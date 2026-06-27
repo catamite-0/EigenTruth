@@ -446,6 +446,17 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
             "promotion_contract_world_model_signal_workflow": {
                 "release_gate_status": "promote"
             },
+            "promotion_contract_external_evidence_baseline_comparison": {
+                "status": "promote",
+                "recommended_route": "structured_fact",
+                "route_passed": True,
+            },
+            "external_evidence_baseline_comparison_source": "registry",
+            "external_evidence_baseline_comparison_status": "promote",
+            "external_evidence_baseline_comparison_decision_status": "promote",
+            "external_evidence_baseline_comparison_recommended_route": "structured_fact",
+            "external_evidence_baseline_comparison_route_passed": True,
+            "external_evidence_baseline_comparison_text_redline_passed": True,
             "promotion_contract_triple_extraction_fixture_matrix": {
                 "status": "promote",
                 "distinct_predicate_count": 6,
@@ -526,6 +537,14 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
     assert payload["metadata"]["promotion_contract_world_model_signal_workflow"] == {
         "release_gate_status": "promote"
     }
+    assert payload["metadata"][
+        "promotion_contract_external_evidence_baseline_comparison"
+    ] == {
+        "status": "promote",
+        "recommended_route": "structured_fact",
+        "_truncated": True,
+        "_omitted_keys": 1,
+    }
     assert payload["metadata"]["promotion_contract_triple_extraction_fixture_matrix"] == {
         "status": "promote",
         "distinct_predicate_count": 6,
@@ -549,6 +568,31 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
     assert metrics["promotion_contract_required_route_baseline_covered_fact_property_counts"] == {
         "benchmark_manifest:structured-fact:0.1": 3
     }
+    assert (
+        metrics["promotion_contract_external_evidence_baseline_comparison_available"]
+        is True
+    )
+    assert metrics[
+        "promotion_contract_external_evidence_baseline_comparison_source"
+    ] == "registry"
+    assert metrics[
+        "promotion_contract_external_evidence_baseline_comparison_status"
+    ] == "promote"
+    assert metrics[
+        "promotion_contract_external_evidence_baseline_comparison_recommended_route"
+    ] == "structured_fact"
+    assert (
+        metrics[
+            "promotion_contract_external_evidence_baseline_comparison_route_passed"
+        ]
+        is True
+    )
+    assert (
+        metrics[
+            "promotion_contract_external_evidence_baseline_comparison_text_redline_passed"
+        ]
+        is True
+    )
     assert metrics["promotion_contract_triple_extraction_fixture_matrix_available"] is True
     assert metrics["promotion_contract_triple_extraction_fixture_matrix_source"] == "registry"
     assert metrics["promotion_contract_triple_extraction_fixture_matrix_status"] == "promote"
@@ -2597,6 +2641,33 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert runtime_metrics["promotion_contract_summary"]["covered_fact_property_rollups"][
         "recommended_route"
     ]["min_records"] == pytest.approx(16.0)
+    assert (
+        runtime_metrics[
+            "promotion_contract_external_evidence_baseline_comparison_available"
+        ]
+        is True
+    )
+    assert runtime_metrics[
+        "promotion_contract_external_evidence_baseline_comparison_record"
+    ] == "report:covered-facts-external-evidence-handoff:0.4"
+    assert runtime_metrics[
+        "promotion_contract_external_evidence_baseline_comparison_status"
+    ] == "promote"
+    assert runtime_metrics[
+        "promotion_contract_external_evidence_baseline_comparison_recommended_route"
+    ] == "structured_fact"
+    assert (
+        runtime_metrics[
+            "promotion_contract_external_evidence_baseline_comparison_route_passed"
+        ]
+        is True
+    )
+    assert (
+        runtime_metrics["promotion_contract_summary"][
+            "external_evidence_baseline_comparison"
+        ]["text_redline_passed"]
+        is True
+    )
     assert metadata[
         "promotion_contract_product_runtime_drift_covered_fact_property_evidence_required"
     ] is True

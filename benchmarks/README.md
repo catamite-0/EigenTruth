@@ -4433,7 +4433,11 @@ skip savings, verification-scope counts, triggered-only partial skip savings,
 triple/slot-audit coverage, promotion-contract covered-fact property scope and
 per-property quality rollups, and optionally apply a
 `ProductRuntimeBudgetPolicy` or promoted
-`ProductPromotionContract` budget. The output includes `optimization.hotspots`,
+`ProductPromotionContract` budget. It also aggregates promotion-contract
+external-evidence baseline-comparison handoff coverage, source/status counts,
+recommended route counts, route-gate pass counts, text-redline pass counts, and
+text-redline run-count summaries into the report, manifest, and registry
+metadata. The output includes `optimization.hotspots`,
 `optimization.recommendations`, and `optimization.policy_hints`, turning the
 baseline into an actionable performance pass over slow phases/routes, low cache
 hit rates, excessive retrieval or verifier fanout, missing staged verification,

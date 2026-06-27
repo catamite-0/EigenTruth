@@ -564,6 +564,12 @@ Added the first stdlib-only external retrieval service shell:
   baseline-comparison handoff through deployment artifacts and bounded trace
   metadata. This closes the local release-to-runtime provenance path without
   adding a network retriever, database, or verifier dependency.
+- `product_runtime_metrics()` and `run_product_runtime_baseline.py` now aggregate
+  the same handoff across product traces: coverage, source/status counts,
+  recommended routes, route-gate pass counts, text-redline pass counts, and
+  text-redline run counts are emitted in runtime-baseline reports, manifests,
+  and registry records. This makes external-evidence release provenance auditable
+  as a product runtime property, still without claiming new grounding evidence.
 
 Added the first monitor-first tool-selection audit layer:
 

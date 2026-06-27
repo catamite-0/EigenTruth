@@ -26328,6 +26328,19 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                     "product_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_current": 0.0,
                     "product_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_status": "pass",
                 },
+                "promotion_contract_external_evidence_baseline_comparison": {
+                    "source": "registry",
+                    "record_key": "report:covered-facts-external-evidence-handoff:0.4",
+                    "status": "promote",
+                    "decision_status": "promote",
+                    "recommended_route": "structured_fact",
+                    "recommended_route_record": (
+                        "benchmark_manifest:structured-fact-canonical:0.1"
+                    ),
+                    "route_passed": True,
+                    "text_redline_passed": True,
+                    "text_redline_run_count": 2,
+                },
                 "promotion_contract_triple_extraction_fixture_matrix": {
                     "source": "registry",
                     "status": "promote",
@@ -26433,6 +26446,19 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                         },
                     }
                 },
+                "external_evidence_baseline_comparison_source": "runtime_evidence_bundle",
+                "external_evidence_baseline_comparison_record": (
+                    "report:covered-facts-external-evidence-handoff:0.5"
+                ),
+                "external_evidence_baseline_comparison_status": "promote",
+                "external_evidence_baseline_comparison_decision_status": "promote",
+                "external_evidence_baseline_comparison_recommended_route": "structured_fact",
+                "external_evidence_baseline_comparison_recommended_route_record": (
+                    "benchmark_manifest:structured-fact-paraphrase:0.1"
+                ),
+                "external_evidence_baseline_comparison_route_passed": True,
+                "external_evidence_baseline_comparison_text_redline_passed": False,
+                "external_evidence_baseline_comparison_text_redline_run_count": 1,
                 "triple_extraction_fixture_matrix_source": "runtime_evidence_bundle",
                 "triple_extraction_fixture_matrix_status": "promote",
                 "triple_extraction_fixture_matrix_manifest_verification": {"passed": True},
@@ -26521,6 +26547,7 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     covered_properties = promotion["covered_fact_properties"]
     runtime_drift = promotion["product_runtime_drift"]
     trace_replay = promotion["product_trace_replay"]
+    external_evidence = promotion["external_evidence_baseline_comparison"]
     matrix = promotion["triple_extraction_fixture_matrix"]
     assert promotion["available_trace_count"] == 2
     assert promotion["source_counts"] == {"contract-a.json": 1}
@@ -26598,6 +26625,21 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert trace_replay["action_execution_gate"]["request_id_mismatch_rate"][
         "mean"
     ] == pytest.approx(0.0)
+    assert external_evidence["available_trace_count"] == 2
+    assert external_evidence["coverage_rate"] == pytest.approx(1.0)
+    assert external_evidence["source_counts"] == {
+        "registry": 1,
+        "runtime_evidence_bundle": 1,
+    }
+    assert external_evidence["status_counts"] == {"promote": 2}
+    assert external_evidence["decision_status_counts"] == {"promote": 2}
+    assert external_evidence["recommended_route_counts"] == {"structured_fact": 2}
+    assert external_evidence["route_passed_counts"] == {"True": 2}
+    assert external_evidence["text_redline_passed_counts"] == {
+        "False": 1,
+        "True": 1,
+    }
+    assert external_evidence["text_redline_run_count"]["mean"] == pytest.approx(1.5)
     assert matrix["available_trace_count"] == 2
     assert matrix["source_counts"] == {"registry": 1, "runtime_evidence_bundle": 1}
     assert matrix["status_counts"] == {"promote": 2}
@@ -26637,6 +26679,12 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert payload["traces"][0]["metrics"][
         "promotion_contract_product_trace_action_execution_request_id_mismatch_rate"
     ] == pytest.approx(0.0)
+    assert payload["traces"][0]["metrics"][
+        "promotion_contract_external_evidence_baseline_comparison_record"
+    ] == "report:covered-facts-external-evidence-handoff:0.4"
+    assert payload["traces"][0]["metrics"][
+        "promotion_contract_external_evidence_baseline_comparison_text_redline_run_count"
+    ] == pytest.approx(2.0)
     assert payload["traces"][0]["metrics"][
         "promotion_contract_recommended_route_covered_fact_property_count"
     ] == 3.0
@@ -26682,6 +26730,15 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
             "promotion_contract_triple_extraction_fixture_matrix_manifest_verified"
         ]
         is True
+    )
+    assert payload["traces"][1]["metrics"][
+        "promotion_contract_external_evidence_baseline_comparison_source"
+    ] == "runtime_evidence_bundle"
+    assert (
+        payload["traces"][1]["metrics"][
+            "promotion_contract_external_evidence_baseline_comparison_text_redline_passed"
+        ]
+        is False
     )
     assert saved["artifact_manifest_summary"] == manifest["summary"]
     assert saved["artifact_manifest_summary"]["artifact_count"] == 3
@@ -26735,6 +26792,24 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert manifest["metadata"][
         "promotion_contract_product_trace_action_execution_request_id_mismatch_rate_mean"
     ] == pytest.approx(0.0)
+    assert (
+        manifest["metadata"][
+            "promotion_contract_external_evidence_baseline_comparison_available_trace_count"
+        ]
+        == 2
+    )
+    assert manifest["metadata"][
+        "promotion_contract_external_evidence_baseline_comparison_coverage_rate"
+    ] == pytest.approx(1.0)
+    assert manifest["metadata"][
+        "promotion_contract_external_evidence_baseline_comparison_source_counts"
+    ] == {"registry": 1, "runtime_evidence_bundle": 1}
+    assert manifest["metadata"][
+        "promotion_contract_external_evidence_baseline_comparison_text_redline_passed_counts"
+    ] == {"False": 1, "True": 1}
+    assert manifest["metadata"][
+        "promotion_contract_external_evidence_baseline_comparison_text_redline_run_count_mean"
+    ] == pytest.approx(1.5)
     assert "\n  " not in saved_text
     assert "\n  " not in manifest_text
     assert registry_module.load_and_verify_artifact_manifest(
@@ -26768,6 +26843,15 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert record.metadata[
         "promotion_contract_product_trace_action_execution_request_id_mismatch_rate_mean"
     ] == pytest.approx(0.0)
+    assert record.metadata[
+        "promotion_contract_external_evidence_baseline_comparison_available_trace_count"
+    ] == 2
+    assert record.metadata[
+        "promotion_contract_external_evidence_baseline_comparison_status_counts"
+    ] == {"promote": 2}
+    assert record.metadata[
+        "promotion_contract_external_evidence_baseline_comparison_recommended_route_counts"
+    ] == {"structured_fact": 2}
 
 
 def test_run_product_runtime_baseline_reports_optimization_advice(tmp_path):
@@ -27825,7 +27909,7 @@ def test_run_product_runtime_baseline_reuses_trace_record_cache(tmp_path, monkey
     assert first["config"]["trace_record_cache"]["cache_hit"] is False
     assert first["config"]["trace_record_cache"]["cache_written"] is True
     assert first["paths"]["trace_records_cache"] == str(cache_path)
-    assert cache_payload["schema_version"] == 6
+    assert cache_payload["schema_version"] == 7
     assert cache_payload["workflow"] == "product_runtime_baseline_trace_records"
     assert cache_payload["summary"]["trace_count"] == 2
     assert cache_payload["policy"]["payload"]["max_total_seconds"] == 0.3

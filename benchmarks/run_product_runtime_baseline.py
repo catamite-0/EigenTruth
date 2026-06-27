@@ -21,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-_TRACE_RECORD_CACHE_SCHEMA_VERSION = 6
+_TRACE_RECORD_CACHE_SCHEMA_VERSION = 7
 _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "promotion_contract_coverage_rate",
     "triple_extraction_fixture_matrix_coverage_rate",
@@ -108,6 +108,20 @@ _PROMOTION_CONTRACT_PRODUCT_TRACE_REPLAY_FIELDS: tuple[str, ...] = (
     "promotion_contract_product_trace_action_execution_missing_result_rate",
     "promotion_contract_product_trace_action_execution_unexpected_result_rate",
     "promotion_contract_product_trace_action_execution_request_id_mismatch_rate",
+)
+_PROMOTION_CONTRACT_EXTERNAL_EVIDENCE_BASELINE_COMPARISON_FIELDS: tuple[str, ...] = (
+    "promotion_contract_external_evidence_baseline_comparison_available",
+    "promotion_contract_external_evidence_baseline_comparison_source",
+    "promotion_contract_external_evidence_baseline_comparison_report",
+    "promotion_contract_external_evidence_baseline_comparison_registry",
+    "promotion_contract_external_evidence_baseline_comparison_record",
+    "promotion_contract_external_evidence_baseline_comparison_status",
+    "promotion_contract_external_evidence_baseline_comparison_decision_status",
+    "promotion_contract_external_evidence_baseline_comparison_recommended_route",
+    "promotion_contract_external_evidence_baseline_comparison_recommended_route_record",
+    "promotion_contract_external_evidence_baseline_comparison_route_passed",
+    "promotion_contract_external_evidence_baseline_comparison_text_redline_passed",
+    "promotion_contract_external_evidence_baseline_comparison_text_redline_run_count",
 )
 _PROMOTION_CONTRACT_COVERED_FACT_ROLLUP_FIELDS: tuple[str, ...] = (
     "promotion_contract_recommended_route_covered_fact_property_metric_count",
@@ -709,6 +723,52 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
                 metrics.get("promotion_contract_structured_fact_robustness_property_metrics")
             ).items()
         },
+        "promotion_contract_external_evidence_baseline_comparison_available": bool(
+            metrics.get("promotion_contract_external_evidence_baseline_comparison_available")
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_source": metrics.get(
+            "promotion_contract_external_evidence_baseline_comparison_source"
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_report": metrics.get(
+            "promotion_contract_external_evidence_baseline_comparison_report"
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_registry": metrics.get(
+            "promotion_contract_external_evidence_baseline_comparison_registry"
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_record": metrics.get(
+            "promotion_contract_external_evidence_baseline_comparison_record"
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_status": metrics.get(
+            "promotion_contract_external_evidence_baseline_comparison_status"
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_decision_status": (
+            metrics.get(
+                "promotion_contract_external_evidence_baseline_comparison_decision_status"
+            )
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_recommended_route": (
+            metrics.get(
+                "promotion_contract_external_evidence_baseline_comparison_recommended_route"
+            )
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_recommended_route_record": (
+            metrics.get(
+                "promotion_contract_external_evidence_baseline_comparison_recommended_route_record"
+            )
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_route_passed": metrics.get(
+            "promotion_contract_external_evidence_baseline_comparison_route_passed"
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_text_redline_passed": (
+            metrics.get(
+                "promotion_contract_external_evidence_baseline_comparison_text_redline_passed"
+            )
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_text_redline_run_count": (
+            metrics.get(
+                "promotion_contract_external_evidence_baseline_comparison_text_redline_run_count"
+            )
+        ),
         "promotion_contract_triple_extraction_fixture_matrix_available": bool(
             metrics.get("promotion_contract_triple_extraction_fixture_matrix_available")
         ),
@@ -742,6 +802,8 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
     for field_name in _PROMOTION_CONTRACT_PRODUCT_RUNTIME_DRIFT_FIELDS:
         compact[field_name] = metrics.get(field_name)
     for field_name in _PROMOTION_CONTRACT_COVERED_FACT_ROLLUP_FIELDS:
+        compact[field_name] = metrics.get(field_name)
+    for field_name in _PROMOTION_CONTRACT_EXTERNAL_EVIDENCE_BASELINE_COMPARISON_FIELDS:
         compact[field_name] = metrics.get(field_name)
     for prefix in _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
@@ -1761,6 +1823,9 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
         for item in metrics
     ]
     manifest_observations = sum(value is not None for value in manifest_values)
+    external_evidence = _aggregate_promotion_contract_external_evidence_baseline_comparison(
+        metrics
+    )
     product_trace_replay = _aggregate_promotion_contract_product_trace_replay(metrics)
     product_runtime_drift = _aggregate_promotion_contract_product_runtime_drift(metrics)
     return {
@@ -1809,6 +1874,7 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
                 prefix="promotion_contract_structured_fact_robustness",
             ),
         },
+        "external_evidence_baseline_comparison": external_evidence,
         "triple_extraction_fixture_matrix": {
             "available_trace_count": matrix_available_count,
             "missing_trace_count": len(metrics) - matrix_available_count,
@@ -1848,6 +1914,69 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
                 for item in metrics
             ),
         },
+    }
+
+
+def _aggregate_promotion_contract_external_evidence_baseline_comparison(
+    metrics: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    available_count = sum(
+        1
+        for item in metrics
+        if bool(
+            item.get("promotion_contract_external_evidence_baseline_comparison_available")
+        )
+    )
+    return {
+        "available_trace_count": available_count,
+        "missing_trace_count": len(metrics) - available_count,
+        "coverage_rate": _safe_div(available_count, len(metrics)),
+        "source_counts": _counts(
+            item.get("promotion_contract_external_evidence_baseline_comparison_source")
+            for item in metrics
+        ),
+        "status_counts": _counts(
+            item.get("promotion_contract_external_evidence_baseline_comparison_status")
+            for item in metrics
+        ),
+        "decision_status_counts": _counts(
+            item.get(
+                "promotion_contract_external_evidence_baseline_comparison_decision_status"
+            )
+            for item in metrics
+        ),
+        "recommended_route_counts": _counts(
+            item.get(
+                "promotion_contract_external_evidence_baseline_comparison_recommended_route"
+            )
+            for item in metrics
+        ),
+        "recommended_route_record_counts": _counts(
+            item.get(
+                "promotion_contract_external_evidence_baseline_comparison_recommended_route_record"
+            )
+            for item in metrics
+        ),
+        "record_counts": _counts(
+            item.get("promotion_contract_external_evidence_baseline_comparison_record")
+            for item in metrics
+        ),
+        "route_passed_counts": _counts(
+            item.get("promotion_contract_external_evidence_baseline_comparison_route_passed")
+            for item in metrics
+        ),
+        "text_redline_passed_counts": _counts(
+            item.get(
+                "promotion_contract_external_evidence_baseline_comparison_text_redline_passed"
+            )
+            for item in metrics
+        ),
+        "text_redline_run_count": _numeric_summary(
+            item.get(
+                "promotion_contract_external_evidence_baseline_comparison_text_redline_run_count"
+            )
+            for item in metrics
+        ),
     }
 
 
@@ -2363,6 +2492,9 @@ def _write_artifact_manifest(
     promotion_contract_trace_replay_metadata = _promotion_contract_trace_replay_flat_metadata(
         report
     )
+    promotion_contract_external_evidence_metadata = (
+        _promotion_contract_external_evidence_baseline_comparison_flat_metadata(report)
+    )
     manifest = build_artifact_manifest(
         _artifact_paths(config) if artifacts is None else artifacts,
         root=config.resolved_artifact_manifest_path.parent,
@@ -2396,6 +2528,7 @@ def _write_artifact_manifest(
             "compact_json": config.compact_json,
             **promotion_contract_drift_metadata,
             **promotion_contract_trace_replay_metadata,
+            **promotion_contract_external_evidence_metadata,
             **dict(config.metadata),
         },
     )
@@ -2423,6 +2556,9 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
     promotion_contract_drift_metadata = _promotion_contract_runtime_drift_flat_metadata(report)
     promotion_contract_trace_replay_metadata = _promotion_contract_trace_replay_flat_metadata(
         report
+    )
+    promotion_contract_external_evidence_metadata = (
+        _promotion_contract_external_evidence_baseline_comparison_flat_metadata(report)
     )
     registry = ArtifactRegistry.load_json(config.registry_path)
     registry.record_product_runtime_baseline(
@@ -2462,6 +2598,7 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
             "compact_json": config.compact_json,
             **promotion_contract_drift_metadata,
             **promotion_contract_trace_replay_metadata,
+            **promotion_contract_external_evidence_metadata,
             **dict(config.metadata),
         },
     )
@@ -2691,6 +2828,59 @@ def _promotion_contract_trace_replay_flat_metadata(
             action_execution,
             "request_id_mismatch_rate",
             "mean",
+        ),
+    }
+
+
+def _promotion_contract_external_evidence_baseline_comparison_flat_metadata(
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    external_evidence = _mapping(
+        _nested(
+            report,
+            "summary",
+            "promotion_contract",
+            "external_evidence_baseline_comparison",
+        )
+    )
+    if not external_evidence:
+        return {}
+    return {
+        "promotion_contract_external_evidence_baseline_comparison_available_trace_count": (
+            external_evidence.get("available_trace_count")
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_missing_trace_count": (
+            external_evidence.get("missing_trace_count")
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_coverage_rate": (
+            external_evidence.get("coverage_rate")
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_source_counts": dict(
+            _mapping(external_evidence.get("source_counts"))
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_status_counts": dict(
+            _mapping(external_evidence.get("status_counts"))
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_decision_status_counts": dict(
+            _mapping(external_evidence.get("decision_status_counts"))
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_recommended_route_counts": dict(
+            _mapping(external_evidence.get("recommended_route_counts"))
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_recommended_route_record_counts": dict(
+            _mapping(external_evidence.get("recommended_route_record_counts"))
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_record_counts": dict(
+            _mapping(external_evidence.get("record_counts"))
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_route_passed_counts": dict(
+            _mapping(external_evidence.get("route_passed_counts"))
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_text_redline_passed_counts": dict(
+            _mapping(external_evidence.get("text_redline_passed_counts"))
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_text_redline_run_count_mean": (
+            _nested(external_evidence, "text_redline_run_count", "mean")
         ),
     }
 
