@@ -446,6 +446,9 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
             "promotion_contract_world_model_signal_workflow": {
                 "release_gate_status": "promote"
             },
+            "promotion_contract_pathway_intervention_workflow": {
+                "release_ready": True
+            },
             "promotion_contract_external_evidence_baseline_comparison": {
                 "status": "promote",
                 "recommended_route": "structured_fact",
@@ -536,6 +539,9 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
     }
     assert payload["metadata"]["promotion_contract_world_model_signal_workflow"] == {
         "release_gate_status": "promote"
+    }
+    assert payload["metadata"]["promotion_contract_pathway_intervention_workflow"] == {
+        "release_ready": True
     }
     assert payload["metadata"][
         "promotion_contract_external_evidence_baseline_comparison"
@@ -1750,6 +1756,10 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             "recommended_world_model_signal_workflow_report": (
                 "artifacts/world-model-signal/world-model-signal-workflow.json"
             ),
+            "pathway_intervention_workflow_status": "promote",
+            "recommended_pathway_intervention_workflow_report": (
+                "artifacts/pathway-intervention/pathway-intervention-workflow.json"
+            ),
             "external_evidence_baseline_comparison_status": "promote",
             "recommended_external_evidence_baseline_comparison_report": (
                 "artifacts/external-evidence/external-evidence-baseline-comparison.json"
@@ -1871,6 +1881,31 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "trace_gap_max": 0.0,
                 "conflict_positive_count": 4,
                 "calibrated_conflict_signal_count": 1,
+                "blocking_reasons": [],
+            },
+            "pathway_intervention_workflow": {
+                "report_path": (
+                    "artifacts/pathway-intervention/pathway-intervention-workflow.json"
+                ),
+                "manifest_path": "artifacts/pathway-intervention/artifact-manifest.json",
+                "source": "registry",
+                "registry": "artifacts/release-registry.json",
+                "record_key": "report:pathway-intervention-workflow:0.1",
+                "workflow": "pathway_intervention_workflow",
+                "status": "promote",
+                "report_status": "complete",
+                "release_ready": True,
+                "model": "Qwen/Qwen2.5-0.5B-Instruct",
+                "layer": -8,
+                "intervention_layer": -8,
+                "patch_layer": -8,
+                "signals": ["pathway_disagreement", "truth_proj", "nll_answer"],
+                "activation_ablation_gate_status": "promote",
+                "source_patch_gate_status": "promote",
+                "best_signals": {
+                    "activation_ablation": "pathway_disagreement",
+                    "source_patch": "truth_proj",
+                },
                 "blocking_reasons": [],
             },
             "external_evidence_baseline_comparison": {
@@ -2136,6 +2171,9 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "world_model_signal_workflow_manifest": (
                     "artifacts/world-model-signal/artifact-manifest.json"
                 ),
+                "pathway_intervention_workflow_manifest": (
+                    "artifacts/pathway-intervention/artifact-manifest.json"
+                ),
                 "triple_extraction_fixture_matrix_manifest": (
                     "artifacts/triple-extraction-fixture-matrix/artifact-manifest.json"
                 ),
@@ -2184,6 +2222,9 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
 
     assert contract.model_id == "Qwen/Qwen2.5-0.5B-Instruct"
     assert roundtrip.world_model_signal_workflow == contract.world_model_signal_workflow
+    assert roundtrip.pathway_intervention_workflow == (
+        contract.pathway_intervention_workflow
+    )
     assert roundtrip.external_evidence_baseline_comparison == (
         contract.external_evidence_baseline_comparison
     )
@@ -2325,6 +2366,38 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.metadata["world_model_signal_workflow_trace_gap_max"] == 0.0
     assert contract.metadata["world_model_signal_workflow_conflict_positive_count"] == 4
     assert contract.metadata["world_model_signal_workflow_calibrated_conflict_signal_count"] == 1
+    assert contract.pathway_intervention_workflow == {
+        "report_path": "artifacts/pathway-intervention/pathway-intervention-workflow.json",
+        "manifest_path": "artifacts/pathway-intervention/artifact-manifest.json",
+        "source": "registry",
+        "registry": "artifacts/release-registry.json",
+        "record_key": "report:pathway-intervention-workflow:0.1",
+        "workflow": "pathway_intervention_workflow",
+        "status": "promote",
+        "report_status": "complete",
+        "release_ready": True,
+        "model": "Qwen/Qwen2.5-0.5B-Instruct",
+        "layer": -8,
+        "intervention_layer": -8,
+        "patch_layer": -8,
+        "signals": ["pathway_disagreement", "truth_proj", "nll_answer"],
+        "activation_ablation_gate_status": "promote",
+        "source_patch_gate_status": "promote",
+        "best_signals": {
+            "activation_ablation": "pathway_disagreement",
+            "source_patch": "truth_proj",
+        },
+        "blocking_reasons": [],
+    }
+    assert contract.metadata["pathway_intervention_workflow_status"] == "promote"
+    assert contract.metadata["recommended_pathway_intervention_workflow_report"] == (
+        "artifacts/pathway-intervention/pathway-intervention-workflow.json"
+    )
+    assert contract.metadata["pathway_intervention_workflow_release_ready"] is True
+    assert contract.metadata["pathway_intervention_workflow_activation_ablation_gate"] == (
+        "promote"
+    )
+    assert contract.metadata["pathway_intervention_workflow_source_patch_gate"] == "promote"
     assert contract.external_evidence_baseline_comparison["record_key"] == (
         "report:covered-facts-external-evidence-handoff:0.4"
     )
@@ -2617,6 +2690,25 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
             "release_gate_status": "promote",
             "trace_gap_max": 0.0,
         },
+        pathway_intervention_workflow={
+            "report_path": "pathway-intervention-workflow.json",
+            "manifest_path": "pathway-artifact-manifest.json",
+            "record_key": "report:pathway-intervention-workflow:0.1",
+            "status": "promote",
+            "report_status": "complete",
+            "release_ready": True,
+            "model": "demo-model",
+            "layer": -8,
+            "intervention_layer": -8,
+            "patch_layer": -8,
+            "signals": ["pathway_disagreement", "truth_proj"],
+            "activation_ablation_gate_status": "promote",
+            "source_patch_gate_status": "promote",
+            "best_signals": {
+                "activation_ablation": "pathway_disagreement",
+                "source_patch": "truth_proj",
+            },
+        },
         control_policy_config={
             "unsupported_action": "clarify",
             "compound_verification_escalates": False,
@@ -2818,6 +2910,24 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert runtime_metrics["promotion_contract_summary"][
         "counterfactual_verification"
     ]["record_count"] == pytest.approx(4.0)
+    assert runtime_metrics[
+        "promotion_contract_pathway_intervention_workflow_available"
+    ] is True
+    assert runtime_metrics[
+        "promotion_contract_pathway_intervention_workflow_record"
+    ] == "report:pathway-intervention-workflow:0.1"
+    assert runtime_metrics[
+        "promotion_contract_pathway_intervention_workflow_release_ready"
+    ] is True
+    assert runtime_metrics[
+        "promotion_contract_pathway_intervention_workflow_activation_ablation_gate"
+    ] == "promote"
+    assert runtime_metrics["promotion_contract_summary"][
+        "pathway_intervention_workflow"
+    ]["best_signals"] == {
+        "activation_ablation": "pathway_disagreement",
+        "source_patch": "truth_proj",
+    }
     assert metadata[
         "promotion_contract_product_runtime_drift_covered_fact_property_evidence_required"
     ] is True
@@ -2992,6 +3102,32 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
         "release_gate_status": "promote",
         "trace_gap_max": 0.0,
     }
+    assert metadata["promotion_contract_pathway_intervention_workflow"] == {
+        "report_path": "pathway-intervention-workflow.json",
+        "manifest_path": "pathway-artifact-manifest.json",
+        "record_key": "report:pathway-intervention-workflow:0.1",
+        "status": "promote",
+        "report_status": "complete",
+        "release_ready": True,
+        "model": "demo-model",
+        "layer": -8,
+        "intervention_layer": -8,
+        "patch_layer": -8,
+        "signals": ["pathway_disagreement", "truth_proj"],
+        "activation_ablation_gate_status": "promote",
+        "source_patch_gate_status": "promote",
+        "best_signals": {
+            "activation_ablation": "pathway_disagreement",
+            "source_patch": "truth_proj",
+        },
+    }
+    assert metadata["promotion_contract_pathway_intervention_workflow_report"] == (
+        "pathway-intervention-workflow.json"
+    )
+    assert metadata["promotion_contract_pathway_intervention_workflow_release_ready"] is True
+    assert metadata[
+        "promotion_contract_pathway_intervention_workflow_source_patch_gate"
+    ] == "promote"
     assert metadata["promotion_contract_feedback_policy_workflow"] == {
         "report_path": "feedback-policy-workflow.json",
         "record_key": "report:feedback-policy-workflow:0.1",
@@ -3094,6 +3230,11 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
     world_model_report_path = world_model_dir / "workflow.json"
     world_model_manifest_path = world_model_dir / "artifact-manifest.json"
     world_model_registry_path = world_model_dir / "registry.json"
+    pathway_dir = tmp_path / "pathway-intervention"
+    pathway_dir.mkdir()
+    pathway_report_path = pathway_dir / "workflow.json"
+    pathway_manifest_path = pathway_dir / "artifact-manifest.json"
+    pathway_registry_path = pathway_dir / "registry.json"
     external_evidence_dir = tmp_path / "external-evidence"
     external_evidence_dir.mkdir()
     external_evidence_report_path = external_evidence_dir / "comparison.json"
@@ -3170,6 +3311,45 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
         path=world_model_report_path,
         version="0.1",
         metadata={"artifact_manifest": str(world_model_manifest_path)},
+    ).save_json()
+    pathway_report_path.write_text(
+        json.dumps({
+            "workflow": "pathway_intervention_workflow",
+            "status": "complete",
+            "evidence_bundle": {
+                "release_ready": True,
+                "model": "demo-model",
+                "layer": -8,
+                "intervention_layer": -8,
+                "patch_layer": -8,
+                "signals": ["pathway_disagreement", "truth_proj"],
+                "best_signals": {
+                    "activation_ablation": "pathway_disagreement",
+                    "source_patch": "truth_proj",
+                },
+            },
+            "comparisons": {
+                "activation_ablation": {"gate": {"status": "promote"}},
+                "source_patch": {"gate": {"status": "promote"}},
+            },
+        }),
+        encoding="utf-8",
+    )
+    pathway_manifest_path.write_text(
+        json.dumps(
+            build_artifact_manifest(
+                {"pathway_intervention_workflow": pathway_report_path},
+                root=pathway_dir,
+                metadata={"workflow": "pathway_intervention_workflow"},
+            )
+        ),
+        encoding="utf-8",
+    )
+    ArtifactRegistry.load_json(pathway_registry_path).record_report(
+        name="pathway-intervention-workflow",
+        path=pathway_report_path,
+        version="0.1",
+        metadata={"artifact_manifest": str(pathway_manifest_path)},
     ).save_json()
     external_evidence_report_path.write_text(
         json.dumps({
@@ -3315,6 +3495,26 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
             "trace_gap_max": 0.0,
             "conflict_positive_count": 4,
             "calibrated_conflict_signal_count": 1,
+        },
+        pathway_intervention_workflow={
+            "report_path": "pathway-intervention/workflow.json",
+            "manifest_path": "pathway-intervention/artifact-manifest.json",
+            "registry": "pathway-intervention/registry.json",
+            "record_key": "report:pathway-intervention-workflow:0.1",
+            "status": "promote",
+            "report_status": "complete",
+            "release_ready": True,
+            "model": "demo-model",
+            "layer": -8,
+            "intervention_layer": -8,
+            "patch_layer": -8,
+            "signals": ["pathway_disagreement", "truth_proj"],
+            "activation_ablation_gate_status": "promote",
+            "source_patch_gate_status": "promote",
+            "best_signals": {
+                "activation_ablation": "pathway_disagreement",
+                "source_patch": "truth_proj",
+            },
         },
         external_evidence_baseline_comparison={
             "report_path": "external-evidence/comparison.json",
@@ -3462,6 +3662,38 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
     assert metadata_without_verification["world_model_signal_workflow_release_gate_status"] == "promote"
     assert metadata_without_verification["world_model_signal_workflow_trace_gap_max"] == 0.0
     assert metadata_without_verification["world_model_signal_workflow_conflict_positive_count"] == 4
+    assert metadata_without_verification["pathway_intervention_workflow_report"] == str(
+        pathway_report_path
+    )
+    assert metadata_without_verification["pathway_intervention_workflow_manifest"] == str(
+        pathway_manifest_path
+    )
+    assert (
+        metadata_without_verification[
+            "pathway_intervention_workflow_manifest_verification"
+        ]
+        is None
+    )
+    assert metadata_without_verification["pathway_intervention_workflow_registry"] == str(
+        pathway_registry_path
+    )
+    assert metadata_without_verification["pathway_intervention_workflow_registry_key"] == (
+        "report:pathway-intervention-workflow:0.1"
+    )
+    assert metadata_without_verification["pathway_intervention_workflow_registry_record"] is None
+    assert metadata_without_verification["pathway_intervention_workflow_release_ready"] is True
+    assert metadata_without_verification["pathway_intervention_workflow_model"] == "demo-model"
+    assert metadata_without_verification["pathway_intervention_workflow_layer"] == -8
+    assert metadata_without_verification[
+        "pathway_intervention_workflow_activation_ablation_gate"
+    ] == "promote"
+    assert (
+        metadata_without_verification["pathway_intervention_workflow_source_patch_gate"]
+        == "promote"
+    )
+    assert metadata_without_verification[
+        "promotion_contract_pathway_intervention_workflow"
+    ]["record_key"] == "report:pathway-intervention-workflow:0.1"
     assert metadata_without_verification[
         "promotion_contract_external_evidence_baseline_comparison"
     ]["record_key"] == "report:covered-facts-external-evidence-handoff:0.4"
@@ -3637,6 +3869,31 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
     assert metadata_with_world_model_verification[
         "world_model_signal_workflow_registry_record"
     ]["metadata"] == {"artifact_manifest": str(world_model_manifest_path)}
+
+    metadata_with_pathway_verification = bundle.runtime_metadata(
+        budget_enabled=True,
+        verify_pathway_intervention_workflow_manifest=True,
+        include_pathway_intervention_workflow_record=True,
+    )
+    assert (
+        metadata_with_pathway_verification[
+            "pathway_intervention_workflow_manifest_verification"
+        ]["passed"]
+        is True
+    )
+    assert (
+        metadata_with_pathway_verification[
+            "pathway_intervention_workflow_manifest_verification"
+        ]["checked"]
+        == 1
+    )
+    assert (
+        metadata_with_pathway_verification["pathway_intervention_workflow_registry_key"]
+        == "report:pathway-intervention-workflow:0.1"
+    )
+    assert metadata_with_pathway_verification[
+        "pathway_intervention_workflow_registry_record"
+    ]["metadata"] == {"artifact_manifest": str(pathway_manifest_path)}
 
     metadata_with_external_evidence_record = bundle.runtime_metadata(
         budget_enabled=True,

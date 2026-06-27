@@ -86,6 +86,7 @@ class ProductPromotionContract:
     product_trace_replay_workflow: Mapping[str, Any] = field(default_factory=dict)
     selfcheck_signal_fusion_workflow: Mapping[str, Any] = field(default_factory=dict)
     world_model_signal_workflow: Mapping[str, Any] = field(default_factory=dict)
+    pathway_intervention_workflow: Mapping[str, Any] = field(default_factory=dict)
     feedback_policy_workflow: Mapping[str, Any] = field(default_factory=dict)
     external_evidence_baseline_comparison: Mapping[str, Any] = field(default_factory=dict)
     pre_generation_probe_comparison: Mapping[str, Any] = field(default_factory=dict)
@@ -121,6 +122,11 @@ class ProductPromotionContract:
             self,
             "world_model_signal_workflow",
             dict(self.world_model_signal_workflow),
+        )
+        object.__setattr__(
+            self,
+            "pathway_intervention_workflow",
+            dict(self.pathway_intervention_workflow),
         )
         object.__setattr__(
             self,
@@ -181,6 +187,9 @@ class ProductPromotionContract:
                 world_model_signal_workflow=_mapping(
                     payload.get("world_model_signal_workflow")
                 ),
+                pathway_intervention_workflow=_mapping(
+                    payload.get("pathway_intervention_workflow")
+                ),
                 feedback_policy_workflow=_mapping(payload.get("feedback_policy_workflow")),
                 external_evidence_baseline_comparison=_mapping(
                     payload.get("external_evidence_baseline_comparison")
@@ -239,6 +248,9 @@ class ProductPromotionContract:
             candidate.get("selfcheck_signal_fusion_workflow")
         )
         world_model_signal_workflow = _mapping(candidate.get("world_model_signal_workflow"))
+        pathway_intervention_workflow = _mapping(
+            candidate.get("pathway_intervention_workflow")
+        )
         feedback_policy_workflow = _mapping(candidate.get("feedback_policy_workflow"))
         external_evidence_baseline_comparison = (
             _external_evidence_baseline_comparison_metadata(
@@ -349,6 +361,10 @@ class ProductPromotionContract:
             ),
             world_model_signal_workflow=_world_model_signal_workflow_metadata(
                 world_model_signal_workflow,
+                manifests=manifests,
+            ),
+            pathway_intervention_workflow=_pathway_intervention_workflow_metadata(
+                pathway_intervention_workflow,
                 manifests=manifests,
             ),
             feedback_policy_workflow=_feedback_policy_workflow_metadata(
@@ -499,6 +515,12 @@ class ProductPromotionContract:
                 "recommended_world_model_signal_workflow_report": decision.get(
                     "recommended_world_model_signal_workflow_report"
                 ),
+                "pathway_intervention_workflow_status": decision.get(
+                    "pathway_intervention_workflow_status"
+                ),
+                "recommended_pathway_intervention_workflow_report": decision.get(
+                    "recommended_pathway_intervention_workflow_report"
+                ),
                 "triple_extraction_fixture_matrix_status": _first_present(
                     decision.get("triple_extraction_fixture_matrix_status"),
                     triple_extraction_fixture_matrix.get("status"),
@@ -561,6 +583,52 @@ class ProductPromotionContract:
                 ),
                 "world_model_signal_workflow_calibrated_conflict_signal_count": (
                     world_model_signal_workflow.get("calibrated_conflict_signal_count")
+                ),
+                "pathway_intervention_workflow_report": (
+                    pathway_intervention_workflow.get("report_path")
+                ),
+                "pathway_intervention_workflow_manifest": (
+                    pathway_intervention_workflow.get("manifest_path")
+                    or manifests.get("pathway_intervention_workflow_manifest")
+                ),
+                "pathway_intervention_workflow_source": (
+                    pathway_intervention_workflow.get("source")
+                ),
+                "pathway_intervention_workflow_registry": (
+                    pathway_intervention_workflow.get("registry")
+                ),
+                "pathway_intervention_workflow_record": (
+                    pathway_intervention_workflow.get("record_key")
+                ),
+                "pathway_intervention_workflow_report_status": (
+                    pathway_intervention_workflow.get("report_status")
+                ),
+                "pathway_intervention_workflow_release_ready": (
+                    pathway_intervention_workflow.get("release_ready")
+                ),
+                "pathway_intervention_workflow_model": (
+                    pathway_intervention_workflow.get("model")
+                ),
+                "pathway_intervention_workflow_layer": (
+                    pathway_intervention_workflow.get("layer")
+                ),
+                "pathway_intervention_workflow_intervention_layer": (
+                    pathway_intervention_workflow.get("intervention_layer")
+                ),
+                "pathway_intervention_workflow_patch_layer": (
+                    pathway_intervention_workflow.get("patch_layer")
+                ),
+                "pathway_intervention_workflow_activation_ablation_gate": (
+                    pathway_intervention_workflow.get("activation_ablation_gate_status")
+                ),
+                "pathway_intervention_workflow_source_patch_gate": (
+                    pathway_intervention_workflow.get("source_patch_gate_status")
+                ),
+                "pathway_intervention_workflow_signals": (
+                    pathway_intervention_workflow.get("signals")
+                ),
+                "pathway_intervention_workflow_best_signals": (
+                    pathway_intervention_workflow.get("best_signals")
                 ),
                 "selfcheck_signal_fusion_workflow_report": (
                     selfcheck_signal_fusion_workflow.get("report_path")
@@ -945,6 +1013,7 @@ class ProductPromotionContract:
             "product_trace_replay_workflow": dict(self.product_trace_replay_workflow),
             "selfcheck_signal_fusion_workflow": dict(self.selfcheck_signal_fusion_workflow),
             "world_model_signal_workflow": dict(self.world_model_signal_workflow),
+            "pathway_intervention_workflow": dict(self.pathway_intervention_workflow),
             "feedback_policy_workflow": dict(self.feedback_policy_workflow),
             "external_evidence_baseline_comparison": dict(
                 self.external_evidence_baseline_comparison
@@ -1191,6 +1260,20 @@ class ProductRuntimeEvidenceBundle:
         )
     )
     _world_model_signal_workflow_registry_record: RegistryRecord | None = field(
+        default=None,
+        init=False,
+        compare=False,
+        repr=False,
+    )
+    _pathway_intervention_workflow_manifest_verification: (
+        ArtifactManifestVerification | None
+    ) = field(
+        default=None,
+        init=False,
+        compare=False,
+        repr=False,
+    )
+    _pathway_intervention_workflow_registry_record: RegistryRecord | None = field(
         default=None,
         init=False,
         compare=False,
@@ -1553,6 +1636,128 @@ class ProductRuntimeEvidenceBundle:
             "world_model_signal_workflow_calibrated_conflict_signal_count": (
                 workflow.get("calibrated_conflict_signal_count")
             ),
+        }
+
+    @property
+    def pathway_intervention_workflow(self) -> Mapping[str, Any]:
+        """Return the pathway-intervention workflow contract, if present."""
+        return self.contract.pathway_intervention_workflow
+
+    @property
+    def pathway_intervention_workflow_report_path(self) -> Path | None:
+        """Return the pathway-intervention workflow report path."""
+        return _resolve_contract_metadata_path(
+            self.pathway_intervention_workflow.get("report_path"),
+            contract_path=self.contract_path,
+        )
+
+    @property
+    def pathway_intervention_workflow_manifest_path(self) -> Path | None:
+        """Return the pathway-intervention workflow manifest path."""
+        return _resolve_contract_metadata_path(
+            self.pathway_intervention_workflow.get("manifest_path"),
+            contract_path=self.contract_path,
+        )
+
+    @property
+    def pathway_intervention_workflow_registry_path(self) -> Path | None:
+        """Return the pathway-intervention workflow registry path."""
+        return _resolve_contract_metadata_path(
+            self.pathway_intervention_workflow.get("registry"),
+            contract_path=self.contract_path,
+        )
+
+    def verify_pathway_intervention_workflow_manifest(
+        self,
+    ) -> ArtifactManifestVerification | None:
+        """Lazily verify the optional pathway-intervention workflow manifest."""
+        manifest_path = self.pathway_intervention_workflow_manifest_path
+        if manifest_path is None:
+            return None
+        if self._pathway_intervention_workflow_manifest_verification is None:
+            object.__setattr__(
+                self,
+                "_pathway_intervention_workflow_manifest_verification",
+                load_and_verify_artifact_manifest(
+                    manifest_path,
+                    recursive=self.manifest_recursive,
+                ),
+            )
+        return self._pathway_intervention_workflow_manifest_verification
+
+    def pathway_intervention_workflow_registry_record(self) -> RegistryRecord | None:
+        """Lazily resolve the optional pathway-intervention workflow registry record."""
+        registry_path = self.pathway_intervention_workflow_registry_path
+        record_key = self.pathway_intervention_workflow.get("record_key")
+        if registry_path is None or record_key is None:
+            return None
+        if self._pathway_intervention_workflow_registry_record is None:
+            registry = ArtifactRegistry.load_json(registry_path)
+            object.__setattr__(
+                self,
+                "_pathway_intervention_workflow_registry_record",
+                registry.get(str(record_key)),
+            )
+        return self._pathway_intervention_workflow_registry_record
+
+    def pathway_intervention_evidence_metadata(
+        self,
+        *,
+        verify_manifest: bool = False,
+        include_registry_record: bool = False,
+    ) -> dict[str, Any]:
+        """Return JSON-ready pathway-intervention provenance metadata."""
+        workflow = self.pathway_intervention_workflow
+        report_path = self.pathway_intervention_workflow_report_path
+        manifest_path = self.pathway_intervention_workflow_manifest_path
+        registry_path = self.pathway_intervention_workflow_registry_path
+        manifest_verification = (
+            self.verify_pathway_intervention_workflow_manifest()
+            if verify_manifest
+            else None
+        )
+        record_key = workflow.get("record_key")
+        registry_record = (
+            self.pathway_intervention_workflow_registry_record()
+            if include_registry_record
+            else None
+        )
+        return {
+            "pathway_intervention_workflow_report": (
+                None if report_path is None else str(report_path)
+            ),
+            "pathway_intervention_workflow_manifest": (
+                None if manifest_path is None else str(manifest_path)
+            ),
+            "pathway_intervention_workflow_manifest_verification": (
+                None if manifest_verification is None else manifest_verification.to_dict()
+            ),
+            "pathway_intervention_workflow_registry": (
+                None if registry_path is None else str(registry_path)
+            ),
+            "pathway_intervention_workflow_registry_key": (
+                None if record_key is None else str(record_key)
+            ),
+            "pathway_intervention_workflow_registry_record": (
+                None if registry_record is None else registry_record.to_dict()
+            ),
+            "pathway_intervention_workflow_status": workflow.get("status"),
+            "pathway_intervention_workflow_report_status": workflow.get("report_status"),
+            "pathway_intervention_workflow_release_ready": workflow.get("release_ready"),
+            "pathway_intervention_workflow_model": workflow.get("model"),
+            "pathway_intervention_workflow_layer": workflow.get("layer"),
+            "pathway_intervention_workflow_intervention_layer": workflow.get(
+                "intervention_layer"
+            ),
+            "pathway_intervention_workflow_patch_layer": workflow.get("patch_layer"),
+            "pathway_intervention_workflow_activation_ablation_gate": workflow.get(
+                "activation_ablation_gate_status"
+            ),
+            "pathway_intervention_workflow_source_patch_gate": workflow.get(
+                "source_patch_gate_status"
+            ),
+            "pathway_intervention_workflow_signals": workflow.get("signals"),
+            "pathway_intervention_workflow_best_signals": workflow.get("best_signals"),
         }
 
     @property
@@ -2020,6 +2225,8 @@ class ProductRuntimeEvidenceBundle:
         include_selfcheck_signal_fusion_record: bool = False,
         verify_world_model_signal_workflow_manifest: bool = False,
         include_world_model_signal_workflow_record: bool = False,
+        verify_pathway_intervention_workflow_manifest: bool = False,
+        include_pathway_intervention_workflow_record: bool = False,
         include_external_evidence_baseline_comparison_record: bool = False,
         verify_pre_generation_probe_comparison_manifest: bool = False,
         include_pre_generation_probe_comparison_record: bool = False,
@@ -2042,6 +2249,10 @@ class ProductRuntimeEvidenceBundle:
             **self.world_model_signal_evidence_metadata(
                 verify_manifest=verify_world_model_signal_workflow_manifest,
                 include_registry_record=include_world_model_signal_workflow_record,
+            ),
+            **self.pathway_intervention_evidence_metadata(
+                verify_manifest=verify_pathway_intervention_workflow_manifest,
+                include_registry_record=include_pathway_intervention_workflow_record,
             ),
             **self.external_evidence_baseline_comparison_evidence_metadata(
                 include_registry_record=include_external_evidence_baseline_comparison_record,
@@ -2124,6 +2335,9 @@ def product_promotion_contract_metadata(
         "promotion_contract_world_model_signal_workflow": dict(
             contract.world_model_signal_workflow
         ),
+        "promotion_contract_pathway_intervention_workflow": dict(
+            contract.pathway_intervention_workflow
+        ),
         "promotion_contract_feedback_policy_workflow": dict(
             contract.feedback_policy_workflow
         ),
@@ -2145,6 +2359,7 @@ def product_promotion_contract_metadata(
         **_promotion_contract_product_runtime_drift_metadata(contract),
         **_promotion_contract_external_evidence_baseline_comparison_metadata(contract),
         **_promotion_contract_pre_generation_probe_comparison_metadata(contract),
+        **_promotion_contract_pathway_intervention_metadata(contract),
         **_promotion_contract_counterfactual_verification_metadata(contract),
         **covered_fact_scope,
     }
@@ -2535,6 +2750,85 @@ def _promotion_contract_pre_generation_probe_comparison_metadata(
     })
 
 
+def _promotion_contract_pathway_intervention_metadata(
+    contract: ProductPromotionContract,
+) -> dict[str, Any]:
+    metadata = _mapping(contract.metadata)
+    workflow = _mapping(contract.pathway_intervention_workflow)
+    return _drop_none_values({
+        "promotion_contract_pathway_intervention_workflow_status": _first_present(
+            metadata.get("pathway_intervention_workflow_status"),
+            workflow.get("status"),
+        ),
+        "promotion_contract_pathway_intervention_workflow_report": _first_present(
+            workflow.get("report_path"),
+            metadata.get("pathway_intervention_workflow_report"),
+        ),
+        "promotion_contract_pathway_intervention_workflow_manifest": _first_present(
+            workflow.get("manifest_path"),
+            metadata.get("pathway_intervention_workflow_manifest"),
+        ),
+        "promotion_contract_pathway_intervention_workflow_source": _first_present(
+            workflow.get("source"),
+            metadata.get("pathway_intervention_workflow_source"),
+        ),
+        "promotion_contract_pathway_intervention_workflow_registry": _first_present(
+            workflow.get("registry"),
+            metadata.get("pathway_intervention_workflow_registry"),
+        ),
+        "promotion_contract_pathway_intervention_workflow_record": _first_present(
+            workflow.get("record_key"),
+            metadata.get("pathway_intervention_workflow_record"),
+        ),
+        "promotion_contract_pathway_intervention_workflow_report_status": _first_present(
+            workflow.get("report_status"),
+            metadata.get("pathway_intervention_workflow_report_status"),
+        ),
+        "promotion_contract_pathway_intervention_workflow_release_ready": _first_present(
+            workflow.get("release_ready"),
+            metadata.get("pathway_intervention_workflow_release_ready"),
+        ),
+        "promotion_contract_pathway_intervention_workflow_model": _first_present(
+            workflow.get("model"),
+            metadata.get("pathway_intervention_workflow_model"),
+        ),
+        "promotion_contract_pathway_intervention_workflow_layer": _first_present(
+            workflow.get("layer"),
+            metadata.get("pathway_intervention_workflow_layer"),
+        ),
+        "promotion_contract_pathway_intervention_workflow_intervention_layer": (
+            _first_present(
+                workflow.get("intervention_layer"),
+                metadata.get("pathway_intervention_workflow_intervention_layer"),
+            )
+        ),
+        "promotion_contract_pathway_intervention_workflow_patch_layer": _first_present(
+            workflow.get("patch_layer"),
+            metadata.get("pathway_intervention_workflow_patch_layer"),
+        ),
+        "promotion_contract_pathway_intervention_workflow_activation_ablation_gate": (
+            _first_present(
+                workflow.get("activation_ablation_gate_status"),
+                metadata.get("pathway_intervention_workflow_activation_ablation_gate"),
+            )
+        ),
+        "promotion_contract_pathway_intervention_workflow_source_patch_gate": (
+            _first_present(
+                workflow.get("source_patch_gate_status"),
+                metadata.get("pathway_intervention_workflow_source_patch_gate"),
+            )
+        ),
+        "promotion_contract_pathway_intervention_workflow_signals": _first_present(
+            workflow.get("signals"),
+            metadata.get("pathway_intervention_workflow_signals"),
+        ),
+        "promotion_contract_pathway_intervention_workflow_best_signals": _first_present(
+            workflow.get("best_signals"),
+            metadata.get("pathway_intervention_workflow_best_signals"),
+        ),
+    })
+
+
 def _promotion_contract_counterfactual_verification_metadata(
     contract: ProductPromotionContract,
 ) -> dict[str, Any]:
@@ -2872,6 +3166,40 @@ def _world_model_signal_workflow_metadata(
         "calibrated_conflict_signal_count": workflow.get(
             "calibrated_conflict_signal_count"
         ),
+        "blocking_reasons": workflow.get("blocking_reasons"),
+    }
+
+
+def _pathway_intervention_workflow_metadata(
+    workflow: Mapping[str, Any],
+    *,
+    manifests: Mapping[str, Any],
+) -> dict[str, Any]:
+    if not workflow:
+        return {}
+    return {
+        "report_path": workflow.get("report_path"),
+        "manifest_path": (
+            workflow.get("manifest_path")
+            or manifests.get("pathway_intervention_workflow_manifest")
+        ),
+        "source": workflow.get("source"),
+        "registry": workflow.get("registry"),
+        "record_key": workflow.get("record_key"),
+        "workflow": workflow.get("workflow"),
+        "status": workflow.get("status"),
+        "report_status": workflow.get("report_status"),
+        "release_ready": workflow.get("release_ready"),
+        "model": workflow.get("model"),
+        "layer": workflow.get("layer"),
+        "intervention_layer": workflow.get("intervention_layer"),
+        "patch_layer": workflow.get("patch_layer"),
+        "signals": workflow.get("signals"),
+        "activation_ablation_gate_status": workflow.get(
+            "activation_ablation_gate_status"
+        ),
+        "source_patch_gate_status": workflow.get("source_patch_gate_status"),
+        "best_signals": workflow.get("best_signals"),
         "blocking_reasons": workflow.get("blocking_reasons"),
     }
 

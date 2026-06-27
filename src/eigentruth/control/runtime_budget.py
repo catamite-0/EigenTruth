@@ -1091,6 +1091,14 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         or _counterfactual_verification_from_flat_metadata(metadata)
         or _counterfactual_verification_from_flat_metadata(contract_metadata)
     )
+    nested_pathway = _mapping(
+        metadata.get("promotion_contract_pathway_intervention_workflow")
+    )
+    pathway = (
+        nested_pathway
+        or _pathway_intervention_workflow_from_flat_metadata(metadata)
+        or _pathway_intervention_workflow_from_flat_metadata(contract_metadata)
+    )
     covered_fact_scope = _covered_fact_scope_from_metadata(
         metadata,
         contract_metadata=contract_metadata,
@@ -1169,6 +1177,7 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         or pre_generation_available
         or matrix_available
         or bool(counterfactual)
+        or bool(pathway)
         or bool(runtime_drift.get("available"))
     )
     pre_generation_manifest_verification = _mapping(
@@ -1181,6 +1190,12 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         _first_present(
             metadata.get("counterfactual_verification_manifest_verification"),
             contract_metadata.get("counterfactual_verification_manifest_verification"),
+        )
+    )
+    pathway_manifest_verification = _mapping(
+        _first_present(
+            metadata.get("pathway_intervention_workflow_manifest_verification"),
+            contract_metadata.get("pathway_intervention_workflow_manifest_verification"),
         )
     )
     pre_generation_best_run = _mapping(pre_generation.get("best_run"))
@@ -1198,6 +1213,133 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         },
         "product_trace_replay": product_trace_replay,
         "product_runtime_drift": runtime_drift,
+        "pathway_intervention_workflow": {
+            "available": bool(pathway),
+            "source": _optional_string(
+                _first_present(
+                    pathway.get("source"),
+                    metadata.get("pathway_intervention_workflow_source"),
+                    contract_metadata.get("pathway_intervention_workflow_source"),
+                )
+            ),
+            "report": _optional_string(
+                _first_present(
+                    pathway.get("report_path"),
+                    pathway.get("report"),
+                    metadata.get("pathway_intervention_workflow_report"),
+                    contract_metadata.get("pathway_intervention_workflow_report"),
+                )
+            ),
+            "manifest": _optional_string(
+                _first_present(
+                    pathway.get("manifest_path"),
+                    pathway.get("manifest"),
+                    metadata.get("pathway_intervention_workflow_manifest"),
+                    contract_metadata.get("pathway_intervention_workflow_manifest"),
+                )
+            ),
+            "registry": _optional_string(
+                _first_present(
+                    pathway.get("registry"),
+                    metadata.get("pathway_intervention_workflow_registry"),
+                    contract_metadata.get("pathway_intervention_workflow_registry"),
+                )
+            ),
+            "record": _optional_string(
+                _first_present(
+                    pathway.get("record_key"),
+                    pathway.get("record"),
+                    metadata.get("pathway_intervention_workflow_record"),
+                    metadata.get("pathway_intervention_workflow_registry_key"),
+                    contract_metadata.get("pathway_intervention_workflow_record"),
+                    contract_metadata.get("pathway_intervention_workflow_registry_key"),
+                )
+            ),
+            "manifest_verified": _optional_bool(
+                pathway_manifest_verification.get("passed")
+            ),
+            "status": _optional_string(
+                _first_present(
+                    pathway.get("status"),
+                    metadata.get("pathway_intervention_workflow_status"),
+                    contract_metadata.get("pathway_intervention_workflow_status"),
+                )
+            ),
+            "report_status": _optional_string(
+                _first_present(
+                    pathway.get("report_status"),
+                    metadata.get("pathway_intervention_workflow_report_status"),
+                    contract_metadata.get("pathway_intervention_workflow_report_status"),
+                )
+            ),
+            "release_ready": _optional_bool(
+                _first_present(
+                    pathway.get("release_ready"),
+                    metadata.get("pathway_intervention_workflow_release_ready"),
+                    contract_metadata.get("pathway_intervention_workflow_release_ready"),
+                )
+            ),
+            "model": _optional_string(
+                _first_present(
+                    pathway.get("model"),
+                    metadata.get("pathway_intervention_workflow_model"),
+                    contract_metadata.get("pathway_intervention_workflow_model"),
+                )
+            ),
+            "layer": _finite_float(
+                _first_present(
+                    pathway.get("layer"),
+                    metadata.get("pathway_intervention_workflow_layer"),
+                    contract_metadata.get("pathway_intervention_workflow_layer"),
+                )
+            ),
+            "intervention_layer": _finite_float(
+                _first_present(
+                    pathway.get("intervention_layer"),
+                    metadata.get("pathway_intervention_workflow_intervention_layer"),
+                    contract_metadata.get(
+                        "pathway_intervention_workflow_intervention_layer"
+                    ),
+                )
+            ),
+            "patch_layer": _finite_float(
+                _first_present(
+                    pathway.get("patch_layer"),
+                    metadata.get("pathway_intervention_workflow_patch_layer"),
+                    contract_metadata.get("pathway_intervention_workflow_patch_layer"),
+                )
+            ),
+            "activation_ablation_gate": _optional_string(
+                _first_present(
+                    pathway.get("activation_ablation_gate_status"),
+                    pathway.get("activation_ablation_gate"),
+                    metadata.get("pathway_intervention_workflow_activation_ablation_gate"),
+                    contract_metadata.get(
+                        "pathway_intervention_workflow_activation_ablation_gate"
+                    ),
+                )
+            ),
+            "source_patch_gate": _optional_string(
+                _first_present(
+                    pathway.get("source_patch_gate_status"),
+                    pathway.get("source_patch_gate"),
+                    metadata.get("pathway_intervention_workflow_source_patch_gate"),
+                    contract_metadata.get("pathway_intervention_workflow_source_patch_gate"),
+                )
+            ),
+            "signals": _first_present(
+                pathway.get("signals"),
+                metadata.get("pathway_intervention_workflow_signals"),
+                contract_metadata.get("pathway_intervention_workflow_signals"),
+            ),
+            "best_signals": _mapping(
+                _first_present(
+                    pathway.get("best_signals"),
+                    metadata.get("pathway_intervention_workflow_best_signals"),
+                    contract_metadata.get("pathway_intervention_workflow_best_signals"),
+                )
+            ),
+        },
         "external_evidence_baseline_comparison": {
             "available": external_evidence_available,
             "source": external_evidence_source,
@@ -1558,6 +1700,7 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
     external_evidence_summary = _mapping(
         summary["external_evidence_baseline_comparison"]
     )
+    pathway_summary = _mapping(summary["pathway_intervention_workflow"])
     pre_generation_summary = _mapping(summary["pre_generation_probe_comparison"])
     counterfactual_summary = _mapping(summary["counterfactual_verification"])
     product_trace_replay_metrics = _promotion_contract_product_trace_replay_metric_values(
@@ -1722,6 +1865,60 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         ),
         "promotion_contract_triple_extraction_fixture_matrix_mean_f1_lift": matrix_summary.get(
             "mean_f1_lift"
+        ),
+        "promotion_contract_pathway_intervention_workflow_available": (
+            pathway_summary.get("available")
+        ),
+        "promotion_contract_pathway_intervention_workflow_source": (
+            pathway_summary.get("source")
+        ),
+        "promotion_contract_pathway_intervention_workflow_report": (
+            pathway_summary.get("report")
+        ),
+        "promotion_contract_pathway_intervention_workflow_manifest": (
+            pathway_summary.get("manifest")
+        ),
+        "promotion_contract_pathway_intervention_workflow_registry": (
+            pathway_summary.get("registry")
+        ),
+        "promotion_contract_pathway_intervention_workflow_record": (
+            pathway_summary.get("record")
+        ),
+        "promotion_contract_pathway_intervention_workflow_manifest_verified": (
+            pathway_summary.get("manifest_verified")
+        ),
+        "promotion_contract_pathway_intervention_workflow_status": (
+            pathway_summary.get("status")
+        ),
+        "promotion_contract_pathway_intervention_workflow_report_status": (
+            pathway_summary.get("report_status")
+        ),
+        "promotion_contract_pathway_intervention_workflow_release_ready": (
+            pathway_summary.get("release_ready")
+        ),
+        "promotion_contract_pathway_intervention_workflow_model": (
+            pathway_summary.get("model")
+        ),
+        "promotion_contract_pathway_intervention_workflow_layer": (
+            pathway_summary.get("layer")
+        ),
+        "promotion_contract_pathway_intervention_workflow_intervention_layer": (
+            pathway_summary.get("intervention_layer")
+        ),
+        "promotion_contract_pathway_intervention_workflow_patch_layer": (
+            pathway_summary.get("patch_layer")
+        ),
+        "promotion_contract_pathway_intervention_workflow_activation_ablation_gate": (
+            pathway_summary.get("activation_ablation_gate")
+        ),
+        "promotion_contract_pathway_intervention_workflow_source_patch_gate": (
+            pathway_summary.get("source_patch_gate")
+        ),
+        "promotion_contract_pathway_intervention_workflow_signals": (
+            pathway_summary.get("signals")
+        ),
+        "promotion_contract_pathway_intervention_workflow_best_signals": (
+            pathway_summary.get("best_signals")
         ),
         "promotion_contract_counterfactual_verification_available": (
             counterfactual_available
@@ -2386,6 +2583,45 @@ def _matrix_from_flat_metadata(metadata: Mapping[str, Any]) -> dict[str, Any]:
         "mean_f1_lift": metadata.get("triple_extraction_fixture_matrix_mean_f1_lift"),
     }
     return {key: value for key, value in matrix.items() if value is not None}
+
+
+def _pathway_intervention_workflow_from_flat_metadata(
+    metadata: Mapping[str, Any],
+) -> dict[str, Any]:
+    def value(key: str) -> Any:
+        return _first_present(
+            metadata.get(key),
+            metadata.get(f"promotion_contract_{key}"),
+        )
+
+    workflow = {
+        "report_path": value("pathway_intervention_workflow_report"),
+        "manifest_path": value("pathway_intervention_workflow_manifest"),
+        "source": value("pathway_intervention_workflow_source"),
+        "registry": value("pathway_intervention_workflow_registry"),
+        "record_key": _first_present(
+            value("pathway_intervention_workflow_record"),
+            value("pathway_intervention_workflow_registry_key"),
+        ),
+        "status": value("pathway_intervention_workflow_status"),
+        "report_status": value("pathway_intervention_workflow_report_status"),
+        "release_ready": value("pathway_intervention_workflow_release_ready"),
+        "model": value("pathway_intervention_workflow_model"),
+        "layer": value("pathway_intervention_workflow_layer"),
+        "intervention_layer": value(
+            "pathway_intervention_workflow_intervention_layer"
+        ),
+        "patch_layer": value("pathway_intervention_workflow_patch_layer"),
+        "activation_ablation_gate_status": value(
+            "pathway_intervention_workflow_activation_ablation_gate"
+        ),
+        "source_patch_gate_status": value(
+            "pathway_intervention_workflow_source_patch_gate"
+        ),
+        "signals": value("pathway_intervention_workflow_signals"),
+        "best_signals": value("pathway_intervention_workflow_best_signals"),
+    }
+    return {key: item for key, item in workflow.items() if item is not None}
 
 
 def _external_evidence_baseline_comparison_from_flat_metadata(

@@ -94,6 +94,7 @@ def export_product_promotion_contract(
     trace_replay_workflow = dict(contract.product_trace_replay_workflow)
     selfcheck_signal_fusion_workflow = dict(contract.selfcheck_signal_fusion_workflow)
     world_model_signal_workflow = dict(contract.world_model_signal_workflow)
+    pathway_intervention_workflow = dict(contract.pathway_intervention_workflow)
     feedback_policy_workflow = dict(contract.feedback_policy_workflow)
     external_evidence_baseline_comparison = dict(
         contract.external_evidence_baseline_comparison
@@ -333,6 +334,51 @@ def export_product_promotion_contract(
                 "world_model_signal_workflow_calibrated_conflict_signal_count": (
                     world_model_signal_workflow.get("calibrated_conflict_signal_count")
                 ),
+                "pathway_intervention_workflow_report": (
+                    pathway_intervention_workflow.get("report_path")
+                ),
+                "pathway_intervention_workflow_manifest": (
+                    pathway_intervention_workflow.get("manifest_path")
+                ),
+                "pathway_intervention_workflow_source": (
+                    pathway_intervention_workflow.get("source")
+                ),
+                "pathway_intervention_workflow_registry": (
+                    pathway_intervention_workflow.get("registry")
+                ),
+                "pathway_intervention_workflow_record": (
+                    pathway_intervention_workflow.get("record_key")
+                ),
+                "pathway_intervention_workflow_report_status": (
+                    pathway_intervention_workflow.get("report_status")
+                ),
+                "pathway_intervention_workflow_release_ready": (
+                    pathway_intervention_workflow.get("release_ready")
+                ),
+                "pathway_intervention_workflow_model": (
+                    pathway_intervention_workflow.get("model")
+                ),
+                "pathway_intervention_workflow_layer": (
+                    pathway_intervention_workflow.get("layer")
+                ),
+                "pathway_intervention_workflow_intervention_layer": (
+                    pathway_intervention_workflow.get("intervention_layer")
+                ),
+                "pathway_intervention_workflow_patch_layer": (
+                    pathway_intervention_workflow.get("patch_layer")
+                ),
+                "pathway_intervention_workflow_activation_ablation_gate": (
+                    pathway_intervention_workflow.get("activation_ablation_gate_status")
+                ),
+                "pathway_intervention_workflow_source_patch_gate": (
+                    pathway_intervention_workflow.get("source_patch_gate_status")
+                ),
+                "pathway_intervention_workflow_signals": (
+                    pathway_intervention_workflow.get("signals")
+                ),
+                "pathway_intervention_workflow_best_signals": (
+                    pathway_intervention_workflow.get("best_signals")
+                ),
                 **external_evidence_baseline_comparison_metadata,
                 **counterfactual_verification_metadata,
                 "triple_extraction_fixture_matrix_report": (
@@ -433,6 +479,7 @@ def export_product_promotion_contract(
             "product_trace_replay_workflow": trace_replay_workflow,
             "selfcheck_signal_fusion_workflow": selfcheck_signal_fusion_workflow,
             "world_model_signal_workflow": world_model_signal_workflow,
+            "pathway_intervention_workflow": pathway_intervention_workflow,
             "feedback_policy_workflow": feedback_policy_workflow,
             "external_evidence_baseline_comparison": external_evidence_baseline_comparison,
             "counterfactual_verification": counterfactual_verification,
