@@ -2355,6 +2355,25 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
             "P36": {"decision_accuracy": 1.0, "n_records": 16}
         }
     }
+    runtime_metrics = product_runtime_metrics({"metadata": metadata})
+    assert runtime_metrics[
+        "promotion_contract_recommended_route_covered_fact_property_metric_count"
+    ] == pytest.approx(1.0)
+    assert runtime_metrics[
+        "promotion_contract_recommended_route_covered_fact_min_records"
+    ] == pytest.approx(16.0)
+    assert runtime_metrics[
+        "promotion_contract_recommended_route_covered_fact_min_decision_accuracy"
+    ] == pytest.approx(1.0)
+    assert runtime_metrics[
+        "promotion_contract_required_route_baseline_covered_fact_property_metric_count"
+    ] == pytest.approx(1.0)
+    assert runtime_metrics[
+        "promotion_contract_required_route_baseline_covered_fact_min_records"
+    ] == pytest.approx(16.0)
+    assert runtime_metrics["promotion_contract_summary"]["covered_fact_property_rollups"][
+        "recommended_route"
+    ]["min_records"] == pytest.approx(16.0)
     assert metadata["promotion_contract_control_policy_config"]["unsupported_action"] == "clarify"
     assert metadata["promotion_contract_control_policy_config"][
         "compound_verification_escalates"

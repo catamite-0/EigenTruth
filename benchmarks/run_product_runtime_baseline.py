@@ -21,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-_TRACE_RECORD_CACHE_SCHEMA_VERSION = 3
+_TRACE_RECORD_CACHE_SCHEMA_VERSION = 4
 _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "promotion_contract_coverage_rate",
     "triple_extraction_fixture_matrix_coverage_rate",
@@ -50,6 +50,26 @@ _PROMOTION_CONTRACT_PRODUCT_RUNTIME_DRIFT_FIELDS: tuple[str, ...] = (
     "promotion_contract_product_runtime_drift_promotion_evidence_blocked_metric_count",
     "promotion_contract_product_runtime_drift_triple_audit_evidence_metric_count",
     "promotion_contract_product_runtime_drift_triple_audit_evidence_blocked_metric_count",
+)
+_PROMOTION_CONTRACT_COVERED_FACT_ROLLUP_FIELDS: tuple[str, ...] = (
+    "promotion_contract_recommended_route_covered_fact_property_metric_count",
+    "promotion_contract_recommended_route_covered_fact_min_records",
+    "promotion_contract_recommended_route_covered_fact_min_source_documents",
+    "promotion_contract_recommended_route_covered_fact_min_decision_accuracy",
+    "promotion_contract_recommended_route_covered_fact_max_false_supported_rate",
+    "promotion_contract_recommended_route_covered_fact_min_false_refuted_rate",
+    "promotion_contract_required_route_baseline_covered_fact_property_metric_count",
+    "promotion_contract_required_route_baseline_covered_fact_min_records",
+    "promotion_contract_required_route_baseline_covered_fact_min_source_documents",
+    "promotion_contract_required_route_baseline_covered_fact_min_decision_accuracy",
+    "promotion_contract_required_route_baseline_covered_fact_max_false_supported_rate",
+    "promotion_contract_required_route_baseline_covered_fact_min_false_refuted_rate",
+    "promotion_contract_structured_fact_robustness_property_metric_count",
+    "promotion_contract_structured_fact_robustness_min_records",
+    "promotion_contract_structured_fact_robustness_min_source_documents",
+    "promotion_contract_structured_fact_robustness_min_decision_accuracy",
+    "promotion_contract_structured_fact_robustness_max_false_supported_rate",
+    "promotion_contract_structured_fact_robustness_min_false_refuted_rate",
 )
 
 from benchmarks.config_utils import (  # noqa: E402
@@ -565,6 +585,9 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         "promotion_contract_recommended_route_covered_fact_properties": list(
             _sequence(metrics.get("promotion_contract_recommended_route_covered_fact_properties"))
         ),
+        "promotion_contract_recommended_route_covered_fact_property_metrics": dict(
+            _mapping(metrics.get("promotion_contract_recommended_route_covered_fact_property_metrics"))
+        ),
         "promotion_contract_required_route_baseline_covered_fact_property_counts": dict(
             _mapping(metrics.get("promotion_contract_required_route_baseline_covered_fact_property_counts"))
         ),
@@ -574,6 +597,12 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
                 metrics.get("promotion_contract_required_route_baseline_covered_fact_properties")
             ).items()
         },
+        "promotion_contract_required_route_baseline_covered_fact_property_metrics": {
+            str(key): dict(_mapping(value))
+            for key, value in _mapping(
+                metrics.get("promotion_contract_required_route_baseline_covered_fact_property_metrics")
+            ).items()
+        },
         "promotion_contract_structured_fact_robustness_property_counts": dict(
             _mapping(metrics.get("promotion_contract_structured_fact_robustness_property_counts"))
         ),
@@ -581,6 +610,12 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
             str(key): list(_sequence(value))
             for key, value in _mapping(
                 metrics.get("promotion_contract_structured_fact_robustness_properties")
+            ).items()
+        },
+        "promotion_contract_structured_fact_robustness_property_metrics": {
+            str(key): dict(_mapping(value))
+            for key, value in _mapping(
+                metrics.get("promotion_contract_structured_fact_robustness_property_metrics")
             ).items()
         },
         "promotion_contract_triple_extraction_fixture_matrix_available": bool(
@@ -612,6 +647,8 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         ),
     }
     for field_name in _PROMOTION_CONTRACT_PRODUCT_RUNTIME_DRIFT_FIELDS:
+        compact[field_name] = metrics.get(field_name)
+    for field_name in _PROMOTION_CONTRACT_COVERED_FACT_ROLLUP_FIELDS:
         compact[field_name] = metrics.get(field_name)
     for prefix in _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
@@ -1509,9 +1546,21 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
                 item.get("promotion_contract_required_route_baseline_covered_fact_property_counts")
                 for item in metrics
             ),
+            "recommended_route_property_metrics": _covered_fact_rollup_summary(
+                metrics,
+                prefix="promotion_contract_recommended_route_covered_fact",
+            ),
+            "required_route_baseline_property_metrics": _covered_fact_rollup_summary(
+                metrics,
+                prefix="promotion_contract_required_route_baseline_covered_fact",
+            ),
             "structured_fact_robustness_records": _counts_from_mapping_keys(
                 item.get("promotion_contract_structured_fact_robustness_property_counts")
                 for item in metrics
+            ),
+            "structured_fact_robustness_property_metrics": _covered_fact_rollup_summary(
+                metrics,
+                prefix="promotion_contract_structured_fact_robustness",
             ),
         },
         "triple_extraction_fixture_matrix": {
@@ -1553,6 +1602,31 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
                 for item in metrics
             ),
         },
+    }
+
+
+def _covered_fact_rollup_summary(
+    metrics: Sequence[Mapping[str, Any]],
+    *,
+    prefix: str,
+) -> dict[str, Any]:
+    return {
+        "property_metric_count": _numeric_summary(
+            item.get(f"{prefix}_property_metric_count") for item in metrics
+        ),
+        "min_records": _numeric_summary(item.get(f"{prefix}_min_records") for item in metrics),
+        "min_source_documents": _numeric_summary(
+            item.get(f"{prefix}_min_source_documents") for item in metrics
+        ),
+        "min_decision_accuracy": _numeric_summary(
+            item.get(f"{prefix}_min_decision_accuracy") for item in metrics
+        ),
+        "max_false_supported_rate": _numeric_summary(
+            item.get(f"{prefix}_max_false_supported_rate") for item in metrics
+        ),
+        "min_false_refuted_rate": _numeric_summary(
+            item.get(f"{prefix}_min_false_refuted_rate") for item in metrics
+        ),
     }
 
 

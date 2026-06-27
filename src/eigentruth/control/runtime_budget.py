@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Any, Mapping, Sequence
+from typing import Any, Iterable, Mapping, Sequence
 
 from eigentruth.control.trace import ProductTrace, RuntimeTrace
 
@@ -881,6 +881,15 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         contract_metadata=contract_metadata,
         verifier_route=verifier_route,
     )
+    recommended_property_rollups = _covered_fact_property_metric_rollups(
+        _mapping(covered_fact_scope.get("recommended_route_property_metrics"))
+    )
+    required_property_rollups = _covered_fact_property_metric_rollups(
+        _mapping(covered_fact_scope.get("required_route_baseline_property_metrics"))
+    )
+    robustness_property_rollups = _covered_fact_property_metric_rollups(
+        _mapping(covered_fact_scope.get("structured_fact_robustness_property_metrics"))
+    )
     runtime_drift = _promotion_contract_runtime_drift_from_metadata(
         metadata,
         contract_metadata=contract_metadata,
@@ -923,6 +932,11 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         "source_status": source_status,
         "budget_enabled": budget_enabled,
         "covered_fact_properties": covered_fact_scope,
+        "covered_fact_property_rollups": {
+            "recommended_route": recommended_property_rollups,
+            "required_route_baseline": required_property_rollups,
+            "structured_fact_robustness": robustness_property_rollups,
+        },
         "product_runtime_drift": runtime_drift,
         "triple_extraction_fixture_matrix": {
             "available": matrix_available,
@@ -980,17 +994,38 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         "promotion_contract_recommended_route_covered_fact_properties": (
             covered_fact_scope.get("recommended_route_properties")
         ),
+        "promotion_contract_recommended_route_covered_fact_property_metrics": (
+            covered_fact_scope.get("recommended_route_property_metrics")
+        ),
+        **_prefixed_property_rollup_metrics(
+            "promotion_contract_recommended_route_covered_fact",
+            recommended_property_rollups,
+        ),
         "promotion_contract_required_route_baseline_covered_fact_property_counts": (
             covered_fact_scope.get("required_route_baseline_counts")
         ),
         "promotion_contract_required_route_baseline_covered_fact_properties": (
             covered_fact_scope.get("required_route_baseline_properties")
         ),
+        "promotion_contract_required_route_baseline_covered_fact_property_metrics": (
+            covered_fact_scope.get("required_route_baseline_property_metrics")
+        ),
+        **_prefixed_property_rollup_metrics(
+            "promotion_contract_required_route_baseline_covered_fact",
+            required_property_rollups,
+        ),
         "promotion_contract_structured_fact_robustness_property_counts": (
             covered_fact_scope.get("structured_fact_robustness_counts")
         ),
         "promotion_contract_structured_fact_robustness_properties": (
             covered_fact_scope.get("structured_fact_robustness_properties")
+        ),
+        "promotion_contract_structured_fact_robustness_property_metrics": (
+            covered_fact_scope.get("structured_fact_robustness_property_metrics")
+        ),
+        **_prefixed_property_rollup_metrics(
+            "promotion_contract_structured_fact_robustness",
+            robustness_property_rollups,
         ),
         "promotion_contract_triple_extraction_fixture_matrix_available": matrix_available,
         "promotion_contract_triple_extraction_fixture_matrix_source": matrix_source,
@@ -1215,6 +1250,19 @@ def _covered_fact_scope_from_metadata(
                 contract_metadata.get("required_route_baseline_covered_fact_properties"),
             )
         ),
+        "recommended_route_property_metrics": _mapping(
+            _first_present(
+                metadata.get("promotion_contract_recommended_route_covered_fact_property_metrics"),
+                contract_metadata.get("recommended_route_covered_fact_property_metrics"),
+                verifier_route.get("covered_fact_property_metrics"),
+            )
+        ),
+        "required_route_baseline_property_metrics": _mapping(
+            _first_present(
+                metadata.get("promotion_contract_required_route_baseline_covered_fact_property_metrics"),
+                contract_metadata.get("required_route_baseline_covered_fact_property_metrics"),
+            )
+        ),
         "structured_fact_robustness_counts": _mapping(
             _first_present(
                 metadata.get("promotion_contract_structured_fact_robustness_property_counts"),
@@ -1227,7 +1275,70 @@ def _covered_fact_scope_from_metadata(
                 contract_metadata.get("structured_fact_robustness_properties"),
             )
         ),
+        "structured_fact_robustness_property_metrics": _mapping(
+            _first_present(
+                metadata.get("promotion_contract_structured_fact_robustness_property_metrics"),
+                contract_metadata.get("structured_fact_robustness_property_metrics"),
+            )
+        ),
     }
+
+
+def _covered_fact_property_metric_rollups(metrics: Mapping[str, Any]) -> dict[str, float | None]:
+    leaves = tuple(_iter_covered_fact_property_metric_leaves(metrics))
+    return {
+        "property_metric_count": float(len(leaves)) if leaves else None,
+        "min_records": _min_finite(item.get("n_records") for item in leaves),
+        "min_source_documents": _min_finite(item.get("n_source_documents") for item in leaves),
+        "min_decision_accuracy": _min_finite(item.get("decision_accuracy") for item in leaves),
+        "max_false_supported_rate": _max_finite(
+            item.get("false_supported_rate") for item in leaves
+        ),
+        "min_false_refuted_rate": _min_finite(item.get("false_refuted_rate") for item in leaves),
+    }
+
+
+def _iter_covered_fact_property_metric_leaves(value: Any) -> tuple[Mapping[str, Any], ...]:
+    mapping = _mapping(value)
+    if not mapping:
+        return ()
+    metric_keys = {
+        "n_records",
+        "n_source_documents",
+        "decision_accuracy",
+        "false_supported_rate",
+        "false_refuted_rate",
+    }
+    if any(key in mapping for key in metric_keys):
+        return (mapping,)
+    leaves: list[Mapping[str, Any]] = []
+    for nested in mapping.values():
+        leaves.extend(_iter_covered_fact_property_metric_leaves(nested))
+    return tuple(leaves)
+
+
+def _prefixed_property_rollup_metrics(
+    prefix: str,
+    rollups: Mapping[str, Any],
+) -> dict[str, Any]:
+    return {
+        f"{prefix}_property_metric_count": rollups.get("property_metric_count"),
+        f"{prefix}_min_records": rollups.get("min_records"),
+        f"{prefix}_min_source_documents": rollups.get("min_source_documents"),
+        f"{prefix}_min_decision_accuracy": rollups.get("min_decision_accuracy"),
+        f"{prefix}_max_false_supported_rate": rollups.get("max_false_supported_rate"),
+        f"{prefix}_min_false_refuted_rate": rollups.get("min_false_refuted_rate"),
+    }
+
+
+def _min_finite(values: Iterable[Any]) -> float | None:
+    finite = tuple(value for raw in values if (value := _finite_float(raw)) is not None)
+    return min(finite) if finite else None
+
+
+def _max_finite(values: Iterable[Any]) -> float | None:
+    finite = tuple(value for raw in values if (value := _finite_float(raw)) is not None)
+    return max(finite) if finite else None
 
 
 def _matrix_from_flat_metadata(metadata: Mapping[str, Any]) -> dict[str, Any]:

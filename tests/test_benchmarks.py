@@ -23966,13 +23966,86 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                     "route": "structured_fact",
                     "covered_fact_property_count": 3,
                     "covered_fact_properties": ["P36", "P37", "P38"],
+                    "covered_fact_property_metrics": {
+                        "P36": {
+                            "n_source_documents": 120,
+                            "n_records": 16,
+                            "decision_accuracy": 1.0,
+                            "false_supported_rate": 0.0,
+                            "false_refuted_rate": 1.0,
+                        },
+                        "P37": {
+                            "n_source_documents": 120,
+                            "n_records": 12,
+                            "decision_accuracy": 1.0,
+                            "false_supported_rate": 0.0,
+                            "false_refuted_rate": 1.0,
+                        },
+                        "P38": {
+                            "n_source_documents": 119,
+                            "n_records": 9,
+                            "decision_accuracy": 1.0,
+                            "false_supported_rate": 0.0,
+                            "false_refuted_rate": 1.0,
+                        },
+                    },
                 },
                 "promotion_contract_metadata": {
                     "required_route_baseline_covered_fact_property_counts": {
                         "benchmark_manifest:structured-fact-canonical:0.1": 3
                     },
+                    "required_route_baseline_covered_fact_property_metrics": {
+                        "benchmark_manifest:structured-fact-canonical:0.1": {
+                            "P36": {
+                                "n_source_documents": 120,
+                                "n_records": 16,
+                                "decision_accuracy": 1.0,
+                                "false_supported_rate": 0.0,
+                                "false_refuted_rate": 1.0,
+                            },
+                            "P37": {
+                                "n_source_documents": 120,
+                                "n_records": 12,
+                                "decision_accuracy": 1.0,
+                                "false_supported_rate": 0.0,
+                                "false_refuted_rate": 1.0,
+                            },
+                            "P38": {
+                                "n_source_documents": 119,
+                                "n_records": 9,
+                                "decision_accuracy": 1.0,
+                                "false_supported_rate": 0.0,
+                                "false_refuted_rate": 1.0,
+                            },
+                        }
+                    },
                     "structured_fact_robustness_property_counts": {
                         "benchmark_manifest:structured-fact-canonical:0.1": 3
+                    },
+                    "structured_fact_robustness_property_metrics": {
+                        "benchmark_manifest:structured-fact-canonical:0.1": {
+                            "P36": {
+                                "n_source_documents": 120,
+                                "n_records": 16,
+                                "decision_accuracy": 1.0,
+                                "false_supported_rate": 0.0,
+                                "false_refuted_rate": 1.0,
+                            },
+                            "P37": {
+                                "n_source_documents": 120,
+                                "n_records": 12,
+                                "decision_accuracy": 1.0,
+                                "false_supported_rate": 0.0,
+                                "false_refuted_rate": 1.0,
+                            },
+                            "P38": {
+                                "n_source_documents": 119,
+                                "n_records": 9,
+                                "decision_accuracy": 1.0,
+                                "false_supported_rate": 0.0,
+                                "false_refuted_rate": 1.0,
+                            },
+                        }
                     },
                     "product_runtime_drift_status": "promote",
                     "product_runtime_drift_report": "artifacts/runtime-drift/runtime-drift.json",
@@ -24053,8 +24126,42 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                     "P36",
                     "P37",
                 ],
+                "promotion_contract_recommended_route_covered_fact_property_metrics": {
+                    "P36": {
+                        "n_source_documents": 120,
+                        "n_records": 10,
+                        "decision_accuracy": 1.0,
+                        "false_supported_rate": 0.0,
+                        "false_refuted_rate": 1.0,
+                    },
+                    "P37": {
+                        "n_source_documents": 100,
+                        "n_records": 8,
+                        "decision_accuracy": 0.99,
+                        "false_supported_rate": 0.01,
+                        "false_refuted_rate": 0.99,
+                    },
+                },
                 "promotion_contract_required_route_baseline_covered_fact_property_counts": {
                     "benchmark_manifest:structured-fact-paraphrase:0.1": 2
+                },
+                "promotion_contract_required_route_baseline_covered_fact_property_metrics": {
+                    "benchmark_manifest:structured-fact-paraphrase:0.1": {
+                        "P36": {
+                            "n_source_documents": 120,
+                            "n_records": 10,
+                            "decision_accuracy": 1.0,
+                            "false_supported_rate": 0.0,
+                            "false_refuted_rate": 1.0,
+                        },
+                        "P37": {
+                            "n_source_documents": 100,
+                            "n_records": 8,
+                            "decision_accuracy": 0.99,
+                            "false_supported_rate": 0.01,
+                            "false_refuted_rate": 0.99,
+                        },
+                    }
                 },
                 "triple_extraction_fixture_matrix_source": "runtime_evidence_bundle",
                 "triple_extraction_fixture_matrix_status": "promote",
@@ -24152,6 +24259,27 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert covered_properties["structured_fact_robustness_records"] == {
         "benchmark_manifest:structured-fact-canonical:0.1": 1
     }
+    assert covered_properties["recommended_route_property_metrics"]["property_metric_count"][
+        "mean"
+    ] == pytest.approx(2.5)
+    assert covered_properties["recommended_route_property_metrics"]["min_records"][
+        "mean"
+    ] == pytest.approx(8.5)
+    assert covered_properties["recommended_route_property_metrics"]["min_decision_accuracy"][
+        "mean"
+    ] == pytest.approx(0.995)
+    assert covered_properties["recommended_route_property_metrics"]["max_false_supported_rate"][
+        "mean"
+    ] == pytest.approx(0.005)
+    assert covered_properties["required_route_baseline_property_metrics"][
+        "property_metric_count"
+    ]["mean"] == pytest.approx(2.5)
+    assert covered_properties["required_route_baseline_property_metrics"]["min_records"][
+        "mean"
+    ] == pytest.approx(8.5)
+    assert covered_properties["structured_fact_robustness_property_metrics"][
+        "property_metric_count"
+    ]["mean"] == pytest.approx(3.0)
     assert runtime_drift["available_trace_count"] == 1
     assert runtime_drift["status_counts"] == {"promote": 1}
     assert runtime_drift["gate_enabled_counts"] == {"True": 1}
@@ -24211,6 +24339,30 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert payload["traces"][0]["metrics"][
         "promotion_contract_recommended_route_covered_fact_properties"
     ] == ["P36", "P37", "P38"]
+    assert (
+        payload["traces"][0]["metrics"][
+            "promotion_contract_recommended_route_covered_fact_property_metric_count"
+        ]
+        == 3.0
+    )
+    assert (
+        payload["traces"][0]["metrics"][
+            "promotion_contract_recommended_route_covered_fact_min_records"
+        ]
+        == 9.0
+    )
+    assert (
+        payload["traces"][1]["metrics"][
+            "promotion_contract_recommended_route_covered_fact_min_decision_accuracy"
+        ]
+        == pytest.approx(0.99)
+    )
+    assert (
+        payload["traces"][1]["metrics"][
+            "promotion_contract_recommended_route_covered_fact_max_false_supported_rate"
+        ]
+        == pytest.approx(0.01)
+    )
     assert (
         payload["traces"][0]["metrics"][
             "promotion_contract_triple_extraction_fixture_matrix_distinct_predicate_count"
@@ -25337,7 +25489,7 @@ def test_run_product_runtime_baseline_reuses_trace_record_cache(tmp_path, monkey
     assert first["config"]["trace_record_cache"]["cache_hit"] is False
     assert first["config"]["trace_record_cache"]["cache_written"] is True
     assert first["paths"]["trace_records_cache"] == str(cache_path)
-    assert cache_payload["schema_version"] == 3
+    assert cache_payload["schema_version"] == 4
     assert cache_payload["workflow"] == "product_runtime_baseline_trace_records"
     assert cache_payload["summary"]["trace_count"] == 2
     assert cache_payload["policy"]["payload"]["max_total_seconds"] == 0.3
