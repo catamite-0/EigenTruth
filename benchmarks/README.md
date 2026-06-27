@@ -2553,6 +2553,7 @@ quality gates over the route summary `property_metrics`. `frontier_audit` adds t
 also defaults `adapter_family_profile=strict_audit`,
 `require_product_runtime_drift_promotion_evidence=true`,
 `require_product_runtime_drift_pre_generation_evidence=true`,
+`require_product_runtime_drift_counterfactual_evidence=true`,
 `require_product_runtime_drift_triple_audit_evidence=true`,
 `require_product_runtime_drift_covered_fact_property_evidence=true`,
 `require_product_runtime_drift_action_gate_evidence=true`,
@@ -2562,7 +2563,8 @@ covered-facts external-evidence handoff, registered triple-extraction fixture
 matrix, and external-prediction triple-extraction minima unless explicit file
 paths are supplied. The release must carry the strict adapter-family matrix,
 rule-based state-transition world-model evidence, promotion-backed runtime-drift
-evidence, pre-generation runtime-drift evidence, trace-level triple-audit
+evidence, pre-generation runtime-drift evidence, counterfactual verifier-audit
+runtime-drift evidence, trace-level triple-audit
 evidence, recommended-route covered-fact property/action-gate drift evidence,
 registered frontier evidence handoffs, and
 promoted product-trace action-audit/action-execution child gates unless

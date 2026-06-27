@@ -89,6 +89,12 @@ class ProductTraceReplayWorkflowConfig:
     max_runtime_drift_pre_generation_probe_comparison_best_test_label_auroc_drop: float | None = None
     max_runtime_drift_pre_generation_probe_comparison_best_redline_auroc_drop: float | None = None
     max_runtime_drift_pre_generation_probe_comparison_best_redline_margin_drop: float | None = None
+    min_runtime_drift_counterfactual_verification_coverage: float | None = None
+    min_runtime_drift_counterfactual_verification_manifest_verified_rate: float | None = None
+    min_runtime_drift_counterfactual_verification_record_count: float | None = None
+    min_runtime_drift_counterfactual_verification_pass_rate: float | None = None
+    max_runtime_drift_counterfactual_verification_false_invariance_rate: float | None = None
+    max_runtime_drift_counterfactual_verification_flip_success_count_drop: float | None = None
     min_runtime_drift_triple_extraction_fixture_matrix_coverage: float | None = None
     max_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_drop: float | None = None
     max_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_drop: float | None = None
@@ -191,6 +197,12 @@ class ProductTraceReplayWorkflowConfig:
                 self.max_runtime_drift_pre_generation_probe_comparison_best_test_label_auroc_drop,
                 self.max_runtime_drift_pre_generation_probe_comparison_best_redline_auroc_drop,
                 self.max_runtime_drift_pre_generation_probe_comparison_best_redline_margin_drop,
+                self.min_runtime_drift_counterfactual_verification_coverage,
+                self.min_runtime_drift_counterfactual_verification_manifest_verified_rate,
+                self.min_runtime_drift_counterfactual_verification_record_count,
+                self.min_runtime_drift_counterfactual_verification_pass_rate,
+                self.max_runtime_drift_counterfactual_verification_false_invariance_rate,
+                self.max_runtime_drift_counterfactual_verification_flip_success_count_drop,
                 self.min_runtime_drift_triple_extraction_fixture_matrix_coverage,
                 self.max_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_drop,
                 self.max_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_drop,
@@ -1320,6 +1332,12 @@ def _runtime_drift_configured(config: ProductTraceReplayWorkflowConfig) -> bool:
             config.max_runtime_drift_pre_generation_probe_comparison_best_test_label_auroc_drop,
             config.max_runtime_drift_pre_generation_probe_comparison_best_redline_auroc_drop,
             config.max_runtime_drift_pre_generation_probe_comparison_best_redline_margin_drop,
+            config.min_runtime_drift_counterfactual_verification_coverage,
+            config.min_runtime_drift_counterfactual_verification_manifest_verified_rate,
+            config.min_runtime_drift_counterfactual_verification_record_count,
+            config.min_runtime_drift_counterfactual_verification_pass_rate,
+            config.max_runtime_drift_counterfactual_verification_false_invariance_rate,
+            config.max_runtime_drift_counterfactual_verification_flip_success_count_drop,
             config.min_runtime_drift_triple_extraction_fixture_matrix_coverage,
             config.max_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_drop,
             config.max_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_drop,
@@ -1382,6 +1400,24 @@ def _runtime_drift_gate_config(config: ProductTraceReplayWorkflowConfig) -> dict
         ),
         "max_pre_generation_probe_comparison_best_redline_margin_drop": (
             config.max_runtime_drift_pre_generation_probe_comparison_best_redline_margin_drop
+        ),
+        "min_counterfactual_verification_coverage": (
+            config.min_runtime_drift_counterfactual_verification_coverage
+        ),
+        "min_counterfactual_verification_manifest_verified_rate": (
+            config.min_runtime_drift_counterfactual_verification_manifest_verified_rate
+        ),
+        "min_counterfactual_verification_record_count": (
+            config.min_runtime_drift_counterfactual_verification_record_count
+        ),
+        "min_counterfactual_verification_pass_rate": (
+            config.min_runtime_drift_counterfactual_verification_pass_rate
+        ),
+        "max_counterfactual_verification_false_invariance_rate": (
+            config.max_runtime_drift_counterfactual_verification_false_invariance_rate
+        ),
+        "max_counterfactual_verification_flip_success_count_drop": (
+            config.max_runtime_drift_counterfactual_verification_flip_success_count_drop
         ),
         "min_triple_extraction_fixture_matrix_coverage": (
             config.min_runtime_drift_triple_extraction_fixture_matrix_coverage
@@ -1765,6 +1801,7 @@ def _runtime_drift_summary(runtime_drift: Mapping[str, Any]) -> dict[str, Any]:
     covered_fact_property = _covered_fact_property_metric_summary(runtime_drift)
     product_trace_action_gate = _product_trace_action_gate_metric_summary(runtime_drift)
     pre_generation_probe_comparison = _pre_generation_probe_comparison_metric_summary(runtime_drift)
+    counterfactual_verification = _counterfactual_verification_metric_summary(runtime_drift)
     return {
         "status": runtime_drift.get("status"),
         "gate_enabled": summary.get("gate_enabled"),
@@ -1782,6 +1819,10 @@ def _runtime_drift_summary(runtime_drift: Mapping[str, Any]) -> dict[str, Any]:
         "pre_generation_probe_comparison_metric_count": pre_generation_probe_comparison["metric_count"],
         "pre_generation_probe_comparison_blocked_metric_count": (
             pre_generation_probe_comparison["blocked_metric_count"]
+        ),
+        "counterfactual_verification_metric_count": counterfactual_verification["metric_count"],
+        "counterfactual_verification_blocked_metric_count": (
+            counterfactual_verification["blocked_metric_count"]
         ),
         "baseline_path": _nested(runtime_drift, "baseline", "path"),
         "current_path": _nested(runtime_drift, "current", "path"),
@@ -1812,6 +1853,20 @@ def _pre_generation_probe_comparison_metric_summary(runtime_drift: Mapping[str, 
         for metric in _sequence(runtime_drift.get("metrics"))
         if str(_mapping(metric).get("metric") or "").startswith(
             "promotion_contract.pre_generation_probe_comparison."
+        )
+    )
+    return {
+        "metric_count": len(metrics),
+        "blocked_metric_count": sum(1 for metric in metrics if metric.get("status") == "blocked"),
+    }
+
+
+def _counterfactual_verification_metric_summary(runtime_drift: Mapping[str, Any]) -> dict[str, int]:
+    metrics = tuple(
+        _mapping(metric)
+        for metric in _sequence(runtime_drift.get("metrics"))
+        if str(_mapping(metric).get("metric") or "").startswith(
+            "promotion_contract.counterfactual_verification."
         )
     )
     return {
@@ -2231,6 +2286,16 @@ def _write_artifact_manifest(
                 "runtime_drift",
                 "pre_generation_probe_comparison_blocked_metric_count",
             ),
+            "runtime_drift_counterfactual_verification_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "counterfactual_verification_metric_count",
+            ),
+            "runtime_drift_counterfactual_verification_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "counterfactual_verification_blocked_metric_count",
+            ),
             "runtime_drift_report": _nested(report, "paths", "runtime_drift_report"),
             "runtime_drift_artifact_manifest": _nested(report, "paths", "runtime_drift_manifest"),
             "compact_json": config.compact_json,
@@ -2487,6 +2552,16 @@ def _record_registry(
                 report,
                 "runtime_drift",
                 "pre_generation_probe_comparison_blocked_metric_count",
+            ),
+            "runtime_drift_counterfactual_verification_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "counterfactual_verification_metric_count",
+            ),
+            "runtime_drift_counterfactual_verification_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "counterfactual_verification_blocked_metric_count",
             ),
             "runtime_drift_report": _nested(report, "paths", "runtime_drift_report"),
             "runtime_drift_artifact_manifest": _nested(report, "paths", "runtime_drift_manifest"),
@@ -2842,6 +2917,24 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
         max_runtime_drift_pre_generation_probe_comparison_best_redline_margin_drop=(
             args.max_runtime_drift_pre_generation_probe_comparison_best_redline_margin_drop
         ),
+        min_runtime_drift_counterfactual_verification_coverage=(
+            args.min_runtime_drift_counterfactual_verification_coverage
+        ),
+        min_runtime_drift_counterfactual_verification_manifest_verified_rate=(
+            args.min_runtime_drift_counterfactual_verification_manifest_verified_rate
+        ),
+        min_runtime_drift_counterfactual_verification_record_count=(
+            args.min_runtime_drift_counterfactual_verification_record_count
+        ),
+        min_runtime_drift_counterfactual_verification_pass_rate=(
+            args.min_runtime_drift_counterfactual_verification_pass_rate
+        ),
+        max_runtime_drift_counterfactual_verification_false_invariance_rate=(
+            args.max_runtime_drift_counterfactual_verification_false_invariance_rate
+        ),
+        max_runtime_drift_counterfactual_verification_flip_success_count_drop=(
+            args.max_runtime_drift_counterfactual_verification_flip_success_count_drop
+        ),
         min_runtime_drift_triple_extraction_fixture_matrix_coverage=(
             args.min_runtime_drift_triple_extraction_fixture_matrix_coverage
         ),
@@ -3034,6 +3127,24 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument(
         "--max-runtime-drift-pre-generation-probe-comparison-best-redline-margin-drop",
+        type=float,
+        default=None,
+    )
+    parser.add_argument("--min-runtime-drift-counterfactual-verification-coverage", type=float, default=None)
+    parser.add_argument(
+        "--min-runtime-drift-counterfactual-verification-manifest-verified-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument("--min-runtime-drift-counterfactual-verification-record-count", type=float, default=None)
+    parser.add_argument("--min-runtime-drift-counterfactual-verification-pass-rate", type=float, default=None)
+    parser.add_argument(
+        "--max-runtime-drift-counterfactual-verification-false-invariance-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-counterfactual-verification-flip-success-count-drop",
         type=float,
         default=None,
     )

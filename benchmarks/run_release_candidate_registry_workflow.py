@@ -55,6 +55,14 @@ _PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "pre_generation_probe_comparison_best_redline_auroc",
     "pre_generation_probe_comparison_best_redline_margin",
 )
+_PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "counterfactual_verification_coverage_rate",
+    "counterfactual_verification_manifest_verified_rate",
+    "counterfactual_verification_record_count",
+    "counterfactual_verification_pass_rate",
+    "counterfactual_verification_false_invariance_rate",
+    "counterfactual_verification_flip_success_count",
+)
 _PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "triple_claim_coverage_rate",
     "triple_audit_claim_coverage_rate",
@@ -129,6 +137,9 @@ def _apply_release_policy_profile_to_config(
             "require_product_runtime_drift_pre_generation_evidence": (
                 config.require_product_runtime_drift_pre_generation_evidence
             ),
+            "require_product_runtime_drift_counterfactual_evidence": (
+                config.require_product_runtime_drift_counterfactual_evidence
+            ),
             "require_product_runtime_drift_triple_audit_evidence": (
                 config.require_product_runtime_drift_triple_audit_evidence
             ),
@@ -190,6 +201,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     product_runtime_drift_report_path: Path | None = None
     require_product_runtime_drift_promotion_evidence: bool = False
     require_product_runtime_drift_pre_generation_evidence: bool = False
+    require_product_runtime_drift_counterfactual_evidence: bool = False
     require_product_runtime_drift_triple_audit_evidence: bool = False
     require_product_runtime_drift_covered_fact_property_evidence: bool = False
     require_product_runtime_drift_action_gate_evidence: bool = False
@@ -622,6 +634,9 @@ def run_release_candidate_registry_workflow(
         require_product_runtime_drift_pre_generation_evidence=(
             config.require_product_runtime_drift_pre_generation_evidence
         ),
+        require_product_runtime_drift_counterfactual_evidence=(
+            config.require_product_runtime_drift_counterfactual_evidence
+        ),
         require_product_runtime_drift_triple_audit_evidence=(
             config.require_product_runtime_drift_triple_audit_evidence
         ),
@@ -882,6 +897,9 @@ def run_release_candidate_registry_workflow(
             ),
             "require_product_runtime_drift_pre_generation_evidence": (
                 config.require_product_runtime_drift_pre_generation_evidence
+            ),
+            "require_product_runtime_drift_counterfactual_evidence": (
+                config.require_product_runtime_drift_counterfactual_evidence
             ),
             "require_product_runtime_drift_triple_audit_evidence": (
                 config.require_product_runtime_drift_triple_audit_evidence
@@ -1831,6 +1849,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "product_runtime_drift_pre_generation_evidence_required": config.get(
             "require_product_runtime_drift_pre_generation_evidence"
         ),
+        "product_runtime_drift_counterfactual_evidence_required": config.get(
+            "require_product_runtime_drift_counterfactual_evidence"
+        ),
         "product_runtime_drift_triple_audit_evidence_required": config.get(
             "require_product_runtime_drift_triple_audit_evidence"
         ),
@@ -2264,6 +2285,12 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         "product_runtime_drift_pre_generation_evidence_blocked_metric_count": summary.get(
             "pre_generation_evidence_blocked_metric_count"
         ),
+        "product_runtime_drift_counterfactual_evidence_metric_count": summary.get(
+            "counterfactual_evidence_metric_count"
+        ),
+        "product_runtime_drift_counterfactual_evidence_blocked_metric_count": summary.get(
+            "counterfactual_evidence_blocked_metric_count"
+        ),
         "product_runtime_drift_triple_audit_evidence_metric_count": summary.get(
             "triple_audit_evidence_metric_count"
         ),
@@ -2287,6 +2314,9 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     for prefix in _PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     for prefix in _PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES:
@@ -2482,6 +2512,9 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         ),
         require_product_runtime_drift_pre_generation_evidence=bool(
             args.require_product_runtime_drift_pre_generation_evidence
+        ),
+        require_product_runtime_drift_counterfactual_evidence=bool(
+            args.require_product_runtime_drift_counterfactual_evidence
         ),
         require_product_runtime_drift_triple_audit_evidence=bool(
             args.require_product_runtime_drift_triple_audit_evidence
@@ -2800,6 +2833,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--require-product-runtime-drift-pre-generation-evidence", action="store_true",
                         help="require the product runtime drift report to include pre-generation "
                              "probe comparison coverage, redline, and quality metrics")
+    parser.add_argument("--require-product-runtime-drift-counterfactual-evidence", action="store_true",
+                        help="require the product runtime drift report to include counterfactual "
+                             "verifier-audit coverage, manifest, pass-rate, false-invariance, "
+                             "and flip-success metrics")
     parser.add_argument("--require-product-runtime-drift-triple-audit-evidence", action="store_true",
                         help="require the product runtime drift report to include trace-level "
                              "triple coverage, audit coverage, audit pass-rate, and slot coverage metrics")

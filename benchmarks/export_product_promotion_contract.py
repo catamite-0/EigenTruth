@@ -30,6 +30,12 @@ _PRODUCT_RUNTIME_DRIFT_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "pre_generation_probe_comparison_best_test_label_auroc",
     "pre_generation_probe_comparison_best_redline_auroc",
     "pre_generation_probe_comparison_best_redline_margin",
+    "counterfactual_verification_coverage_rate",
+    "counterfactual_verification_manifest_verified_rate",
+    "counterfactual_verification_record_count",
+    "counterfactual_verification_pass_rate",
+    "counterfactual_verification_false_invariance_rate",
+    "counterfactual_verification_flip_success_count",
     "triple_claim_coverage_rate",
     "triple_audit_claim_coverage_rate",
     "triple_audit_pass_rate",
@@ -817,6 +823,15 @@ def _product_runtime_drift_flat_metadata(metadata: Mapping[str, Any]) -> dict[st
         ),
         "product_runtime_drift_pre_generation_evidence_blocked_metric_count": metadata.get(
             "product_runtime_drift_pre_generation_evidence_blocked_metric_count"
+        ),
+        "product_runtime_drift_counterfactual_evidence_required": metadata.get(
+            "product_runtime_drift_counterfactual_evidence_required"
+        ),
+        "product_runtime_drift_counterfactual_evidence_metric_count": metadata.get(
+            "product_runtime_drift_counterfactual_evidence_metric_count"
+        ),
+        "product_runtime_drift_counterfactual_evidence_blocked_metric_count": metadata.get(
+            "product_runtime_drift_counterfactual_evidence_blocked_metric_count"
         ),
         "product_runtime_drift_triple_audit_evidence_required": metadata.get(
             "product_runtime_drift_triple_audit_evidence_required"
