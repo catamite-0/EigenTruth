@@ -13942,6 +13942,68 @@ def test_compare_release_candidates_consumes_product_trace_replay_workflow(tmp_p
         "action_audit_gate_report_path"
     ].endswith("trace-replay-workflow-audited/action-audit-gate.json")
 
+    blocked_execution_payload = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        product_trace_replay_workflow_path=workflow_report,
+        require_product_trace_action_execution_gate=True,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+
+    assert blocked_execution_payload["decision"]["status"] == "blocked"
+    assert blocked_execution_payload["config"]["require_product_trace_action_execution_gate"] is True
+    blocked_execution_gate = blocked_execution_payload["product_trace_replay_workflow_gate"]
+    assert blocked_execution_gate["gate"]["passed"] is False
+    assert blocked_execution_gate["gate"]["require_action_execution_gate"] is True
+    assert any(
+        "action-execution gate is not enabled" in reason
+        for reason in blocked_execution_gate["gate"]["blocking_reasons"]
+    )
+
+    executed_workflow_report = _write_product_trace_replay_workflow_report(
+        tmp_path / "trace-replay-workflow-executed",
+        selector_report=selector_report,
+        drift_report=drift_report,
+        status="promote",
+        action_execution_status="promote",
+        action_execution_gate_enabled=True,
+        action_execution_passed=True,
+        action_execution_missing_result_rate=0.0,
+        action_execution_unexpected_result_rate=0.0,
+        action_execution_request_id_mismatch_rate=0.0,
+    )
+    executed_payload = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        product_trace_replay_workflow_path=executed_workflow_report,
+        require_product_trace_action_execution_gate=True,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+
+    assert executed_payload["decision"]["status"] == "promote"
+    executed_workflow_gate = executed_payload["product_trace_replay_workflow_gate"]
+    assert executed_workflow_gate["gate"]["passed"] is True
+    assert executed_workflow_gate["gate"]["require_action_execution_gate"] is True
+    assert executed_workflow_gate["action_execution_gate"]["status"] == "promote"
+    assert executed_workflow_gate["action_execution_gate"]["missing_result_rate"] == (
+        pytest.approx(0.0)
+    )
+    execution_candidate = executed_payload["release_candidate"]["product_trace_replay_workflow"]
+    assert execution_candidate["action_execution_gate_report_path"].endswith(
+        "trace-replay-workflow-executed/action-execution-gate.json"
+    )
+    assert executed_payload["release_candidate"]["manifests"][
+        "product_trace_action_execution_gate_report"
+    ].endswith("trace-replay-workflow-executed/action-execution-gate.json")
+
 
 def test_compare_release_candidates_can_require_feedback_policy_workflow(tmp_path):
     module = importlib.import_module("benchmarks.compare_release_candidates")
@@ -14837,6 +14899,7 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     assert frontier_payload["config"]["require_product_runtime_drift_triple_audit_evidence"] is True
     assert frontier_payload["config"]["require_product_runtime_drift_covered_fact_property_evidence"] is True
     assert frontier_payload["config"]["require_product_trace_action_audit_gate"] is True
+    assert frontier_payload["config"]["require_product_trace_action_execution_gate"] is True
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
         "adapter_family_profile"
     ] == "strict_audit"
@@ -14851,6 +14914,9 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     ] is True
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
         "require_product_trace_action_audit_gate"
+    ] is True
+    assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
+        "require_product_trace_action_execution_gate"
     ] is True
     assert frontier_payload["product_runtime_drift_gate"]["summary"]["promotion_evidence_metric_count"] == 4
     assert frontier_payload["product_runtime_drift_gate"]["summary"]["triple_audit_evidence_metric_count"] == 4
@@ -15848,6 +15914,7 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     assert frontier_profile_config.require_product_runtime_drift_triple_audit_evidence is True
     assert frontier_profile_config.require_product_runtime_drift_covered_fact_property_evidence is True
     assert frontier_profile_config.require_product_trace_action_audit_gate is True
+    assert frontier_profile_config.require_product_trace_action_execution_gate is True
     assert frontier_profile_config.release_policy_profile_applied_defaults["adapter_family_profile"] == (
         "strict_audit"
     )
@@ -15865,6 +15932,9 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     ] is True
     assert frontier_profile_config.release_policy_profile_applied_defaults[
         "require_product_trace_action_audit_gate"
+    ] is True
+    assert frontier_profile_config.release_policy_profile_applied_defaults[
+        "require_product_trace_action_execution_gate"
     ] is True
 
     with pytest.raises(ValueError, match="release_policy_profile"):
@@ -16363,6 +16433,12 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         action_audit_gate_enabled=True,
         action_audit_passed=True,
         action_audit_error_rate=0.0,
+        action_execution_status="promote",
+        action_execution_gate_enabled=True,
+        action_execution_passed=True,
+        action_execution_missing_result_rate=0.0,
+        action_execution_unexpected_result_rate=0.0,
+        action_execution_request_id_mismatch_rate=0.0,
     )
     feedback_policy_workflow_report = _write_feedback_policy_workflow_report(
         tmp_path / "feedback-policy-workflow",
@@ -16444,6 +16520,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         release_efficiency_report_path=release_efficiency_report,
         product_trace_replay_workflow_key="report:product-trace-replay-workflow:0.1",
         require_product_trace_action_audit_gate=True,
+        require_product_trace_action_execution_gate=True,
         require_product_runtime_drift_promotion_evidence=True,
         require_product_runtime_drift_triple_audit_evidence=True,
         selfcheck_signal_fusion_workflow_key="report:selfcheck-signal-fusion-workflow:0.1",
@@ -16497,6 +16574,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         "performance_manifest",
         "product_runtime_drift_manifest",
         "product_trace_action_audit_gate_report",
+        "product_trace_action_execution_gate_report",
         "product_trace_replay_workflow_manifest",
         "readiness_manifest",
         "release_candidate_report",
@@ -16523,6 +16601,16 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["product_trace_action_audit_gate_passed"] is True
     assert manifest["metadata"]["product_trace_action_audit_error_rate"] == pytest.approx(0.0)
     assert manifest["metadata"]["product_trace_action_audit_missing_retrieval_action_rate"] == (
+        pytest.approx(0.0)
+    )
+    assert manifest["metadata"]["product_trace_action_execution_gate_required"] is True
+    assert manifest["metadata"]["product_trace_action_execution_gate_status"] == "promote"
+    assert manifest["metadata"]["product_trace_action_execution_gate_enabled"] is True
+    assert manifest["metadata"]["product_trace_action_execution_gate_passed"] is True
+    assert manifest["metadata"]["product_trace_action_execution_missing_result_rate"] == (
+        pytest.approx(0.0)
+    )
+    assert manifest["metadata"]["product_trace_action_execution_request_id_mismatch_rate"] == (
         pytest.approx(0.0)
     )
     assert manifest["metadata"]["release_selfcheck_signal_fusion_workflow_status"] == "promote"
@@ -17007,6 +17095,11 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["product_trace_action_audit_gate_enabled"] is True
     assert record.metadata["product_trace_action_audit_gate_passed"] is True
     assert record.metadata["product_trace_action_audit_error_rate"] == pytest.approx(0.0)
+    assert record.metadata["product_trace_action_execution_gate_required"] is True
+    assert record.metadata["product_trace_action_execution_gate_status"] == "promote"
+    assert record.metadata["product_trace_action_execution_gate_enabled"] is True
+    assert record.metadata["product_trace_action_execution_gate_passed"] is True
+    assert record.metadata["product_trace_action_execution_missing_result_rate"] == pytest.approx(0.0)
     assert record.metadata["release_selfcheck_signal_fusion_workflow_status"] == "promote"
     assert record.metadata["release_feedback_policy_workflow_status"] == "promote"
     assert record.metadata["release_world_model_signal_workflow_status"] == "promote"
@@ -19434,6 +19527,12 @@ def _write_product_trace_replay_workflow_report(
     action_audit_gate_enabled=False,
     action_audit_passed=None,
     action_audit_error_rate=None,
+    action_execution_status="not_configured",
+    action_execution_gate_enabled=False,
+    action_execution_passed=None,
+    action_execution_missing_result_rate=None,
+    action_execution_unexpected_result_rate=None,
+    action_execution_request_id_mismatch_rate=None,
 ):
     from eigentruth.registry import build_artifact_manifest
 
@@ -19441,10 +19540,13 @@ def _write_product_trace_replay_workflow_report(
     report_path = output_dir / "product-trace-replay-workflow.json"
     manifest_path = output_dir / "artifact-manifest.json"
     action_audit_gate_report_path = output_dir / "action-audit-gate.json"
+    action_execution_gate_report_path = output_dir / "action-execution-gate.json"
     selector_report = Path(selector_report)
     drift_report = Path(drift_report)
     if action_audit_passed is None and action_audit_gate_enabled:
         action_audit_passed = action_audit_status == "promote"
+    if action_execution_passed is None and action_execution_gate_enabled:
+        action_execution_passed = action_execution_status == "promote"
     action_audit_summary = {
         "status": action_audit_status,
         "gate_enabled": action_audit_gate_enabled,
@@ -19466,6 +19568,31 @@ def _write_product_trace_replay_workflow_report(
             else None
         ),
     }
+    action_execution_summary = {
+        "status": action_execution_status,
+        "gate_enabled": action_execution_gate_enabled,
+        "passed": action_execution_passed,
+        "trace_count": 2 if action_execution_gate_enabled else 0,
+        "available_trace_count": 2 if action_execution_gate_enabled else 0,
+        "alignment_available_trace_count": 2 if action_execution_gate_enabled else 0,
+        "alignment_failed_trace_count": 0 if action_execution_passed else None,
+        "alignment_failed_trace_rate": 0.0 if action_execution_passed else None,
+        "planned_action_count": 2 if action_execution_gate_enabled else 0,
+        "result_count": 2 if action_execution_passed else None,
+        "missing_result_count": 0 if action_execution_passed else None,
+        "missing_result_rate": action_execution_missing_result_rate,
+        "unexpected_result_count": 0 if action_execution_passed else None,
+        "unexpected_result_rate": action_execution_unexpected_result_rate,
+        "request_id_mismatch_count": 0 if action_execution_passed else None,
+        "request_id_mismatch_rate": action_execution_request_id_mismatch_rate,
+        "blocked_metric_count": 0 if action_execution_passed else None,
+        "checked_metric_count": 3 if action_execution_gate_enabled else 0,
+        "report_path": (
+            os.path.relpath(action_execution_gate_report_path, start=output_dir)
+            if action_execution_gate_enabled
+            else None
+        ),
+    }
     paths = {
         "report": str(report_path),
         "artifact_manifest": str(manifest_path),
@@ -19475,6 +19602,11 @@ def _write_product_trace_replay_workflow_report(
     if action_audit_gate_enabled:
         paths["action_audit_gate_report"] = os.path.relpath(
             action_audit_gate_report_path,
+            start=output_dir,
+        )
+    if action_execution_gate_enabled:
+        paths["action_execution_gate_report"] = os.path.relpath(
+            action_execution_gate_report_path,
             start=output_dir,
         )
     report_payload = {
@@ -19495,6 +19627,7 @@ def _write_product_trace_replay_workflow_report(
             "blocked_metric_count": 0 if status == "promote" else 1,
         },
         "action_audit_gate": action_audit_summary,
+        "action_execution_gate": action_execution_summary,
         "paths": paths,
     }
     if action_audit_gate_enabled:
@@ -19520,6 +19653,52 @@ def _write_product_trace_replay_workflow_report(
             + "\n",
             encoding="utf-8",
         )
+    if action_execution_gate_enabled:
+        action_execution_gate_report_path.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "workflow": "product_trace_action_execution_gate",
+                    "status": action_execution_status,
+                    "summary": action_execution_summary,
+                    "decision": {
+                        "status": action_execution_status,
+                        "passed": action_execution_passed,
+                        "blocking_reasons": ()
+                        if action_execution_passed
+                        else ("action execution blocked",),
+                    },
+                    "checks": [
+                        {
+                            "metric": "action_execution.missing_result_rate",
+                            "status": "pass" if action_execution_passed else "blocked",
+                            "value": action_execution_missing_result_rate,
+                            "limit": 0.0,
+                            "operator": "<=",
+                        },
+                        {
+                            "metric": "action_execution.unexpected_result_rate",
+                            "status": "pass" if action_execution_passed else "blocked",
+                            "value": action_execution_unexpected_result_rate,
+                            "limit": 0.0,
+                            "operator": "<=",
+                        },
+                        {
+                            "metric": "action_execution.request_id_mismatch_rate",
+                            "status": "pass" if action_execution_passed else "blocked",
+                            "value": action_execution_request_id_mismatch_rate,
+                            "limit": 0.0,
+                            "operator": "<=",
+                        },
+                    ],
+                    "paths": {"report": str(action_execution_gate_report_path)},
+                },
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
     report_path.write_text(json.dumps(report_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     artifacts = {
         "product_trace_replay_workflow_report": report_path,
@@ -19528,6 +19707,8 @@ def _write_product_trace_replay_workflow_report(
     }
     if action_audit_gate_enabled:
         artifacts["action_audit_gate_report"] = action_audit_gate_report_path
+    if action_execution_gate_enabled:
+        artifacts["action_execution_gate_report"] = action_execution_gate_report_path
     manifest_path.write_text(
         json.dumps(
             build_artifact_manifest(
@@ -19539,6 +19720,11 @@ def _write_product_trace_replay_workflow_report(
                     "action_audit_gate_status": action_audit_status,
                     "action_audit_gate_enabled": action_audit_gate_enabled,
                     "action_audit_error_rate": action_audit_error_rate,
+                    "action_execution_gate_status": action_execution_status,
+                    "action_execution_gate_enabled": action_execution_gate_enabled,
+                    "action_execution_missing_result_rate": (
+                        action_execution_missing_result_rate
+                    ),
                 },
             ),
             indent=2,

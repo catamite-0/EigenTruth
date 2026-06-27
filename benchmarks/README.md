@@ -2104,12 +2104,15 @@ final manifest, and registry metadata. Available release policy profiles are `re
 defaults only fill unset values, so explicit thresholds still win. Direct
 `compare_release_candidates.py` reports record `release_policy_profile` and
 `release_policy_profile_applied_defaults` in `config`. `frontier_audit` also
-defaults `--require-product-runtime-drift-promotion-evidence` and
-`--require-product-runtime-drift-triple-audit-evidence` and
-`--require-product-runtime-drift-covered-fact-property-evidence` so strict local
-releases fail closed when runtime drift lacks promotion-contract,
-triple-extraction fixture-matrix, trace-level triple-audit, or recommended-route
-covered-fact property evidence.
+defaults `--require-product-runtime-drift-promotion-evidence`,
+`--require-product-runtime-drift-triple-audit-evidence`,
+`--require-product-runtime-drift-covered-fact-property-evidence`,
+`--require-product-trace-action-audit-gate`, and
+`--require-product-trace-action-execution-gate` so strict local releases fail
+closed when runtime drift lacks promotion-contract, triple-extraction
+fixture-matrix, trace-level triple-audit, recommended-route covered-fact
+property evidence, or the product-trace replay workflow lacks promoted
+action-audit/action-execution child gates.
 Add `--performance-baseline-key performance_baseline:<name>:<version>` when the
 final candidate must match a registered performance handoff. The comparison
 verifies that performance baseline manifest, reloads its runtime recommendation,
@@ -2279,13 +2282,16 @@ and adds stricter route/required-route quality thresholds for covered-fact
 release evidence, including fail-closed per-property count and support/refutation
 quality gates over the route summary `property_metrics`. `frontier_audit` adds the same structured-fact defaults and
 also defaults `adapter_family_profile=strict_audit`,
-`require_product_runtime_drift_promotion_evidence=true`, and
-`require_product_runtime_drift_triple_audit_evidence=true`, and
-`require_product_runtime_drift_covered_fact_property_evidence=true`, so the release must
-carry the strict adapter-family matrix, rule-based state-transition world-model
+`require_product_runtime_drift_promotion_evidence=true`,
+`require_product_runtime_drift_triple_audit_evidence=true`,
+`require_product_runtime_drift_covered_fact_property_evidence=true`,
+`require_product_trace_action_audit_gate=true`, and
+`require_product_trace_action_execution_gate=true`, so the release must carry
+the strict adapter-family matrix, rule-based state-transition world-model
 evidence, promotion-backed runtime-drift evidence, trace-level triple-audit
-evidence, and recommended-route covered-fact property drift evidence unless
-explicitly overridden. The workflow records
+evidence, recommended-route covered-fact property drift evidence, and promoted
+product-trace action-audit/action-execution child gates unless explicitly
+overridden. The workflow records
 `release_policy_profile` and `release_policy_profile_applied_defaults` in the
 comparison report, final manifest, and registry metadata.
 It also forwards `--max-covariance-maha-last-auroc-drop` to the underlying

@@ -124,6 +124,7 @@ def compare_release_candidates(
     product_trace_replay_workflow_registry_path: str | Path | None = None,
     product_trace_replay_workflow_key: str | None = None,
     require_product_trace_action_audit_gate: bool = False,
+    require_product_trace_action_execution_gate: bool = False,
     selfcheck_signal_fusion_workflow_path: str | Path | None = None,
     selfcheck_signal_fusion_workflow_registry_path: str | Path | None = None,
     selfcheck_signal_fusion_workflow_key: str | None = None,
@@ -272,6 +273,9 @@ def compare_release_candidates(
                     require_product_runtime_drift_covered_fact_property_evidence
                 ),
                 "require_product_trace_action_audit_gate": require_product_trace_action_audit_gate,
+                "require_product_trace_action_execution_gate": (
+                    require_product_trace_action_execution_gate
+                ),
             },
         )
     )
@@ -319,6 +323,9 @@ def compare_release_candidates(
     )
     require_product_trace_action_audit_gate = bool(
         release_policy_values["require_product_trace_action_audit_gate"]
+    )
+    require_product_trace_action_execution_gate = bool(
+        release_policy_values["require_product_trace_action_execution_gate"]
     )
     structured_fact_canonical_route_key = clean_optional_key(structured_fact_canonical_route_key)
     structured_fact_paraphrase_route_key = clean_optional_key(structured_fact_paraphrase_route_key)
@@ -482,6 +489,7 @@ def compare_release_candidates(
         selector_replay_report_path=selector_replay_report_path,
         product_runtime_drift_report_path=product_runtime_drift_report_path,
         require_action_audit_gate=require_product_trace_action_audit_gate,
+        require_action_execution_gate=require_product_trace_action_execution_gate,
         recursive=recursive,
         allow_unverified=allow_unverified,
         manifest_fingerprint_workers=manifest_fingerprint_workers,
@@ -833,6 +841,9 @@ def compare_release_candidates(
             ),
             "require_product_trace_action_audit_gate": bool(
                 require_product_trace_action_audit_gate
+            ),
+            "require_product_trace_action_execution_gate": bool(
+                require_product_trace_action_execution_gate
             ),
             "release_efficiency_report": (
                 None
@@ -2169,6 +2180,7 @@ def _product_trace_replay_workflow_gate(
     selector_replay_report_path: str | Path | None,
     product_runtime_drift_report_path: str | Path | None,
     require_action_audit_gate: bool,
+    require_action_execution_gate: bool,
     recursive: bool,
     allow_unverified: bool,
     manifest_fingerprint_workers: int,
@@ -2201,10 +2213,20 @@ def _product_trace_replay_workflow_gate(
         report_path=report_path,
         child_path_key="action_audit_gate_report",
     )
+    workflow_action_execution_path = _product_trace_replay_workflow_child_path(
+        report,
+        report_path=report_path,
+        child_path_key="action_execution_gate_report",
+    )
     action_audit_gate = _product_trace_action_audit_gate_summary(
         report,
         report_path=report_path,
         action_audit_gate_report_path=workflow_action_audit_path,
+    )
+    action_execution_gate = _product_trace_action_execution_gate_summary(
+        report,
+        report_path=report_path,
+        action_execution_gate_report_path=workflow_action_execution_path,
     )
     action_audit_report_path = (
         None
@@ -2217,6 +2239,17 @@ def _product_trace_replay_workflow_gate(
         action_audit_report, action_audit_report_error = verification_context.load_json_object(
             action_audit_report_path
         )
+    action_execution_report_path = (
+        None
+        if action_execution_gate.get("report_path") is None
+        else Path(str(action_execution_gate["report_path"]))
+    )
+    action_execution_report: dict[str, Any] = {}
+    action_execution_report_error = None
+    if require_action_execution_gate and action_execution_report_path is not None:
+        action_execution_report, action_execution_report_error = verification_context.load_json_object(
+            action_execution_report_path
+        )
     action_audit_manifest_artifact_present = None
     action_audit_manifest_artifact_path = None
     action_audit_manifest_error = None
@@ -2228,6 +2261,19 @@ def _product_trace_replay_workflow_gate(
         ) = _artifact_manifest_artifact_path(
             manifest_path,
             artifact_name="action_audit_gate_report",
+            verification_context=verification_context,
+        )
+    action_execution_manifest_artifact_present = None
+    action_execution_manifest_artifact_path = None
+    action_execution_manifest_error = None
+    if require_action_execution_gate:
+        (
+            action_execution_manifest_artifact_present,
+            action_execution_manifest_artifact_path,
+            action_execution_manifest_error,
+        ) = _artifact_manifest_artifact_path(
+            manifest_path,
+            artifact_name="action_execution_gate_report",
             verification_context=verification_context,
         )
     resolved_selector_path = (
@@ -2255,9 +2301,18 @@ def _product_trace_replay_workflow_gate(
         action_audit_manifest_artifact_path=action_audit_manifest_artifact_path,
         action_audit_manifest_error=action_audit_manifest_error,
         require_action_audit_gate=require_action_audit_gate,
+        action_execution_gate=action_execution_gate,
+        action_execution_report_path=action_execution_report_path,
+        action_execution_report=action_execution_report,
+        action_execution_report_error=action_execution_report_error,
+        action_execution_manifest_artifact_present=action_execution_manifest_artifact_present,
+        action_execution_manifest_artifact_path=action_execution_manifest_artifact_path,
+        action_execution_manifest_error=action_execution_manifest_error,
+        require_action_execution_gate=require_action_execution_gate,
         allow_unverified=allow_unverified,
     )
     action_audit_gate = _mapping(gate.get("action_audit_gate"))
+    action_execution_gate = _mapping(gate.get("action_execution_gate"))
     return {
         "schema_version": 1,
         "status": "promote" if gate["passed"] else "blocked",
@@ -2288,6 +2343,9 @@ def _product_trace_replay_workflow_gate(
         "action_audit_gate": action_audit_gate,
         "action_audit_gate_report_path": action_audit_gate.get("report_path"),
         "require_action_audit_gate": bool(require_action_audit_gate),
+        "action_execution_gate": action_execution_gate,
+        "action_execution_gate_report_path": action_execution_gate.get("report_path"),
+        "require_action_execution_gate": bool(require_action_execution_gate),
         "verification": verification,
         "gate": gate,
     }
@@ -2348,6 +2406,14 @@ def _product_trace_replay_workflow_report_gate(
     action_audit_manifest_artifact_path: Path | None,
     action_audit_manifest_error: str | None,
     require_action_audit_gate: bool,
+    action_execution_gate: Mapping[str, Any],
+    action_execution_report_path: Path | None,
+    action_execution_report: Mapping[str, Any],
+    action_execution_report_error: str | None,
+    action_execution_manifest_artifact_present: bool | None,
+    action_execution_manifest_artifact_path: Path | None,
+    action_execution_manifest_error: str | None,
+    require_action_execution_gate: bool,
     allow_unverified: bool,
 ) -> dict[str, Any]:
     failures = []
@@ -2444,6 +2510,80 @@ def _product_trace_replay_workflow_report_gate(
                     f"path is {action_audit_manifest_artifact_path!s}, expected "
                     f"{action_audit_report_path!s}"
                 )
+    if require_action_execution_gate:
+        if action_execution_gate.get("gate_enabled") is not True:
+            failures.append("product trace replay workflow action-execution gate is not enabled")
+        if (
+            action_execution_gate.get("status") != "promote"
+            or action_execution_gate.get("passed") is not True
+        ):
+            failures.append(
+                "product trace replay workflow action-execution gate status is "
+                f"{action_execution_gate.get('status')!r}, expected 'promote'"
+            )
+        if action_execution_gate.get("report_path") is None:
+            failures.append("product trace replay workflow action-execution gate report is missing")
+        elif action_execution_report_error is not None:
+            failures.append(
+                "product trace replay workflow action-execution gate report could not be loaded: "
+                f"{action_execution_report_error}"
+            )
+        else:
+            action_execution_report_summary = _mapping(action_execution_report.get("summary"))
+            if action_execution_report.get("workflow") != "product_trace_action_execution_gate":
+                failures.append(
+                    "product trace replay workflow action-execution gate report workflow is "
+                    f"{action_execution_report.get('workflow')!r}, expected "
+                    "'product_trace_action_execution_gate'"
+                )
+            if action_execution_report.get("status") != "promote":
+                failures.append(
+                    "product trace replay workflow action-execution gate report status is "
+                    f"{action_execution_report.get('status')!r}, expected 'promote'"
+                )
+            if action_execution_report_summary.get("gate_enabled") is not True:
+                failures.append(
+                    "product trace replay workflow action-execution gate report is not enabled"
+                )
+            if action_execution_report_summary.get("passed") is not True:
+                failures.append(
+                    "product trace replay workflow action-execution gate report did not pass"
+                )
+            failures.extend(
+                _action_execution_report_internal_failures(
+                    action_execution_report,
+                    action_execution_report_summary=action_execution_report_summary,
+                )
+            )
+            failures.extend(
+                _action_execution_report_path_failures(
+                    action_execution_report,
+                    action_execution_report_path=action_execution_report_path,
+                )
+            )
+            failures.extend(
+                _action_execution_summary_mismatches(
+                    action_execution_gate,
+                    action_execution_report_summary,
+                )
+            )
+        if not allow_unverified:
+            if action_execution_manifest_error is not None:
+                failures.append(
+                    "product trace replay workflow artifact manifest could not be inspected for "
+                    f"action-execution gate report: {action_execution_manifest_error}"
+                )
+            elif action_execution_manifest_artifact_present is not True:
+                failures.append(
+                    "product trace replay workflow artifact manifest does not include "
+                    "action-execution gate report"
+                )
+            elif not _paths_match(action_execution_manifest_artifact_path, action_execution_report_path):
+                failures.append(
+                    "product trace replay workflow artifact manifest action-execution gate report "
+                    f"path is {action_execution_manifest_artifact_path!s}, expected "
+                    f"{action_execution_report_path!s}"
+                )
     return {
         "passed": not failures,
         "blocking_reasons": failures,
@@ -2456,6 +2596,16 @@ def _product_trace_replay_workflow_report_gate(
             None
             if action_audit_manifest_artifact_path is None
             else str(action_audit_manifest_artifact_path)
+        ),
+        "require_action_execution_gate": bool(require_action_execution_gate),
+        "action_execution_gate": dict(action_execution_gate),
+        "action_execution_gate_report_status": action_execution_report.get("status"),
+        "action_execution_gate_report_workflow": action_execution_report.get("workflow"),
+        "action_execution_manifest_artifact_present": action_execution_manifest_artifact_present,
+        "action_execution_manifest_artifact_path": (
+            None
+            if action_execution_manifest_artifact_path is None
+            else str(action_execution_manifest_artifact_path)
         ),
     }
 
@@ -2509,6 +2659,56 @@ def _product_trace_action_audit_gate_summary(
     }
 
 
+def _product_trace_action_execution_gate_summary(
+    report: Mapping[str, Any],
+    *,
+    report_path: Path,
+    action_execution_gate_report_path: Path | None,
+) -> dict[str, Any]:
+    summary = _mapping(report.get("action_execution_gate"))
+    if not summary:
+        return {
+            "status": None,
+            "gate_enabled": None,
+            "passed": None,
+            "report_path": (
+                None
+                if action_execution_gate_report_path is None
+                else str(action_execution_gate_report_path)
+            ),
+        }
+    report_path_value = action_execution_gate_report_path
+    if report_path_value is None:
+        raw_report_path = summary.get("report_path") or _nested(
+            report,
+            "paths",
+            "action_execution_gate_report",
+        )
+        if raw_report_path is not None:
+            report_path_value = _resolve_path(raw_report_path, base_path=report_path)
+    return {
+        "status": summary.get("status"),
+        "gate_enabled": summary.get("gate_enabled"),
+        "passed": summary.get("passed"),
+        "trace_count": summary.get("trace_count"),
+        "available_trace_count": summary.get("available_trace_count"),
+        "alignment_available_trace_count": summary.get("alignment_available_trace_count"),
+        "alignment_failed_trace_count": summary.get("alignment_failed_trace_count"),
+        "alignment_failed_trace_rate": summary.get("alignment_failed_trace_rate"),
+        "planned_action_count": summary.get("planned_action_count"),
+        "result_count": summary.get("result_count"),
+        "missing_result_count": summary.get("missing_result_count"),
+        "missing_result_rate": summary.get("missing_result_rate"),
+        "unexpected_result_count": summary.get("unexpected_result_count"),
+        "unexpected_result_rate": summary.get("unexpected_result_rate"),
+        "request_id_mismatch_count": summary.get("request_id_mismatch_count"),
+        "request_id_mismatch_rate": summary.get("request_id_mismatch_rate"),
+        "blocked_metric_count": summary.get("blocked_metric_count"),
+        "checked_metric_count": summary.get("checked_metric_count"),
+        "report_path": None if report_path_value is None else str(report_path_value),
+    }
+
+
 def _action_audit_summary_mismatches(
     workflow_summary: Mapping[str, Any],
     report_summary: Mapping[str, Any],
@@ -2538,6 +2738,42 @@ def _action_audit_summary_mismatches(
         if workflow_value != report_value:
             failures.append(
                 "product trace replay workflow action-audit summary field "
+                f"{field!r} is {workflow_value!r}, but child report has {report_value!r}"
+            )
+    return failures
+
+
+def _action_execution_summary_mismatches(
+    workflow_summary: Mapping[str, Any],
+    report_summary: Mapping[str, Any],
+) -> list[str]:
+    failures: list[str] = []
+    for field in (
+        "gate_enabled",
+        "passed",
+        "trace_count",
+        "available_trace_count",
+        "alignment_available_trace_count",
+        "alignment_failed_trace_count",
+        "alignment_failed_trace_rate",
+        "planned_action_count",
+        "result_count",
+        "missing_result_count",
+        "missing_result_rate",
+        "unexpected_result_count",
+        "unexpected_result_rate",
+        "request_id_mismatch_count",
+        "request_id_mismatch_rate",
+        "blocked_metric_count",
+        "checked_metric_count",
+    ):
+        workflow_value = workflow_summary.get(field)
+        report_value = report_summary.get(field)
+        if workflow_value is None or report_value is None:
+            continue
+        if workflow_value != report_value:
+            failures.append(
+                "product trace replay workflow action-execution summary field "
                 f"{field!r} is {workflow_value!r}, but child report has {report_value!r}"
             )
     return failures
@@ -2606,6 +2842,72 @@ def _action_audit_report_internal_failures(
     return failures
 
 
+def _action_execution_report_internal_failures(
+    action_execution_report: Mapping[str, Any],
+    *,
+    action_execution_report_summary: Mapping[str, Any],
+) -> list[str]:
+    failures: list[str] = []
+    report_status = action_execution_report.get("status")
+    decision = _mapping(action_execution_report.get("decision"))
+    decision_status = decision.get("status")
+    if decision_status is not None and decision_status != report_status:
+        failures.append(
+            "product trace replay workflow action-execution gate report decision status is "
+            f"{decision_status!r}, expected {report_status!r}"
+        )
+    decision_passed = decision.get("passed")
+    if (
+        decision_passed is not None
+        and decision_passed != action_execution_report_summary.get("passed")
+    ):
+        failures.append(
+            "product trace replay workflow action-execution gate report decision passed is "
+            f"{decision_passed!r}, expected {action_execution_report_summary.get('passed')!r}"
+        )
+    blocking_reasons = _tuple_or_empty_sequence(decision.get("blocking_reasons"))
+    if report_status == "promote" and blocking_reasons:
+        failures.append(
+            "product trace replay workflow action-execution gate report promoted with "
+            f"{len(blocking_reasons)} blocking reasons"
+        )
+    summary_blocked_metric_count = action_execution_report_summary.get("blocked_metric_count")
+    if summary_blocked_metric_count is not None and blocking_reasons:
+        if summary_blocked_metric_count != len(blocking_reasons):
+            failures.append(
+                "product trace replay workflow action-execution gate report blocked metric count is "
+                f"{summary_blocked_metric_count!r}, but decision has {len(blocking_reasons)} "
+                "blocking reasons"
+            )
+
+    checks = tuple(
+        _mapping(check)
+        for check in _tuple_or_empty_sequence(action_execution_report.get("checks"))
+        if isinstance(check, Mapping)
+    )
+    blocked_checks = tuple(check for check in checks if check.get("status") == "blocked")
+    if report_status == "promote" and blocked_checks:
+        failures.append(
+            "product trace replay workflow action-execution gate report promoted with "
+            f"{len(blocked_checks)} blocked checks"
+        )
+    summary_checked_metric_count = action_execution_report_summary.get("checked_metric_count")
+    if summary_checked_metric_count is not None and checks:
+        if summary_checked_metric_count != len(checks):
+            failures.append(
+                "product trace replay workflow action-execution gate report checked metric count is "
+                f"{summary_checked_metric_count!r}, but report has {len(checks)} checks"
+            )
+    if summary_blocked_metric_count is not None and checks:
+        if summary_blocked_metric_count != len(blocked_checks):
+            failures.append(
+                "product trace replay workflow action-execution gate report blocked metric count is "
+                f"{summary_blocked_metric_count!r}, but report has {len(blocked_checks)} "
+                "blocked checks"
+            )
+    return failures
+
+
 def _action_audit_report_path_failures(
     action_audit_report: Mapping[str, Any],
     *,
@@ -2623,6 +2925,27 @@ def _action_audit_report_path_failures(
         return [
             "product trace replay workflow action-audit gate report self path is "
             f"{expected_path!s}, expected {action_audit_report_path!s}"
+        ]
+    return []
+
+
+def _action_execution_report_path_failures(
+    action_execution_report: Mapping[str, Any],
+    *,
+    action_execution_report_path: Path | None,
+) -> list[str]:
+    raw_report_path = _nested(action_execution_report, "paths", "report")
+    if raw_report_path is None:
+        return ["product trace replay workflow action-execution gate report path is missing"]
+    expected_path = (
+        None
+        if action_execution_report_path is None
+        else _resolve_path(raw_report_path, base_path=action_execution_report_path)
+    )
+    if not _paths_match(expected_path, action_execution_report_path):
+        return [
+            "product trace replay workflow action-execution gate report self path is "
+            f"{expected_path!s}, expected {action_execution_report_path!s}"
         ]
     return []
 
@@ -4770,10 +5093,23 @@ def _candidate_with_gates(
             "action_audit_gate_report_path": product_trace_replay_workflow.get(
                 "action_audit_gate_report_path"
             ),
+            "require_action_execution_gate": product_trace_replay_workflow.get(
+                "require_action_execution_gate"
+            ),
+            "action_execution_gate": dict(
+                _mapping(product_trace_replay_workflow.get("action_execution_gate"))
+            ),
+            "action_execution_gate_report_path": product_trace_replay_workflow.get(
+                "action_execution_gate_report_path"
+            ),
         }
         manifests["product_trace_replay_workflow_manifest"] = product_trace_replay_workflow.get(
             "manifest_path"
         )
+        if product_trace_replay_workflow.get("action_execution_gate_report_path") is not None:
+            manifests["product_trace_action_execution_gate_report"] = (
+                product_trace_replay_workflow.get("action_execution_gate_report_path")
+            )
     if selector_replay is not None:
         payload["selector_replay"] = {
             "report_path": selector_replay.get("report_path"),
@@ -5225,6 +5561,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         product_trace_replay_workflow_registry_path=args.product_trace_replay_workflow_registry,
         product_trace_replay_workflow_key=args.product_trace_replay_workflow_key,
         require_product_trace_action_audit_gate=bool(args.require_product_trace_action_audit_gate),
+        require_product_trace_action_execution_gate=bool(
+            args.require_product_trace_action_execution_gate
+        ),
         selfcheck_signal_fusion_workflow_path=args.selfcheck_signal_fusion_workflow,
         selfcheck_signal_fusion_workflow_registry_path=args.selfcheck_signal_fusion_workflow_registry,
         selfcheck_signal_fusion_workflow_key=args.selfcheck_signal_fusion_workflow_key,
@@ -5466,6 +5805,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--require-product-trace-action-audit-gate", action="store_true",
                         help="require the supplied product trace replay workflow to have enabled and promoted "
                              "its action-audit gate")
+    parser.add_argument("--require-product-trace-action-execution-gate", action="store_true",
+                        help="require the supplied product trace replay workflow to have enabled and promoted "
+                             "its action-execution alignment gate")
     parser.add_argument("--selfcheck-signal-fusion-workflow", default=None,
                         help="optional selfcheck signal fusion workflow report that must pass sample-quality "
                              "and manifest gates")
