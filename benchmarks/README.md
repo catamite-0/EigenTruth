@@ -558,6 +558,8 @@ python benchmarks/eval_pre_generation_probe.py \
   --records artifacts/pre-generation-probe-records.jsonl \
   --json artifacts/pre-generation-probe-report.json \
   --save-artifact artifacts/pre-generation-probe.pt \
+  --save-calibration artifacts/pre-generation-probe-calibration.json \
+  --conformal-alpha 0.2 \
   --layer-idx -8
 ```
 
@@ -582,11 +584,18 @@ Each JSON/JSONL record must provide `hidden_states` (or `prompt_hidden_states`) 
 shape `[tokens, hidden_dim]`, plus either `soft_target`, `risk_target`, or
 `sample_correctness`. `attention_mask` is optional and defaults to all tokens kept.
 `label` or `is_false` is optional; when both classes are present, the report includes
-label AUROC in addition to soft-target MSE/MAE/BCE.
+label AUROC in addition to soft-target MSE/MAE/BCE. The script also computes a
+split-conformal threshold over `pre_generation_risk_probability` when every record
+has hard labels. Use `--save-calibration` to persist that threshold as a
+`CalibrationArtifact`. For prompt-level records without hard labels, pass
+`--soft-target-cutoff` only when you intentionally want to derive a calibration
+label from the soft target; otherwise conformal calibration is reported as
+unavailable and explicit artifact saving fails closed.
 
 `eval_pre_generation_probe.py` itself does not load a model or download data. The
-current handoff proves the local record/export/train/evaluate path; detector-quality
-claims still require larger model runs, held-out calibration, and release evidence.
+current handoff proves the local record/export/train/evaluate/calibrate path;
+detector-quality claims still require larger model runs, held-out calibration, and
+release evidence.
 
 ## `eval_conformal.py` (E1)
 

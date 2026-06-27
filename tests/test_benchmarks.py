@@ -159,6 +159,7 @@ def test_eval_counterfactual_verification_generates_probes_from_claims(tmp_path)
 
 def test_eval_pre_generation_probe_trains_and_saves_artifact(tmp_path):
     module = importlib.import_module("benchmarks.eval_pre_generation_probe")
+    from eigentruth.calibration import CalibrationArtifact
     from eigentruth.core import AttentionSoftTargetProbeArtifact
 
     records = []
@@ -181,30 +182,93 @@ def test_eval_pre_generation_probe_trains_and_saves_artifact(tmp_path):
     records_path = tmp_path / "pre-generation-records.json"
     report_path = tmp_path / "pre-generation-report.json"
     artifact_path = tmp_path / "pre-generation-probe.pt"
+    calibration_path = tmp_path / "pre-generation-calibration.json"
     records_path.write_text(json.dumps({"records": records}), encoding="utf-8")
 
     payload = module.run_pre_generation_probe_eval(
         records_path,
         output_path=report_path,
         artifact_path=artifact_path,
+        calibration_path=calibration_path,
         train_fraction=0.75,
         seed=3,
         layer_idx=2,
+        conformal_alpha=0.2,
         steps=160,
         lr=0.08,
     )
     loaded_artifact = AttentionSoftTargetProbeArtifact.load(artifact_path)
+    calibration_artifact = CalibrationArtifact.load_json(calibration_path)
     saved_report = json.loads(report_path.read_text(encoding="utf-8"))
 
     assert payload["workflow"] == "pre_generation_probe_eval"
     assert payload["record_count"] == 16
     assert payload["config"]["layer_idx"] == 2
+    assert payload["conformal"]["available"] is True
+    assert payload["conformal"]["score_name"] == "pre_generation_risk_probability"
+    assert payload["conformal"]["split_reports"]["test"]["selective"]["coverage"] < 1.0
     assert payload["metrics"]["test"]["label_auroc"] == pytest.approx(1.0)
     assert payload["metrics"]["test"]["target_mse"] < 0.05
     assert payload["paths"]["artifact"] == str(artifact_path)
+    assert payload["paths"]["calibration"] == str(calibration_path)
     assert saved_report["paths"]["report"] == str(report_path)
     assert saved_report["artifact"]["hidden_dim"] == 3
+    assert saved_report["calibration_artifact"]["scores"][0]["direction"] == "higher"
     assert loaded_artifact.layer_idx == 2
+    assert calibration_artifact.target_layer == 2
+    assert calibration_artifact.get_score("pre_generation_risk_probability").conformal_alpha == pytest.approx(0.2)
+
+
+def test_eval_pre_generation_probe_soft_targets_need_cutoff_for_calibration_artifact(tmp_path):
+    module = importlib.import_module("benchmarks.eval_pre_generation_probe")
+
+    records = []
+    for index in range(8):
+        risk = 0.9 if index >= 4 else 0.1
+        sign = 2.0 if risk > 0.5 else -2.0
+        records.append({
+            "id": f"r{index}",
+            "hidden_states": [[sign, 1.0], [sign, 0.0]],
+            "attention_mask": [True, True],
+            "soft_target": risk,
+        })
+    records_path = tmp_path / "pre-generation-soft-records.json"
+    calibration_path = tmp_path / "pre-generation-soft-calibration.json"
+    records_path.write_text(json.dumps({"records": records}), encoding="utf-8")
+
+    payload = module.run_pre_generation_probe_eval(
+        records_path,
+        train_fraction=0.75,
+        seed=0,
+        layer_idx=-1,
+        steps=40,
+    )
+    assert payload["conformal"]["available"] is False
+    assert "hard labels" in payload["conformal"]["reason"]
+
+    with pytest.raises(ValueError, match="conformal calibration is unavailable"):
+        module.run_pre_generation_probe_eval(
+            records_path,
+            calibration_path=calibration_path,
+            train_fraction=0.75,
+            seed=0,
+            layer_idx=-1,
+            steps=40,
+        )
+
+    calibrated = module.run_pre_generation_probe_eval(
+        records_path,
+        calibration_path=calibration_path,
+        train_fraction=0.75,
+        seed=0,
+        layer_idx=-1,
+        steps=40,
+        soft_target_cutoff=0.5,
+    )
+    assert calibrated["conformal"]["available"] is True
+    assert calibrated["conformal"]["label_source"] == "soft_target_cutoff"
+    assert calibrated["paths"]["calibration"] == str(calibration_path)
+    assert calibration_path.exists()
 
 
 def test_eval_truthfulqa_exports_pre_generation_probe_records(tmp_path):

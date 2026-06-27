@@ -6,15 +6,24 @@ import argparse
 import json
 import random
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import torch
 import torch.nn.functional as F
 
+from eigentruth import __version__
+from eigentruth.calibration import CalibrationArtifact, CalibrationScore
 from eigentruth.core import AttentionSoftTargetProbeArtifact, soft_error_rate_targets
-from eigentruth.eval.metrics import roc_auc
+from eigentruth.eval.conformal import (
+    directional_conformal_threshold,
+    evaluate_conformal_abstention,
+)
+from eigentruth.eval.metrics import roc_auc, selective_classification_report
 from eigentruth.json_utils import to_jsonable
+
+PRE_GENERATION_RISK_SCORE_NAME = "pre_generation_risk_probability"
 
 
 @dataclass(frozen=True)
@@ -82,6 +91,10 @@ def run_pre_generation_probe_eval(
     *,
     output_path: str | Path | None = None,
     artifact_path: str | Path | None = None,
+    calibration_path: str | Path | None = None,
+    calibration_model_id: str = "pre_generation_probe",
+    conformal_alpha: float = 0.1,
+    soft_target_cutoff: float | None = None,
     train_fraction: float = 0.7,
     seed: int = 0,
     layer_idx: int | None = None,
@@ -122,6 +135,33 @@ def run_pre_generation_probe_eval(
         "test": _evaluate_split(artifact, records, test_indices),
         "all": _evaluate_split(artifact, records, tuple(range(len(records)))),
     }
+    conformal_report = _pre_generation_conformal_report(
+        artifact,
+        records,
+        train_indices=train_indices,
+        test_indices=test_indices,
+        alpha=conformal_alpha,
+        soft_target_cutoff=soft_target_cutoff,
+    )
+    calibration_artifact = None
+    if calibration_path is not None:
+        if not conformal_report["available"]:
+            raise ValueError(
+                "cannot save calibration artifact because conformal calibration is unavailable: "
+                f"{conformal_report['reason']}"
+            )
+        calibration_artifact = _build_pre_generation_calibration_artifact(
+            records_path=records_path,
+            threshold=conformal_report["threshold"],
+            alpha=conformal_alpha,
+            layer_idx=layer_idx,
+            model_id=calibration_model_id,
+            record_count=len(records),
+            train_count=len(train_indices),
+            test_count=len(test_indices),
+            label_source=conformal_report["label_source"],
+            soft_target_cutoff=soft_target_cutoff,
+        )
     payload = {
         "workflow": "pre_generation_probe_eval",
         "records_path": str(records_path),
@@ -134,6 +174,8 @@ def run_pre_generation_probe_eval(
             "lr": float(lr),
             "l2": float(l2),
             "hidden_dim": hidden_dim,
+            "conformal_alpha": float(conformal_alpha),
+            "soft_target_cutoff": soft_target_cutoff,
         },
         "split": {
             "train_indices": tuple(int(index) for index in train_indices),
@@ -143,12 +185,19 @@ def run_pre_generation_probe_eval(
         },
         "artifact": artifact.to_dict(),
         "metrics": split_metrics,
+        "conformal": conformal_report,
+        "calibration_artifact": None if calibration_artifact is None else calibration_artifact.to_dict(),
         "paths": {},
     }
     if artifact_path is not None:
         artifact_output = Path(artifact_path)
         artifact.save(artifact_output)
         payload["paths"]["artifact"] = str(artifact_output)
+    if calibration_path is not None and calibration_artifact is not None:
+        calibration_output = Path(calibration_path)
+        calibration_output.parent.mkdir(parents=True, exist_ok=True)
+        calibration_artifact.save_json(calibration_output)
+        payload["paths"]["calibration"] = str(calibration_output)
     if output_path is not None:
         output = Path(output_path)
         payload["paths"]["report"] = str(output)
@@ -194,6 +243,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         args.records,
         output_path=args.json,
         artifact_path=args.save_artifact,
+        calibration_path=args.save_calibration,
+        calibration_model_id=args.calibration_model_id,
+        conformal_alpha=args.conformal_alpha,
+        soft_target_cutoff=args.soft_target_cutoff,
         train_fraction=args.train_fraction,
         seed=args.seed,
         layer_idx=args.layer_idx,
@@ -201,6 +254,124 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         lr=args.lr,
         l2=args.l2,
         compact_json=args.compact_json,
+    )
+
+
+def _pre_generation_conformal_report(
+    artifact: AttentionSoftTargetProbeArtifact,
+    records: Sequence[PreGenerationProbeRecord],
+    *,
+    train_indices: Sequence[int],
+    test_indices: Sequence[int],
+    alpha: float,
+    soft_target_cutoff: float | None,
+) -> dict[str, Any]:
+    alpha_value = _alpha_float(alpha)
+    cutoff_value = (
+        None
+        if soft_target_cutoff is None
+        else _probability_float(soft_target_cutoff, field_name="soft_target_cutoff")
+    )
+    label_result = _false_labels_for_records(records, soft_target_cutoff=soft_target_cutoff)
+    if label_result is None:
+        return {
+            "available": False,
+            "reason": (
+                "records do not all provide hard labels; pass --soft-target-cutoff "
+                "to derive a calibration label from soft_target"
+            ),
+            "score_name": PRE_GENERATION_RISK_SCORE_NAME,
+            "direction": "higher",
+            "alpha": alpha_value,
+            "label_source": None,
+            "soft_target_cutoff": cutoff_value,
+        }
+    false_labels, label_source = label_result
+    probabilities = _record_probabilities(artifact, records)
+    train_scores = probabilities[torch.as_tensor(tuple(train_indices), dtype=torch.int64)]
+    test_scores = probabilities[torch.as_tensor(tuple(test_indices), dtype=torch.int64)]
+    train_false = false_labels[torch.as_tensor(tuple(train_indices), dtype=torch.int64)]
+    test_false = false_labels[torch.as_tensor(tuple(test_indices), dtype=torch.int64)]
+    normal_train_scores = train_scores[train_false == 0]
+    if int(normal_train_scores.numel()) == 0:
+        return {
+            "available": False,
+            "reason": "training split has no normal records for conformal calibration",
+            "score_name": PRE_GENERATION_RISK_SCORE_NAME,
+            "direction": "higher",
+            "alpha": alpha_value,
+            "label_source": label_source,
+            "soft_target_cutoff": cutoff_value,
+        }
+    threshold = directional_conformal_threshold(normal_train_scores, alpha_value, "higher")
+    all_indices = tuple(range(len(records)))
+    all_scores = probabilities
+    all_false = false_labels
+
+    return {
+        "available": True,
+        "score_name": PRE_GENERATION_RISK_SCORE_NAME,
+        "direction": "higher",
+        "alpha": alpha_value,
+        "threshold": threshold,
+        "label_source": label_source,
+        "soft_target_cutoff": cutoff_value,
+        "calibration_record_count": int(len(train_indices)),
+        "calibration_normal_count": int(normal_train_scores.numel()),
+        "calibration_anomalous_count": int((train_false == 1).sum().item()),
+        "evaluation_record_count": int(len(test_indices)),
+        "split_reports": {
+            "train": _selective_probe_report(train_scores, train_false, threshold, alpha_value),
+            "test": _selective_probe_report(test_scores, test_false, threshold, alpha_value),
+            "all": _selective_probe_report(all_scores, all_false, threshold, alpha_value),
+        },
+        "record_scores": {
+            "train": _record_score_rows(records, train_indices, train_scores, train_false),
+            "test": _record_score_rows(records, test_indices, test_scores, test_false),
+            "all_indices": tuple(int(index) for index in all_indices),
+        },
+    }
+
+
+def _build_pre_generation_calibration_artifact(
+    *,
+    records_path: Path,
+    threshold: float,
+    alpha: float,
+    layer_idx: int | None,
+    model_id: str,
+    record_count: int,
+    train_count: int,
+    test_count: int,
+    label_source: str,
+    soft_target_cutoff: float | None,
+) -> CalibrationArtifact:
+    return CalibrationArtifact(
+        model_id=str(model_id),
+        target_layer=0 if layer_idx is None else int(layer_idx),
+        scores=(
+            CalibrationScore(
+                name=PRE_GENERATION_RISK_SCORE_NAME,
+                threshold=threshold,
+                conformal_alpha=alpha,
+                direction="higher",
+            ),
+        ),
+        eigentruth_version=__version__,
+        warmup_dataset_metadata={
+            "workflow": "pre_generation_probe_eval",
+            "records_path": str(records_path),
+            "record_count": int(record_count),
+        },
+        calibration_dataset_metadata={
+            "split": "train",
+            "train_count": int(train_count),
+            "test_count": int(test_count),
+            "label_source": label_source,
+            "soft_target_cutoff": soft_target_cutoff,
+            "score_name": PRE_GENERATION_RISK_SCORE_NAME,
+        },
+        created_at=datetime.now(timezone.utc).isoformat(),
     )
 
 
@@ -243,6 +414,77 @@ def _evaluate_split(
         "min_probability": float(probabilities.min().item()),
         "max_probability": float(probabilities.max().item()),
     }
+
+
+def _selective_probe_report(
+    probabilities: torch.Tensor,
+    false_labels: torch.Tensor,
+    threshold: float,
+    alpha: float,
+) -> dict[str, Any]:
+    correctness = (false_labels == 0).to(torch.int64)
+    return {
+        "selective": selective_classification_report(
+            probabilities,
+            false_labels,
+            threshold,
+            direction="higher",
+        ),
+        "abstention": evaluate_conformal_abstention(
+            probabilities,
+            correctness.tolist(),
+            threshold=threshold,
+            alpha=alpha,
+            direction="higher",
+            score_name=PRE_GENERATION_RISK_SCORE_NAME,
+        ).to_dict(),
+    }
+
+
+def _record_probabilities(
+    artifact: AttentionSoftTargetProbeArtifact,
+    records: Sequence[PreGenerationProbeRecord],
+) -> torch.Tensor:
+    hidden, mask, _targets, _labels = _stack_records(records, tuple(range(len(records))))
+    with torch.no_grad():
+        return artifact.predict_proba(hidden, attention_mask=mask).detach().cpu().to(torch.float64)
+
+
+def _false_labels_for_records(
+    records: Sequence[PreGenerationProbeRecord],
+    *,
+    soft_target_cutoff: float | None,
+) -> tuple[torch.Tensor, str] | None:
+    if all(record.label is not None for record in records):
+        return (
+            torch.tensor([int(record.label) for record in records], dtype=torch.int64),
+            "label",
+        )
+    if soft_target_cutoff is None:
+        return None
+    cutoff = _probability_float(soft_target_cutoff, field_name="soft_target_cutoff")
+    return (
+        torch.tensor([1 if record.soft_target > cutoff else 0 for record in records], dtype=torch.int64),
+        "soft_target_cutoff",
+    )
+
+
+def _record_score_rows(
+    records: Sequence[PreGenerationProbeRecord],
+    indices: Sequence[int],
+    probabilities: torch.Tensor,
+    false_labels: torch.Tensor,
+) -> tuple[dict[str, Any], ...]:
+    return tuple(
+        {
+            "index": int(index),
+            "record_id": records[int(index)].record_id,
+            "probability": float(probabilities[row].item()),
+            "label": int(false_labels[row].item()),
+            "soft_target": records[int(index)].soft_target,
+        }
+        for row, index in enumerate(indices)
+    )
 
 
 def _stack_records(
@@ -351,12 +593,30 @@ def _train_fraction(value: Any) -> float:
     return parsed
 
 
+def _alpha_float(value: Any) -> float:
+    parsed = _probability_float(value, field_name="conformal_alpha")
+    if parsed <= 0.0 or parsed >= 1.0:
+        raise ValueError("conformal_alpha must be > 0 and < 1.")
+    return parsed
+
+
 def build_arg_parser() -> argparse.ArgumentParser:
     """Build the CLI parser."""
     parser = argparse.ArgumentParser(description="Train/evaluate a pre-generation attention risk probe")
     parser.add_argument("--records", required=True, help="JSON/JSONL records with hidden_states and soft targets")
     parser.add_argument("--json", help="optional report output path")
     parser.add_argument("--save-artifact", help="optional torch artifact output path")
+    parser.add_argument("--save-calibration", help="optional CalibrationArtifact JSON output path")
+    parser.add_argument("--calibration-model-id", default="pre_generation_probe")
+    parser.add_argument("--conformal-alpha", type=float, default=0.1)
+    parser.add_argument(
+        "--soft-target-cutoff",
+        type=float,
+        help=(
+            "derive calibration labels from soft_target when hard labels are absent; "
+            "records with soft_target > cutoff are treated as anomalous"
+        ),
+    )
     parser.add_argument("--train-fraction", type=float, default=0.7)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--layer-idx", type=int)

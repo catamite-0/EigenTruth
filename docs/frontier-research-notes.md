@@ -30,8 +30,8 @@ Added hidden-state soft-target attention probe artifacts:
 - `AttentionSoftTargetProbeArtifact.fit(...)` trains a torch-only attention-pooled hidden-state probe over prompt token representations, using soft BCE targets and an attention mask.
 - The artifact exposes risk logits/probabilities, token attention weights, JSON-safe metadata, and torch save/load.
 - `eval_truthfulqa.py --dump-pre-generation-probe-records` exports prompt-token hidden-state records from the forced-answer benchmark path, using prompt-level candidate false-answer rates as soft targets by default.
-- `benchmarks/eval_pre_generation_probe.py` consumes local JSON/JSONL prompt hidden-state records, trains/evaluates the probe, reports soft-target and optional label metrics, and can save the artifact for later routing experiments.
-- This implements the local core primitive plus a reproducible record/export/train/evaluate handoff for the current soft-target attention-probing direction without adding a new mandatory dependency. Detector-quality claims still require larger model runs, held-out calibration, and release evidence.
+- `benchmarks/eval_pre_generation_probe.py` consumes local JSON/JSONL prompt hidden-state records, trains/evaluates the probe, reports soft-target and optional label metrics, computes a split-conformal risk threshold when calibration labels are available, and can save both the probe artifact and a reusable calibration artifact for later routing experiments.
+- This implements the local core primitive plus a reproducible record/export/train/evaluate/calibrate handoff for the current soft-target attention-probing direction without adding a new mandatory dependency. Detector-quality claims still require larger model runs, held-out calibration on meaningful splits, and release evidence.
 
 Added soft pre-generation risk estimates:
 
