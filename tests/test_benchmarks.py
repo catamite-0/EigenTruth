@@ -12974,10 +12974,23 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         blocked_metric_count=0,
         promotion_evidence=True,
     )
+    triple_audit_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "triple-audit-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        triple_audit_evidence=True,
+    )
     missing_evidence_drift_report = _write_product_runtime_drift_report(
         tmp_path / "missing-evidence-runtime-drift",
         status="promote",
         blocked_metric_count=0,
+    )
+    blocked_triple_audit_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "blocked-triple-audit-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        triple_audit_evidence=True,
+        triple_audit_blocked=True,
     )
     blocked_drift_report = _write_product_runtime_drift_report(
         tmp_path / "blocked-runtime-drift",
@@ -13016,6 +13029,49 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         max_false_supported_rate=0.0,
         min_false_refuted_rate=0.99,
         product_runtime_drift_report_path=blocked_drift_report,
+    )
+    triple_audit = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=triple_audit_drift_report,
+        require_product_runtime_drift_triple_audit_evidence=True,
+    )
+    missing_triple_audit = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=drift_report,
+        require_product_runtime_drift_triple_audit_evidence=True,
+    )
+    blocked_triple_audit = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=blocked_triple_audit_drift_report,
+        require_product_runtime_drift_triple_audit_evidence=True,
+    )
+    missing_triple_audit_report = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        require_product_runtime_drift_triple_audit_evidence=True,
     )
 
     assert payload["decision"]["status"] == "promote"
@@ -13064,6 +13120,41 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         "product runtime drift status is 'blocked'" in reason
         for reason in blocked["decision"]["blocking_reasons"][0]["reasons"]
     )
+    assert triple_audit["decision"]["status"] == "promote"
+    assert triple_audit["config"]["require_product_runtime_drift_triple_audit_evidence"] is True
+    triple_summary = triple_audit["release_candidate"]["product_runtime_drift"]["summary"]
+    assert triple_summary["triple_audit_evidence_required"] is True
+    assert triple_summary["triple_audit_evidence_metric_count"] == 4
+    assert triple_summary["triple_audit_evidence_blocked_metric_count"] == 0
+    assert triple_summary["triple_audit_pass_rate_current"] == pytest.approx(1.0)
+    assert missing_triple_audit["decision"]["status"] == "blocked"
+    assert missing_triple_audit["product_runtime_drift_gate"]["summary"][
+        "triple_audit_evidence_missing_metrics"
+    ] == (
+        "triple_coverage.claim_triple_coverage_rate",
+        "triple_coverage.audit_claim_coverage_rate",
+        "triple_coverage.audit_pass_rate",
+        "triple_coverage.slot_coverage_rate",
+    )
+    assert any(
+        "triple audit evidence metrics are incomplete" in reason
+        for reason in missing_triple_audit["decision"]["blocking_reasons"][0]["reasons"]
+    )
+    assert blocked_triple_audit["decision"]["status"] == "blocked"
+    assert blocked_triple_audit["product_runtime_drift_gate"]["summary"][
+        "triple_audit_evidence_blocked_metric_count"
+    ] == 1
+    assert any(
+        "triple audit evidence blocked 1 metric" in reason
+        for reason in blocked_triple_audit["decision"]["blocking_reasons"][0]["reasons"]
+    )
+    assert missing_triple_audit_report["decision"]["status"] == "blocked"
+    assert missing_triple_audit_report["product_runtime_drift_gate"]["summary"][
+        "promotion_evidence_required"
+    ] is False
+    assert missing_triple_audit_report["product_runtime_drift_gate"]["summary"][
+        "triple_audit_evidence_required"
+    ] is True
 
 
 def test_compare_release_candidates_can_require_release_efficiency_report(tmp_path):
@@ -14180,6 +14271,7 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         status="promote",
         blocked_metric_count=0,
         promotion_evidence=True,
+        triple_audit_evidence=True,
     )
     frontier_payload = module.compare_release_candidates(
         readiness_registry_path=registry_path,
@@ -14257,13 +14349,18 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     assert frontier_payload["config"]["adapter_family_profile"] == "strict_audit"
     assert frontier_payload["config"]["require_state_transition_world_model"] is True
     assert frontier_payload["config"]["require_product_runtime_drift_promotion_evidence"] is True
+    assert frontier_payload["config"]["require_product_runtime_drift_triple_audit_evidence"] is True
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
         "adapter_family_profile"
     ] == "strict_audit"
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
         "require_product_runtime_drift_promotion_evidence"
     ] is True
+    assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
+        "require_product_runtime_drift_triple_audit_evidence"
+    ] is True
     assert frontier_payload["product_runtime_drift_gate"]["summary"]["promotion_evidence_metric_count"] == 4
+    assert frontier_payload["product_runtime_drift_gate"]["summary"]["triple_audit_evidence_metric_count"] == 4
     assert frontier_payload["adapter_family_matrix_gate"]["state_transition_world_model_adapter"] == (
         "RuleBasedWorldModelAdapter"
     )
@@ -15252,6 +15349,7 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     assert frontier_profile_config.adapter_family_profile == "strict_audit"
     assert frontier_profile_config.require_state_transition_world_model is True
     assert frontier_profile_config.require_product_runtime_drift_promotion_evidence is True
+    assert frontier_profile_config.require_product_runtime_drift_triple_audit_evidence is True
     assert frontier_profile_config.release_policy_profile_applied_defaults["adapter_family_profile"] == (
         "strict_audit"
     )
@@ -15260,6 +15358,9 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     ] is True
     assert frontier_profile_config.release_policy_profile_applied_defaults[
         "require_product_runtime_drift_promotion_evidence"
+    ] is True
+    assert frontier_profile_config.release_policy_profile_applied_defaults[
+        "require_product_runtime_drift_triple_audit_evidence"
     ] is True
 
     with pytest.raises(ValueError, match="release_policy_profile"):
@@ -18382,6 +18483,8 @@ def _write_product_runtime_drift_report(
     status,
     blocked_metric_count,
     promotion_evidence=False,
+    triple_audit_evidence=False,
+    triple_audit_blocked=False,
 ):
     from eigentruth.registry import build_artifact_manifest
 
@@ -18474,6 +18577,54 @@ def _write_product_runtime_drift_report(
                 "absolute_delta": -0.01,
                 "absolute_drop": 0.01,
                 "threshold": 0.10,
+                "reason": None,
+            },
+        ])
+    if triple_audit_evidence:
+        audit_pass_status = "blocked" if triple_audit_blocked else "pass"
+        metrics.extend([
+            {
+                "metric": "triple_coverage.claim_triple_coverage_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "triple_coverage.audit_claim_coverage_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "triple_coverage.audit_pass_rate",
+                "status": audit_pass_status,
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 0.50 if triple_audit_blocked else 1.0,
+                "absolute_delta": -0.50 if triple_audit_blocked else 0.0,
+                "threshold": 1.0,
+                "reason": (
+                    "triple_coverage.audit_pass_rate below gate"
+                    if triple_audit_blocked
+                    else None
+                ),
+            },
+            {
+                "metric": "triple_coverage.slot_coverage_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
                 "reason": None,
             },
         ])

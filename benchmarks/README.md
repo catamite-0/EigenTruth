@@ -2104,9 +2104,10 @@ final manifest, and registry metadata. Available release policy profiles are `re
 defaults only fill unset values, so explicit thresholds still win. Direct
 `compare_release_candidates.py` reports record `release_policy_profile` and
 `release_policy_profile_applied_defaults` in `config`. `frontier_audit` also
-defaults `--require-product-runtime-drift-promotion-evidence` so strict local
-releases fail closed when runtime drift lacks promotion-contract and
-triple-extraction fixture-matrix evidence.
+defaults `--require-product-runtime-drift-promotion-evidence` and
+`--require-product-runtime-drift-triple-audit-evidence` so strict local releases
+fail closed when runtime drift lacks promotion-contract, triple-extraction
+fixture-matrix, or trace-level triple-audit evidence.
 Add `--performance-baseline-key performance_baseline:<name>:<version>` when the
 final candidate must match a registered performance handoff. The comparison
 verifies that performance baseline manifest, reloads its runtime recommendation,
@@ -2171,7 +2172,9 @@ or file-based product runtime baseline. The gate verifies the drift report
 manifest, requires `status=promote`, and carries baseline/current paths plus
 blocked-metric counts into the release candidate. This connects captured product
 traffic replay back into the same release gate as model, route, and selector
-evidence.
+evidence. Add `--require-product-runtime-drift-triple-audit-evidence` when the
+release must also require trace-level triple coverage, audited-claim coverage,
+audit pass-rate, and slot coverage metrics from that drift report.
 Add `--release-efficiency-report` when the final candidate must also prove that
 the product runtime profile sweep has a promoted efficiency handoff. The gate
 verifies the release-efficiency manifest, requires `workflow=release_efficiency_report`
@@ -2273,11 +2276,12 @@ canonical/paraphrase route keys, applies the baseline candidate quality gates,
 and adds stricter route/required-route quality thresholds for covered-fact
 release evidence, including fail-closed per-property count and support/refutation
 quality gates over the route summary `property_metrics`. `frontier_audit` adds the same structured-fact defaults and
-also defaults `adapter_family_profile=strict_audit` and
-`require_product_runtime_drift_promotion_evidence=true`, so the release must
+also defaults `adapter_family_profile=strict_audit`,
+`require_product_runtime_drift_promotion_evidence=true`, and
+`require_product_runtime_drift_triple_audit_evidence=true`, so the release must
 carry the strict adapter-family matrix, rule-based state-transition world-model
-evidence, and promotion-backed runtime-drift evidence unless explicitly
-overridden. The workflow records
+evidence, promotion-backed runtime-drift evidence, and trace-level triple-audit
+evidence unless explicitly overridden. The workflow records
 `release_policy_profile` and `release_policy_profile_applied_defaults` in the
 comparison report, final manifest, and registry metadata.
 It also forwards `--max-covariance-maha-last-auroc-drop` to the underlying
@@ -2761,6 +2765,7 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --selector-replay-report artifacts/smollm2_product_trace_replay_workflow/selector-replay/runtime-profile-selector-replay.json \
   --product-runtime-drift-report artifacts/smollm2_product_runtime_drift_v1_6/product-runtime-drift.json \
   --require-product-runtime-drift-promotion-evidence \
+  --require-product-runtime-drift-triple-audit-evidence \
   --adapter-family-matrix artifacts/smollm2_l20_adapter_family_retrieval_structured_qa/adapter-family-matrix.json \
   --required-adapter-route structured_state \
   --required-adapter-route state_transition \
