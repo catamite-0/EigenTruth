@@ -93,6 +93,7 @@ def export_product_promotion_contract(
         contract.external_evidence_baseline_comparison
     )
     triple_extraction_fixture_matrix = dict(contract.triple_extraction_fixture_matrix)
+    counterfactual_verification = dict(contract.counterfactual_verification)
     release_efficiency = dict(contract.release_efficiency)
     release_efficiency_metadata = _release_efficiency_flat_metadata(release_efficiency)
     product_runtime_drift_metadata = _product_runtime_drift_flat_metadata(contract.metadata)
@@ -108,6 +109,12 @@ def export_product_promotion_contract(
     external_evidence_baseline_comparison_metadata = (
         _external_evidence_baseline_comparison_flat_metadata(
             external_evidence_baseline_comparison,
+            contract.metadata,
+        )
+    )
+    counterfactual_verification_metadata = (
+        _counterfactual_verification_flat_metadata(
+            counterfactual_verification,
             contract.metadata,
         )
     )
@@ -134,6 +141,7 @@ def export_product_promotion_contract(
                 **product_runtime_drift_metadata,
                 **product_trace_replay_workflow_metadata,
                 **external_evidence_baseline_comparison_metadata,
+                **counterfactual_verification_metadata,
                 **release_efficiency_metadata,
                 **triple_extraction_fixture_matrix_metadata,
                 **export_metadata,
@@ -320,6 +328,7 @@ def export_product_promotion_contract(
                     world_model_signal_workflow.get("calibrated_conflict_signal_count")
                 ),
                 **external_evidence_baseline_comparison_metadata,
+                **counterfactual_verification_metadata,
                 "triple_extraction_fixture_matrix_report": (
                     triple_extraction_fixture_matrix.get("report_path")
                 ),
@@ -420,6 +429,7 @@ def export_product_promotion_contract(
             "world_model_signal_workflow": world_model_signal_workflow,
             "feedback_policy_workflow": feedback_policy_workflow,
             "external_evidence_baseline_comparison": external_evidence_baseline_comparison,
+            "counterfactual_verification": counterfactual_verification,
             "triple_extraction_fixture_matrix": triple_extraction_fixture_matrix,
             "release_efficiency": release_efficiency,
             "metadata": dict(contract.metadata),
@@ -726,6 +736,58 @@ def _external_evidence_baseline_comparison_flat_metadata(
         "external_evidence_baseline_comparison_text_redline_run_count": _first_present(
             comparison.get("text_redline_run_count"),
             metadata.get("external_evidence_baseline_comparison_text_redline_run_count"),
+        ),
+    })
+
+
+def _counterfactual_verification_flat_metadata(
+    audit: Mapping[str, Any],
+    metadata: Mapping[str, Any],
+) -> dict[str, Any]:
+    return _drop_none_values({
+        "counterfactual_verification_report": _first_present(
+            audit.get("report_path"),
+            metadata.get("counterfactual_verification_report"),
+        ),
+        "counterfactual_verification_manifest": _first_present(
+            audit.get("manifest_path"),
+            metadata.get("counterfactual_verification_manifest"),
+        ),
+        "counterfactual_verification_source": _first_present(
+            audit.get("source"),
+            metadata.get("counterfactual_verification_source"),
+        ),
+        "counterfactual_verification_registry": _first_present(
+            audit.get("registry"),
+            metadata.get("counterfactual_verification_registry"),
+        ),
+        "counterfactual_verification_record": _first_present(
+            audit.get("record_key"),
+            metadata.get("counterfactual_verification_record"),
+        ),
+        "counterfactual_verification_status": _first_present(
+            audit.get("status"),
+            metadata.get("counterfactual_verification_status"),
+        ),
+        "counterfactual_verification_workflow": _first_present(
+            audit.get("workflow"),
+            metadata.get("counterfactual_verification_workflow"),
+        ),
+        "counterfactual_verification_record_count": _first_present(
+            audit.get("record_count"),
+            metadata.get("counterfactual_verification_record_count"),
+        ),
+        "counterfactual_verification_pass_rate": _first_present(
+            audit.get("pass_rate"),
+            metadata.get("counterfactual_verification_pass_rate"),
+        ),
+        "counterfactual_verification_false_invariance_rate": _first_present(
+            audit.get("false_invariance_rate"),
+            metadata.get("counterfactual_verification_false_invariance_rate"),
+        ),
+        "counterfactual_verification_flip_success_count": _first_present(
+            audit.get("flip_success_count"),
+            metadata.get("counterfactual_verification_flip_success_count"),
         ),
     })
 

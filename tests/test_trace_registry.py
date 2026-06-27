@@ -1758,6 +1758,10 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             "recommended_pre_generation_probe_comparison_report": (
                 "artifacts/pre-generation-probe-comparison/comparison.json"
             ),
+            "counterfactual_verification_status": "promote",
+            "recommended_counterfactual_verification_report": (
+                "artifacts/counterfactual/counterfactual-verification.json"
+            ),
             "triple_extraction_fixture_matrix_status": "promote",
             "recommended_triple_extraction_fixture_matrix_report": (
                 "artifacts/triple-extraction-fixture-matrix/"
@@ -1910,6 +1914,19 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                     "redline_best_auroc": 0.61,
                     "redline_margin": 0.13,
                 },
+            },
+            "counterfactual_verification": {
+                "report_path": "artifacts/counterfactual/counterfactual-verification.json",
+                "manifest_path": "artifacts/counterfactual/artifact-manifest.json",
+                "source": "registry",
+                "registry": "artifacts/release-registry.json",
+                "record_key": "report:counterfactual-verifier-audit:0.1",
+                "workflow": "counterfactual_verification_eval",
+                "status": "promote",
+                "record_count": 12,
+                "pass_rate": 1.0,
+                "false_invariance_rate": 0.0,
+                "flip_success_count": 12,
             },
             "triple_extraction_fixture_matrix": {
                 "report_path": (
@@ -2122,6 +2139,9 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "triple_extraction_fixture_matrix_manifest": (
                     "artifacts/triple-extraction-fixture-matrix/artifact-manifest.json"
                 ),
+                "counterfactual_verification_manifest": (
+                    "artifacts/counterfactual/artifact-manifest.json"
+                ),
                 "feedback_policy_workflow_manifest": (
                     "artifacts/feedback-policy-workflow/artifact-manifest.json"
                 ),
@@ -2169,6 +2189,9 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     )
     assert roundtrip.pre_generation_probe_comparison == (
         contract.pre_generation_probe_comparison
+    )
+    assert roundtrip.counterfactual_verification == (
+        contract.counterfactual_verification
     )
     assert roundtrip.triple_extraction_fixture_matrix == (
         contract.triple_extraction_fixture_matrix
@@ -2343,6 +2366,22 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
         "answer_token_count"
     )
     assert contract.metadata["pre_generation_probe_comparison_best_redline_margin"] == 0.13
+    assert contract.counterfactual_verification["record_key"] == (
+        "report:counterfactual-verifier-audit:0.1"
+    )
+    assert contract.metadata["counterfactual_verification_status"] == "promote"
+    assert contract.metadata["recommended_counterfactual_verification_report"] == (
+        "artifacts/counterfactual/counterfactual-verification.json"
+    )
+    assert contract.metadata["counterfactual_verification_manifest"] == (
+        "artifacts/counterfactual/artifact-manifest.json"
+    )
+    assert contract.metadata["counterfactual_verification_record_count"] == 12
+    assert contract.metadata["counterfactual_verification_pass_rate"] == pytest.approx(1.0)
+    assert contract.metadata["counterfactual_verification_false_invariance_rate"] == (
+        pytest.approx(0.0)
+    )
+    assert contract.metadata["counterfactual_verification_flip_success_count"] == 12
     assert contract.triple_extraction_fixture_matrix["record_key"] == (
         "report:triple-extraction-fixture-matrix:0.1"
     )
@@ -2613,6 +2652,16 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
                 "redline_margin": 0.13,
             },
         },
+        counterfactual_verification={
+            "report_path": "counterfactual-verification.json",
+            "record_key": "report:counterfactual-verifier-audit:0.1",
+            "workflow": "counterfactual_verification_eval",
+            "status": "promote",
+            "record_count": 4,
+            "pass_rate": 1.0,
+            "false_invariance_rate": 0.0,
+            "flip_success_count": 4,
+        },
         triple_extraction_fixture_matrix={
             "report_path": "triple-extraction-fixture-matrix.json",
             "record_key": "report:triple-extraction-fixture-matrix:0.1",
@@ -2753,6 +2802,22 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert runtime_metrics["promotion_contract_summary"][
         "pre_generation_probe_comparison"
     ]["best_redline_signal"] == "answer_token_count"
+    assert runtime_metrics["promotion_contract_counterfactual_verification_available"] is True
+    assert runtime_metrics[
+        "promotion_contract_counterfactual_verification_record"
+    ] == "report:counterfactual-verifier-audit:0.1"
+    assert runtime_metrics[
+        "promotion_contract_counterfactual_verification_status"
+    ] == "promote"
+    assert runtime_metrics[
+        "promotion_contract_counterfactual_verification_pass_rate"
+    ] == pytest.approx(1.0)
+    assert runtime_metrics[
+        "promotion_contract_counterfactual_verification_false_invariance_rate"
+    ] == pytest.approx(0.0)
+    assert runtime_metrics["promotion_contract_summary"][
+        "counterfactual_verification"
+    ]["record_count"] == pytest.approx(4.0)
     assert metadata[
         "promotion_contract_product_runtime_drift_covered_fact_property_evidence_required"
     ] is True
@@ -2977,6 +3042,27 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
         metadata["promotion_contract_pre_generation_probe_comparison_best_redline_signal"]
         == "answer_token_count"
     )
+    assert metadata["promotion_contract_counterfactual_verification"] == {
+        "report_path": "counterfactual-verification.json",
+        "record_key": "report:counterfactual-verifier-audit:0.1",
+        "workflow": "counterfactual_verification_eval",
+        "status": "promote",
+        "record_count": 4,
+        "pass_rate": 1.0,
+        "false_invariance_rate": 0.0,
+        "flip_success_count": 4,
+    }
+    assert metadata["promotion_contract_counterfactual_verification_report"] == (
+        "counterfactual-verification.json"
+    )
+    assert metadata["promotion_contract_counterfactual_verification_record"] == (
+        "report:counterfactual-verifier-audit:0.1"
+    )
+    assert metadata["promotion_contract_counterfactual_verification_pass_rate"] == 1.0
+    assert (
+        metadata["promotion_contract_counterfactual_verification_false_invariance_rate"]
+        == 0.0
+    )
     assert metadata["promotion_contract_triple_extraction_fixture_matrix"] == {
         "report_path": "triple-extraction-fixture-matrix.json",
         "record_key": "report:triple-extraction-fixture-matrix:0.1",
@@ -3022,6 +3108,11 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
     triple_matrix_report_path = triple_matrix_dir / "matrix.json"
     triple_matrix_manifest_path = triple_matrix_dir / "artifact-manifest.json"
     triple_matrix_registry_path = triple_matrix_dir / "registry.json"
+    counterfactual_dir = tmp_path / "counterfactual"
+    counterfactual_dir.mkdir()
+    counterfactual_report_path = counterfactual_dir / "counterfactual-verification.json"
+    counterfactual_manifest_path = counterfactual_dir / "artifact-manifest.json"
+    counterfactual_registry_path = counterfactual_dir / "registry.json"
     selfcheck_report_path.write_text(
         json.dumps({
             "workflow": "selfcheck_signal_fusion_workflow",
@@ -3161,6 +3252,35 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
         version="0.1",
         metadata={"artifact_manifest": str(triple_matrix_manifest_path)},
     ).save_json()
+    counterfactual_report_path.write_text(
+        json.dumps({
+            "workflow": "counterfactual_verification_eval",
+            "status": "promote",
+            "summary": {
+                "record_count": 4,
+                "pass_rate": 1.0,
+                "false_invariance_rate": 0.0,
+                "flip_success_count": 4,
+            },
+        }),
+        encoding="utf-8",
+    )
+    counterfactual_manifest_path.write_text(
+        json.dumps(
+            build_artifact_manifest(
+                {"counterfactual_verification": counterfactual_report_path},
+                root=counterfactual_dir,
+                metadata={"workflow": "counterfactual_verification_eval"},
+            )
+        ),
+        encoding="utf-8",
+    )
+    ArtifactRegistry.load_json(counterfactual_registry_path).record_report(
+        name="counterfactual-verifier-audit",
+        path=counterfactual_report_path,
+        version="0.1",
+        metadata={"artifact_manifest": str(counterfactual_manifest_path)},
+    ).save_json()
     ProductPromotionContract(
         model_id="demo-model",
         runtime={"layer": -2},
@@ -3241,6 +3361,18 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
             "distinct_predicate_count": 6,
             "mean_best_f1": 1.0,
             "mean_f1_lift": 0.5,
+        },
+        counterfactual_verification={
+            "report_path": "counterfactual/counterfactual-verification.json",
+            "manifest_path": "counterfactual/artifact-manifest.json",
+            "registry": "counterfactual/registry.json",
+            "record_key": "report:counterfactual-verifier-audit:0.1",
+            "workflow": "counterfactual_verification_eval",
+            "status": "promote",
+            "record_count": 4,
+            "pass_rate": 1.0,
+            "false_invariance_rate": 0.0,
+            "flip_success_count": 4,
         },
         metadata={"product_runtime_drift_status": "promote"},
     ).save_json(contract_path)
@@ -3411,6 +3543,37 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
     assert metadata_without_verification[
         "triple_extraction_fixture_matrix_distinct_predicate_count"
     ] == 6
+    assert metadata_without_verification[
+        "promotion_contract_counterfactual_verification"
+    ]["record_key"] == "report:counterfactual-verifier-audit:0.1"
+    assert metadata_without_verification["counterfactual_verification_report"] == str(
+        counterfactual_report_path
+    )
+    assert metadata_without_verification["counterfactual_verification_manifest"] == str(
+        counterfactual_manifest_path
+    )
+    assert (
+        metadata_without_verification[
+            "counterfactual_verification_manifest_verification"
+        ]
+        is None
+    )
+    assert metadata_without_verification[
+        "counterfactual_verification_registry"
+    ] == str(counterfactual_registry_path)
+    assert metadata_without_verification[
+        "counterfactual_verification_registry_key"
+    ] == "report:counterfactual-verifier-audit:0.1"
+    assert metadata_without_verification[
+        "counterfactual_verification_registry_record"
+    ] is None
+    assert metadata_without_verification["counterfactual_verification_status"] == "promote"
+    assert metadata_without_verification["counterfactual_verification_pass_rate"] == (
+        pytest.approx(1.0)
+    )
+    assert metadata_without_verification[
+        "counterfactual_verification_false_invariance_rate"
+    ] == pytest.approx(0.0)
 
     metadata_with_verification = bundle.runtime_metadata(
         budget_enabled=True,
@@ -3515,6 +3678,33 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
     assert metadata_with_pre_generation_verification[
         "pre_generation_probe_comparison_registry_record"
     ]["metadata"] == {"artifact_manifest": str(pre_generation_manifest_path)}
+
+    metadata_with_counterfactual_verification = bundle.runtime_metadata(
+        budget_enabled=True,
+        verify_counterfactual_verification_manifest=True,
+        include_counterfactual_verification_record=True,
+    )
+    assert (
+        metadata_with_counterfactual_verification[
+            "counterfactual_verification_manifest_verification"
+        ]["passed"]
+        is True
+    )
+    assert (
+        metadata_with_counterfactual_verification[
+            "counterfactual_verification_manifest_verification"
+        ]["checked"]
+        == 1
+    )
+    assert (
+        metadata_with_counterfactual_verification[
+            "counterfactual_verification_registry_key"
+        ]
+        == "report:counterfactual-verifier-audit:0.1"
+    )
+    assert metadata_with_counterfactual_verification[
+        "counterfactual_verification_registry_record"
+    ]["metadata"] == {"artifact_manifest": str(counterfactual_manifest_path)}
 
     metadata_with_triple_matrix_verification = bundle.runtime_metadata(
         budget_enabled=True,

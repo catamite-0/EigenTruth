@@ -2705,6 +2705,12 @@ compact contract, manifest, and registry metadata retain the comparator report
 path, source type, registry key, decision status, recommended route, route-gate
 status, and text-redline status so runtime traces can show which external
 evidence handoff was release-gated.
+When the release candidate was gated by a counterfactual verifier audit, the
+compact contract, manifest, and registry metadata retain the audit report,
+manifest, registry record, workflow, status, record count, pass rate,
+false-invariance rate, and flip-success count. `ProductRuntimeEvidenceBundle`
+can lazily verify that audit manifest and attach the local registry record to
+runtime trace metadata without rerunning verifier probes.
 When the
 release candidate was gated by
 a product trace replay workflow, the compact contract and registry metadata keep
@@ -4588,7 +4594,11 @@ per-property quality rollups, and optionally apply a
 external-evidence baseline-comparison handoff coverage, source/status counts,
 recommended route counts, route-gate pass counts, text-redline pass counts, and
 text-redline run-count summaries into the report, manifest, and registry
-metadata. The output includes `optimization.hotspots`,
+metadata. It also aggregates promotion-contract counterfactual verifier-audit
+coverage, source/status/workflow counts, manifest-verification counts,
+record-count/pass-rate/false-invariance summaries, and flip-success summaries
+into the same report, manifest, and registry metadata. The output includes
+`optimization.hotspots`,
 `optimization.recommendations`, and `optimization.policy_hints`, turning the
 baseline into an actionable performance pass over slow phases/routes, low cache
 hit rates, excessive retrieval or verifier fanout, missing staged verification,

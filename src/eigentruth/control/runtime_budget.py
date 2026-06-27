@@ -1075,6 +1075,14 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
     matrix = nested_matrix or _matrix_from_flat_metadata(metadata) or _matrix_from_flat_metadata(
         contract_metadata
     )
+    nested_counterfactual = _mapping(
+        metadata.get("promotion_contract_counterfactual_verification")
+    )
+    counterfactual = (
+        nested_counterfactual
+        or _counterfactual_verification_from_flat_metadata(metadata)
+        or _counterfactual_verification_from_flat_metadata(contract_metadata)
+    )
     covered_fact_scope = _covered_fact_scope_from_metadata(
         metadata,
         contract_metadata=contract_metadata,
@@ -1152,6 +1160,7 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         or external_evidence_available
         or pre_generation_available
         or matrix_available
+        or bool(counterfactual)
         or bool(runtime_drift.get("available"))
     )
     pre_generation_manifest_verification = _mapping(
@@ -1160,7 +1169,14 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
             contract_metadata.get("pre_generation_probe_comparison_manifest_verification"),
         )
     )
+    counterfactual_manifest_verification = _mapping(
+        _first_present(
+            metadata.get("counterfactual_verification_manifest_verification"),
+            contract_metadata.get("counterfactual_verification_manifest_verification"),
+        )
+    )
     pre_generation_best_run = _mapping(pre_generation.get("best_run"))
+    counterfactual_available = bool(counterfactual)
     summary = {
         "available": available,
         "source": source,
@@ -1437,12 +1453,105 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
                 )
             ),
         },
+        "counterfactual_verification": {
+            "available": counterfactual_available,
+            "source": _optional_string(
+                _first_present(
+                    counterfactual.get("source"),
+                    metadata.get("counterfactual_verification_source"),
+                    contract_metadata.get("counterfactual_verification_source"),
+                )
+            ),
+            "report": _optional_string(
+                _first_present(
+                    counterfactual.get("report_path"),
+                    counterfactual.get("report"),
+                    metadata.get("counterfactual_verification_report"),
+                    contract_metadata.get("counterfactual_verification_report"),
+                )
+            ),
+            "manifest": _optional_string(
+                _first_present(
+                    counterfactual.get("manifest_path"),
+                    counterfactual.get("manifest"),
+                    metadata.get("counterfactual_verification_manifest"),
+                    contract_metadata.get("counterfactual_verification_manifest"),
+                )
+            ),
+            "registry": _optional_string(
+                _first_present(
+                    counterfactual.get("registry"),
+                    metadata.get("counterfactual_verification_registry"),
+                    contract_metadata.get("counterfactual_verification_registry"),
+                )
+            ),
+            "record": _optional_string(
+                _first_present(
+                    counterfactual.get("record_key"),
+                    counterfactual.get("record"),
+                    metadata.get("counterfactual_verification_record"),
+                    metadata.get("counterfactual_verification_registry_key"),
+                    contract_metadata.get("counterfactual_verification_record"),
+                    contract_metadata.get("counterfactual_verification_registry_key"),
+                )
+            ),
+            "manifest_verified": _optional_bool(
+                counterfactual_manifest_verification.get("passed")
+            ),
+            "status": _optional_string(
+                _first_present(
+                    counterfactual.get("status"),
+                    metadata.get("counterfactual_verification_status"),
+                    contract_metadata.get("counterfactual_verification_status"),
+                )
+            ),
+            "workflow": _optional_string(
+                _first_present(
+                    counterfactual.get("workflow"),
+                    metadata.get("counterfactual_verification_workflow"),
+                    contract_metadata.get("counterfactual_verification_workflow"),
+                )
+            ),
+            "record_count": _finite_float(
+                _first_present(
+                    counterfactual.get("record_count"),
+                    metadata.get("counterfactual_verification_record_count"),
+                    contract_metadata.get("counterfactual_verification_record_count"),
+                )
+            ),
+            "pass_rate": _finite_float(
+                _first_present(
+                    counterfactual.get("pass_rate"),
+                    metadata.get("counterfactual_verification_pass_rate"),
+                    contract_metadata.get("counterfactual_verification_pass_rate"),
+                )
+            ),
+            "false_invariance_rate": _finite_float(
+                _first_present(
+                    counterfactual.get("false_invariance_rate"),
+                    metadata.get("counterfactual_verification_false_invariance_rate"),
+                    contract_metadata.get(
+                        "counterfactual_verification_false_invariance_rate"
+                    ),
+                )
+            ),
+            "flip_success_count": _finite_float(
+                _first_present(
+                    counterfactual.get("flip_success_count"),
+                    metadata.get("counterfactual_verification_flip_success_count"),
+                    contract_metadata.get(
+                        "counterfactual_verification_flip_success_count"
+                    ),
+                )
+            ),
+        },
     }
     matrix_summary = _mapping(summary["triple_extraction_fixture_matrix"])
     external_evidence_summary = _mapping(
         summary["external_evidence_baseline_comparison"]
     )
     pre_generation_summary = _mapping(summary["pre_generation_probe_comparison"])
+    counterfactual_summary = _mapping(summary["counterfactual_verification"])
     product_trace_replay_metrics = _promotion_contract_product_trace_replay_metric_values(
         product_trace_replay
     )
@@ -1605,6 +1714,45 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         ),
         "promotion_contract_triple_extraction_fixture_matrix_mean_f1_lift": matrix_summary.get(
             "mean_f1_lift"
+        ),
+        "promotion_contract_counterfactual_verification_available": (
+            counterfactual_available
+        ),
+        "promotion_contract_counterfactual_verification_source": (
+            counterfactual_summary.get("source")
+        ),
+        "promotion_contract_counterfactual_verification_report": (
+            counterfactual_summary.get("report")
+        ),
+        "promotion_contract_counterfactual_verification_manifest": (
+            counterfactual_summary.get("manifest")
+        ),
+        "promotion_contract_counterfactual_verification_registry": (
+            counterfactual_summary.get("registry")
+        ),
+        "promotion_contract_counterfactual_verification_record": (
+            counterfactual_summary.get("record")
+        ),
+        "promotion_contract_counterfactual_verification_manifest_verified": (
+            counterfactual_summary.get("manifest_verified")
+        ),
+        "promotion_contract_counterfactual_verification_status": (
+            counterfactual_summary.get("status")
+        ),
+        "promotion_contract_counterfactual_verification_workflow": (
+            counterfactual_summary.get("workflow")
+        ),
+        "promotion_contract_counterfactual_verification_record_count": (
+            counterfactual_summary.get("record_count")
+        ),
+        "promotion_contract_counterfactual_verification_pass_rate": (
+            counterfactual_summary.get("pass_rate")
+        ),
+        "promotion_contract_counterfactual_verification_false_invariance_rate": (
+            counterfactual_summary.get("false_invariance_rate")
+        ),
+        "promotion_contract_counterfactual_verification_flip_success_count": (
+            counterfactual_summary.get("flip_success_count")
         ),
         **product_trace_replay_metrics,
         **runtime_drift_metrics,
@@ -2273,6 +2421,32 @@ def _pre_generation_probe_comparison_from_flat_metadata(
         "best_run": cleaned_best_run or None,
     }
     return {key: value for key, value in comparison.items() if value is not None}
+
+
+def _counterfactual_verification_from_flat_metadata(
+    metadata: Mapping[str, Any],
+) -> dict[str, Any]:
+    audit = {
+        "report_path": metadata.get("counterfactual_verification_report"),
+        "manifest_path": metadata.get("counterfactual_verification_manifest"),
+        "source": metadata.get("counterfactual_verification_source"),
+        "registry": metadata.get("counterfactual_verification_registry"),
+        "record_key": _first_present(
+            metadata.get("counterfactual_verification_record"),
+            metadata.get("counterfactual_verification_registry_key"),
+        ),
+        "status": metadata.get("counterfactual_verification_status"),
+        "workflow": metadata.get("counterfactual_verification_workflow"),
+        "record_count": metadata.get("counterfactual_verification_record_count"),
+        "pass_rate": metadata.get("counterfactual_verification_pass_rate"),
+        "false_invariance_rate": metadata.get(
+            "counterfactual_verification_false_invariance_rate"
+        ),
+        "flip_success_count": metadata.get(
+            "counterfactual_verification_flip_success_count"
+        ),
+    }
+    return {key: value for key, value in audit.items() if value is not None}
 
 
 def _route_counts_from_plan(plan: Mapping[str, Any]) -> dict[str, int]:

@@ -19705,6 +19705,10 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                 "recommended_external_evidence_baseline_comparison_report": (
                     "artifacts/external-evidence/external-evidence-baseline-comparison.json"
                 ),
+                "counterfactual_verification_status": "promote",
+                "recommended_counterfactual_verification_report": (
+                    "artifacts/counterfactual/counterfactual-verification.json"
+                ),
                 "triple_extraction_fixture_matrix_status": "promote",
                 "recommended_triple_extraction_fixture_matrix_report": (
                     "artifacts/triple-extraction-fixture-matrix/"
@@ -19944,6 +19948,19 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                     "text_redline_passed": True,
                     "text_redline_run_count": 2,
                 },
+                "counterfactual_verification": {
+                    "report_path": "artifacts/counterfactual/counterfactual-verification.json",
+                    "manifest_path": "artifacts/counterfactual/artifact-manifest.json",
+                    "source": "registry",
+                    "registry": "artifacts/release-registry.json",
+                    "record_key": "report:counterfactual-verifier-audit:0.1",
+                    "workflow": "counterfactual_verification_eval",
+                    "status": "promote",
+                    "record_count": 12,
+                    "pass_rate": 1.0,
+                    "false_invariance_rate": 0.0,
+                    "flip_success_count": 12,
+                },
                 "triple_extraction_fixture_matrix": {
                     "report_path": (
                         "artifacts/triple-extraction-fixture-matrix/"
@@ -20021,6 +20038,9 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                     ),
                     "world_model_signal_workflow_manifest": (
                         "artifacts/world-model-signal/artifact-manifest.json"
+                    ),
+                    "counterfactual_verification_manifest": (
+                        "artifacts/counterfactual/artifact-manifest.json"
                     ),
                     "triple_extraction_fixture_matrix_manifest": (
                         "artifacts/triple-extraction-fixture-matrix/artifact-manifest.json"
@@ -20149,6 +20169,10 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["external_evidence_baseline_comparison"]["recommended_route"] == (
         "structured_fact"
     )
+    assert contract["counterfactual_verification"]["record_key"] == (
+        "report:counterfactual-verifier-audit:0.1"
+    )
+    assert contract["counterfactual_verification"]["pass_rate"] == pytest.approx(1.0)
     assert contract["triple_extraction_fixture_matrix"]["record_key"] == (
         "report:triple-extraction-fixture-matrix:0.1"
     )
@@ -20176,6 +20200,9 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     )
     assert payload["contract"]["external_evidence_baseline_comparison"]["report_path"] == (
         "artifacts/external-evidence/external-evidence-baseline-comparison.json"
+    )
+    assert payload["contract"]["counterfactual_verification"]["report_path"] == (
+        "artifacts/counterfactual/counterfactual-verification.json"
     )
     assert payload["contract"]["triple_extraction_fixture_matrix"]["report_path"] == (
         "artifacts/triple-extraction-fixture-matrix/triple-extraction-fixture-matrix.json"
@@ -20212,6 +20239,21 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     )
     assert contract["metadata"]["external_evidence_baseline_comparison_route_passed"] is True
     assert contract["metadata"]["external_evidence_baseline_comparison_text_redline_run_count"] == 2
+    assert contract["metadata"]["counterfactual_verification_status"] == "promote"
+    assert contract["metadata"]["recommended_counterfactual_verification_report"] == (
+        "artifacts/counterfactual/counterfactual-verification.json"
+    )
+    assert contract["metadata"]["counterfactual_verification_manifest"] == (
+        "artifacts/counterfactual/artifact-manifest.json"
+    )
+    assert contract["metadata"]["counterfactual_verification_record"] == (
+        "report:counterfactual-verifier-audit:0.1"
+    )
+    assert contract["metadata"]["counterfactual_verification_record_count"] == 12
+    assert contract["metadata"]["counterfactual_verification_pass_rate"] == pytest.approx(1.0)
+    assert contract["metadata"]["counterfactual_verification_false_invariance_rate"] == (
+        pytest.approx(0.0)
+    )
     assert contract["metadata"]["triple_extraction_fixture_matrix_status"] == "promote"
     assert contract["metadata"]["recommended_triple_extraction_fixture_matrix_report"] == (
         "artifacts/triple-extraction-fixture-matrix/triple-extraction-fixture-matrix.json"
@@ -20324,6 +20366,14 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert manifest["metadata"]["external_evidence_baseline_comparison_record"] == (
         "report:covered-facts-external-evidence-handoff:0.4"
     )
+    assert manifest["metadata"]["counterfactual_verification_status"] == "promote"
+    assert manifest["metadata"]["counterfactual_verification_record"] == (
+        "report:counterfactual-verifier-audit:0.1"
+    )
+    assert manifest["metadata"]["counterfactual_verification_pass_rate"] == pytest.approx(1.0)
+    assert manifest["metadata"]["counterfactual_verification_false_invariance_rate"] == (
+        pytest.approx(0.0)
+    )
     assert manifest["metadata"]["product_trace_action_audit_gate_required"] is True
     assert manifest["metadata"]["product_trace_action_audit_gate_status"] == "promote"
     assert manifest["metadata"]["product_trace_action_execution_gate_required"] is True
@@ -20424,6 +20474,16 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert record.metadata["external_evidence_baseline_comparison_status"] == "promote"
     assert record.metadata["external_evidence_baseline_comparison_route_passed"] is True
     assert record.metadata["external_evidence_baseline_comparison_text_redline_passed"] is True
+    assert record.metadata["counterfactual_verification_source"] == "registry"
+    assert record.metadata["counterfactual_verification_record"] == (
+        "report:counterfactual-verifier-audit:0.1"
+    )
+    assert record.metadata["counterfactual_verification_status"] == "promote"
+    assert record.metadata["counterfactual_verification_record_count"] == 12
+    assert record.metadata["counterfactual_verification_pass_rate"] == pytest.approx(1.0)
+    assert record.metadata["counterfactual_verification_false_invariance_rate"] == (
+        pytest.approx(0.0)
+    )
     assert record.metadata["triple_extraction_fixture_matrix_source"] == "registry"
     assert record.metadata["triple_extraction_fixture_matrix_record"] == (
         "report:triple-extraction-fixture-matrix:0.1"
@@ -29012,7 +29072,7 @@ def test_run_product_runtime_baseline_reuses_trace_record_cache(tmp_path, monkey
     assert first["config"]["trace_record_cache"]["cache_hit"] is False
     assert first["config"]["trace_record_cache"]["cache_written"] is True
     assert first["paths"]["trace_records_cache"] == str(cache_path)
-    assert cache_payload["schema_version"] == 9
+    assert cache_payload["schema_version"] == 10
     assert cache_payload["workflow"] == "product_runtime_baseline_trace_records"
     assert cache_payload["summary"]["trace_count"] == 2
     assert cache_payload["policy"]["payload"]["max_total_seconds"] == 0.3

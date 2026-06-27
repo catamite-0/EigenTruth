@@ -82,6 +82,7 @@ class ProductPromotionContract:
     external_evidence_baseline_comparison: Mapping[str, Any] = field(default_factory=dict)
     pre_generation_probe_comparison: Mapping[str, Any] = field(default_factory=dict)
     triple_extraction_fixture_matrix: Mapping[str, Any] = field(default_factory=dict)
+    counterfactual_verification: Mapping[str, Any] = field(default_factory=dict)
     release_efficiency: Mapping[str, Any] = field(default_factory=dict)
     metadata: Mapping[str, Any] = field(default_factory=dict)
     schema_version: int = 1
@@ -133,6 +134,11 @@ class ProductPromotionContract:
             "triple_extraction_fixture_matrix",
             dict(self.triple_extraction_fixture_matrix),
         )
+        object.__setattr__(
+            self,
+            "counterfactual_verification",
+            dict(self.counterfactual_verification),
+        )
         object.__setattr__(self, "release_efficiency", dict(self.release_efficiency))
         object.__setattr__(self, "metadata", dict(self.metadata))
         object.__setattr__(self, "schema_version", int(self.schema_version))
@@ -176,6 +182,9 @@ class ProductPromotionContract:
                 ),
                 triple_extraction_fixture_matrix=_mapping(
                     payload.get("triple_extraction_fixture_matrix")
+                ),
+                counterfactual_verification=_mapping(
+                    payload.get("counterfactual_verification")
                 ),
                 release_efficiency=_mapping(payload.get("release_efficiency")),
                 metadata=_mapping(payload.get("metadata")),
@@ -241,6 +250,13 @@ class ProductPromotionContract:
             _first_mapping(
                 candidate.get("triple_extraction_fixture_matrix"),
                 comparison.get("triple_extraction_fixture_matrix_gate"),
+            ),
+            manifests=manifests,
+        )
+        counterfactual_verification = _counterfactual_verification_metadata(
+            _first_mapping(
+                candidate.get("counterfactual_verification"),
+                comparison.get("counterfactual_verification_gate"),
             ),
             manifests=manifests,
         )
@@ -334,6 +350,7 @@ class ProductPromotionContract:
             external_evidence_baseline_comparison=external_evidence_baseline_comparison,
             pre_generation_probe_comparison=pre_generation_probe_comparison,
             triple_extraction_fixture_matrix=triple_extraction_fixture_matrix,
+            counterfactual_verification=counterfactual_verification,
             release_efficiency=release_efficiency,
             metadata={
                 "recommended_readiness_record": decision.get("recommended_readiness_record"),
@@ -483,6 +500,25 @@ class ProductPromotionContract:
                 ),
                 **_triple_extraction_fixture_matrix_flat_metadata(
                     triple_extraction_fixture_matrix
+                ),
+                "counterfactual_verification_status": _first_present(
+                    decision.get("counterfactual_verification_status"),
+                    counterfactual_verification.get("status"),
+                ),
+                "recommended_counterfactual_verification_report": (
+                    decision.get("recommended_counterfactual_verification_report")
+                ),
+                **_counterfactual_verification_flat_metadata(
+                    counterfactual_verification
+                ),
+                "counterfactual_verification_min_records": config.get(
+                    "min_counterfactual_verification_records"
+                ),
+                "counterfactual_verification_min_pass_rate": config.get(
+                    "min_counterfactual_verification_pass_rate"
+                ),
+                "counterfactual_verification_max_false_invariance_rate": config.get(
+                    "max_counterfactual_verification_false_invariance_rate"
                 ),
                 "triple_extraction_fixture_matrix_min_corpora": config.get(
                     "min_triple_extraction_corpora"
@@ -908,6 +944,7 @@ class ProductPromotionContract:
             "triple_extraction_fixture_matrix": dict(
                 self.triple_extraction_fixture_matrix
             ),
+            "counterfactual_verification": dict(self.counterfactual_verification),
             "release_efficiency": dict(self.release_efficiency),
             "metadata": dict(self.metadata),
         }
@@ -1170,6 +1207,20 @@ class ProductRuntimeEvidenceBundle:
         repr=False,
     )
     _triple_extraction_fixture_matrix_registry_record: RegistryRecord | None = field(
+        default=None,
+        init=False,
+        compare=False,
+        repr=False,
+    )
+    _counterfactual_verification_manifest_verification: (
+        ArtifactManifestVerification | None
+    ) = field(
+        default=None,
+        init=False,
+        compare=False,
+        repr=False,
+    )
+    _counterfactual_verification_registry_record: RegistryRecord | None = field(
         default=None,
         init=False,
         compare=False,
@@ -1823,6 +1874,122 @@ class ProductRuntimeEvidenceBundle:
             "triple_extraction_fixture_matrix_mean_f1_lift": matrix.get("mean_f1_lift"),
         }
 
+    @property
+    def counterfactual_verification(self) -> Mapping[str, Any]:
+        """Return the counterfactual verifier-audit contract, if present."""
+        return self.contract.counterfactual_verification
+
+    @property
+    def counterfactual_verification_report_path(self) -> Path | None:
+        """Return the counterfactual verifier-audit report path."""
+        return _resolve_contract_metadata_path(
+            self.counterfactual_verification.get("report_path"),
+            contract_path=self.contract_path,
+        )
+
+    @property
+    def counterfactual_verification_manifest_path(self) -> Path | None:
+        """Return the counterfactual verifier-audit manifest path."""
+        return _resolve_contract_metadata_path(
+            self.counterfactual_verification.get("manifest_path"),
+            contract_path=self.contract_path,
+        )
+
+    @property
+    def counterfactual_verification_registry_path(self) -> Path | None:
+        """Return the counterfactual verifier-audit registry path."""
+        return _resolve_contract_metadata_path(
+            self.counterfactual_verification.get("registry"),
+            contract_path=self.contract_path,
+        )
+
+    def verify_counterfactual_verification_manifest(
+        self,
+    ) -> ArtifactManifestVerification | None:
+        """Lazily verify the optional counterfactual verifier-audit manifest."""
+        manifest_path = self.counterfactual_verification_manifest_path
+        if manifest_path is None:
+            return None
+        if self._counterfactual_verification_manifest_verification is None:
+            object.__setattr__(
+                self,
+                "_counterfactual_verification_manifest_verification",
+                load_and_verify_artifact_manifest(
+                    manifest_path,
+                    recursive=self.manifest_recursive,
+                ),
+            )
+        return self._counterfactual_verification_manifest_verification
+
+    def counterfactual_verification_registry_record(self) -> RegistryRecord | None:
+        """Lazily resolve the optional counterfactual verifier-audit record."""
+        registry_path = self.counterfactual_verification_registry_path
+        record_key = self.counterfactual_verification.get("record_key")
+        if registry_path is None or record_key is None:
+            return None
+        if self._counterfactual_verification_registry_record is None:
+            registry = ArtifactRegistry.load_json(registry_path)
+            object.__setattr__(
+                self,
+                "_counterfactual_verification_registry_record",
+                registry.get(str(record_key)),
+            )
+        return self._counterfactual_verification_registry_record
+
+    def counterfactual_verification_evidence_metadata(
+        self,
+        *,
+        verify_manifest: bool = False,
+        include_registry_record: bool = False,
+    ) -> dict[str, Any]:
+        """Return JSON-ready counterfactual verifier-audit provenance metadata."""
+        audit = self.counterfactual_verification
+        report_path = self.counterfactual_verification_report_path
+        manifest_path = self.counterfactual_verification_manifest_path
+        registry_path = self.counterfactual_verification_registry_path
+        manifest_verification = (
+            self.verify_counterfactual_verification_manifest()
+            if verify_manifest
+            else None
+        )
+        record_key = audit.get("record_key")
+        registry_record = (
+            self.counterfactual_verification_registry_record()
+            if include_registry_record
+            else None
+        )
+        return {
+            "counterfactual_verification_report": (
+                None if report_path is None else str(report_path)
+            ),
+            "counterfactual_verification_manifest": (
+                None if manifest_path is None else str(manifest_path)
+            ),
+            "counterfactual_verification_manifest_verification": (
+                None if manifest_verification is None else manifest_verification.to_dict()
+            ),
+            "counterfactual_verification_registry": (
+                None if registry_path is None else str(registry_path)
+            ),
+            "counterfactual_verification_registry_key": (
+                None if record_key is None else str(record_key)
+            ),
+            "counterfactual_verification_registry_record": (
+                None if registry_record is None else registry_record.to_dict()
+            ),
+            "counterfactual_verification_source": audit.get("source"),
+            "counterfactual_verification_status": audit.get("status"),
+            "counterfactual_verification_workflow": audit.get("workflow"),
+            "counterfactual_verification_record_count": audit.get("record_count"),
+            "counterfactual_verification_pass_rate": audit.get("pass_rate"),
+            "counterfactual_verification_false_invariance_rate": audit.get(
+                "false_invariance_rate"
+            ),
+            "counterfactual_verification_flip_success_count": audit.get(
+                "flip_success_count"
+            ),
+        }
+
     def runtime_metadata(
         self,
         *,
@@ -1838,6 +2005,8 @@ class ProductRuntimeEvidenceBundle:
         include_pre_generation_probe_comparison_record: bool = False,
         verify_triple_extraction_fixture_matrix_manifest: bool = False,
         include_triple_extraction_fixture_matrix_record: bool = False,
+        verify_counterfactual_verification_manifest: bool = False,
+        include_counterfactual_verification_record: bool = False,
     ) -> dict[str, Any]:
         """Return ProductTrace metadata for contract and provenance evidence."""
         return {
@@ -1864,6 +2033,10 @@ class ProductRuntimeEvidenceBundle:
             **self.triple_extraction_fixture_matrix_evidence_metadata(
                 verify_manifest=verify_triple_extraction_fixture_matrix_manifest,
                 include_registry_record=include_triple_extraction_fixture_matrix_record,
+            ),
+            **self.counterfactual_verification_evidence_metadata(
+                verify_manifest=verify_counterfactual_verification_manifest,
+                include_registry_record=include_counterfactual_verification_record,
             ),
         }
 
@@ -1943,12 +2116,16 @@ def product_promotion_contract_metadata(
         "promotion_contract_triple_extraction_fixture_matrix": dict(
             contract.triple_extraction_fixture_matrix
         ),
+        "promotion_contract_counterfactual_verification": dict(
+            contract.counterfactual_verification
+        ),
         "promotion_contract_release_efficiency": dict(contract.release_efficiency),
         "promotion_contract_metadata": dict(contract.metadata),
         **_promotion_contract_product_trace_replay_metadata(contract),
         **_promotion_contract_product_runtime_drift_metadata(contract),
         **_promotion_contract_external_evidence_baseline_comparison_metadata(contract),
         **_promotion_contract_pre_generation_probe_comparison_metadata(contract),
+        **_promotion_contract_counterfactual_verification_metadata(contract),
         **covered_fact_scope,
     }
 
@@ -2329,6 +2506,63 @@ def _promotion_contract_pre_generation_probe_comparison_metadata(
             _first_present(
                 best_run.get("redline_best_auroc"),
                 metadata.get("pre_generation_probe_comparison_best_redline_auroc"),
+            )
+        ),
+    })
+
+
+def _promotion_contract_counterfactual_verification_metadata(
+    contract: ProductPromotionContract,
+) -> dict[str, Any]:
+    metadata = _mapping(contract.metadata)
+    audit = _mapping(contract.counterfactual_verification)
+    return _drop_none_values({
+        "promotion_contract_counterfactual_verification_status": _first_present(
+            metadata.get("counterfactual_verification_status"),
+            audit.get("status"),
+        ),
+        "promotion_contract_counterfactual_verification_report": _first_present(
+            audit.get("report_path"),
+            metadata.get("counterfactual_verification_report"),
+        ),
+        "promotion_contract_counterfactual_verification_manifest": _first_present(
+            audit.get("manifest_path"),
+            metadata.get("counterfactual_verification_manifest"),
+        ),
+        "promotion_contract_counterfactual_verification_source": _first_present(
+            audit.get("source"),
+            metadata.get("counterfactual_verification_source"),
+        ),
+        "promotion_contract_counterfactual_verification_registry": _first_present(
+            audit.get("registry"),
+            metadata.get("counterfactual_verification_registry"),
+        ),
+        "promotion_contract_counterfactual_verification_record": _first_present(
+            audit.get("record_key"),
+            metadata.get("counterfactual_verification_record"),
+        ),
+        "promotion_contract_counterfactual_verification_workflow": _first_present(
+            audit.get("workflow"),
+            metadata.get("counterfactual_verification_workflow"),
+        ),
+        "promotion_contract_counterfactual_verification_record_count": _first_present(
+            audit.get("record_count"),
+            metadata.get("counterfactual_verification_record_count"),
+        ),
+        "promotion_contract_counterfactual_verification_pass_rate": _first_present(
+            audit.get("pass_rate"),
+            metadata.get("counterfactual_verification_pass_rate"),
+        ),
+        "promotion_contract_counterfactual_verification_false_invariance_rate": (
+            _first_present(
+                audit.get("false_invariance_rate"),
+                metadata.get("counterfactual_verification_false_invariance_rate"),
+            )
+        ),
+        "promotion_contract_counterfactual_verification_flip_success_count": (
+            _first_present(
+                audit.get("flip_success_count"),
+                metadata.get("counterfactual_verification_flip_success_count"),
             )
         ),
     })
@@ -2806,6 +3040,58 @@ def _pre_generation_probe_comparison_flat_metadata(
             best_run.get("redline_best_auroc")
         ),
         "pre_generation_probe_comparison_best_redline_margin": best_run.get("redline_margin"),
+    })
+
+
+def _counterfactual_verification_metadata(
+    audit: Mapping[str, Any],
+    *,
+    manifests: Mapping[str, Any],
+) -> dict[str, Any]:
+    if not audit:
+        return {}
+    gate = _mapping(audit.get("gate"))
+    return _drop_none_values({
+        "report_path": audit.get("report_path"),
+        "manifest_path": (
+            audit.get("manifest_path")
+            or manifests.get("counterfactual_verification_manifest")
+        ),
+        "source": audit.get("source"),
+        "registry": audit.get("registry"),
+        "record_key": audit.get("record_key"),
+        "workflow": audit.get("workflow"),
+        "status": _first_present(audit.get("status"), audit.get("report_status")),
+        "record_count": audit.get("record_count"),
+        "pass_rate": audit.get("pass_rate"),
+        "false_invariance_rate": audit.get("false_invariance_rate"),
+        "flip_success_count": audit.get("flip_success_count"),
+        "blocking_reasons": _first_present(
+            audit.get("blocking_reasons"),
+            gate.get("blocking_reasons"),
+        ),
+    })
+
+
+def _counterfactual_verification_flat_metadata(
+    audit: Mapping[str, Any],
+) -> dict[str, Any]:
+    return _drop_none_values({
+        "counterfactual_verification_report": audit.get("report_path"),
+        "counterfactual_verification_manifest": audit.get("manifest_path"),
+        "counterfactual_verification_source": audit.get("source"),
+        "counterfactual_verification_registry": audit.get("registry"),
+        "counterfactual_verification_record": audit.get("record_key"),
+        "counterfactual_verification_status": audit.get("status"),
+        "counterfactual_verification_workflow": audit.get("workflow"),
+        "counterfactual_verification_record_count": audit.get("record_count"),
+        "counterfactual_verification_pass_rate": audit.get("pass_rate"),
+        "counterfactual_verification_false_invariance_rate": (
+            audit.get("false_invariance_rate")
+        ),
+        "counterfactual_verification_flip_success_count": (
+            audit.get("flip_success_count")
+        ),
     })
 
 

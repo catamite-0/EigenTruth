@@ -21,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-_TRACE_RECORD_CACHE_SCHEMA_VERSION = 9
+_TRACE_RECORD_CACHE_SCHEMA_VERSION = 10
 _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "promotion_contract_coverage_rate",
     "triple_extraction_fixture_matrix_coverage_rate",
@@ -156,6 +156,21 @@ _PROMOTION_CONTRACT_PRE_GENERATION_PROBE_COMPARISON_FIELDS: tuple[str, ...] = (
     "promotion_contract_pre_generation_probe_comparison_best_redline_signal",
     "promotion_contract_pre_generation_probe_comparison_best_redline_auroc",
     "promotion_contract_pre_generation_probe_comparison_best_redline_margin",
+)
+_PROMOTION_CONTRACT_COUNTERFACTUAL_VERIFICATION_FIELDS: tuple[str, ...] = (
+    "promotion_contract_counterfactual_verification_available",
+    "promotion_contract_counterfactual_verification_source",
+    "promotion_contract_counterfactual_verification_report",
+    "promotion_contract_counterfactual_verification_manifest",
+    "promotion_contract_counterfactual_verification_registry",
+    "promotion_contract_counterfactual_verification_record",
+    "promotion_contract_counterfactual_verification_manifest_verified",
+    "promotion_contract_counterfactual_verification_status",
+    "promotion_contract_counterfactual_verification_workflow",
+    "promotion_contract_counterfactual_verification_record_count",
+    "promotion_contract_counterfactual_verification_pass_rate",
+    "promotion_contract_counterfactual_verification_false_invariance_rate",
+    "promotion_contract_counterfactual_verification_flip_success_count",
 )
 _PROMOTION_CONTRACT_COVERED_FACT_ROLLUP_FIELDS: tuple[str, ...] = (
     "promotion_contract_recommended_route_covered_fact_property_metric_count",
@@ -840,6 +855,8 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
     for field_name in _PROMOTION_CONTRACT_EXTERNAL_EVIDENCE_BASELINE_COMPARISON_FIELDS:
         compact[field_name] = metrics.get(field_name)
     for field_name in _PROMOTION_CONTRACT_PRE_GENERATION_PROBE_COMPARISON_FIELDS:
+        compact[field_name] = metrics.get(field_name)
+    for field_name in _PROMOTION_CONTRACT_COUNTERFACTUAL_VERIFICATION_FIELDS:
         compact[field_name] = metrics.get(field_name)
     for prefix in _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
@@ -1869,6 +1886,7 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
     pre_generation = _aggregate_promotion_contract_pre_generation_probe_comparison(
         metrics
     )
+    counterfactual = _aggregate_promotion_contract_counterfactual_verification(metrics)
     product_trace_replay = _aggregate_promotion_contract_product_trace_replay(metrics)
     product_runtime_drift = _aggregate_promotion_contract_product_runtime_drift(metrics)
     return {
@@ -1919,6 +1937,7 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
         },
         "external_evidence_baseline_comparison": external_evidence,
         "pre_generation_probe_comparison": pre_generation,
+        "counterfactual_verification": counterfactual,
         "triple_extraction_fixture_matrix": {
             "available_trace_count": matrix_available_count,
             "missing_trace_count": len(metrics) - matrix_available_count,
@@ -1958,6 +1977,64 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
                 for item in metrics
             ),
         },
+    }
+
+
+def _aggregate_promotion_contract_counterfactual_verification(
+    metrics: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    available_count = sum(
+        1
+        for item in metrics
+        if bool(item.get("promotion_contract_counterfactual_verification_available"))
+    )
+    manifest_values = [
+        item.get("promotion_contract_counterfactual_verification_manifest_verified")
+        for item in metrics
+    ]
+    manifest_observations = sum(value is not None for value in manifest_values)
+    return {
+        "available_trace_count": available_count,
+        "missing_trace_count": len(metrics) - available_count,
+        "coverage_rate": _safe_div(available_count, len(metrics)),
+        "source_counts": _counts(
+            item.get("promotion_contract_counterfactual_verification_source")
+            for item in metrics
+        ),
+        "status_counts": _counts(
+            item.get("promotion_contract_counterfactual_verification_status")
+            for item in metrics
+        ),
+        "workflow_counts": _counts(
+            item.get("promotion_contract_counterfactual_verification_workflow")
+            for item in metrics
+        ),
+        "record_counts": _counts(
+            item.get("promotion_contract_counterfactual_verification_record")
+            for item in metrics
+        ),
+        "manifest_verification_observations": manifest_observations,
+        "manifest_verified_count": sum(value is True for value in manifest_values),
+        "manifest_failed_count": sum(value is False for value in manifest_values),
+        "manifest_unknown_count": len(metrics) - manifest_observations,
+        "record_count": _numeric_summary(
+            item.get("promotion_contract_counterfactual_verification_record_count")
+            for item in metrics
+        ),
+        "pass_rate": _numeric_summary(
+            item.get("promotion_contract_counterfactual_verification_pass_rate")
+            for item in metrics
+        ),
+        "false_invariance_rate": _numeric_summary(
+            item.get(
+                "promotion_contract_counterfactual_verification_false_invariance_rate"
+            )
+            for item in metrics
+        ),
+        "flip_success_count": _numeric_summary(
+            item.get("promotion_contract_counterfactual_verification_flip_success_count")
+            for item in metrics
+        ),
     }
 
 
@@ -2652,6 +2729,9 @@ def _write_artifact_manifest(
     promotion_contract_pre_generation_metadata = (
         _promotion_contract_pre_generation_probe_comparison_flat_metadata(report)
     )
+    promotion_contract_counterfactual_metadata = (
+        _promotion_contract_counterfactual_verification_flat_metadata(report)
+    )
     manifest = build_artifact_manifest(
         _artifact_paths(config) if artifacts is None else artifacts,
         root=config.resolved_artifact_manifest_path.parent,
@@ -2687,6 +2767,7 @@ def _write_artifact_manifest(
             **promotion_contract_trace_replay_metadata,
             **promotion_contract_external_evidence_metadata,
             **promotion_contract_pre_generation_metadata,
+            **promotion_contract_counterfactual_metadata,
             **dict(config.metadata),
         },
     )
@@ -2720,6 +2801,9 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
     )
     promotion_contract_pre_generation_metadata = (
         _promotion_contract_pre_generation_probe_comparison_flat_metadata(report)
+    )
+    promotion_contract_counterfactual_metadata = (
+        _promotion_contract_counterfactual_verification_flat_metadata(report)
     )
     registry = ArtifactRegistry.load_json(config.registry_path)
     registry.record_product_runtime_baseline(
@@ -2761,6 +2845,7 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
             **promotion_contract_trace_replay_metadata,
             **promotion_contract_external_evidence_metadata,
             **promotion_contract_pre_generation_metadata,
+            **promotion_contract_counterfactual_metadata,
             **dict(config.metadata),
         },
     )
@@ -3153,6 +3238,77 @@ def _promotion_contract_pre_generation_probe_comparison_flat_metadata(
             pre_generation,
             "best_redline_margin",
             "mean",
+        ),
+    }
+
+
+def _promotion_contract_counterfactual_verification_flat_metadata(
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    counterfactual = _mapping(
+        _nested(
+            report,
+            "summary",
+            "promotion_contract",
+            "counterfactual_verification",
+        )
+    )
+    if not counterfactual:
+        return {}
+    return {
+        "promotion_contract_counterfactual_verification_available_trace_count": (
+            counterfactual.get("available_trace_count")
+        ),
+        "promotion_contract_counterfactual_verification_missing_trace_count": (
+            counterfactual.get("missing_trace_count")
+        ),
+        "promotion_contract_counterfactual_verification_coverage_rate": (
+            counterfactual.get("coverage_rate")
+        ),
+        "promotion_contract_counterfactual_verification_source_counts": dict(
+            _mapping(counterfactual.get("source_counts"))
+        ),
+        "promotion_contract_counterfactual_verification_status_counts": dict(
+            _mapping(counterfactual.get("status_counts"))
+        ),
+        "promotion_contract_counterfactual_verification_workflow_counts": dict(
+            _mapping(counterfactual.get("workflow_counts"))
+        ),
+        "promotion_contract_counterfactual_verification_record_counts": dict(
+            _mapping(counterfactual.get("record_counts"))
+        ),
+        "promotion_contract_counterfactual_verification_manifest_verified_count": (
+            counterfactual.get("manifest_verified_count")
+        ),
+        "promotion_contract_counterfactual_verification_manifest_failed_count": (
+            counterfactual.get("manifest_failed_count")
+        ),
+        "promotion_contract_counterfactual_verification_manifest_unknown_count": (
+            counterfactual.get("manifest_unknown_count")
+        ),
+        "promotion_contract_counterfactual_verification_record_count_mean": _nested(
+            counterfactual,
+            "record_count",
+            "mean",
+        ),
+        "promotion_contract_counterfactual_verification_pass_rate_mean": _nested(
+            counterfactual,
+            "pass_rate",
+            "mean",
+        ),
+        "promotion_contract_counterfactual_verification_false_invariance_rate_mean": (
+            _nested(
+                counterfactual,
+                "false_invariance_rate",
+                "mean",
+            )
+        ),
+        "promotion_contract_counterfactual_verification_flip_success_count_mean": (
+            _nested(
+                counterfactual,
+                "flip_success_count",
+                "mean",
+            )
         ),
     }
 
