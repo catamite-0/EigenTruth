@@ -192,6 +192,12 @@ class ReleaseCandidateRegistryWorkflowConfig:
     min_triple_extraction_external_prediction_count: int | None = None
     min_triple_extraction_external_prediction_corpora: int | None = None
     min_triple_extraction_mean_best_external_f1: float | None = None
+    counterfactual_verification_report_path: Path | None = None
+    counterfactual_verification_registry_path: Path | None = None
+    counterfactual_verification_key: str | None = None
+    min_counterfactual_verification_records: int | None = None
+    min_counterfactual_verification_pass_rate: float | None = None
+    max_counterfactual_verification_false_invariance_rate: float | None = None
     require_performance_score_dump_cache: bool = False
     min_performance_score_dump_cache_jsonl_view_hit_rate: float | None = None
     performance_drift_baseline_key: str | None = None
@@ -387,6 +393,18 @@ class ReleaseCandidateRegistryWorkflowConfig:
                 self,
                 "triple_extraction_fixture_matrix_registry_path",
                 Path(self.triple_extraction_fixture_matrix_registry_path),
+            )
+        if self.counterfactual_verification_report_path is not None:
+            object.__setattr__(
+                self,
+                "counterfactual_verification_report_path",
+                Path(self.counterfactual_verification_report_path),
+            )
+        if self.counterfactual_verification_registry_path is not None:
+            object.__setattr__(
+                self,
+                "counterfactual_verification_registry_path",
+                Path(self.counterfactual_verification_registry_path),
             )
         if self.retrieval_stress_manifest_path is not None:
             object.__setattr__(
@@ -613,6 +631,16 @@ def run_release_candidate_registry_workflow(
         ),
         min_triple_extraction_mean_best_external_f1=(
             config.min_triple_extraction_mean_best_external_f1
+        ),
+        counterfactual_verification_report_path=config.counterfactual_verification_report_path,
+        counterfactual_verification_registry_path=config.counterfactual_verification_registry_path,
+        counterfactual_verification_key=config.counterfactual_verification_key,
+        min_counterfactual_verification_records=config.min_counterfactual_verification_records,
+        min_counterfactual_verification_pass_rate=(
+            config.min_counterfactual_verification_pass_rate
+        ),
+        max_counterfactual_verification_false_invariance_rate=(
+            config.max_counterfactual_verification_false_invariance_rate
         ),
         require_performance_score_dump_cache=config.require_performance_score_dump_cache,
         min_performance_score_dump_cache_jsonl_view_hit_rate=(
@@ -922,6 +950,26 @@ def run_release_candidate_registry_workflow(
             "min_triple_extraction_mean_best_external_f1": (
                 config.min_triple_extraction_mean_best_external_f1
             ),
+            "counterfactual_verification_report": (
+                None
+                if config.counterfactual_verification_report_path is None
+                else str(config.counterfactual_verification_report_path)
+            ),
+            "counterfactual_verification_registry": (
+                None
+                if config.counterfactual_verification_registry_path is None
+                else str(config.counterfactual_verification_registry_path)
+            ),
+            "counterfactual_verification_key": config.counterfactual_verification_key,
+            "min_counterfactual_verification_records": (
+                config.min_counterfactual_verification_records
+            ),
+            "min_counterfactual_verification_pass_rate": (
+                config.min_counterfactual_verification_pass_rate
+            ),
+            "max_counterfactual_verification_false_invariance_rate": (
+                config.max_counterfactual_verification_false_invariance_rate
+            ),
             "require_performance_score_dump_cache": config.require_performance_score_dump_cache,
             "min_performance_score_dump_cache_jsonl_view_hit_rate": (
                 config.min_performance_score_dump_cache_jsonl_view_hit_rate
@@ -1136,6 +1184,26 @@ def _comparison_with_registry_config(
         "min_triple_extraction_mean_best_external_f1": (
             config.min_triple_extraction_mean_best_external_f1
         ),
+        "counterfactual_verification_report": (
+            comparison_config.get("counterfactual_verification_report")
+            if config.counterfactual_verification_report_path is None
+            else str(config.counterfactual_verification_report_path)
+        ),
+        "counterfactual_verification_registry": (
+            comparison_config.get("counterfactual_verification_registry")
+            if config.counterfactual_verification_registry_path is None
+            else str(config.counterfactual_verification_registry_path)
+        ),
+        "counterfactual_verification_key": config.counterfactual_verification_key,
+        "min_counterfactual_verification_records": (
+            config.min_counterfactual_verification_records
+        ),
+        "min_counterfactual_verification_pass_rate": (
+            config.min_counterfactual_verification_pass_rate
+        ),
+        "max_counterfactual_verification_false_invariance_rate": (
+            config.max_counterfactual_verification_false_invariance_rate
+        ),
         "external_evidence_baseline_comparison": (
             comparison_config.get("external_evidence_baseline_comparison")
             if config.external_evidence_baseline_comparison_path is None
@@ -1208,6 +1276,12 @@ def _write_artifact_manifest(
         ),
         "triple_extraction_fixture_matrix_manifest": manifests.get(
             "triple_extraction_fixture_matrix_manifest"
+        ),
+        "counterfactual_verification_report": manifests.get(
+            "counterfactual_verification_report"
+        ),
+        "counterfactual_verification_manifest": manifests.get(
+            "counterfactual_verification_manifest"
         ),
     }
     artifacts.update({
@@ -1290,6 +1364,11 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         triple_extraction_fixture_matrix = dict(
             comparison.get("triple_extraction_fixture_matrix_gate") or {}
         )
+    counterfactual_verification = dict(candidate.get("counterfactual_verification") or {})
+    if not counterfactual_verification:
+        counterfactual_verification = dict(
+            comparison.get("counterfactual_verification_gate") or {}
+        )
     required_route_baselines = dict(candidate.get("required_route_baselines") or {})
     required_route_property_counts = dict(
         required_route_baselines.get("covered_fact_property_counts") or {}
@@ -1366,6 +1445,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "release_triple_extraction_fixture_matrix_status": decision.get(
             "triple_extraction_fixture_matrix_status"
         ),
+        "release_counterfactual_verification_status": decision.get(
+            "counterfactual_verification_status"
+        ),
         "release_required_route_baseline_status": decision.get("required_route_baseline_status"),
         "release_product_trace_replay_workflow_status": decision.get(
             "product_trace_replay_workflow_status"
@@ -1399,6 +1481,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "recommended_triple_extraction_fixture_matrix_report": decision.get(
             "recommended_triple_extraction_fixture_matrix_report"
+        ),
+        "recommended_counterfactual_verification_report": decision.get(
+            "recommended_counterfactual_verification_report"
         ),
         "recommended_selfcheck_signal_fusion_workflow_report": decision.get(
             "recommended_selfcheck_signal_fusion_workflow_report"
@@ -1895,6 +1980,35 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "triple_extraction_fixture_matrix_min_mean_best_external_f1": config.get(
             "min_triple_extraction_mean_best_external_f1"
         ),
+        "counterfactual_verification_report": counterfactual_verification.get("report_path"),
+        "counterfactual_verification_manifest": (
+            manifests.get("counterfactual_verification_manifest")
+            or counterfactual_verification.get("manifest_path")
+        ),
+        "counterfactual_verification_source": counterfactual_verification.get("source"),
+        "counterfactual_verification_registry": counterfactual_verification.get("registry"),
+        "counterfactual_verification_record": counterfactual_verification.get("record_key"),
+        "counterfactual_verification_status": counterfactual_verification.get("status")
+        or counterfactual_verification.get("report_status"),
+        "counterfactual_verification_record_count": (
+            counterfactual_verification.get("record_count")
+        ),
+        "counterfactual_verification_pass_rate": counterfactual_verification.get("pass_rate"),
+        "counterfactual_verification_false_invariance_rate": (
+            counterfactual_verification.get("false_invariance_rate")
+        ),
+        "counterfactual_verification_flip_success_count": (
+            counterfactual_verification.get("flip_success_count")
+        ),
+        "counterfactual_verification_min_records": config.get(
+            "min_counterfactual_verification_records"
+        ),
+        "counterfactual_verification_min_pass_rate": config.get(
+            "min_counterfactual_verification_pass_rate"
+        ),
+        "counterfactual_verification_max_false_invariance_rate": config.get(
+            "max_counterfactual_verification_false_invariance_rate"
+        ),
         "required_route_baseline_registry": required_route_baselines.get("registry"),
         "required_route_baseline_routes": required_route_baselines.get("routes"),
         "required_route_baseline_manifests": required_route_baselines.get("manifest_paths"),
@@ -2317,6 +2431,24 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         min_triple_extraction_mean_best_external_f1=(
             args.min_triple_extraction_mean_best_external_f1
         ),
+        counterfactual_verification_report_path=(
+            None
+            if args.counterfactual_verification_report is None
+            else Path(args.counterfactual_verification_report)
+        ),
+        counterfactual_verification_registry_path=(
+            None
+            if args.counterfactual_verification_registry is None
+            else Path(args.counterfactual_verification_registry)
+        ),
+        counterfactual_verification_key=args.counterfactual_verification_key,
+        min_counterfactual_verification_records=args.min_counterfactual_verification_records,
+        min_counterfactual_verification_pass_rate=(
+            args.min_counterfactual_verification_pass_rate
+        ),
+        max_counterfactual_verification_false_invariance_rate=(
+            args.max_counterfactual_verification_false_invariance_rate
+        ),
         require_performance_score_dump_cache=bool(args.require_performance_score_dump_cache),
         min_performance_score_dump_cache_jsonl_view_hit_rate=(
             args.min_performance_score_dump_cache_jsonl_view_hit_rate
@@ -2617,6 +2749,31 @@ def main(argv: Sequence[str] | None = None) -> None:
                         ), default=None,
                         help="optional minimum mean best external prediction F1 for the "
                              "triple-extraction fixture matrix")
+    parser.add_argument("--counterfactual-verification-report", default=None,
+                        help="optional counterfactual verifier audit report that must promote and verify")
+    parser.add_argument("--counterfactual-verification-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for "
+                             "--counterfactual-verification-key; defaults to --readiness-registry")
+    parser.add_argument("--counterfactual-verification-key", default=None,
+                        help="optional report:<name>:<version> registry key for a counterfactual verifier audit")
+    parser.add_argument("--min-counterfactual-verification-records",
+                        type=lambda value: _parse_non_negative_int(
+                            value,
+                            flag="--min-counterfactual-verification-records",
+                        ), default=None,
+                        help="optional minimum audited counterfactual pair count")
+    parser.add_argument("--min-counterfactual-verification-pass-rate",
+                        type=lambda value: _parse_unit_float(
+                            value,
+                            flag="--min-counterfactual-verification-pass-rate",
+                        ), default=None,
+                        help="optional minimum counterfactual verifier audit pass rate")
+    parser.add_argument("--max-counterfactual-verification-false-invariance-rate",
+                        type=lambda value: _parse_unit_float(
+                            value,
+                            flag="--max-counterfactual-verification-false-invariance-rate",
+                        ), default=None,
+                        help="optional maximum rate where false counterfactuals remain supported")
     parser.add_argument("--require-performance-score-dump-cache", action="store_true",
                         help="require the selected performance baseline to include score-dump cache evidence")
     parser.add_argument("--json", default=None, help="optional registry workflow report path")

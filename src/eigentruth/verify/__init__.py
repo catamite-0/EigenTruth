@@ -31,6 +31,15 @@ from eigentruth.verify.coherence import (
     infer_claim_dependencies,
 )
 from eigentruth.verify.composite import CompositeVerifier, RoutedVerifier, VerifierRoute
+from eigentruth.verify.counterfactual import (
+    CounterfactualProbe,
+    CounterfactualProbeGenerator,
+    CounterfactualProbeResult,
+    CounterfactualVerificationAuditor,
+    CounterfactualVerificationReport,
+    audit_counterfactual_verification,
+    generate_counterfactual_probes,
+)
 from eigentruth.verify.groundedness import EvidenceDocument, EvidenceQualityPolicy, GroundednessVerifier
 from eigentruth.verify.localization import (
     ClaimRiskLocalizationReport,
@@ -83,6 +92,11 @@ __all__ = [
     "ClaimVerificationPlanner",
     "CompositeTripleExtractor",
     "CompositeVerifier",
+    "CounterfactualProbe",
+    "CounterfactualProbeResult",
+    "CounterfactualProbeGenerator",
+    "CounterfactualVerificationAuditor",
+    "CounterfactualVerificationReport",
     "EvidenceDocument",
     "EvidenceQualityPolicy",
     "GroundednessVerifier",
@@ -109,6 +123,8 @@ __all__ = [
     "SentenceClaimExtractor",
     "SelfConsistencyVerifier",
     "apply_claim_coherence",
+    "audit_counterfactual_verification",
+    "generate_counterfactual_probes",
     "audit_claim_triples",
     "claim_features",
     "default_routed_verifier",

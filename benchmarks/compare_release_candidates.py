@@ -189,6 +189,12 @@ def compare_release_candidates(
     min_triple_extraction_external_prediction_count: int | None = None,
     min_triple_extraction_external_prediction_corpora: int | None = None,
     min_triple_extraction_mean_best_external_f1: float | None = None,
+    counterfactual_verification_report_path: str | Path | None = None,
+    counterfactual_verification_registry_path: str | Path | None = None,
+    counterfactual_verification_key: str | None = None,
+    min_counterfactual_verification_records: int | None = None,
+    min_counterfactual_verification_pass_rate: float | None = None,
+    max_counterfactual_verification_false_invariance_rate: float | None = None,
     require_performance_score_dump_cache: bool = False,
     min_performance_score_dump_cache_jsonl_view_hit_rate: float | None = None,
     performance_drift_baseline_key: str | None = None,
@@ -721,6 +727,26 @@ def compare_release_candidates(
         min_mean_best_external_f1=min_triple_extraction_mean_best_external_f1,
         verification_context=verification_context,
     )
+    counterfactual_verification_source = _resolve_counterfactual_verification_source(
+        counterfactual_verification_report_path=counterfactual_verification_report_path,
+        counterfactual_verification_registry_path=(
+            counterfactual_verification_registry_path
+            if counterfactual_verification_key is not None
+            else None
+        ),
+        counterfactual_verification_key=counterfactual_verification_key,
+        default_registry_path=readiness_registry_path,
+    )
+    counterfactual_verification = _counterfactual_verification_gate(
+        counterfactual_verification_source=counterfactual_verification_source,
+        recursive=recursive,
+        allow_unverified=allow_unverified,
+        manifest_fingerprint_workers=manifest_fingerprint_workers,
+        min_records=min_counterfactual_verification_records,
+        min_pass_rate=min_counterfactual_verification_pass_rate,
+        max_false_invariance_rate=max_counterfactual_verification_false_invariance_rate,
+        verification_context=verification_context,
+    )
     performance = _performance_baseline_gate(
         performance_registry_path=performance_registry_path,
         performance_baseline_key=performance_baseline_key,
@@ -822,6 +848,7 @@ def compare_release_candidates(
         performance,
         adapter_family,
         triple_extraction_fixture_matrix,
+        counterfactual_verification,
         required_routes,
         product_trace_replay_workflow,
         selector_replay,
@@ -839,6 +866,7 @@ def compare_release_candidates(
             performance,
             adapter_family,
             triple_extraction_fixture_matrix,
+            counterfactual_verification,
             required_routes,
             product_trace_replay_workflow,
             selector_replay,
@@ -1004,6 +1032,22 @@ def compare_release_candidates(
             "min_triple_extraction_mean_best_external_f1": (
                 min_triple_extraction_mean_best_external_f1
             ),
+            "counterfactual_verification_report": (
+                None
+                if counterfactual_verification_source is None
+                else str(counterfactual_verification_source["path"])
+            ),
+            "counterfactual_verification_registry": (
+                None
+                if counterfactual_verification_source is None
+                else counterfactual_verification_source.get("registry")
+            ),
+            "counterfactual_verification_key": counterfactual_verification_key,
+            "min_counterfactual_verification_records": min_counterfactual_verification_records,
+            "min_counterfactual_verification_pass_rate": min_counterfactual_verification_pass_rate,
+            "max_counterfactual_verification_false_invariance_rate": (
+                max_counterfactual_verification_false_invariance_rate
+            ),
             "require_performance_score_dump_cache": require_performance_score_dump_cache,
             "min_performance_score_dump_cache_jsonl_view_hit_rate": (
                 min_performance_score_dump_cache_jsonl_view_hit_rate
@@ -1128,6 +1172,7 @@ def compare_release_candidates(
         "world_model_signal_workflow_gate": world_model_signal_workflow,
         "adapter_family_matrix_gate": adapter_family,
         "triple_extraction_fixture_matrix_gate": triple_extraction_fixture_matrix,
+        "counterfactual_verification_gate": counterfactual_verification,
         "release_candidate": candidate,
         "decision": decision,
         "notes": list(notes),
@@ -1280,6 +1325,7 @@ def _decision(
     performance: Mapping[str, Any] | None = None,
     adapter_family: Mapping[str, Any] | None = None,
     triple_extraction_fixture_matrix: Mapping[str, Any] | None = None,
+    counterfactual_verification: Mapping[str, Any] | None = None,
     required_routes: Mapping[str, Any] | None = None,
     product_trace_replay_workflow: Mapping[str, Any] | None = None,
     selector_replay: Mapping[str, Any] | None = None,
@@ -1308,6 +1354,16 @@ def _decision(
         None
         if triple_extraction_fixture_matrix is None
         else triple_extraction_fixture_matrix.get("status")
+    )
+    counterfactual_verification_gate = _mapping(
+        None
+        if counterfactual_verification is None
+        else counterfactual_verification.get("gate")
+    )
+    counterfactual_verification_status = (
+        None
+        if counterfactual_verification is None
+        else counterfactual_verification.get("status")
     )
     required_routes_gate = _mapping(None if required_routes is None else required_routes.get("gate"))
     required_route_status = None if required_routes is None else required_routes.get("status")
@@ -1407,6 +1463,15 @@ def _decision(
             "status": triple_extraction_fixture_matrix_status,
             "reasons": list(triple_extraction_fixture_matrix_gate.get("blocking_reasons", ())),
         })
+    if (
+        counterfactual_verification is not None
+        and counterfactual_verification_gate.get("passed") is not True
+    ):
+        blocking_reasons.append({
+            "gate": "counterfactual_verification",
+            "status": counterfactual_verification_status,
+            "reasons": list(counterfactual_verification_gate.get("blocking_reasons", ())),
+        })
     if required_routes is not None and required_routes_gate.get("passed") is not True:
         blocking_reasons.append({
             "gate": "required_route_baselines",
@@ -1501,6 +1566,7 @@ def _decision(
         "performance_status": performance_status,
         "adapter_family_status": adapter_family_status,
         "triple_extraction_fixture_matrix_status": triple_extraction_fixture_matrix_status,
+        "counterfactual_verification_status": counterfactual_verification_status,
         "required_route_baseline_status": required_route_status,
         "product_trace_replay_workflow_status": product_trace_replay_workflow_status,
         "selector_replay_status": selector_replay_status,
@@ -1528,6 +1594,14 @@ def _decision(
                 or triple_extraction_fixture_matrix_gate.get("passed") is not True
             )
             else triple_extraction_fixture_matrix.get("report_path")
+        ),
+        "recommended_counterfactual_verification_report": (
+            None
+            if (
+                counterfactual_verification is None
+                or counterfactual_verification_gate.get("passed") is not True
+            )
+            else counterfactual_verification.get("report_path")
         ),
         "required_route_baseline_records": (
             ()
@@ -2058,6 +2132,188 @@ def _resolve_triple_extraction_fixture_matrix_source(
     )
     registry = ArtifactRegistry.load_json(registry_path)
     record = registry.get(str(triple_extraction_fixture_matrix_key))
+    if record.artifact_type != "report":
+        raise ValueError(f"registry record {record.key()!r} is not a report.")
+    return {
+        "source": "registry",
+        "registry": str(registry_path),
+        "record_key": record.key(),
+        "record": record.to_dict(),
+        "path": _resolve_registry_record_path(registry_path, record),
+    }
+
+
+def _counterfactual_verification_gate(
+    *,
+    counterfactual_verification_source: Mapping[str, Any] | None,
+    recursive: bool,
+    allow_unverified: bool,
+    manifest_fingerprint_workers: int,
+    min_records: int | None,
+    min_pass_rate: float | None,
+    max_false_invariance_rate: float | None,
+    verification_context: ArtifactVerificationContext,
+) -> dict[str, Any] | None:
+    if counterfactual_verification_source is None:
+        return None
+    report_path = Path(counterfactual_verification_source["path"])
+    report, report_error = verification_context.load_json_object(report_path)
+    manifest_path = _counterfactual_verification_manifest_path(report, report_path=report_path)
+    verification = _verify_artifact_manifest(
+        manifest_path,
+        recursive=recursive,
+        max_workers=manifest_fingerprint_workers,
+        artifact_name="counterfactual_verification_manifest",
+        verification_context=verification_context,
+    )
+    summary = _counterfactual_verification_summary(report)
+    gate = _counterfactual_verification_report_gate(
+        report=report,
+        report_error=report_error,
+        manifest_path=manifest_path,
+        verification=verification,
+        summary=summary,
+        allow_unverified=allow_unverified,
+        min_records=min_records,
+        min_pass_rate=min_pass_rate,
+        max_false_invariance_rate=max_false_invariance_rate,
+    )
+    return {
+        "schema_version": 1,
+        "status": "promote" if gate["passed"] else "blocked",
+        "report_path": str(report_path),
+        "manifest_path": None if manifest_path is None else str(manifest_path),
+        "source": counterfactual_verification_source.get("source"),
+        "registry": counterfactual_verification_source.get("registry"),
+        "record_key": counterfactual_verification_source.get("record_key"),
+        "record": counterfactual_verification_source.get("record"),
+        "workflow": report.get("workflow"),
+        "record_count": _float_or_none(summary.get("record_count")),
+        "pass_rate": _float_or_none(summary.get("pass_rate")),
+        "false_invariance_rate": _float_or_none(summary.get("false_invariance_rate")),
+        "flip_success_count": _float_or_none(summary.get("flip_success_count")),
+        "verification": verification,
+        "gate": gate,
+    }
+
+
+def _counterfactual_verification_report_gate(
+    *,
+    report: Mapping[str, Any],
+    report_error: str | None,
+    manifest_path: Path | None,
+    verification: Mapping[str, Any],
+    summary: Mapping[str, Any],
+    allow_unverified: bool,
+    min_records: int | None,
+    min_pass_rate: float | None,
+    max_false_invariance_rate: float | None,
+) -> dict[str, Any]:
+    failures = []
+    effective_min_records = 1 if min_records is None else int(min_records)
+    effective_min_pass_rate = 1.0 if min_pass_rate is None else float(min_pass_rate)
+    effective_max_false_invariance_rate = (
+        0.0 if max_false_invariance_rate is None else float(max_false_invariance_rate)
+    )
+    if report_error is not None:
+        failures.append(f"counterfactual verification report could not be loaded: {report_error}")
+    if manifest_path is None:
+        failures.append("counterfactual verification artifact manifest is missing")
+    if not bool(verification.get("passed", False)) and not allow_unverified:
+        failures.append("counterfactual verification manifest verification failed")
+    workflow = report.get("workflow")
+    if workflow not in {"counterfactual_verification_eval", "counterfactual_verification_audit"}:
+        failures.append(
+            f"counterfactual verification workflow is {workflow!r}, expected "
+            "'counterfactual_verification_eval' or 'counterfactual_verification_audit'"
+        )
+    record_count = _float_or_none(summary.get("record_count"))
+    pass_rate = _float_or_none(summary.get("pass_rate"))
+    false_invariance_rate = _float_or_none(summary.get("false_invariance_rate"))
+    if record_count is None:
+        failures.append("counterfactual verification record_count is missing")
+    elif record_count < effective_min_records:
+        failures.append(
+            "counterfactual verification record count below "
+            f"{effective_min_records}: {summary.get('record_count')!r}"
+        )
+    if pass_rate is None:
+        failures.append("counterfactual verification pass_rate is missing")
+    elif pass_rate < effective_min_pass_rate:
+        failures.append(
+            "counterfactual verification pass_rate below "
+            f"{effective_min_pass_rate}: {pass_rate!r}"
+        )
+    if false_invariance_rate is None:
+        failures.append("counterfactual verification false_invariance_rate is missing")
+    elif false_invariance_rate > effective_max_false_invariance_rate:
+        failures.append(
+            "counterfactual verification false_invariance_rate above "
+            f"{effective_max_false_invariance_rate}: {false_invariance_rate!r}"
+        )
+    return {
+        "passed": not failures,
+        "blocking_reasons": failures,
+        "policy": {
+            "min_records": effective_min_records,
+            "min_pass_rate": effective_min_pass_rate,
+            "max_false_invariance_rate": effective_max_false_invariance_rate,
+        },
+    }
+
+
+def _counterfactual_verification_summary(report: Mapping[str, Any]) -> Mapping[str, Any]:
+    return _mapping(
+        _first_present(
+            _nested(report, "report", "summary"),
+            report.get("summary"),
+        )
+    )
+
+
+def _counterfactual_verification_manifest_path(
+    report: Mapping[str, Any],
+    *,
+    report_path: Path,
+) -> Path | None:
+    raw_path = _first_present(
+        _nested(report, "paths", "artifact_manifest"),
+        report.get("artifact_manifest_path"),
+    )
+    if raw_path is None:
+        sibling = report_path.parent / "artifact-manifest.json"
+        return sibling if sibling.exists() else None
+    return _resolve_path(raw_path, base_path=report_path)
+
+
+def _resolve_counterfactual_verification_source(
+    *,
+    counterfactual_verification_report_path: str | Path | None,
+    counterfactual_verification_registry_path: str | Path | None,
+    counterfactual_verification_key: str | None,
+    default_registry_path: str | Path,
+) -> dict[str, Any] | None:
+    if counterfactual_verification_report_path is not None:
+        if counterfactual_verification_key is not None:
+            raise ValueError(
+                "counterfactual_verification_report_path is mutually exclusive with "
+                "counterfactual_verification_key."
+            )
+        return {"source": "file", "path": Path(counterfactual_verification_report_path)}
+    if counterfactual_verification_key is None:
+        if counterfactual_verification_registry_path is not None:
+            raise ValueError(
+                "counterfactual_verification_registry_path requires "
+                "counterfactual_verification_key."
+            )
+        return None
+    registry_path = Path(
+        default_registry_path
+        if counterfactual_verification_registry_path is None
+        else counterfactual_verification_registry_path
+    )
+    registry = ArtifactRegistry.load_json(registry_path)
+    record = registry.get(str(counterfactual_verification_key))
     if record.artifact_type != "report":
         raise ValueError(f"registry record {record.key()!r} is not a report.")
     return {
@@ -5086,6 +5342,7 @@ def _candidate_with_gates(
     performance: Mapping[str, Any] | None,
     adapter_family: Mapping[str, Any] | None,
     triple_extraction_fixture_matrix: Mapping[str, Any] | None,
+    counterfactual_verification: Mapping[str, Any] | None,
     required_routes: Mapping[str, Any] | None,
     product_trace_replay_workflow: Mapping[str, Any] | None,
     selector_replay: Mapping[str, Any] | None,
@@ -5158,6 +5415,25 @@ def _candidate_with_gates(
         )
         manifests["triple_extraction_fixture_matrix_manifest"] = (
             triple_extraction_fixture_matrix.get("manifest_path")
+        )
+    if counterfactual_verification is not None:
+        payload["counterfactual_verification"] = {
+            "report_path": counterfactual_verification.get("report_path"),
+            "manifest_path": counterfactual_verification.get("manifest_path"),
+            "source": counterfactual_verification.get("source"),
+            "registry": counterfactual_verification.get("registry"),
+            "record_key": counterfactual_verification.get("record_key"),
+            "workflow": counterfactual_verification.get("workflow"),
+            "record_count": counterfactual_verification.get("record_count"),
+            "pass_rate": counterfactual_verification.get("pass_rate"),
+            "false_invariance_rate": counterfactual_verification.get("false_invariance_rate"),
+            "flip_success_count": counterfactual_verification.get("flip_success_count"),
+        }
+        manifests["counterfactual_verification_report"] = (
+            counterfactual_verification.get("report_path")
+        )
+        manifests["counterfactual_verification_manifest"] = (
+            counterfactual_verification.get("manifest_path")
         )
     if required_routes is not None:
         required_rows = tuple(_mapping(row) for row in required_routes.get("rows", ()))
@@ -5718,6 +5994,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         min_triple_extraction_mean_best_external_f1=(
             args.min_triple_extraction_mean_best_external_f1
         ),
+        counterfactual_verification_report_path=args.counterfactual_verification_report,
+        counterfactual_verification_registry_path=args.counterfactual_verification_registry,
+        counterfactual_verification_key=args.counterfactual_verification_key,
+        min_counterfactual_verification_records=args.min_counterfactual_verification_records,
+        min_counterfactual_verification_pass_rate=args.min_counterfactual_verification_pass_rate,
+        max_counterfactual_verification_false_invariance_rate=(
+            args.max_counterfactual_verification_false_invariance_rate
+        ),
         require_performance_score_dump_cache=bool(args.require_performance_score_dump_cache),
         min_performance_score_dump_cache_jsonl_view_hit_rate=(
             args.min_performance_score_dump_cache_jsonl_view_hit_rate
@@ -5842,7 +6126,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         f"frontier_release_evidence={decision.get('frontier_release_evidence_status')} "
         f"world_model_signal={decision.get('world_model_signal_workflow_status')} "
         f"selfcheck_signal_fusion={decision.get('selfcheck_signal_fusion_workflow_status')} "
-        f"triple_extraction_matrix={decision.get('triple_extraction_fixture_matrix_status')}"
+        f"triple_extraction_matrix={decision.get('triple_extraction_fixture_matrix_status')} "
+        f"counterfactual_verification={decision.get('counterfactual_verification_status')}"
     )
     if args.fail_on_blocked and decision["status"] != "promote":
         raise SystemExit(1)
@@ -6019,6 +6304,31 @@ def main(argv: Sequence[str] | None = None) -> None:
                         ), default=None,
                         help="optional minimum mean best external prediction F1 for the "
                              "triple-extraction fixture matrix")
+    parser.add_argument("--counterfactual-verification-report", default=None,
+                        help="optional counterfactual verifier audit report that must promote and verify")
+    parser.add_argument("--counterfactual-verification-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for "
+                             "--counterfactual-verification-key; defaults to --readiness-registry")
+    parser.add_argument("--counterfactual-verification-key", default=None,
+                        help="optional report:<name>:<version> registry key for counterfactual verifier audit")
+    parser.add_argument("--min-counterfactual-verification-records",
+                        type=lambda value: _parse_non_negative_int(
+                            value,
+                            flag="--min-counterfactual-verification-records",
+                        ), default=None,
+                        help="optional minimum counterfactual probe count; defaults to 1 when report is supplied")
+    parser.add_argument("--min-counterfactual-verification-pass-rate",
+                        type=lambda value: _parse_unit_float(
+                            value,
+                            flag="--min-counterfactual-verification-pass-rate",
+                        ), default=None,
+                        help="optional minimum audit pass rate; defaults to 1.0 when report is supplied")
+    parser.add_argument("--max-counterfactual-verification-false-invariance-rate",
+                        type=lambda value: _parse_unit_float(
+                            value,
+                            flag="--max-counterfactual-verification-false-invariance-rate",
+                        ), default=None,
+                        help="optional maximum false-invariance rate; defaults to 0.0 when report is supplied")
     parser.add_argument("--require-performance-score-dump-cache", action="store_true",
                         help="require the selected performance baseline to include score-dump cache evidence")
     parser.add_argument("--json", default=None, help="optional path to write JSON report")

@@ -17,6 +17,9 @@ EigenTruth should move from hallucination detection alone toward calibrated part
 - Internal Representations as Indicators of Hallucinations in Agent Tool Selection (arXiv:2601.05214) frames agent hallucination as incorrect tool selection, malformed parameters, and tool bypass. This supports keeping tool-route intent explicit in `ClaimVerificationPlan` instead of only checking final text.
 - World-Model-Augmented Web Agents with Action Correction (arXiv:2602.15384) uses consequence simulation and action correction before risky actions. This supports EigenTruth's world-model route as a post-draft verifier and pre-action correction adapter rather than a core dependency.
 - TokenHD (arXiv:2605.12384) and related span/token-level work point toward finer localization of hallucinations. EigenTruth's current lightweight equivalent is claim-level risk localization, route budgeting, and trace evidence; learned token-level detectors remain out of scope until the dependency and training boundary is explicit.
+- Pre-generation hallucination detection with soft targets (arXiv:2606.21917) reinforces the current layer/sweep direction: hallucination risk is better treated as a probability estimated from internal representations than as a single hard decoded label.
+- Entropy Alone is Insufficient for Safe Selective Prediction in LLMs (arXiv:2603.21172) and the UQ-as-clustering critique (arXiv:2605.19220) both argue against relying on entropy/self-consistency alone. EigenTruth should keep combining internal geometry with correctness/verifier/world-model evidence and deployment-facing selective metrics.
+- Counterfactual Probing for Hallucination Detection and Mitigation (arXiv:2508.01862) supports adding perturbation sensitivity audits: robust verifiers should change status on entity, temporal, quantitative, or logical counterfactuals instead of staying invariant to false variants.
 
 ## Implemented This Continuation
 
@@ -31,6 +34,14 @@ Added budget-aware adaptive verification planning:
 - `ProductTrace.to_bounded_dict()` and `product_runtime_metrics(...)` preserve compact verification-budget summaries, including selected/dropped claim counts and claim/route/tool/cost budget exhaustion flags.
 
 This is a product-facing implementation of the current research direction: use internal diagnostics and claim metadata to decide when verification is needed, then spend verifier/tool budget on the most consequential claims and routes while leaving an auditable trace of what was skipped. It does not add network retrieval, learned token detectors, or model-dependent world-model code.
+
+Added dependency-free counterfactual verifier auditing:
+
+- `CounterfactualProbe`, `CounterfactualVerificationAuditor`, and `CounterfactualVerificationReport` run paired original/counterfactual claims through any local `Verifier`.
+- `CounterfactualProbeGenerator` and `generate_counterfactual_probes(...)` can derive bounded metadata/entity/quantity/year/negation probes from existing claims so trace-side claim extraction can feed verifier perturbation audits without a model call.
+- The report records expected-status accuracy, flip success, false invariance, unexpected flips, per-probe failure reasons, and probe-type summaries.
+- `benchmarks/eval_counterfactual_verification.py` provides a local JSON/JSONL harness for `in_memory` and `structured_fact` verifier audits, and can write an artifact manifest plus local registry record for release evidence.
+- This does not claim broad hallucination mitigation; it gives structured-fact, retrieval, world-model, or future external verifier routes a reproducible perturbation-sensitivity gate before their outputs are trusted by release workflows.
 
 Added dependency-free claim-risk localization:
 
@@ -443,6 +454,11 @@ Added dependency-free triple extractor plug-ins and eval harness:
   extractor evidence from a standalone benchmark into the same fail-closed
   release candidate and registered manifest gates as readiness, route,
   selfcheck, world-model, feedback, and adapter-family evidence.
+- `benchmarks/compare_release_candidates.py` and
+  `benchmarks/run_release_candidate_registry_workflow.py` can also require a
+  counterfactual verifier audit report or registry key, gating promotion on
+  audited pair count, pass rate, and false-invariance rate while recording the
+  report and manifest in the release artifact.
 - The first real cross-corpus matrix is now materialized at
   `artifacts/wikidata-cross-corpus-triple-extraction-fixture-matrix/`. It
   combines the 359-fact country-core Wikidata corpus with the fetched

@@ -82,6 +82,9 @@ from eigentruth.verify import (
     ClaimVerificationPlan,
     CompositeTripleExtractor,
     CompositeVerifier,
+    CounterfactualProbe,
+    CounterfactualProbeGenerator,
+    CounterfactualVerificationAuditor,
     EvidenceDocument,
     EvidenceQualityPolicy,
     GroundednessVerifier,
@@ -101,12 +104,14 @@ from eigentruth.verify import (
     VerifierRoute,
     apply_claim_coherence,
     audit_claim_triples,
+    audit_counterfactual_verification,
     default_routed_verifier,
     default_verifier_routes,
     extract_calculation,
     extract_citation_references,
     extract_claim_triples,
     extract_claims,
+    generate_counterfactual_probes,
     infer_claim_dependencies,
     normalize_claim_text,
 )
@@ -850,6 +855,88 @@ def test_structured_fact_verifier_supports_and_refutes_wikidata_claims():
     assert supported_currency.status is VerificationStatus.SUPPORTED
     assert missing_subject.status is VerificationStatus.INSUFFICIENT_EVIDENCE
     assert not_applicable.status is VerificationStatus.NOT_APPLICABLE
+
+
+def test_counterfactual_verification_audit_passes_structured_fact_flip():
+    verifier = StructuredFactVerifier.from_corpus({
+        "facts": [
+            {
+                "subject": "France",
+                "predicate": "P36",
+                "object": "Paris",
+                "source": "wikidata:Q142:P36:Q90",
+            },
+        ],
+    })
+    probe = CounterfactualProbe(
+        original=Claim("Paris is the capital of France.", claim_id="capital_true"),
+        counterfactual=Claim("Berlin is the capital of France.", claim_id="capital_false"),
+        probe_id="capital_cf",
+        probe_type="entity_swap",
+    )
+
+    report = audit_counterfactual_verification(verifier, (probe,))
+    payload = report.to_dict()
+
+    assert payload["summary"]["record_count"] == 1
+    assert payload["summary"]["pass_rate"] == pytest.approx(1.0)
+    assert payload["summary"]["flip_success_count"] == 1
+    assert payload["results"][0]["original_result"]["status"] == "supported"
+    assert payload["results"][0]["counterfactual_result"]["status"] == "refuted"
+    assert payload["results"][0]["passed"] is True
+
+
+def test_counterfactual_verification_audit_flags_false_invariance():
+    verifier = InMemoryVerifier({
+        normalize_claim_text("Paris is the capital of France."): VerificationStatus.SUPPORTED,
+        normalize_claim_text("Berlin is the capital of France."): VerificationStatus.SUPPORTED,
+    })
+    probe = CounterfactualProbe(
+        original={"text": "Paris is the capital of France."},
+        counterfactual={"text": "Berlin is the capital of France."},
+        expected_counterfactual_status=VerificationStatus.SUPPORTED,
+        expected_flip=True,
+    )
+
+    report = CounterfactualVerificationAuditor(verifier).audit((probe,), max_examples=1)
+    summary = report.summary()
+
+    assert summary["passed_count"] == 0
+    assert summary["false_invariance_count"] == 1
+    assert summary["false_invariance_rate"] == pytest.approx(1.0)
+    assert report.error_examples()[0]["failure_reason"] == "false_invariance"
+
+
+def test_counterfactual_probe_generator_builds_metadata_numeric_temporal_and_negation_probes():
+    claims = (
+        Claim(
+            "Paris is the capital of France.",
+            claim_id="capital",
+            metadata={
+                "counterfactual_replacements": {"Paris": "Berlin"},
+                "counterfactual_variants": [
+                    {"text": "Paris is the capital of Germany.", "probe_type": "entity_swap"}
+                ],
+            },
+        ),
+        Claim("The company was founded in 2020.", claim_id="year"),
+        Claim("2 plus 2 is 4.", claim_id="quantity"),
+        Claim("The API is stable.", claim_id="negation"),
+    )
+
+    probes = generate_counterfactual_probes(claims, max_probes_per_claim=2)
+    by_type = {probe.probe_type: probe for probe in probes}
+
+    assert isinstance(CounterfactualProbeGenerator(max_probes_per_claim=1), CounterfactualProbeGenerator)
+    assert "entity_swap" in by_type
+    assert "year" in by_type
+    assert "quantity" in by_type
+    assert "negation" in by_type
+    assert any(probe.counterfactual.text == "Berlin is the capital of France." for probe in probes)
+    assert any(probe.counterfactual.text == "The company was founded in 2021." for probe in probes)
+    assert any(probe.counterfactual.text == "3 plus 2 is 4." for probe in probes)
+    assert any(probe.counterfactual.text == "The API is not stable." for probe in probes)
+    assert all(probe.expected_counterfactual_status is VerificationStatus.REFUTED for probe in probes)
 
 
 def test_structured_fact_verifier_handles_fact_paraphrases_and_object_lists():

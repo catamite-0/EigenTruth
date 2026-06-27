@@ -59,6 +59,104 @@ def test_eval_conformal_run_respects_lower_direction(tmp_path):
     assert report["detection"] == pytest.approx(1.0)
 
 
+def test_eval_counterfactual_verification_reports_false_invariance(tmp_path):
+    module = importlib.import_module("benchmarks.eval_counterfactual_verification")
+    from eigentruth.registry import ArtifactRegistry
+
+    records_path = tmp_path / "counterfactual-records.json"
+    facts_path = tmp_path / "facts.json"
+    report_path = tmp_path / "counterfactual-report.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    records_path.write_text(
+        json.dumps({
+            "records": [
+                {
+                    "probe_id": "capital_cf",
+                    "probe_type": "entity_swap",
+                    "original_text": "Paris is the capital of France.",
+                    "counterfactual_text": "Berlin is the capital of France.",
+                    "expected_original_status": "supported",
+                    "expected_counterfactual_status": "supported",
+                    "expected_flip": True,
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    facts_path.write_text(
+        json.dumps({
+            "Paris is the capital of France.": "supported",
+            "Berlin is the capital of France.": "supported",
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run_counterfactual_verification_eval(
+        records_path,
+        verifier_name="in_memory",
+        in_memory_facts_path=facts_path,
+        output_path=report_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        register_name="counterfactual-smoke",
+        register_version="0.1",
+    )
+    summary = payload["report"]["summary"]
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = ArtifactRegistry.load_json(registry_path).get("report:counterfactual-smoke:0.1")
+
+    assert payload["workflow"] == "counterfactual_verification_eval"
+    assert summary["record_count"] == 1
+    assert summary["passed_count"] == 0
+    assert summary["false_invariance_rate"] == pytest.approx(1.0)
+    assert payload["report"]["error_examples"][0]["failure_reason"] == "false_invariance"
+    assert payload["paths"]["artifact_manifest"] == str(manifest_path)
+    assert payload["registry_record"] == "report:counterfactual-smoke:0.1"
+    assert manifest["summary"]["missing_count"] == 0
+    assert record.metadata["false_invariance_rate"] == pytest.approx(1.0)
+
+
+def test_eval_counterfactual_verification_generates_probes_from_claims(tmp_path):
+    module = importlib.import_module("benchmarks.eval_counterfactual_verification")
+
+    claims_path = tmp_path / "claims.json"
+    report_path = tmp_path / "generated-counterfactual-report.json"
+    claims_path.write_text(
+        json.dumps({
+            "records": [
+                {
+                    "claim_id": "capital",
+                    "text": "Paris is the capital of France.",
+                    "metadata": {"counterfactual_replacements": {"Paris": "Berlin"}},
+                },
+                {"claim_id": "year", "text": "The company was founded in 2020."},
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run_counterfactual_verification_eval(
+        claims_path=claims_path,
+        verifier_name="in_memory",
+        output_path=report_path,
+        max_generated_probes_per_claim=1,
+        generated_probe_types=("entity_swap", "year"),
+    )
+
+    summary = payload["report"]["summary"]
+    probe_types = summary["by_probe_type"]
+
+    assert payload["records_path"] is None
+    assert payload["claims_path"] == str(claims_path)
+    assert payload["generated_probe_count"] == 2
+    assert summary["record_count"] == 2
+    assert summary["pass_rate"] == pytest.approx(1.0)
+    assert probe_types["entity_swap"]["record_count"] == 1
+    assert probe_types["year"]["record_count"] == 1
+    assert report_path.exists()
+
+
 def test_eval_triple_extraction_compares_regex_against_rule_based(tmp_path):
     module = importlib.import_module("benchmarks.eval_triple_extraction")
     records_path = tmp_path / "triple-records.json"
@@ -12458,6 +12556,112 @@ def test_compare_release_candidates_promotes_readiness_and_route_baselines(tmp_p
     )
 
 
+def test_compare_release_candidates_can_require_counterfactual_verification(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    counterfactual = importlib.import_module("benchmarks.eval_counterfactual_verification")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="counterfactual-readiness",
+        version="0.1",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="counterfactual-route",
+        route="structured_fact",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="counterfactual-route",
+        path=route_manifest,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+    records_path = tmp_path / "counterfactual-records.json"
+    records_path.write_text(
+        json.dumps({
+            "records": [
+                {
+                    "probe_id": "capital_cf",
+                    "probe_type": "entity_swap",
+                    "original_text": "Paris is the capital of France.",
+                    "counterfactual_text": "Berlin is the capital of France.",
+                    "expected_original_status": "supported",
+                    "expected_counterfactual_status": "refuted",
+                    "expected_flip": True,
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    promoted_report = tmp_path / "counterfactual-good.json"
+    promoted_manifest = tmp_path / "counterfactual-good-manifest.json"
+    counterfactual.run_counterfactual_verification_eval(
+        records_path,
+        verifier_name="in_memory",
+        output_path=promoted_report,
+        artifact_manifest_path=promoted_manifest,
+    )
+    facts_path = tmp_path / "counterfactual-bad-facts.json"
+    facts_path.write_text(
+        json.dumps({
+            "Paris is the capital of France.": "supported",
+            "Berlin is the capital of France.": "supported",
+        }),
+        encoding="utf-8",
+    )
+    blocked_report = tmp_path / "counterfactual-bad.json"
+    blocked_manifest = tmp_path / "counterfactual-bad-manifest.json"
+    counterfactual.run_counterfactual_verification_eval(
+        records_path,
+        verifier_name="in_memory",
+        in_memory_facts_path=facts_path,
+        output_path=blocked_report,
+        artifact_manifest_path=blocked_manifest,
+    )
+
+    promoted = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        counterfactual_verification_report_path=promoted_report,
+    )
+    blocked = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        counterfactual_verification_report_path=blocked_report,
+    )
+
+    assert promoted["decision"]["status"] == "promote"
+    assert promoted["decision"]["counterfactual_verification_status"] == "promote"
+    assert promoted["release_candidate"]["counterfactual_verification"]["pass_rate"] == pytest.approx(1.0)
+    assert blocked["decision"]["status"] == "blocked"
+    assert blocked["counterfactual_verification_gate"]["gate"]["passed"] is False
+    assert any(
+        "false_invariance_rate above 0.0" in reason
+        for reason in blocked["decision"]["blocking_reasons"][0]["reasons"]
+    )
+
+
 def test_compare_release_candidates_gates_frontier_release_evidence(tmp_path):
     module = importlib.import_module("benchmarks.compare_release_candidates")
     from eigentruth.registry import ArtifactRegistry
@@ -16047,6 +16251,26 @@ def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_p
     comparison_report = _write_external_evidence_baseline_comparison_report(
         tmp_path / "external-evidence-baseline-comparison.json"
     )
+    counterfactual_report = tmp_path / "counterfactual-verification.json"
+    counterfactual_report.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "workflow": "counterfactual_verification_eval",
+                "status": "promote",
+                "summary": {
+                    "record_count": 2,
+                    "pass_rate": 1.0,
+                    "false_invariance_rate": 0.0,
+                    "flip_success_count": 2,
+                },
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
     def fake_compare_release_candidates(**kwargs):
         compare_captured.update(kwargs)
@@ -16059,13 +16283,16 @@ def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_p
             "decision": {
                 "status": "promote",
                 "external_evidence_baseline_comparison_status": "promote",
+                "counterfactual_verification_status": "promote",
                 "recommended_external_evidence_baseline_comparison_report": (
                     str(comparison_report)
                 ),
+                "recommended_counterfactual_verification_report": str(counterfactual_report),
             },
             "release_candidate": {
                 "manifests": {
                     "external_evidence_baseline_comparison_report": str(comparison_report),
+                    "counterfactual_verification_report": str(counterfactual_report),
                 },
                 "external_evidence_baseline_comparison": {
                     "report_path": str(comparison_report),
@@ -16077,6 +16304,15 @@ def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_p
                     "route_passed": True,
                     "text_redline_passed": True,
                     "text_redline_run_count": 1,
+                },
+                "counterfactual_verification": {
+                    "report_path": str(counterfactual_report),
+                    "source": "path",
+                    "status": "promote",
+                    "record_count": 2,
+                    "pass_rate": 1.0,
+                    "false_invariance_rate": 0.0,
+                    "flip_success_count": 2,
                 },
             },
             "external_evidence_baseline_comparison_gate": {
@@ -16090,6 +16326,15 @@ def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_p
                 "route_passed": True,
                 "text_redline_passed": True,
                 "text_redline_run_count": 1,
+                "gate": {"passed": True, "blocking_reasons": []},
+            },
+            "counterfactual_verification_gate": {
+                "status": "promote",
+                "report_path": str(counterfactual_report),
+                "record_count": 2,
+                "pass_rate": 1.0,
+                "false_invariance_rate": 0.0,
+                "flip_success_count": 2,
                 "gate": {"passed": True, "blocking_reasons": []},
             },
         }
@@ -16118,6 +16363,10 @@ def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_p
             recursive=False,
             adapter_family_profile="strict_audit",
             external_evidence_baseline_comparison_path=comparison_report,
+            counterfactual_verification_report_path=counterfactual_report,
+            min_counterfactual_verification_records=2,
+            min_counterfactual_verification_pass_rate=1.0,
+            max_counterfactual_verification_false_invariance_rate=0.0,
         )
     )
 
@@ -16127,18 +16376,33 @@ def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_p
     assert compare_captured["adapter_family_profile"] == "strict_audit"
     assert compare_captured["require_state_transition_world_model"] is True
     assert compare_captured["external_evidence_baseline_comparison_path"] == comparison_report
+    assert compare_captured["counterfactual_verification_report_path"] == counterfactual_report
+    assert compare_captured["min_counterfactual_verification_records"] == 2
+    assert compare_captured["min_counterfactual_verification_pass_rate"] == pytest.approx(1.0)
+    assert compare_captured[
+        "max_counterfactual_verification_false_invariance_rate"
+    ] == pytest.approx(0.0)
     assert payload["config"]["recursive"] is False
     assert payload["config"]["manifest_fingerprint_workers"] == 3
     assert payload["config"]["adapter_family_profile"] == "strict_audit"
     assert payload["config"]["adapter_family_profile_requires_state_transition_world_model"] is True
     assert payload["config"]["require_state_transition_world_model"] is True
     assert payload["config"]["external_evidence_baseline_comparison"] == str(comparison_report)
+    assert payload["config"]["counterfactual_verification_report"] == str(counterfactual_report)
+    assert payload["config"]["min_counterfactual_verification_records"] == 2
     assert payload["release_candidate_comparison"]["config"][
         "external_evidence_baseline_comparison"
     ] == str(comparison_report)
     assert payload["release_candidate_comparison"]["config"][
+        "counterfactual_verification_report"
+    ] == str(counterfactual_report)
+    assert payload["release_candidate_comparison"]["config"][
         "adapter_family_profile_requires_state_transition_world_model"
     ] is True
+    assert captured["metadata"]["release_counterfactual_verification_status"] == "promote"
+    assert captured["metadata"]["counterfactual_verification_report"] == str(counterfactual_report)
+    assert captured["metadata"]["counterfactual_verification_record_count"] == 2
+    assert captured["metadata"]["counterfactual_verification_pass_rate"] == pytest.approx(1.0)
     manifest = json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["artifacts"]["external_evidence_baseline_comparison_report"][
         "path"

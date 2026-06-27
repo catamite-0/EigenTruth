@@ -7,6 +7,49 @@ and ablated.
 
 可复现评测脚本，把 EigenTruth 的诊断信号变成可度量的数字（AUROC），用于检验和消融核心假设。
 
+## `eval_counterfactual_verification.py`
+
+Audits whether a local verifier changes decision on paired counterfactual claim
+perturbations. This is a verifier robustness check, not an open-domain factuality
+claim: a passing report only means the supplied verifier handled the supplied
+entity/time/quantity/logical probes.
+
+```bash
+python benchmarks/eval_counterfactual_verification.py \
+  --records artifacts/counterfactual-probes.json \
+  --verifier structured_fact \
+  --fact-corpus artifacts/structured-fact-corpus.json \
+  --json artifacts/counterfactual-verifier-audit.json \
+  --artifact-manifest artifacts/counterfactual-verifier-audit.manifest.json \
+  --registry artifacts/local-artifact-registry.json \
+  --register-name counterfactual-verifier-audit \
+  --register-version 0.1
+```
+
+For small local fixtures, `--verifier in_memory` can derive exact-match statuses
+from each probe's expected status fields, or consume `--in-memory-facts`.
+When only extracted claims are available, the benchmark can generate bounded
+counterfactual probes from claim metadata, entity replacements, numbers, years,
+and negation:
+
+```bash
+python benchmarks/eval_counterfactual_verification.py \
+  --claims artifacts/extracted-claims.jsonl \
+  --generated-probe-types entity_swap,quantity,year,negation \
+  --max-generated-probes-per-claim 2 \
+  --verifier in_memory \
+  --json artifacts/generated-counterfactual-verifier-audit.json
+```
+
+Generated probes are meant for fast verifier-sensitivity audits and should be
+reviewed or replaced with hand-labeled probes before they are treated as strong
+open-domain evidence.
+The resulting report can be used as a release gate through
+`compare_release_candidates.py --counterfactual-verification-report` or the
+same flag on `run_release_candidate_registry_workflow.py`; registry-backed runs
+can pass `--counterfactual-verification-registry` and
+`--counterfactual-verification-key`.
+
 ## `eval_truthfulqa.py`
 
 Tests whether hidden-state geometry separates **true** from **false** statements on
