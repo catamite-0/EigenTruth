@@ -24213,6 +24213,31 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert manifest["metadata"]["runner"] == "run_product_runtime_baseline"
     assert manifest["metadata"]["budget_passed"] is True
     assert manifest["metadata"]["compact_json"] is True
+    assert (
+        manifest["metadata"]["promotion_contract_product_runtime_drift_available_trace_count"]
+        == 1
+    )
+    assert manifest["metadata"]["promotion_contract_product_runtime_drift_coverage_rate"] == (
+        pytest.approx(0.5)
+    )
+    assert manifest["metadata"]["promotion_contract_product_runtime_drift_status_counts"] == {
+        "promote": 1
+    }
+    assert manifest["metadata"][
+        "promotion_contract_product_runtime_drift_promotion_evidence_metric_count_mean"
+    ] == pytest.approx(4.0)
+    assert manifest["metadata"][
+        "promotion_contract_product_runtime_drift_triple_audit_evidence_metric_count_mean"
+    ] == pytest.approx(4.0)
+    assert manifest["metadata"][
+        "promotion_contract_product_runtime_drift_promotion_contract_coverage_rate_current_mean"
+    ] == pytest.approx(1.0)
+    assert manifest["metadata"][
+        "promotion_contract_product_runtime_drift_triple_audit_pass_rate_current_mean"
+    ] == pytest.approx(1.0)
+    assert manifest["metadata"][
+        "promotion_contract_product_runtime_drift_triple_slot_coverage_rate_status_counts"
+    ] == {"pass": 1}
     assert "\n  " not in saved_text
     assert "\n  " not in manifest_text
     assert registry_module.load_and_verify_artifact_manifest(
@@ -24222,6 +24247,22 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert record.metadata["status"] == "promote"
     assert record.metadata["trace_count"] == 2
     assert record.metadata["compact_json"] is True
+    assert (
+        record.metadata["promotion_contract_product_runtime_drift_available_trace_count"]
+        == 1
+    )
+    assert record.metadata["promotion_contract_product_runtime_drift_coverage_rate"] == (
+        pytest.approx(0.5)
+    )
+    assert record.metadata["promotion_contract_product_runtime_drift_status_counts"] == {
+        "promote": 1
+    }
+    assert record.metadata[
+        "promotion_contract_product_runtime_drift_promotion_evidence_metric_count_mean"
+    ] == pytest.approx(4.0)
+    assert record.metadata[
+        "promotion_contract_product_runtime_drift_triple_audit_pass_rate_current_mean"
+    ] == pytest.approx(1.0)
 
 
 def test_run_product_runtime_baseline_reports_optimization_advice(tmp_path):

@@ -1878,6 +1878,7 @@ def _write_artifact_manifest(
     *,
     artifacts: Mapping[str, str | Path | None] | None = None,
 ) -> dict[str, Any]:
+    promotion_contract_drift_metadata = _promotion_contract_runtime_drift_flat_metadata(report)
     manifest = build_artifact_manifest(
         _artifact_paths(config) if artifacts is None else artifacts,
         root=config.resolved_artifact_manifest_path.parent,
@@ -1909,6 +1910,7 @@ def _write_artifact_manifest(
             "budget_enabled": _mapping(report.get("budget")).get("enabled"),
             "budget_passed": _mapping(report.get("budget")).get("passed"),
             "compact_json": config.compact_json,
+            **promotion_contract_drift_metadata,
             **dict(config.metadata),
         },
     )
@@ -1933,6 +1935,7 @@ def _artifact_paths(config: ProductRuntimeBaselineConfig) -> dict[str, str | Pat
 def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, Any]) -> None:
     if config.registry_path is None:
         return
+    promotion_contract_drift_metadata = _promotion_contract_runtime_drift_flat_metadata(report)
     registry = ArtifactRegistry.load_json(config.registry_path)
     registry.record_product_runtime_baseline(
         name=str(config.name),
@@ -1969,6 +1972,7 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
             "budget_passed": _mapping(report.get("budget")).get("passed"),
             "failed_count": _mapping(report.get("budget")).get("failed_count"),
             "compact_json": config.compact_json,
+            **promotion_contract_drift_metadata,
             **dict(config.metadata),
         },
     )
@@ -1990,6 +1994,109 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
             },
         )
     registry.save_json()
+
+
+def _promotion_contract_runtime_drift_flat_metadata(
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    drift = _mapping(
+        _nested(
+            report,
+            "summary",
+            "promotion_contract",
+            "product_runtime_drift",
+        )
+    )
+    if not drift:
+        return {}
+    metadata = {
+        "promotion_contract_product_runtime_drift_available_trace_count": drift.get(
+            "available_trace_count"
+        ),
+        "promotion_contract_product_runtime_drift_missing_trace_count": drift.get(
+            "missing_trace_count"
+        ),
+        "promotion_contract_product_runtime_drift_coverage_rate": drift.get("coverage_rate"),
+        "promotion_contract_product_runtime_drift_status_counts": dict(
+            _mapping(drift.get("status_counts"))
+        ),
+        "promotion_contract_product_runtime_drift_gate_enabled_counts": dict(
+            _mapping(drift.get("gate_enabled_counts"))
+        ),
+        "promotion_contract_product_runtime_drift_promotion_evidence_required_counts": dict(
+            _mapping(drift.get("promotion_evidence_required_counts"))
+        ),
+        "promotion_contract_product_runtime_drift_triple_audit_evidence_required_counts": dict(
+            _mapping(drift.get("triple_audit_evidence_required_counts"))
+        ),
+        "promotion_contract_product_runtime_drift_compared_metric_count_mean": _nested(
+            drift,
+            "compared_metric_count",
+            "mean",
+        ),
+        "promotion_contract_product_runtime_drift_blocked_metric_count_mean": _nested(
+            drift,
+            "blocked_metric_count",
+            "mean",
+        ),
+        "promotion_contract_product_runtime_drift_promotion_evidence_metric_count_mean": _nested(
+            drift,
+            "promotion_evidence_metric_count",
+            "mean",
+        ),
+        "promotion_contract_product_runtime_drift_promotion_evidence_blocked_metric_count_mean": _nested(
+            drift,
+            "promotion_evidence_blocked_metric_count",
+            "mean",
+        ),
+        "promotion_contract_product_runtime_drift_triple_audit_evidence_metric_count_mean": _nested(
+            drift,
+            "triple_audit_evidence_metric_count",
+            "mean",
+        ),
+        "promotion_contract_product_runtime_drift_triple_audit_evidence_blocked_metric_count_mean": _nested(
+            drift,
+            "triple_audit_evidence_blocked_metric_count",
+            "mean",
+        ),
+    }
+    metadata.update(
+        _product_runtime_drift_evidence_flat_metadata(
+            _mapping(drift.get("promotion_evidence")),
+            prefixes=_PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES,
+        )
+    )
+    metadata.update(
+        _product_runtime_drift_evidence_flat_metadata(
+            _mapping(drift.get("triple_audit_evidence")),
+            prefixes=_PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES,
+        )
+    )
+    return metadata
+
+
+def _product_runtime_drift_evidence_flat_metadata(
+    evidence: Mapping[str, Any],
+    *,
+    prefixes: Sequence[str],
+) -> dict[str, Any]:
+    metadata: dict[str, Any] = {}
+    for prefix in prefixes:
+        values = _mapping(evidence.get(prefix))
+        metadata[f"promotion_contract_product_runtime_drift_{prefix}_baseline_mean"] = _nested(
+            values,
+            "baseline",
+            "mean",
+        )
+        metadata[f"promotion_contract_product_runtime_drift_{prefix}_current_mean"] = _nested(
+            values,
+            "current",
+            "mean",
+        )
+        metadata[f"promotion_contract_product_runtime_drift_{prefix}_status_counts"] = dict(
+            _mapping(values.get("status_counts"))
+        )
+    return metadata
 
 
 def _load_trace(path: str | Path) -> dict[str, Any]:
