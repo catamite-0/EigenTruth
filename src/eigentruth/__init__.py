@@ -58,6 +58,13 @@ from eigentruth.intervention.multi_probe import (
     ConceptProbeState,
     MultiConceptMonitor,
 )
+from eigentruth.intervention.pathways import (
+    AttentionPathwayKnockoutReport,
+    PathwayInterventionEffect,
+    attention_pathway_knockout_report,
+    knockout_attention_pathway,
+    pathway_intervention_effect,
+)
 from eigentruth.models.wrapper import EigenTruthWrapper
 from eigentruth.registry import ConceptArtifact, load_concept_artifact
 from eigentruth.training import (
@@ -84,6 +91,8 @@ __all__ = [
     "ConceptProbeConfig",
     "ConceptProbeState",
     "MultiConceptMonitor",
+    "AttentionPathwayKnockoutReport",
+    "PathwayInterventionEffect",
     "TruthManifold",
     "RepresentationManifold",
     "TruthSubspace",
@@ -97,6 +106,9 @@ __all__ = [
     "TrajectoryConvergenceReport",
     "TrajectoryMonitor",
     "attention_pathway_metrics",
+    "attention_pathway_knockout_report",
+    "knockout_attention_pathway",
+    "pathway_intervention_effect",
     "prompt_answer_pathway_metrics",
     "residual_contribution_profile",
     "trajectory_convergence_metrics",
