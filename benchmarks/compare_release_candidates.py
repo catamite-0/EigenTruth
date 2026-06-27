@@ -2201,6 +2201,33 @@ def _product_trace_replay_workflow_gate(
         report_path=report_path,
         child_path_key="action_audit_gate_report",
     )
+    action_audit_gate = _product_trace_action_audit_gate_summary(
+        report,
+        report_path=report_path,
+        action_audit_gate_report_path=workflow_action_audit_path,
+    )
+    action_audit_report_path = (
+        None
+        if action_audit_gate.get("report_path") is None
+        else Path(str(action_audit_gate["report_path"]))
+    )
+    action_audit_report: dict[str, Any] = {}
+    action_audit_report_error = None
+    if require_action_audit_gate and action_audit_report_path is not None:
+        action_audit_report, action_audit_report_error = verification_context.load_json_object(
+            action_audit_report_path
+        )
+    action_audit_manifest_artifact_present = None
+    action_audit_manifest_error = None
+    if require_action_audit_gate:
+        (
+            action_audit_manifest_artifact_present,
+            action_audit_manifest_error,
+        ) = _artifact_manifest_contains_artifact(
+            manifest_path,
+            artifact_name="action_audit_gate_report",
+            verification_context=verification_context,
+        )
     resolved_selector_path = (
         Path(selector_replay_report_path)
         if selector_replay_report_path is not None
@@ -2218,11 +2245,11 @@ def _product_trace_replay_workflow_gate(
         verification=verification,
         selector_replay_report_path=resolved_selector_path,
         product_runtime_drift_report_path=resolved_drift_path,
-        action_audit_gate=_product_trace_action_audit_gate_summary(
-            report,
-            report_path=report_path,
-            action_audit_gate_report_path=workflow_action_audit_path,
-        ),
+        action_audit_gate=action_audit_gate,
+        action_audit_report=action_audit_report,
+        action_audit_report_error=action_audit_report_error,
+        action_audit_manifest_artifact_present=action_audit_manifest_artifact_present,
+        action_audit_manifest_error=action_audit_manifest_error,
         require_action_audit_gate=require_action_audit_gate,
         allow_unverified=allow_unverified,
     )
@@ -2310,6 +2337,10 @@ def _product_trace_replay_workflow_report_gate(
     selector_replay_report_path: Path | None,
     product_runtime_drift_report_path: Path | None,
     action_audit_gate: Mapping[str, Any],
+    action_audit_report: Mapping[str, Any],
+    action_audit_report_error: str | None,
+    action_audit_manifest_artifact_present: bool | None,
+    action_audit_manifest_error: str | None,
     require_action_audit_gate: bool,
     allow_unverified: bool,
 ) -> dict[str, Any]:
@@ -2346,11 +2377,51 @@ def _product_trace_replay_workflow_report_gate(
             )
         if action_audit_gate.get("report_path") is None:
             failures.append("product trace replay workflow action-audit gate report is missing")
+        elif action_audit_report_error is not None:
+            failures.append(
+                "product trace replay workflow action-audit gate report could not be loaded: "
+                f"{action_audit_report_error}"
+            )
+        else:
+            action_audit_report_summary = _mapping(action_audit_report.get("summary"))
+            if action_audit_report.get("workflow") != "product_trace_action_audit_gate":
+                failures.append(
+                    "product trace replay workflow action-audit gate report workflow is "
+                    f"{action_audit_report.get('workflow')!r}, expected "
+                    "'product_trace_action_audit_gate'"
+                )
+            if action_audit_report.get("status") != "promote":
+                failures.append(
+                    "product trace replay workflow action-audit gate report status is "
+                    f"{action_audit_report.get('status')!r}, expected 'promote'"
+                )
+            if action_audit_report_summary.get("gate_enabled") is not True:
+                failures.append(
+                    "product trace replay workflow action-audit gate report is not enabled"
+                )
+            if action_audit_report_summary.get("passed") is not True:
+                failures.append(
+                    "product trace replay workflow action-audit gate report did not pass"
+                )
+        if not allow_unverified:
+            if action_audit_manifest_error is not None:
+                failures.append(
+                    "product trace replay workflow artifact manifest could not be inspected for "
+                    f"action-audit gate report: {action_audit_manifest_error}"
+                )
+            elif action_audit_manifest_artifact_present is not True:
+                failures.append(
+                    "product trace replay workflow artifact manifest does not include "
+                    "action-audit gate report"
+                )
     return {
         "passed": not failures,
         "blocking_reasons": failures,
         "require_action_audit_gate": bool(require_action_audit_gate),
         "action_audit_gate": dict(action_audit_gate),
+        "action_audit_gate_report_status": action_audit_report.get("status"),
+        "action_audit_gate_report_workflow": action_audit_report.get("workflow"),
+        "action_audit_manifest_artifact_present": action_audit_manifest_artifact_present,
     }
 
 
@@ -2422,6 +2493,23 @@ def _product_trace_replay_workflow_child_path(
         return None
     path = _resolve_path(raw_path, base_path=report_path)
     return path.resolve() if path.exists() else path
+
+
+def _artifact_manifest_contains_artifact(
+    manifest_path: Path | None,
+    *,
+    artifact_name: str,
+    verification_context: ArtifactVerificationContext,
+) -> tuple[bool | None, str | None]:
+    if manifest_path is None:
+        return None, "artifact manifest path is missing"
+    manifest, error = verification_context.load_json_object(manifest_path)
+    if error is not None:
+        return None, error
+    artifacts = manifest.get("artifacts")
+    if not isinstance(artifacts, Mapping):
+        return None, "artifact manifest artifacts is not a mapping"
+    return artifact_name in artifacts, None
 
 
 def _feedback_policy_workflow_gate(
