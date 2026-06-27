@@ -16,7 +16,7 @@ EigenTruth should move from hallucination detection alone toward calibrated part
 - CiteCheck (arXiv:2605.27700) shows that citation hallucinations often appear as small metadata drift rather than fully fabricated references. This supports a separate citation-integrity route before broad retrieval: DOI, arXiv id, URL, author/year, title, and local reference labels should be checked against a trusted citation catalog instead of treated as ordinary lexical groundedness.
 - Internal Representations as Indicators of Hallucinations in Agent Tool Selection (arXiv:2601.05214) frames agent hallucination as incorrect tool selection, malformed parameters, and tool bypass. This supports keeping tool-route intent explicit in `ClaimVerificationPlan` instead of only checking final text.
 - World-Model-Augmented Web Agents with Action Correction (arXiv:2602.15384) uses consequence simulation and action correction before risky actions. This supports EigenTruth's world-model route as a post-draft verifier and pre-action correction adapter rather than a core dependency.
-- TokenHD (arXiv:2605.12384) and related span/token-level work point toward finer localization of hallucinations. EigenTruth's current lightweight equivalent is claim-level route budgeting and trace evidence; learned token-level detectors remain out of scope until the dependency and training boundary is explicit.
+- TokenHD (arXiv:2605.12384) and related span/token-level work point toward finer localization of hallucinations. EigenTruth's current lightweight equivalent is claim-level risk localization, route budgeting, and trace evidence; learned token-level detectors remain out of scope until the dependency and training boundary is explicit.
 
 ## Implemented This Continuation
 
@@ -31,6 +31,13 @@ Added budget-aware adaptive verification planning:
 - `ProductTrace.to_bounded_dict()` and `product_runtime_metrics(...)` preserve compact verification-budget summaries, including selected/dropped claim counts and claim/route/tool/cost budget exhaustion flags.
 
 This is a product-facing implementation of the current research direction: use internal diagnostics and claim metadata to decide when verification is needed, then spend verifier/tool budget on the most consequential claims and routes while leaving an auditable trace of what was skipped. It does not add network retrieval, learned token detectors, or model-dependent world-model code.
+
+Added dependency-free claim-risk localization:
+
+- `ClaimRiskSpan`, `ClaimRiskLocalizationReport`, and `localize_claim_risk_spans(...)` turn existing claim spans, verifier statuses, route hints, and verification-budget drops into a JSON-ready localization report.
+- The report preserves per-claim span offsets when available, risk level, risk score, verifier status, confidence, routes, evidence count, and reasons such as `verification_status:refuted`, sensitive claim features, or budget-dropped routes.
+- `ProductTrace.to_bounded_dict()` now includes a compact `claim_risk_localization` summary with top risky spans, and `product_runtime_metrics(...)` exposes high/medium-or-high claim counts plus max localized risk score.
+- This is the monitor-first bridge toward token/span-level hallucination tooling: it gives product UI and audits a concrete risky text region today, while leaving learned TokenHD-style detectors as a future optional adapter.
 
 ## Implemented This Round
 

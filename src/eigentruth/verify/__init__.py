@@ -32,6 +32,11 @@ from eigentruth.verify.coherence import (
 )
 from eigentruth.verify.composite import CompositeVerifier, RoutedVerifier, VerifierRoute
 from eigentruth.verify.groundedness import EvidenceDocument, EvidenceQualityPolicy, GroundednessVerifier
+from eigentruth.verify.localization import (
+    ClaimRiskLocalizationReport,
+    ClaimRiskSpan,
+    localize_claim_risk_spans,
+)
 from eigentruth.verify.planning import (
     ClaimVerificationPlan,
     ClaimVerificationPlanner,
@@ -68,6 +73,8 @@ __all__ = [
     "ClaimCoherenceReport",
     "ClaimDependency",
     "ClaimExtractor",
+    "ClaimRiskLocalizationReport",
+    "ClaimRiskSpan",
     "CitationRecord",
     "CitationVerifier",
     "ClaimTriple",
@@ -111,6 +118,7 @@ __all__ = [
     "extract_citation_references",
     "extract_claims",
     "extract_claim_triples",
+    "localize_claim_risk_spans",
     "budget_verification_plan",
     "estimate_verification_plan_cost",
     "infer_claim_dependencies",

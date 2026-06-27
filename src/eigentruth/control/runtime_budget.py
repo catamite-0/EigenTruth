@@ -471,6 +471,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
         metrics.update(_route_cost_metrics(trace))
         metrics.update(_verification_stage_metrics(trace))
         metrics.update(_verification_plan_metrics(trace))
+        metrics.update(_claim_risk_localization_metrics(trace))
         metrics.update(_triple_coverage_metrics(trace))
         metrics.update(_final_answer_metrics(trace))
         metrics.update(_promotion_contract_metrics(trace))
@@ -508,6 +509,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
     metrics.update(_route_cost_metrics(trace))
     metrics.update(_verification_stage_metrics(trace))
     metrics.update(_verification_plan_metrics(trace))
+    metrics.update(_claim_risk_localization_metrics(trace))
     metrics.update(_triple_coverage_metrics(trace))
     metrics.update(_final_answer_metrics(trace))
     metrics.update(_promotion_contract_metrics(trace))
@@ -759,6 +761,37 @@ def _verification_plan_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[
         "verification_plan_budget_estimated_cost_budget_exhausted": estimated_cost_budget_exhausted,
         "verification_plan_budget_selected_claim_count": selected_budget_claim_count,
         "verification_plan_budget_dropped_claim_count": dropped_budget_claim_count,
+    }
+
+
+def _claim_risk_localization_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:
+    if isinstance(trace, ProductTrace):
+        summary = trace.claim_risk_localization_summary()
+        source = "full_trace"
+    else:
+        payload = dict(trace)
+        summary = _mapping(_mapping(payload.get("summaries")).get("claim_risk_localization"))
+        if summary:
+            source = "bounded_summary"
+        else:
+            summary = ProductTrace(
+                claims=tuple(_sequence(payload.get("claims", ()))),
+                verification_results=tuple(_sequence(payload.get("verification_results", ()))),
+                verification_plan=_mapping(payload.get("verification_plan")),
+            ).claim_risk_localization_summary()
+            source = "full_trace"
+    counts_by_risk_level = _mapping(summary.get("counts_by_risk_level"))
+    return {
+        "claim_risk_localization_available": bool(summary.get("available")),
+        "claim_risk_localization_source": source,
+        "claim_risk_localization_summary": summary,
+        "claim_risk_span_count": _finite_float(summary.get("span_count")),
+        "claim_risk_localized_span_count": _finite_float(summary.get("localized_span_count")),
+        "claim_risk_high_count": _finite_float(summary.get("high_risk_claim_count")),
+        "claim_risk_medium_or_high_count": _finite_float(summary.get("medium_or_high_risk_claim_count")),
+        "claim_risk_low_count": _finite_float(counts_by_risk_level.get("low")),
+        "claim_risk_medium_count": _finite_float(counts_by_risk_level.get("medium")),
+        "claim_risk_max_score": _finite_float(summary.get("max_risk_score")),
     }
 
 

@@ -10,6 +10,7 @@ from eigentruth.control.actions import ActionRequest, ActionResult
 from eigentruth.control.finalization import FinalAnswer
 from eigentruth.control.policy import ControlAction, RiskDecision
 from eigentruth.json_utils import to_jsonable
+from eigentruth.verify.localization import localize_claim_risk_spans
 from eigentruth.verify.planning import ClaimVerificationPlan, estimate_verification_plan_cost
 from eigentruth.verify.protocols import Claim, VerificationResult
 
@@ -264,6 +265,11 @@ class ProductTrace:
                 verification_result_count=len(prepared.verification_results),
             ),
             "verification_plan": _verification_plan_summary(prepared.verification_plan),
+            "claim_risk_localization": _claim_risk_localization_summary(
+                prepared.claims,
+                prepared.verification_results,
+                prepared.verification_plan,
+            ),
             "triple_coverage": _triple_coverage_summary(
                 prepared.claims,
                 prepared.verification_results,
@@ -362,6 +368,14 @@ class ProductTrace:
         return _triple_coverage_summary(
             tuple(_claim_to_dict(claim) for claim in self.claims),
             tuple(_verification_result_to_dict(result) for result in self.verification_results),
+        )
+
+    def claim_risk_localization_summary(self) -> dict[str, Any]:
+        """Summarize localized claim risk from claims and verifier outputs."""
+        return _claim_risk_localization_summary(
+            tuple(_claim_to_dict(claim) for claim in self.claims),
+            tuple(_verification_result_to_dict(result) for result in self.verification_results),
+            _verification_plan_to_dict(self.verification_plan),
         )
 
 
@@ -646,6 +660,28 @@ def _verification_plan_summary(plan: Mapping[str, Any] | None) -> dict[str, Any]
         "dependency_count": len(_as_sequence(plan.get("dependencies", ()))),
         "cost_estimate": cost_estimate,
         "budget": budget_summary,
+    }
+
+
+def _claim_risk_localization_summary(
+    claims: Sequence[Mapping[str, Any]],
+    results: Sequence[Mapping[str, Any]],
+    plan: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    report = localize_claim_risk_spans(
+        claims,
+        verification_results=results,
+        verification_plan=plan,
+    )
+    summary = report.summary()
+    top_spans = sorted(
+        report.spans,
+        key=lambda span: (span.risk_score, span.claim_id),
+        reverse=True,
+    )[:5]
+    return {
+        **summary,
+        "top_risk_spans": tuple(span.to_dict() for span in top_spans),
     }
 
 
