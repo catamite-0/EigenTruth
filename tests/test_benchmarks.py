@@ -24921,6 +24921,26 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                 "promotion_contract_source": "contract-a.json",
                 "promotion_contract_source_status": "promote",
                 "promotion_contract_budget_enabled": True,
+                "promotion_contract_product_trace_replay_workflow_status": "promote",
+                "promotion_contract_product_trace_replay_workflow_report": (
+                    "artifacts/trace-replay/product-trace-replay-workflow.json"
+                ),
+                "promotion_contract_product_trace_replay_workflow_report_status": "promote",
+                "promotion_contract_product_trace_action_audit_gate_required": True,
+                "promotion_contract_product_trace_action_audit_gate_status": "promote",
+                "promotion_contract_product_trace_action_audit_gate_enabled": True,
+                "promotion_contract_product_trace_action_audit_gate_passed": True,
+                "promotion_contract_product_trace_action_audit_error_rate": 0.0,
+                "promotion_contract_product_trace_action_audit_missing_retrieval_action_rate": 0.0,
+                "promotion_contract_product_trace_action_audit_missing_plan_retrieval_query_rate": 0.0,
+                "promotion_contract_product_trace_action_execution_gate_required": True,
+                "promotion_contract_product_trace_action_execution_gate_status": "promote",
+                "promotion_contract_product_trace_action_execution_gate_enabled": True,
+                "promotion_contract_product_trace_action_execution_gate_passed": True,
+                "promotion_contract_product_trace_action_execution_alignment_failed_trace_rate": 0.0,
+                "promotion_contract_product_trace_action_execution_missing_result_rate": 0.0,
+                "promotion_contract_product_trace_action_execution_unexpected_result_rate": 0.0,
+                "promotion_contract_product_trace_action_execution_request_id_mismatch_rate": 0.0,
                 "promotion_contract_verifier_route": {
                     "route": "structured_fact",
                     "covered_fact_property_count": 3,
@@ -25218,6 +25238,7 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     promotion = payload["summary"]["promotion_contract"]
     covered_properties = promotion["covered_fact_properties"]
     runtime_drift = promotion["product_runtime_drift"]
+    trace_replay = promotion["product_trace_replay"]
     matrix = promotion["triple_extraction_fixture_matrix"]
     assert promotion["available_trace_count"] == 2
     assert promotion["source_counts"] == {"contract-a.json": 1}
@@ -25280,6 +25301,13 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert runtime_drift["triple_audit_evidence"]["triple_slot_coverage_rate"][
         "status_counts"
     ] == {"pass": 1}
+    assert trace_replay["available_trace_count"] == 1
+    assert trace_replay["workflow_status_counts"] == {"promote": 1}
+    assert trace_replay["action_audit_gate"]["status_counts"] == {"promote": 1}
+    assert trace_replay["action_audit_gate"]["error_rate"]["mean"] == pytest.approx(0.0)
+    assert trace_replay["action_execution_gate"]["request_id_mismatch_rate"][
+        "mean"
+    ] == pytest.approx(0.0)
     assert matrix["available_trace_count"] == 2
     assert matrix["source_counts"] == {"registry": 1, "runtime_evidence_bundle": 1}
     assert matrix["status_counts"] == {"promote": 2}
@@ -25313,6 +25341,12 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
         ]
         == 1.0
     )
+    assert payload["traces"][0]["metrics"][
+        "promotion_contract_product_trace_action_audit_error_rate"
+    ] == pytest.approx(0.0)
+    assert payload["traces"][0]["metrics"][
+        "promotion_contract_product_trace_action_execution_request_id_mismatch_rate"
+    ] == pytest.approx(0.0)
     assert payload["traces"][0]["metrics"][
         "promotion_contract_recommended_route_covered_fact_property_count"
     ] == 3.0
@@ -25389,6 +25423,19 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert manifest["metadata"][
         "promotion_contract_product_runtime_drift_triple_slot_coverage_rate_status_counts"
     ] == {"pass": 1}
+    assert (
+        manifest["metadata"]["promotion_contract_product_trace_replay_available_trace_count"]
+        == 1
+    )
+    assert manifest["metadata"]["promotion_contract_product_trace_replay_workflow_status_counts"] == {
+        "promote": 1
+    }
+    assert manifest["metadata"]["promotion_contract_product_trace_action_audit_error_rate_mean"] == pytest.approx(
+        0.0
+    )
+    assert manifest["metadata"][
+        "promotion_contract_product_trace_action_execution_request_id_mismatch_rate_mean"
+    ] == pytest.approx(0.0)
     assert "\n  " not in saved_text
     assert "\n  " not in manifest_text
     assert registry_module.load_and_verify_artifact_manifest(
@@ -25414,6 +25461,14 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert record.metadata[
         "promotion_contract_product_runtime_drift_triple_audit_pass_rate_current_mean"
     ] == pytest.approx(1.0)
+    assert (
+        record.metadata["promotion_contract_product_trace_replay_available_trace_count"]
+        == 1
+    )
+    assert record.metadata["promotion_contract_product_trace_action_audit_error_rate_mean"] == pytest.approx(0.0)
+    assert record.metadata[
+        "promotion_contract_product_trace_action_execution_request_id_mismatch_rate_mean"
+    ] == pytest.approx(0.0)
 
 
 def test_run_product_runtime_baseline_reports_optimization_advice(tmp_path):
@@ -26471,7 +26526,7 @@ def test_run_product_runtime_baseline_reuses_trace_record_cache(tmp_path, monkey
     assert first["config"]["trace_record_cache"]["cache_hit"] is False
     assert first["config"]["trace_record_cache"]["cache_written"] is True
     assert first["paths"]["trace_records_cache"] == str(cache_path)
-    assert cache_payload["schema_version"] == 5
+    assert cache_payload["schema_version"] == 6
     assert cache_payload["workflow"] == "product_runtime_baseline_trace_records"
     assert cache_payload["summary"]["trace_count"] == 2
     assert cache_payload["policy"]["payload"]["max_total_seconds"] == 0.3
@@ -26690,6 +26745,106 @@ def test_compare_product_runtime_baselines_blocks_drift_and_registers(tmp_path):
     assert record.metadata["compared_metric_count"] == 17
     assert record.metadata["compact_json"] is True
     assert "\n  " not in saved_text
+
+
+def test_compare_product_runtime_baselines_gates_product_trace_action_gate_drift(tmp_path):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    registry_module = importlib.import_module("eigentruth.registry")
+    baseline_trace = tmp_path / "baseline-trace.json"
+    current_trace = tmp_path / "current-trace.json"
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    drift_report = tmp_path / "drift.json"
+    manifest_path = tmp_path / "drift-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    _write_product_runtime_trace(
+        baseline_trace,
+        request_id="baseline",
+        total_seconds=0.10,
+        route_seconds=0.02,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=4,
+        cache_misses=1,
+        metadata={
+            "promotion_contract_product_trace_replay_workflow_status": "promote",
+            "promotion_contract_product_trace_action_audit_error_rate": 0.0,
+            "promotion_contract_product_trace_action_audit_missing_retrieval_action_rate": 0.0,
+            "promotion_contract_product_trace_action_audit_missing_plan_retrieval_query_rate": 0.0,
+            "promotion_contract_product_trace_action_execution_request_id_mismatch_rate": 0.0,
+        },
+    )
+    _write_product_runtime_trace(
+        current_trace,
+        request_id="current",
+        total_seconds=0.10,
+        route_seconds=0.02,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=4,
+        cache_misses=1,
+        metadata={
+            "promotion_contract_product_trace_replay_workflow_status": "promote",
+            "promotion_contract_product_trace_action_audit_error_rate": 0.20,
+            "promotion_contract_product_trace_action_audit_missing_retrieval_action_rate": 0.10,
+            "promotion_contract_product_trace_action_audit_missing_plan_retrieval_query_rate": 0.15,
+            "promotion_contract_product_trace_action_execution_request_id_mismatch_rate": 0.25,
+        },
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=baseline_report,
+        )
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(current_trace,),
+            report_path=current_report,
+        )
+    )
+
+    payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        report_path=drift_report,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="runtime-drift-action-gates",
+        version="0.1",
+        max_product_trace_action_audit_error_rate_increase=0.05,
+        max_product_trace_action_audit_missing_plan_retrieval_query_rate_increase=0.05,
+        max_product_trace_action_execution_request_id_mismatch_rate_increase=0.05,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "product_runtime_drift_report:runtime-drift-action-gates:0.1"
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["blocked_metric_count"] == 3
+    assert payload["summary"]["compared_metric_count"] == 27
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.product_trace_replay.action_audit_gate.error_rate.mean",
+    )["status"] == "blocked"
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.product_trace_replay.action_audit_gate.missing_plan_retrieval_query_rate.mean",
+    )["absolute_delta"] == pytest.approx(0.15)
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.product_trace_replay.action_execution_gate.request_id_mismatch_rate.mean",
+    )["status"] == "blocked"
+    assert payload["config"]["max_product_trace_action_audit_error_rate_increase"] == pytest.approx(0.05)
+    assert manifest["metadata"]["product_trace_action_gate_blocked_metric_count"] == 3
+    assert manifest["metadata"]["product_trace_action_audit_error_rate_current"] == pytest.approx(0.20)
+    assert manifest["metadata"]["product_trace_action_audit_missing_retrieval_action_rate_status"] == "observed"
+    assert record.metadata["product_trace_action_gate_blocked_metric_count"] == 3
+    assert record.metadata["product_trace_action_execution_request_id_mismatch_rate_current"] == pytest.approx(
+        0.25
+    )
 
 
 def test_compare_product_runtime_baselines_reports_minimum_trace_gate_reason(tmp_path):

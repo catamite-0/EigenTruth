@@ -21,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-_TRACE_RECORD_CACHE_SCHEMA_VERSION = 5
+_TRACE_RECORD_CACHE_SCHEMA_VERSION = 6
 _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "promotion_contract_coverage_rate",
     "triple_extraction_fixture_matrix_coverage_rate",
@@ -61,6 +61,38 @@ _PROMOTION_CONTRACT_PRODUCT_RUNTIME_DRIFT_FIELDS: tuple[str, ...] = (
     "promotion_contract_product_runtime_drift_triple_audit_evidence_blocked_metric_count",
     "promotion_contract_product_runtime_drift_covered_fact_property_evidence_metric_count",
     "promotion_contract_product_runtime_drift_covered_fact_property_evidence_blocked_metric_count",
+)
+_PROMOTION_CONTRACT_PRODUCT_TRACE_REPLAY_FIELDS: tuple[str, ...] = (
+    "promotion_contract_product_trace_replay_available",
+    "promotion_contract_product_trace_replay_workflow_status",
+    "promotion_contract_product_trace_replay_workflow_report",
+    "promotion_contract_product_trace_replay_workflow_manifest",
+    "promotion_contract_product_trace_replay_workflow_source",
+    "promotion_contract_product_trace_replay_workflow_registry",
+    "promotion_contract_product_trace_replay_workflow_record",
+    "promotion_contract_product_trace_replay_workflow_report_status",
+    "promotion_contract_product_trace_replay_workflow_selector_replay_report",
+    "promotion_contract_product_trace_replay_workflow_runtime_drift_report",
+    "promotion_contract_product_trace_action_audit_gate_required",
+    "promotion_contract_product_trace_action_audit_gate_status",
+    "promotion_contract_product_trace_action_audit_gate_enabled",
+    "promotion_contract_product_trace_action_audit_gate_passed",
+    "promotion_contract_product_trace_action_audit_gate_report",
+    "promotion_contract_product_trace_action_audit_error_rate",
+    "promotion_contract_product_trace_action_audit_missing_retrieval_action_rate",
+    "promotion_contract_product_trace_action_audit_missing_plan_retrieval_query_rate",
+    "promotion_contract_product_trace_action_audit_malformed_payload_rate",
+    "promotion_contract_product_trace_action_audit_unexpected_action_rate",
+    "promotion_contract_product_trace_action_audit_unknown_claim_id_rate",
+    "promotion_contract_product_trace_action_execution_gate_required",
+    "promotion_contract_product_trace_action_execution_gate_status",
+    "promotion_contract_product_trace_action_execution_gate_enabled",
+    "promotion_contract_product_trace_action_execution_gate_passed",
+    "promotion_contract_product_trace_action_execution_gate_report",
+    "promotion_contract_product_trace_action_execution_alignment_failed_trace_rate",
+    "promotion_contract_product_trace_action_execution_missing_result_rate",
+    "promotion_contract_product_trace_action_execution_unexpected_result_rate",
+    "promotion_contract_product_trace_action_execution_request_id_mismatch_rate",
 )
 _PROMOTION_CONTRACT_COVERED_FACT_ROLLUP_FIELDS: tuple[str, ...] = (
     "promotion_contract_recommended_route_covered_fact_property_metric_count",
@@ -690,6 +722,8 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
             "promotion_contract_triple_extraction_fixture_matrix_mean_f1_lift"
         ),
     }
+    for field_name in _PROMOTION_CONTRACT_PRODUCT_TRACE_REPLAY_FIELDS:
+        compact[field_name] = metrics.get(field_name)
     for field_name in _PROMOTION_CONTRACT_PRODUCT_RUNTIME_DRIFT_FIELDS:
         compact[field_name] = metrics.get(field_name)
     for field_name in _PROMOTION_CONTRACT_COVERED_FACT_ROLLUP_FIELDS:
@@ -1708,6 +1742,7 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
         for item in metrics
     ]
     manifest_observations = sum(value is not None for value in manifest_values)
+    product_trace_replay = _aggregate_promotion_contract_product_trace_replay(metrics)
     product_runtime_drift = _aggregate_promotion_contract_product_runtime_drift(metrics)
     return {
         "source_trace_count": len(metrics),
@@ -1724,6 +1759,7 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
         "summary_observations": sum(
             1 for item in metrics if _mapping(item.get("promotion_contract_summary"))
         ),
+        "product_trace_replay": product_trace_replay,
         "product_runtime_drift": product_runtime_drift,
         "covered_fact_properties": {
             "recommended_route_observation_count": property_scope_observations,
@@ -1790,6 +1826,127 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
             ),
             "mean_f1_lift": _numeric_summary(
                 item.get("promotion_contract_triple_extraction_fixture_matrix_mean_f1_lift")
+                for item in metrics
+            ),
+        },
+    }
+
+
+def _aggregate_promotion_contract_product_trace_replay(
+    metrics: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    available_count = sum(
+        1
+        for item in metrics
+        if bool(item.get("promotion_contract_product_trace_replay_available"))
+    )
+    return {
+        "available_trace_count": available_count,
+        "missing_trace_count": len(metrics) - available_count,
+        "coverage_rate": _safe_div(available_count, len(metrics)),
+        "workflow_status_counts": _counts(
+            item.get("promotion_contract_product_trace_replay_workflow_status")
+            for item in metrics
+        ),
+        "workflow_report_status_counts": _counts(
+            item.get("promotion_contract_product_trace_replay_workflow_report_status")
+            for item in metrics
+        ),
+        "workflow_source_counts": _counts(
+            item.get("promotion_contract_product_trace_replay_workflow_source")
+            for item in metrics
+        ),
+        "action_audit_gate": {
+            "required_counts": _counts(
+                item.get("promotion_contract_product_trace_action_audit_gate_required")
+                for item in metrics
+            ),
+            "status_counts": _counts(
+                item.get("promotion_contract_product_trace_action_audit_gate_status")
+                for item in metrics
+            ),
+            "enabled_counts": _counts(
+                item.get("promotion_contract_product_trace_action_audit_gate_enabled")
+                for item in metrics
+            ),
+            "passed_counts": _counts(
+                item.get("promotion_contract_product_trace_action_audit_gate_passed")
+                for item in metrics
+            ),
+            "error_rate": _numeric_summary(
+                item.get("promotion_contract_product_trace_action_audit_error_rate")
+                for item in metrics
+            ),
+            "missing_retrieval_action_rate": _numeric_summary(
+                item.get(
+                    "promotion_contract_product_trace_action_audit_missing_retrieval_action_rate"
+                )
+                for item in metrics
+            ),
+            "missing_plan_retrieval_query_rate": _numeric_summary(
+                item.get(
+                    "promotion_contract_product_trace_action_audit_missing_plan_retrieval_query_rate"
+                )
+                for item in metrics
+            ),
+            "malformed_payload_rate": _numeric_summary(
+                item.get(
+                    "promotion_contract_product_trace_action_audit_malformed_payload_rate"
+                )
+                for item in metrics
+            ),
+            "unexpected_action_rate": _numeric_summary(
+                item.get(
+                    "promotion_contract_product_trace_action_audit_unexpected_action_rate"
+                )
+                for item in metrics
+            ),
+            "unknown_claim_id_rate": _numeric_summary(
+                item.get(
+                    "promotion_contract_product_trace_action_audit_unknown_claim_id_rate"
+                )
+                for item in metrics
+            ),
+        },
+        "action_execution_gate": {
+            "required_counts": _counts(
+                item.get("promotion_contract_product_trace_action_execution_gate_required")
+                for item in metrics
+            ),
+            "status_counts": _counts(
+                item.get("promotion_contract_product_trace_action_execution_gate_status")
+                for item in metrics
+            ),
+            "enabled_counts": _counts(
+                item.get("promotion_contract_product_trace_action_execution_gate_enabled")
+                for item in metrics
+            ),
+            "passed_counts": _counts(
+                item.get("promotion_contract_product_trace_action_execution_gate_passed")
+                for item in metrics
+            ),
+            "alignment_failed_trace_rate": _numeric_summary(
+                item.get(
+                    "promotion_contract_product_trace_action_execution_alignment_failed_trace_rate"
+                )
+                for item in metrics
+            ),
+            "missing_result_rate": _numeric_summary(
+                item.get(
+                    "promotion_contract_product_trace_action_execution_missing_result_rate"
+                )
+                for item in metrics
+            ),
+            "unexpected_result_rate": _numeric_summary(
+                item.get(
+                    "promotion_contract_product_trace_action_execution_unexpected_result_rate"
+                )
+                for item in metrics
+            ),
+            "request_id_mismatch_rate": _numeric_summary(
+                item.get(
+                    "promotion_contract_product_trace_action_execution_request_id_mismatch_rate"
+                )
                 for item in metrics
             ),
         },
@@ -2166,6 +2323,9 @@ def _write_artifact_manifest(
     artifacts: Mapping[str, str | Path | None] | None = None,
 ) -> dict[str, Any]:
     promotion_contract_drift_metadata = _promotion_contract_runtime_drift_flat_metadata(report)
+    promotion_contract_trace_replay_metadata = _promotion_contract_trace_replay_flat_metadata(
+        report
+    )
     manifest = build_artifact_manifest(
         _artifact_paths(config) if artifacts is None else artifacts,
         root=config.resolved_artifact_manifest_path.parent,
@@ -2198,6 +2358,7 @@ def _write_artifact_manifest(
             "budget_passed": _mapping(report.get("budget")).get("passed"),
             "compact_json": config.compact_json,
             **promotion_contract_drift_metadata,
+            **promotion_contract_trace_replay_metadata,
             **dict(config.metadata),
         },
     )
@@ -2223,6 +2384,9 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
     if config.registry_path is None:
         return
     promotion_contract_drift_metadata = _promotion_contract_runtime_drift_flat_metadata(report)
+    promotion_contract_trace_replay_metadata = _promotion_contract_trace_replay_flat_metadata(
+        report
+    )
     registry = ArtifactRegistry.load_json(config.registry_path)
     registry.record_product_runtime_baseline(
         name=str(config.name),
@@ -2260,6 +2424,7 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
             "failed_count": _mapping(report.get("budget")).get("failed_count"),
             "compact_json": config.compact_json,
             **promotion_contract_drift_metadata,
+            **promotion_contract_trace_replay_metadata,
             **dict(config.metadata),
         },
     )
@@ -2360,6 +2525,99 @@ def _promotion_contract_runtime_drift_flat_metadata(
         )
     )
     return metadata
+
+
+def _promotion_contract_trace_replay_flat_metadata(
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    replay = _mapping(
+        _nested(
+            report,
+            "summary",
+            "promotion_contract",
+            "product_trace_replay",
+        )
+    )
+    if not replay:
+        return {}
+    action_audit = _mapping(replay.get("action_audit_gate"))
+    action_execution = _mapping(replay.get("action_execution_gate"))
+    return {
+        "promotion_contract_product_trace_replay_available_trace_count": replay.get(
+            "available_trace_count"
+        ),
+        "promotion_contract_product_trace_replay_missing_trace_count": replay.get(
+            "missing_trace_count"
+        ),
+        "promotion_contract_product_trace_replay_coverage_rate": replay.get(
+            "coverage_rate"
+        ),
+        "promotion_contract_product_trace_replay_workflow_status_counts": dict(
+            _mapping(replay.get("workflow_status_counts"))
+        ),
+        "promotion_contract_product_trace_replay_workflow_report_status_counts": dict(
+            _mapping(replay.get("workflow_report_status_counts"))
+        ),
+        "promotion_contract_product_trace_action_audit_gate_required_counts": dict(
+            _mapping(action_audit.get("required_counts"))
+        ),
+        "promotion_contract_product_trace_action_audit_gate_status_counts": dict(
+            _mapping(action_audit.get("status_counts"))
+        ),
+        "promotion_contract_product_trace_action_audit_gate_enabled_counts": dict(
+            _mapping(action_audit.get("enabled_counts"))
+        ),
+        "promotion_contract_product_trace_action_audit_gate_passed_counts": dict(
+            _mapping(action_audit.get("passed_counts"))
+        ),
+        "promotion_contract_product_trace_action_audit_error_rate_mean": _nested(
+            action_audit,
+            "error_rate",
+            "mean",
+        ),
+        "promotion_contract_product_trace_action_audit_missing_retrieval_action_rate_mean": _nested(
+            action_audit,
+            "missing_retrieval_action_rate",
+            "mean",
+        ),
+        "promotion_contract_product_trace_action_audit_missing_plan_retrieval_query_rate_mean": _nested(
+            action_audit,
+            "missing_plan_retrieval_query_rate",
+            "mean",
+        ),
+        "promotion_contract_product_trace_action_execution_gate_required_counts": dict(
+            _mapping(action_execution.get("required_counts"))
+        ),
+        "promotion_contract_product_trace_action_execution_gate_status_counts": dict(
+            _mapping(action_execution.get("status_counts"))
+        ),
+        "promotion_contract_product_trace_action_execution_gate_enabled_counts": dict(
+            _mapping(action_execution.get("enabled_counts"))
+        ),
+        "promotion_contract_product_trace_action_execution_gate_passed_counts": dict(
+            _mapping(action_execution.get("passed_counts"))
+        ),
+        "promotion_contract_product_trace_action_execution_alignment_failed_trace_rate_mean": _nested(
+            action_execution,
+            "alignment_failed_trace_rate",
+            "mean",
+        ),
+        "promotion_contract_product_trace_action_execution_missing_result_rate_mean": _nested(
+            action_execution,
+            "missing_result_rate",
+            "mean",
+        ),
+        "promotion_contract_product_trace_action_execution_unexpected_result_rate_mean": _nested(
+            action_execution,
+            "unexpected_result_rate",
+            "mean",
+        ),
+        "promotion_contract_product_trace_action_execution_request_id_mismatch_rate_mean": _nested(
+            action_execution,
+            "request_id_mismatch_rate",
+            "mean",
+        ),
+    }
 
 
 def _product_runtime_drift_evidence_flat_metadata(

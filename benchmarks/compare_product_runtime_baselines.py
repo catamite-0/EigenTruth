@@ -72,6 +72,124 @@ _COVERED_FACT_PROPERTY_METADATA_FIELDS: tuple[tuple[str, str], ...] = tuple(
         "min_false_refuted_rate",
     )
 )
+_PRODUCT_TRACE_ACTION_GATE_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
+    (
+        "promotion_contract.product_trace_replay.action_audit_gate.error_rate.mean",
+        "product_trace_action_audit_error_rate",
+    ),
+    (
+        "promotion_contract.product_trace_replay.action_audit_gate.missing_retrieval_action_rate.mean",
+        "product_trace_action_audit_missing_retrieval_action_rate",
+    ),
+    (
+        "promotion_contract.product_trace_replay.action_audit_gate.missing_plan_retrieval_query_rate.mean",
+        "product_trace_action_audit_missing_plan_retrieval_query_rate",
+    ),
+    (
+        "promotion_contract.product_trace_replay.action_audit_gate.malformed_payload_rate.mean",
+        "product_trace_action_audit_malformed_payload_rate",
+    ),
+    (
+        "promotion_contract.product_trace_replay.action_audit_gate.unexpected_action_rate.mean",
+        "product_trace_action_audit_unexpected_action_rate",
+    ),
+    (
+        "promotion_contract.product_trace_replay.action_audit_gate.unknown_claim_id_rate.mean",
+        "product_trace_action_audit_unknown_claim_id_rate",
+    ),
+    (
+        "promotion_contract.product_trace_replay.action_execution_gate.alignment_failed_trace_rate.mean",
+        "product_trace_action_execution_alignment_failed_trace_rate",
+    ),
+    (
+        "promotion_contract.product_trace_replay.action_execution_gate.missing_result_rate.mean",
+        "product_trace_action_execution_missing_result_rate",
+    ),
+    (
+        "promotion_contract.product_trace_replay.action_execution_gate.unexpected_result_rate.mean",
+        "product_trace_action_execution_unexpected_result_rate",
+    ),
+    (
+        "promotion_contract.product_trace_replay.action_execution_gate.request_id_mismatch_rate.mean",
+        "product_trace_action_execution_request_id_mismatch_rate",
+    ),
+)
+_PRODUCT_TRACE_ACTION_GATE_METRIC_SPECS: tuple[tuple[str, tuple[str, ...], str], ...] = (
+    (
+        "promotion_contract.product_trace_replay.action_audit_gate.error_rate.mean",
+        ("promotion_contract", "product_trace_replay", "action_audit_gate", "error_rate", "mean"),
+        "max_product_trace_action_audit_error_rate_increase",
+    ),
+    (
+        "promotion_contract.product_trace_replay.action_audit_gate.missing_retrieval_action_rate.mean",
+        (
+            "promotion_contract",
+            "product_trace_replay",
+            "action_audit_gate",
+            "missing_retrieval_action_rate",
+            "mean",
+        ),
+        "max_product_trace_action_audit_missing_retrieval_action_rate_increase",
+    ),
+    (
+        "promotion_contract.product_trace_replay.action_audit_gate.missing_plan_retrieval_query_rate.mean",
+        (
+            "promotion_contract",
+            "product_trace_replay",
+            "action_audit_gate",
+            "missing_plan_retrieval_query_rate",
+            "mean",
+        ),
+        "max_product_trace_action_audit_missing_plan_retrieval_query_rate_increase",
+    ),
+    (
+        "promotion_contract.product_trace_replay.action_audit_gate.malformed_payload_rate.mean",
+        ("promotion_contract", "product_trace_replay", "action_audit_gate", "malformed_payload_rate", "mean"),
+        "max_product_trace_action_audit_malformed_payload_rate_increase",
+    ),
+    (
+        "promotion_contract.product_trace_replay.action_audit_gate.unexpected_action_rate.mean",
+        ("promotion_contract", "product_trace_replay", "action_audit_gate", "unexpected_action_rate", "mean"),
+        "max_product_trace_action_audit_unexpected_action_rate_increase",
+    ),
+    (
+        "promotion_contract.product_trace_replay.action_audit_gate.unknown_claim_id_rate.mean",
+        ("promotion_contract", "product_trace_replay", "action_audit_gate", "unknown_claim_id_rate", "mean"),
+        "max_product_trace_action_audit_unknown_claim_id_rate_increase",
+    ),
+    (
+        "promotion_contract.product_trace_replay.action_execution_gate.alignment_failed_trace_rate.mean",
+        (
+            "promotion_contract",
+            "product_trace_replay",
+            "action_execution_gate",
+            "alignment_failed_trace_rate",
+            "mean",
+        ),
+        "max_product_trace_action_execution_alignment_failed_trace_rate_increase",
+    ),
+    (
+        "promotion_contract.product_trace_replay.action_execution_gate.missing_result_rate.mean",
+        ("promotion_contract", "product_trace_replay", "action_execution_gate", "missing_result_rate", "mean"),
+        "max_product_trace_action_execution_missing_result_rate_increase",
+    ),
+    (
+        "promotion_contract.product_trace_replay.action_execution_gate.unexpected_result_rate.mean",
+        ("promotion_contract", "product_trace_replay", "action_execution_gate", "unexpected_result_rate", "mean"),
+        "max_product_trace_action_execution_unexpected_result_rate_increase",
+    ),
+    (
+        "promotion_contract.product_trace_replay.action_execution_gate.request_id_mismatch_rate.mean",
+        (
+            "promotion_contract",
+            "product_trace_replay",
+            "action_execution_gate",
+            "request_id_mismatch_rate",
+            "mean",
+        ),
+        "max_product_trace_action_execution_request_id_mismatch_rate_increase",
+    ),
+)
 
 
 def compare_product_runtime_baselines(
@@ -111,6 +229,16 @@ def compare_product_runtime_baselines(
     max_promotion_contract_covered_fact_min_decision_accuracy_drop: float | None = None,
     max_promotion_contract_covered_fact_max_false_supported_rate_increase: float | None = None,
     max_promotion_contract_covered_fact_min_false_refuted_rate_drop: float | None = None,
+    max_product_trace_action_audit_error_rate_increase: float | None = None,
+    max_product_trace_action_audit_missing_retrieval_action_rate_increase: float | None = None,
+    max_product_trace_action_audit_missing_plan_retrieval_query_rate_increase: float | None = None,
+    max_product_trace_action_audit_malformed_payload_rate_increase: float | None = None,
+    max_product_trace_action_audit_unexpected_action_rate_increase: float | None = None,
+    max_product_trace_action_audit_unknown_claim_id_rate_increase: float | None = None,
+    max_product_trace_action_execution_alignment_failed_trace_rate_increase: float | None = None,
+    max_product_trace_action_execution_missing_result_rate_increase: float | None = None,
+    max_product_trace_action_execution_unexpected_result_rate_increase: float | None = None,
+    max_product_trace_action_execution_request_id_mismatch_rate_increase: float | None = None,
     min_current_trace_count: int | None = None,
     metadata: Mapping[str, Any] | None = None,
     compact_json: bool = False,
@@ -179,6 +307,44 @@ def compare_product_runtime_baselines(
         ),
         "max_promotion_contract_covered_fact_min_false_refuted_rate_drop": _optional_rate_float(
             max_promotion_contract_covered_fact_min_false_refuted_rate_drop
+        ),
+        "max_product_trace_action_audit_error_rate_increase": _optional_rate_float(
+            max_product_trace_action_audit_error_rate_increase
+        ),
+        "max_product_trace_action_audit_missing_retrieval_action_rate_increase": _optional_rate_float(
+            max_product_trace_action_audit_missing_retrieval_action_rate_increase
+        ),
+        "max_product_trace_action_audit_missing_plan_retrieval_query_rate_increase": (
+            _optional_rate_float(
+                max_product_trace_action_audit_missing_plan_retrieval_query_rate_increase
+            )
+        ),
+        "max_product_trace_action_audit_malformed_payload_rate_increase": _optional_rate_float(
+            max_product_trace_action_audit_malformed_payload_rate_increase
+        ),
+        "max_product_trace_action_audit_unexpected_action_rate_increase": _optional_rate_float(
+            max_product_trace_action_audit_unexpected_action_rate_increase
+        ),
+        "max_product_trace_action_audit_unknown_claim_id_rate_increase": _optional_rate_float(
+            max_product_trace_action_audit_unknown_claim_id_rate_increase
+        ),
+        "max_product_trace_action_execution_alignment_failed_trace_rate_increase": (
+            _optional_rate_float(
+                max_product_trace_action_execution_alignment_failed_trace_rate_increase
+            )
+        ),
+        "max_product_trace_action_execution_missing_result_rate_increase": _optional_rate_float(
+            max_product_trace_action_execution_missing_result_rate_increase
+        ),
+        "max_product_trace_action_execution_unexpected_result_rate_increase": (
+            _optional_rate_float(
+                max_product_trace_action_execution_unexpected_result_rate_increase
+            )
+        ),
+        "max_product_trace_action_execution_request_id_mismatch_rate_increase": (
+            _optional_rate_float(
+                max_product_trace_action_execution_request_id_mismatch_rate_increase
+            )
         ),
         "min_current_trace_count": _optional_non_negative_int(min_current_trace_count),
     }
@@ -424,6 +590,7 @@ def _comparison_metrics(
         ),
     ]
     metrics.extend(_covered_fact_property_metrics(baseline_summary, current_summary, gates=gates))
+    metrics.extend(_product_trace_action_gate_metrics(baseline_summary, current_summary, gates=gates))
     return metrics
 
 
@@ -539,6 +706,29 @@ def _covered_fact_property_gate_enabled(gates: Mapping[str, Any]) -> bool:
             "max_promotion_contract_covered_fact_min_false_refuted_rate_drop",
         )
     )
+
+
+def _product_trace_action_gate_metrics(
+    baseline_summary: Mapping[str, Any],
+    current_summary: Mapping[str, Any],
+    *,
+    gates: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    if not _product_trace_action_gate_gate_enabled(gates):
+        return []
+    return [
+        _delta_metric(
+            metric_name,
+            _nested_float(baseline_summary, metric_path),
+            _nested_float(current_summary, metric_path),
+            gates.get(gate_key),
+        )
+        for metric_name, metric_path, gate_key in _PRODUCT_TRACE_ACTION_GATE_METRIC_SPECS
+    ]
+
+
+def _product_trace_action_gate_gate_enabled(gates: Mapping[str, Any]) -> bool:
+    return any(gates.get(gate_key) is not None for _, _, gate_key in _PRODUCT_TRACE_ACTION_GATE_METRIC_SPECS)
 
 
 def _runtime_optimization_handoff(report: Mapping[str, Any]) -> dict[str, Any]:
@@ -1159,6 +1349,7 @@ def _drift_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
         **_promotion_evidence_metadata(report),
         **_covered_fact_property_metadata(report),
         **_triple_coverage_metadata(report),
+        **_product_trace_action_gate_metadata(report),
     }
 
 
@@ -1204,6 +1395,21 @@ def _triple_coverage_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
         metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
         if metric is not None and metric.get("status") == "blocked":
             metadata["triple_coverage_blocked_metric_count"] += 1
+    return metadata
+
+
+def _product_trace_action_gate_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    metrics = _metrics_by_name(report.get("metrics"))
+    metadata: dict[str, Any] = {
+        "product_trace_action_gate_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _PRODUCT_TRACE_ACTION_GATE_METADATA_FIELDS:
+        metric = metrics.get(metric_name)
+        metadata[f"{prefix}_baseline"] = _finite_float(None if metric is None else metric.get("baseline"))
+        metadata[f"{prefix}_current"] = _finite_float(None if metric is None else metric.get("current"))
+        metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is not None and metric.get("status") == "blocked":
+            metadata["product_trace_action_gate_blocked_metric_count"] += 1
     return metadata
 
 
@@ -1391,6 +1597,36 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_promotion_contract_covered_fact_min_false_refuted_rate_drop=(
             args.max_promotion_contract_covered_fact_min_false_refuted_rate_drop
         ),
+        max_product_trace_action_audit_error_rate_increase=(
+            args.max_product_trace_action_audit_error_rate_increase
+        ),
+        max_product_trace_action_audit_missing_retrieval_action_rate_increase=(
+            args.max_product_trace_action_audit_missing_retrieval_action_rate_increase
+        ),
+        max_product_trace_action_audit_missing_plan_retrieval_query_rate_increase=(
+            args.max_product_trace_action_audit_missing_plan_retrieval_query_rate_increase
+        ),
+        max_product_trace_action_audit_malformed_payload_rate_increase=(
+            args.max_product_trace_action_audit_malformed_payload_rate_increase
+        ),
+        max_product_trace_action_audit_unexpected_action_rate_increase=(
+            args.max_product_trace_action_audit_unexpected_action_rate_increase
+        ),
+        max_product_trace_action_audit_unknown_claim_id_rate_increase=(
+            args.max_product_trace_action_audit_unknown_claim_id_rate_increase
+        ),
+        max_product_trace_action_execution_alignment_failed_trace_rate_increase=(
+            args.max_product_trace_action_execution_alignment_failed_trace_rate_increase
+        ),
+        max_product_trace_action_execution_missing_result_rate_increase=(
+            args.max_product_trace_action_execution_missing_result_rate_increase
+        ),
+        max_product_trace_action_execution_unexpected_result_rate_increase=(
+            args.max_product_trace_action_execution_unexpected_result_rate_increase
+        ),
+        max_product_trace_action_execution_request_id_mismatch_rate_increase=(
+            args.max_product_trace_action_execution_request_id_mismatch_rate_increase
+        ),
         min_current_trace_count=args.min_current_trace_count,
         metadata=_parse_metadata(args.metadata or ()),
         compact_json=bool(args.compact_json),
@@ -1459,6 +1695,36 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument(
         "--max-promotion-contract-covered-fact-min-false-refuted-rate-drop",
+        type=float,
+        default=None,
+    )
+    parser.add_argument("--max-product-trace-action-audit-error-rate-increase", type=float, default=None)
+    parser.add_argument(
+        "--max-product-trace-action-audit-missing-retrieval-action-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-action-audit-missing-plan-retrieval-query-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument("--max-product-trace-action-audit-malformed-payload-rate-increase", type=float, default=None)
+    parser.add_argument("--max-product-trace-action-audit-unexpected-action-rate-increase", type=float, default=None)
+    parser.add_argument("--max-product-trace-action-audit-unknown-claim-id-rate-increase", type=float, default=None)
+    parser.add_argument(
+        "--max-product-trace-action-execution-alignment-failed-trace-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument("--max-product-trace-action-execution-missing-result-rate-increase", type=float, default=None)
+    parser.add_argument(
+        "--max-product-trace-action-execution-unexpected-result-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-action-execution-request-id-mismatch-rate-increase",
         type=float,
         default=None,
     )
