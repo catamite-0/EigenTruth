@@ -113,6 +113,36 @@ def euclidean_dispersion(points: Tensor) -> Tensor:
     return torch.norm(points - centroid, dim=-1).mean()
 
 
+def topk_normalized_entropy(logits: Tensor, *, top_k: int = 20) -> Tensor:
+    """Return normalized entropy over the top-k logits.
+
+    The result is in ``[0, 1]`` for finite logits. ``0`` means the top-k
+    distribution is concentrated on one token, while ``1`` means it is uniform
+    across the retained tokens. This is a dependency-free primitive for
+    first-token uncertainty baselines.
+    """
+    if int(top_k) < 1:
+        raise ValueError("top_k must be >= 1.")
+    logits_t = torch.as_tensor(logits, dtype=torch.float32)
+    if logits_t.numel() == 0 or logits_t.shape[-1] == 0:
+        raise ValueError("logits must have a non-empty vocabulary dimension.")
+    if not torch.isfinite(logits_t).all():
+        raise ValueError("logits must contain only finite values.")
+    k = min(int(top_k), int(logits_t.shape[-1]))
+    if k <= 1:
+        return torch.zeros(logits_t.shape[:-1], dtype=torch.float32, device=logits_t.device)
+    top_logits = torch.topk(logits_t, k=k, dim=-1).values
+    log_probs = torch.log_softmax(top_logits, dim=-1)
+    probs = log_probs.exp()
+    entropy = -(probs * log_probs).sum(dim=-1)
+    return entropy / math.log(float(k))
+
+
+def first_token_confidence(logits: Tensor, *, top_k: int = 20) -> Tensor:
+    """Return ``1 - topk_normalized_entropy(logits)`` for first-token scoring."""
+    return 1.0 - topk_normalized_entropy(logits, top_k=top_k)
+
+
 def binomial_confidence_interval(successes: int, total: int, *, z: float = 1.96) -> dict[str, Any]:
     """Return a normal-approximation binomial confidence interval.
 

@@ -19,6 +19,7 @@ EigenTruth should move from hallucination detection alone toward calibrated part
 - TokenHD (arXiv:2605.12384) and related span/token-level work point toward finer localization of hallucinations. EigenTruth's current lightweight equivalent is claim-level risk localization, route budgeting, and trace evidence; learned token-level detectors remain out of scope until the dependency and training boundary is explicit.
 - Pre-generation hallucination detection with soft targets (arXiv:2606.21917) reinforces the current layer/sweep direction: hallucination risk is better treated as a probability estimated from internal representations than as a single hard decoded label.
 - Entropy Alone is Insufficient for Safe Selective Prediction in LLMs (arXiv:2603.21172) and the UQ-as-clustering critique (arXiv:2605.19220) both argue against relying on entropy/self-consistency alone. EigenTruth should keep combining internal geometry with correctness/verifier/world-model evidence and deployment-facing selective metrics.
+- Single-decode first-token confidence work (arXiv:2605.05166) points to a cheap baseline before multi-sample routes: top-k entropy at the first answer-token prediction can be logged from the same forced-answer pass and compared against internal geometry, INSIDE/selfcheck, and verifier signals.
 - Counterfactual Probing for Hallucination Detection and Mitigation (arXiv:2508.01862) supports adding perturbation sensitivity audits: robust verifiers should change status on entity, temporal, quantitative, or logical counterfactuals instead of staying invariant to false variants.
 
 ## Implemented This Continuation
@@ -34,6 +35,12 @@ Added budget-aware adaptive verification planning:
 - `ProductTrace.to_bounded_dict()` and `product_runtime_metrics(...)` preserve compact verification-budget summaries, including selected/dropped claim counts and claim/route/tool/cost budget exhaustion flags.
 
 This is a product-facing implementation of the current research direction: use internal diagnostics and claim metadata to decide when verification is needed, then spend verifier/tool budget on the most consequential claims and routes while leaving an auditable trace of what was skipped. It does not add network retrieval, learned token detectors, or model-dependent world-model code.
+
+Added a single-decode first-token uncertainty baseline:
+
+- `topk_normalized_entropy(...)` and `first_token_confidence(...)` provide dependency-free logits uncertainty primitives.
+- `eval_truthfulqa.py` now emits `first_token_entropy` from the first available answer-token prediction, stores `first_token_top_k` in report/cache config, and includes the signal in primary score dumps for conformal calibration, abstention comparison, and fusion experiments.
+- The score is intentionally a baseline, not a promoted route: current entropy-only safety critiques still apply, so it must be compared against geometry, verifier, retrieval, selfcheck, and world-model signals before product use.
 
 Added dependency-free counterfactual verifier auditing:
 

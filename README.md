@@ -39,6 +39,7 @@ EigenTruth wraps a decoder-only language model with PyTorch hooks. It can:
 - optionally project hidden states into a Poincare ball and compute Hyperbolic Semantic Entropy (HSE) for ablations
 - optionally build a contrastive direction from factual and false examples
 - fit a low-rank `TruthSubspace` and score residual distance from factual states
+- emit a single-decode `first_token_entropy` uncertainty baseline from top-k logits
 - save versioned `ConceptArtifact` files and attach multiple concept probes at once
 - calibrate diagnostic thresholds from benchmark score dumps and combine them with claim verification
 - select a cheap pre-generation runtime profile from prompt and metadata risk markers
@@ -52,6 +53,7 @@ EigenTruth 通过 PyTorch hook 包装 decoder-only 语言模型。它可以：
 - 可选地将隐藏状态投影到庞加莱球并计算双曲语义熵（HSE）用于消融实验
 - 可选地使用事实与错误样本构建对比方向
 - 拟合低秩 `TruthSubspace`，并计算相对事实子空间的残差距离
+- 从 top-k logits 输出单次 decode 的 `first_token_entropy` 不确定性基线
 - 保存版本化 `ConceptArtifact`，并同时挂载多个 concept probe
 - 从 benchmark 分数 dump 校准诊断阈值，并与 claim 验证结果组合成风险决策
 - 基于 prompt 与 metadata 风险标记，在生成前选择低成本 runtime profile
@@ -123,7 +125,7 @@ python benchmarks/eval_truthfulqa.py --model gpt2 --layer -8 --sweep \
 python benchmarks/eval_conformal.py --scores benchmarks/scores.manifest.json \
   --json artifacts/gpt2-conformal-report.json \
   --save-abstention-report artifacts/gpt2-abstention-report.json \
-  --abstention-signals maha_last,truth_proj,subspace_resid,inside_eigenscore \
+  --abstention-signals maha_last,truth_proj,subspace_resid,first_token_entropy,inside_eigenscore \
   --save-abstention-comparison artifacts/gpt2-abstention-comparison.json \
   --save-abstention-release-gate artifacts/gpt2-abstention-release-gate.json \
   --min-abstention-conditional-correctness-lower-bound 0.8 \
@@ -168,6 +170,12 @@ python benchmarks/eval_conformal.py --scores benchmarks/scores.manifest.json \
   --adaptive-feature-weight inside_semantic_energy=0.5 \
   --save-adaptive-calibration artifacts/gpt2-maha-adaptive.json
 ```
+
+`eval_truthfulqa.py` also emits `first_token_entropy` by default, using top-k
+normalized logits entropy from the first available answer-token prediction as a
+single-decode uncertainty baseline. Use `--first-token-top-k` to change the
+retained logits before comparing it with geometry, INSIDE/selfcheck, or verifier
+signals.
 
 For calibrated participation-control experiments, add
 `--save-abstention-report` or `--include-abstention-report`. The abstention report
@@ -399,6 +407,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `poincare_map` | Projects representations into a bounded hyperbolic space for optional HSE ablations. |
 | `hyperbolic_semantic_entropy` | Measures dispersion over a sliding window of projected states; retained as an opt-in ablation signal, not the default runtime path. |
 | `internal_eigenscore` / `spectral_effective_rank` / `cluster_assignment_entropy` / `lexical_semantic_entropy` / `embedding_semantic_entropy` / `semantic_energy_score` / `lexical_semantic_energy` | Computes INSIDE/EigenScore-style spectral diversity, dependency-free semantic-entropy proxies, and confidence-weighted semantic-energy disagreement from sampled hidden-state/text clusters; benchmarks can optionally sample multiple continuations for `inside_eigenscore`, `inside_semantic_entropy`, `inside_embedding_entropy`, and `inside_semantic_energy`. |
+| `topk_normalized_entropy` / `first_token_confidence` / `first_token_entropy` score dumps | Adds a low-cost single-decode uncertainty baseline: `eval_truthfulqa.py` records top-k normalized entropy at the first available answer-token prediction as `first_token_entropy`, with `--first-token-top-k` controlling the retained logits. Higher entropy is treated as more anomalous and can be calibrated or fused like other score-dump signals. |
 | `TruthProbe` / `RepresentationProbe` | Captures selected-layer hidden states and optionally applies steering; HSE tracking is opt-in via `track_hse=True`. |
 | `ConceptArtifact` / `MultiConceptMonitor` | Saves versioned concept manifolds with layer metadata and attaches several concept probes to one model, returning per-concept diagnostics without changing the single-probe wrapper path. |
 | `EigenTruthWrapper` / `RepresentationMonitor` | Provides warmup, generation passthrough, diagnostics, and probe lifecycle management. |

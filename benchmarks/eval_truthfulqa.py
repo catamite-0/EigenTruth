@@ -76,11 +76,18 @@ from eigentruth.core.math_engine import (
     poincare_map,
 )
 from eigentruth.eval.conformal import directional_conformal_threshold
-from eigentruth.eval.metrics import euclidean_dispersion, roc_auc, selective_classification_report
+from eigentruth.eval.metrics import (
+    euclidean_dispersion,
+    roc_auc,
+    selective_classification_report,
+    topk_normalized_entropy,
+)
 from eigentruth.eval.score_dump import write_score_dump_jsonl_mapping
 from eigentruth.intervention.hooks import TruthProbe
 from eigentruth.verify import Claim, SelfConsistencyVerifier
 
+FIRST_TOKEN_ENTROPY_SIGNAL = "first_token_entropy"
+FIRST_TOKEN_TOP_K_DEFAULT = 20
 SIGNALS = [
     "maha_last",
     "truth_proj",
@@ -89,6 +96,7 @@ SIGNALS = [
     "disp_euclid",
     "disp_hse",
     "eigenscore",
+    FIRST_TOKEN_ENTROPY_SIGNAL,
     "nll_answer",
 ]
 INSIDE_SIGNAL = "inside_eigenscore"
@@ -101,6 +109,7 @@ INSIDE_SIGNALS = (
     INSIDE_EMBEDDING_ENTROPY_SIGNAL,
     INSIDE_SEMANTIC_ENERGY_SIGNAL,
 )
+NON_GEOMETRY_BASELINE_SIGNALS = {"nll_answer", FIRST_TOKEN_ENTROPY_SIGNAL}
 REPORT_ALPHA = 0.10
 HIDDEN_STATE_CAPTURE_METHODS = ("outputs", "hooks")
 SCORE_DUMP_FORMATS = ("json", "jsonl")
@@ -1140,6 +1149,7 @@ def _score_reps_batch(
             **record["layer_scores"][target_layer],
             "disp_euclid": float(euclidean_dispersion(ans).item()),
             "disp_hse": float(hyperbolic_semantic_entropy(poincare_map(ans)).item()),
+            FIRST_TOKEN_ENTROPY_SIGNAL: float(reps.get("first_token_entropy", 0.0)),
             "nll_answer": float(reps["nll"]),
         }
 
@@ -1723,6 +1733,8 @@ def _eval_reps_cache_metadata(
         "layers": [int(layer) for layer in layers],
         "max_length": int(args.max_length),
         "eigenscore_alpha": float(args.eigenscore_alpha),
+        "first_token_entropy_schema": 1,
+        "first_token_top_k": int(getattr(args, "first_token_top_k", FIRST_TOKEN_TOP_K_DEFAULT)),
         "resid_update_norm_schema": 1,
         "length_bucketed_batches": bool(args.length_bucketed_batches),
         "n_eval": len(eval_statements),
@@ -1763,6 +1775,8 @@ def _validate_cache_only_metadata(
         {
             **base_expected,
             "eigenscore_alpha": float(args.eigenscore_alpha),
+            "first_token_entropy_schema": 1,
+            "first_token_top_k": int(getattr(args, "first_token_top_k", FIRST_TOKEN_TOP_K_DEFAULT)),
         },
         cache_name="eval reps cache",
     )
@@ -1781,6 +1795,7 @@ def _reps_to_cache_state(reps: Optional[Mapping]) -> Optional[dict]:
             int(layer): float(value)
             for layer, value in dict(reps.get("resid_update_norm_by_layer") or {}).items()
         },
+        "first_token_entropy": float(reps.get("first_token_entropy", 0.0)),
         "nll": float(reps["nll"]),
     }
 
@@ -1798,6 +1813,7 @@ def _reps_from_cache_state(state: Optional[Mapping]) -> Optional[dict]:
             int(layer): float(value)
             for layer, value in dict(state.get("resid_update_norm_by_layer") or {}).items()
         },
+        "first_token_entropy": float(state.get("first_token_entropy", 0.0)),
         "nll": float(state["nll"]),
     }
 
@@ -2422,6 +2438,7 @@ def batched_statement_reps(
     hidden_state_capture: str = "outputs",
     encoded_statements: Sequence[Optional[StatementEncoding]] | None = None,
     prefix_kv_cache: bool = False,
+    first_token_top_k: int = FIRST_TOKEN_TOP_K_DEFAULT,
 ) -> list[Optional[dict]]:
     """Batch forced-answer forwards while preserving per-statement result shape."""
     encoded: list[tuple[int, list[int], int]] = []
@@ -2450,6 +2467,7 @@ def batched_statement_reps(
                 device,
                 result_count=len(statements),
                 eigenscore_alpha=eigenscore_alpha,
+                first_token_top_k=first_token_top_k,
             )
 
     n_layers = _model_num_hidden_layers(model)
@@ -2506,11 +2524,18 @@ def batched_statement_reps(
         }
 
         nll = _answer_nll_from_logits(out.logits[row], input_ids[row], seq_len, n_ans)
+        first_token_entropy = _first_answer_token_entropy_from_logits(
+            out.logits[row],
+            seq_len,
+            n_ans,
+            top_k=first_token_top_k,
+        )
         results[original_idx] = {
             "last": last_by_layer,
             "ans_hs": ans_hs,
             "eigenscore_by_layer": eigenscore_by_layer,
             "resid_update_norm_by_layer": resid_update_norm_by_layer,
+            "first_token_entropy": first_token_entropy,
             "nll": nll,
         }
     return results
@@ -2524,6 +2549,7 @@ def _batched_statement_reps_with_prefix_kv(
     *,
     result_count: int,
     eigenscore_alpha: float,
+    first_token_top_k: int,
 ) -> list[Optional[dict]]:
     """Score encoded statements by reusing one prefix KV cache per shared prefix."""
     results: list[Optional[dict]] = [None] * int(result_count)
@@ -2600,11 +2626,15 @@ def _batched_statement_reps_with_prefix_kv(
                     dim=0,
                 )
             nll = _nll_from_prediction_logits(prediction_logits, answer_input[0])
+            first_token_entropy = float(
+                topk_normalized_entropy(prefix_next_logits[0], top_k=first_token_top_k).item()
+            )
             results[original_idx] = {
                 "last": last_by_layer,
                 "ans_hs": ans_hs,
                 "eigenscore_by_layer": eigenscore_by_layer,
                 "resid_update_norm_by_layer": resid_update_norm_by_layer,
+                "first_token_entropy": first_token_entropy,
                 "nll": nll,
             }
     return results
@@ -2643,6 +2673,23 @@ def _answer_nll_from_logits(
     return _nll_from_prediction_logits(answer_logits, targets)
 
 
+def _first_answer_token_entropy_from_logits(
+    logits: torch.Tensor,
+    seq_len: int,
+    n_answer_tokens: int,
+    *,
+    top_k: int = FIRST_TOKEN_TOP_K_DEFAULT,
+) -> float:
+    """Return top-k normalized entropy for the first answer-token prediction."""
+    seq_len = int(seq_len)
+    n_answer_tokens = int(n_answer_tokens)
+    ans_start = seq_len - n_answer_tokens
+    logit_index = max(0, ans_start - 1)
+    if logit_index >= seq_len:
+        return float("nan")
+    return float(topk_normalized_entropy(logits[logit_index], top_k=top_k).item())
+
+
 def _nll_from_prediction_logits(prediction_logits: torch.Tensor, targets: torch.Tensor) -> float:
     """Return mean NLL for logits that directly predict the given targets."""
     logp = torch.log_softmax(prediction_logits.float(), dim=-1)
@@ -2666,6 +2713,7 @@ def _batched_statement_reps_for_pairs(
     eigenscore_alpha: float = 1e-3,
     hidden_state_capture: str = "outputs",
     prefix_kv_cache: bool = False,
+    first_token_top_k: int = FIRST_TOKEN_TOP_K_DEFAULT,
 ) -> list[Optional[dict]]:
     """Run forced-answer forwards for statement pairs with optional memory fallback."""
 
@@ -2684,6 +2732,7 @@ def _batched_statement_reps_for_pairs(
             hidden_state_capture=hidden_state_capture,
             encoded_statements=encoded,
             prefix_kv_cache=prefix_kv_cache,
+            first_token_top_k=first_token_top_k,
         )
 
     return _run_with_batch_size_fallback(
@@ -2700,7 +2749,8 @@ def statement_reps(model, tokenizer, stmt: Statement, layers: List[int],
                    compute_answer_metrics: bool = True,
                    eigenscore_alpha: float = 1e-3,
                    hidden_state_capture: str = "outputs",
-                   prefix_kv_cache: bool = False) -> Optional[dict]:
+                   prefix_kv_cache: bool = False,
+                   first_token_top_k: int = FIRST_TOKEN_TOP_K_DEFAULT) -> Optional[dict]:
     """Single-statement compatibility wrapper around batched_statement_reps."""
     return batched_statement_reps(
         model,
@@ -2714,6 +2764,7 @@ def statement_reps(model, tokenizer, stmt: Statement, layers: List[int],
         hidden_state_capture=hidden_state_capture,
         encoded_statements=None,
         prefix_kv_cache=prefix_kv_cache,
+        first_token_top_k=first_token_top_k,
     )[0]
 
 
@@ -3933,6 +3984,7 @@ def run(args) -> dict:
                     phase="forced_answer_forward",
                     hidden_state_capture=args.hidden_state_capture,
                     prefix_kv_cache=bool(getattr(args, "prefix_kv_cache", False)),
+                    first_token_top_k=int(getattr(args, "first_token_top_k", FIRST_TOKEN_TOP_K_DEFAULT)),
                 )
             if eval_reps_writer is not None:
                 with _profile_phase(profile, "write_eval_reps_cache_batch"):
@@ -4144,6 +4196,7 @@ def run(args) -> dict:
                 scores["disp_euclid"].append(primary_scores["disp_euclid"])
                 scores["disp_hse"].append(primary_scores["disp_hse"])
                 scores["eigenscore"].append(primary_scores["eigenscore"])
+                scores[FIRST_TOKEN_ENTROPY_SIGNAL].append(primary_scores[FIRST_TOKEN_ENTROPY_SIGNAL])
                 if inside_scores is not None:
                     scores[INSIDE_SIGNAL].append(sweep_scores[args.layer][INSIDE_SIGNAL][-1])
                     scores[INSIDE_SEMANTIC_ENTROPY_SIGNAL].append(float(inside_entropy))
@@ -4211,10 +4264,16 @@ def run(args) -> dict:
         verdict = "hyperbolic HELPS" if delta > 0.01 else (
             "hyperbolic HURTS" if delta < -0.01 else "no meaningful difference")
         print(f"  disp_hse - disp_euclid = {delta:+.3f}  ->  {verdict}")
-    geo = max(results[s] for s in signals if s != "nll_answer")
+    geo = max(results[s] for s in signals if s not in NON_GEOMETRY_BASELINE_SIGNALS)
     if not (results["nll_answer"] != results["nll_answer"]):
         print(f"  best geometry ({geo:.3f}) vs nll baseline ({results['nll_answer']:.3f})  ->  "
               f"{'geometry wins' if geo > results['nll_answer'] + 0.01 else 'baseline competitive'}")
+    first_token_auc = results.get(FIRST_TOKEN_ENTROPY_SIGNAL)
+    if first_token_auc is not None and not (first_token_auc != first_token_auc):
+        print(
+            f"  first-token entropy baseline AUROC = {first_token_auc:.3f}  "
+            "(single-decode uncertainty)"
+        )
     print("=" * 56)
 
     sweep_payload = None
@@ -4241,6 +4300,7 @@ def run(args) -> dict:
                    "hidden_dim": primary.hidden_dim, "subspace_rank": args.subspace_rank,
                    "n_pos": n_pos, "n_neg": n_neg, "seed": args.seed,
                    "eigenscore_alpha": args.eigenscore_alpha,
+                   "first_token_top_k": int(getattr(args, "first_token_top_k", FIRST_TOKEN_TOP_K_DEFAULT)),
                    "batch_size": args.batch_size,
                    "max_batch_tokens": max_batch_tokens,
                    "auto_batch_size": args.auto_batch_size,
@@ -4466,6 +4526,8 @@ def main():
                    help="number of largest covariance eigenvalues to include when --include-layer-spectra is set")
     p.add_argument("--eigenscore-alpha", type=float, default=1e-3,
                    help="regularization alpha for EigenScore-style log-det scores")
+    p.add_argument("--first-token-top-k", type=int, default=FIRST_TOKEN_TOP_K_DEFAULT,
+                   help="top-k logits used for first_token_entropy; higher entropy is treated as anomalous")
     p.add_argument("--inside-samples", type=int, default=0,
                    help="enable multi-sample INSIDE proxy with this many sampled continuations; "
                         "0 disables it, values >=2 enable inside_eigenscore, inside_semantic_entropy, "
@@ -4562,6 +4624,8 @@ def main():
         p.error("--covariance-low-rank must be >=1")
     if args.layer_spectrum_top_k < 0:
         p.error("--layer-spectrum-top-k must be >=0")
+    if args.first_token_top_k < 1:
+        p.error("--first-token-top-k must be >=1")
     if args.inside_batch_size < 1:
         p.error("--inside-batch-size must be >=1")
     if args.inside_samples == 1:

@@ -463,8 +463,9 @@ progress output.
 - `subspace_resid > 0.5` means false statements sit farther from the fitted factual subspace.
 - `resid_update_norm > 0.5` means false statements induce larger final-token
   cross-layer residual updates at the selected layer.
-- Compare `maha_last` against `nll_answer`: geometry is only interesting if it adds
-  signal over plain perplexity.
+- Compare `maha_last` against `nll_answer` and `first_token_entropy`: geometry is
+  only interesting if it adds signal over plain perplexity or cheap single-decode
+  uncertainty.
 - Compare `disp_hse` against `disp_euclid`: this is the decisive ablation for the
   hyperbolic component.
 - Treat `eigenscore` as an internal-state spectral-diversity proxy. Use
@@ -534,6 +535,10 @@ than an 8 GB machine comfortably provides) before drawing conclusions.
   `inside_semantic_energy` are closer because they sample multiple continuations,
   but they are still verifier-prompted benchmark proxies rather than full
   published reproductions.
+- `first_token_entropy` is a **single-decode uncertainty baseline** computed from
+  top-k logits at the first available answer-token prediction. It is included so
+  expensive sampling routes have a low-cost baseline, not because it is already
+  promoted as a product gate.
 - A small model (e.g. 0.5B) and a few hundred items give wide confidence intervals.
   Treat AUROC values as indicative, not conclusive, and report `n`.
 - Beating these in-house baselines is necessary but not sufficient; a real claim needs
@@ -582,13 +587,13 @@ python benchmarks/eval_conformal.py --scores benchmarks/scores.json --signal mah
 
 # Compare several abstention candidates before promoting one into control policy:
 python benchmarks/eval_conformal.py --scores benchmarks/scores.json --signal maha_last \
-  --abstention-signals maha_last,truth_proj,subspace_resid,inside_eigenscore \
+  --abstention-signals maha_last,truth_proj,subspace_resid,first_token_entropy,inside_eigenscore \
   --abstention-alpha 0.1 \
   --save-abstention-comparison artifacts/gpt2-abstention-comparison.json
 
 # Turn the selected abstention report/comparison candidate into a release gate:
 python benchmarks/eval_conformal.py --scores benchmarks/scores.json --signal maha_last \
-  --abstention-signals maha_last,truth_proj,subspace_resid,inside_eigenscore \
+  --abstention-signals maha_last,truth_proj,subspace_resid,first_token_entropy,inside_eigenscore \
   --abstention-alpha 0.1 \
   --save-abstention-release-gate artifacts/gpt2-abstention-release-gate.json \
   --min-abstention-conditional-correctness-lower-bound 0.8 \
@@ -596,7 +601,7 @@ python benchmarks/eval_conformal.py --scores benchmarks/scores.json --signal mah
 
 # Build the 0.2 calibrated-observability closure: layer/score sweep + best artifact:
 python benchmarks/eval_conformal.py --scores benchmarks/scores.json \
-  --signals maha_last,truth_proj,subspace_resid,resid_update_norm,eigenscore,inside_eigenscore,inside_semantic_entropy,inside_embedding_entropy,inside_semantic_energy \
+  --signals maha_last,truth_proj,subspace_resid,resid_update_norm,eigenscore,first_token_entropy,inside_eigenscore,inside_semantic_entropy,inside_embedding_entropy,inside_semantic_energy \
   --artifact-alpha 0.2 \
   --json artifacts/gpt2-conformal-report.json \
   --save-sweep-report artifacts/gpt2-sweep-report.json \
@@ -870,7 +875,7 @@ OUT=artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability
 python benchmarks/eval_abstention_stability.py \
   --scores qwen05-l80=artifacts/truthfulqa-frontier-qwen-smollm2-l80/qwen05-l80/scores.manifest.json \
   --scores smollm2-l80=artifacts/truthfulqa-frontier-qwen-smollm2-l80/smollm2-l80/scores.manifest.json \
-  --signals maha_last,truth_proj,subspace_resid,disp_euclid,disp_hse,nll_answer,eigenscore,resid_update_norm \
+  --signals maha_last,truth_proj,subspace_resid,disp_euclid,disp_hse,nll_answer,first_token_entropy,eigenscore,resid_update_norm \
   --alpha 0.10 \
   --best-by conditional_correctness_lower_bound \
   --seeds 0,1,2,3,4,5,6,7,8,9 \

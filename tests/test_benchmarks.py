@@ -32921,6 +32921,24 @@ def test_eval_truthfulqa_exposes_internal_eigenscore_signal():
     assert "resid_update_norm" in module.SIGNALS
     assert "resid_update_norm" in module._sweep_signal_names(SimpleNamespace(inside_samples=0))
     assert module.DEFAULT_SCORE_DIRECTIONS["resid_update_norm"] == "higher"
+    assert module.FIRST_TOKEN_ENTROPY_SIGNAL in module.SIGNALS
+    assert module.FIRST_TOKEN_ENTROPY_SIGNAL not in module._sweep_signal_names(SimpleNamespace(inside_samples=0))
+    assert module.DEFAULT_SCORE_DIRECTIONS[module.FIRST_TOKEN_ENTROPY_SIGNAL] == "higher"
+
+
+def test_eval_truthfulqa_first_answer_token_entropy_uses_first_available_prediction():
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+    logits = torch.tensor([
+        [4.0, 0.0, 0.0],
+        [0.0, 4.0, 0.0],
+        [0.0, 0.0, 4.0],
+    ])
+
+    with_prompt = module._first_answer_token_entropy_from_logits(logits, seq_len=3, n_answer_tokens=2, top_k=2)
+    no_prompt = module._first_answer_token_entropy_from_logits(logits, seq_len=3, n_answer_tokens=3, top_k=2)
+
+    assert with_prompt == pytest.approx(no_prompt)
+    assert 0.0 <= with_prompt <= 1.0
 
 
 def test_eval_truthfulqa_multisample_inside_signal_is_optional():
@@ -33420,6 +33438,7 @@ def test_eval_truthfulqa_eval_reps_cache_roundtrip(tmp_path):
         "ans_hs": torch.tensor([[1.0, 2.0], [3.0, 4.0]]),
         "eigenscore_by_layer": {-1: 0.125, -2: 0.25},
         "resid_update_norm_by_layer": {-1: 1.5, -2: 0.5},
+        "first_token_entropy": 0.375,
         "nll": 1.5,
     }
 
@@ -33458,6 +33477,7 @@ def test_eval_truthfulqa_eval_reps_cache_roundtrip(tmp_path):
     assert torch.allclose(loaded[0]["ans_hs"], reps["ans_hs"])
     assert loaded[0]["eigenscore_by_layer"][-2] == pytest.approx(0.25)
     assert loaded[0]["resid_update_norm_by_layer"][-1] == pytest.approx(1.5)
+    assert loaded[0]["first_token_entropy"] == pytest.approx(0.375)
     assert loaded[0]["nll"] == pytest.approx(1.5)
     assert loaded[1] is None
 
@@ -33487,12 +33507,14 @@ def test_eval_truthfulqa_eval_reps_sharded_cache_roundtrip_and_range(tmp_path, m
         "last": {-1: torch.tensor([1.0, 0.0]), -2: torch.tensor([0.0, 1.0])},
         "ans_hs": torch.tensor([[1.0, 2.0], [3.0, 4.0]]),
         "eigenscore_by_layer": {-1: 0.125, -2: 0.25},
+        "first_token_entropy": 0.25,
         "nll": 1.5,
     }
     reps_b = {
         "last": {-1: torch.tensor([2.0, 0.0]), -2: torch.tensor([0.0, 2.0])},
         "ans_hs": torch.tensor([[2.0, 3.0], [4.0, 5.0]]),
         "eigenscore_by_layer": {-1: 0.5, -2: 0.75},
+        "first_token_entropy": 0.75,
         "nll": 2.5,
     }
 
@@ -33535,6 +33557,7 @@ def test_eval_truthfulqa_eval_reps_sharded_cache_roundtrip_and_range(tmp_path, m
     assert torch.allclose(repeat_first_shard[0]["ans_hs"], reps_a["ans_hs"])
     assert repeat_first_shard_again[0] is None
     assert repeat_second_shard[0]["nll"] == pytest.approx(2.5)
+    assert repeat_second_shard[0]["first_token_entropy"] == pytest.approx(0.75)
     assert counted_reader_loads == [
         "records-000000.pt",
         "records-000001.pt",
@@ -33555,6 +33578,7 @@ def test_eval_truthfulqa_eval_reps_sharded_cache_roundtrip_and_range(tmp_path, m
     assert loaded_metadata == metadata
     assert torch.allclose(loaded[0]["ans_hs"], reps_a["ans_hs"])
     assert loaded[1] is None
+    assert loaded[2]["first_token_entropy"] == pytest.approx(0.75)
     assert loaded[2]["nll"] == pytest.approx(2.5)
 
 
@@ -33848,6 +33872,7 @@ def test_eval_truthfulqa_score_reps_batch_matches_scalar_math():
         "ans_hs": torch.tensor([[1.0, 0.0, 0.0], [2.0, 0.0, 0.0]]),
         "eigenscore_by_layer": {-1: 0.125, -2: 0.25},
         "resid_update_norm_by_layer": {-1: 0.75, -2: 0.25},
+        "first_token_entropy": 0.375,
         "nll": 1.5,
     }
     reps_3 = {
@@ -33855,6 +33880,7 @@ def test_eval_truthfulqa_score_reps_batch_matches_scalar_math():
         "ans_hs": torch.tensor([[0.0, 1.0, 0.0], [0.0, 2.0, 0.0]]),
         "eigenscore_by_layer": {-1: 0.5, -2: 0.75},
         "resid_update_norm_by_layer": {-1: 1.25, -2: 0.5},
+        "first_token_entropy": 0.625,
         "nll": 2.0,
     }
 
@@ -33885,6 +33911,9 @@ def test_eval_truthfulqa_score_reps_batch_matches_scalar_math():
         assert record["primary_scores"]["eigenscore"] == pytest.approx(reps["eigenscore_by_layer"][-1])
         assert record["primary_scores"]["resid_update_norm"] == pytest.approx(
             reps["resid_update_norm_by_layer"][-1]
+        )
+        assert record["primary_scores"][module.FIRST_TOKEN_ENTROPY_SIGNAL] == pytest.approx(
+            reps["first_token_entropy"]
         )
         assert record["primary_scores"]["disp_euclid"] == pytest.approx(
             module.euclidean_dispersion(reps["ans_hs"]).item()
@@ -34677,6 +34706,7 @@ def test_eval_truthfulqa_batched_statement_reps_can_use_precomputed_encodings():
     assert reps[0]["last"][0].shape == (4,)
     assert reps[0]["ans_hs"].shape == (2, 4)
     assert reps[0]["resid_update_norm_by_layer"][0] == pytest.approx(0.0)
+    assert reps[0]["first_token_entropy"] == pytest.approx(1.0)
     assert reps[0]["nll"] == pytest.approx(torch.log(torch.tensor(64.0)).item())
 
 
@@ -34717,6 +34747,7 @@ def test_eval_truthfulqa_batched_statement_reps_scores_residual_update_norm():
 
     assert torch.allclose(reps[0]["last"][1], torch.tensor([8.0, 8.0, 8.0, 8.0]))
     assert reps[0]["resid_update_norm_by_layer"][1] == pytest.approx(2.0)
+    assert reps[0]["first_token_entropy"] == pytest.approx(1.0)
 
 
 def test_eval_truthfulqa_batched_statement_reps_skips_lm_head_when_metrics_disabled():
@@ -34963,6 +34994,7 @@ def test_eval_truthfulqa_prefix_kv_cache_matches_full_sequence_reps():
         assert torch.allclose(prefix_rep["last"][0], full_rep["last"][0])
         assert torch.allclose(prefix_rep["ans_hs"], full_rep["ans_hs"])
         assert prefix_rep["nll"] == pytest.approx(full_rep["nll"])
+        assert prefix_rep["first_token_entropy"] == pytest.approx(full_rep["first_token_entropy"])
         assert prefix_rep["eigenscore_by_layer"][0] == pytest.approx(full_rep["eigenscore_by_layer"][0])
 
 

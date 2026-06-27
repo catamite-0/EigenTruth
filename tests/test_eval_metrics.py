@@ -16,9 +16,11 @@ from eigentruth.eval.metrics import (
     binomial_confidence_interval,
     confidence_error_report,
     euclidean_dispersion,
+    first_token_confidence,
     roc_auc,
     selective_classification_report,
     spearman_correlation,
+    topk_normalized_entropy,
 )
 from eigentruth.eval.score_dump import (
     ScoreDump,
@@ -154,6 +156,37 @@ class TestEuclideanDispersion:
     def test_non_negative(self):
         torch.manual_seed(1)
         assert euclidean_dispersion(torch.randn(10, 32)) >= 0.0
+
+
+class TestFirstTokenEntropy:
+    """First-token confidence/entropy primitive tests."""
+
+    def test_topk_normalized_entropy_low_for_concentrated_logits(self):
+        logits = torch.tensor([8.0, 1.0, 0.0, -1.0])
+
+        entropy = topk_normalized_entropy(logits, top_k=4)
+        confidence = first_token_confidence(logits, top_k=4)
+
+        assert 0.0 <= float(entropy.item()) <= 0.1
+        assert confidence.item() == pytest.approx(1.0 - entropy.item())
+
+    def test_topk_normalized_entropy_one_for_uniform_topk(self):
+        logits = torch.zeros(4)
+
+        assert topk_normalized_entropy(logits, top_k=4).item() == pytest.approx(1.0)
+
+    def test_topk_normalized_entropy_handles_batch_and_topk_one(self):
+        logits = torch.tensor([[1.0, 0.0], [0.0, 0.0]])
+
+        entropy = topk_normalized_entropy(logits, top_k=1)
+
+        assert torch.allclose(entropy, torch.zeros(2))
+
+    def test_topk_normalized_entropy_rejects_bad_inputs(self):
+        with pytest.raises(ValueError, match="top_k"):
+            topk_normalized_entropy(torch.zeros(2), top_k=0)
+        with pytest.raises(ValueError, match="finite"):
+            topk_normalized_entropy(torch.tensor([0.0, float("nan")]))
 
 
 class TestSelectiveClassificationReport:

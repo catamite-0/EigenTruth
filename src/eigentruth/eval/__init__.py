@@ -39,9 +39,11 @@ from eigentruth.eval.metrics import (
     binomial_confidence_interval,
     confidence_error_report,
     euclidean_dispersion,
+    first_token_confidence,
     roc_auc,
     selective_classification_report,
     spearman_correlation,
+    topk_normalized_entropy,
 )
 from eigentruth.eval.score_dump import (
     ScoreDump,
@@ -84,6 +86,8 @@ __all__ = [
     "roc_auc",
     "spearman_correlation",
     "euclidean_dispersion",
+    "topk_normalized_entropy",
+    "first_token_confidence",
     "binomial_confidence_interval",
     "selective_classification_report",
     "confidence_error_report",
