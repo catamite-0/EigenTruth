@@ -98,6 +98,7 @@ class ProductTraceReplayWorkflowConfig:
     min_runtime_drift_current_trace_count: int | None = None
     max_action_audit_error_rate: float | None = None
     max_action_audit_missing_retrieval_rate: float | None = None
+    max_action_audit_missing_plan_retrieval_query_rate: float | None = None
     max_action_audit_malformed_payload_rate: float | None = None
     max_action_audit_unexpected_action_rate: float | None = None
     max_action_audit_unknown_claim_id_rate: float | None = None
@@ -184,6 +185,7 @@ class ProductTraceReplayWorkflowConfig:
         for field_name in (
             "max_action_audit_error_rate",
             "max_action_audit_missing_retrieval_rate",
+            "max_action_audit_missing_plan_retrieval_query_rate",
             "max_action_audit_malformed_payload_rate",
             "max_action_audit_unexpected_action_rate",
             "max_action_audit_unknown_claim_id_rate",
@@ -986,6 +988,9 @@ def _run_action_audit_gate(
         "error_rate": action_audit.get("error_rate"),
         "missing_decision_action_rate": action_audit.get("missing_decision_action_rate"),
         "missing_retrieval_action_rate": action_audit.get("missing_retrieval_action_rate"),
+        "missing_plan_retrieval_query_rate": action_audit.get(
+            "missing_plan_retrieval_query_rate"
+        ),
         "malformed_payload_rate": action_audit.get("malformed_payload_rate"),
         "unexpected_action_rate": action_audit.get("unexpected_action_rate"),
         "unknown_claim_id_rate": action_audit.get("unknown_claim_id_rate"),
@@ -1221,6 +1226,7 @@ def _action_audit_gate_configured(config: ProductTraceReplayWorkflowConfig) -> b
         for value in (
             config.max_action_audit_error_rate,
             config.max_action_audit_missing_retrieval_rate,
+            config.max_action_audit_missing_plan_retrieval_query_rate,
             config.max_action_audit_malformed_payload_rate,
             config.max_action_audit_unexpected_action_rate,
             config.max_action_audit_unknown_claim_id_rate,
@@ -1232,6 +1238,9 @@ def _action_audit_gate_config(config: ProductTraceReplayWorkflowConfig) -> dict[
     return {
         "max_error_rate": config.max_action_audit_error_rate,
         "max_missing_retrieval_rate": config.max_action_audit_missing_retrieval_rate,
+        "max_missing_plan_retrieval_query_rate": (
+            config.max_action_audit_missing_plan_retrieval_query_rate
+        ),
         "max_malformed_payload_rate": config.max_action_audit_malformed_payload_rate,
         "max_unexpected_action_rate": config.max_action_audit_unexpected_action_rate,
         "max_unknown_claim_id_rate": config.max_action_audit_unknown_claim_id_rate,
@@ -1248,6 +1257,11 @@ def _action_audit_gate_checks(
             "action_audit.missing_retrieval_action_rate",
             "missing_retrieval_action_rate",
             "max_missing_retrieval_rate",
+        ),
+        (
+            "action_audit.missing_plan_retrieval_query_rate",
+            "missing_plan_retrieval_query_rate",
+            "max_missing_plan_retrieval_query_rate",
         ),
         (
             "action_audit.malformed_payload_rate",
@@ -1360,6 +1374,9 @@ def _runtime_baseline_summary(runtime_baseline: Mapping[str, Any]) -> dict[str, 
         "action_audit_missing_retrieval_action_rate": action_audit.get(
             "missing_retrieval_action_rate"
         ),
+        "action_audit_missing_plan_retrieval_query_rate": action_audit.get(
+            "missing_plan_retrieval_query_rate"
+        ),
         "action_audit_malformed_payload_rate": action_audit.get("malformed_payload_rate"),
         "action_audit_unexpected_action_rate": action_audit.get("unexpected_action_rate"),
         "action_audit_unknown_claim_id_rate": action_audit.get("unknown_claim_id_rate"),
@@ -1386,6 +1403,9 @@ def _action_audit_gate_summary(action_audit_gate: Mapping[str, Any]) -> dict[str
         "error_count": summary.get("error_count"),
         "error_rate": summary.get("error_rate"),
         "missing_retrieval_action_rate": summary.get("missing_retrieval_action_rate"),
+        "missing_plan_retrieval_query_rate": summary.get(
+            "missing_plan_retrieval_query_rate"
+        ),
         "malformed_payload_rate": summary.get("malformed_payload_rate"),
         "unexpected_action_rate": summary.get("unexpected_action_rate"),
         "unknown_claim_id_rate": summary.get("unknown_claim_id_rate"),
@@ -1617,6 +1637,11 @@ def _write_artifact_manifest(
                 "action_audit_gate",
                 "missing_retrieval_action_rate",
             ),
+            "action_audit_missing_plan_retrieval_query_rate": _nested(
+                report,
+                "action_audit_gate",
+                "missing_plan_retrieval_query_rate",
+            ),
             "action_audit_malformed_payload_rate": _nested(
                 report,
                 "action_audit_gate",
@@ -1813,6 +1838,11 @@ def _record_registry(
                 report,
                 "action_audit_gate",
                 "missing_retrieval_action_rate",
+            ),
+            "action_audit_missing_plan_retrieval_query_rate": _nested(
+                report,
+                "action_audit_gate",
+                "missing_plan_retrieval_query_rate",
             ),
             "action_audit_malformed_payload_rate": _nested(
                 report,
@@ -2324,6 +2354,9 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
         min_runtime_drift_current_trace_count=args.min_runtime_drift_current_trace_count,
         max_action_audit_error_rate=args.max_action_audit_error_rate,
         max_action_audit_missing_retrieval_rate=args.max_action_audit_missing_retrieval_rate,
+        max_action_audit_missing_plan_retrieval_query_rate=(
+            args.max_action_audit_missing_plan_retrieval_query_rate
+        ),
         max_action_audit_malformed_payload_rate=args.max_action_audit_malformed_payload_rate,
         max_action_audit_unexpected_action_rate=args.max_action_audit_unexpected_action_rate,
         max_action_audit_unknown_claim_id_rate=args.max_action_audit_unknown_claim_id_rate,
@@ -2440,6 +2473,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--min-runtime-drift-current-trace-count", type=int, default=None)
     parser.add_argument("--max-action-audit-error-rate", type=float, default=None)
     parser.add_argument("--max-action-audit-missing-retrieval-rate", type=float, default=None)
+    parser.add_argument("--max-action-audit-missing-plan-retrieval-query-rate", type=float, default=None)
     parser.add_argument("--max-action-audit-malformed-payload-rate", type=float, default=None)
     parser.add_argument("--max-action-audit-unexpected-action-rate", type=float, default=None)
     parser.add_argument("--max-action-audit-unknown-claim-id-rate", type=float, default=None)

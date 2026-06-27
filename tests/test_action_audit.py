@@ -79,6 +79,54 @@ def test_action_audit_accepts_executable_retrieval_payload():
     assert report.summary()["issue_count"] == 0
 
 
+def test_action_audit_flags_retrieval_payload_that_misses_plan_query():
+    trace = ProductTrace(
+        verification_plan=_plan_with_retrieval(),
+        risk_decision={"action": "retrieve"},
+        actions=(
+            ActionRequest(
+                action=ControlAction.RETRIEVE,
+                reason="retrieve evidence",
+                payload={
+                    "retrieval_targets": (
+                        {"claim_id": "c1", "text": "Berlin capital Germany"},
+                    ),
+                },
+            ),
+        ),
+    )
+    report = audit_action_requests(
+        (
+            ActionRequest(
+                action=ControlAction.RETRIEVE,
+                reason="retrieve evidence",
+                payload={
+                    "retrieval_targets": (
+                        {"claim_id": "c1", "text": "Berlin capital Germany"},
+                    ),
+                },
+            ),
+        ),
+        decision=ControlAction.RETRIEVE,
+        verification_plan=_plan_with_retrieval(),
+    )
+
+    summary = report.summary()
+    metrics = product_runtime_metrics(trace)
+    assert report.passed is False
+    assert summary["counts_by_code"]["missing_plan_retrieval_query"] == 1
+    assert metrics["action_audit_missing_plan_retrieval_query_count"] == 1.0
+    issue = next(
+        issue for issue in report.issues
+        if issue.code == "missing_plan_retrieval_query"
+    )
+    assert issue.severity is ActionAuditSeverity.ERROR
+    assert issue.claim_ids == ("c1",)
+    assert issue.metadata["plan_retrieval_query_count"] == 1
+    assert issue.metadata["covered_query_count"] == 0
+    assert issue.metadata["missing_query_count"] == 1
+
+
 def test_action_audit_flags_retrieval_queries_without_executable_target():
     report = audit_action_requests(
         (

@@ -28851,6 +28851,46 @@ def test_run_product_trace_replay_workflow_applies_action_audit_gate(tmp_path):
             "metadata": {"runtime_profile": "balanced"},
             "runtime_trace": {"total_seconds": 0.20, "phases": []},
         },
+        {
+            "request_id": "retrieve-missing-plan-query",
+            "risk_decision": {
+                "action": "retrieve",
+                "risk_level": "medium",
+                "confidence": 0.6,
+                "reason": "unsupported",
+            },
+            "claims": [{"claim_id": "c1", "text": "Private unsupported fact.", "metadata": {}}],
+            "verification_plan": {
+                "run_verifier": True,
+                "reason": "unsupported claim needs retrieval",
+                "verification_scope": "all",
+                "claims": [{"claim_id": "c1", "text": "Private unsupported fact.", "metadata": {}}],
+                "verify_claim_ids": ["c1"],
+                "skipped_claim_ids": [],
+                "triggered_claim_ids": ["c1"],
+                "triggered_features": {},
+                "triggered_metadata": {},
+                "route_hints": [],
+                "retrieval_queries": [{"claim_id": "c1", "query": "Private unsupported fact"}],
+                "calculation_checks": [],
+                "state_checks": [],
+                "world_model_checks": [],
+                "dependencies": [],
+            },
+            "actions": [
+                {
+                    "action": "retrieve",
+                    "reason": "retrieve wrong evidence",
+                    "payload": {
+                        "retrieval_targets": [
+                            {"claim_id": "c1", "text": "Different private fact"}
+                        ]
+                    },
+                }
+            ],
+            "metadata": {"runtime_profile": "balanced"},
+            "runtime_trace": {"total_seconds": 0.20, "phases": []},
+        },
     )
     trace_paths = []
     for index, payload in enumerate(trace_payloads):
@@ -28866,6 +28906,7 @@ def test_run_product_trace_replay_workflow_applies_action_audit_gate(tmp_path):
             require_runtime_trace=True,
             max_action_audit_error_rate=0.0,
             max_action_audit_missing_retrieval_rate=0.0,
+            max_action_audit_missing_plan_retrieval_query_rate=0.0,
             max_action_audit_malformed_payload_rate=0.0,
             max_action_audit_unexpected_action_rate=0.0,
         )
@@ -28877,15 +28918,19 @@ def test_run_product_trace_replay_workflow_applies_action_audit_gate(tmp_path):
     assert payload["action_audit_gate"]["status"] == "blocked"
     assert payload["action_audit_gate"]["gate_enabled"] is True
     assert payload["action_audit_gate"]["error_rate"] == pytest.approx(1.0)
-    assert payload["action_audit_gate"]["missing_retrieval_action_rate"] == pytest.approx(0.5)
+    assert payload["action_audit_gate"]["missing_retrieval_action_rate"] == pytest.approx(1 / 3)
+    assert payload["action_audit_gate"]["missing_plan_retrieval_query_rate"] == pytest.approx(1 / 3)
     assert payload["action_audit_gate"]["malformed_payload_rate"] == pytest.approx(0.0)
     assert payload["runtime_baseline"]["action_audit_error_rate"] == pytest.approx(1.0)
+    assert payload["runtime_baseline"]["action_audit_missing_plan_retrieval_query_rate"] == (
+        pytest.approx(1 / 3)
+    )
     assert any(
         str(reason).startswith("action_audit_gate:")
         for reason in payload["decision"]["blocking_reasons"]
     )
     assert gate_report["status"] == "blocked"
-    assert gate_report["summary"]["blocked_metric_count"] == 2
+    assert gate_report["summary"]["blocked_metric_count"] == 3
     assert {
         check["metric"]
         for check in gate_report["checks"]
@@ -28893,10 +28938,14 @@ def test_run_product_trace_replay_workflow_applies_action_audit_gate(tmp_path):
     } == {
         "action_audit.error_rate",
         "action_audit.missing_retrieval_action_rate",
+        "action_audit.missing_plan_retrieval_query_rate",
     }
     assert "action_audit_gate_report" in manifest["artifacts"]
     assert manifest["metadata"]["action_audit_gate_status"] == "blocked"
     assert manifest["metadata"]["action_audit_error_rate"] == pytest.approx(1.0)
+    assert manifest["metadata"]["action_audit_missing_plan_retrieval_query_rate"] == (
+        pytest.approx(1 / 3)
+    )
 
 
 def test_run_product_trace_replay_workflow_reuses_corpus_cache(tmp_path, monkeypatch):

@@ -318,6 +318,13 @@ def audit_action_requests(
                 action=ControlAction.RETRIEVE.value,
                 metadata={"plan_retrieval_query_count": plan_retrieval_query_count},
             ))
+        else:
+            issues.extend(
+                _audit_plan_retrieval_query_coverage(
+                    action_payloads,
+                    _plan_retrieval_queries(plan),
+                )
+            )
 
     known_claim_ids = _known_plan_claim_ids(plan)
     for index, payload in enumerate(action_payloads):
@@ -382,6 +389,40 @@ def _audit_retrieval_payload(
             metadata={"advisory_query_count": advisory_query_count},
         ))
     return tuple(issues)
+
+
+def _audit_plan_retrieval_query_coverage(
+    action_payloads: Sequence[Mapping[str, Any]],
+    plan_queries: Sequence[Mapping[str, Any]],
+) -> tuple[ActionAuditIssue, ...]:
+    if not plan_queries:
+        return ()
+    executed_queries = _executed_retrieval_queries(action_payloads)
+    missing = tuple(
+        query for query in plan_queries
+        if not _plan_query_covered(query, executed_queries)
+    )
+    if not missing:
+        return ()
+    return (ActionAuditIssue(
+        code="missing_plan_retrieval_query",
+        severity=ActionAuditSeverity.ERROR,
+        message=(
+            "retrieve actions did not cover all verification-plan retrieval queries"
+        ),
+        action=ControlAction.RETRIEVE.value,
+        claim_ids=tuple(
+            str(query["claim_id"])
+            for query in missing
+            if query.get("claim_id") is not None
+        ),
+        metadata={
+            "plan_retrieval_query_count": len(plan_queries),
+            "covered_query_count": len(plan_queries) - len(missing),
+            "missing_query_count": len(missing),
+            "missing_queries": tuple(dict(query) for query in missing[:8]),
+        },
+    ),)
 
 
 def _audit_tool_payload(
@@ -511,6 +552,27 @@ def _plan_retrieval_query_count(plan: Mapping[str, Any] | None) -> int:
     return sum(1 for item in _as_sequence(plan.get("retrieval_queries", ())) if _mapping_query_text(item))
 
 
+def _plan_retrieval_queries(plan: Mapping[str, Any] | None) -> tuple[dict[str, Any], ...]:
+    if not plan:
+        return ()
+    queries: list[dict[str, Any]] = []
+    for item in _as_sequence(plan.get("retrieval_queries", ())):
+        if not isinstance(item, Mapping):
+            continue
+        raw_query = _mapping_query_text(item)
+        normalized_query = _normalize_query_text(raw_query)
+        if normalized_query is None:
+            continue
+        raw_claim_id = item.get("claim_id")
+        claim_id = None if raw_claim_id is None else str(raw_claim_id).strip()
+        queries.append({
+            "claim_id": claim_id or None,
+            "query": raw_query,
+            "normalized_query": normalized_query,
+        })
+    return tuple(queries)
+
+
 def _known_plan_claim_ids(plan: Mapping[str, Any] | None) -> set[str]:
     if not plan:
         return set()
@@ -575,6 +637,63 @@ def _executable_retrieval_query_count(payload: Mapping[str, Any]) -> int:
     return count
 
 
+def _executed_retrieval_queries(
+    action_payloads: Sequence[Mapping[str, Any]],
+) -> tuple[dict[str, Any], ...]:
+    queries: list[dict[str, Any]] = []
+    for payload in action_payloads:
+        if payload.get("action") != ControlAction.RETRIEVE.value:
+            continue
+        body = _mapping(payload.get("payload"))
+        inherited_claim_ids = _claim_ids_from_mapping(body)
+        raw_query = body.get("query")
+        normalized_query = _normalize_query_text(raw_query)
+        if normalized_query is not None:
+            queries.append({
+                "claim_ids": inherited_claim_ids,
+                "normalized_query": normalized_query,
+            })
+        targets = body.get("retrieval_targets", ())
+        if isinstance(targets, Mapping):
+            targets = (targets,)
+        for target in _as_sequence(targets):
+            if isinstance(target, str):
+                normalized_target = _normalize_query_text(target)
+                if normalized_target is not None:
+                    queries.append({
+                        "claim_ids": inherited_claim_ids,
+                        "normalized_query": normalized_target,
+                    })
+            elif isinstance(target, Mapping):
+                normalized_target = _normalize_query_text(_mapping_query_text(target))
+                if normalized_target is not None:
+                    target_claim_ids = _claim_ids_from_mapping(target) or inherited_claim_ids
+                    queries.append({
+                        "claim_ids": target_claim_ids,
+                        "normalized_query": normalized_target,
+                    })
+    return tuple(queries)
+
+
+def _plan_query_covered(
+    plan_query: Mapping[str, Any],
+    executed_queries: Sequence[Mapping[str, Any]],
+) -> bool:
+    normalized_query = plan_query.get("normalized_query")
+    claim_id = plan_query.get("claim_id")
+    for executed in executed_queries:
+        if executed.get("normalized_query") != normalized_query:
+            continue
+        executed_claim_ids = tuple(
+            str(item)
+            for item in _as_sequence(executed.get("claim_ids", ()))
+            if str(item).strip()
+        )
+        if claim_id is None or not executed_claim_ids or str(claim_id) in executed_claim_ids:
+            return True
+    return False
+
+
 def _advisory_retrieval_query_count(payload: Mapping[str, Any]) -> int:
     count = 0
     for key in ("retrieval_queries", "queries"):
@@ -599,6 +718,30 @@ def _mapping_query_text(value: Any) -> str | None:
         return None
     text = str(raw_query).strip()
     return text or None
+
+
+def _normalize_query_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = " ".join(str(value).casefold().split())
+    return text or None
+
+
+def _claim_ids_from_mapping(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    claim_ids: list[str] = []
+    raw_claim_id = payload.get("claim_id")
+    if raw_claim_id is not None:
+        claim_id = str(raw_claim_id).strip()
+        if claim_id:
+            claim_ids.append(claim_id)
+    raw_claim_ids = payload.get("claim_ids", ())
+    if isinstance(raw_claim_ids, str):
+        claim_id = raw_claim_ids.strip()
+        if claim_id:
+            claim_ids.append(claim_id)
+    elif isinstance(raw_claim_ids, Sequence) and not isinstance(raw_claim_ids, (str, bytes, bytearray)):
+        claim_ids.extend(str(item).strip() for item in raw_claim_ids if str(item).strip())
+    return tuple(dict.fromkeys(claim_ids))
 
 
 def _normalize_action_name(value: Any) -> str:

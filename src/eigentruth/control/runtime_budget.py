@@ -621,6 +621,9 @@ def _action_audit_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, 
         "action_audit_missing_retrieval_action_count": _finite_float(
             counts_by_code.get("missing_retrieval_action")
         ) or 0.0,
+        "action_audit_missing_plan_retrieval_query_count": _finite_float(
+            counts_by_code.get("missing_plan_retrieval_query")
+        ) or 0.0,
         "action_audit_malformed_payload_count": malformed_payload_count,
         "action_audit_unexpected_action_count": _finite_float(
             counts_by_code.get("unexpected_action_for_decision")

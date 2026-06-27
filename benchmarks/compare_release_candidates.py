@@ -2497,6 +2497,9 @@ def _product_trace_action_audit_gate_summary(
         "error_count": summary.get("error_count"),
         "error_rate": summary.get("error_rate"),
         "missing_retrieval_action_rate": summary.get("missing_retrieval_action_rate"),
+        "missing_plan_retrieval_query_rate": summary.get(
+            "missing_plan_retrieval_query_rate"
+        ),
         "malformed_payload_rate": summary.get("malformed_payload_rate"),
         "unexpected_action_rate": summary.get("unexpected_action_rate"),
         "unknown_claim_id_rate": summary.get("unknown_claim_id_rate"),
@@ -2521,6 +2524,7 @@ def _action_audit_summary_mismatches(
         "error_count",
         "error_rate",
         "missing_retrieval_action_rate",
+        "missing_plan_retrieval_query_rate",
         "malformed_payload_rate",
         "unexpected_action_rate",
         "unknown_claim_id_rate",

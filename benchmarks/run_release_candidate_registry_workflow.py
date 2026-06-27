@@ -1675,6 +1675,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "product_trace_action_audit_missing_retrieval_action_rate": (
             product_trace_action_audit_gate.get("missing_retrieval_action_rate")
         ),
+        "product_trace_action_audit_missing_plan_retrieval_query_rate": (
+            product_trace_action_audit_gate.get("missing_plan_retrieval_query_rate")
+        ),
         "product_trace_action_audit_malformed_payload_rate": product_trace_action_audit_gate.get(
             "malformed_payload_rate"
         ),

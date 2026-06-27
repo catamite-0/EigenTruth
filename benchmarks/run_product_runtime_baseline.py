@@ -564,6 +564,9 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         "action_audit_missing_retrieval_action_count": metrics.get(
             "action_audit_missing_retrieval_action_count"
         ),
+        "action_audit_missing_plan_retrieval_query_count": metrics.get(
+            "action_audit_missing_plan_retrieval_query_count"
+        ),
         "action_audit_malformed_payload_count": metrics.get("action_audit_malformed_payload_count"),
         "action_audit_unexpected_action_count": metrics.get("action_audit_unexpected_action_count"),
         "action_audit_unknown_claim_id_count": metrics.get("action_audit_unknown_claim_id_count"),
@@ -814,6 +817,11 @@ def _optimization_report(
                 summary,
                 "action_audit",
                 "missing_retrieval_action_rate",
+            ),
+            "action_audit_missing_plan_retrieval_query_rate": _nested(
+                summary,
+                "action_audit",
+                "missing_plan_retrieval_query_rate",
             ),
             "action_audit_malformed_payload_rate": _nested(
                 summary,
@@ -1450,6 +1458,10 @@ def _aggregate_action_audit(metrics: Sequence[Mapping[str, Any]]) -> dict[str, A
         metrics,
         "action_audit_missing_retrieval_action_count",
     ) or 0.0
+    missing_plan_retrieval_query_count = _sum_float(
+        metrics,
+        "action_audit_missing_plan_retrieval_query_count",
+    ) or 0.0
     malformed_payload_count = _sum_float(metrics, "action_audit_malformed_payload_count") or 0.0
     unexpected_action_count = _sum_float(metrics, "action_audit_unexpected_action_count") or 0.0
     unknown_claim_id_count = _sum_float(metrics, "action_audit_unknown_claim_id_count") or 0.0
@@ -1473,6 +1485,11 @@ def _aggregate_action_audit(metrics: Sequence[Mapping[str, Any]]) -> dict[str, A
         "missing_decision_action_rate": _safe_div(missing_decision_action_count, n_traces),
         "missing_retrieval_action_count": missing_retrieval_action_count,
         "missing_retrieval_action_rate": _safe_div(missing_retrieval_action_count, n_traces),
+        "missing_plan_retrieval_query_count": missing_plan_retrieval_query_count,
+        "missing_plan_retrieval_query_rate": _safe_div(
+            missing_plan_retrieval_query_count,
+            n_traces,
+        ),
         "malformed_payload_count": malformed_payload_count,
         "malformed_payload_rate": _safe_div(malformed_payload_count, n_traces),
         "unexpected_action_count": unexpected_action_count,

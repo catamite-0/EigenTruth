@@ -532,9 +532,10 @@ Added the first monitor-first tool-selection audit layer:
   tool-bypass and parameter-hallucination failures before introducing learned
   tool-selection models or external tool routers.
 - `run_product_runtime_baseline.py` now aggregates action-audit error,
-  missing-retrieval, malformed-payload, unexpected-action, and unknown-claim-id
-  rates, and `run_product_trace_replay_workflow.py` can enforce them as an
-  optional action-audit release gate. The gate is off by default, writes a child
+  missing-retrieval, missing planned retrieval-query coverage,
+  malformed-payload, unexpected-action, and unknown-claim-id rates, and
+  `run_product_trace_replay_workflow.py` can enforce them as an optional
+  action-audit release gate. The gate is off by default, writes a child
   `action-audit-gate.json` report when configured, and blocks replay workflows
   when configured rates exceed thresholds or required audit metrics are missing.
 - `compare_release_candidates.py --require-product-trace-action-audit-gate`
