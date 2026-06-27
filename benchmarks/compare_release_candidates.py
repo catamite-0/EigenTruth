@@ -2403,6 +2403,12 @@ def _product_trace_replay_workflow_report_gate(
                 failures.append(
                     "product trace replay workflow action-audit gate report did not pass"
                 )
+            failures.extend(
+                _action_audit_summary_mismatches(
+                    action_audit_gate,
+                    action_audit_report_summary,
+                )
+            )
         if not allow_unverified:
             if action_audit_manifest_error is not None:
                 failures.append(
@@ -2469,6 +2475,39 @@ def _product_trace_action_audit_gate_summary(
         "checked_metric_count": summary.get("checked_metric_count"),
         "report_path": None if report_path_value is None else str(report_path_value),
     }
+
+
+def _action_audit_summary_mismatches(
+    workflow_summary: Mapping[str, Any],
+    report_summary: Mapping[str, Any],
+) -> list[str]:
+    failures: list[str] = []
+    for field in (
+        "gate_enabled",
+        "passed",
+        "trace_count",
+        "available_trace_count",
+        "failed_trace_count",
+        "failed_trace_rate",
+        "error_count",
+        "error_rate",
+        "missing_retrieval_action_rate",
+        "malformed_payload_rate",
+        "unexpected_action_rate",
+        "unknown_claim_id_rate",
+        "blocked_metric_count",
+        "checked_metric_count",
+    ):
+        workflow_value = workflow_summary.get(field)
+        report_value = report_summary.get(field)
+        if workflow_value is None or report_value is None:
+            continue
+        if workflow_value != report_value:
+            failures.append(
+                "product trace replay workflow action-audit summary field "
+                f"{field!r} is {workflow_value!r}, but child report has {report_value!r}"
+            )
+    return failures
 
 
 def _product_trace_replay_workflow_manifest_path(

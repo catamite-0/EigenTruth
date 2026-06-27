@@ -13489,7 +13489,7 @@ def test_compare_release_candidates_can_require_external_evidence_baseline_compa
 
 def test_compare_release_candidates_consumes_product_trace_replay_workflow(tmp_path):
     module = importlib.import_module("benchmarks.compare_release_candidates")
-    from eigentruth.registry import ArtifactRegistry
+    from eigentruth.registry import ArtifactRegistry, build_artifact_manifest
 
     registry_path = tmp_path / "registry.json"
     _write_readiness_baseline_manifest(
@@ -13627,6 +13627,72 @@ def test_compare_release_candidates_consumes_product_trace_replay_workflow(tmp_p
     assert any(
         "artifact manifest does not include action-audit gate report" in reason
         for reason in unmanifested_gate["blocking_reasons"]
+    )
+
+    inconsistent_workflow_report = _write_product_trace_replay_workflow_report(
+        tmp_path / "trace-replay-workflow-inconsistent-audit",
+        selector_report=selector_report,
+        drift_report=drift_report,
+        status="promote",
+        action_audit_status="promote",
+        action_audit_gate_enabled=True,
+        action_audit_passed=True,
+        action_audit_error_rate=0.0,
+    )
+    inconsistent_action_audit_report_path = (
+        inconsistent_workflow_report.parent / "action-audit-gate.json"
+    )
+    inconsistent_action_audit = json.loads(
+        inconsistent_action_audit_report_path.read_text(encoding="utf-8")
+    )
+    inconsistent_action_audit["summary"]["error_rate"] = 0.5
+    inconsistent_action_audit_report_path.write_text(
+        json.dumps(inconsistent_action_audit, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    inconsistent_manifest_path = inconsistent_workflow_report.parent / "artifact-manifest.json"
+    inconsistent_manifest_path.write_text(
+        json.dumps(
+            build_artifact_manifest(
+                {
+                    "product_trace_replay_workflow_report": inconsistent_workflow_report,
+                    "selector_replay_report": selector_report,
+                    "product_runtime_drift_report": drift_report,
+                    "action_audit_gate_report": inconsistent_action_audit_report_path,
+                },
+                root=inconsistent_workflow_report.parent,
+                metadata={
+                    "runner": "run_product_trace_replay_workflow",
+                    "status": "promote",
+                    "action_audit_gate_status": "promote",
+                    "action_audit_gate_enabled": True,
+                    "action_audit_error_rate": 0.0,
+                },
+            ),
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    inconsistent_payload = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        product_trace_replay_workflow_path=inconsistent_workflow_report,
+        require_product_trace_action_audit_gate=True,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+
+    assert inconsistent_payload["decision"]["status"] == "blocked"
+    inconsistent_gate = inconsistent_payload["product_trace_replay_workflow_gate"]["gate"]
+    assert inconsistent_gate["action_audit_manifest_artifact_present"] is True
+    assert any(
+        "action-audit summary field 'error_rate'" in reason
+        for reason in inconsistent_gate["blocking_reasons"]
     )
 
     audited_workflow_report = _write_product_trace_replay_workflow_report(
