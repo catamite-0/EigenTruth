@@ -623,14 +623,25 @@ After running several workflow reports, aggregate the compact evidence without
 loading the large records:
 
 ```bash
+python benchmarks/eval_pre_generation_text_baselines.py \
+  --records artifacts/runtime_evidence/pre-generation-smollm2-l12/records.jsonl \
+  --json artifacts/runtime_evidence/pre-generation-smollm2-l12-workflow/text-baseline.json
+
+python benchmarks/eval_pre_generation_text_baselines.py \
+  --records artifacts/runtime_evidence/pre-generation-qwen05-l12-workflow/records.jsonl \
+  --json artifacts/runtime_evidence/pre-generation-qwen05-l12-workflow/text-baseline.json
+
 python benchmarks/compare_pre_generation_probe_workflows.py \
   --workflow-report smollm2=artifacts/runtime_evidence/pre-generation-smollm2-l12-workflow/pre-generation-probe-workflow.json \
   --workflow-report qwen05=artifacts/runtime_evidence/pre-generation-qwen05-l12-workflow/pre-generation-probe-workflow.json \
+  --redline-report smollm2=artifacts/runtime_evidence/pre-generation-smollm2-l12-workflow/text-baseline.json \
+  --redline-report qwen05=artifacts/runtime_evidence/pre-generation-qwen05-l12-workflow/text-baseline.json \
   --json artifacts/runtime_evidence/pre-generation-qwen-smollm2-l12-comparison/comparison.json \
   --artifact-manifest artifacts/runtime_evidence/pre-generation-qwen-smollm2-l12-comparison/artifact-manifest.json \
   --min-model-count 2 \
   --min-record-count 80 \
-  --min-test-label-auroc 0.7
+  --min-test-label-auroc 0.7 \
+  --min-redline-auroc-margin 0.05
 ```
 
 By default, that export writes one prompt-level record per question and uses the

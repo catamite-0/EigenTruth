@@ -443,6 +443,7 @@ def test_compare_pre_generation_probe_workflows_gates_multimodel_reports(tmp_pat
     module = importlib.import_module("benchmarks.compare_pre_generation_probe_workflows")
 
     report_paths = {}
+    redline_paths = {}
     for name, model, auroc, layer in (
         ("smollm2", "HuggingFaceTB/SmolLM2-135M-Instruct", 0.72, -12),
         ("qwen05", "Qwen/Qwen2.5-0.5B-Instruct", 0.81, -4),
@@ -477,17 +478,34 @@ def test_compare_pre_generation_probe_workflows_gates_multimodel_reports(tmp_pat
             encoding="utf-8",
         )
         report_paths[name] = path
+        redline_path = tmp_path / f"{name}-redline.json"
+        redline_path.write_text(
+            json.dumps({
+                "workflow": "pre_generation_text_baseline_eval",
+                "status": "ready",
+                "record_count": 94,
+                "best_signal": {
+                    "name": "answer_token_count",
+                    "direction": "higher",
+                    "auroc": 0.66,
+                },
+            }),
+            encoding="utf-8",
+        )
+        redline_paths[name] = redline_path
     comparison_path = tmp_path / "comparison.json"
     manifest_path = tmp_path / "artifact-manifest.json"
 
     payload = module.compare_pre_generation_probe_workflows(
         module.PreGenerationProbeWorkflowComparisonConfig(
             workflow_reports=report_paths,
+            redline_reports=redline_paths,
             output_path=comparison_path,
             artifact_manifest_path=manifest_path,
             min_model_count=2,
             min_record_count=80,
             min_test_label_auroc=0.7,
+            min_redline_auroc_margin=0.05,
         )
     )
     saved = json.loads(comparison_path.read_text(encoding="utf-8"))
@@ -497,11 +515,61 @@ def test_compare_pre_generation_probe_workflows_gates_multimodel_reports(tmp_pat
     assert payload["status"] == "ready"
     assert payload["promotion_gate"]["failures"] == []
     assert payload["promotion_gate"]["model_count"] == 2
+    assert payload["promotion_gate"]["redline_passed"] is True
+    assert payload["promotion_gate"]["redline_run_count"] == 2
     assert payload["leaderboard"][0]["name"] == "qwen05"
     assert payload["leaderboard"][0]["recommended_layer"] == -4
+    assert payload["leaderboard"][0]["redline_best_auroc"] == pytest.approx(0.66)
+    assert payload["leaderboard"][0]["redline_margin"] == pytest.approx(0.15)
     assert saved["artifact_manifest_summary"]["missing_count"] == 0
     assert manifest["metadata"]["workflow"] == "pre_generation_probe_workflow_comparison"
     assert manifest["metadata"]["status"] == "ready"
+
+
+def test_eval_pre_generation_text_baselines_reports_best_redline(tmp_path):
+    module = importlib.import_module("benchmarks.eval_pre_generation_text_baselines")
+
+    records = []
+    for index in range(10):
+        label = 1 if index >= 5 else 0
+        answer = "long false answer with many tokens" if label else "short"
+        records.append({
+            "id": f"r{index}",
+            "label": label,
+            "soft_target": 0.9 if label else 0.1,
+            "metadata": {
+                "answer": answer,
+                "dataset": "synthetic",
+                "model": "synthetic-model",
+                "question": "What is the answer?",
+                "record_grain": "candidate",
+            },
+        })
+    records_path = tmp_path / "records.json"
+    report_path = tmp_path / "text-baseline.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    records_path.write_text(json.dumps({"records": records}), encoding="utf-8")
+
+    payload = module.run_pre_generation_text_baselines(
+        module.PreGenerationTextBaselineConfig(
+            records_path=records_path,
+            output_path=report_path,
+            artifact_manifest_path=manifest_path,
+            baseline_signals=("answer_token_count", "answer_negation_flag"),
+        )
+    )
+    saved = json.loads(report_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert payload["workflow"] == "pre_generation_text_baseline_eval"
+    assert payload["status"] == "ready"
+    assert payload["record_count"] == 10
+    assert payload["metadata"]["model"] == "synthetic-model"
+    assert payload["best_signal"]["name"] == "answer_token_count"
+    assert payload["best_signal"]["direction"] == "higher"
+    assert payload["best_signal"]["auroc"] == pytest.approx(1.0)
+    assert saved["artifact_manifest_summary"]["missing_count"] == 0
+    assert manifest["metadata"]["workflow"] == "pre_generation_text_baseline_eval"
 
 
 def test_eval_truthfulqa_exports_pre_generation_probe_records(tmp_path):
