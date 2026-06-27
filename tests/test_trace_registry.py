@@ -1843,6 +1843,22 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                     "gate_enabled": True,
                     "compared_metric_count": 9,
                     "blocked_metric_count": 0,
+                    "promotion_evidence_metric_count": 4,
+                    "promotion_evidence_blocked_metric_count": 0,
+                    "triple_audit_evidence_metric_count": 4,
+                    "triple_audit_evidence_blocked_metric_count": 0,
+                    "promotion_contract_coverage_rate_baseline": 1.0,
+                    "promotion_contract_coverage_rate_current": 1.0,
+                    "promotion_contract_coverage_rate_status": "pass",
+                    "triple_extraction_fixture_matrix_mean_best_f1_baseline": 0.9,
+                    "triple_extraction_fixture_matrix_mean_best_f1_current": 0.88,
+                    "triple_extraction_fixture_matrix_mean_best_f1_status": "pass",
+                    "triple_audit_pass_rate_baseline": 1.0,
+                    "triple_audit_pass_rate_current": 1.0,
+                    "triple_audit_pass_rate_status": "pass",
+                    "triple_slot_coverage_rate_baseline": 1.0,
+                    "triple_slot_coverage_rate_current": 1.0,
+                    "triple_slot_coverage_rate_status": "pass",
                 },
             },
             "adapter_family_matrix": {
@@ -2140,6 +2156,20 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.metadata["product_runtime_drift_gate_enabled"] is True
     assert contract.metadata["product_runtime_drift_compared_metric_count"] == 9
     assert contract.metadata["product_runtime_drift_blocked_metric_count"] == 0
+    assert contract.metadata["product_runtime_drift_promotion_evidence_metric_count"] == 4
+    assert contract.metadata["product_runtime_drift_promotion_evidence_blocked_metric_count"] == 0
+    assert contract.metadata["product_runtime_drift_triple_audit_evidence_metric_count"] == 4
+    assert contract.metadata["product_runtime_drift_triple_audit_evidence_blocked_metric_count"] == 0
+    assert contract.metadata["product_runtime_drift_promotion_contract_coverage_rate_current"] == 1.0
+    assert contract.metadata["product_runtime_drift_promotion_contract_coverage_rate_status"] == "pass"
+    assert (
+        contract.metadata[
+            "product_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_current"
+        ]
+        == 0.88
+    )
+    assert contract.metadata["product_runtime_drift_triple_audit_pass_rate_current"] == 1.0
+    assert contract.metadata["product_runtime_drift_triple_slot_coverage_rate_status"] == "pass"
     assert contract.metadata["adapter_family_matrix_report"] == "artifacts/adapter-family-matrix.json"
     assert contract.metadata["adapter_family_required_routes"] == [
         "structured_state",

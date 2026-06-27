@@ -21,6 +21,37 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+_TRACE_RECORD_CACHE_SCHEMA_VERSION = 3
+_PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "promotion_contract_coverage_rate",
+    "triple_extraction_fixture_matrix_coverage_rate",
+    "triple_extraction_fixture_matrix_mean_best_f1",
+    "triple_extraction_fixture_matrix_mean_f1_lift",
+)
+_PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "triple_claim_coverage_rate",
+    "triple_audit_claim_coverage_rate",
+    "triple_audit_pass_rate",
+    "triple_slot_coverage_rate",
+)
+_PROMOTION_CONTRACT_PRODUCT_RUNTIME_DRIFT_FIELDS: tuple[str, ...] = (
+    "promotion_contract_product_runtime_drift_available",
+    "promotion_contract_product_runtime_drift_status",
+    "promotion_contract_product_runtime_drift_report",
+    "promotion_contract_product_runtime_drift_manifest",
+    "promotion_contract_product_runtime_drift_baseline_path",
+    "promotion_contract_product_runtime_drift_current_path",
+    "promotion_contract_product_runtime_drift_gate_enabled",
+    "promotion_contract_product_runtime_drift_promotion_evidence_required",
+    "promotion_contract_product_runtime_drift_triple_audit_evidence_required",
+    "promotion_contract_product_runtime_drift_compared_metric_count",
+    "promotion_contract_product_runtime_drift_blocked_metric_count",
+    "promotion_contract_product_runtime_drift_promotion_evidence_metric_count",
+    "promotion_contract_product_runtime_drift_promotion_evidence_blocked_metric_count",
+    "promotion_contract_product_runtime_drift_triple_audit_evidence_metric_count",
+    "promotion_contract_product_runtime_drift_triple_audit_evidence_blocked_metric_count",
+)
+
 from benchmarks.config_utils import (  # noqa: E402
     planned_artifact_manifest_summary,
     reject_bounded_product_trace,
@@ -330,7 +361,7 @@ def _load_trace_records_cache(
         return None
     if not isinstance(payload, Mapping):
         return None
-    if payload.get("schema_version") != 2:
+    if payload.get("schema_version") != _TRACE_RECORD_CACHE_SCHEMA_VERSION:
         return None
     if payload.get("workflow") != "product_runtime_baseline_trace_records":
         return None
@@ -367,7 +398,7 @@ def _trace_records_cache_payload(
     policy: ProductRuntimeBudgetPolicy | None,
 ) -> dict[str, Any]:
     return {
-        "schema_version": 2,
+        "schema_version": _TRACE_RECORD_CACHE_SCHEMA_VERSION,
         "workflow": "product_runtime_baseline_trace_records",
         "paths": {
             "trace_records_cache": (
@@ -442,7 +473,7 @@ def _fingerprint_matches(expected: Mapping[str, Any], actual: Mapping[str, Any])
 
 
 def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
-    return {
+    compact = {
         "has_runtime_trace": bool(metrics.get("has_runtime_trace")),
         "total_seconds": metrics.get("total_seconds"),
         "accounted_seconds": metrics.get("accounted_seconds"),
@@ -580,6 +611,17 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
             "promotion_contract_triple_extraction_fixture_matrix_mean_f1_lift"
         ),
     }
+    for field_name in _PROMOTION_CONTRACT_PRODUCT_RUNTIME_DRIFT_FIELDS:
+        compact[field_name] = metrics.get(field_name)
+    for prefix in _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
+            compact[field_name] = metrics.get(field_name)
+    for prefix in _PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
+            compact[field_name] = metrics.get(field_name)
+    return compact
 
 
 def _aggregate_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
@@ -1438,6 +1480,7 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
         for item in metrics
     ]
     manifest_observations = sum(value is not None for value in manifest_values)
+    product_runtime_drift = _aggregate_promotion_contract_product_runtime_drift(metrics)
     return {
         "source_trace_count": len(metrics),
         "available_trace_count": available_count,
@@ -1453,6 +1496,7 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
         "summary_observations": sum(
             1 for item in metrics if _mapping(item.get("promotion_contract_summary"))
         ),
+        "product_runtime_drift": product_runtime_drift,
         "covered_fact_properties": {
             "recommended_route_observation_count": property_scope_observations,
             "recommended_route_coverage_rate": _safe_div(
@@ -1509,6 +1553,96 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
                 for item in metrics
             ),
         },
+    }
+
+
+def _aggregate_promotion_contract_product_runtime_drift(
+    metrics: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    available_count = sum(
+        1
+        for item in metrics
+        if bool(item.get("promotion_contract_product_runtime_drift_available"))
+    )
+    return {
+        "available_trace_count": available_count,
+        "missing_trace_count": len(metrics) - available_count,
+        "coverage_rate": _safe_div(available_count, len(metrics)),
+        "status_counts": _counts(
+            item.get("promotion_contract_product_runtime_drift_status") for item in metrics
+        ),
+        "gate_enabled_counts": _counts(
+            item.get("promotion_contract_product_runtime_drift_gate_enabled")
+            for item in metrics
+        ),
+        "promotion_evidence_required_counts": _counts(
+            item.get("promotion_contract_product_runtime_drift_promotion_evidence_required")
+            for item in metrics
+        ),
+        "triple_audit_evidence_required_counts": _counts(
+            item.get("promotion_contract_product_runtime_drift_triple_audit_evidence_required")
+            for item in metrics
+        ),
+        "compared_metric_count": _numeric_summary(
+            item.get("promotion_contract_product_runtime_drift_compared_metric_count")
+            for item in metrics
+        ),
+        "blocked_metric_count": _numeric_summary(
+            item.get("promotion_contract_product_runtime_drift_blocked_metric_count")
+            for item in metrics
+        ),
+        "promotion_evidence_metric_count": _numeric_summary(
+            item.get("promotion_contract_product_runtime_drift_promotion_evidence_metric_count")
+            for item in metrics
+        ),
+        "promotion_evidence_blocked_metric_count": _numeric_summary(
+            item.get(
+                "promotion_contract_product_runtime_drift_promotion_evidence_blocked_metric_count"
+            )
+            for item in metrics
+        ),
+        "triple_audit_evidence_metric_count": _numeric_summary(
+            item.get("promotion_contract_product_runtime_drift_triple_audit_evidence_metric_count")
+            for item in metrics
+        ),
+        "triple_audit_evidence_blocked_metric_count": _numeric_summary(
+            item.get(
+                "promotion_contract_product_runtime_drift_triple_audit_evidence_blocked_metric_count"
+            )
+            for item in metrics
+        ),
+        "promotion_evidence": _aggregate_product_runtime_drift_evidence(
+            metrics,
+            prefixes=_PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES,
+        ),
+        "triple_audit_evidence": _aggregate_product_runtime_drift_evidence(
+            metrics,
+            prefixes=_PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES,
+        ),
+    }
+
+
+def _aggregate_product_runtime_drift_evidence(
+    metrics: Sequence[Mapping[str, Any]],
+    *,
+    prefixes: Sequence[str],
+) -> dict[str, Any]:
+    return {
+        prefix: {
+            "baseline": _numeric_summary(
+                item.get(f"promotion_contract_product_runtime_drift_{prefix}_baseline")
+                for item in metrics
+            ),
+            "current": _numeric_summary(
+                item.get(f"promotion_contract_product_runtime_drift_{prefix}_current")
+                for item in metrics
+            ),
+            "status_counts": _counts(
+                item.get(f"promotion_contract_product_runtime_drift_{prefix}_status")
+                for item in metrics
+            ),
+        }
+        for prefix in prefixes
     }
 
 

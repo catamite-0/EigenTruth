@@ -8,6 +8,19 @@ from typing import Any, Mapping, Sequence
 
 from eigentruth.control.trace import ProductTrace, RuntimeTrace
 
+_PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "promotion_contract_coverage_rate",
+    "triple_extraction_fixture_matrix_coverage_rate",
+    "triple_extraction_fixture_matrix_mean_best_f1",
+    "triple_extraction_fixture_matrix_mean_f1_lift",
+)
+_PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "triple_claim_coverage_rate",
+    "triple_audit_claim_coverage_rate",
+    "triple_audit_pass_rate",
+    "triple_slot_coverage_rate",
+)
+
 
 @dataclass(frozen=True)
 class ProductRuntimeBudgetPolicy:
@@ -868,6 +881,10 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         contract_metadata=contract_metadata,
         verifier_route=verifier_route,
     )
+    runtime_drift = _promotion_contract_runtime_drift_from_metadata(
+        metadata,
+        contract_metadata=contract_metadata,
+    )
     manifest_verification = _mapping(
         _first_present(
             metadata.get("triple_extraction_fixture_matrix_manifest_verification"),
@@ -898,6 +915,7 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         or metadata.get("promotion_contract_runtime") is not None
         or contract_metadata
         or matrix_available
+        or bool(runtime_drift.get("available"))
     )
     summary = {
         "available": available,
@@ -905,6 +923,7 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         "source_status": source_status,
         "budget_enabled": budget_enabled,
         "covered_fact_properties": covered_fact_scope,
+        "product_runtime_drift": runtime_drift,
         "triple_extraction_fixture_matrix": {
             "available": matrix_available,
             "source": matrix_source,
@@ -948,6 +967,7 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         },
     }
     matrix_summary = _mapping(summary["triple_extraction_fixture_matrix"])
+    runtime_drift_metrics = _promotion_contract_runtime_drift_metric_values(runtime_drift)
     return {
         "promotion_contract_available": available,
         "promotion_contract_source": source,
@@ -993,7 +1013,169 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         "promotion_contract_triple_extraction_fixture_matrix_mean_f1_lift": matrix_summary.get(
             "mean_f1_lift"
         ),
+        **runtime_drift_metrics,
     }
+
+
+def _promotion_contract_runtime_drift_from_metadata(
+    metadata: Mapping[str, Any],
+    *,
+    contract_metadata: Mapping[str, Any],
+) -> dict[str, Any]:
+    def value(key: str) -> Any:
+        return _first_present(
+            metadata.get(f"promotion_contract_{key}"),
+            contract_metadata.get(key),
+            metadata.get(key),
+        )
+
+    promotion_evidence = _promotion_contract_runtime_drift_evidence(
+        metadata,
+        contract_metadata=contract_metadata,
+        prefixes=_PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES,
+    )
+    triple_audit_evidence = _promotion_contract_runtime_drift_evidence(
+        metadata,
+        contract_metadata=contract_metadata,
+        prefixes=_PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES,
+    )
+    drift = {
+        "available": False,
+        "status": _optional_string(value("product_runtime_drift_status")),
+        "report": _optional_string(value("product_runtime_drift_report")),
+        "manifest": _optional_string(value("product_runtime_drift_manifest")),
+        "baseline_path": _optional_string(value("product_runtime_drift_baseline_path")),
+        "current_path": _optional_string(value("product_runtime_drift_current_path")),
+        "gate_enabled": _optional_bool(value("product_runtime_drift_gate_enabled")),
+        "promotion_evidence_required": _optional_bool(
+            value("product_runtime_drift_promotion_evidence_required")
+        ),
+        "triple_audit_evidence_required": _optional_bool(
+            value("product_runtime_drift_triple_audit_evidence_required")
+        ),
+        "compared_metric_count": _finite_float(
+            value("product_runtime_drift_compared_metric_count")
+        ),
+        "blocked_metric_count": _finite_float(value("product_runtime_drift_blocked_metric_count")),
+        "promotion_evidence_metric_count": _finite_float(
+            value("product_runtime_drift_promotion_evidence_metric_count")
+        ),
+        "promotion_evidence_blocked_metric_count": _finite_float(
+            value("product_runtime_drift_promotion_evidence_blocked_metric_count")
+        ),
+        "triple_audit_evidence_metric_count": _finite_float(
+            value("product_runtime_drift_triple_audit_evidence_metric_count")
+        ),
+        "triple_audit_evidence_blocked_metric_count": _finite_float(
+            value("product_runtime_drift_triple_audit_evidence_blocked_metric_count")
+        ),
+        "promotion_evidence": promotion_evidence,
+        "triple_audit_evidence": triple_audit_evidence,
+    }
+    drift["available"] = any(
+        item is not None
+        for key, item in drift.items()
+        if key not in {"available", "promotion_evidence", "triple_audit_evidence"}
+    ) or _runtime_drift_evidence_available(promotion_evidence, triple_audit_evidence)
+    return drift
+
+
+def _promotion_contract_runtime_drift_evidence(
+    metadata: Mapping[str, Any],
+    *,
+    contract_metadata: Mapping[str, Any],
+    prefixes: Sequence[str],
+) -> dict[str, dict[str, Any]]:
+    evidence: dict[str, dict[str, Any]] = {}
+    for prefix in prefixes:
+        base_key = f"product_runtime_drift_{prefix}"
+        evidence[prefix] = {
+            "baseline": _finite_float(
+                _first_present(
+                    metadata.get(f"promotion_contract_{base_key}_baseline"),
+                    contract_metadata.get(f"{base_key}_baseline"),
+                    metadata.get(f"{base_key}_baseline"),
+                )
+            ),
+            "current": _finite_float(
+                _first_present(
+                    metadata.get(f"promotion_contract_{base_key}_current"),
+                    contract_metadata.get(f"{base_key}_current"),
+                    metadata.get(f"{base_key}_current"),
+                )
+            ),
+            "status": _optional_string(
+                _first_present(
+                    metadata.get(f"promotion_contract_{base_key}_status"),
+                    contract_metadata.get(f"{base_key}_status"),
+                    metadata.get(f"{base_key}_status"),
+                )
+            ),
+        }
+    return evidence
+
+
+def _runtime_drift_evidence_available(*groups: Mapping[str, Mapping[str, Any]]) -> bool:
+    for group in groups:
+        for values in group.values():
+            if any(item is not None for item in values.values()):
+                return True
+    return False
+
+
+def _promotion_contract_runtime_drift_metric_values(runtime_drift: Mapping[str, Any]) -> dict[str, Any]:
+    metrics = {
+        "promotion_contract_product_runtime_drift_available": _optional_bool(
+            runtime_drift.get("available")
+        ),
+        "promotion_contract_product_runtime_drift_status": runtime_drift.get("status"),
+        "promotion_contract_product_runtime_drift_report": runtime_drift.get("report"),
+        "promotion_contract_product_runtime_drift_manifest": runtime_drift.get("manifest"),
+        "promotion_contract_product_runtime_drift_baseline_path": runtime_drift.get(
+            "baseline_path"
+        ),
+        "promotion_contract_product_runtime_drift_current_path": runtime_drift.get(
+            "current_path"
+        ),
+        "promotion_contract_product_runtime_drift_gate_enabled": runtime_drift.get(
+            "gate_enabled"
+        ),
+        "promotion_contract_product_runtime_drift_promotion_evidence_required": (
+            runtime_drift.get("promotion_evidence_required")
+        ),
+        "promotion_contract_product_runtime_drift_triple_audit_evidence_required": (
+            runtime_drift.get("triple_audit_evidence_required")
+        ),
+        "promotion_contract_product_runtime_drift_compared_metric_count": (
+            runtime_drift.get("compared_metric_count")
+        ),
+        "promotion_contract_product_runtime_drift_blocked_metric_count": (
+            runtime_drift.get("blocked_metric_count")
+        ),
+        "promotion_contract_product_runtime_drift_promotion_evidence_metric_count": (
+            runtime_drift.get("promotion_evidence_metric_count")
+        ),
+        "promotion_contract_product_runtime_drift_promotion_evidence_blocked_metric_count": (
+            runtime_drift.get("promotion_evidence_blocked_metric_count")
+        ),
+        "promotion_contract_product_runtime_drift_triple_audit_evidence_metric_count": (
+            runtime_drift.get("triple_audit_evidence_metric_count")
+        ),
+        "promotion_contract_product_runtime_drift_triple_audit_evidence_blocked_metric_count": (
+            runtime_drift.get("triple_audit_evidence_blocked_metric_count")
+        ),
+    }
+    for prefix, values in _mapping(runtime_drift.get("promotion_evidence")).items():
+        for suffix in ("baseline", "current", "status"):
+            metrics[
+                f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
+            ] = _mapping(values).get(suffix)
+    for prefix, values in _mapping(runtime_drift.get("triple_audit_evidence")).items():
+        for suffix in ("baseline", "current", "status"):
+            metrics[
+                f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
+            ] = _mapping(values).get(suffix)
+    return metrics
 
 
 def _covered_fact_scope_from_metadata(

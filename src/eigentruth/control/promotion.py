@@ -756,6 +756,9 @@ class LoadedProductPromotionContract:
 
 def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dict[str, Any]:
     metadata = {
+        "product_runtime_drift_promotion_evidence_metric_count": summary.get(
+            "promotion_evidence_metric_count"
+        ),
         "product_runtime_drift_promotion_evidence_blocked_metric_count": summary.get(
             "promotion_evidence_blocked_metric_count"
         ),

@@ -17295,6 +17295,7 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                         "gate_enabled": True,
                         "compared_metric_count": 9,
                         "blocked_metric_count": 0,
+                        "promotion_evidence_metric_count": 4,
                         "promotion_evidence_blocked_metric_count": 0,
                         "triple_audit_evidence_metric_count": 4,
                         "triple_audit_evidence_blocked_metric_count": 0,
@@ -17604,6 +17605,7 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["metadata"]["product_runtime_drift_promotion_evidence_required"] is True
     assert contract["metadata"]["product_runtime_drift_triple_audit_evidence_required"] is True
     assert contract["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
+    assert contract["metadata"]["product_runtime_drift_promotion_evidence_metric_count"] == 4
     assert contract["metadata"]["product_runtime_drift_promotion_evidence_blocked_metric_count"] == 0
     assert contract["metadata"]["product_runtime_drift_triple_audit_evidence_metric_count"] == 4
     assert contract["metadata"]["product_runtime_drift_triple_audit_evidence_blocked_metric_count"] == 0
@@ -17646,6 +17648,7 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert manifest["artifacts"]["release_efficiency_report"]["exists"] is True
     assert manifest["metadata"]["triple_extraction_fixture_matrix_status"] == "promote"
     assert manifest["metadata"]["product_runtime_drift_triple_audit_evidence_required"] is True
+    assert manifest["metadata"]["product_runtime_drift_promotion_evidence_metric_count"] == 4
     assert manifest["metadata"]["product_runtime_drift_triple_audit_pass_rate_current"] == 1.0
     assert manifest["metadata"]["product_runtime_drift_triple_slot_coverage_rate_status"] == "pass"
     assert manifest["metadata"]["triple_extraction_fixture_matrix_report"] == (
@@ -17697,6 +17700,7 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
         "artifacts/runtime-drift/runtime-drift.json"
     )
     assert record.metadata["product_runtime_drift_triple_audit_evidence_required"] is True
+    assert record.metadata["product_runtime_drift_promotion_evidence_metric_count"] == 4
     assert record.metadata["product_runtime_drift_triple_audit_pass_rate_current"] == pytest.approx(1.0)
     assert record.metadata["product_runtime_drift_triple_slot_coverage_rate_status"] == "pass"
     assert record.metadata["selfcheck_signal_fusion_workflow_source"] == "registry"
@@ -23937,6 +23941,25 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                     "structured_fact_robustness_property_counts": {
                         "benchmark_manifest:structured-fact-canonical:0.1": 3
                     },
+                    "product_runtime_drift_status": "promote",
+                    "product_runtime_drift_report": "artifacts/runtime-drift/runtime-drift.json",
+                    "product_runtime_drift_gate_enabled": True,
+                    "product_runtime_drift_promotion_evidence_required": True,
+                    "product_runtime_drift_triple_audit_evidence_required": True,
+                    "product_runtime_drift_compared_metric_count": 12,
+                    "product_runtime_drift_blocked_metric_count": 0,
+                    "product_runtime_drift_promotion_evidence_metric_count": 4,
+                    "product_runtime_drift_promotion_evidence_blocked_metric_count": 0,
+                    "product_runtime_drift_triple_audit_evidence_metric_count": 4,
+                    "product_runtime_drift_triple_audit_evidence_blocked_metric_count": 0,
+                    "product_runtime_drift_promotion_contract_coverage_rate_current": 1.0,
+                    "product_runtime_drift_promotion_contract_coverage_rate_status": "pass",
+                    "product_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_current": 0.88,
+                    "product_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_status": "pass",
+                    "product_runtime_drift_triple_audit_pass_rate_current": 1.0,
+                    "product_runtime_drift_triple_audit_pass_rate_status": "pass",
+                    "product_runtime_drift_triple_slot_coverage_rate_current": 1.0,
+                    "product_runtime_drift_triple_slot_coverage_rate_status": "pass",
                 },
                 "promotion_contract_triple_extraction_fixture_matrix": {
                     "source": "registry",
@@ -24075,6 +24098,7 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     }
     promotion = payload["summary"]["promotion_contract"]
     covered_properties = promotion["covered_fact_properties"]
+    runtime_drift = promotion["product_runtime_drift"]
     matrix = promotion["triple_extraction_fixture_matrix"]
     assert promotion["available_trace_count"] == 2
     assert promotion["source_counts"] == {"contract-a.json": 1}
@@ -24095,6 +24119,27 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert covered_properties["structured_fact_robustness_records"] == {
         "benchmark_manifest:structured-fact-canonical:0.1": 1
     }
+    assert runtime_drift["available_trace_count"] == 1
+    assert runtime_drift["status_counts"] == {"promote": 1}
+    assert runtime_drift["gate_enabled_counts"] == {"True": 1}
+    assert runtime_drift["promotion_evidence_required_counts"] == {"True": 1}
+    assert runtime_drift["triple_audit_evidence_required_counts"] == {"True": 1}
+    assert runtime_drift["compared_metric_count"]["mean"] == pytest.approx(12.0)
+    assert runtime_drift["blocked_metric_count"]["mean"] == pytest.approx(0.0)
+    assert runtime_drift["promotion_evidence_metric_count"]["mean"] == pytest.approx(4.0)
+    assert runtime_drift["triple_audit_evidence_metric_count"]["mean"] == pytest.approx(4.0)
+    assert runtime_drift["promotion_evidence"]["promotion_contract_coverage_rate"][
+        "current"
+    ]["mean"] == pytest.approx(1.0)
+    assert runtime_drift["promotion_evidence"]["promotion_contract_coverage_rate"][
+        "status_counts"
+    ] == {"pass": 1}
+    assert runtime_drift["triple_audit_evidence"]["triple_audit_pass_rate"][
+        "current"
+    ]["mean"] == pytest.approx(1.0)
+    assert runtime_drift["triple_audit_evidence"]["triple_slot_coverage_rate"][
+        "status_counts"
+    ] == {"pass": 1}
     assert matrix["available_trace_count"] == 2
     assert matrix["source_counts"] == {"registry": 1, "runtime_evidence_bundle": 1}
     assert matrix["status_counts"] == {"promote": 2}
@@ -24111,6 +24156,22 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert payload["traces"][0]["metrics"]["final_answer_available"] is True
     assert payload["traces"][0]["metrics"]["final_answer_status"] == "answered"
     assert payload["traces"][0]["metrics"]["promotion_contract_available"] is True
+    assert (
+        payload["traces"][0]["metrics"]["promotion_contract_product_runtime_drift_status"]
+        == "promote"
+    )
+    assert (
+        payload["traces"][0]["metrics"][
+            "promotion_contract_product_runtime_drift_promotion_evidence_metric_count"
+        ]
+        == 4.0
+    )
+    assert (
+        payload["traces"][0]["metrics"][
+            "promotion_contract_product_runtime_drift_triple_audit_pass_rate_current"
+        ]
+        == 1.0
+    )
     assert payload["traces"][0]["metrics"][
         "promotion_contract_recommended_route_covered_fact_property_count"
     ] == 3.0
@@ -25202,7 +25263,7 @@ def test_run_product_runtime_baseline_reuses_trace_record_cache(tmp_path, monkey
     assert first["config"]["trace_record_cache"]["cache_hit"] is False
     assert first["config"]["trace_record_cache"]["cache_written"] is True
     assert first["paths"]["trace_records_cache"] == str(cache_path)
-    assert cache_payload["schema_version"] == 2
+    assert cache_payload["schema_version"] == 3
     assert cache_payload["workflow"] == "product_runtime_baseline_trace_records"
     assert cache_payload["summary"]["trace_count"] == 2
     assert cache_payload["policy"]["payload"]["max_total_seconds"] == 0.3
