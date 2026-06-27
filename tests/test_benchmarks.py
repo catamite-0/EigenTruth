@@ -13828,6 +13828,88 @@ def test_compare_release_candidates_consumes_product_trace_replay_workflow(tmp_p
         for reason in self_swapped_gate["blocking_reasons"]
     )
 
+    internally_inconsistent_workflow_report = _write_product_trace_replay_workflow_report(
+        tmp_path / "trace-replay-workflow-internally-inconsistent-audit",
+        selector_report=selector_report,
+        drift_report=drift_report,
+        status="promote",
+        action_audit_status="promote",
+        action_audit_gate_enabled=True,
+        action_audit_passed=True,
+        action_audit_error_rate=0.0,
+    )
+    internally_inconsistent_action_path = (
+        internally_inconsistent_workflow_report.parent / "action-audit-gate.json"
+    )
+    internally_inconsistent_action = json.loads(
+        internally_inconsistent_action_path.read_text(encoding="utf-8")
+    )
+    internally_inconsistent_action["decision"]["blocking_reasons"] = [
+        "latent blocked action audit reason"
+    ]
+    internally_inconsistent_action["checks"] = [
+        {
+            "metric": "action_audit.error_rate",
+            "status": "blocked",
+            "reason": "latent blocked check",
+        }
+    ]
+    internally_inconsistent_action_path.write_text(
+        json.dumps(internally_inconsistent_action, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    internally_inconsistent_manifest_path = (
+        internally_inconsistent_workflow_report.parent / "artifact-manifest.json"
+    )
+    internally_inconsistent_manifest_path.write_text(
+        json.dumps(
+            build_artifact_manifest(
+                {
+                    "product_trace_replay_workflow_report": internally_inconsistent_workflow_report,
+                    "selector_replay_report": selector_report,
+                    "product_runtime_drift_report": drift_report,
+                    "action_audit_gate_report": internally_inconsistent_action_path,
+                },
+                root=internally_inconsistent_workflow_report.parent,
+                metadata={
+                    "runner": "run_product_trace_replay_workflow",
+                    "status": "promote",
+                    "action_audit_gate_status": "promote",
+                    "action_audit_gate_enabled": True,
+                    "action_audit_error_rate": 0.0,
+                },
+            ),
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    internally_inconsistent_payload = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        product_trace_replay_workflow_path=internally_inconsistent_workflow_report,
+        require_product_trace_action_audit_gate=True,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+
+    assert internally_inconsistent_payload["decision"]["status"] == "blocked"
+    internally_inconsistent_gate = internally_inconsistent_payload[
+        "product_trace_replay_workflow_gate"
+    ]["gate"]
+    assert any(
+        "promoted with 1 blocking reasons" in reason
+        for reason in internally_inconsistent_gate["blocking_reasons"]
+    )
+    assert any(
+        "promoted with 1 blocked checks" in reason
+        for reason in internally_inconsistent_gate["blocking_reasons"]
+    )
+
     audited_workflow_report = _write_product_trace_replay_workflow_report(
         tmp_path / "trace-replay-workflow-audited",
         selector_report=selector_report,

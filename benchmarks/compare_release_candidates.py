@@ -2410,6 +2410,12 @@ def _product_trace_replay_workflow_report_gate(
                     "product trace replay workflow action-audit gate report did not pass"
                 )
             failures.extend(
+                _action_audit_report_internal_failures(
+                    action_audit_report,
+                    action_audit_report_summary=action_audit_report_summary,
+                )
+            )
+            failures.extend(
                 _action_audit_report_path_failures(
                     action_audit_report,
                     action_audit_report_path=action_audit_report_path,
@@ -2529,6 +2535,69 @@ def _action_audit_summary_mismatches(
             failures.append(
                 "product trace replay workflow action-audit summary field "
                 f"{field!r} is {workflow_value!r}, but child report has {report_value!r}"
+            )
+    return failures
+
+
+def _action_audit_report_internal_failures(
+    action_audit_report: Mapping[str, Any],
+    *,
+    action_audit_report_summary: Mapping[str, Any],
+) -> list[str]:
+    failures: list[str] = []
+    report_status = action_audit_report.get("status")
+    decision = _mapping(action_audit_report.get("decision"))
+    decision_status = decision.get("status")
+    if decision_status is not None and decision_status != report_status:
+        failures.append(
+            "product trace replay workflow action-audit gate report decision status is "
+            f"{decision_status!r}, expected {report_status!r}"
+        )
+    decision_passed = decision.get("passed")
+    if decision_passed is not None and decision_passed != action_audit_report_summary.get("passed"):
+        failures.append(
+            "product trace replay workflow action-audit gate report decision passed is "
+            f"{decision_passed!r}, expected {action_audit_report_summary.get('passed')!r}"
+        )
+    blocking_reasons = _tuple_or_empty_sequence(decision.get("blocking_reasons"))
+    if report_status == "promote" and blocking_reasons:
+        failures.append(
+            "product trace replay workflow action-audit gate report promoted with "
+            f"{len(blocking_reasons)} blocking reasons"
+        )
+    summary_blocked_metric_count = action_audit_report_summary.get("blocked_metric_count")
+    if summary_blocked_metric_count is not None and blocking_reasons:
+        if summary_blocked_metric_count != len(blocking_reasons):
+            failures.append(
+                "product trace replay workflow action-audit gate report blocked metric count is "
+                f"{summary_blocked_metric_count!r}, but decision has {len(blocking_reasons)} "
+                "blocking reasons"
+            )
+
+    checks = tuple(
+        _mapping(check)
+        for check in _tuple_or_empty_sequence(action_audit_report.get("checks"))
+        if isinstance(check, Mapping)
+    )
+    blocked_checks = tuple(check for check in checks if check.get("status") == "blocked")
+    if report_status == "promote" and blocked_checks:
+        failures.append(
+            "product trace replay workflow action-audit gate report promoted with "
+            f"{len(blocked_checks)} blocked checks"
+        )
+    summary_checked_metric_count = action_audit_report_summary.get("checked_metric_count")
+    if summary_checked_metric_count is not None and checks:
+        if summary_checked_metric_count != len(checks):
+            failures.append(
+                "product trace replay workflow action-audit gate report checked metric count is "
+                f"{summary_checked_metric_count!r}, but report has {len(checks)} checks"
+            )
+    if summary_blocked_metric_count is not None and checks:
+        if summary_blocked_metric_count != len(blocked_checks):
+            failures.append(
+                "product trace replay workflow action-audit gate report blocked metric count is "
+                f"{summary_blocked_metric_count!r}, but report has {len(blocked_checks)} "
+                "blocked checks"
             )
     return failures
 
