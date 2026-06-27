@@ -228,6 +228,9 @@ def compare_release_candidates(
     world_model_signal_workflow_path: str | Path | None = None,
     world_model_signal_workflow_registry_path: str | Path | None = None,
     world_model_signal_workflow_key: str | None = None,
+    pathway_intervention_workflow_path: str | Path | None = None,
+    pathway_intervention_workflow_registry_path: str | Path | None = None,
+    pathway_intervention_workflow_key: str | None = None,
     product_trace_replay_workflow_path: str | Path | None = None,
     product_trace_replay_workflow_registry_path: str | Path | None = None,
     product_trace_replay_workflow_key: str | None = None,
@@ -1027,6 +1030,23 @@ def compare_release_candidates(
         manifest_fingerprint_workers=manifest_fingerprint_workers,
         verification_context=verification_context,
     )
+    pathway_intervention_workflow_source = _resolve_pathway_intervention_workflow_source(
+        pathway_intervention_workflow_path=pathway_intervention_workflow_path,
+        pathway_intervention_workflow_registry_path=(
+            pathway_intervention_workflow_registry_path
+            if pathway_intervention_workflow_key is not None
+            else None
+        ),
+        pathway_intervention_workflow_key=pathway_intervention_workflow_key,
+        default_registry_path=readiness_registry_path,
+    )
+    pathway_intervention_workflow = _pathway_intervention_workflow_gate(
+        pathway_intervention_workflow_source=pathway_intervention_workflow_source,
+        recursive=recursive,
+        allow_unverified=allow_unverified,
+        manifest_fingerprint_workers=manifest_fingerprint_workers,
+        verification_context=verification_context,
+    )
     decision = _decision(
         readiness,
         route,
@@ -1044,6 +1064,7 @@ def compare_release_candidates(
         pre_generation_probe_comparison,
         frontier_release_evidence,
         world_model_signal_workflow,
+        pathway_intervention_workflow,
         selfcheck_signal_fusion_workflow,
         uncertainty_escalation_workflow,
         feedback_policy_workflow,
@@ -1064,6 +1085,7 @@ def compare_release_candidates(
             pre_generation_probe_comparison,
             frontier_release_evidence,
             world_model_signal_workflow,
+            pathway_intervention_workflow,
             selfcheck_signal_fusion_workflow,
             uncertainty_escalation_workflow,
             feedback_policy_workflow,
@@ -1173,6 +1195,17 @@ def compare_release_candidates(
                 else world_model_signal_workflow_source.get("registry")
             ),
             "world_model_signal_workflow_key": world_model_signal_workflow_key,
+            "pathway_intervention_workflow": (
+                None
+                if pathway_intervention_workflow_source is None
+                else str(pathway_intervention_workflow_source["path"])
+            ),
+            "pathway_intervention_workflow_registry": (
+                None
+                if pathway_intervention_workflow_source is None
+                else pathway_intervention_workflow_source.get("registry")
+            ),
+            "pathway_intervention_workflow_key": pathway_intervention_workflow_key,
             "product_trace_replay_workflow": (
                 None
                 if product_trace_replay_workflow_source is None
@@ -1403,6 +1436,7 @@ def compare_release_candidates(
         "pre_generation_probe_comparison_gate": pre_generation_probe_comparison,
         "frontier_release_evidence_gate": frontier_release_evidence,
         "world_model_signal_workflow_gate": world_model_signal_workflow,
+        "pathway_intervention_workflow_gate": pathway_intervention_workflow,
         "adapter_family_matrix_gate": adapter_family,
         "triple_extraction_fixture_matrix_gate": triple_extraction_fixture_matrix,
         "counterfactual_verification_gate": counterfactual_verification,
@@ -1568,6 +1602,7 @@ def _decision(
     pre_generation_probe_comparison: Mapping[str, Any] | None = None,
     frontier_release_evidence: Mapping[str, Any] | None = None,
     world_model_signal_workflow: Mapping[str, Any] | None = None,
+    pathway_intervention_workflow: Mapping[str, Any] | None = None,
     selfcheck_signal_fusion_workflow: Mapping[str, Any] | None = None,
     uncertainty_escalation_workflow: Mapping[str, Any] | None = None,
     feedback_policy_workflow: Mapping[str, Any] | None = None,
@@ -1657,6 +1692,16 @@ def _decision(
         None
         if world_model_signal_workflow is None
         else world_model_signal_workflow.get("status")
+    )
+    pathway_intervention_workflow_gate = _mapping(
+        None
+        if pathway_intervention_workflow is None
+        else pathway_intervention_workflow.get("gate")
+    )
+    pathway_intervention_workflow_status = (
+        None
+        if pathway_intervention_workflow is None
+        else pathway_intervention_workflow.get("status")
     )
     selfcheck_signal_fusion_workflow_gate = _mapping(
         None
@@ -1797,6 +1842,15 @@ def _decision(
             "reasons": list(world_model_signal_workflow_gate.get("blocking_reasons", ())),
         })
     if (
+        pathway_intervention_workflow is not None
+        and pathway_intervention_workflow_gate.get("passed") is not True
+    ):
+        blocking_reasons.append({
+            "gate": "pathway_intervention_workflow",
+            "status": pathway_intervention_workflow_status,
+            "reasons": list(pathway_intervention_workflow_gate.get("blocking_reasons", ())),
+        })
+    if (
         selfcheck_signal_fusion_workflow is not None
         and selfcheck_signal_fusion_workflow_gate.get("passed") is not True
     ):
@@ -1851,6 +1905,7 @@ def _decision(
         "pre_generation_probe_comparison_status": pre_generation_probe_comparison_status,
         "frontier_release_evidence_status": frontier_release_evidence_status,
         "world_model_signal_workflow_status": world_model_signal_workflow_status,
+        "pathway_intervention_workflow_status": pathway_intervention_workflow_status,
         "selfcheck_signal_fusion_workflow_status": selfcheck_signal_fusion_workflow_status,
         "uncertainty_escalation_workflow_status": uncertainty_escalation_workflow_status,
         "feedback_policy_workflow_status": feedback_policy_workflow_status,
@@ -1936,6 +1991,14 @@ def _decision(
                 or world_model_signal_workflow_gate.get("passed") is not True
             )
             else world_model_signal_workflow.get("report_path")
+        ),
+        "recommended_pathway_intervention_workflow_report": (
+            None
+            if (
+                pathway_intervention_workflow is None
+                or pathway_intervention_workflow_gate.get("passed") is not True
+            )
+            else pathway_intervention_workflow.get("report_path")
         ),
         "recommended_selfcheck_signal_fusion_workflow_report": (
             None
@@ -4915,6 +4978,165 @@ def _resolve_world_model_signal_workflow_source(
     }
 
 
+def _pathway_intervention_workflow_gate(
+    *,
+    pathway_intervention_workflow_source: Mapping[str, Any] | None,
+    recursive: bool,
+    allow_unverified: bool,
+    manifest_fingerprint_workers: int,
+    verification_context: ArtifactVerificationContext,
+) -> dict[str, Any] | None:
+    if pathway_intervention_workflow_source is None:
+        return None
+    report_path = Path(pathway_intervention_workflow_source["path"])
+    report, report_error = verification_context.load_json_object(report_path)
+    manifest_path = _pathway_intervention_workflow_manifest_path(report, report_path=report_path)
+    verification = _verify_artifact_manifest(
+        manifest_path,
+        recursive=recursive,
+        max_workers=manifest_fingerprint_workers,
+        artifact_name="pathway_intervention_workflow_manifest",
+        verification_context=verification_context,
+    )
+    evidence_bundle = _mapping(report.get("evidence_bundle"))
+    comparisons = _mapping(report.get("comparisons"))
+    activation_ablation = _mapping(comparisons.get("activation_ablation"))
+    source_patch = _mapping(comparisons.get("source_patch"))
+    gate = _pathway_intervention_workflow_report_gate(
+        report=report,
+        report_error=report_error,
+        manifest_path=manifest_path,
+        verification=verification,
+        evidence_bundle=evidence_bundle,
+        activation_ablation=activation_ablation,
+        source_patch=source_patch,
+        allow_unverified=allow_unverified,
+    )
+    return {
+        "schema_version": 1,
+        "status": "promote" if gate["passed"] else "blocked",
+        "report_path": str(report_path),
+        "manifest_path": None if manifest_path is None else str(manifest_path),
+        "source": pathway_intervention_workflow_source.get("source"),
+        "registry": pathway_intervention_workflow_source.get("registry"),
+        "record_key": pathway_intervention_workflow_source.get("record_key"),
+        "record": pathway_intervention_workflow_source.get("record"),
+        "workflow": report.get("workflow"),
+        "report_status": report.get("status"),
+        "release_ready": evidence_bundle.get("release_ready"),
+        "model": evidence_bundle.get("model"),
+        "layer": evidence_bundle.get("layer"),
+        "intervention_layer": evidence_bundle.get("intervention_layer"),
+        "patch_layer": evidence_bundle.get("patch_layer"),
+        "signals": tuple(evidence_bundle.get("signals", ())),
+        "activation_ablation_gate_status": _nested(activation_ablation, "gate", "status"),
+        "source_patch_gate_status": _nested(source_patch, "gate", "status"),
+        "best_signals": dict(evidence_bundle.get("best_signals") or {}),
+        "blocking_reasons": tuple(gate.get("blocking_reasons", ())),
+        "verification": verification,
+        "gate": gate,
+    }
+
+
+def _pathway_intervention_workflow_report_gate(
+    *,
+    report: Mapping[str, Any],
+    report_error: str | None,
+    manifest_path: Path | None,
+    verification: Mapping[str, Any],
+    evidence_bundle: Mapping[str, Any],
+    activation_ablation: Mapping[str, Any],
+    source_patch: Mapping[str, Any],
+    allow_unverified: bool,
+) -> dict[str, Any]:
+    failures = []
+    if report_error is not None:
+        failures.append(f"pathway intervention workflow report could not be loaded: {report_error}")
+    if manifest_path is None:
+        failures.append("pathway intervention workflow artifact manifest is missing")
+    if not bool(verification.get("passed", False)) and not allow_unverified:
+        failures.append("pathway intervention workflow manifest verification failed")
+    if report.get("workflow") != "pathway_intervention_workflow":
+        failures.append(
+            "pathway intervention workflow is "
+            f"{report.get('workflow')!r}, expected 'pathway_intervention_workflow'"
+        )
+    if report.get("status") != "complete":
+        failures.append(
+            f"pathway intervention workflow status is {report.get('status')!r}, expected 'complete'"
+        )
+    if evidence_bundle.get("release_ready") is not True:
+        failures.append("pathway intervention workflow evidence_bundle.release_ready is not true")
+    for name, comparison in (
+        ("activation_ablation", activation_ablation),
+        ("source_patch", source_patch),
+    ):
+        gate_status = _nested(comparison, "gate", "status")
+        if gate_status != "promote":
+            failures.append(
+                f"pathway intervention workflow {name} gate status is "
+                f"{gate_status!r}, expected 'promote'"
+            )
+    return {
+        "passed": not failures,
+        "blocking_reasons": failures,
+    }
+
+
+def _pathway_intervention_workflow_manifest_path(
+    report: Mapping[str, Any],
+    *,
+    report_path: Path,
+) -> Path | None:
+    raw_path = _first_present(
+        report.get("artifact_manifest_path"),
+        _nested(report, "paths", "artifact_manifest"),
+    )
+    if raw_path is None:
+        sibling = report_path.parent / "artifact-manifest.json"
+        return sibling if sibling.exists() else None
+    return _resolve_path(raw_path, base_path=report_path)
+
+
+def _resolve_pathway_intervention_workflow_source(
+    *,
+    pathway_intervention_workflow_path: str | Path | None,
+    pathway_intervention_workflow_registry_path: str | Path | None,
+    pathway_intervention_workflow_key: str | None,
+    default_registry_path: str | Path,
+) -> dict[str, Any] | None:
+    if pathway_intervention_workflow_path is not None:
+        if pathway_intervention_workflow_key is not None:
+            raise ValueError(
+                "pathway_intervention_workflow_path is mutually exclusive with "
+                "pathway_intervention_workflow_key."
+            )
+        return {"source": "file", "path": Path(pathway_intervention_workflow_path)}
+    if pathway_intervention_workflow_key is None:
+        if pathway_intervention_workflow_registry_path is not None:
+            raise ValueError(
+                "pathway_intervention_workflow_registry_path requires "
+                "pathway_intervention_workflow_key."
+            )
+        return None
+    registry_path = Path(
+        default_registry_path
+        if pathway_intervention_workflow_registry_path is None
+        else pathway_intervention_workflow_registry_path
+    )
+    registry = ArtifactRegistry.load_json(registry_path)
+    record = registry.get(str(pathway_intervention_workflow_key))
+    if record.artifact_type != "report":
+        raise ValueError(f"registry record {record.key()!r} is not a report.")
+    return {
+        "source": "registry",
+        "registry": str(registry_path),
+        "record_key": record.key(),
+        "record": record.to_dict(),
+        "path": _resolve_registry_record_path(registry_path, record),
+    }
+
+
 def _format_gate_reasons(gate: Mapping[str, Any]) -> str:
     reasons = tuple(gate.get("blocking_reasons", ()) or ())
     return f": {reasons!r}" if reasons else ""
@@ -6218,6 +6440,7 @@ def _candidate_with_gates(
     pre_generation_probe_comparison: Mapping[str, Any] | None,
     frontier_release_evidence: Mapping[str, Any] | None,
     world_model_signal_workflow: Mapping[str, Any] | None,
+    pathway_intervention_workflow: Mapping[str, Any] | None,
     selfcheck_signal_fusion_workflow: Mapping[str, Any] | None,
     uncertainty_escalation_workflow: Mapping[str, Any] | None,
     feedback_policy_workflow: Mapping[str, Any] | None,
@@ -6506,6 +6729,31 @@ def _candidate_with_gates(
         }
         manifests["world_model_signal_workflow_manifest"] = (
             world_model_signal_workflow.get("manifest_path")
+        )
+    if pathway_intervention_workflow is not None:
+        payload["pathway_intervention_workflow"] = {
+            "report_path": pathway_intervention_workflow.get("report_path"),
+            "manifest_path": pathway_intervention_workflow.get("manifest_path"),
+            "source": pathway_intervention_workflow.get("source"),
+            "registry": pathway_intervention_workflow.get("registry"),
+            "record_key": pathway_intervention_workflow.get("record_key"),
+            "workflow": pathway_intervention_workflow.get("workflow"),
+            "report_status": pathway_intervention_workflow.get("report_status"),
+            "release_ready": pathway_intervention_workflow.get("release_ready"),
+            "model": pathway_intervention_workflow.get("model"),
+            "layer": pathway_intervention_workflow.get("layer"),
+            "intervention_layer": pathway_intervention_workflow.get("intervention_layer"),
+            "patch_layer": pathway_intervention_workflow.get("patch_layer"),
+            "signals": tuple(pathway_intervention_workflow.get("signals", ())),
+            "activation_ablation_gate_status": (
+                pathway_intervention_workflow.get("activation_ablation_gate_status")
+            ),
+            "source_patch_gate_status": pathway_intervention_workflow.get("source_patch_gate_status"),
+            "best_signals": dict(pathway_intervention_workflow.get("best_signals") or {}),
+            "blocking_reasons": tuple(pathway_intervention_workflow.get("blocking_reasons", ())),
+        }
+        manifests["pathway_intervention_workflow_manifest"] = (
+            pathway_intervention_workflow.get("manifest_path")
         )
     if selfcheck_signal_fusion_workflow is not None:
         payload["selfcheck_signal_fusion_workflow"] = {
@@ -6899,6 +7147,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         world_model_signal_workflow_path=args.world_model_signal_workflow,
         world_model_signal_workflow_registry_path=args.world_model_signal_workflow_registry,
         world_model_signal_workflow_key=args.world_model_signal_workflow_key,
+        pathway_intervention_workflow_path=args.pathway_intervention_workflow,
+        pathway_intervention_workflow_registry_path=args.pathway_intervention_workflow_registry,
+        pathway_intervention_workflow_key=args.pathway_intervention_workflow_key,
         product_trace_replay_workflow_path=args.product_trace_replay_workflow,
         product_trace_replay_workflow_registry_path=args.product_trace_replay_workflow_registry,
         product_trace_replay_workflow_key=args.product_trace_replay_workflow_key,
@@ -7079,6 +7330,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         f"pre_generation_probe={decision.get('pre_generation_probe_comparison_status')} "
         f"frontier_release_evidence={decision.get('frontier_release_evidence_status')} "
         f"world_model_signal={decision.get('world_model_signal_workflow_status')} "
+        f"pathway_intervention={decision.get('pathway_intervention_workflow_status')} "
         f"selfcheck_signal_fusion={decision.get('selfcheck_signal_fusion_workflow_status')} "
         f"uncertainty_escalation={decision.get('uncertainty_escalation_workflow_status')} "
         f"triple_extraction_matrix={decision.get('triple_extraction_fixture_matrix_status')} "
@@ -7179,6 +7431,14 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "defaults to --readiness-registry")
     parser.add_argument("--world-model-signal-workflow-key", default=None,
                         help="optional report:<name>:<version> registry key for a world-model signal workflow")
+    parser.add_argument("--pathway-intervention-workflow", default=None,
+                        help="optional pathway intervention workflow report that must be release-ready "
+                             "and manifest-verified")
+    parser.add_argument("--pathway-intervention-workflow-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for --pathway-intervention-workflow-key; "
+                             "defaults to --readiness-registry")
+    parser.add_argument("--pathway-intervention-workflow-key", default=None,
+                        help="optional report:<name>:<version> registry key for a pathway intervention workflow")
     parser.add_argument("--product-trace-replay-workflow", default=None,
                         help="optional product trace replay workflow report; when supplied, its selector "
                              "replay and runtime-drift child reports are used unless explicit child report "

@@ -11076,6 +11076,71 @@ def _write_world_model_signal_workflow_report(
     return report_path
 
 
+def _write_pathway_intervention_workflow_report(
+    output_dir: Path,
+    *,
+    release_ready: bool = True,
+    status: str = "complete",
+    activation_gate_status: str = "promote",
+    source_patch_gate_status: str = "promote",
+) -> Path:
+    from eigentruth.registry import build_artifact_manifest
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    report_path = output_dir / "pathway-intervention-workflow.json"
+    manifest_path = output_dir / "artifact-manifest.json"
+    payload = {
+        "schema_version": 1,
+        "workflow": "pathway_intervention_workflow",
+        "status": status,
+        "paths": {
+            "workflow_report": str(report_path),
+            "artifact_manifest": str(manifest_path),
+        },
+        "comparisons": {
+            "activation_ablation": {
+                "status": "complete",
+                "best_signal": "pathway_disagreement",
+                "gate": {"status": activation_gate_status},
+            },
+            "source_patch": {
+                "status": "complete",
+                "best_signal": "truth_proj",
+                "gate": {"status": source_patch_gate_status},
+            },
+        },
+        "evidence_bundle": {
+            "schema_version": 1,
+            "status": status,
+            "release_ready": release_ready,
+            "model": "Qwen/Qwen2.5-0.5B-Instruct",
+            "layer": -8,
+            "intervention_layer": -8,
+            "patch_layer": -8,
+            "signals": ("pathway_disagreement", "truth_proj", "nll_answer"),
+            "best_signals": {
+                "activation_ablation": "pathway_disagreement",
+                "source_patch": "truth_proj",
+            },
+            "artifact_manifest": str(manifest_path),
+        },
+    }
+    report_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest = build_artifact_manifest(
+        {"pathway_intervention_workflow": report_path},
+        root=output_dir,
+        metadata={
+            "runner": "run_pathway_intervention_workflow",
+            "workflow": "pathway_intervention_workflow",
+            "release_ready": release_ready,
+            "activation_ablation_gate": activation_gate_status,
+            "source_patch_gate": source_patch_gate_status,
+        },
+    )
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return report_path
+
+
 def _write_triple_extraction_fixture_matrix_report(
     output_dir: Path,
     *,
@@ -14057,6 +14122,102 @@ def test_compare_release_candidates_gates_world_model_signal_workflow(tmp_path):
     assert candidate["world_model_signal_workflow"]["trace_gap_max"] == pytest.approx(0.0)
     assert candidate["world_model_signal_workflow"]["conflict_positive_count"] == pytest.approx(4)
     assert "world_model_signal_workflow_manifest" in candidate["manifests"]
+
+
+def test_compare_release_candidates_gates_pathway_intervention_workflow(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="pathway-readiness",
+        version="0.1",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="pathway-route",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="pathway-route",
+        path=route_manifest,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+    blocked_workflow_path = _write_pathway_intervention_workflow_report(
+        tmp_path / "pathway-workflow-blocked",
+        release_ready=False,
+        source_patch_gate_status="blocked",
+    )
+    promoted_workflow_path = _write_pathway_intervention_workflow_report(
+        tmp_path / "pathway-workflow-promote",
+        release_ready=True,
+    )
+    ArtifactRegistry.load_json(registry_path).record_report(
+        name="pathway-workflow",
+        path=promoted_workflow_path,
+        version="0.1",
+        metadata={"workflow": "pathway_intervention_workflow", "status": "complete"},
+    ).save_json()
+
+    blocked = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        pathway_intervention_workflow_path=blocked_workflow_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+    promoted = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        pathway_intervention_workflow_path=promoted_workflow_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+    promoted_from_key = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        pathway_intervention_workflow_key="report:pathway-workflow:0.1",
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+
+    assert blocked["decision"]["status"] == "blocked"
+    assert blocked["decision"]["pathway_intervention_workflow_status"] == "blocked"
+    assert blocked["decision"]["blocking_reasons"][0]["gate"] == "pathway_intervention_workflow"
+    assert blocked["pathway_intervention_workflow_gate"]["gate"]["passed"] is False
+    assert promoted["decision"]["status"] == "promote"
+    assert promoted["decision"]["pathway_intervention_workflow_status"] == "promote"
+    assert promoted["decision"]["recommended_pathway_intervention_workflow_report"] == str(
+        promoted_workflow_path
+    )
+    candidate = promoted["release_candidate"]
+    assert candidate["pathway_intervention_workflow"]["release_ready"] is True
+    assert candidate["pathway_intervention_workflow"]["activation_ablation_gate_status"] == "promote"
+    assert "pathway_intervention_workflow_manifest" in candidate["manifests"]
+    assert promoted_from_key["pathway_intervention_workflow_gate"]["source"] == "registry"
+    assert promoted_from_key["decision"]["status"] == "promote"
 
 
 def test_compare_release_candidates_gates_pre_generation_probe_comparison(tmp_path):
@@ -17930,6 +18091,10 @@ def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_p
         final_false_accept_rate=0.0,
         false_accept_delta=-1.0,
     )
+    pathway_report = _write_pathway_intervention_workflow_report(
+        tmp_path / "pathway-intervention-workflow",
+        release_ready=True,
+    )
 
     def fake_compare_release_candidates(**kwargs):
         compare_captured.update(kwargs)
@@ -17944,11 +18109,13 @@ def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_p
                 "external_evidence_baseline_comparison_status": "promote",
                 "counterfactual_verification_status": "promote",
                 "uncertainty_escalation_workflow_status": "promote",
+                "pathway_intervention_workflow_status": "promote",
                 "recommended_external_evidence_baseline_comparison_report": (
                     str(comparison_report)
                 ),
                 "recommended_counterfactual_verification_report": str(counterfactual_report),
                 "recommended_uncertainty_escalation_workflow_report": str(uncertainty_report),
+                "recommended_pathway_intervention_workflow_report": str(pathway_report),
             },
             "release_candidate": {
                 "manifests": {
@@ -17956,6 +18123,9 @@ def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_p
                     "counterfactual_verification_report": str(counterfactual_report),
                     "uncertainty_escalation_workflow_manifest": str(
                         uncertainty_report.parent / "artifact-manifest.json"
+                    ),
+                    "pathway_intervention_workflow_manifest": str(
+                        pathway_report.parent / "artifact-manifest.json"
                     ),
                 },
                 "external_evidence_baseline_comparison": {
@@ -17989,6 +18159,17 @@ def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_p
                     "final_false_accept_rate": 0.0,
                     "false_accept_delta": -1.0,
                     "accepted_false_delta": -2,
+                },
+                "pathway_intervention_workflow": {
+                    "report_path": str(pathway_report),
+                    "manifest_path": str(pathway_report.parent / "artifact-manifest.json"),
+                    "source": "path",
+                    "status": "promote",
+                    "release_ready": True,
+                    "model": "Qwen/Qwen2.5-0.5B-Instruct",
+                    "layer": -8,
+                    "activation_ablation_gate_status": "promote",
+                    "source_patch_gate_status": "promote",
                 },
             },
             "external_evidence_baseline_comparison_gate": {
@@ -18025,6 +18206,17 @@ def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_p
                 "accepted_false_delta": -2,
                 "gate": {"passed": True, "blocking_reasons": []},
             },
+            "pathway_intervention_workflow_gate": {
+                "status": "promote",
+                "report_path": str(pathway_report),
+                "manifest_path": str(pathway_report.parent / "artifact-manifest.json"),
+                "release_ready": True,
+                "model": "Qwen/Qwen2.5-0.5B-Instruct",
+                "layer": -8,
+                "activation_ablation_gate_status": "promote",
+                "source_patch_gate_status": "promote",
+                "gate": {"passed": True, "blocking_reasons": []},
+            },
         }
 
     def fake_promote_artifact_manifest(**kwargs):
@@ -18052,6 +18244,7 @@ def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_p
             adapter_family_profile="strict_audit",
             external_evidence_baseline_comparison_path=comparison_report,
             counterfactual_verification_report_path=counterfactual_report,
+            pathway_intervention_workflow_path=pathway_report,
             min_counterfactual_verification_records=2,
             min_counterfactual_verification_pass_rate=1.0,
             max_counterfactual_verification_false_invariance_rate=0.0,
@@ -18071,6 +18264,7 @@ def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_p
     assert compare_captured["require_state_transition_world_model"] is True
     assert compare_captured["external_evidence_baseline_comparison_path"] == comparison_report
     assert compare_captured["counterfactual_verification_report_path"] == counterfactual_report
+    assert compare_captured["pathway_intervention_workflow_path"] == pathway_report
     assert compare_captured["min_counterfactual_verification_records"] == 2
     assert compare_captured["min_counterfactual_verification_pass_rate"] == pytest.approx(1.0)
     assert compare_captured[

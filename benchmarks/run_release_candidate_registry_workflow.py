@@ -218,6 +218,9 @@ class ReleaseCandidateRegistryWorkflowConfig:
     world_model_signal_workflow_path: Path | None = None
     world_model_signal_workflow_registry_path: Path | None = None
     world_model_signal_workflow_key: str | None = None
+    pathway_intervention_workflow_path: Path | None = None
+    pathway_intervention_workflow_registry_path: Path | None = None
+    pathway_intervention_workflow_key: str | None = None
     product_trace_replay_workflow_path: Path | None = None
     product_trace_replay_workflow_registry_path: Path | None = None
     product_trace_replay_workflow_key: str | None = None
@@ -415,6 +418,18 @@ class ReleaseCandidateRegistryWorkflowConfig:
                 self,
                 "world_model_signal_workflow_registry_path",
                 Path(self.world_model_signal_workflow_registry_path),
+            )
+        if self.pathway_intervention_workflow_path is not None:
+            object.__setattr__(
+                self,
+                "pathway_intervention_workflow_path",
+                Path(self.pathway_intervention_workflow_path),
+            )
+        if self.pathway_intervention_workflow_registry_path is not None:
+            object.__setattr__(
+                self,
+                "pathway_intervention_workflow_registry_path",
+                Path(self.pathway_intervention_workflow_registry_path),
             )
         if self.product_trace_replay_workflow_path is not None:
             object.__setattr__(
@@ -687,6 +702,11 @@ def run_release_candidate_registry_workflow(
         world_model_signal_workflow_path=config.world_model_signal_workflow_path,
         world_model_signal_workflow_registry_path=config.world_model_signal_workflow_registry_path,
         world_model_signal_workflow_key=config.world_model_signal_workflow_key,
+        pathway_intervention_workflow_path=config.pathway_intervention_workflow_path,
+        pathway_intervention_workflow_registry_path=(
+            config.pathway_intervention_workflow_registry_path
+        ),
+        pathway_intervention_workflow_key=config.pathway_intervention_workflow_key,
         product_trace_replay_workflow_path=config.product_trace_replay_workflow_path,
         product_trace_replay_workflow_registry_path=config.product_trace_replay_workflow_registry_path,
         product_trace_replay_workflow_key=config.product_trace_replay_workflow_key,
@@ -999,6 +1019,17 @@ def run_release_candidate_registry_workflow(
                 else str(config.world_model_signal_workflow_registry_path)
             ),
             "world_model_signal_workflow_key": config.world_model_signal_workflow_key,
+            "pathway_intervention_workflow": (
+                None
+                if config.pathway_intervention_workflow_path is None
+                else str(config.pathway_intervention_workflow_path)
+            ),
+            "pathway_intervention_workflow_registry": (
+                None
+                if config.pathway_intervention_workflow_registry_path is None
+                else str(config.pathway_intervention_workflow_registry_path)
+            ),
+            "pathway_intervention_workflow_key": config.pathway_intervention_workflow_key,
             "product_trace_replay_workflow": (
                 None
                 if config.product_trace_replay_workflow_path is None
@@ -1314,6 +1345,17 @@ def _comparison_with_registry_config(
             else str(config.world_model_signal_workflow_registry_path)
         ),
         "world_model_signal_workflow_key": config.world_model_signal_workflow_key,
+        "pathway_intervention_workflow": (
+            comparison_config.get("pathway_intervention_workflow")
+            if config.pathway_intervention_workflow_path is None
+            else str(config.pathway_intervention_workflow_path)
+        ),
+        "pathway_intervention_workflow_registry": (
+            comparison_config.get("pathway_intervention_workflow_registry")
+            if config.pathway_intervention_workflow_registry_path is None
+            else str(config.pathway_intervention_workflow_registry_path)
+        ),
+        "pathway_intervention_workflow_key": config.pathway_intervention_workflow_key,
         "uncertainty_escalation_workflow": (
             comparison_config.get("uncertainty_escalation_workflow")
             if config.uncertainty_escalation_workflow_path is None
@@ -1449,6 +1491,10 @@ def _write_artifact_manifest(
         or _nested(comparison, "frontier_release_evidence_gate", "manifest_path"),
         "world_model_signal_workflow_manifest": manifests.get("world_model_signal_workflow_manifest")
         or _nested(comparison, "world_model_signal_workflow_gate", "manifest_path"),
+        "pathway_intervention_workflow_manifest": manifests.get(
+            "pathway_intervention_workflow_manifest"
+        )
+        or _nested(comparison, "pathway_intervention_workflow_gate", "manifest_path"),
         "product_trace_replay_workflow_manifest": manifests.get(
             "product_trace_replay_workflow_manifest"
         ),
@@ -1638,6 +1684,11 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
     world_model_signal_workflow = dict(candidate.get("world_model_signal_workflow") or {})
     if not world_model_signal_workflow:
         world_model_signal_workflow = dict(comparison.get("world_model_signal_workflow_gate") or {})
+    pathway_intervention_workflow = dict(candidate.get("pathway_intervention_workflow") or {})
+    if not pathway_intervention_workflow:
+        pathway_intervention_workflow = dict(
+            comparison.get("pathway_intervention_workflow_gate") or {}
+        )
     return {
         "runner": "run_release_candidate_registry_workflow",
         "workflow": comparison.get("workflow"),
@@ -1659,6 +1710,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "release_world_model_signal_workflow_status": decision.get(
             "world_model_signal_workflow_status"
+        ),
+        "release_pathway_intervention_workflow_status": decision.get(
+            "pathway_intervention_workflow_status"
         ),
         "release_adapter_family_status": decision.get("adapter_family_status"),
         "release_triple_extraction_fixture_matrix_status": decision.get(
@@ -1703,6 +1757,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "recommended_world_model_signal_workflow_report": decision.get(
             "recommended_world_model_signal_workflow_report"
+        ),
+        "recommended_pathway_intervention_workflow_report": decision.get(
+            "recommended_pathway_intervention_workflow_report"
         ),
         "recommended_triple_extraction_fixture_matrix_report": decision.get(
             "recommended_triple_extraction_fixture_matrix_report"
@@ -2415,6 +2472,25 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "world_model_signal_workflow_calibrated_conflict_signal_count": (
             world_model_signal_workflow.get("calibrated_conflict_signal_count")
         ),
+        "pathway_intervention_workflow_report": pathway_intervention_workflow.get("report_path"),
+        "pathway_intervention_workflow_manifest": (
+            manifests.get("pathway_intervention_workflow_manifest")
+            or pathway_intervention_workflow.get("manifest_path")
+        ),
+        "pathway_intervention_workflow_source": pathway_intervention_workflow.get("source"),
+        "pathway_intervention_workflow_registry": pathway_intervention_workflow.get("registry"),
+        "pathway_intervention_workflow_record": pathway_intervention_workflow.get("record_key"),
+        "pathway_intervention_workflow_release_ready": (
+            pathway_intervention_workflow.get("release_ready")
+        ),
+        "pathway_intervention_workflow_model": pathway_intervention_workflow.get("model"),
+        "pathway_intervention_workflow_layer": pathway_intervention_workflow.get("layer"),
+        "pathway_intervention_workflow_activation_ablation_gate": (
+            pathway_intervention_workflow.get("activation_ablation_gate_status")
+        ),
+        "pathway_intervention_workflow_source_patch_gate": (
+            pathway_intervention_workflow.get("source_patch_gate_status")
+        ),
         "product_trace_replay_workflow_manifest": manifests.get(
             "product_trace_replay_workflow_manifest"
         ),
@@ -2735,6 +2811,17 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
             else Path(args.world_model_signal_workflow_registry)
         ),
         world_model_signal_workflow_key=args.world_model_signal_workflow_key,
+        pathway_intervention_workflow_path=(
+            None
+            if args.pathway_intervention_workflow is None
+            else Path(args.pathway_intervention_workflow)
+        ),
+        pathway_intervention_workflow_registry_path=(
+            None
+            if args.pathway_intervention_workflow_registry is None
+            else Path(args.pathway_intervention_workflow_registry)
+        ),
+        pathway_intervention_workflow_key=args.pathway_intervention_workflow_key,
         product_trace_replay_workflow_path=(
             None
             if args.product_trace_replay_workflow is None
@@ -3061,6 +3148,14 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "defaults to --readiness-registry")
     parser.add_argument("--world-model-signal-workflow-key", default=None,
                         help="optional report:<name>:<version> registry key for a world-model signal workflow")
+    parser.add_argument("--pathway-intervention-workflow", default=None,
+                        help="optional pathway intervention workflow report that must be release-ready "
+                             "and manifest-verified")
+    parser.add_argument("--pathway-intervention-workflow-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for --pathway-intervention-workflow-key; "
+                             "defaults to --readiness-registry")
+    parser.add_argument("--pathway-intervention-workflow-key", default=None,
+                        help="optional report:<name>:<version> registry key for a pathway intervention workflow")
     parser.add_argument("--product-trace-replay-workflow", default=None,
                         help="optional product trace replay workflow report; when supplied, its selector "
                              "replay and runtime-drift child reports are used unless explicit child report "
