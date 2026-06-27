@@ -2550,6 +2550,12 @@ a structured-fact route audit, the compact contract, manifest, and registry
 metadata keep the recommended route's covered Wikidata property ids plus
 required-route record-to-property coverage summaries, so deployment-side traces
 can state the exact KG predicate scope behind the verifier route. When the
+release candidate was gated by an external-evidence baseline comparison, the
+compact contract, manifest, and registry metadata retain the comparator report
+path, source type, registry key, decision status, recommended route, route-gate
+status, and text-redline status so runtime traces can show which external
+evidence handoff was release-gated.
+When the
 release candidate was gated by
 a product trace replay workflow, the compact contract and registry metadata keep
 the workflow report/manifest plus its selector-replay and runtime-drift child

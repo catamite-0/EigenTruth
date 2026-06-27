@@ -559,6 +559,11 @@ Added the first stdlib-only external retrieval service shell:
   release gate and carry its report, source/record provenance, recommended
   route, route-gate status, and text-redline status into manifest and registry
   metadata.
+- `ProductPromotionContract`, `export_product_promotion_contract.py`, and
+  `ProductRuntimeEvidenceBundle` now preserve that external-evidence
+  baseline-comparison handoff through deployment artifacts and bounded trace
+  metadata. This closes the local release-to-runtime provenance path without
+  adding a network retriever, database, or verifier dependency.
 
 Added the first monitor-first tool-selection audit layer:
 

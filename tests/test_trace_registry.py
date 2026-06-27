@@ -1706,6 +1706,10 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             "recommended_world_model_signal_workflow_report": (
                 "artifacts/world-model-signal/world-model-signal-workflow.json"
             ),
+            "external_evidence_baseline_comparison_status": "promote",
+            "recommended_external_evidence_baseline_comparison_report": (
+                "artifacts/external-evidence/external-evidence-baseline-comparison.json"
+            ),
             "triple_extraction_fixture_matrix_status": "promote",
             "recommended_triple_extraction_fixture_matrix_report": (
                 "artifacts/triple-extraction-fixture-matrix/"
@@ -1816,6 +1820,24 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "conflict_positive_count": 4,
                 "calibrated_conflict_signal_count": 1,
                 "blocking_reasons": [],
+            },
+            "external_evidence_baseline_comparison": {
+                "report_path": (
+                    "artifacts/external-evidence/"
+                    "external-evidence-baseline-comparison.json"
+                ),
+                "source": "registry",
+                "registry": "artifacts/release-registry.json",
+                "record_key": "report:covered-facts-external-evidence-handoff:0.4",
+                "workflow": "external_evidence_baseline_comparison",
+                "decision_status": "promote",
+                "recommended_route": "structured_fact",
+                "recommended_route_record": (
+                    "benchmark_manifest:structured-fact-canonical-route:0.1"
+                ),
+                "route_passed": True,
+                "text_redline_passed": True,
+                "text_redline_run_count": 2,
             },
             "triple_extraction_fixture_matrix": {
                 "report_path": (
@@ -2070,6 +2092,9 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
 
     assert contract.model_id == "Qwen/Qwen2.5-0.5B-Instruct"
     assert roundtrip.world_model_signal_workflow == contract.world_model_signal_workflow
+    assert roundtrip.external_evidence_baseline_comparison == (
+        contract.external_evidence_baseline_comparison
+    )
     assert roundtrip.triple_extraction_fixture_matrix == (
         contract.triple_extraction_fixture_matrix
     )
@@ -2202,6 +2227,27 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.metadata["world_model_signal_workflow_trace_gap_max"] == 0.0
     assert contract.metadata["world_model_signal_workflow_conflict_positive_count"] == 4
     assert contract.metadata["world_model_signal_workflow_calibrated_conflict_signal_count"] == 1
+    assert contract.external_evidence_baseline_comparison["record_key"] == (
+        "report:covered-facts-external-evidence-handoff:0.4"
+    )
+    assert contract.external_evidence_baseline_comparison["recommended_route"] == (
+        "structured_fact"
+    )
+    assert contract.metadata["external_evidence_baseline_comparison_status"] == "promote"
+    assert contract.metadata[
+        "recommended_external_evidence_baseline_comparison_report"
+    ] == "artifacts/external-evidence/external-evidence-baseline-comparison.json"
+    assert contract.metadata["external_evidence_baseline_comparison_record"] == (
+        "report:covered-facts-external-evidence-handoff:0.4"
+    )
+    assert contract.metadata[
+        "external_evidence_baseline_comparison_recommended_route"
+    ] == "structured_fact"
+    assert contract.metadata["external_evidence_baseline_comparison_route_passed"] is True
+    assert (
+        contract.metadata["external_evidence_baseline_comparison_text_redline_run_count"]
+        == 2
+    )
     assert contract.triple_extraction_fixture_matrix["record_key"] == (
         "report:triple-extraction-fixture-matrix:0.1"
     )
@@ -2445,6 +2491,14 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
             "report_path": "feedback-policy-workflow.json",
             "record_key": "report:feedback-policy-workflow:0.1",
             "promotion_decision": "promote_candidate_policy",
+        },
+        external_evidence_baseline_comparison={
+            "report_path": "external-evidence-baseline-comparison.json",
+            "record_key": "report:covered-facts-external-evidence-handoff:0.4",
+            "status": "promote",
+            "recommended_route": "structured_fact",
+            "route_passed": True,
+            "text_redline_passed": True,
         },
         triple_extraction_fixture_matrix={
             "report_path": "triple-extraction-fixture-matrix.json",
@@ -2722,6 +2776,23 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
         "record_key": "report:feedback-policy-workflow:0.1",
         "promotion_decision": "promote_candidate_policy",
     }
+    assert metadata["promotion_contract_external_evidence_baseline_comparison"] == {
+        "report_path": "external-evidence-baseline-comparison.json",
+        "record_key": "report:covered-facts-external-evidence-handoff:0.4",
+        "status": "promote",
+        "recommended_route": "structured_fact",
+        "route_passed": True,
+        "text_redline_passed": True,
+    }
+    assert metadata[
+        "promotion_contract_external_evidence_baseline_comparison_report"
+    ] == "external-evidence-baseline-comparison.json"
+    assert metadata[
+        "promotion_contract_external_evidence_baseline_comparison_record"
+    ] == "report:covered-facts-external-evidence-handoff:0.4"
+    assert metadata[
+        "promotion_contract_external_evidence_baseline_comparison_route_passed"
+    ] is True
     assert metadata["promotion_contract_triple_extraction_fixture_matrix"] == {
         "report_path": "triple-extraction-fixture-matrix.json",
         "record_key": "report:triple-extraction-fixture-matrix:0.1",
@@ -2753,6 +2824,10 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
     world_model_report_path = world_model_dir / "workflow.json"
     world_model_manifest_path = world_model_dir / "artifact-manifest.json"
     world_model_registry_path = world_model_dir / "registry.json"
+    external_evidence_dir = tmp_path / "external-evidence"
+    external_evidence_dir.mkdir()
+    external_evidence_report_path = external_evidence_dir / "comparison.json"
+    external_evidence_registry_path = external_evidence_dir / "registry.json"
     triple_matrix_dir = tmp_path / "triple-extraction-fixture-matrix"
     triple_matrix_dir.mkdir()
     triple_matrix_report_path = triple_matrix_dir / "matrix.json"
@@ -2815,6 +2890,25 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
         path=world_model_report_path,
         version="0.1",
         metadata={"artifact_manifest": str(world_model_manifest_path)},
+    ).save_json()
+    external_evidence_report_path.write_text(
+        json.dumps({
+            "workflow": "external_evidence_baseline_comparison",
+            "decision": {
+                "status": "promote",
+                "recommended_route": "structured_fact",
+                "recommended_route_record": (
+                    "benchmark_manifest:structured-fact-canonical-route:0.1"
+                ),
+            },
+        }),
+        encoding="utf-8",
+    )
+    ArtifactRegistry.load_json(external_evidence_registry_path).record_report(
+        name="covered-facts-external-evidence-handoff",
+        path=external_evidence_report_path,
+        version="0.4",
+        metadata={"workflow": "external_evidence_baseline_comparison"},
     ).save_json()
     triple_matrix_report_path.write_text(
         json.dumps({
@@ -2886,6 +2980,20 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
             "trace_gap_max": 0.0,
             "conflict_positive_count": 4,
             "calibrated_conflict_signal_count": 1,
+        },
+        external_evidence_baseline_comparison={
+            "report_path": "external-evidence/comparison.json",
+            "registry": "external-evidence/registry.json",
+            "record_key": "report:covered-facts-external-evidence-handoff:0.4",
+            "status": "promote",
+            "decision_status": "promote",
+            "recommended_route": "structured_fact",
+            "recommended_route_record": (
+                "benchmark_manifest:structured-fact-canonical-route:0.1"
+            ),
+            "route_passed": True,
+            "text_redline_passed": True,
+            "text_redline_run_count": 1,
         },
         triple_extraction_fixture_matrix={
             "report_path": "triple-extraction-fixture-matrix/matrix.json",
@@ -2987,6 +3095,33 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
     assert metadata_without_verification["world_model_signal_workflow_release_gate_status"] == "promote"
     assert metadata_without_verification["world_model_signal_workflow_trace_gap_max"] == 0.0
     assert metadata_without_verification["world_model_signal_workflow_conflict_positive_count"] == 4
+    assert metadata_without_verification[
+        "promotion_contract_external_evidence_baseline_comparison"
+    ]["record_key"] == "report:covered-facts-external-evidence-handoff:0.4"
+    assert metadata_without_verification["external_evidence_baseline_comparison_report"] == (
+        str(external_evidence_report_path)
+    )
+    assert metadata_without_verification[
+        "external_evidence_baseline_comparison_registry"
+    ] == str(external_evidence_registry_path)
+    assert metadata_without_verification[
+        "external_evidence_baseline_comparison_registry_key"
+    ] == "report:covered-facts-external-evidence-handoff:0.4"
+    assert (
+        metadata_without_verification[
+            "external_evidence_baseline_comparison_registry_record"
+        ]
+        is None
+    )
+    assert metadata_without_verification[
+        "external_evidence_baseline_comparison_status"
+    ] == "promote"
+    assert metadata_without_verification[
+        "external_evidence_baseline_comparison_route_passed"
+    ] is True
+    assert metadata_without_verification[
+        "external_evidence_baseline_comparison_text_redline_run_count"
+    ] == 1
     assert metadata_without_verification["triple_extraction_fixture_matrix_report"] == str(
         triple_matrix_report_path
     )
@@ -3074,6 +3209,20 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
     assert metadata_with_world_model_verification[
         "world_model_signal_workflow_registry_record"
     ]["metadata"] == {"artifact_manifest": str(world_model_manifest_path)}
+
+    metadata_with_external_evidence_record = bundle.runtime_metadata(
+        budget_enabled=True,
+        include_external_evidence_baseline_comparison_record=True,
+    )
+    assert (
+        metadata_with_external_evidence_record[
+            "external_evidence_baseline_comparison_registry_key"
+        ]
+        == "report:covered-facts-external-evidence-handoff:0.4"
+    )
+    assert metadata_with_external_evidence_record[
+        "external_evidence_baseline_comparison_registry_record"
+    ]["metadata"] == {"workflow": "external_evidence_baseline_comparison"}
 
     metadata_with_triple_matrix_verification = bundle.runtime_metadata(
         budget_enabled=True,

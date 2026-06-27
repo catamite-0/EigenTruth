@@ -69,6 +69,7 @@ class ProductPromotionContract:
     selfcheck_signal_fusion_workflow: Mapping[str, Any] = field(default_factory=dict)
     world_model_signal_workflow: Mapping[str, Any] = field(default_factory=dict)
     feedback_policy_workflow: Mapping[str, Any] = field(default_factory=dict)
+    external_evidence_baseline_comparison: Mapping[str, Any] = field(default_factory=dict)
     triple_extraction_fixture_matrix: Mapping[str, Any] = field(default_factory=dict)
     release_efficiency: Mapping[str, Any] = field(default_factory=dict)
     metadata: Mapping[str, Any] = field(default_factory=dict)
@@ -105,6 +106,11 @@ class ProductPromotionContract:
             self,
             "feedback_policy_workflow",
             dict(self.feedback_policy_workflow),
+        )
+        object.__setattr__(
+            self,
+            "external_evidence_baseline_comparison",
+            dict(self.external_evidence_baseline_comparison),
         )
         object.__setattr__(
             self,
@@ -146,6 +152,9 @@ class ProductPromotionContract:
                     payload.get("world_model_signal_workflow")
                 ),
                 feedback_policy_workflow=_mapping(payload.get("feedback_policy_workflow")),
+                external_evidence_baseline_comparison=_mapping(
+                    payload.get("external_evidence_baseline_comparison")
+                ),
                 triple_extraction_fixture_matrix=_mapping(
                     payload.get("triple_extraction_fixture_matrix")
                 ),
@@ -195,6 +204,14 @@ class ProductPromotionContract:
         )
         world_model_signal_workflow = _mapping(candidate.get("world_model_signal_workflow"))
         feedback_policy_workflow = _mapping(candidate.get("feedback_policy_workflow"))
+        external_evidence_baseline_comparison = (
+            _external_evidence_baseline_comparison_metadata(
+                _first_mapping(
+                    candidate.get("external_evidence_baseline_comparison"),
+                    comparison.get("external_evidence_baseline_comparison_gate"),
+                ),
+            )
+        )
         triple_extraction_fixture_matrix = _triple_extraction_fixture_matrix_metadata(
             _first_mapping(
                 candidate.get("triple_extraction_fixture_matrix"),
@@ -289,6 +306,7 @@ class ProductPromotionContract:
                 feedback_policy_workflow,
                 manifests=manifests,
             ),
+            external_evidence_baseline_comparison=external_evidence_baseline_comparison,
             triple_extraction_fixture_matrix=triple_extraction_fixture_matrix,
             release_efficiency=release_efficiency,
             metadata={
@@ -557,6 +575,17 @@ class ProductPromotionContract:
                 ),
                 "feedback_policy_workflow_unknown_safety_issue_rate": (
                     feedback_policy_workflow.get("unknown_safety_issue_rate")
+                ),
+                "external_evidence_baseline_comparison_status": _first_present(
+                    decision.get("external_evidence_baseline_comparison_status"),
+                    external_evidence_baseline_comparison.get("decision_status"),
+                    external_evidence_baseline_comparison.get("status"),
+                ),
+                "recommended_external_evidence_baseline_comparison_report": (
+                    decision.get("recommended_external_evidence_baseline_comparison_report")
+                ),
+                **_external_evidence_baseline_comparison_flat_metadata(
+                    external_evidence_baseline_comparison
                 ),
                 **_release_efficiency_flat_metadata(release_efficiency),
                 "performance_baseline_record": candidate.get("performance_baseline_record"),
@@ -831,6 +860,9 @@ class ProductPromotionContract:
             "selfcheck_signal_fusion_workflow": dict(self.selfcheck_signal_fusion_workflow),
             "world_model_signal_workflow": dict(self.world_model_signal_workflow),
             "feedback_policy_workflow": dict(self.feedback_policy_workflow),
+            "external_evidence_baseline_comparison": dict(
+                self.external_evidence_baseline_comparison
+            ),
             "triple_extraction_fixture_matrix": dict(
                 self.triple_extraction_fixture_matrix
             ),
@@ -1055,6 +1087,14 @@ class ProductRuntimeEvidenceBundle:
         init=False,
         compare=False,
         repr=False,
+    )
+    _external_evidence_baseline_comparison_registry_record: RegistryRecord | None = (
+        field(
+            default=None,
+            init=False,
+            compare=False,
+            repr=False,
+        )
     )
     _triple_extraction_fixture_matrix_manifest_verification: (
         ArtifactManifestVerification | None
@@ -1380,6 +1420,93 @@ class ProductRuntimeEvidenceBundle:
         }
 
     @property
+    def external_evidence_baseline_comparison(self) -> Mapping[str, Any]:
+        """Return the external-evidence baseline-comparison contract, if present."""
+        return self.contract.external_evidence_baseline_comparison
+
+    @property
+    def external_evidence_baseline_comparison_report_path(self) -> Path | None:
+        """Return the external-evidence baseline-comparison report path."""
+        return _resolve_contract_metadata_path(
+            self.external_evidence_baseline_comparison.get("report_path"),
+            contract_path=self.contract_path,
+        )
+
+    @property
+    def external_evidence_baseline_comparison_registry_path(self) -> Path | None:
+        """Return the external-evidence baseline-comparison registry path."""
+        return _resolve_contract_metadata_path(
+            self.external_evidence_baseline_comparison.get("registry"),
+            contract_path=self.contract_path,
+        )
+
+    def external_evidence_baseline_comparison_registry_record(
+        self,
+    ) -> RegistryRecord | None:
+        """Lazily resolve the optional external-evidence comparison record."""
+        registry_path = self.external_evidence_baseline_comparison_registry_path
+        record_key = self.external_evidence_baseline_comparison.get("record_key")
+        if registry_path is None or record_key is None:
+            return None
+        if self._external_evidence_baseline_comparison_registry_record is None:
+            registry = ArtifactRegistry.load_json(registry_path)
+            object.__setattr__(
+                self,
+                "_external_evidence_baseline_comparison_registry_record",
+                registry.get(str(record_key)),
+            )
+        return self._external_evidence_baseline_comparison_registry_record
+
+    def external_evidence_baseline_comparison_evidence_metadata(
+        self,
+        *,
+        include_registry_record: bool = False,
+    ) -> dict[str, Any]:
+        """Return JSON-ready external-evidence comparison provenance metadata."""
+        comparison = self.external_evidence_baseline_comparison
+        report_path = self.external_evidence_baseline_comparison_report_path
+        registry_path = self.external_evidence_baseline_comparison_registry_path
+        record_key = comparison.get("record_key")
+        registry_record = (
+            self.external_evidence_baseline_comparison_registry_record()
+            if include_registry_record
+            else None
+        )
+        return {
+            "external_evidence_baseline_comparison_report": (
+                None if report_path is None else str(report_path)
+            ),
+            "external_evidence_baseline_comparison_registry": (
+                None if registry_path is None else str(registry_path)
+            ),
+            "external_evidence_baseline_comparison_registry_key": (
+                None if record_key is None else str(record_key)
+            ),
+            "external_evidence_baseline_comparison_registry_record": (
+                None if registry_record is None else registry_record.to_dict()
+            ),
+            "external_evidence_baseline_comparison_status": comparison.get("status"),
+            "external_evidence_baseline_comparison_decision_status": (
+                comparison.get("decision_status")
+            ),
+            "external_evidence_baseline_comparison_recommended_route": (
+                comparison.get("recommended_route")
+            ),
+            "external_evidence_baseline_comparison_recommended_route_record": (
+                comparison.get("recommended_route_record")
+            ),
+            "external_evidence_baseline_comparison_route_passed": (
+                comparison.get("route_passed")
+            ),
+            "external_evidence_baseline_comparison_text_redline_passed": (
+                comparison.get("text_redline_passed")
+            ),
+            "external_evidence_baseline_comparison_text_redline_run_count": (
+                comparison.get("text_redline_run_count")
+            ),
+        }
+
+    @property
     def triple_extraction_fixture_matrix(self) -> Mapping[str, Any]:
         """Return the triple-extraction fixture-matrix contract, if present."""
         return self.contract.triple_extraction_fixture_matrix
@@ -1507,6 +1634,7 @@ class ProductRuntimeEvidenceBundle:
         include_selfcheck_signal_fusion_record: bool = False,
         verify_world_model_signal_workflow_manifest: bool = False,
         include_world_model_signal_workflow_record: bool = False,
+        include_external_evidence_baseline_comparison_record: bool = False,
         verify_triple_extraction_fixture_matrix_manifest: bool = False,
         include_triple_extraction_fixture_matrix_record: bool = False,
     ) -> dict[str, Any]:
@@ -1524,6 +1652,9 @@ class ProductRuntimeEvidenceBundle:
             **self.world_model_signal_evidence_metadata(
                 verify_manifest=verify_world_model_signal_workflow_manifest,
                 include_registry_record=include_world_model_signal_workflow_record,
+            ),
+            **self.external_evidence_baseline_comparison_evidence_metadata(
+                include_registry_record=include_external_evidence_baseline_comparison_record,
             ),
             **self.triple_extraction_fixture_matrix_evidence_metadata(
                 verify_manifest=verify_triple_extraction_fixture_matrix_manifest,
@@ -1598,6 +1729,9 @@ def product_promotion_contract_metadata(
         "promotion_contract_feedback_policy_workflow": dict(
             contract.feedback_policy_workflow
         ),
+        "promotion_contract_external_evidence_baseline_comparison": dict(
+            contract.external_evidence_baseline_comparison
+        ),
         "promotion_contract_triple_extraction_fixture_matrix": dict(
             contract.triple_extraction_fixture_matrix
         ),
@@ -1605,6 +1739,7 @@ def product_promotion_contract_metadata(
         "promotion_contract_metadata": dict(contract.metadata),
         **_promotion_contract_product_trace_replay_metadata(contract),
         **_promotion_contract_product_runtime_drift_metadata(contract),
+        **_promotion_contract_external_evidence_baseline_comparison_metadata(contract),
         **covered_fact_scope,
     }
 
@@ -1830,6 +1965,76 @@ def _promotion_contract_product_runtime_drift_metadata(
             if key in metadata:
                 flattened[f"promotion_contract_{key}"] = metadata.get(key)
     return flattened
+
+
+def _promotion_contract_external_evidence_baseline_comparison_metadata(
+    contract: ProductPromotionContract,
+) -> dict[str, Any]:
+    metadata = _mapping(contract.metadata)
+    comparison = _mapping(contract.external_evidence_baseline_comparison)
+    return _drop_none_values({
+        "promotion_contract_external_evidence_baseline_comparison_status": _first_present(
+            metadata.get("external_evidence_baseline_comparison_status"),
+            comparison.get("status"),
+            comparison.get("decision_status"),
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_report": _first_present(
+            comparison.get("report_path"),
+            metadata.get("external_evidence_baseline_comparison_report"),
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_source": _first_present(
+            comparison.get("source"),
+            metadata.get("external_evidence_baseline_comparison_source"),
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_registry": _first_present(
+            comparison.get("registry"),
+            metadata.get("external_evidence_baseline_comparison_registry"),
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_record": _first_present(
+            comparison.get("record_key"),
+            metadata.get("external_evidence_baseline_comparison_record"),
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_decision_status": (
+            _first_present(
+                comparison.get("decision_status"),
+                metadata.get("external_evidence_baseline_comparison_decision_status"),
+            )
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_recommended_route": (
+            _first_present(
+                comparison.get("recommended_route"),
+                metadata.get("external_evidence_baseline_comparison_recommended_route"),
+            )
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_recommended_route_record": (
+            _first_present(
+                comparison.get("recommended_route_record"),
+                metadata.get(
+                    "external_evidence_baseline_comparison_recommended_route_record"
+                ),
+            )
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_route_passed": (
+            _first_present(
+                comparison.get("route_passed"),
+                metadata.get("external_evidence_baseline_comparison_route_passed"),
+            )
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_text_redline_passed": (
+            _first_present(
+                comparison.get("text_redline_passed"),
+                metadata.get("external_evidence_baseline_comparison_text_redline_passed"),
+            )
+        ),
+        "promotion_contract_external_evidence_baseline_comparison_text_redline_run_count": (
+            _first_present(
+                comparison.get("text_redline_run_count"),
+                metadata.get(
+                    "external_evidence_baseline_comparison_text_redline_run_count"
+                ),
+            )
+        ),
+    })
 
 
 def _promotion_contract_covered_fact_scope_metadata(
@@ -2181,6 +2386,62 @@ def _triple_extraction_fixture_matrix_metadata(
         "mean_baseline_f1": matrix.get("mean_baseline_f1"),
         "mean_best_f1": matrix.get("mean_best_f1"),
         "mean_f1_lift": matrix.get("mean_f1_lift"),
+    })
+
+
+def _external_evidence_baseline_comparison_metadata(
+    comparison: Mapping[str, Any],
+) -> dict[str, Any]:
+    if not comparison:
+        return {}
+    return _drop_none_values({
+        "report_path": comparison.get("report_path"),
+        "source": comparison.get("source"),
+        "registry": comparison.get("registry"),
+        "record_key": comparison.get("record_key"),
+        "workflow": comparison.get("workflow"),
+        "status": _first_present(
+            comparison.get("status"),
+            comparison.get("decision_status"),
+            comparison.get("report_status"),
+        ),
+        "decision_status": comparison.get("decision_status"),
+        "recommended_route": comparison.get("recommended_route"),
+        "recommended_route_record": comparison.get("recommended_route_record"),
+        "route_passed": comparison.get("route_passed"),
+        "text_redline_passed": comparison.get("text_redline_passed"),
+        "text_redline_run_count": comparison.get("text_redline_run_count"),
+        "blocking_reasons": comparison.get("blocking_reasons"),
+    })
+
+
+def _external_evidence_baseline_comparison_flat_metadata(
+    comparison: Mapping[str, Any],
+) -> dict[str, Any]:
+    return _drop_none_values({
+        "external_evidence_baseline_comparison_report": comparison.get("report_path"),
+        "external_evidence_baseline_comparison_source": comparison.get("source"),
+        "external_evidence_baseline_comparison_registry": comparison.get("registry"),
+        "external_evidence_baseline_comparison_record": comparison.get("record_key"),
+        "external_evidence_baseline_comparison_status": comparison.get("status"),
+        "external_evidence_baseline_comparison_decision_status": (
+            comparison.get("decision_status")
+        ),
+        "external_evidence_baseline_comparison_recommended_route": (
+            comparison.get("recommended_route")
+        ),
+        "external_evidence_baseline_comparison_recommended_route_record": (
+            comparison.get("recommended_route_record")
+        ),
+        "external_evidence_baseline_comparison_route_passed": (
+            comparison.get("route_passed")
+        ),
+        "external_evidence_baseline_comparison_text_redline_passed": (
+            comparison.get("text_redline_passed")
+        ),
+        "external_evidence_baseline_comparison_text_redline_run_count": (
+            comparison.get("text_redline_run_count")
+        ),
     })
 
 
