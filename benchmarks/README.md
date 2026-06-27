@@ -560,8 +560,24 @@ python benchmarks/eval_pre_generation_probe.py \
   --save-artifact artifacts/pre-generation-probe.pt \
   --save-calibration artifacts/pre-generation-probe-calibration.json \
   --conformal-alpha 0.2 \
+  --soft-target-cutoff 0.5 \
   --record-layer -8 \
   --layer-idx -8
+```
+
+For records that contain several layers, run a local layer sweep and save the
+recommended layer artifacts:
+
+```bash
+python benchmarks/eval_pre_generation_probe.py \
+  --records artifacts/pre-generation-probe-records.jsonl \
+  --json artifacts/pre-generation-probe-layer-sweep.json \
+  --sweep-layers=-12,-8,-4 \
+  --best-by auto \
+  --save-artifact artifacts/pre-generation-best-probe.pt \
+  --save-calibration artifacts/pre-generation-best-calibration.json \
+  --conformal-alpha 0.2 \
+  --soft-target-cutoff 0.5
 ```
 
 `eval_truthfulqa.py` can now generate compatible local records from the same
@@ -582,7 +598,9 @@ question's candidate false-answer rate as the soft target. Use
 `label` fields. `--pre-generation-probe-layers` writes a `layer_hidden_states`
 mapping per record and keeps the first layer in `prompt_hidden_states` for backward
 compatibility; use `eval_pre_generation_probe.py --record-layer <layer>` to train
-or calibrate one selected layer from the same record file. Use the equals form
+or calibrate one selected layer from the same record file, or `--sweep-layers`
+to train/rank several layer candidates from that same file. In sweep mode,
+`--save-artifact` and `--save-calibration` save the recommended candidate. Use the equals form
 (`--pre-generation-probe-layers=-12,-8,-4`) when the list starts with a negative
 layer index. If the run reads an
 older `--eval-reps-cache` that does not contain prompt hidden states, refresh the
@@ -601,7 +619,7 @@ label from the soft target; otherwise conformal calibration is reported as
 unavailable and explicit artifact saving fails closed.
 
 `eval_pre_generation_probe.py` itself does not load a model or download data. The
-current handoff proves the local record/export/train/evaluate/calibrate path;
+current handoff proves the local record/export/train/evaluate/calibrate/layer-sweep path;
 detector-quality claims still require larger model runs, held-out calibration, and
 release evidence.
 

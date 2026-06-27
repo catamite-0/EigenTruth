@@ -309,6 +309,60 @@ def test_eval_pre_generation_probe_selects_layered_records(tmp_path):
     assert payload["metrics"]["test"]["label_auroc"] == pytest.approx(1.0)
 
 
+def test_eval_pre_generation_probe_layer_sweep_saves_best_artifacts(tmp_path):
+    module = importlib.import_module("benchmarks.eval_pre_generation_probe")
+    from eigentruth.calibration import CalibrationArtifact
+    from eigentruth.core import AttentionSoftTargetProbeArtifact
+
+    records = []
+    for index in range(16):
+        label = 1 if index >= 8 else 0
+        sign = 3.0 if label else -3.0
+        records.append({
+            "id": f"r{index}",
+            "layer_hidden_states": {
+                "-1": [[0.0, 0.0], [0.0, 0.0]],
+                "-2": [[sign, 0.0], [sign, 0.5]],
+            },
+            "attention_mask": [True, True],
+            "label": label,
+            "soft_target": 0.9 if label else 0.1,
+        })
+    records_path = tmp_path / "layered-records.json"
+    report_path = tmp_path / "sweep-report.json"
+    artifact_path = tmp_path / "best-probe.pt"
+    calibration_path = tmp_path / "best-calibration.json"
+    records_path.write_text(json.dumps({"records": records}), encoding="utf-8")
+
+    payload = module.run_pre_generation_probe_layer_sweep(
+        records_path,
+        sweep_layers=(-1, -2),
+        output_path=report_path,
+        artifact_path=artifact_path,
+        calibration_path=calibration_path,
+        train_fraction=0.75,
+        seed=2,
+        steps=120,
+        lr=0.08,
+        conformal_alpha=0.2,
+    )
+    saved_report = json.loads(report_path.read_text(encoding="utf-8"))
+    artifact = AttentionSoftTargetProbeArtifact.load(artifact_path)
+    calibration = CalibrationArtifact.load_json(calibration_path)
+
+    assert payload["workflow"] == "pre_generation_probe_layer_sweep"
+    assert payload["candidate_count"] == 2
+    assert payload["config"]["resolved_best_by"] == "label_auroc"
+    assert payload["recommended"]["layer"] == -2
+    assert payload["recommended"]["rank"] == 1
+    assert payload["recommended"]["selection_raw_value"] == pytest.approx(1.0)
+    assert payload["paths"]["best_artifact"] == str(artifact_path)
+    assert payload["paths"]["best_calibration"] == str(calibration_path)
+    assert saved_report["recommended"]["layer"] == -2
+    assert artifact.layer_idx == -2
+    assert calibration.target_layer == -2
+
+
 def test_eval_truthfulqa_exports_pre_generation_probe_records(tmp_path):
     truthfulqa = importlib.import_module("benchmarks.eval_truthfulqa")
     probe = importlib.import_module("benchmarks.eval_pre_generation_probe")

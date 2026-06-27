@@ -24,6 +24,16 @@ from eigentruth.eval.metrics import roc_auc, selective_classification_report
 from eigentruth.json_utils import to_jsonable
 
 PRE_GENERATION_RISK_SCORE_NAME = "pre_generation_risk_probability"
+PRE_GENERATION_SWEEP_BEST_BY = (
+    "auto",
+    "label_auroc",
+    "target_bce",
+    "target_mse",
+    "target_mae",
+    "conformal_selective_accuracy",
+    "conformal_conditional_lower_bound",
+)
+_LOWER_IS_BETTER_SWEEP_METRICS = {"target_bce", "target_mse", "target_mae"}
 
 
 @dataclass(frozen=True)
@@ -225,6 +235,115 @@ def run_pre_generation_probe_eval(
     return to_jsonable(payload)
 
 
+def run_pre_generation_probe_layer_sweep(
+    records_path: str | Path,
+    *,
+    sweep_layers: Sequence[int] | None = None,
+    output_path: str | Path | None = None,
+    artifact_path: str | Path | None = None,
+    calibration_path: str | Path | None = None,
+    calibration_model_id: str = "pre_generation_probe",
+    conformal_alpha: float = 0.1,
+    soft_target_cutoff: float | None = None,
+    best_by: str = "auto",
+    train_fraction: float = 0.7,
+    seed: int = 0,
+    steps: int = 300,
+    lr: float = 0.05,
+    l2: float = 1e-4,
+    compact_json: bool = False,
+) -> dict[str, Any]:
+    """Train/evaluate one pre-generation probe per selected record layer."""
+    records_path = Path(records_path)
+    layers = (
+        tuple(_discover_record_layers(records_path))
+        if sweep_layers is None
+        else tuple(int(layer) for layer in sweep_layers)
+    )
+    if not layers:
+        raise ValueError("sweep_layers must contain at least one layer or records must expose layer_hidden_states.")
+    if best_by not in PRE_GENERATION_SWEEP_BEST_BY:
+        raise ValueError(f"best_by must be one of {PRE_GENERATION_SWEEP_BEST_BY}.")
+
+    candidates: list[dict[str, Any]] = []
+    for layer in layers:
+        candidate_payload = run_pre_generation_probe_eval(
+            records_path,
+            calibration_model_id=calibration_model_id,
+            conformal_alpha=conformal_alpha,
+            soft_target_cutoff=soft_target_cutoff,
+            record_layer=int(layer),
+            train_fraction=train_fraction,
+            seed=seed,
+            layer_idx=int(layer),
+            steps=steps,
+            lr=lr,
+            l2=l2,
+            compact_json=compact_json,
+        )
+        candidates.append(_sweep_candidate_from_payload(int(layer), candidate_payload))
+
+    resolved_best_by = _resolve_sweep_best_by(candidates, best_by)
+    ranked = _rank_sweep_candidates(candidates, resolved_best_by)
+    recommended = None if not ranked else ranked[0]
+    saved_recommended = None
+    if recommended is not None and (artifact_path is not None or calibration_path is not None):
+        saved_recommended = run_pre_generation_probe_eval(
+            records_path,
+            artifact_path=artifact_path,
+            calibration_path=calibration_path,
+            calibration_model_id=calibration_model_id,
+            conformal_alpha=conformal_alpha,
+            soft_target_cutoff=soft_target_cutoff,
+            record_layer=int(recommended["layer"]),
+            train_fraction=train_fraction,
+            seed=seed,
+            layer_idx=int(recommended["layer"]),
+            steps=steps,
+            lr=lr,
+            l2=l2,
+            compact_json=compact_json,
+        )
+
+    payload = {
+        "workflow": "pre_generation_probe_layer_sweep",
+        "records_path": str(records_path),
+        "candidate_count": len(ranked),
+        "config": {
+            "sweep_layers": tuple(int(layer) for layer in layers),
+            "best_by": best_by,
+            "resolved_best_by": resolved_best_by,
+            "train_fraction": _train_fraction(train_fraction),
+            "seed": int(seed),
+            "steps": int(steps),
+            "lr": float(lr),
+            "l2": float(l2),
+            "conformal_alpha": _alpha_float(conformal_alpha),
+            "soft_target_cutoff": soft_target_cutoff,
+        },
+        "recommended": recommended,
+        "candidates": ranked,
+        "paths": {},
+    }
+    if saved_recommended is not None:
+        payload["saved_recommended"] = {
+            "layer": int(recommended["layer"]) if recommended is not None else None,
+            "paths": dict(saved_recommended.get("paths", {})),
+            "artifact": saved_recommended.get("artifact"),
+            "calibration_artifact": saved_recommended.get("calibration_artifact"),
+        }
+        for key, value in saved_recommended.get("paths", {}).items():
+            payload["paths"][f"best_{key}"] = value
+    if output_path is not None:
+        output = Path(output_path)
+        payload["paths"]["report"] = str(output)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        with output.open("w", encoding="utf-8") as f:
+            json.dump(to_jsonable(payload), f, indent=None if compact_json else 2, sort_keys=True)
+            f.write("\n")
+    return to_jsonable(payload)
+
+
 def load_pre_generation_probe_records(
     path: str | Path,
     *,
@@ -264,8 +383,70 @@ def load_pre_generation_probe_records(
     return tuple(records)
 
 
+def _discover_record_layers(path: str | Path) -> tuple[int, ...]:
+    layers: list[int] = []
+    seen: set[int] = set()
+    for index, payload in enumerate(_iter_record_payloads(path)):
+        layer_payload = _first_present(payload, ("layer_hidden_states", "prompt_hidden_states_by_layer"))
+        if isinstance(layer_payload, Mapping):
+            for raw_layer in layer_payload:
+                layer = _parse_layer_key(raw_layer, index=index)
+                if layer not in seen:
+                    seen.add(layer)
+                    layers.append(layer)
+            continue
+        layer = _metadata_layer(payload)
+        if layer is not None and layer not in seen:
+            seen.add(layer)
+            layers.append(layer)
+    return tuple(layers)
+
+
+def _iter_record_payloads(path: str | Path) -> tuple[Mapping[str, Any], ...]:
+    path = Path(path)
+    if path.suffix.lower() == ".jsonl":
+        records: list[Mapping[str, Any]] = []
+        with path.open(encoding="utf-8") as f:
+            for line_number, line in enumerate(f, start=1):
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                if not isinstance(payload, Mapping):
+                    raise ValueError(f"JSONL line {line_number} must be an object.")
+                records.append(payload)
+        return tuple(records)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    raw_records = payload.get("records") if isinstance(payload, Mapping) else payload
+    if not isinstance(raw_records, Sequence) or isinstance(raw_records, (str, bytes, bytearray)):
+        raise ValueError("records JSON must be a list or an object with a records list.")
+    records = []
+    for index, item in enumerate(raw_records):
+        if not isinstance(item, Mapping):
+            raise ValueError(f"record {index} must be an object.")
+        records.append(item)
+    return tuple(records)
+
+
 def run(args: argparse.Namespace) -> dict[str, Any]:
     """CLI adapter for tests and command-line use."""
+    if args.sweep_layers is not None:
+        return run_pre_generation_probe_layer_sweep(
+            args.records,
+            sweep_layers=_parse_sweep_layers(args.sweep_layers),
+            output_path=args.json,
+            artifact_path=args.save_artifact,
+            calibration_path=args.save_calibration,
+            calibration_model_id=args.calibration_model_id,
+            conformal_alpha=args.conformal_alpha,
+            soft_target_cutoff=args.soft_target_cutoff,
+            best_by=args.best_by,
+            train_fraction=args.train_fraction,
+            seed=args.seed,
+            steps=args.steps,
+            lr=args.lr,
+            l2=args.l2,
+            compact_json=args.compact_json,
+        )
     return run_pre_generation_probe_eval(
         args.records,
         output_path=args.json,
@@ -283,6 +464,105 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         l2=args.l2,
         compact_json=args.compact_json,
     )
+
+
+def _sweep_candidate_from_payload(layer: int, payload: Mapping[str, Any]) -> dict[str, Any]:
+    test_metrics = dict(payload.get("metrics", {}).get("test", {}))
+    all_metrics = dict(payload.get("metrics", {}).get("all", {}))
+    conformal = dict(payload.get("conformal", {}))
+    conformal_test = {}
+    if conformal.get("available"):
+        split_reports = conformal.get("split_reports", {})
+        if isinstance(split_reports, Mapping):
+            conformal_test = dict(split_reports.get("test", {}))
+    selection_metrics = {
+        "label_auroc": test_metrics.get("label_auroc"),
+        "target_bce": test_metrics.get("target_bce"),
+        "target_mse": test_metrics.get("target_mse"),
+        "target_mae": test_metrics.get("target_mae"),
+        "conformal_selective_accuracy": _nested_metric(
+            conformal_test,
+            ("selective", "selective_accuracy"),
+        ),
+        "conformal_conditional_lower_bound": _nested_metric(
+            conformal_test,
+            ("abstention", "conditional_correctness_lower_bound"),
+        ),
+    }
+    return {
+        "layer": int(layer),
+        "record_count": int(payload.get("record_count", 0)),
+        "selection_metrics": selection_metrics,
+        "metrics": {
+            "test": test_metrics,
+            "all": all_metrics,
+        },
+        "conformal": {
+            "available": bool(conformal.get("available", False)),
+            "threshold": conformal.get("threshold"),
+            "label_source": conformal.get("label_source"),
+            "soft_target_cutoff": conformal.get("soft_target_cutoff"),
+            "test_selective": conformal_test.get("selective"),
+            "test_abstention": conformal_test.get("abstention"),
+        },
+        "artifact": payload.get("artifact"),
+    }
+
+
+def _resolve_sweep_best_by(candidates: Sequence[Mapping[str, Any]], best_by: str) -> str:
+    if best_by != "auto":
+        return best_by
+    if any(_metric_value(candidate, "label_auroc") is not None for candidate in candidates):
+        return "label_auroc"
+    return "target_bce"
+
+
+def _rank_sweep_candidates(candidates: Sequence[dict[str, Any]], best_by: str) -> list[dict[str, Any]]:
+    def sort_key(candidate: Mapping[str, Any]) -> tuple[float, int]:
+        value = _selection_value(candidate, best_by)
+        sortable = float("-inf") if value is None else float(value)
+        return (-sortable, int(candidate["layer"]))
+
+    ranked = []
+    for candidate in sorted(candidates, key=sort_key):
+        value = _selection_value(candidate, best_by)
+        row = dict(candidate)
+        row["selection_metric"] = best_by
+        row["selection_raw_value"] = _metric_value(candidate, best_by)
+        row["selection_value"] = value
+        ranked.append(row)
+    for rank, row in enumerate(ranked, start=1):
+        row["rank"] = rank
+    return ranked
+
+
+def _selection_value(candidate: Mapping[str, Any], metric: str) -> float | None:
+    value = _metric_value(candidate, metric)
+    if value is None:
+        return None
+    return -value if metric in _LOWER_IS_BETTER_SWEEP_METRICS else value
+
+
+def _metric_value(candidate: Mapping[str, Any], metric: str) -> float | None:
+    raw = dict(candidate.get("selection_metrics", {})).get(metric)
+    if raw is None:
+        return None
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        return None
+    if value != value or value in {float("inf"), float("-inf")}:
+        return None
+    return value
+
+
+def _nested_metric(payload: Mapping[str, Any], path: Sequence[str]) -> Any:
+    value: Any = payload
+    for key in path:
+        if not isinstance(value, Mapping):
+            return None
+        value = value.get(key)
+    return value
 
 
 def _pre_generation_conformal_report(
@@ -678,6 +958,32 @@ def _alpha_float(value: Any) -> float:
     return parsed
 
 
+def _parse_sweep_layers(value: str | None) -> tuple[int, ...] | None:
+    if value is None or value.strip().lower() == "auto":
+        return None
+    layers: list[int] = []
+    for part in value.split(","):
+        text = part.strip()
+        if not text:
+            continue
+        try:
+            layers.append(int(text))
+        except ValueError as exc:
+            raise ValueError(
+                "--sweep-layers must be a comma-separated list of integer layer indexes or 'auto'."
+            ) from exc
+    if not layers:
+        raise ValueError("--sweep-layers must contain at least one layer index or 'auto'.")
+    seen: set[int] = set()
+    unique: list[int] = []
+    for layer in layers:
+        if layer in seen:
+            continue
+        seen.add(layer)
+        unique.append(layer)
+    return tuple(unique)
+
+
 def build_arg_parser() -> argparse.ArgumentParser:
     """Build the CLI parser."""
     parser = argparse.ArgumentParser(description="Train/evaluate a pre-generation attention risk probe")
@@ -687,6 +993,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--save-calibration", help="optional CalibrationArtifact JSON output path")
     parser.add_argument("--calibration-model-id", default="pre_generation_probe")
     parser.add_argument("--conformal-alpha", type=float, default=0.1)
+    parser.add_argument(
+        "--sweep-layers",
+        default=None,
+        help=(
+            "comma-separated record layers to train and rank, or 'auto' to infer layer_hidden_states keys; "
+            "use --sweep-layers=-12,-8,-4 when the list starts with '-'"
+        ),
+    )
+    parser.add_argument("--best-by", default="auto", choices=PRE_GENERATION_SWEEP_BEST_BY)
     parser.add_argument(
         "--record-layer",
         type=int,
@@ -714,6 +1029,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     """Run the CLI."""
     parser = build_arg_parser()
     args = parser.parse_args(argv)
+    if args.sweep_layers is not None:
+        if args.record_layer is not None:
+            parser.error("--record-layer cannot be combined with --sweep-layers")
+        if args.layer_idx is not None:
+            parser.error("--layer-idx cannot be combined with --sweep-layers; each candidate uses its record layer")
     payload = run(args)
     if args.json is None:
         print(json.dumps(payload, indent=None if args.compact_json else 2, sort_keys=True))
