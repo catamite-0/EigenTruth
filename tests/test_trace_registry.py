@@ -1754,6 +1754,10 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             "recommended_external_evidence_baseline_comparison_report": (
                 "artifacts/external-evidence/external-evidence-baseline-comparison.json"
             ),
+            "pre_generation_probe_comparison_status": "promote",
+            "recommended_pre_generation_probe_comparison_report": (
+                "artifacts/pre-generation-probe-comparison/comparison.json"
+            ),
             "triple_extraction_fixture_matrix_status": "promote",
             "recommended_triple_extraction_fixture_matrix_report": (
                 "artifacts/triple-extraction-fixture-matrix/"
@@ -1882,6 +1886,30 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "route_passed": True,
                 "text_redline_passed": True,
                 "text_redline_run_count": 2,
+            },
+            "pre_generation_probe_comparison": {
+                "report_path": "artifacts/pre-generation-probe-comparison/comparison.json",
+                "manifest_path": (
+                    "artifacts/pre-generation-probe-comparison/artifact-manifest.json"
+                ),
+                "source": "registry",
+                "registry": "artifacts/release-registry.json",
+                "record_key": "report:pre-generation-probe-comparison:0.1",
+                "workflow": "pre_generation_probe_workflow_comparison",
+                "status": "promote",
+                "model_count": 2,
+                "run_count": 2,
+                "redline_passed": True,
+                "redline_run_count": 2,
+                "best_run": {
+                    "name": "qwen05",
+                    "model": "Qwen/Qwen2.5-0.5B-Instruct",
+                    "recommended_layer": -12,
+                    "test_label_auroc": 0.74,
+                    "redline_best_signal": "answer_token_count",
+                    "redline_best_auroc": 0.61,
+                    "redline_margin": 0.13,
+                },
             },
             "triple_extraction_fixture_matrix": {
                 "report_path": (
@@ -2139,6 +2167,9 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert roundtrip.external_evidence_baseline_comparison == (
         contract.external_evidence_baseline_comparison
     )
+    assert roundtrip.pre_generation_probe_comparison == (
+        contract.pre_generation_probe_comparison
+    )
     assert roundtrip.triple_extraction_fixture_matrix == (
         contract.triple_extraction_fixture_matrix
     )
@@ -2292,6 +2323,26 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
         contract.metadata["external_evidence_baseline_comparison_text_redline_run_count"]
         == 2
     )
+    assert contract.pre_generation_probe_comparison["record_key"] == (
+        "report:pre-generation-probe-comparison:0.1"
+    )
+    assert contract.metadata["pre_generation_probe_comparison_status"] == "promote"
+    assert contract.metadata["recommended_pre_generation_probe_comparison_report"] == (
+        "artifacts/pre-generation-probe-comparison/comparison.json"
+    )
+    assert contract.metadata["pre_generation_probe_comparison_report"] == (
+        "artifacts/pre-generation-probe-comparison/comparison.json"
+    )
+    assert contract.metadata["pre_generation_probe_comparison_record"] == (
+        "report:pre-generation-probe-comparison:0.1"
+    )
+    assert contract.metadata["pre_generation_probe_comparison_model_count"] == 2
+    assert contract.metadata["pre_generation_probe_comparison_redline_passed"] is True
+    assert contract.metadata["pre_generation_probe_comparison_best_run"] == "qwen05"
+    assert contract.metadata["pre_generation_probe_comparison_best_redline_signal"] == (
+        "answer_token_count"
+    )
+    assert contract.metadata["pre_generation_probe_comparison_best_redline_margin"] == 0.13
     assert contract.triple_extraction_fixture_matrix["record_key"] == (
         "report:triple-extraction-fixture-matrix:0.1"
     )
@@ -2544,6 +2595,24 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
             "route_passed": True,
             "text_redline_passed": True,
         },
+        pre_generation_probe_comparison={
+            "report_path": "pre-generation-probe-comparison.json",
+            "record_key": "report:pre-generation-probe-comparison:0.1",
+            "status": "promote",
+            "model_count": 2,
+            "run_count": 2,
+            "redline_passed": True,
+            "redline_run_count": 2,
+            "best_run": {
+                "name": "qwen05",
+                "model": "Qwen/Qwen2.5-0.5B-Instruct",
+                "recommended_layer": -12,
+                "test_label_auroc": 0.74,
+                "redline_best_signal": "answer_token_count",
+                "redline_best_auroc": 0.61,
+                "redline_margin": 0.13,
+            },
+        },
         triple_extraction_fixture_matrix={
             "report_path": "triple-extraction-fixture-matrix.json",
             "record_key": "report:triple-extraction-fixture-matrix:0.1",
@@ -2668,6 +2737,22 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
         ]["text_redline_passed"]
         is True
     )
+    assert (
+        runtime_metrics["promotion_contract_pre_generation_probe_comparison_available"]
+        is True
+    )
+    assert runtime_metrics[
+        "promotion_contract_pre_generation_probe_comparison_record"
+    ] == "report:pre-generation-probe-comparison:0.1"
+    assert runtime_metrics[
+        "promotion_contract_pre_generation_probe_comparison_redline_passed"
+    ] is True
+    assert runtime_metrics[
+        "promotion_contract_pre_generation_probe_comparison_best_redline_margin"
+    ] == pytest.approx(0.13)
+    assert runtime_metrics["promotion_contract_summary"][
+        "pre_generation_probe_comparison"
+    ]["best_redline_signal"] == "answer_token_count"
     assert metadata[
         "promotion_contract_product_runtime_drift_covered_fact_property_evidence_required"
     ] is True
@@ -2864,6 +2949,34 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert metadata[
         "promotion_contract_external_evidence_baseline_comparison_route_passed"
     ] is True
+    assert metadata["promotion_contract_pre_generation_probe_comparison"] == {
+        "report_path": "pre-generation-probe-comparison.json",
+        "record_key": "report:pre-generation-probe-comparison:0.1",
+        "status": "promote",
+        "model_count": 2,
+        "run_count": 2,
+        "redline_passed": True,
+        "redline_run_count": 2,
+        "best_run": {
+            "name": "qwen05",
+            "model": "Qwen/Qwen2.5-0.5B-Instruct",
+            "recommended_layer": -12,
+            "test_label_auroc": 0.74,
+            "redline_best_signal": "answer_token_count",
+            "redline_best_auroc": 0.61,
+            "redline_margin": 0.13,
+        },
+    }
+    assert metadata["promotion_contract_pre_generation_probe_comparison_report"] == (
+        "pre-generation-probe-comparison.json"
+    )
+    assert metadata["promotion_contract_pre_generation_probe_comparison_record"] == (
+        "report:pre-generation-probe-comparison:0.1"
+    )
+    assert (
+        metadata["promotion_contract_pre_generation_probe_comparison_best_redline_signal"]
+        == "answer_token_count"
+    )
     assert metadata["promotion_contract_triple_extraction_fixture_matrix"] == {
         "report_path": "triple-extraction-fixture-matrix.json",
         "record_key": "report:triple-extraction-fixture-matrix:0.1",
@@ -2899,6 +3012,11 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
     external_evidence_dir.mkdir()
     external_evidence_report_path = external_evidence_dir / "comparison.json"
     external_evidence_registry_path = external_evidence_dir / "registry.json"
+    pre_generation_dir = tmp_path / "pre-generation"
+    pre_generation_dir.mkdir()
+    pre_generation_report_path = pre_generation_dir / "comparison.json"
+    pre_generation_manifest_path = pre_generation_dir / "artifact-manifest.json"
+    pre_generation_registry_path = pre_generation_dir / "registry.json"
     triple_matrix_dir = tmp_path / "triple-extraction-fixture-matrix"
     triple_matrix_dir.mkdir()
     triple_matrix_report_path = triple_matrix_dir / "matrix.json"
@@ -2980,6 +3098,32 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
         path=external_evidence_report_path,
         version="0.4",
         metadata={"workflow": "external_evidence_baseline_comparison"},
+    ).save_json()
+    pre_generation_report_path.write_text(
+        json.dumps({
+            "workflow": "pre_generation_probe_workflow_comparison",
+            "status": "ready",
+            "model_count": 2,
+            "redline_passed": True,
+            "redline_run_count": 2,
+        }),
+        encoding="utf-8",
+    )
+    pre_generation_manifest_path.write_text(
+        json.dumps(
+            build_artifact_manifest(
+                {"pre_generation_probe_comparison": pre_generation_report_path},
+                root=pre_generation_dir,
+                metadata={"workflow": "pre_generation_probe_workflow_comparison"},
+            )
+        ),
+        encoding="utf-8",
+    )
+    ArtifactRegistry.load_json(pre_generation_registry_path).record_report(
+        name="pre-generation-probe-comparison",
+        path=pre_generation_report_path,
+        version="0.1",
+        metadata={"artifact_manifest": str(pre_generation_manifest_path)},
     ).save_json()
     triple_matrix_report_path.write_text(
         json.dumps({
@@ -3065,6 +3209,26 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
             "route_passed": True,
             "text_redline_passed": True,
             "text_redline_run_count": 1,
+        },
+        pre_generation_probe_comparison={
+            "report_path": "pre-generation/comparison.json",
+            "manifest_path": "pre-generation/artifact-manifest.json",
+            "registry": "pre-generation/registry.json",
+            "record_key": "report:pre-generation-probe-comparison:0.1",
+            "status": "promote",
+            "model_count": 2,
+            "run_count": 2,
+            "redline_passed": True,
+            "redline_run_count": 2,
+            "best_run": {
+                "name": "qwen05",
+                "model": "Qwen/Qwen2.5-0.5B-Instruct",
+                "recommended_layer": -12,
+                "test_label_auroc": 0.74,
+                "redline_best_signal": "answer_token_count",
+                "redline_best_auroc": 0.61,
+                "redline_margin": 0.13,
+            },
         },
         triple_extraction_fixture_matrix={
             "report_path": "triple-extraction-fixture-matrix/matrix.json",
@@ -3193,6 +3357,36 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
     assert metadata_without_verification[
         "external_evidence_baseline_comparison_text_redline_run_count"
     ] == 1
+    assert metadata_without_verification[
+        "promotion_contract_pre_generation_probe_comparison"
+    ]["record_key"] == "report:pre-generation-probe-comparison:0.1"
+    assert metadata_without_verification["pre_generation_probe_comparison_report"] == str(
+        pre_generation_report_path
+    )
+    assert metadata_without_verification["pre_generation_probe_comparison_manifest"] == str(
+        pre_generation_manifest_path
+    )
+    assert (
+        metadata_without_verification[
+            "pre_generation_probe_comparison_manifest_verification"
+        ]
+        is None
+    )
+    assert metadata_without_verification[
+        "pre_generation_probe_comparison_registry"
+    ] == str(pre_generation_registry_path)
+    assert metadata_without_verification[
+        "pre_generation_probe_comparison_registry_key"
+    ] == "report:pre-generation-probe-comparison:0.1"
+    assert metadata_without_verification[
+        "pre_generation_probe_comparison_registry_record"
+    ] is None
+    assert metadata_without_verification[
+        "pre_generation_probe_comparison_redline_passed"
+    ] is True
+    assert metadata_without_verification[
+        "pre_generation_probe_comparison_best_redline_margin"
+    ] == pytest.approx(0.13)
     assert metadata_without_verification["triple_extraction_fixture_matrix_report"] == str(
         triple_matrix_report_path
     )
@@ -3294,6 +3488,33 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
     assert metadata_with_external_evidence_record[
         "external_evidence_baseline_comparison_registry_record"
     ]["metadata"] == {"workflow": "external_evidence_baseline_comparison"}
+
+    metadata_with_pre_generation_verification = bundle.runtime_metadata(
+        budget_enabled=True,
+        verify_pre_generation_probe_comparison_manifest=True,
+        include_pre_generation_probe_comparison_record=True,
+    )
+    assert (
+        metadata_with_pre_generation_verification[
+            "pre_generation_probe_comparison_manifest_verification"
+        ]["passed"]
+        is True
+    )
+    assert (
+        metadata_with_pre_generation_verification[
+            "pre_generation_probe_comparison_manifest_verification"
+        ]["checked"]
+        == 1
+    )
+    assert (
+        metadata_with_pre_generation_verification[
+            "pre_generation_probe_comparison_registry_key"
+        ]
+        == "report:pre-generation-probe-comparison:0.1"
+    )
+    assert metadata_with_pre_generation_verification[
+        "pre_generation_probe_comparison_registry_record"
+    ]["metadata"] == {"artifact_manifest": str(pre_generation_manifest_path)}
 
     metadata_with_triple_matrix_verification = bundle.runtime_metadata(
         budget_enabled=True,

@@ -1053,6 +1053,14 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         or _external_evidence_baseline_comparison_from_flat_metadata(metadata)
         or _external_evidence_baseline_comparison_from_flat_metadata(contract_metadata)
     )
+    nested_pre_generation = _mapping(
+        metadata.get("promotion_contract_pre_generation_probe_comparison")
+    )
+    pre_generation = (
+        nested_pre_generation
+        or _pre_generation_probe_comparison_from_flat_metadata(metadata)
+        or _pre_generation_probe_comparison_from_flat_metadata(contract_metadata)
+    )
     nested_matrix = _mapping(metadata.get("promotion_contract_triple_extraction_fixture_matrix"))
     matrix = nested_matrix or _matrix_from_flat_metadata(metadata) or _matrix_from_flat_metadata(
         contract_metadata
@@ -1124,6 +1132,7 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         )
     )
     external_evidence_available = bool(external_evidence)
+    pre_generation_available = bool(pre_generation)
     matrix_available = bool(matrix)
     available = bool(
         source is not None
@@ -1131,9 +1140,17 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         or metadata.get("promotion_contract_runtime") is not None
         or contract_metadata
         or external_evidence_available
+        or pre_generation_available
         or matrix_available
         or bool(runtime_drift.get("available"))
     )
+    pre_generation_manifest_verification = _mapping(
+        _first_present(
+            metadata.get("pre_generation_probe_comparison_manifest_verification"),
+            contract_metadata.get("pre_generation_probe_comparison_manifest_verification"),
+        )
+    )
+    pre_generation_best_run = _mapping(pre_generation.get("best_run"))
     summary = {
         "available": available,
         "source": source,
@@ -1229,6 +1246,146 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
                 )
             ),
         },
+        "pre_generation_probe_comparison": {
+            "available": pre_generation_available,
+            "source": _optional_string(
+                _first_present(
+                    pre_generation.get("source"),
+                    metadata.get("pre_generation_probe_comparison_source"),
+                    contract_metadata.get("pre_generation_probe_comparison_source"),
+                )
+            ),
+            "report": _optional_string(
+                _first_present(
+                    pre_generation.get("report_path"),
+                    pre_generation.get("report"),
+                    metadata.get("pre_generation_probe_comparison_report"),
+                    contract_metadata.get("pre_generation_probe_comparison_report"),
+                )
+            ),
+            "manifest": _optional_string(
+                _first_present(
+                    pre_generation.get("manifest_path"),
+                    pre_generation.get("manifest"),
+                    metadata.get("pre_generation_probe_comparison_manifest"),
+                    contract_metadata.get("pre_generation_probe_comparison_manifest"),
+                )
+            ),
+            "registry": _optional_string(
+                _first_present(
+                    pre_generation.get("registry"),
+                    metadata.get("pre_generation_probe_comparison_registry"),
+                    contract_metadata.get("pre_generation_probe_comparison_registry"),
+                )
+            ),
+            "record": _optional_string(
+                _first_present(
+                    pre_generation.get("record_key"),
+                    pre_generation.get("record"),
+                    metadata.get("pre_generation_probe_comparison_record"),
+                    metadata.get("pre_generation_probe_comparison_registry_key"),
+                    contract_metadata.get("pre_generation_probe_comparison_record"),
+                    contract_metadata.get("pre_generation_probe_comparison_registry_key"),
+                )
+            ),
+            "manifest_verified": _optional_bool(
+                pre_generation_manifest_verification.get("passed")
+            ),
+            "status": _optional_string(
+                _first_present(
+                    pre_generation.get("status"),
+                    metadata.get("pre_generation_probe_comparison_status"),
+                    contract_metadata.get("pre_generation_probe_comparison_status"),
+                )
+            ),
+            "model_count": _finite_float(
+                _first_present(
+                    pre_generation.get("model_count"),
+                    metadata.get("pre_generation_probe_comparison_model_count"),
+                    contract_metadata.get("pre_generation_probe_comparison_model_count"),
+                )
+            ),
+            "run_count": _finite_float(
+                _first_present(
+                    pre_generation.get("run_count"),
+                    metadata.get("pre_generation_probe_comparison_run_count"),
+                    contract_metadata.get("pre_generation_probe_comparison_run_count"),
+                )
+            ),
+            "redline_passed": _optional_bool(
+                _first_present(
+                    pre_generation.get("redline_passed"),
+                    metadata.get("pre_generation_probe_comparison_redline_passed"),
+                    contract_metadata.get("pre_generation_probe_comparison_redline_passed"),
+                )
+            ),
+            "redline_run_count": _finite_float(
+                _first_present(
+                    pre_generation.get("redline_run_count"),
+                    metadata.get("pre_generation_probe_comparison_redline_run_count"),
+                    contract_metadata.get(
+                        "pre_generation_probe_comparison_redline_run_count"
+                    ),
+                )
+            ),
+            "best_run": _optional_string(
+                _first_present(
+                    pre_generation_best_run.get("name"),
+                    metadata.get("pre_generation_probe_comparison_best_run"),
+                    contract_metadata.get("pre_generation_probe_comparison_best_run"),
+                )
+            ),
+            "best_model": _optional_string(
+                _first_present(
+                    pre_generation_best_run.get("model"),
+                    metadata.get("pre_generation_probe_comparison_best_model"),
+                    contract_metadata.get("pre_generation_probe_comparison_best_model"),
+                )
+            ),
+            "best_layer": _finite_float(
+                _first_present(
+                    pre_generation_best_run.get("recommended_layer"),
+                    metadata.get("pre_generation_probe_comparison_best_layer"),
+                    contract_metadata.get("pre_generation_probe_comparison_best_layer"),
+                )
+            ),
+            "best_test_label_auroc": _finite_float(
+                _first_present(
+                    pre_generation_best_run.get("test_label_auroc"),
+                    metadata.get("pre_generation_probe_comparison_best_test_label_auroc"),
+                    contract_metadata.get(
+                        "pre_generation_probe_comparison_best_test_label_auroc"
+                    ),
+                )
+            ),
+            "best_redline_signal": _optional_string(
+                _first_present(
+                    pre_generation_best_run.get("redline_best_signal"),
+                    metadata.get("pre_generation_probe_comparison_best_redline_signal"),
+                    contract_metadata.get(
+                        "pre_generation_probe_comparison_best_redline_signal"
+                    ),
+                )
+            ),
+            "best_redline_auroc": _finite_float(
+                _first_present(
+                    pre_generation_best_run.get("redline_best_auroc"),
+                    metadata.get("pre_generation_probe_comparison_best_redline_auroc"),
+                    contract_metadata.get(
+                        "pre_generation_probe_comparison_best_redline_auroc"
+                    ),
+                )
+            ),
+            "best_redline_margin": _finite_float(
+                _first_present(
+                    pre_generation_best_run.get("redline_margin"),
+                    metadata.get("pre_generation_probe_comparison_best_redline_margin"),
+                    contract_metadata.get(
+                        "pre_generation_probe_comparison_best_redline_margin"
+                    ),
+                )
+            ),
+        },
         "triple_extraction_fixture_matrix": {
             "available": matrix_available,
             "source": matrix_source,
@@ -1275,6 +1432,7 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
     external_evidence_summary = _mapping(
         summary["external_evidence_baseline_comparison"]
     )
+    pre_generation_summary = _mapping(summary["pre_generation_probe_comparison"])
     product_trace_replay_metrics = _promotion_contract_product_trace_replay_metric_values(
         product_trace_replay
     )
@@ -1359,6 +1517,63 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         ),
         "promotion_contract_external_evidence_baseline_comparison_text_redline_run_count": (
             external_evidence_summary.get("text_redline_run_count")
+        ),
+        "promotion_contract_pre_generation_probe_comparison_available": (
+            pre_generation_available
+        ),
+        "promotion_contract_pre_generation_probe_comparison_source": (
+            pre_generation_summary.get("source")
+        ),
+        "promotion_contract_pre_generation_probe_comparison_report": (
+            pre_generation_summary.get("report")
+        ),
+        "promotion_contract_pre_generation_probe_comparison_manifest": (
+            pre_generation_summary.get("manifest")
+        ),
+        "promotion_contract_pre_generation_probe_comparison_registry": (
+            pre_generation_summary.get("registry")
+        ),
+        "promotion_contract_pre_generation_probe_comparison_record": (
+            pre_generation_summary.get("record")
+        ),
+        "promotion_contract_pre_generation_probe_comparison_manifest_verified": (
+            pre_generation_summary.get("manifest_verified")
+        ),
+        "promotion_contract_pre_generation_probe_comparison_status": (
+            pre_generation_summary.get("status")
+        ),
+        "promotion_contract_pre_generation_probe_comparison_model_count": (
+            pre_generation_summary.get("model_count")
+        ),
+        "promotion_contract_pre_generation_probe_comparison_run_count": (
+            pre_generation_summary.get("run_count")
+        ),
+        "promotion_contract_pre_generation_probe_comparison_redline_passed": (
+            pre_generation_summary.get("redline_passed")
+        ),
+        "promotion_contract_pre_generation_probe_comparison_redline_run_count": (
+            pre_generation_summary.get("redline_run_count")
+        ),
+        "promotion_contract_pre_generation_probe_comparison_best_run": (
+            pre_generation_summary.get("best_run")
+        ),
+        "promotion_contract_pre_generation_probe_comparison_best_model": (
+            pre_generation_summary.get("best_model")
+        ),
+        "promotion_contract_pre_generation_probe_comparison_best_layer": (
+            pre_generation_summary.get("best_layer")
+        ),
+        "promotion_contract_pre_generation_probe_comparison_best_test_label_auroc": (
+            pre_generation_summary.get("best_test_label_auroc")
+        ),
+        "promotion_contract_pre_generation_probe_comparison_best_redline_signal": (
+            pre_generation_summary.get("best_redline_signal")
+        ),
+        "promotion_contract_pre_generation_probe_comparison_best_redline_auroc": (
+            pre_generation_summary.get("best_redline_auroc")
+        ),
+        "promotion_contract_pre_generation_probe_comparison_best_redline_margin": (
+            pre_generation_summary.get("best_redline_margin")
         ),
         "promotion_contract_triple_extraction_fixture_matrix_available": matrix_available,
         "promotion_contract_triple_extraction_fixture_matrix_source": matrix_source,
@@ -1973,6 +2188,48 @@ def _external_evidence_baseline_comparison_from_flat_metadata(
         "text_redline_run_count": metadata.get(
             "external_evidence_baseline_comparison_text_redline_run_count"
         ),
+    }
+    return {key: value for key, value in comparison.items() if value is not None}
+
+
+def _pre_generation_probe_comparison_from_flat_metadata(
+    metadata: Mapping[str, Any],
+) -> dict[str, Any]:
+    best_run = {
+        "name": metadata.get("pre_generation_probe_comparison_best_run"),
+        "model": metadata.get("pre_generation_probe_comparison_best_model"),
+        "recommended_layer": metadata.get("pre_generation_probe_comparison_best_layer"),
+        "test_label_auroc": metadata.get(
+            "pre_generation_probe_comparison_best_test_label_auroc"
+        ),
+        "redline_best_signal": metadata.get(
+            "pre_generation_probe_comparison_best_redline_signal"
+        ),
+        "redline_best_auroc": metadata.get(
+            "pre_generation_probe_comparison_best_redline_auroc"
+        ),
+        "redline_margin": metadata.get(
+            "pre_generation_probe_comparison_best_redline_margin"
+        ),
+    }
+    cleaned_best_run = {key: value for key, value in best_run.items() if value is not None}
+    comparison = {
+        "report_path": metadata.get("pre_generation_probe_comparison_report"),
+        "manifest_path": metadata.get("pre_generation_probe_comparison_manifest"),
+        "source": metadata.get("pre_generation_probe_comparison_source"),
+        "registry": metadata.get("pre_generation_probe_comparison_registry"),
+        "record_key": _first_present(
+            metadata.get("pre_generation_probe_comparison_record"),
+            metadata.get("pre_generation_probe_comparison_registry_key"),
+        ),
+        "status": metadata.get("pre_generation_probe_comparison_status"),
+        "model_count": metadata.get("pre_generation_probe_comparison_model_count"),
+        "run_count": metadata.get("pre_generation_probe_comparison_run_count"),
+        "redline_passed": metadata.get("pre_generation_probe_comparison_redline_passed"),
+        "redline_run_count": metadata.get(
+            "pre_generation_probe_comparison_redline_run_count"
+        ),
+        "best_run": cleaned_best_run or None,
     }
     return {key: value for key, value in comparison.items() if value is not None}
 

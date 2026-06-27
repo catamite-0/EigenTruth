@@ -27063,6 +27063,24 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                     "text_redline_passed": True,
                     "text_redline_run_count": 2,
                 },
+                "promotion_contract_pre_generation_probe_comparison": {
+                    "source": "registry",
+                    "record_key": "report:pre-generation-probe-comparison:0.1",
+                    "status": "promote",
+                    "model_count": 2,
+                    "run_count": 2,
+                    "redline_passed": True,
+                    "redline_run_count": 2,
+                    "best_run": {
+                        "name": "qwen05",
+                        "model": "Qwen/Qwen2.5-0.5B-Instruct",
+                        "recommended_layer": -12,
+                        "test_label_auroc": 0.74,
+                        "redline_best_signal": "answer_token_count",
+                        "redline_best_auroc": 0.61,
+                        "redline_margin": 0.13,
+                    },
+                },
                 "promotion_contract_triple_extraction_fixture_matrix": {
                     "source": "registry",
                     "status": "promote",
@@ -27181,6 +27199,23 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                 "external_evidence_baseline_comparison_route_passed": True,
                 "external_evidence_baseline_comparison_text_redline_passed": False,
                 "external_evidence_baseline_comparison_text_redline_run_count": 1,
+                "pre_generation_probe_comparison_source": "runtime_evidence_bundle",
+                "pre_generation_probe_comparison_record": (
+                    "report:pre-generation-probe-comparison:0.2"
+                ),
+                "pre_generation_probe_comparison_status": "promote",
+                "pre_generation_probe_comparison_manifest_verification": {"passed": True},
+                "pre_generation_probe_comparison_model_count": 3,
+                "pre_generation_probe_comparison_run_count": 3,
+                "pre_generation_probe_comparison_redline_passed": False,
+                "pre_generation_probe_comparison_redline_run_count": 1,
+                "pre_generation_probe_comparison_best_run": "smollm2",
+                "pre_generation_probe_comparison_best_model": "HuggingFaceTB/SmolLM2-135M",
+                "pre_generation_probe_comparison_best_layer": -10,
+                "pre_generation_probe_comparison_best_test_label_auroc": 0.70,
+                "pre_generation_probe_comparison_best_redline_signal": "claim_token_count",
+                "pre_generation_probe_comparison_best_redline_auroc": 0.66,
+                "pre_generation_probe_comparison_best_redline_margin": 0.04,
                 "triple_extraction_fixture_matrix_source": "runtime_evidence_bundle",
                 "triple_extraction_fixture_matrix_status": "promote",
                 "triple_extraction_fixture_matrix_manifest_verification": {"passed": True},
@@ -27270,6 +27305,7 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     runtime_drift = promotion["product_runtime_drift"]
     trace_replay = promotion["product_trace_replay"]
     external_evidence = promotion["external_evidence_baseline_comparison"]
+    pre_generation = promotion["pre_generation_probe_comparison"]
     matrix = promotion["triple_extraction_fixture_matrix"]
     assert promotion["available_trace_count"] == 2
     assert promotion["source_counts"] == {"contract-a.json": 1}
@@ -27362,6 +27398,28 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
         "True": 1,
     }
     assert external_evidence["text_redline_run_count"]["mean"] == pytest.approx(1.5)
+    assert pre_generation["available_trace_count"] == 2
+    assert pre_generation["coverage_rate"] == pytest.approx(1.0)
+    assert pre_generation["source_counts"] == {
+        "registry": 1,
+        "runtime_evidence_bundle": 1,
+    }
+    assert pre_generation["status_counts"] == {"promote": 2}
+    assert pre_generation["record_counts"] == {
+        "report:pre-generation-probe-comparison:0.1": 1,
+        "report:pre-generation-probe-comparison:0.2": 1,
+    }
+    assert pre_generation["manifest_verified_count"] == 1
+    assert pre_generation["manifest_unknown_count"] == 1
+    assert pre_generation["model_count"]["mean"] == pytest.approx(2.5)
+    assert pre_generation["redline_passed_counts"] == {"False": 1, "True": 1}
+    assert pre_generation["redline_run_count"]["mean"] == pytest.approx(1.5)
+    assert pre_generation["best_run_counts"] == {"qwen05": 1, "smollm2": 1}
+    assert pre_generation["best_redline_signal_counts"] == {
+        "answer_token_count": 1,
+        "claim_token_count": 1,
+    }
+    assert pre_generation["best_redline_margin"]["mean"] == pytest.approx(0.085)
     assert matrix["available_trace_count"] == 2
     assert matrix["source_counts"] == {"registry": 1, "runtime_evidence_bundle": 1}
     assert matrix["status_counts"] == {"promote": 2}
@@ -27407,6 +27465,12 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert payload["traces"][0]["metrics"][
         "promotion_contract_external_evidence_baseline_comparison_text_redline_run_count"
     ] == pytest.approx(2.0)
+    assert payload["traces"][0]["metrics"][
+        "promotion_contract_pre_generation_probe_comparison_record"
+    ] == "report:pre-generation-probe-comparison:0.1"
+    assert payload["traces"][0]["metrics"][
+        "promotion_contract_pre_generation_probe_comparison_best_redline_margin"
+    ] == pytest.approx(0.13)
     assert payload["traces"][0]["metrics"][
         "promotion_contract_recommended_route_covered_fact_property_count"
     ] == 3.0
@@ -27462,6 +27526,12 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
         ]
         is False
     )
+    assert payload["traces"][1]["metrics"][
+        "promotion_contract_pre_generation_probe_comparison_source"
+    ] == "runtime_evidence_bundle"
+    assert payload["traces"][1]["metrics"][
+        "promotion_contract_pre_generation_probe_comparison_redline_passed"
+    ] is False
     assert saved["artifact_manifest_summary"] == manifest["summary"]
     assert saved["artifact_manifest_summary"]["artifact_count"] == 3
     assert manifest["metadata"]["runner"] == "run_product_runtime_baseline"
@@ -27532,6 +27602,21 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert manifest["metadata"][
         "promotion_contract_external_evidence_baseline_comparison_text_redline_run_count_mean"
     ] == pytest.approx(1.5)
+    assert (
+        manifest["metadata"][
+            "promotion_contract_pre_generation_probe_comparison_available_trace_count"
+        ]
+        == 2
+    )
+    assert manifest["metadata"][
+        "promotion_contract_pre_generation_probe_comparison_source_counts"
+    ] == {"registry": 1, "runtime_evidence_bundle": 1}
+    assert manifest["metadata"][
+        "promotion_contract_pre_generation_probe_comparison_redline_passed_counts"
+    ] == {"False": 1, "True": 1}
+    assert manifest["metadata"][
+        "promotion_contract_pre_generation_probe_comparison_best_redline_margin_mean"
+    ] == pytest.approx(0.085)
     assert "\n  " not in saved_text
     assert "\n  " not in manifest_text
     assert registry_module.load_and_verify_artifact_manifest(
@@ -27574,6 +27659,12 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert record.metadata[
         "promotion_contract_external_evidence_baseline_comparison_recommended_route_counts"
     ] == {"structured_fact": 2}
+    assert record.metadata[
+        "promotion_contract_pre_generation_probe_comparison_status_counts"
+    ] == {"promote": 2}
+    assert record.metadata[
+        "promotion_contract_pre_generation_probe_comparison_best_redline_signal_counts"
+    ] == {"answer_token_count": 1, "claim_token_count": 1}
 
 
 def test_run_product_runtime_baseline_reports_optimization_advice(tmp_path):
@@ -28631,7 +28722,7 @@ def test_run_product_runtime_baseline_reuses_trace_record_cache(tmp_path, monkey
     assert first["config"]["trace_record_cache"]["cache_hit"] is False
     assert first["config"]["trace_record_cache"]["cache_written"] is True
     assert first["paths"]["trace_records_cache"] == str(cache_path)
-    assert cache_payload["schema_version"] == 7
+    assert cache_payload["schema_version"] == 8
     assert cache_payload["workflow"] == "product_runtime_baseline_trace_records"
     assert cache_payload["summary"]["trace_count"] == 2
     assert cache_payload["policy"]["payload"]["max_total_seconds"] == 0.3

@@ -603,6 +603,13 @@ class ProductPromotionContract:
                 **_external_evidence_baseline_comparison_flat_metadata(
                     external_evidence_baseline_comparison
                 ),
+                "pre_generation_probe_comparison_status": _first_present(
+                    decision.get("pre_generation_probe_comparison_status"),
+                    pre_generation_probe_comparison.get("status"),
+                ),
+                "recommended_pre_generation_probe_comparison_report": (
+                    decision.get("recommended_pre_generation_probe_comparison_report")
+                ),
                 **_pre_generation_probe_comparison_flat_metadata(
                     pre_generation_probe_comparison
                 ),
@@ -1118,6 +1125,20 @@ class ProductRuntimeEvidenceBundle:
             repr=False,
         )
     )
+    _pre_generation_probe_comparison_manifest_verification: (
+        ArtifactManifestVerification | None
+    ) = field(
+        default=None,
+        init=False,
+        compare=False,
+        repr=False,
+    )
+    _pre_generation_probe_comparison_registry_record: RegistryRecord | None = field(
+        default=None,
+        init=False,
+        compare=False,
+        repr=False,
+    )
     _triple_extraction_fixture_matrix_manifest_verification: (
         ArtifactManifestVerification | None
     ) = field(
@@ -1529,6 +1550,140 @@ class ProductRuntimeEvidenceBundle:
         }
 
     @property
+    def pre_generation_probe_comparison(self) -> Mapping[str, Any]:
+        """Return the pre-generation probe comparison contract, if present."""
+        return self.contract.pre_generation_probe_comparison
+
+    @property
+    def pre_generation_probe_comparison_report_path(self) -> Path | None:
+        """Return the pre-generation probe comparison report path."""
+        return _resolve_contract_metadata_path(
+            self.pre_generation_probe_comparison.get("report_path"),
+            contract_path=self.contract_path,
+        )
+
+    @property
+    def pre_generation_probe_comparison_manifest_path(self) -> Path | None:
+        """Return the pre-generation probe comparison manifest path."""
+        return _resolve_contract_metadata_path(
+            self.pre_generation_probe_comparison.get("manifest_path"),
+            contract_path=self.contract_path,
+        )
+
+    @property
+    def pre_generation_probe_comparison_registry_path(self) -> Path | None:
+        """Return the pre-generation probe comparison registry path."""
+        return _resolve_contract_metadata_path(
+            self.pre_generation_probe_comparison.get("registry"),
+            contract_path=self.contract_path,
+        )
+
+    def verify_pre_generation_probe_comparison_manifest(
+        self,
+    ) -> ArtifactManifestVerification | None:
+        """Lazily verify the optional pre-generation probe comparison manifest."""
+        manifest_path = self.pre_generation_probe_comparison_manifest_path
+        if manifest_path is None:
+            return None
+        if self._pre_generation_probe_comparison_manifest_verification is None:
+            object.__setattr__(
+                self,
+                "_pre_generation_probe_comparison_manifest_verification",
+                load_and_verify_artifact_manifest(
+                    manifest_path,
+                    recursive=self.manifest_recursive,
+                ),
+            )
+        return self._pre_generation_probe_comparison_manifest_verification
+
+    def pre_generation_probe_comparison_registry_record(
+        self,
+    ) -> RegistryRecord | None:
+        """Lazily resolve the optional pre-generation probe comparison record."""
+        registry_path = self.pre_generation_probe_comparison_registry_path
+        record_key = self.pre_generation_probe_comparison.get("record_key")
+        if registry_path is None or record_key is None:
+            return None
+        if self._pre_generation_probe_comparison_registry_record is None:
+            registry = ArtifactRegistry.load_json(registry_path)
+            object.__setattr__(
+                self,
+                "_pre_generation_probe_comparison_registry_record",
+                registry.get(str(record_key)),
+            )
+        return self._pre_generation_probe_comparison_registry_record
+
+    def pre_generation_probe_comparison_evidence_metadata(
+        self,
+        *,
+        verify_manifest: bool = False,
+        include_registry_record: bool = False,
+    ) -> dict[str, Any]:
+        """Return JSON-ready pre-generation probe comparison provenance metadata."""
+        comparison = self.pre_generation_probe_comparison
+        report_path = self.pre_generation_probe_comparison_report_path
+        manifest_path = self.pre_generation_probe_comparison_manifest_path
+        registry_path = self.pre_generation_probe_comparison_registry_path
+        manifest_verification = (
+            self.verify_pre_generation_probe_comparison_manifest()
+            if verify_manifest
+            else None
+        )
+        record_key = comparison.get("record_key")
+        registry_record = (
+            self.pre_generation_probe_comparison_registry_record()
+            if include_registry_record
+            else None
+        )
+        best_run = _mapping(comparison.get("best_run"))
+        return {
+            "pre_generation_probe_comparison_report": (
+                None if report_path is None else str(report_path)
+            ),
+            "pre_generation_probe_comparison_manifest": (
+                None if manifest_path is None else str(manifest_path)
+            ),
+            "pre_generation_probe_comparison_manifest_verification": (
+                None if manifest_verification is None else manifest_verification.to_dict()
+            ),
+            "pre_generation_probe_comparison_registry": (
+                None if registry_path is None else str(registry_path)
+            ),
+            "pre_generation_probe_comparison_registry_key": (
+                None if record_key is None else str(record_key)
+            ),
+            "pre_generation_probe_comparison_registry_record": (
+                None if registry_record is None else registry_record.to_dict()
+            ),
+            "pre_generation_probe_comparison_status": comparison.get("status"),
+            "pre_generation_probe_comparison_model_count": comparison.get("model_count"),
+            "pre_generation_probe_comparison_run_count": comparison.get("run_count"),
+            "pre_generation_probe_comparison_redline_passed": comparison.get(
+                "redline_passed"
+            ),
+            "pre_generation_probe_comparison_redline_run_count": comparison.get(
+                "redline_run_count"
+            ),
+            "pre_generation_probe_comparison_best_run": best_run.get("name"),
+            "pre_generation_probe_comparison_best_model": best_run.get("model"),
+            "pre_generation_probe_comparison_best_layer": best_run.get(
+                "recommended_layer"
+            ),
+            "pre_generation_probe_comparison_best_test_label_auroc": best_run.get(
+                "test_label_auroc"
+            ),
+            "pre_generation_probe_comparison_best_redline_signal": best_run.get(
+                "redline_best_signal"
+            ),
+            "pre_generation_probe_comparison_best_redline_auroc": best_run.get(
+                "redline_best_auroc"
+            ),
+            "pre_generation_probe_comparison_best_redline_margin": best_run.get(
+                "redline_margin"
+            ),
+        }
+
+    @property
     def triple_extraction_fixture_matrix(self) -> Mapping[str, Any]:
         """Return the triple-extraction fixture-matrix contract, if present."""
         return self.contract.triple_extraction_fixture_matrix
@@ -1657,6 +1812,8 @@ class ProductRuntimeEvidenceBundle:
         verify_world_model_signal_workflow_manifest: bool = False,
         include_world_model_signal_workflow_record: bool = False,
         include_external_evidence_baseline_comparison_record: bool = False,
+        verify_pre_generation_probe_comparison_manifest: bool = False,
+        include_pre_generation_probe_comparison_record: bool = False,
         verify_triple_extraction_fixture_matrix_manifest: bool = False,
         include_triple_extraction_fixture_matrix_record: bool = False,
     ) -> dict[str, Any]:
@@ -1677,6 +1834,10 @@ class ProductRuntimeEvidenceBundle:
             ),
             **self.external_evidence_baseline_comparison_evidence_metadata(
                 include_registry_record=include_external_evidence_baseline_comparison_record,
+            ),
+            **self.pre_generation_probe_comparison_evidence_metadata(
+                verify_manifest=verify_pre_generation_probe_comparison_manifest,
+                include_registry_record=include_pre_generation_probe_comparison_record,
             ),
             **self.triple_extraction_fixture_matrix_evidence_metadata(
                 verify_manifest=verify_triple_extraction_fixture_matrix_manifest,
@@ -2130,6 +2291,18 @@ def _promotion_contract_pre_generation_probe_comparison_metadata(
             _first_present(
                 best_run.get("redline_margin"),
                 metadata.get("pre_generation_probe_comparison_best_redline_margin"),
+            )
+        ),
+        "promotion_contract_pre_generation_probe_comparison_best_redline_signal": (
+            _first_present(
+                best_run.get("redline_best_signal"),
+                metadata.get("pre_generation_probe_comparison_best_redline_signal"),
+            )
+        ),
+        "promotion_contract_pre_generation_probe_comparison_best_redline_auroc": (
+            _first_present(
+                best_run.get("redline_best_auroc"),
+                metadata.get("pre_generation_probe_comparison_best_redline_auroc"),
             )
         ),
     })
