@@ -24,6 +24,7 @@ from eigentruth.verify import (
     Claim,
     ClaimDependency,
     GroundednessVerifier,
+    VerificationEscalationPolicy,
     VerificationResult,
     VerificationStatus,
     extract_claims,
@@ -507,6 +508,49 @@ def test_verification_loop_can_execute_plan_aware_retrieval_query():
     assert result.action_results[0].output["hits"][0]["text"] == "zephyr-token retrieval-key evidence"
 
 
+def test_verification_loop_escalates_low_confidence_supported_claims_to_retrieval():
+    claims = (Claim("Paris is the capital of France.", claim_id="c1"),)
+    verifier = _LowConfidenceThenEvidenceVerifier()
+    registry = _registry_with_retrieval(("Paris is the capital of France.",), min_overlap=0.7)
+
+    result = run_verification_loop(
+        request_id="req-escalate",
+        diagnostics={"maha_last": 1.0},
+        claims=claims,
+        verifier=verifier,
+        controller=RiskController(_artifact()),
+        executor_registry=registry,
+        escalation_policy=VerificationEscalationPolicy(min_confidence=0.65),
+    )
+
+    assert result.initial_decision.action is ControlAction.ACCEPT
+    assert result.initial_verification_results[0].status is VerificationStatus.SUPPORTED
+    assert result.initial_verification_results[0].confidence == 0.4
+    assert result.uncertainty_escalation_plan is not None
+    assert result.uncertainty_escalation_plan.verify_claim_ids == ("c1",)
+    assert result.claim_verification_plan.verify_claim_ids == ("c1",)
+    assert result.claim_verification_plan.retrieval_queries[0]["query"] == "Paris is the capital of France."
+    assert [request.action for request in result.action_requests] == [
+        ControlAction.ACCEPT,
+        ControlAction.RETRIEVE,
+    ]
+    assert result.action_results[1].status is ActionExecutionStatus.SUCCEEDED
+    assert result.retrieval_evidence.has_evidence()
+    assert result.final_verification_results[0].status is VerificationStatus.SUPPORTED
+    assert result.final_verification_results[0].confidence == 0.95
+    assert verifier.verify_many_calls == 1
+    assert verifier.verify_calls == 1
+
+    trace = result.trace.to_dict()
+    assert trace["metadata"]["uncertainty_escalation"]["verify_claim_count"] == 1
+    assert any(event["event_type"] == "uncertainty_escalation_plan" for event in trace["events"])
+    runtime_phase_names = {phase["name"] for phase in trace["runtime_trace"]["phases"]}
+    assert "uncertainty_escalation_planning" in runtime_phase_names
+    payload = result.to_dict()
+    assert payload["uncertainty_escalation_plan"]["verify_claim_ids"] == ("c1",)
+    json.dumps(payload)
+
+
 def test_verification_loop_can_enforce_claim_coherence_for_triggered_subset():
     claims = (
         Claim("The trial was randomized.", claim_id="c1"),
@@ -738,6 +782,42 @@ class _CountingVerifier:
     def verify_many(self, claims, context=None):
         self.verify_many_calls += 1
         return tuple(self.verify(claim, context=context) for claim in claims)
+
+
+class _LowConfidenceThenEvidenceVerifier:
+    def __init__(self):
+        self.verify_many_calls = 0
+        self.verify_calls = 0
+
+    def verify_many(self, claims, context=None):
+        del context
+        self.verify_many_calls += 1
+        return tuple(
+            VerificationResult(
+                status=VerificationStatus.SUPPORTED,
+                confidence=0.4,
+                explanation="cheap preliminary verifier is weakly supportive",
+            )
+            for _claim in claims
+        )
+
+    def verify(self, claim, context=None):
+        self.verify_calls += 1
+        evidence = tuple((context or {}).get("evidence", ()))
+        if evidence:
+            return VerificationResult(
+                status=VerificationStatus.SUPPORTED,
+                confidence=0.95,
+                evidence=tuple(str(item.get("text", "")) for item in evidence),
+                explanation="retrieved evidence supports the claim",
+                metadata={"claim_id": claim.claim_id},
+            )
+        return VerificationResult(
+            status=VerificationStatus.INSUFFICIENT_EVIDENCE,
+            confidence=0.2,
+            explanation="no evidence",
+            metadata={"claim_id": claim.claim_id},
+        )
 
 
 class _FailingVerifyManyVerifier:

@@ -13,6 +13,7 @@ from eigentruth.control.actions import (
     ActionResult,
     CorrectionPolicy,
     DefaultCorrectionPolicy,
+    PlanAwareCorrectionPolicy,
 )
 from eigentruth.control.controller import RiskController
 from eigentruth.control.policy import ControlAction, RiskDecision, RiskLevel
@@ -29,6 +30,8 @@ from eigentruth.verify.planning import (
     DEFAULT_VERIFY_CLAIM_METADATA_KEYS,
     ClaimVerificationPlan,
     ClaimVerificationPlanner,
+    VerificationEscalationPolicy,
+    escalate_uncertain_verification_plan,
 )
 from eigentruth.verify.protocols import Claim, VerificationResult, VerificationStatus, Verifier
 
@@ -87,6 +90,7 @@ class VerificationLoopResult:
     final_decision: RiskDecision
     trace: ProductTrace
     claim_verification_plan: ClaimVerificationPlan | Mapping[str, Any] | None = None
+    uncertainty_escalation_plan: ClaimVerificationPlan | Mapping[str, Any] | None = None
     verification_stage_decision: VerificationStageDecision | Mapping[str, Any] | None = None
     initial_coherence_report: ClaimCoherenceReport | Mapping[str, Any] | None = None
     final_coherence_report: ClaimCoherenceReport | Mapping[str, Any] | None = None
@@ -113,6 +117,7 @@ class VerificationLoopResult:
             "final_decision": self.final_decision.to_dict(),
             "trace": self.trace.to_dict(),
             "claim_verification_plan": _claim_verification_plan_to_dict(self.claim_verification_plan),
+            "uncertainty_escalation_plan": _claim_verification_plan_to_dict(self.uncertainty_escalation_plan),
             "verification_stage_decision": _stage_decision_to_dict(self.verification_stage_decision),
             "initial_coherence_report": _coherence_report_to_dict(self.initial_coherence_report),
             "final_coherence_report": _coherence_report_to_dict(self.final_coherence_report),
@@ -181,11 +186,18 @@ def run_verification_loop(
     context: Mapping[str, Any] | None = None,
     metadata: Mapping[str, Any] | None = None,
     stage_policy: StagedVerificationPolicy | None = None,
+    escalation_policy: VerificationEscalationPolicy | Mapping[str, Any] | None = None,
     profile_runtime: bool = True,
     claim_dependencies: Sequence[ClaimDependency | Mapping[str, Any]] | None = None,
     enforce_claim_coherence: bool = False,
 ) -> VerificationLoopResult:
-    """Run a dependency-free verification/action/reverification loop."""
+    """Run a dependency-free verification/action/reverification loop.
+
+    ``escalation_policy`` is opt-in. When supplied, low-confidence or
+    insufficient-evidence preliminary results can replace the action-planning
+    verification plan with a stronger second-stage plan before retrieval/tool
+    actions are executed.
+    """
     base_context = dict(context or {})
     runtime_phases: list[RuntimePhaseTiming] = []
     loop_started_at = _start_runtime_phase(profile_runtime)
@@ -320,15 +332,40 @@ def run_verification_loop(
         )
     )
 
-    claim_verification_plan = _build_claim_verification_plan(
+    base_claim_verification_plan = _build_claim_verification_plan(
         claims=claims,
         stage_policy=stage_policy,
         stage_decision=stage_decision,
         claim_dependencies=claim_dependencies,
     )
+    claim_verification_plan = base_claim_verification_plan
+    uncertainty_escalation_plan: ClaimVerificationPlan | None = None
+    if escalation_policy is not None:
+        phase_started_at = _start_runtime_phase(profile_runtime)
+        uncertainty_escalation_plan = escalate_uncertain_verification_plan(
+            base_claim_verification_plan,
+            initial_results,
+            escalation_policy,
+        )
+        _record_runtime_phase(
+            runtime_phases,
+            "uncertainty_escalation_planning",
+            phase_started_at,
+            metadata={
+                "run_verifier": uncertainty_escalation_plan.run_verifier,
+                "verify_claim_count": len(uncertainty_escalation_plan.verify_claim_ids),
+                "retrieval_query_count": len(uncertainty_escalation_plan.retrieval_queries),
+            },
+        )
+        if uncertainty_escalation_plan.run_verifier:
+            claim_verification_plan = uncertainty_escalation_plan
 
     phase_started_at = _start_runtime_phase(profile_runtime)
-    policy = correction_policy or DefaultCorrectionPolicy()
+    policy = correction_policy or (
+        PlanAwareCorrectionPolicy()
+        if uncertainty_escalation_plan is not None and uncertainty_escalation_plan.run_verifier
+        else DefaultCorrectionPolicy()
+    )
     action_planning_context = {**base_context, "verification_plan": claim_verification_plan}
     action_requests = policy.plan(
         initial_decision,
@@ -454,6 +491,23 @@ def run_verification_loop(
                 else ()
             ),
             TraceEvent("initial_risk_decision", initial_decision.to_dict()),
+            *(
+                (
+                    TraceEvent(
+                        "uncertainty_escalation_plan",
+                        {
+                            "run_verifier": uncertainty_escalation_plan.run_verifier,
+                            "verification_scope": uncertainty_escalation_plan.verification_scope,
+                            "verify_claim_ids": uncertainty_escalation_plan.verify_claim_ids,
+                            "skipped_claim_ids": uncertainty_escalation_plan.skipped_claim_ids,
+                            "retrieval_query_count": len(uncertainty_escalation_plan.retrieval_queries),
+                            "budget": uncertainty_escalation_plan.budget,
+                        },
+                    ),
+                )
+                if uncertainty_escalation_plan is not None
+                else ()
+            ),
             TraceEvent(
                 "claim_verification_plan",
                 {
@@ -514,6 +568,16 @@ def run_verification_loop(
                 "dependency_count": len(claim_verification_plan.dependencies),
             },
             "staged_verification": None if stage_policy is None else stage_policy.to_dict(),
+            "uncertainty_escalation": None
+            if uncertainty_escalation_plan is None
+            else {
+                "run_verifier": uncertainty_escalation_plan.run_verifier,
+                "verification_scope": uncertainty_escalation_plan.verification_scope,
+                "verify_claim_count": len(uncertainty_escalation_plan.verify_claim_ids),
+                "skipped_claim_count": len(uncertainty_escalation_plan.skipped_claim_ids),
+                "route_count": len(uncertainty_escalation_plan.route_hints),
+                "retrieval_query_count": len(uncertainty_escalation_plan.retrieval_queries),
+            },
             "claim_coherence": None if not coherence_enabled else _claim_coherence_metadata(
                 initial_coherence_report,
                 final_coherence_report,
@@ -532,6 +596,7 @@ def run_verification_loop(
         final_decision=final_decision,
         trace=trace,
         claim_verification_plan=claim_verification_plan,
+        uncertainty_escalation_plan=uncertainty_escalation_plan,
         verification_stage_decision=stage_decision,
         initial_coherence_report=initial_coherence_report,
         final_coherence_report=final_coherence_report,
