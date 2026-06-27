@@ -28987,6 +28987,147 @@ def test_run_product_trace_replay_workflow_applies_action_audit_gate(tmp_path):
     )
 
 
+def test_run_product_trace_replay_workflow_applies_action_execution_gate(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_trace_replay_workflow")
+    tuning_module = importlib.import_module("benchmarks.run_runtime_profile_selector_tuning")
+    output_dir = tmp_path / "workflow"
+    traces_dir = tmp_path / "input-traces"
+    traces_dir.mkdir()
+    trace_payloads = (
+        {
+            "request_id": "aligned",
+            "risk_decision": {
+                "action": "accept",
+                "risk_level": "low",
+                "confidence": 1.0,
+                "reason": "supported",
+            },
+            "actions": [
+                {
+                    "action": "accept",
+                    "reason": "supported",
+                    "payload": {"claim_ids": ["c1"]},
+                    "request_id": "action-a",
+                }
+            ],
+            "action_results": [
+                {
+                    "action": "accept",
+                    "status": "dry_run",
+                    "output": {"would_execute": "accept"},
+                    "request_id": "action-a",
+                }
+            ],
+            "metadata": {"runtime_profile": "latency"},
+            "runtime_trace": {"total_seconds": 0.10, "phases": []},
+        },
+        {
+            "request_id": "wrong-result-action",
+            "risk_decision": {
+                "action": "retrieve",
+                "risk_level": "medium",
+                "confidence": 0.6,
+                "reason": "unsupported",
+            },
+            "actions": [
+                {
+                    "action": "retrieve",
+                    "reason": "needs evidence",
+                    "payload": {"query": "Private unsupported fact"},
+                    "request_id": "action-b",
+                }
+            ],
+            "action_results": [
+                {
+                    "action": "accept",
+                    "status": "dry_run",
+                    "output": {"would_execute": "accept"},
+                    "request_id": "action-b",
+                }
+            ],
+            "metadata": {"runtime_profile": "balanced"},
+            "runtime_trace": {"total_seconds": 0.20, "phases": []},
+        },
+        {
+            "request_id": "wrong-result-request-id",
+            "risk_decision": {
+                "action": "clarify",
+                "risk_level": "unknown",
+                "confidence": 0.4,
+                "reason": "ambiguous claim",
+            },
+            "actions": [
+                {
+                    "action": "clarify",
+                    "reason": "ambiguous claim",
+                    "payload": {"question": "Which entity?"},
+                    "request_id": "action-c",
+                }
+            ],
+            "action_results": [
+                {
+                    "action": "clarify",
+                    "status": "dry_run",
+                    "output": {"would_execute": "clarify"},
+                    "request_id": "action-d",
+                }
+            ],
+            "metadata": {"runtime_profile": "balanced"},
+            "runtime_trace": {"total_seconds": 0.30, "phases": []},
+        },
+    )
+    trace_paths = []
+    for index, payload in enumerate(trace_payloads):
+        trace_path = traces_dir / f"trace-{index}.json"
+        trace_path.write_text(json.dumps(payload), encoding="utf-8")
+        trace_paths.append(trace_path)
+
+    payload = module.run_product_trace_replay_workflow(
+        module.ProductTraceReplayWorkflowConfig(
+            trace_paths=trace_paths,
+            output_dir=output_dir,
+            candidates=(tuning_module.RuntimeProfileSelectorCandidate(name="default", policy={}),),
+            require_runtime_trace=True,
+            max_action_execution_missing_result_rate=0.0,
+            max_action_execution_unexpected_result_rate=0.0,
+            max_action_execution_request_id_mismatch_rate=0.0,
+        )
+    )
+    gate_report = json.loads(
+        Path(payload["paths"]["action_execution_gate_report"]).read_text(encoding="utf-8")
+    )
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+
+    assert payload["status"] == "blocked"
+    assert payload["action_execution_gate"]["status"] == "blocked"
+    assert payload["action_execution_gate"]["gate_enabled"] is True
+    assert payload["action_execution_gate"]["missing_result_rate"] == pytest.approx(1 / 3)
+    assert payload["action_execution_gate"]["unexpected_result_rate"] == pytest.approx(1 / 3)
+    assert payload["action_execution_gate"]["request_id_mismatch_rate"] == pytest.approx(2 / 3)
+    assert payload["runtime_baseline"]["action_execution_missing_result_rate"] == pytest.approx(1 / 3)
+    assert payload["runtime_baseline"]["action_execution_unexpected_result_rate"] == pytest.approx(1 / 3)
+    assert payload["runtime_baseline"]["action_execution_request_id_mismatch_rate"] == pytest.approx(2 / 3)
+    assert any(
+        str(reason).startswith("action_execution_gate:")
+        for reason in payload["decision"]["blocking_reasons"]
+    )
+    assert gate_report["status"] == "blocked"
+    assert gate_report["summary"]["blocked_metric_count"] == 3
+    assert {
+        check["metric"]
+        for check in gate_report["checks"]
+        if check["status"] == "blocked"
+    } == {
+        "action_execution.missing_result_rate",
+        "action_execution.unexpected_result_rate",
+        "action_execution.request_id_mismatch_rate",
+    }
+    assert "action_execution_gate_report" in manifest["artifacts"]
+    assert manifest["metadata"]["action_execution_gate_status"] == "blocked"
+    assert manifest["metadata"]["action_execution_missing_result_rate"] == pytest.approx(1 / 3)
+    assert manifest["metadata"]["action_execution_request_id_mismatch_rate"] == pytest.approx(2 / 3)
+
+
 def test_run_product_trace_replay_workflow_reuses_corpus_cache(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.run_product_trace_replay_workflow")
     output_dir = tmp_path / "workflow"

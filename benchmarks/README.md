@@ -4543,9 +4543,8 @@ summaries for local performance tuning, lifts the runtime baseline
 `optimization` status/recommendations/policy hints into the top-level workflow
 report and registry metadata, can save the runtime baseline's recommended
 `ProductRuntimeBudgetPolicy` artifact for later gates, can run the current
-runtime baseline through a product-runtime drift/policy gate against a prior
-baseline, and registers one
-workflow report.
+runtime baseline through action-audit, action-execution alignment, or
+product-runtime drift/policy gates, and registers one workflow report.
 Add `--verify-manifest` to write a separate recursive verification
 report and register `manifest_verification:<name>-verification:<version>` next
 to the workflow report. Add `--fingerprint-cache` when repeating local checks,
@@ -4568,6 +4567,11 @@ covered-fact property gates such as
 `--min-runtime-drift-covered-fact-min-records`,
 `--min-runtime-drift-covered-fact-min-source-documents`, and the
 `--max-runtime-drift-covered-fact-*` drift gates. Add
+`--max-action-execution-missing-result-rate`,
+`--max-action-execution-unexpected-result-rate`, and
+`--max-action-execution-request-id-mismatch-rate` when a replay workflow should
+fail closed on dropped, unexpected, or request-id-mismatched action execution
+results. Add
 `--selector-trace-inputs-json` when replaying
 selector policies repeatedly over unchanged standardized traces:
 
@@ -4592,6 +4596,9 @@ python benchmarks/run_product_trace_replay_workflow.py \
   --save-runtime-recommended-policy artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/recommended-policy.json \
   --runtime-drift-baseline artifacts/smollm2_product_runtime_profile_sweep/baselines/auto/product-runtime-baseline.json \
   --runtime-drift-budget-policy artifacts/product-runtime-baseline-recommended-policy.json \
+  --max-action-execution-missing-result-rate 0.0 \
+  --max-action-execution-unexpected-result-rate 0.0 \
+  --max-action-execution-request-id-mismatch-rate 0.0 \
   --max-runtime-drift-total-seconds-p95-ratio 1.6 \
   --min-runtime-drift-promotion-contract-coverage 1.0 \
   --min-runtime-drift-covered-fact-property-metric-count 3 \

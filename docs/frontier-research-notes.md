@@ -536,6 +536,12 @@ Added the first monitor-first tool-selection audit layer:
   `run_product_runtime_baseline.py` aggregates missing, unexpected, and
   request-id-mismatched action results. This makes executor bypass and dropped
   side-effect results visible before adding stricter release gates.
+- `run_product_trace_replay_workflow.py` can now enforce those
+  action-execution alignment metrics as an optional fail-closed gate. The gate
+  is off by default, writes `action-execution-gate.json` when configured, and
+  blocks the replay workflow when missing results, unexpected results, or
+  request-id mismatches exceed configured thresholds or required metrics are
+  unavailable.
 - `run_product_runtime_baseline.py` now aggregates action-audit error,
   missing-retrieval, missing planned retrieval-query coverage,
   malformed-payload, unexpected-action, and unknown-claim-id rates, and
