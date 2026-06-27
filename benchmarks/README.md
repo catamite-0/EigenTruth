@@ -1138,6 +1138,30 @@ negative controls. The generated prediction file can then be passed to
 `run_triple_extraction_fixture_workflow.py --external-predictions NAME=PATH` or
 to the matrix form `--external-predictions CORPUS:NAME=PATH`.
 
+Use `run_external_triple_extractor_matrix_handoff.py` when the same external
+command should be evaluated across the cross-corpus/adversarial matrix. It
+first builds deterministic per-corpus fixture records, sends label-free requests
+to each configured command, gates every returned prediction file, then feeds the
+prediction paths into `run_triple_extraction_fixture_matrix.py` so release gates
+can require external-prediction count, corpus coverage, and mean best external
+F1:
+
+```bash
+python benchmarks/run_external_triple_extractor_matrix_handoff.py \
+  --corpus country-core=artifacts/wikidata-country-core-facts-external-corpus/wikidata-country-core-facts-source.jsonl \
+  --corpus organization-product=artifacts/wikidata-organization-product-core-facts/wikidata-organization-product-source.jsonl \
+  --external-extractor-command "learned=python path/to/extractor.py --input {input} --output {output}" \
+  --output-dir artifacts/external-triple-extractor-matrix-handoff \
+  --min-distinct-predicates 6 \
+  --adversarial-negatives-per-fact 1 \
+  --max-external-false-positive-rate 0.0 \
+  --verification-report artifacts/external-triple-extractor-matrix-handoff/manifest-verification.json
+```
+
+This wrapper still does not make the extractor a dependency. It records a local
+command boundary and matrix-level artifact chain; any quality claim depends on
+the actual external extractor run promoting under the configured gates.
+
 Use `build_triple_extraction_fixture.py` to turn structured fact corpora, such
 as the output of `build_wikidata_qa_corpus.py`, into larger labeled extraction
 fixtures plus matching default regex patterns:

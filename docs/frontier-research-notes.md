@@ -442,6 +442,12 @@ Added dependency-free triple extractor plug-ins and eval harness:
   the same exact and subgroup false-positive gates, and can register a verified
   handoff manifest. This still makes no quality claim for any specific learned
   extractor until a real extractor run promotes on the matrix.
+- `benchmarks/run_external_triple_extractor_matrix_handoff.py` lifts that
+  command boundary to cross-corpus release evidence: it builds deterministic
+  per-corpus fixtures, runs one or more external commands over label-free
+  requests, gates each prediction file, then feeds the outputs into
+  `run_triple_extraction_fixture_matrix.py` so release candidates can require
+  external-prediction count, corpus coverage, and mean best external F1.
 - `benchmarks/fixtures/triple_extraction_records.json`,
   `benchmarks/fixtures/triple_extraction_regex_patterns.json`, and
   `benchmarks/triple_extraction_smoke.py` add a versioned extractor fixture and
@@ -600,5 +606,5 @@ Added the first monitor-first tool-selection audit layer:
 ## Next Research-to-Code Candidates
 
 1. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
-2. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
+2. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
 3. Feed the registered covered-facts external-evidence handoff into `compare_release_candidates.py --external-evidence-baseline-comparison-key` so KG correction evidence participates in the full release gate.

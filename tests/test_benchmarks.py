@@ -353,6 +353,111 @@ def test_external_triple_extractor_handoff_blocks_false_positive(tmp_path):
     assert any("false_positive_rate above 0.0" in reason for reason in payload["gate"]["blocking_reasons"])
 
 
+def test_external_triple_extractor_matrix_handoff_promotes_and_registers(tmp_path):
+    module = importlib.import_module("benchmarks.run_external_triple_extractor_matrix_handoff")
+    from eigentruth.registry import ArtifactRegistry
+
+    country_corpus, domain_corpus = _write_external_matrix_fact_corpora(tmp_path)
+    extractor_script = _write_external_matrix_extractor_script(tmp_path / "matrix-extractor.py")
+    output_dir = tmp_path / "external-matrix-handoff"
+    registry_path = tmp_path / "registry.json"
+
+    payload = module.run_external_triple_extractor_matrix_handoff(
+        module.ExternalTripleExtractorMatrixHandoffConfig(
+            corpora=(
+                {"name": "country-core", "fact_corpus_paths": (country_corpus,)},
+                {"name": "enterprise-product", "fact_corpus_paths": (domain_corpus,)},
+            ),
+            extractor_commands={
+                "learned-smoke": (
+                    sys.executable,
+                    str(extractor_script),
+                    "--input",
+                    "{input}",
+                    "--output",
+                    "{output}",
+                ),
+            },
+            output_dir=output_dir,
+            min_distinct_predicates=2,
+            adversarial_negatives_per_fact=1,
+            registry_path=registry_path,
+            name="external-matrix-handoff",
+            version="0.1",
+            verification_report_path=output_dir / "manifest-verification.json",
+            min_external_f1=1.0,
+            min_external_precision=1.0,
+            min_external_recall=1.0,
+        )
+    )
+    manifest = json.loads((output_dir / "artifact-manifest.json").read_text(encoding="utf-8"))
+    verification = json.loads((output_dir / "manifest-verification.json").read_text(encoding="utf-8"))
+    record = ArtifactRegistry.load_json(registry_path).get("report:external-matrix-handoff:0.1")
+
+    assert payload["status"] == "promote"
+    assert payload["gate"]["passed"] is True
+    assert payload["matrix"]["status"] == "promote"
+    assert payload["matrix"]["external_prediction_count"] == 2
+    assert payload["matrix"]["external_prediction_corpora"] == (
+        "country-core",
+        "enterprise-product",
+    )
+    assert payload["matrix"]["mean_best_external_f1"] == pytest.approx(1.0)
+    assert payload["gate"]["policy"]["expected_external_prediction_count"] == 2
+    assert manifest["metadata"]["status"] == "promote"
+    assert manifest["metadata"]["external_prediction_count"] == 2
+    assert verification["passed"] is True
+    assert record.metadata["status"] == "promote"
+    assert record.metadata["manifest_verified"] is True
+    assert (
+        output_dir
+        / "matrix"
+        / "country-core"
+        / "external_learned_smoke-triple-extraction-report.json"
+    ).exists()
+
+
+def test_external_triple_extractor_matrix_handoff_blocks_false_positive(tmp_path):
+    module = importlib.import_module("benchmarks.run_external_triple_extractor_matrix_handoff")
+    country_corpus, domain_corpus = _write_external_matrix_fact_corpora(tmp_path)
+    extractor_script = _write_external_matrix_extractor_script(
+        tmp_path / "leaky-matrix-extractor.py",
+        emit_false_positive=True,
+    )
+
+    payload = module.run_external_triple_extractor_matrix_handoff(
+        module.ExternalTripleExtractorMatrixHandoffConfig(
+            corpora=(
+                {"name": "country-core", "fact_corpus_paths": (country_corpus,)},
+                {"name": "enterprise-product", "fact_corpus_paths": (domain_corpus,)},
+            ),
+            extractor_commands={
+                "leaky": (
+                    sys.executable,
+                    str(extractor_script),
+                    "--input",
+                    "{input}",
+                    "--output",
+                    "{output}",
+                ),
+            },
+            output_dir=tmp_path / "blocked-external-matrix-handoff",
+            min_distinct_predicates=2,
+            adversarial_negatives_per_fact=1,
+            min_external_f1=0.0,
+            min_external_precision=0.0,
+            min_external_recall=0.0,
+            max_external_false_positive_rate=0.0,
+        )
+    )
+
+    assert payload["status"] == "blocked"
+    assert any(
+        failure["gate"] == "external_handoffs_promote"
+        for failure in payload["gate"]["failures"]
+    )
+
+
 def _write_external_triple_handoff_records(path: Path) -> Path:
     path.write_text(
         json.dumps({
@@ -386,6 +491,35 @@ def _write_external_triple_handoff_records(path: Path) -> Path:
     return path
 
 
+def _write_external_matrix_fact_corpora(tmp_path: Path) -> tuple[Path, Path]:
+    country_corpus = tmp_path / "country-facts.json"
+    domain_corpus = tmp_path / "domain-facts.json"
+    country_corpus.write_text(
+        json.dumps({
+            "documents": [
+                {
+                    "answer": "Paris",
+                    "metadata": {
+                        "country": "France",
+                        "statement_property": "P36",
+                        "statement_property_label": "capital",
+                    },
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    domain_corpus.write_text(
+        json.dumps({
+            "facts": [
+                {"subject": "OpenAI", "predicate": "P159", "object": "San Francisco"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    return country_corpus, domain_corpus
+
+
 def _write_external_triple_extractor_script(path: Path, *, emit_false_positive: bool = False) -> Path:
     path.write_text(
         f"""
@@ -412,6 +546,49 @@ with open(args.output, "w", encoding="utf-8") as out:
                 obj = text.split("capital of ", 1)[1].strip().rstrip(".")
                 triples.append({{"subject": subject, "predicate": "capital_of", "object": obj}})
             out.write(json.dumps({{"claim_id": row["claim_id"], "triples": triples}}, sort_keys=True) + "\\n")
+""".lstrip(),
+        encoding="utf-8",
+    )
+    return path
+
+
+def _write_external_matrix_extractor_script(path: Path, *, emit_false_positive: bool = False) -> Path:
+    path.write_text(
+        f"""
+import argparse
+import json
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--input", required=True)
+parser.add_argument("--output", required=True)
+args = parser.parse_args()
+
+emit_false_positive = {str(bool(emit_false_positive))}
+
+def triples_for(text):
+    blocked = " not " in text or "does not" in text
+    if blocked and not emit_false_positive:
+        return []
+    if "France" in text and "Paris" in text and "capital" in text:
+        return [{{"subject": "France", "predicate": "capital_of", "object": "Paris"}}]
+    if "OpenAI" in text and "San Francisco" in text and "headquarter" in text:
+        return [{{
+            "subject": "OpenAI",
+            "predicate": "headquarters_location_of",
+            "object": "San Francisco",
+        }}]
+    return []
+
+with open(args.output, "w", encoding="utf-8") as out:
+    with open(args.input, encoding="utf-8") as handle:
+        for line in handle:
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            out.write(json.dumps({{
+                "claim_id": row["claim_id"],
+                "triples": triples_for(row["text"]),
+            }}, sort_keys=True) + "\\n")
 """.lstrip(),
         encoding="utf-8",
     )
