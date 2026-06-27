@@ -561,15 +561,32 @@ python benchmarks/eval_pre_generation_probe.py \
   --layer-idx -8
 ```
 
+`eval_truthfulqa.py` can now generate compatible local records from the same
+forced-answer forward pass used for score dumps:
+
+```bash
+python benchmarks/eval_truthfulqa.py \
+  --model Qwen/Qwen2.5-0.5B-Instruct \
+  --layer -8 \
+  --limit 200 \
+  --dump-pre-generation-probe-records artifacts/pre-generation-probe-records.jsonl
+```
+
+By default, that export writes one prompt-level record per question and uses the
+question's candidate false-answer rate as the soft target. Use
+`--pre-generation-record-grain candidate` for candidate-level records with hard
+`label` fields. If the run reads an older `--eval-reps-cache` that does not contain
+prompt hidden states, refresh the cache before exporting.
+
 Each JSON/JSONL record must provide `hidden_states` (or `prompt_hidden_states`) with
 shape `[tokens, hidden_dim]`, plus either `soft_target`, `risk_target`, or
 `sample_correctness`. `attention_mask` is optional and defaults to all tokens kept.
 `label` or `is_false` is optional; when both classes are present, the report includes
 label AUROC in addition to soft-target MSE/MAE/BCE.
 
-This script does not load a model, download data, or bind the main TruthfulQA path to
-a hidden-state cache format. Producing high-quality prompt-token records from a real
-model run and calibrating the resulting probe remain separate experiment steps.
+`eval_pre_generation_probe.py` itself does not load a model or download data. The
+current handoff proves the local record/export/train/evaluate path; detector-quality
+claims still require larger model runs, held-out calibration, and release evidence.
 
 ## `eval_conformal.py` (E1)
 

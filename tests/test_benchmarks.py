@@ -207,6 +207,64 @@ def test_eval_pre_generation_probe_trains_and_saves_artifact(tmp_path):
     assert loaded_artifact.layer_idx == 2
 
 
+def test_eval_truthfulqa_exports_pre_generation_probe_records(tmp_path):
+    truthfulqa = importlib.import_module("benchmarks.eval_truthfulqa")
+    probe = importlib.import_module("benchmarks.eval_pre_generation_probe")
+
+    statements = [
+        truthfulqa.Statement("What is the capital of France?", "Paris", 0),
+        truthfulqa.Statement("What is the capital of France?", "Berlin", 1),
+        truthfulqa.Statement("What boils at sea level?", "Water at 30 C", 1),
+    ]
+    reps_batch = [
+        {
+            "prompt_hs_by_layer": {-1: torch.tensor([[1.0, 0.0], [1.0, 0.5]])},
+            "prompt_attention_mask": torch.tensor([True, True]),
+        },
+        {
+            "prompt_hs_by_layer": {-1: torch.tensor([[9.0, 9.0], [9.0, 9.5]])},
+            "prompt_attention_mask": torch.tensor([True, True]),
+        },
+        {
+            "prompt_hs_by_layer": {-1: torch.tensor([[0.0, 1.0]])},
+            "prompt_attention_mask": torch.tensor([True]),
+        },
+    ]
+    soft_targets = truthfulqa._pre_generation_soft_targets(statements)
+    seen: set[str] = set()
+
+    records, stats = truthfulqa._pre_generation_probe_records_from_batch(
+        statements,
+        reps_batch,
+        layer=-1,
+        soft_targets=soft_targets,
+        record_grain="question",
+        seen_keys=seen,
+        start_index=0,
+    )
+    records_path = tmp_path / "pre-generation-records.jsonl"
+    truthfulqa._write_pre_generation_probe_records(
+        records_path,
+        {
+            "metadata": {"model": "tiny", "layer": -1},
+            "records": records,
+        },
+    )
+    loaded = probe.load_pre_generation_probe_records(records_path)
+
+    assert stats["candidate_count"] == 3
+    assert stats["exported_count"] == 2
+    assert stats["duplicate_count"] == 1
+    assert len(records) == 2
+    assert records[0]["soft_target"] == pytest.approx(0.5)
+    assert records[1]["soft_target"] == pytest.approx(1.0)
+    assert "label" not in records[0]
+    assert len(loaded) == 2
+    assert loaded[0].hidden_states.shape == (2, 2)
+    assert loaded[0].soft_target == pytest.approx(0.5)
+    assert loaded[0].metadata["model"] == "tiny"
+
+
 def test_eval_triple_extraction_compares_regex_against_rule_based(tmp_path):
     module = importlib.import_module("benchmarks.eval_triple_extraction")
     records_path = tmp_path / "triple-records.json"
