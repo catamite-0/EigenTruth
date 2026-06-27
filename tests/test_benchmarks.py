@@ -23650,6 +23650,26 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                     {"name": "initial_verification", "seconds": 0.03},
                 ],
             },
+            "claims": [
+                {
+                    "claim_id": "c1",
+                    "text": "Paris is the capital of France.",
+                    "metadata": {
+                        "claim_triples": [
+                            {
+                                "subject": "France",
+                                "predicate": "capital_of",
+                                "object": "Paris",
+                            }
+                        ]
+                    },
+                },
+                {
+                    "claim_id": "c2",
+                    "text": "Berlin is a large city.",
+                    "metadata": {},
+                },
+            ],
             "verification_results": [
                 {
                     "status": "supported",
@@ -23659,6 +23679,32 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                         "selected_route_duration_seconds": 0.01,
                         "attempted_route_count": 1,
                         "used_retrieval": False,
+                        "audit_report": {
+                            "claim_id": "c1",
+                            "triple_count": 1,
+                            "passed_count": 1,
+                            "failed_count": 0,
+                            "covered_slot_count": 3,
+                            "missing_slot_count": 0,
+                            "passed": True,
+                            "audits": [
+                                {
+                                    "triple": {
+                                        "subject": "France",
+                                        "predicate": "capital_of",
+                                        "object": "Paris",
+                                    },
+                                    "passed": True,
+                                    "covered_slots": ["subject", "predicate", "object"],
+                                    "missing_slots": [],
+                                    "slot_coverage": {
+                                        "subject": 1.0,
+                                        "predicate": 1.0,
+                                        "object": 1.0,
+                                    },
+                                }
+                            ],
+                        },
                     },
                 }
             ],
@@ -23832,6 +23878,17 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert payload["summary"]["verification_plan"]["coverage_rate"] == pytest.approx(0.5)
     assert payload["summary"]["verification_plan"]["route_counts"]["retrieval"] == 1
     assert payload["summary"]["verification_plan"]["tool_payload_counts"]["retrieval_queries"] == 1
+    triple_coverage = payload["summary"]["triple_coverage"]
+    assert triple_coverage["claim_count"] == 2.0
+    assert triple_coverage["claims_with_triples"] == 1.0
+    assert triple_coverage["claim_triple_coverage_rate"] == pytest.approx(0.5)
+    assert triple_coverage["claim_predicate_counts"] == {"capital_of": 1}
+    assert triple_coverage["audit_available_trace_count"] == 1
+    assert triple_coverage["audit_claim_covered_count"] == pytest.approx(1.0)
+    assert triple_coverage["audit_claim_coverage_rate"] == pytest.approx(1.0)
+    assert triple_coverage["audit_pass_rate"] == pytest.approx(1.0)
+    assert triple_coverage["slot_coverage_rate"] == pytest.approx(1.0)
+    assert triple_coverage["audit_predicate_counts"] == {"capital_of": 1}
     assert payload["summary"]["final_answer"]["available_trace_count"] == 2
     assert payload["summary"]["final_answer"]["answerable_count"] == 1
     assert payload["summary"]["final_answer"]["followup_required_count"] == 1
@@ -23875,6 +23932,9 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert matrix["mean_best_f1"]["mean"] == pytest.approx(0.9)
     assert matrix["mean_f1_lift"]["mean"] == pytest.approx(0.35)
     assert payload["traces"][0]["metrics"]["verification_plan_available"] is True
+    assert payload["traces"][0]["metrics"]["triple_claim_count"] == 1.0
+    assert payload["traces"][0]["metrics"]["triple_audit_pass_rate"] == pytest.approx(1.0)
+    assert payload["traces"][0]["metrics"]["triple_slot_coverage_rate"] == pytest.approx(1.0)
     assert payload["traces"][0]["metrics"]["final_answer_available"] is True
     assert payload["traces"][0]["metrics"]["final_answer_status"] == "answered"
     assert payload["traces"][0]["metrics"]["promotion_contract_available"] is True
@@ -23943,6 +24003,21 @@ def test_run_product_runtime_baseline_reports_optimization_advice(tmp_path):
                         {"name": "initial_verification", "seconds": route_seconds},
                     ],
                 },
+                "claims": [
+                    {
+                        "claim_id": "c1",
+                        "text": "Paris is the capital of France.",
+                        "metadata": {
+                            "claim_triples": [
+                                {
+                                    "subject": "France",
+                                    "predicate": "capital_of",
+                                    "object": "Paris",
+                                }
+                            ]
+                        },
+                    }
+                ],
                 "verification_results": [
                     {
                         "status": "supported",
@@ -24004,9 +24079,14 @@ def test_run_product_runtime_baseline_reports_optimization_advice(tmp_path):
         "reduce_verifier_route_fanout",
         "review_verifier_route_budget_exhaustion",
         "gate_retrieval_to_unsupported_claims",
+        "enable_strict_triple_evidence_audits",
         "enable_staged_verification",
         "replay_runtime_profile_selector",
     }.issubset(recommendation_ids)
+    assert payload["summary"]["triple_coverage"]["claim_triple_count"] == 2.0
+    assert payload["summary"]["triple_coverage"]["audit_available_trace_count"] == 0
+    assert payload["summary"]["triple_coverage"]["audit_claim_covered_count"] == 0.0
+    assert payload["summary"]["triple_coverage"]["audit_claim_coverage_rate"] == pytest.approx(0.0)
     assert payload["summary"]["routes"]["overall"]["route_budget_exhaustion_rate"] == 1.0
     assert optimization["policy_hints"]["candidate_runtime_budget_policy"][
         "max_route_budget_exhaustion_rate"

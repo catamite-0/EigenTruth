@@ -489,6 +489,28 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         "verification_plan_state_check_count": metrics.get("verification_plan_state_check_count"),
         "verification_plan_world_model_check_count": metrics.get("verification_plan_world_model_check_count"),
         "verification_plan_dependency_count": metrics.get("verification_plan_dependency_count"),
+        "triple_coverage_summary": dict(_mapping(metrics.get("triple_coverage_summary"))),
+        "triple_coverage_source": metrics.get("triple_coverage_source"),
+        "triple_claim_count": metrics.get("triple_claim_count"),
+        "triple_claim_coverage_rate": metrics.get("triple_claim_coverage_rate"),
+        "triple_audit_available": metrics.get("triple_audit_available"),
+        "triple_audit_report_count": metrics.get("triple_audit_report_count"),
+        "triple_audit_claim_covered_count": metrics.get("triple_audit_claim_covered_count"),
+        "triple_audit_claim_coverage_rate": metrics.get("triple_audit_claim_coverage_rate"),
+        "triple_audit_triple_count": metrics.get("triple_audit_triple_count"),
+        "triple_audit_pass_rate": metrics.get("triple_audit_pass_rate"),
+        "triple_slot_coverage_rate": metrics.get("triple_slot_coverage_rate"),
+        "triple_structured_fact_result_count": metrics.get("triple_structured_fact_result_count"),
+        "triple_claim_predicate_counts": dict(_mapping(metrics.get("triple_claim_predicate_counts"))),
+        "triple_audit_predicate_counts": dict(_mapping(metrics.get("triple_audit_predicate_counts"))),
+        "triple_missing_slot_counts": dict(_mapping(metrics.get("triple_missing_slot_counts"))),
+        "triple_covered_slot_counts": dict(_mapping(metrics.get("triple_covered_slot_counts"))),
+        "triple_structured_fact_status_counts": dict(
+            _mapping(metrics.get("triple_structured_fact_status_counts"))
+        ),
+        "triple_structured_fact_predicate_counts": dict(
+            _mapping(metrics.get("triple_structured_fact_predicate_counts"))
+        ),
         "final_answer_summary": dict(_mapping(metrics.get("final_answer_summary"))),
         "final_answer_available": bool(metrics.get("final_answer_available")),
         "final_answer_source": metrics.get("final_answer_source"),
@@ -604,6 +626,7 @@ def _aggregate_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "verifier_saved_claim_count": _numeric_summary(item.get("verifier_saved_claim_count") for item in metrics),
         "verification_stage": _aggregate_verification_stage(metrics),
         "verification_plan": _aggregate_verification_plan(metrics),
+        "triple_coverage": _aggregate_triple_coverage(metrics),
         "final_answer": _aggregate_final_answer(metrics),
         "promotion_contract": _aggregate_promotion_contract(metrics),
         "phases": _aggregate_phases(metrics),
@@ -775,7 +798,12 @@ def _optimization_recommendations(
     retrieval_use_rate = _finite_float(overall_routes.get("retrieval_use_rate"))
     cache_hit_rate = _finite_float(_nested(summary, "cache_hit_rate", "mean"))
     verification_stage = _mapping(summary.get("verification_stage"))
+    triple_coverage = _mapping(summary.get("triple_coverage"))
     claim_skip_rate = _finite_float(verification_stage.get("claim_skip_rate"))
+    triple_claim_count = _finite_float(triple_coverage.get("claim_triple_count")) or 0.0
+    triple_audit_claim_coverage_rate = _finite_float(
+        triple_coverage.get("audit_claim_coverage_rate")
+    )
     enabled_stage_count = _finite_float(verification_stage.get("enabled_trace_count")) or 0.0
     run_verifier_stage_count = _finite_float(verification_stage.get("run_verifier_trace_count")) or 0.0
     triggered_scope_count = _finite_float(verification_stage.get("triggered_scope_trace_count")) or 0.0
@@ -886,6 +914,30 @@ def _optimization_recommendations(
             suggested_action=(
                 "Run cheap structured/rule/self-consistency routes first, then retrieve only "
                 "for unsupported or freshness-sensitive claims with bounded top_k."
+            ),
+        ))
+
+    if triple_claim_count > 0.0 and (
+        triple_audit_claim_coverage_rate is None or triple_audit_claim_coverage_rate < 1.0
+    ):
+        recommendations.append(_recommendation(
+            "enable_strict_triple_evidence_audits",
+            priority="medium",
+            area="verifier_routes",
+            title="Route structured factual triples through slot-level evidence audits.",
+            reason=(
+                "The trace corpus contains extracted claim triples, but not every triple-bearing "
+                "claim has a recorded triple-evidence audit report."
+            ),
+            evidence={
+                "claim_triple_count": triple_claim_count,
+                "audit_claim_coverage_rate": triple_audit_claim_coverage_rate,
+                "claim_predicate_counts": _mapping(triple_coverage.get("claim_predicate_counts")),
+            },
+            suggested_action=(
+                "Enable the triple_evidence route for sensitive factual claims or attach a "
+                "structured-fact verifier, then rerun the product runtime baseline and require "
+                "slot_coverage_rate evidence before promoting covered-fact routes."
             ),
         ))
 
@@ -1251,6 +1303,88 @@ def _aggregate_verification_plan(metrics: Sequence[Mapping[str, Any]]) -> dict[s
         ),
         "summary_observations": sum(1 for summary in summaries if summary),
     }
+
+
+def _aggregate_triple_coverage(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    summaries = [_mapping(item.get("triple_coverage_summary")) for item in metrics]
+    claim_count = _sum_float(summaries, "claim_count")
+    claims_with_triples = _sum_float(summaries, "claims_with_triples")
+    audit_report_count = _sum_float(summaries, "audit_report_count")
+    audit_claim_covered_count = _sum_float(summaries, "audit_claim_covered_count")
+    if audit_claim_covered_count is None:
+        audit_claim_covered_count = _fallback_audit_claim_covered_count(summaries)
+    audit_triple_count = _sum_float(summaries, "audit_triple_count")
+    audit_passed_count = _sum_float(summaries, "audit_passed_count")
+    covered_slot_count = _sum_float(summaries, "covered_slot_count")
+    missing_slot_count = _sum_float(summaries, "missing_slot_count")
+    total_slot_count = None
+    if covered_slot_count is not None or missing_slot_count is not None:
+        total_slot_count = (covered_slot_count or 0.0) + (missing_slot_count or 0.0)
+    claim_predicate_counts: dict[str, int] = {}
+    audit_predicate_counts: dict[str, int] = {}
+    missing_slot_counts: dict[str, int] = {}
+    structured_fact_status_counts: dict[str, int] = {}
+    structured_fact_predicate_counts: dict[str, int] = {}
+    for item in metrics:
+        _merge_counts(claim_predicate_counts, _mapping(item.get("triple_claim_predicate_counts")))
+        _merge_counts(audit_predicate_counts, _mapping(item.get("triple_audit_predicate_counts")))
+        _merge_counts(missing_slot_counts, _mapping(item.get("triple_missing_slot_counts")))
+        _merge_counts(
+            structured_fact_status_counts,
+            _mapping(item.get("triple_structured_fact_status_counts")),
+        )
+        _merge_counts(
+            structured_fact_predicate_counts,
+            _mapping(item.get("triple_structured_fact_predicate_counts")),
+        )
+    return {
+        "source_trace_count": len(metrics),
+        "summary_observations": sum(1 for summary in summaries if summary),
+        "source_counts": _counts(item.get("triple_coverage_source") for item in metrics),
+        "claim_count": claim_count,
+        "claims_with_triples": claims_with_triples,
+        "claim_triple_count": _sum_float(summaries, "claim_triple_count"),
+        "claim_triple_coverage_rate": _safe_div(claims_with_triples, claim_count),
+        "claim_predicate_counts": claim_predicate_counts,
+        "audit_available_trace_count": sum(1 for item in metrics if item.get("triple_audit_available") is True),
+        "audit_report_count": audit_report_count,
+        "audit_claim_covered_count": audit_claim_covered_count,
+        "audit_claim_coverage_rate": _safe_div(audit_claim_covered_count, claims_with_triples),
+        "audit_triple_count": audit_triple_count,
+        "audit_passed_count": audit_passed_count,
+        "audit_failed_count": _sum_float(summaries, "audit_failed_count"),
+        "audit_pass_rate": _safe_div(audit_passed_count, audit_triple_count),
+        "audit_predicate_counts": audit_predicate_counts,
+        "covered_slot_count": covered_slot_count,
+        "missing_slot_count": missing_slot_count,
+        "slot_coverage_rate": _safe_div(covered_slot_count, total_slot_count),
+        "missing_slot_counts": missing_slot_counts,
+        "structured_fact_result_count": _sum_float(summaries, "structured_fact_result_count"),
+        "structured_fact_status_counts": structured_fact_status_counts,
+        "structured_fact_predicate_counts": structured_fact_predicate_counts,
+        "per_trace_claim_triple_coverage_rate": _numeric_summary(
+            item.get("triple_claim_coverage_rate") for item in metrics
+        ),
+        "per_trace_audit_pass_rate": _numeric_summary(
+            item.get("triple_audit_pass_rate") for item in metrics
+        ),
+        "per_trace_slot_coverage_rate": _numeric_summary(
+            item.get("triple_slot_coverage_rate") for item in metrics
+        ),
+    }
+
+
+def _fallback_audit_claim_covered_count(summaries: Sequence[Mapping[str, Any]]) -> float | None:
+    total = 0.0
+    observed = False
+    for summary in summaries:
+        claims_with_triples = _finite_float(summary.get("claims_with_triples"))
+        audit_report_count = _finite_float(summary.get("audit_report_count"))
+        if claims_with_triples is None or audit_report_count is None:
+            continue
+        observed = True
+        total += min(claims_with_triples, audit_report_count)
+    return total if observed else None
 
 
 def _aggregate_final_answer(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:

@@ -4253,13 +4253,14 @@ Use `run_product_runtime_baseline.py` for the product-control side of the same
 performance story: aggregate saved `ProductTrace` JSON files, summarize request
 phase timings, route costs, cache hit rates, retrieval use, staged-verification
 skip savings, verification-scope counts, triggered-only partial skip savings,
-promotion-contract covered-fact property scope, and optionally apply a
+triple/slot-audit coverage, promotion-contract covered-fact property scope, and optionally apply a
 `ProductRuntimeBudgetPolicy` or promoted
 `ProductPromotionContract` budget. The output includes `optimization.hotspots`,
 `optimization.recommendations`, and `optimization.policy_hints`, turning the
 baseline into an actionable performance pass over slow phases/routes, low cache
 hit rates, excessive retrieval or verifier fanout, missing staged verification,
-missing triggered-claim-only staged verification, and audit-heavy
+missing triggered-claim-only staged verification, extracted triples without
+strict slot-audit reports, and audit-heavy
 runtime-profile distributions. Use full `ProductTrace.to_dict()`
 payloads for this workflow; bounded telemetry from `--bounded-trace` is
 intentionally rejected because it can truncate replay-relevant evidence and

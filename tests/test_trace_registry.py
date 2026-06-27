@@ -177,6 +177,86 @@ def test_product_trace_serializes_claim_verification_plan_and_bounded_summary():
     json.dumps(bounded)
 
 
+def test_product_trace_summarizes_triple_and_slot_coverage():
+    triple = {"subject": "France", "predicate": "capital_of", "object": "Paris"}
+    trace = ProductTrace(
+        claims=(
+            {
+                "claim_id": "c1",
+                "text": "Paris is the capital of France.",
+                "metadata": {"claim_triples": (triple,)},
+            },
+            {
+                "claim_id": "c2",
+                "text": "Berlin is a large city.",
+                "metadata": {},
+            },
+        ),
+        verification_results=(
+            VerificationResult(
+                status=VerificationStatus.SUPPORTED,
+                confidence=0.85,
+                evidence=("atlas",),
+                metadata={
+                    "selected_route": "triple_evidence",
+                    "audit_report": {
+                        "claim_id": "c1",
+                        "triple_count": 1,
+                        "passed_count": 1,
+                        "failed_count": 0,
+                        "covered_slot_count": 3,
+                        "missing_slot_count": 0,
+                        "passed": True,
+                        "audits": (
+                            {
+                                "triple": triple,
+                                "passed": True,
+                                "covered_slots": ("subject", "predicate", "object"),
+                                "missing_slots": (),
+                                "slot_coverage": {
+                                    "subject": 1.0,
+                                    "predicate": 1.0,
+                                    "object": 1.0,
+                                },
+                            },
+                        ),
+                    },
+                    "all_triple_results": (
+                        {
+                            "status": "supported",
+                            "metadata": {"triple": triple},
+                        },
+                    ),
+                },
+            ),
+        ),
+    )
+
+    summary = trace.triple_coverage_summary()
+    bounded = trace.to_bounded_dict()
+    metrics = product_runtime_metrics(trace)
+    bounded_metrics = product_runtime_metrics(bounded)
+
+    assert summary["claim_count"] == 2
+    assert summary["claims_with_triples"] == 1
+    assert summary["claim_triple_count"] == 1
+    assert summary["claim_triple_coverage_rate"] == pytest.approx(0.5)
+    assert summary["audit_available"] is True
+    assert summary["audit_claim_covered_count"] == 1
+    assert summary["audit_claim_coverage_rate"] == pytest.approx(1.0)
+    assert summary["audit_pass_rate"] == pytest.approx(1.0)
+    assert summary["slot_coverage_rate"] == pytest.approx(1.0)
+    assert summary["claim_predicate_counts"] == {"capital_of": 1}
+    assert summary["audit_predicate_counts"] == {"capital_of": 1}
+    assert summary["structured_fact_status_counts"] == {"supported": 1}
+    assert bounded["summaries"]["triple_coverage"]["audit_report_count"] == 1
+    assert metrics["triple_coverage_source"] == "full_trace"
+    assert metrics["triple_audit_pass_rate"] == pytest.approx(1.0)
+    assert bounded_metrics["triple_coverage_source"] == "bounded_summary"
+    assert bounded_metrics["triple_slot_coverage_rate"] == pytest.approx(1.0)
+    json.dumps(bounded)
+
+
 def test_product_trace_feedback_and_registry_normalize_strict_json_values(tmp_path):
     trace = ProductTrace(
         request_id="req-json",

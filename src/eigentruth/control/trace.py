@@ -264,6 +264,10 @@ class ProductTrace:
                 verification_result_count=len(prepared.verification_results),
             ),
             "verification_plan": _verification_plan_summary(prepared.verification_plan),
+            "triple_coverage": _triple_coverage_summary(
+                prepared.claims,
+                prepared.verification_results,
+            ),
             "final_answer": _final_answer_summary(prepared.final_answer),
         }
         payload = {
@@ -352,6 +356,13 @@ class ProductTrace:
     def final_answer_summary(self) -> dict[str, Any]:
         """Summarize final answer status for trace/registry metadata."""
         return _final_answer_summary(_final_answer_to_dict(self.final_answer))
+
+    def triple_coverage_summary(self) -> dict[str, Any]:
+        """Summarize claim-triple and slot-audit coverage in this trace."""
+        return _triple_coverage_summary(
+            tuple(_claim_to_dict(claim) for claim in self.claims),
+            tuple(_verification_result_to_dict(result) for result in self.verification_results),
+        )
 
 
 @dataclass(frozen=True)
@@ -616,6 +627,130 @@ def _verification_plan_summary(plan: Mapping[str, Any] | None) -> dict[str, Any]
         },
         "dependency_count": len(_as_sequence(plan.get("dependencies", ()))),
         "cost_estimate": cost_estimate,
+    }
+
+
+def _triple_coverage_summary(
+    claims: Sequence[Mapping[str, Any]],
+    results: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    claim_predicate_counts: dict[str, int] = {}
+    audit_predicate_counts: dict[str, int] = {}
+    structured_fact_predicate_counts: dict[str, int] = {}
+    structured_fact_status_counts: dict[str, int] = {}
+    covered_slot_counts: dict[str, int] = {}
+    missing_slot_counts: dict[str, int] = {}
+    slot_coverage_totals: dict[str, float] = {}
+    slot_coverage_counts: dict[str, int] = {}
+
+    claims_with_triples = 0
+    claim_triple_count = 0
+    triple_claim_ids: set[str] = set()
+    for index, claim in enumerate(claims):
+        metadata = _mapping(claim.get("metadata"))
+        triples = _triple_payloads(metadata.get("claim_triples", metadata.get("triples")))
+        if triples:
+            claims_with_triples += 1
+            triple_claim_ids.add(_payload_claim_id(claim, fallback=f"claim:{index}"))
+        claim_triple_count += len(triples)
+        for triple in triples:
+            _increment_count(claim_predicate_counts, _triple_predicate(triple))
+
+    audit_report_count = 0
+    audit_triple_count = 0
+    audit_passed_count = 0
+    audit_failed_count = 0
+    covered_slot_count = 0
+    missing_slot_count = 0
+    structured_fact_result_count = 0
+    audit_claim_ids: set[str] = set()
+    for index, result in enumerate(results):
+        metadata = _mapping(result.get("metadata"))
+        audit_report = _mapping(metadata.get("audit_report"))
+        if audit_report:
+            audit_report_count += 1
+            audit_claim_ids.add(
+                _payload_claim_id(
+                    audit_report,
+                    fallback=_payload_claim_id(metadata, fallback=f"claim:{index}"),
+                )
+            )
+            audits = _as_sequence(audit_report.get("audits", ()))
+            if audits:
+                for audit in audits:
+                    if not isinstance(audit, Mapping):
+                        continue
+                    audit_triple_count += 1
+                    if bool(audit.get("passed")):
+                        audit_passed_count += 1
+                    else:
+                        audit_failed_count += 1
+                    _increment_count(audit_predicate_counts, _triple_predicate(_mapping(audit.get("triple"))))
+                    for slot in _as_sequence(audit.get("covered_slots", ())):
+                        slot_name = str(slot)
+                        covered_slot_count += 1
+                        covered_slot_counts[slot_name] = covered_slot_counts.get(slot_name, 0) + 1
+                    for slot in _as_sequence(audit.get("missing_slots", ())):
+                        slot_name = str(slot)
+                        missing_slot_count += 1
+                        missing_slot_counts[slot_name] = missing_slot_counts.get(slot_name, 0) + 1
+                    for slot, value in _mapping(audit.get("slot_coverage")).items():
+                        numeric = _finite_float(value)
+                        if numeric is None:
+                            continue
+                        slot_name = str(slot)
+                        slot_coverage_totals[slot_name] = slot_coverage_totals.get(slot_name, 0.0) + numeric
+                        slot_coverage_counts[slot_name] = slot_coverage_counts.get(slot_name, 0) + 1
+            else:
+                audit_triple_count += _non_negative_int(audit_report.get("triple_count")) or 0
+                audit_passed_count += _non_negative_int(audit_report.get("passed_count")) or 0
+                audit_failed_count += _non_negative_int(audit_report.get("failed_count")) or 0
+                covered_slot_count += _non_negative_int(audit_report.get("covered_slot_count")) or 0
+                missing_slot_count += _non_negative_int(audit_report.get("missing_slot_count")) or 0
+
+        for triple_result in _as_sequence(metadata.get("all_triple_results", ())):
+            if not isinstance(triple_result, Mapping):
+                continue
+            structured_fact_result_count += 1
+            status = triple_result.get("status", result.get("status"))
+            _increment_count(structured_fact_status_counts, status)
+            triple_metadata = _mapping(triple_result.get("metadata"))
+            _increment_count(
+                structured_fact_predicate_counts,
+                _triple_predicate(_mapping(triple_metadata.get("triple"))),
+            )
+
+    total_audit_slots = covered_slot_count + missing_slot_count
+    audit_claim_covered_count = len(triple_claim_ids & audit_claim_ids)
+    return {
+        "claim_count": len(claims),
+        "verification_result_count": len(results),
+        "claims_with_triples": claims_with_triples,
+        "claim_triple_count": claim_triple_count,
+        "claim_triple_coverage_rate": _safe_div(claims_with_triples, len(claims)),
+        "claim_predicate_counts": claim_predicate_counts,
+        "audit_available": audit_report_count > 0,
+        "audit_report_count": audit_report_count,
+        "audit_claim_covered_count": audit_claim_covered_count,
+        "audit_claim_coverage_rate": _safe_div(audit_claim_covered_count, claims_with_triples),
+        "audit_triple_count": audit_triple_count,
+        "audit_passed_count": audit_passed_count,
+        "audit_failed_count": audit_failed_count,
+        "audit_pass_rate": _safe_div(audit_passed_count, audit_triple_count),
+        "audit_predicate_counts": audit_predicate_counts,
+        "covered_slot_count": covered_slot_count,
+        "missing_slot_count": missing_slot_count,
+        "slot_coverage_rate": _safe_div(covered_slot_count, total_audit_slots),
+        "covered_slot_counts": covered_slot_counts,
+        "missing_slot_counts": missing_slot_counts,
+        "slot_mean_coverage": {
+            slot: slot_coverage_totals[slot] / slot_coverage_counts[slot]
+            for slot in sorted(slot_coverage_totals)
+            if slot_coverage_counts.get(slot)
+        },
+        "structured_fact_result_count": structured_fact_result_count,
+        "structured_fact_status_counts": structured_fact_status_counts,
+        "structured_fact_predicate_counts": structured_fact_predicate_counts,
     }
 
 
@@ -1342,6 +1477,64 @@ def _retrieval_hit_count(metadata: Mapping[str, Any]) -> int:
     if isinstance(hits, Sequence) and not isinstance(hits, (str, bytes, bytearray)):
         return len(hits)
     return 0
+
+
+def _mapping(value: Any) -> dict[str, Any]:
+    if isinstance(value, Mapping):
+        return dict(value)
+    return {}
+
+
+def _triple_payloads(value: Any) -> tuple[Mapping[str, Any], ...]:
+    if value is None:
+        return ()
+    if isinstance(value, Mapping):
+        if _looks_like_triple_payload(value):
+            return (dict(value),)
+        raw = value.get("triples", value.get("claim_triples"))
+        return _triple_payloads(raw)
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        triples = []
+        for item in value:
+            if isinstance(item, Mapping) and _looks_like_triple_payload(item):
+                triples.append(dict(item))
+        return tuple(triples)
+    return ()
+
+
+def _looks_like_triple_payload(value: Mapping[str, Any]) -> bool:
+    return (
+        value.get("subject") is not None
+        and value.get("predicate") is not None
+        and (value.get("object") is not None or value.get("object_text") is not None)
+    )
+
+
+def _triple_predicate(value: Mapping[str, Any]) -> str | None:
+    predicate = value.get("predicate")
+    if predicate is None:
+        return None
+    text = str(predicate).strip()
+    return text or None
+
+
+def _payload_claim_id(value: Mapping[str, Any], *, fallback: str) -> str:
+    claim_id = value.get("claim_id")
+    if claim_id is None:
+        claim_id = value.get("id")
+    if claim_id is None:
+        return fallback
+    text = str(claim_id).strip()
+    return text or fallback
+
+
+def _increment_count(counts: dict[str, int], value: Any) -> None:
+    if value is None:
+        return
+    text = str(value).strip()
+    if not text:
+        return
+    counts[text] = counts.get(text, 0) + 1
 
 
 def _truthy_flag(value: Any) -> bool:

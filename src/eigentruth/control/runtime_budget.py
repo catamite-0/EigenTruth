@@ -450,6 +450,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
         metrics.update(_route_cost_metrics(trace))
         metrics.update(_verification_stage_metrics(trace))
         metrics.update(_verification_plan_metrics(trace))
+        metrics.update(_triple_coverage_metrics(trace))
         metrics.update(_final_answer_metrics(trace))
         metrics.update(_promotion_contract_metrics(trace))
         return metrics
@@ -486,6 +487,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
     metrics.update(_route_cost_metrics(trace))
     metrics.update(_verification_stage_metrics(trace))
     metrics.update(_verification_plan_metrics(trace))
+    metrics.update(_triple_coverage_metrics(trace))
     metrics.update(_final_answer_metrics(trace))
     metrics.update(_promotion_contract_metrics(trace))
     return metrics
@@ -707,6 +709,51 @@ def _verification_plan_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[
         "verification_plan_state_check_count": state_check_count,
         "verification_plan_world_model_check_count": world_model_check_count,
         "verification_plan_dependency_count": dependency_count,
+    }
+
+
+def _triple_coverage_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:
+    if isinstance(trace, ProductTrace):
+        summary = trace.triple_coverage_summary()
+        source = "full_trace"
+    else:
+        payload = dict(trace)
+        summary = _mapping(_mapping(payload.get("summaries")).get("triple_coverage"))
+        if summary:
+            source = "bounded_summary"
+        else:
+            summary = ProductTrace(
+                claims=tuple(_sequence(payload.get("claims", ()))),
+                verification_results=tuple(_sequence(payload.get("verification_results", ()))),
+            ).triple_coverage_summary()
+            source = "full_trace"
+    return {
+        "triple_coverage_summary": summary,
+        "triple_coverage_source": source,
+        "triple_claim_count": _finite_float(summary.get("claim_triple_count")),
+        "triple_claim_coverage_rate": _finite_float(summary.get("claim_triple_coverage_rate")),
+        "triple_audit_available": _optional_bool(summary.get("audit_available")),
+        "triple_audit_report_count": _finite_float(summary.get("audit_report_count")),
+        "triple_audit_claim_covered_count": _finite_float(
+            summary.get("audit_claim_covered_count")
+        ),
+        "triple_audit_claim_coverage_rate": _finite_float(summary.get("audit_claim_coverage_rate")),
+        "triple_audit_triple_count": _finite_float(summary.get("audit_triple_count")),
+        "triple_audit_pass_rate": _finite_float(summary.get("audit_pass_rate")),
+        "triple_slot_coverage_rate": _finite_float(summary.get("slot_coverage_rate")),
+        "triple_structured_fact_result_count": _finite_float(
+            summary.get("structured_fact_result_count")
+        ),
+        "triple_claim_predicate_counts": _int_mapping(summary.get("claim_predicate_counts")),
+        "triple_audit_predicate_counts": _int_mapping(summary.get("audit_predicate_counts")),
+        "triple_missing_slot_counts": _int_mapping(summary.get("missing_slot_counts")),
+        "triple_covered_slot_counts": _int_mapping(summary.get("covered_slot_counts")),
+        "triple_structured_fact_status_counts": _int_mapping(
+            summary.get("structured_fact_status_counts")
+        ),
+        "triple_structured_fact_predicate_counts": _int_mapping(
+            summary.get("structured_fact_predicate_counts")
+        ),
     }
 
 
