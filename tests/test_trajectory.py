@@ -2,9 +2,11 @@ import pytest
 import torch
 
 from eigentruth.core import (
+    AttentionPathwayMetrics,
     PromptAnswerPathwayMetrics,
     ResidualContributionProfile,
     TrajectoryMonitor,
+    attention_pathway_metrics,
     prompt_answer_pathway_metrics,
     residual_contribution_profile,
     trajectory_convergence_metrics,
@@ -119,6 +121,50 @@ def test_prompt_answer_pathway_metrics_rejects_bad_shapes():
     bad[0, 0] = float("inf")
     with pytest.raises(ValueError, match="finite"):
         prompt_answer_pathway_metrics(bad, torch.randn(1, 3))
+
+
+def test_attention_pathway_metrics_summarizes_prompt_and_answer_flow():
+    attention = torch.tensor(
+        [
+            [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.4, 0.6, 0.0, 0.0],
+                [0.50, 0.25, 0.25, 0.0],
+                [0.10, 0.10, 0.20, 0.60],
+            ]
+        ]
+    )
+    metrics = attention_pathway_metrics(
+        attention,
+        prompt_start=0,
+        answer_start=2,
+        sequence_end=4,
+        metadata={"kind": "attention_pathway"},
+    )
+    roundtrip = AttentionPathwayMetrics.from_dict(metrics.to_dict())
+
+    assert metrics.prompt_token_count == 2
+    assert metrics.answer_token_count == 2
+    assert metrics.head_count == 1
+    assert metrics.prompt_flow_fraction == pytest.approx((0.75 + 0.20) / 2.0)
+    assert metrics.answer_self_flow_fraction == pytest.approx((0.25 + 0.80) / 2.0)
+    assert metrics.prompt_flow_loss == pytest.approx(1.0 - metrics.prompt_flow_fraction)
+    assert metrics.pathway_gap == pytest.approx(0.05)
+    assert metrics.pathway_concentration == pytest.approx(metrics.answer_self_flow_fraction)
+    assert 0.0 <= metrics.pathway_entropy <= 1.0
+    assert metrics.metadata["kind"] == "attention_pathway"
+    assert roundtrip.to_dict() == metrics.to_dict()
+
+
+def test_attention_pathway_metrics_rejects_invalid_attention():
+    with pytest.raises(ValueError, match="attention must be shaped"):
+        attention_pathway_metrics(torch.randn(2, 3), answer_start=1)
+    with pytest.raises(ValueError, match="batch size 1"):
+        attention_pathway_metrics(torch.randn(2, 1, 3, 3), answer_start=1)
+    bad = torch.ones(1, 3, 3)
+    bad[0, 0, 0] = -1.0
+    with pytest.raises(ValueError, match="non-negative"):
+        attention_pathway_metrics(bad, answer_start=1)
 
 
 def test_trajectory_convergence_rejects_invalid_inputs():

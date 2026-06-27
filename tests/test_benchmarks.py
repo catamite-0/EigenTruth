@@ -2653,7 +2653,9 @@ def test_calibrated_observability_workflow_dry_run_writes_plan(tmp_path):
             model="tiny-local",
             layer=-2,
             sweep_layers=(-2, -3),
-            signals=("maha_last", "truth_proj"),
+            signals=("maha_last", "truth_proj", "attn_prompt_flow_loss"),
+            attention_pathway=True,
+            attn_implementation="eager",
             dry_run=True,
             python_executable=sys.executable,
         )
@@ -2670,6 +2672,10 @@ def test_calibrated_observability_workflow_dry_run_writes_plan(tmp_path):
     assert "--dump-scores-format" in truthfulqa_command
     assert "jsonl" in truthfulqa_command
     assert "--sweep-layers=-2,-3" in truthfulqa_command
+    assert "--attention-pathway" in truthfulqa_command
+    assert truthfulqa_command[truthfulqa_command.index("--attn-implementation") + 1] == "eager"
+    assert payload["config"]["attention_pathway"] is True
+    assert payload["config"]["attn_implementation"] == "eager"
     assert truthfulqa_command[truthfulqa_command.index("--statement-encoding-cache") + 1].endswith(
         "statement-encodings.json"
     )
@@ -2979,8 +2985,11 @@ def test_truthfulqa_frontier_workflow_dry_run_writes_multicell_plan(tmp_path):
             "3",
             "--eval-reps-shard-read-cache-size",
             "5",
+            "--attention-pathway",
+            "--attn-implementation",
+            "eager",
             "--signals",
-            "truth_proj,resid_update_norm",
+            "truth_proj,resid_update_norm,attn_prompt_flow_loss",
             "--conformal-signal",
             "truth_proj",
             "--conformal-repeats",
@@ -3002,7 +3011,9 @@ def test_truthfulqa_frontier_workflow_dry_run_writes_multicell_plan(tmp_path):
     assert payload["status"] == "needs_evidence"
     assert payload["config"]["models"][0]["name"] == "tiny"
     assert payload["config"]["scales"][0]["name"] == "l4"
-    assert payload["config"]["signals"] == ["truth_proj", "resid_update_norm"]
+    assert payload["config"]["signals"] == ["truth_proj", "resid_update_norm", "attn_prompt_flow_loss"]
+    assert payload["config"]["attention_pathway"] is True
+    assert payload["config"]["attn_implementation"] == "eager"
     assert payload["config"]["cache_dir"].endswith("frontier-cache")
     assert payload["config"]["eval_reps_cache_shard_size"] == 3
     assert payload["ensemble"] is None
@@ -3022,6 +3033,8 @@ def test_truthfulqa_frontier_workflow_dry_run_writes_multicell_plan(tmp_path):
     )
     assert truthfulqa_command[truthfulqa_command.index("--eval-reps-cache-shard-size") + 1] == "3"
     assert truthfulqa_command[truthfulqa_command.index("--eval-reps-shard-read-cache-size") + 1] == "5"
+    assert "--attention-pathway" in truthfulqa_command
+    assert truthfulqa_command[truthfulqa_command.index("--attn-implementation") + 1] == "eager"
     assert "--refresh-eval-reps-cache" in truthfulqa_command
     assert manifest["artifacts"]["cells.tiny-l4.artifact_manifest"]["path"].endswith(
         "tiny-l4/artifact-manifest.json"
@@ -34986,6 +34999,14 @@ def test_eval_truthfulqa_exposes_internal_eigenscore_signal():
         assert signal in module.SIGNALS
         assert signal not in module._sweep_signal_names(SimpleNamespace(inside_samples=0))
         assert module.DEFAULT_SCORE_DIRECTIONS[signal] == "higher"
+    attention_enabled = SimpleNamespace(inside_samples=0, attention_pathway=True)
+    for signal in module.ATTENTION_PATHWAY_SIGNAL_NAMES:
+        assert signal in module.SIGNALS
+        assert signal not in module._enabled_signals(SimpleNamespace(inside_samples=0))
+        assert signal not in module._sweep_signal_names(SimpleNamespace(inside_samples=0))
+        assert signal in module._enabled_signals(attention_enabled)
+        assert signal in module._sweep_signal_names(attention_enabled)
+        assert module.DEFAULT_SCORE_DIRECTIONS[signal] == "higher"
     assert module.FIRST_TOKEN_ENTROPY_SIGNAL in module.SIGNALS
     assert module.FIRST_TOKEN_ENTROPY_SIGNAL not in module._sweep_signal_names(SimpleNamespace(inside_samples=0))
     assert module.DEFAULT_SCORE_DIRECTIONS[module.FIRST_TOKEN_ENTROPY_SIGNAL] == "higher"
@@ -35519,6 +35540,20 @@ def test_eval_truthfulqa_eval_reps_cache_roundtrip(tmp_path):
                 "pathway_disagreement": 1.5,
             },
         },
+        "attention_pathway_by_layer": {
+            -1: {
+                "prompt_flow_loss": 0.11,
+                "answer_self_flow_fraction": 0.12,
+                "pathway_gap": 0.13,
+                "pathway_concentration": 0.14,
+            },
+            -2: {
+                "prompt_flow_loss": 0.21,
+                "answer_self_flow_fraction": 0.22,
+                "pathway_gap": 0.23,
+                "pathway_concentration": 0.24,
+            },
+        },
         "first_token_entropy": 0.375,
         "nll": 1.5,
     }
@@ -35559,6 +35594,7 @@ def test_eval_truthfulqa_eval_reps_cache_roundtrip(tmp_path):
     assert loaded[0]["eigenscore_by_layer"][-2] == pytest.approx(0.25)
     assert loaded[0]["resid_update_norm_by_layer"][-1] == pytest.approx(1.5)
     assert loaded[0]["prompt_answer_pathway_by_layer"][-2]["pathway_disagreement"] == pytest.approx(1.5)
+    assert loaded[0]["attention_pathway_by_layer"][-2]["prompt_flow_loss"] == pytest.approx(0.21)
     assert loaded[0]["first_token_entropy"] == pytest.approx(0.375)
     assert loaded[0]["nll"] == pytest.approx(1.5)
     assert loaded[1] is None
@@ -35970,6 +36006,20 @@ def test_eval_truthfulqa_score_reps_batch_matches_scalar_math():
                 "pathway_disagreement": 1.5,
             },
         },
+        "attention_pathway_by_layer": {
+            -1: {
+                "prompt_flow_loss": 0.11,
+                "answer_self_flow_fraction": 0.12,
+                "pathway_gap": 0.13,
+                "pathway_concentration": 0.14,
+            },
+            -2: {
+                "prompt_flow_loss": 0.21,
+                "answer_self_flow_fraction": 0.22,
+                "pathway_gap": 0.23,
+                "pathway_concentration": 0.24,
+            },
+        },
         "first_token_entropy": 0.375,
         "nll": 1.5,
     }
@@ -35992,6 +36042,20 @@ def test_eval_truthfulqa_score_reps_batch_matches_scalar_math():
                 "answer_anchor_distance": 3.3,
                 "answer_path_length": 3.4,
                 "pathway_disagreement": 3.5,
+            },
+        },
+        "attention_pathway_by_layer": {
+            -1: {
+                "prompt_flow_loss": 2.11,
+                "answer_self_flow_fraction": 2.12,
+                "pathway_gap": 2.13,
+                "pathway_concentration": 2.14,
+            },
+            -2: {
+                "prompt_flow_loss": 3.11,
+                "answer_self_flow_fraction": 3.12,
+                "pathway_gap": 3.13,
+                "pathway_concentration": 3.14,
             },
         },
         "first_token_entropy": 0.625,
@@ -36051,6 +36115,22 @@ def test_eval_truthfulqa_score_reps_batch_matches_scalar_math():
             )
             assert record["primary_scores"][signal] == pytest.approx(
                 reps["prompt_answer_pathway_by_layer"][-1][signal]
+            )
+        attention_signal_map = {
+            "attn_prompt_flow_loss": "prompt_flow_loss",
+            "attn_answer_self_flow": "answer_self_flow_fraction",
+            "attn_pathway_gap": "pathway_gap",
+            "attn_pathway_concentration": "pathway_concentration",
+        }
+        for signal, raw_signal in attention_signal_map.items():
+            assert record["layer_scores"][-1][signal] == pytest.approx(
+                reps["attention_pathway_by_layer"][-1][raw_signal]
+            )
+            assert record["layer_scores"][-2][signal] == pytest.approx(
+                reps["attention_pathway_by_layer"][-2][raw_signal]
+            )
+            assert record["primary_scores"][signal] == pytest.approx(
+                reps["attention_pathway_by_layer"][-1][raw_signal]
             )
         assert record["primary_scores"][module.FIRST_TOKEN_ENTROPY_SIGNAL] == pytest.approx(
             reps["first_token_entropy"]
@@ -36891,6 +36971,100 @@ def test_eval_truthfulqa_batched_statement_reps_scores_residual_update_norm():
     assert reps[0]["resid_update_norm_by_layer"][1] == pytest.approx(2.0)
     assert reps[0]["prompt_answer_pathway_by_layer"][1]["answer_path_length"] > 0.0
     assert reps[0]["first_token_entropy"] == pytest.approx(1.0)
+
+
+def test_eval_truthfulqa_batched_statement_reps_captures_attention_pathway():
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+
+    class NoCallTokenizer:
+        pad_token_id = 0
+        eos_token_id = 2
+
+        def __call__(self, *_args, **_kwargs):
+            raise AssertionError("precomputed encodings should bypass tokenizer calls")
+
+    class AttentionModel(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.config = SimpleNamespace(num_hidden_layers=1)
+
+        def forward(
+            self,
+            input_ids=None,
+            attention_mask=None,
+            output_hidden_states=False,
+            output_attentions=False,
+            **_kwargs,
+        ):
+            del attention_mask
+            state0 = input_ids.float().unsqueeze(-1).repeat(1, 1, 4)
+            state1 = state0 + 1.0
+            logits = torch.zeros((*input_ids.shape, 64), dtype=torch.float32)
+            attention = torch.tensor(
+                [[[
+                    [1.0, 0.0, 0.0],
+                    [0.8, 0.2, 0.0],
+                    [0.1, 0.4, 0.5],
+                ]]],
+                dtype=torch.float32,
+            ).repeat(input_ids.shape[0], 1, 1, 1)
+            return SimpleNamespace(
+                logits=logits,
+                hidden_states=(state0, state1) if output_hidden_states else None,
+                attentions=(attention,) if output_attentions else None,
+            )
+
+    reps = module.batched_statement_reps(
+        AttentionModel(),
+        NoCallTokenizer(),
+        [module.Statement("Q?", "A.", 0)],
+        [1],
+        torch.device("cpu"),
+        8,
+        encoded_statements=[module.StatementEncoding((1, 5, 6), 2)],
+        capture_attention_pathways=True,
+    )
+    metrics = reps[0]["attention_pathway_by_layer"][1]
+
+    assert metrics["prompt_flow_fraction"] == pytest.approx((0.8 + 0.1) / 2.0)
+    assert metrics["answer_self_flow_fraction"] == pytest.approx((0.2 + 0.9) / 2.0)
+    assert metrics["prompt_flow_loss"] == pytest.approx(0.55)
+    assert metrics["pathway_gap"] == pytest.approx(0.10)
+    assert metrics["pathway_concentration"] == pytest.approx(0.55)
+
+
+def test_eval_truthfulqa_attention_pathway_fails_when_backend_omits_attentions():
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+
+    class NoCallTokenizer:
+        pad_token_id = 0
+        eos_token_id = 2
+
+        def __call__(self, *_args, **_kwargs):
+            raise AssertionError("precomputed encodings should bypass tokenizer calls")
+
+    class NoAttentionModel(nn.Module):
+        def forward(self, input_ids=None, attention_mask=None, output_hidden_states=False, **_kwargs):
+            del attention_mask
+            state = input_ids.float().unsqueeze(-1).repeat(1, 1, 4)
+            logits = torch.zeros((*input_ids.shape, 64), dtype=torch.float32)
+            return SimpleNamespace(
+                logits=logits,
+                hidden_states=(state,) if output_hidden_states else None,
+                attentions=None,
+            )
+
+    with pytest.raises(ValueError, match="did not return"):
+        module.batched_statement_reps(
+            NoAttentionModel(),
+            NoCallTokenizer(),
+            [module.Statement("Q?", "A.", 0)],
+            [0],
+            torch.device("cpu"),
+            8,
+            encoded_statements=[module.StatementEncoding((1, 5, 6), 2)],
+            capture_attention_pathways=True,
+        )
 
 
 def test_eval_truthfulqa_batched_statement_reps_skips_lm_head_when_metrics_disabled():

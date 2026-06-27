@@ -190,20 +190,25 @@ representation-observability toolkit spanning **training and inference**.
 	  and deployable handoff
 	  `product_promotion_contract:smollm2-l8-selected-fusion-product-promotion-contract:0.3`.
 
-### E7b. Prompt-answer pathway diagnostics
+### E7b. Prompt-answer and attention-pathway diagnostics
 - **Question:** Do prompt/question-anchored and answer-anchored hidden-state
-  pathway summaries add a useful hallucination signal beyond static geometry and
-  residual-update profiles?
+  or attention-flow pathway summaries add a useful hallucination signal beyond
+  static geometry and residual-update profiles?
 - **Method:** Use the same forced-answer hidden states from `eval_truthfulqa.py`
   to compute prompt-answer distance/cosine gap, answer-anchor distance, answer
-  path length, and pathway disagreement per monitored layer; run the standard
-  layer/score conformal sweep before treating any pathway metric as evidence.
+  path length, and pathway disagreement per monitored layer. Optionally request
+  returned model attentions with `--attention-pathway --attn-implementation eager`
+  and compute prompt-flow loss, answer-self flow, pathway gap, and pathway
+  concentration. Run the standard layer/score conformal sweep before treating
+  any pathway metric as evidence.
 - **Accept:** at least one pathway signal improves held-out calibrated detection
   or selected fusion over the current best baseline without increasing false
-  alarm beyond the release gate.
-- **Deliverable:** `PromptAnswerPathwayMetrics`, score-dump/layer-sweep wiring,
-  docs, and CPU smoke tests. **Status:** implementation landed as a
-  dependency-free exploratory signal; larger model replication is still required.
+  alarm beyond the release gate, and attention-based runs must fail closed when
+  attentions are unavailable.
+- **Deliverable:** `PromptAnswerPathwayMetrics`, `AttentionPathwayMetrics`,
+  score-dump/layer-sweep wiring, docs, and CPU smoke tests. **Status:**
+  implementation landed as dependency-free exploratory signals; larger model
+  replication is still required.
 
 ### E8. Concept registry + multi-probe (platform glue)
 - **Question:** engineering, not science — can multiple (manifold, direction) pairs be

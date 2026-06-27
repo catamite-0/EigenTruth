@@ -131,6 +131,8 @@ class TruthfulQAFrontierWorkflowConfig:
     max_batch_tokens: int = 0
     max_length: int = 96
     hidden_state_capture: str = "hooks"
+    attention_pathway: bool = False
+    attn_implementation: str | None = None
     covariance_mode: str = "full"
     covariance_low_rank: int = 16
     progress_every: int = 0
@@ -204,6 +206,12 @@ class TruthfulQAFrontierWorkflowConfig:
             raise ValueError("cache_only cannot refresh caches.")
         if self.hidden_state_capture not in {"outputs", "hooks"}:
             raise ValueError("hidden_state_capture must be one of: outputs, hooks.")
+        if self.attn_implementation is not None:
+            attn_implementation = str(self.attn_implementation).strip()
+            if not attn_implementation:
+                raise ValueError("attn_implementation must be non-empty when set.")
+            object.__setattr__(self, "attn_implementation", attn_implementation)
+        object.__setattr__(self, "attention_pathway", bool(self.attention_pathway))
         if self.covariance_mode not in {"full", "diag", "low_rank", "shrinkage"}:
             raise ValueError("covariance_mode must be one of: full, diag, low_rank, shrinkage.")
         if self.dump_scores_format not in {"json", "jsonl"}:
@@ -364,6 +372,8 @@ def _cell_config(
         batch_size=config.batch_size,
         max_batch_tokens=config.max_batch_tokens,
         hidden_state_capture=config.hidden_state_capture,
+        attention_pathway=config.attention_pathway,
+        attn_implementation=config.attn_implementation,
         covariance_mode=config.covariance_mode,
         covariance_low_rank=config.covariance_low_rank,
         progress_every=config.progress_every,
@@ -572,6 +582,8 @@ def _config_payload(config: TruthfulQAFrontierWorkflowConfig) -> dict[str, Any]:
         "max_batch_tokens": config.max_batch_tokens,
         "max_length": config.max_length,
         "hidden_state_capture": config.hidden_state_capture,
+        "attention_pathway": config.attention_pathway,
+        "attn_implementation": config.attn_implementation,
         "covariance_mode": config.covariance_mode,
         "covariance_low_rank": config.covariance_low_rank,
         "progress_every": config.progress_every,
@@ -703,6 +715,8 @@ def _config_from_args(args: argparse.Namespace) -> TruthfulQAFrontierWorkflowCon
         max_batch_tokens=args.max_batch_tokens,
         max_length=args.max_length,
         hidden_state_capture=args.hidden_state_capture,
+        attention_pathway=args.attention_pathway,
+        attn_implementation=args.attn_implementation,
         covariance_mode=args.covariance_mode,
         covariance_low_rank=args.covariance_low_rank,
         progress_every=args.progress_every,
@@ -793,6 +807,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-batch-tokens", type=int, default=0)
     parser.add_argument("--max-length", type=int, default=96)
     parser.add_argument("--hidden-state-capture", choices=("outputs", "hooks"), default="hooks")
+    parser.add_argument("--attention-pathway", action="store_true",
+                        help="request optional attention-pathway score columns in each cell")
+    parser.add_argument("--attn-implementation", default=None,
+                        help="optional Transformers attention backend, e.g. eager for output_attentions support")
     parser.add_argument("--covariance-mode", choices=("full", "diag", "low_rank", "shrinkage"),
                         default="full")
     parser.add_argument("--covariance-low-rank", type=int, default=16)

@@ -90,6 +90,11 @@ TruthfulQA, in a deterministic, judge-free, single-forward-pass setup (SAPLMA-st
    how far answer states move from the prompt anchor, how much the answer path
    moves internally, and whether those two views disagree. Treat them as
    exploratory pathway diagnostics until replicated on larger calibrated runs.
+   Add `--attention-pathway --attn-implementation eager` to request model
+   attentions and emit optional `attn_prompt_flow_loss`, `attn_answer_self_flow`,
+   `attn_pathway_gap`, and `attn_pathway_concentration` columns. This is a
+   pathway-flow readout, not a causal attention knockout; unsupported attention
+   backends fail closed.
 
 ### Method
 
@@ -166,6 +171,11 @@ python benchmarks/eval_truthfulqa.py --model sshleifer/tiny-gpt2 --offline \
 # Optional multi-response INSIDE proxy (slower: samples K continuations per statement):
 python benchmarks/eval_truthfulqa.py --model sshleifer/tiny-gpt2 --offline \
   --batch-size 4 --inside-samples 3 --inside-batch-size 2 --inside-max-new-tokens 6
+
+# Optional attention pathway readout (requires a backend that returns attentions):
+python benchmarks/eval_truthfulqa.py --model Qwen/Qwen2.5-0.5B-Instruct \
+  --layer -8 --limit 200 --attention-pathway --attn-implementation eager \
+  --dump-scores artifacts/qwen05-attn-pathway-scores.json
 
 # Budgeted INSIDE: sample only the most suspicious half of each eval batch:
 python benchmarks/eval_truthfulqa.py --model sshleifer/tiny-gpt2 --offline \
@@ -483,6 +493,10 @@ progress output.
   training-free prompt/answer pathway summaries rank false statements above true
   ones. They are mechanism-inspired diagnostics, not a full attention-knockout or
   token-patching replication.
+- `attn_* > 0.5` means optional attention-flow pathway summaries rank false
+  statements above true ones. These require `--attention-pathway`; if the model
+  backend does not return attentions, the benchmark fails instead of writing a
+  misleading all-zero attention signal.
 - Compare `maha_last` against `nll_answer` and `first_token_entropy`: geometry is
   only interesting if it adds signal over plain perplexity or cheap single-decode
   uncertainty.
@@ -917,6 +931,12 @@ calibration iterations. Add `--refresh-*-cache` only when the cache should be
 rebuilt, and use `--cache-only` with existing layer/eval caches when the model
 forward pass should be skipped entirely.
 
+To include optional attention-flow pathway columns in the score dump, add
+`--attention-pathway --attn-implementation eager` and include the desired
+`attn_*` score names in `--signals`. These columns stay out of the default
+signal set because some Transformers attention backends do not return
+attentions.
+
 Use `--runtime-preset quick` for bounded local smoke runs, `calibrate` when
 iterating on existing score dumps, and `full` for real TruthfulQA-oriented runs
 with longer contexts and auto batch-size fallback. Any explicit CLI parameter
@@ -955,6 +975,9 @@ Use `--cache-dir` for l80 or multi-seed runs so each model/scale cell gets
 stable per-cell `statement-encodings.json`, `layer-stats.pt`, `eval-reps-cache`,
 and warmup checkpoint paths; use `--refresh-caches` only for the first cache
 build or when changing cache-defining model/data/layer parameters.
+Use `--attention-pathway --attn-implementation eager` with explicit `attn_*`
+entries in `--signals` when the frontier cells should collect optional
+attention-flow pathway evidence.
 
 When a layer-band selector report should drive several frontier cells, pass the
 same report to the frontier workflow and let each cell match its own run name:

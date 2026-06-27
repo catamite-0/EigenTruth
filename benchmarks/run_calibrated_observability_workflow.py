@@ -122,6 +122,8 @@ class CalibratedObservabilityWorkflowConfig:
     batch_size: int = 1
     max_batch_tokens: int = 0
     hidden_state_capture: str = "outputs"
+    attention_pathway: bool = False
+    attn_implementation: str | None = None
     covariance_mode: str = "full"
     covariance_low_rank: int = 16
     progress_every: int = 0
@@ -176,6 +178,12 @@ class CalibratedObservabilityWorkflowConfig:
         object.__setattr__(self, "max_batch_tokens", int(self.max_batch_tokens))
         object.__setattr__(self, "covariance_mode", str(self.covariance_mode))
         object.__setattr__(self, "covariance_low_rank", int(self.covariance_low_rank))
+        object.__setattr__(self, "attention_pathway", bool(self.attention_pathway))
+        if self.attn_implementation is not None:
+            attn_implementation = str(self.attn_implementation).strip()
+            if not attn_implementation:
+                raise ValueError("attn_implementation must be non-empty when set.")
+            object.__setattr__(self, "attn_implementation", attn_implementation)
         object.__setattr__(self, "max_length", int(self.max_length))
         object.__setattr__(self, "progress_every", int(self.progress_every))
         object.__setattr__(self, "warmup_checkpoint_every", int(self.warmup_checkpoint_every))
@@ -440,6 +448,10 @@ def _truthfulqa_command(config: CalibratedObservabilityWorkflowConfig) -> list[s
         command.append("--length-bucketed-batches")
     if config.auto_batch_size:
         command.append("--auto-batch-size")
+    if config.attention_pathway:
+        command.append("--attention-pathway")
+    if config.attn_implementation is not None:
+        command.extend(["--attn-implementation", config.attn_implementation])
     if config.cache_only:
         command.append("--cache-only")
     if config.statement_encoding_cache is not None and not config.cache_only:
@@ -579,6 +591,8 @@ def _evidence_bundle_summary(
             "max_batch_tokens": config.max_batch_tokens,
             "auto_batch_size": config.auto_batch_size,
             "cache_only": config.cache_only,
+            "attention_pathway": config.attention_pathway,
+            "attn_implementation": config.attn_implementation,
         },
         "caches": _cache_payload(config),
         "score_dump": {
@@ -676,6 +690,8 @@ def _config_payload(config: CalibratedObservabilityWorkflowConfig) -> dict[str, 
         "batch_size": config.batch_size,
         "max_batch_tokens": config.max_batch_tokens,
         "hidden_state_capture": config.hidden_state_capture,
+        "attention_pathway": config.attention_pathway,
+        "attn_implementation": config.attn_implementation,
         "covariance_mode": config.covariance_mode,
         "covariance_low_rank": config.covariance_low_rank,
         "progress_every": config.progress_every,
@@ -1042,6 +1058,8 @@ def _config_from_args(args: argparse.Namespace) -> CalibratedObservabilityWorkfl
             sweep_layers=sweep_layers,
             has_band_report=bool(band_report and sweep),
         ),
+        attention_pathway=args.attention_pathway,
+        attn_implementation=args.attn_implementation,
         covariance_mode=_arg_or_preset(args, preset_defaults, "covariance_mode", "full"),
         covariance_low_rank=_arg_or_preset(args, preset_defaults, "covariance_low_rank", 16),
         progress_every=_arg_or_preset(args, preset_defaults, "progress_every", 0),
@@ -1147,6 +1165,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--batch-size", type=int, default=None)
     parser.add_argument("--max-batch-tokens", type=int, default=None)
     parser.add_argument("--hidden-state-capture", default=None, choices=("outputs", "hooks"))
+    parser.add_argument("--attention-pathway", action="store_true",
+                        help="request optional attention-pathway score columns from eval_truthfulqa.py")
+    parser.add_argument("--attn-implementation", default=None,
+                        help="optional Transformers attention backend, e.g. eager for output_attentions support")
     parser.add_argument("--covariance-mode", default=None,
                         choices=("full", "diag", "low_rank", "shrinkage"))
     parser.add_argument("--covariance-low-rank", type=int, default=None)

@@ -18,7 +18,8 @@ EigenTruth benchmark — can hidden-state geometry separate true vs. false state
        dynamics signal?
     5. prompt/question-anchored 与 answer-anchored 隐状态路径是否分歧？
        Do prompt/question-anchored and answer-anchored hidden-state pathways diverge
-       on false statements?
+       on false statements? Optional --attention-pathway also reads question-vs-answer
+       attention flow when the model backend returns attentions.
 
 方法 / Method (SAPLMA 式、确定性、无需 LLM 裁判 / SAPLMA-style, deterministic, judge-free):
     - 从**留出**题目的*正确*答案构建真值流形（无标签泄漏）。
@@ -66,6 +67,7 @@ import torch
 from eigentruth.calibration import DEFAULT_SCORE_DIRECTIONS
 from eigentruth.core import (
     TruthSubspace,
+    attention_pathway_metrics,
     embedding_semantic_entropy,
     internal_eigenscore,
     lexical_semantic_energy,
@@ -106,6 +108,12 @@ PROMPT_ANSWER_PATHWAY_SIGNAL_NAMES = (
     "answer_path_length",
     "pathway_disagreement",
 )
+ATTENTION_PATHWAY_SIGNAL_NAMES = (
+    "attn_prompt_flow_loss",
+    "attn_answer_self_flow",
+    "attn_pathway_gap",
+    "attn_pathway_concentration",
+)
 SIGNALS = [
     "maha_last",
     "truth_proj",
@@ -113,6 +121,7 @@ SIGNALS = [
     "resid_update_norm",
     *RESID_UPDATE_PROFILE_SIGNAL_NAMES,
     *PROMPT_ANSWER_PATHWAY_SIGNAL_NAMES,
+    *ATTENTION_PATHWAY_SIGNAL_NAMES,
     "disp_euclid",
     "disp_hse",
     "eigenscore",
@@ -531,7 +540,13 @@ def _inside_trigger_enabled(args) -> bool:
 
 
 def _enabled_signals(args) -> list[str]:
-    signals = list(SIGNALS)
+    signals = [
+        signal
+        for signal in SIGNALS
+        if signal not in ATTENTION_PATHWAY_SIGNAL_NAMES
+    ]
+    if bool(getattr(args, "attention_pathway", False)):
+        signals.extend(ATTENTION_PATHWAY_SIGNAL_NAMES)
     if _inside_enabled(args):
         signals.extend(INSIDE_SIGNALS)
     return signals
@@ -539,6 +554,8 @@ def _enabled_signals(args) -> list[str]:
 
 def _sweep_signal_names(args) -> list[str]:
     signals = ["maha_last", "truth_proj", "subspace_resid", "resid_update_norm", "eigenscore"]
+    if bool(getattr(args, "attention_pathway", False)):
+        signals.extend(ATTENTION_PATHWAY_SIGNAL_NAMES)
     if _inside_enabled(args):
         signals.extend(INSIDE_SIGNALS)
     return signals
@@ -773,6 +790,72 @@ def _pathway_signal_scores(metrics: Mapping[str, object] | None) -> dict[str, fl
     }
 
 
+def _attention_pathway_metrics_by_layer(
+    attentions,
+    layers: Sequence[int],
+    *,
+    n_layers: int | None,
+    row: int,
+    prompt_start: int,
+    answer_start: int,
+    sequence_end: int,
+) -> dict[int, dict[str, float]]:
+    metrics: dict[int, dict[str, float]] = {}
+    if attentions is None or answer_start <= prompt_start or sequence_end <= answer_start:
+        return {int(layer): _empty_attention_pathway_metrics() for layer in layers}
+    for layer in layers:
+        layer = int(layer)
+        attn_index = _attention_index_for_hidden_layer(layer, n_layers=n_layers)
+        if attn_index is None or attn_index >= len(attentions):
+            metrics[layer] = _empty_attention_pathway_metrics()
+            continue
+        try:
+            metrics[layer] = attention_pathway_metrics(
+                attentions[attn_index][row],
+                prompt_start=prompt_start,
+                answer_start=answer_start,
+                sequence_end=sequence_end,
+                metadata={"layer": layer, "attention_index": int(attn_index)},
+            ).to_dict()
+        except (IndexError, TypeError, ValueError):
+            metrics[layer] = _empty_attention_pathway_metrics()
+    return metrics
+
+
+def _attention_index_for_hidden_layer(layer: int, *, n_layers: int | None) -> int | None:
+    if n_layers is None:
+        return None
+    hidden_index = int(layer)
+    if hidden_index < 0:
+        hidden_index = int(n_layers) + 1 + hidden_index
+    attention_index = hidden_index - 1
+    if attention_index < 0 or attention_index >= int(n_layers):
+        return None
+    return int(attention_index)
+
+
+def _empty_attention_pathway_metrics() -> dict[str, float]:
+    return {
+        "prompt_flow_fraction": 0.0,
+        "answer_self_flow_fraction": 0.0,
+        "other_flow_fraction": 0.0,
+        "prompt_flow_loss": 0.0,
+        "pathway_gap": 0.0,
+        "pathway_concentration": 0.0,
+        "pathway_entropy": 0.0,
+    }
+
+
+def _attention_pathway_signal_scores(metrics: Mapping[str, object] | None) -> dict[str, float]:
+    payload = dict(metrics or {})
+    return {
+        "attn_prompt_flow_loss": float(payload.get("prompt_flow_loss", 0.0)),
+        "attn_answer_self_flow": float(payload.get("answer_self_flow_fraction", 0.0)),
+        "attn_pathway_gap": float(payload.get("pathway_gap", 0.0)),
+        "attn_pathway_concentration": float(payload.get("pathway_concentration", 0.0)),
+    }
+
+
 def _hook_capture_layer_map(model, layers: Sequence[int]) -> dict[int, int]:
     """Return requested hidden-state indexes mapped to transformer block indexes.
 
@@ -835,13 +918,17 @@ def _call_forward_for_hidden_states(
     input_ids: torch.Tensor,
     attention_mask: torch.Tensor,
     output_hidden_states: bool,
+    output_attentions: bool = False,
 ):
-    return module(
-        input_ids=input_ids,
-        attention_mask=attention_mask,
-        output_hidden_states=output_hidden_states,
-        use_cache=False,
-    )
+    kwargs = {
+        "input_ids": input_ids,
+        "attention_mask": attention_mask,
+        "output_hidden_states": output_hidden_states,
+        "use_cache": False,
+    }
+    if output_attentions:
+        kwargs["output_attentions"] = True
+    return module(**kwargs)
 
 
 def _forward_for_hidden_states(
@@ -850,6 +937,7 @@ def _forward_for_hidden_states(
     input_ids: torch.Tensor,
     attention_mask: torch.Tensor,
     output_hidden_states: bool,
+    output_attentions: bool = False,
     need_logits: bool,
 ):
     if not need_logits:
@@ -860,16 +948,20 @@ def _forward_for_hidden_states(
                     input_ids=input_ids,
                     attention_mask=attention_mask,
                     output_hidden_states=output_hidden_states,
+                    output_attentions=output_attentions,
                 )
             except (AttributeError, TypeError, NotImplementedError):
                 continue
-            if not output_hidden_states or getattr(out, "hidden_states", None) is not None:
+            has_hidden_states = not output_hidden_states or getattr(out, "hidden_states", None) is not None
+            has_attentions = not output_attentions or getattr(out, "attentions", None) is not None
+            if has_hidden_states and has_attentions:
                 return out, True
     return _call_forward_for_hidden_states(
         model,
         input_ids=input_ids,
         attention_mask=attention_mask,
         output_hidden_states=output_hidden_states,
+        output_attentions=output_attentions,
     ), False
 
 
@@ -881,6 +973,7 @@ def _forward_with_selected_hidden_states(
     layers: Sequence[int],
     hidden_state_capture: str,
     need_logits: bool = True,
+    output_attentions: bool = False,
 ):
     if hidden_state_capture not in HIDDEN_STATE_CAPTURE_METHODS:
         raise ValueError(f"hidden_state_capture must be one of {HIDDEN_STATE_CAPTURE_METHODS}.")
@@ -891,6 +984,7 @@ def _forward_with_selected_hidden_states(
             input_ids=input_ids,
             attention_mask=attention_mask,
             output_hidden_states=True,
+            output_attentions=output_attentions,
             need_logits=need_logits,
         )
         return out, {int(layer): out.hidden_states[int(layer)] for layer in layers}
@@ -911,6 +1005,7 @@ def _forward_with_selected_hidden_states(
             input_ids=input_ids,
             attention_mask=attention_mask,
             output_hidden_states=False,
+            output_attentions=output_attentions,
             need_logits=need_logits,
         )
     finally:
@@ -932,6 +1027,7 @@ def _forward_with_selected_hidden_states(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
                 output_hidden_states=False,
+                output_attentions=output_attentions,
                 need_logits=True,
             )
         finally:
@@ -1406,6 +1502,10 @@ def _score_reps_batch(
             _pathway_signal_scores(dict(reps.get("prompt_answer_pathway_by_layer") or {}).get(layer))
             for _, reps in valid
         ]
+        attention_pathway_scores_by_record = [
+            _attention_pathway_signal_scores(dict(reps.get("attention_pathway_by_layer") or {}).get(layer))
+            for _, reps in valid
+        ]
         for record, maha, proj, resid, resid_update, eigenscore in zip(
             records,
             maha_values,
@@ -1424,6 +1524,8 @@ def _score_reps_batch(
             }
         for record, pathway_scores in zip(records, pathway_scores_by_record, strict=True):
             record["layer_scores"][layer].update(pathway_scores)
+        for record, attention_pathway_scores in zip(records, attention_pathway_scores_by_record, strict=True):
+            record["layer_scores"][layer].update(attention_pathway_scores)
 
     for record, (_, reps) in zip(records, valid):
         ans = reps["ans_hs"]
@@ -2014,7 +2116,7 @@ def _eval_reps_cache_metadata(
     n_layers: int,
     eval_statements: Sequence[Statement],
 ) -> dict:
-    return {
+    metadata = {
         "format": 1,
         "model": args.model,
         "dtype": args.dtype,
@@ -2032,6 +2134,9 @@ def _eval_reps_cache_metadata(
         "eval_fingerprint": _statement_fingerprint(eval_statements),
         "eval_statements": _statement_cache_payload(eval_statements),
     }
+    if bool(getattr(args, "attention_pathway", False)):
+        metadata["attention_pathway_schema"] = 1
+    return metadata
 
 
 def _validate_cache_only_metadata(
@@ -2061,15 +2166,18 @@ def _validate_cache_only_metadata(
         },
         cache_name="layer stats cache",
     )
+    eval_expected = {
+        **base_expected,
+        "eigenscore_alpha": float(args.eigenscore_alpha),
+        "first_token_entropy_schema": 1,
+        "first_token_top_k": int(getattr(args, "first_token_top_k", FIRST_TOKEN_TOP_K_DEFAULT)),
+        "prompt_answer_pathway_schema": 1,
+    }
+    if bool(getattr(args, "attention_pathway", False)):
+        eval_expected["attention_pathway_schema"] = 1
     _validate_cache_metadata(
         _eval_reps_validation_metadata(eval_reps_metadata),
-        {
-            **base_expected,
-            "eigenscore_alpha": float(args.eigenscore_alpha),
-            "first_token_entropy_schema": 1,
-            "first_token_top_k": int(getattr(args, "first_token_top_k", FIRST_TOKEN_TOP_K_DEFAULT)),
-            "prompt_answer_pathway_schema": 1,
-        },
+        eval_expected,
         cache_name="eval reps cache",
     )
 
@@ -2090,6 +2198,10 @@ def _reps_to_cache_state(reps: Optional[Mapping]) -> Optional[dict]:
         "prompt_answer_pathway_by_layer": {
             int(layer): dict(value)
             for layer, value in dict(reps.get("prompt_answer_pathway_by_layer") or {}).items()
+        },
+        "attention_pathway_by_layer": {
+            int(layer): dict(value)
+            for layer, value in dict(reps.get("attention_pathway_by_layer") or {}).items()
         },
         "first_token_entropy": float(reps.get("first_token_entropy", 0.0)),
         "nll": float(reps["nll"]),
@@ -2120,6 +2232,10 @@ def _reps_from_cache_state(state: Optional[Mapping]) -> Optional[dict]:
         "prompt_answer_pathway_by_layer": {
             int(layer): dict(value)
             for layer, value in dict(state.get("prompt_answer_pathway_by_layer") or {}).items()
+        },
+        "attention_pathway_by_layer": {
+            int(layer): dict(value)
+            for layer, value in dict(state.get("attention_pathway_by_layer") or {}).items()
         },
         "first_token_entropy": float(state.get("first_token_entropy", 0.0)),
         "nll": float(state["nll"]),
@@ -2495,15 +2611,28 @@ def load_truthfulqa(
 _DTYPES = {"float32": torch.float32, "bfloat16": torch.bfloat16, "float16": torch.float16}
 
 
-def load_model(model_name: str, device: torch.device, dtype: str = "float32"):
+def load_model(
+    model_name: str,
+    device: torch.device,
+    dtype: str = "float32",
+    *,
+    attn_implementation: str | None = None,
+):
     from transformers import AutoModelForCausalLM, AutoTokenizer  # lazy
 
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     # dtype= 替代已弃用的 torch_dtype=；bfloat16 减半权重内存；
     # low_cpu_mem_usage 避免加载时 2× 峰值内存（低内存机器关键）
-    model = AutoModelForCausalLM.from_pretrained(
-        model_name, dtype=_DTYPES[dtype], low_cpu_mem_usage=True
-    )
+    load_kwargs = {"dtype": _DTYPES[dtype], "low_cpu_mem_usage": True}
+    if attn_implementation:
+        load_kwargs["attn_implementation"] = str(attn_implementation)
+    try:
+        model = AutoModelForCausalLM.from_pretrained(model_name, **load_kwargs)
+    except TypeError:
+        if not attn_implementation:
+            raise
+        load_kwargs.pop("attn_implementation", None)
+        model = AutoModelForCausalLM.from_pretrained(model_name, **load_kwargs)
     model.to(device).eval()
     return model, tokenizer
 
@@ -2754,6 +2883,7 @@ def batched_statement_reps(
     prefix_kv_cache: bool = False,
     first_token_top_k: int = FIRST_TOKEN_TOP_K_DEFAULT,
     capture_prompt_hidden_states: bool = False,
+    capture_attention_pathways: bool = False,
 ) -> list[Optional[dict]]:
     """Batch forced-answer forwards while preserving per-statement result shape."""
     encoded: list[tuple[int, list[int], int]] = []
@@ -2774,6 +2904,8 @@ def batched_statement_reps(
     if prefix_kv_cache:
         if capture_prompt_hidden_states:
             raise ValueError("--prefix-kv-cache cannot be combined with pre-generation probe record export.")
+        if capture_attention_pathways:
+            raise ValueError("--prefix-kv-cache cannot be combined with --attention-pathway.")
         if hidden_state_capture != "outputs":
             raise ValueError("--prefix-kv-cache requires hidden_state_capture='outputs'.")
         if compute_answer_metrics:
@@ -2809,7 +2941,13 @@ def batched_statement_reps(
         layers=capture_layers,
         hidden_state_capture=hidden_state_capture,
         need_logits=compute_answer_metrics,
+        output_attentions=bool(capture_attention_pathways),
     )
+    if capture_attention_pathways and getattr(out, "attentions", None) is None:
+        raise ValueError(
+            "--attention-pathway requested model attentions, but the model backend did not return them. "
+            "Use a model/backend that supports output_attentions, such as an eager attention implementation."
+        )
     for row, (original_idx, ids, n_ans) in enumerate(encoded):
         seq_len = len(ids)
         last_by_layer = {
@@ -2855,6 +2993,15 @@ def batched_statement_reps(
             answer_start=ans_start,
             sequence_end=seq_len,
         )
+        attention_pathway_by_layer = _attention_pathway_metrics_by_layer(
+            getattr(out, "attentions", None),
+            layers,
+            n_layers=n_layers,
+            row=row,
+            prompt_start=0,
+            answer_start=ans_start,
+            sequence_end=seq_len,
+        ) if capture_attention_pathways else {}
 
         nll = _answer_nll_from_logits(out.logits[row], input_ids[row], seq_len, n_ans)
         first_token_entropy = _first_answer_token_entropy_from_logits(
@@ -2869,6 +3016,7 @@ def batched_statement_reps(
             "eigenscore_by_layer": eigenscore_by_layer,
             "resid_update_norm_by_layer": resid_update_norm_by_layer,
             "prompt_answer_pathway_by_layer": pathway_metrics_by_layer,
+            "attention_pathway_by_layer": attention_pathway_by_layer,
             "first_token_entropy": first_token_entropy,
             "nll": nll,
         }
@@ -3066,6 +3214,7 @@ def _batched_statement_reps_for_pairs(
     prefix_kv_cache: bool = False,
     first_token_top_k: int = FIRST_TOKEN_TOP_K_DEFAULT,
     capture_prompt_hidden_states: bool = False,
+    capture_attention_pathways: bool = False,
 ) -> list[Optional[dict]]:
     """Run forced-answer forwards for statement pairs with optional memory fallback."""
 
@@ -3086,6 +3235,7 @@ def _batched_statement_reps_for_pairs(
             prefix_kv_cache=prefix_kv_cache,
             first_token_top_k=first_token_top_k,
             capture_prompt_hidden_states=capture_prompt_hidden_states,
+            capture_attention_pathways=capture_attention_pathways,
         )
 
     return _run_with_batch_size_fallback(
@@ -3103,7 +3253,8 @@ def statement_reps(model, tokenizer, stmt: Statement, layers: List[int],
                    eigenscore_alpha: float = 1e-3,
                    hidden_state_capture: str = "outputs",
                    prefix_kv_cache: bool = False,
-                   first_token_top_k: int = FIRST_TOKEN_TOP_K_DEFAULT) -> Optional[dict]:
+                   first_token_top_k: int = FIRST_TOKEN_TOP_K_DEFAULT,
+                   capture_attention_pathways: bool = False) -> Optional[dict]:
     """Single-statement compatibility wrapper around batched_statement_reps."""
     return batched_statement_reps(
         model,
@@ -3118,6 +3269,7 @@ def statement_reps(model, tokenizer, stmt: Statement, layers: List[int],
         encoded_statements=None,
         prefix_kv_cache=prefix_kv_cache,
         first_token_top_k=first_token_top_k,
+        capture_attention_pathways=capture_attention_pathways,
     )[0]
 
 
@@ -4101,7 +4253,12 @@ def run(args) -> dict:
                 )
         print(f"Loading {args.model} on {device} (dtype={args.dtype}) ...")
         with _profile_phase(profile, "load_model"):
-            model, tokenizer = load_model(args.model, device, args.dtype)
+            model, tokenizer = load_model(
+                args.model,
+                device,
+                args.dtype,
+                attn_implementation=getattr(args, "attn_implementation", None),
+            )
         n_layers = int(model.config.num_hidden_layers)
 
     args.layer = resolve_target_layer(args.layer, n_layers, offline=args.offline)
@@ -4356,6 +4513,7 @@ def run(args) -> dict:
                     prefix_kv_cache=bool(getattr(args, "prefix_kv_cache", False)),
                     first_token_top_k=int(getattr(args, "first_token_top_k", FIRST_TOKEN_TOP_K_DEFAULT)),
                     capture_prompt_hidden_states=dump_pre_generation_probe_records,
+                    capture_attention_pathways=bool(getattr(args, "attention_pathway", False)),
                 )
             if eval_reps_writer is not None:
                 with _profile_phase(profile, "write_eval_reps_cache_batch"):
@@ -4562,6 +4720,9 @@ def run(args) -> dict:
                     sweep_scores[layer]["subspace_resid"].append(layer_scores["subspace_resid"])
                     sweep_scores[layer]["resid_update_norm"].append(layer_scores["resid_update_norm"])
                     sweep_scores[layer]["eigenscore"].append(layer_scores["eigenscore"])
+                    if bool(getattr(args, "attention_pathway", False)):
+                        for signal in ATTENTION_PATHWAY_SIGNAL_NAMES:
+                            sweep_scores[layer][signal].append(layer_scores[signal])
                     if inside_scores is not None:
                         sweep_scores[layer][INSIDE_SIGNAL].append(float(inside_scores[layer]))
                         sweep_scores[layer][INSIDE_SEMANTIC_ENTROPY_SIGNAL].append(float(inside_entropy))
@@ -4581,6 +4742,9 @@ def run(args) -> dict:
                     scores[signal].append(primary_scores[signal])
                 for signal in PROMPT_ANSWER_PATHWAY_SIGNAL_NAMES:
                     scores[signal].append(primary_scores[signal])
+                if bool(getattr(args, "attention_pathway", False)):
+                    for signal in ATTENTION_PATHWAY_SIGNAL_NAMES:
+                        scores[signal].append(primary_scores[signal])
                 scores["disp_euclid"].append(primary_scores["disp_euclid"])
                 scores["disp_hse"].append(primary_scores["disp_hse"])
                 scores["eigenscore"].append(primary_scores["eigenscore"])
@@ -4683,6 +4847,7 @@ def run(args) -> dict:
     payload = {
         "config": {"model": args.model, "dataset": "truthfulqa",
                    "dtype": args.dtype, "layer": args.layer,
+                   "attn_implementation": getattr(args, "attn_implementation", None),
                    "offline": args.offline, "max_length": args.max_length,
                    "manifold_n": primary.n, "n_manifold_false": len(manifold_false),
                    "hidden_dim": primary.hidden_dim, "subspace_rank": args.subspace_rank,
@@ -4691,6 +4856,10 @@ def run(args) -> dict:
                    "first_token_top_k": int(getattr(args, "first_token_top_k", FIRST_TOKEN_TOP_K_DEFAULT)),
                    "resid_update_profile_schema": 1,
                    "prompt_answer_pathway_schema": 1,
+                   "attention_pathway": bool(getattr(args, "attention_pathway", False)),
+                   "attention_pathway_schema": (
+                       1 if bool(getattr(args, "attention_pathway", False)) else None
+                   ),
                    "batch_size": args.batch_size,
                    "max_batch_tokens": max_batch_tokens,
                    "auto_batch_size": args.auto_batch_size,
@@ -4917,6 +5086,9 @@ def main():
     p.add_argument("--model", default="Qwen/Qwen2.5-0.5B-Instruct")
     p.add_argument("--dtype", default="float32", choices=list(_DTYPES),
                    help="model weight dtype; bfloat16 halves memory on low-RAM machines")
+    p.add_argument("--attn-implementation", default=None,
+                   help="optional Transformers attention implementation override, e.g. eager when "
+                        "--attention-pathway needs output_attentions support")
     p.add_argument("--layer", type=int, default=-8, help="target layer index (negative ok)")
     p.add_argument("--sweep", action="store_true",
                    help="score geometry signals at every layer; with default hidden-state capture, "
@@ -4960,6 +5132,10 @@ def main():
                    help="regularization alpha for EigenScore-style log-det scores")
     p.add_argument("--first-token-top-k", type=int, default=FIRST_TOKEN_TOP_K_DEFAULT,
                    help="top-k logits used for first_token_entropy; higher entropy is treated as anomalous")
+    p.add_argument("--attention-pathway", action="store_true",
+                   help="optional: request model attentions and emit question-vs-answer attention-flow "
+                        "pathway signals; off by default because it increases memory and may require "
+                        "attention support from the model backend")
     p.add_argument("--inside-samples", type=int, default=0,
                    help="enable multi-sample INSIDE proxy with this many sampled continuations; "
                         "0 disables it, values >=2 enable inside_eigenscore, inside_semantic_entropy, "
@@ -5101,6 +5277,8 @@ def main():
             p.error("--inside-min-samples cannot exceed --inside-samples")
     if args.inside_trigger_signal and args.inside_samples < 2:
         p.error("--inside-trigger-signal requires --inside-samples >=2")
+    if args.inside_trigger_signal in ATTENTION_PATHWAY_SIGNAL_NAMES and not args.attention_pathway:
+        p.error("attention pathway trigger signals require --attention-pathway")
     if (args.inside_trigger_threshold is not None or args.inside_trigger_top_fraction is not None) \
             and not args.inside_trigger_signal:
         p.error("--inside-trigger-threshold/--inside-trigger-top-fraction require --inside-trigger-signal")
@@ -5142,6 +5320,8 @@ def main():
         p.error("--warmup-checkpoint-every must be >=0")
     if args.prefix_kv_cache and args.hidden_state_capture != "outputs":
         p.error("--prefix-kv-cache requires --hidden-state-capture outputs")
+    if args.prefix_kv_cache and args.attention_pathway:
+        p.error("--attention-pathway cannot be combined with --prefix-kv-cache")
     if args.cache_only:
         if not args.layer_stats_cache or not args.eval_reps_cache:
             p.error("--cache-only requires --layer-stats-cache and --eval-reps-cache")

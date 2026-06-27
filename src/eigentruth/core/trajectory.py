@@ -213,6 +213,67 @@ class PromptAnswerPathwayMetrics:
         )
 
 
+@dataclass(frozen=True)
+class AttentionPathwayMetrics:
+    """Question-vs-answer attention-flow summary for one attention layer.
+
+    The metrics summarize how answer-token queries allocate attention mass to
+    prompt/question tokens versus answer tokens. This is a cheap observational
+    readout of pathway balance, not a causal attention knockout.
+    """
+
+    prompt_token_count: int
+    answer_token_count: int
+    head_count: int
+    query_count: int
+    key_count: int
+    prompt_flow_fraction: float
+    answer_self_flow_fraction: float
+    other_flow_fraction: float
+    prompt_flow_loss: float
+    pathway_gap: float
+    pathway_concentration: float
+    pathway_entropy: float
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-ready metrics payload."""
+        return {
+            "prompt_token_count": int(self.prompt_token_count),
+            "answer_token_count": int(self.answer_token_count),
+            "head_count": int(self.head_count),
+            "query_count": int(self.query_count),
+            "key_count": int(self.key_count),
+            "prompt_flow_fraction": float(self.prompt_flow_fraction),
+            "answer_self_flow_fraction": float(self.answer_self_flow_fraction),
+            "other_flow_fraction": float(self.other_flow_fraction),
+            "prompt_flow_loss": float(self.prompt_flow_loss),
+            "pathway_gap": float(self.pathway_gap),
+            "pathway_concentration": float(self.pathway_concentration),
+            "pathway_entropy": float(self.pathway_entropy),
+            "metadata": dict(self.metadata),
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "AttentionPathwayMetrics":
+        """Build metrics from a JSON-like payload."""
+        return cls(
+            prompt_token_count=int(data["prompt_token_count"]),
+            answer_token_count=int(data["answer_token_count"]),
+            head_count=int(data["head_count"]),
+            query_count=int(data["query_count"]),
+            key_count=int(data["key_count"]),
+            prompt_flow_fraction=float(data["prompt_flow_fraction"]),
+            answer_self_flow_fraction=float(data["answer_self_flow_fraction"]),
+            other_flow_fraction=float(data["other_flow_fraction"]),
+            prompt_flow_loss=float(data["prompt_flow_loss"]),
+            pathway_gap=float(data["pathway_gap"]),
+            pathway_concentration=float(data["pathway_concentration"]),
+            pathway_entropy=float(data["pathway_entropy"]),
+            metadata=dict(data.get("metadata") or {}),
+        )
+
+
 def trajectory_convergence_metrics(
     states: Tensor,
     *,
@@ -315,6 +376,81 @@ def prompt_answer_pathway_metrics(
         answer_anchor_distance=float(answer_anchor_distance),
         answer_path_length=float(answer_path_length),
         pathway_disagreement=float(pathway_disagreement),
+        metadata=metadata or {},
+    )
+
+
+def attention_pathway_metrics(
+    attention: Tensor,
+    *,
+    prompt_start: int = 0,
+    answer_start: int,
+    sequence_end: int | None = None,
+    eps: float = 1e-8,
+    metadata: Mapping[str, Any] | None = None,
+) -> AttentionPathwayMetrics:
+    """Summarize answer-token attention flow into prompt and answer spans.
+
+    ``attention`` may be shaped ``[head, query_token, key_token]`` or
+    ``[batch, head, query_token, key_token]`` with batch size 1. Query rows from
+    ``answer_start:sequence_end`` are treated as answer-token queries. Key
+    columns from ``prompt_start:answer_start`` are treated as the prompt/question
+    pathway, while ``answer_start:sequence_end`` are treated as the answer
+    pathway. Fractions are normalized per query/head row before aggregation so
+    non-unit attention rows remain comparable.
+    """
+    matrix = _as_attention_pathway_tensor(attention)
+    query_count = int(matrix.shape[-2])
+    key_count = int(matrix.shape[-1])
+    if float(eps) <= 0.0 or not math.isfinite(float(eps)):
+        raise ValueError("eps must be positive and finite.")
+    prompt_start = int(prompt_start)
+    answer_start = int(answer_start)
+    if sequence_end is None:
+        sequence_end = min(query_count, key_count)
+    sequence_end = int(sequence_end)
+    if not (0 <= prompt_start < answer_start < sequence_end):
+        raise ValueError("expected 0 <= prompt_start < answer_start < sequence_end.")
+    if sequence_end > query_count or sequence_end > key_count:
+        raise ValueError("sequence_end must fit both query and key dimensions.")
+
+    answer_queries = matrix[:, answer_start:sequence_end, :]
+    row_mass = answer_queries.sum(dim=-1, keepdim=True).clamp_min(float(eps))
+    normalized = answer_queries / row_mass
+    prompt_mass = normalized[:, :, prompt_start:answer_start].sum(dim=-1)
+    answer_mass = normalized[:, :, answer_start:sequence_end].sum(dim=-1)
+    observed_mass = prompt_mass + answer_mass
+    other_mass = (1.0 - observed_mass).clamp_min(0.0)
+
+    prompt_flow = float(prompt_mass.mean().item())
+    answer_flow = float(answer_mass.mean().item())
+    other_flow = float(other_mass.mean().item())
+    prompt_loss = max(0.0, 1.0 - prompt_flow)
+    gap = abs(prompt_flow - answer_flow)
+    concentration = max(prompt_flow, answer_flow)
+    pathway_total = prompt_flow + answer_flow
+    if pathway_total <= float(eps):
+        entropy = 0.0
+    else:
+        probabilities = [
+            max(0.0, prompt_flow / pathway_total),
+            max(0.0, answer_flow / pathway_total),
+        ]
+        entropy = -sum(p * math.log(max(p, float(eps))) for p in probabilities if p > 0.0) / math.log(2.0)
+
+    return AttentionPathwayMetrics(
+        prompt_token_count=int(answer_start - prompt_start),
+        answer_token_count=int(sequence_end - answer_start),
+        head_count=int(matrix.shape[0]),
+        query_count=query_count,
+        key_count=key_count,
+        prompt_flow_fraction=float(prompt_flow),
+        answer_self_flow_fraction=float(answer_flow),
+        other_flow_fraction=float(other_flow),
+        prompt_flow_loss=float(prompt_loss),
+        pathway_gap=float(gap),
+        pathway_concentration=float(concentration),
+        pathway_entropy=float(entropy),
         metadata=metadata or {},
     )
 
@@ -472,6 +608,23 @@ def _as_pathway_matrix(states: Tensor, *, name: str) -> Tensor:
         raise ValueError(f"{name} must have a non-empty hidden dimension.")
     if not torch.isfinite(matrix).all():
         raise ValueError(f"{name} must contain only finite values.")
+    return matrix
+
+
+def _as_attention_pathway_tensor(attention: Tensor) -> Tensor:
+    matrix = torch.as_tensor(attention, dtype=torch.float32).detach().cpu()
+    if matrix.ndim == 4:
+        if int(matrix.shape[0]) != 1:
+            raise ValueError("4D attention input must have batch size 1.")
+        matrix = matrix[0]
+    if matrix.ndim != 3:
+        raise ValueError("attention must be shaped [head, query, key] or [1, head, query, key].")
+    if int(matrix.shape[0]) < 1 or int(matrix.shape[1]) < 1 or int(matrix.shape[2]) < 1:
+        raise ValueError("attention must have non-empty head, query, and key dimensions.")
+    if not torch.isfinite(matrix).all():
+        raise ValueError("attention must contain only finite values.")
+    if bool((matrix < 0).any()):
+        raise ValueError("attention must contain non-negative weights.")
     return matrix
 
 
