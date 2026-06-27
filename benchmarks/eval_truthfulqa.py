@@ -93,7 +93,9 @@ from eigentruth.eval.score_dump import write_score_dump_jsonl_mapping
 from eigentruth.intervention import (
     ACTIVATION_INTERVENTION_MODES,
     ACTIVATION_INTERVENTION_SPANS,
+    ACTIVATION_PATCH_ALIGNMENTS,
     TemporaryActivationIntervention,
+    TemporaryActivationPatch,
 )
 from eigentruth.intervention.hooks import TruthProbe
 from eigentruth.verify import Claim, SelfConsistencyVerifier
@@ -148,6 +150,7 @@ REPORT_ALPHA = 0.10
 HIDDEN_STATE_CAPTURE_METHODS = ("outputs", "hooks")
 SCORE_DUMP_FORMATS = ("json", "jsonl")
 PRE_GENERATION_RECORD_GRAINS = ("question", "candidate")
+ACTIVATION_PATCH_SOURCE_MODES = ("opposite_label", "same_label")
 SCORE_DUMP_RECORD_EXTRA_NAMES = (
     "batch_indexes",
     "inside_sampled",
@@ -2786,6 +2789,92 @@ def _statement_pairs(
     return pairs
 
 
+def _activation_patch_source_maps(
+    statements: Sequence[Statement],
+    encodings: Sequence[Optional[StatementEncoding]] | None,
+    *,
+    source_mode: str,
+) -> tuple[dict[int, Statement], dict[int, Optional[StatementEncoding]] | None]:
+    """Return target-object-id maps for deterministic source-token patching."""
+    source_mode = _coerce_activation_patch_source_mode(source_mode)
+    if encodings is not None and len(encodings) != len(statements):
+        raise ValueError("statement encodings must have the same length as statements.")
+    by_question: dict[str, list[int]] = {}
+    by_label: dict[int, list[int]] = {0: [], 1: []}
+    for idx, stmt in enumerate(statements):
+        label = int(stmt.is_false)
+        by_label.setdefault(label, []).append(idx)
+        question = stmt.question.strip()
+        if question:
+            by_question.setdefault(question, []).append(idx)
+
+    source_by_target: dict[int, Statement] = {}
+    source_encoding_by_target: dict[int, Optional[StatementEncoding]] | None = (
+        {} if encodings is not None else None
+    )
+    missing = []
+    for idx, stmt in enumerate(statements):
+        target_label = int(stmt.is_false)
+        source_label = 1 - target_label if source_mode == "opposite_label" else target_label
+        question = stmt.question.strip()
+        candidates: list[int] = []
+        if question:
+            candidates = [
+                candidate
+                for candidate in by_question.get(question, [])
+                if candidate != idx and int(statements[candidate].is_false) == source_label
+            ]
+        if not candidates:
+            candidates = [
+                candidate
+                for candidate in by_label.get(source_label, [])
+                if candidate != idx
+            ]
+        if not candidates:
+            missing.append(idx)
+            continue
+        source_idx = int(candidates[0])
+        source_by_target[id(stmt)] = statements[source_idx]
+        if source_encoding_by_target is not None:
+            source_encoding_by_target[id(stmt)] = encodings[source_idx]
+    if missing:
+        raise ValueError(
+            "activation patch source selection could not find source statement(s) "
+            f"for {len(missing)} target row(s)."
+        )
+    return source_by_target, source_encoding_by_target
+
+
+def _activation_patch_source_pairs_for_batch(
+    batch_pairs: Sequence[tuple[Statement, Optional[StatementEncoding]]],
+    *,
+    source_by_target: Mapping[int, Statement],
+    source_encoding_by_target: Mapping[int, Optional[StatementEncoding]] | None,
+) -> list[tuple[Statement, Optional[StatementEncoding]]]:
+    """Return source statement pairs aligned to a target batch."""
+    source_pairs = []
+    for stmt, _encoding in batch_pairs:
+        source = source_by_target.get(id(stmt))
+        if source is None:
+            raise ValueError("activation patch source map is missing a target statement.")
+        source_encoding = (
+            None
+            if source_encoding_by_target is None
+            else source_encoding_by_target.get(id(stmt))
+        )
+        source_pairs.append((source, source_encoding))
+    return source_pairs
+
+
+def _coerce_activation_patch_source_mode(value: object) -> str:
+    text = str(value).strip().lower().replace("-", "_")
+    if text not in ACTIVATION_PATCH_SOURCE_MODES:
+        raise ValueError(
+            f"activation patch source mode must be one of: {', '.join(ACTIVATION_PATCH_SOURCE_MODES)}."
+        )
+    return text
+
+
 def _batched_statement_pairs_after_offset(
     statements: Sequence[Statement],
     encodings: Sequence[Optional[StatementEncoding]] | None,
@@ -2890,9 +2979,14 @@ def batched_statement_reps(
     capture_prompt_hidden_states: bool = False,
     capture_attention_pathways: bool = False,
     activation_intervention: Mapping[str, object] | None = None,
+    activation_patch: Mapping[str, object] | None = None,
+    patch_source_statements: Sequence[Statement] | None = None,
+    encoded_patch_source_statements: Sequence[Optional[StatementEncoding]] | None = None,
 ) -> list[Optional[dict]]:
     """Batch forced-answer forwards while preserving per-statement result shape."""
-    encoded: list[tuple[int, list[int], int]] = []
+    if activation_intervention is not None and activation_patch is not None:
+        raise ValueError("choose only one of activation_intervention or activation_patch.")
+    encoded: list[tuple[int, list[int], int, list[int] | None, int | None]] = []
     results: list[Optional[dict]] = [None] * len(statements)
     if encoded_statements is None:
         tokenized_statements = _batch_statement_token_ids(tokenizer, statements, max_length)
@@ -2900,13 +2994,36 @@ def batched_statement_reps(
         if len(encoded_statements) != len(statements):
             raise ValueError("encoded_statements must have the same length as statements.")
         tokenized_statements = [_encoding_to_token_ids(encoding) for encoding in encoded_statements]
+    tokenized_patch_sources: list[Optional[tuple[list[int], int]]] | None = None
+    if activation_patch is not None:
+        if patch_source_statements is None:
+            raise ValueError("activation_patch requires patch_source_statements.")
+        if len(patch_source_statements) != len(statements):
+            raise ValueError("patch_source_statements must have the same length as statements.")
+        if encoded_patch_source_statements is None:
+            tokenized_patch_sources = _batch_statement_token_ids(tokenizer, patch_source_statements, max_length)
+        else:
+            if len(encoded_patch_source_statements) != len(statements):
+                raise ValueError("encoded_patch_source_statements must have the same length as statements.")
+            tokenized_patch_sources = [
+                _encoding_to_token_ids(encoding) for encoding in encoded_patch_source_statements
+            ]
     for idx, tokenized in enumerate(tokenized_statements):
         if tokenized is None:
             continue
         ids, n_ans = tokenized
-        encoded.append((idx, ids, n_ans))
+        source_ids = None
+        source_n_ans = None
+        if tokenized_patch_sources is not None:
+            source_tokenized = tokenized_patch_sources[idx]
+            if source_tokenized is None:
+                continue
+            source_ids, source_n_ans = source_tokenized
+        encoded.append((idx, ids, n_ans, source_ids, source_n_ans))
     if not encoded:
         return results
+    if prefix_kv_cache and activation_patch is not None:
+        raise ValueError("--prefix-kv-cache cannot be combined with activation_patch.")
     if prefix_kv_cache:
         if capture_prompt_hidden_states:
             raise ValueError("--prefix-kv-cache cannot be combined with pre-generation probe record export.")
@@ -2917,7 +3034,7 @@ def batched_statement_reps(
         if compute_answer_metrics:
             return _batched_statement_reps_with_prefix_kv(
                 model,
-                encoded,
+                [(idx, ids, n_ans) for idx, ids, n_ans, _source_ids, _source_n_ans in encoded],
                 layers,
                 device,
                 result_count=len(statements),
@@ -2932,16 +3049,17 @@ def batched_statement_reps(
         hidden_state_capture=hidden_state_capture,
     )
     pad_token_id = _pad_token_id(tokenizer)
-    batch_len = max(len(ids) for _, ids, _ in encoded)
+    batch_len = max(len(ids) for _, ids, _n_ans, _source_ids, _source_n_ans in encoded)
     input_ids = torch.full((len(encoded), batch_len), pad_token_id, dtype=torch.long, device=device)
     attention_mask = torch.zeros_like(input_ids)
-    for row, (_, ids, _) in enumerate(encoded):
+    for row, (_idx, ids, _n_ans, _source_ids, _source_n_ans) in enumerate(encoded):
         ids_t = torch.tensor(ids, dtype=torch.long, device=device)
         input_ids[row, :len(ids)] = ids_t
         attention_mask[row, :len(ids)] = 1
 
     activation_summary = None
-    if activation_intervention is None:
+    activation_patch_summary = None
+    if activation_intervention is None and activation_patch is None:
         out, hidden_by_layer = _forward_with_selected_hidden_states(
             model,
             input_ids=input_ids,
@@ -2951,9 +3069,11 @@ def batched_statement_reps(
             need_logits=compute_answer_metrics,
             output_attentions=bool(capture_attention_pathways),
         )
-    else:
-        sequence_lengths = [len(ids) for _, ids, _ in encoded]
-        answer_starts = [len(ids) - int(n_ans) for _, ids, n_ans in encoded]
+    elif activation_intervention is not None:
+        sequence_lengths = [len(ids) for _idx, ids, _n_ans, _source_ids, _source_n_ans in encoded]
+        answer_starts = [
+            len(ids) - int(n_ans) for _idx, ids, n_ans, _source_ids, _source_n_ans in encoded
+        ]
         requested_intervention_layer = int(activation_intervention.get("layer_idx", layers[0]))
         intervention_layer = _hook_capture_layer_map(model, [requested_intervention_layer])[
             requested_intervention_layer
@@ -2983,12 +3103,84 @@ def batched_statement_reps(
                 output_attentions=bool(capture_attention_pathways),
             )
             activation_summary = intervention.summary.to_dict()
+    else:
+        sequence_lengths = [len(ids) for _idx, ids, _n_ans, _source_ids, _source_n_ans in encoded]
+        answer_starts = [
+            len(ids) - int(n_ans) for _idx, ids, n_ans, _source_ids, _source_n_ans in encoded
+        ]
+        source_lengths = [
+            len(source_ids) for _idx, _ids, _n_ans, source_ids, _source_n_ans in encoded
+            if source_ids is not None
+        ]
+        source_answer_starts = [
+            len(source_ids) - int(source_n_ans)
+            for _idx, _ids, _n_ans, source_ids, source_n_ans in encoded
+            if source_ids is not None and source_n_ans is not None
+        ]
+        if len(source_lengths) != len(encoded) or len(source_answer_starts) != len(encoded):
+            raise ValueError("activation_patch requires encoded source statements for every target row.")
+        requested_patch_layer = int(activation_patch.get("layer_idx", layers[0]))
+        patch_layer = _hook_capture_layer_map(model, [requested_patch_layer])[requested_patch_layer]
+        source_batch_len = max(
+            len(source_ids) for _idx, _ids, _n_ans, source_ids, _source_n_ans in encoded
+            if source_ids is not None
+        )
+        source_input_ids = torch.full(
+            (len(encoded), source_batch_len),
+            pad_token_id,
+            dtype=torch.long,
+            device=device,
+        )
+        source_attention_mask = torch.zeros_like(source_input_ids)
+        for row, (_idx, _ids, _n_ans, source_ids, _source_n_ans) in enumerate(encoded):
+            if source_ids is None:
+                raise ValueError("activation_patch source ids are missing.")
+            source_ids_t = torch.tensor(source_ids, dtype=torch.long, device=device)
+            source_input_ids[row, :len(source_ids)] = source_ids_t
+            source_attention_mask[row, :len(source_ids)] = 1
+        _source_out, source_hidden_by_layer = _forward_with_selected_hidden_states(
+            model,
+            input_ids=source_input_ids,
+            attention_mask=source_attention_mask,
+            layers=[requested_patch_layer],
+            hidden_state_capture="hooks",
+            need_logits=False,
+            output_attentions=False,
+        )
+        patch_metadata = dict(activation_patch.get("metadata") or {})
+        patch_metadata.update({
+            "requested_hidden_state_layer_idx": requested_patch_layer,
+            "module_layer_idx": patch_layer,
+        })
+        with TemporaryActivationPatch(
+            model,
+            layer_idx=patch_layer,
+            source_hidden=source_hidden_by_layer[requested_patch_layer],
+            target_sequence_lengths=sequence_lengths,
+            target_answer_starts=answer_starts,
+            source_sequence_lengths=source_lengths,
+            source_answer_starts=source_answer_starts,
+            target_span=str(activation_patch.get("target_span", "answer")),
+            source_span=str(activation_patch.get("source_span", "answer")),
+            alignment=str(activation_patch.get("alignment", "left")),
+            metadata=patch_metadata,
+        ) as patch:
+            out, hidden_by_layer = _forward_with_selected_hidden_states(
+                model,
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                layers=capture_layers,
+                hidden_state_capture=hidden_state_capture,
+                need_logits=compute_answer_metrics,
+                output_attentions=bool(capture_attention_pathways),
+            )
+            activation_patch_summary = patch.summary.to_dict()
     if capture_attention_pathways and getattr(out, "attentions", None) is None:
         raise ValueError(
             "--attention-pathway requested model attentions, but the model backend did not return them. "
             "Use a model/backend that supports output_attentions, such as an eager attention implementation."
         )
-    for row, (original_idx, ids, n_ans) in enumerate(encoded):
+    for row, (original_idx, ids, n_ans, _source_ids, _source_n_ans) in enumerate(encoded):
         seq_len = len(ids)
         last_by_layer = {
             layer: hidden_by_layer[layer][row, seq_len - 1, :].float().cpu()
@@ -3062,6 +3254,8 @@ def batched_statement_reps(
         }
         if activation_summary is not None:
             result["activation_intervention"] = activation_summary
+        if activation_patch_summary is not None:
+            result["activation_patch"] = activation_patch_summary
         if prompt_hs_by_layer is not None and prompt_attention_mask is not None:
             result["prompt_hs_by_layer"] = prompt_hs_by_layer
             result["prompt_attention_mask"] = prompt_attention_mask
@@ -3258,12 +3452,40 @@ def _batched_statement_reps_for_pairs(
     capture_prompt_hidden_states: bool = False,
     capture_attention_pathways: bool = False,
     activation_intervention: Mapping[str, object] | None = None,
+    activation_patch: Mapping[str, object] | None = None,
+    patch_source_pairs: Sequence[tuple[Statement, Optional[StatementEncoding]]] | None = None,
 ) -> list[Optional[dict]]:
     """Run forced-answer forwards for statement pairs with optional memory fallback."""
+    if activation_patch is not None and patch_source_pairs is None:
+        raise ValueError("activation_patch requires patch_source_pairs.")
+    if patch_source_pairs is not None and len(patch_source_pairs) != len(batch_pairs):
+        raise ValueError("patch_source_pairs must have the same length as batch_pairs.")
+    source_pair_by_target_id = (
+        {
+            id(target_stmt): source_pair
+            for (target_stmt, _target_encoding), source_pair in zip(
+                batch_pairs,
+                patch_source_pairs or (),
+                strict=True,
+            )
+        }
+        if patch_source_pairs is not None
+        else None
+    )
 
     def _runner(pairs):
         statements = [stmt for stmt, _encoding in pairs]
         encoded = [encoding for _stmt, encoding in pairs] if encoded_statements_provided else None
+        source_statements = None
+        source_encoded = None
+        if source_pair_by_target_id is not None:
+            aligned_source_pairs = [source_pair_by_target_id[id(stmt)] for stmt, _encoding in pairs]
+            source_statements = [stmt for stmt, _encoding in aligned_source_pairs]
+            source_encoded = (
+                [encoding for _stmt, encoding in aligned_source_pairs]
+                if encoded_statements_provided
+                else None
+            )
         return batched_statement_reps(
             model,
             tokenizer,
@@ -3280,6 +3502,9 @@ def _batched_statement_reps_for_pairs(
             capture_prompt_hidden_states=capture_prompt_hidden_states,
             capture_attention_pathways=capture_attention_pathways,
             activation_intervention=activation_intervention,
+            activation_patch=activation_patch,
+            patch_source_statements=source_statements,
+            encoded_patch_source_statements=source_encoded,
         )
 
     return _run_with_batch_size_fallback(
@@ -3299,7 +3524,9 @@ def statement_reps(model, tokenizer, stmt: Statement, layers: List[int],
                    prefix_kv_cache: bool = False,
                    first_token_top_k: int = FIRST_TOKEN_TOP_K_DEFAULT,
                    capture_attention_pathways: bool = False,
-                   activation_intervention: Mapping[str, object] | None = None) -> Optional[dict]:
+                   activation_intervention: Mapping[str, object] | None = None,
+                   activation_patch: Mapping[str, object] | None = None,
+                   patch_source_statement: Statement | None = None) -> Optional[dict]:
     """Single-statement compatibility wrapper around batched_statement_reps."""
     return batched_statement_reps(
         model,
@@ -3316,6 +3543,8 @@ def statement_reps(model, tokenizer, stmt: Statement, layers: List[int],
         first_token_top_k=first_token_top_k,
         capture_attention_pathways=capture_attention_pathways,
         activation_intervention=activation_intervention,
+        activation_patch=activation_patch,
+        patch_source_statements=None if patch_source_statement is None else [patch_source_statement],
     )[0]
 
 
@@ -4229,6 +4458,29 @@ def _activation_intervention_config(args) -> dict[str, object] | None:
     }
 
 
+def _activation_patch_config(args) -> dict[str, object] | None:
+    """Return forced-answer activation patch config from CLI args."""
+    layer_idx = getattr(args, "activation_patch_layer", None)
+    if layer_idx is None:
+        return None
+    source_mode = _coerce_activation_patch_source_mode(
+        getattr(args, "activation_patch_source", "opposite_label")
+    )
+    return {
+        "layer_idx": int(layer_idx),
+        "target_span": str(getattr(args, "activation_patch_target_span", "answer")),
+        "source_span": str(getattr(args, "activation_patch_source_span", "answer")),
+        "alignment": str(getattr(args, "activation_patch_alignment", "left")),
+        "source_mode": source_mode,
+        "metadata": {
+            "source": "eval_truthfulqa_forced_answer",
+            "description": "temporary source-token activation patch during forced-answer scoring",
+            "layer_index_semantics": "hf_hidden_states_index",
+            "source_mode": source_mode,
+        },
+    }
+
+
 # ---------------------------------------------------------------------------
 # 主流程 / Main
 # ---------------------------------------------------------------------------
@@ -4257,6 +4509,7 @@ def run(args) -> dict:
     inside_selfcheck_support_threshold = float(getattr(args, "inside_selfcheck_support_threshold", 0.60))
     inside_selfcheck_refute_threshold = float(getattr(args, "inside_selfcheck_refute_threshold", 0.50))
     activation_intervention = _activation_intervention_config(args)
+    activation_patch = _activation_patch_config(args)
 
     stats_cache_path = Path(args.layer_stats_cache) if args.layer_stats_cache else None
     eval_reps_cache_path = Path(args.eval_reps_cache) if args.eval_reps_cache else None
@@ -4497,6 +4750,14 @@ def run(args) -> dict:
 
     print(f"Scoring {len(eval_stmts)} eval statements ...")
     scored = 0
+    patch_source_by_target: dict[int, Statement] | None = None
+    patch_source_encoding_by_target: dict[int, Optional[StatementEncoding]] | None = None
+    if activation_patch is not None:
+        patch_source_by_target, patch_source_encoding_by_target = _activation_patch_source_maps(
+            eval_stmts,
+            eval_encodings,
+            source_mode=str(activation_patch.get("source_mode", "opposite_label")),
+        )
     eval_pairs = _statement_pairs(
         eval_stmts,
         eval_encodings,
@@ -4562,6 +4823,15 @@ def run(args) -> dict:
             with _profile_phase(profile, "read_eval_reps_cache_batch"):
                 reps_batch = eval_reps_reader.read_range(eval_reps_offset, len(batch))
         else:
+            patch_source_pairs = None
+            if activation_patch is not None:
+                if patch_source_by_target is None:
+                    raise ValueError("activation patch source map was not initialized.")
+                patch_source_pairs = _activation_patch_source_pairs_for_batch(
+                    batch_pairs,
+                    source_by_target=patch_source_by_target,
+                    source_encoding_by_target=patch_source_encoding_by_target,
+                )
             with _profile_phase(profile, "forced_answer_forward"):
                 reps_batch = _batched_statement_reps_for_pairs(
                     model,
@@ -4580,6 +4850,8 @@ def run(args) -> dict:
                     capture_prompt_hidden_states=dump_pre_generation_probe_records,
                     capture_attention_pathways=bool(getattr(args, "attention_pathway", False)),
                     activation_intervention=activation_intervention,
+                    activation_patch=activation_patch,
+                    patch_source_pairs=patch_source_pairs,
                 )
             if eval_reps_writer is not None:
                 with _profile_phase(profile, "write_eval_reps_cache_batch"):
@@ -4928,6 +5200,8 @@ def run(args) -> dict:
                    ),
                    "activation_intervention": activation_intervention,
                    "activation_intervention_schema": 1 if activation_intervention is not None else None,
+                   "activation_patch": activation_patch,
+                   "activation_patch_schema": 1 if activation_patch is not None else None,
                    "batch_size": args.batch_size,
                    "max_batch_tokens": max_batch_tokens,
                    "auto_batch_size": args.auto_batch_size,
@@ -5214,6 +5488,18 @@ def main():
                    help="activation intervention operation")
     p.add_argument("--activation-intervention-scale", type=float, default=0.0,
                    help="scale value used when --activation-intervention-mode scale")
+    p.add_argument("--activation-patch-layer", type=int, default=None,
+                   help="optional forced-answer source-token activation patch HF hidden_states layer index; "
+                        "source statements are chosen by --activation-patch-source and the resulting score "
+                        "dump should be compared against a baseline with eval_pathway_intervention.py")
+    p.add_argument("--activation-patch-target-span", default="answer", choices=ACTIVATION_INTERVENTION_SPANS,
+                   help="target token span replaced during --activation-patch-layer")
+    p.add_argument("--activation-patch-source-span", default="answer", choices=ACTIVATION_INTERVENTION_SPANS,
+                   help="source token span copied during --activation-patch-layer")
+    p.add_argument("--activation-patch-alignment", default="left", choices=ACTIVATION_PATCH_ALIGNMENTS,
+                   help="how to align source and target spans when lengths differ")
+    p.add_argument("--activation-patch-source", default="opposite_label", choices=ACTIVATION_PATCH_SOURCE_MODES,
+                   help="source statement selection policy for --activation-patch-layer")
     p.add_argument("--inside-samples", type=int, default=0,
                    help="enable multi-sample INSIDE proxy with this many sampled continuations; "
                         "0 disables it, values >=2 enable inside_eigenscore, inside_semantic_entropy, "
@@ -5408,6 +5694,14 @@ def main():
         if args.eval_reps_cache:
             p.error("--activation-intervention-layer cannot be combined with --eval-reps-cache; "
                     "write the intervention score dump directly and compare it post-hoc")
+    if args.activation_patch_layer is not None:
+        if args.activation_intervention_layer is not None:
+            p.error("choose only one of --activation-intervention-layer or --activation-patch-layer")
+        if args.prefix_kv_cache:
+            p.error("--activation-patch-layer cannot be combined with --prefix-kv-cache")
+        if args.eval_reps_cache:
+            p.error("--activation-patch-layer cannot be combined with --eval-reps-cache; "
+                    "write the patch score dump directly and compare it post-hoc")
     if args.cache_only:
         if not args.layer_stats_cache or not args.eval_reps_cache:
             p.error("--cache-only requires --layer-stats-cache and --eval-reps-cache")

@@ -201,9 +201,9 @@ representation-observability toolkit spanning **training and inference**.
   and compute prompt-flow loss, answer-self flow, pathway gap, and pathway
   concentration. For mechanism follow-up, run
   `eval_truthfulqa.py --activation-intervention-layer ...` to zero/scale/mean
-  patch prompt or answer hidden-state spans during forced-answer scoring, use
-  `apply_activation_patch(...)` / `TemporaryActivationPatch` for controlled
-  source-token hidden-state patching experiments, apply
+  patch prompt or answer hidden-state spans during forced-answer scoring, run
+  `eval_truthfulqa.py --activation-patch-layer ...` for deterministic
+  source-token hidden-state patch reruns, apply
   `knockout_attention_pathway(...)` to captured attention tensors where useful,
   and use `pathway_intervention_effect(...)` to record direction-aware
   before/after score deltas; use `benchmarks/eval_pathway_intervention.py` to
@@ -216,11 +216,11 @@ representation-observability toolkit spanning **training and inference**.
   attentions are unavailable.
 - **Deliverable:** `PromptAnswerPathwayMetrics`, `AttentionPathwayMetrics`,
   activation-intervention forced-answer reruns, source-token activation patching
-  primitives, attention-pathway knockout/effect helpers, rerun intervention
-  comparator, score-dump/layer-sweep wiring, docs, and CPU smoke tests.
+  forced-answer reruns, attention-pathway knockout/effect helpers, rerun
+  intervention comparator, score-dump/layer-sweep wiring, docs, and CPU smoke tests.
   **Status:** implementation landed as dependency-free exploratory signals plus
-  mechanism-experiment evidence scaffolding; benchmark-integrated token patching,
-  true attention-kernel replication, and larger model evidence are still required.
+  mechanism-experiment evidence scaffolding; true attention-kernel replication,
+  paper-faithful larger-model patch suites, and larger model evidence are still required.
 
 ### E8. Concept registry + multi-probe (platform glue)
 - **Question:** engineering, not science — can multiple (manifold, direction) pairs be

@@ -970,6 +970,24 @@ python benchmarks/eval_pathway_intervention.py \
   --register-version 0.1
 ```
 
+Source-token activation patching uses the same compare step. The patch run
+chooses a source statement per target row, defaulting to an opposite-label
+candidate from the same TruthfulQA question and falling back to the global
+opposite-label pool for ungrouped smoke data:
+
+```bash
+python benchmarks/eval_truthfulqa.py \
+  --model Qwen/Qwen2.5-0.5B-Instruct \
+  --layer -8 --limit 200 --hidden-state-capture hooks \
+  --activation-patch-layer -8 \
+  --activation-patch-target-span answer \
+  --activation-patch-source-span answer \
+  --activation-patch-alignment left \
+  --activation-patch-source opposite_label \
+  --dump-scores artifacts/pathway-answer-source-patch/scores.manifest.json \
+  --dump-scores-format jsonl
+```
+
 The two score dumps must cover the same examples in the same order with
 identical labels. The report uses score directions to compute positive
 `risk_reduction` when the intervention lowers anomaly under that signal; it is
@@ -977,12 +995,7 @@ rerun evidence from a model-side activation intervention. `--eval-reps-cache`
 and `--prefix-kv-cache` are intentionally disabled for activation intervention
 runs so a baseline representation cache cannot contaminate the intervention
 dump.
-
-For source-token patching experiments, use the lower-level
-`TemporaryActivationPatch` / `apply_activation_patch` APIs to replace selected
-target hidden-state spans with aligned source spans before writing a separate
-intervention score dump. The benchmark CLI currently exposes ablation reruns;
-full source-run patch orchestration is a follow-up mechanism-replication step.
+The same cache restriction applies to `--activation-patch-layer`.
 
 Use `--runtime-preset quick` for bounded local smoke runs, `calibrate` when
 iterating on existing score dumps, and `full` for real TruthfulQA-oriented runs

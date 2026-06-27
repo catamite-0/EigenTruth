@@ -37037,6 +37037,101 @@ def test_eval_truthfulqa_activation_intervention_changes_forced_answer_nll():
     assert intervened[0]["activation_intervention"]["affected_token_count"] == 2
 
 
+def test_eval_truthfulqa_activation_patch_changes_forced_answer_nll():
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+
+    class NoCallTokenizer:
+        pad_token_id = 0
+        eos_token_id = 2
+
+        def __call__(self, *_args, **_kwargs):
+            raise AssertionError("precomputed encodings should bypass tokenizer calls")
+
+    class IdentityBlock(nn.Module):
+        def forward(self, x):
+            return x
+
+    class PatchSensitiveModel(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.config = SimpleNamespace(num_hidden_layers=2)
+            self.layers = nn.ModuleList([IdentityBlock(), IdentityBlock()])
+
+        def forward(self, input_ids=None, attention_mask=None, output_hidden_states=False, **_kwargs):
+            del attention_mask
+            state0 = input_ids.float().unsqueeze(-1).repeat(1, 1, 4)
+            state1 = self.layers[0](state0)
+            state2 = self.layers[1](state1)
+            logits = torch.zeros((*input_ids.shape, 8), dtype=torch.float32)
+            logits[..., 4] = state2[..., 0] * 5.0
+            return SimpleNamespace(
+                logits=logits,
+                hidden_states=(state0, state1, state2) if output_hidden_states else None,
+            )
+
+    model = PatchSensitiveModel()
+    baseline = module.batched_statement_reps(
+        model,
+        NoCallTokenizer(),
+        [module.Statement("Q?", "target", 1)],
+        [1],
+        torch.device("cpu"),
+        8,
+        encoded_statements=[module.StatementEncoding((1, 2, 3, 4), 2)],
+    )
+    patched = module.batched_statement_reps(
+        model,
+        NoCallTokenizer(),
+        [module.Statement("Q?", "target", 1)],
+        [1],
+        torch.device("cpu"),
+        8,
+        encoded_statements=[module.StatementEncoding((1, 2, 3, 4), 2)],
+        activation_patch={
+            "layer_idx": 1,
+            "target_span": "answer",
+            "source_span": "answer",
+            "alignment": "left",
+            "metadata": {"source": "unit"},
+        },
+        patch_source_statements=[module.Statement("Q?", "source", 0)],
+        encoded_patch_source_statements=[module.StatementEncoding((1, 2, 0, 0), 2)],
+    )
+
+    assert patched[0]["nll"] > baseline[0]["nll"]
+    assert torch.allclose(patched[0]["last"][1], torch.zeros(4))
+    assert patched[0]["activation_patch"]["target_span"] == "answer"
+    assert patched[0]["activation_patch"]["source_span"] == "answer"
+    assert patched[0]["activation_patch"]["copied_token_count"] == 2
+
+
+def test_eval_truthfulqa_activation_patch_source_maps_pair_opposite_label_by_question():
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+    statements = [
+        module.Statement("Q1", "true", 0),
+        module.Statement("Q1", "false", 1),
+        module.Statement("Q2", "true", 0),
+        module.Statement("Q2", "false", 1),
+    ]
+    encodings = [
+        module.StatementEncoding((1, 10), 1),
+        module.StatementEncoding((1, 20), 1),
+        module.StatementEncoding((1, 30), 1),
+        module.StatementEncoding((1, 40), 1),
+    ]
+
+    source_by_target, source_encoding_by_target = module._activation_patch_source_maps(
+        statements,
+        encodings,
+        source_mode="opposite_label",
+    )
+
+    assert source_by_target[id(statements[0])].answer == "false"
+    assert source_by_target[id(statements[1])].answer == "true"
+    assert source_encoding_by_target[id(statements[2])].input_ids == (1, 40)
+    assert source_encoding_by_target[id(statements[3])].input_ids == (1, 30)
+
+
 def test_eval_truthfulqa_batched_statement_reps_captures_attention_pathway():
     module = importlib.import_module("benchmarks.eval_truthfulqa")
 
