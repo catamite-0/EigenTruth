@@ -37441,3 +37441,98 @@ def test_eval_truthfulqa_hook_capture_rejects_final_hidden_state():
 
     with pytest.raises(ValueError, match="final post-norm hidden state"):
         module._hook_capture_layer_map(HookableModel(), [-1])
+
+
+def test_eval_pathway_intervention_writes_report_manifest_and_registry(tmp_path):
+    module = importlib.import_module("benchmarks.eval_pathway_intervention")
+    from eigentruth.eval.score_dump import ScoreDump
+    from eigentruth.registry import ArtifactRegistry
+
+    baseline = ScoreDump(
+        labels=(0, 0, 1, 1),
+        scores={
+            "attn_prompt_flow_loss": (0.10, 0.20, 0.90, 0.80),
+            "support_score": (0.90, 0.80, 0.10, 0.20),
+        },
+        statements=(
+            {"id": "a", "text": "true-a"},
+            {"id": "b", "text": "true-b"},
+            {"id": "c", "text": "false-c"},
+            {"id": "d", "text": "false-d"},
+        ),
+    )
+    intervened = ScoreDump(
+        labels=(0, 0, 1, 1),
+        scores={
+            "attn_prompt_flow_loss": (0.05, 0.10, 0.40, 0.30),
+            "support_score": (0.95, 0.90, 0.50, 0.60),
+        },
+        statements=baseline.statements,
+    )
+    baseline_path = tmp_path / "baseline.json"
+    intervened_path = tmp_path / "intervened.json"
+    report_path = tmp_path / "pathway-intervention-report.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    baseline_path.write_text(json.dumps(baseline.to_mapping()), encoding="utf-8")
+    intervened_path.write_text(json.dumps(intervened.to_mapping()), encoding="utf-8")
+
+    payload = module.run_pathway_intervention_eval(
+        baseline_scores_path=baseline_path,
+        intervened_scores_path=intervened_path,
+        output_path=report_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        register_name="pathway-smoke",
+        register_version="0.1",
+        directions={"support_score": "lower"},
+        pathway="prompt",
+        intervention_name="prompt_attention_knockout",
+        metadata={"source": "unit"},
+    )
+    saved = json.loads(report_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    registry_record = ArtifactRegistry.load_json(registry_path).get("report:pathway-smoke:0.1")
+
+    assert payload["workflow"] == "pathway_intervention_effect_eval"
+    assert payload["summary"]["gate"]["status"] == "promote"
+    assert payload["summary"]["best_signal"] == "attn_prompt_flow_loss"
+    assert payload["signals"]["attn_prompt_flow_loss"]["mean_risk_reduction"] == pytest.approx(0.2875)
+    assert payload["signals"]["support_score"]["direction"] == "lower"
+    assert payload["signals"]["support_score"]["mean_risk_reduction"] == pytest.approx(0.2375)
+    assert payload["record_effects"][2]["signals"]["support_score"]["risk_reduction"] == pytest.approx(0.4)
+    assert saved["paths"]["artifact_manifest"] == str(manifest_path)
+    assert manifest["summary"]["missing_count"] == 0
+    assert registry_record.metadata["gate_status"] == "promote"
+    assert registry_record.metadata["best_signal"] == "attn_prompt_flow_loss"
+
+
+def test_eval_pathway_intervention_respects_lower_direction_and_blocks_bad_gate(tmp_path):
+    module = importlib.import_module("benchmarks.eval_pathway_intervention")
+    from eigentruth.eval.score_dump import ScoreDump
+
+    baseline = ScoreDump(
+        labels=(0, 1),
+        scores={"support_score": (0.8, 0.2)},
+    )
+    intervened = ScoreDump(
+        labels=(0, 1),
+        scores={"support_score": (0.9, 0.6)},
+    )
+    baseline_path = tmp_path / "baseline.json"
+    intervened_path = tmp_path / "intervened.json"
+    baseline_path.write_text(json.dumps(baseline.to_mapping()), encoding="utf-8")
+    intervened_path.write_text(json.dumps(intervened.to_mapping()), encoding="utf-8")
+
+    payload = module.run_pathway_intervention_eval(
+        baseline_scores_path=baseline_path,
+        intervened_scores_path=intervened_path,
+        signals=("support_score",),
+        directions={"support_score": "lower"},
+        min_mean_risk_reduction=0.5,
+    )
+
+    assert payload["signals"]["support_score"]["mean_risk_reduction"] == pytest.approx(0.25)
+    assert payload["signals"]["support_score"]["false_mean_risk_reduction"] == pytest.approx(0.4)
+    assert payload["summary"]["gate"]["status"] == "blocked"
+    assert payload["summary"]["gate"]["reason"] == "no signal met intervention evidence floor"

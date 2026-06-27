@@ -201,7 +201,9 @@ representation-observability toolkit spanning **training and inference**.
   and compute prompt-flow loss, answer-self flow, pathway gap, and pathway
   concentration. For mechanism follow-up, apply `knockout_attention_pathway(...)`
   to captured attention tensors and use `pathway_intervention_effect(...)` to
-  record direction-aware before/after score deltas from model reruns. Run the
+  record direction-aware before/after score deltas from model reruns; use
+  `benchmarks/eval_pathway_intervention.py` to compare row-aligned baseline and
+  intervention score dumps as a manifest-backed evidence artifact. Run the
   standard layer/score conformal sweep before treating any pathway metric as
   evidence.
 - **Accept:** at least one pathway signal improves held-out calibrated detection
@@ -209,10 +211,11 @@ representation-observability toolkit spanning **training and inference**.
   alarm beyond the release gate, and attention-based runs must fail closed when
   attentions are unavailable.
 - **Deliverable:** `PromptAnswerPathwayMetrics`, `AttentionPathwayMetrics`,
-  attention-pathway knockout/effect helpers, score-dump/layer-sweep wiring,
-  docs, and CPU smoke tests. **Status:** implementation landed as
-  dependency-free exploratory signals plus mechanism-experiment scaffolding;
-  larger model replication is still required.
+  attention-pathway knockout/effect helpers, rerun intervention comparator,
+  score-dump/layer-sweep wiring, docs, and CPU smoke tests. **Status:**
+  implementation landed as dependency-free exploratory signals plus
+  mechanism-experiment evidence scaffolding; model-side intervention reruns and
+  larger model replication are still required.
 
 ### E8. Concept registry + multi-probe (platform glue)
 - **Question:** engineering, not science — can multiple (manifold, direction) pairs be

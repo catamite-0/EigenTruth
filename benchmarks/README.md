@@ -937,6 +937,30 @@ To include optional attention-flow pathway columns in the score dump, add
 signal set because some Transformers attention backends do not return
 attentions.
 
+When a mechanism intervention has been rerun as a separate row-aligned score
+dump, compare it with the baseline run before making a pathway-causality claim:
+
+```bash
+python benchmarks/eval_pathway_intervention.py \
+  --baseline-scores artifacts/pathway-baseline/scores.manifest.json \
+  --intervened-scores artifacts/pathway-prompt-knockout/scores.manifest.json \
+  --signals attn_prompt_flow_loss,pathway_disagreement,truth_proj \
+  --direction truth_proj=higher \
+  --pathway prompt \
+  --intervention-name prompt_attention_knockout \
+  --json artifacts/pathway-prompt-knockout/intervention-effect-report.json \
+  --artifact-manifest artifacts/pathway-prompt-knockout/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --register-name pathway-prompt-knockout \
+  --register-version 0.1
+```
+
+The two score dumps must cover the same examples in the same order with
+identical labels. The report uses score directions to compute positive
+`risk_reduction` when the intervention lowers anomaly under that signal; it is
+rerun evidence, not a substitute for implementing the actual model-side
+intervention.
+
 Use `--runtime-preset quick` for bounded local smoke runs, `calibrate` when
 iterating on existing score dumps, and `full` for real TruthfulQA-oriented runs
 with longer contexts and auto batch-size fallback. Any explicit CLI parameter
