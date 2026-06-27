@@ -74,6 +74,32 @@ _PRE_GENERATION_PROBE_COMPARISON_METADATA_FIELDS: tuple[tuple[str, str], ...] = 
         "pre_generation_probe_comparison_best_redline_margin",
     ),
 )
+_COUNTERFACTUAL_VERIFICATION_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
+    (
+        "promotion_contract.counterfactual_verification.coverage_rate",
+        "counterfactual_verification_coverage_rate",
+    ),
+    (
+        "promotion_contract.counterfactual_verification.manifest_verified_rate",
+        "counterfactual_verification_manifest_verified_rate",
+    ),
+    (
+        "promotion_contract.counterfactual_verification.record_count.mean",
+        "counterfactual_verification_record_count",
+    ),
+    (
+        "promotion_contract.counterfactual_verification.pass_rate.mean",
+        "counterfactual_verification_pass_rate",
+    ),
+    (
+        "promotion_contract.counterfactual_verification.false_invariance_rate.mean",
+        "counterfactual_verification_false_invariance_rate",
+    ),
+    (
+        "promotion_contract.counterfactual_verification.flip_success_count.mean",
+        "counterfactual_verification_flip_success_count",
+    ),
+)
 
 _TRIPLE_COVERAGE_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
     ("triple_coverage.claim_triple_coverage_rate", "triple_claim_coverage_rate"),
@@ -257,6 +283,12 @@ def compare_product_runtime_baselines(
     max_pre_generation_probe_comparison_best_test_label_auroc_drop: float | None = None,
     max_pre_generation_probe_comparison_best_redline_auroc_drop: float | None = None,
     max_pre_generation_probe_comparison_best_redline_margin_drop: float | None = None,
+    min_counterfactual_verification_coverage: float | None = None,
+    min_counterfactual_verification_manifest_verified_rate: float | None = None,
+    min_counterfactual_verification_record_count: float | None = None,
+    min_counterfactual_verification_pass_rate: float | None = None,
+    max_counterfactual_verification_false_invariance_rate: float | None = None,
+    max_counterfactual_verification_flip_success_count_drop: float | None = None,
     min_triple_extraction_fixture_matrix_coverage: float | None = None,
     max_triple_extraction_fixture_matrix_mean_best_f1_drop: float | None = None,
     max_triple_extraction_fixture_matrix_mean_f1_lift_drop: float | None = None,
@@ -339,6 +371,24 @@ def compare_product_runtime_baselines(
         ),
         "max_pre_generation_probe_comparison_best_redline_margin_drop": (
             _optional_non_negative_float(max_pre_generation_probe_comparison_best_redline_margin_drop)
+        ),
+        "min_counterfactual_verification_coverage": _optional_rate_float(
+            min_counterfactual_verification_coverage
+        ),
+        "min_counterfactual_verification_manifest_verified_rate": _optional_rate_float(
+            min_counterfactual_verification_manifest_verified_rate
+        ),
+        "min_counterfactual_verification_record_count": _optional_non_negative_float(
+            min_counterfactual_verification_record_count
+        ),
+        "min_counterfactual_verification_pass_rate": _optional_rate_float(
+            min_counterfactual_verification_pass_rate
+        ),
+        "max_counterfactual_verification_false_invariance_rate": _optional_rate_float(
+            max_counterfactual_verification_false_invariance_rate
+        ),
+        "max_counterfactual_verification_flip_success_count_drop": _optional_non_negative_float(
+            max_counterfactual_verification_flip_success_count_drop
         ),
         "min_triple_extraction_fixture_matrix_coverage": _optional_rate_float(
             min_triple_extraction_fixture_matrix_coverage
@@ -658,6 +708,7 @@ def _comparison_metrics(
     metrics.extend(_covered_fact_property_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_product_trace_action_gate_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_pre_generation_probe_comparison_metrics(baseline_summary, current_summary, gates=gates))
+    metrics.extend(_counterfactual_verification_metrics(baseline_summary, current_summary, gates=gates))
     return metrics
 
 
@@ -753,6 +804,81 @@ def _pre_generation_manifest_verified_rate(summary: Mapping[str, Any]) -> float 
 def _pre_generation_redline_pass_rate(summary: Mapping[str, Any]) -> float | None:
     counts = _mapping(summary.get("redline_passed_counts"))
     return _count_rate(counts, ("True", "true", "1", "yes", "on"))
+
+
+def _counterfactual_verification_metrics(
+    baseline_summary: Mapping[str, Any],
+    current_summary: Mapping[str, Any],
+    *,
+    gates: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    if not _counterfactual_verification_gate_enabled(gates):
+        return []
+    baseline = _mapping(_nested_value(baseline_summary, ("promotion_contract", "counterfactual_verification")))
+    current = _mapping(_nested_value(current_summary, ("promotion_contract", "counterfactual_verification")))
+    return [
+        _min_current_metric(
+            "promotion_contract.counterfactual_verification.coverage_rate",
+            _finite_float(baseline.get("coverage_rate")),
+            _finite_float(current.get("coverage_rate")),
+            gates.get("min_counterfactual_verification_coverage"),
+        ),
+        _min_current_metric(
+            "promotion_contract.counterfactual_verification.manifest_verified_rate",
+            _manifest_verified_rate(baseline),
+            _manifest_verified_rate(current),
+            gates.get("min_counterfactual_verification_manifest_verified_rate"),
+        ),
+        _min_current_metric(
+            "promotion_contract.counterfactual_verification.record_count.mean",
+            _nested_float(baseline, ("record_count", "mean")),
+            _nested_float(current, ("record_count", "mean")),
+            gates.get("min_counterfactual_verification_record_count"),
+        ),
+        _min_current_metric(
+            "promotion_contract.counterfactual_verification.pass_rate.mean",
+            _nested_float(baseline, ("pass_rate", "mean")),
+            _nested_float(current, ("pass_rate", "mean")),
+            gates.get("min_counterfactual_verification_pass_rate"),
+        ),
+        _max_current_metric(
+            "promotion_contract.counterfactual_verification.false_invariance_rate.mean",
+            _nested_float(baseline, ("false_invariance_rate", "mean")),
+            _nested_float(current, ("false_invariance_rate", "mean")),
+            gates.get("max_counterfactual_verification_false_invariance_rate"),
+        ),
+        _drop_metric(
+            "promotion_contract.counterfactual_verification.flip_success_count.mean",
+            _nested_float(baseline, ("flip_success_count", "mean")),
+            _nested_float(current, ("flip_success_count", "mean")),
+            gates.get("max_counterfactual_verification_flip_success_count_drop"),
+        ),
+    ]
+
+
+def _counterfactual_verification_gate_enabled(gates: Mapping[str, Any]) -> bool:
+    return any(
+        gates.get(key) is not None
+        for key in (
+            "min_counterfactual_verification_coverage",
+            "min_counterfactual_verification_manifest_verified_rate",
+            "min_counterfactual_verification_record_count",
+            "min_counterfactual_verification_pass_rate",
+            "max_counterfactual_verification_false_invariance_rate",
+            "max_counterfactual_verification_flip_success_count_drop",
+        )
+    )
+
+
+def _manifest_verified_rate(summary: Mapping[str, Any]) -> float | None:
+    verified = _finite_float(summary.get("manifest_verified_count"))
+    failed = _finite_float(summary.get("manifest_failed_count"))
+    unknown = _finite_float(summary.get("manifest_unknown_count"))
+    finite = tuple(value for value in (verified, failed, unknown) if value is not None)
+    total = sum(finite)
+    if total <= 0.0:
+        return None
+    return (verified or 0.0) / total
 
 
 def _covered_fact_property_metrics(
@@ -989,6 +1115,20 @@ def _min_current_metric(
     return _gate_metric(row, value=current, threshold=minimum, fail=lambda value, threshold: value < threshold)
 
 
+def _max_current_metric(
+    name: str,
+    baseline: float | None,
+    current: float | None,
+    maximum: float | None,
+) -> dict[str, Any]:
+    row = _base_metric(name, baseline=baseline, current=current)
+    row.update({
+        "comparison": "max_current",
+        "threshold": maximum,
+    })
+    return _gate_metric(row, value=current, threshold=maximum, fail=lambda value, threshold: value > threshold)
+
+
 def _base_metric(name: str, *, baseline: float | None, current: float | None) -> dict[str, Any]:
     return {
         "metric": name,
@@ -1017,6 +1157,8 @@ def _gate_metric(
         row["status"] = "blocked"
         if row.get("comparison") == "min_current":
             row["reason"] = f"{row['metric']}: {value:.6g} below gate {threshold:.6g}"
+        elif row.get("comparison") == "max_current":
+            row["reason"] = f"{row['metric']}: {value:.6g} above gate {threshold:.6g}"
         else:
             row["reason"] = f"{row['metric']}: {value:.6g} exceeded gate {threshold:.6g}"
         return row
@@ -1509,6 +1651,7 @@ def _drift_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
         "observed_metric_count": summary.get("observed_metric_count"),
         **_promotion_evidence_metadata(report),
         **_pre_generation_probe_comparison_metadata(report),
+        **_counterfactual_verification_metadata(report),
         **_covered_fact_property_metadata(report),
         **_triple_coverage_metadata(report),
         **_product_trace_action_gate_metadata(report),
@@ -1542,6 +1685,21 @@ def _pre_generation_probe_comparison_metadata(report: Mapping[str, Any]) -> dict
         metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
         if metric is not None and metric.get("status") == "blocked":
             metadata["pre_generation_probe_comparison_blocked_metric_count"] += 1
+    return metadata
+
+
+def _counterfactual_verification_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    metrics = _metrics_by_name(report.get("metrics"))
+    metadata: dict[str, Any] = {
+        "counterfactual_verification_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _COUNTERFACTUAL_VERIFICATION_METADATA_FIELDS:
+        metric = metrics.get(metric_name)
+        metadata[f"{prefix}_baseline"] = _finite_float(None if metric is None else metric.get("baseline"))
+        metadata[f"{prefix}_current"] = _finite_float(None if metric is None else metric.get("current"))
+        metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is not None and metric.get("status") == "blocked":
+            metadata["counterfactual_verification_blocked_metric_count"] += 1
     return metadata
 
 
@@ -1778,6 +1936,24 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_pre_generation_probe_comparison_best_redline_margin_drop=(
             args.max_pre_generation_probe_comparison_best_redline_margin_drop
         ),
+        min_counterfactual_verification_coverage=(
+            args.min_counterfactual_verification_coverage
+        ),
+        min_counterfactual_verification_manifest_verified_rate=(
+            args.min_counterfactual_verification_manifest_verified_rate
+        ),
+        min_counterfactual_verification_record_count=(
+            args.min_counterfactual_verification_record_count
+        ),
+        min_counterfactual_verification_pass_rate=(
+            args.min_counterfactual_verification_pass_rate
+        ),
+        max_counterfactual_verification_false_invariance_rate=(
+            args.max_counterfactual_verification_false_invariance_rate
+        ),
+        max_counterfactual_verification_flip_success_count_drop=(
+            args.max_counterfactual_verification_flip_success_count_drop
+        ),
         min_triple_extraction_fixture_matrix_coverage=(
             args.min_triple_extraction_fixture_matrix_coverage
         ),
@@ -1899,6 +2075,24 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument(
         "--max-pre-generation-probe-comparison-best-redline-margin-drop",
+        type=float,
+        default=None,
+    )
+    parser.add_argument("--min-counterfactual-verification-coverage", type=float, default=None)
+    parser.add_argument(
+        "--min-counterfactual-verification-manifest-verified-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument("--min-counterfactual-verification-record-count", type=float, default=None)
+    parser.add_argument("--min-counterfactual-verification-pass-rate", type=float, default=None)
+    parser.add_argument(
+        "--max-counterfactual-verification-false-invariance-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-counterfactual-verification-flip-success-count-drop",
         type=float,
         default=None,
     )

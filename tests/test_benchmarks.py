@@ -29705,6 +29705,140 @@ def test_compare_product_runtime_baselines_gates_pre_generation_probe_drift(tmp_
     )
 
 
+def test_compare_product_runtime_baselines_gates_counterfactual_verification_drift(tmp_path):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    registry_module = importlib.import_module("eigentruth.registry")
+    baseline_trace = tmp_path / "baseline-trace.json"
+    current_trace = tmp_path / "current-trace.json"
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    drift_report = tmp_path / "drift.json"
+    manifest_path = tmp_path / "drift-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    _write_product_runtime_trace(
+        baseline_trace,
+        request_id="baseline",
+        total_seconds=0.10,
+        route_seconds=0.02,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=1,
+        cache_misses=0,
+        metadata={
+            "counterfactual_verification_source": "registry",
+            "counterfactual_verification_record": (
+                "report:counterfactual-verifier-audit:0.1"
+            ),
+            "counterfactual_verification_status": "promote",
+            "counterfactual_verification_workflow": "counterfactual_verification_eval",
+            "counterfactual_verification_manifest_verification": {"passed": True},
+            "counterfactual_verification_record_count": 12,
+            "counterfactual_verification_pass_rate": 1.0,
+            "counterfactual_verification_false_invariance_rate": 0.0,
+            "counterfactual_verification_flip_success_count": 12,
+        },
+    )
+    _write_product_runtime_trace(
+        current_trace,
+        request_id="current",
+        total_seconds=0.10,
+        route_seconds=0.02,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=1,
+        cache_misses=0,
+        metadata={
+            "counterfactual_verification_source": "runtime_evidence_bundle",
+            "counterfactual_verification_record": (
+                "report:counterfactual-verifier-audit:0.2"
+            ),
+            "counterfactual_verification_status": "promote",
+            "counterfactual_verification_workflow": "counterfactual_verification_eval",
+            "counterfactual_verification_manifest_verification": {"passed": False},
+            "counterfactual_verification_record_count": 8,
+            "counterfactual_verification_pass_rate": 0.75,
+            "counterfactual_verification_false_invariance_rate": 0.25,
+            "counterfactual_verification_flip_success_count": 6,
+        },
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=baseline_report,
+        )
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(current_trace,),
+            report_path=current_report,
+        )
+    )
+
+    payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        report_path=drift_report,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="runtime-drift-counterfactual",
+        version="0.1",
+        min_counterfactual_verification_coverage=1.0,
+        min_counterfactual_verification_manifest_verified_rate=1.0,
+        min_counterfactual_verification_record_count=10,
+        min_counterfactual_verification_pass_rate=0.95,
+        max_counterfactual_verification_false_invariance_rate=0.05,
+        max_counterfactual_verification_flip_success_count_drop=2,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get("product_runtime_drift_report:runtime-drift-counterfactual:0.1")
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["blocked_metric_count"] == 5
+    assert payload["summary"]["compared_metric_count"] == 23
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.counterfactual_verification.coverage_rate",
+    )["status"] == "pass"
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.counterfactual_verification.manifest_verified_rate",
+    )["current"] == pytest.approx(0.0)
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.counterfactual_verification.record_count.mean",
+    )["status"] == "blocked"
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.counterfactual_verification.pass_rate.mean",
+    )["current"] == pytest.approx(0.75)
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.counterfactual_verification.false_invariance_rate.mean",
+    )["status"] == "blocked"
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.counterfactual_verification.flip_success_count.mean",
+    )["absolute_drop"] == pytest.approx(6.0)
+    assert manifest["metadata"]["counterfactual_verification_blocked_metric_count"] == 5
+    assert manifest["metadata"]["counterfactual_verification_coverage_rate_status"] == "pass"
+    assert manifest["metadata"]["counterfactual_verification_manifest_verified_rate_current"] == (
+        pytest.approx(0.0)
+    )
+    assert manifest["metadata"]["counterfactual_verification_pass_rate_current"] == pytest.approx(
+        0.75
+    )
+    assert manifest["metadata"]["counterfactual_verification_false_invariance_rate_status"] == (
+        "blocked"
+    )
+    assert record.metadata["counterfactual_verification_blocked_metric_count"] == 5
+    assert record.metadata["counterfactual_verification_record_count_current"] == pytest.approx(8.0)
+    assert record.metadata["counterfactual_verification_flip_success_count_status"] == (
+        "blocked"
+    )
+
+
 def test_compare_product_runtime_baselines_gates_covered_fact_property_drift(tmp_path):
     baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
     compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
