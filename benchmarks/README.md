@@ -978,6 +978,12 @@ and `--prefix-kv-cache` are intentionally disabled for activation intervention
 runs so a baseline representation cache cannot contaminate the intervention
 dump.
 
+For source-token patching experiments, use the lower-level
+`TemporaryActivationPatch` / `apply_activation_patch` APIs to replace selected
+target hidden-state spans with aligned source spans before writing a separate
+intervention score dump. The benchmark CLI currently exposes ablation reruns;
+full source-run patch orchestration is a follow-up mechanism-replication step.
+
 Use `--runtime-preset quick` for bounded local smoke runs, `calibrate` when
 iterating on existing score dumps, and `full` for real TruthfulQA-oriented runs
 with longer contexts and auto batch-size fallback. Any explicit CLI parameter

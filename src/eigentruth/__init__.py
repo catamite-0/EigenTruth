@@ -54,8 +54,11 @@ from eigentruth.core.trajectory import (
 )
 from eigentruth.intervention.activation import (
     ActivationInterventionSummary,
+    ActivationPatchSummary,
     TemporaryActivationIntervention,
+    TemporaryActivationPatch,
     apply_activation_intervention,
+    apply_activation_patch,
 )
 from eigentruth.intervention.hooks import TruthProbe
 from eigentruth.intervention.multi_probe import (
@@ -97,9 +100,11 @@ __all__ = [
     "ConceptProbeState",
     "MultiConceptMonitor",
     "ActivationInterventionSummary",
+    "ActivationPatchSummary",
     "AttentionPathwayKnockoutReport",
     "PathwayInterventionEffect",
     "TemporaryActivationIntervention",
+    "TemporaryActivationPatch",
     "TruthManifold",
     "RepresentationManifold",
     "TruthSubspace",
@@ -115,6 +120,7 @@ __all__ = [
     "attention_pathway_metrics",
     "attention_pathway_knockout_report",
     "apply_activation_intervention",
+    "apply_activation_patch",
     "knockout_attention_pathway",
     "pathway_intervention_effect",
     "prompt_answer_pathway_metrics",

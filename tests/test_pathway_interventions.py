@@ -5,10 +5,13 @@ import torch
 
 from eigentruth.intervention import (
     ActivationInterventionSummary,
+    ActivationPatchSummary,
     AttentionPathwayKnockoutReport,
     PathwayInterventionEffect,
     TemporaryActivationIntervention,
+    TemporaryActivationPatch,
     apply_activation_intervention,
+    apply_activation_patch,
     attention_pathway_knockout_report,
     knockout_attention_pathway,
     pathway_intervention_effect,
@@ -169,6 +172,58 @@ def test_apply_activation_intervention_scales_answer_span_and_roundtrips_summary
     assert ActivationInterventionSummary.from_dict(summary.to_dict()).to_dict() == summary.to_dict()
 
 
+def test_apply_activation_patch_copies_overlapping_answer_tokens_and_roundtrips_summary():
+    target = torch.zeros(2, 4, 3)
+    source = torch.arange(24, dtype=torch.float32).reshape(2, 4, 3)
+
+    patched = apply_activation_patch(
+        target,
+        source,
+        target_sequence_lengths=(4, 3),
+        target_answer_starts=(1, 1),
+        source_sequence_lengths=(4, 4),
+        source_answer_starts=(2, 1),
+        target_span="answer",
+        source_span="answer",
+    )
+    summary = ActivationPatchSummary(
+        layer_idx=0,
+        target_span="answer",
+        source_span="answer",
+        alignment="left",
+        target_sequence_lengths=(4, 3),
+        target_answer_starts=(1, 1),
+        source_sequence_lengths=(4, 4),
+        source_answer_starts=(2, 1),
+        copied_token_count=4,
+    )
+
+    assert torch.allclose(patched[0, 1:3], source[0, 2:4])
+    assert torch.allclose(patched[0, 3], torch.zeros(3))
+    assert torch.allclose(patched[1, 1:3], source[1, 1:3])
+    assert ActivationPatchSummary.from_dict(summary.to_dict()).to_dict() == summary.to_dict()
+
+
+def test_apply_activation_patch_right_aligns_when_spans_differ():
+    target = torch.zeros(1, 5, 2)
+    source = torch.arange(8, dtype=torch.float32).reshape(1, 4, 2)
+
+    patched = apply_activation_patch(
+        target,
+        source,
+        target_sequence_lengths=(5,),
+        target_answer_starts=(1,),
+        source_sequence_lengths=(4,),
+        source_answer_starts=(2,),
+        target_span="answer",
+        source_span="answer",
+        alignment="right",
+    )
+
+    assert torch.allclose(patched[0, 1:3], torch.zeros(2, 2))
+    assert torch.allclose(patched[0, 3:5], source[0, 2:4])
+
+
 def test_temporary_activation_intervention_modifies_layer_output():
     class Block(torch.nn.Module):
         def forward(self, x):
@@ -199,3 +254,38 @@ def test_temporary_activation_intervention_modifies_layer_output():
     assert torch.allclose(intervened[:, 0, :], torch.full((1, 2), 2.0))
     assert torch.allclose(intervened[:, 1:3, :], torch.zeros(1, 2, 2))
     assert intervention.summary.affected_token_count == 2
+
+
+def test_temporary_activation_patch_modifies_layer_output():
+    class Block(torch.nn.Module):
+        def forward(self, x):
+            return x + 1.0
+
+    class Tiny(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.layers = torch.nn.ModuleList([Block()])
+
+        def forward(self, x):
+            return self.layers[0](x)
+
+    model = Tiny()
+    x = torch.ones(1, 3, 2)
+    source_hidden = torch.tensor([[[10.0, 11.0], [12.0, 13.0], [14.0, 15.0]]])
+
+    with TemporaryActivationPatch(
+        model,
+        layer_idx=0,
+        source_hidden=source_hidden,
+        target_sequence_lengths=(3,),
+        target_answer_starts=(1,),
+        source_sequence_lengths=(3,),
+        source_answer_starts=(1,),
+        target_span="answer",
+        source_span="answer",
+    ) as patch:
+        patched = model(x)
+
+    assert torch.allclose(patched[:, 0, :], torch.full((1, 2), 2.0))
+    assert torch.allclose(patched[:, 1:3, :], source_hidden[:, 1:3, :])
+    assert patch.summary.copied_token_count == 2
