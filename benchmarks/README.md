@@ -2419,9 +2419,11 @@ release candidate was gated by
 a product trace replay workflow, the compact contract and registry metadata keep
 the workflow report/manifest plus its selector-replay and runtime-drift child
 report paths for deployment-side provenance. Runtime-drift reports also carry
-baseline/current optimization hints, so exported contracts preserve candidate
+baseline/current optimization hints plus promotion-contract and trace-level
+triple-audit evidence summaries, so exported contracts preserve candidate
 control defaults such as `max_verifier_route_attempts` alongside the budget
-policy. When the release candidate was gated by a feedback-policy workflow, the
+policy and keep drift/audit coverage visible in manifest and registry metadata.
+When the release candidate was gated by a feedback-policy workflow, the
 contract and registry metadata also retain the feedback-policy report/manifest,
 promotion decision, candidate control-policy/default paths, validated
 `ControlPolicyConfig`, control-default config, and replay safety metrics. When

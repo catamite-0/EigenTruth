@@ -23,6 +23,12 @@ _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "triple_extraction_fixture_matrix_mean_best_f1",
     "triple_extraction_fixture_matrix_mean_f1_lift",
 )
+_PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "triple_claim_coverage_rate",
+    "triple_audit_claim_coverage_rate",
+    "triple_audit_pass_rate",
+    "triple_slot_coverage_rate",
+)
 
 
 @dataclass(frozen=True)
@@ -634,6 +640,9 @@ class ProductPromotionContract:
                 "product_runtime_drift_promotion_evidence_required": config.get(
                     "require_product_runtime_drift_promotion_evidence"
                 ),
+                "product_runtime_drift_triple_audit_evidence_required": config.get(
+                    "require_product_runtime_drift_triple_audit_evidence"
+                ),
                 "product_runtime_drift_compared_metric_count": (
                     product_runtime_drift_summary.get("compared_metric_count")
                 ),
@@ -750,8 +759,17 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         "product_runtime_drift_promotion_evidence_blocked_metric_count": summary.get(
             "promotion_evidence_blocked_metric_count"
         ),
+        "product_runtime_drift_triple_audit_evidence_metric_count": summary.get(
+            "triple_audit_evidence_metric_count"
+        ),
+        "product_runtime_drift_triple_audit_evidence_blocked_metric_count": summary.get(
+            "triple_audit_evidence_blocked_metric_count"
+        ),
     }
     for prefix in _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     return metadata

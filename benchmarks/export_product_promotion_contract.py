@@ -17,6 +17,17 @@ if str(REPO_ROOT) not in sys.path:
 from eigentruth.control import ProductPromotionContract  # noqa: E402
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
 
+_PRODUCT_RUNTIME_DRIFT_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "promotion_contract_coverage_rate",
+    "triple_extraction_fixture_matrix_coverage_rate",
+    "triple_extraction_fixture_matrix_mean_best_f1",
+    "triple_extraction_fixture_matrix_mean_f1_lift",
+    "triple_claim_coverage_rate",
+    "triple_audit_claim_coverage_rate",
+    "triple_audit_pass_rate",
+    "triple_slot_coverage_rate",
+)
+
 
 def export_product_promotion_contract(
     *,
@@ -57,6 +68,7 @@ def export_product_promotion_contract(
     triple_extraction_fixture_matrix = dict(contract.triple_extraction_fixture_matrix)
     release_efficiency = dict(contract.release_efficiency)
     release_efficiency_metadata = _release_efficiency_flat_metadata(release_efficiency)
+    product_runtime_drift_metadata = _product_runtime_drift_flat_metadata(contract.metadata)
     triple_extraction_fixture_matrix_metadata = (
         _triple_extraction_fixture_matrix_flat_metadata(
             triple_extraction_fixture_matrix
@@ -82,6 +94,7 @@ def export_product_promotion_contract(
                 "source": str(source),
                 "compact_json": compact_json,
                 **covered_fact_property_metadata,
+                **product_runtime_drift_metadata,
                 **release_efficiency_metadata,
                 **triple_extraction_fixture_matrix_metadata,
                 **export_metadata,
@@ -113,6 +126,7 @@ def export_product_promotion_contract(
                     "recommended_selector_replay_candidate"
                 ),
                 "product_runtime_drift_status": contract.metadata.get("product_runtime_drift_status"),
+                **product_runtime_drift_metadata,
                 "max_covariance_maha_last_auroc_drop": contract.metadata.get(
                     "max_covariance_maha_last_auroc_drop"
                 ),
@@ -484,6 +498,37 @@ def _triple_extraction_fixture_matrix_flat_metadata(
         "triple_extraction_fixture_matrix_mean_best_f1": matrix.get("mean_best_f1"),
         "triple_extraction_fixture_matrix_mean_f1_lift": matrix.get("mean_f1_lift"),
     })
+
+
+def _product_runtime_drift_flat_metadata(metadata: Mapping[str, Any]) -> dict[str, Any]:
+    fields = {
+        "product_runtime_drift_status": metadata.get("product_runtime_drift_status"),
+        "product_runtime_drift_report": metadata.get("product_runtime_drift_report"),
+        "product_runtime_drift_manifest": metadata.get("product_runtime_drift_manifest"),
+        "product_runtime_drift_gate_enabled": metadata.get(
+            "product_runtime_drift_gate_enabled"
+        ),
+        "product_runtime_drift_promotion_evidence_required": metadata.get(
+            "product_runtime_drift_promotion_evidence_required"
+        ),
+        "product_runtime_drift_promotion_evidence_blocked_metric_count": metadata.get(
+            "product_runtime_drift_promotion_evidence_blocked_metric_count"
+        ),
+        "product_runtime_drift_triple_audit_evidence_required": metadata.get(
+            "product_runtime_drift_triple_audit_evidence_required"
+        ),
+        "product_runtime_drift_triple_audit_evidence_metric_count": metadata.get(
+            "product_runtime_drift_triple_audit_evidence_metric_count"
+        ),
+        "product_runtime_drift_triple_audit_evidence_blocked_metric_count": metadata.get(
+            "product_runtime_drift_triple_audit_evidence_blocked_metric_count"
+        ),
+    }
+    for prefix in _PRODUCT_RUNTIME_DRIFT_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            key = f"product_runtime_drift_{prefix}_{suffix}"
+            fields[key] = metadata.get(key)
+    return _drop_none_values(fields)
 
 
 def _covered_fact_property_flat_metadata(

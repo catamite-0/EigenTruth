@@ -17170,6 +17170,7 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                 "runtime_profile": "balanced",
                 "max_covariance_maha_last_auroc_drop": 0.05,
                 "require_product_runtime_drift_promotion_evidence": True,
+                "require_product_runtime_drift_triple_audit_evidence": True,
                 "require_structured_fact_robustness": True,
                 "structured_fact_canonical_route_key": (
                     "benchmark_manifest:structured-fact-canonical-route:0.1"
@@ -17295,10 +17296,20 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                         "compared_metric_count": 9,
                         "blocked_metric_count": 0,
                         "promotion_evidence_blocked_metric_count": 0,
+                        "triple_audit_evidence_metric_count": 4,
+                        "triple_audit_evidence_blocked_metric_count": 0,
                         "promotion_contract_coverage_rate_current": 1.0,
                         "promotion_contract_coverage_rate_status": "pass",
                         "triple_extraction_fixture_matrix_mean_best_f1_current": 0.88,
                         "triple_extraction_fixture_matrix_mean_best_f1_status": "pass",
+                        "triple_claim_coverage_rate_current": 1.0,
+                        "triple_claim_coverage_rate_status": "pass",
+                        "triple_audit_claim_coverage_rate_current": 1.0,
+                        "triple_audit_claim_coverage_rate_status": "pass",
+                        "triple_audit_pass_rate_current": 1.0,
+                        "triple_audit_pass_rate_status": "pass",
+                        "triple_slot_coverage_rate_current": 1.0,
+                        "triple_slot_coverage_rate_status": "pass",
                     },
                     "current": {
                         "optimization": {
@@ -17591,8 +17602,11 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["metadata"]["feedback_policy_workflow_final_answer_false_block_rate"] == 0.01
     assert contract["metadata"]["feedback_policy_workflow_safety_coverage_rate"] == 0.92
     assert contract["metadata"]["product_runtime_drift_promotion_evidence_required"] is True
+    assert contract["metadata"]["product_runtime_drift_triple_audit_evidence_required"] is True
     assert contract["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
     assert contract["metadata"]["product_runtime_drift_promotion_evidence_blocked_metric_count"] == 0
+    assert contract["metadata"]["product_runtime_drift_triple_audit_evidence_metric_count"] == 4
+    assert contract["metadata"]["product_runtime_drift_triple_audit_evidence_blocked_metric_count"] == 0
     assert contract["metadata"]["product_runtime_drift_promotion_contract_coverage_rate_current"] == 1.0
     assert contract["metadata"]["product_runtime_drift_promotion_contract_coverage_rate_status"] == "pass"
     assert contract["metadata"]["product_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_current"] == (
@@ -17601,6 +17615,8 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["metadata"]["product_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_status"] == (
         "pass"
     )
+    assert contract["metadata"]["product_runtime_drift_triple_audit_pass_rate_current"] == 1.0
+    assert contract["metadata"]["product_runtime_drift_triple_slot_coverage_rate_current"] == 1.0
     assert contract["metadata"]["max_covariance_maha_last_auroc_drop"] == 0.05
     assert contract["metadata"]["readiness_covariance_selected_mode"] == "low_rank"
     assert contract["metadata"]["performance_covariance_maha_last_delta_vs_baseline"] == -0.02
@@ -17629,6 +17645,9 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert manifest["summary"]["artifact_count"] == 3
     assert manifest["artifacts"]["release_efficiency_report"]["exists"] is True
     assert manifest["metadata"]["triple_extraction_fixture_matrix_status"] == "promote"
+    assert manifest["metadata"]["product_runtime_drift_triple_audit_evidence_required"] is True
+    assert manifest["metadata"]["product_runtime_drift_triple_audit_pass_rate_current"] == 1.0
+    assert manifest["metadata"]["product_runtime_drift_triple_slot_coverage_rate_status"] == "pass"
     assert manifest["metadata"]["triple_extraction_fixture_matrix_report"] == (
         "artifacts/triple-extraction-fixture-matrix/triple-extraction-fixture-matrix.json"
     )
@@ -17677,6 +17696,9 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert record.metadata["product_trace_replay_workflow_runtime_drift_report"] == (
         "artifacts/runtime-drift/runtime-drift.json"
     )
+    assert record.metadata["product_runtime_drift_triple_audit_evidence_required"] is True
+    assert record.metadata["product_runtime_drift_triple_audit_pass_rate_current"] == pytest.approx(1.0)
+    assert record.metadata["product_runtime_drift_triple_slot_coverage_rate_status"] == "pass"
     assert record.metadata["selfcheck_signal_fusion_workflow_source"] == "registry"
     assert record.metadata["selfcheck_signal_fusion_workflow_record"] == (
         "report:selfcheck-signal-fusion-workflow:0.1"
