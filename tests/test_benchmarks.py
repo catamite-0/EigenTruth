@@ -5140,6 +5140,163 @@ def test_compare_layer_band_selectors_marks_missing_spectrum(tmp_path):
     assert "missing spectrum report" in payload["runs"][0]["missing_reason"]
 
 
+def test_audit_layer_band_replication_promotes_dense_multifamily_report(tmp_path):
+    module = importlib.import_module("benchmarks.audit_layer_band_replication")
+    from eigentruth.registry import ArtifactRegistry
+
+    strategy = "spectrum_max_top_eigenvalue_to_mp_upper_radius_1"
+    report_path = tmp_path / "layer-band-report.json"
+    output_path = tmp_path / "replication-audit.json"
+    manifest_path = tmp_path / "replication-manifest.json"
+    verification_path = tmp_path / "replication-verification.json"
+    registry_path = tmp_path / "registry.json"
+    report_path.write_text(
+        json.dumps(_layer_band_report_payload(
+            strategy=strategy,
+            rows=(
+                _layer_band_run(
+                    run_name="qwen-dense",
+                    model="Qwen/Qwen2.5-0.5B-Instruct",
+                    strategy=strategy,
+                    n_ranked_layers=12,
+                ),
+                _layer_band_run(
+                    run_name="smollm-dense",
+                    model="HuggingFaceTB/SmolLM2-135M-Instruct",
+                    strategy=strategy,
+                    n_ranked_layers=10,
+                    candidate_layer_fraction=0.4,
+                    top_k_layer_coverage=0.5,
+                ),
+            ),
+        )),
+        encoding="utf-8",
+    )
+
+    payload = module.run(SimpleNamespace(
+        layer_band_report=(str(report_path),),
+        strategy=None,
+        model_family=None,
+        min_runs=2,
+        min_model_families=2,
+        min_ranked_layers=8,
+        min_best_layer_hit_rate=1.0,
+        max_mean_auroc_regret=0.005,
+        max_mean_candidate_layer_fraction=0.5,
+        min_mean_top_k_coverage=0.5,
+        allow_missing=False,
+        note=("dense replication test",),
+        json=str(output_path),
+        artifact_manifest=str(manifest_path),
+        verification_report=str(verification_path),
+        registry=str(registry_path),
+        name="layer-band-replication",
+        version="0.1",
+        manifest_fingerprint_workers=1,
+        compact_json=False,
+        fail_on_blocked=False,
+    ))
+
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    verification = json.loads(verification_path.read_text(encoding="utf-8"))
+    record = ArtifactRegistry.load_json(registry_path).get("report:layer-band-replication:0.1")
+
+    assert payload["status"] == "promote"
+    assert payload["summary"]["model_family_count"] == 2
+    assert payload["summary"]["min_ranked_layers_observed"] == 10
+    assert payload["summary"]["candidate_default_ready"] is True
+    assert manifest["metadata"]["candidate_default_ready"] is True
+    assert verification["passed"] is True
+    assert record.metadata["status"] == "promote"
+
+
+def test_audit_layer_band_replication_blocks_sparse_grid(tmp_path):
+    module = importlib.import_module("benchmarks.audit_layer_band_replication")
+    strategy = "spectrum_max_top_eigenvalue_to_mp_upper_radius_1"
+    report_path = tmp_path / "layer-band-report.json"
+    report_path.write_text(
+        json.dumps(_layer_band_report_payload(
+            strategy=strategy,
+            rows=(
+                _layer_band_run(
+                    run_name="qwen-sparse",
+                    model="Qwen/Qwen2.5-0.5B-Instruct",
+                    strategy=strategy,
+                    n_ranked_layers=5,
+                ),
+                _layer_band_run(
+                    run_name="smollm-sparse",
+                    model="HuggingFaceTB/SmolLM2-135M-Instruct",
+                    strategy=strategy,
+                    n_ranked_layers=5,
+                ),
+            ),
+        )),
+        encoding="utf-8",
+    )
+
+    payload = module.audit_layer_band_replication(
+        (("sparse", report_path),),
+        min_runs=2,
+        min_model_families=2,
+        min_ranked_layers=8,
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["candidate_default_ready"] is False
+    assert payload["summary"]["model_family_count"] == 2
+    assert payload["summary"]["min_ranked_layers_observed"] == 5
+    assert any("ranked layers 5 below 8" in reason for reason in payload["blocking_reasons"])
+
+
+def _layer_band_report_payload(
+    *,
+    strategy: str,
+    rows: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    return {
+        "workflow": "compare_layer_band_selectors",
+        "score_name": "truth_proj",
+        "coverage_top_k": 2,
+        "recommended_strategy": {
+            "strategy": strategy,
+            "status": "pass",
+            "best_layer_in_band_rate": 1.0,
+            "mean_candidate_layer_fraction": 0.4,
+            "mean_auroc_regret": 0.0,
+            "mean_top_k_layer_coverage": 0.5,
+        },
+        "runs": list(rows),
+    }
+
+
+def _layer_band_run(
+    *,
+    run_name: str,
+    model: str,
+    strategy: str,
+    n_ranked_layers: int,
+    candidate_layer_fraction: float = 0.333,
+    top_k_layer_coverage: float = 0.5,
+) -> dict[str, Any]:
+    return {
+        "name": run_name,
+        "model": model,
+        "strategy": strategy,
+        "matched": True,
+        "n_ranked_layers": n_ranked_layers,
+        "candidate_layer_count": max(1, int(round(n_ranked_layers * candidate_layer_fraction))),
+        "candidate_layer_fraction": candidate_layer_fraction,
+        "avoided_layer_count": n_ranked_layers - max(1, int(round(n_ranked_layers * candidate_layer_fraction))),
+        "best_layer": -4,
+        "best_layer_in_band": True,
+        "band_best_layer": -4,
+        "band_best_rank": 1,
+        "auroc_regret": 0.0,
+        "top_k_layer_coverage": top_k_layer_coverage,
+    }
+
+
 def test_training_telemetry_sanity_separates_clean_and_corrupt_runs(tmp_path, capsys):
     module = importlib.import_module("benchmarks.training_telemetry_sanity")
     report_path = tmp_path / "training-telemetry.json"

@@ -49,6 +49,11 @@ Added the covered-facts KG correction handoff:
 - The workflow is intentionally post-hoc and dependency-free: it does not rerun models, retrieval, databases, or external services. It turns existing canonical/paraphrase `structured_fact` route manifests into a reproducible external-evidence baseline comparison.
 - Current saved canonical/paraphrase artifacts promote the aggregate `structured_fact` route but predate per-property `property_metrics`, so the handoff defaults to aggregate record/source/true/false covered-fact gates. Rebuilt route manifests can enable the stricter per-property gates already supported by the comparator.
 
+Added a fail-closed layer-band replication gate:
+
+- `benchmarks/audit_layer_band_replication.py` consumes saved `compare_layer_band_selectors.py` reports and audits whether one strategy has enough matched runs, enough model-family diversity, dense enough ranked-layer grids, best-layer hit rate, bounded AUROC regret, top-k coverage, and candidate-layer cost reduction to become a default benchmark preset.
+- The current `artifacts/truthfulqa-frontier-layer-band-selection/` report is expected to block under the default dense-grid gate because both l80 runs rank only 5 monitored layers. This preserves the correct interpretation: the selector is a local cost-reduction prior, not a default preset.
+
 Added dependency-free claim-risk localization:
 
 - `ClaimRiskSpan`, `ClaimRiskLocalizationReport`, and `localize_claim_risk_spans(...)` turn existing claim spans, verifier statuses, route hints, and verification-budget drops into a JSON-ready localization report.
@@ -585,6 +590,6 @@ Added the first monitor-first tool-selection audit layer:
 
 ## Next Research-to-Code Candidates
 
-1. Run the registered Wikidata structured-fact canonical/paraphrase route manifests through `compare_external_evidence_baselines.py --require-covered-facts-route`, then use the registered comparator report as the structured KG correction input to `compare_release_candidates.py --external-evidence-baseline-comparison-key`.
-2. Replicate the layer-band selector audit on a denser layer grid and at least one additional model family before using it as a default benchmark preset.
-3. Run an actual learned or external triple extractor through the new offline prediction adapter on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
+1. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
+2. Run an actual learned or external triple extractor through the offline prediction adapter on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
+3. Feed the registered covered-facts external-evidence handoff into `compare_release_candidates.py --external-evidence-baseline-comparison-key` so KG correction evidence participates in the full release gate.

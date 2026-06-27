@@ -478,6 +478,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `compare_intrinsic_dimension_layers.py` | Compares intrinsic-dimension peak layers with saved layer/score sweep AUROC rankings, reporting top-k hits, rank, AUROC regret, and layer gap for cheap layer-selection validation. |
 | `compare_spectrum_layers.py` | Compares Marchenko-Pastur spike/effective-rank spectrum heuristics with saved layer/score sweep AUROC rankings, reporting per-heuristic top-k hits, rank, AUROC regret, and layer gap without rerunning models. |
 | `compare_layer_band_selectors.py` | Compares intrinsic-dimension and spectrum-derived layer bands against calibrated sweep rankings, then recommends a cost-reducing candidate band when it keeps the best layer in band. |
+| `audit_layer_band_replication.py` | Gates a layer-band selector before it becomes a default preset by requiring matched runs, model-family diversity, dense ranked-layer grids, best-layer hit rate, AUROC regret, and candidate-layer cost reduction. |
 | `training_telemetry_sanity.py` | Runs a deterministic synthetic clean-vs-corrupt training telemetry sanity check, gating on distance-to-baseline growth and effective-rank collapse. |
 | `training_telemetry_tiny_finetune.py` | Runs a pure PyTorch tiny clean-vs-duplicate fine-tune comparison and checks whether representation-rank telemetry separates before eval-loss degradation. |
 | `model_collapse_early_warning.py` | Runs a deterministic pseudo-label self-training loop and checks whether representation diversity telemetry warns before visible quality loss. |
@@ -619,6 +620,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `eval_intrinsic_dimension.py` | 从已保存 warmup checkpoint 生成 TwoNN intrinsic-dimension profile，输出 peak-layer 和 rise-then-fall shape summary，不重新加载模型权重。 |
 | `compare_intrinsic_dimension_layers.py` | 将 intrinsic-dimension peak layer 与已保存 layer/score sweep AUROC 排名对齐，输出 top-k 命中、rank、AUROC regret 和层距离，用于低成本 layer-selection 验证。 |
 | `compare_layer_band_selectors.py` | 将 intrinsic-dimension 和 spectrum 派生的 layer band 与 calibrated sweep 排名对齐；当候选 band 覆盖最佳层时，输出可复用的降成本 sweep 先验。 |
+| `audit_layer_band_replication.py` | 在 layer-band selector 成为默认 preset 前做复现 gate：要求 matched run、模型族多样性、dense ranked-layer grid、best-layer 命中率、AUROC regret 和候选层成本比例达标。 |
 | `training_telemetry_sanity.py` | 执行确定性的 synthetic clean-vs-corrupt training telemetry sanity check，用 distance-to-baseline 增长和 effective-rank collapse 做 gate。 |
 | `training_telemetry_tiny_finetune.py` | 执行纯 PyTorch tiny clean-vs-duplicate fine-tune 对照，检查 representation-rank telemetry 是否早于 eval-loss 退化分离。 |
 | `model_collapse_early_warning.py` | 执行确定性的 pseudo-label self-training loop，检查表征多样性 telemetry 是否早于可见质量退化发出预警。 |

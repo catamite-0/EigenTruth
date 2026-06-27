@@ -232,6 +232,28 @@ it keeps both models' best `truth_proj` layer in band with zero AUROC regret whi
 averaging 2 of 5 monitored layers. Treat it as a cost-reduction prior before the
 normal calibrated sweep, not as a standalone deployment selector.
 
+Use `audit_layer_band_replication.py` before turning a layer-band selector into
+a default benchmark preset. It consumes saved layer-band selector reports and
+fails closed unless the selected strategy has enough matched runs, enough model
+families, dense enough ranked-layer grids, high best-layer hit rate, bounded
+AUROC regret, and a bounded candidate-layer fraction:
+
+```bash
+python benchmarks/audit_layer_band_replication.py \
+  --layer-band-report l80=artifacts/truthfulqa-frontier-layer-band-selection/layer-band-comparison.json \
+  --min-runs 2 \
+  --min-model-families 2 \
+  --min-ranked-layers 8 \
+  --json artifacts/truthfulqa-frontier-layer-band-replication/layer-band-replication-audit.json \
+  --artifact-manifest artifacts/truthfulqa-frontier-layer-band-replication/artifact-manifest.json \
+  --verification-report artifacts/truthfulqa-frontier-layer-band-replication/manifest-verification.json
+```
+
+The current l80 selector artifact is expected to block under these defaults
+because each run only ranks 5 monitored layers. That is the intended state:
+the selector is usable as a local sweep prior, but denser grids and additional
+replication evidence are still required before making it a default preset.
+
 Use `--layer-stats-cache path.pt` to load an existing warmup manifold/subspace
 bundle or create one when missing. The cache is validated against model, dtype,
 layer list, max length, subspace rank, covariance mode/rank, warmup mode, and
