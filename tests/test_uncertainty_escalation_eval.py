@@ -107,10 +107,14 @@ def test_eval_uncertainty_escalation_cli_reads_jsonl_wrappers(tmp_path):
 def test_uncertainty_escalation_workflow_writes_loop_sidecar_and_report(tmp_path):
     workflow = importlib.import_module("benchmarks.run_uncertainty_escalation_workflow")
     evaluator = importlib.import_module("benchmarks.eval_uncertainty_escalation")
+    registry_module = importlib.import_module("eigentruth.registry")
     records_path = tmp_path / "records.json"
     output_dir = tmp_path / "workflow"
     report_path = output_dir / "workflow-report.json"
     replay_report_path = output_dir / "replayed-report.json"
+    manifest_path = output_dir / "artifact-manifest.json"
+    verification_path = output_dir / "manifest-verification.json"
+    registry_path = output_dir / "registry.json"
     records_path.write_text(
         json.dumps({
             "records": [
@@ -151,6 +155,9 @@ def test_uncertainty_escalation_workflow_writes_loop_sidecar_and_report(tmp_path
             records_path=records_path,
             output_dir=output_dir,
             report_path=report_path,
+            artifact_manifest_path=manifest_path,
+            verification_report_path=verification_path,
+            registry_path=registry_path,
             retriever_min_overlap=0.2,
         )
     )
@@ -171,6 +178,23 @@ def test_uncertainty_escalation_workflow_writes_loop_sidecar_and_report(tmp_path
     assert report["quality"]["initial"]["false_accept_rate"]["estimate"] == pytest.approx(1.0)
     assert report["quality"]["final"]["false_accept_rate"]["estimate"] == pytest.approx(0.0)
     assert report["quality"]["delta"]["accepted_false"] == -1
+    assert payload["paths"]["artifact_manifest"] == str(manifest_path)
+    assert payload["paths"]["manifest_verification"] == str(verification_path)
+    assert payload["manifest_verification"]["passed"] is True
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    verification = json.loads(verification_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:uncertainty-escalation-fixture-workflow:0.1"
+    )
+    assert sorted(manifest["artifacts"]) == [
+        "fixture_records",
+        "loop_results_jsonl",
+        "workflow_report",
+    ]
+    assert verification["passed"] is True
+    assert record.metadata["manifest_verified"] is True
+    assert record.metadata["record_count"] == 2
+    assert record.metadata["accepted_false_delta"] == -1
 
     exit_code = evaluator.main([
         "--results",

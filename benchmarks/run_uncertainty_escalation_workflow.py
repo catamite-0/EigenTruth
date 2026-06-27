@@ -30,6 +30,7 @@ from eigentruth.control import (  # noqa: E402
 )
 from eigentruth.eval import uncertainty_escalation_report  # noqa: E402
 from eigentruth.json_utils import strict_json_dumps, to_jsonable  # noqa: E402
+from eigentruth.registry import ArtifactRegistry, ArtifactVerificationContext  # noqa: E402
 from eigentruth.verify import Claim, GroundednessVerifier, VerificationEscalationPolicy  # noqa: E402
 from eigentruth.verify.protocols import VerificationResult, VerificationStatus  # noqa: E402
 
@@ -46,6 +47,11 @@ class UncertaintyEscalationWorkflowConfig:
     output_dir: Path
     report_path: Path | None = None
     loop_results_jsonl_path: Path | None = None
+    artifact_manifest_path: Path | None = None
+    verification_report_path: Path | None = None
+    registry_path: Path | None = None
+    name: str = "uncertainty-escalation-fixture-workflow"
+    version: str = "0.1"
     min_confidence: float = 0.65
     retriever_min_overlap: float = 0.2
     retrieval_limit: int = 5
@@ -73,6 +79,18 @@ class UncertaintyEscalationWorkflowConfig:
             if self.loop_results_jsonl_path is None
             else Path(self.loop_results_jsonl_path),
         )
+        if self.artifact_manifest_path is not None:
+            object.__setattr__(self, "artifact_manifest_path", Path(self.artifact_manifest_path))
+        if self.verification_report_path is not None:
+            object.__setattr__(self, "verification_report_path", Path(self.verification_report_path))
+            if self.artifact_manifest_path is None:
+                raise ValueError("verification_report_path requires artifact_manifest_path.")
+        if self.registry_path is not None:
+            object.__setattr__(self, "registry_path", Path(self.registry_path))
+        if not str(self.name).strip():
+            raise ValueError("name must be non-empty.")
+        if not str(self.version).strip():
+            raise ValueError("version must be non-empty.")
         if not (0.0 <= float(self.min_confidence) <= 1.0):
             raise ValueError("min_confidence must be in [0, 1].")
         if not (0.0 <= float(self.retriever_min_overlap) <= 1.0):
@@ -87,6 +105,8 @@ class UncertaintyEscalationWorkflowConfig:
         object.__setattr__(self, "retriever_min_overlap", float(self.retriever_min_overlap))
         object.__setattr__(self, "retrieval_limit", int(self.retrieval_limit))
         object.__setattr__(self, "verifier_min_overlap", float(self.verifier_min_overlap))
+        object.__setattr__(self, "name", str(self.name))
+        object.__setattr__(self, "version", str(self.version))
         object.__setattr__(self, "diagnostic_score_name", str(self.diagnostic_score_name))
         object.__setattr__(self, "diagnostic_threshold", float(self.diagnostic_threshold))
         object.__setattr__(self, "diagnostic_value", float(self.diagnostic_value))
@@ -126,6 +146,8 @@ def run_uncertainty_escalation_workflow(
     payload = {
         "workflow": "uncertainty_escalation_fixture_workflow",
         "schema_version": 1,
+        "name": config.name,
+        "version": config.version,
         "config": _config_payload(config),
         "input": {
             "records_path": str(config.records_path),
@@ -137,7 +159,19 @@ def run_uncertainty_escalation_workflow(
         },
         "report": report,
     }
+    if config.artifact_manifest_path is not None:
+        config.artifact_manifest_path.parent.mkdir(parents=True, exist_ok=True)
+        payload["paths"]["artifact_manifest"] = str(config.artifact_manifest_path)
+    if config.verification_report_path is not None:
+        config.verification_report_path.parent.mkdir(parents=True, exist_ok=True)
+        payload["paths"]["manifest_verification"] = str(config.verification_report_path)
+
     config.report_path.write_text(_json_text(payload, compact=config.compact_json), encoding="utf-8")
+
+    verification_payload = _write_artifact_manifest_and_verification(config, report)
+    if verification_payload is not None:
+        payload["manifest_verification"] = verification_payload
+    _record_registry(config, report, verification_payload)
     return to_jsonable(payload)
 
 
@@ -180,6 +214,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output-dir", required=True, type=Path, help="workflow output directory")
     parser.add_argument("--json", default=None, type=Path, help="optional workflow report path")
     parser.add_argument("--loop-results-jsonl", default=None, type=Path, help="optional loop-result JSONL path")
+    parser.add_argument("--artifact-manifest", default=None, type=Path, help="optional artifact manifest path")
+    parser.add_argument("--verification-report", default=None, type=Path, help="optional manifest verification path")
+    parser.add_argument("--registry", default=None, type=Path, help="optional ArtifactRegistry JSON path")
+    parser.add_argument("--name", default="uncertainty-escalation-fixture-workflow")
+    parser.add_argument("--version", default="0.1")
     parser.add_argument("--min-confidence", type=float, default=0.65)
     parser.add_argument("--retriever-min-overlap", type=float, default=0.2)
     parser.add_argument("--retrieval-limit", type=int, default=5)
@@ -196,6 +235,11 @@ def main(argv: list[str] | None = None) -> int:
             output_dir=args.output_dir,
             report_path=args.json,
             loop_results_jsonl_path=args.loop_results_jsonl,
+            artifact_manifest_path=args.artifact_manifest,
+            verification_report_path=args.verification_report,
+            registry_path=args.registry,
+            name=args.name,
+            version=args.version,
             min_confidence=args.min_confidence,
             retriever_min_overlap=args.retriever_min_overlap,
             retrieval_limit=args.retrieval_limit,
@@ -208,6 +252,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     print(f"Wrote uncertainty escalation workflow report to {payload['paths']['report']}")
     print(f"Wrote loop results to {payload['paths']['loop_results_jsonl']}")
+    if "artifact_manifest" in payload["paths"]:
+        print(f"Wrote artifact manifest to {payload['paths']['artifact_manifest']}")
+    if "manifest_verification" in payload["paths"]:
+        print(f"Wrote manifest verification to {payload['paths']['manifest_verification']}")
     return 0
 
 
@@ -407,6 +455,8 @@ def _calibration_artifact(config: UncertaintyEscalationWorkflowConfig) -> Calibr
 
 def _config_payload(config: UncertaintyEscalationWorkflowConfig) -> dict[str, Any]:
     return {
+        "name": config.name,
+        "version": config.version,
         "min_confidence": config.min_confidence,
         "retriever_min_overlap": config.retriever_min_overlap,
         "retrieval_limit": config.retrieval_limit,
@@ -416,6 +466,99 @@ def _config_payload(config: UncertaintyEscalationWorkflowConfig) -> dict[str, An
         "diagnostic_value": config.diagnostic_value,
         "compact_json": config.compact_json,
     }
+
+
+def _write_artifact_manifest_and_verification(
+    config: UncertaintyEscalationWorkflowConfig,
+    report: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    if config.artifact_manifest_path is None:
+        if config.verification_report_path is not None:
+            raise ValueError("verification_report_path requires artifact_manifest_path.")
+        return None
+
+    context = ArtifactVerificationContext()
+    manifest = context.build_artifact_manifest(
+        {
+            "fixture_records": config.records_path,
+            "loop_results_jsonl": config.loop_results_jsonl_path,
+            "workflow_report": config.report_path,
+        },
+        root=config.artifact_manifest_path.parent,
+        metadata={
+            "workflow": "uncertainty_escalation_fixture_workflow",
+            "name": config.name,
+            "version": config.version,
+            "record_count": report.get("n_total"),
+            "triggered_records": _nested(report, "uncertainty_escalation", "triggered_records"),
+            "retrieval_evidence_records": _nested(
+                report,
+                "action_execution",
+                "retrieval_evidence_records",
+            ),
+            "accepted_false_delta": _nested(report, "quality", "delta", "accepted_false"),
+        },
+    )
+    config.artifact_manifest_path.write_text(
+        _json_text(manifest, compact=config.compact_json),
+        encoding="utf-8",
+    )
+    if config.verification_report_path is None:
+        return None
+    verification = context.load_and_verify_artifact_manifest(
+        config.artifact_manifest_path,
+        recursive=True,
+    )
+    verification_payload = verification.to_dict()
+    config.verification_report_path.write_text(
+        _json_text(verification_payload, compact=config.compact_json),
+        encoding="utf-8",
+    )
+    return verification_payload
+
+
+def _record_registry(
+    config: UncertaintyEscalationWorkflowConfig,
+    report: Mapping[str, Any],
+    verification_payload: Mapping[str, Any] | None,
+) -> None:
+    if config.registry_path is None:
+        return
+    ArtifactRegistry.load_json(config.registry_path).record_report(
+        name=config.name,
+        path=config.report_path if config.report_path is not None else "",
+        version=config.version,
+        metadata={
+            "workflow": "uncertainty_escalation_fixture_workflow",
+            "artifact_manifest": None
+            if config.artifact_manifest_path is None
+            else str(config.artifact_manifest_path),
+            "manifest_verification": None
+            if config.verification_report_path is None
+            else str(config.verification_report_path),
+            "manifest_verified": None
+            if verification_payload is None
+            else bool(verification_payload.get("passed")),
+            "record_count": report.get("n_total"),
+            "triggered_records": _nested(report, "uncertainty_escalation", "triggered_records"),
+            "retrieval_evidence_records": _nested(
+                report,
+                "action_execution",
+                "retrieval_evidence_records",
+            ),
+            "accepted_false_delta": _nested(report, "quality", "delta", "accepted_false"),
+            "compact_json": config.compact_json,
+        },
+    ).save_json()
+
+
+def _nested(payload: Mapping[str, Any], *keys: str) -> Any:
+    current: Any = payload
+    for key in keys:
+        if not isinstance(current, Mapping):
+            return None
+        current = current.get(key)
+    return current
 
 
 def _verification_status(value: Any) -> VerificationStatus:

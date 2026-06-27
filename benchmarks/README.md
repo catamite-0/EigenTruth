@@ -1138,9 +1138,15 @@ escalation is buying useful evidence or only adding retrieval/tool cost.
 
 ```bash
 python benchmarks/run_uncertainty_escalation_workflow.py \
-  --records artifacts/uncertain-verification-fixture.json \
+  --records artifacts/uncertainty-escalation-fixture-workflow/uncertain-verification-fixture.json \
   --output-dir artifacts/uncertainty-escalation-workflow \
-  --min-confidence 0.65
+  --json artifacts/uncertainty-escalation-workflow/uncertainty-escalation-workflow.json \
+  --loop-results-jsonl artifacts/uncertainty-escalation-workflow/verification-loop-results.jsonl \
+  --artifact-manifest artifacts/uncertainty-escalation-workflow/artifact-manifest.json \
+  --verification-report artifacts/uncertainty-escalation-workflow/manifest-verification.json \
+  --registry artifacts/uncertainty-escalation-workflow/registry.json \
+  --min-confidence 0.65 \
+  --retriever-min-overlap 0.2
 ```
 
 Fixture rows may include `claim`, optional `label`, `preliminary_status`,
@@ -1148,6 +1154,12 @@ Fixture rows may include `claim`, optional `label`, `preliminary_status`,
 optional `diagnostics`. The workflow keeps diagnostics low by default, so
 decision changes mostly reflect the cheap verifier -> retrieval -> final
 verifier path.
+
+The committed fixture in `artifacts/uncertainty-escalation-fixture-workflow/`
+contains four records. All four low-confidence preliminary results trigger
+escalation and retrieve evidence; the two false claims move from `accept` to
+`abstain`, reducing the fixture false-accept rate from `1.0` to `0.0`. The
+artifact manifest verifies the fixture, loop-result JSONL, and workflow report.
 
 `eval_uncertainty_escalation.py` replays an existing loop-result sidecar without
 rerunning the control loop:
