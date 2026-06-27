@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from math import exp
 from types import MappingProxyType
 from typing import Any, Mapping, Sequence
 
@@ -56,6 +57,27 @@ _DEFAULT_MEDIUM_RISK_PROMPT_METADATA_KEYS = (
     "sensitive",
     "requires_calculation",
 )
+_DEFAULT_SOFT_RISK_FEATURE_WEIGHTS: Mapping[str, float] = MappingProxyType({
+    "requires_retrieval": 2.0,
+    "is_time_sensitive": 1.8,
+    "requires_domain_state": 1.7,
+    "has_calculation": 1.1,
+    "has_citation": 1.0,
+    "has_number": 0.7,
+    "asks_exact_fact": 0.8,
+    "has_named_entity_hint": 0.6,
+    "is_multi_part": 0.4,
+    "long_prompt": 0.3,
+    "has_question": 0.2,
+})
+_DEFAULT_SOFT_RISK_METADATA_WEIGHTS: Mapping[str, float] = MappingProxyType({
+    "requires_verification": 1.8,
+    "requires_retrieval": 2.0,
+    "requires_current_facts": 2.0,
+    "requires_domain_state": 1.8,
+    "sensitive": 1.0,
+    "requires_calculation": 1.0,
+})
 _TIME_SENSITIVE_RE = re.compile(
     r"\b("
     r"as of|current|currently|latest|newest|recent|today|tonight|tomorrow|"
@@ -78,6 +100,15 @@ _DOMAIN_STATE_RE = re.compile(
     r")\b",
     re.IGNORECASE,
 )
+_QUESTION_RE = re.compile(r"\b(who|what|when|where|which|why|how)\b|\?", re.IGNORECASE)
+_EXACT_FACT_RE = re.compile(
+    r"\b("
+    r"exact|exactly|specific|specifically|identify|name|who|when|where|"
+    r"founded|invented|published|released|reported|ranked"
+    r")\b",
+    re.IGNORECASE,
+)
+_NAMED_ENTITY_HINT_RE = re.compile(r"\b(?:[A-Z][A-Za-z0-9_-]{2,}|[A-Z]{2,})\b")
 
 
 @dataclass(frozen=True)
@@ -339,6 +370,163 @@ class RuntimeProfileSelectorPolicy:
 
 
 @dataclass(frozen=True)
+class SoftPreGenerationRiskEstimate:
+    """Dependency-free soft risk estimate computed before generation."""
+
+    score: float
+    probability: float
+    risk_level: str
+    feature_contributions: Mapping[str, float] = field(default_factory=dict)
+    metadata_contributions: Mapping[str, float] = field(default_factory=dict)
+    medium_threshold: float = 0.45
+    high_threshold: float = 0.75
+
+    def __post_init__(self) -> None:
+        score = _finite_float(self.score, field_name="score")
+        probability = _probability_float(self.probability, field_name="probability")
+        risk_level = RiskLevel(str(self.risk_level)).value
+        medium_threshold = _probability_float(self.medium_threshold, field_name="medium_threshold")
+        high_threshold = _probability_float(self.high_threshold, field_name="high_threshold")
+        if medium_threshold > high_threshold:
+            raise ValueError("medium_threshold must be <= high_threshold")
+        object.__setattr__(self, "score", score)
+        object.__setattr__(self, "probability", probability)
+        object.__setattr__(self, "risk_level", risk_level)
+        object.__setattr__(
+            self,
+            "feature_contributions",
+            MappingProxyType(_float_mapping(self.feature_contributions, field_name="feature_contributions")),
+        )
+        object.__setattr__(
+            self,
+            "metadata_contributions",
+            MappingProxyType(_float_mapping(self.metadata_contributions, field_name="metadata_contributions")),
+        )
+        object.__setattr__(self, "medium_threshold", medium_threshold)
+        object.__setattr__(self, "high_threshold", high_threshold)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable representation."""
+        return {
+            "score": self.score,
+            "probability": self.probability,
+            "risk_level": self.risk_level,
+            "feature_contributions": dict(self.feature_contributions),
+            "metadata_contributions": dict(self.metadata_contributions),
+            "medium_threshold": self.medium_threshold,
+            "high_threshold": self.high_threshold,
+        }
+
+
+@dataclass(frozen=True)
+class SoftPreGenerationRiskConfig:
+    """Config for prompt-level soft risk scoring before generation.
+
+    The scorer is intentionally not a trained probe. It is a transparent local
+    approximation that lets product code record and optionally route on a soft
+    risk probability while stronger hidden-state probes remain an external or
+    future adapter.
+    """
+
+    enabled: bool = True
+    route_on_soft_risk: bool = False
+    bias: float = -2.0
+    medium_risk_probability_threshold: float = 0.45
+    high_risk_probability_threshold: float = 0.75
+    feature_weights: Mapping[str, float] = field(default_factory=lambda: dict(_DEFAULT_SOFT_RISK_FEATURE_WEIGHTS))
+    metadata_weights: Mapping[str, float] = field(default_factory=lambda: dict(_DEFAULT_SOFT_RISK_METADATA_WEIGHTS))
+
+    def __post_init__(self) -> None:
+        enabled = _strict_bool(self.enabled, field_name="enabled")
+        route_on_soft_risk = _strict_bool(self.route_on_soft_risk, field_name="route_on_soft_risk")
+        bias = _finite_float(self.bias, field_name="bias")
+        medium_threshold = _probability_float(
+            self.medium_risk_probability_threshold,
+            field_name="medium_risk_probability_threshold",
+        )
+        high_threshold = _probability_float(
+            self.high_risk_probability_threshold,
+            field_name="high_risk_probability_threshold",
+        )
+        if medium_threshold > high_threshold:
+            raise ValueError("medium_risk_probability_threshold must be <= high_risk_probability_threshold")
+        object.__setattr__(self, "enabled", enabled)
+        object.__setattr__(self, "route_on_soft_risk", route_on_soft_risk)
+        object.__setattr__(self, "bias", bias)
+        object.__setattr__(self, "medium_risk_probability_threshold", medium_threshold)
+        object.__setattr__(self, "high_risk_probability_threshold", high_threshold)
+        object.__setattr__(
+            self,
+            "feature_weights",
+            MappingProxyType(_float_mapping(self.feature_weights, field_name="feature_weights")),
+        )
+        object.__setattr__(
+            self,
+            "metadata_weights",
+            MappingProxyType(_float_mapping(self.metadata_weights, field_name="metadata_weights")),
+        )
+
+    @classmethod
+    def from_mapping(cls, payload: Mapping[str, Any]) -> "SoftPreGenerationRiskConfig":
+        """Build a soft pre-generation risk config from a JSON-like mapping."""
+        return cls(
+            enabled=payload.get("enabled", cls.enabled),
+            route_on_soft_risk=payload.get("route_on_soft_risk", cls.route_on_soft_risk),
+            bias=payload.get("bias", cls.bias),
+            medium_risk_probability_threshold=payload.get(
+                "medium_risk_probability_threshold",
+                cls.medium_risk_probability_threshold,
+            ),
+            high_risk_probability_threshold=payload.get(
+                "high_risk_probability_threshold",
+                cls.high_risk_probability_threshold,
+            ),
+            feature_weights=payload.get("feature_weights", dict(_DEFAULT_SOFT_RISK_FEATURE_WEIGHTS)),
+            metadata_weights=payload.get("metadata_weights", dict(_DEFAULT_SOFT_RISK_METADATA_WEIGHTS)),
+        )
+
+    def estimate(
+        self,
+        prompt_features: Mapping[str, Any],
+        metadata_flags: Mapping[str, Any],
+    ) -> SoftPreGenerationRiskEstimate | None:
+        """Return a soft risk estimate, or ``None`` when disabled."""
+        if not self.enabled:
+            return None
+        feature_contributions = _enabled_weight_contributions(prompt_features, self.feature_weights)
+        metadata_contributions = _enabled_weight_contributions(metadata_flags, self.metadata_weights)
+        score = self.bias + sum(feature_contributions.values()) + sum(metadata_contributions.values())
+        probability = _sigmoid(score)
+        if probability >= self.high_risk_probability_threshold:
+            risk_level = RiskLevel.HIGH.value
+        elif probability >= self.medium_risk_probability_threshold:
+            risk_level = RiskLevel.MEDIUM.value
+        else:
+            risk_level = RiskLevel.LOW.value
+        return SoftPreGenerationRiskEstimate(
+            score=score,
+            probability=probability,
+            risk_level=risk_level,
+            feature_contributions=feature_contributions,
+            metadata_contributions=metadata_contributions,
+            medium_threshold=self.medium_risk_probability_threshold,
+            high_threshold=self.high_risk_probability_threshold,
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable representation."""
+        return {
+            "enabled": self.enabled,
+            "route_on_soft_risk": self.route_on_soft_risk,
+            "bias": self.bias,
+            "medium_risk_probability_threshold": self.medium_risk_probability_threshold,
+            "high_risk_probability_threshold": self.high_risk_probability_threshold,
+            "feature_weights": dict(self.feature_weights),
+            "metadata_weights": dict(self.metadata_weights),
+        }
+
+
+@dataclass(frozen=True)
 class PreGenerationRiskPolicy:
     """Policy for routing a request before model generation.
 
@@ -355,6 +543,9 @@ class PreGenerationRiskPolicy:
     medium_risk_feature_flags: Sequence[str] = _DEFAULT_MEDIUM_RISK_PROMPT_FEATURE_FLAGS
     high_risk_metadata_keys: Sequence[str] = _DEFAULT_HIGH_RISK_PROMPT_METADATA_KEYS
     medium_risk_metadata_keys: Sequence[str] = _DEFAULT_MEDIUM_RISK_PROMPT_METADATA_KEYS
+    soft_risk_config: SoftPreGenerationRiskConfig | Mapping[str, Any] | None = field(
+        default_factory=SoftPreGenerationRiskConfig
+    )
 
     def __post_init__(self) -> None:
         low_risk_profile = _normalize_profile_name(self.low_risk_profile)
@@ -396,6 +587,11 @@ class PreGenerationRiskPolicy:
                 field_name="medium_risk_metadata_keys",
             ),
         )
+        object.__setattr__(
+            self,
+            "soft_risk_config",
+            _soft_risk_config(self.soft_risk_config),
+        )
 
     @classmethod
     def from_mapping(cls, payload: Mapping[str, Any]) -> "PreGenerationRiskPolicy":
@@ -416,6 +612,7 @@ class PreGenerationRiskPolicy:
             medium_risk_metadata_keys=_as_sequence(
                 payload.get("medium_risk_metadata_keys", cls.medium_risk_metadata_keys)
             ),
+            soft_risk_config=payload.get("soft_risk_config", SoftPreGenerationRiskConfig()),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -428,6 +625,7 @@ class PreGenerationRiskPolicy:
             "medium_risk_feature_flags": tuple(self.medium_risk_feature_flags),
             "high_risk_metadata_keys": tuple(self.high_risk_metadata_keys),
             "medium_risk_metadata_keys": tuple(self.medium_risk_metadata_keys),
+            "soft_risk_config": self.soft_risk_config.to_dict() if self.soft_risk_config is not None else None,
         }
 
 
@@ -442,6 +640,7 @@ class PreGenerationRiskAssessment:
     triggered_metadata: Sequence[str] = ()
     prompt_features: Mapping[str, bool] = field(default_factory=dict)
     metadata_flags: Mapping[str, bool] = field(default_factory=dict)
+    soft_risk: SoftPreGenerationRiskEstimate | Mapping[str, Any] | None = None
 
     def __post_init__(self) -> None:
         selected_profile = _normalize_profile_name(self.selected_profile)
@@ -472,6 +671,11 @@ class PreGenerationRiskAssessment:
             "metadata_flags",
             normalized_feature_flags(self.metadata_flags),
         )
+        object.__setattr__(
+            self,
+            "soft_risk",
+            _soft_risk_payload(self.soft_risk),
+        )
 
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON-serializable representation."""
@@ -483,6 +687,7 @@ class PreGenerationRiskAssessment:
             "triggered_metadata": tuple(self.triggered_metadata),
             "prompt_features": dict(self.prompt_features),
             "metadata_flags": dict(self.metadata_flags),
+            "soft_risk": self.soft_risk,
         }
 
 
@@ -608,6 +813,11 @@ def select_pre_generation_profile(
         metadata_payload,
         keys=(*policy.high_risk_metadata_keys, *policy.medium_risk_metadata_keys),
     )
+    soft_risk = (
+        None
+        if policy.soft_risk_config is None
+        else policy.soft_risk_config.estimate(prompt_features, metadata_flags)
+    )
     high_features = _enabled_feature_names(prompt_features, policy.high_risk_feature_flags)
     high_metadata = _enabled_feature_names(metadata_flags, policy.high_risk_metadata_keys)
     if high_features or high_metadata:
@@ -619,6 +829,23 @@ def select_pre_generation_profile(
             triggered_metadata=high_metadata,
             prompt_features=prompt_features,
             metadata_flags=metadata_flags,
+            soft_risk=soft_risk,
+        )
+    if (
+        soft_risk is not None
+        and policy.soft_risk_config is not None
+        and policy.soft_risk_config.route_on_soft_risk
+        and soft_risk.risk_level == RiskLevel.HIGH.value
+    ):
+        return PreGenerationRiskAssessment(
+            selected_profile=policy.high_risk_profile,
+            risk_level=RiskLevel.HIGH.value,
+            reason="soft pre-generation risk estimate exceeded high threshold",
+            triggered_features=tuple(soft_risk.feature_contributions),
+            triggered_metadata=tuple(soft_risk.metadata_contributions),
+            prompt_features=prompt_features,
+            metadata_flags=metadata_flags,
+            soft_risk=soft_risk,
         )
     medium_features = _enabled_feature_names(prompt_features, policy.medium_risk_feature_flags)
     medium_metadata = _enabled_feature_names(metadata_flags, policy.medium_risk_metadata_keys)
@@ -631,6 +858,23 @@ def select_pre_generation_profile(
             triggered_metadata=medium_metadata,
             prompt_features=prompt_features,
             metadata_flags=metadata_flags,
+            soft_risk=soft_risk,
+        )
+    if (
+        soft_risk is not None
+        and policy.soft_risk_config is not None
+        and policy.soft_risk_config.route_on_soft_risk
+        and soft_risk.risk_level == RiskLevel.MEDIUM.value
+    ):
+        return PreGenerationRiskAssessment(
+            selected_profile=policy.default_profile,
+            risk_level=RiskLevel.MEDIUM.value,
+            reason="soft pre-generation risk estimate exceeded medium threshold",
+            triggered_features=tuple(soft_risk.feature_contributions),
+            triggered_metadata=tuple(soft_risk.metadata_contributions),
+            prompt_features=prompt_features,
+            metadata_flags=metadata_flags,
+            soft_risk=soft_risk,
         )
     return PreGenerationRiskAssessment(
         selected_profile=policy.low_risk_profile,
@@ -638,6 +882,7 @@ def select_pre_generation_profile(
         reason="pre-generation input has no configured risk triggers",
         prompt_features=prompt_features,
         metadata_flags=metadata_flags,
+        soft_risk=soft_risk,
     )
 
 
@@ -762,6 +1007,11 @@ def _prompt_feature_flags(prompt: str) -> dict[str, bool]:
         "is_time_sensitive": bool(_TIME_SENSITIVE_RE.search(text)),
         "requires_retrieval": bool(_TIME_SENSITIVE_RE.search(text)),
         "requires_domain_state": bool(_DOMAIN_STATE_RE.search(text)),
+        "has_question": bool(_QUESTION_RE.search(text)),
+        "asks_exact_fact": bool(_EXACT_FACT_RE.search(text)),
+        "has_named_entity_hint": bool(_NAMED_ENTITY_HINT_RE.search(text)),
+        "is_multi_part": _is_multi_part_prompt(text),
+        "long_prompt": len(text.split()) >= 40,
     }
 
 
@@ -891,6 +1141,105 @@ def _optional_non_negative_float(value: Any, *, field_name: str) -> float | None
     if parsed < 0.0 or not (parsed == parsed) or parsed in {float("inf"), float("-inf")}:
         raise ValueError(f"{field_name} must be a non-negative finite number or None")
     return parsed
+
+
+def _finite_float(value: Any, *, field_name: str) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{field_name} must be a finite number") from exc
+    if not (parsed == parsed) or parsed in {float("inf"), float("-inf")}:
+        raise ValueError(f"{field_name} must be a finite number")
+    return parsed
+
+
+def _probability_float(value: Any, *, field_name: str) -> float:
+    parsed = _finite_float(value, field_name=field_name)
+    if not 0.0 <= parsed <= 1.0:
+        raise ValueError(f"{field_name} must be in [0, 1]")
+    return parsed
+
+
+def _float_mapping(value: Mapping[str, Any], *, field_name: str) -> dict[str, float]:
+    if not isinstance(value, Mapping):
+        raise ValueError(f"{field_name} must be a mapping")
+    parsed: dict[str, float] = {}
+    for key, raw_weight in value.items():
+        name = str(key).strip()
+        if not name:
+            raise ValueError(f"{field_name} keys must be non-empty strings")
+        parsed[name] = _finite_float(raw_weight, field_name=f"{field_name}.{name}")
+    return parsed
+
+
+def _strict_bool(value: Any, *, field_name: str) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "1", "yes", "on"}:
+            return True
+        if normalized in {"false", "0", "no", "off"}:
+            return False
+    raise ValueError(f"{field_name} must be a boolean or one of true/false, 1/0, yes/no, on/off")
+
+
+def _soft_risk_config(
+    value: SoftPreGenerationRiskConfig | Mapping[str, Any] | None,
+) -> SoftPreGenerationRiskConfig | None:
+    if value is None:
+        return None
+    if isinstance(value, SoftPreGenerationRiskConfig):
+        return value
+    if isinstance(value, Mapping):
+        return SoftPreGenerationRiskConfig.from_mapping(value)
+    raise ValueError("soft_risk_config must be a mapping, SoftPreGenerationRiskConfig, or None")
+
+
+def _soft_risk_payload(value: SoftPreGenerationRiskEstimate | Mapping[str, Any] | None) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    if isinstance(value, SoftPreGenerationRiskEstimate):
+        return value.to_dict()
+    if isinstance(value, Mapping):
+        payload = dict(value)
+        if "score" in payload:
+            payload["score"] = _finite_float(payload["score"], field_name="soft_risk.score")
+        if "probability" in payload:
+            payload["probability"] = _probability_float(
+                payload["probability"],
+                field_name="soft_risk.probability",
+            )
+        if "risk_level" in payload:
+            payload["risk_level"] = RiskLevel(str(payload["risk_level"])).value
+        return payload
+    raise ValueError("soft_risk must be a mapping, SoftPreGenerationRiskEstimate, or None")
+
+
+def _enabled_weight_contributions(
+    flags: Mapping[str, Any],
+    weights: Mapping[str, float],
+) -> dict[str, float]:
+    return {
+        str(name): float(weight)
+        for name, weight in weights.items()
+        if _metadata_key_enabled(flags, str(name)) and float(weight) != 0.0
+    }
+
+
+def _sigmoid(value: float) -> float:
+    if value >= 0:
+        denominator = 1.0 + exp(-value)
+        return 1.0 / denominator
+    numerator = exp(value)
+    return numerator / (1.0 + numerator)
+
+
+def _is_multi_part_prompt(text: str) -> bool:
+    lowered = text.lower()
+    separators = lowered.count("?") + lowered.count(";") + lowered.count(",")
+    connective_count = len(re.findall(r"\b(and|then|also|compare|versus|vs\.?)\b", lowered))
+    return separators + connective_count >= 2
 
 
 def _string_sequence_mapping(value: Mapping[str, Sequence[str]]) -> dict[str, tuple[str, ...]]:

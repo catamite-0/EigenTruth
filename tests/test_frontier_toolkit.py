@@ -62,6 +62,8 @@ from eigentruth.control import (
     RuntimeProfile,
     RuntimeProfileSelection,
     RuntimeProfileSelectorPolicy,
+    SoftPreGenerationRiskConfig,
+    SoftPreGenerationRiskEstimate,
     TimeoutActionExecutor,
     get_runtime_profile,
     select_pre_generation_profile,
@@ -452,6 +454,67 @@ def test_pre_generation_risk_policy_roundtrip_and_bool_metadata():
     }
     with pytest.raises(ValueError, match="runtime profile selection"):
         PreGenerationRiskPolicy(low_risk_profile="fast")
+
+
+def test_soft_pre_generation_risk_records_without_changing_default_route():
+    assessment = select_pre_generation_profile("Who founded XylophoneNet?")
+
+    assert assessment.selected_profile == "latency"
+    assert assessment.risk_level == "low"
+    assert isinstance(assessment.soft_risk, dict)
+    assert assessment.soft_risk["probability"] > 0.0
+    assert assessment.soft_risk["risk_level"] in {"low", "medium", "high"}
+    assert assessment.soft_risk["feature_contributions"]["has_question"] == pytest.approx(0.2)
+    assert assessment.to_dict()["soft_risk"]["feature_contributions"]["asks_exact_fact"] == pytest.approx(0.8)
+
+
+def test_soft_pre_generation_risk_can_route_when_configured():
+    policy = PreGenerationRiskPolicy(
+        soft_risk_config=SoftPreGenerationRiskConfig(
+            route_on_soft_risk=True,
+            bias=-1.0,
+            high_risk_probability_threshold=0.75,
+            medium_risk_probability_threshold=0.45,
+            feature_weights={
+                "has_question": 1.5,
+                "asks_exact_fact": 1.0,
+                "has_named_entity_hint": 1.0,
+            },
+            metadata_weights={},
+        )
+    )
+
+    assessment = select_pre_generation_profile("Who founded XylophoneNet?", risk_policy=policy.to_dict())
+
+    assert assessment.selected_profile == "audit"
+    assert assessment.risk_level == "high"
+    assert assessment.reason == "soft pre-generation risk estimate exceeded high threshold"
+    assert assessment.triggered_features == ("has_question", "asks_exact_fact", "has_named_entity_hint")
+    assert assessment.soft_risk["risk_level"] == "high"
+    assert assessment.soft_risk["probability"] > 0.9
+
+
+def test_soft_pre_generation_risk_config_roundtrip_and_validation():
+    config = SoftPreGenerationRiskConfig.from_mapping({
+        "enabled": "true",
+        "route_on_soft_risk": "yes",
+        "bias": "-0.5",
+        "feature_weights": {"has_question": "1.25"},
+        "metadata_weights": {"requires_review": "2.0"},
+    })
+    estimate = config.estimate(
+        {"has_question": True},
+        {"requires_review": True},
+    )
+
+    assert isinstance(estimate, SoftPreGenerationRiskEstimate)
+    assert config.to_dict()["route_on_soft_risk"] is True
+    assert estimate.score == pytest.approx(2.75)
+    assert estimate.to_dict()["metadata_contributions"]["requires_review"] == pytest.approx(2.0)
+    with pytest.raises(ValueError, match="route_on_soft_risk"):
+        SoftPreGenerationRiskConfig.from_mapping({"route_on_soft_risk": "maybe"})
+    with pytest.raises(ValueError, match="feature_weights.has_question"):
+        SoftPreGenerationRiskConfig(feature_weights={"has_question": float("nan")})
 
 
 def test_risk_controller_accepts_and_routes_threshold_exceedance():
