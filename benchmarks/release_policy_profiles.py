@@ -45,6 +45,7 @@ RELEASE_POLICY_PROFILES: Mapping[str, Mapping[str, Any]] = {
         "require_product_runtime_drift_promotion_evidence": True,
         "require_product_runtime_drift_triple_audit_evidence": True,
         "require_product_runtime_drift_covered_fact_property_evidence": True,
+        "require_product_trace_action_audit_gate": True,
     },
 }
 RELEASE_POLICY_PROFILE_NAMES = tuple(sorted(RELEASE_POLICY_PROFILES))

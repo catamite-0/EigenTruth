@@ -537,6 +537,11 @@ Added the first monitor-first tool-selection audit layer:
   optional action-audit release gate. The gate is off by default, writes a child
   `action-audit-gate.json` report when configured, and blocks replay workflows
   when configured rates exceed thresholds or required audit metrics are missing.
+- `compare_release_candidates.py --require-product-trace-action-audit-gate`
+  now fails closed unless a supplied product-trace-replay workflow promoted that
+  child action-audit gate. The `frontier_audit` profile enables this by default
+  and `run_release_candidate_registry_workflow.py` records the child gate report
+  plus action-audit rates in release manifests and registry metadata.
 - This layer is intentionally dependency-free and observational. It does not
   claim to solve tool selection; it makes tool-routing mistakes measurable so
   future internal-representation tool-selection or world-model-corrected

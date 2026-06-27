@@ -105,6 +105,7 @@ def _apply_release_policy_profile_to_config(
             "require_product_runtime_drift_covered_fact_property_evidence": (
                 config.require_product_runtime_drift_covered_fact_property_evidence
             ),
+            "require_product_trace_action_audit_gate": config.require_product_trace_action_audit_gate,
         },
     )
     object.__setattr__(config, "release_policy_profile", profile)
@@ -149,6 +150,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     product_trace_replay_workflow_path: Path | None = None
     product_trace_replay_workflow_registry_path: Path | None = None
     product_trace_replay_workflow_key: str | None = None
+    require_product_trace_action_audit_gate: bool = False
     selfcheck_signal_fusion_workflow_path: Path | None = None
     selfcheck_signal_fusion_workflow_registry_path: Path | None = None
     selfcheck_signal_fusion_workflow_key: str | None = None
@@ -552,6 +554,7 @@ def run_release_candidate_registry_workflow(
         product_trace_replay_workflow_path=config.product_trace_replay_workflow_path,
         product_trace_replay_workflow_registry_path=config.product_trace_replay_workflow_registry_path,
         product_trace_replay_workflow_key=config.product_trace_replay_workflow_key,
+        require_product_trace_action_audit_gate=config.require_product_trace_action_audit_gate,
         selfcheck_signal_fusion_workflow_path=config.selfcheck_signal_fusion_workflow_path,
         selfcheck_signal_fusion_workflow_registry_path=(
             config.selfcheck_signal_fusion_workflow_registry_path
@@ -820,6 +823,7 @@ def run_release_candidate_registry_workflow(
                 else str(config.product_trace_replay_workflow_registry_path)
             ),
             "product_trace_replay_workflow_key": config.product_trace_replay_workflow_key,
+            "require_product_trace_action_audit_gate": config.require_product_trace_action_audit_gate,
             "selfcheck_signal_fusion_workflow": (
                 None
                 if config.selfcheck_signal_fusion_workflow_path is None
@@ -1151,6 +1155,11 @@ def _write_artifact_manifest(
         "product_trace_replay_workflow_manifest": manifests.get(
             "product_trace_replay_workflow_manifest"
         ),
+        "product_trace_action_audit_gate_report": _nested(
+            candidate,
+            "product_trace_replay_workflow",
+            "action_audit_gate_report_path",
+        ),
         "selfcheck_signal_fusion_workflow_manifest": manifests.get(
             "selfcheck_signal_fusion_workflow_manifest"
         )
@@ -1277,6 +1286,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
             comparison.get("external_evidence_baseline_comparison_gate") or {}
         )
     product_trace_replay_workflow = dict(candidate.get("product_trace_replay_workflow") or {})
+    product_trace_action_audit_gate = dict(
+        product_trace_replay_workflow.get("action_audit_gate") or {}
+    )
     selfcheck_signal_fusion_workflow = dict(
         candidate.get("selfcheck_signal_fusion_workflow") or {}
     )
@@ -1645,6 +1657,32 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "product_trace_replay_workflow_runtime_drift_report": product_trace_replay_workflow.get(
             "product_runtime_drift_report_path"
+        ),
+        "product_trace_action_audit_gate_required": config.get(
+            "require_product_trace_action_audit_gate"
+        ),
+        "product_trace_action_audit_gate_status": product_trace_action_audit_gate.get("status"),
+        "product_trace_action_audit_gate_enabled": product_trace_action_audit_gate.get(
+            "gate_enabled"
+        ),
+        "product_trace_action_audit_gate_passed": product_trace_action_audit_gate.get("passed"),
+        "product_trace_action_audit_gate_report": product_trace_replay_workflow.get(
+            "action_audit_gate_report_path"
+        ),
+        "product_trace_action_audit_error_rate": product_trace_action_audit_gate.get(
+            "error_rate"
+        ),
+        "product_trace_action_audit_missing_retrieval_action_rate": (
+            product_trace_action_audit_gate.get("missing_retrieval_action_rate")
+        ),
+        "product_trace_action_audit_malformed_payload_rate": product_trace_action_audit_gate.get(
+            "malformed_payload_rate"
+        ),
+        "product_trace_action_audit_unexpected_action_rate": product_trace_action_audit_gate.get(
+            "unexpected_action_rate"
+        ),
+        "product_trace_action_audit_unknown_claim_id_rate": product_trace_action_audit_gate.get(
+            "unknown_claim_id_rate"
         ),
         "selfcheck_signal_fusion_workflow_report": selfcheck_signal_fusion_workflow.get("report_path"),
         "selfcheck_signal_fusion_workflow_manifest": (
@@ -2139,6 +2177,7 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
             else Path(args.product_trace_replay_workflow_registry)
         ),
         product_trace_replay_workflow_key=args.product_trace_replay_workflow_key,
+        require_product_trace_action_audit_gate=bool(args.require_product_trace_action_audit_gate),
         selfcheck_signal_fusion_workflow_path=(
             None
             if args.selfcheck_signal_fusion_workflow is None
@@ -2400,6 +2439,9 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "defaults to --readiness-registry")
     parser.add_argument("--product-trace-replay-workflow-key", default=None,
                         help="optional report:<name>:<version> registry key for a product trace replay workflow")
+    parser.add_argument("--require-product-trace-action-audit-gate", action="store_true",
+                        help="require the supplied product trace replay workflow to have enabled and promoted "
+                             "its action-audit gate")
     parser.add_argument("--selfcheck-signal-fusion-workflow", default=None,
                         help="optional selfcheck signal fusion workflow report that must pass sample-quality "
                              "and manifest gates")

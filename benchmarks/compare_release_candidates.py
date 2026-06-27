@@ -123,6 +123,7 @@ def compare_release_candidates(
     product_trace_replay_workflow_path: str | Path | None = None,
     product_trace_replay_workflow_registry_path: str | Path | None = None,
     product_trace_replay_workflow_key: str | None = None,
+    require_product_trace_action_audit_gate: bool = False,
     selfcheck_signal_fusion_workflow_path: str | Path | None = None,
     selfcheck_signal_fusion_workflow_registry_path: str | Path | None = None,
     selfcheck_signal_fusion_workflow_key: str | None = None,
@@ -270,6 +271,7 @@ def compare_release_candidates(
                 "require_product_runtime_drift_covered_fact_property_evidence": (
                     require_product_runtime_drift_covered_fact_property_evidence
                 ),
+                "require_product_trace_action_audit_gate": require_product_trace_action_audit_gate,
             },
         )
     )
@@ -314,6 +316,9 @@ def compare_release_candidates(
     )
     require_product_runtime_drift_covered_fact_property_evidence = bool(
         release_policy_values["require_product_runtime_drift_covered_fact_property_evidence"]
+    )
+    require_product_trace_action_audit_gate = bool(
+        release_policy_values["require_product_trace_action_audit_gate"]
     )
     structured_fact_canonical_route_key = clean_optional_key(structured_fact_canonical_route_key)
     structured_fact_paraphrase_route_key = clean_optional_key(structured_fact_paraphrase_route_key)
@@ -476,6 +481,7 @@ def compare_release_candidates(
         product_trace_replay_workflow_source=product_trace_replay_workflow_source,
         selector_replay_report_path=selector_replay_report_path,
         product_runtime_drift_report_path=product_runtime_drift_report_path,
+        require_action_audit_gate=require_product_trace_action_audit_gate,
         recursive=recursive,
         allow_unverified=allow_unverified,
         manifest_fingerprint_workers=manifest_fingerprint_workers,
@@ -824,6 +830,9 @@ def compare_release_candidates(
             ),
             "require_product_runtime_drift_covered_fact_property_evidence": bool(
                 require_product_runtime_drift_covered_fact_property_evidence
+            ),
+            "require_product_trace_action_audit_gate": bool(
+                require_product_trace_action_audit_gate
             ),
             "release_efficiency_report": (
                 None
@@ -2159,6 +2168,7 @@ def _product_trace_replay_workflow_gate(
     product_trace_replay_workflow_source: Mapping[str, Any] | None,
     selector_replay_report_path: str | Path | None,
     product_runtime_drift_report_path: str | Path | None,
+    require_action_audit_gate: bool,
     recursive: bool,
     allow_unverified: bool,
     manifest_fingerprint_workers: int,
@@ -2186,6 +2196,11 @@ def _product_trace_replay_workflow_gate(
         report_path=report_path,
         child_path_key="runtime_drift_report",
     )
+    workflow_action_audit_path = _product_trace_replay_workflow_child_path(
+        report,
+        report_path=report_path,
+        child_path_key="action_audit_gate_report",
+    )
     resolved_selector_path = (
         Path(selector_replay_report_path)
         if selector_replay_report_path is not None
@@ -2203,8 +2218,15 @@ def _product_trace_replay_workflow_gate(
         verification=verification,
         selector_replay_report_path=resolved_selector_path,
         product_runtime_drift_report_path=resolved_drift_path,
+        action_audit_gate=_product_trace_action_audit_gate_summary(
+            report,
+            report_path=report_path,
+            action_audit_gate_report_path=workflow_action_audit_path,
+        ),
+        require_action_audit_gate=require_action_audit_gate,
         allow_unverified=allow_unverified,
     )
+    action_audit_gate = _mapping(gate.get("action_audit_gate"))
     return {
         "schema_version": 1,
         "status": "promote" if gate["passed"] else "blocked",
@@ -2232,6 +2254,9 @@ def _product_trace_replay_workflow_gate(
             if resolved_drift_path is None
             else ("explicit" if product_runtime_drift_report_path is not None else "workflow")
         ),
+        "action_audit_gate": action_audit_gate,
+        "action_audit_gate_report_path": action_audit_gate.get("report_path"),
+        "require_action_audit_gate": bool(require_action_audit_gate),
         "verification": verification,
         "gate": gate,
     }
@@ -2284,6 +2309,8 @@ def _product_trace_replay_workflow_report_gate(
     verification: Mapping[str, Any],
     selector_replay_report_path: Path | None,
     product_runtime_drift_report_path: Path | None,
+    action_audit_gate: Mapping[str, Any],
+    require_action_audit_gate: bool,
     allow_unverified: bool,
 ) -> dict[str, Any]:
     failures = []
@@ -2306,9 +2333,70 @@ def _product_trace_replay_workflow_report_gate(
         failures.append("product trace replay workflow selector replay report is missing")
     if product_runtime_drift_report_path is None:
         failures.append("product trace replay workflow runtime drift report is missing")
+    if require_action_audit_gate:
+        if action_audit_gate.get("gate_enabled") is not True:
+            failures.append("product trace replay workflow action-audit gate is not enabled")
+        if (
+            action_audit_gate.get("status") != "promote"
+            or action_audit_gate.get("passed") is not True
+        ):
+            failures.append(
+                "product trace replay workflow action-audit gate status is "
+                f"{action_audit_gate.get('status')!r}, expected 'promote'"
+            )
+        if action_audit_gate.get("report_path") is None:
+            failures.append("product trace replay workflow action-audit gate report is missing")
     return {
         "passed": not failures,
         "blocking_reasons": failures,
+        "require_action_audit_gate": bool(require_action_audit_gate),
+        "action_audit_gate": dict(action_audit_gate),
+    }
+
+
+def _product_trace_action_audit_gate_summary(
+    report: Mapping[str, Any],
+    *,
+    report_path: Path,
+    action_audit_gate_report_path: Path | None,
+) -> dict[str, Any]:
+    summary = _mapping(report.get("action_audit_gate"))
+    if not summary:
+        return {
+            "status": None,
+            "gate_enabled": None,
+            "passed": None,
+            "report_path": (
+                None
+                if action_audit_gate_report_path is None
+                else str(action_audit_gate_report_path)
+            ),
+        }
+    report_path_value = action_audit_gate_report_path
+    if report_path_value is None:
+        raw_report_path = summary.get("report_path") or _nested(
+            report,
+            "paths",
+            "action_audit_gate_report",
+        )
+        if raw_report_path is not None:
+            report_path_value = _resolve_path(raw_report_path, base_path=report_path)
+    return {
+        "status": summary.get("status"),
+        "gate_enabled": summary.get("gate_enabled"),
+        "passed": summary.get("passed"),
+        "trace_count": summary.get("trace_count"),
+        "failed_trace_count": summary.get("failed_trace_count"),
+        "failed_trace_rate": summary.get("failed_trace_rate"),
+        "error_count": summary.get("error_count"),
+        "error_rate": summary.get("error_rate"),
+        "missing_retrieval_action_rate": summary.get("missing_retrieval_action_rate"),
+        "malformed_payload_rate": summary.get("malformed_payload_rate"),
+        "unexpected_action_rate": summary.get("unexpected_action_rate"),
+        "unknown_claim_id_rate": summary.get("unknown_claim_id_rate"),
+        "blocked_metric_count": summary.get("blocked_metric_count"),
+        "checked_metric_count": summary.get("checked_metric_count"),
+        "report_path": None if report_path_value is None else str(report_path_value),
     }
 
 
@@ -4417,6 +4505,15 @@ def _candidate_with_gates(
             "product_runtime_drift_report_path": product_trace_replay_workflow.get(
                 "product_runtime_drift_report_path"
             ),
+            "require_action_audit_gate": product_trace_replay_workflow.get(
+                "require_action_audit_gate"
+            ),
+            "action_audit_gate": dict(
+                _mapping(product_trace_replay_workflow.get("action_audit_gate"))
+            ),
+            "action_audit_gate_report_path": product_trace_replay_workflow.get(
+                "action_audit_gate_report_path"
+            ),
         }
         manifests["product_trace_replay_workflow_manifest"] = product_trace_replay_workflow.get(
             "manifest_path"
@@ -4871,6 +4968,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         product_trace_replay_workflow_path=args.product_trace_replay_workflow,
         product_trace_replay_workflow_registry_path=args.product_trace_replay_workflow_registry,
         product_trace_replay_workflow_key=args.product_trace_replay_workflow_key,
+        require_product_trace_action_audit_gate=bool(args.require_product_trace_action_audit_gate),
         selfcheck_signal_fusion_workflow_path=args.selfcheck_signal_fusion_workflow,
         selfcheck_signal_fusion_workflow_registry_path=args.selfcheck_signal_fusion_workflow_registry,
         selfcheck_signal_fusion_workflow_key=args.selfcheck_signal_fusion_workflow_key,
@@ -5109,6 +5207,9 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "defaults to --readiness-registry")
     parser.add_argument("--product-trace-replay-workflow-key", default=None,
                         help="optional report:<name>:<version> registry key for a product trace replay workflow")
+    parser.add_argument("--require-product-trace-action-audit-gate", action="store_true",
+                        help="require the supplied product trace replay workflow to have enabled and promoted "
+                             "its action-audit gate")
     parser.add_argument("--selfcheck-signal-fusion-workflow", default=None,
                         help="optional selfcheck signal fusion workflow report that must pass sample-quality "
                              "and manifest gates")
