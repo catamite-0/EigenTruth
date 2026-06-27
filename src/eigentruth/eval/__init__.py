@@ -29,6 +29,7 @@ from eigentruth.eval.conformal import (
     directional_trigger_rate,
     evaluate_conformal_abstention,
 )
+from eigentruth.eval.escalation import uncertainty_escalation_report
 from eigentruth.eval.intrinsic_dimension import (
     IntrinsicDimensionReport,
     intrinsic_dimension_peak_layer,
@@ -91,6 +92,7 @@ __all__ = [
     "binomial_confidence_interval",
     "selective_classification_report",
     "confidence_error_report",
+    "uncertainty_escalation_report",
     "IntrinsicDimensionReport",
     "twonn_intrinsic_dimension",
     "intrinsic_dimension_profile",

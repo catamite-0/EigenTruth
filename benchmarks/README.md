@@ -1128,6 +1128,26 @@ cost-aware staging does not silently convert low diagnostic risk into factual
 acceptance; explicit local latency experiments can opt out with
 `stage_fail_closed_on_skip=false` in control defaults.
 
+## `eval_uncertainty_escalation.py`
+
+Summarizes saved `VerificationLoopResult.to_dict()` JSON or JSONL rows after
+`run_verification_loop(..., escalation_policy=...)`. Use it to measure whether
+low-confidence verification escalation is buying useful evidence or only adding
+retrieval/tool cost.
+
+```bash
+python benchmarks/eval_uncertainty_escalation.py \
+  --results artifacts/verification-loop-results.jsonl \
+  --label-key label \
+  --json artifacts/uncertainty-escalation-report.json
+```
+
+Rows may be raw loop-result payloads or wrappers such as
+`{"label": 0, "result": {...}}`. Labels are optional; when present, `0` means
+true/normal and `1` means false/anomalous. The report includes escalation trigger
+rates, selected route counts, retrieval request/success/evidence rates, decision
+transitions, and label-conditioned false-accept/selective-accuracy deltas.
+
 ## `eval_verifier_stability.py`
 
 Replays `eval_verifier_ensemble.py` across several split-conformal seeds without
