@@ -14,6 +14,16 @@ _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "triple_extraction_fixture_matrix_mean_best_f1",
     "triple_extraction_fixture_matrix_mean_f1_lift",
 )
+_PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "pre_generation_probe_comparison_coverage_rate",
+    "pre_generation_probe_comparison_manifest_verified_rate",
+    "pre_generation_probe_comparison_model_count",
+    "pre_generation_probe_comparison_run_count",
+    "pre_generation_probe_comparison_redline_pass_rate",
+    "pre_generation_probe_comparison_best_test_label_auroc",
+    "pre_generation_probe_comparison_best_redline_auroc",
+    "pre_generation_probe_comparison_best_redline_margin",
+)
 _PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "triple_claim_coverage_rate",
     "triple_audit_claim_coverage_rate",
@@ -1803,6 +1813,11 @@ def _promotion_contract_runtime_drift_from_metadata(
         contract_metadata=contract_metadata,
         prefixes=_PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES,
     )
+    pre_generation_evidence = _promotion_contract_runtime_drift_evidence(
+        metadata,
+        contract_metadata=contract_metadata,
+        prefixes=_PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_PREFIXES,
+    )
     triple_audit_evidence = _promotion_contract_runtime_drift_evidence(
         metadata,
         contract_metadata=contract_metadata,
@@ -1829,6 +1844,9 @@ def _promotion_contract_runtime_drift_from_metadata(
         "promotion_evidence_required": _optional_bool(
             value("product_runtime_drift_promotion_evidence_required")
         ),
+        "pre_generation_evidence_required": _optional_bool(
+            value("product_runtime_drift_pre_generation_evidence_required")
+        ),
         "triple_audit_evidence_required": _optional_bool(
             value("product_runtime_drift_triple_audit_evidence_required")
         ),
@@ -1847,6 +1865,12 @@ def _promotion_contract_runtime_drift_from_metadata(
         ),
         "promotion_evidence_blocked_metric_count": _finite_float(
             value("product_runtime_drift_promotion_evidence_blocked_metric_count")
+        ),
+        "pre_generation_evidence_metric_count": _finite_float(
+            value("product_runtime_drift_pre_generation_evidence_metric_count")
+        ),
+        "pre_generation_evidence_blocked_metric_count": _finite_float(
+            value("product_runtime_drift_pre_generation_evidence_blocked_metric_count")
         ),
         "triple_audit_evidence_metric_count": _finite_float(
             value("product_runtime_drift_triple_audit_evidence_metric_count")
@@ -1867,6 +1891,7 @@ def _promotion_contract_runtime_drift_from_metadata(
             value("product_runtime_drift_action_gate_evidence_blocked_metric_count")
         ),
         "promotion_evidence": promotion_evidence,
+        "pre_generation_evidence": pre_generation_evidence,
         "triple_audit_evidence": triple_audit_evidence,
         "covered_fact_property_evidence": covered_fact_property_evidence,
         "action_gate_evidence": action_gate_evidence,
@@ -1878,12 +1903,14 @@ def _promotion_contract_runtime_drift_from_metadata(
         not in {
             "available",
             "promotion_evidence",
+            "pre_generation_evidence",
             "triple_audit_evidence",
             "covered_fact_property_evidence",
             "action_gate_evidence",
         }
     ) or _runtime_drift_evidence_available(
         promotion_evidence,
+        pre_generation_evidence,
         triple_audit_evidence,
         covered_fact_property_evidence,
         action_gate_evidence,
@@ -1954,6 +1981,9 @@ def _promotion_contract_runtime_drift_metric_values(runtime_drift: Mapping[str, 
         "promotion_contract_product_runtime_drift_promotion_evidence_required": (
             runtime_drift.get("promotion_evidence_required")
         ),
+        "promotion_contract_product_runtime_drift_pre_generation_evidence_required": (
+            runtime_drift.get("pre_generation_evidence_required")
+        ),
         "promotion_contract_product_runtime_drift_triple_audit_evidence_required": (
             runtime_drift.get("triple_audit_evidence_required")
         ),
@@ -1975,6 +2005,12 @@ def _promotion_contract_runtime_drift_metric_values(runtime_drift: Mapping[str, 
         "promotion_contract_product_runtime_drift_promotion_evidence_blocked_metric_count": (
             runtime_drift.get("promotion_evidence_blocked_metric_count")
         ),
+        "promotion_contract_product_runtime_drift_pre_generation_evidence_metric_count": (
+            runtime_drift.get("pre_generation_evidence_metric_count")
+        ),
+        "promotion_contract_product_runtime_drift_pre_generation_evidence_blocked_metric_count": (
+            runtime_drift.get("pre_generation_evidence_blocked_metric_count")
+        ),
         "promotion_contract_product_runtime_drift_triple_audit_evidence_metric_count": (
             runtime_drift.get("triple_audit_evidence_metric_count")
         ),
@@ -1995,6 +2031,11 @@ def _promotion_contract_runtime_drift_metric_values(runtime_drift: Mapping[str, 
         ),
     }
     for prefix, values in _mapping(runtime_drift.get("promotion_evidence")).items():
+        for suffix in ("baseline", "current", "status"):
+            metrics[
+                f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
+            ] = _mapping(values).get(suffix)
+    for prefix, values in _mapping(runtime_drift.get("pre_generation_evidence")).items():
         for suffix in ("baseline", "current", "status"):
             metrics[
                 f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"

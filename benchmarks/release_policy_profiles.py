@@ -47,6 +47,7 @@ RELEASE_POLICY_PROFILES: Mapping[str, Mapping[str, Any]] = {
         "adapter_family_profile": "strict_audit",
         "require_state_transition_world_model": True,
         "require_product_runtime_drift_promotion_evidence": True,
+        "require_product_runtime_drift_pre_generation_evidence": True,
         "require_product_runtime_drift_triple_audit_evidence": True,
         "require_product_runtime_drift_covered_fact_property_evidence": True,
         "require_product_runtime_drift_action_gate_evidence": True,

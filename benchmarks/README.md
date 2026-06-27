@@ -2362,6 +2362,7 @@ defaults only fill unset values, so explicit thresholds still win. Direct
 `compare_release_candidates.py` reports record `release_policy_profile` and
 `release_policy_profile_applied_defaults` in `config`. `frontier_audit` also
 defaults `--require-product-runtime-drift-promotion-evidence`,
+`--require-product-runtime-drift-pre-generation-evidence`,
 `--require-product-runtime-drift-triple-audit-evidence`,
 `--require-product-runtime-drift-covered-fact-property-evidence`,
 `--require-product-runtime-drift-action-gate-evidence`,
@@ -2441,9 +2442,13 @@ or file-based product runtime baseline. The gate verifies the drift report
 manifest, requires `status=promote`, and carries baseline/current paths plus
 blocked-metric counts into the release candidate. This connects captured product
 traffic replay back into the same release gate as model, route, and selector
-evidence. Add `--require-product-runtime-drift-triple-audit-evidence` when the
-release must also require trace-level triple coverage, audited-claim coverage,
-audit pass-rate, and slot coverage metrics from that drift report.
+evidence. Add `--require-product-runtime-drift-pre-generation-evidence` when the
+release must also require pre-generation probe comparison coverage,
+manifest-verification, model/run breadth, redline pass-rate, AUROC, and
+redline-margin metrics from that drift report. Add
+`--require-product-runtime-drift-triple-audit-evidence` when the release must
+also require trace-level triple coverage, audited-claim coverage, audit
+pass-rate, and slot coverage metrics from that drift report.
 Add `--release-efficiency-report` when the final candidate must also prove that
 the product runtime profile sweep has a promoted efficiency handoff. The gate
 verifies the release-efficiency manifest, requires `workflow=release_efficiency_report`
@@ -2547,6 +2552,7 @@ release evidence, including fail-closed per-property count and support/refutatio
 quality gates over the route summary `property_metrics`. `frontier_audit` adds the same structured-fact defaults and
 also defaults `adapter_family_profile=strict_audit`,
 `require_product_runtime_drift_promotion_evidence=true`,
+`require_product_runtime_drift_pre_generation_evidence=true`,
 `require_product_runtime_drift_triple_audit_evidence=true`,
 `require_product_runtime_drift_covered_fact_property_evidence=true`,
 `require_product_runtime_drift_action_gate_evidence=true`,
@@ -2556,8 +2562,9 @@ covered-facts external-evidence handoff, registered triple-extraction fixture
 matrix, and external-prediction triple-extraction minima unless explicit file
 paths are supplied. The release must carry the strict adapter-family matrix,
 rule-based state-transition world-model evidence, promotion-backed runtime-drift
-evidence, trace-level triple-audit evidence, recommended-route covered-fact
-property/action-gate drift evidence, registered frontier evidence handoffs, and
+evidence, pre-generation runtime-drift evidence, trace-level triple-audit
+evidence, recommended-route covered-fact property/action-gate drift evidence,
+registered frontier evidence handoffs, and
 promoted product-trace action-audit/action-execution child gates unless
 explicitly overridden. The workflow records
 `release_policy_profile` and `release_policy_profile_applied_defaults` in the
@@ -3053,6 +3060,7 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --selector-replay-report artifacts/smollm2_product_trace_replay_workflow/selector-replay/runtime-profile-selector-replay.json \
   --product-runtime-drift-report artifacts/smollm2_product_runtime_drift_v1_6/product-runtime-drift.json \
   --require-product-runtime-drift-promotion-evidence \
+  --require-product-runtime-drift-pre-generation-evidence \
   --require-product-runtime-drift-triple-audit-evidence \
   --adapter-family-matrix artifacts/smollm2_l20_adapter_family_retrieval_structured_qa/adapter-family-matrix.json \
   --required-adapter-route structured_state \

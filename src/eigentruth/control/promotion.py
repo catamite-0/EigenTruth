@@ -23,6 +23,16 @@ _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "triple_extraction_fixture_matrix_mean_best_f1",
     "triple_extraction_fixture_matrix_mean_f1_lift",
 )
+_PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "pre_generation_probe_comparison_coverage_rate",
+    "pre_generation_probe_comparison_manifest_verified_rate",
+    "pre_generation_probe_comparison_model_count",
+    "pre_generation_probe_comparison_run_count",
+    "pre_generation_probe_comparison_redline_pass_rate",
+    "pre_generation_probe_comparison_best_test_label_auroc",
+    "pre_generation_probe_comparison_best_redline_auroc",
+    "pre_generation_probe_comparison_best_redline_margin",
+)
 _PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "triple_claim_coverage_rate",
     "triple_audit_claim_coverage_rate",
@@ -791,6 +801,9 @@ class ProductPromotionContract:
                 "product_runtime_drift_promotion_evidence_required": config.get(
                     "require_product_runtime_drift_promotion_evidence"
                 ),
+                "product_runtime_drift_pre_generation_evidence_required": config.get(
+                    "require_product_runtime_drift_pre_generation_evidence"
+                ),
                 "product_runtime_drift_triple_audit_evidence_required": config.get(
                     "require_product_runtime_drift_triple_audit_evidence"
                 ),
@@ -931,6 +944,12 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         "product_runtime_drift_promotion_evidence_blocked_metric_count": summary.get(
             "promotion_evidence_blocked_metric_count"
         ),
+        "product_runtime_drift_pre_generation_evidence_metric_count": summary.get(
+            "pre_generation_evidence_metric_count"
+        ),
+        "product_runtime_drift_pre_generation_evidence_blocked_metric_count": summary.get(
+            "pre_generation_evidence_blocked_metric_count"
+        ),
         "product_runtime_drift_triple_audit_evidence_metric_count": summary.get(
             "triple_audit_evidence_metric_count"
         ),
@@ -951,6 +970,9 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         ),
     }
     for prefix in _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     for prefix in _PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES:
@@ -2121,6 +2143,7 @@ def _promotion_contract_product_runtime_drift_metadata(
         "product_runtime_drift_current_path",
         "product_runtime_drift_gate_enabled",
         "product_runtime_drift_promotion_evidence_required",
+        "product_runtime_drift_pre_generation_evidence_required",
         "product_runtime_drift_triple_audit_evidence_required",
         "product_runtime_drift_covered_fact_property_evidence_required",
         "product_runtime_drift_action_gate_evidence_required",
@@ -2128,6 +2151,8 @@ def _promotion_contract_product_runtime_drift_metadata(
         "product_runtime_drift_blocked_metric_count",
         "product_runtime_drift_promotion_evidence_metric_count",
         "product_runtime_drift_promotion_evidence_blocked_metric_count",
+        "product_runtime_drift_pre_generation_evidence_metric_count",
+        "product_runtime_drift_pre_generation_evidence_blocked_metric_count",
         "product_runtime_drift_triple_audit_evidence_metric_count",
         "product_runtime_drift_triple_audit_evidence_blocked_metric_count",
         "product_runtime_drift_covered_fact_property_evidence_metric_count",
@@ -2142,6 +2167,7 @@ def _promotion_contract_product_runtime_drift_metadata(
     }
     evidence_prefixes = (
         *_PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES,
+        *_PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_PREFIXES,
         *_PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES,
         *_PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES,
         *_PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES,

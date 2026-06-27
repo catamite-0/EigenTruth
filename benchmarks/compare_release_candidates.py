@@ -58,6 +58,40 @@ _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = 
         "triple_extraction_fixture_matrix_mean_f1_lift",
     ),
 )
+_PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = (
+    (
+        "promotion_contract.pre_generation_probe_comparison.coverage_rate",
+        "pre_generation_probe_comparison_coverage_rate",
+    ),
+    (
+        "promotion_contract.pre_generation_probe_comparison.manifest_verified_rate",
+        "pre_generation_probe_comparison_manifest_verified_rate",
+    ),
+    (
+        "promotion_contract.pre_generation_probe_comparison.model_count.mean",
+        "pre_generation_probe_comparison_model_count",
+    ),
+    (
+        "promotion_contract.pre_generation_probe_comparison.run_count.mean",
+        "pre_generation_probe_comparison_run_count",
+    ),
+    (
+        "promotion_contract.pre_generation_probe_comparison.redline_pass_rate",
+        "pre_generation_probe_comparison_redline_pass_rate",
+    ),
+    (
+        "promotion_contract.pre_generation_probe_comparison.best_test_label_auroc.mean",
+        "pre_generation_probe_comparison_best_test_label_auroc",
+    ),
+    (
+        "promotion_contract.pre_generation_probe_comparison.best_redline_auroc.mean",
+        "pre_generation_probe_comparison_best_redline_auroc",
+    ),
+    (
+        "promotion_contract.pre_generation_probe_comparison.best_redline_margin.mean",
+        "pre_generation_probe_comparison_best_redline_margin",
+    ),
+)
 _PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = (
     ("triple_coverage.claim_triple_coverage_rate", "triple_claim_coverage_rate"),
     ("triple_coverage.audit_claim_coverage_rate", "triple_audit_claim_coverage_rate"),
@@ -150,6 +184,7 @@ def compare_release_candidates(
     selector_replay_report_path: str | Path | None = None,
     product_runtime_drift_report_path: str | Path | None = None,
     require_product_runtime_drift_promotion_evidence: bool = False,
+    require_product_runtime_drift_pre_generation_evidence: bool = False,
     require_product_runtime_drift_triple_audit_evidence: bool = False,
     require_product_runtime_drift_covered_fact_property_evidence: bool = False,
     require_product_runtime_drift_action_gate_evidence: bool = False,
@@ -323,6 +358,9 @@ def compare_release_candidates(
                 "require_product_runtime_drift_promotion_evidence": (
                     require_product_runtime_drift_promotion_evidence
                 ),
+                "require_product_runtime_drift_pre_generation_evidence": (
+                    require_product_runtime_drift_pre_generation_evidence
+                ),
                 "require_product_runtime_drift_triple_audit_evidence": (
                     require_product_runtime_drift_triple_audit_evidence
                 ),
@@ -390,6 +428,9 @@ def compare_release_candidates(
     )
     require_product_runtime_drift_promotion_evidence = bool(
         release_policy_values["require_product_runtime_drift_promotion_evidence"]
+    )
+    require_product_runtime_drift_pre_generation_evidence = bool(
+        release_policy_values["require_product_runtime_drift_pre_generation_evidence"]
     )
     require_product_runtime_drift_triple_audit_evidence = bool(
         release_policy_values["require_product_runtime_drift_triple_audit_evidence"]
@@ -819,6 +860,7 @@ def compare_release_candidates(
     product_runtime_drift = _product_runtime_drift_gate(
         product_runtime_drift_report_path=product_runtime_drift_report_path,
         require_promotion_evidence=require_product_runtime_drift_promotion_evidence,
+        require_pre_generation_evidence=require_product_runtime_drift_pre_generation_evidence,
         require_triple_audit_evidence=require_product_runtime_drift_triple_audit_evidence,
         require_covered_fact_property_evidence=(
             require_product_runtime_drift_covered_fact_property_evidence
@@ -972,6 +1014,9 @@ def compare_release_candidates(
             ),
             "require_product_runtime_drift_promotion_evidence": bool(
                 require_product_runtime_drift_promotion_evidence
+            ),
+            "require_product_runtime_drift_pre_generation_evidence": bool(
+                require_product_runtime_drift_pre_generation_evidence
             ),
             "require_product_runtime_drift_triple_audit_evidence": bool(
                 require_product_runtime_drift_triple_audit_evidence
@@ -4553,6 +4598,7 @@ def _product_runtime_drift_gate(
     *,
     product_runtime_drift_report_path: str | Path | None,
     require_promotion_evidence: bool,
+    require_pre_generation_evidence: bool,
     require_triple_audit_evidence: bool,
     require_covered_fact_property_evidence: bool,
     require_action_gate_evidence: bool,
@@ -4564,6 +4610,7 @@ def _product_runtime_drift_gate(
     if product_runtime_drift_report_path is None:
         if (
             require_promotion_evidence
+            or require_pre_generation_evidence
             or require_triple_audit_evidence
             or require_covered_fact_property_evidence
             or require_action_gate_evidence
@@ -4596,6 +4643,15 @@ def _product_runtime_drift_gate(
                         for metric_name, _prefix in _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_FIELDS
                     ) if require_promotion_evidence else (),
                     "promotion_evidence_blocked_metric_count": 0,
+                    "pre_generation_evidence_required": bool(require_pre_generation_evidence),
+                    "pre_generation_evidence_metric_count": 0,
+                    "pre_generation_evidence_missing_metrics": tuple(
+                        metric_name
+                        for metric_name, _prefix in (
+                            _PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_FIELDS
+                        )
+                    ) if require_pre_generation_evidence else (),
+                    "pre_generation_evidence_blocked_metric_count": 0,
                     "triple_audit_evidence_required": bool(require_triple_audit_evidence),
                     "triple_audit_evidence_metric_count": 0,
                     "triple_audit_evidence_missing_metrics": tuple(
@@ -4646,6 +4702,10 @@ def _product_runtime_drift_gate(
         metrics,
         required=require_promotion_evidence,
     )
+    pre_generation_evidence_summary = _product_runtime_drift_pre_generation_evidence_summary(
+        metrics,
+        required=require_pre_generation_evidence,
+    )
     triple_audit_evidence_summary = _product_runtime_drift_triple_audit_evidence_summary(
         metrics,
         required=require_triple_audit_evidence,
@@ -4667,6 +4727,8 @@ def _product_runtime_drift_gate(
         verification=verification,
         promotion_evidence_summary=promotion_evidence_summary,
         require_promotion_evidence=require_promotion_evidence,
+        pre_generation_evidence_summary=pre_generation_evidence_summary,
+        require_pre_generation_evidence=require_pre_generation_evidence,
         triple_audit_evidence_summary=triple_audit_evidence_summary,
         require_triple_audit_evidence=require_triple_audit_evidence,
         covered_fact_property_evidence_summary=covered_fact_property_evidence_summary,
@@ -4692,6 +4754,7 @@ def _product_runtime_drift_gate(
             "blocked_metric_count": summary.get("blocked_metric_count"),
             "observed_metric_count": summary.get("observed_metric_count"),
             **promotion_evidence_summary,
+            **pre_generation_evidence_summary,
             **triple_audit_evidence_summary,
             **covered_fact_property_evidence_summary,
             **action_gate_evidence_summary,
@@ -4710,6 +4773,8 @@ def _product_runtime_drift_report_gate(
     verification: Mapping[str, Any],
     promotion_evidence_summary: Mapping[str, Any],
     require_promotion_evidence: bool,
+    pre_generation_evidence_summary: Mapping[str, Any],
+    require_pre_generation_evidence: bool,
     triple_audit_evidence_summary: Mapping[str, Any],
     require_triple_audit_evidence: bool,
     covered_fact_property_evidence_summary: Mapping[str, Any],
@@ -4751,6 +4816,23 @@ def _product_runtime_drift_report_gate(
             failures.append(
                 "product runtime drift promotion evidence metrics are incomplete: "
                 + ", ".join(str(metric) for metric in missing_metrics)
+            )
+    if require_pre_generation_evidence:
+        missing_metrics = tuple(
+            pre_generation_evidence_summary.get("pre_generation_evidence_missing_metrics") or ()
+        )
+        if missing_metrics:
+            failures.append(
+                "product runtime drift pre-generation evidence metrics are incomplete: "
+                + ", ".join(str(metric) for metric in missing_metrics)
+            )
+        blocked_metric_count = _float_or_none(
+            pre_generation_evidence_summary.get("pre_generation_evidence_blocked_metric_count")
+        )
+        if blocked_metric_count is not None and blocked_metric_count > 0:
+            failures.append(
+                "product runtime drift pre-generation evidence blocked "
+                f"{int(blocked_metric_count)} metric(s)"
             )
     if require_triple_audit_evidence:
         missing_metrics = tuple(
@@ -4876,6 +4958,40 @@ def _product_runtime_drift_promotion_evidence_summary(
             summary["promotion_evidence_blocked_metric_count"] += 1
     summary["promotion_evidence_metric_count"] = metric_count
     summary["promotion_evidence_missing_metrics"] = tuple(missing_metrics)
+    return summary
+
+
+def _product_runtime_drift_pre_generation_evidence_summary(
+    metrics: Sequence[Mapping[str, Any]],
+    *,
+    required: bool = False,
+) -> dict[str, Any]:
+    metrics_by_name = {
+        str(metric["metric"]): metric
+        for metric in metrics
+        if isinstance(metric, Mapping) and isinstance(metric.get("metric"), str)
+    }
+    missing_metrics: list[str] = []
+    metric_count = 0
+    summary: dict[str, Any] = {
+        "pre_generation_evidence_required": bool(required),
+        "pre_generation_evidence_metric_count": 0,
+        "pre_generation_evidence_missing_metrics": (),
+        "pre_generation_evidence_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_FIELDS:
+        metric = metrics_by_name.get(metric_name)
+        summary[f"{prefix}_baseline"] = None if metric is None else metric.get("baseline")
+        summary[f"{prefix}_current"] = None if metric is None else metric.get("current")
+        summary[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is None or metric.get("current") is None:
+            missing_metrics.append(metric_name)
+            continue
+        metric_count += 1
+        if metric.get("status") == "blocked":
+            summary["pre_generation_evidence_blocked_metric_count"] += 1
+    summary["pre_generation_evidence_metric_count"] = metric_count
+    summary["pre_generation_evidence_missing_metrics"] = tuple(missing_metrics)
     return summary
 
 
@@ -6231,6 +6347,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         require_product_runtime_drift_promotion_evidence=bool(
             args.require_product_runtime_drift_promotion_evidence
         ),
+        require_product_runtime_drift_pre_generation_evidence=bool(
+            args.require_product_runtime_drift_pre_generation_evidence
+        ),
         require_product_runtime_drift_triple_audit_evidence=bool(
             args.require_product_runtime_drift_triple_audit_evidence
         ),
@@ -6470,6 +6589,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--require-product-runtime-drift-promotion-evidence", action="store_true",
                         help="require the product runtime drift report to include promotion-contract "
                              "coverage and triple-extraction fixture-matrix quality metrics")
+    parser.add_argument("--require-product-runtime-drift-pre-generation-evidence", action="store_true",
+                        help="require the product runtime drift report to include pre-generation "
+                             "probe comparison coverage, redline, and quality metrics")
     parser.add_argument("--require-product-runtime-drift-triple-audit-evidence", action="store_true",
                         help="require the product runtime drift report to include trace-level "
                              "triple coverage, audit coverage, audit pass-rate, and slot coverage metrics")

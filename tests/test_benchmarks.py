@@ -14425,10 +14425,23 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         blocked_metric_count=0,
         triple_audit_evidence=True,
     )
+    pre_generation_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "pre-generation-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        pre_generation_evidence=True,
+    )
     missing_evidence_drift_report = _write_product_runtime_drift_report(
         tmp_path / "missing-evidence-runtime-drift",
         status="promote",
         blocked_metric_count=0,
+    )
+    blocked_pre_generation_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "blocked-pre-generation-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        pre_generation_evidence=True,
+        pre_generation_blocked=True,
     )
     blocked_triple_audit_drift_report = _write_product_runtime_drift_report(
         tmp_path / "blocked-triple-audit-runtime-drift",
@@ -14500,6 +14513,39 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         max_false_supported_rate=0.0,
         min_false_refuted_rate=0.99,
         product_runtime_drift_report_path=blocked_drift_report,
+    )
+    pre_generation = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=pre_generation_drift_report,
+        require_product_runtime_drift_pre_generation_evidence=True,
+    )
+    missing_pre_generation = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=missing_evidence_drift_report,
+        require_product_runtime_drift_pre_generation_evidence=True,
+    )
+    blocked_pre_generation = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=blocked_pre_generation_drift_report,
+        require_product_runtime_drift_pre_generation_evidence=True,
     )
     triple_audit = module.compare_release_candidates(
         readiness_registry_path=registry_path,
@@ -14666,6 +14712,43 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
     assert any(
         "product runtime drift status is 'blocked'" in reason
         for reason in blocked["decision"]["blocking_reasons"][0]["reasons"]
+    )
+    assert pre_generation["decision"]["status"] == "promote"
+    assert pre_generation["config"]["require_product_runtime_drift_pre_generation_evidence"] is True
+    pre_generation_summary = pre_generation["release_candidate"]["product_runtime_drift"]["summary"]
+    assert pre_generation_summary["pre_generation_evidence_required"] is True
+    assert pre_generation_summary["pre_generation_evidence_metric_count"] == 8
+    assert pre_generation_summary["pre_generation_evidence_blocked_metric_count"] == 0
+    assert pre_generation_summary["pre_generation_probe_comparison_redline_pass_rate_current"] == (
+        pytest.approx(1.0)
+    )
+    assert pre_generation_summary["pre_generation_probe_comparison_best_redline_margin_status"] == (
+        "pass"
+    )
+    assert missing_pre_generation["decision"]["status"] == "blocked"
+    assert missing_pre_generation["product_runtime_drift_gate"]["summary"][
+        "pre_generation_evidence_missing_metrics"
+    ] == (
+        "promotion_contract.pre_generation_probe_comparison.coverage_rate",
+        "promotion_contract.pre_generation_probe_comparison.manifest_verified_rate",
+        "promotion_contract.pre_generation_probe_comparison.model_count.mean",
+        "promotion_contract.pre_generation_probe_comparison.run_count.mean",
+        "promotion_contract.pre_generation_probe_comparison.redline_pass_rate",
+        "promotion_contract.pre_generation_probe_comparison.best_test_label_auroc.mean",
+        "promotion_contract.pre_generation_probe_comparison.best_redline_auroc.mean",
+        "promotion_contract.pre_generation_probe_comparison.best_redline_margin.mean",
+    )
+    assert any(
+        "pre-generation evidence metrics are incomplete" in reason
+        for reason in missing_pre_generation["decision"]["blocking_reasons"][0]["reasons"]
+    )
+    assert blocked_pre_generation["decision"]["status"] == "blocked"
+    assert blocked_pre_generation["product_runtime_drift_gate"]["summary"][
+        "pre_generation_evidence_blocked_metric_count"
+    ] == 1
+    assert any(
+        "pre-generation evidence blocked 1 metric" in reason
+        for reason in blocked_pre_generation["decision"]["blocking_reasons"][0]["reasons"]
     )
     assert triple_audit["decision"]["status"] == "promote"
     assert triple_audit["config"]["require_product_runtime_drift_triple_audit_evidence"] is True
@@ -16326,6 +16409,7 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         status="promote",
         blocked_metric_count=0,
         promotion_evidence=True,
+        pre_generation_evidence=True,
         triple_audit_evidence=True,
         covered_fact_property_evidence=True,
         action_gate_evidence=True,
@@ -16426,6 +16510,7 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     assert frontier_payload["config"]["adapter_family_profile"] == "strict_audit"
     assert frontier_payload["config"]["require_state_transition_world_model"] is True
     assert frontier_payload["config"]["require_product_runtime_drift_promotion_evidence"] is True
+    assert frontier_payload["config"]["require_product_runtime_drift_pre_generation_evidence"] is True
     assert frontier_payload["config"]["require_product_runtime_drift_triple_audit_evidence"] is True
     assert frontier_payload["config"]["require_product_runtime_drift_covered_fact_property_evidence"] is True
     assert frontier_payload["config"]["require_product_runtime_drift_action_gate_evidence"] is True
@@ -16449,6 +16534,9 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     ] == "strict_audit"
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
         "require_product_runtime_drift_promotion_evidence"
+    ] is True
+    assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
+        "require_product_runtime_drift_pre_generation_evidence"
     ] is True
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
         "require_product_runtime_drift_triple_audit_evidence"
@@ -16478,6 +16566,7 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         "min_triple_extraction_mean_best_external_f1"
     ] == pytest.approx(0.90)
     assert frontier_payload["product_runtime_drift_gate"]["summary"]["promotion_evidence_metric_count"] == 4
+    assert frontier_payload["product_runtime_drift_gate"]["summary"]["pre_generation_evidence_metric_count"] == 8
     assert frontier_payload["product_runtime_drift_gate"]["summary"]["triple_audit_evidence_metric_count"] == 4
     assert frontier_payload["product_runtime_drift_gate"]["summary"][
         "covered_fact_property_evidence_metric_count"
@@ -17510,6 +17599,7 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     assert frontier_profile_config.adapter_family_profile == "strict_audit"
     assert frontier_profile_config.require_state_transition_world_model is True
     assert frontier_profile_config.require_product_runtime_drift_promotion_evidence is True
+    assert frontier_profile_config.require_product_runtime_drift_pre_generation_evidence is True
     assert frontier_profile_config.require_product_runtime_drift_triple_audit_evidence is True
     assert frontier_profile_config.require_product_runtime_drift_covered_fact_property_evidence is True
     assert frontier_profile_config.require_product_runtime_drift_action_gate_evidence is True
@@ -17534,6 +17624,9 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     ] is True
     assert frontier_profile_config.release_policy_profile_applied_defaults[
         "require_product_runtime_drift_promotion_evidence"
+    ] is True
+    assert frontier_profile_config.release_policy_profile_applied_defaults[
+        "require_product_runtime_drift_pre_generation_evidence"
     ] is True
     assert frontier_profile_config.release_policy_profile_applied_defaults[
         "require_product_runtime_drift_triple_audit_evidence"
@@ -18125,6 +18218,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         status="promote",
         blocked_metric_count=0,
         promotion_evidence=True,
+        pre_generation_evidence=True,
         triple_audit_evidence=True,
         action_gate_evidence=True,
     )
@@ -18240,6 +18334,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         require_product_trace_action_audit_gate=True,
         require_product_trace_action_execution_gate=True,
         require_product_runtime_drift_promotion_evidence=True,
+        require_product_runtime_drift_pre_generation_evidence=True,
         require_product_runtime_drift_triple_audit_evidence=True,
         require_product_runtime_drift_action_gate_evidence=True,
         selfcheck_signal_fusion_workflow_key="report:selfcheck-signal-fusion-workflow:0.1",
@@ -18452,12 +18547,15 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["product_runtime_drift_report"] == str(product_runtime_drift_report)
     assert manifest["metadata"]["product_runtime_drift_gate_enabled"] is True
     assert manifest["metadata"]["product_runtime_drift_promotion_evidence_required"] is True
+    assert manifest["metadata"]["product_runtime_drift_pre_generation_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_triple_audit_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_action_gate_evidence_required"] is True
-    assert manifest["metadata"]["product_runtime_drift_compared_metric_count"] == 20
+    assert manifest["metadata"]["product_runtime_drift_compared_metric_count"] == 28
     assert manifest["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
     assert manifest["metadata"]["product_runtime_drift_promotion_evidence_metric_count"] == 4
     assert manifest["metadata"]["product_runtime_drift_promotion_evidence_blocked_metric_count"] == 0
+    assert manifest["metadata"]["product_runtime_drift_pre_generation_evidence_metric_count"] == 8
+    assert manifest["metadata"]["product_runtime_drift_pre_generation_evidence_blocked_metric_count"] == 0
     assert manifest["metadata"]["product_runtime_drift_triple_audit_evidence_metric_count"] == 4
     assert manifest["metadata"]["product_runtime_drift_triple_audit_evidence_blocked_metric_count"] == 0
     assert manifest["metadata"]["product_runtime_drift_action_gate_evidence_metric_count"] == 10
@@ -18819,11 +18917,14 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["selector_replay_observed_selected_to_original_ratio_mean"] == pytest.approx(0.80)
     assert record.metadata["release_product_runtime_drift_status"] == "promote"
     assert record.metadata["product_runtime_drift_promotion_evidence_required"] is True
+    assert record.metadata["product_runtime_drift_pre_generation_evidence_required"] is True
     assert record.metadata["product_runtime_drift_triple_audit_evidence_required"] is True
     assert record.metadata["product_runtime_drift_action_gate_evidence_required"] is True
     assert record.metadata["product_runtime_drift_blocked_metric_count"] == 0
     assert record.metadata["product_runtime_drift_promotion_evidence_metric_count"] == 4
     assert record.metadata["product_runtime_drift_promotion_evidence_blocked_metric_count"] == 0
+    assert record.metadata["product_runtime_drift_pre_generation_evidence_metric_count"] == 8
+    assert record.metadata["product_runtime_drift_pre_generation_evidence_blocked_metric_count"] == 0
     assert record.metadata["product_runtime_drift_triple_audit_evidence_metric_count"] == 4
     assert record.metadata["product_runtime_drift_triple_audit_evidence_blocked_metric_count"] == 0
     assert record.metadata["product_runtime_drift_action_gate_evidence_metric_count"] == 10
@@ -19574,6 +19675,7 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                 "runtime_profile": "balanced",
                 "max_covariance_maha_last_auroc_drop": 0.05,
                 "require_product_runtime_drift_promotion_evidence": True,
+                "require_product_runtime_drift_pre_generation_evidence": True,
                 "require_product_runtime_drift_triple_audit_evidence": True,
                 "require_product_runtime_drift_action_gate_evidence": True,
                 "require_product_trace_action_audit_gate": True,
@@ -19704,16 +19806,34 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                 "product_runtime_drift": {
                     "summary": {
                         "gate_enabled": True,
-                        "compared_metric_count": 9,
+                        "compared_metric_count": 28,
                         "blocked_metric_count": 0,
                         "promotion_evidence_metric_count": 4,
                         "promotion_evidence_blocked_metric_count": 0,
+                        "pre_generation_evidence_metric_count": 8,
+                        "pre_generation_evidence_blocked_metric_count": 0,
                         "triple_audit_evidence_metric_count": 4,
                         "triple_audit_evidence_blocked_metric_count": 0,
                         "action_gate_evidence_metric_count": 10,
                         "action_gate_evidence_blocked_metric_count": 0,
                         "promotion_contract_coverage_rate_current": 1.0,
                         "promotion_contract_coverage_rate_status": "pass",
+                        "pre_generation_probe_comparison_coverage_rate_current": 1.0,
+                        "pre_generation_probe_comparison_coverage_rate_status": "pass",
+                        "pre_generation_probe_comparison_manifest_verified_rate_current": 1.0,
+                        "pre_generation_probe_comparison_manifest_verified_rate_status": "pass",
+                        "pre_generation_probe_comparison_model_count_current": 2.0,
+                        "pre_generation_probe_comparison_model_count_status": "pass",
+                        "pre_generation_probe_comparison_run_count_current": 2.0,
+                        "pre_generation_probe_comparison_run_count_status": "pass",
+                        "pre_generation_probe_comparison_redline_pass_rate_current": 1.0,
+                        "pre_generation_probe_comparison_redline_pass_rate_status": "pass",
+                        "pre_generation_probe_comparison_best_test_label_auroc_current": 0.85,
+                        "pre_generation_probe_comparison_best_test_label_auroc_status": "pass",
+                        "pre_generation_probe_comparison_best_redline_auroc_current": 0.69,
+                        "pre_generation_probe_comparison_best_redline_auroc_status": "pass",
+                        "pre_generation_probe_comparison_best_redline_margin_current": 0.08,
+                        "pre_generation_probe_comparison_best_redline_margin_status": "pass",
                         "triple_extraction_fixture_matrix_mean_best_f1_current": 0.88,
                         "triple_extraction_fixture_matrix_mean_best_f1_status": "pass",
                         "triple_claim_coverage_rate_current": 1.0,
@@ -20130,11 +20250,14 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
         "artifacts/trace-replay-workflow/action-execution-gate.json"
     )
     assert contract["metadata"]["product_runtime_drift_promotion_evidence_required"] is True
+    assert contract["metadata"]["product_runtime_drift_pre_generation_evidence_required"] is True
     assert contract["metadata"]["product_runtime_drift_triple_audit_evidence_required"] is True
     assert contract["metadata"]["product_runtime_drift_action_gate_evidence_required"] is True
     assert contract["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
     assert contract["metadata"]["product_runtime_drift_promotion_evidence_metric_count"] == 4
     assert contract["metadata"]["product_runtime_drift_promotion_evidence_blocked_metric_count"] == 0
+    assert contract["metadata"]["product_runtime_drift_pre_generation_evidence_metric_count"] == 8
+    assert contract["metadata"]["product_runtime_drift_pre_generation_evidence_blocked_metric_count"] == 0
     assert contract["metadata"]["product_runtime_drift_triple_audit_evidence_metric_count"] == 4
     assert contract["metadata"]["product_runtime_drift_triple_audit_evidence_blocked_metric_count"] == 0
     assert contract["metadata"]["product_runtime_drift_action_gate_evidence_metric_count"] == 10
@@ -20184,7 +20307,12 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert manifest["metadata"]["product_runtime_drift_triple_audit_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_action_gate_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_promotion_evidence_metric_count"] == 4
+    assert manifest["metadata"]["product_runtime_drift_pre_generation_evidence_required"] is True
+    assert manifest["metadata"]["product_runtime_drift_pre_generation_evidence_metric_count"] == 8
     assert manifest["metadata"]["product_runtime_drift_triple_audit_pass_rate_current"] == 1.0
+    assert manifest["metadata"]["product_runtime_drift_pre_generation_probe_comparison_redline_pass_rate_status"] == (
+        "pass"
+    )
     assert manifest["metadata"]["product_runtime_drift_triple_slot_coverage_rate_status"] == "pass"
     assert manifest["metadata"]["product_runtime_drift_product_trace_action_audit_error_rate_current"] == 0.0
     assert manifest["metadata"]["triple_extraction_fixture_matrix_report"] == (
@@ -20264,6 +20392,11 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert record.metadata["product_runtime_drift_triple_audit_evidence_required"] is True
     assert record.metadata["product_runtime_drift_action_gate_evidence_required"] is True
     assert record.metadata["product_runtime_drift_promotion_evidence_metric_count"] == 4
+    assert record.metadata["product_runtime_drift_pre_generation_evidence_required"] is True
+    assert record.metadata["product_runtime_drift_pre_generation_evidence_metric_count"] == 8
+    assert record.metadata[
+        "product_runtime_drift_pre_generation_probe_comparison_best_redline_margin_current"
+    ] == pytest.approx(0.08)
     assert record.metadata["product_runtime_drift_triple_audit_pass_rate_current"] == pytest.approx(1.0)
     assert record.metadata["product_runtime_drift_triple_slot_coverage_rate_status"] == "pass"
     assert record.metadata["product_runtime_drift_product_trace_action_audit_error_rate_current"] == (
@@ -21082,6 +21215,8 @@ def _write_product_runtime_drift_report(
     status,
     blocked_metric_count,
     promotion_evidence=False,
+    pre_generation_evidence=False,
+    pre_generation_blocked=False,
     triple_audit_evidence=False,
     triple_audit_blocked=False,
     covered_fact_property_evidence=False,
@@ -21181,6 +21316,110 @@ def _write_product_runtime_drift_report(
                 "absolute_drop": 0.01,
                 "threshold": 0.10,
                 "reason": None,
+            },
+        ])
+    if pre_generation_evidence:
+        redline_margin_status = "blocked" if pre_generation_blocked else "pass"
+        metrics.extend([
+            {
+                "metric": "promotion_contract.pre_generation_probe_comparison.coverage_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": (
+                    "promotion_contract.pre_generation_probe_comparison."
+                    "manifest_verified_rate"
+                ),
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "promotion_contract.pre_generation_probe_comparison.model_count.mean",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 2.0,
+                "current": 2.0,
+                "absolute_delta": 0.0,
+                "threshold": 2.0,
+                "reason": None,
+            },
+            {
+                "metric": "promotion_contract.pre_generation_probe_comparison.run_count.mean",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 2.0,
+                "current": 2.0,
+                "absolute_delta": 0.0,
+                "threshold": 2.0,
+                "reason": None,
+            },
+            {
+                "metric": "promotion_contract.pre_generation_probe_comparison.redline_pass_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": (
+                    "promotion_contract.pre_generation_probe_comparison."
+                    "best_test_label_auroc.mean"
+                ),
+                "status": "pass",
+                "comparison": "max_drop",
+                "baseline": 0.86,
+                "current": 0.85,
+                "absolute_delta": -0.01,
+                "absolute_drop": 0.01,
+                "threshold": 0.05,
+                "reason": None,
+            },
+            {
+                "metric": (
+                    "promotion_contract.pre_generation_probe_comparison."
+                    "best_redline_auroc.mean"
+                ),
+                "status": "pass",
+                "comparison": "max_drop",
+                "baseline": 0.70,
+                "current": 0.69,
+                "absolute_delta": -0.01,
+                "absolute_drop": 0.01,
+                "threshold": 0.05,
+                "reason": None,
+            },
+            {
+                "metric": (
+                    "promotion_contract.pre_generation_probe_comparison."
+                    "best_redline_margin.mean"
+                ),
+                "status": redline_margin_status,
+                "comparison": "max_drop",
+                "baseline": 0.08,
+                "current": 0.01 if pre_generation_blocked else 0.08,
+                "absolute_delta": -0.07 if pre_generation_blocked else 0.0,
+                "absolute_drop": 0.07 if pre_generation_blocked else 0.0,
+                "threshold": 0.02,
+                "reason": (
+                    "promotion_contract.pre_generation_probe_comparison."
+                    "best_redline_margin.mean below gate"
+                    if pre_generation_blocked
+                    else None
+                ),
             },
         ])
     if triple_audit_evidence:
@@ -27027,18 +27266,37 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                     "product_runtime_drift_report": "artifacts/runtime-drift/runtime-drift.json",
                     "product_runtime_drift_gate_enabled": True,
                     "product_runtime_drift_promotion_evidence_required": True,
+                    "product_runtime_drift_pre_generation_evidence_required": True,
                     "product_runtime_drift_triple_audit_evidence_required": True,
                     "product_runtime_drift_action_gate_evidence_required": True,
-                    "product_runtime_drift_compared_metric_count": 22,
+                    "product_runtime_drift_compared_metric_count": 30,
                     "product_runtime_drift_blocked_metric_count": 0,
                     "product_runtime_drift_promotion_evidence_metric_count": 4,
                     "product_runtime_drift_promotion_evidence_blocked_metric_count": 0,
+                    "product_runtime_drift_pre_generation_evidence_metric_count": 8,
+                    "product_runtime_drift_pre_generation_evidence_blocked_metric_count": 0,
                     "product_runtime_drift_triple_audit_evidence_metric_count": 4,
                     "product_runtime_drift_triple_audit_evidence_blocked_metric_count": 0,
                     "product_runtime_drift_action_gate_evidence_metric_count": 10,
                     "product_runtime_drift_action_gate_evidence_blocked_metric_count": 0,
                     "product_runtime_drift_promotion_contract_coverage_rate_current": 1.0,
                     "product_runtime_drift_promotion_contract_coverage_rate_status": "pass",
+                    "product_runtime_drift_pre_generation_probe_comparison_coverage_rate_current": 1.0,
+                    "product_runtime_drift_pre_generation_probe_comparison_coverage_rate_status": "pass",
+                    "product_runtime_drift_pre_generation_probe_comparison_manifest_verified_rate_current": 1.0,
+                    "product_runtime_drift_pre_generation_probe_comparison_manifest_verified_rate_status": "pass",
+                    "product_runtime_drift_pre_generation_probe_comparison_model_count_current": 2.0,
+                    "product_runtime_drift_pre_generation_probe_comparison_model_count_status": "pass",
+                    "product_runtime_drift_pre_generation_probe_comparison_run_count_current": 2.0,
+                    "product_runtime_drift_pre_generation_probe_comparison_run_count_status": "pass",
+                    "product_runtime_drift_pre_generation_probe_comparison_redline_pass_rate_current": 1.0,
+                    "product_runtime_drift_pre_generation_probe_comparison_redline_pass_rate_status": "pass",
+                    "product_runtime_drift_pre_generation_probe_comparison_best_test_label_auroc_current": 0.85,
+                    "product_runtime_drift_pre_generation_probe_comparison_best_test_label_auroc_status": "pass",
+                    "product_runtime_drift_pre_generation_probe_comparison_best_redline_auroc_current": 0.69,
+                    "product_runtime_drift_pre_generation_probe_comparison_best_redline_auroc_status": "pass",
+                    "product_runtime_drift_pre_generation_probe_comparison_best_redline_margin_current": 0.08,
+                    "product_runtime_drift_pre_generation_probe_comparison_best_redline_margin_status": "pass",
                     "product_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_current": 0.88,
                     "product_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_status": "pass",
                     "product_runtime_drift_triple_audit_pass_rate_current": 1.0,
@@ -27351,11 +27609,13 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert runtime_drift["status_counts"] == {"promote": 1}
     assert runtime_drift["gate_enabled_counts"] == {"True": 1}
     assert runtime_drift["promotion_evidence_required_counts"] == {"True": 1}
+    assert runtime_drift["pre_generation_evidence_required_counts"] == {"True": 1}
     assert runtime_drift["triple_audit_evidence_required_counts"] == {"True": 1}
     assert runtime_drift["action_gate_evidence_required_counts"] == {"True": 1}
-    assert runtime_drift["compared_metric_count"]["mean"] == pytest.approx(22.0)
+    assert runtime_drift["compared_metric_count"]["mean"] == pytest.approx(30.0)
     assert runtime_drift["blocked_metric_count"]["mean"] == pytest.approx(0.0)
     assert runtime_drift["promotion_evidence_metric_count"]["mean"] == pytest.approx(4.0)
+    assert runtime_drift["pre_generation_evidence_metric_count"]["mean"] == pytest.approx(8.0)
     assert runtime_drift["triple_audit_evidence_metric_count"]["mean"] == pytest.approx(4.0)
     assert runtime_drift["action_gate_evidence_metric_count"]["mean"] == pytest.approx(10.0)
     assert runtime_drift["promotion_evidence"]["promotion_contract_coverage_rate"][
@@ -27364,6 +27624,12 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert runtime_drift["promotion_evidence"]["promotion_contract_coverage_rate"][
         "status_counts"
     ] == {"pass": 1}
+    assert runtime_drift["pre_generation_evidence"][
+        "pre_generation_probe_comparison_best_redline_margin"
+    ]["current"]["mean"] == pytest.approx(0.08)
+    assert runtime_drift["pre_generation_evidence"][
+        "pre_generation_probe_comparison_redline_pass_rate"
+    ]["status_counts"] == {"pass": 1}
     assert runtime_drift["triple_audit_evidence"]["triple_audit_pass_rate"][
         "current"
     ]["mean"] == pytest.approx(1.0)
@@ -27446,6 +27712,18 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
             "promotion_contract_product_runtime_drift_promotion_evidence_metric_count"
         ]
         == 4.0
+    )
+    assert (
+        payload["traces"][0]["metrics"][
+            "promotion_contract_product_runtime_drift_pre_generation_evidence_metric_count"
+        ]
+        == 8.0
+    )
+    assert (
+        payload["traces"][0]["metrics"][
+            "promotion_contract_product_runtime_drift_pre_generation_probe_comparison_redline_pass_rate_current"
+        ]
+        == 1.0
     )
     assert (
         payload["traces"][0]["metrics"][
@@ -27551,6 +27829,12 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
         "promotion_contract_product_runtime_drift_promotion_evidence_metric_count_mean"
     ] == pytest.approx(4.0)
     assert manifest["metadata"][
+        "promotion_contract_product_runtime_drift_pre_generation_evidence_metric_count_mean"
+    ] == pytest.approx(8.0)
+    assert manifest["metadata"][
+        "promotion_contract_product_runtime_drift_pre_generation_probe_comparison_best_redline_margin_current_mean"
+    ] == pytest.approx(0.08)
+    assert manifest["metadata"][
         "promotion_contract_product_runtime_drift_triple_audit_evidence_metric_count_mean"
     ] == pytest.approx(4.0)
     assert manifest["metadata"][
@@ -27639,6 +27923,12 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert record.metadata[
         "promotion_contract_product_runtime_drift_promotion_evidence_metric_count_mean"
     ] == pytest.approx(4.0)
+    assert record.metadata[
+        "promotion_contract_product_runtime_drift_pre_generation_evidence_metric_count_mean"
+    ] == pytest.approx(8.0)
+    assert record.metadata[
+        "promotion_contract_product_runtime_drift_pre_generation_probe_comparison_redline_pass_rate_status_counts"
+    ] == {"pass": 1}
     assert record.metadata[
         "promotion_contract_product_runtime_drift_triple_audit_pass_rate_current_mean"
     ] == pytest.approx(1.0)
@@ -28722,7 +29012,7 @@ def test_run_product_runtime_baseline_reuses_trace_record_cache(tmp_path, monkey
     assert first["config"]["trace_record_cache"]["cache_hit"] is False
     assert first["config"]["trace_record_cache"]["cache_written"] is True
     assert first["paths"]["trace_records_cache"] == str(cache_path)
-    assert cache_payload["schema_version"] == 8
+    assert cache_payload["schema_version"] == 9
     assert cache_payload["workflow"] == "product_runtime_baseline_trace_records"
     assert cache_payload["summary"]["trace_count"] == 2
     assert cache_payload["policy"]["payload"]["max_total_seconds"] == 0.3
