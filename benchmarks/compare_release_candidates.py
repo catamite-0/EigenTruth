@@ -279,6 +279,11 @@ def compare_release_candidates(
     json_cache_stats: MutableMapping[str, int] | None = None,
 ) -> dict[str, Any]:
     """Return a fail-closed deployable release candidate from saved baselines."""
+    disabled_profile_defaults: list[str] = []
+    if external_evidence_baseline_comparison_path is not None:
+        disabled_profile_defaults.append("external_evidence_baseline_comparison_key")
+    if triple_extraction_fixture_matrix_path is not None:
+        disabled_profile_defaults.append("triple_extraction_fixture_matrix_key")
     release_policy_profile, release_policy_values, release_policy_applied = (
         apply_release_policy_profile_defaults(
             release_policy_profile,
@@ -328,7 +333,23 @@ def compare_release_candidates(
                 "require_product_trace_action_execution_gate": (
                     require_product_trace_action_execution_gate
                 ),
+                "external_evidence_baseline_comparison_key": (
+                    external_evidence_baseline_comparison_key
+                ),
+                "triple_extraction_fixture_matrix_key": triple_extraction_fixture_matrix_key,
+                "min_triple_extraction_corpora": min_triple_extraction_corpora,
+                "min_triple_extraction_distinct_predicates": min_triple_extraction_distinct_predicates,
+                "min_triple_extraction_external_prediction_count": (
+                    min_triple_extraction_external_prediction_count
+                ),
+                "min_triple_extraction_external_prediction_corpora": (
+                    min_triple_extraction_external_prediction_corpora
+                ),
+                "min_triple_extraction_mean_best_external_f1": (
+                    min_triple_extraction_mean_best_external_f1
+                ),
             },
+            disabled_defaults=disabled_profile_defaults,
         )
     )
     require_structured_fact_robustness = bool(
@@ -382,6 +403,25 @@ def compare_release_candidates(
     require_product_trace_action_execution_gate = bool(
         release_policy_values["require_product_trace_action_execution_gate"]
     )
+    external_evidence_baseline_comparison_key = clean_optional_key(
+        release_policy_values["external_evidence_baseline_comparison_key"]
+    )
+    triple_extraction_fixture_matrix_key = clean_optional_key(
+        release_policy_values["triple_extraction_fixture_matrix_key"]
+    )
+    min_triple_extraction_corpora = release_policy_values["min_triple_extraction_corpora"]
+    min_triple_extraction_distinct_predicates = release_policy_values[
+        "min_triple_extraction_distinct_predicates"
+    ]
+    min_triple_extraction_external_prediction_count = release_policy_values[
+        "min_triple_extraction_external_prediction_count"
+    ]
+    min_triple_extraction_external_prediction_corpora = release_policy_values[
+        "min_triple_extraction_external_prediction_corpora"
+    ]
+    min_triple_extraction_mean_best_external_f1 = release_policy_values[
+        "min_triple_extraction_mean_best_external_f1"
+    ]
     structured_fact_canonical_route_key = clean_optional_key(structured_fact_canonical_route_key)
     structured_fact_paraphrase_route_key = clean_optional_key(structured_fact_paraphrase_route_key)
     if require_structured_fact_robustness and (

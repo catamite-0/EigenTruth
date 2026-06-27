@@ -15651,6 +15651,26 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         covered_fact_property_evidence=True,
         action_gate_evidence=True,
     )
+    external_evidence_report = _write_external_evidence_baseline_comparison_report(
+        tmp_path / "frontier-external-evidence-baseline-comparison.json"
+    )
+    triple_matrix_report = _write_triple_extraction_fixture_matrix_report(
+        tmp_path / "frontier-triple-extraction-matrix",
+        external_prediction_count=2,
+        external_prediction_corpora=("country-core", "enterprise-product"),
+        mean_best_external_f1=0.96,
+    )
+    ArtifactRegistry.load_json(registry_path).record_report(
+        name="covered-facts-external-evidence-handoff",
+        path=external_evidence_report,
+        version="0.4",
+        metadata={"workflow": "external_evidence_baseline_comparison"},
+    ).record_report(
+        name="triple-extraction-fixture-matrix",
+        path=triple_matrix_report,
+        version="0.1",
+        metadata={"workflow": "triple_extraction_fixture_matrix"},
+    ).save_json()
     frontier_payload = module.compare_release_candidates(
         readiness_registry_path=registry_path,
         route_baseline_keys=("benchmark_manifest:structured-fact-canonical-route:0.1",),
@@ -15732,6 +15752,19 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     assert frontier_payload["config"]["require_product_runtime_drift_action_gate_evidence"] is True
     assert frontier_payload["config"]["require_product_trace_action_audit_gate"] is True
     assert frontier_payload["config"]["require_product_trace_action_execution_gate"] is True
+    assert frontier_payload["config"]["external_evidence_baseline_comparison_key"] == (
+        "report:covered-facts-external-evidence-handoff:0.4"
+    )
+    assert frontier_payload["config"]["triple_extraction_fixture_matrix_key"] == (
+        "report:triple-extraction-fixture-matrix:0.1"
+    )
+    assert frontier_payload["config"]["min_triple_extraction_corpora"] == 2
+    assert frontier_payload["config"]["min_triple_extraction_distinct_predicates"] == 6
+    assert frontier_payload["config"]["min_triple_extraction_external_prediction_count"] == 2
+    assert frontier_payload["config"]["min_triple_extraction_external_prediction_corpora"] == 2
+    assert frontier_payload["config"]["min_triple_extraction_mean_best_external_f1"] == (
+        pytest.approx(0.90)
+    )
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
         "adapter_family_profile"
     ] == "strict_audit"
@@ -15753,6 +15786,18 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
         "require_product_trace_action_execution_gate"
     ] is True
+    assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
+        "external_evidence_baseline_comparison_key"
+    ] == "report:covered-facts-external-evidence-handoff:0.4"
+    assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
+        "triple_extraction_fixture_matrix_key"
+    ] == "report:triple-extraction-fixture-matrix:0.1"
+    assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
+        "min_triple_extraction_external_prediction_count"
+    ] == 2
+    assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
+        "min_triple_extraction_mean_best_external_f1"
+    ] == pytest.approx(0.90)
     assert frontier_payload["product_runtime_drift_gate"]["summary"]["promotion_evidence_metric_count"] == 4
     assert frontier_payload["product_runtime_drift_gate"]["summary"]["triple_audit_evidence_metric_count"] == 4
     assert frontier_payload["product_runtime_drift_gate"]["summary"][
@@ -15769,6 +15814,43 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         "state_transition",
         "triple_evidence",
     )
+    assert frontier_payload["release_candidate"]["external_evidence_baseline_comparison"][
+        "record_key"
+    ] == "report:covered-facts-external-evidence-handoff:0.4"
+    assert frontier_payload["release_candidate"]["triple_extraction_fixture_matrix"][
+        "external_prediction_count"
+    ] == 2
+    assert frontier_payload["triple_extraction_fixture_matrix_gate"]["gate"]["policy"][
+        "min_mean_best_external_f1"
+    ] == pytest.approx(0.90)
+
+    frontier_path_payload = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        route_baseline_keys=("benchmark_manifest:structured-fact-canonical-route:0.1",),
+        release_policy_profile="frontier-audit",
+        structured_fact_canonical_route_key="benchmark_manifest:structured-fact-canonical-route:0.1",
+        structured_fact_paraphrase_route_key="benchmark_manifest:structured-fact-paraphrase-route:0.1",
+        adapter_family_matrix_path=adapter_matrix_path,
+        product_runtime_drift_report_path=frontier_drift_report,
+        external_evidence_baseline_comparison_path=external_evidence_report,
+        triple_extraction_fixture_matrix_path=triple_matrix_report,
+    )
+
+    assert frontier_path_payload["decision"]["status"] == "promote"
+    assert frontier_path_payload["config"]["external_evidence_baseline_comparison_key"] is None
+    assert frontier_path_payload["config"]["triple_extraction_fixture_matrix_key"] is None
+    assert "external_evidence_baseline_comparison_key" not in (
+        frontier_path_payload["config"]["release_policy_profile_applied_defaults"]
+    )
+    assert "triple_extraction_fixture_matrix_key" not in (
+        frontier_path_payload["config"]["release_policy_profile_applied_defaults"]
+    )
+    assert frontier_path_payload["release_candidate"]["external_evidence_baseline_comparison"][
+        "report_path"
+    ] == str(external_evidence_report)
+    assert frontier_path_payload["release_candidate"]["triple_extraction_fixture_matrix"][
+        "report_path"
+    ] == str(triple_matrix_report)
 
     with pytest.raises(ValueError, match="structured_fact robustness requires both"):
         module.compare_release_candidates(
@@ -16754,6 +16836,17 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     assert frontier_profile_config.require_product_runtime_drift_action_gate_evidence is True
     assert frontier_profile_config.require_product_trace_action_audit_gate is True
     assert frontier_profile_config.require_product_trace_action_execution_gate is True
+    assert frontier_profile_config.external_evidence_baseline_comparison_key == (
+        "report:covered-facts-external-evidence-handoff:0.4"
+    )
+    assert frontier_profile_config.triple_extraction_fixture_matrix_key == (
+        "report:triple-extraction-fixture-matrix:0.1"
+    )
+    assert frontier_profile_config.min_triple_extraction_corpora == 2
+    assert frontier_profile_config.min_triple_extraction_distinct_predicates == 6
+    assert frontier_profile_config.min_triple_extraction_external_prediction_count == 2
+    assert frontier_profile_config.min_triple_extraction_external_prediction_corpora == 2
+    assert frontier_profile_config.min_triple_extraction_mean_best_external_f1 == pytest.approx(0.90)
     assert frontier_profile_config.release_policy_profile_applied_defaults["adapter_family_profile"] == (
         "strict_audit"
     )
@@ -16778,6 +16871,41 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     assert frontier_profile_config.release_policy_profile_applied_defaults[
         "require_product_trace_action_execution_gate"
     ] is True
+    assert frontier_profile_config.release_policy_profile_applied_defaults[
+        "external_evidence_baseline_comparison_key"
+    ] == "report:covered-facts-external-evidence-handoff:0.4"
+    assert frontier_profile_config.release_policy_profile_applied_defaults[
+        "triple_extraction_fixture_matrix_key"
+    ] == "report:triple-extraction-fixture-matrix:0.1"
+    assert frontier_profile_config.release_policy_profile_applied_defaults[
+        "min_triple_extraction_external_prediction_count"
+    ] == 2
+    assert frontier_profile_config.release_policy_profile_applied_defaults[
+        "min_triple_extraction_mean_best_external_f1"
+    ] == pytest.approx(0.90)
+
+    frontier_path_profile_config = module.ReleaseCandidateRegistryWorkflowConfig(
+        readiness_registry_path=tmp_path / "readiness-registry.json",
+        release_registry_path=tmp_path / "release-registry.json",
+        name="unit-release",
+        version="0.1",
+        release_policy_profile="frontier-audit",
+        structured_fact_canonical_route_key="benchmark_manifest:structured-fact-canonical-route:0.1",
+        structured_fact_paraphrase_route_key="benchmark_manifest:structured-fact-paraphrase-route:0.1",
+        external_evidence_baseline_comparison_path=tmp_path
+        / "external-evidence-baseline-comparison.json",
+        triple_extraction_fixture_matrix_path=tmp_path / "triple-extraction-fixture-matrix.json",
+    )
+
+    assert frontier_path_profile_config.external_evidence_baseline_comparison_key is None
+    assert frontier_path_profile_config.triple_extraction_fixture_matrix_key is None
+    assert "external_evidence_baseline_comparison_key" not in (
+        frontier_path_profile_config.release_policy_profile_applied_defaults
+    )
+    assert "triple_extraction_fixture_matrix_key" not in (
+        frontier_path_profile_config.release_policy_profile_applied_defaults
+    )
+    assert frontier_path_profile_config.min_triple_extraction_external_prediction_count == 2
 
     with pytest.raises(ValueError, match="release_policy_profile"):
         module.ReleaseCandidateRegistryWorkflowConfig(

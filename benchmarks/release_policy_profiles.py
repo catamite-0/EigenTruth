@@ -30,6 +30,10 @@ _STRICT_STRUCTURED_FACT_DEFAULTS: Mapping[str, Any] = {
     "required_route_max_covered_fact_property_false_supported_rate": 0.0,
     "required_route_min_covered_fact_property_false_refuted_rate": 0.99,
 }
+FRONTIER_EXTERNAL_EVIDENCE_BASELINE_COMPARISON_KEY = (
+    "report:covered-facts-external-evidence-handoff:0.4"
+)
+FRONTIER_TRIPLE_EXTRACTION_FIXTURE_MATRIX_KEY = "report:triple-extraction-fixture-matrix:0.1"
 
 RELEASE_POLICY_PROFILES: Mapping[str, Mapping[str, Any]] = {
     "research_smoke": {
@@ -48,6 +52,15 @@ RELEASE_POLICY_PROFILES: Mapping[str, Mapping[str, Any]] = {
         "require_product_runtime_drift_action_gate_evidence": True,
         "require_product_trace_action_audit_gate": True,
         "require_product_trace_action_execution_gate": True,
+        "external_evidence_baseline_comparison_key": (
+            FRONTIER_EXTERNAL_EVIDENCE_BASELINE_COMPARISON_KEY
+        ),
+        "triple_extraction_fixture_matrix_key": FRONTIER_TRIPLE_EXTRACTION_FIXTURE_MATRIX_KEY,
+        "min_triple_extraction_corpora": 2,
+        "min_triple_extraction_distinct_predicates": 6,
+        "min_triple_extraction_external_prediction_count": 2,
+        "min_triple_extraction_external_prediction_corpora": 2,
+        "min_triple_extraction_mean_best_external_f1": 0.90,
     },
 }
 RELEASE_POLICY_PROFILE_NAMES = tuple(sorted(RELEASE_POLICY_PROFILES))
@@ -88,15 +101,20 @@ def normalize_release_policy_profile(value: str | None) -> str | None:
 def apply_release_policy_profile_defaults(
     release_policy_profile: str | None,
     values: Mapping[str, Any],
+    *,
+    disabled_defaults: Sequence[str] = (),
 ) -> tuple[str | None, dict[str, Any], dict[str, Any]]:
     """Apply profile defaults to unset keys without overriding explicit values."""
     profile = normalize_release_policy_profile(release_policy_profile)
     merged = dict(values)
     applied: dict[str, Any] = {}
+    disabled = set(disabled_defaults)
     if profile is None:
         return None, merged, applied
     for key, default in RELEASE_POLICY_PROFILES[profile].items():
         if key not in merged:
+            continue
+        if key in disabled:
             continue
         if not _profile_default_is_unset(merged[key], default):
             continue
@@ -110,4 +128,6 @@ def _profile_default_is_unset(current: Any, default: Any) -> bool:
         return current is False and default is True
     if isinstance(default, (tuple, list)):
         return not tuple(current or ())
+    if isinstance(default, str):
+        return clean_optional_key(current) is None
     return current is None

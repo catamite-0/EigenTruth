@@ -76,6 +76,11 @@ _PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES: tuple[str, ...] = (
 def _apply_release_policy_profile_to_config(
     config: "ReleaseCandidateRegistryWorkflowConfig",
 ) -> None:
+    disabled_profile_defaults: list[str] = []
+    if config.external_evidence_baseline_comparison_path is not None:
+        disabled_profile_defaults.append("external_evidence_baseline_comparison_key")
+    if config.triple_extraction_fixture_matrix_path is not None:
+        disabled_profile_defaults.append("triple_extraction_fixture_matrix_key")
     profile, values, applied = apply_release_policy_profile_defaults(
         config.release_policy_profile,
         {
@@ -124,7 +129,25 @@ def _apply_release_policy_profile_to_config(
             "require_product_trace_action_execution_gate": (
                 config.require_product_trace_action_execution_gate
             ),
+            "external_evidence_baseline_comparison_key": (
+                config.external_evidence_baseline_comparison_key
+            ),
+            "triple_extraction_fixture_matrix_key": config.triple_extraction_fixture_matrix_key,
+            "min_triple_extraction_corpora": config.min_triple_extraction_corpora,
+            "min_triple_extraction_distinct_predicates": (
+                config.min_triple_extraction_distinct_predicates
+            ),
+            "min_triple_extraction_external_prediction_count": (
+                config.min_triple_extraction_external_prediction_count
+            ),
+            "min_triple_extraction_external_prediction_corpora": (
+                config.min_triple_extraction_external_prediction_corpora
+            ),
+            "min_triple_extraction_mean_best_external_f1": (
+                config.min_triple_extraction_mean_best_external_f1
+            ),
         },
+        disabled_defaults=disabled_profile_defaults,
     )
     object.__setattr__(config, "release_policy_profile", profile)
     for key, value in values.items():

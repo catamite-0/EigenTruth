@@ -594,7 +594,9 @@ Added the first monitor-first tool-selection audit layer:
 - `compare_release_candidates.py --require-product-trace-action-audit-gate`
   and `--require-product-trace-action-execution-gate` now fail closed unless a
   supplied product-trace-replay workflow promoted the corresponding child gate.
-  The `frontier_audit` profile enables both by default and
+  The `frontier_audit` profile enables both by default, now also defaults to
+  the registered covered-facts external-evidence handoff and external-prediction
+  triple-extraction matrix gates, and
   `run_release_candidate_registry_workflow.py` records the child gate reports
   plus action-audit/action-execution rates in release manifests and registry
   metadata.
@@ -607,4 +609,4 @@ Added the first monitor-first tool-selection audit layer:
 
 1. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
 2. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
-3. Feed the registered covered-facts external-evidence handoff into `compare_release_candidates.py --external-evidence-baseline-comparison-key` so KG correction evidence participates in the full release gate.
+3. Materialize a real `frontier_audit` release candidate with the registered covered-facts external-evidence handoff and external-prediction triple matrix artifact, then export the resulting promotion contract.

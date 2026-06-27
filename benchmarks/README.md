@@ -2221,12 +2221,19 @@ defaults only fill unset values, so explicit thresholds still win. Direct
 defaults `--require-product-runtime-drift-promotion-evidence`,
 `--require-product-runtime-drift-triple-audit-evidence`,
 `--require-product-runtime-drift-covered-fact-property-evidence`,
+`--require-product-runtime-drift-action-gate-evidence`,
 `--require-product-trace-action-audit-gate`, and
-`--require-product-trace-action-execution-gate` so strict local releases fail
-closed when runtime drift lacks promotion-contract, triple-extraction
-fixture-matrix, trace-level triple-audit, recommended-route covered-fact
-property evidence, or the product-trace replay workflow lacks promoted
-action-audit/action-execution child gates.
+`--require-product-trace-action-execution-gate`; it also defaults to the
+registered covered-facts external-evidence handoff, registered triple-extraction
+fixture matrix, and external-prediction triple-extraction minima. The source
+defaults are path-aware, so explicit `--external-evidence-baseline-comparison`
+or `--triple-extraction-fixture-matrix` file inputs suppress the corresponding
+default registry keys. Strict local releases therefore fail closed when runtime
+drift lacks promotion-contract, triple-extraction fixture-matrix,
+trace-level triple-audit, recommended-route covered-fact property/action-gate
+evidence, the product-trace replay workflow lacks promoted
+action-audit/action-execution child gates, or registered frontier evidence
+handoffs are absent.
 Add `--performance-baseline-key performance_baseline:<name>:<version>` when the
 final candidate must match a registered performance handoff. The comparison
 verifies that performance baseline manifest, reloads its runtime recommendation,
@@ -2399,13 +2406,17 @@ also defaults `adapter_family_profile=strict_audit`,
 `require_product_runtime_drift_promotion_evidence=true`,
 `require_product_runtime_drift_triple_audit_evidence=true`,
 `require_product_runtime_drift_covered_fact_property_evidence=true`,
+`require_product_runtime_drift_action_gate_evidence=true`,
 `require_product_trace_action_audit_gate=true`, and
-`require_product_trace_action_execution_gate=true`, so the release must carry
-the strict adapter-family matrix, rule-based state-transition world-model
-evidence, promotion-backed runtime-drift evidence, trace-level triple-audit
-evidence, recommended-route covered-fact property drift evidence, and promoted
-product-trace action-audit/action-execution child gates unless explicitly
-overridden. The workflow records
+`require_product_trace_action_execution_gate=true`, plus the registered
+covered-facts external-evidence handoff, registered triple-extraction fixture
+matrix, and external-prediction triple-extraction minima unless explicit file
+paths are supplied. The release must carry the strict adapter-family matrix,
+rule-based state-transition world-model evidence, promotion-backed runtime-drift
+evidence, trace-level triple-audit evidence, recommended-route covered-fact
+property/action-gate drift evidence, registered frontier evidence handoffs, and
+promoted product-trace action-audit/action-execution child gates unless
+explicitly overridden. The workflow records
 `release_policy_profile` and `release_policy_profile_applied_defaults` in the
 comparison report, final manifest, and registry metadata.
 It also forwards `--max-covariance-maha-last-auroc-drop` to the underlying
