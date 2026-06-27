@@ -33,9 +33,11 @@ from eigentruth.core.pre_generation import (
 )
 from eigentruth.core.subspace import TruthSubspace
 from eigentruth.core.trajectory import (
+    ResidualContributionProfile,
     TrajectoryConvergenceMetrics,
     TrajectoryConvergenceReport,
     TrajectoryMonitor,
+    residual_contribution_profile,
     trajectory_convergence_metrics,
 )
 
@@ -49,9 +51,11 @@ __all__ = [
     "TruthSubspace",
     "ATTENTION_SOFT_TARGET_PROBE_SCHEMA_VERSION",
     "AttentionSoftTargetProbeArtifact",
+    "ResidualContributionProfile",
     "TrajectoryConvergenceMetrics",
     "TrajectoryConvergenceReport",
     "TrajectoryMonitor",
+    "residual_contribution_profile",
     "trajectory_convergence_metrics",
     "load_attention_soft_target_probe",
     "soft_error_rate_targets",

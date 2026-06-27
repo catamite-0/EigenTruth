@@ -41,9 +41,11 @@ from eigentruth.core.pre_generation import (
 )
 from eigentruth.core.subspace import TruthSubspace
 from eigentruth.core.trajectory import (
+    ResidualContributionProfile,
     TrajectoryConvergenceMetrics,
     TrajectoryConvergenceReport,
     TrajectoryMonitor,
+    residual_contribution_profile,
     trajectory_convergence_metrics,
 )
 from eigentruth.intervention.hooks import TruthProbe
@@ -84,9 +86,11 @@ __all__ = [
     "RepresentationSubspace",
     "AttentionSoftTargetProbeArtifact",
     "ConceptArtifact",
+    "ResidualContributionProfile",
     "TrajectoryConvergenceMetrics",
     "TrajectoryConvergenceReport",
     "TrajectoryMonitor",
+    "residual_contribution_profile",
     "trajectory_convergence_metrics",
     "RepTelemetryCallback",
     "RepresentationTelemetryRecorder",

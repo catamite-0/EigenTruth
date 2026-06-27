@@ -47,6 +47,10 @@ DEFAULT_FRONTIER_SIGNALS = (
     "maha_last",
     "subspace_resid",
     "resid_update_norm",
+    "resid_update_profile_area",
+    "resid_update_profile_peak",
+    "resid_update_profile_late_mass",
+    "resid_update_profile_concentration",
     "eigenscore",
 )
 DEFAULT_ENSEMBLE_METHODS = ("max_rank", "mean_rank")

@@ -77,6 +77,12 @@ TruthfulQA, in a deterministic, judge-free, single-forward-pass setup (SAPLMA-st
    `resid_update_norm` is an ICR-inspired residual-dynamics proxy: it measures
    the RMS update from the previous hidden-state layer to the current layer for
    the final answer token. It is dependency-free and reuses the same forward pass.
+   `resid_update_profile_area`, `resid_update_profile_peak`,
+   `resid_update_profile_late_mass`, and
+   `resid_update_profile_concentration` summarize the whole inspected layer
+   curve from the same per-layer updates. Treat them as exploratory profile
+   signals until they pass the same conformal sweep, stability, and release-gate
+   checks as other diagnostics.
 
 ### Method
 
@@ -463,6 +469,9 @@ progress output.
 - `subspace_resid > 0.5` means false statements sit farther from the fitted factual subspace.
 - `resid_update_norm > 0.5` means false statements induce larger final-token
   cross-layer residual updates at the selected layer.
+- `resid_update_profile_* > 0.5` means a cross-layer residual-update profile
+  summary ranks false statements above true ones. These are exploratory
+  ICR-style curve summaries, not a replacement for calibrated layer/score sweep.
 - Compare `maha_last` against `nll_answer` and `first_token_entropy`: geometry is
   only interesting if it adds signal over plain perplexity or cheap single-decode
   uncertainty.

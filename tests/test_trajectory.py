@@ -1,7 +1,12 @@
 import pytest
 import torch
 
-from eigentruth.core import TrajectoryMonitor, trajectory_convergence_metrics
+from eigentruth.core import (
+    ResidualContributionProfile,
+    TrajectoryMonitor,
+    residual_contribution_profile,
+    trajectory_convergence_metrics,
+)
 
 
 def _convergent_trajectory() -> torch.Tensor:
@@ -53,6 +58,36 @@ def test_trajectory_monitor_records_report_summary():
     assert report["summary"]["mean_convergence_score"] > 0.0
     assert report["metadata"]["run"] == "unit"
     assert report["metadata"]["report"] == "trajectory"
+
+
+def test_residual_contribution_profile_summarizes_layer_curve():
+    profile = residual_contribution_profile(
+        {-2: 0.25, -1: 0.75, 0: 0.0},
+        layers=(-2, -1, 0),
+        late_fraction=1 / 3,
+        metadata={"kind": "unit"},
+    )
+    roundtrip = ResidualContributionProfile.from_dict(profile.to_dict())
+
+    assert profile.layer_count == 3
+    assert profile.total_contribution == pytest.approx(1.0)
+    assert profile.mean_contribution == pytest.approx(1.0 / 3.0)
+    assert profile.peak_contribution == pytest.approx(0.75)
+    assert profile.peak_layer == -1
+    assert profile.peak_position == pytest.approx(0.5)
+    assert profile.layer_centroid == pytest.approx(0.375)
+    assert profile.late_mass_fraction == pytest.approx(0.0)
+    assert 0.0 <= profile.normalized_entropy <= 1.0
+    assert profile.concentration == pytest.approx(1.0 - profile.normalized_entropy)
+    assert profile.metadata["kind"] == "unit"
+    assert roundtrip.to_dict() == profile.to_dict()
+
+
+def test_residual_contribution_profile_rejects_invalid_values():
+    with pytest.raises(ValueError, match="non-negative finite"):
+        residual_contribution_profile({0: -1.0})
+    with pytest.raises(ValueError, match="late_fraction"):
+        residual_contribution_profile({0: 1.0}, late_fraction=0.0)
 
 
 def test_trajectory_convergence_rejects_invalid_inputs():

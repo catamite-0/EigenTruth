@@ -98,6 +98,70 @@ class TrajectoryConvergenceReport:
         }
 
 
+@dataclass(frozen=True)
+class ResidualContributionProfile:
+    """Layerwise residual-update contribution summary for one hidden state.
+
+    The profile treats per-layer residual update norms as a contribution curve
+    over the inspected layer order. It is intended as a lightweight ICR-style
+    dynamic signal: large area/peak values indicate stronger hidden-state
+    movement, while late mass and concentration describe where that movement is
+    concentrated.
+    """
+
+    layer_count: int
+    total_contribution: float
+    mean_contribution: float
+    peak_contribution: float
+    peak_layer: int | None
+    peak_position: float
+    layer_centroid: float
+    late_mass_fraction: float
+    normalized_entropy: float
+    concentration: float
+    values_by_layer: Mapping[int, float] = field(default_factory=dict)
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-ready residual contribution profile."""
+        return {
+            "layer_count": int(self.layer_count),
+            "total_contribution": float(self.total_contribution),
+            "mean_contribution": float(self.mean_contribution),
+            "peak_contribution": float(self.peak_contribution),
+            "peak_layer": None if self.peak_layer is None else int(self.peak_layer),
+            "peak_position": float(self.peak_position),
+            "layer_centroid": float(self.layer_centroid),
+            "late_mass_fraction": float(self.late_mass_fraction),
+            "normalized_entropy": float(self.normalized_entropy),
+            "concentration": float(self.concentration),
+            "values_by_layer": {
+                str(layer): float(value)
+                for layer, value in self.values_by_layer.items()
+            },
+            "metadata": dict(self.metadata),
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "ResidualContributionProfile":
+        """Build a residual contribution profile from a JSON-like payload."""
+        raw_values = data.get("values_by_layer") or {}
+        return cls(
+            layer_count=int(data["layer_count"]),
+            total_contribution=float(data["total_contribution"]),
+            mean_contribution=float(data["mean_contribution"]),
+            peak_contribution=float(data["peak_contribution"]),
+            peak_layer=None if data.get("peak_layer") is None else int(data["peak_layer"]),
+            peak_position=float(data["peak_position"]),
+            layer_centroid=float(data["layer_centroid"]),
+            late_mass_fraction=float(data["late_mass_fraction"]),
+            normalized_entropy=float(data["normalized_entropy"]),
+            concentration=float(data["concentration"]),
+            values_by_layer={int(layer): float(value) for layer, value in dict(raw_values).items()},
+            metadata=dict(data.get("metadata") or {}),
+        )
+
+
 def trajectory_convergence_metrics(
     states: Tensor,
     *,
@@ -157,6 +221,92 @@ def trajectory_convergence_metrics(
     )
 
 
+def residual_contribution_profile(
+    update_norms: Mapping[int, float] | Sequence[float],
+    *,
+    layers: Sequence[int] | None = None,
+    late_fraction: float = 0.5,
+    eps: float = 1e-8,
+    metadata: Mapping[str, Any] | None = None,
+) -> ResidualContributionProfile:
+    """Summarize a per-layer residual-update contribution curve.
+
+    Args:
+        update_norms: Mapping ``layer -> non-negative update norm`` or a
+            sequence of update norms. When a sequence is supplied, ``layers``
+            may provide the corresponding layer identifiers.
+        layers: Optional explicit layer order. This is preferred for negative
+            layer indexes because it preserves the benchmark sweep order.
+        late_fraction: Fraction of the tail of the layer order counted as
+            "late" mass.
+        eps: Positive finite tolerance used for zero-mass handling.
+        metadata: Optional JSON-ready metadata copied into the profile.
+    """
+    values_by_layer = _coerce_residual_update_values(update_norms, layers=layers)
+    if float(eps) <= 0.0 or not math.isfinite(float(eps)):
+        raise ValueError("eps must be positive and finite.")
+    if not (0.0 < float(late_fraction) <= 1.0) or not math.isfinite(float(late_fraction)):
+        raise ValueError("late_fraction must be in (0, 1].")
+
+    ordered_layers = tuple(values_by_layer)
+    values = [values_by_layer[layer] for layer in ordered_layers]
+    layer_count = len(values)
+    if layer_count == 0:
+        return ResidualContributionProfile(
+            layer_count=0,
+            total_contribution=0.0,
+            mean_contribution=0.0,
+            peak_contribution=0.0,
+            peak_layer=None,
+            peak_position=0.0,
+            layer_centroid=0.0,
+            late_mass_fraction=0.0,
+            normalized_entropy=0.0,
+            concentration=0.0,
+            values_by_layer={},
+            metadata=metadata or {},
+        )
+
+    total = float(sum(values))
+    mean = total / layer_count
+    peak_index, peak = max(enumerate(values), key=lambda item: item[1])
+    denominator = max(layer_count - 1, 1)
+    peak_position = peak_index / denominator if layer_count > 1 else 0.0
+
+    if total <= float(eps):
+        centroid = 0.0
+        late_mass_fraction = 0.0
+        normalized_entropy = 0.0
+    else:
+        positions = [idx / denominator if layer_count > 1 else 0.0 for idx in range(layer_count)]
+        weights = [value / total for value in values]
+        centroid = float(sum(position * weight for position, weight in zip(positions, weights, strict=True)))
+        late_count = max(1, math.ceil(layer_count * float(late_fraction)))
+        late_start = max(0, layer_count - late_count)
+        late_mass_fraction = float(sum(values[late_start:]) / total)
+        if layer_count <= 1:
+            normalized_entropy = 0.0
+        else:
+            entropy = -sum(weight * math.log(max(weight, float(eps))) for weight in weights if weight > 0.0)
+            normalized_entropy = float(entropy / math.log(layer_count))
+
+    concentration = max(0.0, min(1.0, 1.0 - normalized_entropy))
+    return ResidualContributionProfile(
+        layer_count=layer_count,
+        total_contribution=total,
+        mean_contribution=mean,
+        peak_contribution=float(peak),
+        peak_layer=int(ordered_layers[peak_index]),
+        peak_position=float(peak_position),
+        layer_centroid=float(centroid),
+        late_mass_fraction=float(late_mass_fraction),
+        normalized_entropy=float(normalized_entropy),
+        concentration=float(concentration),
+        values_by_layer=values_by_layer,
+        metadata=metadata or {},
+    )
+
+
 @dataclass
 class TrajectoryMonitor:
     """Recorder for model-free generation trajectory convergence diagnostics."""
@@ -212,6 +362,45 @@ def _as_trajectory_matrix(states: Tensor) -> Tensor:
     if not torch.isfinite(matrix).all():
         raise ValueError("states must contain only finite values.")
     return matrix
+
+
+def _coerce_residual_update_values(
+    update_norms: Mapping[int, float] | Sequence[float],
+    *,
+    layers: Sequence[int] | None,
+) -> dict[int, float]:
+    if isinstance(update_norms, Mapping):
+        raw_by_layer = {int(layer): value for layer, value in update_norms.items()}
+        if layers is None:
+            ordered_layers = tuple(sorted(raw_by_layer))
+        else:
+            ordered_layers = tuple(int(layer) for layer in layers if int(layer) in raw_by_layer)
+        values = {
+            layer: _non_negative_finite_float(raw_by_layer[layer], name=f"update_norms[{layer}]")
+            for layer in ordered_layers
+        }
+        return values
+
+    values_seq = tuple(update_norms)
+    if layers is None:
+        ordered_layers = tuple(range(len(values_seq)))
+    else:
+        if len(layers) != len(values_seq):
+            raise ValueError("layers must have the same length as update_norms.")
+        ordered_layers = tuple(int(layer) for layer in layers)
+    return {
+        layer: _non_negative_finite_float(value, name=f"update_norms[{index}]")
+        for index, (layer, value) in enumerate(zip(ordered_layers, values_seq, strict=True))
+    }
+
+
+def _non_negative_finite_float(value: float, *, name: str) -> float:
+    if isinstance(value, bool):
+        raise ValueError(f"{name} must be a non-negative finite number.")
+    resolved = float(value)
+    if not math.isfinite(resolved) or resolved < 0.0:
+        raise ValueError(f"{name} must be a non-negative finite number.")
+    return resolved
 
 
 def _log_decay_slope(step_distances: Tensor, *, eps: float) -> float:

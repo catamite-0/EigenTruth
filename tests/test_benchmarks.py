@@ -34978,6 +34978,10 @@ def test_eval_truthfulqa_exposes_internal_eigenscore_signal():
     assert "resid_update_norm" in module.SIGNALS
     assert "resid_update_norm" in module._sweep_signal_names(SimpleNamespace(inside_samples=0))
     assert module.DEFAULT_SCORE_DIRECTIONS["resid_update_norm"] == "higher"
+    for signal in module.RESID_UPDATE_PROFILE_SIGNAL_NAMES:
+        assert signal in module.SIGNALS
+        assert signal not in module._sweep_signal_names(SimpleNamespace(inside_samples=0))
+        assert module.DEFAULT_SCORE_DIRECTIONS[signal] == "higher"
     assert module.FIRST_TOKEN_ENTROPY_SIGNAL in module.SIGNALS
     assert module.FIRST_TOKEN_ENTROPY_SIGNAL not in module._sweep_signal_names(SimpleNamespace(inside_samples=0))
     assert module.DEFAULT_SCORE_DIRECTIONS[module.FIRST_TOKEN_ENTROPY_SIGNAL] == "higher"
@@ -35968,6 +35972,22 @@ def test_eval_truthfulqa_score_reps_batch_matches_scalar_math():
         assert record["primary_scores"]["eigenscore"] == pytest.approx(reps["eigenscore_by_layer"][-1])
         assert record["primary_scores"]["resid_update_norm"] == pytest.approx(
             reps["resid_update_norm_by_layer"][-1]
+        )
+        profile = module.residual_contribution_profile(
+            reps["resid_update_norm_by_layer"],
+            layers=[-1, -2],
+        )
+        assert record["primary_scores"]["resid_update_profile_area"] == pytest.approx(
+            profile.total_contribution
+        )
+        assert record["primary_scores"]["resid_update_profile_peak"] == pytest.approx(
+            profile.peak_contribution
+        )
+        assert record["primary_scores"]["resid_update_profile_late_mass"] == pytest.approx(
+            profile.late_mass_fraction
+        )
+        assert record["primary_scores"]["resid_update_profile_concentration"] == pytest.approx(
+            profile.concentration
         )
         assert record["primary_scores"][module.FIRST_TOKEN_ENTROPY_SIGNAL] == pytest.approx(
             reps["first_token_entropy"]

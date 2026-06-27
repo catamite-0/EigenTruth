@@ -67,6 +67,7 @@ from eigentruth.core import (
     internal_eigenscore,
     lexical_semantic_energy,
     lexical_semantic_entropy,
+    residual_contribution_profile,
 )
 from eigentruth.core.math_engine import (
     COVARIANCE_MODES,
@@ -88,11 +89,18 @@ from eigentruth.verify import Claim, SelfConsistencyVerifier
 
 FIRST_TOKEN_ENTROPY_SIGNAL = "first_token_entropy"
 FIRST_TOKEN_TOP_K_DEFAULT = 20
+RESID_UPDATE_PROFILE_SIGNAL_NAMES = (
+    "resid_update_profile_area",
+    "resid_update_profile_peak",
+    "resid_update_profile_late_mass",
+    "resid_update_profile_concentration",
+)
 SIGNALS = [
     "maha_last",
     "truth_proj",
     "subspace_resid",
     "resid_update_norm",
+    *RESID_UPDATE_PROFILE_SIGNAL_NAMES,
     "disp_euclid",
     "disp_hse",
     "eigenscore",
@@ -1313,8 +1321,16 @@ def _score_reps_batch(
 
     for record, (_, reps) in zip(records, valid):
         ans = reps["ans_hs"]
+        resid_profile = residual_contribution_profile(
+            dict(reps.get("resid_update_norm_by_layer") or {}),
+            layers=layers,
+        )
         record["primary_scores"] = {
             **record["layer_scores"][target_layer],
+            "resid_update_profile_area": float(resid_profile.total_contribution),
+            "resid_update_profile_peak": float(resid_profile.peak_contribution),
+            "resid_update_profile_late_mass": float(resid_profile.late_mass_fraction),
+            "resid_update_profile_concentration": float(resid_profile.concentration),
             "disp_euclid": float(euclidean_dispersion(ans).item()),
             "disp_hse": float(hyperbolic_semantic_entropy(poincare_map(ans)).item()),
             FIRST_TOKEN_ENTROPY_SIGNAL: float(reps.get("first_token_entropy", 0.0)),
@@ -4423,6 +4439,8 @@ def run(args) -> dict:
                 scores["truth_proj"].append(primary_scores["truth_proj"])
                 scores["subspace_resid"].append(primary_scores["subspace_resid"])
                 scores["resid_update_norm"].append(primary_scores["resid_update_norm"])
+                for signal in RESID_UPDATE_PROFILE_SIGNAL_NAMES:
+                    scores[signal].append(primary_scores[signal])
                 scores["disp_euclid"].append(primary_scores["disp_euclid"])
                 scores["disp_hse"].append(primary_scores["disp_hse"])
                 scores["eigenscore"].append(primary_scores["eigenscore"])
@@ -4531,6 +4549,7 @@ def run(args) -> dict:
                    "n_pos": n_pos, "n_neg": n_neg, "seed": args.seed,
                    "eigenscore_alpha": args.eigenscore_alpha,
                    "first_token_top_k": int(getattr(args, "first_token_top_k", FIRST_TOKEN_TOP_K_DEFAULT)),
+                   "resid_update_profile_schema": 1,
                    "batch_size": args.batch_size,
                    "max_batch_tokens": max_batch_tokens,
                    "auto_batch_size": args.auto_batch_size,
