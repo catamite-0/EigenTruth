@@ -104,6 +104,87 @@ def test_eval_uncertainty_escalation_cli_reads_jsonl_wrappers(tmp_path):
     assert payload["quality"]["delta"]["accepted_false"] == -1
 
 
+def test_uncertainty_escalation_workflow_writes_loop_sidecar_and_report(tmp_path):
+    workflow = importlib.import_module("benchmarks.run_uncertainty_escalation_workflow")
+    evaluator = importlib.import_module("benchmarks.eval_uncertainty_escalation")
+    records_path = tmp_path / "records.json"
+    output_dir = tmp_path / "workflow"
+    report_path = output_dir / "workflow-report.json"
+    replay_report_path = output_dir / "replayed-report.json"
+    records_path.write_text(
+        json.dumps({
+            "records": [
+                {
+                    "id": "true-paris",
+                    "label": 0,
+                    "claim": "Paris is the capital of France.",
+                    "preliminary_status": "supported",
+                    "preliminary_confidence": 0.4,
+                    "retrieval_documents": [
+                        {
+                            "text": "Paris is the capital of France.",
+                            "source": "fixture:true",
+                        }
+                    ],
+                },
+                {
+                    "id": "false-moon",
+                    "label": 1,
+                    "claim": "The moon is made of cheese.",
+                    "preliminary_status": "supported",
+                    "preliminary_confidence": 0.4,
+                    "retrieval_documents": [
+                        {
+                            "text": "Apollo samples show the moon is made of rock, not cheese.",
+                            "source": "fixture:false",
+                        }
+                    ],
+                    "refutations": ["Moon rock samples refute the cheese claim."],
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = workflow.run_uncertainty_escalation_workflow(
+        workflow.UncertaintyEscalationWorkflowConfig(
+            records_path=records_path,
+            output_dir=output_dir,
+            report_path=report_path,
+            retriever_min_overlap=0.2,
+        )
+    )
+
+    loop_results_path = output_dir / "verification-loop-results.jsonl"
+    loop_rows = [
+        json.loads(line)
+        for line in loop_results_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    report = payload["report"]
+    assert report_path.exists()
+    assert len(loop_rows) == 2
+    assert [row["id"] for row in loop_rows] == ["true-paris", "false-moon"]
+    assert report["uncertainty_escalation"]["triggered_records"] == 2
+    assert report["action_execution"]["retrieval_evidence_records"] == 2
+    assert report["decision_changes"]["transition_counts"] == {"accept->abstain": 1}
+    assert report["quality"]["initial"]["false_accept_rate"]["estimate"] == pytest.approx(1.0)
+    assert report["quality"]["final"]["false_accept_rate"]["estimate"] == pytest.approx(0.0)
+    assert report["quality"]["delta"]["accepted_false"] == -1
+
+    exit_code = evaluator.main([
+        "--results",
+        str(loop_results_path),
+        "--json",
+        str(replay_report_path),
+    ])
+    replayed = json.loads(replay_report_path.read_text(encoding="utf-8"))
+
+    assert exit_code == 0
+    assert replayed["quality"]["delta"]["accepted_false"] == -1
+    assert replayed["uncertainty_escalation"]["triggered_records"] == 2
+
+
 def _loop_result(*, final_action: str, total_evidence: int, final_status: str) -> dict:
     return {
         "initial_verification_results": (

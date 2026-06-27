@@ -1128,16 +1128,33 @@ cost-aware staging does not silently convert low diagnostic risk into factual
 acceptance; explicit local latency experiments can opt out with
 `stage_fail_closed_on_skip=false` in control defaults.
 
-## `eval_uncertainty_escalation.py`
+## `run_uncertainty_escalation_workflow.py` and `eval_uncertainty_escalation.py`
 
-Summarizes saved `VerificationLoopResult.to_dict()` JSON or JSONL rows after
-`run_verification_loop(..., escalation_policy=...)`. Use it to measure whether
-low-confidence verification escalation is buying useful evidence or only adding
-retrieval/tool cost.
+`run_uncertainty_escalation_workflow.py` runs a local claim/evidence fixture
+through `run_verification_loop(..., escalation_policy=...)`, writes
+`VerificationLoopResult.to_dict()` rows to JSONL, and emits an escalation report.
+Use it before changing defaults to measure whether low-confidence verification
+escalation is buying useful evidence or only adding retrieval/tool cost.
+
+```bash
+python benchmarks/run_uncertainty_escalation_workflow.py \
+  --records artifacts/uncertain-verification-fixture.json \
+  --output-dir artifacts/uncertainty-escalation-workflow \
+  --min-confidence 0.65
+```
+
+Fixture rows may include `claim`, optional `label`, `preliminary_status`,
+`preliminary_confidence`, `retrieval_documents`, optional `refutations`, and
+optional `diagnostics`. The workflow keeps diagnostics low by default, so
+decision changes mostly reflect the cheap verifier -> retrieval -> final
+verifier path.
+
+`eval_uncertainty_escalation.py` replays an existing loop-result sidecar without
+rerunning the control loop:
 
 ```bash
 python benchmarks/eval_uncertainty_escalation.py \
-  --results artifacts/verification-loop-results.jsonl \
+  --results artifacts/uncertainty-escalation-workflow/verification-loop-results.jsonl \
   --label-key label \
   --json artifacts/uncertainty-escalation-report.json
 ```
