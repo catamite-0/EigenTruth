@@ -2399,7 +2399,37 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
         source_status="promote",
         product_trace_replay_workflow={
             "report_path": "trace-replay-workflow.json",
+            "manifest_path": "trace-replay-manifest.json",
+            "source": "registry",
+            "registry": "release-registry.json",
             "record_key": "report:trace-replay-workflow:0.1",
+            "report_status": "promote",
+            "selector_replay_report_path": "selector-replay.json",
+            "product_runtime_drift_report_path": "product-runtime-drift.json",
+            "require_action_audit_gate": True,
+            "action_audit_gate_report_path": "action-audit-gate.json",
+            "action_audit_gate": {
+                "status": "promote",
+                "gate_enabled": True,
+                "passed": True,
+                "error_rate": 0.0,
+                "missing_retrieval_action_rate": 0.0,
+                "missing_plan_retrieval_query_rate": 0.0,
+                "malformed_payload_rate": 0.0,
+                "unexpected_action_rate": 0.0,
+                "unknown_claim_id_rate": 0.0,
+            },
+            "require_action_execution_gate": True,
+            "action_execution_gate_report_path": "action-execution-gate.json",
+            "action_execution_gate": {
+                "status": "promote",
+                "gate_enabled": True,
+                "passed": True,
+                "alignment_failed_trace_rate": 0.0,
+                "missing_result_rate": 0.0,
+                "unexpected_result_rate": 0.0,
+                "request_id_mismatch_rate": 0.0,
+            },
         },
         world_model_signal_workflow={
             "report_path": "world-model-signal-workflow.json",
@@ -2549,8 +2579,87 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     }
     assert metadata["promotion_contract_product_trace_replay_workflow"] == {
         "report_path": "trace-replay-workflow.json",
+        "manifest_path": "trace-replay-manifest.json",
+        "source": "registry",
+        "registry": "release-registry.json",
         "record_key": "report:trace-replay-workflow:0.1",
+        "report_status": "promote",
+        "selector_replay_report_path": "selector-replay.json",
+        "product_runtime_drift_report_path": "product-runtime-drift.json",
+        "require_action_audit_gate": True,
+        "action_audit_gate_report_path": "action-audit-gate.json",
+        "action_audit_gate": {
+            "status": "promote",
+            "gate_enabled": True,
+            "passed": True,
+            "error_rate": 0.0,
+            "missing_retrieval_action_rate": 0.0,
+            "missing_plan_retrieval_query_rate": 0.0,
+            "malformed_payload_rate": 0.0,
+            "unexpected_action_rate": 0.0,
+            "unknown_claim_id_rate": 0.0,
+        },
+        "require_action_execution_gate": True,
+        "action_execution_gate_report_path": "action-execution-gate.json",
+        "action_execution_gate": {
+            "status": "promote",
+            "gate_enabled": True,
+            "passed": True,
+            "alignment_failed_trace_rate": 0.0,
+            "missing_result_rate": 0.0,
+            "unexpected_result_rate": 0.0,
+            "request_id_mismatch_rate": 0.0,
+        },
     }
+    assert metadata["promotion_contract_product_trace_replay_workflow_report"] == (
+        "trace-replay-workflow.json"
+    )
+    assert metadata["promotion_contract_product_trace_replay_workflow_manifest"] == (
+        "trace-replay-manifest.json"
+    )
+    assert metadata["promotion_contract_product_trace_replay_workflow_record"] == (
+        "report:trace-replay-workflow:0.1"
+    )
+    assert metadata["promotion_contract_product_trace_replay_workflow_report_status"] == (
+        "promote"
+    )
+    assert metadata[
+        "promotion_contract_product_trace_replay_workflow_selector_replay_report"
+    ] == "selector-replay.json"
+    assert metadata[
+        "promotion_contract_product_trace_replay_workflow_runtime_drift_report"
+    ] == "product-runtime-drift.json"
+    assert metadata["promotion_contract_product_trace_action_audit_gate_required"] is True
+    assert metadata["promotion_contract_product_trace_action_audit_gate_status"] == "promote"
+    assert metadata["promotion_contract_product_trace_action_audit_gate_enabled"] is True
+    assert metadata["promotion_contract_product_trace_action_audit_gate_passed"] is True
+    assert metadata["promotion_contract_product_trace_action_audit_gate_report"] == (
+        "action-audit-gate.json"
+    )
+    assert metadata[
+        "promotion_contract_product_trace_action_audit_missing_retrieval_action_rate"
+    ] == 0.0
+    assert metadata[
+        "promotion_contract_product_trace_action_audit_missing_plan_retrieval_query_rate"
+    ] == 0.0
+    assert metadata[
+        "promotion_contract_product_trace_action_execution_gate_required"
+    ] is True
+    assert metadata[
+        "promotion_contract_product_trace_action_execution_gate_status"
+    ] == "promote"
+    assert metadata[
+        "promotion_contract_product_trace_action_execution_gate_enabled"
+    ] is True
+    assert metadata[
+        "promotion_contract_product_trace_action_execution_gate_passed"
+    ] is True
+    assert metadata["promotion_contract_product_trace_action_execution_gate_report"] == (
+        "action-execution-gate.json"
+    )
+    assert metadata[
+        "promotion_contract_product_trace_action_execution_request_id_mismatch_rate"
+    ] == 0.0
     assert metadata["promotion_contract_world_model_signal_workflow"] == {
         "report_path": "world-model-signal-workflow.json",
         "record_key": "report:world-model-signal-workflow:0.1",
