@@ -551,6 +551,20 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         "verification_plan_state_check_count": metrics.get("verification_plan_state_check_count"),
         "verification_plan_world_model_check_count": metrics.get("verification_plan_world_model_check_count"),
         "verification_plan_dependency_count": metrics.get("verification_plan_dependency_count"),
+        "action_execution_summary": dict(_mapping(metrics.get("action_execution_summary"))),
+        "action_execution_available": bool(metrics.get("action_execution_available")),
+        "action_execution_source": metrics.get("action_execution_source"),
+        "action_execution_alignment_passed": metrics.get("action_execution_alignment_passed"),
+        "action_execution_planned_action_count": metrics.get("action_execution_planned_action_count"),
+        "action_execution_result_count": metrics.get("action_execution_result_count"),
+        "action_execution_missing_result_count": metrics.get("action_execution_missing_result_count"),
+        "action_execution_unexpected_result_count": metrics.get("action_execution_unexpected_result_count"),
+        "action_execution_request_id_mismatch_count": metrics.get(
+            "action_execution_request_id_mismatch_count"
+        ),
+        "action_execution_alignment_available": bool(
+            metrics.get("action_execution_alignment_available")
+        ),
         "action_audit_summary": dict(_mapping(metrics.get("action_audit_summary"))),
         "action_audit_available": bool(metrics.get("action_audit_available")),
         "action_audit_source": metrics.get("action_audit_source"),
@@ -739,6 +753,7 @@ def _aggregate_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "verifier_saved_claim_count": _numeric_summary(item.get("verifier_saved_claim_count") for item in metrics),
         "verification_stage": _aggregate_verification_stage(metrics),
         "verification_plan": _aggregate_verification_plan(metrics),
+        "action_execution": _aggregate_action_execution(metrics),
         "action_audit": _aggregate_action_audit(metrics),
         "triple_coverage": _aggregate_triple_coverage(metrics),
         "final_answer": _aggregate_final_answer(metrics),
@@ -1431,6 +1446,58 @@ def _aggregate_verification_plan(metrics: Sequence[Mapping[str, Any]]) -> dict[s
         ),
         "per_trace_dependency_count": _numeric_summary(
             item.get("verification_plan_dependency_count") for item in metrics
+        ),
+        "summary_observations": sum(1 for summary in summaries if summary),
+    }
+
+
+def _aggregate_action_execution(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    summaries = [_mapping(item.get("action_execution_summary")) for item in metrics]
+    n_traces = len(metrics)
+    available_count = sum(1 for item in metrics if item.get("action_execution_available") is True)
+    alignment_available_count = sum(
+        1 for item in metrics
+        if item.get("action_execution_alignment_available") is True
+    )
+    passed_count = sum(
+        1 for item in metrics
+        if item.get("action_execution_alignment_passed") is True
+    )
+    failed_count = sum(
+        1 for item in metrics
+        if item.get("action_execution_alignment_passed") is False
+    )
+    missing_result_count = _sum_float(metrics, "action_execution_missing_result_count") or 0.0
+    unexpected_result_count = _sum_float(metrics, "action_execution_unexpected_result_count") or 0.0
+    request_id_mismatch_count = _sum_float(
+        metrics,
+        "action_execution_request_id_mismatch_count",
+    ) or 0.0
+    return {
+        "source_trace_count": n_traces,
+        "available_trace_count": available_count,
+        "alignment_available_trace_count": alignment_available_count,
+        "alignment_coverage_rate": _safe_div(alignment_available_count, n_traces),
+        "alignment_passed_trace_count": passed_count,
+        "alignment_failed_trace_count": failed_count,
+        "alignment_failed_trace_rate": _safe_div(failed_count, alignment_available_count),
+        "source_counts": _counts(item.get("action_execution_source") for item in metrics),
+        "planned_action_count": _sum_float(metrics, "action_execution_planned_action_count"),
+        "result_count": _sum_float(metrics, "action_execution_result_count"),
+        "missing_result_count": missing_result_count,
+        "missing_result_rate": _safe_div(missing_result_count, n_traces),
+        "unexpected_result_count": unexpected_result_count,
+        "unexpected_result_rate": _safe_div(unexpected_result_count, n_traces),
+        "request_id_mismatch_count": request_id_mismatch_count,
+        "request_id_mismatch_rate": _safe_div(request_id_mismatch_count, n_traces),
+        "per_trace_planned_action_count": _numeric_summary(
+            item.get("action_execution_planned_action_count") for item in metrics
+        ),
+        "per_trace_result_count": _numeric_summary(
+            item.get("action_execution_result_count") for item in metrics
+        ),
+        "per_trace_missing_result_count": _numeric_summary(
+            item.get("action_execution_missing_result_count") for item in metrics
         ),
         "summary_observations": sum(1 for summary in summaries if summary),
     }

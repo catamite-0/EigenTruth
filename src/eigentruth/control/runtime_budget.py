@@ -468,6 +468,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
             "slowest_phase": None,
         }
         metrics.update(_cache_metrics(trace))
+        metrics.update(_action_execution_metrics(trace))
         metrics.update(_action_audit_metrics(trace))
         metrics.update(_route_cost_metrics(trace))
         metrics.update(_verification_stage_metrics(trace))
@@ -507,6 +508,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
         "slowest_phase": summary.get("slowest_phase"),
     }
     metrics.update(_cache_metrics(trace))
+    metrics.update(_action_execution_metrics(trace))
     metrics.update(_action_audit_metrics(trace))
     metrics.update(_route_cost_metrics(trace))
     metrics.update(_verification_stage_metrics(trace))
@@ -629,6 +631,42 @@ def _action_audit_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, 
             counts_by_code.get("unexpected_action_for_decision")
         ) or 0.0,
         "action_audit_unknown_claim_id_count": _finite_float(counts_by_code.get("unknown_claim_id")) or 0.0,
+    }
+
+
+def _action_execution_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:
+    if isinstance(trace, ProductTrace):
+        summary = trace.action_execution_summary()
+        source = "full_trace"
+    else:
+        payload = dict(trace)
+        summary = _mapping(_mapping(payload.get("summaries")).get("action_execution"))
+        if summary:
+            source = "bounded_summary"
+        else:
+            summary = ProductTrace(
+                actions=tuple(_sequence(payload.get("actions", ()))),
+                action_results=tuple(_sequence(payload.get("action_results", ()))),
+            ).action_execution_summary()
+            source = "full_trace"
+    alignment = _mapping(summary.get("alignment"))
+    return {
+        "action_execution_available": bool(summary.get("total") or summary.get("planned_action_count")),
+        "action_execution_source": source,
+        "action_execution_summary": summary,
+        "action_execution_alignment_passed": _optional_bool(summary.get("alignment_passed")),
+        "action_execution_planned_action_count": _finite_float(summary.get("planned_action_count")) or 0.0,
+        "action_execution_result_count": _finite_float(summary.get("result_count")) or 0.0,
+        "action_execution_missing_result_count": _finite_float(
+            summary.get("missing_result_count")
+        ) or 0.0,
+        "action_execution_unexpected_result_count": _finite_float(
+            summary.get("unexpected_result_count")
+        ) or 0.0,
+        "action_execution_request_id_mismatch_count": _finite_float(
+            summary.get("request_id_mismatch_count")
+        ) or 0.0,
+        "action_execution_alignment_available": bool(alignment.get("available")),
     }
 
 

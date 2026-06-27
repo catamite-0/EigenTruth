@@ -1059,10 +1059,27 @@ def test_artifact_manifest_parallel_fingerprinting_matches_serial_and_reuses_cac
 
 def test_product_trace_action_execution_summary_counts_results():
     trace = ProductTrace(
+        actions=(
+            ActionRequest(action=ControlAction.RETRIEVE, reason="fetch", request_id="r1"),
+            ActionRequest(action=ControlAction.ABSTAIN, reason="stop", request_id="r2"),
+            ActionRequest(action=ControlAction.RETRIEVE, reason="fetch", request_id="r3"),
+        ),
         action_results=(
-            ActionResult(action=ControlAction.RETRIEVE, status=ActionExecutionStatus.SUCCEEDED),
-            ActionResult(action=ControlAction.ABSTAIN, status=ActionExecutionStatus.DRY_RUN),
-            ActionResult(action=ControlAction.RETRIEVE, status=ActionExecutionStatus.SUCCEEDED),
+            ActionResult(
+                action=ControlAction.RETRIEVE,
+                status=ActionExecutionStatus.SUCCEEDED,
+                request_id="r1",
+            ),
+            ActionResult(
+                action=ControlAction.ABSTAIN,
+                status=ActionExecutionStatus.DRY_RUN,
+                request_id="r2",
+            ),
+            ActionResult(
+                action=ControlAction.RETRIEVE,
+                status=ActionExecutionStatus.SUCCEEDED,
+                request_id="r3",
+            ),
         )
     )
 
@@ -1071,7 +1088,50 @@ def test_product_trace_action_execution_summary_counts_results():
     assert summary["total"] == 3
     assert summary["counts_by_status"] == {"succeeded": 2, "dry_run": 1}
     assert summary["counts_by_action"] == {"retrieve": 2, "abstain": 1}
+    assert summary["planned_action_count"] == 3
+    assert summary["result_count"] == 3
+    assert summary["planned_counts_by_action"] == {"retrieve": 2, "abstain": 1}
+    assert summary["alignment_passed"] is True
+    assert summary["alignment"]["passed"] is True
+    assert summary["missing_result_count"] == 0
+    assert summary["unexpected_result_count"] == 0
+    assert summary["request_id_mismatch_count"] == 0
     assert summary["side_effects"] is False
+
+
+def test_product_trace_action_execution_summary_flags_result_alignment_gaps():
+    trace = ProductTrace(
+        actions=(
+            ActionRequest(action=ControlAction.RETRIEVE, reason="fetch", request_id="r1"),
+            ActionRequest(action=ControlAction.ABSTAIN, reason="stop", request_id="r2"),
+        ),
+        action_results=(
+            ActionResult(
+                action=ControlAction.RETRIEVE,
+                status=ActionExecutionStatus.SUCCEEDED,
+                request_id="r1",
+            ),
+            ActionResult(
+                action=ControlAction.REWRITE,
+                status=ActionExecutionStatus.DRY_RUN,
+                request_id="r-extra",
+            ),
+        ),
+    )
+
+    summary = trace.action_execution_summary()
+    bounded = trace.to_bounded_dict()
+
+    assert summary["alignment_passed"] is False
+    assert summary["missing_result_count"] == 1
+    assert summary["unexpected_result_count"] == 1
+    assert summary["request_id_mismatch_count"] == 2
+    assert summary["alignment"]["missing_results_by_action"] == {"abstain": 1}
+    assert summary["alignment"]["unexpected_results_by_action"] == {"rewrite": 1}
+    assert summary["alignment"]["missing_request_ids"] == ("r2",)
+    assert summary["alignment"]["unexpected_request_ids"] == ("r-extra",)
+    assert bounded["summaries"]["action_execution"]["alignment_passed"] is False
+    assert bounded["summaries"]["action_execution"]["missing_result_count"] == 1
 
 
 def test_product_trace_runtime_summary_counts_phase_timings():

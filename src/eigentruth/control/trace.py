@@ -250,7 +250,10 @@ class ProductTrace:
             for event in prepared.events
         ]
         summaries = {
-            "action_execution": _action_execution_summary_from_results(prepared.action_results),
+            "action_execution": _action_execution_summary_from_payload(
+                prepared.actions,
+                prepared.action_results,
+            ),
             "action_audit": _action_audit_summary_from_payload(
                 actions=prepared.actions,
                 risk_decision=prepared.risk_decision,
@@ -330,8 +333,9 @@ class ProductTrace:
 
     def action_execution_summary(self) -> dict[str, Any]:
         """Summarize action execution results for trace/registry metadata."""
-        return _action_execution_summary_from_results(
-            tuple(_action_result_to_dict(result) for result in self.action_results)
+        return _action_execution_summary_from_payload(
+            tuple(_action_to_dict(action) for action in self.actions),
+            tuple(_action_result_to_dict(result) for result in self.action_results),
         )
 
     def action_audit_summary(self) -> dict[str, Any]:
@@ -447,6 +451,149 @@ def _action_execution_summary_from_results(
         "counts_by_action": counts_by_action,
         "side_effects": side_effects,
     }
+
+
+def _action_execution_summary_from_payload(
+    actions: Sequence[Any],
+    results: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    summary = _action_execution_summary_from_results(results)
+    alignment = _action_result_alignment(actions, results)
+    summary.update({
+        "planned_action_count": len(actions),
+        "result_count": len(results),
+        "planned_counts_by_action": _planned_action_counts(actions),
+        "alignment": alignment,
+        "alignment_passed": alignment["passed"],
+        "missing_result_count": alignment["missing_result_count"],
+        "unexpected_result_count": alignment["unexpected_result_count"],
+        "request_id_mismatch_count": alignment["request_id_mismatch_count"],
+    })
+    return summary
+
+
+def _action_result_alignment(
+    actions: Sequence[Any],
+    results: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    planned_counts = _planned_action_counts(actions)
+    result_counts = _result_action_counts(results)
+    has_planned_actions = bool(planned_counts)
+    missing_by_action = {
+        action: planned_count - result_counts.get(action, 0)
+        for action, planned_count in planned_counts.items()
+        if planned_count > result_counts.get(action, 0)
+    }
+    unexpected_by_action = (
+        {
+            action: result_count - planned_counts.get(action, 0)
+            for action, result_count in result_counts.items()
+            if result_count > planned_counts.get(action, 0)
+        }
+        if has_planned_actions
+        else {}
+    )
+    planned_request_ids = tuple(_action_request_ids(actions))
+    result_request_ids = tuple(_result_request_ids(results))
+    missing_request_ids = tuple(
+        request_id
+        for request_id in planned_request_ids
+        if request_id not in set(result_request_ids)
+    )
+    unexpected_request_ids = (
+        tuple(
+            request_id
+            for request_id in result_request_ids
+            if request_id not in set(planned_request_ids)
+        )
+        if planned_request_ids
+        else ()
+    )
+    missing_result_count = sum(missing_by_action.values())
+    unexpected_result_count = sum(unexpected_by_action.values())
+    request_id_mismatch_count = len(missing_request_ids) + len(unexpected_request_ids)
+    return {
+        "available": has_planned_actions,
+        "passed": not has_planned_actions or (
+            missing_result_count == 0
+            and unexpected_result_count == 0
+            and request_id_mismatch_count == 0
+        ),
+        "missing_result_count": missing_result_count,
+        "unexpected_result_count": unexpected_result_count,
+        "request_id_mismatch_count": request_id_mismatch_count,
+        "missing_results_by_action": missing_by_action,
+        "unexpected_results_by_action": unexpected_by_action,
+        "planned_request_id_count": len(planned_request_ids),
+        "result_request_id_count": len(result_request_ids),
+        "missing_request_ids": missing_request_ids[:8],
+        "unexpected_request_ids": unexpected_request_ids[:8],
+    }
+
+
+def _planned_action_counts(actions: Sequence[Any]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for action in actions:
+        action_name = _action_name_from_payload(action)
+        if action_name is None:
+            continue
+        counts[action_name] = counts.get(action_name, 0) + 1
+    return counts
+
+
+def _result_action_counts(results: Sequence[Mapping[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for result in results:
+        action_name = _action_name_from_payload(result)
+        if action_name is None:
+            continue
+        counts[action_name] = counts.get(action_name, 0) + 1
+    return counts
+
+
+def _action_request_ids(actions: Sequence[Any]) -> tuple[str, ...]:
+    request_ids = []
+    for action in actions:
+        request_id = _request_id_from_payload(action)
+        if request_id is not None:
+            request_ids.append(request_id)
+    return tuple(dict.fromkeys(request_ids))
+
+
+def _result_request_ids(results: Sequence[Mapping[str, Any]]) -> tuple[str, ...]:
+    request_ids = []
+    for result in results:
+        request_id = _request_id_from_payload(result)
+        if request_id is not None:
+            request_ids.append(request_id)
+    return tuple(dict.fromkeys(request_ids))
+
+
+def _action_name_from_payload(payload: Any) -> str | None:
+    if isinstance(payload, ControlAction):
+        return payload.value
+    if isinstance(payload, str):
+        action_name = payload.strip()
+        return action_name or None
+    if isinstance(payload, Mapping):
+        raw_action = payload.get("action")
+        if raw_action is None:
+            return None
+        if isinstance(raw_action, ControlAction):
+            return raw_action.value
+        action_name = str(raw_action).strip()
+        return action_name or None
+    return None
+
+
+def _request_id_from_payload(payload: Any) -> str | None:
+    if not isinstance(payload, Mapping):
+        return None
+    raw_request_id = payload.get("request_id")
+    if raw_request_id is None:
+        return None
+    request_id = str(raw_request_id).strip()
+    return request_id or None
 
 
 def _action_audit_summary_from_payload(

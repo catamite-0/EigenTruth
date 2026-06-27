@@ -531,6 +531,11 @@ Added the first monitor-first tool-selection audit layer:
   `action_audit` summaries and metrics. This creates a release/replay hook for
   tool-bypass and parameter-hallucination failures before introducing learned
   tool-selection models or external tool routers.
+- `ProductTrace.action_execution_summary()` now also compares planned actions
+  against recorded `ActionResult` payloads by action type and request id, and
+  `run_product_runtime_baseline.py` aggregates missing, unexpected, and
+  request-id-mismatched action results. This makes executor bypass and dropped
+  side-effect results visible before adding stricter release gates.
 - `run_product_runtime_baseline.py` now aggregates action-audit error,
   missing-retrieval, missing planned retrieval-query coverage,
   malformed-payload, unexpected-action, and unknown-claim-id rates, and

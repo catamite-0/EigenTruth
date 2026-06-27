@@ -24524,6 +24524,22 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                     {"name": "initial_verification", "seconds": 0.03},
                 ],
             },
+            "actions": [
+                {
+                    "action": "accept",
+                    "reason": "supported by structured QA",
+                    "payload": {"claim_ids": ["c1"]},
+                    "request_id": "action-a",
+                }
+            ],
+            "action_results": [
+                {
+                    "action": "accept",
+                    "status": "dry_run",
+                    "output": {"would_execute": "accept"},
+                    "request_id": "action-a",
+                }
+            ],
             "claims": [
                 {
                     "claim_id": "c1",
@@ -24754,6 +24770,15 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                     {"name": "initial_verification", "seconds": 0.12},
                 ],
             },
+            "actions": [
+                {
+                    "action": "retrieve",
+                    "reason": "needs evidence",
+                    "payload": {"query": "Paris capital France"},
+                    "request_id": "action-b",
+                }
+            ],
+            "action_results": [],
             "verification_results": [
                 {
                     "status": "refuted",
@@ -24878,6 +24903,17 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert payload["summary"]["verification_plan"]["coverage_rate"] == pytest.approx(0.5)
     assert payload["summary"]["verification_plan"]["route_counts"]["retrieval"] == 1
     assert payload["summary"]["verification_plan"]["tool_payload_counts"]["retrieval_queries"] == 1
+    action_execution = payload["summary"]["action_execution"]
+    assert action_execution["available_trace_count"] == 2
+    assert action_execution["alignment_available_trace_count"] == 2
+    assert action_execution["alignment_passed_trace_count"] == 1
+    assert action_execution["alignment_failed_trace_count"] == 1
+    assert action_execution["alignment_failed_trace_rate"] == pytest.approx(0.5)
+    assert action_execution["planned_action_count"] == pytest.approx(2.0)
+    assert action_execution["result_count"] == pytest.approx(1.0)
+    assert action_execution["missing_result_count"] == pytest.approx(1.0)
+    assert action_execution["missing_result_rate"] == pytest.approx(0.5)
+    assert action_execution["request_id_mismatch_count"] == pytest.approx(1.0)
     triple_coverage = payload["summary"]["triple_coverage"]
     assert triple_coverage["claim_count"] == 2.0
     assert triple_coverage["claims_with_triples"] == 1.0
@@ -24975,6 +25011,7 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert matrix["mean_best_f1"]["mean"] == pytest.approx(0.9)
     assert matrix["mean_f1_lift"]["mean"] == pytest.approx(0.35)
     assert payload["traces"][0]["metrics"]["verification_plan_available"] is True
+    assert payload["traces"][0]["metrics"]["action_execution_alignment_passed"] is True
     assert payload["traces"][0]["metrics"]["triple_claim_count"] == 1.0
     assert payload["traces"][0]["metrics"]["triple_audit_pass_rate"] == pytest.approx(1.0)
     assert payload["traces"][0]["metrics"]["triple_slot_coverage_rate"] == pytest.approx(1.0)
@@ -25034,6 +25071,8 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
         == 6.0
     )
     assert payload["traces"][1]["metrics"]["verification_plan_available"] is False
+    assert payload["traces"][1]["metrics"]["action_execution_alignment_passed"] is False
+    assert payload["traces"][1]["metrics"]["action_execution_missing_result_count"] == 1.0
     assert payload["traces"][1]["metrics"]["final_answer_requires_followup"] is True
     assert (
         payload["traces"][1]["metrics"][
