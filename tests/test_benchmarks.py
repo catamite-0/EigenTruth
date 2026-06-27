@@ -20451,6 +20451,32 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                         "source_patch": "truth_proj",
                     },
                 },
+                "pre_generation_probe_comparison": {
+                    "report_path": (
+                        "artifacts/pre-generation-probe-comparison/comparison.json"
+                    ),
+                    "manifest_path": (
+                        "artifacts/pre-generation-probe-comparison/artifact-manifest.json"
+                    ),
+                    "source": "registry",
+                    "registry": "artifacts/release-registry.json",
+                    "record_key": "report:pre-generation-probe-comparison:0.1",
+                    "workflow": "pre_generation_probe_comparison",
+                    "status": "promote",
+                    "model_count": 2,
+                    "run_count": 2,
+                    "redline_passed": True,
+                    "redline_run_count": 2,
+                    "best_run": {
+                        "name": "qwen05",
+                        "model": "Qwen/Qwen2.5-0.5B",
+                        "recommended_layer": -12,
+                        "test_label_auroc": 0.85,
+                        "redline_best_signal": "claim_token_count",
+                        "redline_best_auroc": 0.69,
+                        "redline_margin": 0.08,
+                    },
+                },
                 "external_evidence_baseline_comparison": {
                     "report_path": (
                         "artifacts/external-evidence/"
@@ -20562,6 +20588,9 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                     ),
                     "pathway_intervention_workflow_manifest": (
                         "artifacts/pathway-intervention/artifact-manifest.json"
+                    ),
+                    "pre_generation_probe_comparison_manifest": (
+                        "artifacts/pre-generation-probe-comparison/artifact-manifest.json"
                     ),
                     "counterfactual_verification_manifest": (
                         "artifacts/counterfactual/artifact-manifest.json"
@@ -20695,6 +20724,13 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
         "promote"
     )
     assert contract["pathway_intervention_workflow"]["source_patch_gate_status"] == "promote"
+    assert contract["pre_generation_probe_comparison"]["record_key"] == (
+        "report:pre-generation-probe-comparison:0.1"
+    )
+    assert contract["pre_generation_probe_comparison"]["redline_passed"] is True
+    assert contract["pre_generation_probe_comparison"]["best_run"]["redline_margin"] == (
+        pytest.approx(0.08)
+    )
     assert contract["external_evidence_baseline_comparison"]["record_key"] == (
         "report:covered-facts-external-evidence-handoff:0.4"
     )
@@ -20732,6 +20768,9 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     )
     assert payload["contract"]["pathway_intervention_workflow"]["report_path"] == (
         "artifacts/pathway-intervention/pathway-intervention-workflow.json"
+    )
+    assert payload["contract"]["pre_generation_probe_comparison"]["report_path"] == (
+        "artifacts/pre-generation-probe-comparison/comparison.json"
     )
     assert payload["contract"]["external_evidence_baseline_comparison"]["report_path"] == (
         "artifacts/external-evidence/external-evidence-baseline-comparison.json"
@@ -20771,6 +20810,16 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
         "promote"
     )
     assert contract["metadata"]["pathway_intervention_workflow_source_patch_gate"] == "promote"
+    assert contract["metadata"]["pre_generation_probe_comparison_status"] == "promote"
+    assert contract["metadata"]["pre_generation_probe_comparison_report"] == (
+        "artifacts/pre-generation-probe-comparison/comparison.json"
+    )
+    assert contract["metadata"]["pre_generation_probe_comparison_record"] == (
+        "report:pre-generation-probe-comparison:0.1"
+    )
+    assert contract["metadata"]["pre_generation_probe_comparison_best_redline_margin"] == (
+        pytest.approx(0.08)
+    )
     assert contract["metadata"]["external_evidence_baseline_comparison_status"] == "promote"
     assert contract["metadata"]["recommended_external_evidence_baseline_comparison_report"] == (
         "artifacts/external-evidence/external-evidence-baseline-comparison.json"
@@ -20924,6 +20973,15 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert manifest["metadata"]["external_evidence_baseline_comparison_record"] == (
         "report:covered-facts-external-evidence-handoff:0.4"
     )
+    assert manifest["metadata"]["pre_generation_probe_comparison_report"] == (
+        "artifacts/pre-generation-probe-comparison/comparison.json"
+    )
+    assert manifest["metadata"]["pre_generation_probe_comparison_record"] == (
+        "report:pre-generation-probe-comparison:0.1"
+    )
+    assert manifest["metadata"]["pre_generation_probe_comparison_best_redline_margin"] == (
+        pytest.approx(0.08)
+    )
     assert manifest["metadata"]["counterfactual_verification_status"] == "promote"
     assert manifest["metadata"]["counterfactual_verification_record"] == (
         "report:counterfactual-verifier-audit:0.1"
@@ -21038,6 +21096,16 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert record.metadata["pathway_intervention_workflow_activation_ablation_gate"] == "promote"
     assert record.metadata["pathway_intervention_workflow_source_patch_gate"] == "promote"
     assert record.metadata["pathway_intervention_workflow_layer"] == -8
+    assert record.metadata["pre_generation_probe_comparison_source"] == "registry"
+    assert record.metadata["pre_generation_probe_comparison_record"] == (
+        "report:pre-generation-probe-comparison:0.1"
+    )
+    assert record.metadata["pre_generation_probe_comparison_status"] == "promote"
+    assert record.metadata["pre_generation_probe_comparison_model_count"] == 2
+    assert record.metadata["pre_generation_probe_comparison_best_run"] == "qwen05"
+    assert record.metadata["pre_generation_probe_comparison_best_redline_margin"] == (
+        pytest.approx(0.08)
+    )
     assert record.metadata["external_evidence_baseline_comparison_source"] == "registry"
     assert record.metadata["external_evidence_baseline_comparison_record"] == (
         "report:covered-facts-external-evidence-handoff:0.4"

@@ -99,6 +99,7 @@ def export_product_promotion_contract(
     external_evidence_baseline_comparison = dict(
         contract.external_evidence_baseline_comparison
     )
+    pre_generation_probe_comparison = dict(contract.pre_generation_probe_comparison)
     triple_extraction_fixture_matrix = dict(contract.triple_extraction_fixture_matrix)
     counterfactual_verification = dict(contract.counterfactual_verification)
     release_efficiency = dict(contract.release_efficiency)
@@ -116,6 +117,12 @@ def export_product_promotion_contract(
     external_evidence_baseline_comparison_metadata = (
         _external_evidence_baseline_comparison_flat_metadata(
             external_evidence_baseline_comparison,
+            contract.metadata,
+        )
+    )
+    pre_generation_probe_comparison_metadata = (
+        _pre_generation_probe_comparison_flat_metadata(
+            pre_generation_probe_comparison,
             contract.metadata,
         )
     )
@@ -148,6 +155,7 @@ def export_product_promotion_contract(
                 **product_runtime_drift_metadata,
                 **product_trace_replay_workflow_metadata,
                 **external_evidence_baseline_comparison_metadata,
+                **pre_generation_probe_comparison_metadata,
                 **counterfactual_verification_metadata,
                 **release_efficiency_metadata,
                 **triple_extraction_fixture_matrix_metadata,
@@ -380,6 +388,7 @@ def export_product_promotion_contract(
                     pathway_intervention_workflow.get("best_signals")
                 ),
                 **external_evidence_baseline_comparison_metadata,
+                **pre_generation_probe_comparison_metadata,
                 **counterfactual_verification_metadata,
                 "triple_extraction_fixture_matrix_report": (
                     triple_extraction_fixture_matrix.get("report_path")
@@ -482,6 +491,7 @@ def export_product_promotion_contract(
             "pathway_intervention_workflow": pathway_intervention_workflow,
             "feedback_policy_workflow": feedback_policy_workflow,
             "external_evidence_baseline_comparison": external_evidence_baseline_comparison,
+            "pre_generation_probe_comparison": pre_generation_probe_comparison,
             "counterfactual_verification": counterfactual_verification,
             "triple_extraction_fixture_matrix": triple_extraction_fixture_matrix,
             "release_efficiency": release_efficiency,
@@ -789,6 +799,83 @@ def _external_evidence_baseline_comparison_flat_metadata(
         "external_evidence_baseline_comparison_text_redline_run_count": _first_present(
             comparison.get("text_redline_run_count"),
             metadata.get("external_evidence_baseline_comparison_text_redline_run_count"),
+        ),
+    })
+
+
+def _pre_generation_probe_comparison_flat_metadata(
+    comparison: Mapping[str, Any],
+    metadata: Mapping[str, Any],
+) -> dict[str, Any]:
+    best_run = _mapping(comparison.get("best_run"))
+    return _drop_none_values({
+        "pre_generation_probe_comparison_report": _first_present(
+            comparison.get("report_path"),
+            metadata.get("pre_generation_probe_comparison_report"),
+        ),
+        "pre_generation_probe_comparison_manifest": _first_present(
+            comparison.get("manifest_path"),
+            metadata.get("pre_generation_probe_comparison_manifest"),
+        ),
+        "pre_generation_probe_comparison_source": _first_present(
+            comparison.get("source"),
+            metadata.get("pre_generation_probe_comparison_source"),
+        ),
+        "pre_generation_probe_comparison_registry": _first_present(
+            comparison.get("registry"),
+            metadata.get("pre_generation_probe_comparison_registry"),
+        ),
+        "pre_generation_probe_comparison_record": _first_present(
+            comparison.get("record_key"),
+            metadata.get("pre_generation_probe_comparison_record"),
+        ),
+        "pre_generation_probe_comparison_status": _first_present(
+            comparison.get("status"),
+            metadata.get("pre_generation_probe_comparison_status"),
+        ),
+        "pre_generation_probe_comparison_model_count": _first_present(
+            comparison.get("model_count"),
+            metadata.get("pre_generation_probe_comparison_model_count"),
+        ),
+        "pre_generation_probe_comparison_run_count": _first_present(
+            comparison.get("run_count"),
+            metadata.get("pre_generation_probe_comparison_run_count"),
+        ),
+        "pre_generation_probe_comparison_redline_passed": _first_present(
+            comparison.get("redline_passed"),
+            metadata.get("pre_generation_probe_comparison_redline_passed"),
+        ),
+        "pre_generation_probe_comparison_redline_run_count": _first_present(
+            comparison.get("redline_run_count"),
+            metadata.get("pre_generation_probe_comparison_redline_run_count"),
+        ),
+        "pre_generation_probe_comparison_best_run": _first_present(
+            best_run.get("name"),
+            metadata.get("pre_generation_probe_comparison_best_run"),
+        ),
+        "pre_generation_probe_comparison_best_model": _first_present(
+            best_run.get("model"),
+            metadata.get("pre_generation_probe_comparison_best_model"),
+        ),
+        "pre_generation_probe_comparison_best_layer": _first_present(
+            best_run.get("recommended_layer"),
+            metadata.get("pre_generation_probe_comparison_best_layer"),
+        ),
+        "pre_generation_probe_comparison_best_test_label_auroc": _first_present(
+            best_run.get("test_label_auroc"),
+            metadata.get("pre_generation_probe_comparison_best_test_label_auroc"),
+        ),
+        "pre_generation_probe_comparison_best_redline_signal": _first_present(
+            best_run.get("redline_best_signal"),
+            metadata.get("pre_generation_probe_comparison_best_redline_signal"),
+        ),
+        "pre_generation_probe_comparison_best_redline_auroc": _first_present(
+            best_run.get("redline_best_auroc"),
+            metadata.get("pre_generation_probe_comparison_best_redline_auroc"),
+        ),
+        "pre_generation_probe_comparison_best_redline_margin": _first_present(
+            best_run.get("redline_margin"),
+            metadata.get("pre_generation_probe_comparison_best_redline_margin"),
         ),
     })
 
