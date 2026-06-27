@@ -1851,8 +1851,14 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
 
 def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dict[str, Any]:
     metadata = {
+        "product_runtime_drift_promotion_evidence_metric_count": summary.get(
+            "promotion_evidence_metric_count"
+        ),
         "product_runtime_drift_promotion_evidence_blocked_metric_count": summary.get(
             "promotion_evidence_blocked_metric_count"
+        ),
+        "product_runtime_drift_triple_audit_evidence_metric_count": summary.get(
+            "triple_audit_evidence_metric_count"
         ),
         "product_runtime_drift_triple_audit_evidence_blocked_metric_count": summary.get(
             "triple_audit_evidence_blocked_metric_count"

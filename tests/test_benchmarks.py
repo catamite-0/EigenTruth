@@ -15842,6 +15842,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         status="promote",
         blocked_metric_count=0,
         promotion_evidence=True,
+        triple_audit_evidence=True,
     )
     release_efficiency_report = _write_release_efficiency_report(
         tmp_path / "release-efficiency",
@@ -15935,6 +15936,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         release_efficiency_report_path=release_efficiency_report,
         product_trace_replay_workflow_key="report:product-trace-replay-workflow:0.1",
         require_product_runtime_drift_promotion_evidence=True,
+        require_product_runtime_drift_triple_audit_evidence=True,
         selfcheck_signal_fusion_workflow_key="report:selfcheck-signal-fusion-workflow:0.1",
         feedback_policy_workflow_key="report:feedback-policy-workflow:0.1",
         world_model_signal_workflow_key="report:world-model-signal-workflow:0.1",
@@ -16122,9 +16124,13 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["product_runtime_drift_report"] == str(product_runtime_drift_report)
     assert manifest["metadata"]["product_runtime_drift_gate_enabled"] is True
     assert manifest["metadata"]["product_runtime_drift_promotion_evidence_required"] is True
-    assert manifest["metadata"]["product_runtime_drift_compared_metric_count"] == 6
+    assert manifest["metadata"]["product_runtime_drift_triple_audit_evidence_required"] is True
+    assert manifest["metadata"]["product_runtime_drift_compared_metric_count"] == 10
     assert manifest["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
+    assert manifest["metadata"]["product_runtime_drift_promotion_evidence_metric_count"] == 4
     assert manifest["metadata"]["product_runtime_drift_promotion_evidence_blocked_metric_count"] == 0
+    assert manifest["metadata"]["product_runtime_drift_triple_audit_evidence_metric_count"] == 4
+    assert manifest["metadata"]["product_runtime_drift_triple_audit_evidence_blocked_metric_count"] == 0
     assert manifest["metadata"]["product_runtime_drift_promotion_contract_coverage_rate_current"] == (
         pytest.approx(1.0)
     )
@@ -16134,6 +16140,10 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["product_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_status"] == (
         "pass"
     )
+    assert manifest["metadata"]["product_runtime_drift_triple_audit_pass_rate_current"] == (
+        pytest.approx(1.0)
+    )
+    assert manifest["metadata"]["product_runtime_drift_triple_slot_coverage_rate_status"] == "pass"
     assert manifest["metadata"]["release_efficiency_report"] == str(release_efficiency_report)
     assert manifest["metadata"]["release_efficiency_recommended_profile"] == "balanced"
     assert manifest["metadata"]["release_efficiency_score"] == pytest.approx(2.0)
@@ -16452,14 +16462,20 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["selector_replay_observed_selected_to_original_ratio_mean"] == pytest.approx(0.80)
     assert record.metadata["release_product_runtime_drift_status"] == "promote"
     assert record.metadata["product_runtime_drift_promotion_evidence_required"] is True
+    assert record.metadata["product_runtime_drift_triple_audit_evidence_required"] is True
     assert record.metadata["product_runtime_drift_blocked_metric_count"] == 0
+    assert record.metadata["product_runtime_drift_promotion_evidence_metric_count"] == 4
     assert record.metadata["product_runtime_drift_promotion_evidence_blocked_metric_count"] == 0
+    assert record.metadata["product_runtime_drift_triple_audit_evidence_metric_count"] == 4
+    assert record.metadata["product_runtime_drift_triple_audit_evidence_blocked_metric_count"] == 0
     assert record.metadata["product_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_current"] == (
         pytest.approx(0.88)
     )
     assert record.metadata["product_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_status"] == (
         "pass"
     )
+    assert record.metadata["product_runtime_drift_triple_audit_pass_rate_current"] == pytest.approx(1.0)
+    assert record.metadata["product_runtime_drift_triple_slot_coverage_rate_status"] == "pass"
     assert record.metadata["release_efficiency_status"] == "promote"
     assert record.metadata["release_efficiency_report"] == str(release_efficiency_report)
     assert record.metadata["release_efficiency_recommended_profile"] == "balanced"
