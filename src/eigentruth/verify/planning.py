@@ -17,7 +17,7 @@ from eigentruth.verify.citations import extract_citation_references
 from eigentruth.verify.claims import ClaimExtractor, extract_claims
 from eigentruth.verify.coherence import ClaimDependency, infer_claim_dependencies
 from eigentruth.verify.features import enabled_feature_names, metadata_path_enabled
-from eigentruth.verify.protocols import Claim
+from eigentruth.verify.protocols import Claim, VerificationResult, VerificationStatus
 
 DEFAULT_VERIFICATION_ROUTE_COST_UNITS: Mapping[str, float] = {
     "groundedness": 0.25,
@@ -43,6 +43,16 @@ DEFAULT_VERIFICATION_ROUTE_PRIORITY = (
     "triple_evidence",
     "retrieval",
     "groundedness",
+)
+DEFAULT_VERIFICATION_ESCALATION_ROUTES = (
+    "retrieval",
+    "triple_evidence",
+    "world_model",
+)
+DEFAULT_VERIFICATION_ESCALATION_FALLBACK_ROUTES = ("retrieval",)
+DEFAULT_VERIFICATION_UNCERTAIN_STATUSES = (
+    VerificationStatus.INSUFFICIENT_EVIDENCE,
+    VerificationStatus.ERROR,
 )
 DEFAULT_VERIFY_CLAIM_FEATURE_FLAGS = (
     "has_number",
@@ -319,6 +329,139 @@ class VerificationBudgetPolicy:
             "priority_metadata_keys": tuple(self.priority_metadata_keys),
             "preserve_triggered_claims": self.preserve_triggered_claims,
             "enabled": self.enabled(),
+        }
+
+
+@dataclass(frozen=True)
+class VerificationEscalationPolicy:
+    """Policy for second-stage verification when first-pass evidence is uncertain.
+
+    This is a dependency-free planning primitive. It does not execute a stronger
+    verifier; it emits an auditable follow-up ``ClaimVerificationPlan`` for the
+    subset of claims whose preliminary verifier result is low-confidence or
+    explicitly uncertain.
+    """
+
+    min_confidence: float = 0.65
+    uncertain_statuses: Sequence[VerificationStatus | str] = DEFAULT_VERIFICATION_UNCERTAIN_STATUSES
+    escalation_routes: Sequence[str] = DEFAULT_VERIFICATION_ESCALATION_ROUTES
+    fallback_routes: Sequence[str] = DEFAULT_VERIFICATION_ESCALATION_FALLBACK_ROUTES
+    max_escalated_claims: int | None = None
+    max_route_attempts: int | None = None
+    max_tool_payloads: int | None = None
+    max_estimated_cost_units: float | None = None
+
+    def __post_init__(self) -> None:
+        min_confidence = _non_negative_float(self.min_confidence, name="min_confidence")
+        if min_confidence > 1.0:
+            raise ValueError("min_confidence must be in [0, 1].")
+        object.__setattr__(self, "min_confidence", min_confidence)
+        object.__setattr__(
+            self,
+            "uncertain_statuses",
+            tuple(
+                _verification_status(value, name="uncertain_statuses").value
+                for value in _as_sequence(self.uncertain_statuses)
+            ),
+        )
+        object.__setattr__(
+            self,
+            "escalation_routes",
+            tuple(_non_empty_strings(_as_sequence(self.escalation_routes))),
+        )
+        object.__setattr__(
+            self,
+            "fallback_routes",
+            tuple(_non_empty_strings(_as_sequence(self.fallback_routes))),
+        )
+        object.__setattr__(
+            self,
+            "max_escalated_claims",
+            _optional_non_negative_int(self.max_escalated_claims, name="max_escalated_claims"),
+        )
+        object.__setattr__(
+            self,
+            "max_route_attempts",
+            _optional_non_negative_int(self.max_route_attempts, name="max_route_attempts"),
+        )
+        object.__setattr__(
+            self,
+            "max_tool_payloads",
+            _optional_non_negative_int(self.max_tool_payloads, name="max_tool_payloads"),
+        )
+        object.__setattr__(
+            self,
+            "max_estimated_cost_units",
+            _optional_non_negative_float(
+                self.max_estimated_cost_units,
+                name="max_estimated_cost_units",
+            ),
+        )
+        if not self.escalation_routes and not self.fallback_routes:
+            raise ValueError("at least one escalation or fallback route is required.")
+
+    @classmethod
+    def from_mapping(cls, payload: Mapping[str, Any]) -> "VerificationEscalationPolicy":
+        """Build a policy from a JSON-like mapping."""
+        return cls(
+            min_confidence=payload.get("min_confidence", 0.65),
+            uncertain_statuses=tuple(
+                _as_sequence(payload.get("uncertain_statuses", DEFAULT_VERIFICATION_UNCERTAIN_STATUSES))
+            ),
+            escalation_routes=tuple(
+                _as_sequence(payload.get("escalation_routes", DEFAULT_VERIFICATION_ESCALATION_ROUTES))
+            ),
+            fallback_routes=tuple(
+                _as_sequence(payload.get("fallback_routes", DEFAULT_VERIFICATION_ESCALATION_FALLBACK_ROUTES))
+            ),
+            max_escalated_claims=payload.get("max_escalated_claims"),
+            max_route_attempts=payload.get("max_route_attempts"),
+            max_tool_payloads=payload.get("max_tool_payloads"),
+            max_estimated_cost_units=payload.get("max_estimated_cost_units"),
+        )
+
+    def is_uncertain(self, result: VerificationResult | Mapping[str, Any]) -> tuple[bool, tuple[str, ...]]:
+        """Return whether a preliminary result should receive stronger verification."""
+        result_obj = _verification_result_obj(result)
+        reasons: list[str] = []
+        if result_obj.status.value in set(self.uncertain_statuses):
+            reasons.append(f"status:{result_obj.status.value}")
+        if result_obj.confidence < self.min_confidence:
+            reasons.append(f"confidence_below:{self.min_confidence:g}")
+        return bool(reasons), tuple(reasons)
+
+    def budget_enabled(self) -> bool:
+        """Return whether the escalation plan should also apply route/cost budgets."""
+        return (
+            self.max_route_attempts is not None
+            or self.max_tool_payloads is not None
+            or self.max_estimated_cost_units is not None
+        )
+
+    def to_budget_policy(self) -> VerificationBudgetPolicy:
+        """Return a route/cost budget policy for the escalated plan."""
+        route_priority: list[str] = []
+        for route in (*self.escalation_routes, *DEFAULT_VERIFICATION_ROUTE_PRIORITY):
+            _append_unique(route_priority, route)
+        return VerificationBudgetPolicy(
+            max_route_attempts=self.max_route_attempts,
+            max_tool_payloads=self.max_tool_payloads,
+            max_estimated_cost_units=self.max_estimated_cost_units,
+            route_priority=tuple(route_priority),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable policy."""
+        return {
+            "min_confidence": self.min_confidence,
+            "uncertain_statuses": tuple(self.uncertain_statuses),
+            "escalation_routes": tuple(self.escalation_routes),
+            "fallback_routes": tuple(self.fallback_routes),
+            "max_escalated_claims": self.max_escalated_claims,
+            "max_route_attempts": self.max_route_attempts,
+            "max_tool_payloads": self.max_tool_payloads,
+            "max_estimated_cost_units": self.max_estimated_cost_units,
+            "budget_enabled": self.budget_enabled(),
         }
 
 
@@ -986,6 +1129,170 @@ def budget_verification_plan(
     )
 
 
+def escalate_uncertain_verification_plan(
+    plan: ClaimVerificationPlan | Mapping[str, Any],
+    preliminary_results: Sequence[VerificationResult | Mapping[str, Any]],
+    policy: VerificationEscalationPolicy | Mapping[str, Any] | None = None,
+    *,
+    route_cost_units: Mapping[str, Any] | None = None,
+    tool_payload_cost_units: Mapping[str, Any] | None = None,
+) -> ClaimVerificationPlan:
+    """Build a second-stage verification plan for uncertain preliminary results.
+
+    Results are matched to ``plan.verify_claim_ids`` by order unless a result
+    mapping or result metadata carries ``claim_id``. The returned plan keeps the
+    original claims but selects only uncertain claims and stronger routes, making
+    the escalation decision replayable without binding to any concrete verifier.
+    """
+    plan_obj = _plan_obj(plan)
+    policy_obj = _escalation_policy_obj(policy)
+    claim_ids = tuple(_claim_id(claim, index) for index, claim in enumerate(plan_obj.claims))
+    candidate_claim_ids = tuple(plan_obj.verify_claim_ids) or claim_ids
+    result_by_claim = _preliminary_results_by_claim(plan_obj, preliminary_results)
+    hint_by_claim = {hint.claim_id: hint for hint in plan_obj.route_hints}
+    order_index = {claim_id: index for index, claim_id in enumerate(claim_ids)}
+
+    uncertain: list[tuple[str, VerificationResult, tuple[str, ...]]] = []
+    for claim_id in candidate_claim_ids:
+        result = result_by_claim.get(claim_id)
+        if result is None:
+            continue
+        is_uncertain, reasons = policy_obj.is_uncertain(result)
+        if is_uncertain:
+            uncertain.append((claim_id, result, reasons))
+
+    uncertain.sort(key=lambda item: (item[1].confidence, order_index.get(item[0], 0)))
+    dropped_for_claim_cap: tuple[str, ...] = ()
+    if policy_obj.max_escalated_claims is not None:
+        selected_uncertain = uncertain[: policy_obj.max_escalated_claims]
+        dropped_for_claim_cap = tuple(claim_id for claim_id, _, _ in uncertain[policy_obj.max_escalated_claims :])
+    else:
+        selected_uncertain = uncertain
+
+    selected_route_lists: dict[str, tuple[str, ...]] = {}
+    dropped_no_route: list[str] = []
+    uncertainty_reasons: dict[str, tuple[str, ...]] = {}
+    preliminary_summary: dict[str, dict[str, Any]] = {}
+    for claim_id, result, reasons in selected_uncertain:
+        routes = _escalation_routes_for_claim(
+            hint_by_claim.get(claim_id),
+            escalation_routes=policy_obj.escalation_routes,
+            fallback_routes=policy_obj.fallback_routes,
+        )
+        preliminary_summary[claim_id] = _verification_result_summary(result)
+        uncertainty_reasons[claim_id] = reasons
+        if not routes:
+            dropped_no_route.append(claim_id)
+            continue
+        selected_route_lists[claim_id] = routes
+
+    selected_claim_ids = tuple(
+        claim_id for claim_id in candidate_claim_ids if claim_id in selected_route_lists
+    )
+    final_verify_claim_set = set(selected_claim_ids)
+    skipped_claim_ids = tuple(claim_id for claim_id in claim_ids if claim_id not in final_verify_claim_set)
+    selected_routes = {
+        claim_id: selected_route_lists[claim_id]
+        for claim_id in selected_claim_ids
+    }
+    payloads = _budgeted_tool_payloads(plan_obj, selected_routes=selected_routes)
+    retrieval_queries = _escalation_retrieval_queries(
+        plan_obj,
+        selected_routes=selected_routes,
+        existing_queries=payloads["retrieval_queries"],
+    )
+    budget_summary = {
+        "enabled": True,
+        "policy": policy_obj.to_dict(),
+        "preliminary_result_count": len(tuple(preliminary_results)),
+        "matched_result_count": len(result_by_claim),
+        "candidate_claim_ids": candidate_claim_ids,
+        "uncertain_claim_ids": tuple(claim_id for claim_id, _, _ in uncertain),
+        "selected_claim_ids": selected_claim_ids,
+        "dropped_claim_ids": tuple((*dropped_for_claim_cap, *dropped_no_route)),
+        "dropped_claim_cap_ids": dropped_for_claim_cap,
+        "dropped_no_route_ids": tuple(dropped_no_route),
+        "selected_routes": selected_routes,
+        "uncertainty_reasons": uncertainty_reasons,
+        "preliminary_results": preliminary_summary,
+    }
+    run_verifier = bool(selected_claim_ids)
+    candidate = ClaimVerificationPlan(
+        run_verifier=run_verifier,
+        reason=(
+            "uncertain preliminary verification selected stronger routes"
+            if run_verifier
+            else "no uncertain preliminary verification results selected for escalation"
+        ),
+        verification_scope="budgeted" if run_verifier else "none",
+        claims=plan_obj.claims,
+        verify_claim_ids=selected_claim_ids,
+        skipped_claim_ids=skipped_claim_ids,
+        triggered_claim_ids=tuple(
+            claim_id
+            for claim_id in plan_obj.triggered_claim_ids
+            if claim_id in final_verify_claim_set
+        ),
+        triggered_features={
+            claim_id: features
+            for claim_id, features in plan_obj.triggered_features.items()
+            if claim_id in final_verify_claim_set
+        },
+        triggered_metadata={
+            claim_id: metadata
+            for claim_id, metadata in plan_obj.triggered_metadata.items()
+            if claim_id in final_verify_claim_set
+        },
+        route_hints=tuple(
+            _escalation_route_hint(
+                hint_by_claim.get(claim_id),
+                claim_id=claim_id,
+                routes=selected_route_lists[claim_id],
+                reasons=uncertainty_reasons.get(claim_id, ()),
+                preliminary_result=result_by_claim.get(claim_id),
+            )
+            for claim_id in selected_claim_ids
+        ),
+        retrieval_queries=retrieval_queries,
+        citation_checks=payloads["citation_checks"],
+        calculation_checks=payloads["calculation_checks"],
+        state_checks=payloads["state_checks"],
+        world_model_checks=payloads["world_model_checks"],
+        dependencies=plan_obj.dependencies,
+        budget={"uncertainty_escalation": budget_summary},
+    )
+    if not candidate.run_verifier or not policy_obj.budget_enabled():
+        return candidate
+
+    budgeted = budget_verification_plan(
+        candidate,
+        policy_obj.to_budget_policy(),
+        route_cost_units=route_cost_units,
+        tool_payload_cost_units=tool_payload_cost_units,
+    )
+    merged_budget = dict(budgeted.budget)
+    merged_budget["uncertainty_escalation"] = budget_summary
+    return ClaimVerificationPlan(
+        run_verifier=budgeted.run_verifier,
+        reason=budgeted.reason,
+        verification_scope=budgeted.verification_scope,
+        claims=budgeted.claims,
+        verify_claim_ids=budgeted.verify_claim_ids,
+        skipped_claim_ids=budgeted.skipped_claim_ids,
+        triggered_claim_ids=budgeted.triggered_claim_ids,
+        triggered_features=budgeted.triggered_features,
+        triggered_metadata=budgeted.triggered_metadata,
+        route_hints=budgeted.route_hints,
+        retrieval_queries=budgeted.retrieval_queries,
+        citation_checks=budgeted.citation_checks,
+        calculation_checks=budgeted.calculation_checks,
+        state_checks=budgeted.state_checks,
+        world_model_checks=budgeted.world_model_checks,
+        dependencies=budgeted.dependencies,
+        budget=merged_budget,
+    )
+
+
 def _plan_obj(value: ClaimVerificationPlan | Mapping[str, Any]) -> ClaimVerificationPlan:
     if isinstance(value, ClaimVerificationPlan):
         return value
@@ -1018,6 +1325,169 @@ def _budget_policy_obj(value: VerificationBudgetPolicy | Mapping[str, Any]) -> V
     if not isinstance(value, Mapping):
         raise ValueError("verification budget policy must be a VerificationBudgetPolicy or mapping.")
     return VerificationBudgetPolicy.from_mapping(value)
+
+
+def _escalation_policy_obj(
+    value: VerificationEscalationPolicy | Mapping[str, Any] | None,
+) -> VerificationEscalationPolicy:
+    if value is None:
+        return VerificationEscalationPolicy()
+    if isinstance(value, VerificationEscalationPolicy):
+        return value
+    if not isinstance(value, Mapping):
+        raise ValueError("verification escalation policy must be a VerificationEscalationPolicy or mapping.")
+    return VerificationEscalationPolicy.from_mapping(value)
+
+
+def _preliminary_results_by_claim(
+    plan: ClaimVerificationPlan,
+    preliminary_results: Sequence[VerificationResult | Mapping[str, Any]],
+) -> dict[str, VerificationResult]:
+    target_claim_ids = tuple(plan.verify_claim_ids) or tuple(
+        _claim_id(claim, index) for index, claim in enumerate(plan.claims)
+    )
+    by_claim: dict[str, VerificationResult] = {}
+    for index, raw_result in enumerate(preliminary_results):
+        result = _verification_result_obj(raw_result)
+        claim_id = _claim_id_from_verification_result(raw_result)
+        if claim_id is None and index < len(target_claim_ids):
+            claim_id = target_claim_ids[index]
+        if claim_id is None:
+            continue
+        by_claim[str(claim_id)] = result
+    return by_claim
+
+
+def _claim_id_from_verification_result(
+    result: VerificationResult | Mapping[str, Any],
+) -> str | None:
+    if isinstance(result, VerificationResult):
+        metadata = result.metadata if isinstance(result.metadata, Mapping) else {}
+        raw_claim_id = metadata.get("claim_id")
+        return None if raw_claim_id is None else str(raw_claim_id)
+    if not isinstance(result, Mapping):
+        return None
+    raw_claim_id = result.get("claim_id")
+    if raw_claim_id is not None:
+        return str(raw_claim_id)
+    metadata = result.get("metadata", {})
+    if isinstance(metadata, Mapping):
+        raw_claim_id = metadata.get("claim_id")
+        if raw_claim_id is not None:
+            return str(raw_claim_id)
+    return None
+
+
+def _verification_result_obj(
+    result: VerificationResult | Mapping[str, Any],
+) -> VerificationResult:
+    if isinstance(result, VerificationResult):
+        return result
+    if not isinstance(result, Mapping):
+        raise ValueError("verification results must be VerificationResult objects or mappings.")
+    return VerificationResult(
+        status=_verification_status(result.get("status", VerificationStatus.ERROR), name="status"),
+        confidence=_non_negative_float(result.get("confidence", 0.0), name="confidence"),
+        evidence=tuple(str(item) for item in _as_sequence(result.get("evidence", ()))),
+        explanation=str(result.get("explanation", "")),
+        metadata=dict(result.get("metadata", {})),
+    )
+
+
+def _verification_status(value: VerificationStatus | str, *, name: str) -> VerificationStatus:
+    if isinstance(value, VerificationStatus):
+        return value
+    try:
+        return VerificationStatus(str(value))
+    except ValueError as exc:
+        raise ValueError(f"{name} contains unknown verification status: {value!r}") from exc
+
+
+def _verification_result_summary(result: VerificationResult) -> dict[str, Any]:
+    return {
+        "status": result.status.value,
+        "confidence": result.confidence,
+        "evidence_count": len(result.evidence),
+        "metadata": to_jsonable(dict(result.metadata)),
+    }
+
+
+def _escalation_routes_for_claim(
+    hint: VerificationRouteHint | None,
+    *,
+    escalation_routes: Sequence[str],
+    fallback_routes: Sequence[str],
+) -> tuple[str, ...]:
+    original_routes = () if hint is None else tuple(hint.routes)
+    selected: list[str] = []
+    for route in escalation_routes:
+        if route in original_routes:
+            _append_unique(selected, route)
+    if selected:
+        return tuple(selected)
+    for route in fallback_routes:
+        _append_unique(selected, route)
+    return tuple(selected)
+
+
+def _escalation_route_hint(
+    hint: VerificationRouteHint | None,
+    *,
+    claim_id: str,
+    routes: Sequence[str],
+    reasons: Sequence[str],
+    preliminary_result: VerificationResult | None,
+) -> VerificationRouteHint:
+    metadata = {} if hint is None else dict(hint.metadata)
+    metadata["verification_escalation"] = {
+        "selected_routes": tuple(routes),
+        "uncertainty_reasons": tuple(reasons),
+        "preliminary_result": (
+            None if preliminary_result is None else _verification_result_summary(preliminary_result)
+        ),
+    }
+    base_reasons = () if hint is None else tuple(hint.reasons)
+    return VerificationRouteHint(
+        claim_id=claim_id,
+        routes=tuple(routes),
+        reasons=(*base_reasons, *(f"uncertainty:{reason}" for reason in reasons)),
+        metadata=metadata,
+    )
+
+
+def _escalation_retrieval_queries(
+    plan: ClaimVerificationPlan,
+    *,
+    selected_routes: Mapping[str, Sequence[str]],
+    existing_queries: Sequence[Mapping[str, Any]],
+) -> tuple[dict[str, Any], ...]:
+    queries = [dict(item) for item in existing_queries]
+    query_claim_ids = {
+        str(item.get("claim_id"))
+        for item in queries
+        if item.get("claim_id") is not None
+    }
+    claim_by_id = {
+        _claim_id(claim, index): claim
+        for index, claim in enumerate(plan.claims)
+    }
+    for claim_id, routes in selected_routes.items():
+        if "retrieval" not in set(routes) or claim_id in query_claim_ids:
+            continue
+        claim = claim_by_id.get(claim_id)
+        if claim is None:
+            continue
+        query = str(claim.text).strip()
+        if not query:
+            continue
+        queries.append(
+            {
+                "query": query,
+                "claim_id": claim_id,
+                "metadata": {"source": "uncertainty_escalation.fallback_retrieval"},
+            }
+        )
+    return tuple(queries)
 
 
 def _budget_ordered_claim_ids(

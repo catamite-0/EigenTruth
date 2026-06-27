@@ -11,9 +11,13 @@ from eigentruth.verify import (
     ClaimVerificationPlan,
     ClaimVerificationPlanner,
     VerificationBudgetPolicy,
+    VerificationEscalationPolicy,
     VerificationPlanCostEstimate,
+    VerificationResult,
     VerificationRouteHint,
+    VerificationStatus,
     budget_verification_plan,
+    escalate_uncertain_verification_plan,
     estimate_verification_plan_cost,
     extract_claims,
 )
@@ -292,6 +296,118 @@ def test_claim_verification_planner_accepts_budget_policy_mapping():
     assert plan.budget["selected_cost_estimate"]["estimated_route_attempts"] == 1
 
 
+def test_verification_escalation_policy_selects_uncertain_claims_and_fallback_query():
+    plan = ClaimVerificationPlan(
+        run_verifier=True,
+        reason="manual",
+        verification_scope="all",
+        claims=(
+            Claim("Paris is the capital of France.", claim_id="c1"),
+            Claim("2 plus 2 is 4.", claim_id="c2"),
+        ),
+        verify_claim_ids=("c1", "c2"),
+        route_hints=(
+            VerificationRouteHint("c1", ("groundedness",), ("cheap:first_pass",)),
+            VerificationRouteHint("c2", ("groundedness",), ("cheap:first_pass",)),
+        ),
+    )
+
+    escalated = escalate_uncertain_verification_plan(
+        plan,
+        (
+            VerificationResult(
+                VerificationStatus.INSUFFICIENT_EVIDENCE,
+                confidence=0.4,
+                metadata={"claim_id": "c1"},
+            ),
+            VerificationResult(
+                VerificationStatus.SUPPORTED,
+                confidence=0.92,
+                metadata={"claim_id": "c2"},
+            ),
+        ),
+    )
+
+    assert escalated.verification_scope == "budgeted"
+    assert escalated.verify_claim_ids == ("c1",)
+    assert escalated.skipped_claim_ids == ("c2",)
+    assert escalated.route_hints[0].routes == ("retrieval",)
+    assert escalated.route_hints[0].metadata["verification_escalation"]["uncertainty_reasons"] == (
+        "status:insufficient_evidence",
+        "confidence_below:0.65",
+    )
+    assert escalated.retrieval_queries == (
+        {
+            "query": "Paris is the capital of France.",
+            "claim_id": "c1",
+            "metadata": {"source": "uncertainty_escalation.fallback_retrieval"},
+        },
+    )
+    summary = escalated.budget["uncertainty_escalation"]
+    assert summary["uncertain_claim_ids"] == ("c1",)
+    assert summary["selected_claim_ids"] == ("c1",)
+    assert summary["preliminary_results"]["c1"]["status"] == "insufficient_evidence"
+    json.dumps(escalated.to_dict())
+
+
+def test_verification_escalation_policy_applies_claim_and_route_budgets():
+    claims = (
+        Claim("Claim one.", claim_id="c1"),
+        Claim("Claim two.", claim_id="c2"),
+        Claim("Claim three.", claim_id="c3"),
+    )
+    plan = ClaimVerificationPlan(
+        run_verifier=True,
+        reason="manual",
+        verification_scope="all",
+        claims=claims,
+        verify_claim_ids=("c1", "c2", "c3"),
+        route_hints=tuple(
+            VerificationRouteHint(
+                claim.claim_id or "",
+                ("retrieval", "triple_evidence", "world_model", "groundedness"),
+            )
+            for claim in claims
+        ),
+        retrieval_queries=tuple(
+            {
+                "query": claim.text,
+                "claim_id": claim.claim_id,
+                "metadata": {"source": "test"},
+            }
+            for claim in claims
+        ),
+    )
+
+    escalated = escalate_uncertain_verification_plan(
+        plan,
+        (
+            {"claim_id": "c1", "status": "supported", "confidence": 0.55},
+            {"claim_id": "c2", "status": "supported", "confidence": 0.20},
+            {"claim_id": "c3", "status": "supported", "confidence": 0.40},
+        ),
+        VerificationEscalationPolicy(
+            min_confidence=0.6,
+            max_escalated_claims=2,
+            max_route_attempts=2,
+        ),
+    )
+
+    assert escalated.verify_claim_ids == ("c2", "c3")
+    assert {hint.claim_id: hint.routes for hint in escalated.route_hints} == {
+        "c2": ("retrieval",),
+        "c3": ("retrieval",),
+    }
+    assert [query["claim_id"] for query in escalated.retrieval_queries] == ["c2", "c3"]
+    assert escalated.budget["route_budget_exhausted"] is True
+    summary = escalated.budget["uncertainty_escalation"]
+    assert summary["dropped_claim_cap_ids"] == ("c1",)
+    assert summary["uncertain_claim_ids"] == ("c2", "c3", "c1")
+    assert summary["selected_claim_ids"] == ("c2", "c3")
+    assert escalated.cost_estimate().route_counts == {"retrieval": 2}
+    json.dumps(escalated.to_dict())
+
+
 def test_claim_verification_plan_json_shape_matches_stage_decision_fields():
     plan = ClaimVerificationPlan(
         run_verifier=True,
@@ -343,3 +459,7 @@ def test_claim_verification_planner_rejects_invalid_config():
         ClaimVerificationPlanner(verify_all_by_default="maybe")  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="max_route_attempts"):
         VerificationBudgetPolicy(max_route_attempts=-1)
+    with pytest.raises(ValueError, match="min_confidence"):
+        VerificationEscalationPolicy(min_confidence=1.5)
+    with pytest.raises(ValueError, match="unknown verification status"):
+        VerificationEscalationPolicy(uncertain_statuses=("maybe",))

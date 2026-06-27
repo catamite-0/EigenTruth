@@ -50,9 +50,11 @@ from eigentruth.verify.planning import (
     ClaimVerificationPlan,
     ClaimVerificationPlanner,
     VerificationBudgetPolicy,
+    VerificationEscalationPolicy,
     VerificationPlanCostEstimate,
     VerificationRouteHint,
     budget_verification_plan,
+    escalate_uncertain_verification_plan,
     estimate_verification_plan_cost,
 )
 from eigentruth.verify.protocols import Claim, VerificationResult, VerificationStatus, Verifier
@@ -115,6 +117,7 @@ __all__ = [
     "VerificationResult",
     "VerificationStatus",
     "VerificationBudgetPolicy",
+    "VerificationEscalationPolicy",
     "VerifierCacheStats",
     "Verifier",
     "VerifierRoute",
@@ -136,6 +139,7 @@ __all__ = [
     "extract_claim_triples",
     "localize_claim_risk_spans",
     "budget_verification_plan",
+    "escalate_uncertain_verification_plan",
     "estimate_verification_plan_cost",
     "infer_claim_dependencies",
     "normalize_claim_text",
