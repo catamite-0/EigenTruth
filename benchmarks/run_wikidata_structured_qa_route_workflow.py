@@ -209,6 +209,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             f"{route}_false_supported_rate": summary[f"{route}_metrics"].get("false_supported_rate"),
             f"{route}_false_refuted_rate": summary[f"{route}_metrics"].get("false_refuted_rate"),
             "promotes_covered_facts_route": summary["status"] == "promote",
+            **_covered_fact_property_manifest_metadata(summary),
         },
     )
     _write_json(manifest_path, manifest, compact=False)
@@ -279,6 +280,64 @@ def _summary_payload(
             "keep lexical retrieval gated separately for broad open-domain coverage."
         ),
     }
+
+
+def _covered_fact_property_manifest_metadata(summary: Mapping[str, Any]) -> dict[str, Any]:
+    property_metrics = _mapping(summary.get("property_metrics"))
+    if not property_metrics:
+        return {}
+
+    metadata: dict[str, Any] = {
+        "covered_fact_property_count": len(property_metrics),
+        "covered_fact_property_ids": sorted(str(key) for key in property_metrics),
+    }
+    numeric_rollups: dict[str, list[float]] = {
+        "n_records": [],
+        "n_source_documents": [],
+        "decision_accuracy": [],
+        "false_supported_rate": [],
+        "false_refuted_rate": [],
+    }
+    metric_fields = (
+        "statement_property_label",
+        "n_source_documents",
+        "n_records",
+        "n_true",
+        "n_false",
+        "decision_accuracy",
+        "false_supported_rate",
+        "false_refuted_rate",
+        "true_supported_rate",
+        "true_refuted_rate",
+        "insufficient_evidence_rate",
+        "decision_error_rate",
+    )
+    for property_id in sorted(str(key) for key in property_metrics):
+        metrics = _mapping(property_metrics.get(property_id))
+        prefix = f"covered_fact_property_{_metadata_key_component(property_id)}"
+        for field in metric_fields:
+            metadata[f"{prefix}_{field}"] = metrics.get(field)
+        for field in numeric_rollups:
+            value = metrics.get(field)
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                numeric_rollups[field].append(float(value))
+
+    metadata.update({
+        "covered_fact_property_min_records": _min_or_none(numeric_rollups["n_records"]),
+        "covered_fact_property_min_source_documents": _min_or_none(
+            numeric_rollups["n_source_documents"]
+        ),
+        "covered_fact_property_min_decision_accuracy": _min_or_none(
+            numeric_rollups["decision_accuracy"]
+        ),
+        "covered_fact_property_max_false_supported_rate": _max_or_none(
+            numeric_rollups["false_supported_rate"]
+        ),
+        "covered_fact_property_min_false_refuted_rate": _min_or_none(
+            numeric_rollups["false_refuted_rate"]
+        ),
+    })
+    return metadata
 
 
 def _score_dump_property_summary(
@@ -757,6 +816,20 @@ def _join_answer_list(values: Sequence[str]) -> str:
 
 def _mapping(value: Any) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
+
+
+def _metadata_key_component(value: Any) -> str:
+    text = str(value).strip().lower()
+    key = "".join(char if char.isalnum() else "_" for char in text).strip("_")
+    return key or "unknown"
+
+
+def _min_or_none(values: Sequence[float]) -> float | None:
+    return min(values) if values else None
+
+
+def _max_or_none(values: Sequence[float]) -> float | None:
+    return max(values) if values else None
 
 
 def _clean_text(value: Any) -> str | None:

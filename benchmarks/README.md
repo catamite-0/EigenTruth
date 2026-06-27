@@ -3008,8 +3008,12 @@ per-record verifier traces, and emits a route summary plus artifact manifest.
 The route summary includes `property_metrics`, keyed by Wikidata property id,
 with per-property source-document counts, true/false record counts, selected
 route counts, decision accuracy, false-supported rate, and false-refuted rate.
-Those fields are consumed by `compare_external_evidence_baselines.py` when a
-release gate needs predicate-level covered-facts evidence.
+The artifact manifest also exposes a flat `covered_fact_property_*` metadata
+view with property ids, per-property quality fields, and worst-property rollups,
+so registry and release tooling can prefilter covered-fact evidence without
+opening the route summary JSON. Those fields are consumed by
+`compare_external_evidence_baselines.py` when a release gate needs
+predicate-level covered-facts evidence.
 
 ```bash
 python benchmarks/run_wikidata_structured_qa_route_workflow.py \

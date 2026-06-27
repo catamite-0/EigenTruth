@@ -4203,6 +4203,23 @@ def test_wikidata_structured_qa_route_workflow_promotes_covered_facts(tmp_path):
     assert report["qa_verifier"]["enabled"] is True
     assert manifest["metadata"]["promotes_covered_facts_route"] is True
     assert manifest["metadata"]["property_count"] == 2
+    assert manifest["metadata"]["covered_fact_property_count"] == 2
+    assert manifest["metadata"]["covered_fact_property_ids"] == ["P36", "P37"]
+    assert manifest["metadata"]["covered_fact_property_p36_n_records"] == 4
+    assert manifest["metadata"]["covered_fact_property_p37_n_source_documents"] == 3
+    assert manifest["metadata"]["covered_fact_property_p37_false_refuted_rate"] == (
+        pytest.approx(1.0)
+    )
+    assert manifest["metadata"]["covered_fact_property_min_records"] == pytest.approx(4.0)
+    assert manifest["metadata"]["covered_fact_property_min_decision_accuracy"] == (
+        pytest.approx(1.0)
+    )
+    assert manifest["metadata"]["covered_fact_property_max_false_supported_rate"] == (
+        pytest.approx(0.0)
+    )
+    assert manifest["metadata"]["covered_fact_property_min_false_refuted_rate"] == (
+        pytest.approx(1.0)
+    )
     assert summary["property_count"] == 2
     assert summary["property_metrics"]["P36"]["decision_accuracy"] == pytest.approx(1.0)
     assert summary["property_metrics"]["P36"]["false_supported_rate"] == pytest.approx(0.0)
