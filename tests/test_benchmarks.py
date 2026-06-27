@@ -13695,6 +13695,139 @@ def test_compare_release_candidates_consumes_product_trace_replay_workflow(tmp_p
         for reason in inconsistent_gate["blocking_reasons"]
     )
 
+    manifest_swapped_workflow_report = _write_product_trace_replay_workflow_report(
+        tmp_path / "trace-replay-workflow-manifest-swapped-audit",
+        selector_report=selector_report,
+        drift_report=drift_report,
+        status="promote",
+        action_audit_status="promote",
+        action_audit_gate_enabled=True,
+        action_audit_passed=True,
+        action_audit_error_rate=0.0,
+    )
+    manifest_swapped_real_action_path = (
+        manifest_swapped_workflow_report.parent / "action-audit-gate.json"
+    )
+    manifest_swapped_other_action_path = (
+        manifest_swapped_workflow_report.parent / "other-action-audit-gate.json"
+    )
+    manifest_swapped_other_action_path.write_text(
+        manifest_swapped_real_action_path.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    manifest_swapped_manifest_path = (
+        manifest_swapped_workflow_report.parent / "artifact-manifest.json"
+    )
+    manifest_swapped_manifest_path.write_text(
+        json.dumps(
+            build_artifact_manifest(
+                {
+                    "product_trace_replay_workflow_report": manifest_swapped_workflow_report,
+                    "selector_replay_report": selector_report,
+                    "product_runtime_drift_report": drift_report,
+                    "action_audit_gate_report": manifest_swapped_other_action_path,
+                },
+                root=manifest_swapped_workflow_report.parent,
+                metadata={
+                    "runner": "run_product_trace_replay_workflow",
+                    "status": "promote",
+                    "action_audit_gate_status": "promote",
+                    "action_audit_gate_enabled": True,
+                    "action_audit_error_rate": 0.0,
+                },
+            ),
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    manifest_swapped_payload = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        product_trace_replay_workflow_path=manifest_swapped_workflow_report,
+        require_product_trace_action_audit_gate=True,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+
+    assert manifest_swapped_payload["decision"]["status"] == "blocked"
+    manifest_swapped_gate = manifest_swapped_payload["product_trace_replay_workflow_gate"]["gate"]
+    assert manifest_swapped_gate["action_audit_manifest_artifact_present"] is True
+    assert manifest_swapped_gate["action_audit_manifest_artifact_path"].endswith(
+        "other-action-audit-gate.json"
+    )
+    assert any(
+        "artifact manifest action-audit gate report path" in reason
+        for reason in manifest_swapped_gate["blocking_reasons"]
+    )
+
+    self_swapped_workflow_report = _write_product_trace_replay_workflow_report(
+        tmp_path / "trace-replay-workflow-self-swapped-audit",
+        selector_report=selector_report,
+        drift_report=drift_report,
+        status="promote",
+        action_audit_status="promote",
+        action_audit_gate_enabled=True,
+        action_audit_passed=True,
+        action_audit_error_rate=0.0,
+    )
+    self_swapped_action_path = self_swapped_workflow_report.parent / "action-audit-gate.json"
+    self_swapped_action = json.loads(self_swapped_action_path.read_text(encoding="utf-8"))
+    self_swapped_action["paths"]["report"] = str(
+        self_swapped_workflow_report.parent / "self-declared-other-action-audit-gate.json"
+    )
+    self_swapped_action_path.write_text(
+        json.dumps(self_swapped_action, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    self_swapped_manifest_path = self_swapped_workflow_report.parent / "artifact-manifest.json"
+    self_swapped_manifest_path.write_text(
+        json.dumps(
+            build_artifact_manifest(
+                {
+                    "product_trace_replay_workflow_report": self_swapped_workflow_report,
+                    "selector_replay_report": selector_report,
+                    "product_runtime_drift_report": drift_report,
+                    "action_audit_gate_report": self_swapped_action_path,
+                },
+                root=self_swapped_workflow_report.parent,
+                metadata={
+                    "runner": "run_product_trace_replay_workflow",
+                    "status": "promote",
+                    "action_audit_gate_status": "promote",
+                    "action_audit_gate_enabled": True,
+                    "action_audit_error_rate": 0.0,
+                },
+            ),
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    self_swapped_payload = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        product_trace_replay_workflow_path=self_swapped_workflow_report,
+        require_product_trace_action_audit_gate=True,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+
+    assert self_swapped_payload["decision"]["status"] == "blocked"
+    self_swapped_gate = self_swapped_payload["product_trace_replay_workflow_gate"]["gate"]
+    assert any(
+        "action-audit gate report self path" in reason
+        for reason in self_swapped_gate["blocking_reasons"]
+    )
+
     audited_workflow_report = _write_product_trace_replay_workflow_report(
         tmp_path / "trace-replay-workflow-audited",
         selector_report=selector_report,
