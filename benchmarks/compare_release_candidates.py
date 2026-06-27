@@ -157,6 +157,9 @@ def compare_release_candidates(
     external_evidence_baseline_comparison_path: str | Path | None = None,
     external_evidence_baseline_comparison_registry_path: str | Path | None = None,
     external_evidence_baseline_comparison_key: str | None = None,
+    pre_generation_probe_comparison_path: str | Path | None = None,
+    pre_generation_probe_comparison_registry_path: str | Path | None = None,
+    pre_generation_probe_comparison_key: str | None = None,
     frontier_release_evidence_path: str | Path | None = None,
     frontier_release_evidence_registry_path: str | Path | None = None,
     frontier_release_evidence_key: str | None = None,
@@ -847,6 +850,23 @@ def compare_release_candidates(
         external_evidence_baseline_comparison_source=external_evidence_baseline_comparison_source,
         verification_context=verification_context,
     )
+    pre_generation_probe_comparison_source = _resolve_pre_generation_probe_comparison_source(
+        pre_generation_probe_comparison_path=pre_generation_probe_comparison_path,
+        pre_generation_probe_comparison_registry_path=(
+            pre_generation_probe_comparison_registry_path
+            if pre_generation_probe_comparison_key is not None
+            else None
+        ),
+        pre_generation_probe_comparison_key=pre_generation_probe_comparison_key,
+        default_registry_path=readiness_registry_path,
+    )
+    pre_generation_probe_comparison = _pre_generation_probe_comparison_gate(
+        pre_generation_probe_comparison_source=pre_generation_probe_comparison_source,
+        recursive=recursive,
+        allow_unverified=allow_unverified,
+        manifest_fingerprint_workers=manifest_fingerprint_workers,
+        verification_context=verification_context,
+    )
     frontier_release_evidence_source = _resolve_frontier_release_evidence_source(
         frontier_release_evidence_path=frontier_release_evidence_path,
         frontier_release_evidence_registry_path=(
@@ -895,6 +915,7 @@ def compare_release_candidates(
         product_runtime_drift,
         release_efficiency,
         external_evidence_baseline_comparison,
+        pre_generation_probe_comparison,
         frontier_release_evidence,
         world_model_signal_workflow,
         selfcheck_signal_fusion_workflow,
@@ -913,6 +934,7 @@ def compare_release_candidates(
             product_runtime_drift,
             release_efficiency,
             external_evidence_baseline_comparison,
+            pre_generation_probe_comparison,
             frontier_release_evidence,
             world_model_signal_workflow,
             selfcheck_signal_fusion_workflow,
@@ -984,6 +1006,17 @@ def compare_release_candidates(
             "external_evidence_baseline_comparison_key": (
                 external_evidence_baseline_comparison_key
             ),
+            "pre_generation_probe_comparison": (
+                None
+                if pre_generation_probe_comparison_source is None
+                else str(pre_generation_probe_comparison_source["path"])
+            ),
+            "pre_generation_probe_comparison_registry": (
+                None
+                if pre_generation_probe_comparison_source is None
+                else pre_generation_probe_comparison_source.get("registry")
+            ),
+            "pre_generation_probe_comparison_key": pre_generation_probe_comparison_key,
             "frontier_release_evidence": (
                 None
                 if frontier_release_evidence_source is None
@@ -1208,6 +1241,7 @@ def compare_release_candidates(
         "product_runtime_drift_gate": product_runtime_drift,
         "release_efficiency_gate": release_efficiency,
         "external_evidence_baseline_comparison_gate": external_evidence_baseline_comparison,
+        "pre_generation_probe_comparison_gate": pre_generation_probe_comparison,
         "frontier_release_evidence_gate": frontier_release_evidence,
         "world_model_signal_workflow_gate": world_model_signal_workflow,
         "adapter_family_matrix_gate": adapter_family,
@@ -1372,6 +1406,7 @@ def _decision(
     product_runtime_drift: Mapping[str, Any] | None = None,
     release_efficiency: Mapping[str, Any] | None = None,
     external_evidence_baseline_comparison: Mapping[str, Any] | None = None,
+    pre_generation_probe_comparison: Mapping[str, Any] | None = None,
     frontier_release_evidence: Mapping[str, Any] | None = None,
     world_model_signal_workflow: Mapping[str, Any] | None = None,
     selfcheck_signal_fusion_workflow: Mapping[str, Any] | None = None,
@@ -1436,6 +1471,16 @@ def _decision(
         None
         if external_evidence_baseline_comparison is None
         else external_evidence_baseline_comparison.get("status")
+    )
+    pre_generation_probe_comparison_gate = _mapping(
+        None
+        if pre_generation_probe_comparison is None
+        else pre_generation_probe_comparison.get("gate")
+    )
+    pre_generation_probe_comparison_status = (
+        None
+        if pre_generation_probe_comparison is None
+        else pre_generation_probe_comparison.get("status")
     )
     frontier_release_evidence_gate = _mapping(
         None if frontier_release_evidence is None else frontier_release_evidence.get("gate")
@@ -1555,6 +1600,15 @@ def _decision(
             "reasons": list(external_evidence_baseline_comparison_gate.get("blocking_reasons", ())),
         })
     if (
+        pre_generation_probe_comparison is not None
+        and pre_generation_probe_comparison_gate.get("passed") is not True
+    ):
+        blocking_reasons.append({
+            "gate": "pre_generation_probe_comparison",
+            "status": pre_generation_probe_comparison_status,
+            "reasons": list(pre_generation_probe_comparison_gate.get("blocking_reasons", ())),
+        })
+    if (
         frontier_release_evidence is not None
         and frontier_release_evidence_gate.get("passed") is not True
     ):
@@ -1613,6 +1667,7 @@ def _decision(
         "product_runtime_drift_status": product_runtime_drift_status,
         "release_efficiency_status": release_efficiency_status,
         "external_evidence_baseline_comparison_status": external_evidence_baseline_comparison_status,
+        "pre_generation_probe_comparison_status": pre_generation_probe_comparison_status,
         "frontier_release_evidence_status": frontier_release_evidence_status,
         "world_model_signal_workflow_status": world_model_signal_workflow_status,
         "selfcheck_signal_fusion_workflow_status": selfcheck_signal_fusion_workflow_status,
@@ -1675,6 +1730,14 @@ def _decision(
                 or external_evidence_baseline_comparison_gate.get("passed") is not True
             )
             else external_evidence_baseline_comparison.get("report_path")
+        ),
+        "recommended_pre_generation_probe_comparison_report": (
+            None
+            if (
+                pre_generation_probe_comparison is None
+                or pre_generation_probe_comparison_gate.get("passed") is not True
+            )
+            else pre_generation_probe_comparison.get("report_path")
         ),
         "recommended_frontier_release_evidence_report": (
             None
@@ -3937,6 +4000,174 @@ def _external_evidence_baseline_comparison_report_gate(
     }
 
 
+def _pre_generation_probe_comparison_gate(
+    *,
+    pre_generation_probe_comparison_source: Mapping[str, Any] | None,
+    recursive: bool,
+    allow_unverified: bool,
+    manifest_fingerprint_workers: int,
+    verification_context: ArtifactVerificationContext,
+) -> dict[str, Any] | None:
+    if pre_generation_probe_comparison_source is None:
+        return None
+    report_path = Path(pre_generation_probe_comparison_source["path"])
+    report, report_error = verification_context.load_json_object(report_path)
+    manifest_path = _pre_generation_probe_comparison_manifest_path(report, report_path=report_path)
+    verification = _verify_artifact_manifest(
+        manifest_path,
+        recursive=recursive,
+        max_workers=manifest_fingerprint_workers,
+        artifact_name="pre_generation_probe_comparison_manifest",
+        verification_context=verification_context,
+    )
+    promotion_gate = _mapping(report.get("promotion_gate"))
+    leaderboard = tuple(
+        _mapping(item)
+        for item in report.get("leaderboard") or ()
+        if isinstance(item, Mapping)
+    )
+    best_run = leaderboard[0] if leaderboard else {}
+    gate = _pre_generation_probe_comparison_report_gate(
+        report=report,
+        report_error=report_error,
+        manifest_path=manifest_path,
+        verification=verification,
+        promotion_gate=promotion_gate,
+        leaderboard=leaderboard,
+        allow_unverified=allow_unverified,
+    )
+    return {
+        "schema_version": 1,
+        "status": "promote" if gate["passed"] else "blocked",
+        "report_path": str(report_path),
+        "manifest_path": None if manifest_path is None else str(manifest_path),
+        "source": pre_generation_probe_comparison_source.get("source"),
+        "registry": pre_generation_probe_comparison_source.get("registry"),
+        "record_key": pre_generation_probe_comparison_source.get("record_key"),
+        "record": pre_generation_probe_comparison_source.get("record"),
+        "workflow": report.get("workflow"),
+        "report_status": report.get("status"),
+        "run_count": sum(1 for run in report.get("runs") or () if isinstance(run, Mapping)),
+        "model_count": _float_or_none(promotion_gate.get("model_count")),
+        "models": tuple(promotion_gate.get("models") or ()),
+        "redline_passed": promotion_gate.get("redline_passed"),
+        "redline_run_count": _float_or_none(promotion_gate.get("redline_run_count")),
+        "best_run": {
+            "name": best_run.get("name"),
+            "model": best_run.get("model"),
+            "recommended_layer": best_run.get("recommended_layer"),
+            "test_label_auroc": _float_or_none(best_run.get("test_label_auroc")),
+            "redline_best_signal": best_run.get("redline_best_signal"),
+            "redline_best_auroc": _float_or_none(best_run.get("redline_best_auroc")),
+            "redline_margin": _float_or_none(best_run.get("redline_margin")),
+        },
+        "blocking_reasons": tuple(gate.get("blocking_reasons", ())),
+        "verification": verification,
+        "gate": gate,
+    }
+
+
+def _pre_generation_probe_comparison_report_gate(
+    *,
+    report: Mapping[str, Any],
+    report_error: str | None,
+    manifest_path: Path | None,
+    verification: Mapping[str, Any],
+    promotion_gate: Mapping[str, Any],
+    leaderboard: Sequence[Mapping[str, Any]],
+    allow_unverified: bool,
+) -> dict[str, Any]:
+    failures = []
+    if report_error is not None:
+        failures.append(f"pre-generation probe comparison report could not be loaded: {report_error}")
+    if manifest_path is None:
+        failures.append("pre-generation probe comparison artifact manifest is missing")
+    if not bool(verification.get("passed", False)) and not allow_unverified:
+        failures.append("pre-generation probe comparison manifest verification failed")
+    if report.get("workflow") != "pre_generation_probe_workflow_comparison":
+        failures.append(
+            "pre-generation probe comparison workflow is "
+            f"{report.get('workflow')!r}, expected 'pre_generation_probe_workflow_comparison'"
+        )
+    if report.get("status") != "ready":
+        failures.append(
+            f"pre-generation probe comparison status is {report.get('status')!r}, expected 'ready'"
+        )
+    if not promotion_gate:
+        failures.append("pre-generation probe comparison promotion_gate is missing")
+    else:
+        gate_failures = tuple(promotion_gate.get("failures", ()))
+        if gate_failures:
+            failures.append(
+                "pre-generation probe comparison promotion gate did not pass"
+                + _format_gate_reasons({"blocking_reasons": gate_failures})
+            )
+        model_count = _float_or_none(promotion_gate.get("model_count"))
+        if model_count is None or model_count < 2:
+            failures.append("pre-generation probe comparison model_count is below 2")
+        redline_run_count = _float_or_none(promotion_gate.get("redline_run_count"))
+        if redline_run_count is None or redline_run_count < 1:
+            failures.append("pre-generation probe comparison redline evidence is missing")
+        if promotion_gate.get("redline_passed") is not True:
+            failures.append("pre-generation probe comparison redline gate did not pass")
+    if not leaderboard:
+        failures.append("pre-generation probe comparison leaderboard is missing")
+    return {
+        "passed": not failures,
+        "blocking_reasons": failures,
+    }
+
+
+def _pre_generation_probe_comparison_manifest_path(
+    report: Mapping[str, Any],
+    *,
+    report_path: Path,
+) -> Path | None:
+    raw_path = _nested(report, "paths", "artifact_manifest")
+    if raw_path is None:
+        return None
+    return _resolve_path(raw_path, base_path=report_path)
+
+
+def _resolve_pre_generation_probe_comparison_source(
+    *,
+    pre_generation_probe_comparison_path: str | Path | None,
+    pre_generation_probe_comparison_registry_path: str | Path | None,
+    pre_generation_probe_comparison_key: str | None,
+    default_registry_path: str | Path,
+) -> dict[str, Any] | None:
+    if pre_generation_probe_comparison_path is not None:
+        if pre_generation_probe_comparison_key is not None:
+            raise ValueError(
+                "pre_generation_probe_comparison_path is mutually exclusive with "
+                "pre_generation_probe_comparison_key."
+            )
+        return {"source": "file", "path": Path(pre_generation_probe_comparison_path)}
+    if pre_generation_probe_comparison_key is None:
+        if pre_generation_probe_comparison_registry_path is not None:
+            raise ValueError(
+                "pre_generation_probe_comparison_registry_path requires "
+                "pre_generation_probe_comparison_key."
+            )
+        return None
+    registry_path = Path(
+        default_registry_path
+        if pre_generation_probe_comparison_registry_path is None
+        else pre_generation_probe_comparison_registry_path
+    )
+    registry = ArtifactRegistry.load_json(registry_path)
+    record = registry.get(str(pre_generation_probe_comparison_key))
+    if record.artifact_type != "report":
+        raise ValueError(f"registry record {record.key()!r} is not a report.")
+    return {
+        "source": "registry",
+        "registry": str(registry_path),
+        "record_key": record.key(),
+        "record": record.to_dict(),
+        "path": _resolve_registry_record_path(registry_path, record),
+    }
+
+
 def _frontier_release_evidence_gate(
     *,
     frontier_release_evidence_source: Mapping[str, Any] | None,
@@ -5389,6 +5620,7 @@ def _candidate_with_gates(
     product_runtime_drift: Mapping[str, Any] | None,
     release_efficiency: Mapping[str, Any] | None,
     external_evidence_baseline_comparison: Mapping[str, Any] | None,
+    pre_generation_probe_comparison: Mapping[str, Any] | None,
     frontier_release_evidence: Mapping[str, Any] | None,
     world_model_signal_workflow: Mapping[str, Any] | None,
     selfcheck_signal_fusion_workflow: Mapping[str, Any] | None,
@@ -5619,6 +5851,26 @@ def _candidate_with_gates(
         }
         manifests["external_evidence_baseline_comparison_report"] = (
             external_evidence_baseline_comparison.get("report_path")
+        )
+    if pre_generation_probe_comparison is not None:
+        best_run = _mapping(pre_generation_probe_comparison.get("best_run"))
+        payload["pre_generation_probe_comparison"] = {
+            "report_path": pre_generation_probe_comparison.get("report_path"),
+            "manifest_path": pre_generation_probe_comparison.get("manifest_path"),
+            "source": pre_generation_probe_comparison.get("source"),
+            "registry": pre_generation_probe_comparison.get("registry"),
+            "record_key": pre_generation_probe_comparison.get("record_key"),
+            "workflow": pre_generation_probe_comparison.get("workflow"),
+            "status": pre_generation_probe_comparison.get("report_status"),
+            "model_count": pre_generation_probe_comparison.get("model_count"),
+            "run_count": pre_generation_probe_comparison.get("run_count"),
+            "redline_passed": pre_generation_probe_comparison.get("redline_passed"),
+            "redline_run_count": pre_generation_probe_comparison.get("redline_run_count"),
+            "best_run": best_run,
+            "blocking_reasons": tuple(pre_generation_probe_comparison.get("blocking_reasons", ())),
+        }
+        manifests["pre_generation_probe_comparison_manifest"] = (
+            pre_generation_probe_comparison.get("manifest_path")
         )
     if frontier_release_evidence is not None:
         payload["frontier_release_evidence"] = {
@@ -5994,6 +6246,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             args.external_evidence_baseline_comparison_registry
         ),
         external_evidence_baseline_comparison_key=args.external_evidence_baseline_comparison_key,
+        pre_generation_probe_comparison_path=args.pre_generation_probe_comparison,
+        pre_generation_probe_comparison_registry_path=args.pre_generation_probe_comparison_registry,
+        pre_generation_probe_comparison_key=args.pre_generation_probe_comparison_key,
         frontier_release_evidence_path=args.frontier_release_evidence,
         frontier_release_evidence_registry_path=args.frontier_release_evidence_registry,
         frontier_release_evidence_key=args.frontier_release_evidence_key,
@@ -6163,6 +6418,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         f"product_runtime_drift={decision.get('product_runtime_drift_status')} "
         f"release_efficiency={decision.get('recommended_release_efficiency_profile')} "
         f"external_evidence={decision.get('external_evidence_baseline_comparison_status')} "
+        f"pre_generation_probe={decision.get('pre_generation_probe_comparison_status')} "
         f"frontier_release_evidence={decision.get('frontier_release_evidence_status')} "
         f"world_model_signal={decision.get('world_model_signal_workflow_status')} "
         f"selfcheck_signal_fusion={decision.get('selfcheck_signal_fusion_workflow_status')} "
@@ -6233,6 +6489,15 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--external-evidence-baseline-comparison-key", default=None,
                         help="optional report:<name>:<version> registry key for an external "
                              "evidence baseline comparison")
+    parser.add_argument("--pre-generation-probe-comparison", default=None,
+                        help="optional compare_pre_generation_probe_workflows.py report that must "
+                             "pass multi-model and text-redline release gates")
+    parser.add_argument("--pre-generation-probe-comparison-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for "
+                             "--pre-generation-probe-comparison-key; defaults to --readiness-registry")
+    parser.add_argument("--pre-generation-probe-comparison-key", default=None,
+                        help="optional report:<name>:<version> registry key for a pre-generation "
+                             "probe workflow comparison")
     parser.add_argument("--frontier-release-evidence", default=None,
                         help="optional frontier release-evidence report that must promote and verify")
     parser.add_argument("--frontier-release-evidence-registry", default=None,

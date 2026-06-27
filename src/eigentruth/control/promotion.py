@@ -70,6 +70,7 @@ class ProductPromotionContract:
     world_model_signal_workflow: Mapping[str, Any] = field(default_factory=dict)
     feedback_policy_workflow: Mapping[str, Any] = field(default_factory=dict)
     external_evidence_baseline_comparison: Mapping[str, Any] = field(default_factory=dict)
+    pre_generation_probe_comparison: Mapping[str, Any] = field(default_factory=dict)
     triple_extraction_fixture_matrix: Mapping[str, Any] = field(default_factory=dict)
     release_efficiency: Mapping[str, Any] = field(default_factory=dict)
     metadata: Mapping[str, Any] = field(default_factory=dict)
@@ -114,6 +115,11 @@ class ProductPromotionContract:
         )
         object.__setattr__(
             self,
+            "pre_generation_probe_comparison",
+            dict(self.pre_generation_probe_comparison),
+        )
+        object.__setattr__(
+            self,
             "triple_extraction_fixture_matrix",
             dict(self.triple_extraction_fixture_matrix),
         )
@@ -154,6 +160,9 @@ class ProductPromotionContract:
                 feedback_policy_workflow=_mapping(payload.get("feedback_policy_workflow")),
                 external_evidence_baseline_comparison=_mapping(
                     payload.get("external_evidence_baseline_comparison")
+                ),
+                pre_generation_probe_comparison=_mapping(
+                    payload.get("pre_generation_probe_comparison")
                 ),
                 triple_extraction_fixture_matrix=_mapping(
                     payload.get("triple_extraction_fixture_matrix")
@@ -211,6 +220,12 @@ class ProductPromotionContract:
                     comparison.get("external_evidence_baseline_comparison_gate"),
                 ),
             )
+        )
+        pre_generation_probe_comparison = _pre_generation_probe_comparison_metadata(
+            _first_mapping(
+                candidate.get("pre_generation_probe_comparison"),
+                comparison.get("pre_generation_probe_comparison_gate"),
+            ),
         )
         triple_extraction_fixture_matrix = _triple_extraction_fixture_matrix_metadata(
             _first_mapping(
@@ -307,6 +322,7 @@ class ProductPromotionContract:
                 manifests=manifests,
             ),
             external_evidence_baseline_comparison=external_evidence_baseline_comparison,
+            pre_generation_probe_comparison=pre_generation_probe_comparison,
             triple_extraction_fixture_matrix=triple_extraction_fixture_matrix,
             release_efficiency=release_efficiency,
             metadata={
@@ -587,6 +603,9 @@ class ProductPromotionContract:
                 **_external_evidence_baseline_comparison_flat_metadata(
                     external_evidence_baseline_comparison
                 ),
+                **_pre_generation_probe_comparison_flat_metadata(
+                    pre_generation_probe_comparison
+                ),
                 **_release_efficiency_flat_metadata(release_efficiency),
                 "performance_baseline_record": candidate.get("performance_baseline_record"),
                 "performance_evidence_bundle_status": performance_evidence_bundle.get("status"),
@@ -862,6 +881,9 @@ class ProductPromotionContract:
             "feedback_policy_workflow": dict(self.feedback_policy_workflow),
             "external_evidence_baseline_comparison": dict(
                 self.external_evidence_baseline_comparison
+            ),
+            "pre_generation_probe_comparison": dict(
+                self.pre_generation_probe_comparison
             ),
             "triple_extraction_fixture_matrix": dict(
                 self.triple_extraction_fixture_matrix
@@ -1732,6 +1754,9 @@ def product_promotion_contract_metadata(
         "promotion_contract_external_evidence_baseline_comparison": dict(
             contract.external_evidence_baseline_comparison
         ),
+        "promotion_contract_pre_generation_probe_comparison": dict(
+            contract.pre_generation_probe_comparison
+        ),
         "promotion_contract_triple_extraction_fixture_matrix": dict(
             contract.triple_extraction_fixture_matrix
         ),
@@ -1740,6 +1765,7 @@ def product_promotion_contract_metadata(
         **_promotion_contract_product_trace_replay_metadata(contract),
         **_promotion_contract_product_runtime_drift_metadata(contract),
         **_promotion_contract_external_evidence_baseline_comparison_metadata(contract),
+        **_promotion_contract_pre_generation_probe_comparison_metadata(contract),
         **covered_fact_scope,
     }
 
@@ -2032,6 +2058,78 @@ def _promotion_contract_external_evidence_baseline_comparison_metadata(
                 metadata.get(
                     "external_evidence_baseline_comparison_text_redline_run_count"
                 ),
+            )
+        ),
+    })
+
+
+def _promotion_contract_pre_generation_probe_comparison_metadata(
+    contract: ProductPromotionContract,
+) -> dict[str, Any]:
+    metadata = _mapping(contract.metadata)
+    comparison = _mapping(contract.pre_generation_probe_comparison)
+    best_run = _mapping(comparison.get("best_run"))
+    return _drop_none_values({
+        "promotion_contract_pre_generation_probe_comparison_status": _first_present(
+            metadata.get("pre_generation_probe_comparison_status"),
+            comparison.get("status"),
+        ),
+        "promotion_contract_pre_generation_probe_comparison_report": _first_present(
+            comparison.get("report_path"),
+            metadata.get("pre_generation_probe_comparison_report"),
+        ),
+        "promotion_contract_pre_generation_probe_comparison_source": _first_present(
+            comparison.get("source"),
+            metadata.get("pre_generation_probe_comparison_source"),
+        ),
+        "promotion_contract_pre_generation_probe_comparison_registry": _first_present(
+            comparison.get("registry"),
+            metadata.get("pre_generation_probe_comparison_registry"),
+        ),
+        "promotion_contract_pre_generation_probe_comparison_record": _first_present(
+            comparison.get("record_key"),
+            metadata.get("pre_generation_probe_comparison_record"),
+        ),
+        "promotion_contract_pre_generation_probe_comparison_model_count": _first_present(
+            comparison.get("model_count"),
+            metadata.get("pre_generation_probe_comparison_model_count"),
+        ),
+        "promotion_contract_pre_generation_probe_comparison_run_count": _first_present(
+            comparison.get("run_count"),
+            metadata.get("pre_generation_probe_comparison_run_count"),
+        ),
+        "promotion_contract_pre_generation_probe_comparison_redline_passed": _first_present(
+            comparison.get("redline_passed"),
+            metadata.get("pre_generation_probe_comparison_redline_passed"),
+        ),
+        "promotion_contract_pre_generation_probe_comparison_redline_run_count": (
+            _first_present(
+                comparison.get("redline_run_count"),
+                metadata.get("pre_generation_probe_comparison_redline_run_count"),
+            )
+        ),
+        "promotion_contract_pre_generation_probe_comparison_best_run": _first_present(
+            best_run.get("name"),
+            metadata.get("pre_generation_probe_comparison_best_run"),
+        ),
+        "promotion_contract_pre_generation_probe_comparison_best_model": _first_present(
+            best_run.get("model"),
+            metadata.get("pre_generation_probe_comparison_best_model"),
+        ),
+        "promotion_contract_pre_generation_probe_comparison_best_layer": _first_present(
+            best_run.get("recommended_layer"),
+            metadata.get("pre_generation_probe_comparison_best_layer"),
+        ),
+        "promotion_contract_pre_generation_probe_comparison_best_test_label_auroc": (
+            _first_present(
+                best_run.get("test_label_auroc"),
+                metadata.get("pre_generation_probe_comparison_best_test_label_auroc"),
+            )
+        ),
+        "promotion_contract_pre_generation_probe_comparison_best_redline_margin": (
+            _first_present(
+                best_run.get("redline_margin"),
+                metadata.get("pre_generation_probe_comparison_best_redline_margin"),
             )
         ),
     })
@@ -2442,6 +2540,73 @@ def _external_evidence_baseline_comparison_flat_metadata(
         "external_evidence_baseline_comparison_text_redline_run_count": (
             comparison.get("text_redline_run_count")
         ),
+    })
+
+
+def _pre_generation_probe_comparison_metadata(
+    comparison: Mapping[str, Any],
+) -> dict[str, Any]:
+    if not comparison:
+        return {}
+    best_run = _mapping(comparison.get("best_run"))
+    return _drop_none_values({
+        "report_path": comparison.get("report_path"),
+        "manifest_path": comparison.get("manifest_path"),
+        "source": comparison.get("source"),
+        "registry": comparison.get("registry"),
+        "record_key": comparison.get("record_key"),
+        "workflow": comparison.get("workflow"),
+        "status": _first_present(
+            comparison.get("status"),
+            comparison.get("report_status"),
+        ),
+        "model_count": comparison.get("model_count"),
+        "run_count": comparison.get("run_count"),
+        "redline_passed": comparison.get("redline_passed"),
+        "redline_run_count": comparison.get("redline_run_count"),
+        "best_run": {
+            "name": best_run.get("name"),
+            "model": best_run.get("model"),
+            "recommended_layer": best_run.get("recommended_layer"),
+            "test_label_auroc": best_run.get("test_label_auroc"),
+            "redline_best_signal": best_run.get("redline_best_signal"),
+            "redline_best_auroc": best_run.get("redline_best_auroc"),
+            "redline_margin": best_run.get("redline_margin"),
+        },
+        "blocking_reasons": comparison.get("blocking_reasons"),
+    })
+
+
+def _pre_generation_probe_comparison_flat_metadata(
+    comparison: Mapping[str, Any],
+) -> dict[str, Any]:
+    best_run = _mapping(comparison.get("best_run"))
+    return _drop_none_values({
+        "pre_generation_probe_comparison_report": comparison.get("report_path"),
+        "pre_generation_probe_comparison_manifest": comparison.get("manifest_path"),
+        "pre_generation_probe_comparison_source": comparison.get("source"),
+        "pre_generation_probe_comparison_registry": comparison.get("registry"),
+        "pre_generation_probe_comparison_record": comparison.get("record_key"),
+        "pre_generation_probe_comparison_status": comparison.get("status"),
+        "pre_generation_probe_comparison_model_count": comparison.get("model_count"),
+        "pre_generation_probe_comparison_run_count": comparison.get("run_count"),
+        "pre_generation_probe_comparison_redline_passed": comparison.get("redline_passed"),
+        "pre_generation_probe_comparison_redline_run_count": (
+            comparison.get("redline_run_count")
+        ),
+        "pre_generation_probe_comparison_best_run": best_run.get("name"),
+        "pre_generation_probe_comparison_best_model": best_run.get("model"),
+        "pre_generation_probe_comparison_best_layer": best_run.get("recommended_layer"),
+        "pre_generation_probe_comparison_best_test_label_auroc": (
+            best_run.get("test_label_auroc")
+        ),
+        "pre_generation_probe_comparison_best_redline_signal": (
+            best_run.get("redline_best_signal")
+        ),
+        "pre_generation_probe_comparison_best_redline_auroc": (
+            best_run.get("redline_best_auroc")
+        ),
+        "pre_generation_probe_comparison_best_redline_margin": best_run.get("redline_margin"),
     })
 
 

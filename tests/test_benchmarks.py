@@ -10837,6 +10837,96 @@ def _write_external_evidence_baseline_comparison_report(
     return path
 
 
+def _write_pre_generation_probe_comparison_report(
+    output_dir: Path,
+    *,
+    status: str = "ready",
+    redline_passed: bool = True,
+    model_count: int = 2,
+    failures: Sequence[Mapping[str, object]] = (),
+) -> Path:
+    from eigentruth.registry import build_artifact_manifest
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    report_path = output_dir / "pre-generation-probe-comparison.json"
+    manifest_path = output_dir / "artifact-manifest.json"
+    gate_failures = list(failures)
+    if not redline_passed and not gate_failures:
+        gate_failures.append({"gate": "min_redline_auroc_margin", "run": "qwen05"})
+    leaderboard = [
+        {
+            "rank": 1,
+            "name": "qwen05",
+            "model": "Qwen/Qwen2.5-0.5B-Instruct",
+            "recommended_layer": -4,
+            "test_label_auroc": 0.83,
+            "redline_best_signal": "answer_negation_flag",
+            "redline_best_auroc": 0.74,
+            "redline_margin": 0.09,
+        },
+        {
+            "rank": 2,
+            "name": "smollm2",
+            "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "recommended_layer": -12,
+            "test_label_auroc": 0.82,
+            "redline_best_signal": "answer_negation_flag",
+            "redline_best_auroc": 0.74,
+            "redline_margin": 0.08,
+        },
+    ][:model_count]
+    payload = {
+        "schema_version": 1,
+        "workflow": "pre_generation_probe_workflow_comparison",
+        "status": status,
+        "config": {
+            "min_model_count": 2,
+            "min_record_count": 80,
+            "min_test_label_auroc": 0.70,
+            "min_redline_auroc_margin": 0.05,
+            "require_redline": True,
+        },
+        "promotion_gate": {
+            "failures": gate_failures,
+            "ready_run_count": model_count,
+            "model_count": model_count,
+            "models": [row["model"] for row in leaderboard],
+            "redline_run_count": model_count if redline_passed else 0,
+            "redline_passed": redline_passed,
+        },
+        "runs": [
+            {
+                "name": row["name"],
+                "status": "ready",
+                "model": row["model"],
+                "record_count": 94,
+                "test_label_auroc": row["test_label_auroc"],
+                "redline_margin": row["redline_margin"],
+            }
+            for row in leaderboard
+        ],
+        "leaderboard": leaderboard,
+        "paths": {
+            "report": str(report_path),
+            "artifact_manifest": str(manifest_path),
+        },
+    }
+    report_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest = build_artifact_manifest(
+        {"pre_generation_probe_comparison_report": report_path},
+        root=output_dir,
+        metadata={
+            "runner": "compare_pre_generation_probe_workflows",
+            "workflow": "pre_generation_probe_workflow_comparison",
+            "status": status,
+            "model_count": model_count,
+            "redline_passed": redline_passed,
+        },
+    )
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return report_path
+
+
 def _write_frontier_release_evidence_report(
     output_dir: Path,
     *,
@@ -13850,6 +13940,107 @@ def test_compare_release_candidates_gates_world_model_signal_workflow(tmp_path):
     assert candidate["world_model_signal_workflow"]["trace_gap_max"] == pytest.approx(0.0)
     assert candidate["world_model_signal_workflow"]["conflict_positive_count"] == pytest.approx(4)
     assert "world_model_signal_workflow_manifest" in candidate["manifests"]
+
+
+def test_compare_release_candidates_gates_pre_generation_probe_comparison(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="pre-generation-readiness",
+        version="0.1",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="pre-generation-route",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="pre-generation-route",
+        path=route_manifest,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+    promoted_report = _write_pre_generation_probe_comparison_report(
+        tmp_path / "pre-generation-promote",
+    )
+    blocked_report = _write_pre_generation_probe_comparison_report(
+        tmp_path / "pre-generation-blocked",
+        redline_passed=False,
+    )
+    ArtifactRegistry.load_json(registry_path).record_report(
+        name="pre-generation-probe-comparison",
+        path=promoted_report,
+        version="0.1",
+        metadata={"workflow": "pre_generation_probe_workflow_comparison", "status": "ready"},
+    ).save_json()
+
+    promoted = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        pre_generation_probe_comparison_path=promoted_report,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+    promoted_from_key = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        pre_generation_probe_comparison_key="report:pre-generation-probe-comparison:0.1",
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+    blocked = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        pre_generation_probe_comparison_path=blocked_report,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+
+    assert promoted["decision"]["status"] == "promote"
+    assert promoted["decision"]["pre_generation_probe_comparison_status"] == "promote"
+    assert promoted["decision"]["recommended_pre_generation_probe_comparison_report"] == str(
+        promoted_report
+    )
+    gate = promoted["pre_generation_probe_comparison_gate"]
+    assert gate["gate"]["passed"] is True
+    assert gate["redline_passed"] is True
+    candidate = promoted["release_candidate"]["pre_generation_probe_comparison"]
+    assert candidate["model_count"] == pytest.approx(2)
+    assert candidate["best_run"]["name"] == "qwen05"
+    assert promoted["release_candidate"]["manifests"][
+        "pre_generation_probe_comparison_manifest"
+    ].endswith("artifact-manifest.json")
+    key_candidate = promoted_from_key["release_candidate"]["pre_generation_probe_comparison"]
+    assert key_candidate["source"] == "registry"
+    assert key_candidate["record_key"] == "report:pre-generation-probe-comparison:0.1"
+    assert blocked["decision"]["status"] == "blocked"
+    assert blocked["decision"]["pre_generation_probe_comparison_status"] == "blocked"
+    assert blocked["decision"]["blocking_reasons"][0]["gate"] == (
+        "pre_generation_probe_comparison"
+    )
 
 
 def test_compare_release_candidates_verify_manifest_uses_requested_workers(tmp_path, monkeypatch):
@@ -17976,6 +18167,9 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         trace_gap_max=0.0,
         conflict_positive_count=4,
     )
+    pre_generation_probe_comparison_report = _write_pre_generation_probe_comparison_report(
+        tmp_path / "pre-generation-probe-comparison",
+    )
     ArtifactRegistry.load_json(baseline_registry_path).record_report(
         name="product-trace-replay-workflow",
         path=product_trace_replay_workflow_report,
@@ -17996,6 +18190,11 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         path=world_model_signal_workflow_report,
         version="0.1",
         metadata={"workflow": "run_world_model_signal_calibration_workflow", "status": "promote"},
+    ).record_report(
+        name="pre-generation-probe-comparison",
+        path=pre_generation_probe_comparison_report,
+        version="0.1",
+        metadata={"workflow": "pre_generation_probe_workflow_comparison", "status": "ready"},
     ).save_json()
     adapter_family_matrix_path = _write_adapter_family_matrix(
         tmp_path / "adapter-family-matrix.json",
@@ -18046,6 +18245,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         selfcheck_signal_fusion_workflow_key="report:selfcheck-signal-fusion-workflow:0.1",
         feedback_policy_workflow_key="report:feedback-policy-workflow:0.1",
         world_model_signal_workflow_key="report:world-model-signal-workflow:0.1",
+        pre_generation_probe_comparison_key="report:pre-generation-probe-comparison:0.1",
         feedback_policy_min_matched_feedback_count=20,
         feedback_policy_min_safety_coverage=0.70,
         feedback_policy_max_unknown_safety_issue_rate=0.20,
@@ -18092,6 +18292,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         "adapter_family_matrix_report",
         "feedback_policy_workflow_manifest",
         "performance_manifest",
+        "pre_generation_probe_comparison_manifest",
         "product_runtime_drift_manifest",
         "product_trace_action_audit_gate_report",
         "product_trace_action_execution_gate_report",
@@ -18136,6 +18337,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["release_selfcheck_signal_fusion_workflow_status"] == "promote"
     assert manifest["metadata"]["release_feedback_policy_workflow_status"] == "promote"
     assert manifest["metadata"]["release_world_model_signal_workflow_status"] == "promote"
+    assert manifest["metadata"]["release_pre_generation_probe_comparison_status"] == "promote"
     assert manifest["metadata"]["release_adapter_family_status"] == "promote"
     assert manifest["metadata"]["release_triple_extraction_fixture_matrix_status"] == "promote"
     assert manifest["metadata"]["release_required_route_baseline_status"] == "promote"
@@ -18345,6 +18547,17 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["world_model_signal_workflow_manifest"].endswith(
         "world-model-signal-workflow/artifact-manifest.json"
     )
+    assert manifest["metadata"]["pre_generation_probe_comparison_report"] == str(
+        pre_generation_probe_comparison_report
+    )
+    assert manifest["metadata"]["pre_generation_probe_comparison_source"] == "registry"
+    assert manifest["metadata"]["pre_generation_probe_comparison_record"] == (
+        "report:pre-generation-probe-comparison:0.1"
+    )
+    assert manifest["metadata"]["pre_generation_probe_comparison_model_count"] == pytest.approx(2)
+    assert manifest["metadata"]["pre_generation_probe_comparison_redline_passed"] is True
+    assert manifest["metadata"]["pre_generation_probe_comparison_best_run"] == "qwen05"
+    assert manifest["metadata"]["pre_generation_probe_comparison_best_redline_margin"] == pytest.approx(0.09)
     assert manifest["metadata"]["adapter_family_matrix_report"] == str(adapter_family_matrix_path)
     assert manifest["metadata"]["adapter_family_profile"] == "strict_audit"
     assert manifest["metadata"]["adapter_family_profile_requires_state_transition_world_model"] is True
@@ -18436,6 +18649,9 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert payload["config"]["world_model_signal_workflow_key"] == (
         "report:world-model-signal-workflow:0.1"
     )
+    assert payload["config"]["pre_generation_probe_comparison_key"] == (
+        "report:pre-generation-probe-comparison:0.1"
+    )
     assert payload["config"]["feedback_policy_min_matched_feedback_count"] == 20
     assert payload["config"]["feedback_policy_min_safety_coverage"] == pytest.approx(0.70)
     assert payload["config"]["feedback_policy_max_unknown_safety_issue_rate"] == pytest.approx(0.20)
@@ -18494,6 +18710,12 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     )
     assert payload["release_candidate_comparison"]["config"]["world_model_signal_workflow_key"] == (
         "report:world-model-signal-workflow:0.1"
+    )
+    assert payload["release_candidate_comparison"]["config"]["pre_generation_probe_comparison"] == str(
+        pre_generation_probe_comparison_report
+    )
+    assert payload["release_candidate_comparison"]["config"]["pre_generation_probe_comparison_key"] == (
+        "report:pre-generation-probe-comparison:0.1"
     )
     assert payload["release_candidate_comparison"]["config"]["selector_replay_report"] == str(
         selector_replay_report
@@ -18641,6 +18863,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["release_selfcheck_signal_fusion_workflow_status"] == "promote"
     assert record.metadata["release_feedback_policy_workflow_status"] == "promote"
     assert record.metadata["release_world_model_signal_workflow_status"] == "promote"
+    assert record.metadata["release_pre_generation_probe_comparison_status"] == "promote"
     assert record.metadata["release_triple_extraction_fixture_matrix_status"] == "promote"
     assert record.metadata["product_trace_replay_workflow_report"] == str(
         product_trace_replay_workflow_report
@@ -18685,6 +18908,17 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["world_model_signal_workflow_trace_gap_max"] == pytest.approx(0.0)
     assert record.metadata["world_model_signal_workflow_conflict_positive_count"] == pytest.approx(4)
     assert record.metadata["world_model_signal_workflow_calibrated_conflict_signal_count"] == 1
+    assert record.metadata["pre_generation_probe_comparison_report"] == str(
+        pre_generation_probe_comparison_report
+    )
+    assert record.metadata["pre_generation_probe_comparison_source"] == "registry"
+    assert record.metadata["pre_generation_probe_comparison_record"] == (
+        "report:pre-generation-probe-comparison:0.1"
+    )
+    assert record.metadata["pre_generation_probe_comparison_model_count"] == pytest.approx(2)
+    assert record.metadata["pre_generation_probe_comparison_redline_passed"] is True
+    assert record.metadata["pre_generation_probe_comparison_best_run"] == "qwen05"
+    assert record.metadata["pre_generation_probe_comparison_best_redline_margin"] == pytest.approx(0.09)
     assert record.metadata["release_adapter_family_status"] == "promote"
     assert record.metadata["release_required_route_baseline_status"] == "promote"
     assert record.metadata["adapter_family_matrix_report"] == str(adapter_family_matrix_path)

@@ -644,6 +644,14 @@ python benchmarks/compare_pre_generation_probe_workflows.py \
   --min-redline-auroc-margin 0.05
 ```
 
+That comparison can be used as release evidence:
+
+```bash
+python benchmarks/compare_release_candidates.py \
+  --readiness-registry artifacts/registry.json \
+  --pre-generation-probe-comparison artifacts/runtime_evidence/pre-generation-qwen-smollm2-l12-comparison/comparison.json
+```
+
 By default, that export writes one prompt-level record per question and uses the
 question's candidate false-answer rate as the soft target. Use
 `--pre-generation-record-grain candidate` for candidate-level records with hard

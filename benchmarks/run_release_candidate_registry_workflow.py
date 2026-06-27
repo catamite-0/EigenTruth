@@ -183,6 +183,9 @@ class ReleaseCandidateRegistryWorkflowConfig:
     external_evidence_baseline_comparison_path: Path | None = None
     external_evidence_baseline_comparison_registry_path: Path | None = None
     external_evidence_baseline_comparison_key: str | None = None
+    pre_generation_probe_comparison_path: Path | None = None
+    pre_generation_probe_comparison_registry_path: Path | None = None
+    pre_generation_probe_comparison_key: str | None = None
     frontier_release_evidence_path: Path | None = None
     frontier_release_evidence_registry_path: Path | None = None
     frontier_release_evidence_key: str | None = None
@@ -342,6 +345,18 @@ class ReleaseCandidateRegistryWorkflowConfig:
                 self,
                 "external_evidence_baseline_comparison_registry_path",
                 Path(self.external_evidence_baseline_comparison_registry_path),
+            )
+        if self.pre_generation_probe_comparison_path is not None:
+            object.__setattr__(
+                self,
+                "pre_generation_probe_comparison_path",
+                Path(self.pre_generation_probe_comparison_path),
+            )
+        if self.pre_generation_probe_comparison_registry_path is not None:
+            object.__setattr__(
+                self,
+                "pre_generation_probe_comparison_registry_path",
+                Path(self.pre_generation_probe_comparison_registry_path),
             )
         if self.frontier_release_evidence_path is not None:
             object.__setattr__(
@@ -609,6 +624,11 @@ def run_release_candidate_registry_workflow(
         external_evidence_baseline_comparison_key=(
             config.external_evidence_baseline_comparison_key
         ),
+        pre_generation_probe_comparison_path=config.pre_generation_probe_comparison_path,
+        pre_generation_probe_comparison_registry_path=(
+            config.pre_generation_probe_comparison_registry_path
+        ),
+        pre_generation_probe_comparison_key=config.pre_generation_probe_comparison_key,
         frontier_release_evidence_path=config.frontier_release_evidence_path,
         frontier_release_evidence_registry_path=config.frontier_release_evidence_registry_path,
         frontier_release_evidence_key=config.frontier_release_evidence_key,
@@ -870,6 +890,17 @@ def run_release_candidate_registry_workflow(
             "external_evidence_baseline_comparison_key": (
                 config.external_evidence_baseline_comparison_key
             ),
+            "pre_generation_probe_comparison": (
+                None
+                if config.pre_generation_probe_comparison_path is None
+                else str(config.pre_generation_probe_comparison_path)
+            ),
+            "pre_generation_probe_comparison_registry": (
+                None
+                if config.pre_generation_probe_comparison_registry_path is None
+                else str(config.pre_generation_probe_comparison_registry_path)
+            ),
+            "pre_generation_probe_comparison_key": config.pre_generation_probe_comparison_key,
             "frontier_release_evidence": (
                 None
                 if config.frontier_release_evidence_path is None
@@ -1242,6 +1273,21 @@ def _comparison_with_registry_config(
             if config.external_evidence_baseline_comparison_key is None
             else config.external_evidence_baseline_comparison_key
         ),
+        "pre_generation_probe_comparison": (
+            comparison_config.get("pre_generation_probe_comparison")
+            if config.pre_generation_probe_comparison_path is None
+            else str(config.pre_generation_probe_comparison_path)
+        ),
+        "pre_generation_probe_comparison_registry": (
+            comparison_config.get("pre_generation_probe_comparison_registry")
+            if config.pre_generation_probe_comparison_registry_path is None
+            else str(config.pre_generation_probe_comparison_registry_path)
+        ),
+        "pre_generation_probe_comparison_key": (
+            comparison_config.get("pre_generation_probe_comparison_key")
+            if config.pre_generation_probe_comparison_key is None
+            else config.pre_generation_probe_comparison_key
+        ),
     })
     payload["config"] = comparison_config
     return payload
@@ -1271,6 +1317,10 @@ def _write_artifact_manifest(
             "external_evidence_baseline_comparison_report"
         )
         or _nested(comparison, "external_evidence_baseline_comparison_gate", "report_path"),
+        "pre_generation_probe_comparison_manifest": manifests.get(
+            "pre_generation_probe_comparison_manifest"
+        )
+        or _nested(comparison, "pre_generation_probe_comparison_gate", "manifest_path"),
         "frontier_release_evidence_manifest": manifests.get("frontier_release_evidence_manifest")
         or _nested(comparison, "frontier_release_evidence_gate", "manifest_path"),
         "world_model_signal_workflow_manifest": manifests.get("world_model_signal_workflow_manifest")
@@ -1424,6 +1474,14 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         external_evidence_baseline_comparison = dict(
             comparison.get("external_evidence_baseline_comparison_gate") or {}
         )
+    pre_generation_probe_comparison = dict(
+        candidate.get("pre_generation_probe_comparison") or {}
+    )
+    if not pre_generation_probe_comparison:
+        pre_generation_probe_comparison = dict(
+            comparison.get("pre_generation_probe_comparison_gate") or {}
+        )
+    pre_generation_best_run = dict(pre_generation_probe_comparison.get("best_run") or {})
     product_trace_replay_workflow = dict(candidate.get("product_trace_replay_workflow") or {})
     product_trace_action_audit_gate = dict(
         product_trace_replay_workflow.get("action_audit_gate") or {}
@@ -1457,6 +1515,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "release_efficiency_status": decision.get("release_efficiency_status"),
         "release_external_evidence_baseline_comparison_status": decision.get(
             "external_evidence_baseline_comparison_status"
+        ),
+        "release_pre_generation_probe_comparison_status": decision.get(
+            "pre_generation_probe_comparison_status"
         ),
         "release_frontier_release_evidence_status": decision.get(
             "frontier_release_evidence_status"
@@ -1495,6 +1556,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_release_efficiency_profile": decision.get("recommended_release_efficiency_profile"),
         "recommended_external_evidence_baseline_comparison_report": decision.get(
             "recommended_external_evidence_baseline_comparison_report"
+        ),
+        "recommended_pre_generation_probe_comparison_report": decision.get(
+            "recommended_pre_generation_probe_comparison_report"
         ),
         "recommended_frontier_release_evidence_report": decision.get(
             "recommended_frontier_release_evidence_report"
@@ -1798,6 +1862,51 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "external_evidence_baseline_comparison_text_redline_run_count": (
             external_evidence_baseline_comparison.get("text_redline_run_count")
+        ),
+        "pre_generation_probe_comparison_report": (
+            pre_generation_probe_comparison.get("report_path")
+        ),
+        "pre_generation_probe_comparison_manifest": (
+            manifests.get("pre_generation_probe_comparison_manifest")
+            or pre_generation_probe_comparison.get("manifest_path")
+        ),
+        "pre_generation_probe_comparison_source": (
+            pre_generation_probe_comparison.get("source")
+        ),
+        "pre_generation_probe_comparison_registry": (
+            pre_generation_probe_comparison.get("registry")
+        ),
+        "pre_generation_probe_comparison_record": (
+            pre_generation_probe_comparison.get("record_key")
+        ),
+        "pre_generation_probe_comparison_model_count": (
+            pre_generation_probe_comparison.get("model_count")
+        ),
+        "pre_generation_probe_comparison_run_count": (
+            pre_generation_probe_comparison.get("run_count")
+        ),
+        "pre_generation_probe_comparison_redline_passed": (
+            pre_generation_probe_comparison.get("redline_passed")
+        ),
+        "pre_generation_probe_comparison_redline_run_count": (
+            pre_generation_probe_comparison.get("redline_run_count")
+        ),
+        "pre_generation_probe_comparison_best_run": pre_generation_best_run.get("name"),
+        "pre_generation_probe_comparison_best_model": pre_generation_best_run.get("model"),
+        "pre_generation_probe_comparison_best_layer": (
+            pre_generation_best_run.get("recommended_layer")
+        ),
+        "pre_generation_probe_comparison_best_test_label_auroc": (
+            pre_generation_best_run.get("test_label_auroc")
+        ),
+        "pre_generation_probe_comparison_best_redline_signal": (
+            pre_generation_best_run.get("redline_best_signal")
+        ),
+        "pre_generation_probe_comparison_best_redline_auroc": (
+            pre_generation_best_run.get("redline_best_auroc")
+        ),
+        "pre_generation_probe_comparison_best_redline_margin": (
+            pre_generation_best_run.get("redline_margin")
         ),
         "product_trace_replay_workflow_report": product_trace_replay_workflow.get("report_path"),
         "product_trace_replay_workflow_source": product_trace_replay_workflow.get("source"),
@@ -2366,6 +2475,17 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         external_evidence_baseline_comparison_key=(
             args.external_evidence_baseline_comparison_key
         ),
+        pre_generation_probe_comparison_path=(
+            None
+            if args.pre_generation_probe_comparison is None
+            else Path(args.pre_generation_probe_comparison)
+        ),
+        pre_generation_probe_comparison_registry_path=(
+            None
+            if args.pre_generation_probe_comparison_registry is None
+            else Path(args.pre_generation_probe_comparison_registry)
+        ),
+        pre_generation_probe_comparison_key=args.pre_generation_probe_comparison_key,
         frontier_release_evidence_path=(
             None
             if args.frontier_release_evidence is None
@@ -2661,6 +2781,15 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--external-evidence-baseline-comparison-key", default=None,
                         help="optional report:<name>:<version> registry key for an external "
                              "evidence baseline comparison")
+    parser.add_argument("--pre-generation-probe-comparison", default=None,
+                        help="optional compare_pre_generation_probe_workflows.py report that must "
+                             "pass multi-model and text-redline release gates")
+    parser.add_argument("--pre-generation-probe-comparison-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for "
+                             "--pre-generation-probe-comparison-key; defaults to --readiness-registry")
+    parser.add_argument("--pre-generation-probe-comparison-key", default=None,
+                        help="optional report:<name>:<version> registry key for a pre-generation "
+                             "probe workflow comparison")
     parser.add_argument("--frontier-release-evidence", default=None,
                         help="optional frontier release-evidence report that must promote and verify")
     parser.add_argument("--frontier-release-evidence-registry", default=None,
