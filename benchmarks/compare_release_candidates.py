@@ -64,6 +64,32 @@ _PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_FIELDS: tuple[tuple[str, str], ...]
     ("triple_coverage.audit_pass_rate", "triple_audit_pass_rate"),
     ("triple_coverage.slot_coverage_rate", "triple_slot_coverage_rate"),
 )
+_PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = (
+    (
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.property_metric_count.mean",
+        "covered_fact_recommended_route_property_metric_count",
+    ),
+    (
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_records.mean",
+        "covered_fact_recommended_route_min_records",
+    ),
+    (
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_source_documents.mean",
+        "covered_fact_recommended_route_min_source_documents",
+    ),
+    (
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_decision_accuracy.mean",
+        "covered_fact_recommended_route_min_decision_accuracy",
+    ),
+    (
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.max_false_supported_rate.mean",
+        "covered_fact_recommended_route_max_false_supported_rate",
+    ),
+    (
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_false_refuted_rate.mean",
+        "covered_fact_recommended_route_min_false_refuted_rate",
+    ),
+)
 
 
 def compare_release_candidates(
@@ -83,6 +109,7 @@ def compare_release_candidates(
     product_runtime_drift_report_path: str | Path | None = None,
     require_product_runtime_drift_promotion_evidence: bool = False,
     require_product_runtime_drift_triple_audit_evidence: bool = False,
+    require_product_runtime_drift_covered_fact_property_evidence: bool = False,
     release_efficiency_report_path: str | Path | None = None,
     external_evidence_baseline_comparison_path: str | Path | None = None,
     external_evidence_baseline_comparison_registry_path: str | Path | None = None,
@@ -240,6 +267,9 @@ def compare_release_candidates(
                 "require_product_runtime_drift_triple_audit_evidence": (
                     require_product_runtime_drift_triple_audit_evidence
                 ),
+                "require_product_runtime_drift_covered_fact_property_evidence": (
+                    require_product_runtime_drift_covered_fact_property_evidence
+                ),
             },
         )
     )
@@ -281,6 +311,9 @@ def compare_release_candidates(
     )
     require_product_runtime_drift_triple_audit_evidence = bool(
         release_policy_values["require_product_runtime_drift_triple_audit_evidence"]
+    )
+    require_product_runtime_drift_covered_fact_property_evidence = bool(
+        release_policy_values["require_product_runtime_drift_covered_fact_property_evidence"]
     )
     structured_fact_canonical_route_key = clean_optional_key(structured_fact_canonical_route_key)
     structured_fact_paraphrase_route_key = clean_optional_key(structured_fact_paraphrase_route_key)
@@ -655,6 +688,9 @@ def compare_release_candidates(
         product_runtime_drift_report_path=product_runtime_drift_report_path,
         require_promotion_evidence=require_product_runtime_drift_promotion_evidence,
         require_triple_audit_evidence=require_product_runtime_drift_triple_audit_evidence,
+        require_covered_fact_property_evidence=(
+            require_product_runtime_drift_covered_fact_property_evidence
+        ),
         recursive=recursive,
         allow_unverified=allow_unverified,
         manifest_fingerprint_workers=manifest_fingerprint_workers,
@@ -785,6 +821,9 @@ def compare_release_candidates(
             ),
             "require_product_runtime_drift_triple_audit_evidence": bool(
                 require_product_runtime_drift_triple_audit_evidence
+            ),
+            "require_product_runtime_drift_covered_fact_property_evidence": bool(
+                require_product_runtime_drift_covered_fact_property_evidence
             ),
             "release_efficiency_report": (
                 None
@@ -3268,13 +3307,18 @@ def _product_runtime_drift_gate(
     product_runtime_drift_report_path: str | Path | None,
     require_promotion_evidence: bool,
     require_triple_audit_evidence: bool,
+    require_covered_fact_property_evidence: bool,
     recursive: bool,
     allow_unverified: bool,
     manifest_fingerprint_workers: int,
     verification_context: ArtifactVerificationContext,
 ) -> dict[str, Any] | None:
     if product_runtime_drift_report_path is None:
-        if require_promotion_evidence or require_triple_audit_evidence:
+        if (
+            require_promotion_evidence
+            or require_triple_audit_evidence
+            or require_covered_fact_property_evidence
+        ):
             gate = {
                 "passed": False,
                 "blocking_reasons": [
@@ -3312,6 +3356,17 @@ def _product_runtime_drift_gate(
                         )
                     ) if require_triple_audit_evidence else (),
                     "triple_audit_evidence_blocked_metric_count": 0,
+                    "covered_fact_property_evidence_required": bool(
+                        require_covered_fact_property_evidence
+                    ),
+                    "covered_fact_property_evidence_metric_count": 0,
+                    "covered_fact_property_evidence_missing_metrics": tuple(
+                        metric_name
+                        for metric_name, _prefix in (
+                            _PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_FIELDS
+                        )
+                    ) if require_covered_fact_property_evidence else (),
+                    "covered_fact_property_evidence_blocked_metric_count": 0,
                 },
                 "metrics": (),
                 "verification": {"passed": False, "reason": "missing product runtime drift report"},
@@ -3337,6 +3392,12 @@ def _product_runtime_drift_gate(
         metrics,
         required=require_triple_audit_evidence,
     )
+    covered_fact_property_evidence_summary = (
+        _product_runtime_drift_covered_fact_property_evidence_summary(
+            metrics,
+            required=require_covered_fact_property_evidence,
+        )
+    )
     gate = _product_runtime_drift_report_gate(
         report=report,
         report_error=report_error,
@@ -3346,6 +3407,8 @@ def _product_runtime_drift_gate(
         require_promotion_evidence=require_promotion_evidence,
         triple_audit_evidence_summary=triple_audit_evidence_summary,
         require_triple_audit_evidence=require_triple_audit_evidence,
+        covered_fact_property_evidence_summary=covered_fact_property_evidence_summary,
+        require_covered_fact_property_evidence=require_covered_fact_property_evidence,
         allow_unverified=allow_unverified,
     )
     summary = _mapping(report.get("summary"))
@@ -3366,6 +3429,7 @@ def _product_runtime_drift_gate(
             "observed_metric_count": summary.get("observed_metric_count"),
             **promotion_evidence_summary,
             **triple_audit_evidence_summary,
+            **covered_fact_property_evidence_summary,
         },
         "metrics": metrics,
         "verification": verification,
@@ -3383,6 +3447,8 @@ def _product_runtime_drift_report_gate(
     require_promotion_evidence: bool,
     triple_audit_evidence_summary: Mapping[str, Any],
     require_triple_audit_evidence: bool,
+    covered_fact_property_evidence_summary: Mapping[str, Any],
+    require_covered_fact_property_evidence: bool,
     allow_unverified: bool,
 ) -> dict[str, Any]:
     failures = []
@@ -3434,6 +3500,27 @@ def _product_runtime_drift_report_gate(
         if blocked_metric_count is not None and blocked_metric_count > 0:
             failures.append(
                 "product runtime drift triple audit evidence blocked "
+                f"{int(blocked_metric_count)} metric(s)"
+            )
+    if require_covered_fact_property_evidence:
+        missing_metrics = tuple(
+            covered_fact_property_evidence_summary.get(
+                "covered_fact_property_evidence_missing_metrics"
+            ) or ()
+        )
+        if missing_metrics:
+            failures.append(
+                "product runtime drift covered-fact property evidence metrics are incomplete: "
+                + ", ".join(str(metric) for metric in missing_metrics)
+            )
+        blocked_metric_count = _float_or_none(
+            covered_fact_property_evidence_summary.get(
+                "covered_fact_property_evidence_blocked_metric_count"
+            )
+        )
+        if blocked_metric_count is not None and blocked_metric_count > 0:
+            failures.append(
+                "product runtime drift covered-fact property evidence blocked "
                 f"{int(blocked_metric_count)} metric(s)"
             )
     return {
@@ -3539,6 +3626,40 @@ def _product_runtime_drift_triple_audit_evidence_summary(
             summary["triple_audit_evidence_blocked_metric_count"] += 1
     summary["triple_audit_evidence_metric_count"] = metric_count
     summary["triple_audit_evidence_missing_metrics"] = tuple(missing_metrics)
+    return summary
+
+
+def _product_runtime_drift_covered_fact_property_evidence_summary(
+    metrics: Sequence[Mapping[str, Any]],
+    *,
+    required: bool = False,
+) -> dict[str, Any]:
+    metrics_by_name = {
+        str(metric["metric"]): metric
+        for metric in metrics
+        if isinstance(metric, Mapping) and isinstance(metric.get("metric"), str)
+    }
+    missing_metrics: list[str] = []
+    metric_count = 0
+    summary: dict[str, Any] = {
+        "covered_fact_property_evidence_required": bool(required),
+        "covered_fact_property_evidence_metric_count": 0,
+        "covered_fact_property_evidence_missing_metrics": (),
+        "covered_fact_property_evidence_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_FIELDS:
+        metric = metrics_by_name.get(metric_name)
+        summary[f"{prefix}_baseline"] = None if metric is None else metric.get("baseline")
+        summary[f"{prefix}_current"] = None if metric is None else metric.get("current")
+        summary[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is None or metric.get("current") is None:
+            missing_metrics.append(metric_name)
+            continue
+        metric_count += 1
+        if metric.get("status") == "blocked":
+            summary["covered_fact_property_evidence_blocked_metric_count"] += 1
+    summary["covered_fact_property_evidence_metric_count"] = metric_count
+    summary["covered_fact_property_evidence_missing_metrics"] = tuple(missing_metrics)
     return summary
 
 
@@ -4732,6 +4853,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         require_product_runtime_drift_triple_audit_evidence=bool(
             args.require_product_runtime_drift_triple_audit_evidence
         ),
+        require_product_runtime_drift_covered_fact_property_evidence=bool(
+            args.require_product_runtime_drift_covered_fact_property_evidence
+        ),
         release_efficiency_report_path=args.release_efficiency_report,
         external_evidence_baseline_comparison_path=args.external_evidence_baseline_comparison,
         external_evidence_baseline_comparison_registry_path=(
@@ -4948,6 +5072,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--require-product-runtime-drift-triple-audit-evidence", action="store_true",
                         help="require the product runtime drift report to include trace-level "
                              "triple coverage, audit coverage, audit pass-rate, and slot coverage metrics")
+    parser.add_argument("--require-product-runtime-drift-covered-fact-property-evidence", action="store_true",
+                        help="require the product runtime drift report to include covered-fact property metrics")
     parser.add_argument("--release-efficiency-report", default=None,
                         help="optional release efficiency report that must promote and verify")
     parser.add_argument("--external-evidence-baseline-comparison", default=None,

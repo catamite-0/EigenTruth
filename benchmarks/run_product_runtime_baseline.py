@@ -34,6 +34,14 @@ _PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "triple_audit_pass_rate",
     "triple_slot_coverage_rate",
 )
+_PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "covered_fact_recommended_route_property_metric_count",
+    "covered_fact_recommended_route_min_records",
+    "covered_fact_recommended_route_min_source_documents",
+    "covered_fact_recommended_route_min_decision_accuracy",
+    "covered_fact_recommended_route_max_false_supported_rate",
+    "covered_fact_recommended_route_min_false_refuted_rate",
+)
 _PROMOTION_CONTRACT_PRODUCT_RUNTIME_DRIFT_FIELDS: tuple[str, ...] = (
     "promotion_contract_product_runtime_drift_available",
     "promotion_contract_product_runtime_drift_status",
@@ -44,12 +52,15 @@ _PROMOTION_CONTRACT_PRODUCT_RUNTIME_DRIFT_FIELDS: tuple[str, ...] = (
     "promotion_contract_product_runtime_drift_gate_enabled",
     "promotion_contract_product_runtime_drift_promotion_evidence_required",
     "promotion_contract_product_runtime_drift_triple_audit_evidence_required",
+    "promotion_contract_product_runtime_drift_covered_fact_property_evidence_required",
     "promotion_contract_product_runtime_drift_compared_metric_count",
     "promotion_contract_product_runtime_drift_blocked_metric_count",
     "promotion_contract_product_runtime_drift_promotion_evidence_metric_count",
     "promotion_contract_product_runtime_drift_promotion_evidence_blocked_metric_count",
     "promotion_contract_product_runtime_drift_triple_audit_evidence_metric_count",
     "promotion_contract_product_runtime_drift_triple_audit_evidence_blocked_metric_count",
+    "promotion_contract_product_runtime_drift_covered_fact_property_evidence_metric_count",
+    "promotion_contract_product_runtime_drift_covered_fact_property_evidence_blocked_metric_count",
 )
 _PROMOTION_CONTRACT_COVERED_FACT_ROLLUP_FIELDS: tuple[str, ...] = (
     "promotion_contract_recommended_route_covered_fact_property_metric_count",
@@ -655,6 +666,10 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
             field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
             compact[field_name] = metrics.get(field_name)
     for prefix in _PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
+            compact[field_name] = metrics.get(field_name)
+    for prefix in _PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
             compact[field_name] = metrics.get(field_name)
@@ -1657,6 +1672,12 @@ def _aggregate_promotion_contract_product_runtime_drift(
             item.get("promotion_contract_product_runtime_drift_triple_audit_evidence_required")
             for item in metrics
         ),
+        "covered_fact_property_evidence_required_counts": _counts(
+            item.get(
+                "promotion_contract_product_runtime_drift_covered_fact_property_evidence_required"
+            )
+            for item in metrics
+        ),
         "compared_metric_count": _numeric_summary(
             item.get("promotion_contract_product_runtime_drift_compared_metric_count")
             for item in metrics
@@ -1685,6 +1706,18 @@ def _aggregate_promotion_contract_product_runtime_drift(
             )
             for item in metrics
         ),
+        "covered_fact_property_evidence_metric_count": _numeric_summary(
+            item.get(
+                "promotion_contract_product_runtime_drift_covered_fact_property_evidence_metric_count"
+            )
+            for item in metrics
+        ),
+        "covered_fact_property_evidence_blocked_metric_count": _numeric_summary(
+            item.get(
+                "promotion_contract_product_runtime_drift_covered_fact_property_evidence_blocked_metric_count"
+            )
+            for item in metrics
+        ),
         "promotion_evidence": _aggregate_product_runtime_drift_evidence(
             metrics,
             prefixes=_PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES,
@@ -1692,6 +1725,10 @@ def _aggregate_promotion_contract_product_runtime_drift(
         "triple_audit_evidence": _aggregate_product_runtime_drift_evidence(
             metrics,
             prefixes=_PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES,
+        ),
+        "covered_fact_property_evidence": _aggregate_product_runtime_drift_evidence(
+            metrics,
+            prefixes=_PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES,
         ),
     }
 

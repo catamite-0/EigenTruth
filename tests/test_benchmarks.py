@@ -13009,6 +13009,19 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         triple_audit_evidence=True,
         triple_audit_blocked=True,
     )
+    covered_fact_property_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "covered-fact-property-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        covered_fact_property_evidence=True,
+    )
+    blocked_covered_fact_property_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "blocked-covered-fact-property-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        covered_fact_property_evidence=True,
+        covered_fact_property_blocked=True,
+    )
     blocked_drift_report = _write_product_runtime_drift_report(
         tmp_path / "blocked-runtime-drift",
         status="blocked",
@@ -13089,6 +13102,49 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         max_false_supported_rate=0.0,
         min_false_refuted_rate=0.99,
         require_product_runtime_drift_triple_audit_evidence=True,
+    )
+    covered_fact_property = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=covered_fact_property_drift_report,
+        require_product_runtime_drift_covered_fact_property_evidence=True,
+    )
+    missing_covered_fact_property = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=missing_evidence_drift_report,
+        require_product_runtime_drift_covered_fact_property_evidence=True,
+    )
+    blocked_covered_fact_property = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=blocked_covered_fact_property_drift_report,
+        require_product_runtime_drift_covered_fact_property_evidence=True,
+    )
+    missing_covered_fact_property_report = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        require_product_runtime_drift_covered_fact_property_evidence=True,
     )
 
     assert payload["decision"]["status"] == "promote"
@@ -13171,6 +13227,42 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
     ] is False
     assert missing_triple_audit_report["product_runtime_drift_gate"]["summary"][
         "triple_audit_evidence_required"
+    ] is True
+    assert covered_fact_property["decision"]["status"] == "promote"
+    assert covered_fact_property["config"][
+        "require_product_runtime_drift_covered_fact_property_evidence"
+    ] is True
+    covered_fact_summary = covered_fact_property["release_candidate"]["product_runtime_drift"]["summary"]
+    assert covered_fact_summary["covered_fact_property_evidence_required"] is True
+    assert covered_fact_summary["covered_fact_property_evidence_metric_count"] == 6
+    assert covered_fact_summary["covered_fact_property_evidence_blocked_metric_count"] == 0
+    assert covered_fact_summary["covered_fact_recommended_route_min_records_current"] == pytest.approx(9.0)
+    assert covered_fact_summary["covered_fact_recommended_route_min_records_status"] == "pass"
+    assert missing_covered_fact_property["decision"]["status"] == "blocked"
+    assert missing_covered_fact_property["product_runtime_drift_gate"]["summary"][
+        "covered_fact_property_evidence_missing_metrics"
+    ] == (
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.property_metric_count.mean",
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_records.mean",
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_source_documents.mean",
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_decision_accuracy.mean",
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.max_false_supported_rate.mean",
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_false_refuted_rate.mean",
+    )
+    assert any(
+        "covered-fact property evidence metrics are incomplete" in reason
+        for reason in missing_covered_fact_property["decision"]["blocking_reasons"][0]["reasons"]
+    )
+    assert blocked_covered_fact_property["decision"]["status"] == "blocked"
+    assert blocked_covered_fact_property["product_runtime_drift_gate"]["summary"][
+        "covered_fact_property_evidence_blocked_metric_count"
+    ] == 1
+    assert any(
+        "covered-fact property evidence blocked 1 metric" in reason
+        for reason in blocked_covered_fact_property["decision"]["blocking_reasons"][0]["reasons"]
+    )
+    assert missing_covered_fact_property_report["product_runtime_drift_gate"]["summary"][
+        "covered_fact_property_evidence_required"
     ] is True
 
 
@@ -14289,6 +14381,7 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         blocked_metric_count=0,
         promotion_evidence=True,
         triple_audit_evidence=True,
+        covered_fact_property_evidence=True,
     )
     frontier_payload = module.compare_release_candidates(
         readiness_registry_path=registry_path,
@@ -14367,6 +14460,7 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     assert frontier_payload["config"]["require_state_transition_world_model"] is True
     assert frontier_payload["config"]["require_product_runtime_drift_promotion_evidence"] is True
     assert frontier_payload["config"]["require_product_runtime_drift_triple_audit_evidence"] is True
+    assert frontier_payload["config"]["require_product_runtime_drift_covered_fact_property_evidence"] is True
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
         "adapter_family_profile"
     ] == "strict_audit"
@@ -14376,8 +14470,14 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
         "require_product_runtime_drift_triple_audit_evidence"
     ] is True
+    assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
+        "require_product_runtime_drift_covered_fact_property_evidence"
+    ] is True
     assert frontier_payload["product_runtime_drift_gate"]["summary"]["promotion_evidence_metric_count"] == 4
     assert frontier_payload["product_runtime_drift_gate"]["summary"]["triple_audit_evidence_metric_count"] == 4
+    assert frontier_payload["product_runtime_drift_gate"]["summary"][
+        "covered_fact_property_evidence_metric_count"
+    ] == 6
     assert frontier_payload["adapter_family_matrix_gate"]["state_transition_world_model_adapter"] == (
         "RuleBasedWorldModelAdapter"
     )
@@ -15367,6 +15467,7 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     assert frontier_profile_config.require_state_transition_world_model is True
     assert frontier_profile_config.require_product_runtime_drift_promotion_evidence is True
     assert frontier_profile_config.require_product_runtime_drift_triple_audit_evidence is True
+    assert frontier_profile_config.require_product_runtime_drift_covered_fact_property_evidence is True
     assert frontier_profile_config.release_policy_profile_applied_defaults["adapter_family_profile"] == (
         "strict_audit"
     )
@@ -15378,6 +15479,9 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     ] is True
     assert frontier_profile_config.release_policy_profile_applied_defaults[
         "require_product_runtime_drift_triple_audit_evidence"
+    ] is True
+    assert frontier_profile_config.release_policy_profile_applied_defaults[
+        "require_product_runtime_drift_covered_fact_property_evidence"
     ] is True
 
     with pytest.raises(ValueError, match="release_policy_profile"):
@@ -18544,6 +18648,8 @@ def _write_product_runtime_drift_report(
     promotion_evidence=False,
     triple_audit_evidence=False,
     triple_audit_blocked=False,
+    covered_fact_property_evidence=False,
+    covered_fact_property_blocked=False,
 ):
     from eigentruth.registry import build_artifact_manifest
 
@@ -18684,6 +18790,96 @@ def _write_product_runtime_drift_report(
                 "current": 1.0,
                 "absolute_delta": 0.0,
                 "threshold": 1.0,
+                "reason": None,
+            },
+        ])
+    if covered_fact_property_evidence:
+        property_status = "blocked" if covered_fact_property_blocked else "pass"
+        metrics.extend([
+            {
+                "metric": (
+                    "promotion_contract.covered_fact_properties."
+                    "recommended_route_property_metrics.property_metric_count.mean"
+                ),
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 2.0,
+                "current": 2.0,
+                "absolute_delta": 0.0,
+                "threshold": 2.0,
+                "reason": None,
+            },
+            {
+                "metric": (
+                    "promotion_contract.covered_fact_properties."
+                    "recommended_route_property_metrics.min_records.mean"
+                ),
+                "status": property_status,
+                "comparison": "min_current",
+                "baseline": 9.0,
+                "current": 1.0 if covered_fact_property_blocked else 9.0,
+                "absolute_delta": -8.0 if covered_fact_property_blocked else 0.0,
+                "threshold": 8.0,
+                "reason": (
+                    "promotion_contract.covered_fact_properties."
+                    "recommended_route_property_metrics.min_records.mean below gate"
+                    if covered_fact_property_blocked
+                    else None
+                ),
+            },
+            {
+                "metric": (
+                    "promotion_contract.covered_fact_properties."
+                    "recommended_route_property_metrics.min_source_documents.mean"
+                ),
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 100.0,
+                "current": 100.0,
+                "absolute_delta": 0.0,
+                "threshold": 100.0,
+                "reason": None,
+            },
+            {
+                "metric": (
+                    "promotion_contract.covered_fact_properties."
+                    "recommended_route_property_metrics.min_decision_accuracy.mean"
+                ),
+                "status": "pass",
+                "comparison": "max_drop",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "absolute_drop": 0.0,
+                "threshold": 0.0,
+                "reason": None,
+            },
+            {
+                "metric": (
+                    "promotion_contract.covered_fact_properties."
+                    "recommended_route_property_metrics.max_false_supported_rate.mean"
+                ),
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 0.0,
+                "reason": None,
+            },
+            {
+                "metric": (
+                    "promotion_contract.covered_fact_properties."
+                    "recommended_route_property_metrics.min_false_refuted_rate.mean"
+                ),
+                "status": "pass",
+                "comparison": "max_drop",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "absolute_drop": 0.0,
+                "threshold": 0.0,
                 "reason": None,
             },
         ])
@@ -27954,6 +28150,34 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     drift_policy_path = tmp_path / "runtime-drift-policy.json"
     traces_dir = tmp_path / "input-traces"
     traces_dir.mkdir()
+    covered_fact_property_metrics = {
+        "issuer": {
+            "records": 9,
+            "source_documents": 100,
+            "n_records": 9,
+            "n_source_documents": 100,
+            "decision_accuracy": 1.0,
+            "false_supported_rate": 0.0,
+            "false_refuted_rate": 1.0,
+        },
+        "coupon": {
+            "records": 9,
+            "source_documents": 100,
+            "n_records": 9,
+            "n_source_documents": 100,
+            "decision_accuracy": 1.0,
+            "false_supported_rate": 0.0,
+            "false_refuted_rate": 1.0,
+        },
+    }
+    covered_fact_rollup = {
+        "promotion_contract_recommended_route_covered_fact_property_metric_count": 2,
+        "promotion_contract_recommended_route_covered_fact_min_records": 9,
+        "promotion_contract_recommended_route_covered_fact_min_source_documents": 100,
+        "promotion_contract_recommended_route_covered_fact_min_decision_accuracy": 1.0,
+        "promotion_contract_recommended_route_covered_fact_max_false_supported_rate": 0.0,
+        "promotion_contract_recommended_route_covered_fact_min_false_refuted_rate": 1.0,
+    }
     trace_payloads = (
         {
             "request_id": "latency-low-supported",
@@ -27964,7 +28188,13 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
                 "reason": "supported",
             },
             "claims": [{"claim_id": "c1", "text": "Private low-risk fact.", "metadata": {}}],
-            "metadata": {"runtime_profile": "latency"},
+            "metadata": {
+                "runtime_profile": "latency",
+                "promotion_contract_recommended_route_covered_fact_property_metrics": (
+                    covered_fact_property_metrics
+                ),
+                **covered_fact_rollup,
+            },
             "runtime_trace": {"total_seconds": 0.10, "phases": []},
         },
         {
@@ -27976,7 +28206,13 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
                 "reason": "unsupported",
             },
             "claims": [{"claim_id": "c1", "text": "Private unsupported fact.", "metadata": {}}],
-            "metadata": {"runtime_profile": "balanced"},
+            "metadata": {
+                "runtime_profile": "balanced",
+                "promotion_contract_recommended_route_covered_fact_property_metrics": (
+                    covered_fact_property_metrics
+                ),
+                **covered_fact_rollup,
+            },
             "runtime_trace": {"total_seconds": 0.20, "phases": []},
         },
     )
@@ -28013,6 +28249,12 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
             runtime_drift_budget_policy_path=drift_policy_path,
             max_runtime_drift_total_seconds_p95_ratio=1.2,
             min_runtime_drift_promotion_contract_coverage=0.0,
+            min_runtime_drift_covered_fact_property_metric_count=2,
+            min_runtime_drift_covered_fact_min_records=8,
+            min_runtime_drift_covered_fact_min_source_documents=100,
+            max_runtime_drift_covered_fact_min_decision_accuracy_drop=0.0,
+            max_runtime_drift_covered_fact_max_false_supported_rate_increase=0.0,
+            max_runtime_drift_covered_fact_min_false_refuted_rate_drop=0.0,
             min_runtime_drift_current_trace_count=2,
             registry_path=registry_path,
             name="trace-replay-with-drift",
@@ -28033,13 +28275,42 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert payload["runtime_drift"]["runtime_budget_policy_gate_enabled"] is True
     assert payload["runtime_drift"]["runtime_budget_policy_passed"] is True
     assert payload["runtime_drift"]["blocked_metric_count"] == 0
+    assert payload["runtime_drift"]["covered_fact_property_metric_count"] == 6
+    assert payload["runtime_drift"]["covered_fact_property_blocked_metric_count"] == 0
     assert payload["runtime_drift"]["runtime_budget_policy_path"] == str(drift_policy_path)
     assert payload["paths"]["runtime_drift_manifest"] is not None
     assert payload["config"]["runtime_drift_baseline"] == str(prior_baseline_path)
     assert payload["config"]["runtime_drift_budget_policy"] == str(drift_policy_path)
     assert payload["config"]["runtime_drift_gates"]["max_total_seconds_p95_ratio"] == pytest.approx(1.2)
     assert payload["config"]["runtime_drift_gates"]["min_promotion_contract_coverage"] == pytest.approx(0.0)
+    assert payload["config"]["runtime_drift_gates"][
+        "min_promotion_contract_covered_fact_property_metric_count"
+    ] == pytest.approx(2.0)
     assert drift_report["config"]["min_promotion_contract_coverage"] == pytest.approx(0.0)
+    assert drift_report["config"]["min_promotion_contract_covered_fact_property_metric_count"] == (
+        pytest.approx(2.0)
+    )
+    assert drift_report["config"]["max_promotion_contract_covered_fact_min_decision_accuracy_drop"] == (
+        pytest.approx(0.0)
+    )
+    covered_fact_statuses = {
+        metric["metric"]: metric["status"]
+        for metric in drift_report["metrics"]
+        if metric["metric"].startswith("promotion_contract.covered_fact_properties.")
+    }
+    covered_fact_metrics = {
+        "property_metric_count",
+        "min_records",
+        "min_source_documents",
+        "min_decision_accuracy",
+        "max_false_supported_rate",
+        "min_false_refuted_rate",
+    }
+    assert set(covered_fact_statuses) == {
+        f"promotion_contract.covered_fact_properties.recommended_route_property_metrics.{metric}.mean"
+        for metric in covered_fact_metrics
+    }
+    assert set(covered_fact_statuses.values()) == {"pass"}
     assert drift_report["runtime_budget_policy_gate"]["policy_metadata"] == {
         "source": "unit-test-runtime-drift"
     }
@@ -28047,11 +28318,14 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert "runtime_drift_manifest" in manifest["artifacts"]
     assert manifest["metadata"]["runtime_drift_status"] == "promote"
     assert manifest["metadata"]["runtime_drift_budget_policy_passed"] is True
+    assert manifest["metadata"]["runtime_drift_covered_fact_property_blocked_metric_count"] == 0
     assert record.metadata["runtime_drift_status"] == "promote"
     assert record.metadata["runtime_drift_budget_policy_passed"] is True
+    assert record.metadata["runtime_drift_covered_fact_property_metric_count"] == 6
     assert drift_record.path == payload["paths"]["runtime_drift_report"]
     assert drift_record.metadata["workflow"] == "compare_product_runtime_baselines"
     assert drift_record.metadata["runtime_budget_policy_passed"] is True
+    assert drift_record.metadata["covered_fact_property_blocked_metric_count"] == 0
 
 
 def test_run_product_trace_replay_workflow_reuses_corpus_cache(tmp_path, monkeypatch):

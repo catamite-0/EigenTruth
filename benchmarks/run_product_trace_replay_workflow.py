@@ -88,6 +88,13 @@ class ProductTraceReplayWorkflowConfig:
     min_runtime_drift_triple_audit_claim_coverage: float | None = None
     min_runtime_drift_triple_audit_pass_rate: float | None = None
     min_runtime_drift_triple_slot_coverage: float | None = None
+    runtime_drift_covered_fact_property_scopes: Sequence[str] = ()
+    min_runtime_drift_covered_fact_property_metric_count: float | None = None
+    min_runtime_drift_covered_fact_min_records: float | None = None
+    min_runtime_drift_covered_fact_min_source_documents: float | None = None
+    max_runtime_drift_covered_fact_min_decision_accuracy_drop: float | None = None
+    max_runtime_drift_covered_fact_max_false_supported_rate_increase: float | None = None
+    max_runtime_drift_covered_fact_min_false_refuted_rate_drop: float | None = None
     min_runtime_drift_current_trace_count: int | None = None
     artifact_manifest_path: str | Path | None = None
     registry_path: str | Path | None = None
@@ -135,7 +142,7 @@ class ProductTraceReplayWorkflowConfig:
                 self.runtime_drift_baseline_version,
             )
         )
-        drift_gate_selected = any(
+        drift_gate_selected = bool(self.runtime_drift_covered_fact_property_scopes) or any(
             value is not None
             for value in (
                 self.runtime_drift_budget_policy_path,
@@ -156,6 +163,12 @@ class ProductTraceReplayWorkflowConfig:
                 self.min_runtime_drift_triple_audit_claim_coverage,
                 self.min_runtime_drift_triple_audit_pass_rate,
                 self.min_runtime_drift_triple_slot_coverage,
+                self.min_runtime_drift_covered_fact_property_metric_count,
+                self.min_runtime_drift_covered_fact_min_records,
+                self.min_runtime_drift_covered_fact_min_source_documents,
+                self.max_runtime_drift_covered_fact_min_decision_accuracy_drop,
+                self.max_runtime_drift_covered_fact_max_false_supported_rate_increase,
+                self.max_runtime_drift_covered_fact_min_false_refuted_rate_drop,
                 self.min_runtime_drift_current_trace_count,
             )
         )
@@ -211,6 +224,15 @@ class ProductTraceReplayWorkflowConfig:
             object.__setattr__(self, "selector_trace_inputs_path", Path(self.selector_trace_inputs_path))
         if self.registry_path is not None:
             object.__setattr__(self, "registry_path", Path(self.registry_path))
+        object.__setattr__(
+            self,
+            "runtime_drift_covered_fact_property_scopes",
+            tuple(
+                str(scope).strip()
+                for scope in self.runtime_drift_covered_fact_property_scopes
+                if str(scope).strip()
+            ),
+        )
         object.__setattr__(self, "metadata", dict(self.metadata))
         object.__setattr__(self, "redact_text", strict_bool(self.redact_text, name="redact_text"))
         object.__setattr__(
@@ -968,7 +990,7 @@ def _blocking_reasons(
 
 
 def _runtime_drift_configured(config: ProductTraceReplayWorkflowConfig) -> bool:
-    return any(
+    return bool(config.runtime_drift_covered_fact_property_scopes) or any(
         value is not None
         for value in (
             config.runtime_drift_baseline_path,
@@ -993,6 +1015,12 @@ def _runtime_drift_configured(config: ProductTraceReplayWorkflowConfig) -> bool:
             config.min_runtime_drift_triple_audit_claim_coverage,
             config.min_runtime_drift_triple_audit_pass_rate,
             config.min_runtime_drift_triple_slot_coverage,
+            config.min_runtime_drift_covered_fact_property_metric_count,
+            config.min_runtime_drift_covered_fact_min_records,
+            config.min_runtime_drift_covered_fact_min_source_documents,
+            config.max_runtime_drift_covered_fact_min_decision_accuracy_drop,
+            config.max_runtime_drift_covered_fact_max_false_supported_rate_increase,
+            config.max_runtime_drift_covered_fact_min_false_refuted_rate_drop,
             config.min_runtime_drift_current_trace_count,
         )
     )
@@ -1022,6 +1050,27 @@ def _runtime_drift_gate_config(config: ProductTraceReplayWorkflowConfig) -> dict
         "min_triple_audit_claim_coverage": config.min_runtime_drift_triple_audit_claim_coverage,
         "min_triple_audit_pass_rate": config.min_runtime_drift_triple_audit_pass_rate,
         "min_triple_slot_coverage": config.min_runtime_drift_triple_slot_coverage,
+        "promotion_contract_covered_fact_property_scopes": tuple(
+            config.runtime_drift_covered_fact_property_scopes
+        ),
+        "min_promotion_contract_covered_fact_property_metric_count": (
+            config.min_runtime_drift_covered_fact_property_metric_count
+        ),
+        "min_promotion_contract_covered_fact_min_records": (
+            config.min_runtime_drift_covered_fact_min_records
+        ),
+        "min_promotion_contract_covered_fact_min_source_documents": (
+            config.min_runtime_drift_covered_fact_min_source_documents
+        ),
+        "max_promotion_contract_covered_fact_min_decision_accuracy_drop": (
+            config.max_runtime_drift_covered_fact_min_decision_accuracy_drop
+        ),
+        "max_promotion_contract_covered_fact_max_false_supported_rate_increase": (
+            config.max_runtime_drift_covered_fact_max_false_supported_rate_increase
+        ),
+        "max_promotion_contract_covered_fact_min_false_refuted_rate_drop": (
+            config.max_runtime_drift_covered_fact_min_false_refuted_rate_drop
+        ),
         "min_current_trace_count": config.min_runtime_drift_current_trace_count,
     }
 
@@ -1093,6 +1142,7 @@ def _runtime_baseline_summary(runtime_baseline: Mapping[str, Any]) -> dict[str, 
 def _runtime_drift_summary(runtime_drift: Mapping[str, Any]) -> dict[str, Any]:
     summary = _mapping(runtime_drift.get("summary"))
     budget_gate = _mapping(runtime_drift.get("runtime_budget_policy_gate"))
+    covered_fact_property = _covered_fact_property_metric_summary(runtime_drift)
     return {
         "status": runtime_drift.get("status"),
         "gate_enabled": summary.get("gate_enabled"),
@@ -1103,12 +1153,28 @@ def _runtime_drift_summary(runtime_drift: Mapping[str, Any]) -> dict[str, Any]:
         "compared_metric_count": summary.get("compared_metric_count"),
         "blocked_metric_count": summary.get("blocked_metric_count"),
         "observed_metric_count": summary.get("observed_metric_count"),
+        "covered_fact_property_metric_count": covered_fact_property["metric_count"],
+        "covered_fact_property_blocked_metric_count": covered_fact_property["blocked_metric_count"],
         "baseline_path": _nested(runtime_drift, "baseline", "path"),
         "current_path": _nested(runtime_drift, "current", "path"),
         "report_path": _nested(runtime_drift, "paths", "report"),
         "artifact_manifest_path": _nested(runtime_drift, "paths", "artifact_manifest"),
         "runtime_budget_policy_path": _nested(runtime_drift, "paths", "runtime_budget_policy"),
         "runtime_budget_policy_check_count": budget_gate.get("check_count"),
+    }
+
+
+def _covered_fact_property_metric_summary(runtime_drift: Mapping[str, Any]) -> dict[str, int]:
+    metrics = tuple(
+        _mapping(metric)
+        for metric in _sequence(runtime_drift.get("metrics"))
+        if str(_mapping(metric).get("metric") or "").startswith(
+            "promotion_contract.covered_fact_properties."
+        )
+    )
+    return {
+        "metric_count": len(metrics),
+        "blocked_metric_count": sum(1 for metric in metrics if metric.get("status") == "blocked"),
     }
 
 
@@ -1397,6 +1463,16 @@ def _write_artifact_manifest(
                 "runtime_drift",
                 "blocked_metric_count",
             ),
+            "runtime_drift_covered_fact_property_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "covered_fact_property_metric_count",
+            ),
+            "runtime_drift_covered_fact_property_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "covered_fact_property_blocked_metric_count",
+            ),
             "runtime_drift_report": _nested(report, "paths", "runtime_drift_report"),
             "runtime_drift_artifact_manifest": _nested(report, "paths", "runtime_drift_manifest"),
             "compact_json": config.compact_json,
@@ -1541,6 +1617,16 @@ def _record_registry(
                 report,
                 "runtime_drift",
                 "blocked_metric_count",
+            ),
+            "runtime_drift_covered_fact_property_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "covered_fact_property_metric_count",
+            ),
+            "runtime_drift_covered_fact_property_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "covered_fact_property_blocked_metric_count",
             ),
             "runtime_drift_report": _nested(report, "paths", "runtime_drift_report"),
             "runtime_drift_artifact_manifest": _nested(report, "paths", "runtime_drift_manifest"),
@@ -1864,6 +1950,25 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
         min_runtime_drift_triple_audit_claim_coverage=args.min_runtime_drift_triple_audit_claim_coverage,
         min_runtime_drift_triple_audit_pass_rate=args.min_runtime_drift_triple_audit_pass_rate,
         min_runtime_drift_triple_slot_coverage=args.min_runtime_drift_triple_slot_coverage,
+        runtime_drift_covered_fact_property_scopes=tuple(
+            args.runtime_drift_covered_fact_property_scope or ()
+        ),
+        min_runtime_drift_covered_fact_property_metric_count=(
+            args.min_runtime_drift_covered_fact_property_metric_count
+        ),
+        min_runtime_drift_covered_fact_min_records=args.min_runtime_drift_covered_fact_min_records,
+        min_runtime_drift_covered_fact_min_source_documents=(
+            args.min_runtime_drift_covered_fact_min_source_documents
+        ),
+        max_runtime_drift_covered_fact_min_decision_accuracy_drop=(
+            args.max_runtime_drift_covered_fact_min_decision_accuracy_drop
+        ),
+        max_runtime_drift_covered_fact_max_false_supported_rate_increase=(
+            args.max_runtime_drift_covered_fact_max_false_supported_rate_increase
+        ),
+        max_runtime_drift_covered_fact_min_false_refuted_rate_drop=(
+            args.max_runtime_drift_covered_fact_min_false_refuted_rate_drop
+        ),
         min_runtime_drift_current_trace_count=args.min_runtime_drift_current_trace_count,
         artifact_manifest_path=Path(args.artifact_manifest) if args.artifact_manifest else None,
         registry_path=Path(args.registry) if args.registry else None,
@@ -1959,6 +2064,22 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--min-runtime-drift-triple-audit-claim-coverage", type=float, default=None)
     parser.add_argument("--min-runtime-drift-triple-audit-pass-rate", type=float, default=None)
     parser.add_argument("--min-runtime-drift-triple-slot-coverage", type=float, default=None)
+    parser.add_argument(
+        "--runtime-drift-covered-fact-property-scope",
+        action="append",
+        default=[],
+        help="promotion contract covered-fact property scope for runtime drift gates; repeatable",
+    )
+    parser.add_argument("--min-runtime-drift-covered-fact-property-metric-count", type=float, default=None)
+    parser.add_argument("--min-runtime-drift-covered-fact-min-records", type=float, default=None)
+    parser.add_argument("--min-runtime-drift-covered-fact-min-source-documents", type=float, default=None)
+    parser.add_argument("--max-runtime-drift-covered-fact-min-decision-accuracy-drop", type=float, default=None)
+    parser.add_argument(
+        "--max-runtime-drift-covered-fact-max-false-supported-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument("--max-runtime-drift-covered-fact-min-false-refuted-rate-drop", type=float, default=None)
     parser.add_argument("--min-runtime-drift-current-trace-count", type=int, default=None)
     parser.add_argument("--artifact-manifest", default=None)
     parser.add_argument("--registry", default=None)

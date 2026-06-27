@@ -29,6 +29,14 @@ _PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "triple_audit_pass_rate",
     "triple_slot_coverage_rate",
 )
+_PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "covered_fact_recommended_route_property_metric_count",
+    "covered_fact_recommended_route_min_records",
+    "covered_fact_recommended_route_min_source_documents",
+    "covered_fact_recommended_route_min_decision_accuracy",
+    "covered_fact_recommended_route_max_false_supported_rate",
+    "covered_fact_recommended_route_min_false_refuted_rate",
+)
 
 
 @dataclass(frozen=True)
@@ -649,6 +657,9 @@ class ProductPromotionContract:
                 "product_runtime_drift_triple_audit_evidence_required": config.get(
                     "require_product_runtime_drift_triple_audit_evidence"
                 ),
+                "product_runtime_drift_covered_fact_property_evidence_required": config.get(
+                    "require_product_runtime_drift_covered_fact_property_evidence"
+                ),
                 "product_runtime_drift_compared_metric_count": (
                     product_runtime_drift_summary.get("compared_metric_count")
                 ),
@@ -780,11 +791,20 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         "product_runtime_drift_triple_audit_evidence_blocked_metric_count": summary.get(
             "triple_audit_evidence_blocked_metric_count"
         ),
+        "product_runtime_drift_covered_fact_property_evidence_metric_count": summary.get(
+            "covered_fact_property_evidence_metric_count"
+        ),
+        "product_runtime_drift_covered_fact_property_evidence_blocked_metric_count": summary.get(
+            "covered_fact_property_evidence_blocked_metric_count"
+        ),
     }
     for prefix in _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     for prefix in _PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     return metadata
@@ -1489,8 +1509,50 @@ def product_promotion_contract_metadata(
         ),
         "promotion_contract_release_efficiency": dict(contract.release_efficiency),
         "promotion_contract_metadata": dict(contract.metadata),
+        **_promotion_contract_product_runtime_drift_metadata(contract),
         **covered_fact_scope,
     }
+
+
+def _promotion_contract_product_runtime_drift_metadata(
+    contract: ProductPromotionContract,
+) -> dict[str, Any]:
+    metadata = _mapping(contract.metadata)
+    scalar_fields = (
+        "product_runtime_drift_status",
+        "product_runtime_drift_report",
+        "product_runtime_drift_manifest",
+        "product_runtime_drift_baseline_path",
+        "product_runtime_drift_current_path",
+        "product_runtime_drift_gate_enabled",
+        "product_runtime_drift_promotion_evidence_required",
+        "product_runtime_drift_triple_audit_evidence_required",
+        "product_runtime_drift_covered_fact_property_evidence_required",
+        "product_runtime_drift_compared_metric_count",
+        "product_runtime_drift_blocked_metric_count",
+        "product_runtime_drift_promotion_evidence_metric_count",
+        "product_runtime_drift_promotion_evidence_blocked_metric_count",
+        "product_runtime_drift_triple_audit_evidence_metric_count",
+        "product_runtime_drift_triple_audit_evidence_blocked_metric_count",
+        "product_runtime_drift_covered_fact_property_evidence_metric_count",
+        "product_runtime_drift_covered_fact_property_evidence_blocked_metric_count",
+    )
+    flattened: dict[str, Any] = {
+        f"promotion_contract_{key}": metadata.get(key)
+        for key in scalar_fields
+        if key in metadata
+    }
+    evidence_prefixes = (
+        *_PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES,
+        *_PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES,
+        *_PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES,
+    )
+    for prefix in evidence_prefixes:
+        for suffix in ("baseline", "current", "status"):
+            key = f"product_runtime_drift_{prefix}_{suffix}"
+            if key in metadata:
+                flattened[f"promotion_contract_{key}"] = metadata.get(key)
+    return flattened
 
 
 def _promotion_contract_covered_fact_scope_metadata(

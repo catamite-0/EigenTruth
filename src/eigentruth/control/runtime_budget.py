@@ -20,6 +20,14 @@ _PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "triple_audit_pass_rate",
     "triple_slot_coverage_rate",
 )
+_PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "covered_fact_recommended_route_property_metric_count",
+    "covered_fact_recommended_route_min_records",
+    "covered_fact_recommended_route_min_source_documents",
+    "covered_fact_recommended_route_min_decision_accuracy",
+    "covered_fact_recommended_route_max_false_supported_rate",
+    "covered_fact_recommended_route_min_false_refuted_rate",
+)
 
 
 @dataclass(frozen=True)
@@ -1074,6 +1082,11 @@ def _promotion_contract_runtime_drift_from_metadata(
         contract_metadata=contract_metadata,
         prefixes=_PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES,
     )
+    covered_fact_property_evidence = _promotion_contract_runtime_drift_evidence(
+        metadata,
+        contract_metadata=contract_metadata,
+        prefixes=_PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES,
+    )
     drift = {
         "available": False,
         "status": _optional_string(value("product_runtime_drift_status")),
@@ -1087,6 +1100,9 @@ def _promotion_contract_runtime_drift_from_metadata(
         ),
         "triple_audit_evidence_required": _optional_bool(
             value("product_runtime_drift_triple_audit_evidence_required")
+        ),
+        "covered_fact_property_evidence_required": _optional_bool(
+            value("product_runtime_drift_covered_fact_property_evidence_required")
         ),
         "compared_metric_count": _finite_float(
             value("product_runtime_drift_compared_metric_count")
@@ -1104,14 +1120,31 @@ def _promotion_contract_runtime_drift_from_metadata(
         "triple_audit_evidence_blocked_metric_count": _finite_float(
             value("product_runtime_drift_triple_audit_evidence_blocked_metric_count")
         ),
+        "covered_fact_property_evidence_metric_count": _finite_float(
+            value("product_runtime_drift_covered_fact_property_evidence_metric_count")
+        ),
+        "covered_fact_property_evidence_blocked_metric_count": _finite_float(
+            value("product_runtime_drift_covered_fact_property_evidence_blocked_metric_count")
+        ),
         "promotion_evidence": promotion_evidence,
         "triple_audit_evidence": triple_audit_evidence,
+        "covered_fact_property_evidence": covered_fact_property_evidence,
     }
     drift["available"] = any(
         item is not None
         for key, item in drift.items()
-        if key not in {"available", "promotion_evidence", "triple_audit_evidence"}
-    ) or _runtime_drift_evidence_available(promotion_evidence, triple_audit_evidence)
+        if key
+        not in {
+            "available",
+            "promotion_evidence",
+            "triple_audit_evidence",
+            "covered_fact_property_evidence",
+        }
+    ) or _runtime_drift_evidence_available(
+        promotion_evidence,
+        triple_audit_evidence,
+        covered_fact_property_evidence,
+    )
     return drift
 
 
@@ -1181,6 +1214,9 @@ def _promotion_contract_runtime_drift_metric_values(runtime_drift: Mapping[str, 
         "promotion_contract_product_runtime_drift_triple_audit_evidence_required": (
             runtime_drift.get("triple_audit_evidence_required")
         ),
+        "promotion_contract_product_runtime_drift_covered_fact_property_evidence_required": (
+            runtime_drift.get("covered_fact_property_evidence_required")
+        ),
         "promotion_contract_product_runtime_drift_compared_metric_count": (
             runtime_drift.get("compared_metric_count")
         ),
@@ -1199,6 +1235,12 @@ def _promotion_contract_runtime_drift_metric_values(runtime_drift: Mapping[str, 
         "promotion_contract_product_runtime_drift_triple_audit_evidence_blocked_metric_count": (
             runtime_drift.get("triple_audit_evidence_blocked_metric_count")
         ),
+        "promotion_contract_product_runtime_drift_covered_fact_property_evidence_metric_count": (
+            runtime_drift.get("covered_fact_property_evidence_metric_count")
+        ),
+        "promotion_contract_product_runtime_drift_covered_fact_property_evidence_blocked_metric_count": (
+            runtime_drift.get("covered_fact_property_evidence_blocked_metric_count")
+        ),
     }
     for prefix, values in _mapping(runtime_drift.get("promotion_evidence")).items():
         for suffix in ("baseline", "current", "status"):
@@ -1206,6 +1248,11 @@ def _promotion_contract_runtime_drift_metric_values(runtime_drift: Mapping[str, 
                 f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
             ] = _mapping(values).get(suffix)
     for prefix, values in _mapping(runtime_drift.get("triple_audit_evidence")).items():
+        for suffix in ("baseline", "current", "status"):
+            metrics[
+                f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
+            ] = _mapping(values).get(suffix)
+    for prefix, values in _mapping(runtime_drift.get("covered_fact_property_evidence")).items():
         for suffix in ("baseline", "current", "status"):
             metrics[
                 f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"

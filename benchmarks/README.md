@@ -2105,9 +2105,11 @@ defaults only fill unset values, so explicit thresholds still win. Direct
 `compare_release_candidates.py` reports record `release_policy_profile` and
 `release_policy_profile_applied_defaults` in `config`. `frontier_audit` also
 defaults `--require-product-runtime-drift-promotion-evidence` and
-`--require-product-runtime-drift-triple-audit-evidence` so strict local releases
-fail closed when runtime drift lacks promotion-contract, triple-extraction
-fixture-matrix, or trace-level triple-audit evidence.
+`--require-product-runtime-drift-triple-audit-evidence` and
+`--require-product-runtime-drift-covered-fact-property-evidence` so strict local
+releases fail closed when runtime drift lacks promotion-contract,
+triple-extraction fixture-matrix, trace-level triple-audit, or recommended-route
+covered-fact property evidence.
 Add `--performance-baseline-key performance_baseline:<name>:<version>` when the
 final candidate must match a registered performance handoff. The comparison
 verifies that performance baseline manifest, reloads its runtime recommendation,
@@ -2278,10 +2280,12 @@ release evidence, including fail-closed per-property count and support/refutatio
 quality gates over the route summary `property_metrics`. `frontier_audit` adds the same structured-fact defaults and
 also defaults `adapter_family_profile=strict_audit`,
 `require_product_runtime_drift_promotion_evidence=true`, and
-`require_product_runtime_drift_triple_audit_evidence=true`, so the release must
+`require_product_runtime_drift_triple_audit_evidence=true`, and
+`require_product_runtime_drift_covered_fact_property_evidence=true`, so the release must
 carry the strict adapter-family matrix, rule-based state-transition world-model
-evidence, promotion-backed runtime-drift evidence, and trace-level triple-audit
-evidence unless explicitly overridden. The workflow records
+evidence, promotion-backed runtime-drift evidence, trace-level triple-audit
+evidence, and recommended-route covered-fact property drift evidence unless
+explicitly overridden. The workflow records
 `release_policy_profile` and `release_policy_profile_applied_defaults` in the
 comparison report, final manifest, and registry metadata.
 It also forwards `--max-covariance-maha-last-auroc-drop` to the underlying
@@ -4557,8 +4561,13 @@ the workflow should immediately validate the current runtime baseline against
 the previous promoted baseline/policy gate. The runtime-drift pass-through also
 accepts promotion evidence gates such as
 `--min-runtime-drift-promotion-contract-coverage`,
-`--min-runtime-drift-triple-extraction-fixture-matrix-coverage`, and the two
-`--max-runtime-drift-triple-extraction-fixture-matrix-mean-*` drop gates. Add
+`--min-runtime-drift-triple-extraction-fixture-matrix-coverage`, the two
+`--max-runtime-drift-triple-extraction-fixture-matrix-mean-*` drop gates, and
+covered-fact property gates such as
+`--min-runtime-drift-covered-fact-property-metric-count`,
+`--min-runtime-drift-covered-fact-min-records`,
+`--min-runtime-drift-covered-fact-min-source-documents`, and the
+`--max-runtime-drift-covered-fact-*` drift gates. Add
 `--selector-trace-inputs-json` when replaying
 selector policies repeatedly over unchanged standardized traces:
 
@@ -4585,6 +4594,12 @@ python benchmarks/run_product_trace_replay_workflow.py \
   --runtime-drift-budget-policy artifacts/product-runtime-baseline-recommended-policy.json \
   --max-runtime-drift-total-seconds-p95-ratio 1.6 \
   --min-runtime-drift-promotion-contract-coverage 1.0 \
+  --min-runtime-drift-covered-fact-property-metric-count 3 \
+  --min-runtime-drift-covered-fact-min-records 8 \
+  --min-runtime-drift-covered-fact-min-source-documents 100 \
+  --max-runtime-drift-covered-fact-min-decision-accuracy-drop 0.02 \
+  --max-runtime-drift-covered-fact-max-false-supported-rate-increase 0.01 \
+  --max-runtime-drift-covered-fact-min-false-refuted-rate-drop 0.02 \
   --min-runtime-drift-triple-extraction-fixture-matrix-coverage 1.0 \
   --min-runtime-drift-current-trace-count 12 \
   --selector-trace-inputs-json artifacts/smollm2_product_trace_replay_workflow/selector-replay/trace-inputs.json \

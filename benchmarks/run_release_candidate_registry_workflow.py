@@ -51,6 +51,14 @@ _PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "triple_audit_pass_rate",
     "triple_slot_coverage_rate",
 )
+_PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "covered_fact_recommended_route_property_metric_count",
+    "covered_fact_recommended_route_min_records",
+    "covered_fact_recommended_route_min_source_documents",
+    "covered_fact_recommended_route_min_decision_accuracy",
+    "covered_fact_recommended_route_max_false_supported_rate",
+    "covered_fact_recommended_route_min_false_refuted_rate",
+)
 
 
 def _apply_release_policy_profile_to_config(
@@ -94,6 +102,9 @@ def _apply_release_policy_profile_to_config(
             "require_product_runtime_drift_triple_audit_evidence": (
                 config.require_product_runtime_drift_triple_audit_evidence
             ),
+            "require_product_runtime_drift_covered_fact_property_evidence": (
+                config.require_product_runtime_drift_covered_fact_property_evidence
+            ),
         },
     )
     object.__setattr__(config, "release_policy_profile", profile)
@@ -124,6 +135,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     product_runtime_drift_report_path: Path | None = None
     require_product_runtime_drift_promotion_evidence: bool = False
     require_product_runtime_drift_triple_audit_evidence: bool = False
+    require_product_runtime_drift_covered_fact_property_evidence: bool = False
     release_efficiency_report_path: Path | None = None
     external_evidence_baseline_comparison_path: Path | None = None
     external_evidence_baseline_comparison_registry_path: Path | None = None
@@ -518,6 +530,9 @@ def run_release_candidate_registry_workflow(
         require_product_runtime_drift_triple_audit_evidence=(
             config.require_product_runtime_drift_triple_audit_evidence
         ),
+        require_product_runtime_drift_covered_fact_property_evidence=(
+            config.require_product_runtime_drift_covered_fact_property_evidence
+        ),
         release_efficiency_report_path=config.release_efficiency_report_path,
         external_evidence_baseline_comparison_path=(
             config.external_evidence_baseline_comparison_path
@@ -750,6 +765,9 @@ def run_release_candidate_registry_workflow(
             ),
             "require_product_runtime_drift_triple_audit_evidence": (
                 config.require_product_runtime_drift_triple_audit_evidence
+            ),
+            "require_product_runtime_drift_covered_fact_property_evidence": (
+                config.require_product_runtime_drift_covered_fact_property_evidence
             ),
             "release_efficiency_report": (
                 None
@@ -1569,6 +1587,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "product_runtime_drift_triple_audit_evidence_required": config.get(
             "require_product_runtime_drift_triple_audit_evidence"
         ),
+        "product_runtime_drift_covered_fact_property_evidence_required": config.get(
+            "require_product_runtime_drift_covered_fact_property_evidence"
+        ),
         "product_runtime_drift_compared_metric_count": product_runtime_drift_summary.get(
             "compared_metric_count"
         ),
@@ -1863,11 +1884,20 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         "product_runtime_drift_triple_audit_evidence_blocked_metric_count": summary.get(
             "triple_audit_evidence_blocked_metric_count"
         ),
+        "product_runtime_drift_covered_fact_property_evidence_metric_count": summary.get(
+            "covered_fact_property_evidence_metric_count"
+        ),
+        "product_runtime_drift_covered_fact_property_evidence_blocked_metric_count": summary.get(
+            "covered_fact_property_evidence_blocked_metric_count"
+        ),
     }
     for prefix in _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     for prefix in _PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     return metadata
@@ -2054,6 +2084,9 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         ),
         require_product_runtime_drift_triple_audit_evidence=bool(
             args.require_product_runtime_drift_triple_audit_evidence
+        ),
+        require_product_runtime_drift_covered_fact_property_evidence=bool(
+            args.require_product_runtime_drift_covered_fact_property_evidence
         ),
         release_efficiency_report_path=(
             None
@@ -2330,6 +2363,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--require-product-runtime-drift-triple-audit-evidence", action="store_true",
                         help="require the product runtime drift report to include trace-level "
                              "triple coverage, audit coverage, audit pass-rate, and slot coverage metrics")
+    parser.add_argument("--require-product-runtime-drift-covered-fact-property-evidence", action="store_true",
+                        help="require the product runtime drift report to include covered-fact property metrics")
     parser.add_argument("--release-efficiency-report", default=None,
                         help="optional release efficiency report that must promote and verify")
     parser.add_argument("--external-evidence-baseline-comparison", default=None,

@@ -1603,6 +1603,7 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             "structured_fact_canonical_route_key": (
                 "benchmark_manifest:retrieval-structured-qa:0.5"
             ),
+            "require_product_runtime_drift_covered_fact_property_evidence": True,
             "require_performance_score_dump_cache": True,
             "min_performance_score_dump_cache_jsonl_view_hit_rate": 0.5,
             "performance_drift_baseline_key": "performance_baseline:runtime-reference:0.8",
@@ -1847,6 +1848,8 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                     "promotion_evidence_blocked_metric_count": 0,
                     "triple_audit_evidence_metric_count": 4,
                     "triple_audit_evidence_blocked_metric_count": 0,
+                    "covered_fact_property_evidence_metric_count": 6,
+                    "covered_fact_property_evidence_blocked_metric_count": 0,
                     "promotion_contract_coverage_rate_baseline": 1.0,
                     "promotion_contract_coverage_rate_current": 1.0,
                     "promotion_contract_coverage_rate_status": "pass",
@@ -1859,6 +1862,24 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                     "triple_slot_coverage_rate_baseline": 1.0,
                     "triple_slot_coverage_rate_current": 1.0,
                     "triple_slot_coverage_rate_status": "pass",
+                    "covered_fact_recommended_route_property_metric_count_baseline": 3,
+                    "covered_fact_recommended_route_property_metric_count_current": 3,
+                    "covered_fact_recommended_route_property_metric_count_status": "pass",
+                    "covered_fact_recommended_route_min_records_baseline": 9,
+                    "covered_fact_recommended_route_min_records_current": 9,
+                    "covered_fact_recommended_route_min_records_status": "pass",
+                    "covered_fact_recommended_route_min_source_documents_baseline": 120,
+                    "covered_fact_recommended_route_min_source_documents_current": 118,
+                    "covered_fact_recommended_route_min_source_documents_status": "pass",
+                    "covered_fact_recommended_route_min_decision_accuracy_baseline": 1.0,
+                    "covered_fact_recommended_route_min_decision_accuracy_current": 0.99,
+                    "covered_fact_recommended_route_min_decision_accuracy_status": "pass",
+                    "covered_fact_recommended_route_max_false_supported_rate_baseline": 0.01,
+                    "covered_fact_recommended_route_max_false_supported_rate_current": 0.02,
+                    "covered_fact_recommended_route_max_false_supported_rate_status": "pass",
+                    "covered_fact_recommended_route_min_false_refuted_rate_baseline": 0.98,
+                    "covered_fact_recommended_route_min_false_refuted_rate_current": 0.97,
+                    "covered_fact_recommended_route_min_false_refuted_rate_status": "pass",
                 },
             },
             "adapter_family_matrix": {
@@ -2186,6 +2207,14 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.metadata["product_runtime_drift_promotion_evidence_blocked_metric_count"] == 0
     assert contract.metadata["product_runtime_drift_triple_audit_evidence_metric_count"] == 4
     assert contract.metadata["product_runtime_drift_triple_audit_evidence_blocked_metric_count"] == 0
+    assert contract.metadata["product_runtime_drift_covered_fact_property_evidence_required"] is True
+    assert contract.metadata["product_runtime_drift_covered_fact_property_evidence_metric_count"] == 6
+    assert (
+        contract.metadata[
+            "product_runtime_drift_covered_fact_property_evidence_blocked_metric_count"
+        ]
+        == 0
+    )
     assert contract.metadata["product_runtime_drift_promotion_contract_coverage_rate_current"] == 1.0
     assert contract.metadata["product_runtime_drift_promotion_contract_coverage_rate_status"] == "pass"
     assert (
@@ -2196,6 +2225,24 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     )
     assert contract.metadata["product_runtime_drift_triple_audit_pass_rate_current"] == 1.0
     assert contract.metadata["product_runtime_drift_triple_slot_coverage_rate_status"] == "pass"
+    assert (
+        contract.metadata[
+            "product_runtime_drift_covered_fact_recommended_route_min_records_current"
+        ]
+        == 9
+    )
+    assert (
+        contract.metadata[
+            "product_runtime_drift_covered_fact_recommended_route_min_records_status"
+        ]
+        == "pass"
+    )
+    assert (
+        contract.metadata[
+            "product_runtime_drift_covered_fact_recommended_route_max_false_supported_rate_current"
+        ]
+        == 0.02
+    )
     assert contract.metadata["adapter_family_matrix_report"] == "artifacts/adapter-family-matrix.json"
     assert contract.metadata["adapter_family_required_routes"] == [
         "structured_state",
@@ -2299,6 +2346,15 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
         control_defaults={"max_verifier_route_attempts": 3},
         metadata={
             "selector_replay_status": "promote",
+            "product_runtime_drift_covered_fact_property_evidence_required": True,
+            "product_runtime_drift_covered_fact_property_evidence_metric_count": 6,
+            "product_runtime_drift_covered_fact_property_evidence_blocked_metric_count": 0,
+            "product_runtime_drift_covered_fact_recommended_route_min_records_baseline": 16,
+            "product_runtime_drift_covered_fact_recommended_route_min_records_current": 15,
+            "product_runtime_drift_covered_fact_recommended_route_min_records_status": "pass",
+            "product_runtime_drift_covered_fact_recommended_route_min_decision_accuracy_baseline": 1.0,
+            "product_runtime_drift_covered_fact_recommended_route_min_decision_accuracy_current": 0.99,
+            "product_runtime_drift_covered_fact_recommended_route_min_decision_accuracy_status": "pass",
             "required_route_baseline_covered_fact_property_counts": {
                 "benchmark_manifest:structured-fact:0.1": 3
             },
@@ -2374,6 +2430,33 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert runtime_metrics["promotion_contract_summary"]["covered_fact_property_rollups"][
         "recommended_route"
     ]["min_records"] == pytest.approx(16.0)
+    assert metadata[
+        "promotion_contract_product_runtime_drift_covered_fact_property_evidence_required"
+    ] is True
+    assert metadata[
+        "promotion_contract_product_runtime_drift_covered_fact_property_evidence_metric_count"
+    ] == 6
+    assert metadata[
+        "promotion_contract_product_runtime_drift_covered_fact_property_evidence_blocked_metric_count"
+    ] == 0
+    assert metadata[
+        "promotion_contract_product_runtime_drift_covered_fact_recommended_route_min_records_current"
+    ] == 15
+    assert metadata[
+        "promotion_contract_product_runtime_drift_covered_fact_recommended_route_min_records_status"
+    ] == "pass"
+    assert (
+        metadata[
+            "promotion_contract_product_runtime_drift_covered_fact_recommended_route_min_decision_accuracy_current"
+        ]
+        == 0.99
+    )
+    assert runtime_metrics["promotion_contract_summary"]["product_runtime_drift"][
+        "covered_fact_property_evidence_metric_count"
+    ] == pytest.approx(6.0)
+    assert runtime_metrics["promotion_contract_summary"]["product_runtime_drift"][
+        "covered_fact_property_evidence"
+    ]["covered_fact_recommended_route_min_records"]["current"] == pytest.approx(15.0)
     assert metadata["promotion_contract_control_policy_config"]["unsupported_action"] == "clarify"
     assert metadata["promotion_contract_control_policy_config"][
         "compound_verification_escalates"
