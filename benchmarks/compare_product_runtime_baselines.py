@@ -40,6 +40,40 @@ _PROMOTION_EVIDENCE_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
         "triple_extraction_fixture_matrix_mean_f1_lift",
     ),
 )
+_PRE_GENERATION_PROBE_COMPARISON_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
+    (
+        "promotion_contract.pre_generation_probe_comparison.coverage_rate",
+        "pre_generation_probe_comparison_coverage_rate",
+    ),
+    (
+        "promotion_contract.pre_generation_probe_comparison.manifest_verified_rate",
+        "pre_generation_probe_comparison_manifest_verified_rate",
+    ),
+    (
+        "promotion_contract.pre_generation_probe_comparison.model_count.mean",
+        "pre_generation_probe_comparison_model_count",
+    ),
+    (
+        "promotion_contract.pre_generation_probe_comparison.run_count.mean",
+        "pre_generation_probe_comparison_run_count",
+    ),
+    (
+        "promotion_contract.pre_generation_probe_comparison.redline_pass_rate",
+        "pre_generation_probe_comparison_redline_pass_rate",
+    ),
+    (
+        "promotion_contract.pre_generation_probe_comparison.best_test_label_auroc.mean",
+        "pre_generation_probe_comparison_best_test_label_auroc",
+    ),
+    (
+        "promotion_contract.pre_generation_probe_comparison.best_redline_auroc.mean",
+        "pre_generation_probe_comparison_best_redline_auroc",
+    ),
+    (
+        "promotion_contract.pre_generation_probe_comparison.best_redline_margin.mean",
+        "pre_generation_probe_comparison_best_redline_margin",
+    ),
+)
 
 _TRIPLE_COVERAGE_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
     ("triple_coverage.claim_triple_coverage_rate", "triple_claim_coverage_rate"),
@@ -215,6 +249,14 @@ def compare_product_runtime_baselines(
     max_cache_hit_rate_drop: float | None = None,
     max_verification_skip_rate_drop: float | None = None,
     min_promotion_contract_coverage: float | None = None,
+    min_pre_generation_probe_comparison_coverage: float | None = None,
+    min_pre_generation_probe_comparison_manifest_verified_rate: float | None = None,
+    min_pre_generation_probe_comparison_model_count: float | None = None,
+    min_pre_generation_probe_comparison_run_count: float | None = None,
+    min_pre_generation_probe_comparison_redline_pass_rate: float | None = None,
+    max_pre_generation_probe_comparison_best_test_label_auroc_drop: float | None = None,
+    max_pre_generation_probe_comparison_best_redline_auroc_drop: float | None = None,
+    max_pre_generation_probe_comparison_best_redline_margin_drop: float | None = None,
     min_triple_extraction_fixture_matrix_coverage: float | None = None,
     max_triple_extraction_fixture_matrix_mean_best_f1_drop: float | None = None,
     max_triple_extraction_fixture_matrix_mean_f1_lift_drop: float | None = None,
@@ -274,6 +316,30 @@ def compare_product_runtime_baselines(
         "max_cache_hit_rate_drop": _optional_non_negative_float(max_cache_hit_rate_drop),
         "max_verification_skip_rate_drop": _optional_non_negative_float(max_verification_skip_rate_drop),
         "min_promotion_contract_coverage": _optional_rate_float(min_promotion_contract_coverage),
+        "min_pre_generation_probe_comparison_coverage": _optional_rate_float(
+            min_pre_generation_probe_comparison_coverage
+        ),
+        "min_pre_generation_probe_comparison_manifest_verified_rate": _optional_rate_float(
+            min_pre_generation_probe_comparison_manifest_verified_rate
+        ),
+        "min_pre_generation_probe_comparison_model_count": _optional_non_negative_float(
+            min_pre_generation_probe_comparison_model_count
+        ),
+        "min_pre_generation_probe_comparison_run_count": _optional_non_negative_float(
+            min_pre_generation_probe_comparison_run_count
+        ),
+        "min_pre_generation_probe_comparison_redline_pass_rate": _optional_rate_float(
+            min_pre_generation_probe_comparison_redline_pass_rate
+        ),
+        "max_pre_generation_probe_comparison_best_test_label_auroc_drop": (
+            _optional_rate_float(max_pre_generation_probe_comparison_best_test_label_auroc_drop)
+        ),
+        "max_pre_generation_probe_comparison_best_redline_auroc_drop": (
+            _optional_rate_float(max_pre_generation_probe_comparison_best_redline_auroc_drop)
+        ),
+        "max_pre_generation_probe_comparison_best_redline_margin_drop": (
+            _optional_non_negative_float(max_pre_generation_probe_comparison_best_redline_margin_drop)
+        ),
         "min_triple_extraction_fixture_matrix_coverage": _optional_rate_float(
             min_triple_extraction_fixture_matrix_coverage
         ),
@@ -591,7 +657,102 @@ def _comparison_metrics(
     ]
     metrics.extend(_covered_fact_property_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_product_trace_action_gate_metrics(baseline_summary, current_summary, gates=gates))
+    metrics.extend(_pre_generation_probe_comparison_metrics(baseline_summary, current_summary, gates=gates))
     return metrics
+
+
+def _pre_generation_probe_comparison_metrics(
+    baseline_summary: Mapping[str, Any],
+    current_summary: Mapping[str, Any],
+    *,
+    gates: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    if not _pre_generation_probe_comparison_gate_enabled(gates):
+        return []
+    baseline = _mapping(_nested_value(baseline_summary, ("promotion_contract", "pre_generation_probe_comparison")))
+    current = _mapping(_nested_value(current_summary, ("promotion_contract", "pre_generation_probe_comparison")))
+    return [
+        _min_current_metric(
+            "promotion_contract.pre_generation_probe_comparison.coverage_rate",
+            _finite_float(baseline.get("coverage_rate")),
+            _finite_float(current.get("coverage_rate")),
+            gates.get("min_pre_generation_probe_comparison_coverage"),
+        ),
+        _min_current_metric(
+            "promotion_contract.pre_generation_probe_comparison.manifest_verified_rate",
+            _pre_generation_manifest_verified_rate(baseline),
+            _pre_generation_manifest_verified_rate(current),
+            gates.get("min_pre_generation_probe_comparison_manifest_verified_rate"),
+        ),
+        _min_current_metric(
+            "promotion_contract.pre_generation_probe_comparison.model_count.mean",
+            _nested_float(baseline, ("model_count", "mean")),
+            _nested_float(current, ("model_count", "mean")),
+            gates.get("min_pre_generation_probe_comparison_model_count"),
+        ),
+        _min_current_metric(
+            "promotion_contract.pre_generation_probe_comparison.run_count.mean",
+            _nested_float(baseline, ("run_count", "mean")),
+            _nested_float(current, ("run_count", "mean")),
+            gates.get("min_pre_generation_probe_comparison_run_count"),
+        ),
+        _min_current_metric(
+            "promotion_contract.pre_generation_probe_comparison.redline_pass_rate",
+            _pre_generation_redline_pass_rate(baseline),
+            _pre_generation_redline_pass_rate(current),
+            gates.get("min_pre_generation_probe_comparison_redline_pass_rate"),
+        ),
+        _drop_metric(
+            "promotion_contract.pre_generation_probe_comparison.best_test_label_auroc.mean",
+            _nested_float(baseline, ("best_test_label_auroc", "mean")),
+            _nested_float(current, ("best_test_label_auroc", "mean")),
+            gates.get("max_pre_generation_probe_comparison_best_test_label_auroc_drop"),
+        ),
+        _drop_metric(
+            "promotion_contract.pre_generation_probe_comparison.best_redline_auroc.mean",
+            _nested_float(baseline, ("best_redline_auroc", "mean")),
+            _nested_float(current, ("best_redline_auroc", "mean")),
+            gates.get("max_pre_generation_probe_comparison_best_redline_auroc_drop"),
+        ),
+        _drop_metric(
+            "promotion_contract.pre_generation_probe_comparison.best_redline_margin.mean",
+            _nested_float(baseline, ("best_redline_margin", "mean")),
+            _nested_float(current, ("best_redline_margin", "mean")),
+            gates.get("max_pre_generation_probe_comparison_best_redline_margin_drop"),
+        ),
+    ]
+
+
+def _pre_generation_probe_comparison_gate_enabled(gates: Mapping[str, Any]) -> bool:
+    return any(
+        gates.get(key) is not None
+        for key in (
+            "min_pre_generation_probe_comparison_coverage",
+            "min_pre_generation_probe_comparison_manifest_verified_rate",
+            "min_pre_generation_probe_comparison_model_count",
+            "min_pre_generation_probe_comparison_run_count",
+            "min_pre_generation_probe_comparison_redline_pass_rate",
+            "max_pre_generation_probe_comparison_best_test_label_auroc_drop",
+            "max_pre_generation_probe_comparison_best_redline_auroc_drop",
+            "max_pre_generation_probe_comparison_best_redline_margin_drop",
+        )
+    )
+
+
+def _pre_generation_manifest_verified_rate(summary: Mapping[str, Any]) -> float | None:
+    verified = _finite_float(summary.get("manifest_verified_count"))
+    failed = _finite_float(summary.get("manifest_failed_count"))
+    unknown = _finite_float(summary.get("manifest_unknown_count"))
+    finite = tuple(value for value in (verified, failed, unknown) if value is not None)
+    total = sum(finite)
+    if total <= 0.0:
+        return None
+    return (verified or 0.0) / total
+
+
+def _pre_generation_redline_pass_rate(summary: Mapping[str, Any]) -> float | None:
+    counts = _mapping(summary.get("redline_passed_counts"))
+    return _count_rate(counts, ("True", "true", "1", "yes", "on"))
 
 
 def _covered_fact_property_metrics(
@@ -1347,6 +1508,7 @@ def _drift_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
         "blocked_metric_count": summary.get("blocked_metric_count"),
         "observed_metric_count": summary.get("observed_metric_count"),
         **_promotion_evidence_metadata(report),
+        **_pre_generation_probe_comparison_metadata(report),
         **_covered_fact_property_metadata(report),
         **_triple_coverage_metadata(report),
         **_product_trace_action_gate_metadata(report),
@@ -1365,6 +1527,21 @@ def _promotion_evidence_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
         metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
         if metric is not None and metric.get("status") == "blocked":
             metadata["promotion_evidence_blocked_metric_count"] += 1
+    return metadata
+
+
+def _pre_generation_probe_comparison_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    metrics = _metrics_by_name(report.get("metrics"))
+    metadata: dict[str, Any] = {
+        "pre_generation_probe_comparison_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _PRE_GENERATION_PROBE_COMPARISON_METADATA_FIELDS:
+        metric = metrics.get(metric_name)
+        metadata[f"{prefix}_baseline"] = _finite_float(None if metric is None else metric.get("baseline"))
+        metadata[f"{prefix}_current"] = _finite_float(None if metric is None else metric.get("current"))
+        metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is not None and metric.get("status") == "blocked":
+            metadata["pre_generation_probe_comparison_blocked_metric_count"] += 1
     return metadata
 
 
@@ -1446,12 +1623,16 @@ def _write_json(path: str | Path, payload: Mapping[str, Any], *, compact: bool) 
 
 
 def _nested_float(payload: Mapping[str, Any], path: Sequence[str]) -> float | None:
+    return _finite_float(_nested_value(payload, path))
+
+
+def _nested_value(payload: Mapping[str, Any], path: Sequence[str]) -> Any:
     current: Any = payload
     for part in path:
         if not isinstance(current, Mapping):
             return None
         current = current.get(part)
-    return _finite_float(current)
+    return current
 
 
 def _first_nested_float(
@@ -1521,6 +1702,16 @@ def _mapping(value: Any) -> dict[str, Any]:
     return {}
 
 
+def _count_rate(counts: Mapping[str, Any], keys: Sequence[str]) -> float | None:
+    values = [_finite_float(value) for value in counts.values()]
+    finite_values = tuple(value for value in values if value is not None)
+    total = sum(finite_values)
+    if total <= 0.0:
+        return None
+    numerator = sum(_finite_float(counts.get(key)) or 0.0 for key in keys)
+    return numerator / total
+
+
 def _parse_metadata(values: Sequence[str]) -> dict[str, Any]:
     metadata: dict[str, Any] = {}
     for value in values:
@@ -1563,6 +1754,30 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_cache_hit_rate_drop=args.max_cache_hit_rate_drop,
         max_verification_skip_rate_drop=args.max_verification_skip_rate_drop,
         min_promotion_contract_coverage=args.min_promotion_contract_coverage,
+        min_pre_generation_probe_comparison_coverage=(
+            args.min_pre_generation_probe_comparison_coverage
+        ),
+        min_pre_generation_probe_comparison_manifest_verified_rate=(
+            args.min_pre_generation_probe_comparison_manifest_verified_rate
+        ),
+        min_pre_generation_probe_comparison_model_count=(
+            args.min_pre_generation_probe_comparison_model_count
+        ),
+        min_pre_generation_probe_comparison_run_count=(
+            args.min_pre_generation_probe_comparison_run_count
+        ),
+        min_pre_generation_probe_comparison_redline_pass_rate=(
+            args.min_pre_generation_probe_comparison_redline_pass_rate
+        ),
+        max_pre_generation_probe_comparison_best_test_label_auroc_drop=(
+            args.max_pre_generation_probe_comparison_best_test_label_auroc_drop
+        ),
+        max_pre_generation_probe_comparison_best_redline_auroc_drop=(
+            args.max_pre_generation_probe_comparison_best_redline_auroc_drop
+        ),
+        max_pre_generation_probe_comparison_best_redline_margin_drop=(
+            args.max_pre_generation_probe_comparison_best_redline_margin_drop
+        ),
         min_triple_extraction_fixture_matrix_coverage=(
             args.min_triple_extraction_fixture_matrix_coverage
         ),
@@ -1663,6 +1878,30 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-cache-hit-rate-drop", type=float, default=None)
     parser.add_argument("--max-verification-skip-rate-drop", type=float, default=None)
     parser.add_argument("--min-promotion-contract-coverage", type=float, default=None)
+    parser.add_argument("--min-pre-generation-probe-comparison-coverage", type=float, default=None)
+    parser.add_argument(
+        "--min-pre-generation-probe-comparison-manifest-verified-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument("--min-pre-generation-probe-comparison-model-count", type=float, default=None)
+    parser.add_argument("--min-pre-generation-probe-comparison-run-count", type=float, default=None)
+    parser.add_argument("--min-pre-generation-probe-comparison-redline-pass-rate", type=float, default=None)
+    parser.add_argument(
+        "--max-pre-generation-probe-comparison-best-test-label-auroc-drop",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-pre-generation-probe-comparison-best-redline-auroc-drop",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-pre-generation-probe-comparison-best-redline-margin-drop",
+        type=float,
+        default=None,
+    )
     parser.add_argument("--min-triple-extraction-fixture-matrix-coverage", type=float, default=None)
     parser.add_argument("--max-triple-extraction-fixture-matrix-mean-best-f1-drop", type=float, default=None)
     parser.add_argument("--max-triple-extraction-fixture-matrix-mean-f1-lift-drop", type=float, default=None)

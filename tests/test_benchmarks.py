@@ -29218,6 +29218,143 @@ def test_compare_product_runtime_baselines_gates_promotion_evidence_drift(tmp_pa
     assert record.metadata["triple_extraction_fixture_matrix_mean_best_f1_status"] == "blocked"
 
 
+def test_compare_product_runtime_baselines_gates_pre_generation_probe_drift(tmp_path):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    registry_module = importlib.import_module("eigentruth.registry")
+    baseline_trace = tmp_path / "baseline-trace.json"
+    current_trace = tmp_path / "current-trace.json"
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    drift_report = tmp_path / "drift.json"
+    manifest_path = tmp_path / "drift-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    _write_product_runtime_trace(
+        baseline_trace,
+        request_id="baseline",
+        total_seconds=0.10,
+        route_seconds=0.02,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=1,
+        cache_misses=0,
+        metadata={
+            "pre_generation_probe_comparison_source": "registry",
+            "pre_generation_probe_comparison_record": (
+                "report:pre-generation-probe-comparison:0.1"
+            ),
+            "pre_generation_probe_comparison_status": "promote",
+            "pre_generation_probe_comparison_manifest_verification": {"passed": True},
+            "pre_generation_probe_comparison_model_count": 2,
+            "pre_generation_probe_comparison_run_count": 2,
+            "pre_generation_probe_comparison_redline_passed": True,
+            "pre_generation_probe_comparison_redline_run_count": 2,
+            "pre_generation_probe_comparison_best_run": "qwen05",
+            "pre_generation_probe_comparison_best_model": "Qwen/Qwen2.5-0.5B",
+            "pre_generation_probe_comparison_best_layer": -12,
+            "pre_generation_probe_comparison_best_test_label_auroc": 0.86,
+            "pre_generation_probe_comparison_best_redline_signal": "claim_token_count",
+            "pre_generation_probe_comparison_best_redline_auroc": 0.70,
+            "pre_generation_probe_comparison_best_redline_margin": 0.08,
+        },
+    )
+    _write_product_runtime_trace(
+        current_trace,
+        request_id="current",
+        total_seconds=0.10,
+        route_seconds=0.02,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=1,
+        cache_misses=0,
+        metadata={
+            "pre_generation_probe_comparison_source": "runtime_evidence_bundle",
+            "pre_generation_probe_comparison_record": (
+                "report:pre-generation-probe-comparison:0.2"
+            ),
+            "pre_generation_probe_comparison_status": "promote",
+            "pre_generation_probe_comparison_manifest_verification": {"passed": False},
+            "pre_generation_probe_comparison_model_count": 1,
+            "pre_generation_probe_comparison_run_count": 1,
+            "pre_generation_probe_comparison_redline_passed": False,
+            "pre_generation_probe_comparison_redline_run_count": 1,
+            "pre_generation_probe_comparison_best_run": "smollm2",
+            "pre_generation_probe_comparison_best_model": "HuggingFaceTB/SmolLM2-135M",
+            "pre_generation_probe_comparison_best_layer": -10,
+            "pre_generation_probe_comparison_best_test_label_auroc": 0.72,
+            "pre_generation_probe_comparison_best_redline_signal": "answer_length",
+            "pre_generation_probe_comparison_best_redline_auroc": 0.60,
+            "pre_generation_probe_comparison_best_redline_margin": 0.01,
+        },
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=baseline_report,
+        )
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(current_trace,),
+            report_path=current_report,
+        )
+    )
+
+    payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        report_path=drift_report,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="runtime-drift-pre-generation",
+        version="0.1",
+        min_pre_generation_probe_comparison_coverage=1.0,
+        min_pre_generation_probe_comparison_manifest_verified_rate=1.0,
+        min_pre_generation_probe_comparison_model_count=2,
+        min_pre_generation_probe_comparison_run_count=2,
+        min_pre_generation_probe_comparison_redline_pass_rate=1.0,
+        max_pre_generation_probe_comparison_best_test_label_auroc_drop=0.05,
+        max_pre_generation_probe_comparison_best_redline_auroc_drop=0.05,
+        max_pre_generation_probe_comparison_best_redline_margin_drop=0.02,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get("product_runtime_drift_report:runtime-drift-pre-generation:0.1")
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["blocked_metric_count"] == 7
+    assert payload["summary"]["compared_metric_count"] == 25
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.pre_generation_probe_comparison.coverage_rate",
+    )["status"] == "pass"
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.pre_generation_probe_comparison.manifest_verified_rate",
+    )["current"] == pytest.approx(0.0)
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.pre_generation_probe_comparison.redline_pass_rate",
+    )["status"] == "blocked"
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.pre_generation_probe_comparison.best_test_label_auroc.mean",
+    )["absolute_drop"] == pytest.approx(0.14)
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.pre_generation_probe_comparison.best_redline_margin.mean",
+    )["status"] == "blocked"
+    assert manifest["metadata"]["pre_generation_probe_comparison_blocked_metric_count"] == 7
+    assert manifest["metadata"]["pre_generation_probe_comparison_coverage_rate_status"] == "pass"
+    assert manifest["metadata"]["pre_generation_probe_comparison_model_count_current"] == pytest.approx(1.0)
+    assert manifest["metadata"]["pre_generation_probe_comparison_redline_pass_rate_current"] == pytest.approx(0.0)
+    assert manifest["metadata"]["pre_generation_probe_comparison_best_redline_margin_status"] == "blocked"
+    assert record.metadata["pre_generation_probe_comparison_blocked_metric_count"] == 7
+    assert record.metadata["pre_generation_probe_comparison_best_test_label_auroc_current"] == pytest.approx(
+        0.72
+    )
+
+
 def test_compare_product_runtime_baselines_gates_covered_fact_property_drift(tmp_path):
     baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
     compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
