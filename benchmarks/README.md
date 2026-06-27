@@ -592,6 +592,33 @@ python benchmarks/eval_truthfulqa.py \
   --dump-pre-generation-probe-records artifacts/pre-generation-probe-records.jsonl
 ```
 
+Use the workflow wrapper when you want one reproducible local handoff from record
+export to probe sweep, best artifact, calibration, workflow report, and artifact
+manifest:
+
+```bash
+python benchmarks/run_pre_generation_probe_workflow.py \
+  --output-dir artifacts/runtime_evidence/pre-generation-smollm2-l12 \
+  --model HuggingFaceTB/SmolLM2-135M-Instruct \
+  --real-truthfulqa \
+  --layer -8 \
+  --limit 12 \
+  --manifold-questions 12 \
+  --max-length 192 \
+  --batch-size 1 \
+  --max-batch-tokens 1536 \
+  --hidden-state-capture hooks \
+  --pre-generation-layers=-12,-8,-4 \
+  --sweep-layers auto \
+  --record-grain candidate \
+  --conformal-alpha 0.2 \
+  --train-fraction 0.75
+```
+
+`artifacts/runtime_evidence/` is intentionally ignored by git for large local
+records and torch artifacts. Promote only compact reports or manifests when they
+are part of a maintained baseline.
+
 By default, that export writes one prompt-level record per question and uses the
 question's candidate false-answer rate as the soft target. Use
 `--pre-generation-record-grain candidate` for candidate-level records with hard
