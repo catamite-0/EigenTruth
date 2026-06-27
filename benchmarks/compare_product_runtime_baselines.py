@@ -47,6 +47,31 @@ _TRIPLE_COVERAGE_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
     ("triple_coverage.audit_pass_rate", "triple_audit_pass_rate"),
     ("triple_coverage.slot_coverage_rate", "triple_slot_coverage_rate"),
 )
+_COVERED_FACT_PROPERTY_SCOPES: dict[str, str] = {
+    "recommended_route": "recommended_route_property_metrics",
+    "required_route_baseline": "required_route_baseline_property_metrics",
+    "structured_fact_robustness": "structured_fact_robustness_property_metrics",
+}
+_COVERED_FACT_PROPERTY_METADATA_FIELDS: tuple[tuple[str, str], ...] = tuple(
+    (
+        f"promotion_contract.covered_fact_properties.{scope_key}.property_metric_count.mean",
+        f"covered_fact_{scope_name}_property_metric_count",
+    )
+    for scope_name, scope_key in _COVERED_FACT_PROPERTY_SCOPES.items()
+) + tuple(
+    (
+        f"promotion_contract.covered_fact_properties.{scope_key}.{metric_name}.mean",
+        f"covered_fact_{scope_name}_{metric_name}",
+    )
+    for scope_name, scope_key in _COVERED_FACT_PROPERTY_SCOPES.items()
+    for metric_name in (
+        "min_records",
+        "min_source_documents",
+        "min_decision_accuracy",
+        "max_false_supported_rate",
+        "min_false_refuted_rate",
+    )
+)
 
 
 def compare_product_runtime_baselines(
@@ -79,6 +104,13 @@ def compare_product_runtime_baselines(
     min_triple_audit_claim_coverage: float | None = None,
     min_triple_audit_pass_rate: float | None = None,
     min_triple_slot_coverage: float | None = None,
+    promotion_contract_covered_fact_property_scopes: Sequence[str] | None = None,
+    min_promotion_contract_covered_fact_property_metric_count: float | None = None,
+    min_promotion_contract_covered_fact_min_records: float | None = None,
+    min_promotion_contract_covered_fact_min_source_documents: float | None = None,
+    max_promotion_contract_covered_fact_min_decision_accuracy_drop: float | None = None,
+    max_promotion_contract_covered_fact_max_false_supported_rate_increase: float | None = None,
+    max_promotion_contract_covered_fact_min_false_refuted_rate_drop: float | None = None,
     min_current_trace_count: int | None = None,
     metadata: Mapping[str, Any] | None = None,
     compact_json: bool = False,
@@ -127,6 +159,27 @@ def compare_product_runtime_baselines(
         "min_triple_audit_claim_coverage": _optional_rate_float(min_triple_audit_claim_coverage),
         "min_triple_audit_pass_rate": _optional_rate_float(min_triple_audit_pass_rate),
         "min_triple_slot_coverage": _optional_rate_float(min_triple_slot_coverage),
+        "promotion_contract_covered_fact_property_scopes": _covered_fact_property_scopes(
+            promotion_contract_covered_fact_property_scopes
+        ),
+        "min_promotion_contract_covered_fact_property_metric_count": _optional_non_negative_float(
+            min_promotion_contract_covered_fact_property_metric_count
+        ),
+        "min_promotion_contract_covered_fact_min_records": _optional_non_negative_float(
+            min_promotion_contract_covered_fact_min_records
+        ),
+        "min_promotion_contract_covered_fact_min_source_documents": _optional_non_negative_float(
+            min_promotion_contract_covered_fact_min_source_documents
+        ),
+        "max_promotion_contract_covered_fact_min_decision_accuracy_drop": _optional_rate_float(
+            max_promotion_contract_covered_fact_min_decision_accuracy_drop
+        ),
+        "max_promotion_contract_covered_fact_max_false_supported_rate_increase": _optional_rate_float(
+            max_promotion_contract_covered_fact_max_false_supported_rate_increase
+        ),
+        "max_promotion_contract_covered_fact_min_false_refuted_rate_drop": _optional_rate_float(
+            max_promotion_contract_covered_fact_min_false_refuted_rate_drop
+        ),
         "min_current_trace_count": _optional_non_negative_int(min_current_trace_count),
     }
     metrics = _comparison_metrics(
@@ -138,7 +191,11 @@ def compare_product_runtime_baselines(
         current_summary,
         source=policy_source,
     )
-    drift_gate_enabled = any(value is not None for value in gates.values())
+    drift_gate_enabled = any(
+        value is not None
+        for key, value in gates.items()
+        if key != "promotion_contract_covered_fact_property_scopes"
+    )
     runtime_budget_policy_gate_enabled = bool(runtime_budget_policy_gate.get("enabled"))
     gate_enabled = drift_gate_enabled or runtime_budget_policy_gate_enabled
     blocking_reasons = tuple(
@@ -225,7 +282,7 @@ def _comparison_metrics(
     *,
     gates: Mapping[str, Any],
 ) -> list[dict[str, Any]]:
-    return [
+    metrics = [
         _ratio_metric(
             "total_seconds.mean",
             _nested_float(baseline_summary, ("total_seconds", "mean")),
@@ -366,6 +423,122 @@ def _comparison_metrics(
             gates.get("min_current_trace_count"),
         ),
     ]
+    metrics.extend(_covered_fact_property_metrics(baseline_summary, current_summary, gates=gates))
+    return metrics
+
+
+def _covered_fact_property_metrics(
+    baseline_summary: Mapping[str, Any],
+    current_summary: Mapping[str, Any],
+    *,
+    gates: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    if not _covered_fact_property_gate_enabled(gates):
+        return []
+    rows: list[dict[str, Any]] = []
+    for scope_name in gates.get("promotion_contract_covered_fact_property_scopes", ()):
+        scope_key = _COVERED_FACT_PROPERTY_SCOPES[str(scope_name)]
+        rows.extend((
+            _min_current_metric(
+                f"promotion_contract.covered_fact_properties.{scope_key}.property_metric_count.mean",
+                _nested_float(
+                    baseline_summary,
+                    ("promotion_contract", "covered_fact_properties", scope_key, "property_metric_count", "mean"),
+                ),
+                _nested_float(
+                    current_summary,
+                    ("promotion_contract", "covered_fact_properties", scope_key, "property_metric_count", "mean"),
+                ),
+                gates.get("min_promotion_contract_covered_fact_property_metric_count"),
+            ),
+            _min_current_metric(
+                f"promotion_contract.covered_fact_properties.{scope_key}.min_records.mean",
+                _nested_float(
+                    baseline_summary,
+                    ("promotion_contract", "covered_fact_properties", scope_key, "min_records", "mean"),
+                ),
+                _nested_float(
+                    current_summary,
+                    ("promotion_contract", "covered_fact_properties", scope_key, "min_records", "mean"),
+                ),
+                gates.get("min_promotion_contract_covered_fact_min_records"),
+            ),
+            _min_current_metric(
+                f"promotion_contract.covered_fact_properties.{scope_key}.min_source_documents.mean",
+                _nested_float(
+                    baseline_summary,
+                    ("promotion_contract", "covered_fact_properties", scope_key, "min_source_documents", "mean"),
+                ),
+                _nested_float(
+                    current_summary,
+                    ("promotion_contract", "covered_fact_properties", scope_key, "min_source_documents", "mean"),
+                ),
+                gates.get("min_promotion_contract_covered_fact_min_source_documents"),
+            ),
+            _drop_metric(
+                f"promotion_contract.covered_fact_properties.{scope_key}.min_decision_accuracy.mean",
+                _nested_float(
+                    baseline_summary,
+                    ("promotion_contract", "covered_fact_properties", scope_key, "min_decision_accuracy", "mean"),
+                ),
+                _nested_float(
+                    current_summary,
+                    ("promotion_contract", "covered_fact_properties", scope_key, "min_decision_accuracy", "mean"),
+                ),
+                gates.get("max_promotion_contract_covered_fact_min_decision_accuracy_drop"),
+            ),
+            _delta_metric(
+                f"promotion_contract.covered_fact_properties.{scope_key}.max_false_supported_rate.mean",
+                _nested_float(
+                    baseline_summary,
+                    (
+                        "promotion_contract",
+                        "covered_fact_properties",
+                        scope_key,
+                        "max_false_supported_rate",
+                        "mean",
+                    ),
+                ),
+                _nested_float(
+                    current_summary,
+                    (
+                        "promotion_contract",
+                        "covered_fact_properties",
+                        scope_key,
+                        "max_false_supported_rate",
+                        "mean",
+                    ),
+                ),
+                gates.get("max_promotion_contract_covered_fact_max_false_supported_rate_increase"),
+            ),
+            _drop_metric(
+                f"promotion_contract.covered_fact_properties.{scope_key}.min_false_refuted_rate.mean",
+                _nested_float(
+                    baseline_summary,
+                    ("promotion_contract", "covered_fact_properties", scope_key, "min_false_refuted_rate", "mean"),
+                ),
+                _nested_float(
+                    current_summary,
+                    ("promotion_contract", "covered_fact_properties", scope_key, "min_false_refuted_rate", "mean"),
+                ),
+                gates.get("max_promotion_contract_covered_fact_min_false_refuted_rate_drop"),
+            ),
+        ))
+    return rows
+
+
+def _covered_fact_property_gate_enabled(gates: Mapping[str, Any]) -> bool:
+    return any(
+        gates.get(key) is not None
+        for key in (
+            "min_promotion_contract_covered_fact_property_metric_count",
+            "min_promotion_contract_covered_fact_min_records",
+            "min_promotion_contract_covered_fact_min_source_documents",
+            "max_promotion_contract_covered_fact_min_decision_accuracy_drop",
+            "max_promotion_contract_covered_fact_max_false_supported_rate_increase",
+            "max_promotion_contract_covered_fact_min_false_refuted_rate_drop",
+        )
+    )
 
 
 def _runtime_optimization_handoff(report: Mapping[str, Any]) -> dict[str, Any]:
@@ -984,6 +1157,7 @@ def _drift_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
         "blocked_metric_count": summary.get("blocked_metric_count"),
         "observed_metric_count": summary.get("observed_metric_count"),
         **_promotion_evidence_metadata(report),
+        **_covered_fact_property_metadata(report),
         **_triple_coverage_metadata(report),
     }
 
@@ -1000,6 +1174,21 @@ def _promotion_evidence_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
         metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
         if metric is not None and metric.get("status") == "blocked":
             metadata["promotion_evidence_blocked_metric_count"] += 1
+    return metadata
+
+
+def _covered_fact_property_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    metrics = _metrics_by_name(report.get("metrics"))
+    metadata: dict[str, Any] = {
+        "covered_fact_property_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _COVERED_FACT_PROPERTY_METADATA_FIELDS:
+        metric = metrics.get(metric_name)
+        metadata[f"{prefix}_baseline"] = _finite_float(None if metric is None else metric.get("baseline"))
+        metadata[f"{prefix}_current"] = _finite_float(None if metric is None else metric.get("current"))
+        metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is not None and metric.get("status") == "blocked":
+            metadata["covered_fact_property_blocked_metric_count"] += 1
     return metadata
 
 
@@ -1105,6 +1294,21 @@ def _optional_non_negative_int(value: int | None) -> int | None:
     return numeric
 
 
+def _covered_fact_property_scopes(scopes: Sequence[str] | None) -> tuple[str, ...]:
+    if scopes is None:
+        return ("recommended_route",)
+    normalized = tuple(str(scope).strip() for scope in scopes if str(scope).strip())
+    if not normalized:
+        return ("recommended_route",)
+    invalid = tuple(scope for scope in normalized if scope not in _COVERED_FACT_PROPERTY_SCOPES)
+    if invalid:
+        allowed = ", ".join(sorted(_COVERED_FACT_PROPERTY_SCOPES))
+        raise ValueError(
+            f"unknown promotion-contract covered-fact property scope(s): {invalid}; allowed: {allowed}"
+        )
+    return normalized
+
+
 def _mapping(value: Any) -> dict[str, Any]:
     if isinstance(value, Mapping):
         return dict(value)
@@ -1166,6 +1370,27 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         min_triple_audit_claim_coverage=args.min_triple_audit_claim_coverage,
         min_triple_audit_pass_rate=args.min_triple_audit_pass_rate,
         min_triple_slot_coverage=args.min_triple_slot_coverage,
+        promotion_contract_covered_fact_property_scopes=(
+            args.promotion_contract_covered_fact_property_scope
+        ),
+        min_promotion_contract_covered_fact_property_metric_count=(
+            args.min_promotion_contract_covered_fact_property_metric_count
+        ),
+        min_promotion_contract_covered_fact_min_records=(
+            args.min_promotion_contract_covered_fact_min_records
+        ),
+        min_promotion_contract_covered_fact_min_source_documents=(
+            args.min_promotion_contract_covered_fact_min_source_documents
+        ),
+        max_promotion_contract_covered_fact_min_decision_accuracy_drop=(
+            args.max_promotion_contract_covered_fact_min_decision_accuracy_drop
+        ),
+        max_promotion_contract_covered_fact_max_false_supported_rate_increase=(
+            args.max_promotion_contract_covered_fact_max_false_supported_rate_increase
+        ),
+        max_promotion_contract_covered_fact_min_false_refuted_rate_drop=(
+            args.max_promotion_contract_covered_fact_min_false_refuted_rate_drop
+        ),
         min_current_trace_count=args.min_current_trace_count,
         metadata=_parse_metadata(args.metadata or ()),
         compact_json=bool(args.compact_json),
@@ -1209,6 +1434,34 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--min-triple-audit-claim-coverage", type=float, default=None)
     parser.add_argument("--min-triple-audit-pass-rate", type=float, default=None)
     parser.add_argument("--min-triple-slot-coverage", type=float, default=None)
+    parser.add_argument(
+        "--promotion-contract-covered-fact-property-scope",
+        action="append",
+        default=None,
+        choices=tuple(_COVERED_FACT_PROPERTY_SCOPES),
+        help=(
+            "covered-fact property rollup scope to gate; repeatable; defaults to recommended_route "
+            "when any covered-fact property gate is supplied"
+        ),
+    )
+    parser.add_argument("--min-promotion-contract-covered-fact-property-metric-count", type=float, default=None)
+    parser.add_argument("--min-promotion-contract-covered-fact-min-records", type=float, default=None)
+    parser.add_argument("--min-promotion-contract-covered-fact-min-source-documents", type=float, default=None)
+    parser.add_argument(
+        "--max-promotion-contract-covered-fact-min-decision-accuracy-drop",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-promotion-contract-covered-fact-max-false-supported-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-promotion-contract-covered-fact-min-false-refuted-rate-drop",
+        type=float,
+        default=None,
+    )
     parser.add_argument("--min-current-trace-count", type=int, default=None)
     parser.add_argument("--compact-json", action="store_true",
                         help="write minified drift report and manifest JSON")

@@ -25885,6 +25885,168 @@ def test_compare_product_runtime_baselines_gates_promotion_evidence_drift(tmp_pa
     assert record.metadata["triple_extraction_fixture_matrix_mean_best_f1_status"] == "blocked"
 
 
+def test_compare_product_runtime_baselines_gates_covered_fact_property_drift(tmp_path):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    registry_module = importlib.import_module("eigentruth.registry")
+    baseline_trace = tmp_path / "baseline-trace.json"
+    current_trace = tmp_path / "current-trace.json"
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    drift_report = tmp_path / "drift.json"
+    registry_path = tmp_path / "registry.json"
+    _write_product_runtime_trace(
+        baseline_trace,
+        request_id="baseline",
+        total_seconds=0.10,
+        route_seconds=0.02,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=1,
+        cache_misses=0,
+        metadata={
+            "promotion_contract_source": "contract.json",
+            "promotion_contract_source_status": "promote",
+            "promotion_contract_recommended_route_covered_fact_property_metrics": {
+                "P36": {
+                    "n_source_documents": 120,
+                    "n_records": 16,
+                    "decision_accuracy": 1.0,
+                    "false_supported_rate": 0.0,
+                    "false_refuted_rate": 1.0,
+                },
+                "P37": {
+                    "n_source_documents": 100,
+                    "n_records": 12,
+                    "decision_accuracy": 1.0,
+                    "false_supported_rate": 0.0,
+                    "false_refuted_rate": 1.0,
+                },
+            },
+        },
+    )
+    _write_product_runtime_trace(
+        current_trace,
+        request_id="current",
+        total_seconds=0.10,
+        route_seconds=0.02,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=1,
+        cache_misses=0,
+        metadata={
+            "promotion_contract_source": "contract.json",
+            "promotion_contract_source_status": "promote",
+            "promotion_contract_recommended_route_covered_fact_property_metrics": {
+                "P36": {
+                    "n_source_documents": 80,
+                    "n_records": 10,
+                    "decision_accuracy": 0.92,
+                    "false_supported_rate": 0.05,
+                    "false_refuted_rate": 0.92,
+                },
+                "P37": {
+                    "n_source_documents": 60,
+                    "n_records": 8,
+                    "decision_accuracy": 0.90,
+                    "false_supported_rate": 0.08,
+                    "false_refuted_rate": 0.90,
+                },
+            },
+        },
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=baseline_report,
+        )
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(current_trace,),
+            report_path=current_report,
+        )
+    )
+
+    payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        report_path=drift_report,
+        registry_path=registry_path,
+        name="runtime-drift-covered-facts",
+        version="0.1",
+        min_promotion_contract_covered_fact_property_metric_count=2,
+        min_promotion_contract_covered_fact_min_records=9,
+        min_promotion_contract_covered_fact_min_source_documents=80,
+        max_promotion_contract_covered_fact_min_decision_accuracy_drop=0.05,
+        max_promotion_contract_covered_fact_max_false_supported_rate_increase=0.05,
+        max_promotion_contract_covered_fact_min_false_refuted_rate_drop=0.05,
+    )
+    property_count_metric = _metric_by_name(
+        payload,
+        "promotion_contract.covered_fact_properties."
+        "recommended_route_property_metrics.property_metric_count.mean",
+    )
+    min_records_metric = _metric_by_name(
+        payload,
+        "promotion_contract.covered_fact_properties."
+        "recommended_route_property_metrics.min_records.mean",
+    )
+    source_docs_metric = _metric_by_name(
+        payload,
+        "promotion_contract.covered_fact_properties."
+        "recommended_route_property_metrics.min_source_documents.mean",
+    )
+    accuracy_metric = _metric_by_name(
+        payload,
+        "promotion_contract.covered_fact_properties."
+        "recommended_route_property_metrics.min_decision_accuracy.mean",
+    )
+    false_supported_metric = _metric_by_name(
+        payload,
+        "promotion_contract.covered_fact_properties."
+        "recommended_route_property_metrics.max_false_supported_rate.mean",
+    )
+    false_refuted_metric = _metric_by_name(
+        payload,
+        "promotion_contract.covered_fact_properties."
+        "recommended_route_property_metrics.min_false_refuted_rate.mean",
+    )
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get("product_runtime_drift_report:runtime-drift-covered-facts:0.1")
+
+    assert payload["status"] == "blocked"
+    assert property_count_metric["status"] == "pass"
+    assert property_count_metric["current"] == pytest.approx(2.0)
+    assert min_records_metric["status"] == "blocked"
+    assert min_records_metric["current"] == pytest.approx(8.0)
+    assert source_docs_metric["status"] == "blocked"
+    assert source_docs_metric["current"] == pytest.approx(60.0)
+    assert accuracy_metric["status"] == "blocked"
+    assert accuracy_metric["absolute_drop"] == pytest.approx(0.10)
+    assert false_supported_metric["status"] == "blocked"
+    assert false_supported_metric["absolute_delta"] == pytest.approx(0.08)
+    assert false_refuted_metric["status"] == "blocked"
+    assert false_refuted_metric["absolute_drop"] == pytest.approx(0.10)
+    assert payload["summary"]["blocked_metric_count"] == 5
+    assert manifest["metadata"]["covered_fact_property_blocked_metric_count"] == 5
+    assert manifest["metadata"][
+        "covered_fact_recommended_route_property_metric_count_current"
+    ] == pytest.approx(2.0)
+    assert manifest["metadata"]["covered_fact_recommended_route_min_records_status"] == "blocked"
+    assert manifest["metadata"][
+        "covered_fact_recommended_route_max_false_supported_rate_status"
+    ] == "blocked"
+    assert record.metadata["covered_fact_property_blocked_metric_count"] == 5
+    assert record.metadata["covered_fact_recommended_route_min_decision_accuracy_current"] == (
+        pytest.approx(0.90)
+    )
+    assert record.metadata["covered_fact_recommended_route_min_false_refuted_rate_status"] == (
+        "blocked"
+    )
+
+
 def test_compare_product_runtime_baselines_gates_trace_triple_audit_drift(tmp_path):
     baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
     compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
