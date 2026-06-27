@@ -226,6 +226,14 @@ class ReleaseCandidateRegistryWorkflowConfig:
     selfcheck_signal_fusion_workflow_path: Path | None = None
     selfcheck_signal_fusion_workflow_registry_path: Path | None = None
     selfcheck_signal_fusion_workflow_key: str | None = None
+    uncertainty_escalation_workflow_path: Path | None = None
+    uncertainty_escalation_workflow_registry_path: Path | None = None
+    uncertainty_escalation_workflow_key: str | None = None
+    min_uncertainty_escalation_records: int | None = None
+    min_uncertainty_escalation_trigger_rate: float | None = None
+    min_uncertainty_escalation_retrieval_evidence_rate: float | None = None
+    max_uncertainty_escalation_final_false_accept_rate: float | None = None
+    max_uncertainty_escalation_false_accept_delta: float | None = None
     feedback_policy_workflow_path: Path | None = None
     feedback_policy_workflow_registry_path: Path | None = None
     feedback_policy_workflow_key: str | None = None
@@ -431,6 +439,18 @@ class ReleaseCandidateRegistryWorkflowConfig:
                 self,
                 "selfcheck_signal_fusion_workflow_registry_path",
                 Path(self.selfcheck_signal_fusion_workflow_registry_path),
+            )
+        if self.uncertainty_escalation_workflow_path is not None:
+            object.__setattr__(
+                self,
+                "uncertainty_escalation_workflow_path",
+                Path(self.uncertainty_escalation_workflow_path),
+            )
+        if self.uncertainty_escalation_workflow_registry_path is not None:
+            object.__setattr__(
+                self,
+                "uncertainty_escalation_workflow_registry_path",
+                Path(self.uncertainty_escalation_workflow_registry_path),
             )
         if self.feedback_policy_workflow_path is not None:
             object.__setattr__(
@@ -679,6 +699,24 @@ def run_release_candidate_registry_workflow(
             config.selfcheck_signal_fusion_workflow_registry_path
         ),
         selfcheck_signal_fusion_workflow_key=config.selfcheck_signal_fusion_workflow_key,
+        uncertainty_escalation_workflow_path=config.uncertainty_escalation_workflow_path,
+        uncertainty_escalation_workflow_registry_path=(
+            config.uncertainty_escalation_workflow_registry_path
+        ),
+        uncertainty_escalation_workflow_key=config.uncertainty_escalation_workflow_key,
+        min_uncertainty_escalation_records=config.min_uncertainty_escalation_records,
+        min_uncertainty_escalation_trigger_rate=(
+            config.min_uncertainty_escalation_trigger_rate
+        ),
+        min_uncertainty_escalation_retrieval_evidence_rate=(
+            config.min_uncertainty_escalation_retrieval_evidence_rate
+        ),
+        max_uncertainty_escalation_final_false_accept_rate=(
+            config.max_uncertainty_escalation_final_false_accept_rate
+        ),
+        max_uncertainty_escalation_false_accept_delta=(
+            config.max_uncertainty_escalation_false_accept_delta
+        ),
         feedback_policy_workflow_path=config.feedback_policy_workflow_path,
         feedback_policy_workflow_registry_path=config.feedback_policy_workflow_registry_path,
         feedback_policy_workflow_key=config.feedback_policy_workflow_key,
@@ -987,6 +1025,30 @@ def run_release_candidate_registry_workflow(
                 else str(config.selfcheck_signal_fusion_workflow_registry_path)
             ),
             "selfcheck_signal_fusion_workflow_key": config.selfcheck_signal_fusion_workflow_key,
+            "uncertainty_escalation_workflow": (
+                None
+                if config.uncertainty_escalation_workflow_path is None
+                else str(config.uncertainty_escalation_workflow_path)
+            ),
+            "uncertainty_escalation_workflow_registry": (
+                None
+                if config.uncertainty_escalation_workflow_registry_path is None
+                else str(config.uncertainty_escalation_workflow_registry_path)
+            ),
+            "uncertainty_escalation_workflow_key": config.uncertainty_escalation_workflow_key,
+            "min_uncertainty_escalation_records": config.min_uncertainty_escalation_records,
+            "min_uncertainty_escalation_trigger_rate": (
+                config.min_uncertainty_escalation_trigger_rate
+            ),
+            "min_uncertainty_escalation_retrieval_evidence_rate": (
+                config.min_uncertainty_escalation_retrieval_evidence_rate
+            ),
+            "max_uncertainty_escalation_final_false_accept_rate": (
+                config.max_uncertainty_escalation_final_false_accept_rate
+            ),
+            "max_uncertainty_escalation_false_accept_delta": (
+                config.max_uncertainty_escalation_false_accept_delta
+            ),
             "feedback_policy_workflow": (
                 None
                 if config.feedback_policy_workflow_path is None
@@ -1252,6 +1314,30 @@ def _comparison_with_registry_config(
             else str(config.world_model_signal_workflow_registry_path)
         ),
         "world_model_signal_workflow_key": config.world_model_signal_workflow_key,
+        "uncertainty_escalation_workflow": (
+            comparison_config.get("uncertainty_escalation_workflow")
+            if config.uncertainty_escalation_workflow_path is None
+            else str(config.uncertainty_escalation_workflow_path)
+        ),
+        "uncertainty_escalation_workflow_registry": (
+            comparison_config.get("uncertainty_escalation_workflow_registry")
+            if config.uncertainty_escalation_workflow_registry_path is None
+            else str(config.uncertainty_escalation_workflow_registry_path)
+        ),
+        "uncertainty_escalation_workflow_key": config.uncertainty_escalation_workflow_key,
+        "min_uncertainty_escalation_records": config.min_uncertainty_escalation_records,
+        "min_uncertainty_escalation_trigger_rate": (
+            config.min_uncertainty_escalation_trigger_rate
+        ),
+        "min_uncertainty_escalation_retrieval_evidence_rate": (
+            config.min_uncertainty_escalation_retrieval_evidence_rate
+        ),
+        "max_uncertainty_escalation_final_false_accept_rate": (
+            config.max_uncertainty_escalation_final_false_accept_rate
+        ),
+        "max_uncertainty_escalation_false_accept_delta": (
+            config.max_uncertainty_escalation_false_accept_delta
+        ),
         "triple_extraction_fixture_matrix": (
             comparison_config.get("triple_extraction_fixture_matrix")
             if config.triple_extraction_fixture_matrix_path is None
@@ -1380,6 +1466,10 @@ def _write_artifact_manifest(
             "selfcheck_signal_fusion_workflow_manifest"
         )
         or _nested(comparison, "selfcheck_signal_fusion_workflow_gate", "manifest_path"),
+        "uncertainty_escalation_workflow_manifest": manifests.get(
+            "uncertainty_escalation_workflow_manifest"
+        )
+        or _nested(comparison, "uncertainty_escalation_workflow_gate", "manifest_path"),
         "feedback_policy_workflow_manifest": manifests.get("feedback_policy_workflow_manifest"),
         "adapter_family_matrix_report": manifests.get("adapter_family_matrix_report"),
         "triple_extraction_fixture_matrix_report": manifests.get(
@@ -1534,6 +1624,13 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         selfcheck_signal_fusion_workflow = dict(
             comparison.get("selfcheck_signal_fusion_workflow_gate") or {}
         )
+    uncertainty_escalation_workflow = dict(
+        candidate.get("uncertainty_escalation_workflow") or {}
+    )
+    if not uncertainty_escalation_workflow:
+        uncertainty_escalation_workflow = dict(
+            comparison.get("uncertainty_escalation_workflow_gate") or {}
+        )
     feedback_policy_workflow = dict(candidate.get("feedback_policy_workflow") or {})
     frontier_release_evidence = dict(candidate.get("frontier_release_evidence") or {})
     if not frontier_release_evidence:
@@ -1577,6 +1674,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "release_selfcheck_signal_fusion_workflow_status": decision.get(
             "selfcheck_signal_fusion_workflow_status"
         ),
+        "release_uncertainty_escalation_workflow_status": decision.get(
+            "uncertainty_escalation_workflow_status"
+        ),
         "release_feedback_policy_workflow_status": decision.get("feedback_policy_workflow_status"),
         "release_policy_profile": config.get("release_policy_profile"),
         "release_policy_profile_applied_defaults": config.get(
@@ -1612,6 +1712,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "recommended_selfcheck_signal_fusion_workflow_report": decision.get(
             "recommended_selfcheck_signal_fusion_workflow_report"
+        ),
+        "recommended_uncertainty_escalation_workflow_report": decision.get(
+            "recommended_uncertainty_escalation_workflow_report"
         ),
         "recommended_feedback_policy_workflow_report": decision.get(
             "recommended_feedback_policy_workflow_report"
@@ -2047,6 +2150,55 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "selfcheck_signal_fusion_workflow_enhanced_score_dump_count": (
             selfcheck_signal_fusion_workflow.get("enhanced_score_dump_count")
         ),
+        "uncertainty_escalation_workflow_report": (
+            uncertainty_escalation_workflow.get("report_path")
+        ),
+        "uncertainty_escalation_workflow_manifest": (
+            manifests.get("uncertainty_escalation_workflow_manifest")
+            or uncertainty_escalation_workflow.get("manifest_path")
+        ),
+        "uncertainty_escalation_workflow_source": (
+            uncertainty_escalation_workflow.get("source")
+        ),
+        "uncertainty_escalation_workflow_registry": (
+            uncertainty_escalation_workflow.get("registry")
+        ),
+        "uncertainty_escalation_workflow_record": (
+            uncertainty_escalation_workflow.get("record_key")
+        ),
+        "uncertainty_escalation_workflow_record_count": (
+            uncertainty_escalation_workflow.get("record_count")
+        ),
+        "uncertainty_escalation_workflow_trigger_rate": (
+            uncertainty_escalation_workflow.get("trigger_rate")
+        ),
+        "uncertainty_escalation_workflow_retrieval_evidence_rate": (
+            uncertainty_escalation_workflow.get("retrieval_evidence_rate")
+        ),
+        "uncertainty_escalation_workflow_final_false_accept_rate": (
+            uncertainty_escalation_workflow.get("final_false_accept_rate")
+        ),
+        "uncertainty_escalation_workflow_false_accept_delta": (
+            uncertainty_escalation_workflow.get("false_accept_delta")
+        ),
+        "uncertainty_escalation_workflow_accepted_false_delta": (
+            uncertainty_escalation_workflow.get("accepted_false_delta")
+        ),
+        "uncertainty_escalation_min_records": config.get(
+            "min_uncertainty_escalation_records"
+        ),
+        "uncertainty_escalation_min_trigger_rate": config.get(
+            "min_uncertainty_escalation_trigger_rate"
+        ),
+        "uncertainty_escalation_min_retrieval_evidence_rate": config.get(
+            "min_uncertainty_escalation_retrieval_evidence_rate"
+        ),
+        "uncertainty_escalation_max_final_false_accept_rate": config.get(
+            "max_uncertainty_escalation_final_false_accept_rate"
+        ),
+        "uncertainty_escalation_max_false_accept_delta": config.get(
+            "max_uncertainty_escalation_false_accept_delta"
+        ),
         "feedback_policy_workflow_report": feedback_policy_workflow.get("report_path"),
         "feedback_policy_workflow_source": feedback_policy_workflow.get("source"),
         "feedback_policy_workflow_registry": feedback_policy_workflow.get("registry"),
@@ -2462,6 +2614,13 @@ def _parse_non_negative_float(value: str, *, flag: str) -> float:
     return numeric
 
 
+def _parse_finite_float(value: str, *, flag: str) -> float:
+    numeric = float(value)
+    if not math.isfinite(numeric):
+        raise ValueError(f"{flag} must be a finite number.")
+    return numeric
+
+
 def _parse_non_negative_int(value: str, *, flag: str) -> int:
     numeric = int(value)
     if numeric < 0:
@@ -2602,6 +2761,28 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
             else Path(args.selfcheck_signal_fusion_workflow_registry)
         ),
         selfcheck_signal_fusion_workflow_key=args.selfcheck_signal_fusion_workflow_key,
+        uncertainty_escalation_workflow_path=(
+            None
+            if args.uncertainty_escalation_workflow is None
+            else Path(args.uncertainty_escalation_workflow)
+        ),
+        uncertainty_escalation_workflow_registry_path=(
+            None
+            if args.uncertainty_escalation_workflow_registry is None
+            else Path(args.uncertainty_escalation_workflow_registry)
+        ),
+        uncertainty_escalation_workflow_key=args.uncertainty_escalation_workflow_key,
+        min_uncertainty_escalation_records=args.min_uncertainty_escalation_records,
+        min_uncertainty_escalation_trigger_rate=args.min_uncertainty_escalation_trigger_rate,
+        min_uncertainty_escalation_retrieval_evidence_rate=(
+            args.min_uncertainty_escalation_retrieval_evidence_rate
+        ),
+        max_uncertainty_escalation_final_false_accept_rate=(
+            args.max_uncertainty_escalation_final_false_accept_rate
+        ),
+        max_uncertainty_escalation_false_accept_delta=(
+            args.max_uncertainty_escalation_false_accept_delta
+        ),
         feedback_policy_workflow_path=(
             None
             if args.feedback_policy_workflow is None
@@ -2903,6 +3084,46 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "--selfcheck-signal-fusion-workflow-key; defaults to --readiness-registry")
     parser.add_argument("--selfcheck-signal-fusion-workflow-key", default=None,
                         help="optional report:<name>:<version> registry key for a selfcheck signal fusion workflow")
+    parser.add_argument("--uncertainty-escalation-workflow", default=None,
+                        help="optional uncertainty escalation workflow report that must verify and meet "
+                             "configured escalation/evidence quality thresholds")
+    parser.add_argument("--uncertainty-escalation-workflow-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for "
+                             "--uncertainty-escalation-workflow-key; defaults to --readiness-registry")
+    parser.add_argument("--uncertainty-escalation-workflow-key", default=None,
+                        help="optional report:<name>:<version> registry key for an uncertainty "
+                             "escalation workflow")
+    parser.add_argument("--min-uncertainty-escalation-records",
+                        type=lambda value: _parse_non_negative_int(
+                            value,
+                            flag="--min-uncertainty-escalation-records",
+                        ), default=None,
+                        help="optional minimum record count; defaults to 1 when workflow evidence is supplied")
+    parser.add_argument("--min-uncertainty-escalation-trigger-rate",
+                        type=lambda value: _parse_unit_float(
+                            value,
+                            flag="--min-uncertainty-escalation-trigger-rate",
+                        ), default=None,
+                        help="optional minimum uncertainty escalation trigger rate")
+    parser.add_argument("--min-uncertainty-escalation-retrieval-evidence-rate",
+                        type=lambda value: _parse_unit_float(
+                            value,
+                            flag="--min-uncertainty-escalation-retrieval-evidence-rate",
+                        ), default=None,
+                        help="optional minimum retrieval evidence rate after escalation")
+    parser.add_argument("--max-uncertainty-escalation-final-false-accept-rate",
+                        type=lambda value: _parse_unit_float(
+                            value,
+                            flag="--max-uncertainty-escalation-final-false-accept-rate",
+                        ), default=None,
+                        help="optional maximum final false-accept rate after escalation")
+    parser.add_argument("--max-uncertainty-escalation-false-accept-delta",
+                        type=lambda value: _parse_finite_float(
+                            value,
+                            flag="--max-uncertainty-escalation-false-accept-delta",
+                        ), default=None,
+                        help="optional maximum false-accept-rate delta after escalation; negative values "
+                             "require improvement")
     parser.add_argument("--feedback-policy-workflow", default=None,
                         help="optional feedback-policy workflow report that must recommend/observe and verify")
     parser.add_argument("--feedback-policy-workflow-registry", default=None,

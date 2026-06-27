@@ -236,6 +236,14 @@ def compare_release_candidates(
     selfcheck_signal_fusion_workflow_path: str | Path | None = None,
     selfcheck_signal_fusion_workflow_registry_path: str | Path | None = None,
     selfcheck_signal_fusion_workflow_key: str | None = None,
+    uncertainty_escalation_workflow_path: str | Path | None = None,
+    uncertainty_escalation_workflow_registry_path: str | Path | None = None,
+    uncertainty_escalation_workflow_key: str | None = None,
+    min_uncertainty_escalation_records: int | None = None,
+    min_uncertainty_escalation_trigger_rate: float | None = None,
+    min_uncertainty_escalation_retrieval_evidence_rate: float | None = None,
+    max_uncertainty_escalation_final_false_accept_rate: float | None = None,
+    max_uncertainty_escalation_false_accept_delta: float | None = None,
     feedback_policy_workflow_path: str | Path | None = None,
     feedback_policy_workflow_registry_path: str | Path | None = None,
     feedback_policy_workflow_key: str | None = None,
@@ -590,6 +598,26 @@ def compare_release_candidates(
         feedback_policy_max_unknown_safety_issue_rate,
         name="feedback_policy_max_unknown_safety_issue_rate",
     )
+    min_uncertainty_escalation_records = _validate_optional_non_negative_int(
+        min_uncertainty_escalation_records,
+        name="min_uncertainty_escalation_records",
+    )
+    min_uncertainty_escalation_trigger_rate = _validate_optional_unit_float(
+        min_uncertainty_escalation_trigger_rate,
+        name="min_uncertainty_escalation_trigger_rate",
+    )
+    min_uncertainty_escalation_retrieval_evidence_rate = _validate_optional_unit_float(
+        min_uncertainty_escalation_retrieval_evidence_rate,
+        name="min_uncertainty_escalation_retrieval_evidence_rate",
+    )
+    max_uncertainty_escalation_final_false_accept_rate = _validate_optional_unit_float(
+        max_uncertainty_escalation_final_false_accept_rate,
+        name="max_uncertainty_escalation_final_false_accept_rate",
+    )
+    max_uncertainty_escalation_false_accept_delta = _validate_optional_finite_float(
+        max_uncertainty_escalation_false_accept_delta,
+        name="max_uncertainty_escalation_false_accept_delta",
+    )
     max_covariance_maha_last_auroc_drop = _validate_optional_non_negative_float(
         max_covariance_maha_last_auroc_drop,
         name="max_covariance_maha_last_auroc_drop",
@@ -695,6 +723,28 @@ def compare_release_candidates(
         recursive=recursive,
         allow_unverified=allow_unverified,
         manifest_fingerprint_workers=manifest_fingerprint_workers,
+        verification_context=verification_context,
+    )
+    uncertainty_escalation_workflow_source = _resolve_uncertainty_escalation_workflow_source(
+        uncertainty_escalation_workflow_path=uncertainty_escalation_workflow_path,
+        uncertainty_escalation_workflow_registry_path=(
+            uncertainty_escalation_workflow_registry_path
+            if uncertainty_escalation_workflow_key is not None
+            else None
+        ),
+        uncertainty_escalation_workflow_key=uncertainty_escalation_workflow_key,
+        default_registry_path=readiness_registry_path,
+    )
+    uncertainty_escalation_workflow = _uncertainty_escalation_workflow_gate(
+        uncertainty_escalation_workflow_source=uncertainty_escalation_workflow_source,
+        recursive=recursive,
+        allow_unverified=allow_unverified,
+        manifest_fingerprint_workers=manifest_fingerprint_workers,
+        min_records=min_uncertainty_escalation_records,
+        min_trigger_rate=min_uncertainty_escalation_trigger_rate,
+        min_retrieval_evidence_rate=min_uncertainty_escalation_retrieval_evidence_rate,
+        max_final_false_accept_rate=max_uncertainty_escalation_final_false_accept_rate,
+        max_false_accept_delta=max_uncertainty_escalation_false_accept_delta,
         verification_context=verification_context,
     )
     feedback_policy_workflow_source = _resolve_feedback_policy_workflow_source(
@@ -995,6 +1045,7 @@ def compare_release_candidates(
         frontier_release_evidence,
         world_model_signal_workflow,
         selfcheck_signal_fusion_workflow,
+        uncertainty_escalation_workflow,
         feedback_policy_workflow,
     )
     candidate = (
@@ -1014,6 +1065,7 @@ def compare_release_candidates(
             frontier_release_evidence,
             world_model_signal_workflow,
             selfcheck_signal_fusion_workflow,
+            uncertainty_escalation_workflow,
             feedback_policy_workflow,
         )
         if decision["status"] == "promote"
@@ -1143,6 +1195,30 @@ def compare_release_candidates(
                 else selfcheck_signal_fusion_workflow_source.get("registry")
             ),
             "selfcheck_signal_fusion_workflow_key": selfcheck_signal_fusion_workflow_key,
+            "uncertainty_escalation_workflow": (
+                None
+                if uncertainty_escalation_workflow_source is None
+                else str(uncertainty_escalation_workflow_source["path"])
+            ),
+            "uncertainty_escalation_workflow_registry": (
+                None
+                if uncertainty_escalation_workflow_source is None
+                else uncertainty_escalation_workflow_source.get("registry")
+            ),
+            "uncertainty_escalation_workflow_key": uncertainty_escalation_workflow_key,
+            "min_uncertainty_escalation_records": min_uncertainty_escalation_records,
+            "min_uncertainty_escalation_trigger_rate": (
+                min_uncertainty_escalation_trigger_rate
+            ),
+            "min_uncertainty_escalation_retrieval_evidence_rate": (
+                min_uncertainty_escalation_retrieval_evidence_rate
+            ),
+            "max_uncertainty_escalation_final_false_accept_rate": (
+                max_uncertainty_escalation_final_false_accept_rate
+            ),
+            "max_uncertainty_escalation_false_accept_delta": (
+                max_uncertainty_escalation_false_accept_delta
+            ),
             "feedback_policy_workflow": (
                 None
                 if feedback_policy_workflow_source is None
@@ -1318,6 +1394,7 @@ def compare_release_candidates(
         "performance_baseline_gate": performance,
         "product_trace_replay_workflow_gate": product_trace_replay_workflow,
         "selfcheck_signal_fusion_workflow_gate": selfcheck_signal_fusion_workflow,
+        "uncertainty_escalation_workflow_gate": uncertainty_escalation_workflow,
         "feedback_policy_workflow_gate": feedback_policy_workflow,
         "selector_replay_gate": selector_replay,
         "product_runtime_drift_gate": product_runtime_drift,
@@ -1492,6 +1569,7 @@ def _decision(
     frontier_release_evidence: Mapping[str, Any] | None = None,
     world_model_signal_workflow: Mapping[str, Any] | None = None,
     selfcheck_signal_fusion_workflow: Mapping[str, Any] | None = None,
+    uncertainty_escalation_workflow: Mapping[str, Any] | None = None,
     feedback_policy_workflow: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     readiness_decision = _mapping(readiness.get("decision"))
@@ -1589,6 +1667,16 @@ def _decision(
         None
         if selfcheck_signal_fusion_workflow is None
         else selfcheck_signal_fusion_workflow.get("status")
+    )
+    uncertainty_escalation_workflow_gate = _mapping(
+        None
+        if uncertainty_escalation_workflow is None
+        else uncertainty_escalation_workflow.get("gate")
+    )
+    uncertainty_escalation_workflow_status = (
+        None
+        if uncertainty_escalation_workflow is None
+        else uncertainty_escalation_workflow.get("status")
     )
     feedback_policy_workflow_gate = _mapping(
         None if feedback_policy_workflow is None else feedback_policy_workflow.get("gate")
@@ -1718,6 +1806,17 @@ def _decision(
             "reasons": list(selfcheck_signal_fusion_workflow_gate.get("blocking_reasons", ())),
         })
     if (
+        uncertainty_escalation_workflow is not None
+        and uncertainty_escalation_workflow_gate.get("passed") is not True
+    ):
+        blocking_reasons.append({
+            "gate": "uncertainty_escalation_workflow",
+            "status": uncertainty_escalation_workflow_status,
+            "reasons": list(
+                uncertainty_escalation_workflow_gate.get("blocking_reasons", ())
+            ),
+        })
+    if (
         feedback_policy_workflow is not None
         and feedback_policy_workflow_gate.get("passed") is not True
     ):
@@ -1753,6 +1852,7 @@ def _decision(
         "frontier_release_evidence_status": frontier_release_evidence_status,
         "world_model_signal_workflow_status": world_model_signal_workflow_status,
         "selfcheck_signal_fusion_workflow_status": selfcheck_signal_fusion_workflow_status,
+        "uncertainty_escalation_workflow_status": uncertainty_escalation_workflow_status,
         "feedback_policy_workflow_status": feedback_policy_workflow_status,
         "recommended_readiness_record": None if candidate is None else candidate.get("readiness_record"),
         "recommended_route_record": None if candidate is None else candidate.get("route_record"),
@@ -1844,6 +1944,14 @@ def _decision(
                 or selfcheck_signal_fusion_workflow_gate.get("passed") is not True
             )
             else selfcheck_signal_fusion_workflow.get("report_path")
+        ),
+        "recommended_uncertainty_escalation_workflow_report": (
+            None
+            if (
+                uncertainty_escalation_workflow is None
+                or uncertainty_escalation_workflow_gate.get("passed") is not True
+            )
+            else uncertainty_escalation_workflow.get("report_path")
         ),
         "recommended_feedback_policy_workflow_report": (
             None
@@ -3745,6 +3853,269 @@ def _selfcheck_sample_quality_run_summaries(
             "best_overlap_mean": _float_or_none(run.get("best_overlap_mean")),
         })
     return tuple(summaries)
+
+
+def _uncertainty_escalation_workflow_gate(
+    *,
+    uncertainty_escalation_workflow_source: Mapping[str, Any] | None,
+    recursive: bool,
+    allow_unverified: bool,
+    manifest_fingerprint_workers: int,
+    min_records: int | None,
+    min_trigger_rate: float | None,
+    min_retrieval_evidence_rate: float | None,
+    max_final_false_accept_rate: float | None,
+    max_false_accept_delta: float | None,
+    verification_context: ArtifactVerificationContext,
+) -> dict[str, Any] | None:
+    if uncertainty_escalation_workflow_source is None:
+        return None
+    report_path = Path(uncertainty_escalation_workflow_source["path"])
+    report, report_error = verification_context.load_json_object(report_path)
+    manifest_path = _uncertainty_escalation_workflow_manifest_path(
+        report,
+        report_path=report_path,
+    )
+    verification = _verify_artifact_manifest(
+        manifest_path,
+        recursive=recursive,
+        max_workers=manifest_fingerprint_workers,
+        artifact_name="uncertainty_escalation_workflow_manifest",
+        verification_context=verification_context,
+    )
+    summary = _uncertainty_escalation_workflow_summary(report)
+    gate = _uncertainty_escalation_workflow_report_gate(
+        report=report,
+        report_error=report_error,
+        manifest_path=manifest_path,
+        verification=verification,
+        summary=summary,
+        allow_unverified=allow_unverified,
+        min_records=min_records,
+        min_trigger_rate=min_trigger_rate,
+        min_retrieval_evidence_rate=min_retrieval_evidence_rate,
+        max_final_false_accept_rate=max_final_false_accept_rate,
+        max_false_accept_delta=max_false_accept_delta,
+    )
+    return {
+        "schema_version": 1,
+        "status": "promote" if gate["passed"] else "blocked",
+        "report_path": str(report_path),
+        "manifest_path": None if manifest_path is None else str(manifest_path),
+        "source": uncertainty_escalation_workflow_source.get("source"),
+        "registry": uncertainty_escalation_workflow_source.get("registry"),
+        "record_key": uncertainty_escalation_workflow_source.get("record_key"),
+        "record": uncertainty_escalation_workflow_source.get("record"),
+        "workflow": report.get("workflow"),
+        "record_count": _float_or_none(summary.get("record_count")),
+        "triggered_records": _float_or_none(summary.get("triggered_records")),
+        "trigger_rate": _float_or_none(summary.get("trigger_rate")),
+        "retrieval_evidence_rate": _float_or_none(
+            summary.get("retrieval_evidence_rate")
+        ),
+        "final_false_accept_rate": _float_or_none(
+            summary.get("final_false_accept_rate")
+        ),
+        "false_accept_delta": _float_or_none(summary.get("false_accept_delta")),
+        "accepted_false_delta": _float_or_none(summary.get("accepted_false_delta")),
+        "verification": verification,
+        "gate": gate,
+    }
+
+
+def _resolve_uncertainty_escalation_workflow_source(
+    *,
+    uncertainty_escalation_workflow_path: str | Path | None,
+    uncertainty_escalation_workflow_registry_path: str | Path | None,
+    uncertainty_escalation_workflow_key: str | None,
+    default_registry_path: str | Path,
+) -> dict[str, Any] | None:
+    if uncertainty_escalation_workflow_path is not None:
+        if uncertainty_escalation_workflow_key is not None:
+            raise ValueError(
+                "uncertainty_escalation_workflow_path is mutually exclusive with "
+                "uncertainty_escalation_workflow_key."
+            )
+        return {"source": "file", "path": Path(uncertainty_escalation_workflow_path)}
+    if uncertainty_escalation_workflow_key is None:
+        if uncertainty_escalation_workflow_registry_path is not None:
+            raise ValueError(
+                "uncertainty_escalation_workflow_registry_path requires "
+                "uncertainty_escalation_workflow_key."
+            )
+        return None
+    registry_path = Path(
+        default_registry_path
+        if uncertainty_escalation_workflow_registry_path is None
+        else uncertainty_escalation_workflow_registry_path
+    )
+    registry = ArtifactRegistry.load_json(registry_path)
+    record = registry.get(str(uncertainty_escalation_workflow_key))
+    if record.artifact_type != "report":
+        raise ValueError(f"registry record {record.key()!r} is not a report.")
+    return {
+        "source": "registry",
+        "registry": str(registry_path),
+        "record_key": record.key(),
+        "record": record.to_dict(),
+        "path": _resolve_registry_record_path(registry_path, record),
+    }
+
+
+def _uncertainty_escalation_workflow_report_gate(
+    *,
+    report: Mapping[str, Any],
+    report_error: str | None,
+    manifest_path: Path | None,
+    verification: Mapping[str, Any],
+    summary: Mapping[str, Any],
+    allow_unverified: bool,
+    min_records: int | None,
+    min_trigger_rate: float | None,
+    min_retrieval_evidence_rate: float | None,
+    max_final_false_accept_rate: float | None,
+    max_false_accept_delta: float | None,
+) -> dict[str, Any]:
+    failures = []
+    effective_min_records = 1 if min_records is None else int(min_records)
+    if report_error is not None:
+        failures.append(
+            f"uncertainty escalation workflow report could not be loaded: {report_error}"
+        )
+    if manifest_path is None:
+        failures.append("uncertainty escalation workflow artifact manifest is missing")
+    if not bool(verification.get("passed", False)) and not allow_unverified:
+        failures.append("uncertainty escalation workflow manifest verification failed")
+    if report.get("workflow") != "uncertainty_escalation_fixture_workflow":
+        failures.append(
+            "uncertainty escalation workflow is "
+            f"{report.get('workflow')!r}, expected "
+            "'uncertainty_escalation_fixture_workflow'"
+        )
+    record_count = _float_or_none(summary.get("record_count"))
+    if record_count is None:
+        failures.append("uncertainty escalation workflow record_count is missing")
+    elif record_count < effective_min_records:
+        failures.append(
+            "uncertainty escalation workflow record count below "
+            f"{effective_min_records}: {record_count!r}"
+        )
+    trigger_rate = _float_or_none(summary.get("trigger_rate"))
+    if min_trigger_rate is not None:
+        if trigger_rate is None:
+            failures.append("uncertainty escalation workflow trigger_rate is missing")
+        elif trigger_rate < min_trigger_rate:
+            failures.append(
+                "uncertainty escalation workflow trigger_rate below "
+                f"{min_trigger_rate}: {trigger_rate!r}"
+            )
+    retrieval_rate = _float_or_none(summary.get("retrieval_evidence_rate"))
+    if min_retrieval_evidence_rate is not None:
+        if retrieval_rate is None:
+            failures.append(
+                "uncertainty escalation workflow retrieval_evidence_rate is missing"
+            )
+        elif retrieval_rate < min_retrieval_evidence_rate:
+            failures.append(
+                "uncertainty escalation workflow retrieval_evidence_rate below "
+                f"{min_retrieval_evidence_rate}: {retrieval_rate!r}"
+            )
+    final_false_accept = _float_or_none(summary.get("final_false_accept_rate"))
+    if max_final_false_accept_rate is not None:
+        if final_false_accept is None:
+            failures.append(
+                "uncertainty escalation workflow final_false_accept_rate is missing"
+            )
+        elif final_false_accept > max_final_false_accept_rate:
+            failures.append(
+                "uncertainty escalation workflow final_false_accept_rate above "
+                f"{max_final_false_accept_rate}: {final_false_accept!r}"
+            )
+    false_accept_delta = _float_or_none(summary.get("false_accept_delta"))
+    if max_false_accept_delta is not None:
+        if false_accept_delta is None:
+            failures.append(
+                "uncertainty escalation workflow false_accept_delta is missing"
+            )
+        elif false_accept_delta > max_false_accept_delta:
+            failures.append(
+                "uncertainty escalation workflow false_accept_delta above "
+                f"{max_false_accept_delta}: {false_accept_delta!r}"
+            )
+    return {
+        "passed": not failures,
+        "blocking_reasons": failures,
+        "policy": {
+            "min_records": effective_min_records,
+            "min_trigger_rate": min_trigger_rate,
+            "min_retrieval_evidence_rate": min_retrieval_evidence_rate,
+            "max_final_false_accept_rate": max_final_false_accept_rate,
+            "max_false_accept_delta": max_false_accept_delta,
+        },
+    }
+
+
+def _uncertainty_escalation_workflow_summary(
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    summary = _mapping(_first_present(report.get("report"), report.get("summary")))
+    return {
+        "record_count": _first_present(
+            summary.get("n_total"),
+            _nested(report, "input", "record_count"),
+        ),
+        "triggered_records": _nested(
+            summary,
+            "uncertainty_escalation",
+            "triggered_records",
+        ),
+        "trigger_rate": _nested(
+            summary,
+            "uncertainty_escalation",
+            "trigger_rate",
+            "estimate",
+        ),
+        "retrieval_evidence_rate": _nested(
+            summary,
+            "action_execution",
+            "retrieval_evidence_rate",
+            "estimate",
+        ),
+        "final_false_accept_rate": _nested(
+            summary,
+            "quality",
+            "final",
+            "false_accept_rate",
+            "estimate",
+        ),
+        "false_accept_delta": _nested(
+            summary,
+            "quality",
+            "delta",
+            "false_accept_rate",
+        ),
+        "accepted_false_delta": _nested(
+            summary,
+            "quality",
+            "delta",
+            "accepted_false",
+        ),
+    }
+
+
+def _uncertainty_escalation_workflow_manifest_path(
+    report: Mapping[str, Any],
+    *,
+    report_path: Path,
+) -> Path | None:
+    raw_path = _first_present(
+        _nested(report, "paths", "artifact_manifest"),
+        report.get("artifact_manifest_path"),
+    )
+    if raw_path is None:
+        sibling = report_path.parent / "artifact-manifest.json"
+        return sibling if sibling.exists() else None
+    return _resolve_path(raw_path, base_path=report_path)
 
 
 def _resolve_feedback_policy_workflow_source(
@@ -5848,6 +6219,7 @@ def _candidate_with_gates(
     frontier_release_evidence: Mapping[str, Any] | None,
     world_model_signal_workflow: Mapping[str, Any] | None,
     selfcheck_signal_fusion_workflow: Mapping[str, Any] | None,
+    uncertainty_escalation_workflow: Mapping[str, Any] | None,
     feedback_policy_workflow: Mapping[str, Any] | None,
 ) -> dict[str, Any] | None:
     if candidate is None:
@@ -6171,6 +6543,32 @@ def _candidate_with_gates(
         manifests["selfcheck_signal_fusion_workflow_manifest"] = (
             selfcheck_signal_fusion_workflow.get("manifest_path")
         )
+    if uncertainty_escalation_workflow is not None:
+        payload["uncertainty_escalation_workflow"] = {
+            "report_path": uncertainty_escalation_workflow.get("report_path"),
+            "manifest_path": uncertainty_escalation_workflow.get("manifest_path"),
+            "source": uncertainty_escalation_workflow.get("source"),
+            "registry": uncertainty_escalation_workflow.get("registry"),
+            "record_key": uncertainty_escalation_workflow.get("record_key"),
+            "workflow": uncertainty_escalation_workflow.get("workflow"),
+            "record_count": uncertainty_escalation_workflow.get("record_count"),
+            "trigger_rate": uncertainty_escalation_workflow.get("trigger_rate"),
+            "retrieval_evidence_rate": uncertainty_escalation_workflow.get(
+                "retrieval_evidence_rate"
+            ),
+            "final_false_accept_rate": uncertainty_escalation_workflow.get(
+                "final_false_accept_rate"
+            ),
+            "false_accept_delta": uncertainty_escalation_workflow.get(
+                "false_accept_delta"
+            ),
+            "accepted_false_delta": uncertainty_escalation_workflow.get(
+                "accepted_false_delta"
+            ),
+        }
+        manifests["uncertainty_escalation_workflow_manifest"] = (
+            uncertainty_escalation_workflow.get("manifest_path")
+        )
     if feedback_policy_workflow is not None:
         payload["feedback_policy_workflow"] = {
             "report_path": feedback_policy_workflow.get("report_path"),
@@ -6281,6 +6679,15 @@ def _validate_optional_non_negative_float(value: Any, *, name: str) -> float | N
     return numeric
 
 
+def _validate_optional_finite_float(value: Any, *, name: str) -> float | None:
+    if value is None:
+        return None
+    numeric = _float_or_none(value)
+    if numeric is None:
+        raise ValueError(f"{name} must be a finite number.")
+    return numeric
+
+
 def _validate_optional_unit_float(value: Any, *, name: str) -> float | None:
     numeric = _validate_optional_non_negative_float(value, name=name)
     if numeric is not None and numeric > 1:
@@ -6384,6 +6791,13 @@ def _parse_non_negative_float(value: str, *, flag: str) -> float:
     numeric = float(value)
     if not math.isfinite(numeric) or numeric < 0:
         raise ValueError(f"{flag} must be a non-negative finite number.")
+    return numeric
+
+
+def _parse_finite_float(value: str, *, flag: str) -> float:
+    numeric = float(value)
+    if not math.isfinite(numeric):
+        raise ValueError(f"{flag} must be a finite number.")
     return numeric
 
 
@@ -6495,6 +6909,20 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         selfcheck_signal_fusion_workflow_path=args.selfcheck_signal_fusion_workflow,
         selfcheck_signal_fusion_workflow_registry_path=args.selfcheck_signal_fusion_workflow_registry,
         selfcheck_signal_fusion_workflow_key=args.selfcheck_signal_fusion_workflow_key,
+        uncertainty_escalation_workflow_path=args.uncertainty_escalation_workflow,
+        uncertainty_escalation_workflow_registry_path=args.uncertainty_escalation_workflow_registry,
+        uncertainty_escalation_workflow_key=args.uncertainty_escalation_workflow_key,
+        min_uncertainty_escalation_records=args.min_uncertainty_escalation_records,
+        min_uncertainty_escalation_trigger_rate=args.min_uncertainty_escalation_trigger_rate,
+        min_uncertainty_escalation_retrieval_evidence_rate=(
+            args.min_uncertainty_escalation_retrieval_evidence_rate
+        ),
+        max_uncertainty_escalation_final_false_accept_rate=(
+            args.max_uncertainty_escalation_final_false_accept_rate
+        ),
+        max_uncertainty_escalation_false_accept_delta=(
+            args.max_uncertainty_escalation_false_accept_delta
+        ),
         feedback_policy_workflow_path=args.feedback_policy_workflow,
         feedback_policy_workflow_registry_path=args.feedback_policy_workflow_registry,
         feedback_policy_workflow_key=args.feedback_policy_workflow_key,
@@ -6652,6 +7080,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         f"frontier_release_evidence={decision.get('frontier_release_evidence_status')} "
         f"world_model_signal={decision.get('world_model_signal_workflow_status')} "
         f"selfcheck_signal_fusion={decision.get('selfcheck_signal_fusion_workflow_status')} "
+        f"uncertainty_escalation={decision.get('uncertainty_escalation_workflow_status')} "
         f"triple_extraction_matrix={decision.get('triple_extraction_fixture_matrix_status')} "
         f"counterfactual_verification={decision.get('counterfactual_verification_status')}"
     )
@@ -6773,6 +7202,46 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "--selfcheck-signal-fusion-workflow-key; defaults to --readiness-registry")
     parser.add_argument("--selfcheck-signal-fusion-workflow-key", default=None,
                         help="optional report:<name>:<version> registry key for a selfcheck signal fusion workflow")
+    parser.add_argument("--uncertainty-escalation-workflow", default=None,
+                        help="optional uncertainty escalation workflow report that must verify and meet "
+                             "configured escalation/evidence quality thresholds")
+    parser.add_argument("--uncertainty-escalation-workflow-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for "
+                             "--uncertainty-escalation-workflow-key; defaults to --readiness-registry")
+    parser.add_argument("--uncertainty-escalation-workflow-key", default=None,
+                        help="optional report:<name>:<version> registry key for an uncertainty "
+                             "escalation workflow")
+    parser.add_argument("--min-uncertainty-escalation-records",
+                        type=lambda value: _parse_non_negative_int(
+                            value,
+                            flag="--min-uncertainty-escalation-records",
+                        ), default=None,
+                        help="optional minimum record count; defaults to 1 when workflow evidence is supplied")
+    parser.add_argument("--min-uncertainty-escalation-trigger-rate",
+                        type=lambda value: _parse_unit_float(
+                            value,
+                            flag="--min-uncertainty-escalation-trigger-rate",
+                        ), default=None,
+                        help="optional minimum uncertainty escalation trigger rate")
+    parser.add_argument("--min-uncertainty-escalation-retrieval-evidence-rate",
+                        type=lambda value: _parse_unit_float(
+                            value,
+                            flag="--min-uncertainty-escalation-retrieval-evidence-rate",
+                        ), default=None,
+                        help="optional minimum retrieval evidence rate after escalation")
+    parser.add_argument("--max-uncertainty-escalation-final-false-accept-rate",
+                        type=lambda value: _parse_unit_float(
+                            value,
+                            flag="--max-uncertainty-escalation-final-false-accept-rate",
+                        ), default=None,
+                        help="optional maximum final false-accept rate after escalation")
+    parser.add_argument("--max-uncertainty-escalation-false-accept-delta",
+                        type=lambda value: _parse_finite_float(
+                            value,
+                            flag="--max-uncertainty-escalation-false-accept-delta",
+                        ), default=None,
+                        help="optional maximum false-accept-rate delta after escalation; negative values "
+                             "require improvement")
     parser.add_argument("--feedback-policy-workflow", default=None,
                         help="optional feedback-policy workflow report that must recommend/observe and verify")
     parser.add_argument("--feedback-policy-workflow-registry", default=None,

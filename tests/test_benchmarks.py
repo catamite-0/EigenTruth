@@ -13785,6 +13785,110 @@ def test_compare_release_candidates_can_require_counterfactual_verification(tmp_
     )
 
 
+def test_compare_release_candidates_can_require_uncertainty_escalation_workflow(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="uncertainty-readiness",
+        version="0.1",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="uncertainty-route",
+        route="structured_fact",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="uncertainty-route",
+        path=route_manifest,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+    promoted_report = _write_uncertainty_escalation_workflow_report(
+        tmp_path / "uncertainty-promoted",
+        record_count=4,
+        trigger_rate=1.0,
+        retrieval_evidence_rate=1.0,
+        final_false_accept_rate=0.0,
+        false_accept_delta=-1.0,
+    )
+    blocked_report = _write_uncertainty_escalation_workflow_report(
+        tmp_path / "uncertainty-blocked",
+        record_count=4,
+        trigger_rate=1.0,
+        retrieval_evidence_rate=0.25,
+        final_false_accept_rate=0.25,
+        false_accept_delta=0.25,
+    )
+
+    promoted = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        uncertainty_escalation_workflow_path=promoted_report,
+        min_uncertainty_escalation_records=4,
+        min_uncertainty_escalation_trigger_rate=1.0,
+        min_uncertainty_escalation_retrieval_evidence_rate=1.0,
+        max_uncertainty_escalation_final_false_accept_rate=0.0,
+        max_uncertainty_escalation_false_accept_delta=0.0,
+    )
+    blocked = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        uncertainty_escalation_workflow_path=blocked_report,
+        min_uncertainty_escalation_records=4,
+        min_uncertainty_escalation_trigger_rate=1.0,
+        min_uncertainty_escalation_retrieval_evidence_rate=1.0,
+        max_uncertainty_escalation_final_false_accept_rate=0.0,
+        max_uncertainty_escalation_false_accept_delta=0.0,
+    )
+
+    assert promoted["decision"]["status"] == "promote"
+    assert promoted["decision"]["uncertainty_escalation_workflow_status"] == "promote"
+    assert promoted["decision"]["recommended_uncertainty_escalation_workflow_report"] == str(
+        promoted_report
+    )
+    gate = promoted["uncertainty_escalation_workflow_gate"]
+    assert gate["gate"]["passed"] is True
+    assert gate["record_count"] == pytest.approx(4)
+    assert gate["trigger_rate"] == pytest.approx(1.0)
+    assert gate["retrieval_evidence_rate"] == pytest.approx(1.0)
+    assert gate["final_false_accept_rate"] == pytest.approx(0.0)
+    assert gate["false_accept_delta"] == pytest.approx(-1.0)
+    candidate = promoted["release_candidate"]
+    assert candidate["uncertainty_escalation_workflow"]["false_accept_delta"] == pytest.approx(-1.0)
+    assert "uncertainty_escalation_workflow_manifest" in candidate["manifests"]
+
+    assert blocked["decision"]["status"] == "blocked"
+    assert blocked["decision"]["uncertainty_escalation_workflow_status"] == "blocked"
+    assert blocked["uncertainty_escalation_workflow_gate"]["gate"]["passed"] is False
+    assert blocked["decision"]["blocking_reasons"][0]["gate"] == "uncertainty_escalation_workflow"
+    assert any(
+        "retrieval_evidence_rate below 1.0" in reason
+        for reason in blocked["decision"]["blocking_reasons"][0]["reasons"]
+    )
+
+
 def test_compare_release_candidates_gates_frontier_release_evidence(tmp_path):
     module = importlib.import_module("benchmarks.compare_release_candidates")
     from eigentruth.registry import ArtifactRegistry
@@ -17805,6 +17909,14 @@ def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_p
         + "\n",
         encoding="utf-8",
     )
+    uncertainty_report = _write_uncertainty_escalation_workflow_report(
+        tmp_path / "uncertainty-escalation",
+        record_count=4,
+        trigger_rate=1.0,
+        retrieval_evidence_rate=1.0,
+        final_false_accept_rate=0.0,
+        false_accept_delta=-1.0,
+    )
 
     def fake_compare_release_candidates(**kwargs):
         compare_captured.update(kwargs)
@@ -17818,15 +17930,20 @@ def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_p
                 "status": "promote",
                 "external_evidence_baseline_comparison_status": "promote",
                 "counterfactual_verification_status": "promote",
+                "uncertainty_escalation_workflow_status": "promote",
                 "recommended_external_evidence_baseline_comparison_report": (
                     str(comparison_report)
                 ),
                 "recommended_counterfactual_verification_report": str(counterfactual_report),
+                "recommended_uncertainty_escalation_workflow_report": str(uncertainty_report),
             },
             "release_candidate": {
                 "manifests": {
                     "external_evidence_baseline_comparison_report": str(comparison_report),
                     "counterfactual_verification_report": str(counterfactual_report),
+                    "uncertainty_escalation_workflow_manifest": str(
+                        uncertainty_report.parent / "artifact-manifest.json"
+                    ),
                 },
                 "external_evidence_baseline_comparison": {
                     "report_path": str(comparison_report),
@@ -17847,6 +17964,18 @@ def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_p
                     "pass_rate": 1.0,
                     "false_invariance_rate": 0.0,
                     "flip_success_count": 2,
+                },
+                "uncertainty_escalation_workflow": {
+                    "report_path": str(uncertainty_report),
+                    "manifest_path": str(uncertainty_report.parent / "artifact-manifest.json"),
+                    "source": "path",
+                    "status": "promote",
+                    "record_count": 4,
+                    "trigger_rate": 1.0,
+                    "retrieval_evidence_rate": 1.0,
+                    "final_false_accept_rate": 0.0,
+                    "false_accept_delta": -1.0,
+                    "accepted_false_delta": -2,
                 },
             },
             "external_evidence_baseline_comparison_gate": {
@@ -17869,6 +17998,18 @@ def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_p
                 "pass_rate": 1.0,
                 "false_invariance_rate": 0.0,
                 "flip_success_count": 2,
+                "gate": {"passed": True, "blocking_reasons": []},
+            },
+            "uncertainty_escalation_workflow_gate": {
+                "status": "promote",
+                "report_path": str(uncertainty_report),
+                "manifest_path": str(uncertainty_report.parent / "artifact-manifest.json"),
+                "record_count": 4,
+                "trigger_rate": 1.0,
+                "retrieval_evidence_rate": 1.0,
+                "final_false_accept_rate": 0.0,
+                "false_accept_delta": -1.0,
+                "accepted_false_delta": -2,
                 "gate": {"passed": True, "blocking_reasons": []},
             },
         }
@@ -17901,6 +18042,12 @@ def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_p
             min_counterfactual_verification_records=2,
             min_counterfactual_verification_pass_rate=1.0,
             max_counterfactual_verification_false_invariance_rate=0.0,
+            uncertainty_escalation_workflow_path=uncertainty_report,
+            min_uncertainty_escalation_records=4,
+            min_uncertainty_escalation_trigger_rate=1.0,
+            min_uncertainty_escalation_retrieval_evidence_rate=1.0,
+            max_uncertainty_escalation_final_false_accept_rate=0.0,
+            max_uncertainty_escalation_false_accept_delta=0.0,
         )
     )
 
@@ -17916,6 +18063,12 @@ def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_p
     assert compare_captured[
         "max_counterfactual_verification_false_invariance_rate"
     ] == pytest.approx(0.0)
+    assert compare_captured["uncertainty_escalation_workflow_path"] == uncertainty_report
+    assert compare_captured["min_uncertainty_escalation_records"] == 4
+    assert compare_captured["min_uncertainty_escalation_trigger_rate"] == pytest.approx(1.0)
+    assert compare_captured["min_uncertainty_escalation_retrieval_evidence_rate"] == pytest.approx(1.0)
+    assert compare_captured["max_uncertainty_escalation_final_false_accept_rate"] == pytest.approx(0.0)
+    assert compare_captured["max_uncertainty_escalation_false_accept_delta"] == pytest.approx(0.0)
     assert payload["config"]["recursive"] is False
     assert payload["config"]["manifest_fingerprint_workers"] == 3
     assert payload["config"]["adapter_family_profile"] == "strict_audit"
@@ -17924,6 +18077,8 @@ def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_p
     assert payload["config"]["external_evidence_baseline_comparison"] == str(comparison_report)
     assert payload["config"]["counterfactual_verification_report"] == str(counterfactual_report)
     assert payload["config"]["min_counterfactual_verification_records"] == 2
+    assert payload["config"]["uncertainty_escalation_workflow"] == str(uncertainty_report)
+    assert payload["config"]["min_uncertainty_escalation_records"] == 4
     assert payload["release_candidate_comparison"]["config"][
         "external_evidence_baseline_comparison"
     ] == str(comparison_report)
@@ -17931,18 +18086,36 @@ def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_p
         "counterfactual_verification_report"
     ] == str(counterfactual_report)
     assert payload["release_candidate_comparison"]["config"][
+        "uncertainty_escalation_workflow"
+    ] == str(uncertainty_report)
+    assert payload["release_candidate_comparison"]["config"][
         "adapter_family_profile_requires_state_transition_world_model"
     ] is True
     assert captured["metadata"]["release_counterfactual_verification_status"] == "promote"
     assert captured["metadata"]["counterfactual_verification_report"] == str(counterfactual_report)
     assert captured["metadata"]["counterfactual_verification_record_count"] == 2
     assert captured["metadata"]["counterfactual_verification_pass_rate"] == pytest.approx(1.0)
+    assert captured["metadata"]["release_uncertainty_escalation_workflow_status"] == "promote"
+    assert captured["metadata"]["uncertainty_escalation_workflow_report"] == str(
+        uncertainty_report
+    )
+    assert captured["metadata"]["uncertainty_escalation_workflow_record_count"] == 4
+    assert captured["metadata"]["uncertainty_escalation_workflow_trigger_rate"] == pytest.approx(1.0)
+    assert captured["metadata"]["uncertainty_escalation_workflow_retrieval_evidence_rate"] == (
+        pytest.approx(1.0)
+    )
+    assert captured["metadata"]["uncertainty_escalation_workflow_false_accept_delta"] == (
+        pytest.approx(-1.0)
+    )
     manifest = json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["artifacts"]["external_evidence_baseline_comparison_report"][
         "path"
     ].endswith(
         "external-evidence-baseline-comparison.json"
     )
+    assert manifest["artifacts"]["uncertainty_escalation_workflow_manifest"][
+        "path"
+    ].endswith("artifact-manifest.json")
     metadata = captured["metadata"]
     assert metadata["release_external_evidence_baseline_comparison_status"] == "promote"
     assert metadata["recommended_external_evidence_baseline_comparison_report"] == (
@@ -22567,6 +22740,95 @@ def _write_selfcheck_signal_fusion_workflow_report(
                     "workflow": "selfcheck_signal_fusion_workflow",
                     "sample_quality": sample_quality,
                     "fusion_summary": fusion_summary,
+                },
+            ),
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return report_path
+
+
+def _write_uncertainty_escalation_workflow_report(
+    output_dir,
+    *,
+    record_count=4,
+    trigger_rate=1.0,
+    retrieval_evidence_rate=1.0,
+    final_false_accept_rate=0.0,
+    false_accept_delta=-1.0,
+    accepted_false_delta=-2,
+):
+    from eigentruth.registry import build_artifact_manifest
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    report_path = output_dir / "uncertainty-escalation-workflow.json"
+    loop_results_path = output_dir / "verification-loop-results.jsonl"
+    manifest_path = output_dir / "artifact-manifest.json"
+    loop_results_path.write_text(
+        "\n".join(
+            json.dumps({
+                "trace_id": f"trace-{index}",
+                "escalation": {"triggered": True},
+            })
+            for index in range(record_count)
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    report_payload = {
+        "schema_version": 1,
+        "workflow": "uncertainty_escalation_fixture_workflow",
+        "status": "promote",
+        "input": {"record_count": record_count},
+        "paths": {
+            "loop_results_jsonl": str(loop_results_path),
+            "report": str(report_path),
+            "artifact_manifest": str(manifest_path),
+        },
+        "report": {
+            "n_total": record_count,
+            "uncertainty_escalation": {
+                "triggered_records": int(round(trigger_rate * record_count)),
+                "trigger_rate": {"estimate": trigger_rate},
+            },
+            "action_execution": {
+                "retrieval_evidence_records": int(
+                    round(retrieval_evidence_rate * record_count)
+                ),
+                "retrieval_evidence_rate": {"estimate": retrieval_evidence_rate},
+            },
+            "quality": {
+                "final": {
+                    "false_accept_rate": {"estimate": final_false_accept_rate},
+                },
+                "delta": {
+                    "accepted_false": accepted_false_delta,
+                    "false_accept_rate": false_accept_delta,
+                },
+            },
+        },
+    }
+    report_path.write_text(
+        json.dumps(report_payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    manifest_path.write_text(
+        json.dumps(
+            build_artifact_manifest(
+                {
+                    "uncertainty_escalation_workflow": report_path,
+                    "verification_loop_results": loop_results_path,
+                },
+                root=output_dir,
+                metadata={
+                    "runner": "run_uncertainty_escalation_workflow",
+                    "workflow": "uncertainty_escalation_fixture_workflow",
+                    "record_count": record_count,
+                    "trigger_rate": trigger_rate,
+                    "retrieval_evidence_rate": retrieval_evidence_rate,
                 },
             ),
             indent=2,

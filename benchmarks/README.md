@@ -2317,6 +2317,12 @@ python benchmarks/compare_release_candidates.py \
   --feedback-policy-min-matched-feedback-count 20 \
   --feedback-policy-min-safety-coverage 0.70 \
   --feedback-policy-max-unknown-safety-issue-rate 0.20 \
+  --uncertainty-escalation-workflow-key report:<uncertainty-escalation-workflow-name>:<version> \
+  --min-uncertainty-escalation-records 4 \
+  --min-uncertainty-escalation-trigger-rate 0.50 \
+  --min-uncertainty-escalation-retrieval-evidence-rate 0.50 \
+  --max-uncertainty-escalation-final-false-accept-rate 0.05 \
+  --max-uncertainty-escalation-false-accept-delta 0.0 \
   --release-efficiency-report artifacts/product-runtime-profile-sweep/release-efficiency-report.json \
   --external-evidence-baseline-comparison artifacts/external-evidence-baseline-comparison.json \
   --route-baseline-key benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4 \
@@ -2408,6 +2414,15 @@ required-route record-to-property coverage summary into the comparison report,
 final manifest, and registry metadata. Available release policy profiles are `research_smoke`,
 `candidate_release`, `strict_structured_fact`, and `frontier_audit`; profile
 defaults only fill unset values, so explicit thresholds still win. Direct
+
+Use `--uncertainty-escalation-workflow` or
+`--uncertainty-escalation-workflow-key` when a release must prove that
+low-confidence verification results escalate into additional retrieval/action
+evidence before final acceptance. The optional thresholds gate minimum record
+count, escalation trigger rate, retrieval evidence rate, final false-accept
+rate, and false-accept-rate delta; a threshold of `0.0` for
+`--max-uncertainty-escalation-false-accept-delta` means escalation must not make
+false accepts worse.
 `compare_release_candidates.py` reports record `release_policy_profile` and
 `release_policy_profile_applied_defaults` in `config`. `frontier_audit` also
 defaults `--require-product-runtime-drift-promotion-evidence`,
