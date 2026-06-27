@@ -34,6 +34,11 @@ from eigentruth.core.math_engine import (
     poincare_map,
     sherman_morrison_update,
 )
+from eigentruth.core.pre_generation import (
+    AttentionSoftTargetProbeArtifact,
+    load_attention_soft_target_probe,
+    soft_error_rate_targets,
+)
 from eigentruth.core.subspace import TruthSubspace
 from eigentruth.core.trajectory import (
     TrajectoryConvergenceMetrics,
@@ -77,6 +82,7 @@ __all__ = [
     "RepresentationManifold",
     "TruthSubspace",
     "RepresentationSubspace",
+    "AttentionSoftTargetProbeArtifact",
     "ConceptArtifact",
     "TrajectoryConvergenceMetrics",
     "TrajectoryConvergenceReport",
@@ -100,8 +106,10 @@ __all__ = [
     "internal_eigenscore",
     "lexical_semantic_energy",
     "lexical_semantic_entropy",
+    "load_attention_soft_target_probe",
     "load_concept_artifact",
     "semantic_energy_score",
+    "soft_error_rate_targets",
     "spectral_effective_rank",
     "mahalanobis_distance",
     "manifold_distance",

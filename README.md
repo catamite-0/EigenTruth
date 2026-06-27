@@ -39,6 +39,7 @@ EigenTruth wraps a decoder-only language model with PyTorch hooks. It can:
 - optionally project hidden states into a Poincare ball and compute Hyperbolic Semantic Entropy (HSE) for ablations
 - optionally build a contrastive direction from factual and false examples
 - fit a low-rank `TruthSubspace` and score residual distance from factual states
+- train and save a lightweight pre-generation attention probe from hidden states and soft error-rate targets
 - emit a single-decode `first_token_entropy` uncertainty baseline from top-k logits
 - save versioned `ConceptArtifact` files and attach multiple concept probes at once
 - calibrate diagnostic thresholds from benchmark score dumps and combine them with claim verification
@@ -53,6 +54,7 @@ EigenTruth 通过 PyTorch hook 包装 decoder-only 语言模型。它可以：
 - 可选地将隐藏状态投影到庞加莱球并计算双曲语义熵（HSE）用于消融实验
 - 可选地使用事实与错误样本构建对比方向
 - 拟合低秩 `TruthSubspace`，并计算相对事实子空间的残差距离
+- 用 hidden states 和 soft error-rate targets 训练并保存轻量生成前 attention probe
 - 从 top-k logits 输出单次 decode 的 `first_token_entropy` 不确定性基线
 - 保存版本化 `ConceptArtifact`，并同时挂载多个 concept probe
 - 从 benchmark 分数 dump 校准诊断阈值，并与 claim 验证结果组合成风险决策
@@ -404,6 +406,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `twonn_intrinsic_dimension` / `intrinsic_dimension_profile` | Estimates dependency-free TwoNN intrinsic dimension from hidden-state samples, producing cheap layer-profile evidence for layer selection and representation-collapse experiments. |
 | `RepresentationTelemetryRecorder` / `RepTelemetryCallback` / `representation_telemetry_snapshot` | Records training-side per-layer representation telemetry without mandatory Trainer dependencies: mean norm, variance trace, spectrum rank diagnostics, and Gaussian 2-Wasserstein/Bures distance to an initialization baseline; the optional callback exposes HF Trainer-compatible hook names while staying dependency-free. |
 | `TrajectoryMonitor` / `trajectory_convergence_metrics` | Computes generation-trajectory convergence diagnostics from per-token hidden states, including step-distance decay, Koopman-style rate, path efficiency, and a convergence score for quality/confidence correlation checks. |
+| `AttentionSoftTargetProbeArtifact` / `soft_error_rate_targets` | Trains a torch-only pre-generation attention probe over token-level hidden states using empirical sampled-answer error rates as soft targets; artifacts expose risk probabilities, attention weights, JSON-safe metadata, and torch save/load. |
 | `poincare_map` | Projects representations into a bounded hyperbolic space for optional HSE ablations. |
 | `hyperbolic_semantic_entropy` | Measures dispersion over a sliding window of projected states; retained as an opt-in ablation signal, not the default runtime path. |
 | `internal_eigenscore` / `spectral_effective_rank` / `cluster_assignment_entropy` / `lexical_semantic_entropy` / `embedding_semantic_entropy` / `semantic_energy_score` / `lexical_semantic_energy` | Computes INSIDE/EigenScore-style spectral diversity, dependency-free semantic-entropy proxies, and confidence-weighted semantic-energy disagreement from sampled hidden-state/text clusters; benchmarks can optionally sample multiple continuations for `inside_eigenscore`, `inside_semantic_entropy`, `inside_embedding_entropy`, and `inside_semantic_energy`. |
@@ -554,6 +557,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `twonn_intrinsic_dimension` / `intrinsic_dimension_profile` | 基于 hidden-state 样本估计无新增依赖的 TwoNN intrinsic dimension，为 layer selection 和 representation-collapse 实验提供低成本层级 profile 证据。 |
 | `RepresentationTelemetryRecorder` / `RepTelemetryCallback` / `representation_telemetry_snapshot` | 无需强绑定 Trainer 的训练侧逐层表征 telemetry：记录 mean norm、variance trace、谱 rank 诊断，以及到初始化 baseline 的 Gaussian 2-Wasserstein/Bures 距离；可选 callback 暴露 HF Trainer-compatible hook 名称，但本身仍无 transformers 强依赖。 |
 | `TrajectoryMonitor` / `trajectory_convergence_metrics` | 从逐 token hidden states 计算 generation trajectory convergence 诊断，包括 step-distance decay、Koopman-style rate、path efficiency 和用于质量/置信相关性检查的 convergence score。 |
+| `AttentionSoftTargetProbeArtifact` / `soft_error_rate_targets` | 用 empirical sampled-answer error rate 作为 soft target，在 token-level hidden states 上训练 torch-only 生成前 attention probe；artifact 暴露风险概率、attention weights、JSON metadata 和 torch save/load。 |
 | `poincare_map` | 将表征投影到有界双曲空间，供可选 HSE 消融使用。 |
 | `hyperbolic_semantic_entropy` | 测量投影状态滑动窗口内的离散程度；保留为 opt-in 消融信号，不作为默认 runtime 路径。 |
 | `internal_eigenscore` / `spectral_effective_rank` / `cluster_assignment_entropy` / `lexical_semantic_entropy` / `embedding_semantic_entropy` / `semantic_energy_score` / `lexical_semantic_energy` | 基于隐藏态嵌入与文本簇计算 INSIDE/EigenScore 风格谱分散度、无依赖语义熵代理和置信度加权 semantic-energy 分歧；benchmark 可选多采样续写生成 `inside_eigenscore`、`inside_semantic_entropy`、`inside_embedding_entropy` 和 `inside_semantic_energy`。 |

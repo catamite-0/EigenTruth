@@ -25,6 +25,12 @@ from eigentruth.core.math_engine import (
     poincare_map,
     sherman_morrison_update,
 )
+from eigentruth.core.pre_generation import (
+    ATTENTION_SOFT_TARGET_PROBE_SCHEMA_VERSION,
+    AttentionSoftTargetProbeArtifact,
+    load_attention_soft_target_probe,
+    soft_error_rate_targets,
+)
 from eigentruth.core.subspace import TruthSubspace
 from eigentruth.core.trajectory import (
     TrajectoryConvergenceMetrics,
@@ -41,10 +47,14 @@ __all__ = [
     "RepresentationSubspace",
     "TruthManifold",
     "TruthSubspace",
+    "ATTENTION_SOFT_TARGET_PROBE_SCHEMA_VERSION",
+    "AttentionSoftTargetProbeArtifact",
     "TrajectoryConvergenceMetrics",
     "TrajectoryConvergenceReport",
     "TrajectoryMonitor",
     "trajectory_convergence_metrics",
+    "load_attention_soft_target_probe",
+    "soft_error_rate_targets",
     "COVARIANCE_MODES",
     "CovarianceSpectrum",
     "covariance_shrinkage_intensity",

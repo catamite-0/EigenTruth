@@ -24,6 +24,13 @@ EigenTruth should move from hallucination detection alone toward calibrated part
 
 ## Implemented This Continuation
 
+Added hidden-state soft-target attention probe artifacts:
+
+- `soft_error_rate_targets(...)` converts sampled-answer correctness flags into empirical error-rate soft targets.
+- `AttentionSoftTargetProbeArtifact.fit(...)` trains a torch-only attention-pooled hidden-state probe over prompt token representations, using soft BCE targets and an attention mask.
+- The artifact exposes risk logits/probabilities, token attention weights, JSON-safe metadata, and torch save/load.
+- This implements the local core primitive for the current soft-target attention-probing direction without adding a new mandatory dependency or binding the benchmark pipeline to a specific model cache format yet.
+
 Added soft pre-generation risk estimates:
 
 - `SoftPreGenerationRiskConfig` computes a dependency-free probability-style risk estimate from prompt features and caller metadata before generation.
