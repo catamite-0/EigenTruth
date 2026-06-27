@@ -157,6 +157,56 @@ def test_eval_counterfactual_verification_generates_probes_from_claims(tmp_path)
     assert report_path.exists()
 
 
+def test_eval_pre_generation_probe_trains_and_saves_artifact(tmp_path):
+    module = importlib.import_module("benchmarks.eval_pre_generation_probe")
+    from eigentruth.core import AttentionSoftTargetProbeArtifact
+
+    records = []
+    for index in range(16):
+        label = 1 if index >= 8 else 0
+        sign = 3.0 if label else -3.0
+        seq_len = 3 + (index % 3)
+        hidden = [[sign, 0.2 * token, 1.0] for token in range(seq_len)]
+        record = {
+            "id": f"r{index}",
+            "hidden_states": hidden,
+            "attention_mask": [True] * seq_len,
+            "label": label,
+            "soft_target": 0.9 if label else 0.1,
+        }
+        if index == 0:
+            record.pop("soft_target")
+            record["sample_correctness"] = [1, 1, 1, 0]
+        records.append(record)
+    records_path = tmp_path / "pre-generation-records.json"
+    report_path = tmp_path / "pre-generation-report.json"
+    artifact_path = tmp_path / "pre-generation-probe.pt"
+    records_path.write_text(json.dumps({"records": records}), encoding="utf-8")
+
+    payload = module.run_pre_generation_probe_eval(
+        records_path,
+        output_path=report_path,
+        artifact_path=artifact_path,
+        train_fraction=0.75,
+        seed=3,
+        layer_idx=2,
+        steps=160,
+        lr=0.08,
+    )
+    loaded_artifact = AttentionSoftTargetProbeArtifact.load(artifact_path)
+    saved_report = json.loads(report_path.read_text(encoding="utf-8"))
+
+    assert payload["workflow"] == "pre_generation_probe_eval"
+    assert payload["record_count"] == 16
+    assert payload["config"]["layer_idx"] == 2
+    assert payload["metrics"]["test"]["label_auroc"] == pytest.approx(1.0)
+    assert payload["metrics"]["test"]["target_mse"] < 0.05
+    assert payload["paths"]["artifact"] == str(artifact_path)
+    assert saved_report["paths"]["report"] == str(report_path)
+    assert saved_report["artifact"]["hidden_dim"] == 3
+    assert loaded_artifact.layer_idx == 2
+
+
 def test_eval_triple_extraction_compares_regex_against_rule_based(tmp_path):
     module = importlib.import_module("benchmarks.eval_triple_extraction")
     records_path = tmp_path / "triple-records.json"

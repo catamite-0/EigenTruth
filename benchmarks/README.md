@@ -545,6 +545,32 @@ than an 8 GB machine comfortably provides) before drawing conclusions.
   comparison against full published detectors (semantic entropy, multi-response
   INSIDE/EigenScore, SAPLMA) on standard splits.
 
+## `eval_pre_generation_probe.py`
+
+Trains and evaluates the torch-only pre-generation soft-target attention probe from
+local token-level hidden-state records. This is the benchmark-side handoff for
+frontier soft-target attention probing: it consumes saved prompt hidden states and
+empirical error-rate targets, then writes train/test risk metrics and optionally saves
+an `AttentionSoftTargetProbeArtifact`.
+
+```bash
+python benchmarks/eval_pre_generation_probe.py \
+  --records artifacts/pre-generation-probe-records.jsonl \
+  --json artifacts/pre-generation-probe-report.json \
+  --save-artifact artifacts/pre-generation-probe.pt \
+  --layer-idx -8
+```
+
+Each JSON/JSONL record must provide `hidden_states` (or `prompt_hidden_states`) with
+shape `[tokens, hidden_dim]`, plus either `soft_target`, `risk_target`, or
+`sample_correctness`. `attention_mask` is optional and defaults to all tokens kept.
+`label` or `is_false` is optional; when both classes are present, the report includes
+label AUROC in addition to soft-target MSE/MAE/BCE.
+
+This script does not load a model, download data, or bind the main TruthfulQA path to
+a hidden-state cache format. Producing high-quality prompt-token records from a real
+model run and calibrating the resulting probe remain separate experiment steps.
+
 ## `eval_conformal.py` (E1)
 
 Validates that **split-conformal calibration** turns raw scores (Mahalanobis distance,

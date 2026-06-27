@@ -29,7 +29,8 @@ Added hidden-state soft-target attention probe artifacts:
 - `soft_error_rate_targets(...)` converts sampled-answer correctness flags into empirical error-rate soft targets.
 - `AttentionSoftTargetProbeArtifact.fit(...)` trains a torch-only attention-pooled hidden-state probe over prompt token representations, using soft BCE targets and an attention mask.
 - The artifact exposes risk logits/probabilities, token attention weights, JSON-safe metadata, and torch save/load.
-- This implements the local core primitive for the current soft-target attention-probing direction without adding a new mandatory dependency or binding the benchmark pipeline to a specific model cache format yet.
+- `benchmarks/eval_pre_generation_probe.py` consumes local JSON/JSONL prompt hidden-state records, trains/evaluates the probe, reports soft-target and optional label metrics, and can save the artifact for later routing experiments.
+- This implements the local core primitive and a reproducible local benchmark handoff for the current soft-target attention-probing direction without adding a new mandatory dependency or binding the main TruthfulQA path to a specific hidden-state cache format yet.
 
 Added soft pre-generation risk estimates:
 
