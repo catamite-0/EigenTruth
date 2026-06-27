@@ -1055,6 +1055,10 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         metadata,
         contract_metadata=contract_metadata,
     )
+    product_trace_replay = _promotion_contract_product_trace_replay_from_metadata(
+        metadata,
+        contract_metadata=contract_metadata,
+    )
     manifest_verification = _mapping(
         _first_present(
             metadata.get("triple_extraction_fixture_matrix_manifest_verification"),
@@ -1098,6 +1102,7 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
             "required_route_baseline": required_property_rollups,
             "structured_fact_robustness": robustness_property_rollups,
         },
+        "product_trace_replay": product_trace_replay,
         "product_runtime_drift": runtime_drift,
         "triple_extraction_fixture_matrix": {
             "available": matrix_available,
@@ -1142,6 +1147,9 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         },
     }
     matrix_summary = _mapping(summary["triple_extraction_fixture_matrix"])
+    product_trace_replay_metrics = _promotion_contract_product_trace_replay_metric_values(
+        product_trace_replay
+    )
     runtime_drift_metrics = _promotion_contract_runtime_drift_metric_values(runtime_drift)
     return {
         "promotion_contract_available": available,
@@ -1209,7 +1217,193 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         "promotion_contract_triple_extraction_fixture_matrix_mean_f1_lift": matrix_summary.get(
             "mean_f1_lift"
         ),
+        **product_trace_replay_metrics,
         **runtime_drift_metrics,
+    }
+
+
+def _promotion_contract_product_trace_replay_from_metadata(
+    metadata: Mapping[str, Any],
+    *,
+    contract_metadata: Mapping[str, Any],
+) -> dict[str, Any]:
+    def value(key: str) -> Any:
+        return _first_present(
+            metadata.get(f"promotion_contract_{key}"),
+            contract_metadata.get(key),
+            metadata.get(key),
+        )
+
+    replay = {
+        "available": False,
+        "status": _optional_string(value("product_trace_replay_workflow_status")),
+        "report": _optional_string(value("product_trace_replay_workflow_report")),
+        "manifest": _optional_string(value("product_trace_replay_workflow_manifest")),
+        "source": _optional_string(value("product_trace_replay_workflow_source")),
+        "registry": _optional_string(value("product_trace_replay_workflow_registry")),
+        "record": _optional_string(value("product_trace_replay_workflow_record")),
+        "report_status": _optional_string(
+            value("product_trace_replay_workflow_report_status")
+        ),
+        "selector_replay_report": _optional_string(
+            value("product_trace_replay_workflow_selector_replay_report")
+        ),
+        "runtime_drift_report": _optional_string(
+            value("product_trace_replay_workflow_runtime_drift_report")
+        ),
+        "action_audit_gate": {
+            "required": _optional_bool(value("product_trace_action_audit_gate_required")),
+            "status": _optional_string(value("product_trace_action_audit_gate_status")),
+            "enabled": _optional_bool(value("product_trace_action_audit_gate_enabled")),
+            "passed": _optional_bool(value("product_trace_action_audit_gate_passed")),
+            "report": _optional_string(value("product_trace_action_audit_gate_report")),
+            "error_rate": _finite_float(value("product_trace_action_audit_error_rate")),
+            "missing_retrieval_action_rate": _finite_float(
+                value("product_trace_action_audit_missing_retrieval_action_rate")
+            ),
+            "missing_plan_retrieval_query_rate": _finite_float(
+                value("product_trace_action_audit_missing_plan_retrieval_query_rate")
+            ),
+            "malformed_payload_rate": _finite_float(
+                value("product_trace_action_audit_malformed_payload_rate")
+            ),
+            "unexpected_action_rate": _finite_float(
+                value("product_trace_action_audit_unexpected_action_rate")
+            ),
+            "unknown_claim_id_rate": _finite_float(
+                value("product_trace_action_audit_unknown_claim_id_rate")
+            ),
+        },
+        "action_execution_gate": {
+            "required": _optional_bool(
+                value("product_trace_action_execution_gate_required")
+            ),
+            "status": _optional_string(
+                value("product_trace_action_execution_gate_status")
+            ),
+            "enabled": _optional_bool(
+                value("product_trace_action_execution_gate_enabled")
+            ),
+            "passed": _optional_bool(value("product_trace_action_execution_gate_passed")),
+            "report": _optional_string(value("product_trace_action_execution_gate_report")),
+            "alignment_failed_trace_rate": _finite_float(
+                value("product_trace_action_execution_alignment_failed_trace_rate")
+            ),
+            "missing_result_rate": _finite_float(
+                value("product_trace_action_execution_missing_result_rate")
+            ),
+            "unexpected_result_rate": _finite_float(
+                value("product_trace_action_execution_unexpected_result_rate")
+            ),
+            "request_id_mismatch_rate": _finite_float(
+                value("product_trace_action_execution_request_id_mismatch_rate")
+            ),
+        },
+    }
+    replay["available"] = _product_trace_replay_available(replay)
+    return replay
+
+
+def _product_trace_replay_available(replay: Mapping[str, Any]) -> bool:
+    for key, item in replay.items():
+        if key == "available":
+            continue
+        if isinstance(item, Mapping):
+            if any(value is not None for value in item.values()):
+                return True
+        elif item is not None:
+            return True
+    return False
+
+
+def _promotion_contract_product_trace_replay_metric_values(
+    replay: Mapping[str, Any],
+) -> dict[str, Any]:
+    action_audit = _mapping(replay.get("action_audit_gate"))
+    action_execution = _mapping(replay.get("action_execution_gate"))
+    return {
+        "promotion_contract_product_trace_replay_available": _optional_bool(
+            replay.get("available")
+        ),
+        "promotion_contract_product_trace_replay_workflow_status": replay.get("status"),
+        "promotion_contract_product_trace_replay_workflow_report": replay.get("report"),
+        "promotion_contract_product_trace_replay_workflow_manifest": replay.get(
+            "manifest"
+        ),
+        "promotion_contract_product_trace_replay_workflow_source": replay.get("source"),
+        "promotion_contract_product_trace_replay_workflow_registry": replay.get(
+            "registry"
+        ),
+        "promotion_contract_product_trace_replay_workflow_record": replay.get("record"),
+        "promotion_contract_product_trace_replay_workflow_report_status": replay.get(
+            "report_status"
+        ),
+        "promotion_contract_product_trace_replay_workflow_selector_replay_report": (
+            replay.get("selector_replay_report")
+        ),
+        "promotion_contract_product_trace_replay_workflow_runtime_drift_report": (
+            replay.get("runtime_drift_report")
+        ),
+        "promotion_contract_product_trace_action_audit_gate_required": action_audit.get(
+            "required"
+        ),
+        "promotion_contract_product_trace_action_audit_gate_status": action_audit.get(
+            "status"
+        ),
+        "promotion_contract_product_trace_action_audit_gate_enabled": action_audit.get(
+            "enabled"
+        ),
+        "promotion_contract_product_trace_action_audit_gate_passed": action_audit.get(
+            "passed"
+        ),
+        "promotion_contract_product_trace_action_audit_gate_report": action_audit.get(
+            "report"
+        ),
+        "promotion_contract_product_trace_action_audit_error_rate": action_audit.get(
+            "error_rate"
+        ),
+        "promotion_contract_product_trace_action_audit_missing_retrieval_action_rate": (
+            action_audit.get("missing_retrieval_action_rate")
+        ),
+        "promotion_contract_product_trace_action_audit_missing_plan_retrieval_query_rate": (
+            action_audit.get("missing_plan_retrieval_query_rate")
+        ),
+        "promotion_contract_product_trace_action_audit_malformed_payload_rate": (
+            action_audit.get("malformed_payload_rate")
+        ),
+        "promotion_contract_product_trace_action_audit_unexpected_action_rate": (
+            action_audit.get("unexpected_action_rate")
+        ),
+        "promotion_contract_product_trace_action_audit_unknown_claim_id_rate": (
+            action_audit.get("unknown_claim_id_rate")
+        ),
+        "promotion_contract_product_trace_action_execution_gate_required": (
+            action_execution.get("required")
+        ),
+        "promotion_contract_product_trace_action_execution_gate_status": (
+            action_execution.get("status")
+        ),
+        "promotion_contract_product_trace_action_execution_gate_enabled": (
+            action_execution.get("enabled")
+        ),
+        "promotion_contract_product_trace_action_execution_gate_passed": (
+            action_execution.get("passed")
+        ),
+        "promotion_contract_product_trace_action_execution_gate_report": (
+            action_execution.get("report")
+        ),
+        "promotion_contract_product_trace_action_execution_alignment_failed_trace_rate": (
+            action_execution.get("alignment_failed_trace_rate")
+        ),
+        "promotion_contract_product_trace_action_execution_missing_result_rate": (
+            action_execution.get("missing_result_rate")
+        ),
+        "promotion_contract_product_trace_action_execution_unexpected_result_rate": (
+            action_execution.get("unexpected_result_rate")
+        ),
+        "promotion_contract_product_trace_action_execution_request_id_mismatch_rate": (
+            action_execution.get("request_id_mismatch_rate")
+        ),
     }
 
 

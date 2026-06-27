@@ -2570,6 +2570,57 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert runtime_metrics["promotion_contract_summary"]["product_runtime_drift"][
         "covered_fact_property_evidence"
     ]["covered_fact_recommended_route_min_records"]["current"] == pytest.approx(15.0)
+    assert runtime_metrics["promotion_contract_product_trace_replay_available"] is True
+    assert runtime_metrics["promotion_contract_product_trace_replay_workflow_report"] == (
+        "trace-replay-workflow.json"
+    )
+    assert runtime_metrics[
+        "promotion_contract_product_trace_replay_workflow_manifest"
+    ] == "trace-replay-manifest.json"
+    assert runtime_metrics[
+        "promotion_contract_product_trace_replay_workflow_selector_replay_report"
+    ] == "selector-replay.json"
+    assert runtime_metrics[
+        "promotion_contract_product_trace_replay_workflow_runtime_drift_report"
+    ] == "product-runtime-drift.json"
+    assert runtime_metrics[
+        "promotion_contract_product_trace_action_audit_gate_required"
+    ] is True
+    assert runtime_metrics[
+        "promotion_contract_product_trace_action_audit_gate_status"
+    ] == "promote"
+    assert runtime_metrics[
+        "promotion_contract_product_trace_action_audit_gate_enabled"
+    ] is True
+    assert runtime_metrics[
+        "promotion_contract_product_trace_action_audit_gate_passed"
+    ] is True
+    assert runtime_metrics[
+        "promotion_contract_product_trace_action_audit_missing_retrieval_action_rate"
+    ] == pytest.approx(0.0)
+    assert runtime_metrics[
+        "promotion_contract_product_trace_action_execution_gate_required"
+    ] is True
+    assert runtime_metrics[
+        "promotion_contract_product_trace_action_execution_gate_status"
+    ] == "promote"
+    assert runtime_metrics[
+        "promotion_contract_product_trace_action_execution_gate_enabled"
+    ] is True
+    assert runtime_metrics[
+        "promotion_contract_product_trace_action_execution_gate_passed"
+    ] is True
+    assert runtime_metrics[
+        "promotion_contract_product_trace_action_execution_request_id_mismatch_rate"
+    ] == pytest.approx(0.0)
+    trace_replay_summary = runtime_metrics["promotion_contract_summary"][
+        "product_trace_replay"
+    ]
+    assert trace_replay_summary["available"] is True
+    assert trace_replay_summary["action_audit_gate"]["error_rate"] == pytest.approx(0.0)
+    assert trace_replay_summary["action_execution_gate"][
+        "request_id_mismatch_rate"
+    ] == pytest.approx(0.0)
     assert metadata["promotion_contract_control_policy_config"]["unsupported_action"] == "clarify"
     assert metadata["promotion_contract_control_policy_config"][
         "compound_verification_escalates"
