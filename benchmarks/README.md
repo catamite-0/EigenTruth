@@ -83,6 +83,13 @@ TruthfulQA, in a deterministic, judge-free, single-forward-pass setup (SAPLMA-st
    curve from the same per-layer updates. Treat them as exploratory profile
    signals until they pass the same conformal sweep, stability, and release-gate
    checks as other diagnostics.
+5. **Do prompt/question-anchored and answer-anchored truthfulness pathways diverge?**
+   `prompt_answer_distance`, `prompt_answer_cosine_gap`, `answer_anchor_distance`,
+   `answer_path_length`, and `pathway_disagreement` are training-free two-pathway
+   proxies computed from the same forced-answer hidden states. They summarize
+   how far answer states move from the prompt anchor, how much the answer path
+   moves internally, and whether those two views disagree. Treat them as
+   exploratory pathway diagnostics until replicated on larger calibrated runs.
 
 ### Method
 
@@ -472,6 +479,10 @@ progress output.
 - `resid_update_profile_* > 0.5` means a cross-layer residual-update profile
   summary ranks false statements above true ones. These are exploratory
   ICR-style curve summaries, not a replacement for calibrated layer/score sweep.
+- `prompt_answer_*`, `answer_*`, and `pathway_disagreement > 0.5` mean
+  training-free prompt/answer pathway summaries rank false statements above true
+  ones. They are mechanism-inspired diagnostics, not a full attention-knockout or
+  token-patching replication.
 - Compare `maha_last` against `nll_answer` and `first_token_entropy`: geometry is
   only interesting if it adds signal over plain perplexity or cheap single-decode
   uncertainty.

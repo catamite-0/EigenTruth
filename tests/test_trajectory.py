@@ -2,8 +2,10 @@ import pytest
 import torch
 
 from eigentruth.core import (
+    PromptAnswerPathwayMetrics,
     ResidualContributionProfile,
     TrajectoryMonitor,
+    prompt_answer_pathway_metrics,
     residual_contribution_profile,
     trajectory_convergence_metrics,
 )
@@ -88,6 +90,35 @@ def test_residual_contribution_profile_rejects_invalid_values():
         residual_contribution_profile({0: -1.0})
     with pytest.raises(ValueError, match="late_fraction"):
         residual_contribution_profile({0: 1.0}, late_fraction=0.0)
+
+
+def test_prompt_answer_pathway_metrics_separates_anchor_movements():
+    prompt = torch.tensor([[1.0, 0.0, 0.0], [2.0, 0.0, 0.0]])
+    answer = torch.tensor([[2.0, 0.0, 0.0], [2.0, 3.0, 0.0], [2.0, 6.0, 0.0]])
+    metrics = prompt_answer_pathway_metrics(prompt, answer, metadata={"kind": "pathway"})
+    roundtrip = PromptAnswerPathwayMetrics.from_dict(metrics.to_dict())
+
+    assert metrics.prompt_token_count == 2
+    assert metrics.answer_token_count == 3
+    assert metrics.hidden_dim == 3
+    assert metrics.prompt_answer_distance == pytest.approx(6.0 / (3.0 ** 0.5))
+    assert metrics.prompt_answer_cosine_gap == pytest.approx(1.0 - 4.0 / ((2.0 ** 2) ** 0.5 * (40.0 ** 0.5)))
+    assert metrics.answer_anchor_distance == pytest.approx(6.0 / (3.0 ** 0.5))
+    assert metrics.answer_path_length == pytest.approx(6.0 / (3.0 ** 0.5))
+    assert metrics.pathway_disagreement == pytest.approx(0.0)
+    assert metrics.metadata["kind"] == "pathway"
+    assert roundtrip.to_dict() == metrics.to_dict()
+
+
+def test_prompt_answer_pathway_metrics_rejects_bad_shapes():
+    with pytest.raises(ValueError, match="2D tensor"):
+        prompt_answer_pathway_metrics(torch.randn(1, 2, 3), torch.randn(2, 3))
+    with pytest.raises(ValueError, match="share hidden_dim"):
+        prompt_answer_pathway_metrics(torch.randn(1, 3), torch.randn(2, 4))
+    bad = torch.randn(1, 3)
+    bad[0, 0] = float("inf")
+    with pytest.raises(ValueError, match="finite"):
+        prompt_answer_pathway_metrics(bad, torch.randn(1, 3))
 
 
 def test_trajectory_convergence_rejects_invalid_inputs():

@@ -34982,6 +34982,10 @@ def test_eval_truthfulqa_exposes_internal_eigenscore_signal():
         assert signal in module.SIGNALS
         assert signal not in module._sweep_signal_names(SimpleNamespace(inside_samples=0))
         assert module.DEFAULT_SCORE_DIRECTIONS[signal] == "higher"
+    for signal in module.PROMPT_ANSWER_PATHWAY_SIGNAL_NAMES:
+        assert signal in module.SIGNALS
+        assert signal not in module._sweep_signal_names(SimpleNamespace(inside_samples=0))
+        assert module.DEFAULT_SCORE_DIRECTIONS[signal] == "higher"
     assert module.FIRST_TOKEN_ENTROPY_SIGNAL in module.SIGNALS
     assert module.FIRST_TOKEN_ENTROPY_SIGNAL not in module._sweep_signal_names(SimpleNamespace(inside_samples=0))
     assert module.DEFAULT_SCORE_DIRECTIONS[module.FIRST_TOKEN_ENTROPY_SIGNAL] == "higher"
@@ -35499,6 +35503,22 @@ def test_eval_truthfulqa_eval_reps_cache_roundtrip(tmp_path):
         "ans_hs": torch.tensor([[1.0, 2.0], [3.0, 4.0]]),
         "eigenscore_by_layer": {-1: 0.125, -2: 0.25},
         "resid_update_norm_by_layer": {-1: 1.5, -2: 0.5},
+        "prompt_answer_pathway_by_layer": {
+            -1: {
+                "prompt_answer_distance": 0.1,
+                "prompt_answer_cosine_gap": 0.2,
+                "answer_anchor_distance": 0.3,
+                "answer_path_length": 0.4,
+                "pathway_disagreement": 0.5,
+            },
+            -2: {
+                "prompt_answer_distance": 1.1,
+                "prompt_answer_cosine_gap": 1.2,
+                "answer_anchor_distance": 1.3,
+                "answer_path_length": 1.4,
+                "pathway_disagreement": 1.5,
+            },
+        },
         "first_token_entropy": 0.375,
         "nll": 1.5,
     }
@@ -35538,6 +35558,7 @@ def test_eval_truthfulqa_eval_reps_cache_roundtrip(tmp_path):
     assert torch.allclose(loaded[0]["ans_hs"], reps["ans_hs"])
     assert loaded[0]["eigenscore_by_layer"][-2] == pytest.approx(0.25)
     assert loaded[0]["resid_update_norm_by_layer"][-1] == pytest.approx(1.5)
+    assert loaded[0]["prompt_answer_pathway_by_layer"][-2]["pathway_disagreement"] == pytest.approx(1.5)
     assert loaded[0]["first_token_entropy"] == pytest.approx(0.375)
     assert loaded[0]["nll"] == pytest.approx(1.5)
     assert loaded[1] is None
@@ -35933,6 +35954,22 @@ def test_eval_truthfulqa_score_reps_batch_matches_scalar_math():
         "ans_hs": torch.tensor([[1.0, 0.0, 0.0], [2.0, 0.0, 0.0]]),
         "eigenscore_by_layer": {-1: 0.125, -2: 0.25},
         "resid_update_norm_by_layer": {-1: 0.75, -2: 0.25},
+        "prompt_answer_pathway_by_layer": {
+            -1: {
+                "prompt_answer_distance": 0.1,
+                "prompt_answer_cosine_gap": 0.2,
+                "answer_anchor_distance": 0.3,
+                "answer_path_length": 0.4,
+                "pathway_disagreement": 0.5,
+            },
+            -2: {
+                "prompt_answer_distance": 1.1,
+                "prompt_answer_cosine_gap": 1.2,
+                "answer_anchor_distance": 1.3,
+                "answer_path_length": 1.4,
+                "pathway_disagreement": 1.5,
+            },
+        },
         "first_token_entropy": 0.375,
         "nll": 1.5,
     }
@@ -35941,6 +35978,22 @@ def test_eval_truthfulqa_score_reps_batch_matches_scalar_math():
         "ans_hs": torch.tensor([[0.0, 1.0, 0.0], [0.0, 2.0, 0.0]]),
         "eigenscore_by_layer": {-1: 0.5, -2: 0.75},
         "resid_update_norm_by_layer": {-1: 1.25, -2: 0.5},
+        "prompt_answer_pathway_by_layer": {
+            -1: {
+                "prompt_answer_distance": 2.1,
+                "prompt_answer_cosine_gap": 2.2,
+                "answer_anchor_distance": 2.3,
+                "answer_path_length": 2.4,
+                "pathway_disagreement": 2.5,
+            },
+            -2: {
+                "prompt_answer_distance": 3.1,
+                "prompt_answer_cosine_gap": 3.2,
+                "answer_anchor_distance": 3.3,
+                "answer_path_length": 3.4,
+                "pathway_disagreement": 3.5,
+            },
+        },
         "first_token_entropy": 0.625,
         "nll": 2.0,
     }
@@ -35989,6 +36042,16 @@ def test_eval_truthfulqa_score_reps_batch_matches_scalar_math():
         assert record["primary_scores"]["resid_update_profile_concentration"] == pytest.approx(
             profile.concentration
         )
+        for signal in module.PROMPT_ANSWER_PATHWAY_SIGNAL_NAMES:
+            assert record["layer_scores"][-1][signal] == pytest.approx(
+                reps["prompt_answer_pathway_by_layer"][-1][signal]
+            )
+            assert record["layer_scores"][-2][signal] == pytest.approx(
+                reps["prompt_answer_pathway_by_layer"][-2][signal]
+            )
+            assert record["primary_scores"][signal] == pytest.approx(
+                reps["prompt_answer_pathway_by_layer"][-1][signal]
+            )
         assert record["primary_scores"][module.FIRST_TOKEN_ENTROPY_SIGNAL] == pytest.approx(
             reps["first_token_entropy"]
         )
@@ -36783,6 +36846,8 @@ def test_eval_truthfulqa_batched_statement_reps_can_use_precomputed_encodings():
     assert reps[0]["last"][0].shape == (4,)
     assert reps[0]["ans_hs"].shape == (2, 4)
     assert reps[0]["resid_update_norm_by_layer"][0] == pytest.approx(0.0)
+    assert "prompt_answer_pathway_by_layer" in reps[0]
+    assert reps[0]["prompt_answer_pathway_by_layer"][0]["prompt_answer_distance"] > 0.0
     assert reps[0]["first_token_entropy"] == pytest.approx(1.0)
     assert reps[0]["nll"] == pytest.approx(torch.log(torch.tensor(64.0)).item())
 
@@ -36824,6 +36889,7 @@ def test_eval_truthfulqa_batched_statement_reps_scores_residual_update_norm():
 
     assert torch.allclose(reps[0]["last"][1], torch.tensor([8.0, 8.0, 8.0, 8.0]))
     assert reps[0]["resid_update_norm_by_layer"][1] == pytest.approx(2.0)
+    assert reps[0]["prompt_answer_pathway_by_layer"][1]["answer_path_length"] > 0.0
     assert reps[0]["first_token_entropy"] == pytest.approx(1.0)
 
 
@@ -37073,6 +37139,12 @@ def test_eval_truthfulqa_prefix_kv_cache_matches_full_sequence_reps():
         assert prefix_rep["nll"] == pytest.approx(full_rep["nll"])
         assert prefix_rep["first_token_entropy"] == pytest.approx(full_rep["first_token_entropy"])
         assert prefix_rep["eigenscore_by_layer"][0] == pytest.approx(full_rep["eigenscore_by_layer"][0])
+        assert prefix_rep["prompt_answer_pathway_by_layer"][0]["prompt_answer_distance"] == pytest.approx(
+            full_rep["prompt_answer_pathway_by_layer"][0]["prompt_answer_distance"]
+        )
+        assert prefix_rep["prompt_answer_pathway_by_layer"][0]["pathway_disagreement"] == pytest.approx(
+            full_rep["prompt_answer_pathway_by_layer"][0]["pathway_disagreement"]
+        )
 
 
 def test_eval_truthfulqa_statement_dump_preserves_question_answer_and_label():

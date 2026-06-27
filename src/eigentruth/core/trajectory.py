@@ -162,6 +162,57 @@ class ResidualContributionProfile:
         )
 
 
+@dataclass(frozen=True)
+class PromptAnswerPathwayMetrics:
+    """Two-pathway prompt/answer hidden-state summary for one layer.
+
+    The metrics separate prompt-anchored movement (last prompt token to final
+    answer token) from answer-anchored movement (first answer token to final
+    answer token). This is a lightweight, dependency-free approximation of the
+    current two-pathway truthfulness framing; it is a diagnostic score family,
+    not a learned truth probe.
+    """
+
+    prompt_token_count: int
+    answer_token_count: int
+    hidden_dim: int
+    prompt_answer_distance: float
+    prompt_answer_cosine_gap: float
+    answer_anchor_distance: float
+    answer_path_length: float
+    pathway_disagreement: float
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-ready metrics payload."""
+        return {
+            "prompt_token_count": int(self.prompt_token_count),
+            "answer_token_count": int(self.answer_token_count),
+            "hidden_dim": int(self.hidden_dim),
+            "prompt_answer_distance": float(self.prompt_answer_distance),
+            "prompt_answer_cosine_gap": float(self.prompt_answer_cosine_gap),
+            "answer_anchor_distance": float(self.answer_anchor_distance),
+            "answer_path_length": float(self.answer_path_length),
+            "pathway_disagreement": float(self.pathway_disagreement),
+            "metadata": dict(self.metadata),
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "PromptAnswerPathwayMetrics":
+        """Build metrics from a JSON-like payload."""
+        return cls(
+            prompt_token_count=int(data["prompt_token_count"]),
+            answer_token_count=int(data["answer_token_count"]),
+            hidden_dim=int(data["hidden_dim"]),
+            prompt_answer_distance=float(data["prompt_answer_distance"]),
+            prompt_answer_cosine_gap=float(data["prompt_answer_cosine_gap"]),
+            answer_anchor_distance=float(data["answer_anchor_distance"]),
+            answer_path_length=float(data["answer_path_length"]),
+            pathway_disagreement=float(data["pathway_disagreement"]),
+            metadata=dict(data.get("metadata") or {}),
+        )
+
+
 def trajectory_convergence_metrics(
     states: Tensor,
     *,
@@ -217,6 +268,53 @@ def trajectory_convergence_metrics(
         decay_fraction=decay_fraction,
         displacement_cv=displacement_cv,
         convergence_score=float(convergence_score),
+        metadata=metadata or {},
+    )
+
+
+def prompt_answer_pathway_metrics(
+    prompt_states: Tensor,
+    answer_states: Tensor,
+    *,
+    eps: float = 1e-8,
+    metadata: Mapping[str, Any] | None = None,
+) -> PromptAnswerPathwayMetrics:
+    """Summarize prompt-anchored and answer-anchored hidden-state movement.
+
+    ``prompt_states`` must be shaped ``[prompt_token, hidden_dim]`` and
+    ``answer_states`` must be shaped ``[answer_token, hidden_dim]``. Distances
+    are normalized by ``sqrt(hidden_dim)`` so they remain comparable across
+    model sizes.
+    """
+    prompt = _as_pathway_matrix(prompt_states, name="prompt_states")
+    answer = _as_pathway_matrix(answer_states, name="answer_states")
+    if prompt.shape[1] != answer.shape[1]:
+        raise ValueError("prompt_states and answer_states must share hidden_dim.")
+    if float(eps) <= 0.0 or not math.isfinite(float(eps)):
+        raise ValueError("eps must be positive and finite.")
+
+    scale = math.sqrt(float(prompt.shape[1]))
+    prompt_anchor = prompt[-1]
+    answer_first = answer[0]
+    answer_final = answer[-1]
+    prompt_answer_distance = _normalized_l2(answer_final - prompt_anchor, scale=scale)
+    cosine_gap = _cosine_gap(prompt_anchor, answer_final, eps=float(eps))
+    answer_anchor_distance = _normalized_l2(answer_final - answer_first, scale=scale)
+    if int(answer.shape[0]) <= 1:
+        answer_path_length = 0.0
+    else:
+        deltas = answer[1:] - answer[:-1]
+        answer_path_length = float(torch.linalg.vector_norm(deltas, dim=-1).sum().item() / scale)
+    pathway_disagreement = abs(prompt_answer_distance - answer_anchor_distance)
+    return PromptAnswerPathwayMetrics(
+        prompt_token_count=int(prompt.shape[0]),
+        answer_token_count=int(answer.shape[0]),
+        hidden_dim=int(prompt.shape[1]),
+        prompt_answer_distance=float(prompt_answer_distance),
+        prompt_answer_cosine_gap=float(cosine_gap),
+        answer_anchor_distance=float(answer_anchor_distance),
+        answer_path_length=float(answer_path_length),
+        pathway_disagreement=float(pathway_disagreement),
         metadata=metadata or {},
     )
 
@@ -362,6 +460,32 @@ def _as_trajectory_matrix(states: Tensor) -> Tensor:
     if not torch.isfinite(matrix).all():
         raise ValueError("states must contain only finite values.")
     return matrix
+
+
+def _as_pathway_matrix(states: Tensor, *, name: str) -> Tensor:
+    matrix = torch.as_tensor(states, dtype=torch.float32).detach().cpu()
+    if matrix.ndim != 2:
+        raise ValueError(f"{name} must be a 2D tensor [token, hidden_dim].")
+    if int(matrix.shape[0]) < 1:
+        raise ValueError(f"{name} must contain at least one token.")
+    if int(matrix.shape[1]) < 1:
+        raise ValueError(f"{name} must have a non-empty hidden dimension.")
+    if not torch.isfinite(matrix).all():
+        raise ValueError(f"{name} must contain only finite values.")
+    return matrix
+
+
+def _normalized_l2(vector: Tensor, *, scale: float) -> float:
+    return float(torch.linalg.vector_norm(vector).item() / max(float(scale), 1e-12))
+
+
+def _cosine_gap(left: Tensor, right: Tensor, *, eps: float) -> float:
+    denominator = float(torch.linalg.vector_norm(left).item() * torch.linalg.vector_norm(right).item())
+    if denominator <= float(eps):
+        return 0.0
+    cosine = float(torch.dot(left, right).item() / denominator)
+    cosine = max(-1.0, min(1.0, cosine))
+    return 1.0 - cosine
 
 
 def _coerce_residual_update_values(

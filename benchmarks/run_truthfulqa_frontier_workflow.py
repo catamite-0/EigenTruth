@@ -51,6 +51,11 @@ DEFAULT_FRONTIER_SIGNALS = (
     "resid_update_profile_peak",
     "resid_update_profile_late_mass",
     "resid_update_profile_concentration",
+    "prompt_answer_distance",
+    "prompt_answer_cosine_gap",
+    "answer_anchor_distance",
+    "answer_path_length",
+    "pathway_disagreement",
     "eigenscore",
 )
 DEFAULT_ENSEMBLE_METHODS = ("max_rank", "mean_rank")

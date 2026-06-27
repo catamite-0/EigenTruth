@@ -16,6 +16,9 @@ EigenTruth benchmark — can hidden-state geometry separate true vs. false state
     4. 跨层 residual 更新幅度 (resid_update_norm) 是否提供 ICR-like 隐状态动态信号？
        Does the cross-layer residual update magnitude provide an ICR-like hidden-state
        dynamics signal?
+    5. prompt/question-anchored 与 answer-anchored 隐状态路径是否分歧？
+       Do prompt/question-anchored and answer-anchored hidden-state pathways diverge
+       on false statements?
 
 方法 / Method (SAPLMA 式、确定性、无需 LLM 裁判 / SAPLMA-style, deterministic, judge-free):
     - 从**留出**题目的*正确*答案构建真值流形（无标签泄漏）。
@@ -67,6 +70,7 @@ from eigentruth.core import (
     internal_eigenscore,
     lexical_semantic_energy,
     lexical_semantic_entropy,
+    prompt_answer_pathway_metrics,
     residual_contribution_profile,
 )
 from eigentruth.core.math_engine import (
@@ -95,12 +99,20 @@ RESID_UPDATE_PROFILE_SIGNAL_NAMES = (
     "resid_update_profile_late_mass",
     "resid_update_profile_concentration",
 )
+PROMPT_ANSWER_PATHWAY_SIGNAL_NAMES = (
+    "prompt_answer_distance",
+    "prompt_answer_cosine_gap",
+    "answer_anchor_distance",
+    "answer_path_length",
+    "pathway_disagreement",
+)
 SIGNALS = [
     "maha_last",
     "truth_proj",
     "subspace_resid",
     "resid_update_norm",
     *RESID_UPDATE_PROFILE_SIGNAL_NAMES,
+    *PROMPT_ANSWER_PATHWAY_SIGNAL_NAMES,
     "disp_euclid",
     "disp_hse",
     "eigenscore",
@@ -677,6 +689,88 @@ def _residual_update_norm(
     if delta.numel() == 0:
         return 0.0
     return float(torch.linalg.vector_norm(delta).item() / math.sqrt(float(delta.numel())))
+
+
+def _prompt_answer_pathway_metrics_by_layer(
+    hidden_by_layer: Mapping[int, torch.Tensor],
+    layers: Sequence[int],
+    *,
+    row: int,
+    prompt_start: int,
+    answer_start: int,
+    sequence_end: int,
+) -> dict[int, dict[str, float]]:
+    metrics: dict[int, dict[str, float]] = {}
+    if answer_start <= prompt_start or sequence_end <= answer_start:
+        return {int(layer): _empty_pathway_metrics() for layer in layers}
+    for layer in layers:
+        states = hidden_by_layer.get(int(layer))
+        if states is None:
+            metrics[int(layer)] = _empty_pathway_metrics()
+            continue
+        prompt_states = states[row, prompt_start:answer_start, :].float()
+        answer_states = states[row, answer_start:sequence_end, :].float()
+        try:
+            metrics[int(layer)] = prompt_answer_pathway_metrics(
+                prompt_states,
+                answer_states,
+                metadata={"layer": int(layer)},
+            ).to_dict()
+        except ValueError:
+            metrics[int(layer)] = _empty_pathway_metrics()
+    return metrics
+
+
+def _prompt_answer_pathway_metrics_from_prefix_answer(
+    prefix_hidden_by_layer: Mapping[int, torch.Tensor],
+    answer_hidden_by_layer: Mapping[int, torch.Tensor],
+    layers: Sequence[int],
+    *,
+    prefix_row: int,
+    answer_row: int,
+    prefix_length: int,
+    answer_length: int,
+) -> dict[int, dict[str, float]]:
+    metrics: dict[int, dict[str, float]] = {}
+    if prefix_length <= 0 or answer_length <= 0:
+        return {int(layer): _empty_pathway_metrics() for layer in layers}
+    for layer in layers:
+        layer = int(layer)
+        prefix_states = prefix_hidden_by_layer.get(layer)
+        answer_states = answer_hidden_by_layer.get(layer)
+        if prefix_states is None or answer_states is None:
+            metrics[layer] = _empty_pathway_metrics()
+            continue
+        try:
+            metrics[layer] = prompt_answer_pathway_metrics(
+                prefix_states[prefix_row, :prefix_length, :].float(),
+                answer_states[answer_row, :answer_length, :].float(),
+                metadata={"layer": layer},
+            ).to_dict()
+        except ValueError:
+            metrics[layer] = _empty_pathway_metrics()
+    return metrics
+
+
+def _empty_pathway_metrics() -> dict[str, float]:
+    return {
+        "prompt_answer_distance": 0.0,
+        "prompt_answer_cosine_gap": 0.0,
+        "answer_anchor_distance": 0.0,
+        "answer_path_length": 0.0,
+        "pathway_disagreement": 0.0,
+    }
+
+
+def _pathway_signal_scores(metrics: Mapping[str, object] | None) -> dict[str, float]:
+    payload = dict(metrics or {})
+    return {
+        "prompt_answer_distance": float(payload.get("prompt_answer_distance", 0.0)),
+        "prompt_answer_cosine_gap": float(payload.get("prompt_answer_cosine_gap", 0.0)),
+        "answer_anchor_distance": float(payload.get("answer_anchor_distance", 0.0)),
+        "answer_path_length": float(payload.get("answer_path_length", 0.0)),
+        "pathway_disagreement": float(payload.get("pathway_disagreement", 0.0)),
+    }
 
 
 def _hook_capture_layer_map(model, layers: Sequence[int]) -> dict[int, int]:
@@ -1308,8 +1402,18 @@ def _score_reps_batch(
             for _, reps in valid
         ]
         eigenscore_values = [float(reps["eigenscore_by_layer"][layer]) for _, reps in valid]
+        pathway_scores_by_record = [
+            _pathway_signal_scores(dict(reps.get("prompt_answer_pathway_by_layer") or {}).get(layer))
+            for _, reps in valid
+        ]
         for record, maha, proj, resid, resid_update, eigenscore in zip(
-            records, maha_values, proj_values, resid_values, resid_update_values, eigenscore_values
+            records,
+            maha_values,
+            proj_values,
+            resid_values,
+            resid_update_values,
+            eigenscore_values,
+            strict=True,
         ):
             record["layer_scores"][layer] = {
                 "maha_last": float(maha),
@@ -1318,6 +1422,8 @@ def _score_reps_batch(
                 "resid_update_norm": float(resid_update),
                 "eigenscore": float(eigenscore),
             }
+        for record, pathway_scores in zip(records, pathway_scores_by_record, strict=True):
+            record["layer_scores"][layer].update(pathway_scores)
 
     for record, (_, reps) in zip(records, valid):
         ans = reps["ans_hs"]
@@ -1920,6 +2026,7 @@ def _eval_reps_cache_metadata(
         "first_token_entropy_schema": 1,
         "first_token_top_k": int(getattr(args, "first_token_top_k", FIRST_TOKEN_TOP_K_DEFAULT)),
         "resid_update_norm_schema": 1,
+        "prompt_answer_pathway_schema": 1,
         "length_bucketed_batches": bool(args.length_bucketed_batches),
         "n_eval": len(eval_statements),
         "eval_fingerprint": _statement_fingerprint(eval_statements),
@@ -1961,6 +2068,7 @@ def _validate_cache_only_metadata(
             "eigenscore_alpha": float(args.eigenscore_alpha),
             "first_token_entropy_schema": 1,
             "first_token_top_k": int(getattr(args, "first_token_top_k", FIRST_TOKEN_TOP_K_DEFAULT)),
+            "prompt_answer_pathway_schema": 1,
         },
         cache_name="eval reps cache",
     )
@@ -1978,6 +2086,10 @@ def _reps_to_cache_state(reps: Optional[Mapping]) -> Optional[dict]:
         "resid_update_norm_by_layer": {
             int(layer): float(value)
             for layer, value in dict(reps.get("resid_update_norm_by_layer") or {}).items()
+        },
+        "prompt_answer_pathway_by_layer": {
+            int(layer): dict(value)
+            for layer, value in dict(reps.get("prompt_answer_pathway_by_layer") or {}).items()
         },
         "first_token_entropy": float(reps.get("first_token_entropy", 0.0)),
         "nll": float(reps["nll"]),
@@ -2004,6 +2116,10 @@ def _reps_from_cache_state(state: Optional[Mapping]) -> Optional[dict]:
         "resid_update_norm_by_layer": {
             int(layer): float(value)
             for layer, value in dict(state.get("resid_update_norm_by_layer") or {}).items()
+        },
+        "prompt_answer_pathway_by_layer": {
+            int(layer): dict(value)
+            for layer, value in dict(state.get("prompt_answer_pathway_by_layer") or {}).items()
         },
         "first_token_entropy": float(state.get("first_token_entropy", 0.0)),
         "nll": float(state["nll"]),
@@ -2731,6 +2847,14 @@ def batched_statement_reps(
             )
             for layer in layers
         }
+        pathway_metrics_by_layer = _prompt_answer_pathway_metrics_by_layer(
+            hidden_by_layer,
+            layers,
+            row=row,
+            prompt_start=0,
+            answer_start=ans_start,
+            sequence_end=seq_len,
+        )
 
         nll = _answer_nll_from_logits(out.logits[row], input_ids[row], seq_len, n_ans)
         first_token_entropy = _first_answer_token_entropy_from_logits(
@@ -2744,6 +2868,7 @@ def batched_statement_reps(
             "ans_hs": ans_hs,
             "eigenscore_by_layer": eigenscore_by_layer,
             "resid_update_norm_by_layer": resid_update_norm_by_layer,
+            "prompt_answer_pathway_by_layer": pathway_metrics_by_layer,
             "first_token_entropy": first_token_entropy,
             "nll": nll,
         }
@@ -2785,13 +2910,16 @@ def _batched_statement_reps_with_prefix_kv(
         prefix_out = model(
             input_ids=prefix_ids,
             attention_mask=prefix_mask,
-            output_hidden_states=False,
+            output_hidden_states=True,
             use_cache=True,
         )
         prefix_past = getattr(prefix_out, "past_key_values", None)
         if prefix_past is None:
             raise ValueError("model did not return past_key_values for --prefix-kv-cache.")
         prefix_next_logits = prefix_out.logits[0, -1:, :]
+        prefix_hidden_by_layer = {
+            int(layer): prefix_out.hidden_states[int(layer)] for layer in capture_layers
+        }
 
         for original_idx, ids, n_ans in items:
             answer_ids = ids[-n_ans:]
@@ -2832,6 +2960,15 @@ def _batched_statement_reps_with_prefix_kv(
                 )
                 for layer in layers
             }
+            pathway_metrics_by_layer = _prompt_answer_pathway_metrics_from_prefix_answer(
+                prefix_hidden_by_layer,
+                hidden_by_layer,
+                layers,
+                prefix_row=0,
+                answer_row=0,
+                prefix_length=len(prefix_ids_tuple),
+                answer_length=answer_len,
+            )
             prediction_logits = prefix_next_logits
             if answer_len > 1:
                 prediction_logits = torch.cat(
@@ -2847,6 +2984,7 @@ def _batched_statement_reps_with_prefix_kv(
                 "ans_hs": ans_hs,
                 "eigenscore_by_layer": eigenscore_by_layer,
                 "resid_update_norm_by_layer": resid_update_norm_by_layer,
+                "prompt_answer_pathway_by_layer": pathway_metrics_by_layer,
                 "first_token_entropy": first_token_entropy,
                 "nll": nll,
             }
@@ -4441,6 +4579,8 @@ def run(args) -> dict:
                 scores["resid_update_norm"].append(primary_scores["resid_update_norm"])
                 for signal in RESID_UPDATE_PROFILE_SIGNAL_NAMES:
                     scores[signal].append(primary_scores[signal])
+                for signal in PROMPT_ANSWER_PATHWAY_SIGNAL_NAMES:
+                    scores[signal].append(primary_scores[signal])
                 scores["disp_euclid"].append(primary_scores["disp_euclid"])
                 scores["disp_hse"].append(primary_scores["disp_hse"])
                 scores["eigenscore"].append(primary_scores["eigenscore"])
@@ -4550,6 +4690,7 @@ def run(args) -> dict:
                    "eigenscore_alpha": args.eigenscore_alpha,
                    "first_token_top_k": int(getattr(args, "first_token_top_k", FIRST_TOKEN_TOP_K_DEFAULT)),
                    "resid_update_profile_schema": 1,
+                   "prompt_answer_pathway_schema": 1,
                    "batch_size": args.batch_size,
                    "max_batch_tokens": max_batch_tokens,
                    "auto_batch_size": args.auto_batch_size,
