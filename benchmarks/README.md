@@ -560,6 +560,7 @@ python benchmarks/eval_pre_generation_probe.py \
   --save-artifact artifacts/pre-generation-probe.pt \
   --save-calibration artifacts/pre-generation-probe-calibration.json \
   --conformal-alpha 0.2 \
+  --record-layer -8 \
   --layer-idx -8
 ```
 
@@ -571,14 +572,21 @@ python benchmarks/eval_truthfulqa.py \
   --model Qwen/Qwen2.5-0.5B-Instruct \
   --layer -8 \
   --limit 200 \
+  --pre-generation-probe-layers=-12,-8,-4 \
   --dump-pre-generation-probe-records artifacts/pre-generation-probe-records.jsonl
 ```
 
 By default, that export writes one prompt-level record per question and uses the
 question's candidate false-answer rate as the soft target. Use
 `--pre-generation-record-grain candidate` for candidate-level records with hard
-`label` fields. If the run reads an older `--eval-reps-cache` that does not contain
-prompt hidden states, refresh the cache before exporting.
+`label` fields. `--pre-generation-probe-layers` writes a `layer_hidden_states`
+mapping per record and keeps the first layer in `prompt_hidden_states` for backward
+compatibility; use `eval_pre_generation_probe.py --record-layer <layer>` to train
+or calibrate one selected layer from the same record file. Use the equals form
+(`--pre-generation-probe-layers=-12,-8,-4`) when the list starts with a negative
+layer index. If the run reads an
+older `--eval-reps-cache` that does not contain prompt hidden states, refresh the
+cache before exporting.
 
 Each JSON/JSONL record must provide `hidden_states` (or `prompt_hidden_states`) with
 shape `[tokens, hidden_dim]`, plus either `soft_target`, `risk_target`, or

@@ -271,6 +271,44 @@ def test_eval_pre_generation_probe_soft_targets_need_cutoff_for_calibration_arti
     assert calibration_path.exists()
 
 
+def test_eval_pre_generation_probe_selects_layered_records(tmp_path):
+    module = importlib.import_module("benchmarks.eval_pre_generation_probe")
+
+    records = []
+    for index in range(12):
+        label = 1 if index >= 6 else 0
+        sign = 2.5 if label else -2.5
+        records.append({
+            "id": f"r{index}",
+            "layer_hidden_states": {
+                "-1": [[0.1, sign], [0.2, sign]],
+                "-2": [[sign, 0.1], [sign, 0.2]],
+            },
+            "attention_mask": [True, True],
+            "label": label,
+            "soft_target": 0.9 if label else 0.1,
+        })
+    records_path = tmp_path / "layered-pre-generation-records.json"
+    records_path.write_text(json.dumps({"records": records}), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="multiple layers"):
+        module.load_pre_generation_probe_records(records_path)
+
+    payload = module.run_pre_generation_probe_eval(
+        records_path,
+        record_layer=-2,
+        train_fraction=0.75,
+        seed=1,
+        steps=80,
+        lr=0.08,
+    )
+
+    assert payload["config"]["record_layer"] == -2
+    assert payload["config"]["artifact_layer_idx"] == -2
+    assert payload["artifact"]["layer_idx"] == -2
+    assert payload["metrics"]["test"]["label_auroc"] == pytest.approx(1.0)
+
+
 def test_eval_truthfulqa_exports_pre_generation_probe_records(tmp_path):
     truthfulqa = importlib.import_module("benchmarks.eval_truthfulqa")
     probe = importlib.import_module("benchmarks.eval_pre_generation_probe")
@@ -282,15 +320,24 @@ def test_eval_truthfulqa_exports_pre_generation_probe_records(tmp_path):
     ]
     reps_batch = [
         {
-            "prompt_hs_by_layer": {-1: torch.tensor([[1.0, 0.0], [1.0, 0.5]])},
+            "prompt_hs_by_layer": {
+                -1: torch.tensor([[1.0, 0.0], [1.0, 0.5]]),
+                -2: torch.tensor([[2.0, 0.0], [2.0, 0.5]]),
+            },
             "prompt_attention_mask": torch.tensor([True, True]),
         },
         {
-            "prompt_hs_by_layer": {-1: torch.tensor([[9.0, 9.0], [9.0, 9.5]])},
+            "prompt_hs_by_layer": {
+                -1: torch.tensor([[9.0, 9.0], [9.0, 9.5]]),
+                -2: torch.tensor([[8.0, 8.0], [8.0, 8.5]]),
+            },
             "prompt_attention_mask": torch.tensor([True, True]),
         },
         {
-            "prompt_hs_by_layer": {-1: torch.tensor([[0.0, 1.0]])},
+            "prompt_hs_by_layer": {
+                -1: torch.tensor([[0.0, 1.0]]),
+                -2: torch.tensor([[0.0, 2.0]]),
+            },
             "prompt_attention_mask": torch.tensor([True]),
         },
     ]
@@ -300,7 +347,7 @@ def test_eval_truthfulqa_exports_pre_generation_probe_records(tmp_path):
     records, stats = truthfulqa._pre_generation_probe_records_from_batch(
         statements,
         reps_batch,
-        layer=-1,
+        layers=(-1, -2),
         soft_targets=soft_targets,
         record_grain="question",
         seen_keys=seen,
@@ -315,6 +362,7 @@ def test_eval_truthfulqa_exports_pre_generation_probe_records(tmp_path):
         },
     )
     loaded = probe.load_pre_generation_probe_records(records_path)
+    loaded_l2 = probe.load_pre_generation_probe_records(records_path, record_layer=-2)
 
     assert stats["candidate_count"] == 3
     assert stats["exported_count"] == 2
@@ -322,9 +370,14 @@ def test_eval_truthfulqa_exports_pre_generation_probe_records(tmp_path):
     assert len(records) == 2
     assert records[0]["soft_target"] == pytest.approx(0.5)
     assert records[1]["soft_target"] == pytest.approx(1.0)
+    assert records[0]["metadata"]["layers"] == [-1, -2]
+    assert records[0]["layer_hidden_states"]["-2"][0] == [2.0, 0.0]
     assert "label" not in records[0]
     assert len(loaded) == 2
     assert loaded[0].hidden_states.shape == (2, 2)
+    assert loaded[0].selected_layer == -1
+    assert loaded_l2[0].selected_layer == -2
+    assert loaded_l2[0].hidden_states[0, 0].item() == pytest.approx(2.0)
     assert loaded[0].soft_target == pytest.approx(0.5)
     assert loaded[0].metadata["model"] == "tiny"
 

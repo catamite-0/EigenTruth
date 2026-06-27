@@ -56,7 +56,7 @@ from collections import OrderedDict
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterator, List, Mapping, Optional, Sequence
+from typing import Iterable, Iterator, List, Mapping, Optional, Sequence
 
 import torch
 
@@ -417,13 +417,17 @@ def _pre_generation_probe_records_from_batch(
     statements: Sequence[Statement],
     reps_batch: Sequence[Optional[Mapping]],
     *,
-    layer: int,
+    layers: Sequence[int],
     soft_targets: Mapping[str, float],
     record_grain: str,
     seen_keys: set[str],
     start_index: int,
 ) -> tuple[list[dict[str, object]], dict[str, int]]:
     """Build JSON-ready pre-generation probe records from one eval batch."""
+    export_layers = _unique_preserve_order(int(layer) for layer in layers)
+    if not export_layers:
+        raise ValueError("pre-generation probe export requires at least one layer.")
+    primary_layer = int(export_layers[0])
     records: list[dict[str, object]] = []
     stats = {"candidate_count": 0, "exported_count": 0, "duplicate_count": 0, "missing_hidden_count": 0}
     for position, (stmt, reps) in enumerate(zip(statements, reps_batch)):
@@ -437,13 +441,24 @@ def _pre_generation_probe_records_from_batch(
             stats["missing_hidden_count"] += 1
             continue
         prompt_by_layer = reps.get("prompt_hs_by_layer")
-        if not isinstance(prompt_by_layer, Mapping) or int(layer) not in prompt_by_layer:
+        if not isinstance(prompt_by_layer, Mapping):
             stats["missing_hidden_count"] += 1
             continue
-        hidden = torch.as_tensor(prompt_by_layer[int(layer)], dtype=torch.float32).detach().cpu()
-        if hidden.ndim != 2 or hidden.shape[0] < 1 or hidden.shape[1] < 1:
+        hidden_by_layer: dict[int, torch.Tensor] = {}
+        missing_layer = False
+        for layer in export_layers:
+            if int(layer) not in prompt_by_layer:
+                missing_layer = True
+                break
+            hidden = torch.as_tensor(prompt_by_layer[int(layer)], dtype=torch.float32).detach().cpu()
+            if hidden.ndim != 2 or hidden.shape[0] < 1 or hidden.shape[1] < 1:
+                missing_layer = True
+                break
+            hidden_by_layer[int(layer)] = hidden
+        if missing_layer or primary_layer not in hidden_by_layer:
             stats["missing_hidden_count"] += 1
             continue
+        hidden = hidden_by_layer[primary_layer]
         raw_mask = reps.get("prompt_attention_mask")
         if raw_mask is None:
             attention_mask = torch.ones((hidden.shape[0],), dtype=torch.bool)
@@ -452,12 +467,17 @@ def _pre_generation_probe_records_from_batch(
         if attention_mask.ndim != 1 or attention_mask.shape[0] != hidden.shape[0] or not bool(attention_mask.any()):
             stats["missing_hidden_count"] += 1
             continue
+        if any(layer_hidden.shape[0] != hidden.shape[0] for layer_hidden in hidden_by_layer.values()):
+            stats["missing_hidden_count"] += 1
+            continue
         target_key = _pre_generation_target_key(stmt)
         metadata = {
             "record_grain": record_grain,
             "target_key_sha256": hashlib.sha256(target_key.encode("utf-8")).hexdigest(),
             "source_index": record_index,
             "question": stmt.question,
+            "layer": primary_layer,
+            "layers": list(export_layers),
         }
         if record_grain == "candidate" or not stmt.question.strip():
             metadata["answer"] = stmt.answer
@@ -469,6 +489,11 @@ def _pre_generation_probe_records_from_batch(
             "soft_target": float(soft_targets.get(target_key, float(stmt.is_false))),
             "metadata": metadata,
         }
+        if len(export_layers) > 1:
+            row["layer_hidden_states"] = {
+                str(layer): hidden_by_layer[int(layer)].tolist()
+                for layer in export_layers
+            }
         if record_grain == "candidate" or not stmt.question.strip():
             row["label"] = int(stmt.is_false)
         records.append(row)
@@ -501,6 +526,18 @@ def _sweep_signal_names(args) -> list[str]:
 
 def _sweep_output_enabled(args) -> bool:
     return bool(getattr(args, "sweep", False) or getattr(args, "sweep_layers", None))
+
+
+def _unique_preserve_order(values: Iterable[int]) -> list[int]:
+    seen: set[int] = set()
+    result: list[int] = []
+    for value in values:
+        item = int(value)
+        if item in seen:
+            continue
+        seen.add(item)
+        result.append(item)
+    return result
 
 
 def _parse_sweep_layers(value: str | None) -> list[int] | None:
@@ -541,6 +578,22 @@ def _resolve_sweep_layers(target_layer: int, n_layers: int, *, sweep: bool, swee
             seen.add(layer)
             resolved.append(layer)
     return resolved
+
+
+def _resolve_pre_generation_probe_layers(args, n_layers: int) -> list[int]:
+    requested = _parse_sweep_layers(getattr(args, "pre_generation_probe_layers", None))
+    if requested is not None:
+        layers = requested
+    else:
+        layers = [
+            args.layer
+            if getattr(args, "pre_generation_probe_layer", None) is None
+            else int(args.pre_generation_probe_layer)
+        ]
+    return _unique_preserve_order(
+        resolve_target_layer(layer, n_layers, offline=args.offline)
+        for layer in layers
+    )
 
 
 def _normalize_hidden_state_index(layer: int, n_layers: int) -> int:
@@ -3899,11 +3952,8 @@ def run(args) -> dict:
 
     args.layer = resolve_target_layer(args.layer, n_layers, offline=args.offline)
     dump_pre_generation_probe_records = bool(getattr(args, "dump_pre_generation_probe_records", None))
-    pre_generation_probe_layer = (
-        args.layer
-        if getattr(args, "pre_generation_probe_layer", None) is None
-        else resolve_target_layer(int(args.pre_generation_probe_layer), n_layers, offline=args.offline)
-    )
+    pre_generation_probe_layers = _resolve_pre_generation_probe_layers(args, n_layers)
+    pre_generation_probe_layer = int(pre_generation_probe_layers[0])
     # --sweep: 主层在前；--sweep-layers 可限制候选层带，避免大模型全层后处理成本。
     layers = _resolve_sweep_layers(
         args.layer,
@@ -3911,8 +3961,10 @@ def run(args) -> dict:
         sweep=args.sweep,
         sweep_layers=args.sweep_layers,
     )
-    if dump_pre_generation_probe_records and pre_generation_probe_layer not in layers:
-        layers.append(pre_generation_probe_layer)
+    if dump_pre_generation_probe_records:
+        for pre_generation_layer in pre_generation_probe_layers:
+            if pre_generation_layer not in layers:
+                layers.append(pre_generation_layer)
     if args.cache_only and stats_meta is not None and eval_meta is not None:
         _validate_cache_only_metadata(
             args=args,
@@ -4161,7 +4213,7 @@ def run(args) -> dict:
             exported, export_stats = _pre_generation_probe_records_from_batch(
                 batch,
                 reps_batch,
-                layer=pre_generation_probe_layer,
+                layers=pre_generation_probe_layers,
                 soft_targets=pre_generation_soft_targets,
                 record_grain=str(getattr(args, "pre_generation_record_grain", "question")),
                 seen_keys=pre_generation_seen_keys,
@@ -4533,6 +4585,7 @@ def run(args) -> dict:
                        args, "dump_pre_generation_probe_records", None
                    ),
                    "pre_generation_probe_layer": pre_generation_probe_layer,
+                   "pre_generation_probe_layers": list(pre_generation_probe_layers),
                    "pre_generation_record_grain": getattr(args, "pre_generation_record_grain", "question"),
                    "sweep_layers": layers if (args.sweep or args.sweep_layers) else None},
         "auroc": results,
@@ -4556,6 +4609,7 @@ def run(args) -> dict:
                 "dataset": "truthfulqa",
                 "offline": bool(args.offline),
                 "layer": int(pre_generation_probe_layer),
+                "layers": list(pre_generation_probe_layers),
                 "record_grain": getattr(args, "pre_generation_record_grain", "question"),
                 "soft_target": "prompt_candidate_false_rate",
                 "source": "eval_truthfulqa_forced_answer_prompt_hidden_states",
@@ -4569,6 +4623,7 @@ def run(args) -> dict:
             "path": args.dump_pre_generation_probe_records,
             "record_count": len(pre_generation_probe_records),
             "layer": int(pre_generation_probe_layer),
+            "layers": list(pre_generation_probe_layers),
             "record_grain": getattr(args, "pre_generation_record_grain", "question"),
             "export_stats": pre_generation_export_stats,
         }
@@ -4837,6 +4892,10 @@ def main():
     p.add_argument("--pre-generation-probe-layer", type=int, default=None,
                    help="hidden-state layer to export for --dump-pre-generation-probe-records; "
                         "defaults to --layer")
+    p.add_argument("--pre-generation-probe-layers", default=None,
+                   help="comma-separated hidden-state layers to export in each pre-generation record; "
+                        "the first layer is also written as prompt_hidden_states for backward compatibility; "
+                        "use --pre-generation-probe-layers=-12,-8,-4 when the list starts with '-'")
     p.add_argument("--pre-generation-record-grain", default="question", choices=PRE_GENERATION_RECORD_GRAINS,
                    help="export one pre-generation probe record per question prompt or per scored candidate")
     p.add_argument("--seed", type=int, default=0)
@@ -4899,6 +4958,8 @@ def main():
             p.error("--dump-inside-samples requires --inside-samples >=2")
     if args.dump_pre_generation_probe_records and args.prefix_kv_cache:
         p.error("--dump-pre-generation-probe-records cannot be combined with --prefix-kv-cache")
+    if args.pre_generation_probe_layer is not None and args.pre_generation_probe_layers is not None:
+        p.error("choose only one of --pre-generation-probe-layer or --pre-generation-probe-layers")
     if args.refresh_statement_encoding_cache and not args.statement_encoding_cache:
         p.error("--refresh-statement-encoding-cache requires --statement-encoding-cache")
     if args.refresh_layer_stats_cache and not args.layer_stats_cache:

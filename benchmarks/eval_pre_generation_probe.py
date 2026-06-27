@@ -35,6 +35,7 @@ class PreGenerationProbeRecord:
     attention_mask: torch.Tensor
     soft_target: float
     label: int | None = None
+    selected_layer: int | None = None
     metadata: Mapping[str, Any] | None = None
 
     def __post_init__(self) -> None:
@@ -57,12 +58,23 @@ class PreGenerationProbeRecord:
         object.__setattr__(self, "attention_mask", attention_mask)
         object.__setattr__(self, "soft_target", soft_target)
         object.__setattr__(self, "label", label)
+        object.__setattr__(self, "selected_layer", None if self.selected_layer is None else int(self.selected_layer))
         object.__setattr__(self, "metadata", {} if self.metadata is None else to_jsonable(self.metadata))
 
     @classmethod
-    def from_mapping(cls, payload: Mapping[str, Any], *, index: int) -> "PreGenerationProbeRecord":
+    def from_mapping(
+        cls,
+        payload: Mapping[str, Any],
+        *,
+        index: int,
+        record_layer: int | None = None,
+    ) -> "PreGenerationProbeRecord":
         """Build a record from a JSON-like mapping."""
-        hidden_states = payload.get("hidden_states", payload.get("prompt_hidden_states"))
+        hidden_states, selected_layer = _hidden_states_from_payload(
+            payload,
+            index=index,
+            record_layer=record_layer,
+        )
         if hidden_states is None:
             raise ValueError(f"record {index} is missing hidden_states.")
         mask = payload.get("attention_mask")
@@ -82,6 +94,7 @@ class PreGenerationProbeRecord:
             attention_mask=torch.as_tensor(mask, dtype=torch.bool),
             soft_target=float(soft_target),
             label=None if label is None else _binary_label(label, field_name="label"),
+            selected_layer=selected_layer,
             metadata=payload.get("metadata", {}),
         )
 
@@ -95,6 +108,7 @@ def run_pre_generation_probe_eval(
     calibration_model_id: str = "pre_generation_probe",
     conformal_alpha: float = 0.1,
     soft_target_cutoff: float | None = None,
+    record_layer: int | None = None,
     train_fraction: float = 0.7,
     seed: int = 0,
     layer_idx: int | None = None,
@@ -105,10 +119,11 @@ def run_pre_generation_probe_eval(
 ) -> dict[str, Any]:
     """Train/evaluate an attention soft-target probe from local hidden-state records."""
     records_path = Path(records_path)
-    records = load_pre_generation_probe_records(records_path)
+    records = load_pre_generation_probe_records(records_path, record_layer=record_layer)
     train_fraction = _train_fraction(train_fraction)
     if not records:
         raise ValueError("records must not be empty.")
+    artifact_layer_idx = layer_idx if layer_idx is not None else _infer_record_layer(records)
     hidden_dim = int(records[0].hidden_states.shape[-1])
     for record in records:
         if int(record.hidden_states.shape[-1]) != hidden_dim:
@@ -119,7 +134,7 @@ def run_pre_generation_probe_eval(
         train_hidden,
         train_targets,
         attention_mask=train_mask,
-        layer_idx=layer_idx,
+        layer_idx=artifact_layer_idx,
         steps=steps,
         lr=lr,
         l2=l2,
@@ -154,7 +169,7 @@ def run_pre_generation_probe_eval(
             records_path=records_path,
             threshold=conformal_report["threshold"],
             alpha=conformal_alpha,
-            layer_idx=layer_idx,
+            layer_idx=artifact_layer_idx,
             model_id=calibration_model_id,
             record_count=len(records),
             train_count=len(train_indices),
@@ -170,6 +185,8 @@ def run_pre_generation_probe_eval(
             "train_fraction": train_fraction,
             "seed": int(seed),
             "layer_idx": layer_idx,
+            "artifact_layer_idx": artifact_layer_idx,
+            "record_layer": record_layer,
             "steps": int(steps),
             "lr": float(lr),
             "l2": float(l2),
@@ -208,7 +225,11 @@ def run_pre_generation_probe_eval(
     return to_jsonable(payload)
 
 
-def load_pre_generation_probe_records(path: str | Path) -> tuple[PreGenerationProbeRecord, ...]:
+def load_pre_generation_probe_records(
+    path: str | Path,
+    *,
+    record_layer: int | None = None,
+) -> tuple[PreGenerationProbeRecord, ...]:
     """Load pre-generation probe records from JSON or JSONL."""
     path = Path(path)
     if path.suffix.lower() == ".jsonl":
@@ -220,7 +241,13 @@ def load_pre_generation_probe_records(path: str | Path) -> tuple[PreGenerationPr
                 payload = json.loads(line)
                 if not isinstance(payload, Mapping):
                     raise ValueError(f"JSONL line {index} must be an object.")
-                records.append(PreGenerationProbeRecord.from_mapping(payload, index=len(records)))
+                records.append(
+                    PreGenerationProbeRecord.from_mapping(
+                        payload,
+                        index=len(records),
+                        record_layer=record_layer,
+                    )
+                )
         return tuple(records)
     payload = json.loads(path.read_text(encoding="utf-8"))
     if isinstance(payload, Mapping):
@@ -233,7 +260,7 @@ def load_pre_generation_probe_records(path: str | Path) -> tuple[PreGenerationPr
     for index, item in enumerate(raw_records):
         if not isinstance(item, Mapping):
             raise ValueError(f"record {index} must be an object.")
-        records.append(PreGenerationProbeRecord.from_mapping(item, index=index))
+        records.append(PreGenerationProbeRecord.from_mapping(item, index=index, record_layer=record_layer))
     return tuple(records)
 
 
@@ -247,6 +274,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         calibration_model_id=args.calibration_model_id,
         conformal_alpha=args.conformal_alpha,
         soft_target_cutoff=args.soft_target_cutoff,
+        record_layer=args.record_layer,
         train_fraction=args.train_fraction,
         seed=args.seed,
         layer_idx=args.layer_idx,
@@ -373,6 +401,56 @@ def _build_pre_generation_calibration_artifact(
         },
         created_at=datetime.now(timezone.utc).isoformat(),
     )
+
+
+def _hidden_states_from_payload(
+    payload: Mapping[str, Any],
+    *,
+    index: int,
+    record_layer: int | None,
+) -> tuple[Any | None, int | None]:
+    layer_payload = _first_present(payload, ("layer_hidden_states", "prompt_hidden_states_by_layer"))
+    if isinstance(layer_payload, Mapping):
+        if record_layer is not None:
+            hidden = _lookup_layer_payload(layer_payload, record_layer, index=index)
+            return hidden, int(record_layer)
+        direct = payload.get("hidden_states", payload.get("prompt_hidden_states"))
+        if direct is not None:
+            return direct, _metadata_layer(payload)
+        if len(layer_payload) != 1:
+            raise ValueError(f"record {index} contains multiple layers; pass --record-layer.")
+        raw_layer, hidden = next(iter(layer_payload.items()))
+        return hidden, _parse_layer_key(raw_layer, index=index)
+
+    direct = payload.get("hidden_states", payload.get("prompt_hidden_states"))
+    return direct, record_layer if record_layer is not None else _metadata_layer(payload)
+
+
+def _lookup_layer_payload(layer_payload: Mapping[Any, Any], layer: int, *, index: int) -> Any:
+    for key in (layer, str(layer)):
+        if key in layer_payload:
+            return layer_payload[key]
+    available = ", ".join(str(key) for key in sorted(layer_payload, key=lambda item: str(item)))
+    raise ValueError(f"record {index} is missing layer {layer}; available layers: {available}.")
+
+
+def _metadata_layer(payload: Mapping[str, Any]) -> int | None:
+    metadata = payload.get("metadata", {})
+    if isinstance(metadata, Mapping) and metadata.get("layer") is not None:
+        return int(metadata["layer"])
+    return None
+
+
+def _parse_layer_key(value: Any, *, index: int) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"record {index} has non-integer layer key {value!r}.") from exc
+
+
+def _infer_record_layer(records: Sequence[PreGenerationProbeRecord]) -> int | None:
+    layers = {record.selected_layer for record in records if record.selected_layer is not None}
+    return next(iter(layers)) if len(layers) == 1 else None
 
 
 def _evaluate_split(
@@ -609,6 +687,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--save-calibration", help="optional CalibrationArtifact JSON output path")
     parser.add_argument("--calibration-model-id", default="pre_generation_probe")
     parser.add_argument("--conformal-alpha", type=float, default=0.1)
+    parser.add_argument(
+        "--record-layer",
+        type=int,
+        help="select one layer from records containing layer_hidden_states/prompt_hidden_states_by_layer",
+    )
     parser.add_argument(
         "--soft-target-cutoff",
         type=float,
