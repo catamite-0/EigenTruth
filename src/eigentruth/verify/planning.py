@@ -35,6 +35,15 @@ DEFAULT_VERIFICATION_TOOL_PAYLOAD_COST_UNITS: Mapping[str, float] = {
     "state_checks": 0.5,
     "world_model_checks": 0.75,
 }
+DEFAULT_VERIFICATION_ROUTE_PRIORITY = (
+    "world_model",
+    "state",
+    "calculator",
+    "citation",
+    "triple_evidence",
+    "retrieval",
+    "groundedness",
+)
 DEFAULT_VERIFY_CLAIM_FEATURE_FLAGS = (
     "has_number",
     "has_citation",
@@ -198,6 +207,122 @@ class VerificationPlanCostEstimate:
 
 
 @dataclass(frozen=True)
+class VerificationBudgetPolicy:
+    """Cost-aware policy for selecting verifier claims and routes.
+
+    The policy is intentionally dependency-free and operates on the planned
+    verifier graph before any external tool or retriever runs. It keeps high-risk
+    claim metadata explicit while making route/cost truncation auditable.
+    """
+
+    max_verify_claims: int | None = None
+    max_route_attempts: int | None = None
+    max_tool_payloads: int | None = None
+    max_estimated_cost_units: float | None = None
+    route_priority: Sequence[str] = DEFAULT_VERIFICATION_ROUTE_PRIORITY
+    priority_feature_flags: Sequence[str] = DEFAULT_VERIFY_CLAIM_FEATURE_FLAGS
+    priority_metadata_keys: Sequence[str] = DEFAULT_VERIFY_CLAIM_METADATA_KEYS
+    preserve_triggered_claims: bool = True
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "max_verify_claims",
+            _optional_non_negative_int(self.max_verify_claims, name="max_verify_claims"),
+        )
+        object.__setattr__(
+            self,
+            "max_route_attempts",
+            _optional_non_negative_int(self.max_route_attempts, name="max_route_attempts"),
+        )
+        object.__setattr__(
+            self,
+            "max_tool_payloads",
+            _optional_non_negative_int(self.max_tool_payloads, name="max_tool_payloads"),
+        )
+        object.__setattr__(
+            self,
+            "max_estimated_cost_units",
+            _optional_non_negative_float(
+                self.max_estimated_cost_units,
+                name="max_estimated_cost_units",
+            ),
+        )
+        object.__setattr__(self, "route_priority", tuple(_non_empty_strings(self.route_priority)))
+        object.__setattr__(
+            self,
+            "priority_feature_flags",
+            tuple(_non_empty_strings(self.priority_feature_flags)),
+        )
+        object.__setattr__(
+            self,
+            "priority_metadata_keys",
+            tuple(_non_empty_strings(self.priority_metadata_keys)),
+        )
+        object.__setattr__(
+            self,
+            "preserve_triggered_claims",
+            _strict_bool(self.preserve_triggered_claims),
+        )
+
+    @classmethod
+    def from_mapping(cls, payload: Mapping[str, Any]) -> "VerificationBudgetPolicy":
+        """Build a policy from a JSON-like mapping."""
+        return cls(
+            max_verify_claims=payload.get("max_verify_claims"),
+            max_route_attempts=payload.get("max_route_attempts"),
+            max_tool_payloads=payload.get("max_tool_payloads"),
+            max_estimated_cost_units=payload.get("max_estimated_cost_units"),
+            route_priority=tuple(_as_sequence(payload.get("route_priority", DEFAULT_VERIFICATION_ROUTE_PRIORITY))),
+            priority_feature_flags=tuple(
+                _as_sequence(payload.get("priority_feature_flags", DEFAULT_VERIFY_CLAIM_FEATURE_FLAGS))
+            ),
+            priority_metadata_keys=tuple(
+                _as_sequence(payload.get("priority_metadata_keys", DEFAULT_VERIFY_CLAIM_METADATA_KEYS))
+            ),
+            preserve_triggered_claims=payload.get("preserve_triggered_claims", True),
+        )
+
+    def enabled(self) -> bool:
+        """Return whether the policy has at least one active budget."""
+        return (
+            self.max_verify_claims is not None
+            or self.max_route_attempts is not None
+            or self.max_tool_payloads is not None
+            or self.max_estimated_cost_units is not None
+        )
+
+    def apply(
+        self,
+        plan: "ClaimVerificationPlan | Mapping[str, Any]",
+        *,
+        route_cost_units: Mapping[str, Any] | None = None,
+        tool_payload_cost_units: Mapping[str, Any] | None = None,
+    ) -> "ClaimVerificationPlan":
+        """Return ``plan`` with claims and routes selected under this budget."""
+        return budget_verification_plan(
+            plan,
+            self,
+            route_cost_units=route_cost_units,
+            tool_payload_cost_units=tool_payload_cost_units,
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable policy."""
+        return {
+            "max_verify_claims": self.max_verify_claims,
+            "max_route_attempts": self.max_route_attempts,
+            "max_tool_payloads": self.max_tool_payloads,
+            "max_estimated_cost_units": self.max_estimated_cost_units,
+            "route_priority": tuple(self.route_priority),
+            "priority_feature_flags": tuple(self.priority_feature_flags),
+            "priority_metadata_keys": tuple(self.priority_metadata_keys),
+            "preserve_triggered_claims": self.preserve_triggered_claims,
+            "enabled": self.enabled(),
+        }
+
+
+@dataclass(frozen=True)
 class ClaimVerificationPlan:
     """JSON-ready plan for claim verification and tool routing."""
 
@@ -217,6 +342,7 @@ class ClaimVerificationPlan:
     state_checks: Sequence[Mapping[str, Any]] = ()
     world_model_checks: Sequence[Mapping[str, Any]] = ()
     dependencies: Sequence[ClaimDependency | Mapping[str, Any]] = ()
+    budget: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         scope = _verification_scope(self.verification_scope, run_verifier=self.run_verifier)
@@ -251,6 +377,7 @@ class ClaimVerificationPlan:
             tuple(_jsonable_mapping(item) for item in self.world_model_checks),
         )
         object.__setattr__(self, "dependencies", tuple(_dependency_obj(item) for item in self.dependencies))
+        object.__setattr__(self, "budget", _jsonable_mapping(self.budget) if self.budget else {})
 
     def selected_claims(self) -> tuple[Claim, ...]:
         """Return the claims selected for verification by this plan."""
@@ -304,6 +431,7 @@ class ClaimVerificationPlan:
             "state_checks": tuple(dict(item) for item in self.state_checks),
             "world_model_checks": tuple(dict(item) for item in self.world_model_checks),
             "dependencies": tuple(item.to_dict() for item in self.dependencies),
+            "budget": to_jsonable(dict(self.budget)),
             "cost_estimate": self.cost_estimate().to_dict(),
         }
 
@@ -393,6 +521,7 @@ class ClaimVerificationPlanner:
         claims_or_text: str | Sequence[Claim | Mapping[str, Any]],
         *,
         context: Mapping[str, Any] | None = None,
+        budget_policy: VerificationBudgetPolicy | Mapping[str, Any] | None = None,
     ) -> ClaimVerificationPlan:
         """Return a verification plan for generated text or existing claims."""
         claims = self.extract(claims_or_text) if isinstance(claims_or_text, str) else _coerce_claims(claims_or_text)
@@ -472,7 +601,7 @@ class ClaimVerificationPlanner:
             reason = "claim metadata did not require verification"
 
         dependencies = infer_claim_dependencies(claims) if self.infer_dependencies else ()
-        return ClaimVerificationPlan(
+        plan = ClaimVerificationPlan(
             run_verifier=run_verifier,
             reason=reason,
             verification_scope=scope,
@@ -490,6 +619,9 @@ class ClaimVerificationPlanner:
             world_model_checks=tuple(world_model_checks),
             dependencies=dependencies,
         )
+        if budget_policy is None:
+            return plan
+        return budget_verification_plan(plan, budget_policy)
 
     def _routes_for_claim(
         self,
@@ -657,6 +789,360 @@ def estimate_verification_plan_cost(
     )
 
 
+def budget_verification_plan(
+    plan: ClaimVerificationPlan | Mapping[str, Any],
+    policy: VerificationBudgetPolicy | Mapping[str, Any],
+    *,
+    route_cost_units: Mapping[str, Any] | None = None,
+    tool_payload_cost_units: Mapping[str, Any] | None = None,
+) -> ClaimVerificationPlan:
+    """Select claims and verifier routes under a cost-aware budget policy."""
+    plan_obj = _plan_obj(plan)
+    policy_obj = _budget_policy_obj(policy)
+    if not policy_obj.enabled() or not plan_obj.run_verifier:
+        return plan_obj
+
+    route_costs = _non_negative_float_mapping(
+        DEFAULT_VERIFICATION_ROUTE_COST_UNITS if route_cost_units is None else route_cost_units,
+        name="route_cost_units",
+    )
+    tool_payload_costs = _non_negative_float_mapping(
+        DEFAULT_VERIFICATION_TOOL_PAYLOAD_COST_UNITS
+        if tool_payload_cost_units is None
+        else tool_payload_cost_units,
+        name="tool_payload_cost_units",
+    )
+    original_cost = plan_obj.cost_estimate(
+        route_cost_units=route_costs,
+        tool_payload_cost_units=tool_payload_costs,
+    )
+    claim_ids = tuple(_claim_id(claim, index) for index, claim in enumerate(plan_obj.claims))
+    original_verify_claim_ids = tuple(
+        claim_id for claim_id in plan_obj.verify_claim_ids if claim_id in set(claim_ids)
+    )
+    ordered_claim_ids = _budget_ordered_claim_ids(plan_obj, policy_obj)
+    if policy_obj.max_verify_claims is not None:
+        ordered_claim_ids = ordered_claim_ids[: policy_obj.max_verify_claims]
+    hint_by_claim = {hint.claim_id: hint for hint in plan_obj.route_hints}
+    candidate_routes = {
+        claim_id: _ordered_routes(hint.routes, policy_obj.route_priority)
+        for claim_id, hint in hint_by_claim.items()
+        if claim_id in ordered_claim_ids
+    }
+    selected_route_lists: dict[str, list[str]] = {claim_id: [] for claim_id in ordered_claim_ids}
+    dropped_route_lists: dict[str, list[str]] = {claim_id: [] for claim_id in ordered_claim_ids}
+    route_attempt_count = 0
+    tool_payload_count = 0
+    estimated_cost = 0.0
+    route_budget_exhausted = False
+    tool_payload_budget_exhausted = False
+    estimated_cost_budget_exhausted = False
+
+    route_depth = 0
+    while True:
+        any_remaining_route = False
+        for claim_id in ordered_claim_ids:
+            routes = candidate_routes.get(claim_id, ())
+            if route_depth >= len(routes):
+                continue
+            any_remaining_route = True
+            route = routes[route_depth]
+            route_name = str(route).strip()
+            if not route_name:
+                continue
+            payload_key = _payload_key_for_route(route_name)
+            payload_count = (
+                _payload_count_for_claim(plan_obj, claim_id=claim_id, payload_key=payload_key)
+                if payload_key is not None
+                else 0
+            )
+            additional_cost = route_costs.get(route_name, 1.0)
+            if payload_key is not None:
+                additional_cost += payload_count * tool_payload_costs.get(payload_key, 0.0)
+            if (
+                policy_obj.max_route_attempts is not None
+                and route_attempt_count + 1 > policy_obj.max_route_attempts
+            ):
+                route_budget_exhausted = True
+                dropped_route_lists[claim_id].append(route_name)
+                continue
+            if (
+                policy_obj.max_tool_payloads is not None
+                and tool_payload_count + payload_count > policy_obj.max_tool_payloads
+            ):
+                tool_payload_budget_exhausted = True
+                dropped_route_lists[claim_id].append(route_name)
+                continue
+            if (
+                policy_obj.max_estimated_cost_units is not None
+                and estimated_cost + additional_cost > policy_obj.max_estimated_cost_units
+            ):
+                estimated_cost_budget_exhausted = True
+                dropped_route_lists[claim_id].append(route_name)
+                continue
+            selected_route_lists[claim_id].append(route_name)
+            route_attempt_count += 1
+            tool_payload_count += payload_count
+            estimated_cost += additional_cost
+        if not any_remaining_route:
+            break
+        route_depth += 1
+
+    selected_routes: dict[str, tuple[str, ...]] = {
+        claim_id: tuple(routes)
+        for claim_id, routes in selected_route_lists.items()
+        if routes
+    }
+    dropped_routes: dict[str, tuple[str, ...]] = {
+        claim_id: tuple(routes)
+        for claim_id, routes in dropped_route_lists.items()
+        if routes
+    }
+
+    final_verify_claim_ids = tuple(
+        claim_id for claim_id in original_verify_claim_ids if claim_id in selected_routes
+    )
+    final_verify_claim_set = set(final_verify_claim_ids)
+    final_skipped_claim_ids = tuple(claim_id for claim_id in claim_ids if claim_id not in final_verify_claim_set)
+    final_route_hints = tuple(
+        _budgeted_route_hint(
+            hint_by_claim[claim_id],
+            routes=selected_routes[claim_id],
+            dropped_routes=dropped_routes.get(claim_id, ()),
+        )
+        for claim_id in final_verify_claim_ids
+        if claim_id in hint_by_claim
+    )
+    filtered_payloads = _budgeted_tool_payloads(plan_obj, selected_routes=selected_routes)
+    run_verifier = bool(final_verify_claim_ids and final_route_hints)
+    reason = (
+        "verification budget selected claims and routes"
+        if run_verifier
+        else "verification budget exhausted before selecting verifier routes"
+    )
+    budget_summary = {
+        "enabled": True,
+        "policy": policy_obj.to_dict(),
+        "original_cost_estimate": original_cost.to_dict(),
+        "selected_claim_ids": final_verify_claim_ids,
+        "dropped_claim_ids": tuple(claim_id for claim_id in claim_ids if claim_id not in final_verify_claim_set),
+        "selected_routes": {
+            claim_id: routes
+            for claim_id, routes in selected_routes.items()
+            if claim_id in final_verify_claim_set
+        },
+        "dropped_routes": dropped_routes,
+        "claim_budget_exhausted": (
+            policy_obj.max_verify_claims is not None
+            and len(original_verify_claim_ids) > len(ordered_claim_ids)
+        ),
+        "route_budget_exhausted": route_budget_exhausted,
+        "tool_payload_budget_exhausted": tool_payload_budget_exhausted,
+        "estimated_cost_budget_exhausted": estimated_cost_budget_exhausted,
+    }
+    budgeted_plan = ClaimVerificationPlan(
+        run_verifier=run_verifier,
+        reason=reason,
+        verification_scope="budgeted" if run_verifier else "none",
+        claims=plan_obj.claims,
+        verify_claim_ids=final_verify_claim_ids,
+        skipped_claim_ids=final_skipped_claim_ids,
+        triggered_claim_ids=plan_obj.triggered_claim_ids,
+        triggered_features=plan_obj.triggered_features,
+        triggered_metadata=plan_obj.triggered_metadata,
+        route_hints=final_route_hints,
+        retrieval_queries=filtered_payloads["retrieval_queries"],
+        citation_checks=filtered_payloads["citation_checks"],
+        calculation_checks=filtered_payloads["calculation_checks"],
+        state_checks=filtered_payloads["state_checks"],
+        world_model_checks=filtered_payloads["world_model_checks"],
+        dependencies=plan_obj.dependencies,
+        budget=budget_summary,
+    )
+    selected_cost = budgeted_plan.cost_estimate(
+        route_cost_units=route_costs,
+        tool_payload_cost_units=tool_payload_costs,
+    )
+    budget = dict(budgeted_plan.budget)
+    budget["selected_cost_estimate"] = selected_cost.to_dict()
+    return ClaimVerificationPlan(
+        run_verifier=budgeted_plan.run_verifier,
+        reason=budgeted_plan.reason,
+        verification_scope=budgeted_plan.verification_scope,
+        claims=budgeted_plan.claims,
+        verify_claim_ids=budgeted_plan.verify_claim_ids,
+        skipped_claim_ids=budgeted_plan.skipped_claim_ids,
+        triggered_claim_ids=budgeted_plan.triggered_claim_ids,
+        triggered_features=budgeted_plan.triggered_features,
+        triggered_metadata=budgeted_plan.triggered_metadata,
+        route_hints=budgeted_plan.route_hints,
+        retrieval_queries=budgeted_plan.retrieval_queries,
+        citation_checks=budgeted_plan.citation_checks,
+        calculation_checks=budgeted_plan.calculation_checks,
+        state_checks=budgeted_plan.state_checks,
+        world_model_checks=budgeted_plan.world_model_checks,
+        dependencies=budgeted_plan.dependencies,
+        budget=budget,
+    )
+
+
+def _plan_obj(value: ClaimVerificationPlan | Mapping[str, Any]) -> ClaimVerificationPlan:
+    if isinstance(value, ClaimVerificationPlan):
+        return value
+    if not isinstance(value, Mapping):
+        raise ValueError("verification plan must be a ClaimVerificationPlan or mapping.")
+    return ClaimVerificationPlan(
+        run_verifier=_strict_bool(value.get("run_verifier", False)),
+        reason=str(value.get("reason", "")),
+        verification_scope=None if value.get("verification_scope") is None else str(value.get("verification_scope")),
+        claims=tuple(_as_sequence(value.get("claims", ()))),
+        verify_claim_ids=tuple(_as_sequence(value.get("verify_claim_ids", ()))),
+        skipped_claim_ids=tuple(_as_sequence(value.get("skipped_claim_ids", ()))),
+        triggered_claim_ids=tuple(_as_sequence(value.get("triggered_claim_ids", ()))),
+        triggered_features=_mapping_of_sequences(value.get("triggered_features", {})),
+        triggered_metadata=_mapping_of_sequences(value.get("triggered_metadata", {})),
+        route_hints=tuple(_as_sequence(value.get("route_hints", ()))),
+        retrieval_queries=tuple(_as_sequence(value.get("retrieval_queries", ()))),
+        citation_checks=tuple(_as_sequence(value.get("citation_checks", ()))),
+        calculation_checks=tuple(_as_sequence(value.get("calculation_checks", ()))),
+        state_checks=tuple(_as_sequence(value.get("state_checks", ()))),
+        world_model_checks=tuple(_as_sequence(value.get("world_model_checks", ()))),
+        dependencies=tuple(_as_sequence(value.get("dependencies", ()))),
+        budget=dict(value.get("budget", {})),
+    )
+
+
+def _budget_policy_obj(value: VerificationBudgetPolicy | Mapping[str, Any]) -> VerificationBudgetPolicy:
+    if isinstance(value, VerificationBudgetPolicy):
+        return value
+    if not isinstance(value, Mapping):
+        raise ValueError("verification budget policy must be a VerificationBudgetPolicy or mapping.")
+    return VerificationBudgetPolicy.from_mapping(value)
+
+
+def _budget_ordered_claim_ids(
+    plan: ClaimVerificationPlan,
+    policy: VerificationBudgetPolicy,
+) -> tuple[str, ...]:
+    claim_ids = tuple(_claim_id(claim, index) for index, claim in enumerate(plan.claims))
+    selected = [claim_id for claim_id in plan.verify_claim_ids if claim_id in set(claim_ids)]
+    triggered = set(plan.triggered_claim_ids)
+    priority_features = set(policy.priority_feature_flags)
+    priority_metadata = set(policy.priority_metadata_keys)
+    route_priority = {route: len(policy.route_priority) - index for index, route in enumerate(policy.route_priority)}
+    hint_by_claim = {hint.claim_id: hint for hint in plan.route_hints}
+    order_index = {claim_id: index for index, claim_id in enumerate(claim_ids)}
+
+    def score(claim_id: str) -> tuple[int, int]:
+        value = 0
+        if policy.preserve_triggered_claims and claim_id in triggered:
+            value += 1000
+        value += 25 * len(set(plan.triggered_features.get(claim_id, ())) & priority_features)
+        value += 25 * len(set(plan.triggered_metadata.get(claim_id, ())) & priority_metadata)
+        hint = hint_by_claim.get(claim_id)
+        if hint is not None:
+            value += max((route_priority.get(route, 0) for route in hint.routes), default=0)
+        return value, -order_index.get(claim_id, 0)
+
+    return tuple(sorted(selected, key=score, reverse=True))
+
+
+def _ordered_routes(routes: Sequence[str], priority: Sequence[str]) -> tuple[str, ...]:
+    priority_index = {route: index for index, route in enumerate(priority)}
+    original_index = {route: index for index, route in enumerate(routes)}
+    return tuple(
+        sorted(
+            tuple(_non_empty_strings(routes)),
+            key=lambda route: (priority_index.get(route, len(priority_index)), original_index.get(route, 0)),
+        )
+    )
+
+
+def _budgeted_route_hint(
+    hint: VerificationRouteHint,
+    *,
+    routes: Sequence[str],
+    dropped_routes: Sequence[str],
+) -> VerificationRouteHint:
+    metadata = dict(hint.metadata)
+    metadata["verification_budget_selected_routes"] = tuple(routes)
+    if dropped_routes:
+        metadata["verification_budget_dropped_routes"] = tuple(dropped_routes)
+    return VerificationRouteHint(
+        claim_id=hint.claim_id,
+        routes=tuple(routes),
+        reasons=hint.reasons,
+        metadata=metadata,
+    )
+
+
+def _payload_key_for_route(route: str) -> str | None:
+    return {
+        "retrieval": "retrieval_queries",
+        "citation": "citation_checks",
+        "calculator": "calculation_checks",
+        "state": "state_checks",
+        "world_model": "world_model_checks",
+    }.get(route)
+
+
+def _payload_count_for_claim(
+    plan: ClaimVerificationPlan,
+    *,
+    claim_id: str,
+    payload_key: str | None,
+) -> int:
+    if payload_key is None:
+        return 0
+    return sum(
+        1
+        for item in _payload_sequence_for_key(plan, payload_key)
+        if _payload_claim_id(item) == claim_id
+    )
+
+
+def _budgeted_tool_payloads(
+    plan: ClaimVerificationPlan,
+    *,
+    selected_routes: Mapping[str, Sequence[str]],
+) -> dict[str, tuple[dict[str, Any], ...]]:
+    payloads: dict[str, tuple[dict[str, Any], ...]] = {}
+    for payload_key in DEFAULT_VERIFICATION_TOOL_PAYLOAD_COST_UNITS:
+        route = _route_for_payload_key(payload_key)
+        kept: list[dict[str, Any]] = []
+        for item in _payload_sequence_for_key(plan, payload_key):
+            claim_id = _payload_claim_id(item)
+            if claim_id is None:
+                continue
+            if route in set(selected_routes.get(claim_id, ())):
+                kept.append(dict(item))
+        payloads[payload_key] = tuple(kept)
+    return payloads
+
+
+def _payload_sequence_for_key(
+    plan: ClaimVerificationPlan,
+    payload_key: str,
+) -> tuple[Mapping[str, Any], ...]:
+    value = getattr(plan, payload_key)
+    return tuple(item for item in value if isinstance(item, Mapping))
+
+
+def _payload_claim_id(item: Mapping[str, Any]) -> str | None:
+    raw_claim_id = item.get("claim_id")
+    return None if raw_claim_id is None else str(raw_claim_id)
+
+
+def _route_for_payload_key(payload_key: str) -> str:
+    return {
+        "retrieval_queries": "retrieval",
+        "citation_checks": "citation",
+        "calculation_checks": "calculator",
+        "state_checks": "state",
+        "world_model_checks": "world_model",
+    }[payload_key]
+
+
 def _cost_estimate_payload(plan: ClaimVerificationPlan | Mapping[str, Any]) -> dict[str, Any]:
     if not isinstance(plan, ClaimVerificationPlan):
         return dict(plan)
@@ -680,8 +1166,8 @@ def _verification_scope(value: str | None, *, run_verifier: bool) -> str:
         scope = "all" if run_verifier else "none"
     else:
         scope = str(value).strip().lower()
-    if scope not in {"all", "triggered", "none"}:
-        raise ValueError("verification_scope must be one of: all, triggered, none")
+    if scope not in {"all", "triggered", "budgeted", "none"}:
+        raise ValueError("verification_scope must be one of: all, triggered, budgeted, none")
     if run_verifier and scope == "none":
         raise ValueError("verification_scope cannot be 'none' when run_verifier is true")
     if not run_verifier and scope != "none":
@@ -860,6 +1346,15 @@ def _normalize_string_sequence_mapping(value: Mapping[str, Sequence[str]]) -> di
     }
 
 
+def _mapping_of_sequences(value: Any) -> dict[str, tuple[str, ...]]:
+    if not isinstance(value, Mapping):
+        return {}
+    return {
+        str(key): tuple(_non_empty_strings(_as_sequence(items)))
+        for key, items in value.items()
+    }
+
+
 def _jsonable_mapping(value: Mapping[str, Any]) -> dict[str, Any]:
     if not isinstance(value, Mapping):
         raise ValueError("plan payload entries must be mappings.")
@@ -911,6 +1406,12 @@ def _non_negative_int(value: Any, *, name: str) -> int:
     return parsed
 
 
+def _optional_non_negative_int(value: Any, *, name: str) -> int | None:
+    if value is None:
+        return None
+    return _non_negative_int(value, name=name)
+
+
 def _non_negative_float(value: Any, *, name: str) -> float:
     try:
         parsed = float(value)
@@ -919,6 +1420,12 @@ def _non_negative_float(value: Any, *, name: str) -> float:
     if parsed < 0.0 or not (parsed == parsed) or parsed in {float("inf"), float("-inf")}:
         raise ValueError(f"{name} must be a non-negative finite number.")
     return parsed
+
+
+def _optional_non_negative_float(value: Any, *, name: str) -> float | None:
+    if value is None:
+        return None
+    return _non_negative_float(value, name=name)
 
 
 def _non_negative_int_mapping(value: Mapping[str, Any], *, name: str) -> dict[str, int]:

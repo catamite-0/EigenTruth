@@ -600,6 +600,7 @@ def _verification_plan_summary(plan: Mapping[str, Any] | None) -> dict[str, Any]
             "tool_payload_counts": {},
             "dependency_count": 0,
             "cost_estimate": None,
+            "budget": {},
         }
     route_counts: dict[str, int] = {}
     for hint in _as_sequence(plan.get("route_hints", ())):
@@ -609,6 +610,23 @@ def _verification_plan_summary(plan: Mapping[str, Any] | None) -> dict[str, Any]
             route_name = str(route)
             route_counts[route_name] = route_counts.get(route_name, 0) + 1
     cost_estimate = estimate_verification_plan_cost(plan).to_dict()
+    budget = plan.get("budget")
+    budget_summary = dict(budget) if isinstance(budget, Mapping) else {}
+    if budget_summary:
+        selected_claim_count = budget_summary.get(
+            "selected_claim_count",
+            len(_as_sequence(budget_summary.get("selected_claim_ids", ()))),
+        )
+        dropped_claim_count = budget_summary.get(
+            "dropped_claim_count",
+            len(_as_sequence(budget_summary.get("dropped_claim_ids", ()))),
+        )
+        budget_summary = {
+            "enabled": budget_summary.get("enabled"),
+            "selected_claim_count": selected_claim_count,
+            "dropped_claim_count": dropped_claim_count,
+            **{key: value for key, value in budget_summary.items() if key != "enabled"},
+        }
     return {
         "available": True,
         "run_verifier": _optional_bool(plan.get("run_verifier")),
@@ -627,6 +645,7 @@ def _verification_plan_summary(plan: Mapping[str, Any] | None) -> dict[str, Any]
         },
         "dependency_count": len(_as_sequence(plan.get("dependencies", ()))),
         "cost_estimate": cost_estimate,
+        "budget": budget_summary,
     }
 
 

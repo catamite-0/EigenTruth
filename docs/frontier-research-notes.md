@@ -14,6 +14,23 @@ EigenTruth should move from hallucination detection alone toward calibrated part
 - SelfCheckGPT (arXiv:2303.08896) and FactSelfCheck (arXiv:2503.17229, EACL 2026 findings) support the sampling/self-consistency route. FactSelfCheck moves from sentence-level to fact-level graph/triple checks, which is a strong next adapter direction but needs heavier extraction and multi-sample fixtures.
 - Semantic Energy (arXiv:2508.14496) supports energy-style uncertainty beyond entropy. EigenTruth already has lightweight semantic-energy proxies; a future step is to compare them against conformal abstention and route-cost gates.
 - CiteCheck (arXiv:2605.27700) shows that citation hallucinations often appear as small metadata drift rather than fully fabricated references. This supports a separate citation-integrity route before broad retrieval: DOI, arXiv id, URL, author/year, title, and local reference labels should be checked against a trusted citation catalog instead of treated as ordinary lexical groundedness.
+- Internal Representations as Indicators of Hallucinations in Agent Tool Selection (arXiv:2601.05214) frames agent hallucination as incorrect tool selection, malformed parameters, and tool bypass. This supports keeping tool-route intent explicit in `ClaimVerificationPlan` instead of only checking final text.
+- World-Model-Augmented Web Agents with Action Correction (arXiv:2602.15384) uses consequence simulation and action correction before risky actions. This supports EigenTruth's world-model route as a post-draft verifier and pre-action correction adapter rather than a core dependency.
+- TokenHD (arXiv:2605.12384) and related span/token-level work point toward finer localization of hallucinations. EigenTruth's current lightweight equivalent is claim-level route budgeting and trace evidence; learned token-level detectors remain out of scope until the dependency and training boundary is explicit.
+
+## Implemented This Continuation
+
+Added budget-aware adaptive verification planning:
+
+- `VerificationBudgetPolicy` selects a bounded subset of high-value claims and verifier routes from a `ClaimVerificationPlan`.
+- Budgets can cap verified claims, route attempts, tool payloads, and estimated relative cost units.
+- Route selection is round-robin across selected high-priority claims, so a single risky claim cannot consume the whole route budget before other triggered claims get a first-pass verifier route.
+- Claim priority uses triggered claim metadata/features plus route priority. The default route priority favors world-model, structured state, calculator, citation, triple-evidence, retrieval, then lexical groundedness.
+- `ClaimVerificationPlanner.plan(..., budget_policy=...)` applies the policy directly, while `budget_verification_plan(...)` can post-process an existing plan or JSON-like plan mapping.
+- `ClaimVerificationPlan.to_dict()` now carries a `budget` block with selected/dropped claim ids, selected/dropped routes, budget-exhaustion flags, and original/selected cost estimates.
+- `ProductTrace.to_bounded_dict()` and `product_runtime_metrics(...)` preserve compact verification-budget summaries, including selected/dropped claim counts and claim/route/tool/cost budget exhaustion flags.
+
+This is a product-facing implementation of the current research direction: use internal diagnostics and claim metadata to decide when verification is needed, then spend verifier/tool budget on the most consequential claims and routes while leaving an auditable trace of what was skipped. It does not add network retrieval, learned token detectors, or model-dependent world-model code.
 
 ## Implemented This Round
 

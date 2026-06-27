@@ -662,6 +662,13 @@ def _verification_plan_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[
             "verification_plan_state_check_count": None,
             "verification_plan_world_model_check_count": None,
             "verification_plan_dependency_count": None,
+            "verification_plan_budget_enabled": None,
+            "verification_plan_budget_claim_budget_exhausted": None,
+            "verification_plan_budget_route_budget_exhausted": None,
+            "verification_plan_budget_tool_payload_budget_exhausted": None,
+            "verification_plan_budget_estimated_cost_budget_exhausted": None,
+            "verification_plan_budget_selected_claim_count": None,
+            "verification_plan_budget_dropped_claim_count": None,
         }
 
     if source == "bounded_summary":
@@ -689,6 +696,20 @@ def _verification_plan_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[
         state_check_count = float(len(_sequence(plan.get("state_checks"))))
         world_model_check_count = float(len(_sequence(plan.get("world_model_checks"))))
         dependency_count = float(len(_sequence(plan.get("dependencies"))))
+    budget = _mapping(plan.get("budget"))
+    budget_enabled = _optional_bool(budget.get("enabled"))
+    if budget_enabled is None and budget:
+        budget_enabled = True
+    selected_budget_claim_count = _finite_float(budget.get("selected_claim_count"))
+    if selected_budget_claim_count is None and budget:
+        selected_budget_claim_count = float(len(_sequence(budget.get("selected_claim_ids"))))
+    dropped_budget_claim_count = _finite_float(budget.get("dropped_claim_count"))
+    if dropped_budget_claim_count is None and budget:
+        dropped_budget_claim_count = float(len(_sequence(budget.get("dropped_claim_ids"))))
+    claim_budget_exhausted = _optional_bool(budget.get("claim_budget_exhausted"))
+    route_budget_exhausted = _optional_bool(budget.get("route_budget_exhausted"))
+    tool_payload_budget_exhausted = _optional_bool(budget.get("tool_payload_budget_exhausted"))
+    estimated_cost_budget_exhausted = _optional_bool(budget.get("estimated_cost_budget_exhausted"))
 
     summary = {
         "available": True,
@@ -708,6 +729,7 @@ def _verification_plan_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[
             "world_model_checks": world_model_check_count,
         },
         "dependency_count": dependency_count,
+        "budget": budget,
     }
     return {
         "verification_plan_available": True,
@@ -730,6 +752,13 @@ def _verification_plan_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[
         "verification_plan_state_check_count": state_check_count,
         "verification_plan_world_model_check_count": world_model_check_count,
         "verification_plan_dependency_count": dependency_count,
+        "verification_plan_budget_enabled": budget_enabled,
+        "verification_plan_budget_claim_budget_exhausted": claim_budget_exhausted,
+        "verification_plan_budget_route_budget_exhausted": route_budget_exhausted,
+        "verification_plan_budget_tool_payload_budget_exhausted": tool_payload_budget_exhausted,
+        "verification_plan_budget_estimated_cost_budget_exhausted": estimated_cost_budget_exhausted,
+        "verification_plan_budget_selected_claim_count": selected_budget_claim_count,
+        "verification_plan_budget_dropped_claim_count": dropped_budget_claim_count,
     }
 
 

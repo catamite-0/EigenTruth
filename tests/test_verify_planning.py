@@ -10,8 +10,10 @@ from eigentruth.verify import (
     Claim,
     ClaimVerificationPlan,
     ClaimVerificationPlanner,
+    VerificationBudgetPolicy,
     VerificationPlanCostEstimate,
     VerificationRouteHint,
+    budget_verification_plan,
     estimate_verification_plan_cost,
     extract_claims,
 )
@@ -205,6 +207,91 @@ def test_claim_verification_planner_can_route_extracted_fact_triples():
     assert plan.claims[0].metadata["claim_triples"][0]["predicate"] == "capital_of"
 
 
+def test_verification_budget_policy_selects_high_value_claims_and_routes():
+    claims = (
+        Claim("A low-risk descriptive claim.", claim_id="plain"),
+        Claim(
+            "2 plus 2 is 5.",
+            claim_id="calc",
+            metadata={
+                "calculation": {"expression": "2 + 2", "expected": 5},
+                "features": {"has_number": True, "has_calculation": True},
+            },
+        ),
+        Claim(
+            "Shipping the order will reduce inventory.",
+            claim_id="transition",
+            metadata={
+                "world_model_check": {"action": {"ship": "sku-1"}},
+                "features": {"is_time_sensitive": True},
+            },
+        ),
+    )
+    planner = ClaimVerificationPlanner()
+    original = planner.plan(claims)
+
+    budgeted = budget_verification_plan(
+        original,
+        VerificationBudgetPolicy(
+            max_verify_claims=2,
+            max_route_attempts=3,
+            max_tool_payloads=2,
+        ),
+    )
+
+    assert budgeted.verification_scope == "budgeted"
+    assert budgeted.verify_claim_ids == ("calc", "transition")
+    assert budgeted.skipped_claim_ids == ("plain",)
+    routes = {hint.claim_id: hint.routes for hint in budgeted.route_hints}
+    assert routes == {
+        "calc": ("calculator", "triple_evidence"),
+        "transition": ("world_model",),
+    }
+    assert budgeted.calculation_checks[0]["claim_id"] == "calc"
+    assert budgeted.world_model_checks[0]["claim_id"] == "transition"
+    assert budgeted.retrieval_queries == ()
+    assert budgeted.cost_estimate().route_counts == {
+        "calculator": 1,
+        "triple_evidence": 1,
+        "world_model": 1,
+    }
+    assert budgeted.cost_estimate().tool_payload_counts["calculation_checks"] == 1
+    assert budgeted.cost_estimate().tool_payload_counts["world_model_checks"] == 1
+    assert budgeted.budget["claim_budget_exhausted"] is True
+    assert budgeted.budget["route_budget_exhausted"] is True
+    assert budgeted.budget["dropped_claim_ids"] == ("plain",)
+    assert budgeted.budget["dropped_routes"]["calc"] == ("retrieval", "groundedness")
+    assert budgeted.budget["dropped_routes"]["transition"] == (
+        "triple_evidence",
+        "retrieval",
+        "groundedness",
+    )
+    assert (
+        budgeted.budget["selected_cost_estimate"]["estimated_cost_units"]
+        < budgeted.budget["original_cost_estimate"]["estimated_cost_units"]
+    )
+    json.dumps(budgeted.to_dict())
+
+
+def test_claim_verification_planner_accepts_budget_policy_mapping():
+    planner = ClaimVerificationPlanner()
+
+    plan = planner.plan(
+        "As of 2026, AlphaCorp has 10 offices [1]. 2 plus 2 is 5.",
+        budget_policy={
+            "max_verify_claims": 1,
+            "max_route_attempts": 1,
+            "route_priority": ("calculator", "citation", "retrieval", "groundedness"),
+        },
+    )
+
+    assert plan.verification_scope == "budgeted"
+    assert plan.verify_claim_ids == ("c2",)
+    assert plan.route_hints[0].routes == ("calculator",)
+    assert plan.budget["policy"]["max_verify_claims"] == 1
+    assert plan.budget["selected_cost_estimate"]["estimated_route_attempts"] == 1
+
+
 def test_claim_verification_plan_json_shape_matches_stage_decision_fields():
     plan = ClaimVerificationPlan(
         run_verifier=True,
@@ -254,3 +341,5 @@ def test_claim_verification_planner_rejects_invalid_config():
     assert planner.verify_triggered_claims_only is True
     with pytest.raises(ValueError, match="boolean"):
         ClaimVerificationPlanner(verify_all_by_default="maybe")  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="max_route_attempts"):
+        VerificationBudgetPolicy(max_route_attempts=-1)

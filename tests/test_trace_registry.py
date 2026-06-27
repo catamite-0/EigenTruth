@@ -54,6 +54,7 @@ from eigentruth.registry import (
 from eigentruth.verify import (
     ClaimVerificationPlanner,
     InMemoryVerifier,
+    VerificationBudgetPolicy,
     VerificationResult,
     VerificationStatus,
     extract_claims,
@@ -175,6 +176,28 @@ def test_product_trace_serializes_claim_verification_plan_and_bounded_summary():
     assert bounded_metrics["verification_plan_route_counts"]["triple_evidence"] == 2
     json.dumps(payload)
     json.dumps(bounded)
+
+    budgeted_plan = ClaimVerificationPlanner().plan(
+        claims,
+        budget_policy=VerificationBudgetPolicy(max_verify_claims=1, max_route_attempts=1),
+    )
+    budgeted_trace = ProductTrace(
+        request_id="req-plan-budgeted",
+        claims=claims,
+        verification_plan=budgeted_plan,
+    )
+    budgeted_bounded = budgeted_trace.to_bounded_dict(max_nested_items=2)
+    budgeted_metrics = product_runtime_metrics(budgeted_trace)
+    budgeted_bounded_metrics = product_runtime_metrics(budgeted_bounded)
+
+    assert budgeted_plan.verification_scope == "budgeted"
+    assert budgeted_bounded["summaries"]["verification_plan"]["budget"]["enabled"] is True
+    assert budgeted_metrics["verification_plan_budget_enabled"] is True
+    assert budgeted_metrics["verification_plan_budget_selected_claim_count"] == 1.0
+    assert budgeted_metrics["verification_plan_budget_dropped_claim_count"] == 1.0
+    assert budgeted_metrics["verification_plan_budget_route_budget_exhausted"] is True
+    assert budgeted_bounded_metrics["verification_plan_budget_enabled"] is True
+    assert budgeted_bounded_metrics["verification_plan_budget_selected_claim_count"] == 1.0
 
 
 def test_product_trace_summarizes_triple_and_slot_coverage():

@@ -35,8 +35,10 @@ from eigentruth.verify.groundedness import EvidenceDocument, EvidenceQualityPoli
 from eigentruth.verify.planning import (
     ClaimVerificationPlan,
     ClaimVerificationPlanner,
+    VerificationBudgetPolicy,
     VerificationPlanCostEstimate,
     VerificationRouteHint,
+    budget_verification_plan,
     estimate_verification_plan_cost,
 )
 from eigentruth.verify.protocols import Claim, VerificationResult, VerificationStatus, Verifier
@@ -91,6 +93,7 @@ __all__ = [
     "TripleSlotEvidence",
     "VerificationResult",
     "VerificationStatus",
+    "VerificationBudgetPolicy",
     "VerifierCacheStats",
     "Verifier",
     "VerifierRoute",
@@ -108,6 +111,7 @@ __all__ = [
     "extract_citation_references",
     "extract_claims",
     "extract_claim_triples",
+    "budget_verification_plan",
     "estimate_verification_plan_cost",
     "infer_claim_dependencies",
     "normalize_claim_text",
