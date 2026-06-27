@@ -230,6 +230,9 @@ class ProductPromotionContract:
         required_route_property_sets = _mapping(
             required_route_baselines.get("covered_fact_properties")
         )
+        required_route_property_metrics = _mapping(
+            required_route_baselines.get("covered_fact_property_metrics")
+        )
         structured_fact_robustness = _structured_fact_robustness_metadata(
             config,
             required_route_baselines,
@@ -281,6 +284,9 @@ class ProductPromotionContract:
                 ),
                 "recommended_route_covered_fact_properties": (
                     verifier_route.get("covered_fact_properties")
+                ),
+                "recommended_route_covered_fact_property_metrics": (
+                    verifier_route.get("covered_fact_property_metrics")
                 ),
                 "recommended_product_runtime_drift_report": decision.get(
                     "recommended_product_runtime_drift_report"
@@ -678,6 +684,9 @@ class ProductPromotionContract:
                 "required_route_baseline_covered_fact_properties": (
                     required_route_property_sets
                 ),
+                "required_route_baseline_covered_fact_property_metrics": (
+                    required_route_property_metrics
+                ),
                 "structured_fact_robustness_required": structured_fact_robustness[
                     "required"
                 ],
@@ -701,6 +710,9 @@ class ProductPromotionContract:
                 ),
                 "structured_fact_robustness_properties": (
                     structured_fact_robustness["properties"]
+                ),
+                "structured_fact_robustness_property_metrics": (
+                    structured_fact_robustness["property_metrics"]
                 ),
                 "required_route_budget_policy": _required_route_budget_policy(config),
             },
@@ -798,6 +810,9 @@ def _structured_fact_robustness_metadata(
     properties_by_record = _mapping(
         required_route_baselines.get("covered_fact_properties")
     )
+    property_metrics_by_record = _mapping(
+        required_route_baselines.get("covered_fact_property_metrics")
+    )
     by_record: dict[str, dict[str, Any]] = {}
     for idx, record in enumerate(records):
         key = str(record)
@@ -806,6 +821,7 @@ def _structured_fact_robustness_metadata(
             "manifest": manifests[idx] if idx < len(manifests) else None,
             "property_count": property_counts_by_record.get(key),
             "properties": properties_by_record.get(key),
+            "property_metrics": property_metrics_by_record.get(key),
         }
 
     selected_records: list[str] = []
@@ -813,6 +829,7 @@ def _structured_fact_robustness_metadata(
     selected_manifests: list[Any] = []
     selected_property_counts: dict[str, Any] = {}
     selected_properties: dict[str, Any] = {}
+    selected_property_metrics: dict[str, Any] = {}
     for key in target_keys:
         entry = by_record.get(key)
         if entry is None:
@@ -822,6 +839,7 @@ def _structured_fact_robustness_metadata(
         selected_manifests.append(entry["manifest"])
         selected_property_counts[key] = entry["property_count"]
         selected_properties[key] = entry["properties"]
+        selected_property_metrics[key] = entry["property_metrics"]
 
     return {
         "required": bool(config.get("require_structured_fact_robustness")),
@@ -832,6 +850,7 @@ def _structured_fact_robustness_metadata(
         "manifests": selected_manifests,
         "property_counts": selected_property_counts,
         "properties": selected_properties,
+        "property_metrics": selected_property_metrics,
     }
 
 
@@ -1492,17 +1511,29 @@ def _promotion_contract_covered_fact_scope_metadata(
                 verifier_route.get("covered_fact_properties"),
             )
         ),
+        "promotion_contract_recommended_route_covered_fact_property_metrics": (
+            _first_present(
+                metadata.get("recommended_route_covered_fact_property_metrics"),
+                verifier_route.get("covered_fact_property_metrics"),
+            )
+        ),
         "promotion_contract_required_route_baseline_covered_fact_property_counts": (
             metadata.get("required_route_baseline_covered_fact_property_counts")
         ),
         "promotion_contract_required_route_baseline_covered_fact_properties": (
             metadata.get("required_route_baseline_covered_fact_properties")
         ),
+        "promotion_contract_required_route_baseline_covered_fact_property_metrics": (
+            metadata.get("required_route_baseline_covered_fact_property_metrics")
+        ),
         "promotion_contract_structured_fact_robustness_property_counts": (
             metadata.get("structured_fact_robustness_property_counts")
         ),
         "promotion_contract_structured_fact_robustness_properties": (
             metadata.get("structured_fact_robustness_properties")
+        ),
+        "promotion_contract_structured_fact_robustness_property_metrics": (
+            metadata.get("structured_fact_robustness_property_metrics")
         ),
     }
 

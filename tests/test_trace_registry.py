@@ -1903,6 +1903,13 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                         "P38",
                     ]
                 },
+                "covered_fact_property_metrics": {
+                    "benchmark_manifest:retrieval-structured-qa:0.5": {
+                        "P36": {"decision_accuracy": 1.0, "n_records": 16},
+                        "P37": {"decision_accuracy": 1.0, "n_records": 12},
+                        "P38": {"decision_accuracy": 1.0, "n_records": 9},
+                    }
+                },
             },
             "manifests": {
                 "readiness_manifest": "artifacts/readiness/artifact-manifest.json",
@@ -2008,17 +2015,36 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
         "P37",
         "P38",
     ]
+    assert contract.metadata["recommended_route_covered_fact_property_metrics"] == {
+        "P36": {"decision_accuracy": 1.0, "n_records": 16},
+        "P37": {"decision_accuracy": 1.0, "n_records": 12},
+        "P38": {"decision_accuracy": 1.0, "n_records": 9},
+    }
     assert contract.metadata["required_route_baseline_covered_fact_property_counts"] == {
         "benchmark_manifest:retrieval-structured-qa:0.5": 3
     }
     assert contract.metadata["required_route_baseline_covered_fact_properties"] == {
         "benchmark_manifest:retrieval-structured-qa:0.5": ["P36", "P37", "P38"]
     }
+    assert contract.metadata["required_route_baseline_covered_fact_property_metrics"] == {
+        "benchmark_manifest:retrieval-structured-qa:0.5": {
+            "P36": {"decision_accuracy": 1.0, "n_records": 16},
+            "P37": {"decision_accuracy": 1.0, "n_records": 12},
+            "P38": {"decision_accuracy": 1.0, "n_records": 9},
+        }
+    }
     assert contract.metadata["structured_fact_robustness_property_counts"] == {
         "benchmark_manifest:retrieval-structured-qa:0.5": 3
     }
     assert contract.metadata["structured_fact_robustness_properties"] == {
         "benchmark_manifest:retrieval-structured-qa:0.5": ["P36", "P37", "P38"]
+    }
+    assert contract.metadata["structured_fact_robustness_property_metrics"] == {
+        "benchmark_manifest:retrieval-structured-qa:0.5": {
+            "P36": {"decision_accuracy": 1.0, "n_records": 16},
+            "P37": {"decision_accuracy": 1.0, "n_records": 12},
+            "P38": {"decision_accuracy": 1.0, "n_records": 9},
+        }
     }
     assert contract.metadata["recommended_product_runtime_drift_report"] == (
         "artifacts/runtime-drift/product-runtime-drift.json"
@@ -2234,6 +2260,9 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
             "route": "structured_qa",
             "covered_fact_property_count": 3,
             "covered_fact_properties": ["P36", "P37", "P38"],
+            "covered_fact_property_metrics": {
+                "P36": {"decision_accuracy": 1.0, "n_records": 16},
+            },
         },
         runtime_budget_policy=ProductRuntimeBudgetPolicy(max_mean_attempted_route_count=1.1),
         source_workflow="release_candidate_comparison",
@@ -2276,6 +2305,11 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
             "required_route_baseline_covered_fact_properties": {
                 "benchmark_manifest:structured-fact:0.1": ["P36", "P37", "P38"]
             },
+            "required_route_baseline_covered_fact_property_metrics": {
+                "benchmark_manifest:structured-fact:0.1": {
+                    "P36": {"decision_accuracy": 1.0, "n_records": 16}
+                }
+            },
         },
     ).save_json(contract_path)
 
@@ -2298,6 +2332,9 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
         "route": "structured_qa",
         "covered_fact_property_count": 3,
         "covered_fact_properties": ["P36", "P37", "P38"],
+        "covered_fact_property_metrics": {
+            "P36": {"decision_accuracy": 1.0, "n_records": 16},
+        },
     }
     assert metadata["promotion_contract_recommended_route_covered_fact_property_count"] == 3
     assert metadata["promotion_contract_recommended_route_covered_fact_properties"] == [
@@ -2308,6 +2345,16 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert metadata[
         "promotion_contract_required_route_baseline_covered_fact_property_counts"
     ] == {"benchmark_manifest:structured-fact:0.1": 3}
+    assert metadata[
+        "promotion_contract_recommended_route_covered_fact_property_metrics"
+    ] == {"P36": {"decision_accuracy": 1.0, "n_records": 16}}
+    assert metadata[
+        "promotion_contract_required_route_baseline_covered_fact_property_metrics"
+    ] == {
+        "benchmark_manifest:structured-fact:0.1": {
+            "P36": {"decision_accuracy": 1.0, "n_records": 16}
+        }
+    }
     assert metadata["promotion_contract_control_policy_config"]["unsupported_action"] == "clarify"
     assert metadata["promotion_contract_control_policy_config"][
         "compound_verification_escalates"
