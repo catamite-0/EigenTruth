@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+from eigentruth.control.action_audit import (
+    ActionAuditIssue,
+    ActionAuditPolicy,
+    ActionAuditReport,
+    ActionAuditSeverity,
+    audit_action_requests,
+)
 from eigentruth.control.actions import (
     ActionExecutionLedger,
     ActionExecutionPolicy,
@@ -75,6 +82,10 @@ from eigentruth.control.trace import ProductTrace, RuntimePhaseTiming, RuntimeTr
 
 __all__ = [
     "ActionExecutionStatus",
+    "ActionAuditIssue",
+    "ActionAuditPolicy",
+    "ActionAuditReport",
+    "ActionAuditSeverity",
     "ActionExecutionLedger",
     "ActionExecutionPolicy",
     "ActionExecutorRegistry",
@@ -120,6 +131,7 @@ __all__ = [
     "TraceEvent",
     "VerificationStageDecision",
     "VerificationLoopResult",
+    "audit_action_requests",
     "evidence_bundle_from_action_results",
     "evaluate_product_runtime_budget",
     "finalize_answer",

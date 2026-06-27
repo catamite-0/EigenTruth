@@ -518,8 +518,27 @@ Added the first stdlib-only external retrieval service shell:
   route, route-gate status, and text-redline status into manifest and registry
   metadata.
 
+Added the first monitor-first tool-selection audit layer:
+
+- `ActionAuditPolicy`, `ActionAuditReport`, and `audit_action_requests()` check
+  planned actions before executor dispatch without blocking execution by
+  default. The audit compares the selected `RiskDecision`, `ClaimVerificationPlan`,
+  and planned `ActionRequest` payloads to flag missing decision actions, omitted
+  retrieval actions when the plan emitted retrieval queries, retrieval payloads
+  that the local retrieval executor cannot execute, malformed `execute_tool`
+  names or argument objects, and claim ids that do not exist in the plan.
+- `ProductTrace.to_bounded_dict()` and `product_runtime_metrics()` now expose
+  `action_audit` summaries and metrics. This creates a release/replay hook for
+  tool-bypass and parameter-hallucination failures before introducing learned
+  tool-selection models or external tool routers.
+- This layer is intentionally dependency-free and observational. It does not
+  claim to solve tool selection; it makes tool-routing mistakes measurable so
+  future internal-representation tool-selection or world-model-corrected
+  executor policies have a stable target metric.
+
 ## Next Research-to-Code Candidates
 
 1. Run the registered Wikidata structured-fact canonical/paraphrase route manifests through `compare_external_evidence_baselines.py --require-covered-facts-route`, then use the registered comparator report as the structured KG correction input to `compare_release_candidates.py --external-evidence-baseline-comparison-key`.
 2. Replicate the layer-band selector audit on a denser layer grid and at least one additional model family before using it as a default benchmark preset.
-3. Run an actual learned or external triple extractor through the new offline prediction adapter on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
+3. Add an action-audit release gate for product-trace replay corpora: fail a candidate when missing retrieval actions, malformed retrieval payloads, malformed tool parameters, or unexpected tool actions exceed configured rates.
+4. Run an actual learned or external triple extractor through the new offline prediction adapter on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.

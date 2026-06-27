@@ -468,6 +468,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
             "slowest_phase": None,
         }
         metrics.update(_cache_metrics(trace))
+        metrics.update(_action_audit_metrics(trace))
         metrics.update(_route_cost_metrics(trace))
         metrics.update(_verification_stage_metrics(trace))
         metrics.update(_verification_plan_metrics(trace))
@@ -506,6 +507,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
         "slowest_phase": summary.get("slowest_phase"),
     }
     metrics.update(_cache_metrics(trace))
+    metrics.update(_action_audit_metrics(trace))
     metrics.update(_route_cost_metrics(trace))
     metrics.update(_verification_stage_metrics(trace))
     metrics.update(_verification_plan_metrics(trace))
@@ -576,6 +578,54 @@ def _cache_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:
         "cache_summary": summary,
         "named_cache_hit_rates": named_hit_rates,
         "raw_named_cache_hit_rates": raw_named_hit_rates,
+    }
+
+
+def _action_audit_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:
+    if isinstance(trace, ProductTrace):
+        summary = trace.action_audit_summary()
+        source = "full_trace"
+    else:
+        payload = dict(trace)
+        summary = _mapping(_mapping(payload.get("summaries")).get("action_audit"))
+        if summary:
+            source = "bounded_summary"
+        else:
+            summary = ProductTrace(
+                actions=tuple(_sequence(payload.get("actions", ()))),
+                risk_decision=_mapping(payload.get("risk_decision")),
+                verification_plan=_mapping(payload.get("verification_plan")),
+            ).action_audit_summary()
+            source = "full_trace"
+    counts_by_code = _mapping(summary.get("counts_by_code"))
+    malformed_payload_count = sum(
+        _finite_float(counts_by_code.get(code)) or 0.0
+        for code in (
+            "malformed_action_payload",
+            "malformed_retrieval_payload",
+            "malformed_tool_payload",
+            "malformed_tool_arguments",
+        )
+    )
+    return {
+        "action_audit_available": bool(summary.get("available")),
+        "action_audit_source": source,
+        "action_audit_summary": summary,
+        "action_audit_passed": _optional_bool(summary.get("passed")),
+        "action_audit_issue_count": _finite_float(summary.get("issue_count")),
+        "action_audit_error_count": _finite_float(summary.get("error_count")),
+        "action_audit_warning_count": _finite_float(summary.get("warning_count")),
+        "action_audit_missing_decision_action_count": _finite_float(
+            counts_by_code.get("missing_decision_action")
+        ),
+        "action_audit_missing_retrieval_action_count": _finite_float(
+            counts_by_code.get("missing_retrieval_action")
+        ),
+        "action_audit_malformed_payload_count": malformed_payload_count,
+        "action_audit_unexpected_action_count": _finite_float(
+            counts_by_code.get("unexpected_action_for_decision")
+        ),
+        "action_audit_unknown_claim_id_count": _finite_float(counts_by_code.get("unknown_claim_id")),
     }
 
 

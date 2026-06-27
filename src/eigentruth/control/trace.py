@@ -6,6 +6,7 @@ import math
 from dataclasses import dataclass, field
 from typing import Any, Mapping, Optional, Sequence
 
+from eigentruth.control.action_audit import audit_action_requests
 from eigentruth.control.actions import ActionRequest, ActionResult
 from eigentruth.control.finalization import FinalAnswer
 from eigentruth.control.policy import ControlAction, RiskDecision
@@ -250,6 +251,11 @@ class ProductTrace:
         ]
         summaries = {
             "action_execution": _action_execution_summary_from_results(prepared.action_results),
+            "action_audit": _action_audit_summary_from_payload(
+                actions=prepared.actions,
+                risk_decision=prepared.risk_decision,
+                verification_plan=prepared.verification_plan,
+            ),
             "verification_route": _verification_route_summary_from_results(
                 prepared.verification_results,
             ),
@@ -326,6 +332,14 @@ class ProductTrace:
         """Summarize action execution results for trace/registry metadata."""
         return _action_execution_summary_from_results(
             tuple(_action_result_to_dict(result) for result in self.action_results)
+        )
+
+    def action_audit_summary(self) -> dict[str, Any]:
+        """Summarize planned action/tool-selection audit results."""
+        return _action_audit_summary_from_payload(
+            actions=tuple(_action_to_dict(action) for action in self.actions),
+            risk_decision=_risk_decision_to_dict(self.risk_decision),
+            verification_plan=_verification_plan_to_dict(self.verification_plan),
         )
 
     def verification_route_summary(self) -> dict[str, Any]:
@@ -433,6 +447,20 @@ def _action_execution_summary_from_results(
         "counts_by_action": counts_by_action,
         "side_effects": side_effects,
     }
+
+
+def _action_audit_summary_from_payload(
+    *,
+    actions: Sequence[Any],
+    risk_decision: Mapping[str, Any] | None,
+    verification_plan: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    report = audit_action_requests(
+        actions,
+        decision=risk_decision,
+        verification_plan=verification_plan,
+    )
+    return report.summary()
 
 
 def _verification_route_summary_from_results(
