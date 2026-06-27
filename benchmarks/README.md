@@ -4441,7 +4441,8 @@ Use `compare_product_runtime_baselines.py` after a fresh trace baseline has been
 built. It compares that current baseline against a file path or a registered
 `product_runtime_baseline:*:*` record and can fail closed on latency, route cost,
 retrieval-use, cache-hit-rate, verifier-skip-rate, promotion-contract coverage,
-triple-extraction fixture-matrix coverage/quality drift, and trace-count drift.
+triple-extraction fixture-matrix coverage/quality drift, trace-level
+triple/slot-audit coverage, and trace-count drift.
 When a saved `ProductRuntimeBudgetPolicy` is supplied with
 `--runtime-budget-policy` or `--runtime-budget-policy-key`, the current baseline
 summary is also checked against the reusable budget using p95/aggregate metrics. When a
@@ -4469,6 +4470,10 @@ python benchmarks/compare_product_runtime_baselines.py \
   --min-triple-extraction-fixture-matrix-coverage 1.0 \
   --max-triple-extraction-fixture-matrix-mean-best-f1-drop 0.05 \
   --max-triple-extraction-fixture-matrix-mean-f1-lift-drop 0.05 \
+  --min-triple-claim-coverage 0.5 \
+  --min-triple-audit-claim-coverage 1.0 \
+  --min-triple-audit-pass-rate 1.0 \
+  --min-triple-slot-coverage 1.0 \
   --min-current-trace-count 12 \
   --metadata evidence=smollm2_product_runtime_drift_refresh_v1_6 \
   --fail-on-drift

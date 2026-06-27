@@ -25241,11 +25241,11 @@ def test_compare_product_runtime_baselines_blocks_drift_and_registers(tmp_path):
     assert saved["artifact_manifest_summary"] == manifest["summary"]
     assert manifest["metadata"]["runner"] == "compare_product_runtime_baselines"
     assert manifest["metadata"]["blocked_metric_count"] == 5
-    assert manifest["metadata"]["compared_metric_count"] == 13
+    assert manifest["metadata"]["compared_metric_count"] == 17
     assert record.artifact_type == "product_runtime_drift_report"
     assert record.metadata["status"] == "blocked"
     assert record.metadata["blocked_metric_count"] == 5
-    assert record.metadata["compared_metric_count"] == 13
+    assert record.metadata["compared_metric_count"] == 17
     assert record.metadata["compact_json"] is True
     assert "\n  " not in saved_text
 
@@ -25423,6 +25423,133 @@ def test_compare_product_runtime_baselines_gates_promotion_evidence_drift(tmp_pa
     assert record.metadata["promotion_evidence_blocked_metric_count"] == 2
     assert record.metadata["triple_extraction_fixture_matrix_mean_best_f1_current"] == pytest.approx(0.70)
     assert record.metadata["triple_extraction_fixture_matrix_mean_best_f1_status"] == "blocked"
+
+
+def test_compare_product_runtime_baselines_gates_trace_triple_audit_drift(tmp_path):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    registry_module = importlib.import_module("eigentruth.registry")
+    baseline_trace = tmp_path / "baseline-trace.json"
+    current_trace = tmp_path / "current-trace.json"
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    drift_report = tmp_path / "drift.json"
+    registry_path = tmp_path / "registry.json"
+    triple = {"subject": "France", "predicate": "capital_of", "object": "Paris"}
+    baseline_trace.write_text(
+        json.dumps({
+            "request_id": "baseline",
+            "runtime_trace": {"total_seconds": 0.10, "phases": []},
+            "claims": [
+                {
+                    "claim_id": "c1",
+                    "text": "Paris is the capital of France.",
+                    "metadata": {"claim_triples": [triple]},
+                },
+                {"claim_id": "c2", "text": "Berlin is a city.", "metadata": {}},
+            ],
+            "verification_results": [
+                {
+                    "status": "supported",
+                    "metadata": {
+                        "audit_report": {
+                            "claim_id": "c1",
+                            "triple_count": 1,
+                            "passed_count": 1,
+                            "failed_count": 0,
+                            "covered_slot_count": 3,
+                            "missing_slot_count": 0,
+                            "audits": [
+                                {
+                                    "triple": triple,
+                                    "passed": True,
+                                    "covered_slots": ["subject", "predicate", "object"],
+                                    "missing_slots": [],
+                                }
+                            ],
+                        }
+                    },
+                }
+            ],
+            "metadata": {},
+        }),
+        encoding="utf-8",
+    )
+    current_trace.write_text(
+        json.dumps({
+            "request_id": "current",
+            "runtime_trace": {"total_seconds": 0.10, "phases": []},
+            "claims": [
+                {
+                    "claim_id": "c1",
+                    "text": "Paris is the capital of France.",
+                    "metadata": {"claim_triples": [triple]},
+                },
+                {"claim_id": "c2", "text": "Berlin is a city.", "metadata": {}},
+            ],
+            "verification_results": [
+                {
+                    "status": "supported",
+                    "metadata": {
+                        "selected_route": "structured_fact",
+                    },
+                }
+            ],
+            "metadata": {},
+        }),
+        encoding="utf-8",
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=baseline_report,
+        )
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(current_trace,),
+            report_path=current_report,
+        )
+    )
+
+    payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        report_path=drift_report,
+        registry_path=registry_path,
+        name="runtime-drift-triple-audit",
+        version="0.1",
+        min_triple_claim_coverage=0.5,
+        min_triple_audit_claim_coverage=1.0,
+        min_triple_audit_pass_rate=1.0,
+        min_triple_slot_coverage=1.0,
+    )
+    claim_metric = _metric_by_name(payload, "triple_coverage.claim_triple_coverage_rate")
+    audit_claim_metric = _metric_by_name(payload, "triple_coverage.audit_claim_coverage_rate")
+    audit_pass_metric = _metric_by_name(payload, "triple_coverage.audit_pass_rate")
+    slot_metric = _metric_by_name(payload, "triple_coverage.slot_coverage_rate")
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get("product_runtime_drift_report:runtime-drift-triple-audit:0.1")
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["blocked_metric_count"] == 3
+    assert claim_metric["status"] == "pass"
+    assert claim_metric["current"] == pytest.approx(0.5)
+    assert audit_claim_metric["status"] == "blocked"
+    assert audit_claim_metric["current"] == pytest.approx(0.0)
+    assert audit_pass_metric["status"] == "blocked"
+    assert audit_pass_metric["reason"] == (
+        "triple_coverage.audit_pass_rate: missing or non-finite comparison value"
+    )
+    assert slot_metric["status"] == "blocked"
+    assert manifest["metadata"]["triple_coverage_blocked_metric_count"] == 3
+    assert manifest["metadata"]["triple_claim_coverage_rate_current"] == pytest.approx(0.5)
+    assert manifest["metadata"]["triple_audit_claim_coverage_rate_status"] == "blocked"
+    assert manifest["metadata"]["triple_audit_pass_rate_status"] == "blocked"
+    assert manifest["metadata"]["triple_slot_coverage_rate_status"] == "blocked"
+    assert record.metadata["triple_coverage_blocked_metric_count"] == 3
+    assert record.metadata["triple_audit_claim_coverage_rate_current"] == pytest.approx(0.0)
 
 
 def test_compare_product_runtime_baselines_registers_file_baseline_report(tmp_path):

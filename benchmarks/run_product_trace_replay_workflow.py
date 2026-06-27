@@ -84,6 +84,10 @@ class ProductTraceReplayWorkflowConfig:
     min_runtime_drift_triple_extraction_fixture_matrix_coverage: float | None = None
     max_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_drop: float | None = None
     max_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_drop: float | None = None
+    min_runtime_drift_triple_claim_coverage: float | None = None
+    min_runtime_drift_triple_audit_claim_coverage: float | None = None
+    min_runtime_drift_triple_audit_pass_rate: float | None = None
+    min_runtime_drift_triple_slot_coverage: float | None = None
     min_runtime_drift_current_trace_count: int | None = None
     artifact_manifest_path: str | Path | None = None
     registry_path: str | Path | None = None
@@ -148,6 +152,10 @@ class ProductTraceReplayWorkflowConfig:
                 self.min_runtime_drift_triple_extraction_fixture_matrix_coverage,
                 self.max_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_drop,
                 self.max_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_drop,
+                self.min_runtime_drift_triple_claim_coverage,
+                self.min_runtime_drift_triple_audit_claim_coverage,
+                self.min_runtime_drift_triple_audit_pass_rate,
+                self.min_runtime_drift_triple_slot_coverage,
                 self.min_runtime_drift_current_trace_count,
             )
         )
@@ -981,6 +989,10 @@ def _runtime_drift_configured(config: ProductTraceReplayWorkflowConfig) -> bool:
             config.min_runtime_drift_triple_extraction_fixture_matrix_coverage,
             config.max_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_drop,
             config.max_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_drop,
+            config.min_runtime_drift_triple_claim_coverage,
+            config.min_runtime_drift_triple_audit_claim_coverage,
+            config.min_runtime_drift_triple_audit_pass_rate,
+            config.min_runtime_drift_triple_slot_coverage,
             config.min_runtime_drift_current_trace_count,
         )
     )
@@ -1006,6 +1018,10 @@ def _runtime_drift_gate_config(config: ProductTraceReplayWorkflowConfig) -> dict
         "max_triple_extraction_fixture_matrix_mean_f1_lift_drop": (
             config.max_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_drop
         ),
+        "min_triple_claim_coverage": config.min_runtime_drift_triple_claim_coverage,
+        "min_triple_audit_claim_coverage": config.min_runtime_drift_triple_audit_claim_coverage,
+        "min_triple_audit_pass_rate": config.min_runtime_drift_triple_audit_pass_rate,
+        "min_triple_slot_coverage": config.min_runtime_drift_triple_slot_coverage,
         "min_current_trace_count": config.min_runtime_drift_current_trace_count,
     }
 
@@ -1844,6 +1860,10 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
         max_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_drop=(
             args.max_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_drop
         ),
+        min_runtime_drift_triple_claim_coverage=args.min_runtime_drift_triple_claim_coverage,
+        min_runtime_drift_triple_audit_claim_coverage=args.min_runtime_drift_triple_audit_claim_coverage,
+        min_runtime_drift_triple_audit_pass_rate=args.min_runtime_drift_triple_audit_pass_rate,
+        min_runtime_drift_triple_slot_coverage=args.min_runtime_drift_triple_slot_coverage,
         min_runtime_drift_current_trace_count=args.min_runtime_drift_current_trace_count,
         artifact_manifest_path=Path(args.artifact_manifest) if args.artifact_manifest else None,
         registry_path=Path(args.registry) if args.registry else None,
@@ -1935,6 +1955,10 @@ def main(argv: Sequence[str] | None = None) -> None:
         type=float,
         default=None,
     )
+    parser.add_argument("--min-runtime-drift-triple-claim-coverage", type=float, default=None)
+    parser.add_argument("--min-runtime-drift-triple-audit-claim-coverage", type=float, default=None)
+    parser.add_argument("--min-runtime-drift-triple-audit-pass-rate", type=float, default=None)
+    parser.add_argument("--min-runtime-drift-triple-slot-coverage", type=float, default=None)
     parser.add_argument("--min-runtime-drift-current-trace-count", type=int, default=None)
     parser.add_argument("--artifact-manifest", default=None)
     parser.add_argument("--registry", default=None)

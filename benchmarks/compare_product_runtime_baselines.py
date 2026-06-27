@@ -41,6 +41,13 @@ _PROMOTION_EVIDENCE_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
     ),
 )
 
+_TRIPLE_COVERAGE_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
+    ("triple_coverage.claim_triple_coverage_rate", "triple_claim_coverage_rate"),
+    ("triple_coverage.audit_claim_coverage_rate", "triple_audit_claim_coverage_rate"),
+    ("triple_coverage.audit_pass_rate", "triple_audit_pass_rate"),
+    ("triple_coverage.slot_coverage_rate", "triple_slot_coverage_rate"),
+)
+
 
 def compare_product_runtime_baselines(
     *,
@@ -68,6 +75,10 @@ def compare_product_runtime_baselines(
     min_triple_extraction_fixture_matrix_coverage: float | None = None,
     max_triple_extraction_fixture_matrix_mean_best_f1_drop: float | None = None,
     max_triple_extraction_fixture_matrix_mean_f1_lift_drop: float | None = None,
+    min_triple_claim_coverage: float | None = None,
+    min_triple_audit_claim_coverage: float | None = None,
+    min_triple_audit_pass_rate: float | None = None,
+    min_triple_slot_coverage: float | None = None,
     min_current_trace_count: int | None = None,
     metadata: Mapping[str, Any] | None = None,
     compact_json: bool = False,
@@ -112,6 +123,10 @@ def compare_product_runtime_baselines(
         "max_triple_extraction_fixture_matrix_mean_f1_lift_drop": _optional_non_negative_float(
             max_triple_extraction_fixture_matrix_mean_f1_lift_drop
         ),
+        "min_triple_claim_coverage": _optional_rate_float(min_triple_claim_coverage),
+        "min_triple_audit_claim_coverage": _optional_rate_float(min_triple_audit_claim_coverage),
+        "min_triple_audit_pass_rate": _optional_rate_float(min_triple_audit_pass_rate),
+        "min_triple_slot_coverage": _optional_rate_float(min_triple_slot_coverage),
         "min_current_trace_count": _optional_non_negative_int(min_current_trace_count),
     }
     metrics = _comparison_metrics(
@@ -320,6 +335,30 @@ def _comparison_metrics(
                 ),
             ),
             gates.get("max_triple_extraction_fixture_matrix_mean_f1_lift_drop"),
+        ),
+        _min_current_metric(
+            "triple_coverage.claim_triple_coverage_rate",
+            _nested_float(baseline_summary, ("triple_coverage", "claim_triple_coverage_rate")),
+            _nested_float(current_summary, ("triple_coverage", "claim_triple_coverage_rate")),
+            gates.get("min_triple_claim_coverage"),
+        ),
+        _min_current_metric(
+            "triple_coverage.audit_claim_coverage_rate",
+            _nested_float(baseline_summary, ("triple_coverage", "audit_claim_coverage_rate")),
+            _nested_float(current_summary, ("triple_coverage", "audit_claim_coverage_rate")),
+            gates.get("min_triple_audit_claim_coverage"),
+        ),
+        _min_current_metric(
+            "triple_coverage.audit_pass_rate",
+            _nested_float(baseline_summary, ("triple_coverage", "audit_pass_rate")),
+            _nested_float(current_summary, ("triple_coverage", "audit_pass_rate")),
+            gates.get("min_triple_audit_pass_rate"),
+        ),
+        _min_current_metric(
+            "triple_coverage.slot_coverage_rate",
+            _nested_float(baseline_summary, ("triple_coverage", "slot_coverage_rate")),
+            _nested_float(current_summary, ("triple_coverage", "slot_coverage_rate")),
+            gates.get("min_triple_slot_coverage"),
         ),
         _min_metric(
             "n_traces",
@@ -945,6 +984,7 @@ def _drift_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
         "blocked_metric_count": summary.get("blocked_metric_count"),
         "observed_metric_count": summary.get("observed_metric_count"),
         **_promotion_evidence_metadata(report),
+        **_triple_coverage_metadata(report),
     }
 
 
@@ -960,6 +1000,21 @@ def _promotion_evidence_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
         metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
         if metric is not None and metric.get("status") == "blocked":
             metadata["promotion_evidence_blocked_metric_count"] += 1
+    return metadata
+
+
+def _triple_coverage_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    metrics = _metrics_by_name(report.get("metrics"))
+    metadata: dict[str, Any] = {
+        "triple_coverage_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _TRIPLE_COVERAGE_METADATA_FIELDS:
+        metric = metrics.get(metric_name)
+        metadata[f"{prefix}_baseline"] = _finite_float(None if metric is None else metric.get("baseline"))
+        metadata[f"{prefix}_current"] = _finite_float(None if metric is None else metric.get("current"))
+        metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is not None and metric.get("status") == "blocked":
+            metadata["triple_coverage_blocked_metric_count"] += 1
     return metadata
 
 
@@ -1107,6 +1162,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_triple_extraction_fixture_matrix_mean_f1_lift_drop=(
             args.max_triple_extraction_fixture_matrix_mean_f1_lift_drop
         ),
+        min_triple_claim_coverage=args.min_triple_claim_coverage,
+        min_triple_audit_claim_coverage=args.min_triple_audit_claim_coverage,
+        min_triple_audit_pass_rate=args.min_triple_audit_pass_rate,
+        min_triple_slot_coverage=args.min_triple_slot_coverage,
         min_current_trace_count=args.min_current_trace_count,
         metadata=_parse_metadata(args.metadata or ()),
         compact_json=bool(args.compact_json),
@@ -1146,6 +1205,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--min-triple-extraction-fixture-matrix-coverage", type=float, default=None)
     parser.add_argument("--max-triple-extraction-fixture-matrix-mean-best-f1-drop", type=float, default=None)
     parser.add_argument("--max-triple-extraction-fixture-matrix-mean-f1-lift-drop", type=float, default=None)
+    parser.add_argument("--min-triple-claim-coverage", type=float, default=None)
+    parser.add_argument("--min-triple-audit-claim-coverage", type=float, default=None)
+    parser.add_argument("--min-triple-audit-pass-rate", type=float, default=None)
+    parser.add_argument("--min-triple-slot-coverage", type=float, default=None)
     parser.add_argument("--min-current-trace-count", type=int, default=None)
     parser.add_argument("--compact-json", action="store_true",
                         help="write minified drift report and manifest JSON")
