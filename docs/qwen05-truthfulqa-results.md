@@ -332,6 +332,14 @@ blocked from correction handoff. It preserves the executable request inventory:
 `352` structured-fact, `174` citation, `159` entity-resolution, `41`
 disambiguation, and `38` world-model/calculator-rule requests.
 
+`build_source_family_structured_qa_lane_execution_queue.py` lowers that triage
+into the next executable pass. The registered queue is
+`ready_for_adapter_execution`: it keeps `87` collection targets after excluding
+the audit-only row, writes `752` answer-free adapter/rule requests, and groups
+them into `29` batches. The first batch is `answer_collision_audit` fact
+disambiguation, so the next run can start with the highest-risk entity-collision
+lane before broader source-family coverage expansion.
+
 ## Product Trace Demo
 
 `examples/calibrated_control_demo.py` now defaults to the best repository l80

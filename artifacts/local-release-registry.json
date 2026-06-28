@@ -6311,6 +6311,22 @@
       "name": "truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-gap-triage",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-gap-triage/gap-triage.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "adapter_request_count": 752,
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-lane-execution-queue/artifact-manifest.json",
+        "batch_count": 29,
+        "evidence": "source_family_structured_qa_post_correction_gap_triage",
+        "status": "ready_for_adapter_execution",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "target_count": 87,
+        "workflow": "source_family_structured_qa_lane_execution_queue"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-lane-execution-queue",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-lane-execution-queue/lane-execution-queue.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

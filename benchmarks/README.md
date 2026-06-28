@@ -2522,6 +2522,30 @@ world-model/calculator-rule requests), so the next adapter/rule-authoring pass
 can prioritize the exact failure mode instead of replaying the whole queue
 blindly.
 
+To turn those lanes into executable adapter/rule batches:
+
+```bash
+QUEUE=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-lane-execution-queue
+
+python benchmarks/build_source_family_structured_qa_lane_execution_queue.py \
+  --triage "$TRIAGE/gap-triage.json" \
+  --collection-corpus "$CORPUS/fact-collection-corpus.json" \
+  --output-dir "$QUEUE" \
+  --report-json "$QUEUE/lane-execution-queue.json" \
+  --target-jsonl "$QUEUE/lane-targets.jsonl" \
+  --request-jsonl "$QUEUE/adapter-requests.jsonl" \
+  --batch-jsonl "$QUEUE/execution-batches.jsonl" \
+  --artifact-manifest "$QUEUE/artifact-manifest.json" \
+  --max-requests-per-batch 50 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_post_correction_gap_triage
+```
+
+The queue is `ready_for_adapter_execution` with `87` collection targets, `752`
+adapter/rule requests, and `29` lane-aware batches. It intentionally excludes
+the `1` audit-only row and keeps answer/model-answer fields out of adapter
+requests; the first batch is `answer_collision_audit` disambiguation.
+
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:
 

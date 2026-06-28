@@ -1274,3 +1274,193 @@ def test_source_family_structured_qa_gap_triage_routes_next_lanes(tmp_path):
     assert registry_record is not None
     assert registry_record.metadata["blocked_count"] == 4
     assert len(target_rows) == 5
+
+
+def test_source_family_structured_qa_lane_execution_queue_batches_requests(tmp_path):
+    module = importlib.import_module("benchmarks.build_source_family_structured_qa_lane_execution_queue")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    triage_path = tmp_path / "gap-triage.json"
+    corpus_path = tmp_path / "fact-collection-corpus.json"
+    output_dir = tmp_path / "lane-queue"
+    registry_path = tmp_path / "registry.json"
+    triage_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "source_family_structured_qa_gap_triage",
+            "status": "needs_collection",
+            "summary": {"target_count": 4},
+            "triage_targets": [
+                {
+                    "target_id": "record-1",
+                    "record_index": 1,
+                    "next_lane": "structured_qa_correction_handoff",
+                    "lane_status": "handoff_ready",
+                    "priority_score": 150.0,
+                    "question": "Who founded Alpha?",
+                    "answer": "Ada",
+                    "model_answer": "Ada",
+                    "question_type": "person",
+                    "mapping_decision": "mapped_qa_fact_candidate",
+                    "available_request_counts": {"external_citation": 1},
+                },
+                {
+                    "target_id": "record-2",
+                    "record_index": 2,
+                    "next_lane": "answer_support_audit",
+                    "lane_status": "audit_only",
+                    "priority_score": 25.0,
+                    "question": "Where is Beta?",
+                    "answer": "France",
+                    "question_type": "location",
+                    "mapping_decision": "answer_value_supported_by_covered_fact",
+                    "available_request_counts": {"external_citation": 1},
+                },
+                {
+                    "target_id": "record-3",
+                    "record_index": 3,
+                    "next_lane": "answer_collision_audit",
+                    "lane_status": "blocked_needs_disambiguation",
+                    "priority_score": 120.0,
+                    "question": "Who is Gamma?",
+                    "answer": "Gamma",
+                    "question_type": "definition",
+                    "mapping_decision": "answer_entity_collision",
+                    "source_gap_type": "answer_entity_collision",
+                    "available_request_counts": {
+                        "source_family_fact_disambiguation": 1,
+                        "world_model_or_calculator_rule": 1,
+                        "external_citation": 1,
+                    },
+                    "world_model_rule_families": ["entity_disambiguation"],
+                },
+                {
+                    "target_id": "record-4",
+                    "record_index": 4,
+                    "next_lane": "richer_property_or_indicator_collection",
+                    "lane_status": "needs_property_collection",
+                    "priority_score": 104.0,
+                    "question": "Do most Delta users have passports?",
+                    "answer": "No",
+                    "question_type": "quantity",
+                    "mapping_decision": "subject_only_or_missing_intent",
+                    "source_gap_type": "missing_property_or_indicator",
+                    "available_request_counts": {
+                        "source_family_structured_fact": 1,
+                        "world_model_or_calculator_rule": 1,
+                    },
+                    "source_family_targets": [{"provider": "worldbank", "source_family": "official_statistics"}],
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    corpus_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "source_family_structured_qa_fact_collection_corpus",
+            "status": "ready_for_collection",
+            "summary": {"target_count": 4, "total_request_count": 6},
+            "requests": {
+                "external_citation": [
+                    {
+                        "target_id": "record-1",
+                        "request_id": "cite:record-1:1",
+                        "request_type": "external_citation",
+                        "query": "Alpha founder",
+                        "answer": "Ada",
+                    },
+                    {
+                        "target_id": "record-2",
+                        "request_id": "cite:record-2:1",
+                        "request_type": "external_citation",
+                        "query": "Beta location",
+                    },
+                    {
+                        "target_id": "record-3",
+                        "request_id": "cite:record-3:1",
+                        "request_type": "external_citation",
+                        "query": "Gamma entity",
+                    },
+                ],
+                "source_family_fact_disambiguation": [
+                    {
+                        "target_id": "record-3",
+                        "request_id": "disambig:record-3:1",
+                        "request_type": "source_family_fact_disambiguation",
+                        "query": "Gamma disambiguation",
+                    }
+                ],
+                "source_family_structured_fact": [
+                    {
+                        "target_id": "record-4",
+                        "request_id": "sfact:record-4:1",
+                        "request_type": "source_family_structured_fact",
+                        "query": "Delta passports",
+                        "provider_hint": "worldbank",
+                    }
+                ],
+                "world_model_or_calculator_rule": [
+                    {
+                        "target_id": "record-3",
+                        "request_id": "rule:record-3:1",
+                        "request_type": "world_model_or_calculator_rule",
+                        "rule_family": "entity_disambiguation",
+                        "rule_seed": "Author a role rule for Gamma",
+                    },
+                    {
+                        "target_id": "record-4",
+                        "request_id": "rule:record-4:1",
+                        "request_type": "world_model_or_calculator_rule",
+                        "rule_family": "quantity_or_arithmetic",
+                        "rule_seed": "Author a numeric rule for Delta",
+                    },
+                ],
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        triage_path=triage_path,
+        collection_corpus_path=corpus_path,
+        output_dir=output_dir,
+        registry_path=registry_path,
+        name="source-family-lane-queue-unit",
+        version="0.1",
+        max_requests_per_batch=1,
+        metadata={"suite": "unit"},
+    )
+    registry_record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:source-family-lane-queue-unit:0.1"
+    )
+    request_rows = [
+        json.loads(line)
+        for line in (output_dir / "adapter-requests.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    batch_rows = [
+        json.loads(line)
+        for line in (output_dir / "execution-batches.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+    assert payload["status"] == "ready_for_adapter_execution"
+    assert payload["summary"]["target_count"] == 2
+    assert payload["summary"]["adapter_request_count"] == 5
+    assert payload["summary"]["batch_count"] == 5
+    assert payload["summary"]["skipped_target_counts"] == {
+        "lane_status_filtered": 2,
+    }
+    assert payload["summary"]["top_target"]["target_id"] == "record-3"
+    assert payload["summary"]["request_type_counts"]["world_model_or_calculator_rule"] == 2
+    assert payload["summary"]["request_type_counts"]["external_citation"] == 1
+    assert payload["summary"]["request_type_counts"]["source_family_fact_disambiguation"] == 1
+    assert payload["summary"]["request_type_counts"]["source_family_structured_fact"] == 1
+    assert {row["target_id"] for row in request_rows} == {"record-3", "record-4"}
+    assert all("answer" not in row and "model_answer" not in row for row in request_rows)
+    assert batch_rows[0]["next_lane"] == "answer_collision_audit"
+    assert batch_rows[0]["request_type"] == "source_family_fact_disambiguation"
+    assert registry_module.load_and_verify_artifact_manifest(output_dir / "artifact-manifest.json").passed is True
+    assert registry_record is not None
+    assert registry_record.metadata["adapter_request_count"] == 5
