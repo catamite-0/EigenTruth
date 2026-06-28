@@ -581,6 +581,20 @@ For product features:
   implication: URL-seeded official sources are now a concrete verifier-adapter
   collection lane; the remaining release work is source-specific scholarly
   relevance plus a non-rate-limited news source, not another generic retriever.
+- `run_openalex_source_family_catalog_adapter.py` now fills a complementary
+  scholarly lane through OpenAlex Works search, with optional abstract
+  reconstruction and the same label/request-id-free catalog boundary. The
+  registered run consumes `5` scholarly tasks, runs `40` query variants, writes
+  `52` deduplicated scholarly docs, and records `0` request errors. The local
+  source-family adapter also now supports opt-in family-diverse reranking, which
+  keeps non-fallback preferred families ahead of fallback reference rows in
+  top-k evidence. Combining OpenAlex with the existing catalogs and enabling
+  `--adapter-diversify-source-families` keeps route promotion blocked but drops
+  missing target rows from `28` to `4`: `official=36/36`,
+  `official_statistics=4/4`, and `scholarly=156/156` are covered. Product
+  implication: the evidence panel now needs a replacement or seeded news lane
+  for the final food-affordability gap; scholarly/official coverage is no
+  longer the limiting source-family issue.
 
 ### Next Verification Adapter Work
 

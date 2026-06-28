@@ -1384,6 +1384,21 @@ rows fall from `44` to `28`, `official` coverage reaches `32/36`,
 top-result mix. The refreshed collection plan is now `7` tasks:
 `scholarly=5`, `official=1`, and `news=1`.
 
+`benchmarks/run_openalex_source_family_catalog_adapter.py` now adds the
+OpenAlex scholarly lane. The registered OpenAlex run consumes the `5`
+scholarly tasks from the official-site plan, runs `40` query variants against
+OpenAlex `/works?search=`, writes `52` deduplicated scholarly catalog docs with
+reconstructed abstracts, and records `0` request errors. The source-family
+adapter also now supports `--diversify-source-families`, which selects
+non-fallback preferred source families before fallback `reference` /
+`encyclopedic` rows. With OpenAlex and source-family-diverse reranking, the
+combined workflow still blocks route promotion, but coverage improves again:
+missing target rows fall from `28` to `4`, `official=36/36`,
+`official_statistics=4/4`, and `scholarly=156/156` are covered, and only the
+`news=4` food-affordability gap remains. A GDELT retry on that single news task
+is still `empty` (`0` docs, `8` errors), so the next source-family work should
+replace or seed the news lane rather than rely on the current public GDELT path.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -1409,15 +1424,15 @@ top-result mix. The refreshed collection plan is now `7` tasks:
 6. Promote a Qwen l20/l80 readiness baseline through the same registry workflow
    if Qwen-specific runtime evidence is needed; SmolLM2 now has the first
    non-tiny registered readiness/release candidate.
-7. Continue the reduced source-family catalog collection plan after the
-   completed Crossref, World Bank, GDELT-shell, and official-site slices: make
-   the remaining scholarly tasks more source-specific, add one more official
-   seed/source for the last official gap, and retry or replace the rate-limited
-   news source, then rerun `run_source_family_citation_search_workflow.py`. The
-   combined catalogs now cover `official=32/36`, `official_statistics=4/4`, and
-   `scholarly=128/156`, but still have no passing blind-spot query strategy;
-   only promote future catalogs if provenance, external query-sweep, and
-   controlled-vs-external comparison gates pass.
+7. Continue the latest source-family catalog collection plan after the
+   completed Crossref, World Bank, GDELT-shell, official-site, and OpenAlex
+   slices: replace or seed the remaining news lane for the food-affordability
+   task, then rerun `run_source_family_citation_search_workflow.py` with
+   `--adapter-diversify-source-families`. The combined catalogs now cover
+   `official=36/36`, `official_statistics=4/4`, and `scholarly=156/156`, but
+   still have no passing blind-spot query strategy; only promote future catalogs
+   if provenance, external query-sweep, and controlled-vs-external comparison
+   gates pass.
 8. Extend the new verifier-stability path from structured QA to real retrieval,
    database, calculator, and world-model evidence under the same conformal
    false-alarm budgets. Use `benchmarks/build_evidence_fixture.py` with a local

@@ -1,0 +1,99 @@
+{
+  "config": {
+    "max_examples": 20,
+    "max_query_variants": 8
+  },
+  "examples": [
+    {
+      "freshness_required": true,
+      "metadata": {
+        "collection_boundary": "catalog_task_not_evidence",
+        "input_row_count": 4
+      },
+      "not_verifier_evidence": true,
+      "official_source_preferred": true,
+      "priority_counts": {
+        "high": 4
+      },
+      "provider_hints": [
+        "news_search_adapter",
+        "gdelt_or_news_archive"
+      ],
+      "query": "America happened affordability food recent decades definition",
+      "query_hints": [
+        "official source",
+        "latest",
+        "date",
+        "definition",
+        "reference"
+      ],
+      "query_key": "america happened affordability food recent decades definition",
+      "question_type_counts": {
+        "definition": 4
+      },
+      "rationale": [
+        "fresh_or_time_sensitive",
+        "definition_or_term_claim"
+      ],
+      "request_count": 4,
+      "request_ids": [
+        "cite-search-001487e174e4e658",
+        "cite-search-0825d1e6bab6d172",
+        "cite-search-e5b9550016de8b47",
+        "cite-search-23f868db0c80918e"
+      ],
+      "schema_version": 1,
+      "search_queries": [
+        "America happened affordability food recent decades definition",
+        "America happened affordability food recent decades definition news",
+        "America happened affordability food recent decades definition latest",
+        "America happened affordability food recent decades definition report",
+        "happened affordability food America recent decades",
+        "happened affordability food America recent decades news",
+        "happened affordability food America recent decades latest",
+        "happened affordability food America recent decades report"
+      ],
+      "source_family": "news",
+      "source_queue_request_sha256": [
+        "1d5ff5f6bcd1dee98304e8e347919a339b9b1109118b29ee77d3e8658ab82939",
+        "da184f3aa58946d89cc12c7072a903e3bcbb80a40b16c3566e54bd52632b8ba5",
+        "6237e3365953975cb3aa8a115907ded51b5ed994038231d2467f9d94c4b38c5d",
+        "e3a513056b9c8adb0fea1dab12ee274bf626f0cadadad58b7f25c72a74d8f82f"
+      ],
+      "task_id": "catalog-news-31fae1b881bc",
+      "usage": "source_catalog_collection_only",
+      "workflow": "source_family_catalog_collection_plan"
+    }
+  ],
+  "metadata": {
+    "source": "openalex_diverse_source_family_coverage_audit",
+    "suite": "truthfulqa_frontier_smollm2_l80"
+  },
+  "paths": {
+    "collection_tasks": "artifacts/truthfulqa-frontier-smollm2-l80-openalex-diverse-source-family-catalog-collection-plan/source-family-catalog-collection-tasks.jsonl"
+  },
+  "schema_version": 1,
+  "source": {
+    "acquisition_plan": "artifacts/truthfulqa-frontier-smollm2-l80-openalex-diverse-source-family-coverage-audit/source-family-acquisition-plan.jsonl"
+  },
+  "status": "ready_for_source_collection",
+  "summary": {
+    "acquisition_row_count": 4,
+    "collection_task_count": 1,
+    "deduplication_ratio": 4.0,
+    "family_gap_count": 4,
+    "freshness_required_task_count": 1,
+    "max_input_rows_per_task": 4,
+    "mean_input_rows_per_task": 4.0,
+    "official_source_preferred_task_count": 1,
+    "provider_hint_counts": {
+      "gdelt_or_news_archive": 1,
+      "news_search_adapter": 1
+    },
+    "source_queue_request_count": 4,
+    "task_source_family_counts": {
+      "news": 1
+    }
+  },
+  "workflow": "source_family_catalog_collection_plan"
+}

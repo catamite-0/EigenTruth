@@ -1,0 +1,46 @@
+{
+  "artifacts": {
+    "collection_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-official-site-source-family-catalog-collection-plan/source-family-catalog-collection-tasks.jsonl",
+      "sha256": "389b1260a6453e747cfe4503970c208a308a8819e936a5daaa1031668298ede2",
+      "size_bytes": 12969
+    },
+    "openalex_catalog_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "openalex-scholarly-catalog-report.json",
+      "sha256": "8b622c09084a5504d6f9c2a0a2ad8e719b9d2692ee0d9b6cc1b0825a2241a28b",
+      "size_bytes": 1676
+    },
+    "source_family_catalog": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "openalex-scholarly-catalog.jsonl",
+      "sha256": "50f26d8111dc1c77e9db81235165aac60ce6a8d500c80e4d3cff3a0eb62909e6",
+      "size_bytes": 197204
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "error_count": 0,
+    "query_count": 40,
+    "source": "official_site_source_family_catalog_collection_plan",
+    "source_document_count": 52,
+    "status": "ready",
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "task_count": 5,
+    "workflow": "openalex_source_family_catalog_adapter"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

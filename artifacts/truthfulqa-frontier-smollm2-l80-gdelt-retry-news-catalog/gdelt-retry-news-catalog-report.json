@@ -1,0 +1,87 @@
+{
+  "config": {
+    "api_base_url": "https://api.gdeltproject.org/api/v2/doc/doc",
+    "max_query_variants": 8,
+    "max_records": 5,
+    "max_tasks": null,
+    "min_delay_seconds": 1.0,
+    "mode": "ArtList",
+    "sort": "HybridRel",
+    "source_family": "news",
+    "timeout_seconds": 30.0
+  },
+  "errors": [
+    {
+      "error": "RuntimeError",
+      "message": "GDELT HTTP 429: Please limit requests to one every 5 seconds or contact kalev.leetaru5@gmail.com for larger queries.\n\n",
+      "query": "America happened affordability food recent decades definition",
+      "task_id": "catalog-news-31fae1b881bc"
+    },
+    {
+      "error": "RuntimeError",
+      "message": "GDELT HTTP 429: Please limit requests to one every 5 seconds or contact kalev.leetaru5@gmail.com for larger queries.\n\n",
+      "query": "America happened affordability food recent decades definition news",
+      "task_id": "catalog-news-31fae1b881bc"
+    },
+    {
+      "error": "RuntimeError",
+      "message": "GDELT HTTP 429: Please limit requests to one every 5 seconds or contact kalev.leetaru5@gmail.com for larger queries.\n\n",
+      "query": "America happened affordability food recent decades definition latest",
+      "task_id": "catalog-news-31fae1b881bc"
+    },
+    {
+      "error": "RuntimeError",
+      "message": "GDELT HTTP 429: Please limit requests to one every 5 seconds or contact kalev.leetaru5@gmail.com for larger queries.\n\n",
+      "query": "America happened affordability food recent decades definition report",
+      "task_id": "catalog-news-31fae1b881bc"
+    },
+    {
+      "error": "RuntimeError",
+      "message": "GDELT HTTP 429: Please limit requests to one every 5 seconds or contact kalev.leetaru5@gmail.com for larger queries.\n\n",
+      "query": "happened affordability food America recent decades",
+      "task_id": "catalog-news-31fae1b881bc"
+    },
+    {
+      "error": "RuntimeError",
+      "message": "GDELT HTTP 429: Please limit requests to one every 5 seconds or contact kalev.leetaru5@gmail.com for larger queries.\n\n",
+      "query": "happened affordability food America recent decades news",
+      "task_id": "catalog-news-31fae1b881bc"
+    },
+    {
+      "error": "RuntimeError",
+      "message": "GDELT HTTP 429: Please limit requests to one every 5 seconds or contact kalev.leetaru5@gmail.com for larger queries.\n\n",
+      "query": "happened affordability food America recent decades latest",
+      "task_id": "catalog-news-31fae1b881bc"
+    },
+    {
+      "error": "RuntimeError",
+      "message": "GDELT HTTP 429: Please limit requests to one every 5 seconds or contact kalev.leetaru5@gmail.com for larger queries.\n\n",
+      "query": "happened affordability food America recent decades report",
+      "task_id": "catalog-news-31fae1b881bc"
+    }
+  ],
+  "metadata": {
+    "source": "openalex_diverse_source_family_catalog_collection_plan",
+    "suite": "truthfulqa_frontier_smollm2_l80"
+  },
+  "output_path": "artifacts/truthfulqa-frontier-smollm2-l80-gdelt-retry-news-catalog/gdelt-retry-news-catalog.jsonl",
+  "schema_version": 1,
+  "source": {
+    "collection_tasks": "artifacts/truthfulqa-frontier-smollm2-l80-openalex-diverse-source-family-catalog-collection-plan/source-family-catalog-collection-tasks.jsonl"
+  },
+  "status": "empty",
+  "summary": {
+    "domain_counts": {},
+    "error_count": 8,
+    "provider_counts": {},
+    "query_count": 8,
+    "skipped_duplicate_count": 0,
+    "source_document_count": 0,
+    "source_family_counts": {},
+    "task_count": 1,
+    "task_source_family_counts": {
+      "news": 1
+    }
+  },
+  "workflow": "gdelt_source_family_catalog_adapter"
+}

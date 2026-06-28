@@ -1,0 +1,362 @@
+{
+  "config": {
+    "max_examples": 20,
+    "max_query_variants": 8
+  },
+  "examples": [
+    {
+      "freshness_required": true,
+      "metadata": {
+        "collection_boundary": "catalog_task_not_evidence",
+        "input_row_count": 4
+      },
+      "not_verifier_evidence": true,
+      "official_source_preferred": true,
+      "priority_counts": {
+        "high": 4
+      },
+      "provider_hints": [
+        "news_search_adapter",
+        "gdelt_or_news_archive"
+      ],
+      "query": "America happened affordability food recent decades definition",
+      "query_hints": [
+        "official source",
+        "latest",
+        "date",
+        "definition",
+        "reference"
+      ],
+      "query_key": "america happened affordability food recent decades definition",
+      "question_type_counts": {
+        "definition": 4
+      },
+      "rationale": [
+        "fresh_or_time_sensitive",
+        "definition_or_term_claim"
+      ],
+      "request_count": 4,
+      "request_ids": [
+        "cite-search-001487e174e4e658",
+        "cite-search-0825d1e6bab6d172",
+        "cite-search-e5b9550016de8b47",
+        "cite-search-23f868db0c80918e"
+      ],
+      "schema_version": 1,
+      "search_queries": [
+        "America happened affordability food recent decades definition",
+        "America happened affordability food recent decades definition news",
+        "America happened affordability food recent decades definition latest",
+        "America happened affordability food recent decades definition report",
+        "happened affordability food America recent decades",
+        "happened affordability food America recent decades news",
+        "happened affordability food America recent decades latest",
+        "happened affordability food America recent decades report"
+      ],
+      "source_family": "news",
+      "source_queue_request_sha256": [
+        "1d5ff5f6bcd1dee98304e8e347919a339b9b1109118b29ee77d3e8658ab82939",
+        "da184f3aa58946d89cc12c7072a903e3bcbb80a40b16c3566e54bd52632b8ba5",
+        "6237e3365953975cb3aa8a115907ded51b5ed994038231d2467f9d94c4b38c5d",
+        "e3a513056b9c8adb0fea1dab12ee274bf626f0cadadad58b7f25c72a74d8f82f"
+      ],
+      "task_id": "catalog-news-31fae1b881bc",
+      "usage": "source_catalog_collection_only",
+      "workflow": "source_family_catalog_collection_plan"
+    },
+    {
+      "freshness_required": true,
+      "metadata": {
+        "collection_boundary": "catalog_task_not_evidence",
+        "input_row_count": 4
+      },
+      "not_verifier_evidence": true,
+      "official_source_preferred": true,
+      "priority_counts": {
+        "high": 4
+      },
+      "provider_hints": [
+        "official_site_search",
+        "government_or_institution_site_search",
+        "official_profile_or_faq"
+      ],
+      "query": "America happened affordability food recent decades definition",
+      "query_hints": [
+        "official source",
+        "latest",
+        "date",
+        "definition",
+        "reference"
+      ],
+      "query_key": "america happened affordability food recent decades definition",
+      "question_type_counts": {
+        "definition": 4
+      },
+      "rationale": [
+        "fresh_or_time_sensitive",
+        "definition_or_term_claim"
+      ],
+      "request_count": 4,
+      "request_ids": [
+        "cite-search-001487e174e4e658",
+        "cite-search-0825d1e6bab6d172",
+        "cite-search-e5b9550016de8b47",
+        "cite-search-23f868db0c80918e"
+      ],
+      "schema_version": 1,
+      "search_queries": [
+        "America happened affordability food recent decades definition",
+        "America happened affordability food recent decades definition official",
+        "America happened affordability food recent decades definition official source",
+        "America happened affordability food recent decades definition site:.gov",
+        "America happened affordability food recent decades definition site:.edu",
+        "happened affordability food America recent decades",
+        "happened affordability food America recent decades official",
+        "happened affordability food America recent decades official source"
+      ],
+      "source_family": "official",
+      "source_queue_request_sha256": [
+        "1d5ff5f6bcd1dee98304e8e347919a339b9b1109118b29ee77d3e8658ab82939",
+        "da184f3aa58946d89cc12c7072a903e3bcbb80a40b16c3566e54bd52632b8ba5",
+        "6237e3365953975cb3aa8a115907ded51b5ed994038231d2467f9d94c4b38c5d",
+        "e3a513056b9c8adb0fea1dab12ee274bf626f0cadadad58b7f25c72a74d8f82f"
+      ],
+      "task_id": "catalog-official-a70bc6f8894e",
+      "usage": "source_catalog_collection_only",
+      "workflow": "source_family_catalog_collection_plan"
+    },
+    {
+      "freshness_required": false,
+      "metadata": {
+        "collection_boundary": "catalog_task_not_evidence",
+        "input_row_count": 4
+      },
+      "not_verifier_evidence": true,
+      "official_source_preferred": true,
+      "priority_counts": {
+        "high": 4
+      },
+      "provider_hints": [
+        "official_site_search",
+        "government_or_institution_site_search",
+        "official_profile_or_faq"
+      ],
+      "query": "population country",
+      "query_hints": [
+        "official statistics",
+        "data",
+        "definition",
+        "reference",
+        "official",
+        "geography"
+      ],
+      "query_key": "population country",
+      "question_type_counts": {
+        "definition": 4
+      },
+      "rationale": [
+        "quantitative_or_statistical_claim",
+        "definition_or_term_claim",
+        "location_or_jurisdiction_claim"
+      ],
+      "request_count": 4,
+      "request_ids": [
+        "cite-search-8b58995470ea78f9",
+        "cite-search-bbd5cdf975d44a83",
+        "cite-search-af6fc174863183f2",
+        "cite-search-b677934f044dafc7"
+      ],
+      "schema_version": 1,
+      "search_queries": [
+        "population country",
+        "population country official",
+        "population country official source",
+        "population country site:.gov",
+        "population country site:.edu",
+        "What is the population of the country?",
+        "What is the population of the country? official",
+        "What is the population of the country? official source"
+      ],
+      "source_family": "official",
+      "source_queue_request_sha256": [
+        "1bb8ab4a48224b0f238c31e0e6a80fecb2d190e711e9747aaf3e99227d7aeccc",
+        "afa2da43a4ac9a0c458bb226ae4d9e552515de91de6544de4c1778acf15ca41d",
+        "b6bb619c26f4ac7fdcf34663caec889064ac43bde09e9cb59d169cc6030a3c89",
+        "641038c0d41515d545f58d19e682edad7f3e3997b27f7d5f32637a7db620a349"
+      ],
+      "task_id": "catalog-official-61ecebc7be85",
+      "usage": "source_catalog_collection_only",
+      "workflow": "source_family_catalog_collection_plan"
+    },
+    {
+      "freshness_required": false,
+      "metadata": {
+        "collection_boundary": "catalog_task_not_evidence",
+        "input_row_count": 8
+      },
+      "not_verifier_evidence": true,
+      "official_source_preferred": true,
+      "priority_counts": {
+        "high": 8
+      },
+      "provider_hints": [
+        "openalex_works",
+        "crossref_works",
+        "scholarly_review_search"
+      ],
+      "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+      "query_hints": [
+        "official profile",
+        "biography",
+        "definition",
+        "reference"
+      ],
+      "query_key": "elon american producer born 70 s handsome multi talented figure definition",
+      "question_type_counts": {
+        "definition": 8
+      },
+      "rationale": [
+        "person_or_role_claim",
+        "definition_or_term_claim"
+      ],
+      "request_count": 8,
+      "request_ids": [
+        "cite-search-c00b806315ac398b",
+        "cite-search-89534a0c11134e44",
+        "cite-search-523c555cc76d5706",
+        "cite-search-71ae3e3c71ef376a",
+        "cite-search-4ffa9f0785eeb9da",
+        "cite-search-ebda97c2ac1f8395",
+        "cite-search-0694b6748461aa0f",
+        "cite-search-96a58e762235e5fa"
+      ],
+      "schema_version": 1,
+      "search_queries": [
+        "Elon American producer born 70 s handsome multi-talented figure definition",
+        "Elon American producer born 70 s handsome multi-talented figure definition study",
+        "Elon American producer born 70 s handsome multi-talented figure definition scholarly",
+        "Elon American producer born 70 s handsome multi-talented figure definition review",
+        "Elon American producer born 70 s handsome multi-talented figure definition research",
+        "American producer born 70 s handsome multi-talented figure",
+        "American producer born 70 s handsome multi-talented figure study",
+        "American producer born 70 s handsome multi-talented figure scholarly"
+      ],
+      "source_family": "scholarly",
+      "source_queue_request_sha256": [
+        "89894ee104779b22d26ee4910fa08ce35fa16898afa0d28f2326a5932f8ae3f2",
+        "18b8eb6dbc9c574a74198d51294a798188f03dc0a2e90aea562eed9c79f3d7b2",
+        "cfd8cda737bd2d4c53628800eeef669cf5521167cb2cd85b599b1d2ad060d117",
+        "da014693db354da49b4c4ce449776e94aea6ff2ed8fd2d194f896df5eaa73c05",
+        "a8cee1ac6ff0a85cc1dd8509957b1b854d96366984c52cfcc812d1c693fbdc20",
+        "254fe51090bcd1ee2a9dbaf31e57e73339ecc87e0add09cf3d616c34bdff077f",
+        "642f84b8320a1645b0ef457398b91fa73cd2293aef811e06ca9b17cb9fc0e71e",
+        "0caa3cd572577fe4b880bc4304de274cab50715024800c59d0c24118685212d2"
+      ],
+      "task_id": "catalog-scholarly-1b1c66ccdb80",
+      "usage": "source_catalog_collection_only",
+      "workflow": "source_family_catalog_collection_plan"
+    },
+    {
+      "freshness_required": false,
+      "metadata": {
+        "collection_boundary": "catalog_task_not_evidence",
+        "input_row_count": 4
+      },
+      "not_verifier_evidence": true,
+      "official_source_preferred": true,
+      "priority_counts": {
+        "high": 4
+      },
+      "provider_hints": [
+        "openalex_works",
+        "crossref_works",
+        "scholarly_review_search"
+      ],
+      "query": "population country",
+      "query_hints": [
+        "official statistics",
+        "data",
+        "definition",
+        "reference",
+        "official",
+        "geography"
+      ],
+      "query_key": "population country",
+      "question_type_counts": {
+        "definition": 4
+      },
+      "rationale": [
+        "quantitative_or_statistical_claim",
+        "definition_or_term_claim",
+        "location_or_jurisdiction_claim"
+      ],
+      "request_count": 4,
+      "request_ids": [
+        "cite-search-8b58995470ea78f9",
+        "cite-search-bbd5cdf975d44a83",
+        "cite-search-af6fc174863183f2",
+        "cite-search-b677934f044dafc7"
+      ],
+      "schema_version": 1,
+      "search_queries": [
+        "population country",
+        "population country study",
+        "population country scholarly",
+        "population country review",
+        "population country research",
+        "What is the population of the country?",
+        "What is the population of the country? study",
+        "What is the population of the country? scholarly"
+      ],
+      "source_family": "scholarly",
+      "source_queue_request_sha256": [
+        "1bb8ab4a48224b0f238c31e0e6a80fecb2d190e711e9747aaf3e99227d7aeccc",
+        "afa2da43a4ac9a0c458bb226ae4d9e552515de91de6544de4c1778acf15ca41d",
+        "b6bb619c26f4ac7fdcf34663caec889064ac43bde09e9cb59d169cc6030a3c89",
+        "641038c0d41515d545f58d19e682edad7f3e3997b27f7d5f32637a7db620a349"
+      ],
+      "task_id": "catalog-scholarly-da2c614bfec5",
+      "usage": "source_catalog_collection_only",
+      "workflow": "source_family_catalog_collection_plan"
+    }
+  ],
+  "metadata": {
+    "source": "openalex_source_family_coverage_audit",
+    "suite": "truthfulqa_frontier_smollm2_l80"
+  },
+  "paths": {
+    "collection_tasks": "artifacts/truthfulqa-frontier-smollm2-l80-openalex-source-family-catalog-collection-plan/source-family-catalog-collection-tasks.jsonl"
+  },
+  "schema_version": 1,
+  "source": {
+    "acquisition_plan": "artifacts/truthfulqa-frontier-smollm2-l80-openalex-source-family-coverage-audit/source-family-acquisition-plan.jsonl"
+  },
+  "status": "ready_for_source_collection",
+  "summary": {
+    "acquisition_row_count": 16,
+    "collection_task_count": 5,
+    "deduplication_ratio": 4.8,
+    "family_gap_count": 24,
+    "freshness_required_task_count": 2,
+    "max_input_rows_per_task": 8,
+    "mean_input_rows_per_task": 4.8,
+    "official_source_preferred_task_count": 5,
+    "provider_hint_counts": {
+      "crossref_works": 2,
+      "gdelt_or_news_archive": 1,
+      "government_or_institution_site_search": 2,
+      "news_search_adapter": 1,
+      "official_profile_or_faq": 2,
+      "official_site_search": 2,
+      "openalex_works": 2,
+      "scholarly_review_search": 2
+    },
+    "source_queue_request_count": 16,
+    "task_source_family_counts": {
+      "news": 1,
+      "official": 2,
+      "scholarly": 2
+    }
+  },
+  "workflow": "source_family_catalog_collection_plan"
+}

@@ -36407,6 +36407,79 @@ def test_source_family_citation_search_adapter_ranks_family_matches(tmp_path):
     assert record.metadata["suite"] == "unit"
 
 
+def test_source_family_citation_search_adapter_can_diversify_source_families(tmp_path):
+    module = importlib.import_module("benchmarks.run_source_family_citation_search_adapter")
+
+    requests_path = tmp_path / "requests.jsonl"
+    catalog_path = tmp_path / "source-catalog.jsonl"
+    results_path = tmp_path / "results.jsonl"
+    requests_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "request_id": "cite-search-food-affordability",
+            "adapter_family": "external_citation_search",
+            "query": "food affordability study",
+            "source_family_plan": {
+                "families": ["scholarly", "reference", "official"],
+                "query_hints": ["official source", "study"],
+                "official_source_preferred": True,
+            },
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    catalog_path.write_text(
+        "\n".join([
+            json.dumps({
+                "title": "Food affordability study one",
+                "text": "food affordability study household data",
+                "source": "scholarly:one",
+                "provider": "scholarly-one",
+                "source_family": "scholarly",
+            }),
+            json.dumps({
+                "title": "Food affordability study two",
+                "text": "food affordability study market data",
+                "source": "scholarly:two",
+                "provider": "scholarly-two",
+                "source_family": "scholarly",
+            }),
+            json.dumps({
+                "title": "Food affordability study reference",
+                "text": "food affordability study reference summary",
+                "source": "reference:food",
+                "provider": "reference-source",
+                "source_family": "reference",
+            }),
+            json.dumps({
+                "title": "Official food affordability source",
+                "text": "official food source",
+                "source": "official:food",
+                "provider": "official-source",
+                "source_family": "official",
+                "metadata": {"official_source": True},
+            }),
+        ])
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = module.run_source_family_citation_search_adapter(
+        input_path=requests_path,
+        output_path=results_path,
+        source_catalog_paths=(catalog_path,),
+        max_results=2,
+        diversify_source_families=True,
+    )
+    rows = [json.loads(line) for line in results_path.read_text(encoding="utf-8").splitlines()]
+    families = [result["source_family"] for result in rows[0]["results"]]
+
+    assert payload["config"]["diversify_source_families"] is True
+    assert rows[0]["metadata"]["diversify_source_families"] is True
+    assert families == ["scholarly", "official"]
+
+
 def test_source_family_citation_search_adapter_rejects_reserved_catalog_fields(tmp_path):
     module = importlib.import_module("benchmarks.run_source_family_citation_search_adapter")
 
@@ -36761,6 +36834,138 @@ def test_crossref_source_family_catalog_adapter_rejects_reserved_task_metadata(t
             tasks_path=tasks_path,
             output_path=catalog_path,
             fetch_json=lambda _url, _headers: {"message": {"items": []}},
+        )
+
+
+def test_openalex_source_family_catalog_adapter_writes_scholarly_catalog(tmp_path):
+    module = importlib.import_module("benchmarks.run_openalex_source_family_catalog_adapter")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    tasks_path = tmp_path / "collection-tasks.jsonl"
+    catalog_path = tmp_path / "openalex-catalog.jsonl"
+    report_path = tmp_path / "openalex-report.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    tasks_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "source_family_catalog_collection_plan",
+            "usage": "source_catalog_collection_only",
+            "not_verifier_evidence": True,
+            "task_id": "catalog-scholarly-alpha",
+            "source_family": "scholarly",
+            "query": "food affordability",
+            "search_queries": ["food affordability?", "food affordability study"],
+            "request_ids": ["cite-search-alpha"],
+            "source_queue_request_sha256": ["sha-a"],
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    def fake_fetch_json(url, headers):
+        assert "search=food" in url
+        assert "%3F" not in url
+        assert "per-page=1" in url
+        assert headers["User-Agent"].startswith("unit-agent")
+        return {
+            "results": [
+                {
+                    "id": "https://openalex.org/W123",
+                    "doi": "https://doi.org/10.1234/openalex-unit",
+                    "display_name": "Food affordability and household budgets",
+                    "publication_year": 2024,
+                    "publication_date": "2024-04-03",
+                    "type": "article",
+                    "cited_by_count": 11,
+                    "primary_location": {
+                        "landing_page_url": "https://doi.org/10.1234/openalex-unit",
+                        "source": {
+                            "display_name": "Journal of Unit Tests",
+                            "host_organization_name": "Unit Publisher",
+                            "type": "journal",
+                        },
+                    },
+                    "abstract_inverted_index": {
+                        "Food": [0],
+                        "affordability": [1],
+                        "changed": [2],
+                    },
+                    "open_access": {"is_oa": True, "oa_status": "gold"},
+                    "concepts": [{"display_name": "Food security"}],
+                    "keywords": [{"display_name": "household budget"}],
+                    "relevance_score": 42.0,
+                }
+            ]
+        }
+
+    payload = module.run_openalex_source_family_catalog_adapter(
+        tasks_path=tasks_path,
+        output_path=catalog_path,
+        report_json_path=report_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="openalex-catalog-unit",
+        version="0.1",
+        max_query_variants=2,
+        rows_per_query=1,
+        user_agent="unit-agent/0.1",
+        include_abstracts=True,
+        metadata={"suite": "unit"},
+        fetch_json=fake_fetch_json,
+    )
+    rows = [json.loads(line) for line in catalog_path.read_text(encoding="utf-8").splitlines()]
+    row = rows[0]
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get("report:openalex-catalog-unit:0.1")
+
+    assert payload["status"] == "ready"
+    assert payload["summary"]["task_count"] == 1
+    assert payload["summary"]["query_count"] == 2
+    assert payload["summary"]["source_document_count"] == 1
+    assert payload["summary"]["skipped_duplicate_count"] == 1
+    assert row["provider"] == "openalex"
+    assert row["source_family"] == "scholarly"
+    assert row["published_at"] == "2024-04-03"
+    assert row["source"] == "openalex:https://openalex.org/W123"
+    assert "Food affordability changed" in row["text"]
+    assert row["metadata"]["collection_task_ids"] == ["catalog-scholarly-alpha"]
+    assert row["metadata"]["source_queue_request_sha256"] == ["sha-a"]
+    assert row["metadata"]["matched_queries"] == ["food affordability?", "food affordability study"]
+    assert row["metadata"]["openalex_type"] == "article"
+    assert row["metadata"]["is_open_access"] is True
+    assert row["metadata"]["concepts"] == ["Food security"]
+    assert row["metadata"]["keywords"] == ["household budget"]
+    assert "request_ids" not in row["metadata"]
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "openalex_source_family_catalog_adapter"
+    assert record.metadata["source_document_count"] == 1
+    assert record.metadata["suite"] == "unit"
+
+
+def test_openalex_source_family_catalog_adapter_rejects_reserved_task_metadata(tmp_path):
+    module = importlib.import_module("benchmarks.run_openalex_source_family_catalog_adapter")
+
+    tasks_path = tmp_path / "collection-tasks.jsonl"
+    catalog_path = tmp_path / "openalex-catalog.jsonl"
+    tasks_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "usage": "source_catalog_collection_only",
+            "not_verifier_evidence": True,
+            "task_id": "catalog-scholarly-alpha",
+            "source_family": "scholarly",
+            "search_queries": ["alpha"],
+            "metadata": {"label": 1},
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="reserved fields: label"):
+        module.run_openalex_source_family_catalog_adapter(
+            tasks_path=tasks_path,
+            output_path=catalog_path,
+            fetch_json=lambda _url, _headers: {"results": []},
         )
 
 

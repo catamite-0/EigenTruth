@@ -69,6 +69,7 @@ def run_source_family_citation_search_workflow(
     adapter_max_results: int = 3,
     adapter_max_query_variants: int = 3,
     adapter_min_text_overlap: float = 0.05,
+    adapter_diversify_source_families: bool = False,
     default_source_family: str = DEFAULT_SOURCE_FAMILY,
     corpus_name: str = DEFAULT_CORPUS_NAME,
     source_kind: str = DEFAULT_SOURCE_KIND,
@@ -138,6 +139,7 @@ def run_source_family_citation_search_workflow(
         max_results=adapter_max_results,
         max_query_variants=adapter_max_query_variants,
         min_text_overlap=adapter_min_text_overlap,
+        diversify_source_families=adapter_diversify_source_families,
         default_source_family=default_source_family,
         metadata=workflow_metadata,
         compact_json=compact_json,
@@ -200,6 +202,7 @@ def run_source_family_citation_search_workflow(
             "adapter_max_results": int(adapter_max_results),
             "adapter_max_query_variants": int(adapter_max_query_variants),
             "adapter_min_text_overlap": float(adapter_min_text_overlap),
+            "adapter_diversify_source_families": bool(adapter_diversify_source_families),
             "default_source_family": default_source_family,
             "corpus_name": corpus_name,
             "source_kind": source_kind,
@@ -394,6 +397,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--adapter-max-results", type=int, default=3)
     parser.add_argument("--adapter-max-query-variants", type=int, default=3)
     parser.add_argument("--adapter-min-text-overlap", type=float, default=0.05)
+    parser.add_argument("--adapter-diversify-source-families", action="store_true")
     parser.add_argument("--default-source-family", default=DEFAULT_SOURCE_FAMILY)
     parser.add_argument("--corpus-name", default=DEFAULT_CORPUS_NAME)
     parser.add_argument("--source-kind", default=DEFAULT_SOURCE_KIND)
@@ -440,6 +444,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         adapter_max_results=args.adapter_max_results,
         adapter_max_query_variants=args.adapter_max_query_variants,
         adapter_min_text_overlap=args.adapter_min_text_overlap,
+        adapter_diversify_source_families=bool(args.adapter_diversify_source_families),
         default_source_family=args.default_source_family,
         corpus_name=args.corpus_name,
         source_kind=args.source_kind,

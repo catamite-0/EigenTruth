@@ -1723,6 +1723,11 @@ request JSONL plus one or more local source catalogs. It ranks catalog documents
 by lexical overlap, `source_family_plan` compatibility, official-source
 preference, and freshness hints, then writes the same adapter-result JSONL
 schema accepted by `run_external_citation_search_adapter_workflow.py`.
+When multiple source families are available, `--diversify-source-families`
+selects one high-scoring document per non-fallback preferred family before
+filling the remaining top-k slots. This keeps stronger evidence families such
+as `official`, `official_statistics`, `scholarly`, and `news` from being
+crowded out by fallback `reference` / `encyclopedic` results.
 
 ```bash
 python benchmarks/run_source_family_citation_search_adapter.py \
@@ -1733,7 +1738,8 @@ python benchmarks/run_source_family_citation_search_adapter.py \
   --artifact-manifest artifacts/source-family-citation-search-adapter-smoke/artifact-manifest.json \
   --registry artifacts/local-release-registry.json \
   --name source-family-citation-search-adapter-smoke \
-  --version 0.1
+  --version 0.1 \
+  --diversify-source-families
 ```
 
 The registered smoke artifact
@@ -1752,6 +1758,8 @@ call. The workflow builds sanitized request JSONL from the unresolved queue,
 ranks caller-supplied source catalogs with
 `run_source_family_citation_search_adapter.py`, then runs the standard
 provenance, blind-spot query-sweep, and optional controlled-vs-external gates.
+Use `--adapter-diversify-source-families` when combining heterogeneous source
+catalogs so the adapter preserves source-family coverage in top-k results.
 
 ```bash
 OUT=artifacts/source-family-citation-search-workflow-smoke
@@ -1767,6 +1775,7 @@ python benchmarks/run_source_family_citation_search_workflow.py \
   --name source-family-citation-search-workflow-smoke \
   --version 0.1 \
   --query-fields question_answer \
+  --adapter-diversify-source-families \
   --retriever-min-overlaps 0.5 \
   --retrieval-limit 2 \
   --alpha 0.2 \
@@ -1958,6 +1967,48 @@ comparison is still blocked. This is useful partial evidence: the scholarly
 catalog slot is filled and auditable, but broad Crossref bibliographic matching
 is not enough to promote the correction route.
 
+## `run_openalex_source_family_catalog_adapter.py`
+
+Executes the scholarly slice of a source-family collection plan through the
+OpenAlex `/works?search=` endpoint. The adapter uses only stdlib HTTP/JSON,
+supports optional `--api-key`, `--mailto`, and `--include-abstracts`, sanitizes
+OpenAlex wildcard characters in broad question-like queries, reconstructs
+OpenAlex inverted-index abstracts when requested, and emits adapter-ready
+`source_family=scholarly` catalog rows without request ids, labels, row ids,
+target ids, or model answers.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-openalex-scholarly-catalog
+
+python benchmarks/run_openalex_source_family_catalog_adapter.py \
+  --tasks artifacts/truthfulqa-frontier-smollm2-l80-official-site-source-family-catalog-collection-plan/source-family-catalog-collection-tasks.jsonl \
+  --output "$OUT/openalex-scholarly-catalog.jsonl" \
+  --report-json "$OUT/openalex-scholarly-catalog-report.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-openalex-scholarly-catalog \
+  --version 0.1 \
+  --max-query-variants 8 \
+  --rows-per-query 3 \
+  --min-delay-seconds 0.2 \
+  --timeout-seconds 30 \
+  --include-abstracts \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=official_site_source_family_catalog_collection_plan
+```
+
+The registered OpenAlex run consumes `5` scholarly tasks from the official-site
+coverage audit, runs `40` query variants, writes `52` deduplicated scholarly
+catalog docs with reconstructed abstracts, and records `0` request errors.
+Adding OpenAlex to the existing Wikidata, Crossref, reduced Crossref, World
+Bank, and official-site catalogs still leaves route promotion blocked, as
+expected, but improves source-family coverage. With
+`--adapter-diversify-source-families`, the workflow returns `528` adapter rows,
+balances result families (`official=168`, `official_statistics=12`,
+`reference=160`, `scholarly=188`), and the coverage audit reduces missing
+target rows from `28` to `4`. The only remaining source-family gap is the
+rate-limited or replacement `news` task for recent food-affordability claims.
+
 ## `run_worldbank_source_family_catalog_adapter.py`
 
 Executes official-statistics collection tasks through the World Bank Indicators
@@ -2111,6 +2162,11 @@ adapter rows, and the coverage audit reduces missing target rows from `44` to
 and `scholarly=128`; remaining missing targets are `official=4`,
 `scholarly=28`, and `news=4`. The next acquisition plan compresses to `7`
 tasks: `scholarly=5`, `official=1`, and `news=1`.
+
+The follow-up OpenAlex plus source-family-diverse rerank pass supersedes that
+queue for scholarly/official coverage: the latest collection plan has `1`
+remaining task, the unresolved `news` source-family task for the
+food-affordability question.
 
 ## `run_wikipedia_citation_search_adapter.py`
 

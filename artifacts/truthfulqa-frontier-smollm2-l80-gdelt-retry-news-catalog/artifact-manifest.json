@@ -1,0 +1,46 @@
+{
+  "artifacts": {
+    "collection_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-openalex-diverse-source-family-catalog-collection-plan/source-family-catalog-collection-tasks.jsonl",
+      "sha256": "a64ddafc2d08d9fbe74cc0682f33dc2a01af71a679c330e2da22712a373b7d7b",
+      "size_bytes": 1815
+    },
+    "gdelt_catalog_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "gdelt-retry-news-catalog-report.json",
+      "sha256": "8b220559fe0fd822e8b13eec005d74e6d8f0f6fde31f05a1b4f18ecee76f2a49",
+      "size_bytes": 3624
+    },
+    "source_family_catalog": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "gdelt-retry-news-catalog.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "error_count": 8,
+    "query_count": 8,
+    "source": "openalex_diverse_source_family_catalog_collection_plan",
+    "source_document_count": 0,
+    "status": "empty",
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "task_count": 1,
+    "workflow": "gdelt_source_family_catalog_adapter"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

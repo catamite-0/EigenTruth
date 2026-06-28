@@ -5921,6 +5921,144 @@
       "name": "truthfulqa-frontier-smollm2-l80-official-site-source-family-catalog-collection-plan",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-official-site-source-family-catalog-collection-plan/source-family-catalog-collection-plan.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-openalex-scholarly-catalog/artifact-manifest.json",
+        "error_count": 0,
+        "query_count": 40,
+        "source": "official_site_source_family_catalog_collection_plan",
+        "source_document_count": 52,
+        "status": "ready",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "task_count": 5,
+        "workflow": "openalex_source_family_catalog_adapter"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-openalex-scholarly-catalog",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-openalex-scholarly-catalog/openalex-scholarly-catalog-report.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "adapter_request_count": 176,
+        "adapter_result_count": 528,
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-openalex-source-family-citation-workflow/artifact-manifest.json",
+        "catalog_source_document_count": 687,
+        "corpus_document_count": 528,
+        "evidence": "wikidata_crossref_worldbank_reduced_crossref_official_site_openalex_catalogs",
+        "evidence_source_document_count": 528,
+        "gate_passed": false,
+        "promotion_ready": false,
+        "status": "blocked",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "source_family_citation_search_workflow"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-openalex-source-family-citation-workflow",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-openalex-source-family-citation-workflow/source-family-citation-search-workflow.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "acquisition_plan_count": 16,
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-openalex-source-family-coverage-audit/artifact-manifest.json",
+        "evidence": "wikidata_crossref_worldbank_reduced_crossref_official_site_openalex_catalogs",
+        "request_count": 176,
+        "request_missing_target_family_count": 16,
+        "status": "needs_catalog_expansion",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "source_family_coverage_audit"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-openalex-source-family-coverage-audit",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-openalex-source-family-coverage-audit/source-family-coverage-audit.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "acquisition_row_count": 16,
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-openalex-source-family-catalog-collection-plan/artifact-manifest.json",
+        "collection_task_count": 5,
+        "family_gap_count": 24,
+        "source": "openalex_source_family_coverage_audit",
+        "status": "ready_for_source_collection",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "source_family_catalog_collection_plan"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-openalex-source-family-catalog-collection-plan",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-openalex-source-family-catalog-collection-plan/source-family-catalog-collection-plan.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "adapter_request_count": 176,
+        "adapter_result_count": 528,
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-openalex-diverse-source-family-citation-workflow/artifact-manifest.json",
+        "catalog_source_document_count": 687,
+        "corpus_document_count": 528,
+        "evidence": "wikidata_crossref_worldbank_reduced_crossref_official_site_openalex_diverse_catalogs",
+        "evidence_source_document_count": 528,
+        "gate_passed": false,
+        "promotion_ready": false,
+        "status": "blocked",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "source_family_citation_search_workflow"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-openalex-diverse-source-family-citation-workflow",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-openalex-diverse-source-family-citation-workflow/source-family-citation-search-workflow.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "acquisition_plan_count": 4,
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-openalex-diverse-source-family-coverage-audit/artifact-manifest.json",
+        "evidence": "wikidata_crossref_worldbank_reduced_crossref_official_site_openalex_diverse_catalogs",
+        "request_count": 176,
+        "request_missing_target_family_count": 4,
+        "status": "needs_catalog_expansion",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "source_family_coverage_audit"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-openalex-diverse-source-family-coverage-audit",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-openalex-diverse-source-family-coverage-audit/source-family-coverage-audit.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "acquisition_row_count": 4,
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-openalex-diverse-source-family-catalog-collection-plan/artifact-manifest.json",
+        "collection_task_count": 1,
+        "family_gap_count": 4,
+        "source": "openalex_diverse_source_family_coverage_audit",
+        "status": "ready_for_source_collection",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "source_family_catalog_collection_plan"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-openalex-diverse-source-family-catalog-collection-plan",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-openalex-diverse-source-family-catalog-collection-plan/source-family-catalog-collection-plan.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-gdelt-retry-news-catalog/artifact-manifest.json",
+        "error_count": 8,
+        "query_count": 8,
+        "source": "openalex_diverse_source_family_catalog_collection_plan",
+        "source_document_count": 0,
+        "status": "empty",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "task_count": 1,
+        "workflow": "gdelt_source_family_catalog_adapter"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-gdelt-retry-news-catalog",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-gdelt-retry-news-catalog/gdelt-retry-news-catalog-report.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1
