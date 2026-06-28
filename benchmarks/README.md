@@ -1328,6 +1328,60 @@ rises to `0.176`, so it stays a negative control. Because the source corpus is
 `truthfulqa_correct_answer_evidence`, treat the best strategy as query-design
 evidence to port to external/structured corpora, not as open-domain grounding.
 
+The external provenance rerun keeps that distinction explicit:
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-external-query-sweep
+
+python benchmarks/sweep_blind_spot_retrieval_queries.py \
+  --scores artifacts/smollm2_truthfulqa_l80_scores_with_statements.json \
+  --corpus artifacts/wikidata-country-core-facts-external-corpus/wikidata-country-core-facts-corpus.json \
+  --blind-spots artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
+  --query-fields answer,question_answer \
+  --retriever-min-overlaps 0.95,0.8,0.65,0.5,0.35,0.2 \
+  --retrieval-limit 5 \
+  --json "$OUT/blind-spot-external-query-sweep.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json"
+```
+
+On the committed Wikidata country-core-facts external corpus, the best observed
+blind-spot refuted rate is `0/89`; the structured-QA corpus used as retrieval
+documents also remains at `0/89`. These are negative coverage results, not
+failures of the artifact pipeline.
+
+## `compare_blind_spot_query_sweeps.py`
+
+Compares controlled query-sweep reports with external or structured-evidence
+query-sweep reports. The gate is fail-closed: controlled coverage is accepted
+only as query-design evidence unless an external/structured sweep also passes
+the configured blind-spot and verified false-alarm thresholds.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-query-sweep-provenance-comparison
+
+python benchmarks/compare_blind_spot_query_sweeps.py \
+  --controlled-sweep artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json \
+  --external-sweep artifacts/truthfulqa-frontier-smollm2-l80-external-query-sweep/blind-spot-external-query-sweep.json \
+  --external-sweep artifacts/truthfulqa-frontier-smollm2-l80-structured-qa-query-sweep/blind-spot-structured-qa-query-sweep.json \
+  --min-controlled-blind-refuted-rate 0.5 \
+  --min-external-blind-refuted-rate 0.5 \
+  --max-controlled-verified-false-alarm 0.05 \
+  --max-external-verified-false-alarm 0.05 \
+  --json "$OUT/query-sweep-provenance-comparison.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-query-sweep-provenance-comparison \
+  --version 0.1
+```
+
+The registered comparison
+(`report:truthfulqa-frontier-smollm2-l80-query-sweep-provenance-comparison:0.1`)
+is `blocked`: the controlled sweep passes with `question_answer@0.5`
+(`89/89`), while both external sweeps pass `0` strategies and have best observed
+blind-spot refuted rate `0.0`. This blocks any runtime-default promotion until
+the question-aware strategy is backed by broader external or structured-fact
+coverage.
+
 ## `eval_verifier_ensemble.py`
 
 Compares a single calibrated internal diagnostic against a retrieval/verifier

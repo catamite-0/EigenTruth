@@ -5200,6 +5200,55 @@
       "name": "truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-external-query-sweep/artifact-manifest.json",
+        "best_blind_refuted_count": 0,
+        "best_passing_blind_refuted_count": null,
+        "best_passing_strategy": null,
+        "best_strategy": "question_answer_overlap_0p95",
+        "blind_spot_count": 89,
+        "evidence": "smollm2_l80_blind_spot_external_query_strategy_sweep",
+        "status": "complete",
+        "workflow": "blind_spot_retrieval_query_sweep"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-external-query-sweep",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-external-query-sweep/blind-spot-external-query-sweep.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-structured-qa-query-sweep/artifact-manifest.json",
+        "best_blind_refuted_count": 0,
+        "best_passing_blind_refuted_count": null,
+        "best_passing_strategy": null,
+        "best_strategy": "question_answer_overlap_0p95",
+        "blind_spot_count": 89,
+        "evidence": "smollm2_l80_blind_spot_structured_qa_query_strategy_sweep",
+        "status": "complete",
+        "workflow": "blind_spot_retrieval_query_sweep"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-structured-qa-query-sweep",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-structured-qa-query-sweep/blind-spot-structured-qa-query-sweep.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-query-sweep-provenance-comparison/artifact-manifest.json",
+        "evidence": "smollm2_l80_query_sweep_external_provenance_gate",
+        "passed": false,
+        "recommended_controlled_strategy": "question_answer_overlap_0p5",
+        "recommended_external_strategy": null,
+        "status": "blocked",
+        "workflow": "blind_spot_query_sweep_provenance_comparison"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-query-sweep-provenance-comparison",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-query-sweep-provenance-comparison/query-sweep-provenance-comparison.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

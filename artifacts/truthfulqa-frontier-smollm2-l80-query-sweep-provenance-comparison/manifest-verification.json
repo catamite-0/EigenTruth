@@ -1,0 +1,7 @@
+{
+  "checked": 4,
+  "failures": [],
+  "manifest_path": "artifacts/truthfulqa-frontier-smollm2-l80-query-sweep-provenance-comparison/artifact-manifest.json",
+  "nested": [],
+  "passed": true
+}

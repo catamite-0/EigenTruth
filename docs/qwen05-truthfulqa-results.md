@@ -949,6 +949,15 @@ baseline refutes `3/89`; `answer@0.5` refutes `54/89` with verified false alarm
 question-aware query construction to external or structured-fact corpora with
 provenance gates, rather than promoting the controlled-corpus result.
 
+That provenance gate is now materialized as
+`report:truthfulqa-frontier-smollm2-l80-query-sweep-provenance-comparison:0.1`.
+The two external reruns use the Wikidata country-core-facts external retrieval
+corpus and its structured-QA corpus as retrieval documents. Both remain at
+`0/89` blind spots refuted, so the comparison is `blocked`: controlled passing
+count is `1`, external passing count is `0`, and the controlled-to-external
+generalization gap is `1.0`. This preserves the query sweep as useful design
+evidence while blocking runtime-default promotion.
+
 A local release-candidate smoke artifact now pairs that staged route baseline
 with a tiny-gpt2 offline readiness/runtime baseline:
 

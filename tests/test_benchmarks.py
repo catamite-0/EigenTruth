@@ -34920,6 +34920,126 @@ def test_sweep_blind_spot_retrieval_queries_ranks_query_strategies(tmp_path):
     assert record.metadata["suite"] == "unit"
 
 
+def test_compare_blind_spot_query_sweeps_blocks_controlled_only_signal(tmp_path):
+    module = importlib.import_module("benchmarks.compare_blind_spot_query_sweeps")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    controlled_path = tmp_path / "controlled-query-sweep.json"
+    external_path = tmp_path / "external-query-sweep.json"
+    output_path = tmp_path / "query-sweep-comparison.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    _write_query_sweep_fixture(
+        controlled_path,
+        corpus_type="truthfulqa_correct_answer_evidence",
+        controlled_warning="controlled corpus",
+        refuted_count=2,
+        refuted_rate=1.0,
+        false_alarm=0.0,
+    )
+    _write_query_sweep_fixture(
+        external_path,
+        corpus_type="external_evidence_candidate",
+        controlled_warning=None,
+        refuted_count=0,
+        refuted_rate=0.0,
+        false_alarm=0.08,
+    )
+
+    payload = module.run(
+        controlled_sweep_paths=(controlled_path,),
+        external_sweep_paths=(external_path,),
+        output_path=output_path,
+        min_controlled_blind_refuted_rate=0.5,
+        min_external_blind_refuted_rate=0.5,
+        max_controlled_verified_false_alarm=0.05,
+        max_external_verified_false_alarm=0.05,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="query-sweep-comparison-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    saved = json.loads(output_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:query-sweep-comparison-unit:0.1"
+    )
+    reason_gates = {item["gate"] for item in payload["decision"]["blocking_reasons"]}
+
+    assert payload["status"] == "blocked"
+    assert payload["decision"]["passed"] is False
+    assert payload["summary"]["controlled_passing_count"] == 1
+    assert payload["summary"]["external_passing_count"] == 0
+    assert payload["summary"]["generalization_gap"] == 1.0
+    assert payload["controlled_sweeps"][0]["source_type"] == "controlled"
+    assert payload["external_sweeps"][0]["source_type"] == "external"
+    assert "external_query_sweep" in reason_gates
+    assert "controlled_only_signal" in reason_gates
+    assert saved["decision"]["recommended_controlled_strategy"] == "question_answer_overlap_0p5"
+    assert saved["decision"]["recommended_external_strategy"] is None
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "blind_spot_query_sweep_provenance_comparison"
+    assert record.metadata["status"] == "blocked"
+    assert record.metadata["passed"] is False
+    assert record.metadata["suite"] == "unit"
+
+
+def _write_query_sweep_fixture(
+    path,
+    *,
+    corpus_type,
+    controlled_warning,
+    refuted_count,
+    refuted_rate,
+    false_alarm,
+):
+    path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "blind_spot_retrieval_query_sweep",
+            "status": "complete",
+            "source": {
+                "corpora": [
+                    {
+                        "path": "corpus.json",
+                        "corpus_type": corpus_type,
+                        "summary": {"n_documents": 2},
+                    }
+                ]
+            },
+            "summary": {
+                "blind_spot_count": 2,
+                "best_strategy": "question_answer_overlap_0p5",
+                "best_passing_strategy": (
+                    "question_answer_overlap_0p5"
+                    if refuted_rate >= 0.5 and false_alarm <= 0.05
+                    else None
+                ),
+                "best_blind_refuted_count": refuted_count,
+                "best_passing_blind_refuted_count": (
+                    refuted_count if refuted_rate >= 0.5 and false_alarm <= 0.05 else None
+                ),
+                "controlled_corpus_warning": controlled_warning,
+            },
+            "strategies": [
+                {
+                    "key": "question_answer_overlap_0p5",
+                    "query_field": "question_answer",
+                    "retriever_min_overlap": 0.5,
+                    "retrieval": {"records_with_hits": refuted_count, "total_hits": refuted_count},
+                    "blind_spot": {
+                        "target_route_refuted_count": refuted_count,
+                        "target_route_refuted_rate": refuted_rate,
+                    },
+                    "gate": {"verified_false_alarm": false_alarm},
+                    "target_route_quality": {"decision_accuracy": 1.0 if refuted_count else 0.0},
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+
 def test_eval_score_ensemble_compares_single_and_combined_signals(tmp_path):
     module = importlib.import_module("benchmarks.eval_score_ensemble")
     scores_path = tmp_path / "scores.json"
