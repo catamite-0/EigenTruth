@@ -1,0 +1,36 @@
+{
+  "artifacts": {
+    "blind_spot_evidence_collection_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "blind-spot-evidence-collection-corpus.json",
+      "sha256": "2555c8cc2c2d23939532b28a0b86a082bdf5076eaebaacbbb55d7717b577d2fb",
+      "size_bytes": 1125956
+    },
+    "blind_spot_evidence_expansion_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-blind-spot-evidence-expansion-plan/blind-spot-evidence-expansion-plan.json",
+      "sha256": "4f565ab2c379ae7e9a053322304289b5831eb852fe2f226e7110bbdb68f1f30b",
+      "size_bytes": 446864
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "citation_request_count": 176,
+    "runner": "build_blind_spot_evidence_collection_corpus",
+    "status": "ready_for_collection",
+    "target_count": 65,
+    "total_request_count": 931,
+    "wikidata_request_count": 720
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  }
+}

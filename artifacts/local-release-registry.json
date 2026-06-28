@@ -5265,6 +5265,22 @@
       "name": "truthfulqa-frontier-smollm2-l80-blind-spot-evidence-expansion-plan",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-evidence-expansion-plan/blind-spot-evidence-expansion-plan.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-evidence-collection-corpus/artifact-manifest.json",
+        "citation_request_count": 176,
+        "evidence": "smollm2_l80_high_priority_blind_spot_source_discovery_queue",
+        "status": "ready_for_collection",
+        "target_count": 65,
+        "total_request_count": 931,
+        "wikidata_request_count": 720,
+        "workflow": "blind_spot_evidence_collection_corpus"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-blind-spot-evidence-collection-corpus",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-evidence-collection-corpus/blind-spot-evidence-collection-corpus.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

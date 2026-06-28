@@ -1412,6 +1412,34 @@ world-model/calculator tasks for `21`. This is the concrete worklist for
 expanding external/structured coverage after the provenance comparison blocked
 controlled-only query evidence.
 
+## `build_blind_spot_evidence_collection_corpus.py`
+
+Compiles an evidence expansion plan into source-discovery request batches. This
+output is intentionally not verifier evidence: it is the executable queue for
+Wikidata/entity-property lookup, external citation retrieval, counterfactual
+probe generation, and deterministic world-model/calculator rule authoring.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-evidence-collection-corpus
+
+python benchmarks/build_blind_spot_evidence_collection_corpus.py \
+  --plan artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-evidence-expansion-plan/blind-spot-evidence-expansion-plan.json \
+  --priority high \
+  --json "$OUT/blind-spot-evidence-collection-corpus.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-blind-spot-evidence-collection-corpus \
+  --version 0.1
+```
+
+The registered high-priority corpus has status `ready_for_collection`: `65`
+targets, `931` total requests, `720` Wikidata/entity-property requests, `176`
+citation requests, `29` counterfactual probes, and `6`
+world-model/calculator-rule authoring requests. It keeps the first collection
+pass focused on the targets most likely to unlock structured fact or citation
+coverage before rerunning `sweep_blind_spot_retrieval_queries.py` and
+`compare_blind_spot_query_sweeps.py`.
+
 ## `eval_verifier_ensemble.py`
 
 Compares a single calibrated internal diagnostic against a retrieval/verifier

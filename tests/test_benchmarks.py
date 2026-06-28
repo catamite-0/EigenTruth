@@ -35129,6 +35129,107 @@ def test_plan_blind_spot_evidence_expansion_builds_collection_targets(tmp_path):
     assert record.metadata["suite"] == "unit"
 
 
+def test_build_blind_spot_evidence_collection_corpus_compiles_requests(tmp_path):
+    module = importlib.import_module("benchmarks.build_blind_spot_evidence_collection_corpus")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    plan_path = tmp_path / "evidence-expansion-plan.json"
+    output_path = tmp_path / "evidence-collection-corpus.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    plan_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "blind_spot_evidence_expansion_plan",
+            "status": "needs_evidence_collection",
+            "summary": {"target_count": 3},
+            "targets": [
+                {
+                    "record_index": 7,
+                    "label": 1,
+                    "priority": "high",
+                    "question_type": "definition",
+                    "question": "What is Alpha Syndrome?",
+                    "answer": "A moon.",
+                    "recommended_routes": ["structured_fact", "structured_qa", "retrieval_citation"],
+                    "wikidata_property_hints": ["description", "instance_of:P31", "official_website:P856"],
+                    "entity_candidates": ["Alpha Syndrome"],
+                    "query_seeds": ["Alpha Syndrome A moon", "What is Alpha Syndrome"],
+                },
+                {
+                    "record_index": 8,
+                    "label": 1,
+                    "priority": "high",
+                    "question_type": "person",
+                    "question": "Who founded Beta Labs?",
+                    "answer": "No one.",
+                    "recommended_routes": ["structured_fact", "counterfactual_negation"],
+                    "wikidata_property_hints": ["creator:P170", "occupation:P106"],
+                    "entity_candidates": ["Beta Labs"],
+                    "query_seeds": ["Beta Labs founder"],
+                },
+                {
+                    "record_index": 9,
+                    "label": 1,
+                    "priority": "medium",
+                    "question_type": "quantity",
+                    "question": "How many moons does Gamma have?",
+                    "answer": "Twelve.",
+                    "recommended_routes": ["structured_fact", "calculator", "counterfactual_quantity"],
+                    "wikidata_property_hints": ["population:P1082", "point_in_time:P585"],
+                    "entity_candidates": ["Gamma"],
+                    "query_seeds": ["Gamma moons Twelve"],
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        plan_path=plan_path,
+        output_path=output_path,
+        priorities=("high", "medium"),
+        max_wikidata_requests_per_target=3,
+        max_citation_requests_per_target=2,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="evidence-collection-corpus-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    saved = json.loads(output_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:evidence-collection-corpus-unit:0.1"
+    )
+    request_buckets = payload["requests"]
+    wikidata_requests = request_buckets["wikidata_entity_property"]
+    counterfactual_requests = request_buckets["counterfactual_probe"]
+    rule_requests = request_buckets["world_model_or_calculator_rule"]
+    property_ids = {item["property_id"] for item in wikidata_requests if item["property_id"]}
+
+    assert payload["status"] == "ready_for_collection"
+    assert payload["summary"]["target_count"] == 3
+    assert payload["summary"]["request_counts"]["wikidata_entity_property"] == 7
+    assert payload["summary"]["request_counts"]["external_citation"] == 2
+    assert payload["summary"]["source_discovery_document_count"] == 9
+    assert {"P31", "P170", "P1082"}.issubset(property_ids)
+    assert any(item["probe_type"] == "negation" for item in counterfactual_requests)
+    assert any(item["probe_type"] == "quantity" for item in counterfactual_requests)
+    assert rule_requests[0]["rule_family"] == "quantity_or_arithmetic"
+    assert all("label" not in target for target in payload["targets"])
+    assert all(
+        "label" not in request
+        for bucket in request_buckets.values()
+        for request in bucket
+    )
+    assert saved["label_usage"]["requests_are_verifier_evidence"] is False
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "blind_spot_evidence_collection_corpus"
+    assert record.metadata["target_count"] == 3
+    assert record.metadata["total_request_count"] == payload["summary"]["total_request_count"]
+    assert record.metadata["suite"] == "unit"
+
+
 def test_eval_score_ensemble_compares_single_and_combined_signals(tmp_path):
     module = importlib.import_module("benchmarks.eval_score_ensemble")
     scores_path = tmp_path / "scores.json"

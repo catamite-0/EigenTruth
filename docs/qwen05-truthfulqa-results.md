@@ -966,6 +966,15 @@ high priority, `80` recommend structured facts, `65` recommend structured QA,
 `21` recommend world-model or calculator checks. This is the concrete queue to
 execute before rerunning the external provenance gate.
 
+The high-priority source-discovery corpus is registered as
+`report:truthfulqa-frontier-smollm2-l80-blind-spot-evidence-collection-corpus:0.1`.
+It compiles the plan into executable request batches for the `65` high-priority
+records: `720` Wikidata/entity-property lookups, `176` external citation
+searches, `29` counterfactual probes, and `6` deterministic
+world-model/calculator rule-authoring requests. The artifact explicitly marks these requests as
+`source_discovery_only`, so they can drive evidence collection without being
+mistaken for verifier evidence or release-gate grounding.
+
 A local release-candidate smoke artifact now pairs that staged route baseline
 with a tiny-gpt2 offline readiness/runtime baseline:
 
