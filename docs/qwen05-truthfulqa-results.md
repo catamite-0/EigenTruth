@@ -937,6 +937,18 @@ The artifact manifest verifies, so the conclusion is reproducible: selected
 retrieval-structured-QA evidence is precise, but coverage is far too narrow to
 remove the SmolLM2 detectability blocker.
 
+The query-strategy sweep is registered as
+`report:truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep:0.1`. It runs
+`16` retrieval query/overlap strategies against the same blind spots and the
+controlled TruthfulQA correct-answer corpus. The original `answer@0.95`
+baseline refutes `3/89`; `answer@0.5` refutes `54/89` with verified false alarm
+`0.024`; `question_answer@0.65` refutes `87/89` with verified false alarm
+`0.000`; and `question_answer@0.5` refutes `89/89` with verified false alarm
+`0.000`. A question-only query also refutes `89/89` but raises false alarm to
+`0.176`, so it stays a negative control. The next useful run is to port
+question-aware query construction to external or structured-fact corpora with
+provenance gates, rather than promoting the controlled-corpus result.
+
 A local release-candidate smoke artifact now pairs that staged route baseline
 with a tiny-gpt2 offline readiness/runtime baseline:
 

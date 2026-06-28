@@ -1290,6 +1290,44 @@ coverage: expand query construction, external corpora, structured-fact
 predicates, citation checks, and world-model routes before using this evidence
 to relax the detectability release blocker.
 
+## `sweep_blind_spot_retrieval_queries.py`
+
+Sweeps local retrieval query fields and overlap thresholds over the same
+blind-spot set. This is useful after a route audit shows a coverage gap: it
+separates query-construction failures from verifier failures while preserving
+the corpus provenance warning.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep
+
+python benchmarks/sweep_blind_spot_retrieval_queries.py \
+  --scores artifacts/smollm2_truthfulqa_l80_scores_with_statements.json \
+  --corpus artifacts/truthfulqa_l80_correct_answer_corpus.json \
+  --blind-spots artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
+  --query-fields answer,question,question_answer,text \
+  --retriever-min-overlaps 0.95,0.8,0.65,0.5 \
+  --retrieval-limit 3 \
+  --signal truth_proj \
+  --alpha 0.1 \
+  --verifier-min-overlap 0.65 \
+  --json "$OUT/blind-spot-query-sweep.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep \
+  --version 0.1
+```
+
+The registered SmolLM2 sweep
+(`report:truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep:0.1`) evaluates
+`16` strategies. The original `answer@0.95` baseline refutes only `3/89` blind
+spots. `answer@0.5` refutes `54/89` with verified false alarm `0.024`.
+`question_answer@0.65` refutes `87/89` with verified false alarm `0.000`, and
+`question_answer@0.5` refutes `89/89` with verified false alarm `0.000` in the
+controlled corpus replay. `question@0.95` also refutes `89/89`, but false alarm
+rises to `0.176`, so it stays a negative control. Because the source corpus is
+`truthfulqa_correct_answer_evidence`, treat the best strategy as query-design
+evidence to port to external/structured corpora, not as open-domain grounding.
+
 ## `eval_verifier_ensemble.py`
 
 Compares a single calibrated internal diagnostic against a retrieval/verifier

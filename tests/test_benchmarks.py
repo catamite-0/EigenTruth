@@ -34820,6 +34820,106 @@ def test_audit_blind_spot_correction_routes_joins_verified_sidecar(tmp_path):
     assert record.metadata["suite"] == "unit"
 
 
+def test_sweep_blind_spot_retrieval_queries_ranks_query_strategies(tmp_path):
+    module = importlib.import_module("benchmarks.sweep_blind_spot_retrieval_queries")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    scores_path = tmp_path / "scores.json"
+    corpus_path = tmp_path / "corpus.json"
+    blind_spots_path = tmp_path / "blind-spots.json"
+    output_path = tmp_path / "query-sweep.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 1, 1, 0],
+            "scores": {"truth_proj": [0.1, 0.9, 0.8, 0.2]},
+            "statements": [
+                {"question": "What is Alpha?", "answer": "A1", "text": "What is Alpha? A1"},
+                {"question": "What is Alpha?", "answer": "Wrong A1", "text": "What is Alpha? Wrong A1"},
+                {"question": "Who founded Beta?", "answer": "Wrong B", "text": "Who founded Beta? Wrong B"},
+                {"question": "Who founded Beta?", "answer": "B2", "text": "Who founded Beta? B2"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    corpus_path.write_text(
+        json.dumps({
+            "corpus_type": "unit_correct_answer_evidence",
+            "summary": {"n_documents": 2},
+            "documents": [
+                {"question": "What is Alpha?", "answer": "A1", "text": "What is Alpha? A1", "source": "qa:a"},
+                {"question": "Who founded Beta?", "answer": "B2", "text": "Who founded Beta? B2", "source": "qa:b"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    blind_spots_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "detectability_blind_spot_analysis",
+            "records": [
+                {
+                    "record_index": 1,
+                    "label": 1,
+                    "question_type": "definition",
+                    "features": {},
+                    "question": "What is Alpha?",
+                    "answer": "Wrong A1",
+                    "text": "What is Alpha? Wrong A1",
+                },
+                {
+                    "record_index": 2,
+                    "label": 1,
+                    "question_type": "person",
+                    "features": {},
+                    "question": "Who founded Beta?",
+                    "answer": "Wrong B",
+                    "text": "Who founded Beta? Wrong B",
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        scores_path=scores_path,
+        corpus_paths=(corpus_path,),
+        blind_spots_path=blind_spots_path,
+        output_path=output_path,
+        query_fields=("answer", "question_answer"),
+        retriever_min_overlaps=(1.0, 0.5),
+        retrieval_limit=2,
+        alpha=0.2,
+        max_verified_false_alarm=0.0,
+        min_blind_refuted_rate=1.0,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="query-sweep-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    saved = json.loads(output_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get("report:query-sweep-unit:0.1")
+    by_key = {item["key"]: item for item in payload["strategies"]}
+
+    assert payload["summary"]["strategy_count"] == 4
+    assert payload["summary"]["best_strategy"] == "question_answer_overlap_0p5"
+    assert payload["summary"]["best_passing_strategy"] == "question_answer_overlap_0p5"
+    assert by_key["answer_overlap_1p0"]["blind_spot"]["target_route_refuted_count"] == 0
+    assert by_key["question_answer_overlap_0p5"]["blind_spot"]["target_route_refuted_count"] == 2
+    assert by_key["question_answer_overlap_0p5"]["gate"]["pass"] is True
+    assert saved["summary"]["best_passing_blind_refuted_count"] == 2
+    assert manifest["summary"]["missing_count"] == 0
+    assert manifest["artifacts"]["blind_spot_query_sweep"]["exists"] is True
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "blind_spot_retrieval_query_sweep"
+    assert record.metadata["best_passing_strategy"] == "question_answer_overlap_0p5"
+    assert record.metadata["suite"] == "unit"
+
+
 def test_eval_score_ensemble_compares_single_and_combined_signals(tmp_path):
     module = importlib.import_module("benchmarks.eval_score_ensemble")
     scores_path = tmp_path / "scores.json"

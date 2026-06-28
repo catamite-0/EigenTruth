@@ -5183,6 +5183,23 @@
       "name": "truthfulqa-frontier-smollm2-l80-blind-spot-route-audit",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-route-audit/blind-spot-route-audit.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/artifact-manifest.json",
+        "best_blind_refuted_count": 89,
+        "best_passing_blind_refuted_count": 89,
+        "best_passing_strategy": "question_answer_overlap_0p5",
+        "best_strategy": "question_answer_overlap_0p5",
+        "blind_spot_count": 89,
+        "evidence": "smollm2_l80_blind_spot_query_strategy_sweep",
+        "status": "complete",
+        "workflow": "blind_spot_retrieval_query_sweep"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1
