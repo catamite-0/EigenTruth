@@ -158,8 +158,9 @@ Ran and registered the current Qwen/SmolLM2 l80 abstention-stability replay:
 
 Added a combined frontier release-evidence comparator:
 
-- `benchmarks/compare_frontier_release_evidence.py` consumes staged verifier-stability and abstention-stability reports without rerunning models, verifiers, or retrieval.
-- It emits separate verifier and abstention track verdicts plus one fail-closed release decision.
+- `benchmarks/compare_frontier_release_evidence.py` consumes staged verifier-stability, abstention-stability, and optional DECK-style detectability taxonomy reports without rerunning models, verifiers, or retrieval.
+- It emits separate verifier, abstention, and detectability track verdicts plus one fail-closed release decision.
+- When taxonomy reports are supplied, the comparator gates the `entrenched` false-record share because that high-consistency/high-confidence cell is the expected blind spot for output-level uncertainty and should be handed to independent verifier, retrieval, citation, structured-fact, or world-model routes.
 - On the current l80 artifacts, verifier stability promotes while abstention stability blocks; this records the correct product posture: staged verifier routing is supported by current evidence, participation-gate promotion is not.
 
 Added dependency-free fact-level claim metadata:

@@ -3586,6 +3586,7 @@ def test_compare_frontier_release_evidence_promotes_when_both_tracks_pass(tmp_pa
 
     assert payload["decision"]["status"] == "promote"
     assert payload["evidence_summary"]["run_names"] == ["synthetic"]
+    assert payload["decision"]["detectability_track_status"] == "not_required"
     assert payload["run_decisions"][0]["verifier_decision"]["metrics"]["verified_pass_seed_rate"] == 1.0
     assert payload["run_decisions"][0]["abstention_decision"]["metrics"]["release_gate_pass_seed_rate"] == 1.0
     assert payload["run_decisions"][0]["abstention_decision"]["metrics"][
@@ -3594,6 +3595,103 @@ def test_compare_frontier_release_evidence_promotes_when_both_tracks_pass(tmp_pa
     assert payload["run_decisions"][0]["abstention_decision"]["metrics"][
         "supervised_feasibility_conditional_correctness_lower_bound"
     ] == pytest.approx(0.9)
+
+
+def test_compare_frontier_release_evidence_gates_detectability_blind_spot(tmp_path):
+    module = importlib.import_module("benchmarks.compare_frontier_release_evidence")
+    verifier_path = tmp_path / "verifier-stability.json"
+    abstention_path = tmp_path / "abstention-stability.json"
+    detectability_path = tmp_path / "detectability-taxonomy.json"
+    verifier_path.write_text(
+        json.dumps(_synthetic_verifier_stability_payload()),
+        encoding="utf-8",
+    )
+    abstention_path.write_text(
+        json.dumps(_synthetic_abstention_stability_payload(pass_seed_count=3, correctness_mean=0.86)),
+        encoding="utf-8",
+    )
+    detectability_path.write_text(
+        json.dumps(_synthetic_detectability_taxonomy_payload(entrenched_false_rate=0.4)),
+        encoding="utf-8",
+    )
+
+    payload = module.compare_frontier_release_evidence(
+        verifier_stability_report_path=verifier_path,
+        abstention_stability_report_path=abstention_path,
+        detectability_taxonomy_report_paths=(detectability_path,),
+        max_detectability_entrenched_false_rate=0.25,
+    )
+
+    assert payload["decision"]["status"] == "blocked"
+    assert payload["decision"]["detectability_track_status"] == "blocked"
+    assert payload["run_decisions"][0]["detectability_decision"]["metrics"]["entrenched_false_rate"] == pytest.approx(
+        0.4
+    )
+    assert any("entrenched_false_rate" in reason for reason in payload["decision"]["blocking_reasons"])
+
+
+def test_compare_frontier_release_evidence_manifest_includes_detectability_taxonomy(tmp_path):
+    registry_module = importlib.import_module("eigentruth.registry")
+    verifier_path = tmp_path / "verifier-stability.json"
+    abstention_path = tmp_path / "abstention-stability.json"
+    detectability_path = tmp_path / "detectability-taxonomy.json"
+    output_path = tmp_path / "frontier-release-evidence" / "report.json"
+    manifest_path = tmp_path / "frontier-release-evidence" / "artifact-manifest.json"
+    verification_path = tmp_path / "frontier-release-evidence" / "manifest-verification.json"
+    registry_path = tmp_path / "registry.json"
+    verifier_path.write_text(
+        json.dumps(_synthetic_verifier_stability_payload()),
+        encoding="utf-8",
+    )
+    abstention_path.write_text(
+        json.dumps(_synthetic_abstention_stability_payload(pass_seed_count=3, correctness_mean=0.86)),
+        encoding="utf-8",
+    )
+    detectability_path.write_text(
+        json.dumps(_synthetic_detectability_taxonomy_payload(entrenched_false_rate=0.1)),
+        encoding="utf-8",
+    )
+
+    subprocess.run(
+        [
+            sys.executable,
+            "benchmarks/compare_frontier_release_evidence.py",
+            "--verifier-stability-report",
+            str(verifier_path),
+            "--abstention-stability-report",
+            str(abstention_path),
+            "--detectability-taxonomy-report",
+            str(detectability_path),
+            "--json",
+            str(output_path),
+            "--artifact-manifest",
+            str(manifest_path),
+            "--verification-report",
+            str(verification_path),
+            "--registry",
+            str(registry_path),
+            "--name",
+            "synthetic-frontier-release-evidence",
+            "--version",
+            "0.2",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+
+    assert payload["decision"]["status"] == "promote"
+    assert payload["decision"]["detectability_track_status"] == "promote"
+    assert payload["inputs"]["detectability_taxonomy_reports"][0]["path"] == str(detectability_path)
+    assert manifest["artifacts"]["detectability_taxonomy_report_0"]["exists"] is True
+    assert manifest["metadata"]["detectability_track_status"] == "promote"
+    record = registry.get("report:synthetic-frontier-release-evidence:0.2")
+    assert record.metadata["detectability_track_status"] == "promote"
+    assert record.metadata["detectability_report_count"] == 1
 
 
 def _synthetic_verifier_stability_payload() -> dict[str, object]:
@@ -3652,6 +3750,40 @@ def _synthetic_abstention_stability_payload(
                 },
             }
         ],
+    }
+
+
+def _synthetic_detectability_taxonomy_payload(
+    *,
+    entrenched_false_rate: float,
+) -> dict[str, object]:
+    entrenched_false_count = int(round(entrenched_false_rate * 10))
+    return {
+        "schema_version": 1,
+        "workflow": "detectability_taxonomy",
+        "status": "complete",
+        "metadata": {"run_name": "synthetic"},
+        "config": {
+            "consistency_signal": "selfcheck_support_rate",
+            "confidence_signal": "nll_answer",
+            "confidence_direction": "lower",
+        },
+        "source": {"score_dump_summary": {"model": "synthetic", "n_total": 20}},
+        "report": {
+            "n_total": 20,
+            "n_true": 10,
+            "n_false": 10,
+            "false_distribution": {
+                "drift": {"count": 2, "rate": 0.2},
+                "entrenched": {"count": entrenched_false_count, "rate": entrenched_false_rate},
+                "confabulation": {"count": 3, "rate": 0.3},
+                "knotted": {"count": 10 - entrenched_false_count - 5, "rate": None},
+            },
+            "blind_spot": {
+                "cell": "entrenched",
+                "n_false": entrenched_false_count,
+            },
+        },
     }
 
 

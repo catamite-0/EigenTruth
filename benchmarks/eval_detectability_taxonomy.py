@@ -58,6 +58,7 @@ def build_detectability_taxonomy_report(
     return {
         "schema_version": 1,
         "workflow": "detectability_taxonomy",
+        "status": "complete",
         "source": {
             "score_dump_path": str(score_path),
             "score_dump_file": score_dump_file_metadata(score_path),

@@ -1169,8 +1169,10 @@ candidate columns.
 
 Combines frontier stability reports into one fail-closed release verdict without
 rerunning models, verifiers, or retrieval. It treats staged verifier stability
-and abstention-gate stability as separate tracks, then blocks the release
-candidate if either track misses its configured seed-rate or metric thresholds.
+and abstention-gate stability as separate required tracks, and can optionally
+gate a DECK-style detectability taxonomy track. The release candidate blocks if
+any provided track misses its configured seed-rate, metric, or blind-spot
+threshold.
 
 ```bash
 OUT=artifacts/truthfulqa-frontier-qwen-smollm2-l80-release-evidence
@@ -1178,6 +1180,9 @@ OUT=artifacts/truthfulqa-frontier-qwen-smollm2-l80-release-evidence
 python benchmarks/compare_frontier_release_evidence.py \
   --verifier-stability-report artifacts/truthfulqa-frontier-qwen-smollm2-l80-verifier-stability/verifier-stability-report.json \
   --abstention-stability-report artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json \
+  --detectability-taxonomy-report artifacts/qwen05_detectability_taxonomy.json \
+  --detectability-taxonomy-report artifacts/smollm2_detectability_taxonomy.json \
+  --max-detectability-entrenched-false-rate 0.25 \
   --json "$OUT/frontier-release-evidence.json" \
   --artifact-manifest "$OUT/artifact-manifest.json" \
   --verification-report "$OUT/manifest-verification.json" \
@@ -1190,6 +1195,10 @@ The current l80 evidence promotes the verifier-stability track but blocks the
 abstention-stability track, so the combined release verdict is blocked. This is
 the expected posture until participation-gate evidence clears the conservative
 conditional-correctness lower-bound gate.
+When `--detectability-taxonomy-report` is supplied, each run must have a matching
+taxonomy report. The default blind-spot gate blocks if more than 25% of false
+records fall into the `entrenched` cell, because that cell is repeatable and
+high-confidence enough that output-level uncertainty is expected to miss it.
 
 ## `eval_verifier_ensemble.py`
 

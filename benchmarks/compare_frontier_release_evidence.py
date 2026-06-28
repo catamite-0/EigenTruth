@@ -24,12 +24,14 @@ DEFAULT_MIN_VERIFIER_BEATS_INTERNAL_SEED_RATE = 1.0
 DEFAULT_MIN_ABSTENTION_PASS_SEED_RATE = 1.0
 DEFAULT_MIN_ABSTENTION_CONDITIONAL_CORRECTNESS_LOWER_BOUND_MEAN = 0.8
 DEFAULT_MAX_ABSTENTION_RATE_MEAN = 0.5
+DEFAULT_MAX_DETECTABILITY_ENTRENCHED_FALSE_RATE = 0.25
 
 
 def compare_frontier_release_evidence(
     *,
     verifier_stability_report_path: str | Path,
     abstention_stability_report_path: str | Path,
+    detectability_taxonomy_report_paths: Sequence[str | Path] = (),
     max_verified_false_alarm_mean: float = DEFAULT_MAX_VERIFIED_FALSE_ALARM_MEAN,
     min_verified_detection_mean: float = DEFAULT_MIN_VERIFIED_DETECTION_MEAN,
     min_verifier_delta_detection_mean: float = DEFAULT_MIN_VERIFIER_DELTA_DETECTION_MEAN,
@@ -40,13 +42,16 @@ def compare_frontier_release_evidence(
         DEFAULT_MIN_ABSTENTION_CONDITIONAL_CORRECTNESS_LOWER_BOUND_MEAN
     ),
     max_abstention_rate_mean: float = DEFAULT_MAX_ABSTENTION_RATE_MEAN,
+    max_detectability_entrenched_false_rate: float = DEFAULT_MAX_DETECTABILITY_ENTRENCHED_FALSE_RATE,
     notes: Sequence[str] = (),
 ) -> dict[str, Any]:
     """Return a release verdict from verifier and abstention stability reports."""
     verifier_path = Path(verifier_stability_report_path)
     abstention_path = Path(abstention_stability_report_path)
+    detectability_paths = tuple(Path(path) for path in detectability_taxonomy_report_paths)
     verifier = _load_json_object(verifier_path)
     abstention = _load_json_object(abstention_path)
+    detectability_reports = tuple((path, _load_json_object(path)) for path in detectability_paths)
     config = {
         "max_verified_false_alarm_mean": _unit_float(
             max_verified_false_alarm_mean,
@@ -80,9 +85,14 @@ def compare_frontier_release_evidence(
             max_abstention_rate_mean,
             name="max_abstention_rate_mean",
         ),
+        "max_detectability_entrenched_false_rate": _unit_float(
+            max_detectability_entrenched_false_rate,
+            name="max_detectability_entrenched_false_rate",
+        ),
     }
     verifier_runs = _runs_by_name(verifier)
     abstention_runs = _runs_by_name(abstention)
+    detectability_runs = _detectability_runs_by_name(detectability_reports)
     verifier_input = _input_summary(
         verifier,
         path=verifier_path,
@@ -93,28 +103,48 @@ def compare_frontier_release_evidence(
         path=abstention_path,
         expected_workflow="abstention_stability",
     )
+    detectability_inputs = tuple(
+        _input_summary(
+            report,
+            path=path,
+            expected_workflow="detectability_taxonomy",
+        )
+        for path, report in detectability_reports
+    )
 
     input_blocking_reasons = tuple(verifier_input["blocking_reasons"]) + tuple(
         abstention_input["blocking_reasons"]
+    ) + tuple(
+        reason
+        for item in detectability_inputs
+        for reason in item["blocking_reasons"]
     )
     run_decisions = []
-    run_names = sorted(set(verifier_runs) | set(abstention_runs))
+    run_names = sorted(set(verifier_runs) | set(abstention_runs) | set(detectability_runs))
     if not run_names:
         input_blocking_reasons = input_blocking_reasons + ("no run evidence found",)
     for name in run_names:
         verifier_run = verifier_runs.get(name)
         abstention_run = abstention_runs.get(name)
+        detectability_run = detectability_runs.get(name)
         run_decisions.append(
             _run_decision(
                 name=name,
                 verifier_run=verifier_run,
                 abstention_run=abstention_run,
+                detectability_run=detectability_run,
+                detectability_required=bool(detectability_reports),
                 config=config,
             )
         )
 
     verifier_track_status = _track_status(run_decisions, "verifier_decision")
     abstention_track_status = _track_status(run_decisions, "abstention_decision")
+    detectability_track_status = (
+        _track_status(run_decisions, "detectability_decision")
+        if detectability_reports
+        else "not_required"
+    )
     blocking_reasons = list(input_blocking_reasons)
     for decision in run_decisions:
         blocking_reasons.extend(decision["blocking_reasons"])
@@ -123,6 +153,7 @@ def compare_frontier_release_evidence(
         if not blocking_reasons
         and verifier_track_status == "promote"
         and abstention_track_status == "promote"
+        and detectability_track_status in {"promote", "not_required"}
         else "blocked"
     )
     return {
@@ -133,12 +164,15 @@ def compare_frontier_release_evidence(
         "inputs": {
             "verifier_stability_report": verifier_input,
             "abstention_stability_report": abstention_input,
+            "detectability_taxonomy_reports": detectability_inputs,
         },
         "evidence_summary": {
             "run_count": len(run_decisions),
             "run_names": run_names,
             "verifier_track_status": verifier_track_status,
             "abstention_track_status": abstention_track_status,
+            "detectability_track_status": detectability_track_status,
+            "detectability_report_count": len(detectability_reports),
             "verifier_signal": verifier.get("config", {}).get("signal")
             if isinstance(verifier.get("config"), Mapping)
             else None,
@@ -151,6 +185,7 @@ def compare_frontier_release_evidence(
             "status": status,
             "verifier_track_status": verifier_track_status,
             "abstention_track_status": abstention_track_status,
+            "detectability_track_status": detectability_track_status,
             "blocking_reasons": tuple(blocking_reasons),
         },
         "notes": tuple(str(note) for note in notes),
@@ -162,6 +197,8 @@ def _run_decision(
     name: str,
     verifier_run: Mapping[str, Any] | None,
     abstention_run: Mapping[str, Any] | None,
+    detectability_run: Mapping[str, Any] | None,
+    detectability_required: bool,
     config: Mapping[str, float],
 ) -> dict[str, Any]:
     blocking_reasons: list[str] = []
@@ -173,12 +210,20 @@ def _run_decision(
         abstention_decision = _missing_track_decision("abstention_stability", name)
     else:
         abstention_decision = _abstention_run_decision(name, abstention_run, config)
+    if not detectability_required:
+        detectability_decision = _not_required_track_decision("detectability_taxonomy", name)
+    elif detectability_run is None:
+        detectability_decision = _missing_track_decision("detectability_taxonomy", name)
+    else:
+        detectability_decision = _detectability_run_decision(name, detectability_run, config)
     blocking_reasons.extend(verifier_decision["blocking_reasons"])
     blocking_reasons.extend(abstention_decision["blocking_reasons"])
+    blocking_reasons.extend(detectability_decision["blocking_reasons"])
     status = (
         "promote"
         if verifier_decision["status"] == "promote"
         and abstention_decision["status"] == "promote"
+        and detectability_decision["status"] in {"promote", "not_required"}
         else "blocked"
     )
     return {
@@ -186,6 +231,7 @@ def _run_decision(
         "status": status,
         "verifier_decision": verifier_decision,
         "abstention_decision": abstention_decision,
+        "detectability_decision": detectability_decision,
         "blocking_reasons": tuple(blocking_reasons),
     }
 
@@ -319,6 +365,36 @@ def _abstention_run_decision(
     return _track_decision("abstention_stability", name, metrics, checks, blocking_reasons)
 
 
+def _detectability_run_decision(
+    name: str,
+    run: Mapping[str, Any],
+    config: Mapping[str, float],
+) -> dict[str, Any]:
+    report = _mapping(run.get("report"))
+    false_distribution = _mapping(report.get("false_distribution"))
+    entrenched = _mapping(false_distribution.get("entrenched"))
+    blind_spot = _mapping(report.get("blind_spot"))
+    run_config = _mapping(run.get("config"))
+    metrics = {
+        "entrenched_false_rate": _finite_float_or_none(entrenched.get("rate")),
+        "entrenched_false_count": _non_negative_int(entrenched.get("count")),
+        "blind_spot_false_count": _non_negative_int(blind_spot.get("n_false")),
+        "n_false": _non_negative_int(report.get("n_false")),
+        "n_total": _non_negative_int(report.get("n_total")),
+        "consistency_signal": run_config.get("consistency_signal"),
+        "confidence_signal": run_config.get("confidence_signal"),
+    }
+    checks = [
+        _max_check(
+            f"detectability_taxonomy.{name}.entrenched_false_rate",
+            metrics["entrenched_false_rate"],
+            config["max_detectability_entrenched_false_rate"],
+        )
+    ]
+    blocking_reasons = list(_failed_reasons(checks))
+    return _track_decision("detectability_taxonomy", name, metrics, checks, blocking_reasons)
+
+
 def _track_decision(
     track: str,
     name: str,
@@ -345,6 +421,17 @@ def _missing_track_decision(track: str, name: str) -> dict[str, Any]:
         "metrics": {},
         "checks": (),
         "blocking_reasons": (reason,),
+    }
+
+
+def _not_required_track_decision(track: str, name: str) -> dict[str, Any]:
+    return {
+        "track": track,
+        "name": name,
+        "status": "not_required",
+        "metrics": {},
+        "checks": (),
+        "blocking_reasons": (),
     }
 
 
@@ -390,6 +477,33 @@ def _runs_by_name(payload: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
         name = str(run.get("name") or f"run_{index}")
         result[name] = run
     return result
+
+
+def _detectability_runs_by_name(
+    reports: Sequence[tuple[Path, Mapping[str, Any]]],
+) -> dict[str, Mapping[str, Any]]:
+    result: dict[str, Mapping[str, Any]] = {}
+    for path, report in reports:
+        name = _detectability_report_name(path, report)
+        if name in result:
+            raise ValueError(f"duplicate detectability taxonomy run name: {name!r}")
+        result[name] = report
+    return result
+
+
+def _detectability_report_name(path: Path, report: Mapping[str, Any]) -> str:
+    metadata = _mapping(report.get("metadata"))
+    for key in ("run_name", "name"):
+        value = metadata.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    source = _mapping(report.get("source"))
+    summary = _mapping(source.get("score_dump_summary"))
+    for key in ("name", "run_name", "model"):
+        value = summary.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return path.stem
 
 
 def _load_json_object(path: Path) -> dict[str, Any]:
@@ -521,6 +635,10 @@ def _write_artifact_manifest(
     inputs = _mapping(payload.get("inputs"))
     verifier_input = _mapping(inputs.get("verifier_stability_report"))
     abstention_input = _mapping(inputs.get("abstention_stability_report"))
+    detectability_inputs = tuple(
+        item for item in inputs.get("detectability_taxonomy_reports", ())
+        if isinstance(item, Mapping)
+    )
     artifacts: dict[str, str | Path | None] = {
         "frontier_release_evidence_report": report_path,
         "verifier_stability_report": verifier_input.get("path"),
@@ -528,6 +646,9 @@ def _write_artifact_manifest(
         "abstention_stability_report": abstention_input.get("path"),
         "abstention_stability_manifest": abstention_input.get("artifact_manifest"),
     }
+    for index, detectability_input in enumerate(detectability_inputs):
+        artifacts[f"detectability_taxonomy_report_{index}"] = detectability_input.get("path")
+        artifacts[f"detectability_taxonomy_manifest_{index}"] = detectability_input.get("artifact_manifest")
     manifest = context.build_artifact_manifest(
         artifacts,
         root=output_path.parent,
@@ -540,6 +661,9 @@ def _write_artifact_manifest(
             if isinstance(payload.get("decision"), Mapping)
             else None,
             "abstention_track_status": payload.get("decision", {}).get("abstention_track_status")
+            if isinstance(payload.get("decision"), Mapping)
+            else None,
+            "detectability_track_status": payload.get("decision", {}).get("detectability_track_status")
             if isinstance(payload.get("decision"), Mapping)
             else None,
         },
@@ -590,10 +714,12 @@ def _record_registry(
         "status": decision.get("status"),
         "verifier_track_status": decision.get("verifier_track_status"),
         "abstention_track_status": decision.get("abstention_track_status"),
+        "detectability_track_status": decision.get("detectability_track_status"),
         "blocking_reasons": tuple(decision.get("blocking_reasons", ())),
         "run_names": tuple(evidence_summary.get("run_names", ())),
         "verifier_signal": evidence_summary.get("verifier_signal"),
         "abstention_signals": tuple(evidence_summary.get("abstention_signals", ())),
+        "detectability_report_count": evidence_summary.get("detectability_report_count"),
         "artifact_manifest": None if manifest_path is None else str(manifest_path),
         "manifest_verification_report": None if verification_path is None else str(verification_path),
         "manifest_verified": None if verification is None else bool(verification.get("passed")),
@@ -643,6 +769,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     payload = compare_frontier_release_evidence(
         verifier_stability_report_path=args.verifier_stability_report,
         abstention_stability_report_path=args.abstention_stability_report,
+        detectability_taxonomy_report_paths=tuple(args.detectability_taxonomy_report or ()),
         max_verified_false_alarm_mean=args.max_verified_false_alarm_mean,
         min_verified_detection_mean=args.min_verified_detection_mean,
         min_verifier_delta_detection_mean=args.min_verifier_delta_detection_mean,
@@ -653,6 +780,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             args.min_abstention_conditional_correctness_lower_bound_mean
         ),
         max_abstention_rate_mean=args.max_abstention_rate_mean,
+        max_detectability_entrenched_false_rate=args.max_detectability_entrenched_false_rate,
         notes=args.note,
     )
     if manifest_path is not None:
@@ -753,6 +881,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Compare frontier stability evidence for release")
     parser.add_argument("--verifier-stability-report", required=True)
     parser.add_argument("--abstention-stability-report", required=True)
+    parser.add_argument("--detectability-taxonomy-report", action="append", default=[])
     parser.add_argument("--json", required=True)
     parser.add_argument("--artifact-manifest", default=None)
     parser.add_argument("--verification-report", default=None)
@@ -775,6 +904,8 @@ def main(argv: Sequence[str] | None = None) -> None:
                         default=DEFAULT_MIN_ABSTENTION_CONDITIONAL_CORRECTNESS_LOWER_BOUND_MEAN)
     parser.add_argument("--max-abstention-rate-mean", type=float,
                         default=DEFAULT_MAX_ABSTENTION_RATE_MEAN)
+    parser.add_argument("--max-detectability-entrenched-false-rate", type=float,
+                        default=DEFAULT_MAX_DETECTABILITY_ENTRENCHED_FALSE_RATE)
     parser.add_argument("--manifest-fingerprint-workers", type=int, default=1)
     parser.add_argument("--no-recursive", action="store_true")
     parser.add_argument("--note", action="append", default=[])
