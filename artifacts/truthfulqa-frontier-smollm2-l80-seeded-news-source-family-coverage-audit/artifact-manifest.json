@@ -1,0 +1,52 @@
+{
+  "artifacts": {
+    "coverage_audit_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-coverage-audit.json",
+      "sha256": "aac6371a4de56b5e7e0ee57a8aeca9d6bc5ed834cb7a85ba8c31b1b882ff9d89",
+      "size_bytes": 22814
+    },
+    "source_family_acquisition_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-acquisition-plan.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "source_family_adapter_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-seeded-news-source-family-citation-workflow/source-family-citation-search-results.jsonl",
+      "sha256": "83bf21fca170ab8fb7de0a3bd95e57314b8f91e0e58b261eead02eb6ea948d6d",
+      "size_bytes": 2725648
+    },
+    "source_family_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-seeded-news-source-family-citation-workflow/source-family-citation-search-requests.jsonl",
+      "sha256": "bd1066a0815031d0b943547f6c9655fc750c36f8afd3c88e2ec4e6fe1b431a29",
+      "size_bytes": 238759
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "acquisition_plan_count": 0,
+    "evidence": "wikidata_crossref_worldbank_reduced_crossref_official_site_openalex_seeded_news_catalogs",
+    "request_count": 176,
+    "status": "covered",
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "workflow": "source_family_coverage_audit"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

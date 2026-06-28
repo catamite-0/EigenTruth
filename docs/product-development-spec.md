@@ -595,6 +595,16 @@ For product features:
   implication: the evidence panel now needs a replacement or seeded news lane
   for the final food-affordability gap; scholarly/official coverage is no
   longer the limiting source-family issue.
+- `run_seeded_url_source_family_catalog_adapter.py` now provides that replacement
+  lane. The registered seeded-news run uses `4` AP/PBS URL seeds for the final
+  news task, writes `4` news source-family docs with short fallback text, records
+  `0` errors, and keeps the same request-id/label-free catalog boundary.
+  Combined coverage is now complete (`official=36/36`,
+  `official_statistics=4/4`, `scholarly=156/156`, `news=4/4`), while route
+  promotion still blocks on query-sweep/comparison gates. Product implication:
+  the evidence panel can now show source-family-complete coverage, but the
+  product should still present the route as unpromoted until comparison-quality
+  gates improve.
 
 ### Next Verification Adapter Work
 

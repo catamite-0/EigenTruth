@@ -1399,6 +1399,18 @@ missing target rows fall from `28` to `4`, `official=36/36`,
 is still `empty` (`0` docs, `8` errors), so the next source-family work should
 replace or seed the news lane rather than rely on the current public GDELT path.
 
+`benchmarks/run_seeded_url_source_family_catalog_adapter.py` now closes that
+remaining source-family lane without adding a network-search dependency. The
+registered seeded-news run consumes the final `news=1` collection task, uses
+`4` AP/PBS URL seeds with short paraphrase fallback text, writes `4`
+`source_family=news` docs, records `0` errors, and verifies its manifest. Adding
+the seeded-news catalog to the existing Wikidata, Crossref, reduced Crossref,
+World Bank, official-site, and OpenAlex catalogs produces `691` catalog docs and
+`528` adapter results. The route still blocks promotion on query-sweep and
+controlled-vs-external comparison gates, but source-family coverage is now
+complete: `official=36/36`, `official_statistics=4/4`, `scholarly=156/156`, and
+`news=4/4`, with an empty acquisition plan.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -1424,15 +1436,13 @@ replace or seed the news lane rather than rely on the current public GDELT path.
 6. Promote a Qwen l20/l80 readiness baseline through the same registry workflow
    if Qwen-specific runtime evidence is needed; SmolLM2 now has the first
    non-tiny registered readiness/release candidate.
-7. Continue the latest source-family catalog collection plan after the
-   completed Crossref, World Bank, GDELT-shell, official-site, and OpenAlex
-   slices: replace or seed the remaining news lane for the food-affordability
-   task, then rerun `run_source_family_citation_search_workflow.py` with
-   `--adapter-diversify-source-families`. The combined catalogs now cover
-   `official=36/36`, `official_statistics=4/4`, and `scholarly=156/156`, but
-   still have no passing blind-spot query strategy; only promote future catalogs
-   if provenance, external query-sweep, and controlled-vs-external comparison
-   gates pass.
+7. Source-family catalog acquisition is now closed for the current SmolLM2 l80
+   frontier queue: `official=36/36`, `official_statistics=4/4`,
+   `scholarly=156/156`, and `news=4/4` are covered. The next verification step
+   is not another catalog source; it is converting this coverage into a stronger
+   route gate by improving the blind-spot query strategy and
+   controlled-vs-external comparison, then promoting only if provenance,
+   external query-sweep, and comparison gates pass.
 8. Extend the new verifier-stability path from structured QA to real retrieval,
    database, calculator, and world-model evidence under the same conformal
    false-alarm budgets. Use `benchmarks/build_evidence_fixture.py` with a local

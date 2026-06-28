@@ -37214,6 +37214,135 @@ def test_gdelt_source_family_catalog_adapter_rejects_reserved_task_metadata(tmp_
         )
 
 
+def test_seeded_url_source_family_catalog_adapter_writes_news_catalog(tmp_path):
+    module = importlib.import_module("benchmarks.run_seeded_url_source_family_catalog_adapter")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    tasks_path = tmp_path / "collection-tasks.jsonl"
+    seeds_path = tmp_path / "news-url-seeds.jsonl"
+    catalog_path = tmp_path / "news-catalog.jsonl"
+    report_path = tmp_path / "news-report.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    tasks_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "usage": "source_catalog_collection_only",
+            "not_verifier_evidence": True,
+            "task_id": "catalog-news-alpha",
+            "source_family": "news",
+            "query": "food affordability news",
+            "query_key": "food affordability news",
+            "search_queries": ["food affordability news"],
+            "request_ids": ["cite-search-alpha"],
+            "source_queue_request_sha256": ["sha-a"],
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    seeds_path.write_text(
+        json.dumps({
+            "task_id": "catalog-news-alpha",
+            "url": "https://example.org/food-affordability",
+            "provider": "example_news",
+            "seed_key": "example-food-affordability",
+            "published_at": "2026-06-10",
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    def fake_fetch_text(url, headers):
+        assert url == "https://example.org/food-affordability"
+        assert headers["User-Agent"].startswith("unit-agent")
+        return """
+        <html>
+          <head>
+            <title>Food affordability remains under pressure</title>
+            <meta name="description" content="News report on grocery affordability.">
+          </head>
+          <body><h1>Food costs</h1><p>Grocery prices rose as household budgets tightened.</p></body>
+        </html>
+        """
+
+    payload = module.run_seeded_url_source_family_catalog_adapter(
+        tasks_path=tasks_path,
+        seeds_path=seeds_path,
+        output_path=catalog_path,
+        report_json_path=report_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="seeded-news-catalog-unit",
+        version="0.1",
+        source_family="news",
+        provider="seeded_news",
+        min_delay_seconds=0.0,
+        user_agent="unit-agent/0.1",
+        metadata={"suite": "unit"},
+        fetch_text=fake_fetch_text,
+    )
+    rows = [json.loads(line) for line in catalog_path.read_text(encoding="utf-8").splitlines()]
+    row = rows[0]
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get("report:seeded-news-catalog-unit:0.1")
+
+    assert payload["status"] == "ready"
+    assert payload["summary"]["task_count"] == 1
+    assert payload["summary"]["matched_seed_count"] == 1
+    assert payload["summary"]["source_document_count"] == 1
+    assert payload["summary"]["fetch_status_counts"] == {"fetched": 1}
+    assert row["provider"] == "example_news"
+    assert row["source_family"] == "news"
+    assert row["title"] == "Food affordability remains under pressure"
+    assert row["url"] == "https://example.org/food-affordability"
+    assert row["published_at"] == "2026-06-10"
+    assert row["metadata"]["collection_task_ids"] == ["catalog-news-alpha"]
+    assert row["metadata"]["source_queue_request_sha256"] == ["sha-a"]
+    assert row["metadata"]["fetch_status"] == "fetched"
+    assert row["metadata"]["source_family_seed"] == "news"
+    assert "request_ids" not in row["metadata"]
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "seeded_url_source_family_catalog_adapter"
+    assert record.metadata["source_document_count"] == 1
+    assert record.metadata["suite"] == "unit"
+
+
+def test_seeded_url_source_family_catalog_adapter_rejects_seed_request_ids(tmp_path):
+    module = importlib.import_module("benchmarks.run_seeded_url_source_family_catalog_adapter")
+
+    tasks_path = tmp_path / "collection-tasks.jsonl"
+    seeds_path = tmp_path / "news-url-seeds.jsonl"
+    catalog_path = tmp_path / "news-catalog.jsonl"
+    tasks_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "usage": "source_catalog_collection_only",
+            "not_verifier_evidence": True,
+            "task_id": "catalog-news-alpha",
+            "source_family": "news",
+            "search_queries": ["food affordability news"],
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    seeds_path.write_text(
+        json.dumps({
+            "task_id": "catalog-news-alpha",
+            "url": "https://example.org/food-affordability",
+            "request_ids": ["bad-boundary"],
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="reserved fields: request_ids"):
+        module.run_seeded_url_source_family_catalog_adapter(
+            tasks_path=tasks_path,
+            seeds_path=seeds_path,
+            output_path=catalog_path,
+            fetch_text=lambda _url, _headers: "<html></html>",
+        )
+
+
 def test_official_site_source_family_catalog_adapter_writes_official_catalog(tmp_path):
     module = importlib.import_module("benchmarks.run_official_site_source_family_catalog_adapter")
     registry_module = importlib.import_module("eigentruth.registry")

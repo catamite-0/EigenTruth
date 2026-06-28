@@ -1,0 +1,51 @@
+{
+  "config": {
+    "fetch_pages": false,
+    "max_seed_urls_per_task": null,
+    "max_tasks": null,
+    "max_text_chars": 6000,
+    "min_delay_seconds": 0.0,
+    "provider": "seeded_news",
+    "source_family": "news",
+    "timeout_seconds": 20.0
+  },
+  "errors": [],
+  "metadata": {
+    "source": "openalex_diverse_source_family_catalog_collection_plan",
+    "suite": "truthfulqa_frontier_smollm2_l80"
+  },
+  "output_path": "artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-catalog/seeded-news-catalog.jsonl",
+  "schema_version": 1,
+  "source": {
+    "collection_tasks": "artifacts/truthfulqa-frontier-smollm2-l80-openalex-diverse-source-family-catalog-collection-plan/source-family-catalog-collection-tasks.jsonl",
+    "url_seeds": "artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-catalog/seeded-news-url-seeds.jsonl"
+  },
+  "status": "ready",
+  "summary": {
+    "domain_counts": {
+      "apnews.com": 1,
+      "www.pbs.org": 3
+    },
+    "error_count": 0,
+    "fetch_status_counts": {
+      "seed_fallback": 4
+    },
+    "fetched_page_count": 0,
+    "matched_seed_count": 4,
+    "provider_counts": {
+      "associated_press": 1,
+      "pbs_newshour": 3
+    },
+    "seed_count": 4,
+    "skipped_duplicate_count": 0,
+    "source_document_count": 4,
+    "source_family_counts": {
+      "news": 4
+    },
+    "task_count": 1,
+    "task_source_family_counts": {
+      "news": 1
+    }
+  },
+  "workflow": "seeded_url_source_family_catalog_adapter"
+}

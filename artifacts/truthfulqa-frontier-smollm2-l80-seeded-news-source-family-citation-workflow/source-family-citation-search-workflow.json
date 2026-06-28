@@ -1,0 +1,180 @@
+{
+  "adapter_summary": {
+    "catalog_provider_counts": {
+      "associated_press": 1,
+      "crossref": 117,
+      "noaa_ncei": 1,
+      "noaa_psl": 1,
+      "openalex": 52,
+      "pbs_newshour": 3,
+      "tesla": 1,
+      "tesla_ir": 1,
+      "usda_ers": 2,
+      "who": 1,
+      "who_europe": 1,
+      "wikidata": 292,
+      "worldbank": 218
+    },
+    "catalog_source_family_counts": {
+      "news": 4,
+      "official": 9,
+      "official_statistics": 217,
+      "reference": 292,
+      "scholarly": 169
+    },
+    "request_count": 176,
+    "request_error_count": 0,
+    "request_with_results_count": 176,
+    "result_count": 528,
+    "result_provider_counts": {
+      "crossref": 84,
+      "noaa_ncei": 8,
+      "noaa_psl": 24,
+      "openalex": 108,
+      "pbs_newshour": 4,
+      "usda_ers": 84,
+      "who": 32,
+      "who_europe": 20,
+      "wikidata": 152,
+      "worldbank": 12
+    },
+    "result_source_family_counts": {
+      "news": 4,
+      "official": 168,
+      "official_statistics": 12,
+      "reference": 152,
+      "scholarly": 192
+    },
+    "source_document_count": 691
+  },
+  "config": {
+    "adapter_diversify_source_families": true,
+    "adapter_max_query_variants": 3,
+    "adapter_max_results": 3,
+    "adapter_min_text_overlap": 0.03,
+    "alpha": 0.1,
+    "corpus_name": "unresolved_blind_spot_citation_search",
+    "default_source_family": "reference",
+    "max_alternate_queries": 3,
+    "max_claim_id_link_rate": 0.0,
+    "max_controlled_verified_false_alarm": 0.05,
+    "max_exact_answer_copy_rate": 0.8,
+    "max_external_verified_false_alarm": 0.05,
+    "max_label_metadata_rate": 0.0,
+    "max_requests": null,
+    "max_results_per_request": null,
+    "max_verified_false_alarm": 0.05,
+    "min_blind_refuted_rate": 0.5,
+    "min_controlled_blind_refuted_rate": 0.5,
+    "min_external_blind_refuted_rate": 0.5,
+    "query_fields": [
+      "question_answer"
+    ],
+    "query_mode": "claim_entity",
+    "repeats": 1,
+    "retrieval_limit": 3,
+    "retriever_min_overlaps": [
+      0.5
+    ],
+    "seed": 0,
+    "signal": "truth_proj",
+    "source_kind": "external_citation_search_result",
+    "verifier_min_overlap": 0.65
+  },
+  "evidence_summary": {
+    "adapter_request_count": 176,
+    "comparison_passed": false,
+    "comparison_status": "blocked",
+    "corpus_document_count": 528,
+    "evidence_class": "external_candidate",
+    "provenance_passed": true,
+    "provenance_status": "pass",
+    "query_sweep_best_passing_blind_refuted_count": null,
+    "query_sweep_best_passing_strategy": null,
+    "query_sweep_best_strategy": "question_answer_overlap_0p5",
+    "recommended_external_strategy": null,
+    "source_document_count": 528
+  },
+  "gate": {
+    "blocking_reasons": [
+      {
+        "gate": "query_sweep",
+        "reason": "No blind-spot query strategy passed the configured gates."
+      },
+      {
+        "gate": "query_sweep_comparison",
+        "reason": "Controlled-vs-external comparison status is blocked."
+      }
+    ],
+    "passed": false,
+    "promotion_ready": false
+  },
+  "metadata": {
+    "evidence": "wikidata_crossref_worldbank_reduced_crossref_official_site_openalex_seeded_news_catalogs",
+    "suite": "truthfulqa_frontier_smollm2_l80"
+  },
+  "paths": {
+    "adapter_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-source-family-citation-workflow/source-family-citation-search-adapter-manifest.json",
+    "adapter_report": "artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-source-family-citation-workflow/source-family-citation-search-adapter-report.json",
+    "adapter_results": "artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-source-family-citation-workflow/source-family-citation-search-results.jsonl",
+    "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-source-family-citation-workflow/artifact-manifest.json",
+    "evidence_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-source-family-citation-workflow/evidence-gate/artifact-manifest.json",
+    "evidence_workflow": "artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-source-family-citation-workflow/evidence-gate/citation-search-evidence-workflow.json",
+    "request_handoff": "artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-source-family-citation-workflow/request-handoff/citation-search-request-handoff.json",
+    "request_handoff_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-source-family-citation-workflow/request-handoff/artifact-manifest.json",
+    "requests": "artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-source-family-citation-workflow/source-family-citation-search-requests.jsonl",
+    "workflow_report": "artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-source-family-citation-workflow/source-family-citation-search-workflow.json"
+  },
+  "request_summary": {
+    "adapter_request_count": 176,
+    "corpus_document_count": 0,
+    "freshness_required_count": 4,
+    "official_source_preferred_count": 36,
+    "priority_counts": {
+      "high": 176
+    },
+    "question_type_counts": {
+      "definition": 156,
+      "location": 20
+    },
+    "result_summary": {
+      "input_result_count": 0,
+      "matched_request_count": 0,
+      "result_documents_by_request": {},
+      "skipped_empty_result_count": 0,
+      "unknown_request_result_count": 0
+    },
+    "source_document_count": 0,
+    "source_family_counts": {
+      "encyclopedic": 176,
+      "news": 4,
+      "official": 36,
+      "official_statistics": 4,
+      "reference": 176,
+      "scholarly": 156
+    },
+    "source_provider_counts": {},
+    "source_queue_adapter_request_count": 182,
+    "source_queue_target_count": 46
+  },
+  "schema_version": 1,
+  "source": {
+    "blind_spots": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json",
+    "controlled_sweeps": [
+      "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json"
+    ],
+    "queue_report": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue/unresolved-evidence-queue.json",
+    "scores": "artifacts/smollm2_truthfulqa_l80_scores_with_statements.json",
+    "source_catalogs": [
+      "artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog/source-family-catalog.jsonl",
+      "artifacts/truthfulqa-frontier-smollm2-l80-crossref-scholarly-catalog/crossref-scholarly-catalog.jsonl",
+      "artifacts/truthfulqa-frontier-smollm2-l80-worldbank-official-statistics-catalog/worldbank-official-statistics-catalog.jsonl",
+      "artifacts/truthfulqa-frontier-smollm2-l80-crossref-reduced-scholarly-catalog/crossref-reduced-scholarly-catalog.jsonl",
+      "artifacts/truthfulqa-frontier-smollm2-l80-official-site-catalog/official-site-catalog.jsonl",
+      "artifacts/truthfulqa-frontier-smollm2-l80-openalex-scholarly-catalog/openalex-scholarly-catalog.jsonl",
+      "artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-catalog/seeded-news-catalog.jsonl"
+    ]
+  },
+  "status": "blocked",
+  "workflow": "source_family_citation_search_workflow"
+}

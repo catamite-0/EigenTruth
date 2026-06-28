@@ -2087,6 +2087,44 @@ request errors because the public GDELT endpoint returned rate-limit failures in
 this environment. The manifest verifies and the adapter boundary is tested, but
 this artifact is only a rate-limit/run-status record.
 
+## `run_seeded_url_source_family_catalog_adapter.py`
+
+Fetches or seed-falls-back URL-seeded source-family pages for collection tasks.
+The adapter is dependency-free and generic across source families; the current
+registered use is the remaining `news` lane after GDELT failed closed. Seed rows
+must be label-free and request-id-free, and emitted source docs keep only safe
+task provenance, URL, provider, title, short text, timestamp, and source-family
+metadata.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-catalog
+
+python benchmarks/run_seeded_url_source_family_catalog_adapter.py \
+  --tasks artifacts/truthfulqa-frontier-smollm2-l80-openalex-diverse-source-family-catalog-collection-plan/source-family-catalog-collection-tasks.jsonl \
+  --seeds "$OUT/seeded-news-url-seeds.jsonl" \
+  --output "$OUT/seeded-news-catalog.jsonl" \
+  --report-json "$OUT/seeded-news-catalog-report.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-seeded-news-catalog \
+  --version 0.1 \
+  --source-family news \
+  --provider seeded_news \
+  --no-fetch \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=openalex_diverse_source_family_catalog_collection_plan
+```
+
+The registered seeded-news run consumes the final `news=1` collection task, uses
+`4` AP/PBS URL seeds with short paraphrase fallback text, writes `4`
+`source_family=news` docs, records `0` errors, and verifies its manifest. Adding
+that catalog to the Wikidata, Crossref, reduced Crossref, World Bank,
+official-site, and OpenAlex catalogs gives `691` catalog docs and `528` adapter
+results. Route promotion still blocks on the blind-spot query sweep and
+controlled-vs-external comparison, but the source-family coverage audit is now
+`covered`: `official=36/36`, `official_statistics=4/4`, `scholarly=156/156`,
+and `news=4/4`, with an empty acquisition plan.
+
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:
 
@@ -2164,9 +2202,9 @@ and `scholarly=128`; remaining missing targets are `official=4`,
 tasks: `scholarly=5`, `official=1`, and `news=1`.
 
 The follow-up OpenAlex plus source-family-diverse rerank pass supersedes that
-queue for scholarly/official coverage: the latest collection plan has `1`
-remaining task, the unresolved `news` source-family task for the
-food-affordability question.
+queue for scholarly/official coverage, and the seeded-news pass closes the final
+source-family queue: all requested non-fallback source families are now covered,
+while route promotion remains fail-closed behind query-sweep/comparison gates.
 
 ## `run_wikipedia_citation_search_adapter.py`
 

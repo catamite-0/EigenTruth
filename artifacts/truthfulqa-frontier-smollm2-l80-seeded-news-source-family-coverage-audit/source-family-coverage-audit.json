@@ -1,0 +1,829 @@
+{
+  "config": {
+    "fallback_families": [
+      "encyclopedic",
+      "reference"
+    ],
+    "max_examples": 20
+  },
+  "examples": {
+    "covered": [
+      {
+        "covered_target_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official_statistics",
+          "official",
+          "encyclopedic",
+          "reference",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "population country",
+        "question_type": "definition",
+        "request_id": "cite-search-8b58995470ea78f9",
+        "result_count": 3,
+        "result_providers": [
+          "worldbank",
+          "who",
+          "crossref"
+        ],
+        "result_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official_statistics",
+          "official",
+          "encyclopedic",
+          "reference",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "population country",
+        "question_type": "definition",
+        "request_id": "cite-search-bbd5cdf975d44a83",
+        "result_count": 3,
+        "result_providers": [
+          "worldbank",
+          "who",
+          "crossref"
+        ],
+        "result_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official_statistics",
+          "official",
+          "encyclopedic",
+          "reference",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "population country",
+        "question_type": "definition",
+        "request_id": "cite-search-af6fc174863183f2",
+        "result_count": 3,
+        "result_providers": [
+          "worldbank",
+          "who",
+          "crossref"
+        ],
+        "result_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official_statistics",
+          "official",
+          "encyclopedic",
+          "reference",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "population country",
+        "question_type": "definition",
+        "request_id": "cite-search-b677934f044dafc7",
+        "result_count": 3,
+        "result_providers": [
+          "worldbank",
+          "who",
+          "crossref"
+        ],
+        "result_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-c00b806315ac398b",
+        "result_count": 3,
+        "result_providers": [
+          "usda_ers",
+          "crossref",
+          "wikidata"
+        ],
+        "result_source_families": [
+          "official",
+          "scholarly",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-89534a0c11134e44",
+        "result_count": 3,
+        "result_providers": [
+          "usda_ers",
+          "crossref",
+          "wikidata"
+        ],
+        "result_source_families": [
+          "official",
+          "scholarly",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-523c555cc76d5706",
+        "result_count": 3,
+        "result_providers": [
+          "usda_ers",
+          "crossref",
+          "wikidata"
+        ],
+        "result_source_families": [
+          "official",
+          "scholarly",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-71ae3e3c71ef376a",
+        "result_count": 3,
+        "result_providers": [
+          "usda_ers",
+          "crossref",
+          "wikidata"
+        ],
+        "result_source_families": [
+          "official",
+          "scholarly",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-4ffa9f0785eeb9da",
+        "result_count": 3,
+        "result_providers": [
+          "usda_ers",
+          "crossref",
+          "wikidata"
+        ],
+        "result_source_families": [
+          "official",
+          "scholarly",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-ebda97c2ac1f8395",
+        "result_count": 3,
+        "result_providers": [
+          "usda_ers",
+          "crossref",
+          "wikidata"
+        ],
+        "result_source_families": [
+          "official",
+          "scholarly",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-0694b6748461aa0f",
+        "result_count": 3,
+        "result_providers": [
+          "usda_ers",
+          "crossref",
+          "wikidata"
+        ],
+        "result_source_families": [
+          "official",
+          "scholarly",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-96a58e762235e5fa",
+        "result_count": 3,
+        "result_providers": [
+          "usda_ers",
+          "crossref",
+          "wikidata"
+        ],
+        "result_source_families": [
+          "official",
+          "scholarly",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "America happened affordability food recent decades definition",
+        "question_type": "definition",
+        "request_id": "cite-search-001487e174e4e658",
+        "result_count": 3,
+        "result_providers": [
+          "usda_ers",
+          "pbs_newshour",
+          "openalex"
+        ],
+        "result_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "America happened affordability food recent decades definition",
+        "question_type": "definition",
+        "request_id": "cite-search-0825d1e6bab6d172",
+        "result_count": 3,
+        "result_providers": [
+          "usda_ers",
+          "pbs_newshour",
+          "openalex"
+        ],
+        "result_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "America happened affordability food recent decades definition",
+        "question_type": "definition",
+        "request_id": "cite-search-e5b9550016de8b47",
+        "result_count": 3,
+        "result_providers": [
+          "usda_ers",
+          "pbs_newshour",
+          "openalex"
+        ],
+        "result_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "America happened affordability food recent decades definition",
+        "question_type": "definition",
+        "request_id": "cite-search-23f868db0c80918e",
+        "result_count": 3,
+        "result_providers": [
+          "usda_ers",
+          "pbs_newshour",
+          "openalex"
+        ],
+        "result_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "doing next definition",
+        "question_type": "definition",
+        "request_id": "cite-search-369260c9393016fd",
+        "result_count": 3,
+        "result_providers": [
+          "openalex",
+          "usda_ers",
+          "openalex"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "official",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "doing next definition",
+        "question_type": "definition",
+        "request_id": "cite-search-fce13203fec54cdb",
+        "result_count": 3,
+        "result_providers": [
+          "openalex",
+          "usda_ers",
+          "openalex"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "official",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "doing next definition",
+        "question_type": "definition",
+        "request_id": "cite-search-97afdb455d58cd3d",
+        "result_count": 3,
+        "result_providers": [
+          "openalex",
+          "usda_ers",
+          "openalex"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "official",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "doing next definition",
+        "question_type": "definition",
+        "request_id": "cite-search-eee772a66671b8cc",
+        "result_count": 3,
+        "result_providers": [
+          "openalex",
+          "usda_ers",
+          "openalex"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "official",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      }
+    ],
+    "missing_target_family": []
+  },
+  "metadata": {
+    "evidence": "wikidata_crossref_worldbank_reduced_crossref_official_site_openalex_seeded_news_catalogs",
+    "suite": "truthfulqa_frontier_smollm2_l80"
+  },
+  "schema_version": 1,
+  "source": {
+    "adapter_results": "artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-source-family-citation-workflow/source-family-citation-search-results.jsonl",
+    "requests": "artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-source-family-citation-workflow/source-family-citation-search-requests.jsonl"
+  },
+  "status": "covered",
+  "summary": {
+    "acquisition_plan_count": 0,
+    "covered_target_source_family_counts": {
+      "news": 4,
+      "official": 36,
+      "official_statistics": 4,
+      "scholarly": 156
+    },
+    "freshness_required_count": 4,
+    "freshness_required_with_fresh_result_count": 176,
+    "missing_target_source_family_counts": {},
+    "official_source_preferred_count": 36,
+    "official_source_preferred_with_official_result_count": 176,
+    "preferred_source_family_counts": {
+      "encyclopedic": 176,
+      "news": 4,
+      "official": 36,
+      "official_statistics": 4,
+      "reference": 176,
+      "scholarly": 156
+    },
+    "request_count": 176,
+    "request_missing_target_family_count": 0,
+    "request_with_results_count": 176,
+    "request_with_target_family_count": 176,
+    "result_provider_counts": {
+      "crossref": 84,
+      "noaa_ncei": 8,
+      "noaa_psl": 24,
+      "openalex": 108,
+      "pbs_newshour": 4,
+      "usda_ers": 84,
+      "who": 32,
+      "who_europe": 20,
+      "wikidata": 152,
+      "worldbank": 12
+    },
+    "result_request_count": 176,
+    "result_source_family_counts": {
+      "news": 4,
+      "official": 168,
+      "official_statistics": 12,
+      "reference": 152,
+      "scholarly": 192
+    },
+    "target_source_family_counts": {
+      "news": 4,
+      "official": 36,
+      "official_statistics": 4,
+      "scholarly": 156
+    }
+  },
+  "workflow": "source_family_coverage_audit"
+}

@@ -1,0 +1,75 @@
+{
+  "config": {
+    "default_source_family": "reference",
+    "diversify_source_families": true,
+    "max_query_variants": 3,
+    "max_results": 3,
+    "min_text_overlap": 0.03
+  },
+  "input_path": "artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-source-family-citation-workflow/source-family-citation-search-requests.jsonl",
+  "metadata": {
+    "evidence": "wikidata_crossref_worldbank_reduced_crossref_official_site_openalex_seeded_news_catalogs",
+    "source_workflow": "source_family_citation_search_workflow",
+    "suite": "truthfulqa_frontier_smollm2_l80"
+  },
+  "output_path": "artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-source-family-citation-workflow/source-family-citation-search-results.jsonl",
+  "schema_version": 1,
+  "source_catalog_paths": [
+    "artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog/source-family-catalog.jsonl",
+    "artifacts/truthfulqa-frontier-smollm2-l80-crossref-scholarly-catalog/crossref-scholarly-catalog.jsonl",
+    "artifacts/truthfulqa-frontier-smollm2-l80-worldbank-official-statistics-catalog/worldbank-official-statistics-catalog.jsonl",
+    "artifacts/truthfulqa-frontier-smollm2-l80-crossref-reduced-scholarly-catalog/crossref-reduced-scholarly-catalog.jsonl",
+    "artifacts/truthfulqa-frontier-smollm2-l80-official-site-catalog/official-site-catalog.jsonl",
+    "artifacts/truthfulqa-frontier-smollm2-l80-openalex-scholarly-catalog/openalex-scholarly-catalog.jsonl",
+    "artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-catalog/seeded-news-catalog.jsonl"
+  ],
+  "summary": {
+    "catalog_provider_counts": {
+      "associated_press": 1,
+      "crossref": 117,
+      "noaa_ncei": 1,
+      "noaa_psl": 1,
+      "openalex": 52,
+      "pbs_newshour": 3,
+      "tesla": 1,
+      "tesla_ir": 1,
+      "usda_ers": 2,
+      "who": 1,
+      "who_europe": 1,
+      "wikidata": 292,
+      "worldbank": 218
+    },
+    "catalog_source_family_counts": {
+      "news": 4,
+      "official": 9,
+      "official_statistics": 217,
+      "reference": 292,
+      "scholarly": 169
+    },
+    "request_count": 176,
+    "request_error_count": 0,
+    "request_with_results_count": 176,
+    "result_count": 528,
+    "result_provider_counts": {
+      "crossref": 84,
+      "noaa_ncei": 8,
+      "noaa_psl": 24,
+      "openalex": 108,
+      "pbs_newshour": 4,
+      "usda_ers": 84,
+      "who": 32,
+      "who_europe": 20,
+      "wikidata": 152,
+      "worldbank": 12
+    },
+    "result_source_family_counts": {
+      "news": 4,
+      "official": 168,
+      "official_statistics": 12,
+      "reference": 152,
+      "scholarly": 192
+    },
+    "source_document_count": 691
+  },
+  "workflow": "source_family_citation_search_adapter"
+}

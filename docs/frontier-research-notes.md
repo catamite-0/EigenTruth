@@ -823,16 +823,23 @@ Added the first monitor-first tool-selection audit layer:
   `official_statistics=4/4`, and `scholarly=156/156` are covered. The route
   still blocks promotion, and the only remaining source-family gap is the
   `news=4` food-affordability slice; a wider GDELT retry remains empty.
+- `run_seeded_url_source_family_catalog_adapter.py` adds the generic URL-seeded
+  escape hatch for rate-limited or source-specific lanes. The registered news
+  run consumes the final `news=1` task, uses `4` AP/PBS URL seeds with short
+  paraphrase fallback text, writes `4` news catalog docs, records `0` errors,
+  and verifies its manifest. With that catalog added to the family-diverse
+  workflow, source-family coverage is now complete for this queue:
+  `official=36/36`, `official_statistics=4/4`, `scholarly=156/156`, and
+  `news=4/4`; route promotion still blocks behind query-sweep and
+  controlled-vs-external comparison gates.
 
 ## Next Research-to-Code Candidates
 
 1. Convert the target-specific Wikidata source docs into structured-fact/QA corpora, then rerun the blind-spot correction-route audit instead of another lexical overlap sweep.
-2. Continue the latest 1-task source-family collection plan: replace or
-   URL-seed the remaining news slot for the food-affordability question before
-   rerunning `run_source_family_citation_search_workflow.py` with
-   `--adapter-diversify-source-families`. Current combined catalogs cover
-   `official=36/36`, `official_statistics=4/4`, and `scholarly=156/156`, but
-   still have no passing blind-spot query strategy.
+2. Move from source-family acquisition to route-quality improvement: the current
+   queue now has complete source-family coverage, but still has no passing
+   blind-spot query strategy. The next code step should improve structured query
+   generation/comparison rather than adding another catalog lane.
 3. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
 4. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
 5. Materialize a real `frontier_audit` release candidate with the registered covered-facts external-evidence handoff and external-prediction triple matrix artifact, then export the resulting promotion contract.
