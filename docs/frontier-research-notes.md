@@ -1006,6 +1006,22 @@ Added the first monitor-first tool-selection audit layer:
   is now a first-class optional release gate, and `frontier_audit` defaults its
   registry key alongside covered-facts external evidence and triple-extraction
   fixture evidence.
+- The first real `frontier_audit` release-candidate materialization is now
+  checked in under `artifacts/frontier-audit-release-candidate-v0/`. The run
+  builds a local frontier route registry, consumes the covered-facts external
+  evidence handoff, mechanism handoff bundle, product-trace replay,
+  product-runtime drift report, adapter-family matrix, and triple-extraction
+  fixture matrix, then writes a verified release-candidate manifest. The result
+  correctly blocks rather than exporting a product contract: the verified
+  manifest passes, external evidence and mechanism handoff evidence promote,
+  and structured-fact canonical/paraphrase robustness can now be evaluated from
+  legacy score-dump plus verified-record artifacts; remaining blockers are
+  readiness AUROC/cost, strict adapter-family coverage (`triple_evidence` plus
+  rule-backed `state_transition`), learned/external triple-prediction evidence,
+  the required retrieval route's selected-count/property coverage, product-trace
+  action-audit/action-execution gates, and product-runtime drift coverage for
+  promotion, pre-generation, counterfactual, triple-audit, covered-fact, and
+  action-gate evidence.
 
 ## Next Research-to-Code Candidates
 
@@ -1024,4 +1040,10 @@ Added the first monitor-first tool-selection audit layer:
    coverage is not enough (`0/88` mapped).
 3. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
 4. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
-5. Materialize a real `frontier_audit` release candidate with the registered covered-facts external-evidence handoff, mechanism handoff evidence bundle, and external-prediction triple matrix artifact, then export the resulting promotion contract.
+5. Turn the blocked `frontier_audit` materialization into a promotable contract:
+   rebuild readiness/performance evidence with a stronger or cheaper run,
+   publish a strict adapter-family matrix that includes `triple_evidence` and a
+   rule-backed `state_transition` route, run a real learned/OpenIE/LLM-json
+   triple extractor through the matrix handoff, rerun product-trace replay with
+   action-audit/action-execution child gates, and rebuild runtime-drift evidence
+   from the promotion-contract coverage fields.

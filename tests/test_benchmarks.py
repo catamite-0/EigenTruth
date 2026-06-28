@@ -11753,6 +11753,125 @@ def test_compare_route_baselines_accepts_covered_fact_route_summary(tmp_path):
     )
 
 
+def test_compare_route_baselines_derives_covered_fact_property_metrics(tmp_path):
+    module = importlib.import_module("benchmarks.compare_route_baselines")
+    from eigentruth.registry import ArtifactRegistry, build_artifact_manifest
+
+    output_dir = tmp_path / "legacy-covered-fact-route"
+    output_dir.mkdir()
+    registry_path = tmp_path / "registry.json"
+    route_summary_path = output_dir / "route-summary.json"
+    score_dump_path = output_dir / "covered-facts-scores.json"
+    verified_records_path = output_dir / "verified-records.jsonl"
+    manifest_path = output_dir / "artifact-manifest.json"
+    properties = (
+        ("P36", "capital"),
+        ("P37", "official language"),
+        ("P38", "currency"),
+    )
+    labels: list[int] = []
+    statements: list[dict[str, Any]] = []
+    verified_rows: list[dict[str, Any]] = []
+    for idx, (property_id, property_label) in enumerate(properties):
+        for is_false in (False, True):
+            record_index = len(labels)
+            labels.append(1 if is_false else 0)
+            statements.append({
+                "question": f"Question {idx}",
+                "answer": "wrong" if is_false else "right",
+                "text": f"{property_label} claim",
+                "metadata": {
+                    "source": f"wikidata:Q{idx}:{property_id}:Q{record_index}",
+                    "statement_property": property_id,
+                    "statement_property_label": property_label,
+                },
+            })
+            verified_rows.append({
+                "schema_version": 1,
+                "record_index": record_index,
+                "label": labels[-1],
+                "record": {
+                    "final": {
+                        "status": "refuted" if is_false else "supported",
+                        "confidence": 0.95,
+                    }
+                },
+            })
+    route_summary_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "wikidata_structured_qa_route_workflow",
+            "status": "promote",
+            "route": "structured_fact",
+            "selected_route_counts": {"structured_fact": len(labels)},
+            "route_metrics": {
+                "selected": len(labels),
+                "decision_accuracy": 1.0,
+                "false_supported_rate": 0.0,
+                "false_refuted_rate": 1.0,
+                "mean_attempted_route_count": 1.0,
+                "retrieval_use_rate": 0.0,
+                "invalid_metric_counts": {},
+            },
+        }),
+        encoding="utf-8",
+    )
+    score_dump_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "config": {"workflow": "wikidata_structured_qa_route_workflow"},
+            "labels": labels,
+            "scores": {"truth_proj": [0.0 for _ in labels]},
+            "statements": statements,
+        }),
+        encoding="utf-8",
+    )
+    verified_records_path.write_text(
+        "\n".join(json.dumps(row, sort_keys=True) for row in verified_rows) + "\n",
+        encoding="utf-8",
+    )
+    manifest = build_artifact_manifest(
+        {
+            "route_summary": route_summary_path,
+            "covered_fact_score_dump": score_dump_path,
+            "verified_records_jsonl": verified_records_path,
+        },
+        root=output_dir,
+        metadata={
+            "workflow": "wikidata_structured_qa_route_workflow",
+            "status": "promote",
+            "route": "structured_fact",
+            "promotes_covered_facts_route": True,
+        },
+    )
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="legacy-covered-fact-route",
+        path=manifest_path,
+        version="0.1",
+        metadata={"workflow": "wikidata_structured_qa_route_workflow"},
+    ).save_json()
+
+    payload = module.compare_route_baselines(
+        registry_path=registry_path,
+        min_covered_fact_properties=3,
+        min_covered_fact_property_records=2,
+        min_covered_fact_property_source_documents=2,
+        min_covered_fact_property_decision_accuracy=0.99,
+        max_covered_fact_property_false_supported_rate=0.0,
+        min_covered_fact_property_false_refuted_rate=0.99,
+    )
+    row = payload["leaderboard"][0]
+
+    assert payload["decision"]["status"] == "promote"
+    assert row["covered_fact_property_count"] == 3
+    assert row["covered_fact_property_metrics"]["P36"]["n_records"] == 2
+    assert row["covered_fact_property_metrics"]["P38"]["false_refuted_rate"] == pytest.approx(1.0)
+    assert row["covered_fact_property_metrics"]["P37"]["metric_source"] == (
+        "derived_from_covered_fact_score_dump_and_verified_records"
+    )
+
+
 def test_compare_route_baselines_blocks_invalid_source_metrics(tmp_path):
     module = importlib.import_module("benchmarks.compare_route_baselines")
     from eigentruth.registry import ArtifactRegistry
