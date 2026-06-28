@@ -31,12 +31,18 @@ if str(SRC) not in sys.path:
 from benchmarks.build_external_retrieval_corpus import build_external_retrieval_corpus  # noqa: E402
 from eigentruth.json_utils import strict_json_dumps  # noqa: E402
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
+from eigentruth.verify.search_planning import (  # noqa: E402
+    QUERY_PLAN_STRATEGIES,
+    CitationSearchQueryPlan,
+    plan_citation_search_query,
+)
 
 CITATION_REQUEST_TYPE = "external_citation"
 WORKFLOW = "citation_search_adapter_handoff"
 DEFAULT_CORPUS_NAME = "unresolved_blind_spot_citation_search"
 DEFAULT_SOURCE_KIND = "external_citation_search_result"
-QUERY_MODES = ("question", "queue_query", "question_and_query")
+QUERY_MODES = QUERY_PLAN_STRATEGIES
+DEFAULT_MAX_ALTERNATE_QUERIES = 3
 RESERVED_EXTERNAL_FIELDS = {
     "answer",
     "claim_id",
@@ -59,6 +65,7 @@ def build_citation_search_adapter_handoff(
     query_mode: str = "question",
     max_requests: int | None = None,
     max_results_per_request: int | None = None,
+    max_alternate_queries: int = DEFAULT_MAX_ALTERNATE_QUERIES,
     corpus_name: str = DEFAULT_CORPUS_NAME,
     source_kind: str = DEFAULT_SOURCE_KIND,
     metadata: Mapping[str, Any] | None = None,
@@ -71,6 +78,8 @@ def build_citation_search_adapter_handoff(
         raise ValueError("max_requests must be positive when provided.")
     if max_results_per_request is not None and int(max_results_per_request) <= 0:
         raise ValueError("max_results_per_request must be positive when provided.")
+    if int(max_alternate_queries) < 0:
+        raise ValueError("max_alternate_queries cannot be negative.")
     source_requests = tuple(
         request
         for request in _mapping_sequence(queue_report.get("adapter_requests", ()))
@@ -79,7 +88,11 @@ def build_citation_search_adapter_handoff(
     if max_requests is not None:
         source_requests = source_requests[: int(max_requests)]
     adapter_requests = tuple(
-        _adapter_request(request, query_mode=query_mode)
+        _adapter_request(
+            request,
+            query_mode=query_mode,
+            max_alternate_queries=int(max_alternate_queries),
+        )
         for request in source_requests
     )
     request_by_id = {str(request["request_id"]): request for request in adapter_requests}
@@ -122,6 +135,7 @@ def build_citation_search_adapter_handoff(
             "query_mode": query_mode,
             "max_requests": max_requests,
             "max_results_per_request": max_results_per_request,
+            "max_alternate_queries": int(max_alternate_queries),
             "corpus_name": corpus_name,
             "source_kind": source_kind,
         },
@@ -149,6 +163,7 @@ def run(
     query_mode: str = "question",
     max_requests: int | None = None,
     max_results_per_request: int | None = None,
+    max_alternate_queries: int = DEFAULT_MAX_ALTERNATE_QUERIES,
     corpus_name: str = DEFAULT_CORPUS_NAME,
     source_kind: str = DEFAULT_SOURCE_KIND,
     metadata: Mapping[str, Any] | None = None,
@@ -183,6 +198,7 @@ def run(
         query_mode=query_mode,
         max_requests=max_requests,
         max_results_per_request=max_results_per_request,
+        max_alternate_queries=max_alternate_queries,
         corpus_name=corpus_name,
         source_kind=source_kind,
         metadata=metadata,
@@ -259,9 +275,18 @@ def run(
     return payload
 
 
-def _adapter_request(request: Mapping[str, Any], *, query_mode: str) -> dict[str, Any]:
-    query = _query_for_request(request, query_mode=query_mode)
-    if not query:
+def _adapter_request(
+    request: Mapping[str, Any],
+    *,
+    query_mode: str,
+    max_alternate_queries: int = DEFAULT_MAX_ALTERNATE_QUERIES,
+) -> dict[str, Any]:
+    query_plan = _query_plan_for_request(
+        request,
+        query_mode=query_mode,
+        max_alternate_queries=max_alternate_queries,
+    )
+    if not query_plan.query:
         request_id = request.get("queue_id") or request.get("source_request_id")
         raise ValueError(f"citation request {request_id} has no query.")
     request_id = _adapter_request_id(request)
@@ -269,7 +294,8 @@ def _adapter_request(request: Mapping[str, Any], *, query_mode: str) -> dict[str
         "schema_version": 1,
         "request_id": request_id,
         "adapter_family": "external_citation_search",
-        "query": query,
+        "query": query_plan.query,
+        "alternate_queries": tuple(query_plan.alternate_queries),
         "requires_timestamp": bool(request.get("requires_timestamp")),
         "question_type": str(request.get("question_type", "")),
         "priority": str(request.get("priority", "")),
@@ -278,21 +304,42 @@ def _adapter_request(request: Mapping[str, Any], *, query_mode: str) -> dict[str
         "metadata": {
             "source_queue_request_sha256": _sha256_json(_minimal_request_fingerprint(request)),
             "query_mode": query_mode,
+            "query_strategy": query_plan.strategy,
+            "query_variant_count": len(query_plan.variants),
+            "entity_candidates": tuple(query_plan.entity_candidates),
+            "keyword_terms": tuple(query_plan.keyword_terms),
+            "removed_disallowed_phrase_count": len(query_plan.removed_phrase_hashes),
             "queue_workflow": "unresolved_blind_spot_evidence_queue",
         },
     }
 
 
 def _query_for_request(request: Mapping[str, Any], *, query_mode: str) -> str:
-    question = str(request.get("question", "")).strip()
-    queue_query = str(request.get("query", "")).strip()
-    if query_mode == "question":
-        return question or queue_query
-    if query_mode == "queue_query":
-        return queue_query or question
-    if question and queue_query and question.casefold() not in queue_query.casefold():
-        return f"{question} {queue_query}"
-    return queue_query or question
+    return _query_plan_for_request(request, query_mode=query_mode).query
+
+
+def _query_plan_for_request(
+    request: Mapping[str, Any],
+    *,
+    query_mode: str,
+    max_alternate_queries: int = DEFAULT_MAX_ALTERNATE_QUERIES,
+) -> CitationSearchQueryPlan:
+    return plan_citation_search_query(
+        question=str(request.get("question", "")),
+        candidate_query=str(request.get("query", "")),
+        question_type=str(request.get("question_type", "")),
+        disallowed_phrases=_disallowed_query_phrases(request),
+        strategy=query_mode,
+        max_alternate_queries=max_alternate_queries,
+    )
+
+
+def _disallowed_query_phrases(request: Mapping[str, Any]) -> tuple[str, ...]:
+    return tuple(
+        str(value)
+        for value in (request.get("model_answer"), request.get("answer"))
+        if value is not None and str(value).strip()
+    )
 
 
 def _adapter_request_id(request: Mapping[str, Any]) -> str:
@@ -545,6 +592,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--query-mode", choices=QUERY_MODES, default="question")
     parser.add_argument("--max-requests", type=int, default=None)
     parser.add_argument("--max-results-per-request", type=int, default=None)
+    parser.add_argument("--max-alternate-queries", type=int, default=DEFAULT_MAX_ALTERNATE_QUERIES)
     parser.add_argument("--corpus-name", default=DEFAULT_CORPUS_NAME)
     parser.add_argument("--source-kind", default=DEFAULT_SOURCE_KIND)
     parser.add_argument("--metadata", action="append", default=[])
@@ -565,6 +613,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         query_mode=args.query_mode,
         max_requests=args.max_requests,
         max_results_per_request=args.max_results_per_request,
+        max_alternate_queries=args.max_alternate_queries,
         corpus_name=args.corpus_name,
         source_kind=args.source_kind,
         metadata=_parse_metadata(args.metadata or ()),

@@ -1253,6 +1253,17 @@ specific: generic Wikipedia lexical search is not enough; the route needs
 claim/entity-aware query rewriting or structured source-family adapters before
 promotion.
 
+The claim/entity-aware query rewriting side is now implemented and registered
+as a handoff artifact. `eigentruth.verify.search_planning` builds sanitized
+query plans from question text plus untrusted queue candidates; the handoff uses
+it with `--query-mode claim_entity` to remove model-answer phrases before any
+external adapter boundary. The SmolLM2 L80 artifact
+`truthfulqa-frontier-smollm2-l80-claim-entity-citation-search-handoff` keeps
+`176` citation/search requests, emits `555` primary/alternate query variants,
+records `132` removed disallowed phrases, and still has `0` source docs until
+the next adapter run materializes result JSONL. A request sanity check finds no
+`record_index`, `target_id`, `model_answer`, or `label` fields.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -1278,10 +1289,10 @@ promotion.
 6. Promote a Qwen l20/l80 readiness baseline through the same registry workflow
    if Qwen-specific runtime evidence is needed; SmolLM2 now has the first
    non-tiny registered readiness/release candidate.
-7. Improve the blocked Wikipedia citation/search route with claim/entity-aware
-   query rewriting or structured source-family adapters, then rerun the same
-   external workflow and only promote if provenance, external query-sweep, and
-   controlled-vs-external comparison gates pass.
+7. Rerun the blocked Wikipedia citation/search route with
+   `--query-mode claim_entity`, `--max-alternate-queries 3`, and adapter
+   `--max-query-variants 3`; only promote if provenance, external query-sweep,
+   and controlled-vs-external comparison gates pass.
 8. Extend the new verifier-stability path from structured QA to real retrieval,
    database, calculator, and world-model evidence under the same conformal
    false-alarm budgets. Use `benchmarks/build_evidence_fixture.py` with a local

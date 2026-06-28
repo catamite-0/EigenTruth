@@ -29,6 +29,7 @@ from benchmarks.audit_retrieval_corpus_provenance import (  # noqa: E402
 )
 from benchmarks.build_citation_search_adapter_handoff import (  # noqa: E402
     DEFAULT_CORPUS_NAME,
+    DEFAULT_MAX_ALTERNATE_QUERIES,
     DEFAULT_SOURCE_KIND,
     QUERY_MODES,
 )
@@ -66,6 +67,7 @@ def run(
     query_mode: str = "question",
     max_requests: int | None = None,
     max_results_per_request: int | None = None,
+    max_alternate_queries: int = DEFAULT_MAX_ALTERNATE_QUERIES,
     corpus_name: str = DEFAULT_CORPUS_NAME,
     source_kind: str = DEFAULT_SOURCE_KIND,
     query_fields: Sequence[str] = ("question", "question_answer"),
@@ -109,6 +111,7 @@ def run(
         query_mode=query_mode,
         max_requests=max_requests,
         max_results_per_request=max_results_per_request,
+        max_alternate_queries=max_alternate_queries,
         corpus_name=corpus_name,
         source_kind=source_kind,
         metadata=metadata,
@@ -190,6 +193,7 @@ def run(
             "query_mode": query_mode,
             "max_requests": max_requests,
             "max_results_per_request": max_results_per_request,
+            "max_alternate_queries": int(max_alternate_queries),
             "corpus_name": corpus_name,
             "source_kind": source_kind,
             "query_fields": tuple(query_fields),
@@ -521,6 +525,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--query-mode", choices=QUERY_MODES, default="question")
     parser.add_argument("--max-requests", type=int, default=None)
     parser.add_argument("--max-results-per-request", type=int, default=None)
+    parser.add_argument("--max-alternate-queries", type=int, default=DEFAULT_MAX_ALTERNATE_QUERIES)
     parser.add_argument("--corpus-name", default=DEFAULT_CORPUS_NAME)
     parser.add_argument("--source-kind", default=DEFAULT_SOURCE_KIND)
     parser.add_argument("--query-fields", default="question,question_answer")
@@ -558,6 +563,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         query_mode=args.query_mode,
         max_requests=args.max_requests,
         max_results_per_request=args.max_results_per_request,
+        max_alternate_queries=args.max_alternate_queries,
         corpus_name=args.corpus_name,
         source_kind=args.source_kind,
         query_fields=_parse_csv_strings(args.query_fields, choices=QUERY_FIELDS, name="query_fields"),

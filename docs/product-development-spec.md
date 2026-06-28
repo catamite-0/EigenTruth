@@ -421,11 +421,14 @@ For product features:
   handoff boundary: `build_citation_search_adapter_handoff.py` writes
   sanitized JSONL requests for external search systems and can ingest returned
   result JSONL into source docs plus an external retrieval corpus. The current
-  SmolLM2 L80 artifact emits `176` high-priority question-only requests with no
-  `record_index`, `target_id`, `model_answer`, or `label` fields. Because no
-  external adapter result file has been supplied yet, the registered handoff is
-  `ready_for_external_adapter` with `0` source docs and `0` corpus docs; it is
-  an execution bridge, not verifier evidence.
+  SmolLM2 L80 question-only artifact emits `176` high-priority requests with no
+  `record_index`, `target_id`, `model_answer`, or `label` fields. The
+  claim/entity-aware follow-up handoff uses the dependency-free
+  `eigentruth.verify.search_planning` planner to remove model-answer phrases
+  from internal candidate queries and emit safe `alternate_queries`; it keeps
+  `176` requests, expands them to `555` query variants, and records `132`
+  removed disallowed phrases. Both handoffs are execution bridges, not verifier
+  evidence.
 - The return path is now gateable in one command:
   `run_citation_search_evidence_workflow.py` consumes local adapter-result
   JSONL, reruns the handoff ingestion, audits the resulting corpus as
@@ -441,14 +444,18 @@ For product features:
   output cannot bypass provenance, query-sweep, or controlled-comparison gates.
 - A first real adapter run is registered:
   `run_wikipedia_citation_search_adapter.py` uses MediaWiki/Wikipedia search
-  with query de-duplication, rate limiting, retries, snippets, and extracts. The
-  SmolLM2 L80 workflow returned `504` result documents for `168/176` sanitized
-  requests and passed provenance, but it is still `blocked`: the external query
-  sweep refuted `0/89` entrenched false answers and the controlled-vs-external
-  comparison generalization gap is `1.0`.
+  with query de-duplication, optional alternate-query fallback, rate limiting,
+  retries, snippets, and extracts. The SmolLM2 L80 question-only workflow
+  returned `504` result documents for `168/176` sanitized requests and passed
+  provenance, but it is still `blocked`: the external query sweep refuted
+  `0/89` entrenched false answers and the controlled-vs-external comparison
+  generalization gap is `1.0`.
 
 ### Next Verification Adapter Work
 
+- Rerun the command-boundary adapter on the claim/entity-aware handoff with
+  `--max-query-variants 3`, then keep the route blocked unless the same
+  provenance, blind-spot sweep, and controlled-vs-external gates pass.
 - Improve evidence retrieval beyond generic Wikipedia lexical search: preserve
   the same command boundary, but add claim/entity-aware query rewriting,
   source-family adapters, or structured citation APIs, then promote only if the

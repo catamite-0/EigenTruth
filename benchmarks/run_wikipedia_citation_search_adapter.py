@@ -55,6 +55,7 @@ def run_wikipedia_citation_search_adapter(
     min_delay_seconds: float = 0.25,
     fetch_extracts: bool = True,
     max_extract_chars: int = 1200,
+    max_query_variants: int = 1,
     user_agent: str = DEFAULT_USER_AGENT,
     compact_json: bool = True,
     fail_on_error: bool = False,
@@ -74,6 +75,8 @@ def run_wikipedia_citation_search_adapter(
         raise ValueError("min_delay_seconds cannot be negative.")
     if max_extract_chars <= 0:
         raise ValueError("max_extract_chars must be positive.")
+    if max_query_variants <= 0:
+        raise ValueError("max_query_variants must be positive.")
 
     requests = _load_jsonl(input_path)
     resolved_api_url = (api_url or DEFAULT_API_URL).format(language=language)
@@ -89,24 +92,25 @@ def run_wikipedia_citation_search_adapter(
         "rate_limiter": rate_limiter,
         "fetch_extracts": bool(fetch_extracts),
         "max_extract_chars": int(max_extract_chars),
+        "max_query_variants": int(max_query_variants),
         "headers": headers,
     }
 
     rows_by_index: dict[int, dict[str, Any]] = {}
-    requests_by_query: dict[str, list[tuple[int, Mapping[str, Any]]]] = {}
+    requests_by_query: dict[tuple[str, ...], list[tuple[int, Mapping[str, Any]]]] = {}
     for index, request in enumerate(requests):
         request_id = str(request.get("request_id") or "")
-        query = _clean(request.get("query"))
+        query_variants = _request_query_variants(request, max_items=int(max_query_variants))
         if not request_id:
-            rows_by_index[index] = _error_row("", query, "missing_request_id")
-        elif not query:
-            rows_by_index[index] = _error_row(request_id, query, "missing_query")
+            rows_by_index[index] = _error_row("", "", "missing_request_id")
+        elif not query_variants:
+            rows_by_index[index] = _error_row(request_id, "", "missing_query")
         else:
-            requests_by_query.setdefault(query, []).append((index, request))
+            requests_by_query.setdefault(query_variants, []).append((index, request))
 
     query_items = tuple(requests_by_query.items())
     if workers == 1 or len(query_items) <= 1:
-        for query, grouped in query_items:
+        for query_variants, grouped in query_items:
             row = _search_one(grouped[0][1], **kwargs)
             for index, request in grouped:
                 rows_by_index[index] = _copy_for_request(row, request_id=str(request["request_id"]))
@@ -117,9 +121,9 @@ def run_wikipedia_citation_search_adapter(
                 for query, grouped in query_items
             }
             for future in concurrent.futures.as_completed(futures):
-                query = futures[future]
+                query_variants = futures[future]
                 row = future.result()
-                for index, request in requests_by_query[query]:
+                for index, request in requests_by_query[query_variants]:
                     rows_by_index[index] = _copy_for_request(row, request_id=str(request["request_id"]))
     rows = tuple(rows_by_index[index] for index in range(len(requests)))
 
@@ -140,6 +144,7 @@ def run_wikipedia_citation_search_adapter(
             "min_delay_seconds": float(min_delay_seconds),
             "fetch_extracts": bool(fetch_extracts),
             "max_extract_chars": int(max_extract_chars),
+            "max_query_variants": int(max_query_variants),
         },
         "summary": summary,
     }
@@ -160,33 +165,27 @@ def _search_one(
     rate_limiter: "_RateLimiter",
     fetch_extracts: bool,
     max_extract_chars: int,
+    max_query_variants: int,
     headers: Mapping[str, str],
 ) -> dict[str, Any]:
     request_id = str(request.get("request_id") or "")
-    query = _clean(request.get("query"))
+    query_variants = _request_query_variants(request, max_items=max_query_variants)
+    query = query_variants[0] if query_variants else ""
     if not request_id:
         return _error_row("", query, "missing_request_id")
-    if not query:
+    if not query_variants:
         return _error_row(request_id, query, "missing_query")
     try:
-        search_payload = _fetch_json(
-            api_url,
-            {
-                "action": "query",
-                "format": "json",
-                "list": "search",
-                "srsearch": query,
-                "srlimit": str(max_results),
-                "srprop": "snippet|titlesnippet|timestamp",
-                "utf8": "1",
-            },
+        hits = _search_query_variants(
+            query_variants,
+            api_url=api_url,
+            max_results=max_results,
             headers=headers,
             timeout_seconds=timeout_seconds,
             retries=retries,
             retry_delay_seconds=retry_delay_seconds,
             rate_limiter=rate_limiter,
         )
-        hits = _search_hits(search_payload)
         extracts = (
             _fetch_extracts(
                 hits,
@@ -213,9 +212,59 @@ def _search_one(
                 )
                 for rank, hit in enumerate(hits[:max_results], start=1)
             ),
+            "metadata": {
+                "query": query,
+                "query_variants": query_variants,
+                "searched_query_variant_count": len(query_variants),
+            },
         }
     except (OSError, ValueError, urllib.error.URLError, urllib.error.HTTPError) as exc:
         return _error_row(request_id, query, f"{type(exc).__name__}: {exc}")
+
+
+def _search_query_variants(
+    query_variants: Sequence[str],
+    *,
+    api_url: str,
+    max_results: int,
+    headers: Mapping[str, str],
+    timeout_seconds: float,
+    retries: int,
+    retry_delay_seconds: float,
+    rate_limiter: "_RateLimiter",
+) -> tuple[dict[str, Any], ...]:
+    hits: list[dict[str, Any]] = []
+    seen_pageids: set[int] = set()
+    for query_index, query in enumerate(query_variants, start=1):
+        search_payload = _fetch_json(
+            api_url,
+            {
+                "action": "query",
+                "format": "json",
+                "list": "search",
+                "srsearch": query,
+                "srlimit": str(max_results),
+                "srprop": "snippet|titlesnippet|timestamp",
+                "utf8": "1",
+            },
+            headers=headers,
+            timeout_seconds=timeout_seconds,
+            retries=retries,
+            retry_delay_seconds=retry_delay_seconds,
+            rate_limiter=rate_limiter,
+        )
+        for hit in _search_hits(search_payload):
+            pageid = int(hit["pageid"])
+            if pageid in seen_pageids:
+                continue
+            seen_pageids.add(pageid)
+            hit = dict(hit)
+            hit["matched_query"] = query
+            hit["matched_query_index"] = query_index
+            hits.append(hit)
+            if len(hits) >= max_results:
+                return tuple(hits)
+    return tuple(hits)
 
 
 def _fetch_extracts(
@@ -365,6 +414,8 @@ def _result_from_hit(
         "source": f"wikipedia:{language}:{pageid}",
         "provider": PROVIDER,
         "rank": int(rank),
+        "matched_query": _clean(hit.get("matched_query")),
+        "matched_query_index": int(hit.get("matched_query_index", 1)),
         "published_at": _clean(hit.get("timestamp")),
     }
 
@@ -389,6 +440,26 @@ def _copy_for_request(row: Mapping[str, Any], *, request_id: str) -> dict[str, A
     copied = dict(row)
     copied["request_id"] = request_id
     return copied
+
+
+def _request_query_variants(request: Mapping[str, Any], *, max_items: int) -> tuple[str, ...]:
+    values: list[str] = [_clean(request.get("query"))]
+    raw_alternates = request.get("alternate_queries", ())
+    if isinstance(raw_alternates, Sequence) and not isinstance(raw_alternates, (str, bytes, bytearray)):
+        values.extend(_clean(item) for item in raw_alternates)
+    seen: set[str] = set()
+    variants: list[str] = []
+    for value in values:
+        if not value:
+            continue
+        folded = value.casefold()
+        if folded in seen:
+            continue
+        seen.add(folded)
+        variants.append(value)
+        if len(variants) >= int(max_items):
+            break
+    return tuple(variants)
 
 
 def _summary(rows: Sequence[Mapping[str, Any]], *, unique_query_count: int) -> dict[str, Any]:
@@ -464,6 +535,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--min-delay-seconds", type=float, default=0.25)
     parser.add_argument("--no-fetch-extracts", action="store_true")
     parser.add_argument("--max-extract-chars", type=int, default=1200)
+    parser.add_argument("--max-query-variants", type=int, default=1)
     parser.add_argument("--user-agent", default=DEFAULT_USER_AGENT)
     parser.add_argument("--pretty-json", action="store_true")
     parser.add_argument("--fail-on-error", action="store_true")
@@ -481,6 +553,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         min_delay_seconds=args.min_delay_seconds,
         fetch_extracts=not bool(args.no_fetch_extracts),
         max_extract_chars=args.max_extract_chars,
+        max_query_variants=args.max_query_variants,
         user_agent=args.user_agent,
         compact_json=not bool(args.pretty_json),
         fail_on_error=bool(args.fail_on_error),

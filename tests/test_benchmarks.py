@@ -36194,6 +36194,60 @@ def test_citation_search_adapter_handoff_sanitizes_requests_and_ingests_results(
     assert record.metadata["suite"] == "unit"
 
 
+def test_citation_search_adapter_handoff_claim_entity_mode_removes_model_answer(tmp_path):
+    module = importlib.import_module("benchmarks.build_citation_search_adapter_handoff")
+
+    queue_path = tmp_path / "unresolved-evidence-queue.json"
+    output_dir = tmp_path / "citation-handoff"
+    raw_queue_request = {
+        "queue_id": "queue:record-7:external_citation:1",
+        "source_request_id": "cite:record-7:1",
+        "target_id": "record-7",
+        "record_index": 7,
+        "adapter_family": "external_citation_search",
+        "request_type": "external_citation",
+        "priority": "high",
+        "question_type": "person",
+        "question": 'This American producer was born in the 70s and is named "Elon" what?',
+        "model_answer": "His name is Elon Musk.",
+        "query": 'This American producer was born in the 70s and is named "Elon" what? His name is Elon Musk.',
+        "requires_timestamp": False,
+        "usage": "source_discovery_only",
+    }
+    queue_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "unresolved_blind_spot_evidence_queue",
+            "status": "ready_for_adapter_execution",
+            "summary": {"target_count": 1, "adapter_request_count": 1},
+            "adapter_requests": [raw_queue_request],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        queue_report_path=queue_path,
+        output_dir=output_dir,
+        query_mode="claim_entity",
+        max_alternate_queries=3,
+    )
+    requests = [
+        json.loads(line)
+        for line in (output_dir / "citation-search-adapter-requests.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    request_text = json.dumps(requests[0], sort_keys=True)
+
+    assert payload["status"] == "ready_for_external_adapter"
+    assert requests[0]["query"]
+    assert requests[0]["alternate_queries"]
+    assert requests[0]["metadata"]["query_strategy"] == "claim_entity"
+    assert requests[0]["metadata"]["removed_disallowed_phrase_count"] == 1
+    assert "Elon Musk" not in request_text
+    assert "record_index" not in request_text
+    assert "target_id" not in request_text
+    assert "model_answer" not in request_text
+
+
 def test_wikipedia_citation_search_adapter_writes_mediawiki_results(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.run_wikipedia_citation_search_adapter")
 
@@ -36271,6 +36325,81 @@ def test_wikipedia_citation_search_adapter_writes_mediawiki_results(tmp_path, mo
     assert "record_index" not in result
     assert "target_id" not in result
     assert "model_answer" not in result
+
+
+def test_wikipedia_citation_search_adapter_uses_alternate_queries(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_wikipedia_citation_search_adapter")
+
+    requests_path = tmp_path / "citation-search-requests.jsonl"
+    results_path = tmp_path / "wikipedia-results.jsonl"
+    requests_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "request_id": "cite-search-beta",
+            "adapter_family": "external_citation_search",
+            "query": "Who is Beta?",
+            "alternate_queries": ("Beta Labs founder", "Beta Labs"),
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    searched_queries = []
+
+    def fake_fetch_json(api_url, params, **kwargs):
+        del api_url, kwargs
+        if params.get("list") == "search":
+            searched_queries.append(params["srsearch"])
+            if params["srsearch"] == "Who is Beta?":
+                return {"query": {"search": []}}
+            assert params["srsearch"] == "Beta Labs founder"
+            return {
+                "query": {
+                    "search": [
+                        {
+                            "pageid": 202,
+                            "title": "Beta Labs",
+                            "snippet": "Beta Labs was founded by Ada Example.",
+                            "timestamp": "2026-02-02T00:00:00Z",
+                        }
+                    ]
+                }
+            }
+        if params.get("prop") == "extracts|info":
+            assert params["pageids"] == "202"
+            return {
+                "query": {
+                    "pages": {
+                        "202": {
+                            "pageid": 202,
+                            "title": "Beta Labs",
+                            "extract": "Beta Labs was founded by Ada Example.",
+                            "fullurl": "https://unit.test/wiki/Beta_Labs",
+                        }
+                    }
+                }
+            }
+        raise AssertionError(f"unexpected params: {params}")
+
+    monkeypatch.setattr(module, "_fetch_json", fake_fetch_json)
+
+    payload = module.run_wikipedia_citation_search_adapter(
+        input_path=requests_path,
+        output_path=results_path,
+        api_url="https://unit.test/w/api.php",
+        max_results=1,
+        max_query_variants=2,
+        workers=1,
+    )
+    rows = [json.loads(line) for line in results_path.read_text(encoding="utf-8").splitlines()]
+    result = rows[0]["results"][0]
+
+    assert searched_queries == ["Who is Beta?", "Beta Labs founder"]
+    assert payload["summary"]["request_with_results_count"] == 1
+    assert rows[0]["metadata"]["query_variants"] == ["Who is Beta?", "Beta Labs founder"]
+    assert result["source"] == "wikipedia:en:202"
+    assert result["matched_query"] == "Beta Labs founder"
+    assert result["matched_query_index"] == 2
 
 
 def test_citation_search_evidence_workflow_runs_gates_and_blocks_unsupported_results(tmp_path):

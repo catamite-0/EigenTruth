@@ -1595,10 +1595,14 @@ Prepares the citation/search portion of the unresolved queue for an external
 search adapter. The emitted request JSONL is deliberately narrower than the
 internal queue: it includes request ids, sanitized queries, priority, question
 type, timestamp requirement, and a queue fingerprint, but omits labels,
-record ids, target ids, and model answers. If an external adapter later writes
-JSONL results keyed by `request_id`, the same workflow can normalize those
-results into source documents plus an `external_evidence_candidate` retrieval
-corpus for provenance audit.
+record ids, target ids, and model answers. `--query-mode claim_entity` runs the
+dependency-free query planner in `eigentruth.verify.search_planning`: it removes
+model-answer phrases from internal queue queries, derives entity/keyword
+variants from the question, and writes safe `alternate_queries` for adapters
+that support fallback search. If an external adapter later writes JSONL results
+keyed by `request_id`, the same workflow can normalize those results into
+source documents plus an `external_evidence_candidate` retrieval corpus for
+provenance audit.
 
 ```bash
 OUT=artifacts/truthfulqa-frontier-smollm2-l80-citation-search-adapter-handoff
@@ -1618,6 +1622,27 @@ citation/search requests from the `46` unresolved-target queue. It intentionally
 has `0` source documents and `0` corpus documents until a real external adapter
 returns search results. A sanity check over the saved requests finds no
 `record_index`, `target_id`, `model_answer`, or `label` fields.
+
+The claim/entity-aware follow-up handoff is registered as
+`report:truthfulqa-frontier-smollm2-l80-claim-entity-citation-search-handoff:0.1`:
+it keeps the same `176` external requests, emits `555` safe query variants
+across primary and alternate queries, and removes `132` disallowed model-answer
+phrases from candidate queue queries. Its request JSONL also passes the same
+no-`record_index` / no-`target_id` / no-`model_answer` / no-`label` sanity
+check.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-claim-entity-citation-search-handoff
+
+python benchmarks/build_citation_search_adapter_handoff.py \
+  --queue artifacts/truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue/unresolved-evidence-queue.json \
+  --output-dir "$OUT" \
+  --query-mode claim_entity \
+  --max-alternate-queries 3 \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-claim-entity-citation-search-handoff \
+  --version 0.1
+```
 
 ## `run_citation_search_evidence_workflow.py`
 
@@ -1651,7 +1676,8 @@ and promotion requires both provenance and route-quality gates to pass.
 Runs a dependency-free MediaWiki/Wikipedia search adapter for sanitized
 citation/search requests. It writes the JSONL result schema expected by
 `run_external_citation_search_adapter_workflow.py`, with query de-duplication,
-global rate limiting, retries, snippets, and optional page extracts.
+optional alternate-query fallback (`--max-query-variants`), global rate
+limiting, retries, snippets, and optional page extracts.
 
 ```bash
 python benchmarks/run_wikipedia_citation_search_adapter.py \
@@ -1660,7 +1686,8 @@ python benchmarks/run_wikipedia_citation_search_adapter.py \
   --max-results 3 \
   --workers 1 \
   --min-delay-seconds 1 \
-  --retries 4
+  --retries 4 \
+  --max-query-variants 3
 ```
 
 The registered SmolLM2 L80 run uses this command through the external adapter
@@ -1682,7 +1709,9 @@ OUT=artifacts/truthfulqa-frontier-smollm2-l80-wikipedia-citation-search-adapter-
 
 python benchmarks/run_external_citation_search_adapter_workflow.py \
   --queue artifacts/truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue/unresolved-evidence-queue.json \
-  --search-command "python benchmarks/run_wikipedia_citation_search_adapter.py --input {input} --output {output} --max-results 3 --workers 1 --min-delay-seconds 1 --retries 4" \
+  --query-mode claim_entity \
+  --max-alternate-queries 3 \
+  --search-command "python benchmarks/run_wikipedia_citation_search_adapter.py --input {input} --output {output} --max-results 3 --max-query-variants 3 --workers 1 --min-delay-seconds 1 --retries 4" \
   --scores artifacts/smollm2_truthfulqa_l80_scores_with_statements.json \
   --blind-spots artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
   --controlled-sweep artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json \

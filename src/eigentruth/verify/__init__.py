@@ -60,6 +60,14 @@ from eigentruth.verify.planning import (
 from eigentruth.verify.protocols import Claim, VerificationResult, VerificationStatus, Verifier
 from eigentruth.verify.routing import default_routed_verifier, default_verifier_routes
 from eigentruth.verify.rules import InMemoryVerifier, normalize_claim_text
+from eigentruth.verify.search_planning import (
+    CitationSearchQueryPlan,
+    clean_search_query,
+    extract_entity_candidates,
+    extract_keyword_terms,
+    plan_citation_search_query,
+    sanitize_search_query,
+)
 from eigentruth.verify.selfcheck import SelfConsistencyVerifier
 from eigentruth.verify.triples import (
     ClaimTriple,
@@ -87,6 +95,7 @@ __all__ = [
     "ClaimRiskLocalizationReport",
     "ClaimRiskSpan",
     "CitationRecord",
+    "CitationSearchQueryPlan",
     "CitationVerifier",
     "ClaimTriple",
     "ClaimTripleExtractor",
@@ -130,6 +139,7 @@ __all__ = [
     "generate_counterfactual_probes",
     "audit_claim_triples",
     "claim_features",
+    "clean_search_query",
     "default_routed_verifier",
     "default_verifier_routes",
     "enrich_claims_with_triples",
@@ -137,12 +147,16 @@ __all__ = [
     "extract_citation_references",
     "extract_claims",
     "extract_claim_triples",
+    "extract_entity_candidates",
+    "extract_keyword_terms",
     "localize_claim_risk_spans",
     "budget_verification_plan",
     "escalate_uncertain_verification_plan",
     "estimate_verification_plan_cost",
     "infer_claim_dependencies",
     "normalize_claim_text",
+    "plan_citation_search_query",
+    "sanitize_search_query",
     "stable_cache_key",
     "verifier_cache_key",
 ]

@@ -77,6 +77,7 @@ from eigentruth.eval.conformal import (
 from eigentruth.verify import (
     CachedVerifier,
     CitationRecord,
+    CitationSearchQueryPlan,
     CitationVerifier,
     Claim,
     ClaimDependency,
@@ -113,9 +114,13 @@ from eigentruth.verify import (
     extract_citation_references,
     extract_claim_triples,
     extract_claims,
+    extract_entity_candidates,
+    extract_keyword_terms,
     generate_counterfactual_probes,
     infer_claim_dependencies,
     normalize_claim_text,
+    plan_citation_search_query,
+    sanitize_search_query,
 )
 
 
@@ -712,6 +717,30 @@ def test_claim_extraction_and_in_memory_verifier():
     assert results[0].status is VerificationStatus.SUPPORTED
     assert results[0].evidence == ("atlas",)
     assert results[1].status is VerificationStatus.REFUTED
+
+
+def test_citation_search_query_planner_sanitizes_answer_and_keeps_entity_variants():
+    query, removed_hashes = sanitize_search_query(
+        "What is Alpha Syndrome? A moon A moon.",
+        disallowed_phrases=("A moon.",),
+    )
+    plan = plan_citation_search_query(
+        question='This American producer was born in the 70s and is named "Elon" what?',
+        candidate_query="This American producer was born in the 70s and is named Elon what? His name is Elon Musk.",
+        question_type="person",
+        disallowed_phrases=("His name is Elon Musk.",),
+        strategy="claim_entity",
+        max_alternate_queries=3,
+    )
+
+    assert query == "What is Alpha Syndrome?"
+    assert removed_hashes
+    assert isinstance(plan, CitationSearchQueryPlan)
+    assert "Elon Musk" not in " ".join(plan.variants)
+    assert any("Elon" in item for item in plan.entity_candidates)
+    assert "American" in extract_keyword_terms(plan.query, max_items=8)
+    assert extract_entity_candidates('Who founded "Beta Labs"?')[0] == "Beta Labs"
+    assert plan.to_dict()["removed_phrase_hashes"]
 
 
 def test_rule_based_claim_triples_and_slot_audit_are_stricter_than_overlap():
