@@ -1,0 +1,113 @@
+{
+  "action_execution": {
+    "alignment_available_trace_count": 12,
+    "alignment_coverage_rate": 1.0,
+    "alignment_failed_trace_count": 0,
+    "alignment_failed_trace_rate": 0.0,
+    "alignment_passed_trace_count": 12,
+    "available_trace_count": 12,
+    "missing_result_count": 0.0,
+    "missing_result_rate": 0.0,
+    "per_trace_missing_result_count": {
+      "count": 12,
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0,
+      "missing_or_nonfinite": 0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "p99": 0.0
+    },
+    "per_trace_planned_action_count": {
+      "count": 12,
+      "max": 1.0,
+      "mean": 1.0,
+      "min": 1.0,
+      "missing_or_nonfinite": 0,
+      "p50": 1.0,
+      "p95": 1.0,
+      "p99": 1.0
+    },
+    "per_trace_result_count": {
+      "count": 12,
+      "max": 1.0,
+      "mean": 1.0,
+      "min": 1.0,
+      "missing_or_nonfinite": 0,
+      "p50": 1.0,
+      "p95": 1.0,
+      "p99": 1.0
+    },
+    "planned_action_count": 12.0,
+    "request_id_mismatch_count": 0.0,
+    "request_id_mismatch_rate": 0.0,
+    "result_count": 12.0,
+    "source_counts": {
+      "full_trace": 12
+    },
+    "source_trace_count": 12,
+    "summary_observations": 12,
+    "unexpected_result_count": 0.0,
+    "unexpected_result_rate": 0.0
+  },
+  "checks": [
+    {
+      "limit": 0.0,
+      "metric": "action_execution.missing_result_rate",
+      "operator": "<=",
+      "reason": null,
+      "status": "pass",
+      "value": 0.0
+    },
+    {
+      "limit": 0.0,
+      "metric": "action_execution.unexpected_result_rate",
+      "operator": "<=",
+      "reason": null,
+      "status": "pass",
+      "value": 0.0
+    },
+    {
+      "limit": 0.0,
+      "metric": "action_execution.request_id_mismatch_rate",
+      "operator": "<=",
+      "reason": null,
+      "status": "pass",
+      "value": 0.0
+    }
+  ],
+  "config": {
+    "max_missing_result_rate": 0.0,
+    "max_request_id_mismatch_rate": 0.0,
+    "max_unexpected_result_rate": 0.0
+  },
+  "decision": {
+    "blocking_reasons": [],
+    "status": "promote"
+  },
+  "paths": {
+    "report": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/action-execution-gate.json"
+  },
+  "schema_version": 1,
+  "status": "promote",
+  "summary": {
+    "alignment_available_trace_count": 12,
+    "alignment_failed_trace_count": 0,
+    "alignment_failed_trace_rate": 0.0,
+    "available_trace_count": 12,
+    "blocked_metric_count": 0,
+    "checked_metric_count": 3,
+    "gate_enabled": true,
+    "missing_result_count": 0.0,
+    "missing_result_rate": 0.0,
+    "passed": true,
+    "planned_action_count": 12.0,
+    "request_id_mismatch_count": 0.0,
+    "request_id_mismatch_rate": 0.0,
+    "result_count": 12.0,
+    "trace_count": 12,
+    "unexpected_result_count": 0.0,
+    "unexpected_result_rate": 0.0
+  },
+  "workflow": "product_trace_action_execution_gate"
+}

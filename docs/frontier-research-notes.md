@@ -1032,6 +1032,17 @@ Added the first monitor-first tool-selection audit layer:
   `artifacts/frontier-audit-release-candidate-v1/` keeps the overall
   `frontier_audit` candidate blocked but changes the adapter-family gate from
   blocked to promote with no adapter blocking reasons.
+- `artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/` closes the
+  product-trace action-gate blocker. The input compatibility set
+  `artifacts/smollm2_product_trace_action_payload_compat_v0/` preserves the
+  prior selector/runtime evidence and fixes the one legacy diagnostic-triggered
+  `retrieve` action that had no executable target. The replay workflow promotes
+  with `12/12` traces accepted, selector replay promoted, action-audit error
+  rate `0.0`, and action-execution missing/unexpected/mismatch rates all `0.0`.
+  Replaying the release candidate as
+  `artifacts/frontier-audit-release-candidate-v2/` keeps the overall candidate
+  blocked but changes the product-trace replay gate from blocked to promote
+  with both child gate reports present in the manifest.
 
 ## Next Research-to-Code Candidates
 

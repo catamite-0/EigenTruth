@@ -410,6 +410,17 @@ For product features:
   promotes `triple_evidence` and a rule-backed `state_transition` route with
   `RuleBasedWorldModelAdapter` evidence. The release candidate remains blocked
   on the other frontier gates, which is the expected fail-closed posture.
+  `artifacts/frontier-audit-release-candidate-v2/` then removes the
+  product-trace action-gate blocker by using
+  `artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/`: the
+  replay workflow promotes, action-audit records `0.0` error/malformed/missing
+  retrieval rates over `12` traces, action-execution records `0.0` missing,
+  unexpected, and request-id-mismatch rates, and both child reports are present
+  in the release manifest. The remaining frontier blockers are readiness
+  AUROC/cost, required retrieval-route selected/property coverage, performance
+  baseline comparison, learned/external triple-prediction matrix evidence, and
+  complete product-runtime-drift handoff metrics including action-gate drift
+  summaries.
 - Blind-spot evidence expansion now has a product-facing collection handoff:
   `build_blind_spot_evidence_collection_corpus.py` compiles the registered
   SmolLM2 L80 plan into source-discovery requests for the `65` high-priority

@@ -1,0 +1,29 @@
+{
+  "checked": 28,
+  "failures": [],
+  "manifest_path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/artifact-manifest.json",
+  "nested": [
+    {
+      "checked": 16,
+      "failures": [],
+      "manifest_path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/corpus/artifact-manifest.json",
+      "nested": [],
+      "passed": true
+    },
+    {
+      "checked": 14,
+      "failures": [],
+      "manifest_path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/runtime-baseline/artifact-manifest.json",
+      "nested": [],
+      "passed": true
+    },
+    {
+      "checked": 19,
+      "failures": [],
+      "manifest_path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/selector-replay/artifact-manifest.json",
+      "nested": [],
+      "passed": true
+    }
+  ],
+  "passed": true
+}

@@ -621,6 +621,23 @@ def test_default_correction_policy_plans_action_payloads():
     assert abstain.payload["blocked_claims"][0]["evidence"] == ("nasa",)
 
 
+def test_default_correction_policy_retrieves_unverified_claims_when_diagnostics_trigger():
+    policy = DefaultCorrectionPolicy()
+    claims = extract_claims("Paris is in France. Berlin is in Germany.")
+    decision = RiskDecision(
+        action=ControlAction.RETRIEVE,
+        risk_level=RiskLevel.MEDIUM,
+        confidence=0.6,
+        reason="calibrated diagnostic threshold exceeded",
+    )
+
+    retrieve = policy.plan(decision, claims=claims, verification_results=())[0]
+
+    assert retrieve.action is ControlAction.RETRIEVE
+    assert [target["claim_id"] for target in retrieve.payload["retrieval_targets"]] == ["c1", "c2"]
+    assert retrieve.payload["claim_status_counts"]["not_applicable"] == 2
+
+
 def test_plan_aware_correction_policy_injects_retrieval_queries():
     base_policy = DefaultCorrectionPolicy()
     policy = PlanAwareCorrectionPolicy(base_policy=base_policy)
