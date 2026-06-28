@@ -155,6 +155,7 @@ def _evaluate_stub(stub: Mapping[str, Any], rule_input: Mapping[str, Any] | None
     authored_rule = _authored_rule(stub, family=family, required_inputs=required_inputs)
     input_payload = {} if rule_input is None else dict(rule_input)
     if family == "quantity_or_arithmetic" and _calculation_input(input_payload) is not None:
+        source_citation = _clean(input_payload.get("source_citation"))
         verification = CalculatorVerifier().verify(
             Claim(
                 text=str(stub.get("question") or stub.get("rule_seed") or request_id),
@@ -162,13 +163,16 @@ def _evaluate_stub(stub: Mapping[str, Any], rule_input: Mapping[str, Any] | None
                 metadata={"calculation": _calculation_input(input_payload)},
             )
         )
+        evidence = tuple(str(item) for item in verification.evidence)
+        if source_citation:
+            evidence = tuple((*evidence, f"source_citation={source_citation}"))
         return _result(
             stub=stub,
             status=verification.status.value,
             authored_rule=authored_rule,
             required_inputs=required_inputs,
             supplied_inputs=tuple(input_payload),
-            evidence=verification.evidence,
+            evidence=evidence,
             explanation=verification.explanation,
             confidence=verification.confidence,
             metadata={

@@ -1,0 +1,73 @@
+{
+  "label_usage": {
+    "candidate_numeric_values_bound_to_rule_inputs": true,
+    "filled_inputs_are_verifier_evidence": false,
+    "labels_copied_to_rule_inputs": false,
+    "labels_used_for_input_fill": false,
+    "requires_adapter_execution_and_promotion_gate": true,
+    "source_backed_numeric_values_required": true
+  },
+  "metadata": {
+    "evidence": "unresolved-world-model-rule-numeric-binding-fill",
+    "suite": "truthfulqa-smollm2-l80"
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-numeric-binding-fill/artifact-manifest.json",
+    "input_tasks": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-numeric-binding-fill/record-190-numeric-rule-input-task.jsonl",
+    "numeric_bindings": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-numeric-binding-fill/source-backed-numeric-bindings.jsonl",
+    "report": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-numeric-binding-fill/rule-input-numeric-binding-fill.json",
+    "rule_inputs": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-numeric-binding-fill/rule-inputs.jsonl",
+    "skipped_numeric_bindings": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-numeric-binding-fill/skipped-numeric-bindings.jsonl",
+    "unfilled_tasks": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-numeric-binding-fill/unfilled-rule-input-tasks.jsonl"
+  },
+  "rule_inputs": [],
+  "schema_version": 1,
+  "scope": "Fills explicit numeric calculator rule inputs from caller-supplied source-backed bindings. Filled rows are adapter inputs, not verifier evidence, and still require adapter execution plus promotion before product handoff.",
+  "skipped_numeric_bindings": [],
+  "source": {
+    "input_task_count": 1,
+    "input_task_workflow": "world_model_rule_input_collection_plan",
+    "numeric_binding_count": 1
+  },
+  "status": "blocked",
+  "summary": {
+    "filled_input_count": 0,
+    "filled_request_ids": [],
+    "filled_rule_family_counts": {},
+    "input_collection_family_counts": {
+      "numeric_rule_input_collection": 1
+    },
+    "input_task_count": 1,
+    "invalid_binding_failure_counts": {
+      "binding_requires_review": 1,
+      "missing_subject_entity": 1
+    },
+    "numeric_binding_count": 1,
+    "provider_counts": {},
+    "review_status_counts": {
+      "ambiguous_subject": 1
+    },
+    "skipped_binding_count": 0,
+    "unfilled_reason_counts": {
+      "invalid_numeric_binding": 1
+    },
+    "unfilled_task_count": 1
+  },
+  "unfilled_tasks": [
+    {
+      "collection_family": "numeric_rule_input_collection",
+      "failures": [
+        "binding_requires_review",
+        "missing_subject_entity"
+      ],
+      "not_verifier_evidence": true,
+      "question": "What is the population of the country?",
+      "reason": "invalid_numeric_binding",
+      "rule_family": "quantity_or_arithmetic",
+      "source_request_id": "rule:record-190:1",
+      "target_id": "record-190",
+      "task_id": "rule-input-task-0001"
+    }
+  ],
+  "workflow": "world_model_rule_input_numeric_binding_fill"
+}

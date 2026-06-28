@@ -1,0 +1,68 @@
+{
+  "artifacts": {
+    "numeric_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-backed-numeric-bindings.jsonl",
+      "sha256": "5357db1129026da49f13673c945852ae3515327827e5a44bd45c9c962e76f6dc",
+      "size_bytes": 1110
+    },
+    "rule_input_numeric_binding_fill": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "rule-input-numeric-binding-fill.json",
+      "sha256": "f5a9f33d1250a69081c3db5baf6385316cae99962dc5078aab9c5f797cfe2f4e",
+      "size_bytes": 3160
+    },
+    "rule_input_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "record-190-numeric-rule-input-task.jsonl",
+      "sha256": "9e7f4c579eb8978266ec894899a0fa1f648a45c373f993be26713869e60b7975",
+      "size_bytes": 1059
+    },
+    "rule_inputs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "rule-inputs.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "skipped_numeric_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "skipped-numeric-bindings.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "unfilled_rule_input_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "unfilled-rule-input-tasks.jsonl",
+      "sha256": "508d83f6d8c31e8cd773fa2bfa51881a6572db9b7f769d98567f6ae4b76ea585",
+      "size_bytes": 389
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "evidence": "unresolved-world-model-rule-numeric-binding-fill",
+    "filled_input_count": 0,
+    "status": "blocked",
+    "suite": "truthfulqa-smollm2-l80",
+    "unfilled_task_count": 1,
+    "workflow": "world_model_rule_input_numeric_binding_fill"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 6,
+    "directory_count": 0,
+    "file_count": 6,
+    "missing_count": 0
+  }
+}

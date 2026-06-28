@@ -6786,6 +6786,21 @@
       "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-entity-binding-promotion-gate",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-entity-binding-promotion-gate/world-model-rule-candidate-promotion-gate.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-numeric-binding-fill/artifact-manifest.json",
+        "evidence": "unresolved-world-model-rule-numeric-binding-fill",
+        "filled_input_count": 0,
+        "status": "blocked",
+        "suite": "truthfulqa-smollm2-l80",
+        "unfilled_task_count": 1,
+        "workflow": "world_model_rule_input_numeric_binding_fill"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-numeric-binding-fill",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-numeric-binding-fill/rule-input-numeric-binding-fill.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

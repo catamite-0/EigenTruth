@@ -2906,6 +2906,31 @@ citation, and the two Elon rows use the Elon Gold citation; both citation paths
 remain non-evidence adapter inputs until the promotion gate verifies matching
 source citations in the deterministic candidate evidence.
 
+The unresolved numeric/calculator lane now has the same explicit fill boundary,
+but it fail-closes when the subject binding is still ambiguous:
+
+```bash
+NUMERIC_FILL=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-numeric-binding-fill
+
+python benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py \
+  --input-tasks "$NUMERIC_FILL/record-190-numeric-rule-input-task.jsonl" \
+  --numeric-bindings "$NUMERIC_FILL/source-backed-numeric-bindings.jsonl" \
+  --output-dir "$NUMERIC_FILL" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-numeric-binding-fill \
+  --version 0.1
+```
+
+The registered numeric-binding fill is `blocked`: `0/1` numeric tasks are
+filled, the single `record-190` population task remains unfilled, and the
+failure reasons are `binding_requires_review` plus `missing_subject_entity`.
+The supplied binding records a source-backed World Bank population value for the
+United States, but the original question only says "the country"; the fill script
+therefore refuses to turn that source value into a calculator input without an
+explicit subject entity. Focused tests also cover the positive path: a valid
+source/candidate numeric binding executes through the calculator adapter and can
+promote once `source_citation` appears in deterministic candidate evidence.
+
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:
 

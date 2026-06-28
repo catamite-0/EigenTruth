@@ -1645,6 +1645,17 @@ bound against a fictional-location citation, and the Elon candidates are bound
 against the source-backed expected entity `Elon Gold`; the rows remain
 candidate-only until citation matching passes the promotion gate.
 
+`benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py` now adds the
+numeric/calculator sibling for explicit source-backed bindings. The real
+`record-190` population artifact at
+`artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-numeric-binding-fill/`
+is deliberately `blocked`: `0/1` tasks fill, with
+`binding_requires_review` and `missing_subject_entity`, because the question
+says "the country" and the binding does not prove which country the candidate
+claim refers to. This keeps the World Bank population value as source-backed
+context, not as an executable calculator input, until subject binding is
+resolved.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because

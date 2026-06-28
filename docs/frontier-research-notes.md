@@ -942,6 +942,15 @@ Added the first monitor-first tool-selection audit layer:
   expected entity `Elon Gold`; each row remains candidate-only until the
   promotion gate confirms matching source citations in the deterministic
   evidence text.
+- `fill_world_model_rule_inputs_from_numeric_bindings.py` adds the numeric
+  sibling for calculator tasks. The positive path is covered by synthetic tests:
+  a source-backed numeric binding supplies `numeric_value`,
+  `candidate_numeric_value`, unit, reference time, calculation, and
+  `source_citation`, then the deterministic calculator candidate can be observed
+  and promoted. The real unresolved `record-190` population task is intentionally
+  blocked because the binding is marked `ambiguous_subject` and lacks
+  `subject_entity`; even a source-backed World Bank USA population value is not
+  enough to fill "the country" without an explicit subject binding.
 
 ## Next Research-to-Code Candidates
 
@@ -949,9 +958,11 @@ Added the first monitor-first tool-selection audit layer:
    unresolved rows should stay separated by gap type and feed richer property
    mapping, citation evidence, entity disambiguation, and deterministic
    world-model/calculator rules before entering ProductTrace or release gates.
-2. Extend the rule-input fill family beyond the completed entity-binding batch:
-   numeric, temporal, and causal/procedural tasks still need provenance-backed
-   values before deterministic calculator/world-model results can pass the same
+2. Extend the rule-input fill family beyond the completed entity and numeric
+   binding shells: the remaining numeric work is subject-binding resolution for
+   ambiguous questions such as `record-190`, while temporal and
+   causal/procedural tasks still need provenance-backed values plus adapter
+   execution before deterministic world-model results can pass the same
    promotion gate into handoff. The complete source-backed replay now proves
    local-catalog coverage is not enough (`0/88` mapped).
 3. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.

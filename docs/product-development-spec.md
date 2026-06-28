@@ -450,6 +450,13 @@ For product features:
   candidate `refuted` rows with `0` blocked or pending. These promoted rows are
   still deterministic rule candidates, not direct verifier evidence; ProductTrace
   visibility remains gated by a downstream rule-candidate handoff.
+  `fill_world_model_rule_inputs_from_numeric_bindings.py` adds the sibling
+  numeric/calculator input-fill boundary. In tests, a valid source-backed
+  numeric binding executes through the calculator adapter and can promote once
+  the deterministic evidence carries the matching `source_citation`; on the real
+  unresolved `record-190` population task, the registered artifact is correctly
+  `blocked` with `binding_requires_review` and `missing_subject_entity` because
+  the question says only "the country" and no subject entity is bound.
   Product implication: unresolved deterministic rule work now enters the same
   explicit input-plan pathway as the larger source-family rule lane, but it
   still cannot affect ProductTrace or release gates until candidate execution,
