@@ -36327,6 +36327,120 @@ def test_citation_search_adapter_handoff_exports_source_family_plan(tmp_path):
     assert source_docs[0]["metadata"]["source_family_confidence"] == pytest.approx(0.95)
 
 
+def test_source_family_citation_search_adapter_ranks_family_matches(tmp_path):
+    module = importlib.import_module("benchmarks.run_source_family_citation_search_adapter")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    requests_path = tmp_path / "requests.jsonl"
+    catalog_path = tmp_path / "source-catalog.jsonl"
+    results_path = tmp_path / "results.jsonl"
+    report_path = tmp_path / "adapter-report.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    requests_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "request_id": "cite-search-ireland-population",
+            "adapter_family": "external_citation_search",
+            "query": "Ireland population official statistics",
+            "alternate_queries": ["Ireland population"],
+            "source_family_plan": {
+                "families": ["official_statistics", "official", "encyclopedic"],
+                "query_hints": ["official statistics", "data"],
+                "freshness_required": True,
+                "official_source_preferred": True,
+            },
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    catalog_path.write_text(
+        "\n".join([
+            json.dumps({
+                "title": "Ireland population official statistics",
+                "text": "Ireland population official statistics data are published by the national statistics office.",
+                "source": "official-statistics:ireland-population",
+                "url": "https://official.example/ireland-population",
+                "provider": "unit-official-catalog",
+                "source_family": "official_statistics",
+                "published_at": "2026-01-01",
+                "metadata": {"official_source": True},
+            }),
+            json.dumps({
+                "title": "Ireland",
+                "text": "Ireland is a country with population information in encyclopedic summaries.",
+                "source": "encyclopedic:ireland",
+                "provider": "unit-reference-catalog",
+                "source_family": "encyclopedic",
+            }),
+        ])
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = module.run_source_family_citation_search_adapter(
+        input_path=requests_path,
+        output_path=results_path,
+        source_catalog_paths=(catalog_path,),
+        report_json_path=report_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="source-family-adapter-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    rows = [json.loads(line) for line in results_path.read_text(encoding="utf-8").splitlines()]
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:source-family-adapter-unit:0.1"
+    )
+
+    assert payload["summary"]["request_with_results_count"] == 1
+    assert payload["summary"]["result_source_family_counts"]["official_statistics"] == 1
+    assert rows[0]["results"][0]["source_family"] == "official_statistics"
+    assert rows[0]["results"][0]["family_match"] is True
+    assert rows[0]["results"][0]["official_match"] is True
+    assert rows[0]["results"][0]["freshness_match"] is True
+    assert rows[0]["metadata"]["preferred_source_families"][0] == "official_statistics"
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "source_family_citation_search_adapter"
+    assert record.metadata["suite"] == "unit"
+
+
+def test_source_family_citation_search_adapter_rejects_reserved_catalog_fields(tmp_path):
+    module = importlib.import_module("benchmarks.run_source_family_citation_search_adapter")
+
+    requests_path = tmp_path / "requests.jsonl"
+    catalog_path = tmp_path / "source-catalog.jsonl"
+    results_path = tmp_path / "results.jsonl"
+    requests_path.write_text(
+        json.dumps({
+            "request_id": "cite-search-alpha",
+            "query": "Alpha official source",
+            "source_family_plan": {"families": ["official"]},
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    catalog_path.write_text(
+        json.dumps({
+            "title": "Alpha",
+            "text": "Alpha official source.",
+            "source_family": "official",
+            "metadata": {"label": 0},
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="reserved fields: label"):
+        module.run_source_family_citation_search_adapter(
+            input_path=requests_path,
+            output_path=results_path,
+            source_catalog_paths=(catalog_path,),
+        )
+
+
 def test_wikipedia_citation_search_adapter_writes_mediawiki_results(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.run_wikipedia_citation_search_adapter")
 

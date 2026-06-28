@@ -1688,6 +1688,34 @@ python benchmarks/run_citation_search_evidence_workflow.py \
 This command does not fetch network content. Adapter results remain local input,
 and promotion requires both provenance and route-quality gates to pass.
 
+## `run_source_family_citation_search_adapter.py`
+
+Runs a dependency-free local adapter that consumes sanitized citation/search
+request JSONL plus one or more local source catalogs. It ranks catalog documents
+by lexical overlap, `source_family_plan` compatibility, official-source
+preference, and freshness hints, then writes the same adapter-result JSONL
+schema accepted by `run_external_citation_search_adapter_workflow.py`.
+
+```bash
+python benchmarks/run_source_family_citation_search_adapter.py \
+  --input artifacts/source-family-citation-search-adapter-smoke/source-family-requests.jsonl \
+  --source-catalog artifacts/source-family-citation-search-adapter-smoke/source-family-catalog.jsonl \
+  --output artifacts/source-family-citation-search-adapter-smoke/source-family-results.jsonl \
+  --report-json artifacts/source-family-citation-search-adapter-smoke/source-family-adapter-report.json \
+  --artifact-manifest artifacts/source-family-citation-search-adapter-smoke/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name source-family-citation-search-adapter-smoke \
+  --version 0.1
+```
+
+The registered smoke artifact
+`report:source-family-citation-search-adapter-smoke:0.1` is synthetic and does
+not claim TruthfulQA evidence. It proves the command boundary and manifest path:
+`2` sanitized requests, `3` local catalog docs, `2/2` requests with results,
+`4` total result rows, no reserved-field leakage, and a passing artifact
+manifest. Real use should pass the generated result JSONL into
+`run_citation_search_evidence_workflow.py` before any route promotion.
+
 ## `run_wikipedia_citation_search_adapter.py`
 
 Runs a dependency-free MediaWiki/Wikipedia search adapter for sanitized

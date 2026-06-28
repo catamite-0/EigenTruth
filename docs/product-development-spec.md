@@ -475,15 +475,23 @@ For product features:
   the next official-source command adapter enough structure to route
   quantitative, timestamped, definition, and person/role claims without
   reintroducing labels or model answers.
+- A concrete local source-family adapter now consumes that contract:
+  `run_source_family_citation_search_adapter.py` ranks caller-supplied local
+  source catalogs by query overlap, source-family compatibility, official-source
+  preference, and freshness hints, then writes the same adapter-result JSONL
+  expected by the fail-closed evidence workflow. The registered
+  `report:source-family-citation-search-adapter-smoke:0.1` artifact is synthetic
+  smoke only: `2` sanitized requests, `3` catalog docs, `2/2` requests with
+  results, `4` result rows, no reserved-field leakage, and a verified manifest.
+  This proves the adapter entry point without claiming TruthfulQA route quality.
 
 ### Next Verification Adapter Work
 
 - Improve evidence retrieval beyond generic Wikipedia lexical search: preserve
-  the same command boundary and consume `source_family_plan`, then add concrete
-  source-family adapters, official structured citation APIs, or claim-to-fact
-  mapping that can target the unresolved definition/person/location blind spots.
-  Promote only if the provenance audit, external query sweep, and
-  controlled-vs-external comparison pass.
+  the same command boundary and consume `source_family_plan`, then feed real
+  official/source-family catalogs or structured citation APIs through
+  `run_source_family_citation_search_adapter.py`. Promote only if the provenance
+  audit, external query sweep, and controlled-vs-external comparison pass.
 - Connect `StructuredStateVerifier` to additional live database, business-rule, and domain-state sources behind optional adapters; the current reproducible path uses local JSON state sources, stdlib SQLite, and mapped local tool outputs.
 - Connect additional QA/database/world-model route policies to production adapters while preserving trace-visible match reasons for each selected or skipped tool.
 - Generalize real side-effecting executors behind the same trace, execution-policy, timeout, idempotency-ledger, and tool-output mapping interfaces; the current production-like demo proves the path with a guarded local SQLite mutation and optional JSON/SQLite replay, while hard cancellation remains adapter-specific.

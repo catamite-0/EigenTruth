@@ -727,11 +727,18 @@ Added the first monitor-first tool-selection audit layer:
   docs. This is not retrieval evidence yet; it is the routing contract that lets
   the next adapter choose official or structured sources before the usual
   provenance and blind-spot gates run.
+- The first concrete consumer of that contract is now implemented:
+  `run_source_family_citation_search_adapter.py` ranks local source catalogs
+  using query overlap plus source-family, official-source, and freshness hints,
+  and writes the same adapter-result JSONL consumed by the citation evidence
+  workflow. The registered smoke artifact is synthetic (`2` requests, `3`
+  catalog docs, `4` result rows, verified manifest), so it proves the command
+  boundary and ranking semantics but not TruthfulQA route quality.
 
 ## Next Research-to-Code Candidates
 
 1. Convert the target-specific Wikidata source docs into structured-fact/QA corpora, then rerun the blind-spot correction-route audit instead of another lexical overlap sweep.
-2. Implement a concrete source-family adapter that consumes `source_family_plan` and targets official/structured sources before another generic Wikipedia overlap sweep.
+2. Populate the source-family adapter with real official/structured catalogs for unresolved blind spots, then run the usual provenance/query/comparison gates before making any route-quality claim.
 3. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
 4. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
 5. Materialize a real `frontier_audit` release candidate with the registered covered-facts external-evidence handoff and external-prediction triple matrix artifact, then export the resulting promotion contract.

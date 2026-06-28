@@ -5557,6 +5557,22 @@
       "name": "truthfulqa-frontier-smollm2-l80-source-family-citation-search-handoff",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-citation-search-handoff/citation-search-handoff.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/source-family-citation-search-adapter-smoke/artifact-manifest.json",
+        "evidence": "synthetic_smoke",
+        "request_count": 2,
+        "request_with_results_count": 2,
+        "result_count": 4,
+        "source_document_count": 3,
+        "suite": "source_family_smoke",
+        "workflow": "source_family_citation_search_adapter"
+      },
+      "name": "source-family-citation-search-adapter-smoke",
+      "path": "artifacts/source-family-citation-search-adapter-smoke/source-family-adapter-report.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1
