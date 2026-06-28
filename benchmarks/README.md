@@ -1589,6 +1589,61 @@ contains `176` external citation/search requests and `6` world-model or
 calculator rule-authoring requests; `20` queued targets have no joined facts and
 `7` have only generic fact joins. Its manifest verifies recursively.
 
+## `build_unresolved_world_model_rule_stubs.py`
+
+Bridges the world-model/calculator branch of the unresolved queue into the
+rule-authoring stub contract consumed by
+`run_world_model_rule_authoring_adapter.py`. The bridge is intentionally
+one-way and non-evidence: it filters only `world_model_or_calculator_rule`
+requests, normalizes `temporal_freshness` into `temporal_consistency`, drops
+labels/model answers/row indices/target ranks, and writes manifest-backed JSON
+plus `world-model-rule-stubs.jsonl`.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-stubs
+
+python benchmarks/build_unresolved_world_model_rule_stubs.py \
+  --queue-report artifacts/truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue/unresolved-evidence-queue.json \
+  --output-dir "$OUT" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-stubs \
+  --version 0.1
+```
+
+The current registered bridge is `ready_for_rule_authoring`: it consumes the
+`182`-request unresolved queue, extracts all `6` world-model/calculator rule
+requests, emits `6` sanitized stubs, and reports `0` skipped rule requests. The
+family split is `5` numeric/calculator contracts plus `1` temporal-consistency
+contract; reserved source fields are counted in the report but not copied into
+the stubs.
+
+Run the existing deterministic adapter and typed input planner over those
+stubs:
+
+```bash
+RULE_ADAPTER=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-authoring-adapter
+RULE_INPUT_PLAN=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-input-plan
+
+python benchmarks/run_world_model_rule_authoring_adapter.py \
+  --rule-stubs "$OUT/world-model-rule-stubs.jsonl" \
+  --output-dir "$RULE_ADAPTER" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-authoring-adapter \
+  --version 0.1
+
+python benchmarks/build_world_model_rule_input_collection_plan.py \
+  --input-requests "$RULE_ADAPTER/world-model-rule-input-requests.jsonl" \
+  --output-dir "$RULE_INPUT_PLAN" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-input-plan \
+  --version 0.1
+```
+
+That follow-up chain is `needs_inputs` then `ready_for_input_collection`: all
+`6` stubs become explicit input requests, then `6` typed tasks in `2` batches
+(`5` numeric, `1` temporal snapshot). No rule candidate is executed or promoted
+until explicit inputs and a later promotion gate are supplied.
+
 ## `build_citation_search_adapter_handoff.py`
 
 Prepares the citation/search portion of the unresolved queue for an external

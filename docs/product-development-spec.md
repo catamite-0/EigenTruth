@@ -426,6 +426,19 @@ For product features:
   world-model or calculator-rule authoring requests. The queue is manifest and
   registry backed, but remains `source_discovery_only` / rule-authoring input
   until external documents are ingested and provenance-audited.
+- The rule branch of that unresolved queue is now first-class work, not an
+  orphan count: `build_unresolved_world_model_rule_stubs.py` emits `6`
+  sanitized rule stubs from the queue, records that `model_answer`,
+  `record_index`, and `target_rank` were present in the source rows but not
+  copied, and normalizes the `temporal_freshness` row into a
+  `temporal_consistency` contract. Replaying the existing rule-authoring
+  adapter blocks as `needs_inputs` with `0/6` executed, then
+  `build_world_model_rule_input_collection_plan.py` lowers the rows into `6`
+  typed input tasks across `2` batches (`5` numeric, `1` temporal snapshot).
+  Product implication: unresolved deterministic rule work now enters the same
+  explicit input-plan pathway as the larger source-family rule lane, but it
+  still cannot affect ProductTrace or release gates until inputs, candidate
+  execution, promotion, and handoff all pass.
 - The citation/search part of that unresolved queue now has an external-adapter
   handoff boundary: `build_citation_search_adapter_handoff.py` writes
   sanitized JSONL requests for external search systems and can ingest returned

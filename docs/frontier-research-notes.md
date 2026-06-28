@@ -913,6 +913,14 @@ Added the first monitor-first tool-selection audit layer:
   promotes (`18/18` balanced records correct), but unresolved-claim mapping
   remains `0/88`. This is evidence that the queue can execute reproducibly and
   that disambiguation alone is insufficient for correction handoff.
+- `build_unresolved_world_model_rule_stubs.py` now closes the deterministic
+  branch of the separate unresolved queue: it extracts `6/6`
+  world-model/calculator requests from the `182`-request queue, emits sanitized
+  stubs with no model-answer or row-index fields, normalizes the
+  `temporal_freshness` row to `temporal_consistency`, and then feeds the
+  existing rule-authoring adapter plus input planner. The resulting chain is
+  `ready_for_rule_authoring -> needs_inputs -> ready_for_input_collection`,
+  with `6` typed tasks across `2` batches (`5` numeric, `1` temporal snapshot).
 
 ## Next Research-to-Code Candidates
 

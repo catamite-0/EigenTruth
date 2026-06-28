@@ -1,0 +1,54 @@
+{
+  "artifacts": {
+    "rule_authoring_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-authoring-adapter.json",
+      "sha256": "da92f59113e896c870026a8ae11ac958d809aebc876dcf43622a503617a6eccc",
+      "size_bytes": 2083
+    },
+    "rule_input_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-input-requests.jsonl",
+      "sha256": "20bddd7a0d8090929780e1a76cfe56ae85e10e4b1523cd12615c406fdb1614e0",
+      "size_bytes": 3310
+    },
+    "rule_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-results.jsonl",
+      "sha256": "bad65c1c2221ea509a51f8464b67065c0c2c4dac080e2900ea5b2943bcc68b72",
+      "size_bytes": 8308
+    },
+    "rule_stubs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-stubs/world-model-rule-stubs.jsonl",
+      "sha256": "cdb1a17e9d9dd3377d287ce534425c3a905df358dbf494361eeae7949948d89f",
+      "size_bytes": 8646
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "evidence": "unresolved-world-model-rule-authoring-adapter",
+    "executed_count": 0,
+    "input_request_count": 6,
+    "needs_input_count": 6,
+    "status": "needs_inputs",
+    "stub_count": 6,
+    "suite": "truthfulqa-smollm2-l80",
+    "workflow": "world_model_rule_authoring_adapter"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

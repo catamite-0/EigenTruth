@@ -1299,6 +1299,21 @@ world-model or calculator-rule tasks. This is the next executable input for
 external-source collection and world-model adapter work; it is not verifier
 evidence until those sources are ingested and provenance-audited.
 
+The unresolved world-model/calculator branch now has the same explicit rule
+input contract as the source-family rule lane. `build_unresolved_world_model_rule_stubs.py`
+registers
+`report:truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-stubs:0.1`:
+it extracts all `6/6` rule requests from the `182`-request queue, emits
+sanitized `world-model-rule-stubs.jsonl`, skips `0` rows, and keeps source
+`model_answer`, `record_index`, and `target_rank` fields out of the stubs. The
+family split is `5` `quantity_or_arithmetic` stubs plus `1`
+`temporal_consistency` stub normalized from `temporal_freshness`. Replaying
+`run_world_model_rule_authoring_adapter.py` over those stubs blocks as
+`needs_inputs` (`0/6` executed), and
+`build_world_model_rule_input_collection_plan.py` lowers the requests into `6`
+typed tasks across `2` batches (`5` numeric, `1` temporal snapshot). These rows
+are now actionable input-collection work items, not product corrections.
+
 The citation/search branch of that queue is now ready to hand to an external
 adapter. `build_citation_search_adapter_handoff.py` registers
 `report:truthfulqa-frontier-smollm2-l80-citation-search-adapter-handoff:0.1`

@@ -1687,6 +1687,156 @@ def test_source_family_structured_qa_lane_batch_workflow_emits_rule_only_batch(t
     assert registry_record.metadata["rule_stub_count"] == 1
 
 
+def test_unresolved_world_model_rule_stubs_sanitizes_rule_queue(tmp_path):
+    module = importlib.import_module("benchmarks.build_unresolved_world_model_rule_stubs")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    queue_path = tmp_path / "unresolved-evidence-queue.json"
+    output_dir = tmp_path / "unresolved-rule-stubs"
+    registry_path = tmp_path / "registry.json"
+    queue_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "unresolved_blind_spot_evidence_queue",
+            "status": "ready_for_adapter_execution",
+            "summary": {"adapter_request_count": 3},
+            "adapter_requests": [
+                {
+                    "queue_id": "queue:record-1:external_citation:1",
+                    "source_request_id": "cite:record-1:1",
+                    "target_id": "record-1",
+                    "request_type": "external_citation",
+                    "adapter_family": "external_citation_search",
+                    "question": "What is Alpha Syndrome?",
+                    "model_answer": "A moon.",
+                    "not_verifier_evidence": True,
+                },
+                {
+                    "queue_id": "queue:record-1:world_model_or_calculator_rule:1",
+                    "source_request_id": "rule:record-1:1",
+                    "target_id": "record-1",
+                    "record_index": 1,
+                    "target_rank": 1,
+                    "request_type": "world_model_or_calculator_rule",
+                    "adapter_family": "world_model_rule_authoring",
+                    "rule_family": "quantity_or_arithmetic",
+                    "priority": "high",
+                    "priority_score": 187.0,
+                    "evidence_status": "no_joined_facts",
+                    "mapping_decision": "no_joined_facts",
+                    "question": "What is Alpha Syndrome?",
+                    "question_type": "definition",
+                    "model_answer": "A moon.",
+                    "label": 1,
+                    "metadata": {"request_id": "rule:record-1:1"},
+                    "not_verifier_evidence": True,
+                },
+                {
+                    "queue_id": "queue:record-2:world_model_or_calculator_rule:1",
+                    "source_request_id": "rule:record-2:1",
+                    "target_id": "record-2",
+                    "record_index": 2,
+                    "target_rank": 2,
+                    "request_type": "world_model_or_calculator_rule",
+                    "adapter_family": "world_model_rule_authoring",
+                    "rule_family": "temporal_freshness",
+                    "priority": "high",
+                    "evidence_status": "no_joined_facts",
+                    "mapping_decision": "no_joined_facts",
+                    "question": "What changed in recent decades?",
+                    "question_type": "temporal",
+                    "model_answer": "Food got harder to afford.",
+                    "metadata": {"request_id": "rule:record-2:1"},
+                    "not_verifier_evidence": True,
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        queue_report_path=queue_path,
+        output_dir=output_dir,
+        registry_path=registry_path,
+        name="unresolved-rule-stubs-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    stubs = [
+        json.loads(line)
+        for line in (output_dir / "world-model-rule-stubs.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    registry_record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:unresolved-rule-stubs-unit:0.1"
+    )
+    stub_text = json.dumps(stubs, sort_keys=True)
+
+    assert payload["status"] == "ready_for_rule_authoring"
+    assert payload["summary"]["source_adapter_request_count"] == 3
+    assert payload["summary"]["source_rule_request_count"] == 2
+    assert payload["summary"]["source_non_rule_request_count"] == 1
+    assert payload["summary"]["rule_stub_count"] == 2
+    assert payload["summary"]["rule_family_counts"] == {
+        "quantity_or_arithmetic": 1,
+        "temporal_consistency": 1,
+    }
+    assert payload["summary"]["source_rule_family_counts"] == {
+        "quantity_or_arithmetic": 1,
+        "temporal_freshness": 1,
+    }
+    assert payload["summary"]["reserved_source_field_counts"]["model_answer"] == 2
+    assert payload["summary"]["reserved_source_field_counts"]["record_index"] == 2
+    assert payload["summary"]["reserved_source_field_counts"]["target_rank"] == 2
+    assert payload["summary"]["reserved_source_field_counts"]["label"] == 1
+    assert stubs[0]["request_id"] == "rule:record-1:1"
+    assert stubs[0]["required_inputs"] == ["numeric_value", "unit", "reference_time"]
+    assert stubs[1]["rule_family"] == "temporal_consistency"
+    assert stubs[1]["metadata"]["source_rule_family"] == "temporal_freshness"
+    assert stubs[1]["required_inputs"] == ["claim_time", "source_time", "retrieved_at", "source_citation"]
+    assert all(row["not_verifier_evidence"] is True for row in stubs)
+    assert "model_answer" not in stub_text
+    assert "record_index" not in stub_text
+    assert "target_rank" not in stub_text
+    assert "label" not in stub_text
+    assert "A moon" not in stub_text
+    assert "Food got harder" not in stub_text
+    assert registry_module.load_and_verify_artifact_manifest(output_dir / "artifact-manifest.json").passed is True
+    assert registry_record is not None
+    assert registry_record.metadata["workflow"] == "unresolved_world_model_rule_stubs"
+    assert registry_record.metadata["rule_stub_count"] == 2
+
+
+def test_unresolved_world_model_rule_stubs_skip_untrusted_rule_requests():
+    module = importlib.import_module("benchmarks.build_unresolved_world_model_rule_stubs")
+
+    payload = module.build_unresolved_world_model_rule_stubs(
+        queue_report={
+            "schema_version": 1,
+            "workflow": "unresolved_blind_spot_evidence_queue",
+            "status": "ready_for_adapter_execution",
+            "adapter_requests": [
+                {
+                    "source_request_id": "rule:record-1:1",
+                    "target_id": "record-1",
+                    "request_type": "world_model_or_calculator_rule",
+                    "adapter_family": "world_model_rule_authoring",
+                    "rule_family": "quantity_or_arithmetic",
+                    "question": "What is Alpha Syndrome?",
+                    "not_verifier_evidence": False,
+                }
+            ],
+        }
+    )
+
+    assert payload["status"] == "empty"
+    assert payload["summary"]["source_rule_request_count"] == 1
+    assert payload["summary"]["rule_stub_count"] == 0
+    assert payload["summary"]["skipped_rule_request_count"] == 1
+    assert payload["skipped_rule_requests"][0]["failures"] == ("source_request_not_marked_non_evidence",)
+    assert payload["rule_stubs"] == ()
+
+
 def test_world_model_rule_authoring_adapter_requests_missing_inputs(tmp_path):
     module = importlib.import_module("benchmarks.run_world_model_rule_authoring_adapter")
     registry_module = importlib.import_module("eigentruth.registry")

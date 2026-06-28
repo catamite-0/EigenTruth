@@ -1,0 +1,45 @@
+{
+  "artifacts": {
+    "unresolved_blind_spot_evidence_queue": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue/unresolved-evidence-queue.json",
+      "sha256": "1d56abbbab3cbeba421ea6937ec7604c0cf710e08b36ba137518c068826d443e",
+      "size_bytes": 291202
+    },
+    "unresolved_world_model_rule_stubs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "unresolved-world-model-rule-stubs.json",
+      "sha256": "ee8a6ee1341c6ff20de01e89bf18244dc77756f108c29ff6055a46919b7c66bf",
+      "size_bytes": 14298
+    },
+    "world_model_rule_stubs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-stubs.jsonl",
+      "sha256": "cdb1a17e9d9dd3377d287ce534425c3a905df358dbf494361eeae7949948d89f",
+      "size_bytes": 8646
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "evidence": "unresolved-world-model-rule-stubs",
+    "rule_stub_count": 6,
+    "skipped_rule_request_count": 0,
+    "source_rule_request_count": 6,
+    "status": "ready_for_rule_authoring",
+    "suite": "truthfulqa-smollm2-l80",
+    "workflow": "unresolved_world_model_rule_stubs"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}
