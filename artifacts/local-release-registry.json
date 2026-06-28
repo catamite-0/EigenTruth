@@ -5472,6 +5472,21 @@
       "name": "truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue/unresolved-evidence-queue.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "adapter_request_count": 176,
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-citation-search-adapter-handoff/artifact-manifest.json",
+        "corpus_document_count": 0,
+        "evidence": "smollm2_l80_citation_search_adapter_handoff",
+        "source_document_count": 0,
+        "status": "ready_for_external_adapter",
+        "workflow": "citation_search_adapter_handoff"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-citation-search-adapter-handoff",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-citation-search-adapter-handoff/citation-search-handoff.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

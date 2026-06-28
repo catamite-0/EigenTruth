@@ -1221,6 +1221,15 @@ world-model or calculator-rule tasks. This is the next executable input for
 external-source collection and world-model adapter work; it is not verifier
 evidence until those sources are ingested and provenance-audited.
 
+The citation/search branch of that queue is now ready to hand to an external
+adapter. `build_citation_search_adapter_handoff.py` registers
+`report:truthfulqa-frontier-smollm2-l80-citation-search-adapter-handoff:0.1`
+with `176` sanitized, question-only requests and no `record_index`,
+`target_id`, `model_answer`, or `label` fields in the adapter request JSONL. The
+current artifact is `ready_for_external_adapter`: source docs and corpus docs
+are both `0` until a real adapter returns search results for ingestion, so this
+is still execution plumbing rather than grounding evidence.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -1246,12 +1255,15 @@ evidence until those sources are ingested and provenance-audited.
 6. Promote a Qwen l20/l80 readiness baseline through the same registry workflow
    if Qwen-specific runtime evidence is needed; SmolLM2 now has the first
    non-tiny registered readiness/release candidate.
-7. Extend the new verifier-stability path from structured QA to real retrieval,
+7. Execute the sanitized citation/search adapter requests, feed returned JSONL
+   through the handoff script, and rerun provenance audit plus route-quality
+   checks before treating any returned documents as verifier evidence.
+8. Extend the new verifier-stability path from structured QA to real retrieval,
    database, calculator, and world-model evidence under the same conformal
    false-alarm budgets. Use `benchmarks/build_evidence_fixture.py` with a local
    corpus as the reproducible non-oracle baseline before networked retrieval,
    convert aligned sampled responses with `build_selfcheck_signal_score_dump.py`,
    and compare every new signal against the text/length redline artifact.
-8. Use `CalculatorVerifier` for arithmetic claims once extraction or upstream
+9. Use `CalculatorVerifier` for arithmetic claims once extraction or upstream
    tools provide structured `expression` / `expected` metadata; it is a
    deterministic tool adapter, not a broad natural-language math parser.

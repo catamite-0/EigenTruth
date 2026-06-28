@@ -1589,6 +1589,36 @@ contains `176` external citation/search requests and `6` world-model or
 calculator rule-authoring requests; `20` queued targets have no joined facts and
 `7` have only generic fact joins. Its manifest verifies recursively.
 
+## `build_citation_search_adapter_handoff.py`
+
+Prepares the citation/search portion of the unresolved queue for an external
+search adapter. The emitted request JSONL is deliberately narrower than the
+internal queue: it includes request ids, sanitized queries, priority, question
+type, timestamp requirement, and a queue fingerprint, but omits labels,
+record ids, target ids, and model answers. If an external adapter later writes
+JSONL results keyed by `request_id`, the same workflow can normalize those
+results into source documents plus an `external_evidence_candidate` retrieval
+corpus for provenance audit.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-citation-search-adapter-handoff
+
+python benchmarks/build_citation_search_adapter_handoff.py \
+  --queue artifacts/truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue/unresolved-evidence-queue.json \
+  --output-dir "$OUT" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-citation-search-adapter-handoff \
+  --version 0.1
+```
+
+The current registered handoff
+(`report:truthfulqa-frontier-smollm2-l80-citation-search-adapter-handoff:0.1`)
+has status `ready_for_external_adapter`: it emits `176` sanitized
+citation/search requests from the `46` unresolved-target queue. It intentionally
+has `0` source documents and `0` corpus documents until a real external adapter
+returns search results. A sanity check over the saved requests finds no
+`record_index`, `target_id`, `model_answer`, or `label` fields.
+
 ## `eval_verifier_ensemble.py`
 
 Compares a single calibrated internal diagnostic against a retrieval/verifier

@@ -417,13 +417,22 @@ For product features:
   world-model or calculator-rule authoring requests. The queue is manifest and
   registry backed, but remains `source_discovery_only` / rule-authoring input
   until external documents are ingested and provenance-audited.
+- The citation/search part of that unresolved queue now has an external-adapter
+  handoff boundary: `build_citation_search_adapter_handoff.py` writes
+  sanitized JSONL requests for external search systems and can ingest returned
+  result JSONL into source docs plus an external retrieval corpus. The current
+  SmolLM2 L80 artifact emits `176` high-priority question-only requests with no
+  `record_index`, `target_id`, `model_answer`, or `label` fields. Because no
+  external adapter result file has been supplied yet, the registered handoff is
+  `ready_for_external_adapter` with `0` source docs and `0` corpus docs; it is
+  an execution bridge, not verifier evidence.
 
 ### Next Verification Adapter Work
 
-- Execute the unresolved high-priority citation/search requests through
-  external source adapters, ingest the resulting documents through
-  `build_external_retrieval_corpus.py`, and audit provenance before any route
-  promotion.
+- Run the sanitized unresolved citation/search requests through an external
+  source adapter, feed the returned JSONL back into
+  `build_citation_search_adapter_handoff.py --adapter-results`, then audit the
+  resulting external retrieval corpus before any route promotion.
 - Connect `StructuredStateVerifier` to additional live database, business-rule, and domain-state sources behind optional adapters; the current reproducible path uses local JSON state sources, stdlib SQLite, and mapped local tool outputs.
 - Connect additional QA/database/world-model route policies to production adapters while preserving trace-visible match reasons for each selected or skipped tool.
 - Generalize real side-effecting executors behind the same trace, execution-policy, timeout, idempotency-ledger, and tool-output mapping interfaces; the current production-like demo proves the path with a guarded local SQLite mutation and optional JSON/SQLite replay, while hard cancellation remains adapter-specific.

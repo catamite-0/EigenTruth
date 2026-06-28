@@ -680,11 +680,18 @@ Added the first monitor-first tool-selection audit layer:
   refutes `0/89` blind spots, which turns the frontier requirement from
   retrieval-threshold tuning into structured-fact/QA corpus construction over
   the documented claims.
+- The unresolved citation/search branch now has a clean external-adapter
+  handoff: `build_citation_search_adapter_handoff.py` converts the unresolved
+  queue into `176` sanitized, question-only external search requests and can
+  ingest returned search-result JSONL into auditable source docs and an external
+  retrieval corpus. The current artifact is `ready_for_external_adapter` with
+  `0` source docs, so it proves the execution boundary rather than a grounding
+  route.
 
 ## Next Research-to-Code Candidates
 
 1. Convert the target-specific Wikidata source docs into structured-fact/QA corpora, then rerun the blind-spot correction-route audit instead of another lexical overlap sweep.
-2. Execute the registered unresolved citation/search and world-model queue through external source adapters, then ingest and provenance-audit the returned documents before route promotion.
+2. Run the registered sanitized citation/search request JSONL through an external source adapter, ingest returned results through the handoff script, and provenance-audit the resulting documents before route promotion.
 3. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
 4. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
 5. Materialize a real `frontier_audit` release candidate with the registered covered-facts external-evidence handoff and external-prediction triple matrix artifact, then export the resulting promotion contract.

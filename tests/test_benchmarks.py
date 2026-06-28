@@ -36087,6 +36087,113 @@ def test_unresolved_blind_spot_evidence_queue_filters_resolved_property_slot(tmp
     assert record.metadata["suite"] == "unit"
 
 
+def test_citation_search_adapter_handoff_sanitizes_requests_and_ingests_results(tmp_path):
+    module = importlib.import_module("benchmarks.build_citation_search_adapter_handoff")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    queue_path = tmp_path / "unresolved-evidence-queue.json"
+    results_path = tmp_path / "adapter-results.jsonl"
+    output_dir = tmp_path / "citation-handoff"
+    registry_path = tmp_path / "registry.json"
+    raw_queue_request = {
+        "queue_id": "queue:record-2:external_citation:1",
+        "source_request_id": "cite:record-2:1",
+        "target_id": "record-2",
+        "record_index": 2,
+        "adapter_family": "external_citation_search",
+        "request_type": "external_citation",
+        "evidence_status": "no_joined_facts",
+        "mapping_decision": "no_joined_facts",
+        "priority": "high",
+        "priority_score": 172.0,
+        "question_type": "definition",
+        "question": "What is Alpha Syndrome?",
+        "model_answer": "A moon.",
+        "query": "Alpha Syndrome A moon.",
+        "requires_timestamp": False,
+        "usage": "source_discovery_only",
+    }
+    queue_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "unresolved_blind_spot_evidence_queue",
+            "status": "ready_for_adapter_execution",
+            "summary": {"target_count": 1, "adapter_request_count": 1},
+            "adapter_requests": [raw_queue_request],
+        }),
+        encoding="utf-8",
+    )
+    request_id = module._adapter_request_id(raw_queue_request)
+    results_path.write_text(
+        json.dumps({
+            "request_id": request_id,
+            "results": [
+                {
+                    "title": "Alpha Syndrome reference",
+                    "snippet": "Alpha Syndrome is a fictional condition documented in the test source.",
+                    "url": "https://example.org/alpha",
+                    "provider": "unit-search",
+                    "rank": 1,
+                    "published_at": "2026-01-01",
+                },
+                {
+                    "title": "",
+                    "snippet": "",
+                    "provider": "unit-search",
+                    "rank": 2,
+                },
+            ],
+        }) + "\n",
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        queue_report_path=queue_path,
+        adapter_results_path=results_path,
+        output_dir=output_dir,
+        registry_path=registry_path,
+        name="citation-search-handoff-unit",
+        version="0.1",
+        source_kind="unit_citation_search_result",
+        metadata={"suite": "unit"},
+    )
+    requests = [
+        json.loads(line)
+        for line in (output_dir / "citation-search-adapter-requests.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    source_docs = [
+        json.loads(line)
+        for line in (output_dir / "citation-search-source-docs.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    corpus = json.loads((output_dir / "citation-search-corpus.json").read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:citation-search-handoff-unit:0.1"
+    )
+    manifest_path = output_dir / "artifact-manifest.json"
+
+    assert payload["status"] == "collected"
+    assert payload["summary"]["adapter_request_count"] == 1
+    assert payload["summary"]["source_document_count"] == 1
+    assert payload["summary"]["corpus_document_count"] == 1
+    assert requests[0]["query"] == "What is Alpha Syndrome?"
+    assert requests[0]["not_verifier_evidence"] is True
+    assert "record_index" not in requests[0]
+    assert "model_answer" not in requests[0]
+    assert "target_id" not in requests[0]
+    assert source_docs[0]["metadata"]["provider"] == "unit-search"
+    assert "record_index" not in source_docs[0]["metadata"]
+    assert "target_id" not in source_docs[0]["metadata"]
+    assert "model_answer" not in source_docs[0]["metadata"]
+    assert corpus["corpus_type"] == "external_evidence_candidate"
+    assert corpus["summary"]["n_documents"] == 1
+    assert corpus["label_usage"]["labels_used_for_documents"] is False
+    assert corpus["documents"][0]["metadata"]["source_kind"] == "unit_citation_search_result"
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "citation_search_adapter_handoff"
+    assert record.metadata["source_document_count"] == 1
+    assert record.metadata["suite"] == "unit"
+
+
 def test_eval_score_ensemble_compares_single_and_combined_signals(tmp_path):
     module = importlib.import_module("benchmarks.eval_score_ensemble")
     scores_path = tmp_path / "scores.json"
