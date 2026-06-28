@@ -2122,3 +2122,163 @@ def test_rule_input_correction_handoff_fill_executes_entity_role_candidate(tmp_p
     assert adapter_payload["summary"]["candidate_refuted_count"] == 1
     assert results[0]["status"] == "refuted"
     assert "source_citation=wikidata:Q478214:P112:Q1903673" in results[0]["evidence"][0]
+
+
+def test_world_model_rule_candidate_promotion_gate_promotes_source_backed_candidate(tmp_path):
+    module = importlib.import_module("benchmarks.promote_world_model_rule_candidates")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    results_path = tmp_path / "world-model-rule-results.jsonl"
+    inputs_path = tmp_path / "rule-inputs.jsonl"
+    adapter_report_path = tmp_path / "adapter-report.json"
+    output_dir = tmp_path / "promotion"
+    registry_path = tmp_path / "registry.json"
+    results_path.write_text(
+        "\n".join(
+            json.dumps(row)
+            for row in (
+                {
+                    "schema_version": 1,
+                    "workflow": "world_model_rule_authoring_adapter",
+                    "request_id": "rule:record-1:1",
+                    "target_id": "record-1",
+                    "rule_family": "entity_disambiguation",
+                    "status": "refuted",
+                    "confidence": 0.95,
+                    "missing_inputs": [],
+                    "question": "Who first started Tesla Motors?",
+                    "authored_rule": {"adapter": "entity_role_disambiguation"},
+                    "metadata": {
+                        "adapter": "entity_role_disambiguation",
+                        "candidate_results_require_promotion_gate": True,
+                    },
+                    "evidence": [
+                        "entity_role: requested_role=founder; "
+                        "answer_entity=Elon Musk; expected_entity=Martin Eberhard; "
+                        "source_citation=wikidata:Q478214:P112:Q1903673"
+                    ],
+                    "not_verifier_evidence": True,
+                },
+                {
+                    "schema_version": 1,
+                    "workflow": "world_model_rule_authoring_adapter",
+                    "request_id": "rule:record-11:1",
+                    "target_id": "record-11",
+                    "rule_family": "quantity_or_arithmetic",
+                    "status": "needs_inputs",
+                    "missing_inputs": ["numeric_value"],
+                    "not_verifier_evidence": True,
+                },
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    inputs_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "world_model_rule_input_correction_handoff_fill",
+            "request_id": "rule:record-1:1",
+            "target_id": "record-1",
+            "rule_family": "entity_disambiguation",
+            "subject_entity": "Tesla",
+            "answer_entity": "Elon Musk",
+            "expected_entity": "Martin Eberhard",
+            "requested_role": "founder",
+            "source_citation": "wikidata:Q478214:P112:Q1903673",
+            "source_url": "https://www.wikidata.org/wiki/Q478214",
+            "source_fact_type": "P112",
+            "source_family": "reference",
+            "provider": "wikidata",
+            "not_verifier_evidence": True,
+            "candidate_results_require_promotion_gate": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    adapter_report_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "world_model_rule_authoring_adapter",
+            "status": "partial",
+            "summary": {"executed_count": 1, "needs_input_count": 1},
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        rule_results_path=results_path,
+        rule_inputs_path=inputs_path,
+        adapter_report_path=adapter_report_path,
+        output_dir=output_dir,
+        registry_path=registry_path,
+        name="rule-candidate-promotion-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    promoted = [
+        json.loads(line)
+        for line in (output_dir / "promoted-rule-candidates.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    pending = [
+        json.loads(line)
+        for line in (output_dir / "pending-rule-inputs.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    blocked = (output_dir / "blocked-rule-candidates.jsonl").read_text(encoding="utf-8").strip()
+    registry_record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:rule-candidate-promotion-unit:0.1"
+    )
+
+    assert payload["status"] == "promote"
+    assert payload["summary"]["promoted_count"] == 1
+    assert payload["summary"]["pending_count"] == 1
+    assert payload["summary"]["blocked_count"] == 0
+    assert promoted[0]["request_id"] == "rule:record-1:1"
+    assert promoted[0]["status"] == "refuted"
+    assert promoted[0]["source_citation"] == "wikidata:Q478214:P112:Q1903673"
+    assert promoted[0]["promotion"]["status"] == "promote"
+    assert pending[0]["request_id"] == "rule:record-11:1"
+    assert blocked == ""
+    assert registry_module.load_and_verify_artifact_manifest(output_dir / "artifact-manifest.json").passed is True
+    assert registry_record is not None
+    assert registry_record.metadata["status"] == "promote"
+
+
+def test_world_model_rule_candidate_promotion_gate_blocks_missing_citation(tmp_path):
+    module = importlib.import_module("benchmarks.promote_world_model_rule_candidates")
+
+    payload = module.promote_world_model_rule_candidates(
+        rule_results=[
+            {
+                "request_id": "rule:bad:1",
+                "target_id": "record-bad",
+                "rule_family": "entity_disambiguation",
+                "status": "refuted",
+                "confidence": 0.95,
+                "missing_inputs": [],
+                "authored_rule": {"adapter": "entity_role_disambiguation"},
+                "metadata": {"candidate_results_require_promotion_gate": True},
+                "evidence": ["entity_role: requested_role=founder"],
+                "not_verifier_evidence": True,
+            }
+        ],
+        rule_inputs=[
+            {
+                "request_id": "rule:bad:1",
+                "rule_family": "entity_disambiguation",
+                "subject_entity": "Tesla",
+                "answer_entity": "Elon Musk",
+                "expected_entity": "Martin Eberhard",
+                "requested_role": "founder",
+                "not_verifier_evidence": True,
+                "candidate_results_require_promotion_gate": True,
+            }
+        ],
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["promoted_count"] == 0
+    assert payload["summary"]["blocked_count"] == 1
+    assert payload["blocked_candidates"][0]["failures"] == ("missing_source_citation",)

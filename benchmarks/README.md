@@ -2706,6 +2706,31 @@ filled adapter replay executes `1/37` stubs and produces one candidate
 The remaining `36` tasks stay as explicit input requests, and the candidate
 result still requires a promotion gate before any product correction handoff.
 
+Promotion-gate the deterministic rule candidate before any downstream handoff:
+
+```bash
+RULE_PROMOTION=artifacts/truthfulqa-frontier-smollm2-l80-world-model-rule-candidate-promotion-gate
+
+python benchmarks/promote_world_model_rule_candidates.py \
+  --rule-results "$RULE_FILLED_ADAPTER/world-model-rule-results.jsonl" \
+  --rule-inputs "$RULE_INPUT_FILL/rule-inputs.jsonl" \
+  --adapter-report "$RULE_FILLED_ADAPTER/world-model-rule-authoring-adapter.json" \
+  --output-dir "$RULE_PROMOTION" \
+  --json "$RULE_PROMOTION/world-model-rule-candidate-promotion-gate.json" \
+  --promoted-jsonl "$RULE_PROMOTION/promoted-rule-candidates.jsonl" \
+  --blocked-jsonl "$RULE_PROMOTION/blocked-rule-candidates.jsonl" \
+  --pending-jsonl "$RULE_PROMOTION/pending-rule-inputs.jsonl" \
+  --artifact-manifest "$RULE_PROMOTION/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=world_model_rule_authoring_adapter_correction_filled
+```
+
+The registered promotion gate is `promote`: `1` source-backed entity-role
+candidate passes with `0` blocked candidates and `36` pending input rows. The
+gate checks that the candidate is executed, promotable, high-confidence, still
+marked as candidate-only, backed by explicit rule inputs, and carries the same
+source citation in both the input and adapter evidence.
+
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:
 

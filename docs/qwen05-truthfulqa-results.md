@@ -369,9 +369,12 @@ adapter needs (`expected_entity`, `calculation.expression`,
 task already covered by the promoted Tesla founder correction handoff and
 ProductTrace claim binding. The filled adapter replay executes `1/37` stubs and
 emits one candidate `refuted` entity-role result for `rule:record-1:1`; the
-remaining `36` tasks stay as explicit input requests. The next implementation
-step is therefore promotion-gating that candidate and expanding typed input
-fills, not another source-backed catalog replay.
+remaining `36` tasks stay as explicit input requests.
+`promote_world_model_rule_candidates.py` now promotion-gates that deterministic
+candidate and promotes it with `0` blocked candidates and `36` pending input
+rows. The next implementation step is therefore building a source-backed rule
+candidate handoff and expanding typed input fills, not another source-backed
+catalog replay.
 
 ## Product Trace Demo
 

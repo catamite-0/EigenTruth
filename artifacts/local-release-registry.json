@@ -6568,6 +6568,22 @@
       "name": "truthfulqa-frontier-smollm2-l80-world-model-rule-authoring-adapter-correction-filled",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-world-model-rule-authoring-adapter-correction-filled/world-model-rule-authoring-adapter.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-world-model-rule-candidate-promotion-gate/artifact-manifest.json",
+        "blocked_count": 0,
+        "evidence": "world_model_rule_authoring_adapter_correction_filled",
+        "pending_count": 36,
+        "promoted_count": 1,
+        "status": "promote",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "world_model_rule_candidate_promotion_gate"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-world-model-rule-candidate-promotion-gate",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-world-model-rule-candidate-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1
