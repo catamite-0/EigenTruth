@@ -2931,6 +2931,40 @@ explicit subject entity. Focused tests also cover the positive path: a valid
 source/candidate numeric binding executes through the calculator adapter and can
 promote once `source_citation` appears in deterministic candidate evidence.
 
+The unresolved temporal lane now has a minimal source-timestamp consistency
+adapter and promotion gate:
+
+```bash
+TEMPORAL_ADAPTER=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-adapter
+TEMPORAL_PROMOTION=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-promotion-gate
+
+python benchmarks/run_world_model_rule_authoring_adapter.py \
+  --rule-stubs "$TEMPORAL_ADAPTER/record-326-temporal-rule-stub.jsonl" \
+  --rule-inputs "$TEMPORAL_ADAPTER/rule-inputs.jsonl" \
+  --output-dir "$TEMPORAL_ADAPTER" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-adapter \
+  --version 0.1
+
+python benchmarks/promote_world_model_rule_candidates.py \
+  --rule-results "$TEMPORAL_ADAPTER/world-model-rule-results.jsonl" \
+  --rule-inputs "$TEMPORAL_ADAPTER/rule-inputs.jsonl" \
+  --adapter-report "$TEMPORAL_ADAPTER/world-model-rule-authoring-adapter.json" \
+  --output-dir "$TEMPORAL_PROMOTION" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-promotion-gate \
+  --version 0.1
+```
+
+The registered temporal replay is `observed -> promote`: `1/1` temporal stub
+executes as `supported`, and the promotion gate promotes the single
+`record-326` candidate with `0` blocked and `0` pending. This proves only the
+timestamp/freshness/order contract (`claim_time`, `source_time`, `retrieved_at`,
+and `source_citation`) and manifest-backed promotion wiring; it does not prove
+the food-affordability content itself. Content truth still requires citation or
+structured evidence handoff before ProductTrace or release gates should act on
+the claim.
+
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:
 

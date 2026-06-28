@@ -457,6 +457,14 @@ For product features:
   unresolved `record-190` population task, the registered artifact is correctly
   `blocked` with `binding_requires_review` and `missing_subject_entity` because
   the question says only "the country" and no subject entity is bound.
+  `run_world_model_rule_authoring_adapter.py` now also executes explicit
+  `temporal_consistency` inputs. The registered `record-326` temporal replay
+  supplies `claim_time`, `source_time`, `retrieved_at`, and `source_citation`,
+  observes one supported source-timestamp candidate, and the promotion gate
+  promotes it with the temporal metadata preserved. This still only validates
+  freshness/order of the source snapshot; it does not make a ProductTrace-visible
+  content correction until a citation or structured-evidence route proves the
+  claim content.
   Product implication: unresolved deterministic rule work now enters the same
   explicit input-plan pathway as the larger source-family rule lane, but it
   still cannot affect ProductTrace or release gates until candidate execution,

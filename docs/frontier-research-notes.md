@@ -951,6 +951,14 @@ Added the first monitor-first tool-selection audit layer:
   blocked because the binding is marked `ambiguous_subject` and lacks
   `subject_entity`; even a source-backed World Bank USA population value is not
   enough to fill "the country" without an explicit subject binding.
+- `run_world_model_rule_authoring_adapter.py` now also executes
+  `temporal_consistency` rules when explicit `claim_time`, `source_time`,
+  `retrieved_at`, and `source_citation` inputs are supplied. The registered
+  unresolved `record-326` replay observes one supported timestamp-order
+  candidate, and `promote_world_model_rule_candidates.py` promotes it with the
+  same source citation and temporal metadata. This is a narrow freshness/order
+  proof, not a claim that the food-affordability content is true; content-level
+  correction still needs citation or structured-evidence handoff.
 
 ## Next Research-to-Code Candidates
 
@@ -958,9 +966,10 @@ Added the first monitor-first tool-selection audit layer:
    unresolved rows should stay separated by gap type and feed richer property
    mapping, citation evidence, entity disambiguation, and deterministic
    world-model/calculator rules before entering ProductTrace or release gates.
-2. Extend the rule-input fill family beyond the completed entity and numeric
-   binding shells: the remaining numeric work is subject-binding resolution for
-   ambiguous questions such as `record-190`, while temporal and
+2. Extend the rule-input fill family beyond the completed entity, numeric, and
+   temporal shells: the remaining numeric work is subject-binding resolution for
+   ambiguous questions such as `record-190`; temporal work needs richer
+   content/citation mapping or source-backed temporal fills; and
    causal/procedural tasks still need provenance-backed values plus adapter
    execution before deterministic world-model results can pass the same
    promotion gate into handoff. The complete source-backed replay now proves

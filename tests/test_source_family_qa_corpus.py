@@ -2673,6 +2673,135 @@ def test_world_model_rule_numeric_binding_fill_blocks_review_required_binding():
     }
 
 
+def test_world_model_rule_temporal_consistency_executes_and_promotes_candidate(tmp_path):
+    adapter_module = importlib.import_module("benchmarks.run_world_model_rule_authoring_adapter")
+    promotion_module = importlib.import_module("benchmarks.promote_world_model_rule_candidates")
+
+    stubs_path = tmp_path / "world-model-rule-stubs.jsonl"
+    inputs_path = tmp_path / "rule-inputs.jsonl"
+    adapter_output = tmp_path / "adapter"
+    promotion_output = tmp_path / "promotion"
+    stubs_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "unresolved_world_model_rule_stubs",
+            "request_id": "rule:record-326:1",
+            "target_id": "record-326",
+            "request_type": "world_model_or_calculator_rule",
+            "rule_family": "temporal_consistency",
+            "required_inputs": ["claim_time", "source_time", "retrieved_at", "source_citation"],
+            "question": "What happened to the affordability of food in America in recent decades?",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    inputs_path.write_text(
+        json.dumps({
+            "request_id": "rule:record-326:1",
+            "target_id": "record-326",
+            "rule_family": "temporal_consistency",
+            "claim_time": "2026-06-10",
+            "source_time": "2026-06-10",
+            "retrieved_at": "2026-06-28T15:51:33+00:00",
+            "source_citation": "https://www.pbs.org/newshour/economy/food-affordability",
+            "source_url": "https://www.pbs.org/newshour/economy/food-affordability",
+            "source_family": "news",
+            "provider": "pbs_newshour",
+            "not_verifier_evidence": True,
+            "candidate_results_require_promotion_gate": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    adapter_payload = adapter_module.run_world_model_rule_authoring_adapter(
+        rule_stubs_path=stubs_path,
+        rule_inputs_path=inputs_path,
+        output_dir=adapter_output,
+        metadata={"suite": "unit"},
+    )
+    promotion_payload = promotion_module.run(
+        rule_results_path=adapter_output / "world-model-rule-results.jsonl",
+        rule_inputs_path=inputs_path,
+        adapter_report_path=adapter_output / "world-model-rule-authoring-adapter.json",
+        output_dir=promotion_output,
+        metadata={"suite": "unit"},
+    )
+    result = json.loads((adapter_output / "world-model-rule-results.jsonl").read_text(encoding="utf-8"))
+    promoted = json.loads((promotion_output / "promoted-rule-candidates.jsonl").read_text(encoding="utf-8"))
+
+    assert adapter_payload["status"] == "observed"
+    assert adapter_payload["summary"]["candidate_supported_count"] == 1
+    assert result["status"] == "supported"
+    assert "source_time covers claim_time" in result["evidence"][0]
+    assert "https://www.pbs.org/newshour/economy/food-affordability" in result["evidence"][0]
+    assert promotion_payload["status"] == "promote"
+    assert promoted["rule_family"] == "temporal_consistency"
+    assert promoted["rule_input"]["claim_time"] == "2026-06-10"
+    assert promoted["rule_input"]["retrieved_at"] == "2026-06-28T15:51:33+00:00"
+
+
+def test_world_model_rule_temporal_consistency_blocks_future_source_time(tmp_path):
+    adapter_module = importlib.import_module("benchmarks.run_world_model_rule_authoring_adapter")
+    promotion_module = importlib.import_module("benchmarks.promote_world_model_rule_candidates")
+
+    stubs_path = tmp_path / "world-model-rule-stubs.jsonl"
+    inputs_path = tmp_path / "rule-inputs.jsonl"
+    adapter_output = tmp_path / "adapter"
+    promotion_output = tmp_path / "promotion"
+    stubs_path.write_text(
+        json.dumps({
+            "request_id": "rule:record-326:1",
+            "target_id": "record-326",
+            "rule_family": "temporal_consistency",
+            "required_inputs": ["claim_time", "source_time", "retrieved_at", "source_citation"],
+            "question": "What happened to the affordability of food in America in recent decades?",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    inputs_path.write_text(
+        json.dumps({
+            "request_id": "rule:record-326:1",
+            "target_id": "record-326",
+            "rule_family": "temporal_consistency",
+            "claim_time": "2026-06-10",
+            "source_time": "2026-07-01",
+            "retrieved_at": "2026-06-28",
+            "source_citation": "https://www.pbs.org/newshour/economy/food-affordability",
+            "not_verifier_evidence": True,
+            "candidate_results_require_promotion_gate": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    adapter_payload = adapter_module.run_world_model_rule_authoring_adapter(
+        rule_stubs_path=stubs_path,
+        rule_inputs_path=inputs_path,
+        output_dir=adapter_output,
+        metadata={"suite": "unit"},
+    )
+    promotion_payload = promotion_module.run(
+        rule_results_path=adapter_output / "world-model-rule-results.jsonl",
+        rule_inputs_path=inputs_path,
+        adapter_report_path=adapter_output / "world-model-rule-authoring-adapter.json",
+        output_dir=promotion_output,
+        metadata={"suite": "unit"},
+    )
+    result = json.loads((adapter_output / "world-model-rule-results.jsonl").read_text(encoding="utf-8"))
+    blocked = json.loads((promotion_output / "blocked-rule-candidates.jsonl").read_text(encoding="utf-8"))
+
+    assert adapter_payload["status"] == "observed"
+    assert adapter_payload["summary"]["candidate_error_count"] == 1
+    assert result["status"] == "error"
+    assert "source_time occurs after retrieved_at" in result["evidence"][0]
+    assert promotion_payload["status"] == "blocked"
+    assert blocked["failures"] == ["status_not_promotable"]
+
+
 def test_rule_input_correction_handoff_fill_executes_entity_role_candidate(tmp_path):
     fill_module = importlib.import_module("benchmarks.fill_world_model_rule_inputs_from_correction_handoff")
     adapter_module = importlib.import_module("benchmarks.run_world_model_rule_authoring_adapter")

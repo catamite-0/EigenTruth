@@ -6801,6 +6801,39 @@
       "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-numeric-binding-fill",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-numeric-binding-fill/rule-input-numeric-binding-fill.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-adapter/artifact-manifest.json",
+        "evidence": "unresolved-world-model-rule-temporal-adapter",
+        "executed_count": 1,
+        "input_request_count": 0,
+        "needs_input_count": 0,
+        "status": "observed",
+        "stub_count": 1,
+        "suite": "truthfulqa-smollm2-l80",
+        "workflow": "world_model_rule_authoring_adapter"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-adapter",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-adapter/world-model-rule-authoring-adapter.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-promotion-gate/artifact-manifest.json",
+        "blocked_count": 0,
+        "evidence": "unresolved-world-model-rule-temporal-adapter",
+        "pending_count": 0,
+        "promoted_count": 1,
+        "status": "promote",
+        "suite": "truthfulqa-smollm2-l80",
+        "workflow": "world_model_rule_candidate_promotion_gate"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-promotion-gate",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

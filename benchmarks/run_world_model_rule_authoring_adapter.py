@@ -13,6 +13,7 @@ import json
 import re
 import sys
 from collections import Counter
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -34,6 +35,7 @@ INPUT_KEYS_BY_FAMILY = {
     "quantity_or_arithmetic": ("numeric_value", "unit", "reference_time"),
     "entity_disambiguation": ("subject_entity", "answer_entity", "requested_role"),
     "causal_or_procedural": ("mechanism", "precondition", "source_citation"),
+    "temporal_consistency": ("claim_time", "source_time", "retrieved_at", "source_citation"),
 }
 EXECUTED_STATUSES = {
     VerificationStatus.SUPPORTED.value,
@@ -81,9 +83,9 @@ def run_world_model_rule_authoring_adapter(
         "workflow": WORKFLOW,
         "status": _status(summary),
         "scope": (
-            "Executes deterministic calculator/entity-role checks only when "
-            "explicit rule inputs are provided. Missing-input rows are "
-            "rule-authoring work items, not verifier evidence."
+            "Executes deterministic calculator/entity-role/temporal checks "
+            "only when explicit rule inputs are provided. Missing-input rows "
+            "are rule-authoring work items, not verifier evidence."
         ),
         "source": {
             "rule_stubs": str(rule_stubs_path),
@@ -210,6 +212,23 @@ def _evaluate_stub(stub: Mapping[str, Any], rule_input: Mapping[str, Any] | None
                 "candidate_results_require_promotion_gate": True,
             },
         )
+    if family == "temporal_consistency" and _has_temporal_inputs(input_payload):
+        temporal = _temporal_consistency(input_payload)
+        return _result(
+            stub=stub,
+            status=temporal["status"],
+            authored_rule=authored_rule,
+            required_inputs=required_inputs,
+            supplied_inputs=tuple(input_payload),
+            evidence=temporal["evidence"],
+            explanation=temporal["explanation"],
+            confidence=temporal["confidence"],
+            metadata={
+                "adapter": "temporal_consistency",
+                "candidate_results_require_promotion_gate": True,
+                "temporal_consistency": temporal["metadata"],
+            },
+        )
     missing = _missing_inputs(required_inputs, input_payload, family=family)
     return _result(
         stub=stub,
@@ -273,6 +292,7 @@ def _authored_rule(
     adapter = {
         "quantity_or_arithmetic": "calculator",
         "entity_disambiguation": "entity_role_disambiguation",
+        "temporal_consistency": "temporal_consistency",
         "causal_or_procedural": "world_model_rule",
     }.get(family, "world_model_rule")
     return {
@@ -366,10 +386,128 @@ def _has_entity_role_inputs(rule_input: Mapping[str, Any]) -> bool:
     ) and bool(_clean(rule_input.get("expected_entity", rule_input.get("correct_entity"))))
 
 
+def _has_temporal_inputs(rule_input: Mapping[str, Any]) -> bool:
+    return all(_clean(rule_input.get(key)) for key in ("claim_time", "source_time", "retrieved_at", "source_citation"))
+
+
+def _temporal_consistency(rule_input: Mapping[str, Any]) -> dict[str, Any]:
+    claim_time = _parse_temporal_value(rule_input.get("claim_time"))
+    source_time = _parse_temporal_value(rule_input.get("source_time"))
+    retrieved_at = _parse_temporal_value(rule_input.get("retrieved_at"))
+    source_citation = _clean(rule_input.get("source_citation"))
+    raw_metadata = {
+        "claim_time": _clean(rule_input.get("claim_time")),
+        "source_time": _clean(rule_input.get("source_time")),
+        "retrieved_at": _clean(rule_input.get("retrieved_at")),
+        "source_citation": source_citation,
+        "relation": "source_time_at_or_after_claim_time_and_not_after_retrieval",
+    }
+    if claim_time is None or source_time is None or retrieved_at is None:
+        return {
+            "status": VerificationStatus.ERROR.value,
+            "confidence": 1.0,
+            "evidence": (
+                "temporal_consistency: invalid temporal input; "
+                f"claim_time={raw_metadata['claim_time']}; "
+                f"source_time={raw_metadata['source_time']}; "
+                f"retrieved_at={raw_metadata['retrieved_at']}; "
+                f"source_citation={source_citation}",
+            ),
+            "explanation": "temporal consistency check could not parse one or more explicit inputs",
+            "metadata": {**raw_metadata, "failure": "invalid_temporal_input"},
+        }
+    parsed_metadata = {
+        **raw_metadata,
+        "parsed_claim_time": claim_time.isoformat(),
+        "parsed_source_time": source_time.isoformat(),
+        "parsed_retrieved_at": retrieved_at.isoformat(),
+    }
+    if source_time > retrieved_at:
+        return {
+            "status": VerificationStatus.ERROR.value,
+            "confidence": 1.0,
+            "evidence": (
+                "temporal_consistency: source_time occurs after retrieved_at; "
+                f"source_time={source_time.isoformat()}; "
+                f"retrieved_at={retrieved_at.isoformat()}; "
+                f"source_citation={source_citation}",
+            ),
+            "explanation": "temporal source metadata is inconsistent with retrieval time",
+            "metadata": {**parsed_metadata, "failure": "source_time_after_retrieved_at"},
+        }
+    if claim_time > retrieved_at:
+        return {
+            "status": VerificationStatus.REFUTED.value,
+            "confidence": 0.95,
+            "evidence": (
+                "temporal_consistency: claim_time occurs after retrieved_at; "
+                f"claim_time={claim_time.isoformat()}; "
+                f"retrieved_at={retrieved_at.isoformat()}; "
+                f"source_citation={source_citation}",
+            ),
+            "explanation": "explicit claim time is later than the retrieval snapshot",
+            "metadata": {**parsed_metadata, "failure": "claim_time_after_retrieved_at"},
+        }
+    if source_time < claim_time:
+        return {
+            "status": VerificationStatus.REFUTED.value,
+            "confidence": 0.95,
+            "evidence": (
+                "temporal_consistency: source_time predates claim_time; "
+                f"source_time={source_time.isoformat()}; "
+                f"claim_time={claim_time.isoformat()}; "
+                f"source_citation={source_citation}",
+            ),
+            "explanation": "source timestamp is older than the asserted claim time",
+            "metadata": {**parsed_metadata, "failure": "source_time_before_claim_time"},
+        }
+    return {
+        "status": VerificationStatus.SUPPORTED.value,
+        "confidence": 0.95,
+        "evidence": (
+            "temporal_consistency: source_time covers claim_time before retrieval; "
+            f"claim_time={claim_time.isoformat()}; "
+            f"source_time={source_time.isoformat()}; "
+            f"retrieved_at={retrieved_at.isoformat()}; "
+            f"source_citation={source_citation}",
+        ),
+        "explanation": "source timestamp is current enough for the explicit claim time",
+        "metadata": {**parsed_metadata, "status": "temporally_consistent"},
+    }
+
+
+def _parse_temporal_value(value: Any) -> datetime | None:
+    if isinstance(value, datetime):
+        parsed = value
+    elif isinstance(value, date):
+        parsed = datetime(value.year, value.month, value.day, tzinfo=timezone.utc)
+    else:
+        text = _clean(value)
+        if not text:
+            return None
+        if re.fullmatch(r"\d{4}", text):
+            parsed = datetime(int(text), 1, 1, tzinfo=timezone.utc)
+        elif re.fullmatch(r"\d{4}-\d{2}", text):
+            parsed = datetime.strptime(text, "%Y-%m").replace(tzinfo=timezone.utc)
+        else:
+            try:
+                parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+            except ValueError:
+                try:
+                    parsed = datetime.strptime(text, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                except ValueError:
+                    return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
 def _missing_inputs(required: Sequence[str], supplied: Mapping[str, Any], *, family: str) -> tuple[str, ...]:
     if _calculation_input(supplied) is not None:
         return ()
     if _has_entity_role_inputs(supplied):
+        return ()
+    if _has_temporal_inputs(supplied):
         return ()
     missing = tuple(key for key in required if not _clean(supplied.get(key)))
     if missing:

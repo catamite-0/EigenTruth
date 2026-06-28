@@ -1656,6 +1656,19 @@ claim refers to. This keeps the World Bank population value as source-backed
 context, not as an executable calculator input, until subject binding is
 resolved.
 
+`benchmarks/run_world_model_rule_authoring_adapter.py` now also executes the
+unresolved temporal rule lane when explicit timestamp inputs are supplied. The
+registered `record-326` replay at
+`artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-adapter/`
+observes one supported `temporal_consistency` candidate from `claim_time`,
+`source_time`, `retrieved_at`, and `source_citation`; the paired promotion gate
+at
+`artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-promotion-gate/`
+promotes that single source-timestamp candidate with `0` blocked and `0`
+pending, and both manifests verify. This proves only source snapshot freshness
+and timestamp ordering, not the food-affordability content itself; content truth
+still needs a citation or structured-evidence handoff before ProductTrace action.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because

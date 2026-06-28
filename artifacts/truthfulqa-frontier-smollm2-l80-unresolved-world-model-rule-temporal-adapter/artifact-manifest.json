@@ -1,0 +1,62 @@
+{
+  "artifacts": {
+    "rule_authoring_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-authoring-adapter.json",
+      "sha256": "5cfc2c566d71fe1d89994891868303a46c9e6a478ecc02f97412c9516efbb80a",
+      "size_bytes": 1972
+    },
+    "rule_input_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-input-requests.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "rule_inputs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "rule-inputs.jsonl",
+      "sha256": "d95ced93f522acacd0a2e8a378015970bd0d1f224af7f3dace82153040148003",
+      "size_bytes": 702
+    },
+    "rule_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-results.jsonl",
+      "sha256": "2fc5588fbd327342b97ca1546c3f17656944bd83cbe5dc44fe385de98cd028a0",
+      "size_bytes": 2496
+    },
+    "rule_stubs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "record-326-temporal-rule-stub.jsonl",
+      "sha256": "d50e27a4249682c76ed28f6ed947912509107248c9e7bb7a24939a2d82a411ce",
+      "size_bytes": 809
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "evidence": "unresolved-world-model-rule-temporal-adapter",
+    "executed_count": 1,
+    "input_request_count": 0,
+    "needs_input_count": 0,
+    "status": "observed",
+    "stub_count": 1,
+    "suite": "truthfulqa-smollm2-l80",
+    "workflow": "world_model_rule_authoring_adapter"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

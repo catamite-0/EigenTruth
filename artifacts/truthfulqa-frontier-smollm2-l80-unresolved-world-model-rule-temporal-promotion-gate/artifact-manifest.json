@@ -1,0 +1,77 @@
+{
+  "artifacts": {
+    "adapter_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-adapter/world-model-rule-authoring-adapter.json",
+      "sha256": "5cfc2c566d71fe1d89994891868303a46c9e6a478ecc02f97412c9516efbb80a",
+      "size_bytes": 1972
+    },
+    "blocked_rule_candidates": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "blocked-rule-candidates.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "pending_rule_inputs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "pending-rule-inputs.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "promoted_rule_candidates": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "promoted-rule-candidates.jsonl",
+      "sha256": "03f8146b4dd0db741fe85914e4300942843bbed5fb8d6ed20b60cd87f1236c44",
+      "size_bytes": 1404
+    },
+    "rule_candidate_promotion_gate": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-candidate-promotion-gate.json",
+      "sha256": "ec34180c011bf5be88f251e20e1840315cdc3374eec567e59971f1347bb6b3f1",
+      "size_bytes": 4763
+    },
+    "rule_inputs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-adapter/rule-inputs.jsonl",
+      "sha256": "d95ced93f522acacd0a2e8a378015970bd0d1f224af7f3dace82153040148003",
+      "size_bytes": 702
+    },
+    "rule_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-adapter/world-model-rule-results.jsonl",
+      "sha256": "2fc5588fbd327342b97ca1546c3f17656944bd83cbe5dc44fe385de98cd028a0",
+      "size_bytes": 2496
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "blocked_count": 0,
+    "evidence": "unresolved-world-model-rule-temporal-adapter",
+    "pending_count": 0,
+    "promoted_count": 1,
+    "status": "promote",
+    "suite": "truthfulqa-smollm2-l80",
+    "workflow": "world_model_rule_candidate_promotion_gate"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 7,
+    "directory_count": 0,
+    "file_count": 7,
+    "missing_count": 0
+  }
+}
