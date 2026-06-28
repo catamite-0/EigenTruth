@@ -15,12 +15,14 @@ import torch
 from eigentruth.eval.metrics import (
     binomial_confidence_interval,
     confidence_error_report,
+    deck_taxonomy_report,
     euclidean_dispersion,
     first_token_confidence,
     roc_auc,
     selective_classification_report,
     spearman_correlation,
     topk_normalized_entropy,
+    youden_j_threshold,
 )
 from eigentruth.eval.score_dump import (
     ScoreDump,
@@ -256,6 +258,78 @@ class TestConfidenceErrorReport:
         assert report["n_high_confidence_flagged_false"] == 1
         assert report["high_confidence_false_capture_rate"]["estimate"] == pytest.approx(1.0)
         assert report["high_confidence_false_miss_rate"]["estimate"] == pytest.approx(0.0)
+
+
+class TestDetectabilityTaxonomy:
+    """DECK-style consistency x confidence taxonomy tests."""
+
+    def test_youden_j_threshold_selects_balanced_split(self):
+        report = youden_j_threshold(
+            scores=[0.95, 0.90, 0.85, 0.80, 0.20, 0.82, 0.25, 0.88],
+            labels=[0, 0, 0, 0, 1, 1, 1, 1],
+            direction="higher",
+        )
+
+        assert report["threshold"] == pytest.approx(0.525)
+        assert report["youden_j"] == pytest.approx(0.5)
+        assert report["sensitivity"] == pytest.approx(0.5)
+        assert report["specificity"] == pytest.approx(1.0)
+
+    def test_deck_taxonomy_partitions_false_modes(self):
+        report = deck_taxonomy_report(
+            consistency_scores=[0.95, 0.90, 0.85, 0.80, 0.20, 0.82, 0.25, 0.88],
+            confidence_scores=[0.95, 0.90, 0.85, 0.80, 0.82, 0.90, 0.20, 0.25],
+            labels=[0, 0, 0, 0, 1, 1, 1, 1],
+            include_assignments=True,
+        )
+
+        assert report["method"] == "deck_consistency_confidence_taxonomy"
+        assert report["n_total"] == 8
+        assert report["assignments"] == [
+            "entrenched",
+            "entrenched",
+            "entrenched",
+            "entrenched",
+            "drift",
+            "entrenched",
+            "confabulation",
+            "knotted",
+        ]
+        assert report["cells"]["drift"]["detected_by"] == ["black_box_consistency"]
+        assert report["cells"]["entrenched"]["detected_by"] == ["judge_or_external_verifier"]
+        assert report["cells"]["confabulation"]["detected_by"] == [
+            "black_box_consistency",
+            "white_box_confidence",
+        ]
+        assert report["cells"]["knotted"]["detected_by"] == ["white_box_confidence"]
+        assert report["false_distribution"] == {
+            "drift": {"count": 1, "rate": 0.25},
+            "entrenched": {"count": 1, "rate": 0.25},
+            "confabulation": {"count": 1, "rate": 0.25},
+            "knotted": {"count": 1, "rate": 0.25},
+        }
+        assert report["blind_spot"]["cell"] == "entrenched"
+        assert report["blind_spot"]["n_false"] == 1
+
+    def test_deck_taxonomy_supports_lower_confidence_costs(self):
+        report = deck_taxonomy_report(
+            consistency_scores=[0.95, 0.90, 0.85, 0.80, 0.20, 0.82, 0.25, 0.88],
+            confidence_scores=[0.05, 0.10, 0.15, 0.20, 0.15, 0.10, 1.20, 1.30],
+            labels=[0, 0, 0, 0, 1, 1, 1, 1],
+            confidence_direction="lower",
+            include_assignments=True,
+        )
+
+        assert report["axes"]["confidence"]["direction"] == "lower"
+        assert report["assignments"][-2:] == ["confabulation", "knotted"]
+
+    def test_deck_taxonomy_rejects_invalid_inputs(self):
+        with pytest.raises(ValueError, match="same length"):
+            deck_taxonomy_report([0.1], [0.1, 0.2], [0])
+        with pytest.raises(ValueError, match="finite"):
+            deck_taxonomy_report([0.1, float("nan")], [0.1, 0.2], [0, 1])
+        with pytest.raises(ValueError, match="both true and false"):
+            youden_j_threshold([0.1, 0.2], [0, 0])
 
 
 class TestScoreDump:

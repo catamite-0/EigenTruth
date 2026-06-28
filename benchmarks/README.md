@@ -843,7 +843,8 @@ hits/misses/writes. For larger score artifacts, `load_score_dump()` also
 accepts an `eigentruth.score_dump.jsonl` manifest that points at JSONL records;
 `iter_score_dump_jsonl_records()` can validate those records without materializing
 the whole dump. `eval_conformal.py`, `eval_score_ensemble.py`,
-`eval_verifier_ensemble.py`, `eval_calibration_transfer.py`, and
+`eval_detectability_taxonomy.py`, `eval_verifier_ensemble.py`,
+`eval_calibration_transfer.py`, and
 `LayerScoreSweepCalibrator.calibrate_from_file()` use selected JSONL score views
 where possible, so large JSONL inputs materialize only the requested primary,
 statement-bearing, or layer/score columns plus labels. These selected loaders
@@ -4153,6 +4154,28 @@ near-random: `answer_token_count` AUROC `0.519` with detection `0.110`,
 `question_answer_token_overlap` AUROC `0.330` with zero triggered detection
 under the low-overlap direction. Treat this as a redline baseline for future
 verifier/retrieval/selfcheck signals.
+
+## `eval_detectability_taxonomy.py`
+
+Builds a DECK-style consistency x confidence taxonomy from any two saved
+score-dump signals. This is a post-hoc detectability profile: it answers which
+families of scorers would plausibly catch the observed false records, rather
+than promoting a new release signal by itself.
+
+```bash
+python benchmarks/eval_detectability_taxonomy.py \
+  --scores artifacts/qwen05_truthfulqa_l80_scores.json \
+  --consistency-signal inside_selfcheck_support_rate \
+  --confidence-signal nll_answer \
+  --confidence-direction lower \
+  --json artifacts/qwen05_detectability_taxonomy.json
+```
+
+The report uses Youden's J splits on the two axes and writes counts for
+`drift`, `entrenched`, `confabulation`, and `knotted` cells. Entrenched false
+records are treated as the output-level uncertainty blind spot and should be
+handed to independent verifier, retrieval, citation, structured-fact, or
+world-model routes.
 
 For non-oracle local evidence experiments, `run_verifier_signal_fusion_workflow.py`
 wraps the same chain into one reproducible artifact bundle. It can build a

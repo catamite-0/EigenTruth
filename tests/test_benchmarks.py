@@ -34341,6 +34341,58 @@ def test_eval_calibration_transfer_reads_jsonl_layer_scores(tmp_path, monkeypatc
     assert result["selective_report"]["detection"] == pytest.approx(1.0)
 
 
+def test_eval_detectability_taxonomy_reads_score_dump_and_writes_report(tmp_path):
+    module = importlib.import_module("benchmarks.eval_detectability_taxonomy")
+    scores_path = tmp_path / "scores.json"
+    output_path = tmp_path / "detectability-taxonomy.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 0, 0, 0, 1, 1, 1, 1],
+            "scores": {
+                "consistency": [0.95, 0.90, 0.85, 0.80, 0.20, 0.82, 0.25, 0.88],
+                "nll_answer": [0.05, 0.10, 0.15, 0.20, 0.15, 0.10, 1.20, 1.30],
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.build_detectability_taxonomy_report(
+        score_dump_path=scores_path,
+        consistency_signal="consistency",
+        confidence_signal="nll_answer",
+        confidence_direction="lower",
+        include_assignments=True,
+        metadata={"suite": "unit"},
+    )
+    module.main([
+        "--scores",
+        str(scores_path),
+        "--consistency-signal",
+        "consistency",
+        "--confidence-signal",
+        "nll_answer",
+        "--confidence-direction",
+        "lower",
+        "--include-assignments",
+        "--metadata",
+        "suite=unit",
+        "--json",
+        str(output_path),
+    ])
+
+    saved = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["report"]["assignments"] == saved["report"]["assignments"]
+    assert saved["workflow"] == "detectability_taxonomy"
+    assert saved["metadata"]["suite"] == "unit"
+    assert saved["source"]["score_dump_summary"]["n_total"] == 8
+    assert saved["report"]["false_distribution"]["drift"]["count"] == 1
+    assert saved["report"]["false_distribution"]["entrenched"]["count"] == 1
+    assert saved["report"]["false_distribution"]["confabulation"]["count"] == 1
+    assert saved["report"]["false_distribution"]["knotted"]["count"] == 1
+    assert saved["report"]["blind_spot"]["detected_by"] == ["judge_or_external_verifier"]
+
+
 def test_eval_score_ensemble_compares_single_and_combined_signals(tmp_path):
     module = importlib.import_module("benchmarks.eval_score_ensemble")
     scores_path = tmp_path / "scores.json"

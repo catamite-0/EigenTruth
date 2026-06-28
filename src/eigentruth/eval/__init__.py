@@ -39,12 +39,14 @@ from eigentruth.eval.intrinsic_dimension import (
 from eigentruth.eval.metrics import (
     binomial_confidence_interval,
     confidence_error_report,
+    deck_taxonomy_report,
     euclidean_dispersion,
     first_token_confidence,
     roc_auc,
     selective_classification_report,
     spearman_correlation,
     topk_normalized_entropy,
+    youden_j_threshold,
 )
 from eigentruth.eval.score_dump import (
     ScoreDump,
@@ -92,6 +94,8 @@ __all__ = [
     "binomial_confidence_interval",
     "selective_classification_report",
     "confidence_error_report",
+    "youden_j_threshold",
+    "deck_taxonomy_report",
     "uncertainty_escalation_report",
     "IntrinsicDimensionReport",
     "twonn_intrinsic_dimension",

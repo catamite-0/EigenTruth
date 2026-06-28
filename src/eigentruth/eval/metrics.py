@@ -348,3 +348,244 @@ def confidence_error_report(
             n_high_false,
         ),
     }
+
+
+DECK_CELL_SPECS: dict[str, dict[str, Any]] = {
+    "drift": {
+        "consistency": "low",
+        "confidence": "high",
+        "detected_by": ("black_box_consistency",),
+        "description": "inconsistent but locally confident outputs; consistency scorers should carry signal.",
+    },
+    "entrenched": {
+        "consistency": "high",
+        "confidence": "high",
+        "detected_by": ("judge_or_external_verifier",),
+        "description": "repeatable high-confidence errors; output-level uncertainty can miss these.",
+    },
+    "confabulation": {
+        "consistency": "low",
+        "confidence": "low",
+        "detected_by": ("black_box_consistency", "white_box_confidence"),
+        "description": "both inconsistent and low-confidence outputs; both scorer families should carry signal.",
+    },
+    "knotted": {
+        "consistency": "high",
+        "confidence": "low",
+        "detected_by": ("white_box_confidence",),
+        "description": "consistent but low-confidence outputs; token/probability confidence should carry signal.",
+    },
+}
+
+
+def youden_j_threshold(
+    scores: ArrayLike,
+    labels: ArrayLike,
+    *,
+    direction: str = "higher",
+) -> dict[str, Any]:
+    """Return the Youden's J threshold for a score axis.
+
+    ``label == 1`` denotes the anomalous/false class. ``direction`` describes
+    which raw-score direction means more normal/healthy. For example,
+    consistency or confidence probabilities usually use ``"higher"``, while
+    NLL-style confidence costs usually use ``"lower"``.
+    """
+    if direction not in {"higher", "lower"}:
+        raise ValueError("direction must be 'higher' or 'lower'.")
+    scores_t = torch.as_tensor(scores, dtype=torch.float64).flatten()
+    labels_t = torch.as_tensor(labels, dtype=torch.int64).flatten()
+    if scores_t.numel() != labels_t.numel():
+        raise ValueError("scores and labels must have the same length.")
+    if scores_t.numel() == 0:
+        raise ValueError("scores must contain at least one value.")
+    if not torch.isfinite(scores_t).all():
+        raise ValueError("scores must contain only finite values.")
+    if not torch.logical_or(labels_t == 0, labels_t == 1).all():
+        raise ValueError("labels must be binary values in {0, 1}.")
+    n_false = int((labels_t == 1).sum().item())
+    n_true = int((labels_t == 0).sum().item())
+    if n_false == 0 or n_true == 0:
+        raise ValueError("Youden's J threshold requires both true and false labels.")
+
+    health_scores = scores_t if direction == "higher" else -scores_t
+    candidates = _threshold_candidates(health_scores)
+    best: dict[str, Any] | None = None
+    best_key: tuple[float, float, float, float] | None = None
+    for candidate in candidates:
+        flagged = health_scores < candidate
+        true_positive = int(torch.logical_and(flagged, labels_t == 1).sum().item())
+        false_positive = int(torch.logical_and(flagged, labels_t == 0).sum().item())
+        true_negative = n_true - false_positive
+        sensitivity = true_positive / n_false
+        specificity = true_negative / n_true
+        false_alarm = false_positive / n_true
+        j_value = sensitivity + specificity - 1.0
+        key = (-j_value, false_alarm, -sensitivity, float(candidate.item()))
+        if best_key is None or key < best_key:
+            threshold = float(candidate.item())
+            raw_threshold = threshold if direction == "higher" else -threshold
+            best_key = key
+            best = {
+                "threshold": raw_threshold,
+                "normalized_threshold": threshold,
+                "direction": direction,
+                "youden_j": j_value,
+                "sensitivity": sensitivity,
+                "specificity": specificity,
+                "false_alarm": false_alarm,
+                "flag_rate": int(flagged.sum().item()) / int(labels_t.numel()),
+                "n_true": n_true,
+                "n_false": n_false,
+            }
+    assert best is not None
+    return best
+
+
+def deck_taxonomy_report(
+    consistency_scores: ArrayLike,
+    confidence_scores: ArrayLike,
+    labels: ArrayLike,
+    *,
+    consistency_direction: str = "higher",
+    confidence_direction: str = "higher",
+    include_assignments: bool = False,
+) -> dict[str, Any]:
+    """Classify samples into a consistency x confidence detectability taxonomy.
+
+    This is a dependency-free DECK-style diagnostic report. It uses Youden's J
+    on each axis to split samples into low/high consistency and low/high
+    confidence. The four cells explain which scorer families are expected to
+    catch each error mode:
+
+    - ``drift``: low consistency, high confidence
+    - ``entrenched``: high consistency, high confidence
+    - ``confabulation``: low consistency, low confidence
+    - ``knotted``: high consistency, low confidence
+
+    The function reports all samples, while ``false_distribution`` focuses on
+    the hallucinated/false subset (``label == 1``).
+    """
+    if consistency_direction not in {"higher", "lower"}:
+        raise ValueError("consistency_direction must be 'higher' or 'lower'.")
+    if confidence_direction not in {"higher", "lower"}:
+        raise ValueError("confidence_direction must be 'higher' or 'lower'.")
+
+    consistency_t = torch.as_tensor(consistency_scores, dtype=torch.float64).flatten()
+    confidence_t = torch.as_tensor(confidence_scores, dtype=torch.float64).flatten()
+    labels_t = torch.as_tensor(labels, dtype=torch.int64).flatten()
+    if consistency_t.numel() != labels_t.numel() or confidence_t.numel() != labels_t.numel():
+        raise ValueError("scores and labels must have the same length.")
+    if consistency_t.numel() == 0:
+        raise ValueError("scores must contain at least one value.")
+    if not torch.isfinite(consistency_t).all() or not torch.isfinite(confidence_t).all():
+        raise ValueError("scores must contain only finite values.")
+    if not torch.logical_or(labels_t == 0, labels_t == 1).all():
+        raise ValueError("labels must be binary values in {0, 1}.")
+
+    consistency_axis = youden_j_threshold(
+        consistency_t,
+        labels_t,
+        direction=consistency_direction,
+    )
+    confidence_axis = youden_j_threshold(
+        confidence_t,
+        labels_t,
+        direction=confidence_direction,
+    )
+    consistency_health = consistency_t if consistency_direction == "higher" else -consistency_t
+    confidence_health = confidence_t if confidence_direction == "higher" else -confidence_t
+    low_consistency = consistency_health < float(consistency_axis["normalized_threshold"])
+    low_confidence = confidence_health < float(confidence_axis["normalized_threshold"])
+
+    assignments = [
+        _deck_cell_name(bool(low_c.item()), bool(low_conf.item()))
+        for low_c, low_conf in zip(low_consistency, low_confidence)
+    ]
+    cells = {
+        name: _deck_cell_payload(name, assignments, labels_t)
+        for name in ("drift", "entrenched", "confabulation", "knotted")
+    }
+    n_total = int(labels_t.numel())
+    n_false = int((labels_t == 1).sum().item())
+    n_true = int((labels_t == 0).sum().item())
+    false_counts = {name: int(cells[name]["n_false"]) for name in cells}
+    payload: dict[str, Any] = {
+        "method": "deck_consistency_confidence_taxonomy",
+        "n_total": n_total,
+        "n_true": n_true,
+        "n_false": n_false,
+        "axes": {
+            "consistency": consistency_axis,
+            "confidence": confidence_axis,
+        },
+        "cells": cells,
+        "false_distribution": {
+            name: {
+                "count": count,
+                "rate": (count / n_false if n_false else None),
+            }
+            for name, count in false_counts.items()
+        },
+        "blind_spot": cells["entrenched"],
+    }
+    if include_assignments:
+        payload["assignments"] = assignments
+    return payload
+
+
+def _threshold_candidates(scores: Tensor) -> Tensor:
+    unique = torch.unique(scores, sorted=True)
+    if unique.numel() == 1:
+        value = unique[0]
+        margin = torch.tensor(
+            max(abs(float(value.item())) * 1e-12, 1e-12),
+            dtype=torch.float64,
+            device=scores.device,
+        )
+        return torch.stack((value - margin, value + margin))
+    mids = (unique[:-1] + unique[1:]) / 2.0
+    span = float((unique[-1] - unique[0]).item())
+    margin_value = max(abs(span) * 1e-12, 1e-12)
+    margin = torch.tensor(margin_value, dtype=torch.float64, device=scores.device)
+    return torch.cat((unique[:1] - margin, mids, unique[-1:] + margin))
+
+
+def _deck_cell_name(low_consistency: bool, low_confidence: bool) -> str:
+    if low_consistency and low_confidence:
+        return "confabulation"
+    if low_consistency:
+        return "drift"
+    if low_confidence:
+        return "knotted"
+    return "entrenched"
+
+
+def _deck_cell_payload(name: str, assignments: Sequence[str], labels: Tensor) -> dict[str, Any]:
+    mask_values = torch.tensor(
+        [assignment == name for assignment in assignments],
+        dtype=torch.bool,
+        device=labels.device,
+    )
+    false_mask = labels == 1
+    true_mask = labels == 0
+    n_total = int(mask_values.sum().item())
+    n_false = int(torch.logical_and(mask_values, false_mask).sum().item())
+    n_true = int(torch.logical_and(mask_values, true_mask).sum().item())
+    total_false = int(false_mask.sum().item())
+    total_true = int(true_mask.sum().item())
+    spec = DECK_CELL_SPECS[name]
+    return {
+        "cell": name,
+        "consistency": spec["consistency"],
+        "confidence": spec["confidence"],
+        "detected_by": list(spec["detected_by"]),
+        "description": spec["description"],
+        "n_total": n_total,
+        "n_true": n_true,
+        "n_false": n_false,
+        "sample_rate": binomial_confidence_interval(n_total, int(labels.numel())),
+        "error_rate": binomial_confidence_interval(n_false, n_total),
+        "share_of_false": binomial_confidence_interval(n_false, total_false),
+        "share_of_true": binomial_confidence_interval(n_true, total_true),
+    }

@@ -22,9 +22,18 @@ EigenTruth should move from hallucination detection alone toward calibrated part
 - Pre-generation hallucination detection with soft targets (arXiv:2606.21917) reinforces the current layer/sweep direction: hallucination risk is better treated as a probability estimated from internal representations than as a single hard decoded label.
 - Entropy Alone is Insufficient for Safe Selective Prediction in LLMs (arXiv:2603.21172) and the UQ-as-clustering critique (arXiv:2605.19220) both argue against relying on entropy/self-consistency alone. EigenTruth should keep combining internal geometry with correctness/verifier/world-model evidence and deployment-facing selective metrics.
 - Single-decode first-token confidence work (arXiv:2605.05166) points to a cheap baseline before multi-sample routes: top-k entropy at the first answer-token prediction can be logged from the same forced-answer pass and compared against internal geometry, INSIDE/selfcheck, and verifier signals.
+- DECK (arXiv:2606.02289) reframes hallucination errors by detectability signature rather than content type, splitting errors along inter-sample consistency and token-level confidence into Drift, Entrenched, Confabulation, and Knotted. This directly fits EigenTruth's score-dump posture: consistency signals, white-box confidence signals, and independent verifier/world-model routes should be evaluated for complementary blind spots, not only aggregate AUROC.
+- Global-Local Uncertainty / GLU (arXiv:2606.09875) argues that token-level local entropy and hidden-state global geometry can be near-orthogonal and recover different failure regimes. This supports keeping score-dump fusion and detectability reports axis-aware, so geometry, confidence, self-consistency, and verifier evidence are not collapsed into one uninterpretable scalar too early.
 - Counterfactual Probing for Hallucination Detection and Mitigation (arXiv:2508.01862) supports adding perturbation sensitivity audits: robust verifiers should change status on entity, temporal, quantitative, or logical counterfactuals instead of staying invariant to false variants.
 
 ## Implemented This Continuation
+
+Added DECK-style detectability taxonomy reports:
+
+- `youden_j_threshold(...)` computes a dependency-free Youden's J split for a score axis where either higher or lower raw scores can mean healthier behavior.
+- `deck_taxonomy_report(...)` combines a consistency-style score and a confidence-style score into Drift / Entrenched / Confabulation / Knotted cells, reporting all-sample counts, false-record distribution, blind-spot counts, and scorer families expected to catch each regime.
+- `benchmarks/eval_detectability_taxonomy.py` reads existing JSON or JSONL score dumps with selected-column loading and writes a JSON report without loading a model.
+- This is evidence-only: entrenched false records should route to independent verifier, retrieval, citation, structured-fact, or world-model correction paths; the taxonomy does not promote a new control default by itself.
 
 Added prompt-answer pathway diagnostics:
 
