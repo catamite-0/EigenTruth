@@ -1619,6 +1619,33 @@ has `0` source documents and `0` corpus documents until a real external adapter
 returns search results. A sanity check over the saved requests finds no
 `record_index`, `target_id`, `model_answer`, or `label` fields.
 
+## `run_citation_search_evidence_workflow.py`
+
+Runs the next gate after an external citation/search adapter has returned local
+JSONL results. It reuses the citation-search handoff ingestion, then runs
+`audit_retrieval_corpus_provenance.py`, `sweep_blind_spot_retrieval_queries.py`,
+and, when controlled sweep reports are supplied, `compare_blind_spot_query_sweeps.py`.
+The workflow is fail-closed: returned snippets can pass provenance while still
+being blocked by the blind-spot query sweep or controlled-vs-external comparison.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-citation-search-evidence-workflow
+
+python benchmarks/run_citation_search_evidence_workflow.py \
+  --queue artifacts/truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue/unresolved-evidence-queue.json \
+  --adapter-results path/to/external-search-results.jsonl \
+  --scores artifacts/smollm2_truthfulqa_l80_scores_with_statements.json \
+  --blind-spots artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
+  --controlled-sweep artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json \
+  --output-dir "$OUT" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-citation-search-evidence-workflow \
+  --version 0.1
+```
+
+This command does not fetch network content. Adapter results remain local input,
+and promotion requires both provenance and route-quality gates to pass.
+
 ## `eval_verifier_ensemble.py`
 
 Compares a single calibrated internal diagnostic against a retrieval/verifier

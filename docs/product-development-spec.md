@@ -426,13 +426,21 @@ For product features:
   external adapter result file has been supplied yet, the registered handoff is
   `ready_for_external_adapter` with `0` source docs and `0` corpus docs; it is
   an execution bridge, not verifier evidence.
+- The return path is now gateable in one command:
+  `run_citation_search_evidence_workflow.py` consumes local adapter-result
+  JSONL, reruns the handoff ingestion, audits the resulting corpus as
+  external-candidate provenance, runs the blind-spot query sweep, and can
+  compare controlled versus external sweeps. It is intentionally fail-closed:
+  snippets that pass provenance still block if they do not refute blind spots
+  under the configured verifier/query gates.
 
 ### Next Verification Adapter Work
 
 - Run the sanitized unresolved citation/search requests through an external
   source adapter, feed the returned JSONL back into
-  `build_citation_search_adapter_handoff.py --adapter-results`, then audit the
-  resulting external retrieval corpus before any route promotion.
+  `run_citation_search_evidence_workflow.py`, then promote only if the
+  provenance audit, external query sweep, and controlled-vs-external comparison
+  pass.
 - Connect `StructuredStateVerifier` to additional live database, business-rule, and domain-state sources behind optional adapters; the current reproducible path uses local JSON state sources, stdlib SQLite, and mapped local tool outputs.
 - Connect additional QA/database/world-model route policies to production adapters while preserving trace-visible match reasons for each selected or skipped tool.
 - Generalize real side-effecting executors behind the same trace, execution-policy, timeout, idempotency-ledger, and tool-output mapping interfaces; the current production-like demo proves the path with a guarded local SQLite mutation and optional JSON/SQLite replay, while hard cancellation remains adapter-specific.

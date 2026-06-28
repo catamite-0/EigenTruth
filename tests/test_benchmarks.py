@@ -36194,6 +36194,194 @@ def test_citation_search_adapter_handoff_sanitizes_requests_and_ingests_results(
     assert record.metadata["suite"] == "unit"
 
 
+def test_citation_search_evidence_workflow_runs_gates_and_blocks_unsupported_results(tmp_path):
+    module = importlib.import_module("benchmarks.run_citation_search_evidence_workflow")
+    handoff_module = importlib.import_module("benchmarks.build_citation_search_adapter_handoff")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    queue_path = tmp_path / "unresolved-evidence-queue.json"
+    results_path = tmp_path / "adapter-results.jsonl"
+    scores_path = tmp_path / "scores.json"
+    blind_spots_path = tmp_path / "blind-spots.json"
+    controlled_sweep_path = tmp_path / "controlled-query-sweep.json"
+    output_dir = tmp_path / "citation-search-evidence"
+    registry_path = tmp_path / "registry.json"
+    queue_requests = [
+        {
+            "queue_id": "queue:alpha:external_citation:1",
+            "source_request_id": "cite:alpha:1",
+            "target_id": "alpha",
+            "record_index": 1,
+            "adapter_family": "external_citation_search",
+            "request_type": "external_citation",
+            "priority": "high",
+            "question_type": "definition",
+            "question": "What is Alpha?",
+            "model_answer": "Wrong A1",
+            "query": "What is Alpha? Wrong A1",
+            "requires_timestamp": False,
+            "usage": "source_discovery_only",
+        },
+        {
+            "queue_id": "queue:beta:external_citation:1",
+            "source_request_id": "cite:beta:1",
+            "target_id": "beta",
+            "record_index": 2,
+            "adapter_family": "external_citation_search",
+            "request_type": "external_citation",
+            "priority": "high",
+            "question_type": "person",
+            "question": "Who founded Beta?",
+            "model_answer": "Wrong B",
+            "query": "Who founded Beta? Wrong B",
+            "requires_timestamp": False,
+            "usage": "source_discovery_only",
+        },
+    ]
+    queue_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "unresolved_blind_spot_evidence_queue",
+            "status": "ready_for_adapter_execution",
+            "summary": {"target_count": 2, "adapter_request_count": 2},
+            "adapter_requests": queue_requests,
+        }),
+        encoding="utf-8",
+    )
+    results_path.write_text(
+        "\n".join(
+            [
+                json.dumps({
+                    "request_id": handoff_module._adapter_request_id(queue_requests[0]),
+                    "results": [
+                        {
+                            "title": "Alpha reference",
+                            "snippet": "What is Alpha? A1",
+                            "url": "https://example.org/alpha",
+                            "provider": "unit-search",
+                            "rank": 1,
+                        }
+                    ],
+                }),
+                json.dumps({
+                    "request_id": handoff_module._adapter_request_id(queue_requests[1]),
+                    "results": [
+                        {
+                            "title": "Beta reference",
+                            "snippet": "Who founded Beta? B2",
+                            "url": "https://example.org/beta",
+                            "provider": "unit-search",
+                            "rank": 1,
+                        }
+                    ],
+                }),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 1, 1, 0],
+            "scores": {"truth_proj": [0.1, 0.9, 0.8, 0.2]},
+            "statements": [
+                {"question": "What is Alpha?", "answer": "A1", "text": "What is Alpha? A1"},
+                {"question": "What is Alpha?", "answer": "Wrong A1", "text": "What is Alpha? Wrong A1"},
+                {"question": "Who founded Beta?", "answer": "Wrong B", "text": "Who founded Beta? Wrong B"},
+                {"question": "Who founded Beta?", "answer": "B2", "text": "Who founded Beta? B2"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    blind_spots_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "detectability_blind_spot_analysis",
+            "records": [
+                {
+                    "record_index": 1,
+                    "label": 1,
+                    "question_type": "definition",
+                    "features": {},
+                    "question": "What is Alpha?",
+                    "answer": "Wrong A1",
+                    "text": "What is Alpha? Wrong A1",
+                },
+                {
+                    "record_index": 2,
+                    "label": 1,
+                    "question_type": "person",
+                    "features": {},
+                    "question": "Who founded Beta?",
+                    "answer": "Wrong B",
+                    "text": "Who founded Beta? Wrong B",
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    _write_query_sweep_fixture(
+        controlled_sweep_path,
+        corpus_type="truthfulqa_correct_answer_evidence",
+        controlled_warning="controlled corpus",
+        refuted_count=2,
+        refuted_rate=1.0,
+        false_alarm=0.0,
+    )
+
+    payload = module.run(
+        queue_report_path=queue_path,
+        adapter_results_path=results_path,
+        scores_path=scores_path,
+        blind_spots_path=blind_spots_path,
+        controlled_sweep_paths=(controlled_sweep_path,),
+        output_dir=output_dir,
+        query_fields=("question_answer",),
+        retriever_min_overlaps=(0.5,),
+        retrieval_limit=2,
+        alpha=0.2,
+        max_verified_false_alarm=0.0,
+        min_blind_refuted_rate=1.0,
+        min_controlled_blind_refuted_rate=1.0,
+        min_external_blind_refuted_rate=1.0,
+        max_controlled_verified_false_alarm=0.0,
+        max_external_verified_false_alarm=0.0,
+        registry_path=registry_path,
+        name="citation-search-evidence-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    manifest_path = output_dir / "artifact-manifest.json"
+    workflow_report = json.loads((output_dir / "citation-search-evidence-workflow.json").read_text(encoding="utf-8"))
+    request_jsonl = (output_dir / "citation-search-adapter-requests.jsonl").read_text(encoding="utf-8")
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:citation-search-evidence-unit:0.1"
+    )
+
+    reason_gates = {item["gate"] for item in payload["gate"]["blocking_reasons"]}
+
+    assert payload["status"] == "blocked"
+    assert payload["gate"]["passed"] is False
+    assert payload["gate"]["promotion_ready"] is False
+    assert "query_sweep" in reason_gates
+    assert "query_sweep_comparison" in reason_gates
+    assert payload["summary"]["source_document_count"] == 2
+    assert payload["summary"]["corpus_document_count"] == 2
+    assert payload["summary"]["provenance_passed"] is True
+    assert payload["summary"]["query_sweep_best_strategy"] == "question_answer_overlap_0p5"
+    assert payload["summary"]["query_sweep_best_passing_strategy"] is None
+    assert payload["summary"]["comparison_passed"] is False
+    assert workflow_report["paths"]["external_retrieval_corpus"].endswith("citation-search-corpus.json")
+    assert "record_index" not in request_jsonl
+    assert "target_id" not in request_jsonl
+    assert "model_answer" not in request_jsonl
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "citation_search_evidence_workflow"
+    assert record.metadata["promotion_ready"] is False
+    assert record.metadata["suite"] == "unit"
+
+
 def test_eval_score_ensemble_compares_single_and_combined_signals(tmp_path):
     module = importlib.import_module("benchmarks.eval_score_ensemble")
     scores_path = tmp_path / "scores.json"

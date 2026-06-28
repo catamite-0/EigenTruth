@@ -1230,6 +1230,14 @@ current artifact is `ready_for_external_adapter`: source docs and corpus docs
 are both `0` until a real adapter returns search results for ingestion, so this
 is still execution plumbing rather than grounding evidence.
 
+The return path is now scripted as
+`benchmarks/run_citation_search_evidence_workflow.py`: once an external adapter
+writes local result JSONL keyed by those sanitized request ids, the workflow
+ingests the snippets, audits provenance, reruns the blind-spot query sweep, and
+optionally compares controlled versus external sweeps before promotion. This
+keeps citation snippets out of verifier evidence unless the route-quality gates
+actually pass.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -1255,9 +1263,10 @@ is still execution plumbing rather than grounding evidence.
 6. Promote a Qwen l20/l80 readiness baseline through the same registry workflow
    if Qwen-specific runtime evidence is needed; SmolLM2 now has the first
    non-tiny registered readiness/release candidate.
-7. Execute the sanitized citation/search adapter requests, feed returned JSONL
-   through the handoff script, and rerun provenance audit plus route-quality
-   checks before treating any returned documents as verifier evidence.
+7. Execute the sanitized citation/search adapter requests and feed returned
+   JSONL through `run_citation_search_evidence_workflow.py`; only treat returned
+   documents as verifier evidence if provenance, external query-sweep, and
+   controlled-vs-external comparison gates pass.
 8. Extend the new verifier-stability path from structured QA to real retrieval,
    database, calculator, and world-model evidence under the same conformal
    false-alarm budgets. Use `benchmarks/build_evidence_fixture.py` with a local
