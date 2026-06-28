@@ -34,8 +34,19 @@ RULE_REQUEST_TYPE = "world_model_or_calculator_rule"
 INPUT_KEYS_BY_FAMILY = {
     "quantity_or_arithmetic": ("numeric_value", "unit", "reference_time"),
     "entity_disambiguation": ("subject_entity", "answer_entity", "requested_role"),
-    "causal_or_procedural": ("mechanism", "precondition", "source_citation"),
+    "causal_or_procedural": ("mechanism", "precondition", "source_citation", "mechanism_status"),
     "temporal_consistency": ("claim_time", "source_time", "retrieved_at", "source_citation"),
+}
+MECHANISM_STATUS_ALIASES = {
+    "support": VerificationStatus.SUPPORTED.value,
+    "supported": VerificationStatus.SUPPORTED.value,
+    "supports": VerificationStatus.SUPPORTED.value,
+    "refute": VerificationStatus.REFUTED.value,
+    "refuted": VerificationStatus.REFUTED.value,
+    "refutes": VerificationStatus.REFUTED.value,
+    "insufficient": VerificationStatus.INSUFFICIENT_EVIDENCE.value,
+    "insufficient_evidence": VerificationStatus.INSUFFICIENT_EVIDENCE.value,
+    "unknown": VerificationStatus.INSUFFICIENT_EVIDENCE.value,
 }
 EXECUTED_STATUSES = {
     VerificationStatus.SUPPORTED.value,
@@ -229,6 +240,23 @@ def _evaluate_stub(stub: Mapping[str, Any], rule_input: Mapping[str, Any] | None
                 "temporal_consistency": temporal["metadata"],
             },
         )
+    if family == "causal_or_procedural" and _has_mechanism_inputs(input_payload):
+        mechanism = _mechanism_consistency(input_payload)
+        return _result(
+            stub=stub,
+            status=mechanism["status"],
+            authored_rule=authored_rule,
+            required_inputs=required_inputs,
+            supplied_inputs=tuple(input_payload),
+            evidence=mechanism["evidence"],
+            explanation=mechanism["explanation"],
+            confidence=mechanism["confidence"],
+            metadata={
+                "adapter": "mechanism_consistency",
+                "candidate_results_require_promotion_gate": True,
+                "mechanism_consistency": mechanism["metadata"],
+            },
+        )
     missing = _missing_inputs(required_inputs, input_payload, family=family)
     return _result(
         stub=stub,
@@ -293,7 +321,7 @@ def _authored_rule(
         "quantity_or_arithmetic": "calculator",
         "entity_disambiguation": "entity_role_disambiguation",
         "temporal_consistency": "temporal_consistency",
-        "causal_or_procedural": "world_model_rule",
+        "causal_or_procedural": "mechanism_consistency",
     }.get(family, "world_model_rule")
     return {
         "rule_id": str(stub.get("request_id") or ""),
@@ -349,6 +377,9 @@ def _summary(
         "missing_input_counts": _sorted_counter(missing_counts),
         "candidate_supported_count": int(status_counts.get(VerificationStatus.SUPPORTED.value, 0)),
         "candidate_refuted_count": int(status_counts.get(VerificationStatus.REFUTED.value, 0)),
+        "candidate_insufficient_evidence_count": int(
+            status_counts.get(VerificationStatus.INSUFFICIENT_EVIDENCE.value, 0)
+        ),
         "candidate_error_count": int(status_counts.get(VerificationStatus.ERROR.value, 0)),
     }
 
@@ -388,6 +419,65 @@ def _has_entity_role_inputs(rule_input: Mapping[str, Any]) -> bool:
 
 def _has_temporal_inputs(rule_input: Mapping[str, Any]) -> bool:
     return all(_clean(rule_input.get(key)) for key in ("claim_time", "source_time", "retrieved_at", "source_citation"))
+
+
+def _has_mechanism_inputs(rule_input: Mapping[str, Any]) -> bool:
+    return all(_clean(rule_input.get(key)) for key in ("mechanism", "precondition", "source_citation"))
+
+
+def _mechanism_consistency(rule_input: Mapping[str, Any]) -> dict[str, Any]:
+    mechanism = _clean(rule_input.get("mechanism"))
+    precondition = _clean(rule_input.get("precondition"))
+    source_citation = _clean(rule_input.get("source_citation"))
+    raw_status = _clean(
+        rule_input.get(
+            "mechanism_status",
+            rule_input.get("rule_status", rule_input.get("expected_status", "")),
+        )
+    )
+    normalized_status = _norm(raw_status).replace(" ", "_").replace("-", "_")
+    metadata = {
+        "mechanism": mechanism,
+        "precondition": precondition,
+        "source_citation": source_citation,
+        "mechanism_status": raw_status,
+        "status_contract": "mechanism_status_required_for_supported_or_refuted_promotion",
+    }
+    if raw_status and normalized_status not in MECHANISM_STATUS_ALIASES:
+        return {
+            "status": VerificationStatus.ERROR.value,
+            "confidence": 1.0,
+            "evidence": (
+                "mechanism_consistency: invalid mechanism_status; "
+                f"mechanism_status={raw_status}; source_citation={source_citation}",
+            ),
+            "explanation": "mechanism check could not map the explicit mechanism_status",
+            "metadata": {**metadata, "failure": "invalid_mechanism_status"},
+        }
+    if not raw_status:
+        return {
+            "status": VerificationStatus.INSUFFICIENT_EVIDENCE.value,
+            "confidence": 0.75,
+            "evidence": (
+                "mechanism_consistency: source-backed mechanism captured without promotable status; "
+                f"mechanism={mechanism}; precondition={precondition}; source_citation={source_citation}",
+            ),
+            "explanation": "mechanism and precondition were supplied, but no explicit mechanism_status was provided",
+            "metadata": {**metadata, "failure": "missing_mechanism_status"},
+        }
+    status = MECHANISM_STATUS_ALIASES[normalized_status]
+    confidence = 0.95 if status in {VerificationStatus.SUPPORTED.value, VerificationStatus.REFUTED.value} else 0.75
+    return {
+        "status": status,
+        "confidence": confidence,
+        "evidence": (
+            "mechanism_consistency: explicit mechanism status applied; "
+            f"mechanism={mechanism}; precondition={precondition}; "
+            f"mechanism_status={raw_status}; source_citation={source_citation}",
+        ),
+        "explanation": "mechanism rule executed from explicit source-backed inputs",
+        "metadata": {**metadata, "status": status},
+    }
 
 
 def _temporal_consistency(rule_input: Mapping[str, Any]) -> dict[str, Any]:
@@ -508,6 +598,8 @@ def _missing_inputs(required: Sequence[str], supplied: Mapping[str, Any], *, fam
     if _has_entity_role_inputs(supplied):
         return ()
     if _has_temporal_inputs(supplied):
+        return ()
+    if _has_mechanism_inputs(supplied):
         return ()
     missing = tuple(key for key in required if not _clean(supplied.get(key)))
     if missing:

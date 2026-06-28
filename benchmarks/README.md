@@ -2778,9 +2778,9 @@ The registered input plan is `ready_for_input_collection`: `37` rule-input
 tasks are grouped into `4` typed batches (`12` entity-role, `12` numeric, `9`
 mechanism, and `4` temporal snapshot tasks). The plan expands the executable
 contract with fields the deterministic adapter actually needs, including
-`expected_entity`, `calculation.expression`, `calculation.expected`, and a
-`source_citation` requirement for every task, while still treating every row as
-non-evidence.
+`expected_entity`, `calculation.expression`, `calculation.expected`,
+`mechanism_status`, and a `source_citation` requirement for every task, while
+still treating every row as non-evidence.
 
 Fill the subset that already has promoted correction-handoff provenance, then
 replay the deterministic adapter with those explicit inputs:
@@ -2964,6 +2964,18 @@ and `source_citation`) and manifest-backed promotion wiring; it does not prove
 the food-affordability content itself. Content truth still requires citation or
 structured evidence handoff before ProductTrace or release gates should act on
 the claim.
+
+The causal/procedural lane now has the same conservative execution boundary for
+mechanism-style claims. When a separate rule-input file supplies `mechanism`,
+`precondition`, and `source_citation`, the adapter executes a
+`mechanism_consistency` candidate. Promotion still requires an explicit
+`mechanism_status` (`supported`, `refuted`, or `insufficient_evidence`); missing
+status returns `insufficient_evidence` and blocks promotion. This keeps the
+adapter aligned with fact-level/tool-verification research without turning an
+LLM-as-judge or source lookup into a mandatory dependency. No real
+source-backed TruthfulQA mechanism artifact is registered yet; the current
+evidence is unit-level shell coverage plus a typed collection contract for the
+remaining causal/procedural rows.
 
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:

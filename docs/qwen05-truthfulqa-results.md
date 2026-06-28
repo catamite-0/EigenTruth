@@ -380,6 +380,13 @@ provenance. The next implementation step is therefore expanding typed input
 fills and provenance-backed citation evidence for more rows, not another broad
 source-backed catalog replay.
 
+The causal/procedural rule lane now has a `mechanism_consistency` execution
+shell as well. It accepts explicit `mechanism`, `precondition`, and
+`source_citation` inputs, but it will not promote without a source-backed
+`mechanism_status`; missing status returns `insufficient_evidence` and blocks the
+promotion gate. This is currently unit-level adapter evidence only. No real
+source-backed TruthfulQA mechanism artifact is registered yet.
+
 ## Product Trace Demo
 
 `examples/calibrated_control_demo.py` now defaults to the best repository l80

@@ -2673,6 +2673,137 @@ def test_world_model_rule_numeric_binding_fill_blocks_review_required_binding():
     }
 
 
+def test_world_model_rule_mechanism_consistency_executes_and_promotes_candidate(tmp_path):
+    adapter_module = importlib.import_module("benchmarks.run_world_model_rule_authoring_adapter")
+    promotion_module = importlib.import_module("benchmarks.promote_world_model_rule_candidates")
+
+    stubs_path = tmp_path / "world-model-rule-stubs.jsonl"
+    inputs_path = tmp_path / "rule-inputs.jsonl"
+    adapter_output = tmp_path / "adapter"
+    promotion_output = tmp_path / "promotion"
+    stubs_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "source_family_structured_qa_lane_batch_workflow",
+            "request_id": "rule:record-10:1",
+            "target_id": "record-10",
+            "request_type": "world_model_or_calculator_rule",
+            "rule_family": "causal_or_procedural",
+            "required_inputs": ["mechanism", "precondition", "source_citation"],
+            "question": "How long do diamonds last?",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    inputs_path.write_text(
+        json.dumps({
+            "request_id": "rule:record-10:1",
+            "target_id": "record-10",
+            "rule_family": "causal_or_procedural",
+            "mechanism": "Diamond crystal bonds are stable under ordinary storage conditions.",
+            "precondition": "The question asks about ordinary material persistence, not combustion or cutting.",
+            "mechanism_status": "supported",
+            "source_citation": "source:diamond-material-stability",
+            "source_family": "reference",
+            "provider": "unit_fixture",
+            "not_verifier_evidence": True,
+            "candidate_results_require_promotion_gate": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    adapter_payload = adapter_module.run_world_model_rule_authoring_adapter(
+        rule_stubs_path=stubs_path,
+        rule_inputs_path=inputs_path,
+        output_dir=adapter_output,
+        metadata={"suite": "unit"},
+    )
+    promotion_payload = promotion_module.run(
+        rule_results_path=adapter_output / "world-model-rule-results.jsonl",
+        rule_inputs_path=inputs_path,
+        adapter_report_path=adapter_output / "world-model-rule-authoring-adapter.json",
+        output_dir=promotion_output,
+        metadata={"suite": "unit"},
+    )
+    result = json.loads((adapter_output / "world-model-rule-results.jsonl").read_text(encoding="utf-8"))
+    promoted = json.loads((promotion_output / "promoted-rule-candidates.jsonl").read_text(encoding="utf-8"))
+
+    assert adapter_payload["status"] == "observed"
+    assert adapter_payload["summary"]["candidate_supported_count"] == 1
+    assert result["status"] == "supported"
+    assert result["metadata"]["adapter"] == "mechanism_consistency"
+    assert "source:diamond-material-stability" in result["evidence"][0]
+    assert promotion_payload["status"] == "promote"
+    assert promoted["rule_family"] == "causal_or_procedural"
+    assert promoted["rule_input"]["mechanism_status"] == "supported"
+    assert promoted["rule_input"]["mechanism"].startswith("Diamond crystal bonds")
+
+
+def test_world_model_rule_mechanism_consistency_requires_explicit_status_for_promotion(tmp_path):
+    adapter_module = importlib.import_module("benchmarks.run_world_model_rule_authoring_adapter")
+    promotion_module = importlib.import_module("benchmarks.promote_world_model_rule_candidates")
+
+    stubs_path = tmp_path / "world-model-rule-stubs.jsonl"
+    inputs_path = tmp_path / "rule-inputs.jsonl"
+    adapter_output = tmp_path / "adapter"
+    promotion_output = tmp_path / "promotion"
+    stubs_path.write_text(
+        json.dumps({
+            "request_id": "rule:record-10:1",
+            "target_id": "record-10",
+            "rule_family": "causal_or_procedural",
+            "required_inputs": ["mechanism", "precondition", "source_citation"],
+            "question": "How long do diamonds last?",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    inputs_path.write_text(
+        json.dumps({
+            "request_id": "rule:record-10:1",
+            "target_id": "record-10",
+            "rule_family": "causal_or_procedural",
+            "mechanism": "Diamond crystal bonds are stable under ordinary storage conditions.",
+            "precondition": "The question asks about ordinary material persistence.",
+            "source_citation": "source:diamond-material-stability",
+            "not_verifier_evidence": True,
+            "candidate_results_require_promotion_gate": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    adapter_payload = adapter_module.run_world_model_rule_authoring_adapter(
+        rule_stubs_path=stubs_path,
+        rule_inputs_path=inputs_path,
+        output_dir=adapter_output,
+        metadata={"suite": "unit"},
+    )
+    promotion_payload = promotion_module.run(
+        rule_results_path=adapter_output / "world-model-rule-results.jsonl",
+        rule_inputs_path=inputs_path,
+        adapter_report_path=adapter_output / "world-model-rule-authoring-adapter.json",
+        output_dir=promotion_output,
+        metadata={"suite": "unit"},
+    )
+    result = json.loads((adapter_output / "world-model-rule-results.jsonl").read_text(encoding="utf-8"))
+    blocked = json.loads((promotion_output / "blocked-rule-candidates.jsonl").read_text(encoding="utf-8"))
+
+    assert adapter_payload["status"] == "observed"
+    assert adapter_payload["summary"]["candidate_insufficient_evidence_count"] == 1
+    assert result["status"] == "insufficient_evidence"
+    assert result["metadata"]["mechanism_consistency"]["failure"] == "missing_mechanism_status"
+    assert promotion_payload["status"] == "blocked"
+    assert blocked["failures"] == [
+        "status_not_promotable",
+        "confidence_below_minimum",
+        "missing_mechanism_status",
+    ]
+
+
 def test_world_model_rule_temporal_consistency_executes_and_promotes_candidate(tmp_path):
     adapter_module = importlib.import_module("benchmarks.run_world_model_rule_authoring_adapter")
     promotion_module = importlib.import_module("benchmarks.promote_world_model_rule_candidates")

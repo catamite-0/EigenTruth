@@ -465,6 +465,13 @@ For product features:
   freshness/order of the source snapshot; it does not make a ProductTrace-visible
   content correction until a citation or structured-evidence route proves the
   claim content.
+  `run_world_model_rule_authoring_adapter.py` also has a conservative
+  `mechanism_consistency` shell for causal/procedural tasks. It can observe a
+  source-backed mechanism only when `mechanism`, `precondition`, and
+  `source_citation` are supplied, and it requires explicit `mechanism_status`
+  before promotion. Missing status produces `insufficient_evidence`, so
+  ProductTrace remains blocked until a citation-backed fill, promotion, and
+  handoff all pass.
   Product implication: unresolved deterministic rule work now enters the same
   explicit input-plan pathway as the larger source-family rule lane, but it
   still cannot affect ProductTrace or release gates until candidate execution,

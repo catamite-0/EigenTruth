@@ -959,6 +959,13 @@ Added the first monitor-first tool-selection audit layer:
   same source citation and temporal metadata. This is a narrow freshness/order
   proof, not a claim that the food-affordability content is true; content-level
   correction still needs citation or structured-evidence handoff.
+- The same adapter now has a conservative `mechanism_consistency` shell for
+  causal/procedural rows. Supplying `mechanism`, `precondition`, and
+  `source_citation` executes a candidate, but promotion requires an explicit
+  `mechanism_status`; missing status becomes `insufficient_evidence` and is
+  blocked by the promotion gate. This follows the current fact-level
+  verification direction while keeping world-model execution dependency-free
+  and citation-bound. No real TruthfulQA mechanism artifact is promoted yet.
 
 ## Next Research-to-Code Candidates
 
@@ -966,14 +973,14 @@ Added the first monitor-first tool-selection audit layer:
    unresolved rows should stay separated by gap type and feed richer property
    mapping, citation evidence, entity disambiguation, and deterministic
    world-model/calculator rules before entering ProductTrace or release gates.
-2. Extend the rule-input fill family beyond the completed entity, numeric, and
-   temporal shells: the remaining numeric work is subject-binding resolution for
-   ambiguous questions such as `record-190`; temporal work needs richer
-   content/citation mapping or source-backed temporal fills; and
-   causal/procedural tasks still need provenance-backed values plus adapter
-   execution before deterministic world-model results can pass the same
-   promotion gate into handoff. The complete source-backed replay now proves
-   local-catalog coverage is not enough (`0/88` mapped).
+2. Extend the rule-input fill family beyond the completed entity, numeric,
+   temporal, and mechanism shells: the remaining numeric work is subject-binding
+   resolution for ambiguous questions such as `record-190`; temporal work needs
+   richer content/citation mapping or source-backed temporal fills; and
+   causal/procedural work now needs source-backed `mechanism_status` fills
+   before deterministic world-model results can pass the same promotion gate
+   into handoff. The complete source-backed replay now proves local-catalog
+   coverage is not enough (`0/88` mapped).
 3. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
 4. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
 5. Materialize a real `frontier_audit` release candidate with the registered covered-facts external-evidence handoff and external-prediction triple matrix artifact, then export the resulting promotion contract.

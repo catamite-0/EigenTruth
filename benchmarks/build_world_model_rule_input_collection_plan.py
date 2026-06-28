@@ -58,7 +58,7 @@ EXECUTION_FIELDS_BY_RULE_FAMILY = {
         "requested_role",
         "source_citation",
     ),
-    "causal_or_procedural": ("mechanism", "precondition", "source_citation"),
+    "causal_or_procedural": ("mechanism", "precondition", "mechanism_status", "source_citation"),
     "temporal_consistency": ("claim_time", "source_time", "retrieved_at", "source_citation"),
 }
 FIELD_HINTS = {
@@ -104,6 +104,10 @@ FIELD_HINTS = {
     ),
     "precondition": (
         "Collect the condition under which the mechanism or procedure should apply.",
+        ("external_citation_search", "world_model_rule_authoring"),
+    ),
+    "mechanism_status": (
+        "Record whether the explicit source-backed mechanism supports, refutes, or is insufficient for the claim.",
         ("external_citation_search", "world_model_rule_authoring"),
     ),
     "claim_time": (

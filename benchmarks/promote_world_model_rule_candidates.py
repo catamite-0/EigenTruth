@@ -251,6 +251,10 @@ def _candidate_failures(
             for key in ("claim_time", "source_time", "retrieved_at"):
                 if not str(rule_input.get(key) or "").strip():
                     failures.append(f"missing_{key}")
+        if str(result.get("rule_family") or "") == "causal_or_procedural":
+            for key in ("mechanism", "precondition", "mechanism_status"):
+                if not str(rule_input.get(key) or "").strip():
+                    failures.append(f"missing_{key}")
     return tuple(failures)
 
 
@@ -284,6 +288,9 @@ def _promoted_candidate(result: Mapping[str, Any], *, rule_input: Mapping[str, A
                 "unit",
                 "reference_time",
                 "calculation",
+                "mechanism",
+                "precondition",
+                "mechanism_status",
                 "claim_time",
                 "source_time",
                 "retrieved_at",

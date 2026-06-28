@@ -524,7 +524,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `triage_source_family_structured_qa_gaps.py` | Classifies source-family structured QA claim-mapping rows into next-action lanes such as correction handoff, answer-support audit, answer-collision audit, richer property/indicator collection, citation retrieval, or source-family coverage expansion without turning weak matches into evidence. |
 | `build_source_family_structured_qa_lane_execution_queue.py` | Lowers source-family structured QA triage lanes plus the fact-collection corpus into prioritized adapter/rule execution batches, excluding handoff/audit-only rows by default and keeping answers/model answers out of adapter requests. |
 | `run_source_family_structured_qa_lane_batch_workflow.py` | Materializes selected lane execution batches as compatible fact-collection corpora, reuses the local source-family workflow for source-backed requests, emits rule-authoring stubs for rule-only batches, and records batch provenance before any downstream route/mapping/rule gate. |
-| `run_world_model_rule_authoring_adapter.py` | Converts world-model/calculator rule stubs into auditable input requests and executes deterministic calculator/entity-role/temporal checks only when explicit rule inputs are supplied; candidate results still require a promotion gate. |
+| `run_world_model_rule_authoring_adapter.py` | Converts world-model/calculator rule stubs into auditable input requests and executes deterministic calculator/entity-role/temporal/mechanism checks only when explicit rule inputs are supplied; candidate results still require a promotion gate. |
 | `build_world_model_rule_input_collection_plan.py` | Lowers rule-authoring input requests into typed collection tasks and execution batches for numeric, entity-role, temporal, and mechanism inputs without copying answers or executing verifier candidates. |
 | `audit_world_model_rule_input_plan.py` | Audits typed rule-input tasks before value collection, flagging family/question-intent mismatches and candidate-claim binding gaps while emitting non-evidence requeue suggestions. |
 | `requeue_world_model_rule_stubs_from_audit.py` | Applies rule-input audit requeue suggestions back to sanitized rule stubs, producing corrected non-evidence stubs for the existing rule-authoring adapter. |
@@ -621,7 +621,7 @@ evidence rates and maximum final false-accept / false-accept-delta thresholds.
 | `build_source_family_structured_qa_lane_execution_queue.py` | Converts those triage lanes into lane-aware adapter request JSONL and execution batches for the next source-family/rule pass. |
 | `run_source_family_structured_qa_lane_batch_workflow.py` | Replays selected lane execution batches through source-backed local fact collection or rule-only stub emission, then writes batch-scoped provenance. |
 | `build_unresolved_world_model_rule_stubs.py` | Turns the unresolved queue's world-model/calculator requests into sanitized rule stubs before rule-authoring adapter execution. |
-| `run_world_model_rule_authoring_adapter.py` | Turns rule stubs into explicit input requests, with optional deterministic calculator/entity-role/temporal execution when a separate rule-input file is provided. |
+| `run_world_model_rule_authoring_adapter.py` | Turns rule stubs into explicit input requests, with optional deterministic calculator/entity-role/temporal/mechanism execution when a separate rule-input file is provided. |
 | `build_world_model_rule_input_collection_plan.py` | Turns rule input requests into typed collection tasks and batches before any deterministic rule execution. |
 | `fill_world_model_rule_inputs_from_correction_handoff.py` | Fills a conservative subset of typed rule inputs from promoted correction handoffs and ProductTrace claim bindings. |
 | `fill_world_model_rule_inputs_from_numeric_bindings.py` | Fills numeric/calculator rule inputs from source-backed bindings, but blocks bindings that still need subject review. |
@@ -752,7 +752,7 @@ evidence rates and maximum final false-accept / false-accept-delta thresholds.
 | `triage_source_family_structured_qa_gaps.py` | 将 source-family structured QA claim-mapping 行分类成下一步动作 lane，例如 correction handoff、answer-support audit、answer-collision audit、richer property/indicator collection、citation retrieval 或 source-family coverage expansion，同时不把弱匹配提升为证据。 |
 | `build_source_family_structured_qa_lane_execution_queue.py` | 将 source-family structured QA triage lanes 与 fact-collection corpus 降成按 lane 排序的 adapter/rule execution batches，默认排除 handoff/audit-only 行，并避免把 answer/model answer 复制进 adapter request。 |
 | `run_source_family_structured_qa_lane_batch_workflow.py` | 将选定 lane execution batch 物化成兼容的 fact-collection corpus；source-backed 请求复用本地 source-family workflow，rule-only batch 产出 rule-authoring stub，并在进入 route/mapping/rule gate 前记录 batch provenance。 |
-| `run_world_model_rule_authoring_adapter.py` | 将 world-model/calculator rule stub 转成可审计 input request；只有提供显式 rule inputs 时才执行 deterministic calculator/entity-role/temporal check，候选结果仍需 promotion gate。 |
+| `run_world_model_rule_authoring_adapter.py` | 将 world-model/calculator rule stub 转成可审计 input request；只有提供显式 rule inputs 时才执行 deterministic calculator/entity-role/temporal/mechanism check，候选结果仍需 promotion gate。 |
 | `build_world_model_rule_input_collection_plan.py` | 将 rule-authoring input request 降成 numeric、entity-role、temporal、mechanism 输入采集任务与执行 batch，不复制答案，也不执行 verifier 候选。 |
 | `fill_world_model_rule_inputs_from_correction_handoff.py` | 从已 promoted source-family correction handoff 和 ProductTrace claim binding 中保守填充部分 typed rule inputs，填充结果仍只是候选 adapter 输入。 |
 | `fill_world_model_rule_inputs_from_numeric_bindings.py` | 从 source-backed numeric binding 填充 calculator rule input；如果 subject binding 仍需人工确认则 fail-closed。 |
@@ -846,7 +846,7 @@ false-accept-delta 上限。
 | `build_source_family_structured_qa_lane_execution_queue.py` | 将这些 triage lanes 转换为下一轮 source-family/rule pass 可执行的 lane-aware adapter request JSONL 与 execution batches。 |
 | `run_source_family_structured_qa_lane_batch_workflow.py` | 将选定 lane execution batches 接到 source-backed fact collection 或 rule-only stub emission，并写出 batch-scoped provenance。 |
 | `build_unresolved_world_model_rule_stubs.py` | 在 rule-authoring adapter 执行前，将 unresolved queue 的 world-model/calculator request 转成去敏 rule stub。 |
-| `run_world_model_rule_authoring_adapter.py` | 将 rule stub 转成显式 input request；若另行提供 rule-input 文件，则执行 deterministic calculator/entity-role/temporal 检查。 |
+| `run_world_model_rule_authoring_adapter.py` | 将 rule stub 转成显式 input request；若另行提供 rule-input 文件，则执行 deterministic calculator/entity-role/temporal/mechanism 检查。 |
 | `build_world_model_rule_input_collection_plan.py` | 在 deterministic rule 执行前，将 rule input request 转成 typed collection task 和 batch。 |
 | `audit_world_model_rule_input_plan.py` | 在采集具体 rule input 前审计 typed task，标出 rule family 与问题意图不匹配、缺少 candidate-claim binding 的行，并输出非证据 requeue 建议。 |
 | `requeue_world_model_rule_stubs_from_audit.py` | 将 audit requeue 建议应用回去敏 rule stub，生成修正后的非证据 rule-authoring stub。 |
