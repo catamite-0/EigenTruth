@@ -6164,6 +6164,50 @@
       "name": "truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-claim-mapping",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-claim-mapping/source-family-structured-qa-fact-collection-claim-mapping.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-correction-handoff/artifact-manifest.json",
+        "corpus_document_count": 1,
+        "correction_candidate_count": 1,
+        "evidence": "source_family_structured_qa_fact_collection_workflow",
+        "status": "promote",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "trace_count": 1,
+        "workflow": "source_family_structured_qa_correction_handoff"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-source-family-structured-qa-correction-handoff",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-correction-handoff/source-family-structured-qa-correction-handoff.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "product_trace",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-correction-handoff/artifact-manifest.json",
+        "evidence": "source_family_structured_qa_fact_collection_workflow",
+        "status": "promote",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "trace_count": 1,
+        "workflow": "source_family_structured_qa_correction_handoff"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-source-family-structured-qa-correction-handoff",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-correction-handoff/product-traces.jsonl",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "action_result",
+      "metadata": {
+        "action_result_count": 1,
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-correction-handoff/artifact-manifest.json",
+        "evidence": "source_family_structured_qa_fact_collection_workflow",
+        "status": "promote",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "source_family_structured_qa_correction_handoff"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-source-family-structured-qa-correction-handoff",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-correction-handoff/action-results.jsonl",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

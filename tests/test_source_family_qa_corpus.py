@@ -392,6 +392,185 @@ def test_source_family_structured_qa_claim_mapping_audits_claim_coverage(tmp_pat
     assert record.metadata["suite"] == "unit"
 
 
+def test_source_family_structured_qa_correction_handoff_promotes_mapped_candidates(tmp_path):
+    module = importlib.import_module("benchmarks.build_source_family_structured_qa_correction_handoff")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    claim_mapping_path = tmp_path / "claim-mapping.json"
+    output_dir = tmp_path / "handoff"
+    registry_path = tmp_path / "registry.json"
+    claim_mapping_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "source_family_structured_qa_claim_mapping_audit",
+            "status": "observed",
+            "source": {
+                "route_summary_status": "promote",
+                "route_summary_promoted": True,
+            },
+            "summary": {
+                "target_count": 2,
+                "mapped_qa_fact_candidate_count": 1,
+            },
+            "records": [
+                {
+                    "record_id": "record-10",
+                    "record_index": 10,
+                    "question": "Who first started Acme Motors?",
+                    "answer": "Alice founded Acme.",
+                    "text": "Who first started Acme Motors? Alice founded Acme.",
+                    "label": 1,
+                    "mapping_decision": "mapped_qa_fact_candidate",
+                    "mapped_qa_fact_candidate": True,
+                    "gate_recommendation": "structured_qa_correction_handoff",
+                    "best_mapping_score": 0.91,
+                    "best_subject_coverage": 1.0,
+                    "best_intent_score": 0.8,
+                    "mapped_facts": [
+                        {
+                            "question": "What does Wikidata list as the founder for Acme Motors?",
+                            "answer": "Bob Builder",
+                            "source": "wikidata:Q1:P112:Q2",
+                            "provider": "wikidata",
+                            "source_family": "reference",
+                            "fact_type": "P112",
+                            "subject": "Acme Motors",
+                            "mapping_score": 0.91,
+                            "metadata": {
+                                "provider": "wikidata",
+                                "source_family": "reference",
+                                "statement_property": "P112",
+                                "statement_property_label": "founder",
+                                "subject": "Acme Motors",
+                                "subject_qid": "Q1",
+                                "url": "https://www.wikidata.org/wiki/Q1",
+                            },
+                        }
+                    ],
+                },
+                {
+                    "record_id": "record-11",
+                    "record_index": 11,
+                    "question": "Who first started Acme Motors?",
+                    "answer": "Bob Builder",
+                    "text": "Who first started Acme Motors? Bob Builder",
+                    "label": 0,
+                    "mapping_decision": "answer_value_supported_by_covered_fact",
+                    "mapped_qa_fact_candidate": False,
+                    "gate_recommendation": "answer_support_audit",
+                    "mapped_facts": [],
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        claim_mapping_path=claim_mapping_path,
+        output_dir=output_dir,
+        registry_path=registry_path,
+        name="source-family-qa-correction-handoff-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    report = payload["report"]
+    corpus = json.loads(
+        (output_dir / "source-family-structured-qa-correction-corpus.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    traces = [
+        json.loads(line)
+        for line in (output_dir / "product-traces.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    action_results = [
+        json.loads(line)
+        for line in (output_dir / "action-results.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    report_record = registry.get("report:source-family-qa-correction-handoff-unit:0.1")
+    trace_record = registry.get("product_trace:source-family-qa-correction-handoff-unit:0.1")
+    action_record = registry.get("action_result:source-family-qa-correction-handoff-unit:0.1")
+
+    assert report["status"] == "promote"
+    assert report["source"]["route_summary_promoted"] is True
+    assert report["summary"]["input_record_count"] == 2
+    assert report["summary"]["correction_candidate_count"] == 1
+    assert report["summary"]["corpus_document_count"] == 1
+    assert report["summary"]["verification_status_counts"] == {"refuted": 1}
+    assert report["summary"]["action_counts"] == {"abstain": 1}
+    assert corpus["corpus_type"] == "target_specific_source_family_structured_qa_correction"
+    assert corpus["documents"][0]["question"] == "Who first started Acme Motors?"
+    assert corpus["documents"][0]["answer"] == "Bob Builder"
+    assert corpus["documents"][0]["metadata"]["provider"] == "wikidata"
+    assert corpus["documents"][0]["metadata"]["statement_property"] == "P112"
+    assert "label" not in corpus["documents"][0]["metadata"]
+    assert traces[0]["verification_results"][0]["status"] == "refuted"
+    assert traces[0]["verification_results"][0]["metadata"]["selected_route"] == (
+        "source_family_structured_qa_correction"
+    )
+    assert traces[0]["risk_decision"]["action"] == "abstain"
+    assert traces[0]["risk_decision"]["risk_level"] == "high"
+    assert traces[0]["action_results"][0]["status"] == "dry_run"
+    assert action_results[0]["action"] == "abstain"
+    assert registry_module.load_and_verify_artifact_manifest(output_dir / "artifact-manifest.json").passed is True
+    assert report_record.metadata["workflow"] == "source_family_structured_qa_correction_handoff"
+    assert trace_record.metadata["trace_count"] == 1
+    assert action_record.metadata["action_result_count"] == 1
+
+
+def test_source_family_structured_qa_correction_handoff_requires_promoted_route(tmp_path):
+    module = importlib.import_module("benchmarks.build_source_family_structured_qa_correction_handoff")
+
+    claim_mapping = {
+        "workflow": "source_family_structured_qa_claim_mapping_audit",
+        "status": "blocked",
+        "source": {
+            "route_summary_status": "blocked",
+            "route_summary_promoted": False,
+        },
+        "summary": {
+            "target_count": 1,
+            "mapped_qa_fact_candidate_count": 1,
+        },
+        "records": [
+            {
+                "record_id": "record-1",
+                "record_index": 1,
+                "question": "Who first started Acme Motors?",
+                "answer": "Alice",
+                "mapping_decision": "mapped_qa_fact_candidate",
+                "mapped_qa_fact_candidate": True,
+                "gate_recommendation": "structured_qa_correction_handoff",
+                "mapped_facts": [
+                    {
+                        "question": "What does Wikidata list as the founder for Acme Motors?",
+                        "answer": "Bob",
+                        "source": "wikidata:Q1:P112:Q2",
+                        "metadata": {
+                            "provider": "wikidata",
+                            "source_family": "reference",
+                            "statement_property": "P112",
+                            "subject": "Acme Motors",
+                        },
+                    }
+                ],
+            }
+        ],
+    }
+
+    payload = module.build_source_family_structured_qa_correction_handoff(claim_mapping)
+
+    assert payload["report"]["status"] == "blocked"
+    assert payload["report"]["source"]["route_summary_promoted"] is False
+    assert payload["report"]["summary"]["correction_candidate_count"] == 0
+    assert payload["qa_corpus"]["summary"]["n_documents"] == 0
+    assert payload["product_traces"] == ()
+    assert payload["action_results"] == ()
+
+
 def test_source_family_structured_qa_fact_expansion_plans_mapping_gaps(tmp_path):
     module = importlib.import_module("benchmarks.plan_source_family_structured_qa_fact_expansion")
     registry_module = importlib.import_module("eigentruth.registry")

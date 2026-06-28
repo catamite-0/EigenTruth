@@ -410,7 +410,13 @@ For product features:
   ProductTrace JSONL: the existing verifier refutes the Elon Musk answer,
   records a high-risk abstain decision, and dry-runs the abstain action. The
   product route can use that slot as precise property evidence, but broad
-  blind-spot recall still needs citation or world-model expansion.
+  blind-spot recall still needs citation or world-model expansion. The later
+  source-family fact-collection replay generalizes this path:
+  `build_source_family_structured_qa_correction_handoff.py` consumes the
+  promoted covered-fact route and mapped QA candidate, then writes a
+  source-family ProductTrace/action-result handoff with the same
+  `refuted -> high/abstain -> dry_run` control outcome for the Tesla/Martin
+  Eberhard slot.
 - The unresolved queue has now been made executable without promoting it as
   evidence: `build_unresolved_blind_spot_evidence_queue.py` filters the
   high-priority collection corpus through the question/property mapping report,

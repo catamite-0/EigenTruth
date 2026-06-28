@@ -1496,6 +1496,17 @@ Martin Eberhard. The claim-mapping report remains `observed`, not promoted as a
 broad route; the rest of the blind spots still require richer property mapping,
 source citations, entity disambiguation, or deterministic world-model rules.
 
+`benchmarks/build_source_family_structured_qa_correction_handoff.py` now turns
+that mapped source-family QA fact into the product-control handoff. The artifact
+`artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-correction-handoff/`
+is `promote` for exactly one trace: the target-specific corpus maps "Who first
+started Tesla Motors?" to Martin Eberhard, `QuestionAnswerVerifier` refutes the
+generated Elon Musk answer through `source_family_structured_qa_correction`,
+the risk decision is `high/abstain`, and the executor registry records a
+dry-run abstain action result. The manifest verifies `5/5` files, and the
+handoff remains scoped to `1/89` rather than claiming broad source-family
+recall.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -1526,11 +1537,11 @@ source citations, entity disambiguation, or deterministic world-model rules.
    `scholarly=156/156`, and `news=4/4` are covered. The source-family
    structured QA route audit now promotes both the original `18` extracted
    facts and the `70` fact-collection candidates. Claim/blind-spot mapping has
-   moved from `0/89` to `1/89`, recovering the Tesla/Martin Eberhard correction
-   slot; next, build a source-family structured QA correction handoff for mapped
-   candidates and continue routing the unresolved rows to richer property
-   mapping, citation evidence, entity disambiguation, and deterministic
-   world-model/calculator rules.
+   moved from `0/89` to `1/89`, and the Tesla/Martin Eberhard slot now has a
+   ProductTrace-visible source-family structured-QA correction handoff. Next,
+   keep the remaining `88/89` rows routed to richer property mapping, citation
+   evidence, entity disambiguation, and deterministic world-model/calculator
+   rules.
 8. Extend the new verifier-stability path from structured QA to real retrieval,
    database, calculator, and world-model evidence under the same conformal
    false-alarm budgets. Use `benchmarks/build_evidence_fixture.py` with a local
