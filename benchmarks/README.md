@@ -2618,6 +2618,30 @@ source-catalog adapter execution and no verifier-evidence claim. The next
 implementation step is a deterministic calculator/world-model executor for
 those stubs, not another source-backed catalog replay.
 
+Run the deterministic rule-authoring adapter over those stubs:
+
+```bash
+RULE_ADAPTER=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-rule-authoring-adapter
+
+python benchmarks/run_world_model_rule_authoring_adapter.py \
+  --rule-stubs "$RULE/world-model-rule-stubs.jsonl" \
+  --output-dir "$RULE_ADAPTER" \
+  --json "$RULE_ADAPTER/world-model-rule-authoring-adapter.json" \
+  --rule-results-jsonl "$RULE_ADAPTER/world-model-rule-results.jsonl" \
+  --input-requests-jsonl "$RULE_ADAPTER/world-model-rule-input-requests.jsonl" \
+  --artifact-manifest "$RULE_ADAPTER/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_post_correction_lane_batches_rule_authoring_all
+```
+
+The registered adapter run is `needs_inputs`: all `37` stubs become explicit
+input requests and none are executed without a separate rule-input file. The
+request split is `12` calculator checks, `12` entity-role disambiguation checks,
+`9` causal/procedural world-model checks, and `4` temporal-consistency checks.
+This gives the next pass a concrete input-collection contract while preserving
+the rule-stub boundary: no answer/model-answer/label fields are copied, and no
+rule result is promoted as verifier evidence.
+
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:
 

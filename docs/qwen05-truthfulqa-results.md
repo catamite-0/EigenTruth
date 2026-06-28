@@ -356,8 +356,13 @@ structured QA facts; the covered-fact route still promotes on `126` balanced
 rows, but unresolved-claim mapping remains `0/88`. Rule-only lane execution is
 now wired separately: the `5` world-model/calculator batches emit `37`
 non-evidence rule stubs over `34` targets and are `ready_for_rule_authoring`.
-The next implementation step is therefore a deterministic calculator/world-model
-executor for those stubs, not another source-backed catalog replay.
+The deterministic rule-authoring adapter now consumes those stubs and writes an
+explicit rule-input worklist. The registered run is `needs_inputs`: `0/37`
+stubs execute without a separate input file, and the missing work splits into
+`12` calculator checks, `12` entity-role disambiguation checks, `9`
+causal/procedural world-model checks, and `4` temporal-consistency checks. The
+next implementation step is therefore collecting/providing those inputs and
+running the promotion gate, not another source-backed catalog replay.
 
 ## Product Trace Demo
 

@@ -1685,3 +1685,116 @@ def test_source_family_structured_qa_lane_batch_workflow_emits_rule_only_batch(t
     assert registry_record is not None
     assert registry_record.metadata["status"] == "ready_for_rule_authoring"
     assert registry_record.metadata["rule_stub_count"] == 1
+
+
+def test_world_model_rule_authoring_adapter_requests_missing_inputs(tmp_path):
+    module = importlib.import_module("benchmarks.run_world_model_rule_authoring_adapter")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    stubs_path = tmp_path / "world-model-rule-stubs.jsonl"
+    output_dir = tmp_path / "rule-adapter"
+    registry_path = tmp_path / "registry.json"
+    stubs_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "source_family_structured_qa_lane_batch_workflow",
+            "request_id": "rule:record-11:1",
+            "target_id": "record-11",
+            "request_type": "world_model_or_calculator_rule",
+            "rule_family": "quantity_or_arithmetic",
+            "rule_seed": "Author a deterministic numeric check",
+            "required_inputs": ["numeric_value", "unit", "reference_time"],
+            "question": "Do more than 20% of Americans have passports?",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = module.run_world_model_rule_authoring_adapter(
+        rule_stubs_path=stubs_path,
+        output_dir=output_dir,
+        registry_path=registry_path,
+        name="world-model-rule-adapter-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    input_requests = [
+        json.loads(line)
+        for line in (output_dir / "world-model-rule-input-requests.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    registry_record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:world-model-rule-adapter-unit:0.1"
+    )
+
+    assert payload["status"] == "needs_inputs"
+    assert payload["summary"]["stub_count"] == 1
+    assert payload["summary"]["executed_count"] == 0
+    assert payload["summary"]["needs_input_count"] == 1
+    assert payload["summary"]["adapter_counts"] == {"calculator": 1}
+    assert input_requests[0]["request_id"] == "rule:record-11:1"
+    assert input_requests[0]["missing_inputs"] == ["numeric_value", "unit", "reference_time"]
+    assert input_requests[0]["not_verifier_evidence"] is True
+    assert registry_module.load_and_verify_artifact_manifest(output_dir / "artifact-manifest.json").passed is True
+    assert registry_record is not None
+    assert registry_record.metadata["status"] == "needs_inputs"
+    assert registry_record.metadata["input_request_count"] == 1
+
+
+def test_world_model_rule_authoring_adapter_executes_explicit_calculator_input(tmp_path):
+    module = importlib.import_module("benchmarks.run_world_model_rule_authoring_adapter")
+
+    stubs_path = tmp_path / "world-model-rule-stubs.jsonl"
+    inputs_path = tmp_path / "rule-inputs.json"
+    output_dir = tmp_path / "rule-adapter"
+    stubs_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "source_family_structured_qa_lane_batch_workflow",
+            "request_id": "rule:calc:1",
+            "target_id": "record-calc",
+            "request_type": "world_model_or_calculator_rule",
+            "rule_family": "quantity_or_arithmetic",
+            "required_inputs": ["numeric_value", "unit", "reference_time"],
+            "question": "Is 2 + 2 equal to 5?",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    inputs_path.write_text(
+        json.dumps({
+            "rule:calc:1": {
+                "calculation": {
+                    "expression": "2 + 2",
+                    "expected": 5,
+                }
+            }
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run_world_model_rule_authoring_adapter(
+        rule_stubs_path=stubs_path,
+        rule_inputs_path=inputs_path,
+        output_dir=output_dir,
+        metadata={"suite": "unit"},
+    )
+    results = [
+        json.loads(line)
+        for line in (output_dir / "world-model-rule-results.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    input_requests = (output_dir / "world-model-rule-input-requests.jsonl").read_text(encoding="utf-8").strip()
+
+    assert payload["status"] == "observed"
+    assert payload["summary"]["executed_count"] == 1
+    assert payload["summary"]["candidate_refuted_count"] == 1
+    assert payload["summary"]["needs_input_count"] == 0
+    assert input_requests == ""
+    assert results[0]["status"] == "refuted"
+    assert results[0]["authored_rule"]["adapter"] == "calculator"
+    assert results[0]["not_verifier_evidence"] is True
+    assert results[0]["metadata"]["candidate_results_require_promotion_gate"] is True
+    assert "calculator:" in results[0]["evidence"][0]
