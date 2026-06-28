@@ -302,6 +302,29 @@ centering in `internal_eigenscore`, `inside_eigenscore` is above the
 single-forward `eigenscore` in this tiny run, but both are below chance and the
 sample is far too small for a signal-quality claim.
 
+## Source-Family Post-Correction Replay
+
+After the first source-family correction handoff promoted the Tesla founder
+slot, the remaining structured-QA mapping gaps were replayed through the same
+non-evidence fact-expansion boundary. The post-correction plan skips one
+already resolved mapping decision and keeps `88` targets. It emits `764`
+request rows, including `352` structured-fact requests, while preserving the
+label/model-answer boundary for external requests.
+
+The local source-family workflow returns `2178` candidate results, rebuilds
+`66` structured QA documents, and preserves `38` world-model/calculator rule
+stubs. The covered-fact route audit promotes on `132` balanced rows, but the
+conservative claim-mapping gate finds `0/88` new correction handoff candidates:
+`1` row is answer-supported, `12` are answer-entity collisions, `21` are
+subject-only gaps, `3` are intent-only gaps, `9` are weak-overlap rows, and
+`42` remain no-candidate rows.
+
+Interpretation: the source-family covered-fact route is working when exact QA
+facts exist, but the remaining frontier is fact acquisition and property
+modeling. The next useful work is richer property/indicator collection,
+provenance-audited citation evidence, and explicit world-model/calculator rules,
+not lowering the conservative mapping threshold.
+
 ## Product Trace Demo
 
 `examples/calibrated_control_demo.py` now defaults to the best repository l80

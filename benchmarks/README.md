@@ -2417,6 +2417,84 @@ decision is `high/abstain`, and the executor registry records a dry-run abstain
 action result. Its manifest verifies `5/5` files and no `label` or
 `model_answer` fields are written into the correction artifact.
 
+The post-correction replay starts from the remaining source-family structured
+QA mapping gaps and reruns the same non-evidence collection, route audit, and
+claim-mapping gates with the expanded local catalogs:
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-fact-expansion-plan
+
+python benchmarks/plan_source_family_structured_qa_fact_expansion.py \
+  --claim-mapping artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-claim-mapping/source-family-structured-qa-fact-collection-claim-mapping.json \
+  --json "$OUT/source-family-structured-qa-post-correction-fact-expansion-plan.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=source_family_structured_qa_fact_collection_claim_mapping
+
+CORPUS=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-fact-collection-corpus
+
+python benchmarks/build_source_family_structured_qa_fact_collection_corpus.py \
+  --plan "$OUT/source-family-structured-qa-post-correction-fact-expansion-plan.json" \
+  --output-dir "$CORPUS" \
+  --json "$CORPUS/fact-collection-corpus.json" \
+  --artifact-manifest "$CORPUS/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=source_family_structured_qa_post_correction_fact_expansion_plan
+
+WORKFLOW=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-fact-collection-workflow
+
+python benchmarks/run_source_family_structured_qa_fact_collection_workflow.py \
+  --collection-corpus "$CORPUS/fact-collection-corpus.json" \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog/source-family-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-worldbank-official-statistics-catalog/worldbank-official-statistics-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-crossref-scholarly-catalog/crossref-scholarly-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-official-site-catalog/official-site-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-openalex-scholarly-catalog/openalex-scholarly-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-catalog/seeded-news-catalog.jsonl \
+  --output-dir "$WORKFLOW" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=source_family_structured_qa_post_correction_fact_collection_corpus
+
+ROUTE=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-route
+
+python benchmarks/run_source_family_structured_qa_route_workflow.py \
+  --qa-corpus "$WORKFLOW/source-family-structured-qa-corpus.json" \
+  --output-dir "$ROUTE" \
+  --score-name source-family-post-correction-covered-facts-smollm2-l80 \
+  --alpha 0.1 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_post_correction_fact_collection_workflow
+
+MAP=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-claim-mapping
+
+python benchmarks/audit_source_family_structured_qa_claim_mapping.py \
+  --claims "$MAP/unresolved-claims.json" \
+  --qa-corpus "$WORKFLOW/source-family-structured-qa-corpus.json" \
+  --route-summary "$ROUTE/structured-qa-route-summary.json" \
+  --json "$MAP/source-family-structured-qa-post-correction-claim-mapping.json" \
+  --artifact-manifest "$MAP/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_post_correction_fact_collection_workflow
+```
+
+`$MAP/unresolved-claims.json` is the committed internal audit sidecar derived
+from the post-correction plan targets. It keeps the candidate answer needed for
+claim mapping, but it is not copied into adapter requests and carries no labels.
+
+The registered post-correction plan is `ready_for_collection` over `88` targets
+after skipping one already resolved source-family mapping decision. It emits
+`764` request rows and `352` structured-fact requests. The local workflow
+returns `2178` candidate results, rebuilds `66` structured QA documents, and
+preserves `38` world-model/calculator rule stubs; all manifests verify and the
+adapter request boundary still has no `label`, `answer`, or `model_answer`
+fields. The follow-up route promotes on `132` balanced covered-fact rows, but
+the claim-mapping gate finds no new mapped correction handoff candidates:
+`0/88` mapped, `1/88` answer-supported, `12` answer-entity collisions, `21`
+subject-only gaps, `3` intent-only gaps, `9` weak-overlap rows, and `42`
+no-candidate rows. The next executable work is richer property/indicator
+collection plus citation or world-model rule authoring for those remaining
+gaps, not lowering the mapping gate.
+
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:
 
