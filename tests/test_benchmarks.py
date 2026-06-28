@@ -35040,6 +35040,95 @@ def _write_query_sweep_fixture(
     )
 
 
+def test_plan_blind_spot_evidence_expansion_builds_collection_targets(tmp_path):
+    module = importlib.import_module("benchmarks.plan_blind_spot_evidence_expansion")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    blind_spots_path = tmp_path / "blind-spots.json"
+    comparison_path = tmp_path / "query-sweep-comparison.json"
+    output_path = tmp_path / "evidence-expansion-plan.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    blind_spots_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "detectability_blind_spot_analysis",
+            "records": [
+                {
+                    "record_index": 7,
+                    "label": 1,
+                    "question_type": "definition",
+                    "question": "What is Alpha Syndrome?",
+                    "answer": "A moon.",
+                    "text": "What is Alpha Syndrome? A moon.",
+                    "features": {"has_negation": False, "has_number": False, "is_time_sensitive": False},
+                    "answer_features": {"has_negation": False, "has_number": False, "is_time_sensitive": False},
+                },
+                {
+                    "record_index": 8,
+                    "label": 1,
+                    "question_type": "person",
+                    "question": "Who founded Beta Labs?",
+                    "answer": "No one.",
+                    "text": "Who founded Beta Labs? No one.",
+                    "features": {"has_negation": False, "has_number": False, "is_time_sensitive": False},
+                    "answer_features": {"has_negation": True, "has_number": False, "is_time_sensitive": False},
+                },
+                {
+                    "record_index": 9,
+                    "label": 1,
+                    "question_type": "quantity",
+                    "question": "How many moons does Gamma have?",
+                    "answer": "Twelve.",
+                    "text": "How many moons does Gamma have? Twelve.",
+                    "features": {"has_negation": False, "has_number": True, "is_time_sensitive": False},
+                    "answer_features": {"has_negation": False, "has_number": False, "is_time_sensitive": False},
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    comparison_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "blind_spot_query_sweep_provenance_comparison",
+            "status": "blocked",
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        blind_spots_path=blind_spots_path,
+        provenance_comparison_path=comparison_path,
+        output_path=output_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="evidence-expansion-plan-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:evidence-expansion-plan-unit:0.1"
+    )
+    by_index = {item["record_index"]: item for item in payload["targets"]}
+
+    assert payload["status"] == "needs_evidence_collection"
+    assert payload["source"]["provenance_comparison_status"] == "blocked"
+    assert payload["summary"]["target_count"] == 3
+    assert payload["summary"]["priority_counts"]["high"] == 2
+    assert payload["summary"]["recommended_route_counts"]["structured_fact"] >= 2
+    assert payload["summary"]["collection_task_counts"]["wikidata_entity_resolution"] == 3
+    assert "Alpha Syndrome" in by_index[7]["entity_candidates"]
+    assert "counterfactual_negation" in by_index[8]["recommended_routes"]
+    assert "calculator" in by_index[9]["recommended_routes"]
+    assert by_index[9]["wikidata_property_hints"][-1] == "point_in_time:P585"
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "blind_spot_evidence_expansion_plan"
+    assert record.metadata["status"] == "needs_evidence_collection"
+    assert record.metadata["target_count"] == 3
+    assert record.metadata["suite"] == "unit"
+
+
 def test_eval_score_ensemble_compares_single_and_combined_signals(tmp_path):
     module = importlib.import_module("benchmarks.eval_score_ensemble")
     scores_path = tmp_path / "scores.json"

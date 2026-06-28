@@ -495,6 +495,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `audit_blind_spot_correction_routes.py` | Joins row-level blind spots with verifier sidecar records to measure which independent correction routes actually select, refute, support, or miss high-confidence false answers. |
 | `sweep_blind_spot_retrieval_queries.py` | Sweeps local retrieval query fields and overlap thresholds against blind spots, measuring route coverage, verified false alarm, and controlled-corpus provenance before any retriever default changes. |
 | `compare_blind_spot_query_sweeps.py` | Compares controlled and external/structured query-sweep reports with fail-closed gates, blocking controlled-only query coverage from becoming product evidence. |
+| `plan_blind_spot_evidence_expansion.py` | Turns blocked blind-spot coverage into per-record external evidence collection targets, including structured-fact properties, citation queries, counterfactual probes, and world-model/calculator tasks. |
 | `select_fusion_signals_from_ablation.py` | Converts a saved fusion ablation matrix into a run-specific signal-selection report, keeping optional signals such as trajectory conditional instead of global defaults. |
 | `build_selected_fusion_artifacts.py` | Builds per-run `RankScoreFusionArtifact` files from a signal-selection report and matching score dumps, turning conditional signal choices into calibrated deployable artifacts. |
 | `eval_frontier_stability.py` | Replays saved frontier score dumps across multiple split-conformal seeds, summarizes best-signal stability, fingerprints source score records, and optionally registers the post-hoc stability report. |
@@ -663,6 +664,7 @@ evidence rates and maximum final false-accept / false-accept-delta thresholds.
 | `audit_blind_spot_correction_routes.py` | 将逐条 blind spot 与 verifier sidecar 记录对齐，衡量独立校正路线是否真正选中、refute、support 或漏掉高置信错误。 |
 | `sweep_blind_spot_retrieval_queries.py` | 对 blind spot 扫描本地 retrieval query field 和 overlap 阈值，报告 route 覆盖、verified false alarm 和受控 corpus provenance，再决定是否调整 retriever 默认策略。 |
 | `compare_blind_spot_query_sweeps.py` | 对比 controlled 与 external/structured query-sweep report，用 fail-closed gate 阻止 controlled-only 覆盖被误当成产品证据。 |
+| `plan_blind_spot_evidence_expansion.py` | 将 blocked blind-spot 覆盖转成逐条外部证据采集目标，包括 structured-fact property、citation query、counterfactual probe 和 world-model/calculator 任务。 |
 | `select_fusion_signals_from_ablation.py` | 将已保存 fusion ablation matrix 转成按 run 选择的 signal-selection report，让 trajectory 等可选信号保持条件式启用，而不是全局默认。 |
 | `build_selected_fusion_artifacts.py` | 基于 signal-selection report 和匹配 score dump 生成 per-run `RankScoreFusionArtifact`，把条件式信号选择落成可校准加载的 artifact。 |
 | `eval_frontier_stability.py` | 对已保存 frontier score dump 做多 seed split-conformal 重放，总结最佳信号稳定性，指纹化 source score records，并可选登记 post-hoc stability report。 |

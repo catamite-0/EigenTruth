@@ -958,6 +958,14 @@ count is `1`, external passing count is `0`, and the controlled-to-external
 generalization gap is `1.0`. This preserves the query sweep as useful design
 evidence while blocking runtime-default promotion.
 
+The follow-up evidence-expansion worklist is registered as
+`report:truthfulqa-frontier-smollm2-l80-blind-spot-evidence-expansion-plan:0.1`.
+It keeps status `needs_evidence_collection` and covers all 89 records: `65` are
+high priority, `80` recommend structured facts, `65` recommend structured QA,
+`63` recommend citation retrieval, `41` recommend counterfactual probes, and
+`21` recommend world-model or calculator checks. This is the concrete queue to
+execute before rerunning the external provenance gate.
+
 A local release-candidate smoke artifact now pairs that staged route baseline
 with a tiny-gpt2 offline readiness/runtime baseline:
 

@@ -1,0 +1,44 @@
+{
+  "artifacts": {
+    "blind_spot_evidence_expansion_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "blind-spot-evidence-expansion-plan.json",
+      "sha256": "4f565ab2c379ae7e9a053322304289b5831eb852fe2f226e7110bbdb68f1f30b",
+      "size_bytes": 446864
+    },
+    "blind_spots": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json",
+      "sha256": "5990d22d8547cce21613bdc0c618058ca0f1d6c8766e16363b333595fec4ee5a",
+      "size_bytes": 123816
+    },
+    "provenance_comparison": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-query-sweep-provenance-comparison/query-sweep-provenance-comparison.json",
+      "sha256": "ffadae9ae736a57bb9ea4d839be47e3dbbdb7ed02fd0ee7a5010fa6fd9e12c78",
+      "size_bytes": 26663
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "high_priority_count": 65,
+    "runner": "plan_blind_spot_evidence_expansion",
+    "status": "needs_evidence_collection",
+    "target_count": 89,
+    "top_question_type": "definition",
+    "top_route": "structured_fact"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

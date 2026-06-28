@@ -1382,6 +1382,36 @@ blind-spot refuted rate `0.0`. This blocks any runtime-default promotion until
 the question-aware strategy is backed by broader external or structured-fact
 coverage.
 
+## `plan_blind_spot_evidence_expansion.py`
+
+Turns blocked blind-spot coverage into an external evidence collection plan. It
+does not fetch new data and does not promote a route. Instead, it maps each
+blind spot to likely evidence families: structured-fact properties,
+structured-QA/citation retrieval, counterfactual probes, and world-model or
+calculator checks.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-evidence-expansion-plan
+
+python benchmarks/plan_blind_spot_evidence_expansion.py \
+  --blind-spots artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
+  --provenance-comparison artifacts/truthfulqa-frontier-smollm2-l80-query-sweep-provenance-comparison/query-sweep-provenance-comparison.json \
+  --json "$OUT/blind-spot-evidence-expansion-plan.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-blind-spot-evidence-expansion-plan \
+  --version 0.1
+```
+
+The registered plan
+(`report:truthfulqa-frontier-smollm2-l80-blind-spot-evidence-expansion-plan:0.1`)
+has status `needs_evidence_collection`. It covers all `89` blind spots, marks
+`65` high priority, recommends `structured_fact` for `80`, `structured_qa` for
+`65`, `retrieval_citation` for `63`, counterfactual probes for `41`, and
+world-model/calculator tasks for `21`. This is the concrete worklist for
+expanding external/structured coverage after the provenance comparison blocked
+controlled-only query evidence.
+
 ## `eval_verifier_ensemble.py`
 
 Compares a single calibrated internal diagnostic against a retrieval/verifier

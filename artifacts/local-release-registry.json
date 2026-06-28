@@ -5249,6 +5249,22 @@
       "name": "truthfulqa-frontier-smollm2-l80-query-sweep-provenance-comparison",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-query-sweep-provenance-comparison/query-sweep-provenance-comparison.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-evidence-expansion-plan/artifact-manifest.json",
+        "evidence": "smollm2_l80_blind_spot_external_evidence_expansion_plan",
+        "high_priority_count": 65,
+        "status": "needs_evidence_collection",
+        "target_count": 89,
+        "top_question_type": "definition",
+        "top_route": "structured_fact",
+        "workflow": "blind_spot_evidence_expansion_plan"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-blind-spot-evidence-expansion-plan",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-evidence-expansion-plan/blind-spot-evidence-expansion-plan.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1
