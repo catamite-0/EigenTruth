@@ -15,6 +15,16 @@ from eigentruth.control import (
     RiskLevel,
     SQLiteActionExecutionLedger,
 )
+from eigentruth.control.runtime_drift_keys import (
+    PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS,
+    PRODUCT_RUNTIME_DRIFT_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_KEYS,
+)
 from eigentruth.registry import RegistryRecord
 from eigentruth.verify import Claim, ClaimDependency, VerificationResult, VerificationStatus
 
@@ -33,6 +43,28 @@ def test_representation_aliases_point_to_existing_truth_apis():
     assert RepresentationSubspace is TruthSubspace
     assert RepresentationProbe is TruthProbe
     assert RepresentationMonitor is EigenTruthWrapper
+
+
+def test_runtime_drift_evidence_keys_are_grouped_without_duplicates():
+    grouped = (
+        PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_KEYS
+    )
+
+    assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_KEYS == grouped
+    assert len(PRODUCT_RUNTIME_DRIFT_EVIDENCE_KEYS) == len(
+        set(PRODUCT_RUNTIME_DRIFT_EVIDENCE_KEYS)
+    )
+    assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["pre_generation"] == (
+        PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_KEYS
+    )
+    assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["action_gate"] == (
+        PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_KEYS
+    )
 
 
 def test_calibration_artifact_score_lookup():
