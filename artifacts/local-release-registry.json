@@ -5628,6 +5628,22 @@
       "name": "truthfulqa-frontier-smollm2-l80-wikidata-source-family-citation-workflow",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-citation-workflow/source-family-citation-search-workflow.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "acquisition_plan_count": 176,
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-coverage-audit/artifact-manifest.json",
+        "evidence": "wikidata_cached_source_family_catalog",
+        "request_count": 176,
+        "request_missing_target_family_count": 176,
+        "status": "needs_catalog_expansion",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "source_family_coverage_audit"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-wikidata-source-family-coverage-audit",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-coverage-audit/source-family-coverage-audit.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

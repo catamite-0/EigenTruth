@@ -1816,6 +1816,39 @@ generalization gap. Treat this as real negative evidence for generic Wikidata
 reference matching, and as a prompt to collect more targeted official/source-
 specific catalogs rather than tuning lexical overlap further.
 
+## `audit_source_family_coverage.py`
+
+Audits whether source-family adapter results actually cover the non-fallback
+families requested by each sanitized `source_family_plan`. It treats
+`reference` and `encyclopedic` as fallback families by default, reports missing
+official/statistical/scholarly/news/domain-specific coverage, and emits a
+follow-up JSONL acquisition plan. The acquisition plan is explicitly marked as
+`not_verifier_evidence`; it is only a source-catalog collection target.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-coverage-audit
+
+python benchmarks/audit_source_family_coverage.py \
+  --requests artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-citation-workflow/source-family-citation-search-requests.jsonl \
+  --adapter-results artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-citation-workflow/source-family-citation-search-results.jsonl \
+  --json "$OUT/source-family-coverage-audit.json" \
+  --acquisition-plan-jsonl "$OUT/source-family-acquisition-plan.jsonl" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-wikidata-source-family-coverage-audit \
+  --version 0.1 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=wikidata_cached_source_family_catalog
+```
+
+The registered Wikidata audit has status `needs_catalog_expansion`: all
+`176/176` source-family requests still miss their non-fallback target family.
+The current adapter result families are `reference=480`, while missing targets
+are `scholarly=156`, `official=36`, `official_statistics=4`, and `news=4`.
+Official-source-preferred requests are `36`, and `0` have an official result.
+This turns the blocked workflow into an executable next catalog-acquisition
+queue without weakening the provenance or route-quality gates.
+
 ## `run_wikipedia_citation_search_adapter.py`
 
 Runs a dependency-free MediaWiki/Wikipedia search adapter for sanitized

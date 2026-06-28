@@ -509,6 +509,17 @@ For product features:
   the source-family workflow is real, but generic cached Wikidata reference
   facts are not enough; the next evidence source needs more targeted official,
   citation, or claim-specific structured catalogs.
+- `audit_source_family_coverage.py` now converts that negative result into a
+  source-catalog acquisition queue without treating it as verifier evidence.
+  The registered Wikidata coverage audit consumes the same `176` requests and
+  `480` adapter results, observes `reference=480` returned documents, and marks
+  `176/176` requests as still missing non-fallback target coverage:
+  `scholarly=156`, `official=36`, `official_statistics=4`, and `news=4`.
+  Official-source-preferred requests are `36`, but `0` have an official result.
+  Product implication: the next adapter milestone is not more reference-source
+  matching; it is filling this acquisition plan with official/statistical,
+  scholarly, news, or source-specific catalogs and then rerunning the same
+  fail-closed workflow gates.
 
 ### Next Verification Adapter Work
 

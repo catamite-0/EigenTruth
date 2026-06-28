@@ -36441,6 +36441,114 @@ def test_source_family_citation_search_adapter_rejects_reserved_catalog_fields(t
         )
 
 
+def test_audit_source_family_coverage_emits_acquisition_plan(tmp_path):
+    module = importlib.import_module("benchmarks.audit_source_family_coverage")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    requests_path = tmp_path / "requests.jsonl"
+    results_path = tmp_path / "results.jsonl"
+    report_path = tmp_path / "coverage-report.json"
+    plan_path = tmp_path / "acquisition-plan.jsonl"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    requests_path.write_text(
+        "\n".join([
+            json.dumps({
+                "request_id": "cite-search-population",
+                "query": "Ireland population official statistics",
+                "alternate_queries": ["Ireland population"],
+                "priority": "high",
+                "question_type": "definition",
+                "source_family_plan": {
+                    "families": ["official_statistics", "official", "encyclopedic", "reference"],
+                    "query_hints": ["official statistics", "data"],
+                    "freshness_required": True,
+                    "official_source_preferred": True,
+                    "rationale": ["quantitative_or_statistical_claim"],
+                },
+                "metadata": {
+                    "source_queue_request_sha256": "abc123",
+                    "keyword_terms": ["ireland", "population"],
+                    "query_strategy": "claim_entity",
+                },
+            }),
+            json.dumps({
+                "request_id": "cite-search-capital",
+                "query": "Ireland capital reference",
+                "source_family_plan": {
+                    "families": ["reference", "encyclopedic"],
+                    "official_source_preferred": False,
+                },
+            }),
+        ])
+        + "\n",
+        encoding="utf-8",
+    )
+    results_path.write_text(
+        "\n".join([
+            json.dumps({
+                "request_id": "cite-search-population",
+                "results": [
+                    {
+                        "title": "Ireland",
+                        "text": "Ireland is a country with population notes.",
+                        "provider": "wikidata",
+                        "source_family": "reference",
+                    }
+                ],
+            }),
+            json.dumps({
+                "request_id": "cite-search-capital",
+                "results": [
+                    {
+                        "title": "Ireland",
+                        "text": "Ireland capital reference.",
+                        "provider": "wikidata",
+                        "source_family": "reference",
+                    }
+                ],
+            }),
+        ])
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = module.audit_source_family_coverage(
+        requests_path=requests_path,
+        adapter_results_path=results_path,
+        report_json_path=report_path,
+        acquisition_plan_path=plan_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="source-family-coverage-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    plan_rows = [json.loads(line) for line in plan_path.read_text(encoding="utf-8").splitlines()]
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:source-family-coverage-unit:0.1"
+    )
+
+    assert payload["status"] == "needs_catalog_expansion"
+    assert payload["summary"]["request_count"] == 2
+    assert payload["summary"]["request_with_results_count"] == 2
+    assert payload["summary"]["request_missing_target_family_count"] == 1
+    assert payload["summary"]["missing_target_source_family_counts"] == {
+        "official": 1,
+        "official_statistics": 1,
+    }
+    assert payload["summary"]["covered_target_source_family_counts"] == {"reference": 1}
+    assert plan_rows[0]["request_id"] == "cite-search-population"
+    assert plan_rows[0]["not_verifier_evidence"] is True
+    assert plan_rows[0]["usage"] == "source_catalog_acquisition_only"
+    assert plan_rows[0]["missing_source_families"] == ["official_statistics", "official"]
+    assert plan_rows[0]["metadata"]["source_queue_request_sha256"] == "abc123"
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "source_family_coverage_audit"
+    assert record.metadata["acquisition_plan_count"] == 1
+    assert record.metadata["suite"] == "unit"
+
+
 def test_build_source_family_catalog_lifts_source_metadata(tmp_path):
     module = importlib.import_module("benchmarks.build_source_family_catalog")
     registry_module = importlib.import_module("eigentruth.registry")

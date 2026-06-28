@@ -753,11 +753,20 @@ Added the first monitor-first tool-selection audit layer:
   controlled-vs-external gap is `1.0`. This is useful negative evidence: broad
   cached Wikidata reference matching is not enough for the remaining entrenched
   blind spots.
+- The new source-family coverage audit makes the next collection boundary
+  explicit instead of leaving it in prose. `audit_source_family_coverage.py`
+  compares the `176` source-family requests with the `480` Wikidata adapter
+  results and emits a non-evidence acquisition JSONL. Current coverage is
+  `0/176` for non-fallback target families: returned documents are all
+  `reference`, while missing targets are `scholarly=156`, `official=36`,
+  `official_statistics=4`, and `news=4`; `36` requests prefer official sources
+  and `0` have an official result. The next catalog must fill those family
+  slots before rerunning the source-family workflow and evidence gates.
 
 ## Next Research-to-Code Candidates
 
 1. Convert the target-specific Wikidata source docs into structured-fact/QA corpora, then rerun the blind-spot correction-route audit instead of another lexical overlap sweep.
-2. Populate `run_source_family_citation_search_workflow.py` with more targeted official/source-specific catalogs for unresolved blind spots; the cached Wikidata reference catalog now proves execution but refutes `0/89`, so the next catalog needs claim-specific official/citation coverage before any route-quality claim.
+2. Fill the `source-family-acquisition-plan.jsonl` from the Wikidata coverage audit with targeted official/statistical/scholarly/news/source-specific catalogs, then rerun `run_source_family_citation_search_workflow.py`; the cached Wikidata reference catalog proves execution but covers `0/176` non-fallback family targets and refutes `0/89` blind spots.
 3. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
 4. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
 5. Materialize a real `frontier_audit` release candidate with the registered covered-facts external-evidence handoff and external-prediction triple matrix artifact, then export the resulting promotion contract.
