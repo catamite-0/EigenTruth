@@ -2282,3 +2282,171 @@ def test_world_model_rule_candidate_promotion_gate_blocks_missing_citation(tmp_p
     assert payload["summary"]["promoted_count"] == 0
     assert payload["summary"]["blocked_count"] == 1
     assert payload["blocked_candidates"][0]["failures"] == ("missing_source_citation",)
+
+
+def test_world_model_rule_candidate_handoff_writes_trace_and_action_results(tmp_path):
+    module = importlib.import_module("benchmarks.build_world_model_rule_candidate_handoff")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    promotion_gate_path = tmp_path / "promotion-gate.json"
+    promoted_path = tmp_path / "promoted-rule-candidates.jsonl"
+    output_dir = tmp_path / "handoff"
+    registry_path = tmp_path / "registry.json"
+    promotion_gate_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "world_model_rule_candidate_promotion_gate",
+            "status": "promote",
+            "summary": {
+                "promoted_count": 2,
+                "blocked_count": 0,
+                "pending_count": 0,
+            },
+        }),
+        encoding="utf-8",
+    )
+    promoted_path.write_text(
+        "\n".join(
+            json.dumps(row)
+            for row in (
+                {
+                    "schema_version": 1,
+                    "workflow": "world_model_rule_candidate_promotion_gate",
+                    "request_id": "rule:record-1:1",
+                    "target_id": "record-1",
+                    "rule_family": "entity_disambiguation",
+                    "status": "refuted",
+                    "confidence": 0.95,
+                    "adapter": "entity_role_disambiguation",
+                    "question": "Who first started Tesla Motors?",
+                    "source_citation": "wikidata:Q478214:P112:Q1903673",
+                    "source_url": "https://www.wikidata.org/wiki/Q478214",
+                    "evidence": [
+                        "entity_role: requested_role=founder; "
+                        "answer_entity=Elon Musk; expected_entity=Martin Eberhard; "
+                        "source_citation=wikidata:Q478214:P112:Q1903673"
+                    ],
+                    "rule_input": {
+                        "subject_entity": "Tesla",
+                        "answer_entity": "Elon Musk",
+                        "expected_entity": "Martin Eberhard",
+                        "requested_role": "founder",
+                    },
+                    "promotion": {
+                        "status": "promote",
+                        "gate": "world_model_rule_candidate_promotion_gate",
+                        "candidate_only_requires_downstream_handoff": True,
+                    },
+                },
+                {
+                    "schema_version": 1,
+                    "workflow": "world_model_rule_candidate_promotion_gate",
+                    "request_id": "rule:record-2:1",
+                    "target_id": "record-2",
+                    "rule_family": "entity_disambiguation",
+                    "status": "supported",
+                    "confidence": 0.92,
+                    "adapter": "entity_role_disambiguation",
+                    "question": "Who founded Acme Motors?",
+                    "source_citation": "wikidata:Q1:P112:Q2",
+                    "evidence": [
+                        "entity_role: requested_role=founder; "
+                        "answer_entity=Bob Builder; expected_entity=Bob Builder; "
+                        "source_citation=wikidata:Q1:P112:Q2"
+                    ],
+                    "rule_input": {
+                        "subject_entity": "Acme Motors",
+                        "answer_entity": "Bob Builder",
+                        "expected_entity": "Bob Builder",
+                        "requested_role": "founder",
+                    },
+                    "promotion": {
+                        "status": "promote",
+                        "gate": "world_model_rule_candidate_promotion_gate",
+                        "candidate_only_requires_downstream_handoff": True,
+                    },
+                },
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        promotion_gate_path=promotion_gate_path,
+        promoted_candidates_path=promoted_path,
+        output_dir=output_dir,
+        registry_path=registry_path,
+        name="rule-candidate-handoff-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    report = payload["report"]
+    traces = [
+        json.loads(line)
+        for line in (output_dir / "product-traces.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    action_results = [
+        json.loads(line)
+        for line in (output_dir / "action-results.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    report_record = registry.get("report:rule-candidate-handoff-unit:0.1")
+    trace_record = registry.get("product_trace:rule-candidate-handoff-unit:0.1")
+    action_record = registry.get("action_result:rule-candidate-handoff-unit:0.1")
+
+    assert report["status"] == "promote"
+    assert report["summary"]["input_candidate_count"] == 2
+    assert report["summary"]["blocked_candidate_count"] == 0
+    assert report["summary"]["verification_status_counts"] == {"refuted": 1, "supported": 1}
+    assert report["summary"]["action_counts"] == {"abstain": 1, "accept": 1}
+    assert report["summary"]["action_execution_alignment_passed"] is True
+    assert traces[0]["verification_results"][0]["metadata"]["selected_route"] == "world_model_rule_candidate"
+    assert traces[0]["risk_decision"]["action"] == "abstain"
+    assert traces[0]["risk_decision"]["risk_level"] == "high"
+    assert traces[1]["risk_decision"]["action"] == "accept"
+    assert traces[1]["risk_decision"]["risk_level"] == "low"
+    assert traces[0]["metadata"]["not_open_domain_verifier"] is True
+    assert action_results[0]["status"] == "dry_run"
+    assert action_results[1]["status"] == "dry_run"
+    assert registry_module.load_and_verify_artifact_manifest(output_dir / "artifact-manifest.json").passed is True
+    assert report_record.metadata["workflow"] == "world_model_rule_candidate_handoff"
+    assert trace_record.metadata["trace_count"] == 2
+    assert action_record.metadata["action_result_count"] == 2
+
+
+def test_world_model_rule_candidate_handoff_blocks_missing_handoff_marker():
+    module = importlib.import_module("benchmarks.build_world_model_rule_candidate_handoff")
+
+    payload = module.build_world_model_rule_candidate_handoff(
+        {
+            "workflow": "world_model_rule_candidate_promotion_gate",
+            "status": "promote",
+            "summary": {"promoted_count": 1},
+        },
+        promoted_candidates=[
+            {
+                "workflow": "world_model_rule_candidate_promotion_gate",
+                "request_id": "rule:record-1:1",
+                "target_id": "record-1",
+                "rule_family": "entity_disambiguation",
+                "status": "refuted",
+                "confidence": 0.95,
+                "source_citation": "wikidata:Q1:P112:Q2",
+                "evidence": ["source_citation=wikidata:Q1:P112:Q2"],
+                "promotion": {
+                    "status": "promote",
+                    "gate": "world_model_rule_candidate_promotion_gate",
+                },
+            }
+        ],
+    )
+
+    assert payload["report"]["status"] == "blocked"
+    assert payload["report"]["summary"]["trace_count"] == 0
+    assert payload["report"]["summary"]["blocked_candidate_count"] == 1
+    assert payload["report"]["blocked_candidates"][0]["failures"] == ("missing_downstream_handoff_marker",)
+    assert payload["product_traces"] == ()
+    assert payload["action_results"] == ()

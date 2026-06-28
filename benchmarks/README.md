@@ -2731,6 +2731,30 @@ gate checks that the candidate is executed, promotable, high-confidence, still
 marked as candidate-only, backed by explicit rule inputs, and carries the same
 source citation in both the input and adapter evidence.
 
+Build the ProductTrace-visible handoff from promoted rule candidates:
+
+```bash
+RULE_HANDOFF=artifacts/truthfulqa-frontier-smollm2-l80-world-model-rule-candidate-handoff
+
+python benchmarks/build_world_model_rule_candidate_handoff.py \
+  --promotion-gate "$RULE_PROMOTION/world-model-rule-candidate-promotion-gate.json" \
+  --promoted-candidates "$RULE_PROMOTION/promoted-rule-candidates.jsonl" \
+  --output-dir "$RULE_HANDOFF" \
+  --json "$RULE_HANDOFF/world-model-rule-candidate-handoff.json" \
+  --trace-jsonl "$RULE_HANDOFF/product-traces.jsonl" \
+  --action-results-jsonl "$RULE_HANDOFF/action-results.jsonl" \
+  --artifact-manifest "$RULE_HANDOFF/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=world_model_rule_candidate_promotion_gate
+```
+
+The registered handoff is `promote`: the single promoted Tesla founder rule
+candidate becomes one ProductTrace row, the promoted deterministic rule result
+refutes the Elon Musk answer through `world_model_rule_candidate`, the risk
+decision is `high/abstain`, and the action executor records a dry-run abstain
+result. The handoff remains target-specific and source-citation backed; pending
+rule-input rows remain non-evidence work items.
+
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:
 

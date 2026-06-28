@@ -372,9 +372,13 @@ emits one candidate `refuted` entity-role result for `rule:record-1:1`; the
 remaining `36` tasks stay as explicit input requests.
 `promote_world_model_rule_candidates.py` now promotion-gates that deterministic
 candidate and promotes it with `0` blocked candidates and `36` pending input
-rows. The next implementation step is therefore building a source-backed rule
-candidate handoff and expanding typed input fills, not another source-backed
-catalog replay.
+rows. `build_world_model_rule_candidate_handoff.py` then converts that promoted
+candidate into a ProductTrace-visible rule-candidate handoff: the deterministic
+entity-role result refutes the Elon Musk answer, the risk decision is
+`high/abstain`, and the dry-run action result is registered with source-citation
+provenance. The next implementation step is therefore expanding typed input
+fills and provenance-backed citation evidence for more rows, not another broad
+source-backed catalog replay.
 
 ## Product Trace Demo
 
@@ -1580,6 +1584,18 @@ the risk decision is `high/abstain`, and the executor registry records a
 dry-run abstain action result. The manifest verifies `5/5` files, and the
 handoff remains scoped to `1/89` rather than claiming broad source-family
 recall.
+
+`benchmarks/build_world_model_rule_candidate_handoff.py` now closes the
+deterministic-rule side of the same Tesla slot. It consumes the promoted rule
+candidate from
+`artifacts/truthfulqa-frontier-smollm2-l80-world-model-rule-candidate-promotion-gate/`
+and writes
+`artifacts/truthfulqa-frontier-smollm2-l80-world-model-rule-candidate-handoff/`.
+The handoff is `promote` for one ProductTrace row: `world_model_rule_candidate`
+refutes the Elon Musk founder answer using the promoted entity-role candidate,
+the risk decision is `high/abstain`, and the executor registry records one
+dry-run abstain action. The manifest verifies `5/5` files; the other `36` rule
+rows stay pending input work and are not verifier evidence.
 
 ## Next Steps
 

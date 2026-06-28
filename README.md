@@ -525,6 +525,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `build_world_model_rule_input_collection_plan.py` | Lowers rule-authoring input requests into typed collection tasks and execution batches for numeric, entity-role, temporal, and mechanism inputs without copying answers or executing verifier candidates. |
 | `fill_world_model_rule_inputs_from_correction_handoff.py` | Fills a conservative subset of typed rule inputs from promoted source-family correction handoffs and ProductTrace claim bindings, then leaves filled rows as candidate-only adapter inputs. |
 | `promote_world_model_rule_candidates.py` | Fail-closed promotion gate for deterministic rule candidates; validates explicit rule inputs, confidence, source citation, and candidate metadata while leaving pending input rows queued. |
+| `build_world_model_rule_candidate_handoff.py` | Converts promoted deterministic rule candidates into target-specific ProductTrace/action-result handoffs, preserving source-citation provenance and failing closed on unpromoted or malformed candidates. |
 | `build_source_family_structured_qa_correction_handoff.py` | Converts promoted source-family `mapped_qa_fact_candidate` rows into a target-specific structured-QA correction corpus plus ProductTrace/action-result JSONL, fail-closing unless the upstream covered-fact route was promoted. |
 | `run_source_family_citation_search_workflow.py` | Runs the source-family citation path end to end with local source catalogs: sanitized request handoff, source-family catalog ranking with optional source-family-diverse reranking, provenance audit, target-route-aware blind-spot query sweep, optional controlled-vs-external comparison, manifest, and registry record. |
 | `run_external_citation_search_adapter_workflow.py` | Invokes a local external citation/search command with sanitized `{input}` / `{output}` JSONL boundaries, then runs the target-route-aware citation-search evidence workflow before recording any route decision. |
@@ -617,6 +618,7 @@ evidence rates and maximum final false-accept / false-accept-delta thresholds.
 | `build_world_model_rule_input_collection_plan.py` | Turns rule input requests into typed collection tasks and batches before any deterministic rule execution. |
 | `fill_world_model_rule_inputs_from_correction_handoff.py` | Fills a conservative subset of typed rule inputs from promoted correction handoffs and ProductTrace claim bindings. |
 | `promote_world_model_rule_candidates.py` | Promotion-gates deterministic rule candidates before downstream handoff. |
+| `build_world_model_rule_candidate_handoff.py` | Turns promoted deterministic rule candidates into ProductTrace/action-result handoffs with source-citation provenance. |
 | `build_source_family_structured_qa_correction_handoff.py` | Turns promoted source-family mapped QA facts into target-specific correction ProductTrace/action-result handoffs while fail-closing unpromoted route inputs. |
 | `run_wikidata_structured_qa_route_workflow.py` | Runs covered-facts structured QA or structured-fact route workflows, optionally expands structured-fact claims into paraphrase robustness variants, and records support/refutation metrics for Wikidata properties present in the QA corpus. |
 | `analyze_retrieval_route_gaps.py` | Explains blocked retrieval routes from verified-record sidecars by coverage, status, gap bucket, source, and example records. |
@@ -745,6 +747,7 @@ evidence rates and maximum final false-accept / false-accept-delta thresholds.
 | `build_world_model_rule_input_collection_plan.py` | 将 rule-authoring input request 降成 numeric、entity-role、temporal、mechanism 输入采集任务与执行 batch，不复制答案，也不执行 verifier 候选。 |
 | `fill_world_model_rule_inputs_from_correction_handoff.py` | 从已 promoted source-family correction handoff 和 ProductTrace claim binding 中保守填充部分 typed rule inputs，填充结果仍只是候选 adapter 输入。 |
 | `promote_world_model_rule_candidates.py` | 对 deterministic rule candidate 做 fail-closed promotion gate，检查显式 rule input、confidence、source citation 与 candidate metadata。 |
+| `build_world_model_rule_candidate_handoff.py` | 将已 promoted deterministic rule candidate 转成目标特定 ProductTrace/action-result handoff，保留 source citation provenance，并对未 promoted 或 malformed candidate fail-closed。 |
 | `build_source_family_structured_qa_correction_handoff.py` | 将已 promoted source-family `mapped_qa_fact_candidate` 行转换成目标特定 structured-QA correction corpus 与 ProductTrace/action-result JSONL；若上游 covered-fact route 未 promoted 则 fail-closed。 |
 | `run_source_family_citation_search_workflow.py` | 用本地 source catalog 一次跑完 source-family citation 路径：去敏 request handoff、可选 source-family-diverse rerank、provenance audit、目标路由感知的 blind-spot query sweep、可选 controlled-vs-external comparison、manifest 和 registry 记录。 |
 | `run_external_citation_search_adapter_workflow.py` | 用去敏 `{input}` / `{output}` JSONL 边界调用本地外部 citation/search 命令，并在记录任何 route decision 前自动进入目标路由感知的 citation-search evidence workflow。 |
@@ -836,6 +839,7 @@ false-accept-delta 上限。
 | `build_world_model_rule_input_collection_plan.py` | 在 deterministic rule 执行前，将 rule input request 转成 typed collection task 和 batch。 |
 | `fill_world_model_rule_inputs_from_correction_handoff.py` | 从 promoted correction handoff 与 ProductTrace claim binding 中保守填充一部分 typed rule inputs。 |
 | `promote_world_model_rule_candidates.py` | 在下游 handoff 前对 deterministic rule candidate 做 promotion gate。 |
+| `build_world_model_rule_candidate_handoff.py` | 将 promoted deterministic rule candidate 接入 ProductTrace/action-result handoff，并保留 source-citation provenance。 |
 | `build_source_family_structured_qa_correction_handoff.py` | 将已 promoted source-family mapped QA fact 转成目标特定 correction ProductTrace/action-result handoff，并对未 promoted route 输入 fail-closed。 |
 | `run_wikidata_structured_qa_route_workflow.py` | 执行 covered-facts structured QA 或 structured-fact route workflow，可展开 structured-fact paraphrase robustness 变体，并记录 QA corpus 覆盖属性的支持/反证指标。 |
 | `analyze_retrieval_route_gaps.py` | 基于 verified-record sidecar 解释 blocked retrieval route 的覆盖、状态、gap bucket、证据来源和具体样例。 |

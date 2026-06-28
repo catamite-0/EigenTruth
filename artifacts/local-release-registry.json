@@ -6584,6 +6584,49 @@
       "name": "truthfulqa-frontier-smollm2-l80-world-model-rule-candidate-promotion-gate",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-world-model-rule-candidate-promotion-gate/world-model-rule-candidate-promotion-gate.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-world-model-rule-candidate-handoff/artifact-manifest.json",
+        "blocked_candidate_count": 0,
+        "evidence": "world_model_rule_candidate_promotion_gate",
+        "status": "promote",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "trace_count": 1,
+        "workflow": "world_model_rule_candidate_handoff"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-world-model-rule-candidate-handoff",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-world-model-rule-candidate-handoff/world-model-rule-candidate-handoff.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "product_trace",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-world-model-rule-candidate-handoff/artifact-manifest.json",
+        "evidence": "world_model_rule_candidate_promotion_gate",
+        "status": "promote",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "trace_count": 1,
+        "workflow": "world_model_rule_candidate_handoff"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-world-model-rule-candidate-handoff",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-world-model-rule-candidate-handoff/product-traces.jsonl",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "action_result",
+      "metadata": {
+        "action_result_count": 1,
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-world-model-rule-candidate-handoff/artifact-manifest.json",
+        "evidence": "world_model_rule_candidate_promotion_gate",
+        "status": "promote",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "world_model_rule_candidate_handoff"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-world-model-rule-candidate-handoff",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-world-model-rule-candidate-handoff/action-results.jsonl",
+      "version": "0.1"
     }
   ],
   "schema_version": 1
