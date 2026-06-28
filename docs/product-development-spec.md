@@ -433,12 +433,17 @@ For product features:
   compare controlled versus external sweeps. It is intentionally fail-closed:
   snippets that pass provenance still block if they do not refute blind spots
   under the configured verifier/query gates.
+- The command boundary is now explicit:
+  `run_external_citation_search_adapter_workflow.py` writes sanitized request
+  JSONL, invokes a local external citation/search command with `{input}` and
+  `{output}` placeholders, then automatically runs the same fail-closed evidence
+  workflow. This is the preferred next adapter entry point because command
+  output cannot bypass provenance, query-sweep, or controlled-comparison gates.
 
 ### Next Verification Adapter Work
 
-- Run the sanitized unresolved citation/search requests through an external
-  source adapter, feed the returned JSONL back into
-  `run_citation_search_evidence_workflow.py`, then promote only if the
+- Run a real local citation/search adapter through
+  `run_external_citation_search_adapter_workflow.py`; promote only if the
   provenance audit, external query sweep, and controlled-vs-external comparison
   pass.
 - Connect `StructuredStateVerifier` to additional live database, business-rule, and domain-state sources behind optional adapters; the current reproducible path uses local JSON state sources, stdlib SQLite, and mapped local tool outputs.

@@ -1238,6 +1238,11 @@ optionally compares controlled versus external sweeps before promotion. This
 keeps citation snippets out of verifier evidence unless the route-quality gates
 actually pass.
 
+`benchmarks/run_external_citation_search_adapter_workflow.py` now wraps that
+path with a concrete command boundary: it writes the sanitized request JSONL,
+invokes a local adapter command with `{input}` and `{output}` placeholders, and
+then runs the evidence workflow on the returned JSONL.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -1263,8 +1268,8 @@ actually pass.
 6. Promote a Qwen l20/l80 readiness baseline through the same registry workflow
    if Qwen-specific runtime evidence is needed; SmolLM2 now has the first
    non-tiny registered readiness/release candidate.
-7. Execute the sanitized citation/search adapter requests and feed returned
-   JSONL through `run_citation_search_evidence_workflow.py`; only treat returned
+7. Execute a real local citation/search adapter through
+   `run_external_citation_search_adapter_workflow.py`; only treat returned
    documents as verifier evidence if provenance, external query-sweep, and
    controlled-vs-external comparison gates pass.
 8. Extend the new verifier-stability path from structured QA to real retrieval,

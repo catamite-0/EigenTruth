@@ -692,11 +692,15 @@ Added the first monitor-first tool-selection audit layer:
   the blind spots, and compared against controlled query-sweep evidence in one
   fail-closed workflow. This preserves the frontier distinction between
   collected snippets and route-quality evidence.
+- `run_external_citation_search_adapter_workflow.py` adds the local command
+  boundary on top of that gate: it writes sanitized `{input}` request JSONL,
+  requires the adapter to write `{output}` result JSONL, and then runs the
+  return-side evidence workflow before any promotion metadata is recorded.
 
 ## Next Research-to-Code Candidates
 
 1. Convert the target-specific Wikidata source docs into structured-fact/QA corpora, then rerun the blind-spot correction-route audit instead of another lexical overlap sweep.
-2. Run the registered sanitized citation/search request JSONL through an external source adapter, then feed returned results through `run_citation_search_evidence_workflow.py` before route promotion.
+2. Run a real local citation/search adapter through `run_external_citation_search_adapter_workflow.py`, then promote only if the return-side evidence gates pass.
 3. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
 4. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
 5. Materialize a real `frontier_audit` release candidate with the registered covered-facts external-evidence handoff and external-prediction triple matrix artifact, then export the resulting promotion contract.

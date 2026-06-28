@@ -1646,6 +1646,34 @@ python benchmarks/run_citation_search_evidence_workflow.py \
 This command does not fetch network content. Adapter results remain local input,
 and promotion requires both provenance and route-quality gates to pass.
 
+## `run_external_citation_search_adapter_workflow.py`
+
+Runs the command-boundary version of the citation/search adapter path. The
+workflow first writes sanitized request JSONL from the unresolved queue, invokes
+a local external command without a shell, then feeds the returned result JSONL
+through `run_citation_search_evidence_workflow.py`.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-external-citation-search-adapter-workflow
+
+python benchmarks/run_external_citation_search_adapter_workflow.py \
+  --queue artifacts/truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue/unresolved-evidence-queue.json \
+  --search-command "python path/to/search_adapter.py {input} {output}" \
+  --scores artifacts/smollm2_truthfulqa_l80_scores_with_statements.json \
+  --blind-spots artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
+  --controlled-sweep artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json \
+  --output-dir "$OUT" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-external-citation-search-adapter-workflow \
+  --version 0.1
+```
+
+The command must include both `{input}` and `{output}` placeholders. `{input}`
+receives the sanitized adapter-request JSONL; `{output}` is the result JSONL
+path the adapter must write. Returned snippets still have to pass provenance,
+blind-spot query, and controlled-vs-external gates before any route decision is
+promoted.
+
 ## `eval_verifier_ensemble.py`
 
 Compares a single calibrated internal diagnostic against a retrieval/verifier
