@@ -35,6 +35,7 @@ Added DECK-style detectability taxonomy reports:
 - `benchmarks/eval_detectability_taxonomy.py` reads existing JSON or JSONL score dumps with selected-column loading and writes a JSON report without loading a model.
 - `benchmarks/run_truthfulqa_frontier_workflow.py` can now emit those taxonomy reports per frontier cell, add them to the top-level artifact manifest, and carry the paths forward into release-evidence comparison.
 - The registered l80 replay `report:truthfulqa-frontier-qwen-smollm2-l80-detectability:0.1` reuses existing Qwen/SmolLM2 score dumps and writes per-cell taxonomy reports in 7.5s. With `eigenscore` and `nll_answer` treated as lower-is-risk axes, Qwen has entrenched false-rate `0.000`, while SmolLM2 has `89/306 = 0.291`.
+- `benchmarks/analyze_detectability_blind_spots.py` turns a blocked taxonomy cell into row-level examples plus feature/question-type summaries. The registered SmolLM2 artifact `report:truthfulqa-frontier-smollm2-l80-entrenched-blind-spots:0.1` exports all 89 false entrenched records; the largest groups are definition/what (`39`), person (`13`), and choice (`8`) questions, with mean answer length `5.18` tokens.
 - This is evidence-only: entrenched false records should route to independent verifier, retrieval, citation, structured-fact, or world-model correction paths; the taxonomy does not promote a new control default by itself.
 
 Added prompt-answer pathway diagnostics:

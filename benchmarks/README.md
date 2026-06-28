@@ -1217,6 +1217,33 @@ release-evidence artifact
 keeps verifier stability promoted, keeps abstention blocked, and also blocks
 the detectability track on SmolLM2 at the default `0.25` blind-spot gate.
 
+## `analyze_detectability_blind_spots.py`
+
+Exports row-level examples from a detectability taxonomy cell without loading a
+model. Use it after a DECK report blocks a release gate to inspect which
+questions and answer patterns make up the blind spot.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots
+
+python benchmarks/analyze_detectability_blind_spots.py \
+  --taxonomy-report artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/detectability-taxonomy-report.json \
+  --cell entrenched \
+  --json "$OUT/smollm2-l80-entrenched-blind-spots.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-entrenched-blind-spots \
+  --version 0.1
+```
+
+The registered SmolLM2 l80 report
+(`report:truthfulqa-frontier-smollm2-l80-entrenched-blind-spots:0.1`) exports
+all `89` false entrenched records and passes artifact-manifest verification.
+The largest groups are definition/what questions (`39`), person questions
+(`13`), and choice questions (`8`); the mean answer length is `5.18` tokens.
+These records are the next concrete target for verifier/world-model correction
+route design.
+
 ## `eval_verifier_ensemble.py`
 
 Compares a single calibrated internal diagnostic against a retrieval/verifier

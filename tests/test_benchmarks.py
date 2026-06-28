@@ -34557,6 +34557,94 @@ def test_eval_detectability_taxonomy_reads_score_dump_and_writes_report(tmp_path
     assert saved["report"]["blind_spot"]["detected_by"] == ["judge_or_external_verifier"]
 
 
+def test_analyze_detectability_blind_spots_exports_rows_manifest_registry(tmp_path):
+    module = importlib.import_module("benchmarks.analyze_detectability_blind_spots")
+    registry_module = importlib.import_module("eigentruth.registry")
+    from eigentruth.eval.score_dump import ScoreDump, write_score_dump_jsonl
+
+    scores_path = tmp_path / "scores.manifest.json"
+    taxonomy_path = tmp_path / "detectability-taxonomy.json"
+    output_path = tmp_path / "blind-spots.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    dump = ScoreDump.from_mapping({
+        "config": {"model": "synthetic", "layer": -1},
+        "labels": [0, 1, 1, 0],
+        "scores": {
+            "consistency": [0.90, 0.92, 0.10, 0.10],
+            "confidence": [0.90, 0.95, 0.90, 0.10],
+            "truth_proj": [0.1, 4.0, 3.0, 0.2],
+        },
+        "statements": [
+            {"question": "Who founded ExampleCo?", "answer": "Ada.", "text": "Who founded ExampleCo? Ada."},
+            {
+                "question": "What time is it right now?",
+                "answer": "It is 10:00 AM.",
+                "text": "What time is it right now? It is 10:00 AM.",
+            },
+            {"question": "Where is Example City?", "answer": "On Mars.", "text": "Where is Example City? On Mars."},
+            {"question": "What is 2 + 2?", "answer": "4.", "text": "What is 2 + 2? 4."},
+        ],
+    })
+    write_score_dump_jsonl(dump, scores_path)
+    taxonomy_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "detectability_taxonomy",
+            "status": "complete",
+            "source": {"score_dump_path": str(scores_path)},
+            "config": {
+                "consistency_signal": "consistency",
+                "confidence_signal": "confidence",
+                "consistency_direction": "higher",
+                "confidence_direction": "higher",
+            },
+            "report": {
+                "axes": {
+                    "consistency": {"direction": "higher", "threshold": 0.5, "normalized_threshold": 0.5},
+                    "confidence": {"direction": "higher", "threshold": 0.5, "normalized_threshold": 0.5},
+                },
+                "cells": {
+                    "drift": {"n_total": 1, "n_false": 1},
+                    "entrenched": {"n_total": 2, "n_false": 1},
+                    "confabulation": {"n_total": 1, "n_false": 0},
+                    "knotted": {"n_total": 0, "n_false": 0},
+                },
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        taxonomy_report_path=taxonomy_path,
+        output_path=output_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="blind-spot-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    saved = json.loads(output_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get("report:blind-spot-unit:0.1")
+
+    assert payload["status"] == "complete"
+    assert saved["summary"]["selected_record_count"] == 1
+    assert saved["summary"]["assignment_check_passed"] is True
+    assert saved["summary"]["question_type_counts"] == {"temporal": 1}
+    assert saved["summary"]["feature_counts"]["has_number"] == 1
+    assert saved["summary"]["feature_counts"]["is_time_sensitive"] == 1
+    assert saved["records"][0]["record_index"] == 1
+    assert saved["records"][0]["question_type"] == "temporal"
+    assert saved["records"][0]["scores"]["truth_proj"] == pytest.approx(4.0)
+    assert manifest["summary"]["missing_count"] == 0
+    assert manifest["artifacts"]["blind_spot_analysis_report"]["exists"] is True
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "detectability_blind_spot_analysis"
+    assert record.metadata["selected_record_count"] == 1
+    assert record.metadata["suite"] == "unit"
+
+
 def test_eval_score_ensemble_compares_single_and_combined_signals(tmp_path):
     module = importlib.import_module("benchmarks.eval_score_ensemble")
     scores_path = tmp_path / "scores.json"

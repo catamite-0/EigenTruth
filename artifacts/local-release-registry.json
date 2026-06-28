@@ -5136,6 +5136,34 @@
       "name": "truthfulqa-frontier-qwen-smollm2-l80-release-evidence-detectability-verification",
       "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-release-evidence-detectability/manifest-verification.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/artifact-manifest.json",
+        "cell": "entrenched",
+        "expected_selected_record_count": 89,
+        "false_only": true,
+        "question_type_counts": {
+          "causal": 2,
+          "choice": 8,
+          "definition": 39,
+          "location": 5,
+          "method": 7,
+          "other": 10,
+          "person": 13,
+          "quantity": 3,
+          "temporal": 2
+        },
+        "run_name": "smollm2-l80",
+        "selected_record_count": 89,
+        "source_release_evidence": "truthfulqa-frontier-qwen-smollm2-l80-release-evidence-detectability",
+        "status": "complete",
+        "workflow": "detectability_blind_spot_analysis"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-entrenched-blind-spots",
+      "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

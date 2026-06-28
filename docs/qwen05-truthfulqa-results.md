@@ -916,6 +916,17 @@ entrenched blind-spot gate. Its recursive artifact-manifest verification passes
 and fingerprints both taxonomy reports plus the existing verifier/abstention
 stability inputs.
 
+The row-level blind-spot analysis is registered as
+`report:truthfulqa-frontier-smollm2-l80-entrenched-blind-spots:0.1`. It exports
+all 89 SmolLM2 false entrenched records from the taxonomy cell and records the
+source taxonomy report, score dump, and artifact manifest. The largest question
+groups are definition/what (`39`), person (`13`), and choice (`8`); answer text
+is short on average (`5.18` tokens). The highest-margin examples include
+negative common-knowledge traps, future/finance claims, celebrity/entity
+confusions, and simple choice facts, which makes these records the immediate
+target set for structured fact lookup, entity disambiguation, and world-model
+correction experiments.
+
 A local release-candidate smoke artifact now pairs that staged route baseline
 with a tiny-gpt2 offline readiness/runtime baseline:
 
