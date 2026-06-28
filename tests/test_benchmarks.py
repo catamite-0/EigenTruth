@@ -19925,6 +19925,11 @@ def _write_release_gate_overhead_source_report(
     fingerprint_misses=0,
     fingerprint_entries=0,
     fingerprint_hit_rate=None,
+    json_requests=2,
+    json_hits=1,
+    json_misses=1,
+    json_entries=1,
+    json_hit_rate=0.5,
 ):
     path.write_text(
         json.dumps({
@@ -19956,11 +19961,11 @@ def _write_release_gate_overhead_source_report(
                     "hit_rate": fingerprint_hit_rate,
                 },
                 "artifact_json_cache": {
-                    "requests": 2,
-                    "hits": 1,
-                    "misses": 1,
-                    "entries": 1,
-                    "hit_rate": 0.5,
+                    "requests": json_requests,
+                    "hits": json_hits,
+                    "misses": json_misses,
+                    "entries": json_entries,
+                    "hit_rate": json_hit_rate,
                 },
             },
         }),
@@ -19987,6 +19992,11 @@ def test_release_gate_overhead_baseline_summarizes_cache_and_registers(tmp_path)
         fingerprint_misses=10,
         fingerprint_entries=10,
         fingerprint_hit_rate=0.0,
+        json_requests=6,
+        json_hits=1,
+        json_misses=5,
+        json_entries=5,
+        json_hit_rate=1 / 6,
     )
     _write_release_gate_overhead_source_report(
         warm_report,
@@ -20000,6 +20010,11 @@ def test_release_gate_overhead_baseline_summarizes_cache_and_registers(tmp_path)
         fingerprint_misses=1,
         fingerprint_entries=10,
         fingerprint_hit_rate=0.9,
+        json_requests=6,
+        json_hits=5,
+        json_misses=1,
+        json_entries=5,
+        json_hit_rate=5 / 6,
     )
 
     payload = module.build_release_gate_overhead_baseline(
@@ -20011,6 +20026,8 @@ def test_release_gate_overhead_baseline_summarizes_cache_and_registers(tmp_path)
             version="0.1",
             max_total_seconds=2.0,
             min_last_fingerprint_cache_hit_rate=0.9,
+            min_json_cache_hit_rate=0.5,
+            min_last_json_cache_hit_rate=0.8,
             min_report_count=2,
             compact_json=True,
             metadata={"suite": "unit"},
@@ -20030,12 +20047,27 @@ def test_release_gate_overhead_baseline_summarizes_cache_and_registers(tmp_path)
     assert payload["summary"]["artifact_fingerprint_cache"]["hits"] == 9
     assert payload["summary"]["artifact_fingerprint_cache"]["weighted_hit_rate"] == pytest.approx(0.45)
     assert payload["summary"]["artifact_fingerprint_cache"]["last_hit_rate"] == pytest.approx(0.9)
+    assert payload["summary"]["artifact_json_cache"]["weighted_hit_rate"] == pytest.approx(0.5)
+    assert payload["summary"]["artifact_json_cache"]["last_hit_rate"] == pytest.approx(5 / 6)
     assert payload["summary"]["optimization"]["fingerprint_cache_status"] == "warm_reuse_observed"
     assert payload["registry_record"] == "report:release-gate-overhead:0.1"
+    assert {
+        metric["metric"]: metric["status"]
+        for metric in payload["metrics"]
+        if metric["status"] != "observed"
+    } == {
+        "total_seconds.max": "pass",
+        "artifact_fingerprint_cache.last_hit_rate": "pass",
+        "artifact_json_cache.weighted_hit_rate": "pass",
+        "artifact_json_cache.last_hit_rate": "pass",
+        "report_count": "pass",
+    }
     assert record.metadata["workflow"] == "release_gate_overhead_baseline"
     assert record.metadata["status"] == "promote"
     assert record.metadata["report_count"] == 2
     assert record.metadata["fingerprint_cache_last_hit_rate"] == pytest.approx(0.9)
+    assert record.metadata["artifact_json_cache_weighted_hit_rate"] == pytest.approx(0.5)
+    assert record.metadata["artifact_json_cache_last_hit_rate"] == pytest.approx(5 / 6)
     assert record.metadata["suite"] == "unit"
     assert "\n  " not in saved_text
 
@@ -20072,6 +20104,47 @@ def test_release_gate_overhead_baseline_cli_blocks_slow_report(tmp_path):
     assert payload["metrics"][0]["metric"] == "total_seconds.max"
     assert payload["metrics"][0]["status"] == "blocked"
     assert payload["decision"]["blocking_reasons"]
+
+
+def test_release_gate_overhead_baseline_cli_blocks_cold_json_cache(tmp_path):
+    module = importlib.import_module("benchmarks.run_release_gate_overhead_baseline")
+    source_report = tmp_path / "release-cold-json-cache.json"
+    output_path = tmp_path / "release-gate-overhead.json"
+    _write_release_gate_overhead_source_report(
+        source_report,
+        total_seconds=0.4,
+        phase_total_seconds=0.3,
+        json_requests=8,
+        json_hits=1,
+        json_misses=7,
+        json_entries=7,
+        json_hit_rate=0.125,
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        module.main([
+            "--report",
+            str(source_report),
+            "--json",
+            str(output_path),
+            "--min-last-json-cache-hit-rate",
+            "0.9",
+            "--fail-on-blocked",
+        ])
+
+    assert exc_info.value.code == 1
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    blocked = [metric for metric in payload["metrics"] if metric["status"] == "blocked"]
+    assert blocked == [
+        {
+            "metric": "artifact_json_cache.last_hit_rate",
+            "comparison": "min",
+            "observed": 0.125,
+            "threshold": 0.9,
+            "status": "blocked",
+            "reason": "artifact_json_cache.last_hit_rate: 0.125 below gate 0.9",
+        },
+    ]
 
 
 def test_run_release_candidate_registry_workflow_cli_blocks_without_registration(tmp_path):

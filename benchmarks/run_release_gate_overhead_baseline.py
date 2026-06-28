@@ -37,6 +37,8 @@ class ReleaseGateOverheadBaselineConfig:
     max_phase_total_seconds: float | None = None
     min_fingerprint_cache_hit_rate: float | None = None
     min_last_fingerprint_cache_hit_rate: float | None = None
+    min_json_cache_hit_rate: float | None = None
+    min_last_json_cache_hit_rate: float | None = None
     min_report_count: int | None = None
     compact_json: bool = False
     metadata: Mapping[str, Any] = field(default_factory=dict)
@@ -58,6 +60,8 @@ class ReleaseGateOverheadBaselineConfig:
             "max_phase_total_seconds",
             "min_fingerprint_cache_hit_rate",
             "min_last_fingerprint_cache_hit_rate",
+            "min_json_cache_hit_rate",
+            "min_last_json_cache_hit_rate",
         ):
             value = getattr(self, field_name)
             if value is not None:
@@ -78,6 +82,8 @@ def build_release_gate_overhead_baseline(config: ReleaseGateOverheadBaselineConf
         "max_phase_total_seconds": config.max_phase_total_seconds,
         "min_fingerprint_cache_hit_rate": config.min_fingerprint_cache_hit_rate,
         "min_last_fingerprint_cache_hit_rate": config.min_last_fingerprint_cache_hit_rate,
+        "min_json_cache_hit_rate": config.min_json_cache_hit_rate,
+        "min_last_json_cache_hit_rate": config.min_last_json_cache_hit_rate,
         "min_report_count": config.min_report_count,
     }
     metrics = _gate_metrics(summary, gates)
@@ -264,6 +270,7 @@ def _fingerprint_cache_status(cache: Mapping[str, Any]) -> str:
 
 def _gate_metrics(summary: Mapping[str, Any], gates: Mapping[str, Any]) -> list[dict[str, Any]]:
     fingerprint_cache = _mapping(summary.get("artifact_fingerprint_cache"))
+    json_cache = _mapping(summary.get("artifact_json_cache"))
     return [
         _max_metric(
             "total_seconds.max",
@@ -284,6 +291,16 @@ def _gate_metrics(summary: Mapping[str, Any], gates: Mapping[str, Any]) -> list[
             "artifact_fingerprint_cache.last_hit_rate",
             _finite_float(fingerprint_cache.get("last_hit_rate")),
             gates.get("min_last_fingerprint_cache_hit_rate"),
+        ),
+        _min_metric(
+            "artifact_json_cache.weighted_hit_rate",
+            _finite_float(json_cache.get("weighted_hit_rate")),
+            gates.get("min_json_cache_hit_rate"),
+        ),
+        _min_metric(
+            "artifact_json_cache.last_hit_rate",
+            _finite_float(json_cache.get("last_hit_rate")),
+            gates.get("min_last_json_cache_hit_rate"),
         ),
         _min_metric(
             "report_count",
@@ -342,6 +359,7 @@ def _gate_metric(
 def _record_registry(config: ReleaseGateOverheadBaselineConfig, payload: Mapping[str, Any]) -> None:
     summary = _mapping(payload.get("summary"))
     fingerprint_cache = _mapping(summary.get("artifact_fingerprint_cache"))
+    json_cache = _mapping(summary.get("artifact_json_cache"))
     registry = ArtifactRegistry.load_json(config.registry_path)
     registry.record_report(
         name=str(config.name),
@@ -356,6 +374,8 @@ def _record_registry(config: ReleaseGateOverheadBaselineConfig, payload: Mapping
             "phase_total_seconds_mean": _mapping(summary.get("phase_total_seconds")).get("mean"),
             "fingerprint_cache_weighted_hit_rate": fingerprint_cache.get("weighted_hit_rate"),
             "fingerprint_cache_last_hit_rate": fingerprint_cache.get("last_hit_rate"),
+            "artifact_json_cache_weighted_hit_rate": json_cache.get("weighted_hit_rate"),
+            "artifact_json_cache_last_hit_rate": json_cache.get("last_hit_rate"),
             "compact_json": config.compact_json,
             **dict(config.metadata),
         },
@@ -484,6 +504,8 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseGateOverheadBaselineCo
         max_phase_total_seconds=args.max_phase_total_seconds,
         min_fingerprint_cache_hit_rate=args.min_fingerprint_cache_hit_rate,
         min_last_fingerprint_cache_hit_rate=args.min_last_fingerprint_cache_hit_rate,
+        min_json_cache_hit_rate=args.min_json_cache_hit_rate,
+        min_last_json_cache_hit_rate=args.min_last_json_cache_hit_rate,
         min_report_count=args.min_report_count,
         compact_json=bool(args.compact_json),
         metadata=_parse_metadata(args.metadata or ()),
@@ -516,6 +538,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-phase-total-seconds", type=float, default=None)
     parser.add_argument("--min-fingerprint-cache-hit-rate", type=float, default=None)
     parser.add_argument("--min-last-fingerprint-cache-hit-rate", type=float, default=None)
+    parser.add_argument("--min-json-cache-hit-rate", type=float, default=None)
+    parser.add_argument("--min-last-json-cache-hit-rate", type=float, default=None)
     parser.add_argument("--min-report-count", type=int, default=None)
     parser.add_argument("--metadata", action="append", default=[])
     parser.add_argument("--compact-json", action="store_true")

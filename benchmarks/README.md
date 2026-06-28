@@ -2870,14 +2870,16 @@ python benchmarks/run_release_gate_overhead_baseline.py \
   --version 0.1 \
   --max-total-seconds 30 \
   --min-last-fingerprint-cache-hit-rate 0.90 \
+  --min-last-json-cache-hit-rate 0.90 \
   --min-report-count 2 \
   --fail-on-blocked
 ```
 
 The report records `total_seconds`, `phase_total_seconds`, per-phase timing,
 artifact fingerprint/JSON cache hit rates, and the slowest observed phase. Use
-`--min-last-fingerprint-cache-hit-rate` to verify the warm run actually reused
-the persisted fingerprint cache.
+`--min-last-fingerprint-cache-hit-rate` and
+`--min-last-json-cache-hit-rate` to verify the warm run actually reused the
+persisted fingerprint and parsed-JSON artifact caches.
 
 Use `export_product_promotion_contract.py` after a release candidate promotes to
 write the smaller product handoff artifact consumed by demos and control-plane
