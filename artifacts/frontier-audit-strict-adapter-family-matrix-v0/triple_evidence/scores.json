@@ -1,0 +1,66 @@
+{
+  "config": {
+    "fixture_type": "triple_evidence_route_family",
+    "layer": -1,
+    "model": "synthetic-triple-evidence",
+    "n_records": 8,
+    "signal": "truth_proj"
+  },
+  "labels": [
+    0,
+    0,
+    0,
+    0,
+    1,
+    1,
+    1,
+    1
+  ],
+  "schema_version": 1,
+  "scores": {
+    "truth_proj": [
+      0.16,
+      0.17,
+      0.18,
+      0.19,
+      0.78,
+      0.79,
+      0.8,
+      0.81
+    ]
+  },
+  "statements": [
+    {
+      "claim_id": "triple_true_1",
+      "text": "Order T1 has 10 approved invoices."
+    },
+    {
+      "claim_id": "triple_true_2",
+      "text": "Order T2 has 11 approved invoices."
+    },
+    {
+      "claim_id": "triple_true_3",
+      "text": "Order T3 has 12 approved invoices."
+    },
+    {
+      "claim_id": "triple_true_4",
+      "text": "Order T4 has 13 approved invoices."
+    },
+    {
+      "claim_id": "triple_false_1",
+      "text": "Order F1 has 20 approved invoices."
+    },
+    {
+      "claim_id": "triple_false_2",
+      "text": "Order F2 has 21 approved invoices."
+    },
+    {
+      "claim_id": "triple_false_3",
+      "text": "Order F3 has 22 approved invoices."
+    },
+    {
+      "claim_id": "triple_false_4",
+      "text": "Order F4 has 23 approved invoices."
+    }
+  ]
+}

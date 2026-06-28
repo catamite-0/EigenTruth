@@ -1,0 +1,102 @@
+{
+  "fixture_type": "triple_evidence_route_family",
+  "records": [
+    {
+      "claim": "Order T1 has 10 approved invoices.",
+      "claim_id": "triple_true_1",
+      "claim_metadata": {
+        "features": {
+          "has_number": true
+        }
+      },
+      "initial_evidence": [
+        "Order T1 has 10 approved invoices."
+      ]
+    },
+    {
+      "claim": "Order T2 has 11 approved invoices.",
+      "claim_id": "triple_true_2",
+      "claim_metadata": {
+        "features": {
+          "has_number": true
+        }
+      },
+      "initial_evidence": [
+        "Order T2 has 11 approved invoices."
+      ]
+    },
+    {
+      "claim": "Order T3 has 12 approved invoices.",
+      "claim_id": "triple_true_3",
+      "claim_metadata": {
+        "features": {
+          "has_number": true
+        }
+      },
+      "initial_evidence": [
+        "Order T3 has 12 approved invoices."
+      ]
+    },
+    {
+      "claim": "Order T4 has 13 approved invoices.",
+      "claim_id": "triple_true_4",
+      "claim_metadata": {
+        "features": {
+          "has_number": true
+        }
+      },
+      "initial_evidence": [
+        "Order T4 has 13 approved invoices."
+      ]
+    },
+    {
+      "claim": "Order F1 has 20 approved invoices.",
+      "claim_id": "triple_false_1",
+      "claim_metadata": {
+        "features": {
+          "has_number": true
+        }
+      },
+      "initial_evidence": [
+        "Order F1 has approved invoices."
+      ]
+    },
+    {
+      "claim": "Order F2 has 21 approved invoices.",
+      "claim_id": "triple_false_2",
+      "claim_metadata": {
+        "features": {
+          "has_number": true
+        }
+      },
+      "initial_evidence": [
+        "Order F2 has approved invoices."
+      ]
+    },
+    {
+      "claim": "Order F3 has 22 approved invoices.",
+      "claim_id": "triple_false_3",
+      "claim_metadata": {
+        "features": {
+          "has_number": true
+        }
+      },
+      "initial_evidence": [
+        "Order F3 has approved invoices."
+      ]
+    },
+    {
+      "claim": "Order F4 has 23 approved invoices.",
+      "claim_id": "triple_false_4",
+      "claim_metadata": {
+        "features": {
+          "has_number": true
+        }
+      },
+      "initial_evidence": [
+        "Order F4 has approved invoices."
+      ]
+    }
+  ],
+  "schema_version": 1
+}

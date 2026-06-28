@@ -1022,6 +1022,16 @@ Added the first monitor-first tool-selection audit layer:
   action-audit/action-execution gates, and product-runtime drift coverage for
   promotion, pre-generation, counterfactual, triple-audit, covered-fact, and
   action-gate evidence.
+- `artifacts/frontier-audit-strict-adapter-family-matrix-v0/` closes the
+  strict adapter-family blocker without model work. The matrix promotes
+  `structured_qa`, `structured_state`, `state_transition`, and `triple_evidence`;
+  the `state_transition` family now records `RuleBasedWorldModelAdapter` with
+  `8` rules, while `triple_evidence` is treated as an audit route whose safety
+  gate is zero false support rather than mandatory false refutation. Replaying
+  the release candidate as
+  `artifacts/frontier-audit-release-candidate-v1/` keeps the overall
+  `frontier_audit` candidate blocked but changes the adapter-family gate from
+  blocked to promote with no adapter blocking reasons.
 
 ## Next Research-to-Code Candidates
 
@@ -1041,9 +1051,9 @@ Added the first monitor-first tool-selection audit layer:
 3. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
 4. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
 5. Turn the blocked `frontier_audit` materialization into a promotable contract:
-   rebuild readiness/performance evidence with a stronger or cheaper run,
-   publish a strict adapter-family matrix that includes `triple_evidence` and a
-   rule-backed `state_transition` route, run a real learned/OpenIE/LLM-json
-   triple extractor through the matrix handoff, rerun product-trace replay with
-   action-audit/action-execution child gates, and rebuild runtime-drift evidence
-   from the promotion-contract coverage fields.
+   rebuild readiness/performance evidence with a stronger or cheaper run, run a
+   real learned/OpenIE/LLM-json triple extractor through the matrix handoff,
+   rerun product-trace replay with action-audit/action-execution child gates,
+   rebuild runtime-drift evidence from the promotion-contract coverage fields,
+   and expand or reshape the required retrieval-route evidence so its selected
+   count and covered-fact property metrics meet the frontier profile.

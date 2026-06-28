@@ -401,11 +401,15 @@ For product features:
   evidence and mechanism handoff evidence promote; legacy canonical/paraphrase
   covered-fact route artifacts can now supply per-property metrics by deriving
   them from `covered_fact_score_dump` and `verified_records_jsonl`. The remaining
-  product blockers are stronger readiness/performance evidence, strict adapter
-  family coverage including `triple_evidence` and rule-backed
-  `state_transition`, learned/external triple-prediction matrix evidence,
+  v0 product blockers were stronger readiness/performance evidence, strict
+  adapter-family coverage, learned/external triple-prediction matrix evidence,
   required retrieval-route coverage, product-trace action gates, and complete
-  runtime-drift handoff coverage.
+  runtime-drift handoff coverage. `artifacts/frontier-audit-release-candidate-v1/`
+  removes the adapter-family blocker by using
+  `artifacts/frontier-audit-strict-adapter-family-matrix-v0/`: strict audit now
+  promotes `triple_evidence` and a rule-backed `state_transition` route with
+  `RuleBasedWorldModelAdapter` evidence. The release candidate remains blocked
+  on the other frontier gates, which is the expected fail-closed posture.
 - Blind-spot evidence expansion now has a product-facing collection handoff:
   `build_blind_spot_evidence_collection_corpus.py` compiles the registered
   SmolLM2 L80 plan into source-discovery requests for the `65` high-priority
