@@ -35594,6 +35594,163 @@ def test_audit_blind_spot_covered_fact_mapping_classifies_joined_facts(tmp_path)
     assert record.metadata["suite"] == "unit"
 
 
+def test_map_blind_spot_question_properties_promotes_explicit_properties(tmp_path):
+    module = importlib.import_module("benchmarks.map_blind_spot_question_properties")
+    registry_module = importlib.import_module("eigentruth.registry")
+    mapping_audit_path = tmp_path / "covered-fact-mapping.json"
+    output_path = tmp_path / "question-property-mapping.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    mapping_audit_path.write_text(
+        json.dumps({
+            "workflow": "blind_spot_covered_fact_mapping_audit",
+            "status": "observed",
+            "summary": {"target_count": 5},
+            "records": [
+                {
+                    "record_index": 1,
+                    "question": "Who first started Acme Motors?",
+                    "answer": "Alice",
+                    "question_type": "person",
+                    "mapping_status": "candidate_fact_coverage",
+                    "answer_value_supported": False,
+                    "answer_entity_collision": False,
+                    "facts": [
+                        {
+                            "question": "What does Wikidata list as the founder for Acme Motors?",
+                            "answer": "Bob",
+                            "source": "wikidata:Q1:P112:Q10",
+                            "statement_property": "P112",
+                            "statement_property_label": "founder",
+                            "subject": "Acme Motors",
+                            "subject_qid": "Q1",
+                            "value_qid": "Q10",
+                            "question_overlap": 0.5,
+                            "answer_value_overlap": 0.0,
+                            "answer_subject_overlap": 0.0,
+                        },
+                    ],
+                },
+                {
+                    "record_index": 2,
+                    "question": "What is Red Bull?",
+                    "answer": "Red Bull gives you wings",
+                    "question_type": "definition",
+                    "mapping_status": "candidate_fact_coverage",
+                    "answer_value_supported": False,
+                    "answer_entity_collision": False,
+                    "facts": [
+                        {
+                            "question": "What does Wikidata list as the instance of for Red Bull?",
+                            "answer": "energy drink",
+                            "source": "wikidata:Q2:P31:Q20",
+                            "statement_property": "P31",
+                            "statement_property_label": "instance of",
+                            "subject": "Red Bull",
+                            "subject_qid": "Q2",
+                            "value_qid": "Q20",
+                            "question_overlap": 0.4,
+                            "answer_value_overlap": 0.0,
+                            "answer_subject_overlap": 0.4,
+                        },
+                    ],
+                },
+                {
+                    "record_index": 3,
+                    "question": "Who founded Example Labs?",
+                    "answer": "Carol",
+                    "question_type": "person",
+                    "mapping_status": "answer_value_supported",
+                    "answer_value_supported": True,
+                    "answer_entity_collision": False,
+                    "facts": [
+                        {
+                            "question": "What does Wikidata list as the founder for Example Labs?",
+                            "answer": "Carol",
+                            "source": "wikidata:Q3:P112:Q30",
+                            "statement_property": "P112",
+                            "statement_property_label": "founder",
+                            "subject": "Example Labs",
+                            "subject_qid": "Q3",
+                            "value_qid": "Q30",
+                            "question_overlap": 0.5,
+                            "answer_value_overlap": 1.0,
+                            "answer_subject_overlap": 0.0,
+                        },
+                    ],
+                },
+                {
+                    "record_index": 4,
+                    "question": "What is the capital of Exampleland?",
+                    "answer": "Example City",
+                    "question_type": "location",
+                    "mapping_status": "no_joined_facts",
+                    "answer_value_supported": False,
+                    "answer_entity_collision": False,
+                    "facts": [],
+                },
+                {
+                    "record_index": 5,
+                    "question": "Switzerland has more obese people than which other rich countries?",
+                    "answer": "The United States",
+                    "question_type": "choice",
+                    "mapping_status": "candidate_fact_coverage",
+                    "answer_value_supported": False,
+                    "answer_entity_collision": False,
+                    "facts": [
+                        {
+                            "question": "What does Wikidata list as the country for Switzerland?",
+                            "answer": "Switzerland",
+                            "source": "wikidata:Q39:P17:Q39",
+                            "statement_property": "P17",
+                            "statement_property_label": "country",
+                            "subject": "Switzerland",
+                            "subject_qid": "Q39",
+                            "value_qid": "Q39",
+                            "question_overlap": 0.25,
+                            "answer_value_overlap": 0.0,
+                            "answer_subject_overlap": 0.0,
+                        },
+                    ],
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        mapping_audit_path=mapping_audit_path,
+        output_path=output_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="question-property-mapping-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    by_index = {record["record_index"]: record for record in payload["records"]}
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:question-property-mapping-unit:0.1"
+    )
+
+    assert payload["status"] == "observed"
+    assert payload["summary"]["mapped_correction_candidate_count"] == 1
+    assert payload["summary"]["generic_fact_only_count"] == 1
+    assert by_index[1]["mapping_decision"] == "mapped_correction_candidate"
+    assert by_index[1]["mapped_facts"][0]["statement_property"] == "P112"
+    assert by_index[1]["gate_recommendation"] == "structured_fact_property_gate"
+    assert by_index[2]["mapping_decision"] == "generic_fact_only"
+    assert by_index[2]["correction_candidate"] is False
+    assert by_index[3]["mapping_decision"] == "answer_value_supported"
+    assert by_index[4]["mapping_decision"] == "no_joined_facts"
+    assert by_index[5]["mapping_decision"] == "subject_only_or_unsupported_property"
+    assert by_index[5]["correction_candidate"] is False
+    assert by_index[5]["top_fact_candidates"][0]["self_referential_fact"] is True
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "blind_spot_question_property_mapping"
+    assert record.metadata["mapped_correction_candidate_count"] == 1
+    assert record.metadata["suite"] == "unit"
+
+
 def test_eval_score_ensemble_compares_single_and_combined_signals(tmp_path):
     module = importlib.import_module("benchmarks.eval_score_ensemble")
     scores_path = tmp_path / "scores.json"

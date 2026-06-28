@@ -1505,6 +1505,32 @@ frontier step concrete: add explicit question/property claim mapping for the
 candidate set and route the remaining records to citation retrieval or
 world-model evidence collection.
 
+## `map_blind_spot_question_properties.py`
+
+Consumes the covered-fact mapping audit and applies a stricter lexical
+question/property gate. A joined fact is promoted only when the original
+question exposes a matching property intent, such as "started/founded" mapping
+to Wikidata `P112`; generic facts such as descriptions and `instance of` remain
+diagnostic until citation retrieval or world-model evidence validates them.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-question-property-mapping
+
+python benchmarks/map_blind_spot_question_properties.py \
+  --mapping-audit artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-covered-fact-mapping/blind-spot-covered-fact-mapping.json \
+  --json "$OUT/blind-spot-question-property-mapping.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-blind-spot-question-property-mapping \
+  --version 0.1
+```
+
+The current SmolLM2 l80 run narrows the `10/89` covered-fact candidates to
+`1/89` explicit correction candidate: the Tesla founder question maps to
+Wikidata `P112` with Martin Eberhard and Marc Tarpenning as covered facts.
+Another `7` records are generic fact-only joins. This turns the Wikidata path
+into a precise property gate while making the remaining gap explicit.
+
 ## `eval_verifier_ensemble.py`
 
 Compares a single calibrated internal diagnostic against a retrieval/verifier

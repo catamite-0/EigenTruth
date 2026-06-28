@@ -5425,6 +5425,21 @@
       "name": "truthfulqa-frontier-smollm2-l80-blind-spot-covered-fact-mapping",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-covered-fact-mapping/blind-spot-covered-fact-mapping.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-question-property-mapping/artifact-manifest.json",
+        "evidence": "smollm2_l80_explicit_question_property_mapping",
+        "generic_fact_only_count": 7,
+        "mapped_correction_candidate_count": 1,
+        "status": "observed",
+        "target_count": 89,
+        "workflow": "blind_spot_question_property_mapping"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-blind-spot-question-property-mapping",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-question-property-mapping/blind-spot-question-property-mapping.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

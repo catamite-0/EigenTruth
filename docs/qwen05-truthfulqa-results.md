@@ -1012,6 +1012,17 @@ facts. The immediate next step is explicit question/property mapping for the
 10 candidates, while unresolved records need citation retrieval or world-model
 evidence rather than more lexical overlap tuning.
 
+That explicit mapper is now registered as
+`report:truthfulqa-frontier-smollm2-l80-blind-spot-question-property-mapping:0.1`.
+It applies a stricter lexical property-intent gate on top of the covered-fact
+audit and narrows the `10/89` conservative candidates to `1/89` deployable
+question/property correction candidate: the Tesla founder question maps to
+Wikidata `P112` with Martin Eberhard and Marc Tarpenning as covered facts.
+Another `7` rows are only generic fact joins, `5` support the model answer, `2`
+are answer-entity collisions, and `52` still have no joined facts. The product
+handoff should therefore treat target-specific Wikidata as a precise property
+gate for explicitly mapped claims, not as broad TruthfulQA recall.
+
 A local release-candidate smoke artifact now pairs that staged route baseline
 with a tiny-gpt2 offline readiness/runtime baseline:
 

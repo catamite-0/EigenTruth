@@ -399,14 +399,19 @@ For product features:
 - That handoff has now been executed for Wikidata: the target-specific fetch
   resolves `61` entities and writes `292` CC0 source docs, provenance-audited as
   `external_candidate` with no claim-id, row-link, or label metadata leakage.
-  The lexical query rerun still refutes `0/89` entrenched false blind spots, so
-  the product route should move those facts into structured-fact/QA adapters
-  instead of tuning local retrieval overlap.
+  The lexical query rerun still refutes `0/89` entrenched false blind spots,
+  while structured QA over those covered facts promotes with decision accuracy
+  `1.0`. The explicit question/property mapper then narrows the `10/89`
+  covered-fact candidates to `1/89` deployable correction gate: Tesla founder
+  maps to Wikidata `P112`. The product route can use that slot as precise
+  property evidence, but broad blind-spot recall still needs citation or
+  world-model expansion.
 
 ### Next Verification Adapter Work
 
-- Convert the target-specific Wikidata source docs into structured-fact/QA
-  corpora, then rerun the blind-spot correction-route audit and provenance gate.
+- Promote mapped question/property corrections as a separate verifier route
+  input so the Tesla/P112 covered-fact gate is visible in ProductTrace without
+  implying broad KG coverage.
 - Execute the unresolved high-priority citation/search requests through
   external source adapters, ingest the resulting documents through
   `build_external_retrieval_corpus.py`, and audit provenance before any route
