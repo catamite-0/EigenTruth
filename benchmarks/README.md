@@ -2068,6 +2068,50 @@ families are now `official_statistics=4` and `scholarly=140`; remaining missing
 targets are `official=36`, `scholarly=16`, and `news=4`. The next collection
 plan is down to `9` tasks: `official=5`, `scholarly=3`, and `news=1`.
 
+## `run_official_site_source_family_catalog_adapter.py`
+
+Fetches URL-seeded official pages for `source_family=official` collection tasks.
+This is deliberately not a web-search adapter: the URL seed file is the
+auditable handoff from human review, a search provider, or a later source
+discovery system. The adapter fetches HTML when possible, falls back to seed
+title/text when a site blocks automated access, emits adapter-ready official
+catalog rows, and keeps request ids, labels, target ids, row ids, and model
+answers out of source documents.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-official-site-catalog
+
+python benchmarks/run_official_site_source_family_catalog_adapter.py \
+  --tasks artifacts/truthfulqa-frontier-smollm2-l80-reduced-source-family-catalog-collection-plan/source-family-catalog-collection-tasks.jsonl \
+  --seeds "$OUT/official-site-url-seeds.jsonl" \
+  --output "$OUT/official-site-catalog.jsonl" \
+  --report-json "$OUT/official-site-catalog-report.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-official-site-catalog \
+  --version 0.1 \
+  --max-text-chars 6000 \
+  --timeout-seconds 30 \
+  --min-delay-seconds 0.5 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=reduced_source_family_catalog_collection_plan
+```
+
+The registered official-site run consumes the `5` remaining official collection
+tasks with `9` URL seeds across USDA ERS, Tesla, WHO, World Bank, and NOAA. It
+writes `9` official catalog docs, successfully fetches `7` pages, and records
+`2` Tesla access-denied errors while retaining seed-title fallback rows. The
+manifest verifies and catalog/source-doc reserved-field scans are clean.
+
+Adding this official-site catalog to the Wikidata, Crossref, reduced Crossref,
+and World Bank catalogs still leaves route promotion blocked, but it improves
+source-family coverage: the workflow has `635` catalog docs, returns `528`
+adapter rows, and the coverage audit reduces missing target rows from `44` to
+`28`. Covered target families are now `official=32`, `official_statistics=4`,
+and `scholarly=128`; remaining missing targets are `official=4`,
+`scholarly=28`, and `news=4`. The next acquisition plan compresses to `7`
+tasks: `scholarly=5`, `official=1`, and `news=1`.
+
 ## `run_wikipedia_citation_search_adapter.py`
 
 Runs a dependency-free MediaWiki/Wikipedia search adapter for sanitized

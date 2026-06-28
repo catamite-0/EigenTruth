@@ -800,16 +800,27 @@ Added the first monitor-first tool-selection audit layer:
   keeps the correction route blocked, but improves the coverage audit from `84`
   to `44` missing target rows and shrinks the next collection plan to `9` tasks:
   `official=5`, `scholarly=3`, and `news=1`.
+- `run_official_site_source_family_catalog_adapter.py` adds the official-site
+  lane without adding a search dependency: a URL seed file is the auditable
+  handoff, and the adapter only fetches, extracts, fingerprints, manifests, and
+  registers official-page catalog rows. The registered run covers `5` official
+  tasks with `9` URL seeds across USDA ERS, Tesla, WHO, World Bank, and NOAA,
+  writes `9` official catalog docs, fetches `7` pages, and records `2` Tesla
+  access-denied fallbacks. Rerunning the combined source-family workflow still
+  blocks promotion, but coverage improves from `44` to `28` missing target rows:
+  `official=32/36`, `official_statistics=4/4`, and `scholarly=128/156` are now
+  covered. The next collection queue shrinks to `7` tasks:
+  `scholarly=5`, `official=1`, and `news=1`.
 
 ## Next Research-to-Code Candidates
 
 1. Convert the target-specific Wikidata source docs into structured-fact/QA corpora, then rerun the blind-spot correction-route audit instead of another lexical overlap sweep.
-2. Continue the reduced 9-task source-family collection plan: implement
-   official-site retrieval first, retry or replace the rate-limited news slot,
-   and make the remaining scholarly tasks more source-specific before rerunning
-   `run_source_family_citation_search_workflow.py`. Current combined catalogs
-   cover `official_statistics=4/4` and `scholarly=140/156`, but still have no
-   passing blind-spot query strategy.
+2. Continue the reduced 7-task source-family collection plan: make the
+   remaining scholarly tasks source-specific, add one more official seed/source
+   for the last official gap, and retry or replace the rate-limited news slot
+   before rerunning `run_source_family_citation_search_workflow.py`. Current
+   combined catalogs cover `official=32/36`, `official_statistics=4/4`, and
+   `scholarly=128/156`, but still have no passing blind-spot query strategy.
 3. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
 4. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
 5. Materialize a real `frontier_audit` release candidate with the registered covered-facts external-evidence handoff and external-prediction triple matrix artifact, then export the resulting promotion contract.

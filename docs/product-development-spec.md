@@ -568,6 +568,19 @@ For product features:
   implication: the next runtime-relevant work is official-site retrieval plus a
   retried/news-specific source adapter; this is still catalog coverage, not
   route promotion.
+- `run_official_site_source_family_catalog_adapter.py` now fills the official
+  webpage slot through an auditable URL-seed file rather than a new search
+  dependency. The registered run maps `9` official URLs across USDA ERS, Tesla,
+  WHO, World Bank, and NOAA to the `5` remaining official tasks, fetches `7`
+  pages, records `2` Tesla access-denied errors, and writes `9` official catalog
+  docs with clean catalog/source-doc reserved-field scans. Combining this
+  official-site catalog with Wikidata, Crossref, reduced Crossref, and World
+  Bank catalogs keeps route promotion blocked, but coverage improves again:
+  missing target rows fall from `44` to `28`, with `official=32/36`,
+  `official_statistics=4/4`, and `scholarly=128/156` covered. Product
+  implication: URL-seeded official sources are now a concrete verifier-adapter
+  collection lane; the remaining release work is source-specific scholarly
+  relevance plus a non-rate-limited news source, not another generic retriever.
 
 ### Next Verification Adapter Work
 

@@ -37009,6 +37009,132 @@ def test_gdelt_source_family_catalog_adapter_rejects_reserved_task_metadata(tmp_
         )
 
 
+def test_official_site_source_family_catalog_adapter_writes_official_catalog(tmp_path):
+    module = importlib.import_module("benchmarks.run_official_site_source_family_catalog_adapter")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    tasks_path = tmp_path / "collection-tasks.jsonl"
+    seeds_path = tmp_path / "official-url-seeds.jsonl"
+    catalog_path = tmp_path / "official-catalog.jsonl"
+    report_path = tmp_path / "official-report.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    tasks_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "usage": "source_catalog_collection_only",
+            "not_verifier_evidence": True,
+            "task_id": "catalog-official-alpha",
+            "source_family": "official",
+            "query": "food affordability official",
+            "query_key": "food affordability official",
+            "search_queries": ["food affordability official"],
+            "request_ids": ["cite-search-alpha"],
+            "source_queue_request_sha256": ["sha-a"],
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    seeds_path.write_text(
+        json.dumps({
+            "task_id": "catalog-official-alpha",
+            "url": "https://example.gov/food-prices",
+            "provider": "example_agency",
+            "seed_key": "example-food",
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    def fake_fetch_text(url, headers):
+        assert url == "https://example.gov/food-prices"
+        assert headers["User-Agent"].startswith("unit-agent")
+        return """
+        <html>
+          <head>
+            <title>Food Prices and Spending</title>
+            <meta name="description" content="Official food price statistics.">
+          </head>
+          <body><h1>Food prices</h1><p>Food prices increased over time.</p></body>
+        </html>
+        """
+
+    payload = module.run_official_site_source_family_catalog_adapter(
+        tasks_path=tasks_path,
+        seeds_path=seeds_path,
+        output_path=catalog_path,
+        report_json_path=report_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="official-catalog-unit",
+        version="0.1",
+        min_delay_seconds=0.0,
+        user_agent="unit-agent/0.1",
+        metadata={"suite": "unit"},
+        fetch_text=fake_fetch_text,
+    )
+    rows = [json.loads(line) for line in catalog_path.read_text(encoding="utf-8").splitlines()]
+    row = rows[0]
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get("report:official-catalog-unit:0.1")
+
+    assert payload["status"] == "ready"
+    assert payload["summary"]["task_count"] == 1
+    assert payload["summary"]["matched_seed_count"] == 1
+    assert payload["summary"]["source_document_count"] == 1
+    assert payload["summary"]["fetch_status_counts"] == {"fetched": 1}
+    assert row["provider"] == "example_agency"
+    assert row["source_family"] == "official"
+    assert row["title"] == "Food Prices and Spending"
+    assert row["url"] == "https://example.gov/food-prices"
+    assert row["metadata"]["collection_task_ids"] == ["catalog-official-alpha"]
+    assert row["metadata"]["source_queue_request_sha256"] == ["sha-a"]
+    assert row["metadata"]["official_source"] is True
+    assert row["metadata"]["fetch_status"] == "fetched"
+    assert "request_ids" not in row["metadata"]
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "official_site_source_family_catalog_adapter"
+    assert record.metadata["source_document_count"] == 1
+    assert record.metadata["suite"] == "unit"
+
+
+def test_official_site_source_family_catalog_adapter_rejects_seed_request_ids(tmp_path):
+    module = importlib.import_module("benchmarks.run_official_site_source_family_catalog_adapter")
+
+    tasks_path = tmp_path / "collection-tasks.jsonl"
+    seeds_path = tmp_path / "official-url-seeds.jsonl"
+    catalog_path = tmp_path / "official-catalog.jsonl"
+    tasks_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "usage": "source_catalog_collection_only",
+            "not_verifier_evidence": True,
+            "task_id": "catalog-official-alpha",
+            "source_family": "official",
+            "search_queries": ["food affordability official"],
+            "request_ids": ["cite-search-alpha"],
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    seeds_path.write_text(
+        json.dumps({
+            "task_id": "catalog-official-alpha",
+            "url": "https://example.gov/food-prices",
+            "request_ids": ["bad-boundary"],
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="reserved fields: request_ids"):
+        module.run_official_site_source_family_catalog_adapter(
+            tasks_path=tasks_path,
+            seeds_path=seeds_path,
+            output_path=catalog_path,
+            fetch_text=lambda _url, _headers: "<html></html>",
+        )
+
+
 def test_build_source_family_catalog_lifts_source_metadata(tmp_path):
     module = importlib.import_module("benchmarks.build_source_family_catalog")
     registry_module = importlib.import_module("eigentruth.registry")

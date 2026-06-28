@@ -1,0 +1,76 @@
+{
+  "config": {
+    "fetch_pages": true,
+    "max_seed_urls_per_task": null,
+    "max_tasks": null,
+    "max_text_chars": 6000,
+    "min_delay_seconds": 0.5,
+    "source_family": "official",
+    "timeout_seconds": 30.0
+  },
+  "errors": [
+    {
+      "error": "RuntimeError",
+      "message": "official site HTTP 403: <HTML><HEAD>\n<TITLE>Access Denied</TITLE>\n</HEAD><BODY>\n<H1>Access Denied</H1>\n \nYou don't have permission to access \"http&#58;&#47;&#47;www&#46;tesla&#46;com&#47;elon&#45;musk\" on this server.<P>\nReference&#32;&#35;18&#46;aff7d517&#46;1782659032&#46;a2dea920\n<P>https&#58;&#47;&#47;errors&#46;edgesu",
+      "task_id": "catalog-official-0c9343c74804",
+      "url": "https://www.tesla.com/elon-musk"
+    },
+    {
+      "error": "RuntimeError",
+      "message": "official site HTTP 403: <HTML><HEAD>\n<TITLE>Access Denied</TITLE>\n</HEAD><BODY>\n<H1>Access Denied</H1>\n \nYou don't have permission to access \"http&#58;&#47;&#47;ir&#46;tesla&#46;com&#47;corporate&#47;elon&#45;musk\" on this server.<P>\nReference&#32;&#35;18&#46;aff7d517&#46;1782659034&#46;a2debf87\n<P>https&#58;&#47;&#47;erro",
+      "task_id": "catalog-official-0c9343c74804",
+      "url": "https://ir.tesla.com/corporate/elon-musk"
+    }
+  ],
+  "metadata": {
+    "source": "reduced_source_family_catalog_collection_plan",
+    "suite": "truthfulqa_frontier_smollm2_l80"
+  },
+  "output_path": "artifacts/truthfulqa-frontier-smollm2-l80-official-site-catalog/official-site-catalog.jsonl",
+  "schema_version": 1,
+  "source": {
+    "collection_tasks": "artifacts/truthfulqa-frontier-smollm2-l80-reduced-source-family-catalog-collection-plan/source-family-catalog-collection-tasks.jsonl",
+    "url_seeds": "artifacts/truthfulqa-frontier-smollm2-l80-official-site-catalog/official-site-url-seeds.jsonl"
+  },
+  "status": "ready",
+  "summary": {
+    "domain_counts": {
+      "data.who.int": 1,
+      "data.worldbank.org": 1,
+      "ir.tesla.com": 1,
+      "www.ers.usda.gov": 2,
+      "www.ncei.noaa.gov": 1,
+      "www.psl.noaa.gov": 1,
+      "www.tesla.com": 1,
+      "www.who.int": 1
+    },
+    "error_count": 2,
+    "fetch_status_counts": {
+      "fetched": 7,
+      "seed_fallback": 2
+    },
+    "fetched_page_count": 7,
+    "matched_seed_count": 9,
+    "provider_counts": {
+      "noaa_ncei": 1,
+      "noaa_psl": 1,
+      "tesla": 1,
+      "tesla_ir": 1,
+      "usda_ers": 2,
+      "who": 1,
+      "who_europe": 1,
+      "worldbank": 1
+    },
+    "seed_count": 9,
+    "skipped_duplicate_count": 0,
+    "source_document_count": 9,
+    "source_family_counts": {
+      "official": 9
+    },
+    "task_count": 5,
+    "task_source_family_counts": {
+      "official": 5
+    }
+  },
+  "workflow": "official_site_source_family_catalog_adapter"
+}

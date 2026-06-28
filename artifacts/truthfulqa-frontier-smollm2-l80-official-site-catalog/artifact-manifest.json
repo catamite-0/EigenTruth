@@ -1,0 +1,54 @@
+{
+  "artifacts": {
+    "collection_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-reduced-source-family-catalog-collection-plan/source-family-catalog-collection-tasks.jsonl",
+      "sha256": "16676e08a21fc7b5804f00bcaaa0771851b32a905ef9d1d21392795dcb6f9291",
+      "size_bytes": 17773
+    },
+    "official_site_catalog_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "official-site-catalog-report.json",
+      "sha256": "9b7a4a6696e439d126fee84d0379a6910f6f86072a855b8d11802dd9708a657c",
+      "size_bytes": 2732
+    },
+    "official_url_seeds": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "official-site-url-seeds.jsonl",
+      "sha256": "bdbe3b7c1a7bbab428afb1cd8e289ac2ef659dd745286af5d89e303520b7b4f1",
+      "size_bytes": 2107
+    },
+    "source_family_catalog": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "official-site-catalog.jsonl",
+      "sha256": "4a8a05f9492f2b626b610a78fa6531e7db63e220a9e306ea580313a7ff92d5e8",
+      "size_bytes": 51070
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "error_count": 2,
+    "matched_seed_count": 9,
+    "source": "reduced_source_family_catalog_collection_plan",
+    "source_document_count": 9,
+    "status": "ready",
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "task_count": 5,
+    "workflow": "official_site_source_family_catalog_adapter"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

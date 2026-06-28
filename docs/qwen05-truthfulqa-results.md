@@ -1372,6 +1372,18 @@ sees `626` source docs and the coverage audit drops missing target rows from
 `84` to `44`. The route still blocks at the evidence gates. The refreshed
 collection plan is now `9` tasks: `official=5`, `scholarly=3`, and `news=1`.
 
+`benchmarks/run_official_site_source_family_catalog_adapter.py` now covers the
+official-webpage lane without introducing a search dependency. The registered
+URL-seeded run maps `9` official URLs across USDA ERS, Tesla, WHO, World Bank,
+and NOAA onto the `5` remaining official tasks, writes `9` official catalog
+documents, successfully fetches `7` pages, and records `2` Tesla access-denied
+fallbacks. Adding this catalog to the combined workflow still leaves route
+promotion blocked, but source-family coverage improves again: missing target
+rows fall from `44` to `28`, `official` coverage reaches `32/36`,
+`official_statistics` remains `4/4`, and `scholarly` is `128/156` under the new
+top-result mix. The refreshed collection plan is now `7` tasks:
+`scholarly=5`, `official=1`, and `news=1`.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -1398,14 +1410,14 @@ collection plan is now `9` tasks: `official=5`, `scholarly=3`, and `news=1`.
    if Qwen-specific runtime evidence is needed; SmolLM2 now has the first
    non-tiny registered readiness/release candidate.
 7. Continue the reduced source-family catalog collection plan after the
-   completed Crossref, World Bank, and GDELT-shell slices: add official-site
-   retrieval, retry or replace the rate-limited news source, and make the
-   remaining scholarly tasks more source-specific, then rerun
-   `run_source_family_citation_search_workflow.py`. The combined catalogs now
-   cover official statistics and `140/156` scholarly target-family requests, but
-   still have no passing blind-spot query strategy; only promote future catalogs
-   if provenance, external query-sweep, and controlled-vs-external comparison
-   gates pass.
+   completed Crossref, World Bank, GDELT-shell, and official-site slices: make
+   the remaining scholarly tasks more source-specific, add one more official
+   seed/source for the last official gap, and retry or replace the rate-limited
+   news source, then rerun `run_source_family_citation_search_workflow.py`. The
+   combined catalogs now cover `official=32/36`, `official_statistics=4/4`, and
+   `scholarly=128/156`, but still have no passing blind-spot query strategy;
+   only promote future catalogs if provenance, external query-sweep, and
+   controlled-vs-external comparison gates pass.
 8. Extend the new verifier-stability path from structured QA to real retrieval,
    database, calculator, and world-model evidence under the same conformal
    false-alarm budgets. Use `benchmarks/build_evidence_fixture.py` with a local
