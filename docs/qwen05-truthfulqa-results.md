@@ -1325,6 +1325,15 @@ official sources and `0` have an official result. The emitted acquisition plan
 is marked `not_verifier_evidence`, so it is a collection queue rather than a
 route-quality claim.
 
+`benchmarks/plan_source_family_catalog_collection.py` now deduplicates that
+collection queue into provider-specific tasks. The registered collection plan
+compresses `176` acquisition rows and `200` missing family gaps into `28`
+tasks: `scholarly=21`, `official=5`, `official_statistics=1`, and `news=1`.
+Those tasks carry query variants, provider hints, request ids, and queue
+fingerprints while remaining `not_verifier_evidence`. This is the next input to
+real OpenAlex/Crossref, official-site, statistics, news, or source-specific
+catalog adapters.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -1350,10 +1359,9 @@ route-quality claim.
 6. Promote a Qwen l20/l80 readiness baseline through the same registry workflow
    if Qwen-specific runtime evidence is needed; SmolLM2 now has the first
    non-tiny registered readiness/release candidate.
-7. Fill the Wikidata source-family coverage audit's
-   `source-family-acquisition-plan.jsonl` with targeted official/statistical,
-   scholarly, news, or source-specific catalogs, then rerun
-   `run_source_family_citation_search_workflow.py`. The cached Wikidata
+7. Execute the 28-task source-family catalog collection plan with targeted
+   official/statistical, scholarly, news, or source-specific adapters, then
+   rerun `run_source_family_citation_search_workflow.py`. The cached Wikidata
    reference catalog now proves the workflow executes, but it covers `0/176`
    non-fallback family targets and still refutes `0/89`; only promote future
    catalogs if provenance, external query-sweep, and controlled-vs-external

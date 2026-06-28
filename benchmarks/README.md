@@ -1849,6 +1849,39 @@ Official-source-preferred requests are `36`, and `0` have an official result.
 This turns the blocked workflow into an executable next catalog-acquisition
 queue without weakening the provenance or route-quality gates.
 
+## `plan_source_family_catalog_collection.py`
+
+Deduplicates the coverage audit's acquisition JSONL into provider-specific
+collection tasks. Each task carries one missing source family, a compact set of
+query variants, provider hints, covered request ids, queue fingerprints, and
+`not_verifier_evidence=true`. It is the input contract for future OpenAlex,
+Crossref, official-site, statistics API, news, or domain-specific catalog
+adapters; it is not a source document catalog and cannot promote a verifier
+route by itself.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-source-family-catalog-collection-plan
+
+python benchmarks/plan_source_family_catalog_collection.py \
+  --acquisition-plan artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-coverage-audit/source-family-acquisition-plan.jsonl \
+  --tasks-jsonl "$OUT/source-family-catalog-collection-tasks.jsonl" \
+  --report-json "$OUT/source-family-catalog-collection-plan.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-source-family-catalog-collection-plan \
+  --version 0.1 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=wikidata_source_family_coverage_audit
+```
+
+The registered SmolLM2 plan compresses `176` acquisition rows and `200` missing
+family gaps into `28` collection tasks: `scholarly=21`, `official=5`,
+`official_statistics=1`, and `news=1`. The deduplication ratio is `7.14`, and
+the tasks retain all `176` source-queue fingerprints while keeping reserved
+label/model-answer fields out of the boundary. This is the next executable
+handoff before filling real source catalogs and rerunning
+`run_source_family_citation_search_workflow.py`.
+
 ## `run_wikipedia_citation_search_adapter.py`
 
 Runs a dependency-free MediaWiki/Wikipedia search adapter for sanitized

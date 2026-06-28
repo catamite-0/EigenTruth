@@ -762,11 +762,17 @@ Added the first monitor-first tool-selection audit layer:
   `official_statistics=4`, and `news=4`; `36` requests prefer official sources
   and `0` have an official result. The next catalog must fill those family
   slots before rerunning the source-family workflow and evidence gates.
+- `plan_source_family_catalog_collection.py` turns the 176-row acquisition queue
+  into a smaller provider task graph: `200` missing family gaps collapse to `28`
+  collection tasks with provider hints for OpenAlex/Crossref-like scholarly
+  search, official-site search, statistics APIs/catalogs, and news archives.
+  This is still not evidence, but it is the executable boundary for the next
+  source-specific adapter pass.
 
 ## Next Research-to-Code Candidates
 
 1. Convert the target-specific Wikidata source docs into structured-fact/QA corpora, then rerun the blind-spot correction-route audit instead of another lexical overlap sweep.
-2. Fill the `source-family-acquisition-plan.jsonl` from the Wikidata coverage audit with targeted official/statistical/scholarly/news/source-specific catalogs, then rerun `run_source_family_citation_search_workflow.py`; the cached Wikidata reference catalog proves execution but covers `0/176` non-fallback family targets and refutes `0/89` blind spots.
+2. Execute the 28-task source-family catalog collection plan with targeted official/statistical/scholarly/news/source-specific adapters, then rerun `run_source_family_citation_search_workflow.py`; the cached Wikidata reference catalog proves execution but covers `0/176` non-fallback family targets and refutes `0/89` blind spots.
 3. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
 4. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
 5. Materialize a real `frontier_audit` release candidate with the registered covered-facts external-evidence handoff and external-prediction triple matrix artifact, then export the resulting promotion contract.

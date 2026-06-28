@@ -36549,6 +36549,109 @@ def test_audit_source_family_coverage_emits_acquisition_plan(tmp_path):
     assert record.metadata["suite"] == "unit"
 
 
+def test_plan_source_family_catalog_collection_deduplicates_family_tasks(tmp_path):
+    module = importlib.import_module("benchmarks.plan_source_family_catalog_collection")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    acquisition_path = tmp_path / "acquisition-plan.jsonl"
+    tasks_path = tmp_path / "collection-tasks.jsonl"
+    report_path = tmp_path / "collection-plan-report.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    acquisition_path.write_text(
+        "\n".join([
+            json.dumps({
+                "schema_version": 1,
+                "workflow": "source_family_coverage_audit",
+                "usage": "source_catalog_acquisition_only",
+                "not_verifier_evidence": True,
+                "request_id": "cite-search-1",
+                "query": "Ireland population",
+                "alternate_queries": ["Ireland population official statistics"],
+                "priority": "high",
+                "question_type": "definition",
+                "missing_source_families": ["official_statistics", "official"],
+                "official_source_preferred": True,
+                "freshness_required": True,
+                "query_hints": ["official statistics", "data"],
+                "metadata": {"source_queue_request_sha256": "sha-a"},
+            }),
+            json.dumps({
+                "schema_version": 1,
+                "workflow": "source_family_coverage_audit",
+                "usage": "source_catalog_acquisition_only",
+                "not_verifier_evidence": True,
+                "request_id": "cite-search-2",
+                "query": "Ireland population",
+                "alternate_queries": ["Ireland population data"],
+                "priority": "high",
+                "question_type": "definition",
+                "missing_source_families": ["official"],
+                "official_source_preferred": True,
+                "freshness_required": True,
+                "query_hints": ["official statistics"],
+                "metadata": {"source_queue_request_sha256": "sha-b"},
+            }),
+            json.dumps({
+                "schema_version": 1,
+                "workflow": "source_family_coverage_audit",
+                "usage": "source_catalog_acquisition_only",
+                "not_verifier_evidence": True,
+                "request_id": "cite-search-3",
+                "query": "gum swallowing myth",
+                "priority": "high",
+                "question_type": "definition",
+                "missing_source_families": ["scholarly"],
+                "official_source_preferred": False,
+                "freshness_required": False,
+                "query_hints": ["definition"],
+                "metadata": {"source_queue_request_sha256": "sha-c"},
+            }),
+        ])
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = module.plan_source_family_catalog_collection(
+        acquisition_plan_path=acquisition_path,
+        tasks_jsonl_path=tasks_path,
+        report_json_path=report_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="source-family-collection-plan-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    tasks = [json.loads(line) for line in tasks_path.read_text(encoding="utf-8").splitlines()]
+    official_task = next(task for task in tasks if task["source_family"] == "official")
+    scholarly_task = next(task for task in tasks if task["source_family"] == "scholarly")
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:source-family-collection-plan-unit:0.1"
+    )
+
+    assert payload["status"] == "ready_for_source_collection"
+    assert payload["summary"]["acquisition_row_count"] == 3
+    assert payload["summary"]["family_gap_count"] == 4
+    assert payload["summary"]["collection_task_count"] == 3
+    assert payload["summary"]["task_source_family_counts"] == {
+        "official": 1,
+        "official_statistics": 1,
+        "scholarly": 1,
+    }
+    assert official_task["not_verifier_evidence"] is True
+    assert official_task["usage"] == "source_catalog_collection_only"
+    assert official_task["request_count"] == 2
+    assert official_task["request_ids"] == ["cite-search-1", "cite-search-2"]
+    assert official_task["source_queue_request_sha256"] == ["sha-a", "sha-b"]
+    assert "official_site_search" in official_task["provider_hints"]
+    assert any("official" in query for query in official_task["search_queries"])
+    assert "openalex_works" in scholarly_task["provider_hints"]
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "source_family_catalog_collection_plan"
+    assert record.metadata["collection_task_count"] == 3
+    assert record.metadata["suite"] == "unit"
+
+
 def test_build_source_family_catalog_lifts_source_metadata(tmp_path):
     module = importlib.import_module("benchmarks.build_source_family_catalog")
     registry_module = importlib.import_module("eigentruth.registry")

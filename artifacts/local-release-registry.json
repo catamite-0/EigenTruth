@@ -5644,6 +5644,22 @@
       "name": "truthfulqa-frontier-smollm2-l80-wikidata-source-family-coverage-audit",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-coverage-audit/source-family-coverage-audit.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "acquisition_row_count": 176,
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-catalog-collection-plan/artifact-manifest.json",
+        "collection_task_count": 28,
+        "family_gap_count": 200,
+        "source": "wikidata_source_family_coverage_audit",
+        "status": "ready_for_source_collection",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "source_family_catalog_collection_plan"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-source-family-catalog-collection-plan",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-catalog-collection-plan/source-family-catalog-collection-plan.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

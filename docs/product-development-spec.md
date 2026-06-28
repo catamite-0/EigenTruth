@@ -520,6 +520,15 @@ For product features:
   matching; it is filling this acquisition plan with official/statistical,
   scholarly, news, or source-specific catalogs and then rerunning the same
   fail-closed workflow gates.
+- `plan_source_family_catalog_collection.py` deduplicates that acquisition queue
+  into provider-oriented source collection tasks. The registered SmolLM2 plan
+  compresses `176` acquisition rows and `200` missing family gaps into `28`
+  tasks: `scholarly=21`, `official=5`, `official_statistics=1`, and `news=1`.
+  Each task carries query variants, provider hints, request ids, queue
+  fingerprints, and `not_verifier_evidence=true`. Product implication: future
+  OpenAlex/Crossref, official-site, statistics API, news, or source-specific
+  adapters can now fill a small task set before the resulting catalogs re-enter
+  `run_source_family_citation_search_workflow.py`.
 
 ### Next Verification Adapter Work
 
