@@ -5410,6 +5410,21 @@
       "name": "truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-covered-facts-handoff-verification",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-covered-facts-handoff/manifest-verification.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "answer_entity_collision_count": 6,
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-covered-fact-mapping/artifact-manifest.json",
+        "candidate_fact_coverage_count": 10,
+        "evidence": "smollm2_l80_blind_spot_claim_to_wikidata_covered_fact_mapping",
+        "status": "observed",
+        "target_count": 89,
+        "workflow": "blind_spot_covered_fact_mapping_audit"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-blind-spot-covered-fact-mapping",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-covered-fact-mapping/blind-spot-covered-fact-mapping.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

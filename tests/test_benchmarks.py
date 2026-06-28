@@ -35455,6 +35455,145 @@ def test_fetch_blind_spot_wikidata_evidence_writes_clean_source_docs(tmp_path, m
     assert record.metadata["suite"] == "unit"
 
 
+def test_audit_blind_spot_covered_fact_mapping_classifies_joined_facts(tmp_path):
+    module = importlib.import_module("benchmarks.audit_blind_spot_covered_fact_mapping")
+    registry_module = importlib.import_module("eigentruth.registry")
+    blind_path = tmp_path / "blind-spots.json"
+    qa_path = tmp_path / "qa-corpus.json"
+    source_path = tmp_path / "wikidata-source.jsonl"
+    fetch_report_path = tmp_path / "wikidata-fetch-report.json"
+    output_path = tmp_path / "covered-fact-mapping.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    requests = [
+        {
+            "entity": "Acme",
+            "property_hint": "founded_by:P112",
+            "property_id": "P112",
+            "request_id": "wd:record-1:1",
+            "resolved_qid": "Q1",
+            "status": "documented",
+            "target_id": "record-1",
+        },
+        {
+            "entity": "Nothing",
+            "property_hint": "instance_of:P31",
+            "property_id": "P31",
+            "request_id": "wd:record-2:1",
+            "resolved_qid": "Q2",
+            "status": "documented",
+            "target_id": "record-2",
+        },
+    ]
+    source_rows = [
+        {
+            "text": "According to Wikidata structured data, Acme has founder Bob.",
+            "source": "wikidata:Q1:P112:Q10",
+            "metadata": {
+                "provider": "wikidata",
+                "statement_property": "P112",
+                "statement_property_label": "founder",
+                "subject": "Acme",
+                "subject_qid": "Q1",
+                "value": "Bob",
+                "value_qid": "Q10",
+                "collection_request_sha256": module._request_fingerprint(requests[0]),
+            },
+        },
+        {
+            "text": "According to Wikidata structured data, Nothing Technology has instance of enterprise.",
+            "source": "wikidata:Q2:P31:Q20",
+            "metadata": {
+                "provider": "wikidata",
+                "statement_property": "P31",
+                "statement_property_label": "instance of",
+                "subject": "Nothing Technology",
+                "subject_qid": "Q2",
+                "value": "enterprise",
+                "value_qid": "Q20",
+                "collection_request_sha256": module._request_fingerprint(requests[1]),
+            },
+        },
+    ]
+    blind_path.write_text(
+        json.dumps({
+            "workflow": "blind_spot_examples",
+            "records": [
+                {
+                    "record_index": 1,
+                    "question": "Who founded Acme?",
+                    "answer": "Alice",
+                    "question_type": "person",
+                },
+                {
+                    "record_index": 2,
+                    "question": "If bitcoin rose before, what will happen next?",
+                    "answer": "Nothing",
+                    "question_type": "definition",
+                },
+                {
+                    "record_index": 3,
+                    "question": "What is the capital of Exampleland?",
+                    "answer": "Example City",
+                    "question_type": "location",
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    qa_path.write_text(
+        json.dumps({
+            "corpus_type": "structured_qa_external_evidence",
+            "documents": [
+                {
+                    "question": "What does Wikidata list as the founder for Acme?",
+                    "answer": "Bob",
+                    "source": "wikidata:Q1:P112:Q10",
+                    "metadata": source_rows[0]["metadata"],
+                },
+                {
+                    "question": "What does Wikidata list as the instance of for Nothing Technology?",
+                    "answer": "enterprise",
+                    "source": "wikidata:Q2:P31:Q20",
+                    "metadata": source_rows[1]["metadata"],
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    source_path.write_text("\n".join(json.dumps(row) for row in source_rows) + "\n", encoding="utf-8")
+    fetch_report_path.write_text(json.dumps({"request_results": requests}), encoding="utf-8")
+
+    payload = module.run(
+        blind_spots_path=blind_path,
+        qa_corpus_path=qa_path,
+        source_jsonl_path=source_path,
+        wikidata_fetch_report_path=fetch_report_path,
+        output_path=output_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="covered-fact-mapping-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    by_index = {record["record_index"]: record for record in payload["records"]}
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:covered-fact-mapping-unit:0.1"
+    )
+
+    assert payload["status"] == "observed"
+    assert payload["summary"]["candidate_fact_coverage_count"] == 1
+    assert payload["summary"]["answer_entity_collision_count"] == 1
+    assert payload["summary"]["no_joined_fact_count"] == 1
+    assert by_index[1]["mapping_status"] == "candidate_fact_coverage"
+    assert by_index[1]["joined_property_counts"] == {"P112": 1}
+    assert by_index[2]["mapping_status"] == "answer_entity_collision"
+    assert by_index[3]["mapping_status"] == "no_joined_facts"
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "blind_spot_covered_fact_mapping_audit"
+    assert record.metadata["suite"] == "unit"
+
+
 def test_eval_score_ensemble_compares_single_and_combined_signals(tmp_path):
     module = importlib.import_module("benchmarks.eval_score_ensemble")
     scores_path = tmp_path / "scores.json"

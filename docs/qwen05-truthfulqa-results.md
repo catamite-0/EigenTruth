@@ -1001,6 +1001,17 @@ promotes this as external covered-facts correction evidence. This is the
 property-level correction route for collected Wikidata facts, not a claim that
 all `89` entrenched TruthfulQA blind spots now have open-domain recall.
 
+The follow-up mapping audit
+`report:truthfulqa-frontier-smollm2-l80-blind-spot-covered-fact-mapping:0.1`
+joins those covered facts back to the original 89 blind spots using request
+fingerprints rather than evidence-corpus row ids. It finds joined facts for
+`37/89` targets, but only `10/89` are conservative correction candidates; `5`
+have evidence values that support the model answer, `6` show answer-entity
+collision risk, `20` are joined but low relevance, and `52` have no joined
+facts. The immediate next step is explicit question/property mapping for the
+10 candidates, while unresolved records need citation retrieval or world-model
+evidence rather than more lexical overlap tuning.
+
 A local release-candidate smoke artifact now pairs that staged route baseline
 with a tiny-gpt2 offline readiness/runtime baseline:
 

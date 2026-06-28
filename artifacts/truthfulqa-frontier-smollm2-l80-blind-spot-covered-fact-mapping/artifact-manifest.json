@@ -1,0 +1,61 @@
+{
+  "artifacts": {
+    "blind_spots": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json",
+      "sha256": "5990d22d8547cce21613bdc0c618058ca0f1d6c8766e16363b333595fec4ee5a",
+      "size_bytes": 123816
+    },
+    "covered_fact_mapping_audit": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "blind-spot-covered-fact-mapping.json",
+      "sha256": "71114ae19361a9beb5ccd80303353ada1b8ffa4f72686e44fe509c05c1f9e939",
+      "size_bytes": 186220
+    },
+    "qa_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-structured-qa-route/wikidata-blind-spot-qa-corpus.json",
+      "sha256": "898e7710d547b59541aafe0ec16d5737c3532337fe1581bdea1d1683bfd2caa9",
+      "size_bytes": 382494
+    },
+    "wikidata_fetch_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-evidence/wikidata-evidence-fetch-report.json",
+      "sha256": "50fa4a6421c2143ce9fabfe20bc71eec3a2b8b1f3cd4f20880de0cd875259046",
+      "size_bytes": 201159
+    },
+    "wikidata_source_docs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-evidence/wikidata-source-docs.jsonl",
+      "sha256": "257e86d0ff60ca6cdab55f69864dd1ca004249fcdb9a3ce6c93013f2088518ab",
+      "size_bytes": 236534
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "answer_entity_collision_count": 6,
+    "candidate_fact_coverage_count": 10,
+    "evidence": "smollm2_l80_blind_spot_claim_to_wikidata_covered_fact_mapping",
+    "no_joined_fact_count": 52,
+    "status": "observed",
+    "target_count": 89,
+    "workflow": "blind_spot_covered_fact_mapping_audit"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

@@ -1471,6 +1471,40 @@ is therefore: source collection works, lexical retrieval is still the wrong
 coverage lever, and the next pass should turn documented Wikidata claims into
 structured-fact/QA route corpora.
 
+## `audit_blind_spot_covered_fact_mapping.py`
+
+Joins blind-spot records to target-specific Wikidata source docs and structured
+QA facts without copying target ids into the evidence corpus. The join uses the
+collection request fingerprint stored in source-doc metadata plus the fetch
+report's request trace, then reports conservative mapping statuses such as
+`candidate_fact_coverage`, `answer_value_supported`,
+`answer_entity_collision`, `joined_low_relevance`, and `no_joined_facts`.
+Joined facts are treated as mapping candidates, not as proof that the original
+TruthfulQA answer is refuted.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-covered-fact-mapping
+
+python benchmarks/audit_blind_spot_covered_fact_mapping.py \
+  --blind-spots artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
+  --qa-corpus artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-structured-qa-route/wikidata-blind-spot-qa-corpus.json \
+  --source-jsonl artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-evidence/wikidata-source-docs.jsonl \
+  --wikidata-fetch-report artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-evidence/wikidata-evidence-fetch-report.json \
+  --json "$OUT/blind-spot-covered-fact-mapping.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-blind-spot-covered-fact-mapping \
+  --version 0.1
+```
+
+The current SmolLM2 l80 run observes joined Wikidata facts for `37/89` blind
+spots, but only `10/89` are conservative correction candidates. Another `5`
+records have evidence values that support the model answer, `6` show answer
+entity collision risk, and `52` have no joined facts. This makes the next
+frontier step concrete: add explicit question/property claim mapping for the
+candidate set and route the remaining records to citation retrieval or
+world-model evidence collection.
+
 ## `eval_verifier_ensemble.py`
 
 Compares a single calibrated internal diagnostic against a retrieval/verifier
