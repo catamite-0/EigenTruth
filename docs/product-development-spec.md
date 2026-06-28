@@ -542,6 +542,18 @@ For product features:
   and auditable, but broad bibliographic Crossref matching is not enough; the
   next catalogs need better query relevance, official/statistical coverage, or
   source-specific semantics before route defaults can change.
+- `run_worldbank_source_family_catalog_adapter.py` now fills the first
+  official-statistics slot through the World Bank Indicators API. The registered
+  population catalog consumes the single `official_statistics` collection task,
+  writes `217` country-level official statistics rows after filtering aggregate
+  regions, and records `0` request errors. Combining Wikidata, Crossref, and
+  World Bank catalogs gives the source-family workflow `557` source docs and
+  `12` World Bank result rows. Promotion still blocks, but source-family
+  coverage improves materially: `official_statistics` is now covered for `4/4`
+  requests, `scholarly` is covered for `100/156`, and missing target rows drop
+  from `176` to `84`. Product implication: official data adapters can shrink
+  the blind-spot acquisition frontier even before they are strong enough to
+  change runtime route defaults.
 
 ### Next Verification Adapter Work
 

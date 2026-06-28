@@ -1,0 +1,45 @@
+{
+  "artifacts": {
+    "collection_plan_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-catalog-collection-plan.json",
+      "sha256": "c3eb88b2021055bf3cb0a4a67dc3effb6af82fd297bada16199c47b4f14ae771",
+      "size_bytes": 32731
+    },
+    "source_family_acquisition_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-worldbank-source-family-coverage-audit/source-family-acquisition-plan.jsonl",
+      "sha256": "8b7dcbf5442798a6705592c9617cdf65a7504dbd9b6711f3c5cbbde1c9e406a2",
+      "size_bytes": 89838
+    },
+    "source_family_collection_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-catalog-collection-tasks.jsonl",
+      "sha256": "9bf3b3d44b9b7357584ed80725157bd01ad1925888cc124f28b3fb05c17af53b",
+      "size_bytes": 25388
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "acquisition_row_count": 84,
+    "collection_task_count": 12,
+    "family_gap_count": 96,
+    "source": "worldbank_source_family_coverage_audit",
+    "status": "ready_for_source_collection",
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "workflow": "source_family_catalog_collection_plan"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

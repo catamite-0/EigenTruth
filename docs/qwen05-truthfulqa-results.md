@@ -1347,6 +1347,19 @@ query strategy passes and the controlled-vs-external comparison remains
 blocked. So this is a real catalog-family coverage step, not a correction-route
 promotion.
 
+`benchmarks/run_worldbank_source_family_catalog_adapter.py` now covers the first
+official-statistics slice. The registered World Bank catalog uses the Indicators
+API with `SP.POP.TOTL`, filters aggregate regions by default, writes `217`
+country-level population statistic documents, and records `0` request errors.
+Rerunning the source-family workflow with Wikidata reference, Crossref
+scholarly, and World Bank official-statistics catalogs gives `557` source
+catalog documents, `528` adapter results for `176/176` requests, and `12`
+World Bank official-statistics result rows. The route still blocks at the
+query-sweep and controlled-vs-external gates, but source-family coverage
+improves: `official_statistics=4/4` and `scholarly=100/156` are now covered,
+leaving `84` requests with missing target families. The refreshed collection
+plan is down to `12` tasks: `official=5`, `scholarly=6`, and `news=1`.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -1372,12 +1385,12 @@ promotion.
 6. Promote a Qwen l20/l80 readiness baseline through the same registry workflow
    if Qwen-specific runtime evidence is needed; SmolLM2 now has the first
    non-tiny registered readiness/release candidate.
-7. Continue the source-family catalog collection plan after the completed
-   Crossref scholarly slice: add official/statistical, news, and more
-   source-specific adapters, then rerun
-   `run_source_family_citation_search_workflow.py`. The Wikidata plus Crossref
-   workflow now proves execution and fills a scholarly catalog slot, but still
-   has no passing blind-spot query strategy; only promote future catalogs if
+7. Continue the reduced source-family catalog collection plan after the
+   completed Crossref and World Bank slices: add official-site, news, and
+   source-specific scholarly adapters, then rerun
+   `run_source_family_citation_search_workflow.py`. The combined catalogs now
+   cover official statistics and much of the scholarly target family, but still
+   have no passing blind-spot query strategy; only promote future catalogs if
    provenance, external query-sweep, and controlled-vs-external comparison gates
    pass.
 8. Extend the new verifier-stability path from structured QA to real retrieval,

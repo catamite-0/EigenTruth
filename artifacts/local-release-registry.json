@@ -5697,6 +5697,75 @@
       "name": "truthfulqa-frontier-smollm2-l80-crossref-source-family-citation-workflow",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-crossref-source-family-citation-workflow/source-family-citation-search-workflow.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-worldbank-official-statistics-catalog/artifact-manifest.json",
+        "error_count": 0,
+        "page_count": 1,
+        "source": "source_family_catalog_collection_plan",
+        "source_document_count": 217,
+        "status": "ready",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "task_count": 1,
+        "workflow": "worldbank_source_family_catalog_adapter"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-worldbank-official-statistics-catalog",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-worldbank-official-statistics-catalog/worldbank-official-statistics-catalog-report.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "adapter_request_count": 176,
+        "adapter_result_count": 528,
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-worldbank-source-family-citation-workflow/artifact-manifest.json",
+        "catalog_source_document_count": 557,
+        "corpus_document_count": 528,
+        "evidence": "wikidata_reference_plus_crossref_scholarly_plus_worldbank_official_statistics",
+        "evidence_source_document_count": 528,
+        "gate_passed": false,
+        "promotion_ready": false,
+        "status": "blocked",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "source_family_citation_search_workflow"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-worldbank-source-family-citation-workflow",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-worldbank-source-family-citation-workflow/source-family-citation-search-workflow.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "acquisition_plan_count": 84,
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-worldbank-source-family-coverage-audit/artifact-manifest.json",
+        "evidence": "wikidata_crossref_worldbank_source_family_catalogs",
+        "request_count": 176,
+        "request_missing_target_family_count": 84,
+        "status": "needs_catalog_expansion",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "source_family_coverage_audit"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-worldbank-source-family-coverage-audit",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-worldbank-source-family-coverage-audit/source-family-coverage-audit.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "acquisition_row_count": 84,
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-worldbank-source-family-catalog-collection-plan/artifact-manifest.json",
+        "collection_task_count": 12,
+        "family_gap_count": 96,
+        "source": "worldbank_source_family_coverage_audit",
+        "status": "ready_for_source_collection",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "source_family_catalog_collection_plan"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-worldbank-source-family-catalog-collection-plan",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-worldbank-source-family-catalog-collection-plan/source-family-catalog-collection-plan.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

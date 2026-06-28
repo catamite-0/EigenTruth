@@ -36764,6 +36764,142 @@ def test_crossref_source_family_catalog_adapter_rejects_reserved_task_metadata(t
         )
 
 
+def test_worldbank_source_family_catalog_adapter_writes_official_statistics_catalog(tmp_path):
+    module = importlib.import_module("benchmarks.run_worldbank_source_family_catalog_adapter")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    tasks_path = tmp_path / "collection-tasks.jsonl"
+    catalog_path = tmp_path / "worldbank-catalog.jsonl"
+    report_path = tmp_path / "worldbank-report.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    tasks_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "source_family_catalog_collection_plan",
+            "usage": "source_catalog_collection_only",
+            "not_verifier_evidence": True,
+            "task_id": "catalog-official-statistics-alpha",
+            "source_family": "official_statistics",
+            "query": "population country",
+            "search_queries": ["population country", "population country official statistics"],
+            "request_ids": ["cite-search-alpha"],
+            "source_queue_request_sha256": ["sha-a"],
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    def fake_fetch_json(url, headers):
+        assert headers["User-Agent"].startswith("unit-agent")
+        if "/country?" in url:
+            return [
+                {"page": 1, "pages": 1, "per_page": "300", "total": 2},
+                [
+                    {
+                        "id": "AFG",
+                        "iso2Code": "AF",
+                        "name": "Afghanistan",
+                        "region": {"id": "MEA", "value": "Middle East, North Africa, Afghanistan & Pakistan"},
+                        "incomeLevel": {"id": "LIC", "value": "Low income"},
+                    },
+                    {
+                        "id": "WLD",
+                        "iso2Code": "1W",
+                        "name": "World",
+                        "region": {"id": "NA", "value": "Aggregates"},
+                        "incomeLevel": {"id": "NA", "value": "Aggregates"},
+                    },
+                ],
+            ]
+        assert "/country/all/indicator/SP.POP.TOTL" in url
+        return [
+            {"page": 1, "pages": 1, "per_page": 300, "total": 2, "lastupdated": "2026-04-08"},
+            [
+                {
+                    "indicator": {"id": "SP.POP.TOTL", "value": "Population, total"},
+                    "country": {"id": "AF", "value": "Afghanistan"},
+                    "countryiso3code": "AFG",
+                    "date": "2024",
+                    "value": 42647492,
+                    "unit": "",
+                    "decimal": 0,
+                },
+                {
+                    "indicator": {"id": "SP.POP.TOTL", "value": "Population, total"},
+                    "country": {"id": "1W", "value": "World"},
+                    "countryiso3code": "WLD",
+                    "date": "2024",
+                    "value": 8234567890,
+                    "unit": "",
+                    "decimal": 0,
+                },
+            ],
+        ]
+
+    payload = module.run_worldbank_source_family_catalog_adapter(
+        tasks_path=tasks_path,
+        output_path=catalog_path,
+        report_json_path=report_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="worldbank-catalog-unit",
+        version="0.1",
+        user_agent="unit-agent/0.1",
+        metadata={"suite": "unit"},
+        fetch_json=fake_fetch_json,
+    )
+    rows = [json.loads(line) for line in catalog_path.read_text(encoding="utf-8").splitlines()]
+    row = rows[0]
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get("report:worldbank-catalog-unit:0.1")
+
+    assert payload["status"] == "ready"
+    assert payload["summary"]["task_count"] == 1
+    assert payload["summary"]["source_document_count"] == 1
+    assert payload["summary"]["skipped_aggregate_count"] == 1
+    assert row["provider"] == "worldbank"
+    assert row["source_family"] == "official_statistics"
+    assert row["source"] == "worldbank:SP.POP.TOTL:AFG:2024"
+    assert row["published_at"] == "2026-04-08"
+    assert "population country" in row["text"]
+    assert row["metadata"]["collection_task_ids"] == ["catalog-official-statistics-alpha"]
+    assert row["metadata"]["source_queue_request_sha256"] == ["sha-a"]
+    assert row["metadata"]["indicator"] == "SP.POP.TOTL"
+    assert row["metadata"]["country_code_iso3"] == "AFG"
+    assert "request_ids" not in row["metadata"]
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "worldbank_source_family_catalog_adapter"
+    assert record.metadata["source_document_count"] == 1
+    assert record.metadata["suite"] == "unit"
+
+
+def test_worldbank_source_family_catalog_adapter_rejects_reserved_task_metadata(tmp_path):
+    module = importlib.import_module("benchmarks.run_worldbank_source_family_catalog_adapter")
+
+    tasks_path = tmp_path / "collection-tasks.jsonl"
+    catalog_path = tmp_path / "worldbank-catalog.jsonl"
+    tasks_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "usage": "source_catalog_collection_only",
+            "not_verifier_evidence": True,
+            "task_id": "catalog-official-statistics-alpha",
+            "source_family": "official_statistics",
+            "search_queries": ["population country"],
+            "metadata": {"model_answer": "bad boundary"},
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="reserved fields: model_answer"):
+        module.run_worldbank_source_family_catalog_adapter(
+            tasks_path=tasks_path,
+            output_path=catalog_path,
+            fetch_json=lambda _url, _headers: [{"page": 1, "pages": 1}, []],
+        )
+
+
 def test_build_source_family_catalog_lifts_source_metadata(tmp_path):
     module = importlib.import_module("benchmarks.build_source_family_catalog")
     registry_module = importlib.import_module("eigentruth.registry")
