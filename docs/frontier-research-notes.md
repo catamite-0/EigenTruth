@@ -832,6 +832,15 @@ Added the first monitor-first tool-selection audit layer:
   `official=36/36`, `official_statistics=4/4`, `scholarly=156/156`, and
   `news=4/4`; route promotion still blocks behind query-sweep and
   controlled-vs-external comparison gates.
+- The citation/search evidence workflow now exposes the target verifier route
+  through `--target-route`, so external/source-family evidence is evaluated
+  against the route it actually selects. Replaying seeded-news source-family
+  evidence with `target_route=retrieval_groundedness` changes the blind-spot
+  query-sweep count from an artifactually reported `0/89` to `7/89`, but it
+  still blocks: external verified false alarm is `0.136`, and the matching
+  controlled `retrieval_groundedness` sweep reaches only `1/89`. Conclusion:
+  the source-family acquisition loop is complete, but groundedness-style lexical
+  evidence should stay diagnostic until structured route-quality improves.
 
 ## Next Research-to-Code Candidates
 
@@ -839,7 +848,8 @@ Added the first monitor-first tool-selection audit layer:
 2. Move from source-family acquisition to route-quality improvement: the current
    queue now has complete source-family coverage, but still has no passing
    blind-spot query strategy. The next code step should improve structured query
-   generation/comparison rather than adding another catalog lane.
+   generation/comparison rather than adding another catalog lane or promoting
+   `retrieval_groundedness` as a correction route.
 3. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
 4. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
 5. Materialize a real `frontier_audit` release candidate with the registered covered-facts external-evidence handoff and external-prediction triple matrix artifact, then export the resulting promotion contract.

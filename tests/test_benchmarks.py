@@ -37881,13 +37881,18 @@ def test_citation_search_evidence_workflow_runs_gates_and_blocks_unsupported_res
     assert payload["summary"]["query_sweep_best_strategy"] == "question_answer_overlap_0p5"
     assert payload["summary"]["query_sweep_best_passing_strategy"] is None
     assert payload["summary"]["comparison_passed"] is False
+    assert payload["config"]["target_route"] == "retrieval_structured_qa"
     assert workflow_report["paths"]["external_retrieval_corpus"].endswith("citation-search-corpus.json")
+    assert workflow_report["config"]["target_route"] == "retrieval_structured_qa"
+    query_sweep_report = json.loads((output_dir / "citation-search-query-sweep.json").read_text(encoding="utf-8"))
+    assert query_sweep_report["config"]["target_route"] == "retrieval_structured_qa"
     assert "record_index" not in request_jsonl
     assert "target_id" not in request_jsonl
     assert "model_answer" not in request_jsonl
     assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
     assert record.metadata["workflow"] == "citation_search_evidence_workflow"
     assert record.metadata["promotion_ready"] is False
+    assert record.metadata["target_route"] == "retrieval_structured_qa"
     assert record.metadata["suite"] == "unit"
 
 
@@ -38040,6 +38045,9 @@ print(f"mock_search_adapter_written={written}")
     manifest_path = output_dir / "artifact-manifest.json"
     request_jsonl = (output_dir / "external-citation-search-requests.jsonl").read_text(encoding="utf-8")
     results_jsonl = (output_dir / "external-citation-search-results.jsonl").read_text(encoding="utf-8")
+    evidence_report = json.loads(
+        (output_dir / "evidence-gate" / "citation-search-evidence-workflow.json").read_text(encoding="utf-8")
+    )
     record = registry_module.ArtifactRegistry.load_json(registry_path).get(
         "report:external-citation-search-unit:0.1"
     )
@@ -38052,6 +38060,8 @@ print(f"mock_search_adapter_written={written}")
     assert payload["evidence_summary"]["source_document_count"] == 2
     assert payload["evidence_summary"]["provenance_passed"] is True
     assert payload["evidence_summary"]["query_sweep_best_passing_strategy"] is None
+    assert payload["config"]["target_route"] == "retrieval_structured_qa"
+    assert evidence_report["config"]["target_route"] == "retrieval_structured_qa"
     assert "record_index" not in request_jsonl
     assert "target_id" not in request_jsonl
     assert "model_answer" not in request_jsonl
@@ -38059,6 +38069,7 @@ print(f"mock_search_adapter_written={written}")
     assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
     assert record.metadata["workflow"] == "external_citation_search_adapter_workflow"
     assert record.metadata["promotion_ready"] is False
+    assert record.metadata["target_route"] == "retrieval_structured_qa"
     assert record.metadata["suite"] == "unit"
 
 
@@ -38209,6 +38220,9 @@ def test_source_family_citation_search_workflow_runs_catalog_and_gates_results(t
     manifest_path = output_dir / "artifact-manifest.json"
     request_jsonl = (output_dir / "source-family-citation-search-requests.jsonl").read_text(encoding="utf-8")
     results_jsonl = (output_dir / "source-family-citation-search-results.jsonl").read_text(encoding="utf-8")
+    evidence_report = json.loads(
+        (output_dir / "evidence-gate" / "citation-search-evidence-workflow.json").read_text(encoding="utf-8")
+    )
     record = registry_module.ArtifactRegistry.load_json(registry_path).get(
         "report:source-family-citation-search-unit:0.1"
     )
@@ -38221,6 +38235,8 @@ def test_source_family_citation_search_workflow_runs_catalog_and_gates_results(t
     assert payload["adapter_summary"]["result_count"] == 2
     assert payload["evidence_summary"]["source_document_count"] == 2
     assert payload["evidence_summary"]["provenance_passed"] is True
+    assert payload["config"]["target_route"] == "retrieval_structured_qa"
+    assert evidence_report["config"]["target_route"] == "retrieval_structured_qa"
     assert "record_index" not in request_jsonl
     assert "target_id" not in request_jsonl
     assert "model_answer" not in request_jsonl
@@ -38228,6 +38244,7 @@ def test_source_family_citation_search_workflow_runs_catalog_and_gates_results(t
     assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
     assert record.metadata["workflow"] == "source_family_citation_search_workflow"
     assert record.metadata["promotion_ready"] is False
+    assert record.metadata["target_route"] == "retrieval_structured_qa"
     assert record.metadata["suite"] == "unit"
 
 

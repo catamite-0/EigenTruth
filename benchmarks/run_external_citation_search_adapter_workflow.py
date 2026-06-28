@@ -37,6 +37,7 @@ from benchmarks.build_citation_search_adapter_handoff import (  # noqa: E402
     run as run_citation_search_handoff,
 )
 from benchmarks.run_citation_search_evidence_workflow import run as run_citation_search_evidence  # noqa: E402
+from benchmarks.sweep_blind_spot_retrieval_queries import DEFAULT_TARGET_ROUTE  # noqa: E402
 from eigentruth.json_utils import strict_json_dumps  # noqa: E402
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
 
@@ -66,6 +67,7 @@ def run_external_citation_search_adapter_workflow(
     corpus_name: str = DEFAULT_CORPUS_NAME,
     source_kind: str = DEFAULT_SOURCE_KIND,
     command_timeout_seconds: float | None = None,
+    target_route: str = DEFAULT_TARGET_ROUTE,
     evidence_metadata: Mapping[str, Any] | None = None,
     compact_json: bool = False,
     fail_on_blocked: bool = False,
@@ -123,6 +125,7 @@ def run_external_citation_search_adapter_workflow(
         max_alternate_queries=max_alternate_queries,
         corpus_name=corpus_name,
         source_kind=source_kind,
+        target_route=target_route,
         metadata={**dict(evidence_metadata or {}), "source_workflow": WORKFLOW},
         compact_json=compact_json,
     )
@@ -150,6 +153,7 @@ def run_external_citation_search_adapter_workflow(
             "corpus_name": corpus_name,
             "source_kind": source_kind,
             "command_timeout_seconds": command_timeout_seconds,
+            "target_route": target_route,
         },
         "paths": {
             "requests": str(request_jsonl),
@@ -191,6 +195,7 @@ def run_external_citation_search_adapter_workflow(
             "status": payload["status"],
             "gate_passed": gate["passed"],
             "promotion_ready": gate["promotion_ready"],
+            "target_route": target_route,
             "adapter_request_count": payload["request_summary"].get("adapter_request_count"),
             "source_document_count": payload["evidence_summary"].get("source_document_count"),
             "corpus_document_count": payload["evidence_summary"].get("corpus_document_count"),
@@ -209,6 +214,7 @@ def run_external_citation_search_adapter_workflow(
                 "status": payload["status"],
                 "gate_passed": gate["passed"],
                 "promotion_ready": gate["promotion_ready"],
+                "target_route": target_route,
                 "adapter_request_count": payload["request_summary"].get("adapter_request_count"),
                 "source_document_count": payload["evidence_summary"].get("source_document_count"),
                 "corpus_document_count": payload["evidence_summary"].get("corpus_document_count"),
@@ -338,6 +344,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--corpus-name", default=DEFAULT_CORPUS_NAME)
     parser.add_argument("--source-kind", default=DEFAULT_SOURCE_KIND)
     parser.add_argument("--command-timeout-seconds", type=float, default=None)
+    parser.add_argument("--target-route", default=DEFAULT_TARGET_ROUTE)
     parser.add_argument("--metadata", action="append", default=[])
     parser.add_argument("--compact-json", action="store_true")
     parser.add_argument("--fail-on-blocked", action="store_true")
@@ -363,6 +370,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         corpus_name=args.corpus_name,
         source_kind=args.source_kind,
         command_timeout_seconds=args.command_timeout_seconds,
+        target_route=args.target_route,
         evidence_metadata=_parse_metadata(args.metadata or ()),
         compact_json=bool(args.compact_json),
         fail_on_blocked=bool(args.fail_on_blocked),

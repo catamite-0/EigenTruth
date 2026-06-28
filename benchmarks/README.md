@@ -2125,6 +2125,16 @@ controlled-vs-external comparison, but the source-family coverage audit is now
 `covered`: `official=36/36`, `official_statistics=4/4`, `scholarly=156/156`,
 and `news=4/4`, with an empty acquisition plan.
 
+The source-family and external citation workflows accept `--target-route` and
+pass it into the query sweep. Use this when the returned verifier records select
+`retrieval_groundedness` rather than `retrieval_structured_qa`; otherwise a real
+refutation can be counted under `any_route_refuted` but missed by the target
+route gate. The seeded-news same-route replay is intentionally still blocked:
+`retrieval_groundedness` refutes `7/89` external blind spots, the matching
+controlled groundedness sweep refutes `1/89`, and external verified false alarm
+is `0.136` against the `0.05` gate. Treat it as diagnostic evidence, not a
+route-promotion artifact.
+
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:
 

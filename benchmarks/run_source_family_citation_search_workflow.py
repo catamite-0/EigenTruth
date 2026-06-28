@@ -38,6 +38,7 @@ from benchmarks.run_source_family_citation_search_adapter import (  # noqa: E402
 )
 from benchmarks.sweep_blind_spot_retrieval_queries import (  # noqa: E402
     DEFAULT_MIN_OVERLAPS,
+    DEFAULT_TARGET_ROUTE,
     QUERY_FIELDS,
 )
 from eigentruth.json_utils import strict_json_dumps  # noqa: E402
@@ -81,6 +82,7 @@ def run_source_family_citation_search_workflow(
     repeats: int = 1,
     seed: int = 0,
     verifier_min_overlap: float = 0.65,
+    target_route: str = DEFAULT_TARGET_ROUTE,
     max_verified_false_alarm: float = 0.05,
     min_blind_refuted_rate: float = 0.50,
     min_controlled_blind_refuted_rate: float = 0.50,
@@ -165,6 +167,7 @@ def run_source_family_citation_search_workflow(
         repeats=repeats,
         seed=seed,
         verifier_min_overlap=verifier_min_overlap,
+        target_route=target_route,
         max_verified_false_alarm=max_verified_false_alarm,
         min_blind_refuted_rate=min_blind_refuted_rate,
         min_controlled_blind_refuted_rate=min_controlled_blind_refuted_rate,
@@ -214,6 +217,7 @@ def run_source_family_citation_search_workflow(
             "repeats": int(repeats),
             "seed": int(seed),
             "verifier_min_overlap": float(verifier_min_overlap),
+            "target_route": target_route,
             "max_verified_false_alarm": float(max_verified_false_alarm),
             "min_blind_refuted_rate": float(min_blind_refuted_rate),
             "min_controlled_blind_refuted_rate": float(min_controlled_blind_refuted_rate),
@@ -264,6 +268,7 @@ def run_source_family_citation_search_workflow(
             "status": payload["status"],
             "gate_passed": gate["passed"],
             "promotion_ready": gate["promotion_ready"],
+            "target_route": target_route,
             "adapter_request_count": payload["request_summary"].get("adapter_request_count"),
             "catalog_source_document_count": payload["adapter_summary"].get("source_document_count"),
             "adapter_result_count": payload["adapter_summary"].get("result_count"),
@@ -284,6 +289,7 @@ def run_source_family_citation_search_workflow(
                 "status": payload["status"],
                 "gate_passed": gate["passed"],
                 "promotion_ready": gate["promotion_ready"],
+                "target_route": target_route,
                 "adapter_request_count": payload["request_summary"].get("adapter_request_count"),
                 "catalog_source_document_count": payload["adapter_summary"].get("source_document_count"),
                 "adapter_result_count": payload["adapter_summary"].get("result_count"),
@@ -409,6 +415,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--repeats", type=int, default=1)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--verifier-min-overlap", type=float, default=0.65)
+    parser.add_argument("--target-route", default=DEFAULT_TARGET_ROUTE)
     parser.add_argument("--max-verified-false-alarm", type=float, default=0.05)
     parser.add_argument("--min-blind-refuted-rate", type=float, default=0.50)
     parser.add_argument("--min-controlled-blind-refuted-rate", type=float, default=0.50)
@@ -456,6 +463,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         repeats=args.repeats,
         seed=args.seed,
         verifier_min_overlap=args.verifier_min_overlap,
+        target_route=args.target_route,
         max_verified_false_alarm=args.max_verified_false_alarm,
         min_blind_refuted_rate=args.min_blind_refuted_rate,
         min_controlled_blind_refuted_rate=args.min_controlled_blind_refuted_rate,

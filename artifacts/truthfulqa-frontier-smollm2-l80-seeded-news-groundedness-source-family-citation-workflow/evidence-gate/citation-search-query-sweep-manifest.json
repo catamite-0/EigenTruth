@@ -1,0 +1,53 @@
+{
+  "artifacts": {
+    "blind_spot_query_sweep": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-query-sweep.json",
+      "sha256": "5ea669b3ff2735a2d636fe4df27284c4e24c2772f0ae41d37ae05421fc302411",
+      "size_bytes": 19027
+    },
+    "blind_spots": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json",
+      "sha256": "5990d22d8547cce21613bdc0c618058ca0f1d6c8766e16363b333595fec4ee5a",
+      "size_bytes": 123816
+    },
+    "corpus_0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-corpus.json",
+      "sha256": "ec9512a25368adaa1a76f90e8ed88161f24efa9a650e03158518c6515f34eae8",
+      "size_bytes": 2159386
+    },
+    "scores": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../smollm2_truthfulqa_l80_scores_with_statements.json",
+      "sha256": "39a53894be76a24513ec5549a8c67269d54a80b995e29161743aafb813b094d9",
+      "size_bytes": 572345
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "best_blind_refuted_count": 7,
+    "best_passing_blind_refuted_count": null,
+    "best_passing_strategy": null,
+    "best_strategy": "question_answer_overlap_0p5",
+    "blind_spot_count": 89,
+    "runner": "sweep_blind_spot_retrieval_queries",
+    "status": "complete"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

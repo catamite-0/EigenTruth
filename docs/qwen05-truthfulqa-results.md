@@ -1411,6 +1411,17 @@ controlled-vs-external comparison gates, but source-family coverage is now
 complete: `official=36/36`, `official_statistics=4/4`, `scholarly=156/156`, and
 `news=4/4`, with an empty acquisition plan.
 
+The citation/search evidence workflows now carry an explicit target route into
+the blind-spot query sweep. Rerunning the seeded-news source-family workflow
+with `--target-route retrieval_groundedness` fixes the earlier route accounting
+mismatch: the external sweep now reports `7/89` blind spots refuted instead of
+`0/89`. This is still not release evidence. The same-route controlled
+`retrieval_groundedness` sweep reaches only `1/89`, the external verified false
+alarm is `0.136` against the `0.05` gate, and the workflow remains `blocked`.
+The practical conclusion is that source-family coverage is solved for this
+queue; next work should improve structured correction routes, not broaden
+lexical groundedness catalogs.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
