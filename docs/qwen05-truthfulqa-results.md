@@ -364,9 +364,14 @@ causal/procedural world-model checks, and `4` temporal-consistency checks.
 `build_world_model_rule_input_collection_plan.py` now lowers that worklist into
 `37` typed input tasks and `4` batches, adding the execution-only fields the
 adapter needs (`expected_entity`, `calculation.expression`,
-`calculation.expected`, and per-task `source_citation`). The next
-implementation step is therefore filling those typed inputs and running the
-promotion gate, not another source-backed catalog replay.
+`calculation.expected`, and per-task `source_citation`).
+`fill_world_model_rule_inputs_from_correction_handoff.py` then fills the one
+task already covered by the promoted Tesla founder correction handoff and
+ProductTrace claim binding. The filled adapter replay executes `1/37` stubs and
+emits one candidate `refuted` entity-role result for `rule:record-1:1`; the
+remaining `36` tasks stay as explicit input requests. The next implementation
+step is therefore promotion-gating that candidate and expanding typed input
+fills, not another source-backed catalog replay.
 
 ## Product Trace Demo
 

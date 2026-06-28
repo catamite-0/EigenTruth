@@ -1959,3 +1959,166 @@ def test_world_model_rule_input_collection_plan_builds_typed_batches(tmp_path):
     assert registry_record is not None
     assert registry_record.metadata["status"] == "ready_for_input_collection"
     assert registry_record.metadata["task_count"] == 2
+
+
+def test_rule_input_correction_handoff_fill_executes_entity_role_candidate(tmp_path):
+    fill_module = importlib.import_module("benchmarks.fill_world_model_rule_inputs_from_correction_handoff")
+    adapter_module = importlib.import_module("benchmarks.run_world_model_rule_authoring_adapter")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    tasks_path = tmp_path / "rule-input-tasks.jsonl"
+    handoff_path = tmp_path / "correction-handoff.json"
+    qa_path = tmp_path / "qa-corpus.json"
+    traces_path = tmp_path / "product-traces.jsonl"
+    fill_output = tmp_path / "fill"
+    adapter_output = tmp_path / "adapter"
+    registry_path = tmp_path / "registry.json"
+    tasks_path.write_text(
+        "\n".join(
+            json.dumps(row)
+            for row in (
+                {
+                    "task_id": "rule-input-task-0001",
+                    "source_request_id": "rule:record-1:1",
+                    "target_id": "record-1",
+                    "rule_family": "entity_disambiguation",
+                    "collection_family": "entity_role_rule_input_collection",
+                    "question": "Who first started Tesla Motors?",
+                    "not_verifier_evidence": True,
+                },
+                {
+                    "task_id": "rule-input-task-0002",
+                    "source_request_id": "rule:record-11:1",
+                    "target_id": "record-11",
+                    "rule_family": "quantity_or_arithmetic",
+                    "collection_family": "numeric_rule_input_collection",
+                    "question": "Do more than 20% of Americans have passports?",
+                    "not_verifier_evidence": True,
+                },
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    handoff_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "source_family_structured_qa_correction_handoff",
+            "status": "promote",
+            "summary": {"correction_candidate_count": 1},
+        }),
+        encoding="utf-8",
+    )
+    qa_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "corpus_type": "target_specific_source_family_structured_qa_correction",
+            "documents": [
+                {
+                    "question": "Who first started Tesla Motors?",
+                    "answer": "Martin Eberhard",
+                    "source": "wikidata:Q478214:P112:Q1903673",
+                    "metadata": {
+                        "subject": "Tesla",
+                        "statement_property": "P112",
+                        "statement_property_label": "founder",
+                        "provider": "wikidata",
+                        "source_family": "reference",
+                        "url": "https://www.wikidata.org/wiki/Q478214",
+                    },
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
+    traces_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "request_id": "source-family-structured-qa-record-38",
+            "claims": [
+                {
+                    "claim_id": "source-family-structured-qa-record-38:model-answer",
+                    "text": "Who first started Tesla Motors? Elon Musk founded Tesla.",
+                    "metadata": {
+                        "question": "Who first started Tesla Motors?",
+                        "answer": "Elon Musk founded Tesla.",
+                    },
+                }
+            ],
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = fill_module.run(
+        input_tasks_path=tasks_path,
+        correction_handoff_path=handoff_path,
+        qa_corpus_path=qa_path,
+        product_traces_path=traces_path,
+        output_dir=fill_output,
+        registry_path=registry_path,
+        name="rule-input-fill-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    filled = [
+        json.loads(line)
+        for line in (fill_output / "rule-inputs.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    unfilled = [
+        json.loads(line)
+        for line in (fill_output / "unfilled-rule-input-tasks.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    registry_record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:rule-input-fill-unit:0.1"
+    )
+
+    assert payload["status"] == "partial"
+    assert payload["summary"]["filled_input_count"] == 1
+    assert payload["summary"]["unfilled_task_count"] == 1
+    assert filled[0]["request_id"] == "rule:record-1:1"
+    assert filled[0]["subject_entity"] == "Tesla"
+    assert filled[0]["answer_entity"] == "Elon Musk"
+    assert filled[0]["expected_entity"] == "Martin Eberhard"
+    assert filled[0]["requested_role"] == "founder"
+    assert filled[0]["source_citation"] == "wikidata:Q478214:P112:Q1903673"
+    assert filled[0]["not_verifier_evidence"] is True
+    assert unfilled[0]["reason"] == "unsupported_collection_family"
+    assert registry_module.load_and_verify_artifact_manifest(fill_output / "artifact-manifest.json").passed is True
+    assert registry_record is not None
+    assert registry_record.metadata["status"] == "partial"
+
+    stubs_path = tmp_path / "world-model-rule-stubs.jsonl"
+    stubs_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "source_family_structured_qa_lane_batch_workflow",
+            "request_id": "rule:record-1:1",
+            "target_id": "record-1",
+            "request_type": "world_model_or_calculator_rule",
+            "rule_family": "entity_disambiguation",
+            "required_inputs": ["subject_entity", "answer_entity", "requested_role"],
+            "question": "Who first started Tesla Motors?",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    adapter_payload = adapter_module.run_world_model_rule_authoring_adapter(
+        rule_stubs_path=stubs_path,
+        rule_inputs_path=fill_output / "rule-inputs.jsonl",
+        output_dir=adapter_output,
+        metadata={"suite": "unit"},
+    )
+    results = [
+        json.loads(line)
+        for line in (adapter_output / "world-model-rule-results.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+    assert adapter_payload["status"] == "observed"
+    assert adapter_payload["summary"]["candidate_refuted_count"] == 1
+    assert results[0]["status"] == "refuted"
+    assert "source_citation=wikidata:Q478214:P112:Q1903673" in results[0]["evidence"][0]

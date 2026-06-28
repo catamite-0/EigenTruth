@@ -185,10 +185,12 @@ def _evaluate_stub(stub: Mapping[str, Any], rule_input: Mapping[str, Any] | None
             if _norm(answer) == _norm(expected)
             else VerificationStatus.REFUTED.value
         )
+        citation = _clean(input_payload.get("source_citation"))
         evidence = (
             "entity_role: "
             f"requested_role={_clean(input_payload.get('requested_role'))}; "
             f"answer_entity={answer}; expected_entity={expected}"
+            f"{'; source_citation=' + citation if citation else ''}"
         )
         return _result(
             stub=stub,

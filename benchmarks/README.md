@@ -2666,6 +2666,46 @@ contract with fields the deterministic adapter actually needs, including
 `source_citation` requirement for every task, while still treating every row as
 non-evidence.
 
+Fill the subset that already has promoted correction-handoff provenance, then
+replay the deterministic adapter with those explicit inputs:
+
+```bash
+RULE_INPUT_FILL=artifacts/truthfulqa-frontier-smollm2-l80-world-model-rule-input-correction-handoff-fill
+RULE_FILLED_ADAPTER=artifacts/truthfulqa-frontier-smollm2-l80-world-model-rule-authoring-adapter-correction-filled
+
+python benchmarks/fill_world_model_rule_inputs_from_correction_handoff.py \
+  --input-tasks "$RULE_INPUT_PLAN/rule-input-tasks.jsonl" \
+  --correction-handoff artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-correction-handoff/source-family-structured-qa-correction-handoff.json \
+  --qa-corpus artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-correction-handoff/source-family-structured-qa-correction-corpus.json \
+  --product-traces artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-correction-handoff/product-traces.jsonl \
+  --output-dir "$RULE_INPUT_FILL" \
+  --json "$RULE_INPUT_FILL/rule-input-correction-handoff-fill.json" \
+  --rule-inputs-jsonl "$RULE_INPUT_FILL/rule-inputs.jsonl" \
+  --unfilled-tasks-jsonl "$RULE_INPUT_FILL/unfilled-rule-input-tasks.jsonl" \
+  --artifact-manifest "$RULE_INPUT_FILL/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_correction_handoff
+
+python benchmarks/run_world_model_rule_authoring_adapter.py \
+  --rule-stubs "$RULE/world-model-rule-stubs.jsonl" \
+  --rule-inputs "$RULE_INPUT_FILL/rule-inputs.jsonl" \
+  --output-dir "$RULE_FILLED_ADAPTER" \
+  --json "$RULE_FILLED_ADAPTER/world-model-rule-authoring-adapter.json" \
+  --rule-results-jsonl "$RULE_FILLED_ADAPTER/world-model-rule-results.jsonl" \
+  --input-requests-jsonl "$RULE_FILLED_ADAPTER/world-model-rule-input-requests.jsonl" \
+  --artifact-manifest "$RULE_FILLED_ADAPTER/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=world_model_rule_input_correction_handoff_fill
+```
+
+The registered fill is `partial`: `1/37` typed tasks are filled from the
+promoted Tesla founder correction handoff, binding ProductTrace answer entity
+`Elon Musk` against the source-backed expected entity `Martin Eberhard`. The
+filled adapter replay executes `1/37` stubs and produces one candidate
+`refuted` entity-role result with `source_citation=wikidata:Q478214:P112:Q1903673`.
+The remaining `36` tasks stay as explicit input requests, and the candidate
+result still requires a promotion gate before any product correction handoff.
+
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:
 
