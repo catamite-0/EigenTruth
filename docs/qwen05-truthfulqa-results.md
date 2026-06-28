@@ -400,6 +400,20 @@ extraterrestrial-premise records promote as `refuted`, and the mixed handoff
 writes two `accept/low` plus two `abstain/high` dry-run actions. Mechanism
 coverage is now `9/9` causal/procedural tasks.
 
+`benchmarks/build_mechanism_handoff_evidence_bundle.py` now aggregates those
+three mechanism handoffs into
+`artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle/`.
+The bundle release gate promotes with `3` handoff reports, `9` ProductTrace
+rows, `9/9` target coverage, `7` supported and `2` refuted verification
+results, `7` accept and `2` abstain actions, and source-family coverage across
+physics reference, official statistics, biographical reference, and official
+science report evidence. Its recursive artifact manifest verifies the three
+child handoff manifests, and `compare_release_candidates.py` /
+`run_release_candidate_registry_workflow.py` can now consume the bundle by file
+or registry key. The `frontier_audit` profile defaults to the registered
+`report:truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle:0.1`
+key.
+
 ## Product Trace Demo
 
 `examples/calibrated_control_demo.py` now defaults to the best repository l80

@@ -11331,6 +11331,74 @@ def _write_world_model_signal_workflow_report(
     return report_path
 
 
+def _write_mechanism_handoff_evidence_bundle_report(
+    output_dir: Path,
+    *,
+    passed: bool = True,
+    trace_count: int = 3,
+    target_count: int = 3,
+    supported_count: int = 2,
+    refuted_count: int = 1,
+) -> Path:
+    from eigentruth.registry import build_artifact_manifest
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    report_path = output_dir / "mechanism-handoff-evidence-bundle.json"
+    manifest_path = output_dir / "artifact-manifest.json"
+    blocking_reasons = [] if passed else ["synthetic mechanism handoff bundle blocked"]
+    status = "promote" if passed else "blocked"
+    payload = {
+        "schema_version": 1,
+        "workflow": "mechanism_handoff_evidence_bundle",
+        "status": status,
+        "paths": {
+            "report": str(report_path),
+            "artifact_manifest": str(manifest_path),
+            "handoff_reports": (),
+            "handoff_manifests": (),
+        },
+        "summary": {
+            "handoff_count": 2 if trace_count else 0,
+            "trace_count": trace_count,
+            "target_count": target_count,
+            "target_coverage_rate": 1.0 if target_count else 0.0,
+            "source_citation_count": trace_count,
+            "verification_status_counts": {
+                "refuted": refuted_count,
+                "supported": supported_count,
+            },
+            "action_counts": {
+                "abstain": refuted_count,
+                "accept": supported_count,
+            },
+            "source_family_counts": {"reference": trace_count},
+        },
+        "gate": {
+            "passed": passed,
+            "status": status,
+            "blocking_reasons": blocking_reasons,
+            "policy": {
+                "min_trace_count": 1,
+                "min_source_citation_count": trace_count,
+            },
+        },
+    }
+    report_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest = build_artifact_manifest(
+        {"mechanism_handoff_evidence_bundle": report_path},
+        root=output_dir,
+        metadata={
+            "runner": "build_mechanism_handoff_evidence_bundle",
+            "workflow": "mechanism_handoff_evidence_bundle",
+            "status": status,
+            "trace_count": trace_count,
+            "target_count": target_count,
+        },
+    )
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return report_path
+
+
 def _write_pathway_intervention_workflow_report(
     output_dir: Path,
     *,
@@ -14379,6 +14447,119 @@ def test_compare_release_candidates_gates_world_model_signal_workflow(tmp_path):
     assert "world_model_signal_workflow_manifest" in candidate["manifests"]
 
 
+def test_compare_release_candidates_gates_mechanism_handoff_evidence_bundle(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="mechanism-readiness",
+        version="0.1",
+        model="HuggingFaceTB/SmolLM2-135M-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="mechanism-route",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="mechanism-route",
+        path=route_manifest,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+    blocked_bundle_path = _write_mechanism_handoff_evidence_bundle_report(
+        tmp_path / "mechanism-bundle-blocked",
+        passed=False,
+        trace_count=0,
+        target_count=0,
+        supported_count=0,
+        refuted_count=0,
+    )
+    promoted_bundle_path = _write_mechanism_handoff_evidence_bundle_report(
+        tmp_path / "mechanism-bundle-promote",
+        passed=True,
+        trace_count=3,
+        target_count=3,
+        supported_count=2,
+        refuted_count=1,
+    )
+    ArtifactRegistry.load_json(registry_path).record_report(
+        name="mechanism-bundle",
+        path=promoted_bundle_path,
+        version="0.1",
+        metadata={"workflow": "mechanism_handoff_evidence_bundle"},
+    ).save_json()
+
+    blocked = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        mechanism_handoff_evidence_bundle_path=blocked_bundle_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+    promoted = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        mechanism_handoff_evidence_bundle_path=promoted_bundle_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+    promoted_from_key = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        mechanism_handoff_evidence_bundle_key="report:mechanism-bundle:0.1",
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+
+    assert blocked["decision"]["status"] == "blocked"
+    assert blocked["decision"]["mechanism_handoff_evidence_bundle_status"] == "blocked"
+    assert blocked["decision"]["blocking_reasons"][0]["gate"] == (
+        "mechanism_handoff_evidence_bundle"
+    )
+    assert blocked["mechanism_handoff_evidence_bundle_gate"]["gate"]["passed"] is False
+    assert promoted["decision"]["status"] == "promote"
+    assert promoted["decision"]["mechanism_handoff_evidence_bundle_status"] == "promote"
+    assert promoted["decision"]["recommended_mechanism_handoff_evidence_bundle_report"] == (
+        str(promoted_bundle_path)
+    )
+    candidate = promoted["release_candidate"]
+    assert candidate["mechanism_handoff_evidence_bundle"]["trace_count"] == pytest.approx(3)
+    assert candidate["mechanism_handoff_evidence_bundle"]["verification_status_counts"] == {
+        "refuted": 1,
+        "supported": 2,
+    }
+    assert "mechanism_handoff_evidence_bundle_manifest" in candidate["manifests"]
+    key_gate = promoted_from_key["release_candidate"]["mechanism_handoff_evidence_bundle"]
+    assert promoted_from_key["decision"]["status"] == "promote"
+    assert promoted_from_key["config"]["mechanism_handoff_evidence_bundle_key"] == (
+        "report:mechanism-bundle:0.1"
+    )
+    assert key_gate["source"] == "registry"
+    assert key_gate["record_key"] == "report:mechanism-bundle:0.1"
+
+
 def test_compare_release_candidates_gates_pathway_intervention_workflow(tmp_path):
     module = importlib.import_module("benchmarks.compare_release_candidates")
     from eigentruth.registry import ArtifactRegistry
@@ -17036,6 +17217,13 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         external_prediction_corpora=("country-core", "enterprise-product"),
         mean_best_external_f1=0.96,
     )
+    mechanism_bundle_report = _write_mechanism_handoff_evidence_bundle_report(
+        tmp_path / "frontier-mechanism-handoff-evidence-bundle",
+        trace_count=3,
+        target_count=3,
+        supported_count=2,
+        refuted_count=1,
+    )
     ArtifactRegistry.load_json(registry_path).record_report(
         name="covered-facts-external-evidence-handoff",
         path=external_evidence_report,
@@ -17046,6 +17234,11 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         path=triple_matrix_report,
         version="0.1",
         metadata={"workflow": "triple_extraction_fixture_matrix"},
+    ).record_report(
+        name="truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle",
+        path=mechanism_bundle_report,
+        version="0.1",
+        metadata={"workflow": "mechanism_handoff_evidence_bundle"},
     ).save_json()
     frontier_payload = module.compare_release_candidates(
         readiness_registry_path=registry_path,
@@ -17136,6 +17329,9 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     assert frontier_payload["config"]["triple_extraction_fixture_matrix_key"] == (
         "report:triple-extraction-fixture-matrix:0.1"
     )
+    assert frontier_payload["config"]["mechanism_handoff_evidence_bundle_key"] == (
+        "report:truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle:0.1"
+    )
     assert frontier_payload["config"]["min_triple_extraction_corpora"] == 2
     assert frontier_payload["config"]["min_triple_extraction_distinct_predicates"] == 6
     assert frontier_payload["config"]["min_triple_extraction_external_prediction_count"] == 2
@@ -17177,6 +17373,9 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         "triple_extraction_fixture_matrix_key"
     ] == "report:triple-extraction-fixture-matrix:0.1"
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
+        "mechanism_handoff_evidence_bundle_key"
+    ] == "report:truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle:0.1"
+    assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
         "min_triple_extraction_external_prediction_count"
     ] == 2
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
@@ -17206,6 +17405,12 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     assert frontier_payload["release_candidate"]["triple_extraction_fixture_matrix"][
         "external_prediction_count"
     ] == 2
+    assert frontier_payload["release_candidate"]["mechanism_handoff_evidence_bundle"][
+        "record_key"
+    ] == "report:truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle:0.1"
+    assert frontier_payload["release_candidate"]["mechanism_handoff_evidence_bundle"][
+        "trace_count"
+    ] == pytest.approx(3)
     assert frontier_payload["triple_extraction_fixture_matrix_gate"]["gate"]["policy"][
         "min_mean_best_external_f1"
     ] == pytest.approx(0.90)
@@ -17220,15 +17425,20 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         product_runtime_drift_report_path=frontier_drift_report,
         external_evidence_baseline_comparison_path=external_evidence_report,
         triple_extraction_fixture_matrix_path=triple_matrix_report,
+        mechanism_handoff_evidence_bundle_path=mechanism_bundle_report,
     )
 
     assert frontier_path_payload["decision"]["status"] == "promote"
     assert frontier_path_payload["config"]["external_evidence_baseline_comparison_key"] is None
     assert frontier_path_payload["config"]["triple_extraction_fixture_matrix_key"] is None
+    assert frontier_path_payload["config"]["mechanism_handoff_evidence_bundle_key"] is None
     assert "external_evidence_baseline_comparison_key" not in (
         frontier_path_payload["config"]["release_policy_profile_applied_defaults"]
     )
     assert "triple_extraction_fixture_matrix_key" not in (
+        frontier_path_payload["config"]["release_policy_profile_applied_defaults"]
+    )
+    assert "mechanism_handoff_evidence_bundle_key" not in (
         frontier_path_payload["config"]["release_policy_profile_applied_defaults"]
     )
     assert frontier_path_payload["release_candidate"]["external_evidence_baseline_comparison"][
@@ -17237,6 +17447,9 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     assert frontier_path_payload["release_candidate"]["triple_extraction_fixture_matrix"][
         "report_path"
     ] == str(triple_matrix_report)
+    assert frontier_path_payload["release_candidate"]["mechanism_handoff_evidence_bundle"][
+        "report_path"
+    ] == str(mechanism_bundle_report)
 
     with pytest.raises(ValueError, match="structured_fact robustness requires both"):
         module.compare_release_candidates(
@@ -18230,6 +18443,9 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     assert frontier_profile_config.triple_extraction_fixture_matrix_key == (
         "report:triple-extraction-fixture-matrix:0.1"
     )
+    assert frontier_profile_config.mechanism_handoff_evidence_bundle_key == (
+        "report:truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle:0.1"
+    )
     assert frontier_profile_config.min_triple_extraction_corpora == 2
     assert frontier_profile_config.min_triple_extraction_distinct_predicates == 6
     assert frontier_profile_config.min_triple_extraction_external_prediction_count == 2
@@ -18272,6 +18488,9 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
         "triple_extraction_fixture_matrix_key"
     ] == "report:triple-extraction-fixture-matrix:0.1"
     assert frontier_profile_config.release_policy_profile_applied_defaults[
+        "mechanism_handoff_evidence_bundle_key"
+    ] == "report:truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle:0.1"
+    assert frontier_profile_config.release_policy_profile_applied_defaults[
         "min_triple_extraction_external_prediction_count"
     ] == 2
     assert frontier_profile_config.release_policy_profile_applied_defaults[
@@ -18289,14 +18508,20 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
         external_evidence_baseline_comparison_path=tmp_path
         / "external-evidence-baseline-comparison.json",
         triple_extraction_fixture_matrix_path=tmp_path / "triple-extraction-fixture-matrix.json",
+        mechanism_handoff_evidence_bundle_path=tmp_path
+        / "mechanism-handoff-evidence-bundle.json",
     )
 
     assert frontier_path_profile_config.external_evidence_baseline_comparison_key is None
     assert frontier_path_profile_config.triple_extraction_fixture_matrix_key is None
+    assert frontier_path_profile_config.mechanism_handoff_evidence_bundle_key is None
     assert "external_evidence_baseline_comparison_key" not in (
         frontier_path_profile_config.release_policy_profile_applied_defaults
     )
     assert "triple_extraction_fixture_matrix_key" not in (
+        frontier_path_profile_config.release_policy_profile_applied_defaults
+    )
+    assert "mechanism_handoff_evidence_bundle_key" not in (
         frontier_path_profile_config.release_policy_profile_applied_defaults
     )
     assert frontier_path_profile_config.min_triple_extraction_external_prediction_count == 2

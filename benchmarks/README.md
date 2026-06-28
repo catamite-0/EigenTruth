@@ -3033,6 +3033,31 @@ actions. All four manifests verify. The registered mechanism lane now covers
 `9/9` causal/procedural input tasks across four source-backed mechanism
 families.
 
+Those three promoted mechanism handoffs can now be bundled as one release-gate
+artifact:
+
+```bash
+python benchmarks/build_mechanism_handoff_evidence_bundle.py \
+  --handoff artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff/world-model-rule-candidate-handoff.json \
+  --handoff artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff/world-model-rule-candidate-handoff.json \
+  --handoff artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff/world-model-rule-candidate-handoff.json \
+  --output-dir artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle \
+  --registry artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle/registry.json \
+  --name truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle \
+  --version 0.1 \
+  --expected-target-count 9 \
+  --min-trace-count 9 \
+  --min-supported-count 7 \
+  --min-refuted-count 2
+```
+
+The current bundle promotes with `9/9` target coverage, `7` supported and `2`
+refuted traces, `7` accept and `2` abstain actions, four source-family buckets,
+and recursive verification of the three child handoff manifests. It can be
+passed to release candidate comparison with `--mechanism-handoff-evidence-bundle`
+or by registry key; `frontier_audit` defaults to
+`report:truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle:0.1`.
+
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:
 
@@ -4440,6 +4465,7 @@ python benchmarks/compare_release_candidates.py \
   --max-uncertainty-escalation-false-accept-delta 0.0 \
   --release-efficiency-report artifacts/product-runtime-profile-sweep/release-efficiency-report.json \
   --external-evidence-baseline-comparison artifacts/external-evidence-baseline-comparison.json \
+  --mechanism-handoff-evidence-bundle artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle/mechanism-handoff-evidence-bundle.json \
   --route-baseline-key benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4 \
   --required-route-baseline-key benchmark_manifest:<local-retrieval-route-name>:<version> \
   --adapter-family-matrix artifacts/adapter_family_matrix/adapter-family-matrix.json \

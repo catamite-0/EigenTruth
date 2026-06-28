@@ -3664,6 +3664,132 @@ def test_world_model_rule_candidate_handoff_writes_trace_and_action_results(tmp_
     assert action_record.metadata["action_result_count"] == 2
 
 
+def test_mechanism_handoff_evidence_bundle_writes_manifest_and_registry(tmp_path):
+    module = importlib.import_module("benchmarks.build_mechanism_handoff_evidence_bundle")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    def write_handoff(
+        output_dir,
+        *,
+        name,
+        target_id,
+        status,
+        action,
+        source_family,
+    ):
+        output_dir.mkdir(parents=True, exist_ok=True)
+        report_path = output_dir / "world-model-rule-candidate-handoff.json"
+        trace_path = output_dir / "product-traces.jsonl"
+        action_path = output_dir / "action-results.jsonl"
+        manifest_path = output_dir / "artifact-manifest.json"
+        report = {
+            "schema_version": 1,
+            "workflow": "world_model_rule_candidate_handoff",
+            "status": "promote",
+            "summary": {
+                "input_candidate_count": 1,
+                "handoff_candidate_count": 1,
+                "blocked_candidate_count": 0,
+                "trace_count": 1,
+                "action_result_count": 1,
+                "verification_status_counts": {status: 1},
+                "action_counts": {action: 1},
+                "rule_family_counts": {"causal_or_procedural": 1},
+                "source_citation_count": 1,
+                "action_execution_alignment_passed": True,
+            },
+            "paths": {
+                "product_traces": str(trace_path),
+                "action_results": str(action_path),
+                "artifact_manifest": str(manifest_path),
+            },
+        }
+        trace = {
+            "request_id": f"trace:{name}",
+            "metadata": {"target_id": target_id},
+            "claims": [{"metadata": {"source_family": source_family}}],
+        }
+        report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+        trace_path.write_text(json.dumps(trace) + "\n", encoding="utf-8")
+        action_path.write_text(json.dumps({"status": "dry_run"}) + "\n", encoding="utf-8")
+        manifest = registry_module.build_artifact_manifest(
+            {
+                "world_model_rule_candidate_handoff": report_path,
+                "product_traces": trace_path,
+                "action_results": action_path,
+            },
+            root=output_dir,
+            metadata={
+                "workflow": "world_model_rule_candidate_handoff",
+                "status": "promote",
+                "trace_count": 1,
+            },
+        )
+        manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+        return report_path
+
+    registry_path = tmp_path / "registry.json"
+    output_dir = tmp_path / "bundle"
+    handoffs = (
+        write_handoff(
+            tmp_path / "supported-handoff",
+            name="supported",
+            target_id="record-10",
+            status="supported",
+            action="accept",
+            source_family="reference",
+        ),
+        write_handoff(
+            tmp_path / "refuted-handoff",
+            name="refuted",
+            target_id="record-212",
+            status="refuted",
+            action="abstain",
+            source_family="scientific_report",
+        ),
+    )
+
+    payload = module.run(
+        handoff_paths=handoffs,
+        output_dir=output_dir,
+        registry_path=registry_path,
+        name="mechanism-bundle-unit",
+        version="0.1",
+        expected_target_count=2,
+        min_supported_count=1,
+        min_refuted_count=1,
+        metadata={"suite": "unit"},
+    )
+    blocked = module.build_mechanism_handoff_evidence_bundle(
+        [payload["handoffs"][0]],
+        expected_target_count=2,
+        min_refuted_count=1,
+    )
+
+    assert payload["status"] == "promote"
+    assert payload["summary"]["handoff_count"] == 2
+    assert payload["summary"]["trace_count"] == 2
+    assert payload["summary"]["target_count"] == 2
+    assert payload["summary"]["verification_status_counts"] == {"refuted": 1, "supported": 1}
+    assert payload["summary"]["action_counts"] == {"abstain": 1, "accept": 1}
+    assert payload["summary"]["source_family_counts"] == {
+        "reference": 1,
+        "scientific_report": 1,
+    }
+    assert payload["gate"]["passed"] is True
+    assert blocked["status"] == "blocked"
+    assert any("refuted count below" in reason for reason in blocked["gate"]["blocking_reasons"])
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:mechanism-bundle-unit:0.1"
+    )
+    assert record.metadata["workflow"] == "mechanism_handoff_evidence_bundle"
+    assert record.metadata["trace_count"] == 2
+    assert registry_module.load_and_verify_artifact_manifest(
+        output_dir / "artifact-manifest.json",
+        recursive=True,
+    ).passed is True
+
+
 def test_world_model_rule_candidate_handoff_preserves_mechanism_claim_metadata():
     module = importlib.import_module("benchmarks.build_world_model_rule_candidate_handoff")
 

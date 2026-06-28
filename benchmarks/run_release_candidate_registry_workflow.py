@@ -68,6 +68,8 @@ def _apply_release_policy_profile_to_config(
         disabled_profile_defaults.append("external_evidence_baseline_comparison_key")
     if config.triple_extraction_fixture_matrix_path is not None:
         disabled_profile_defaults.append("triple_extraction_fixture_matrix_key")
+    if config.mechanism_handoff_evidence_bundle_path is not None:
+        disabled_profile_defaults.append("mechanism_handoff_evidence_bundle_key")
     profile, values, applied = apply_release_policy_profile_defaults(
         config.release_policy_profile,
         {
@@ -126,6 +128,9 @@ def _apply_release_policy_profile_to_config(
                 config.external_evidence_baseline_comparison_key
             ),
             "triple_extraction_fixture_matrix_key": config.triple_extraction_fixture_matrix_key,
+            "mechanism_handoff_evidence_bundle_key": (
+                config.mechanism_handoff_evidence_bundle_key
+            ),
             "min_triple_extraction_corpora": config.min_triple_extraction_corpora,
             "min_triple_extraction_distinct_predicates": (
                 config.min_triple_extraction_distinct_predicates
@@ -187,6 +192,9 @@ class ReleaseCandidateRegistryWorkflowConfig:
     world_model_signal_workflow_path: Path | None = None
     world_model_signal_workflow_registry_path: Path | None = None
     world_model_signal_workflow_key: str | None = None
+    mechanism_handoff_evidence_bundle_path: Path | None = None
+    mechanism_handoff_evidence_bundle_registry_path: Path | None = None
+    mechanism_handoff_evidence_bundle_key: str | None = None
     pathway_intervention_workflow_path: Path | None = None
     pathway_intervention_workflow_registry_path: Path | None = None
     pathway_intervention_workflow_key: str | None = None
@@ -671,6 +679,11 @@ def run_release_candidate_registry_workflow(
         world_model_signal_workflow_path=config.world_model_signal_workflow_path,
         world_model_signal_workflow_registry_path=config.world_model_signal_workflow_registry_path,
         world_model_signal_workflow_key=config.world_model_signal_workflow_key,
+        mechanism_handoff_evidence_bundle_path=config.mechanism_handoff_evidence_bundle_path,
+        mechanism_handoff_evidence_bundle_registry_path=(
+            config.mechanism_handoff_evidence_bundle_registry_path
+        ),
+        mechanism_handoff_evidence_bundle_key=config.mechanism_handoff_evidence_bundle_key,
         pathway_intervention_workflow_path=config.pathway_intervention_workflow_path,
         pathway_intervention_workflow_registry_path=(
             config.pathway_intervention_workflow_registry_path
@@ -1653,6 +1666,13 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
     world_model_signal_workflow = dict(candidate.get("world_model_signal_workflow") or {})
     if not world_model_signal_workflow:
         world_model_signal_workflow = dict(comparison.get("world_model_signal_workflow_gate") or {})
+    mechanism_handoff_evidence_bundle = dict(
+        candidate.get("mechanism_handoff_evidence_bundle") or {}
+    )
+    if not mechanism_handoff_evidence_bundle:
+        mechanism_handoff_evidence_bundle = dict(
+            comparison.get("mechanism_handoff_evidence_bundle_gate") or {}
+        )
     pathway_intervention_workflow = dict(candidate.get("pathway_intervention_workflow") or {})
     if not pathway_intervention_workflow:
         pathway_intervention_workflow = dict(
@@ -1679,6 +1699,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "release_world_model_signal_workflow_status": decision.get(
             "world_model_signal_workflow_status"
+        ),
+        "release_mechanism_handoff_evidence_bundle_status": decision.get(
+            "mechanism_handoff_evidence_bundle_status"
         ),
         "release_pathway_intervention_workflow_status": decision.get(
             "pathway_intervention_workflow_status"
@@ -1726,6 +1749,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "recommended_world_model_signal_workflow_report": decision.get(
             "recommended_world_model_signal_workflow_report"
+        ),
+        "recommended_mechanism_handoff_evidence_bundle_report": decision.get(
+            "recommended_mechanism_handoff_evidence_bundle_report"
         ),
         "recommended_pathway_intervention_workflow_report": decision.get(
             "recommended_pathway_intervention_workflow_report"
@@ -2441,6 +2467,34 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "world_model_signal_workflow_calibrated_conflict_signal_count": (
             world_model_signal_workflow.get("calibrated_conflict_signal_count")
         ),
+        "mechanism_handoff_evidence_bundle_report": (
+            mechanism_handoff_evidence_bundle.get("report_path")
+        ),
+        "mechanism_handoff_evidence_bundle_manifest": (
+            manifests.get("mechanism_handoff_evidence_bundle_manifest")
+            or mechanism_handoff_evidence_bundle.get("manifest_path")
+        ),
+        "mechanism_handoff_evidence_bundle_source": (
+            mechanism_handoff_evidence_bundle.get("source")
+        ),
+        "mechanism_handoff_evidence_bundle_registry": (
+            mechanism_handoff_evidence_bundle.get("registry")
+        ),
+        "mechanism_handoff_evidence_bundle_record": (
+            mechanism_handoff_evidence_bundle.get("record_key")
+        ),
+        "mechanism_handoff_evidence_bundle_handoff_count": (
+            mechanism_handoff_evidence_bundle.get("handoff_count")
+        ),
+        "mechanism_handoff_evidence_bundle_trace_count": (
+            mechanism_handoff_evidence_bundle.get("trace_count")
+        ),
+        "mechanism_handoff_evidence_bundle_target_count": (
+            mechanism_handoff_evidence_bundle.get("target_count")
+        ),
+        "mechanism_handoff_evidence_bundle_source_citation_count": (
+            mechanism_handoff_evidence_bundle.get("source_citation_count")
+        ),
         "pathway_intervention_workflow_report": pathway_intervention_workflow.get("report_path"),
         "pathway_intervention_workflow_manifest": (
             manifests.get("pathway_intervention_workflow_manifest")
@@ -2780,6 +2834,17 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
             else Path(args.world_model_signal_workflow_registry)
         ),
         world_model_signal_workflow_key=args.world_model_signal_workflow_key,
+        mechanism_handoff_evidence_bundle_path=(
+            None
+            if args.mechanism_handoff_evidence_bundle is None
+            else Path(args.mechanism_handoff_evidence_bundle)
+        ),
+        mechanism_handoff_evidence_bundle_registry_path=(
+            None
+            if args.mechanism_handoff_evidence_bundle_registry is None
+            else Path(args.mechanism_handoff_evidence_bundle_registry)
+        ),
+        mechanism_handoff_evidence_bundle_key=args.mechanism_handoff_evidence_bundle_key,
         pathway_intervention_workflow_path=(
             None
             if args.pathway_intervention_workflow is None
@@ -3117,6 +3182,16 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "defaults to --readiness-registry")
     parser.add_argument("--world-model-signal-workflow-key", default=None,
                         help="optional report:<name>:<version> registry key for a world-model signal workflow")
+    parser.add_argument("--mechanism-handoff-evidence-bundle", default=None,
+                        help="optional mechanism handoff evidence bundle report that must promote "
+                             "and verify")
+    parser.add_argument("--mechanism-handoff-evidence-bundle-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for "
+                             "--mechanism-handoff-evidence-bundle-key; defaults to "
+                             "--readiness-registry")
+    parser.add_argument("--mechanism-handoff-evidence-bundle-key", default=None,
+                        help="optional report:<name>:<version> registry key for a mechanism "
+                             "handoff evidence bundle")
     parser.add_argument("--pathway-intervention-workflow", default=None,
                         help="optional pathway intervention workflow report that must be release-ready "
                              "and manifest-verified")

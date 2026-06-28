@@ -34,6 +34,9 @@ FRONTIER_EXTERNAL_EVIDENCE_BASELINE_COMPARISON_KEY = (
     "report:covered-facts-external-evidence-handoff:0.4"
 )
 FRONTIER_TRIPLE_EXTRACTION_FIXTURE_MATRIX_KEY = "report:triple-extraction-fixture-matrix:0.1"
+FRONTIER_MECHANISM_HANDOFF_EVIDENCE_BUNDLE_KEY = (
+    "report:truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle:0.1"
+)
 
 RELEASE_POLICY_PROFILES: Mapping[str, Mapping[str, Any]] = {
     "research_smoke": {
@@ -58,6 +61,7 @@ RELEASE_POLICY_PROFILES: Mapping[str, Mapping[str, Any]] = {
             FRONTIER_EXTERNAL_EVIDENCE_BASELINE_COMPARISON_KEY
         ),
         "triple_extraction_fixture_matrix_key": FRONTIER_TRIPLE_EXTRACTION_FIXTURE_MATRIX_KEY,
+        "mechanism_handoff_evidence_bundle_key": FRONTIER_MECHANISM_HANDOFF_EVIDENCE_BUNDLE_KEY,
         "min_triple_extraction_corpora": 2,
         "min_triple_extraction_distinct_predicates": 6,
         "min_triple_extraction_external_prediction_count": 2,

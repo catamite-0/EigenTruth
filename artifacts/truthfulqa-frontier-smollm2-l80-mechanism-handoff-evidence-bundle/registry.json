@@ -1,0 +1,22 @@
+{
+  "records": [
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle/artifact-manifest.json",
+        "evidence": "mechanism_handoff_evidence_bundle",
+        "handoff_count": 3,
+        "source_citation_count": 9,
+        "status": "promote",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "target_count": 9,
+        "trace_count": 9,
+        "workflow": "mechanism_handoff_evidence_bundle"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle/mechanism-handoff-evidence-bundle.json",
+      "version": "0.1"
+    }
+  ],
+  "schema_version": 1
+}

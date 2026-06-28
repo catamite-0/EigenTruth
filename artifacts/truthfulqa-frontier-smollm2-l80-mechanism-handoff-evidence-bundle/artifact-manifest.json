@@ -1,0 +1,126 @@
+{
+  "artifacts": {
+    "handoff_action_results_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff/action-results.jsonl",
+      "sha256": "39f04f25b36d6cf4c1856f3ec284754b9120ae5e3ede406ace22b9f2ae8eeed7",
+      "size_bytes": 944
+    },
+    "handoff_action_results_2": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff/action-results.jsonl",
+      "sha256": "8b51fd7e332653d88faaae7ef0f25cb19019a08ecd96e6da17b32d423c6ddef2",
+      "size_bytes": 3784
+    },
+    "handoff_action_results_3": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff/action-results.jsonl",
+      "sha256": "74b8455960cac5daeec82c2f909d59c84481941fe6b53abad5d145e265f38acf",
+      "size_bytes": 9162
+    },
+    "handoff_manifest_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff/artifact-manifest.json",
+      "sha256": "76b4b11bf5aa4e35e7327c8f2684e0f69bb1cefa4385d95297f9207d83060c2f",
+      "size_bytes": 1974
+    },
+    "handoff_manifest_2": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff/artifact-manifest.json",
+      "sha256": "fe31f90c85e0b4750035bcd18f863fa1c893e3dd1409d0943efaa77c7ca163be",
+      "size_bytes": 2013
+    },
+    "handoff_manifest_3": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff/artifact-manifest.json",
+      "sha256": "4fd716da8abedf5f2cc7091270c8646a2402baaff2d4cde1ee90b337bea5255d",
+      "size_bytes": 1998
+    },
+    "handoff_product_traces_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff/product-traces.jsonl",
+      "sha256": "e3065c279ddbb82964c1a68a67e48b4f10d86d9e7191b9874b60920b4afe0345",
+      "size_bytes": 18496
+    },
+    "handoff_product_traces_2": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff/product-traces.jsonl",
+      "sha256": "0ed3dc5807f86422c326201201c8975f5eaba516a745dcb47879a3cb35dc2e1c",
+      "size_bytes": 78064
+    },
+    "handoff_product_traces_3": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff/product-traces.jsonl",
+      "sha256": "cc2c990dee7680c34ace5c5fa742d972d8944d218a832923db9f9005b8e4935f",
+      "size_bytes": 90649
+    },
+    "handoff_report_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff/world-model-rule-candidate-handoff.json",
+      "sha256": "845e0bcfbc9afe1bbdf112c454252ae448c8622f76449771fec4e0e8c092f5d7",
+      "size_bytes": 3054
+    },
+    "handoff_report_2": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff/world-model-rule-candidate-handoff.json",
+      "sha256": "a14126c88502bd51573ea13e0811accd6c3ac258f638ce76044c26189605f2a0",
+      "size_bytes": 4434
+    },
+    "handoff_report_3": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff/world-model-rule-candidate-handoff.json",
+      "sha256": "c04c2580c776fe3bebdbfd86e6e4b9bde942bba4de65e099c608a9d1c45a2adb",
+      "size_bytes": 4286
+    },
+    "mechanism_handoff_evidence_bundle": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "mechanism-handoff-evidence-bundle.json",
+      "sha256": "c3c636c7ff8858589b301d9bc747b7881f532bc8d90aff086e5cbd80d733716f",
+      "size_bytes": 7151
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "evidence": "mechanism_handoff_evidence_bundle",
+    "handoff_count": 3,
+    "source_citation_count": 9,
+    "status": "promote",
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "target_count": 9,
+    "trace_count": 9,
+    "workflow": "mechanism_handoff_evidence_bundle"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 13,
+    "directory_count": 0,
+    "file_count": 13,
+    "missing_count": 0
+  }
+}

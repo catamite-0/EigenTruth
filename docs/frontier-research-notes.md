@@ -663,8 +663,8 @@ Added the first monitor-first tool-selection audit layer:
   and `--require-product-trace-action-execution-gate` now fail closed unless a
   supplied product-trace-replay workflow promoted the corresponding child gate.
   The `frontier_audit` profile enables both by default, now also defaults to
-  the registered covered-facts external-evidence handoff and external-prediction
-  triple-extraction matrix gates, and
+  the registered covered-facts external-evidence handoff, mechanism handoff
+  evidence bundle, and external-prediction triple-extraction matrix gates, and
   `run_release_candidate_registry_workflow.py` records the child gate reports
   plus action-audit/action-execution rates in release manifests and registry
   metadata.
@@ -997,8 +997,15 @@ Added the first monitor-first tool-selection audit layer:
   supported and two refuted candidates, promotes `4/4`, and writes ProductTrace
   actions split between two `accept/low` and two `abstain/high`. Mechanism
   coverage is now `9/9` causal/procedural input tasks across four
-  source-backed families, while the broader product frontier still needs release
-  gate aggregation and more non-mechanism evidence.
+  source-backed families. `build_mechanism_handoff_evidence_bundle.py` now
+  aggregates those three handoff reports into
+  `artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle/`:
+  the gate promotes with `9/9` target coverage, `7` supported and `2` refuted
+  traces, `7` accept and `2` abstain actions, four source-family buckets, and a
+  recursive manifest that verifies the three child handoff manifests. The bundle
+  is now a first-class optional release gate, and `frontier_audit` defaults its
+  registry key alongside covered-facts external evidence and triple-extraction
+  fixture evidence.
 
 ## Next Research-to-Code Candidates
 
@@ -1010,10 +1017,11 @@ Added the first monitor-first tool-selection audit layer:
    the remaining numeric work is subject-binding resolution for ambiguous
    questions such as `record-190`; temporal work needs richer content/citation
    mapping or source-backed temporal fills. The causal/procedural mechanism
-   queue is now fully filled and promoted (`9/9`), so the next mechanism work is
-   release-gate aggregation rather than more typed input collection. The
-   complete source-backed replay now proves local-catalog coverage is not enough
-   (`0/88` mapped).
+   queue is now fully filled, promoted, aggregated into a release-gate bundle,
+   and manifest-verified (`9/9`), so the next mechanism work is full
+   `frontier_audit` release-candidate materialization rather than more typed
+   input collection. The complete source-backed replay now proves local-catalog
+   coverage is not enough (`0/88` mapped).
 3. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
 4. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
-5. Materialize a real `frontier_audit` release candidate with the registered covered-facts external-evidence handoff and external-prediction triple matrix artifact, then export the resulting promotion contract.
+5. Materialize a real `frontier_audit` release candidate with the registered covered-facts external-evidence handoff, mechanism handoff evidence bundle, and external-prediction triple matrix artifact, then export the resulting promotion contract.
