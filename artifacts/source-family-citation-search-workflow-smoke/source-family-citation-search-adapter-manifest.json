@@ -1,0 +1,54 @@
+{
+  "artifacts": {
+    "adapter_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-citation-search-adapter-report.json",
+      "sha256": "408f051ea6808d08e1db0b22feabfd503f5889b8a4abd61131f157228c991e99",
+      "size_bytes": 1250
+    },
+    "adapter_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-citation-search-requests.jsonl",
+      "sha256": "3d1dd098ddb51dbd876b2cd7076e2d3b6e85a4b417596ab3ddac880ee29b2ea0",
+      "size_bytes": 2319
+    },
+    "adapter_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-citation-search-results.jsonl",
+      "sha256": "b6e10cb4f947318fd4416e6d9c1a0715277d1aea61eee76de444b0c9658d65cb",
+      "size_bytes": 2024
+    },
+    "source_catalog_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-catalog.jsonl",
+      "sha256": "1d3d3a702babcaabda8008fd5f8e318982ee3b673d75cea2a857cedf9c8fcdb8",
+      "size_bytes": 423
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "evidence": "synthetic_smoke",
+    "request_count": 2,
+    "request_with_results_count": 2,
+    "result_count": 2,
+    "source_document_count": 2,
+    "source_workflow": "source_family_citation_search_workflow",
+    "suite": "source_family_workflow_smoke",
+    "workflow": "source_family_citation_search_adapter"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

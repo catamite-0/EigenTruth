@@ -1,0 +1,42 @@
+{
+  "config": {
+    "layer": -1,
+    "model": "synthetic"
+  },
+  "labels": [
+    0,
+    1,
+    1,
+    0
+  ],
+  "scores": {
+    "truth_proj": [
+      0.1,
+      0.9,
+      0.8,
+      0.2
+    ]
+  },
+  "statements": [
+    {
+      "answer": "A1",
+      "question": "What is Alpha?",
+      "text": "What is Alpha? A1"
+    },
+    {
+      "answer": "Wrong A1",
+      "question": "What is Alpha?",
+      "text": "What is Alpha? Wrong A1"
+    },
+    {
+      "answer": "Wrong B",
+      "question": "Who founded Beta?",
+      "text": "Who founded Beta? Wrong B"
+    },
+    {
+      "answer": "B2",
+      "question": "Who founded Beta?",
+      "text": "Who founded Beta? B2"
+    }
+  ]
+}

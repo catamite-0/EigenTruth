@@ -1,0 +1,24 @@
+{
+  "records": [
+    {
+      "answer": "Wrong A1",
+      "features": {},
+      "label": 1,
+      "question": "What is Alpha?",
+      "question_type": "definition",
+      "record_index": 1,
+      "text": "What is Alpha? Wrong A1"
+    },
+    {
+      "answer": "Wrong B",
+      "features": {},
+      "label": 1,
+      "question": "Who founded Beta?",
+      "question_type": "person",
+      "record_index": 2,
+      "text": "Who founded Beta? Wrong B"
+    }
+  ],
+  "schema_version": 1,
+  "workflow": "detectability_blind_spot_analysis"
+}

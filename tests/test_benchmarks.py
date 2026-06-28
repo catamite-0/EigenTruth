@@ -36954,6 +36954,175 @@ print(f"mock_search_adapter_written={written}")
     assert record.metadata["suite"] == "unit"
 
 
+def test_source_family_citation_search_workflow_runs_catalog_and_gates_results(tmp_path):
+    module = importlib.import_module("benchmarks.run_source_family_citation_search_workflow")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    queue_path = tmp_path / "unresolved-evidence-queue.json"
+    catalog_path = tmp_path / "source-family-catalog.jsonl"
+    scores_path = tmp_path / "scores.json"
+    blind_spots_path = tmp_path / "blind-spots.json"
+    controlled_sweep_path = tmp_path / "controlled-query-sweep.json"
+    output_dir = tmp_path / "source-family-workflow"
+    registry_path = tmp_path / "registry.json"
+    queue_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "unresolved_blind_spot_evidence_queue",
+            "status": "ready_for_adapter_execution",
+            "summary": {"target_count": 2, "adapter_request_count": 2},
+            "adapter_requests": [
+                {
+                    "queue_id": "queue:alpha:external_citation:1",
+                    "source_request_id": "cite:alpha:1",
+                    "target_id": "alpha",
+                    "record_index": 1,
+                    "adapter_family": "external_citation_search",
+                    "request_type": "external_citation",
+                    "priority": "high",
+                    "question_type": "definition",
+                    "question": "What is Alpha?",
+                    "model_answer": "Wrong A1",
+                    "query": "What is Alpha? Wrong A1",
+                    "requires_timestamp": False,
+                    "usage": "source_discovery_only",
+                },
+                {
+                    "queue_id": "queue:beta:external_citation:1",
+                    "source_request_id": "cite:beta:1",
+                    "target_id": "beta",
+                    "record_index": 2,
+                    "adapter_family": "external_citation_search",
+                    "request_type": "external_citation",
+                    "priority": "high",
+                    "question_type": "person",
+                    "question": "Who founded Beta?",
+                    "model_answer": "Wrong B",
+                    "query": "Who founded Beta? Wrong B",
+                    "requires_timestamp": False,
+                    "usage": "source_discovery_only",
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    catalog_path.write_text(
+        "\n".join([
+            json.dumps({
+                "title": "Alpha reference source",
+                "text": "What is Alpha? Alpha is described in an independent reference source.",
+                "source": "reference:alpha",
+                "provider": "unit-source-family-catalog",
+                "source_family": "reference",
+            }),
+            json.dumps({
+                "title": "Beta official source",
+                "text": "Who founded Beta? Beta has an official profile in this local catalog.",
+                "source": "official:beta",
+                "provider": "unit-source-family-catalog",
+                "source_family": "official",
+            }),
+        ])
+        + "\n",
+        encoding="utf-8",
+    )
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 1, 1, 0],
+            "scores": {"truth_proj": [0.1, 0.9, 0.8, 0.2]},
+            "statements": [
+                {"question": "What is Alpha?", "answer": "A1", "text": "What is Alpha? A1"},
+                {"question": "What is Alpha?", "answer": "Wrong A1", "text": "What is Alpha? Wrong A1"},
+                {"question": "Who founded Beta?", "answer": "Wrong B", "text": "Who founded Beta? Wrong B"},
+                {"question": "Who founded Beta?", "answer": "B2", "text": "Who founded Beta? B2"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    blind_spots_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "detectability_blind_spot_analysis",
+            "records": [
+                {
+                    "record_index": 1,
+                    "label": 1,
+                    "question_type": "definition",
+                    "features": {},
+                    "question": "What is Alpha?",
+                    "answer": "Wrong A1",
+                    "text": "What is Alpha? Wrong A1",
+                },
+                {
+                    "record_index": 2,
+                    "label": 1,
+                    "question_type": "person",
+                    "features": {},
+                    "question": "Who founded Beta?",
+                    "answer": "Wrong B",
+                    "text": "Who founded Beta? Wrong B",
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    _write_query_sweep_fixture(
+        controlled_sweep_path,
+        corpus_type="truthfulqa_correct_answer_evidence",
+        controlled_warning="controlled corpus",
+        refuted_count=2,
+        refuted_rate=1.0,
+        false_alarm=0.0,
+    )
+
+    payload = module.run_source_family_citation_search_workflow(
+        queue_report_path=queue_path,
+        source_catalog_paths=(catalog_path,),
+        scores_path=scores_path,
+        blind_spots_path=blind_spots_path,
+        controlled_sweep_paths=(controlled_sweep_path,),
+        output_dir=output_dir,
+        query_fields=("question_answer",),
+        retriever_min_overlaps=(0.5,),
+        retrieval_limit=2,
+        alpha=0.2,
+        max_verified_false_alarm=0.0,
+        min_blind_refuted_rate=1.0,
+        min_controlled_blind_refuted_rate=1.0,
+        min_external_blind_refuted_rate=1.0,
+        max_controlled_verified_false_alarm=0.0,
+        max_external_verified_false_alarm=0.0,
+        registry_path=registry_path,
+        name="source-family-citation-search-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    manifest_path = output_dir / "artifact-manifest.json"
+    request_jsonl = (output_dir / "source-family-citation-search-requests.jsonl").read_text(encoding="utf-8")
+    results_jsonl = (output_dir / "source-family-citation-search-results.jsonl").read_text(encoding="utf-8")
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:source-family-citation-search-unit:0.1"
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["gate"]["passed"] is False
+    assert payload["gate"]["promotion_ready"] is False
+    assert payload["request_summary"]["adapter_request_count"] == 2
+    assert payload["adapter_summary"]["request_with_results_count"] == 2
+    assert payload["adapter_summary"]["result_count"] == 2
+    assert payload["evidence_summary"]["source_document_count"] == 2
+    assert payload["evidence_summary"]["provenance_passed"] is True
+    assert "record_index" not in request_jsonl
+    assert "target_id" not in request_jsonl
+    assert "model_answer" not in request_jsonl
+    assert "unit-source-family-catalog" in results_jsonl
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "source_family_citation_search_workflow"
+    assert record.metadata["promotion_ready"] is False
+    assert record.metadata["suite"] == "unit"
+
+
 def test_eval_score_ensemble_compares_single_and_combined_signals(tmp_path):
     module = importlib.import_module("benchmarks.eval_score_ensemble")
     scores_path = tmp_path / "scores.json"

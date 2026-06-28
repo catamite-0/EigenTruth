@@ -734,11 +734,19 @@ Added the first monitor-first tool-selection audit layer:
   workflow. The registered smoke artifact is synthetic (`2` requests, `3`
   catalog docs, `4` result rows, verified manifest), so it proves the command
   boundary and ranking semantics but not TruthfulQA route quality.
+- The local source-family adapter now has a one-command evidence loop:
+  `run_source_family_citation_search_workflow.py` builds sanitized requests,
+  ranks local source catalogs, and runs the standard provenance/query/comparison
+  gates. Its registered synthetic smoke artifact consumes `2` unresolved
+  citation requests and returns `2` adapter results, passes provenance, and
+  remains blocked by query/comparison gates. This is the right fail-closed
+  posture for official-source catalog integration: real source catalogs can be
+  dropped in without creating a bypass around release evidence gates.
 
 ## Next Research-to-Code Candidates
 
 1. Convert the target-specific Wikidata source docs into structured-fact/QA corpora, then rerun the blind-spot correction-route audit instead of another lexical overlap sweep.
-2. Populate the source-family adapter with real official/structured catalogs for unresolved blind spots, then run the usual provenance/query/comparison gates before making any route-quality claim.
+2. Populate `run_source_family_citation_search_workflow.py` with real official/structured catalogs for unresolved blind spots, then run the usual provenance/query/comparison gates before making any route-quality claim.
 3. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
 4. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
 5. Materialize a real `frontier_audit` release candidate with the registered covered-facts external-evidence handoff and external-prediction triple matrix artifact, then export the resulting promotion contract.

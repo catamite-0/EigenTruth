@@ -5573,6 +5573,26 @@
       "name": "source-family-citation-search-adapter-smoke",
       "path": "artifacts/source-family-citation-search-adapter-smoke/source-family-adapter-report.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "adapter_request_count": 2,
+        "adapter_result_count": 2,
+        "artifact_manifest": "artifacts/source-family-citation-search-workflow-smoke/artifact-manifest.json",
+        "catalog_source_document_count": 2,
+        "corpus_document_count": 2,
+        "evidence": "synthetic_smoke",
+        "evidence_source_document_count": 2,
+        "gate_passed": false,
+        "promotion_ready": false,
+        "status": "blocked",
+        "suite": "source_family_workflow_smoke",
+        "workflow": "source_family_citation_search_workflow"
+      },
+      "name": "source-family-citation-search-workflow-smoke",
+      "path": "artifacts/source-family-citation-search-workflow-smoke/source-family-citation-search-workflow.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

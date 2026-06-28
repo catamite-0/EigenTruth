@@ -1714,7 +1714,51 @@ not claim TruthfulQA evidence. It proves the command boundary and manifest path:
 `2` sanitized requests, `3` local catalog docs, `2/2` requests with results,
 `4` total result rows, no reserved-field leakage, and a passing artifact
 manifest. Real use should pass the generated result JSONL into
-`run_citation_search_evidence_workflow.py` before any route promotion.
+`run_citation_search_evidence_workflow.py` or the one-command source-family
+workflow below before any route promotion.
+
+## `run_source_family_citation_search_workflow.py`
+
+Runs the local source-family citation/search path end to end without a network
+call. The workflow builds sanitized request JSONL from the unresolved queue,
+ranks caller-supplied source catalogs with
+`run_source_family_citation_search_adapter.py`, then runs the standard
+provenance, blind-spot query-sweep, and optional controlled-vs-external gates.
+
+```bash
+OUT=artifacts/source-family-citation-search-workflow-smoke
+
+python benchmarks/run_source_family_citation_search_workflow.py \
+  --queue "$OUT/unresolved-evidence-queue.json" \
+  --source-catalog "$OUT/source-family-catalog.jsonl" \
+  --scores "$OUT/scores.json" \
+  --blind-spots "$OUT/blind-spots.json" \
+  --controlled-sweep "$OUT/controlled-query-sweep.json" \
+  --output-dir "$OUT" \
+  --registry artifacts/local-release-registry.json \
+  --name source-family-citation-search-workflow-smoke \
+  --version 0.1 \
+  --query-fields question_answer \
+  --retriever-min-overlaps 0.5 \
+  --retrieval-limit 2 \
+  --alpha 0.2 \
+  --max-verified-false-alarm 0.0 \
+  --min-blind-refuted-rate 1.0 \
+  --min-controlled-blind-refuted-rate 1.0 \
+  --min-external-blind-refuted-rate 1.0 \
+  --max-controlled-verified-false-alarm 0.0 \
+  --max-external-verified-false-alarm 0.0 \
+  --metadata suite=source_family_workflow_smoke \
+  --metadata evidence=synthetic_smoke
+```
+
+The registered smoke artifact
+`report:source-family-citation-search-workflow-smoke:0.1` is synthetic and
+intentionally `blocked`: it consumes `2` unresolved citation requests, ranks `2`
+local catalog docs into `2` adapter results, passes provenance, but does not
+pass the blind-spot query-sweep or controlled-vs-external gates. This proves the
+end-to-end local catalog wiring and manifest chain without promoting weak
+source-family evidence.
 
 ## `run_wikipedia_citation_search_adapter.py`
 

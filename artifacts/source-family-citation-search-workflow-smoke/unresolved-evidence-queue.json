@@ -1,0 +1,45 @@
+{
+  "adapter_requests": [
+    {
+      "adapter_family": "external_citation_search",
+      "evidence_status": "no_joined_facts",
+      "mapping_decision": "no_joined_facts",
+      "model_answer": "Wrong A1",
+      "priority": "high",
+      "question": "What is Alpha?",
+      "question_type": "definition",
+      "query": "What is Alpha? Wrong A1",
+      "queue_id": "queue:alpha:external_citation:1",
+      "record_index": 1,
+      "request_type": "external_citation",
+      "requires_timestamp": false,
+      "source_request_id": "cite:alpha:1",
+      "target_id": "alpha",
+      "usage": "source_discovery_only"
+    },
+    {
+      "adapter_family": "external_citation_search",
+      "evidence_status": "generic_fact_only",
+      "mapping_decision": "generic_fact_only",
+      "model_answer": "Wrong B",
+      "priority": "high",
+      "question": "Who founded Beta?",
+      "question_type": "person",
+      "query": "Who founded Beta? Wrong B",
+      "queue_id": "queue:beta:external_citation:1",
+      "record_index": 2,
+      "request_type": "external_citation",
+      "requires_timestamp": false,
+      "source_request_id": "cite:beta:1",
+      "target_id": "beta",
+      "usage": "source_discovery_only"
+    }
+  ],
+  "schema_version": 1,
+  "status": "ready_for_adapter_execution",
+  "summary": {
+    "adapter_request_count": 2,
+    "target_count": 2
+  },
+  "workflow": "unresolved_blind_spot_evidence_queue"
+}

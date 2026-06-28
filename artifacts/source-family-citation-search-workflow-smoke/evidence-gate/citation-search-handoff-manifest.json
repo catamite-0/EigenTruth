@@ -1,0 +1,70 @@
+{
+  "artifacts": {
+    "adapter_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../source-family-citation-search-results.jsonl",
+      "sha256": "b6e10cb4f947318fd4416e6d9c1a0715277d1aea61eee76de444b0c9658d65cb",
+      "size_bytes": 2024
+    },
+    "citation_search_adapter_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-adapter-requests.jsonl",
+      "sha256": "3d1dd098ddb51dbd876b2cd7076e2d3b6e85a4b417596ab3ddac880ee29b2ea0",
+      "size_bytes": 2319
+    },
+    "citation_search_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-corpus.json",
+      "sha256": "83ad9e4e68c578e91f6fd3a934679ea6dfac20a558973b687a2c6b13f649ab11",
+      "size_bytes": 3344
+    },
+    "citation_search_handoff": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-handoff.json",
+      "sha256": "8e61e9a140434eb70f81d8466e8ffa78aa70f2070801dc0f8180b318944ffc3e",
+      "size_bytes": 11274
+    },
+    "citation_search_source_documents": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-source-docs.jsonl",
+      "sha256": "32206a2e190f0d814423e94c7b196159db160fcd0c7584cf576a284f46e312f5",
+      "size_bytes": 1233
+    },
+    "unresolved_blind_spot_evidence_queue": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-evidence-queue.json",
+      "sha256": "d087e2ae62e785ad85997564f6bf3e04741705604cbe4b69327bc2ef06aa3923",
+      "size_bytes": 1416
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "adapter_request_count": 2,
+    "corpus_document_count": 2,
+    "evidence": "synthetic_smoke",
+    "source_document_count": 2,
+    "source_workflow": "source_family_citation_search_workflow",
+    "status": "collected",
+    "suite": "source_family_workflow_smoke",
+    "workflow": "citation_search_adapter_handoff"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 6,
+    "directory_count": 0,
+    "file_count": 6,
+    "missing_count": 0
+  }
+}

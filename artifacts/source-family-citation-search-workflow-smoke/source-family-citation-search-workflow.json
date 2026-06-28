@@ -1,0 +1,144 @@
+{
+  "adapter_summary": {
+    "catalog_provider_counts": {
+      "synthetic-source-family-catalog": 2
+    },
+    "catalog_source_family_counts": {
+      "official": 1,
+      "reference": 1
+    },
+    "request_count": 2,
+    "request_error_count": 0,
+    "request_with_results_count": 2,
+    "result_count": 2,
+    "result_provider_counts": {
+      "synthetic-source-family-catalog": 2
+    },
+    "result_source_family_counts": {
+      "official": 1,
+      "reference": 1
+    },
+    "source_document_count": 2
+  },
+  "config": {
+    "adapter_max_query_variants": 3,
+    "adapter_max_results": 3,
+    "adapter_min_text_overlap": 0.05,
+    "alpha": 0.2,
+    "corpus_name": "unresolved_blind_spot_citation_search",
+    "default_source_family": "reference",
+    "max_alternate_queries": 3,
+    "max_claim_id_link_rate": 0.0,
+    "max_controlled_verified_false_alarm": 0.0,
+    "max_exact_answer_copy_rate": 0.8,
+    "max_external_verified_false_alarm": 0.0,
+    "max_label_metadata_rate": 0.0,
+    "max_requests": null,
+    "max_results_per_request": null,
+    "max_verified_false_alarm": 0.0,
+    "min_blind_refuted_rate": 1.0,
+    "min_controlled_blind_refuted_rate": 1.0,
+    "min_external_blind_refuted_rate": 1.0,
+    "query_fields": [
+      "question_answer"
+    ],
+    "query_mode": "claim_entity",
+    "repeats": 1,
+    "retrieval_limit": 2,
+    "retriever_min_overlaps": [
+      0.5
+    ],
+    "seed": 0,
+    "signal": "truth_proj",
+    "source_kind": "external_citation_search_result",
+    "verifier_min_overlap": 0.65
+  },
+  "evidence_summary": {
+    "adapter_request_count": 2,
+    "comparison_passed": false,
+    "comparison_status": "blocked",
+    "corpus_document_count": 2,
+    "evidence_class": "external_candidate",
+    "provenance_passed": true,
+    "provenance_status": "pass",
+    "query_sweep_best_passing_blind_refuted_count": null,
+    "query_sweep_best_passing_strategy": null,
+    "query_sweep_best_strategy": "question_answer_overlap_0p5",
+    "recommended_external_strategy": null,
+    "source_document_count": 2
+  },
+  "gate": {
+    "blocking_reasons": [
+      {
+        "gate": "query_sweep",
+        "reason": "No blind-spot query strategy passed the configured gates."
+      },
+      {
+        "gate": "query_sweep_comparison",
+        "reason": "Controlled-vs-external comparison status is blocked."
+      }
+    ],
+    "passed": false,
+    "promotion_ready": false
+  },
+  "metadata": {
+    "evidence": "synthetic_smoke",
+    "suite": "source_family_workflow_smoke"
+  },
+  "paths": {
+    "adapter_manifest": "artifacts/source-family-citation-search-workflow-smoke/source-family-citation-search-adapter-manifest.json",
+    "adapter_report": "artifacts/source-family-citation-search-workflow-smoke/source-family-citation-search-adapter-report.json",
+    "adapter_results": "artifacts/source-family-citation-search-workflow-smoke/source-family-citation-search-results.jsonl",
+    "artifact_manifest": "artifacts/source-family-citation-search-workflow-smoke/artifact-manifest.json",
+    "evidence_manifest": "artifacts/source-family-citation-search-workflow-smoke/evidence-gate/artifact-manifest.json",
+    "evidence_workflow": "artifacts/source-family-citation-search-workflow-smoke/evidence-gate/citation-search-evidence-workflow.json",
+    "request_handoff": "artifacts/source-family-citation-search-workflow-smoke/request-handoff/citation-search-request-handoff.json",
+    "request_handoff_manifest": "artifacts/source-family-citation-search-workflow-smoke/request-handoff/artifact-manifest.json",
+    "requests": "artifacts/source-family-citation-search-workflow-smoke/source-family-citation-search-requests.jsonl",
+    "workflow_report": "artifacts/source-family-citation-search-workflow-smoke/source-family-citation-search-workflow.json"
+  },
+  "request_summary": {
+    "adapter_request_count": 2,
+    "corpus_document_count": 0,
+    "freshness_required_count": 0,
+    "official_source_preferred_count": 1,
+    "priority_counts": {
+      "high": 2
+    },
+    "question_type_counts": {
+      "definition": 1,
+      "person": 1
+    },
+    "result_summary": {
+      "input_result_count": 0,
+      "matched_request_count": 0,
+      "result_documents_by_request": {},
+      "skipped_empty_result_count": 0,
+      "unknown_request_result_count": 0
+    },
+    "source_document_count": 0,
+    "source_family_counts": {
+      "encyclopedic": 2,
+      "official": 1,
+      "reference": 2,
+      "scholarly": 1
+    },
+    "source_provider_counts": {},
+    "source_queue_adapter_request_count": 2,
+    "source_queue_target_count": 2
+  },
+  "schema_version": 1,
+  "source": {
+    "blind_spots": "artifacts/source-family-citation-search-workflow-smoke/blind-spots.json",
+    "controlled_sweeps": [
+      "artifacts/source-family-citation-search-workflow-smoke/controlled-query-sweep.json"
+    ],
+    "queue_report": "artifacts/source-family-citation-search-workflow-smoke/unresolved-evidence-queue.json",
+    "scores": "artifacts/source-family-citation-search-workflow-smoke/scores.json",
+    "source_catalogs": [
+      "artifacts/source-family-citation-search-workflow-smoke/source-family-catalog.jsonl"
+    ]
+  },
+  "status": "blocked",
+  "workflow": "source_family_citation_search_workflow"
+}

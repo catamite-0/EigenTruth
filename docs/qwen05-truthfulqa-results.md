@@ -1294,6 +1294,14 @@ rows, rejects reserved catalog fields in tests, and verifies its artifact
 manifest. This is implementation evidence for the adapter command boundary, not
 TruthfulQA route-quality evidence.
 
+`benchmarks/run_source_family_citation_search_workflow.py` now wraps that local
+adapter in the full evidence gate. The synthetic smoke artifact
+`source-family-citation-search-workflow-smoke` consumes `2` unresolved citation
+requests, ranks `2` local catalog docs into `2` adapter results, passes
+provenance, and remains intentionally `blocked` because the external query
+sweep and controlled-vs-external comparison do not pass. This proves the
+one-command local catalog loop without promoting weak synthetic evidence.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -1319,10 +1327,10 @@ TruthfulQA route-quality evidence.
 6. Promote a Qwen l20/l80 readiness baseline through the same registry workflow
    if Qwen-specific runtime evidence is needed; SmolLM2 now has the first
    non-tiny registered readiness/release candidate.
-7. Populate the source-family adapter with real official or structured catalogs
-   for the unresolved blind spots, preserving the same command boundary and
-   promotion gates; only promote if provenance, external query-sweep, and
-   controlled-vs-external comparison gates pass.
+7. Populate `run_source_family_citation_search_workflow.py` with real official
+   or structured catalogs for the unresolved blind spots; only promote if
+   provenance, external query-sweep, and controlled-vs-external comparison gates
+   pass.
 8. Extend the new verifier-stability path from structured QA to real retrieval,
    database, calculator, and world-model evidence under the same conformal
    false-alarm budgets. Use `benchmarks/build_evidence_fixture.py` with a local

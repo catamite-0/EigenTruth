@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "source": {
+    "corpora": [
+      {
+        "corpus_type": "truthfulqa_correct_answer_evidence",
+        "path": "corpus.json",
+        "summary": {
+          "n_documents": 2
+        }
+      }
+    ]
+  },
+  "status": "complete",
+  "strategies": [
+    {
+      "blind_spot": {
+        "target_route_refuted_count": 2,
+        "target_route_refuted_rate": 1.0
+      },
+      "gate": {
+        "verified_false_alarm": 0.0
+      },
+      "key": "question_answer_overlap_0p5",
+      "query_field": "question_answer",
+      "retrieval": {
+        "records_with_hits": 2,
+        "total_hits": 2
+      },
+      "retriever_min_overlap": 0.5,
+      "target_route_quality": {
+        "decision_accuracy": 1.0
+      }
+    }
+  ],
+  "summary": {
+    "best_blind_refuted_count": 2,
+    "best_passing_blind_refuted_count": 2,
+    "best_passing_strategy": "question_answer_overlap_0p5",
+    "best_strategy": "question_answer_overlap_0p5",
+    "blind_spot_count": 2,
+    "controlled_corpus_warning": "controlled corpus"
+  },
+  "workflow": "blind_spot_retrieval_query_sweep"
+}

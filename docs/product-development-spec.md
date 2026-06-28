@@ -484,14 +484,24 @@ For product features:
   smoke only: `2` sanitized requests, `3` catalog docs, `2/2` requests with
   results, `4` result rows, no reserved-field leakage, and a verified manifest.
   This proves the adapter entry point without claiming TruthfulQA route quality.
+- The local source-family path now has a one-command evidence workflow:
+  `run_source_family_citation_search_workflow.py` builds the sanitized request
+  handoff, runs the local source-family catalog adapter, and then invokes the
+  same provenance/query-sweep/controlled-comparison gates. The registered
+  `report:source-family-citation-search-workflow-smoke:0.1` artifact is still
+  synthetic and intentionally `blocked`: `2` requests, `2` catalog docs, `2`
+  adapter results, provenance pass, but no passing external blind-spot strategy
+  or controlled-vs-external comparison. This proves the closed local-catalog
+  workflow without letting weak catalog matches bypass release gates.
 
 ### Next Verification Adapter Work
 
 - Improve evidence retrieval beyond generic Wikipedia lexical search: preserve
   the same command boundary and consume `source_family_plan`, then feed real
   official/source-family catalogs or structured citation APIs through
-  `run_source_family_citation_search_adapter.py`. Promote only if the provenance
-  audit, external query sweep, and controlled-vs-external comparison pass.
+  `run_source_family_citation_search_workflow.py`. Promote only if the
+  provenance audit, external query sweep, and controlled-vs-external comparison
+  pass.
 - Connect `StructuredStateVerifier` to additional live database, business-rule, and domain-state sources behind optional adapters; the current reproducible path uses local JSON state sources, stdlib SQLite, and mapped local tool outputs.
 - Connect additional QA/database/world-model route policies to production adapters while preserving trace-visible match reasons for each selected or skipped tool.
 - Generalize real side-effecting executors behind the same trace, execution-policy, timeout, idempotency-ledger, and tool-output mapping interfaces; the current production-like demo proves the path with a guarded local SQLite mutation and optional JSON/SQLite replay, while hard cancellation remains adapter-specific.

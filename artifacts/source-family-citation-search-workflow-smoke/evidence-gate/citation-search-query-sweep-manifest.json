@@ -1,0 +1,53 @@
+{
+  "artifacts": {
+    "blind_spot_query_sweep": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-query-sweep.json",
+      "sha256": "d101e1a81a83d239053449503afe31661ee51869862abaa751f12eb3bdabc95d",
+      "size_bytes": 6126
+    },
+    "blind_spots": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../blind-spots.json",
+      "sha256": "399386968e1920a95bc73f8762c143d087278b8f20b01de65408e2aba1543034",
+      "size_bytes": 534
+    },
+    "corpus_0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-corpus.json",
+      "sha256": "83ad9e4e68c578e91f6fd3a934679ea6dfac20a558973b687a2c6b13f649ab11",
+      "size_bytes": 3344
+    },
+    "scores": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../scores.json",
+      "sha256": "9fa13f7e03506ffe4ac3a30a234337eb83b855f3145d7068d35dab44414cffcc",
+      "size_bytes": 674
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "best_blind_refuted_count": 0,
+    "best_passing_blind_refuted_count": null,
+    "best_passing_strategy": null,
+    "best_strategy": "question_answer_overlap_0p5",
+    "blind_spot_count": 2,
+    "runner": "sweep_blind_spot_retrieval_queries",
+    "status": "complete"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

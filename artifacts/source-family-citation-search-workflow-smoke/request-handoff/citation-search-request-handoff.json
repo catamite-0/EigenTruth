@@ -1,0 +1,192 @@
+{
+  "adapter_requests": [
+    {
+      "adapter_family": "external_citation_search",
+      "alternate_queries": [
+        "Alpha",
+        "What is Alpha?"
+      ],
+      "metadata": {
+        "entity_candidates": [
+          "Alpha"
+        ],
+        "freshness_required": false,
+        "keyword_terms": [
+          "Alpha"
+        ],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "query_mode": "claim_entity",
+        "query_strategy": "claim_entity",
+        "query_variant_count": 3,
+        "queue_workflow": "unresolved_blind_spot_evidence_queue",
+        "removed_disallowed_phrase_count": 1,
+        "source_queue_request_sha256": "885eb3d4a90639a5cf1824f4aa9fcfa0eb877570be0fed5ce4838c296a894a88"
+      },
+      "not_verifier_evidence": true,
+      "priority": "high",
+      "query": "Alpha definition",
+      "question_type": "definition",
+      "request_id": "cite-search-925e10b771d77f7b",
+      "requires_timestamp": false,
+      "schema_version": 1,
+      "source_family_plan": {
+        "families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "freshness_required": false,
+        "metadata": {
+          "keyword_terms": [
+            "Alpha"
+          ],
+          "question_type": "definition"
+        },
+        "official_source_preferred": false,
+        "query_hints": [
+          "definition",
+          "reference"
+        ],
+        "rationale": [
+          "definition_or_term_claim"
+        ]
+      },
+      "usage": "source_discovery_only"
+    },
+    {
+      "adapter_family": "external_citation_search",
+      "alternate_queries": [
+        "founded Beta",
+        "Who founded Beta?"
+      ],
+      "metadata": {
+        "entity_candidates": [
+          "Beta",
+          "founded Beta"
+        ],
+        "freshness_required": false,
+        "keyword_terms": [
+          "founded",
+          "Beta"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic"
+        ],
+        "query_mode": "claim_entity",
+        "query_strategy": "claim_entity",
+        "query_variant_count": 3,
+        "queue_workflow": "unresolved_blind_spot_evidence_queue",
+        "removed_disallowed_phrase_count": 1,
+        "source_queue_request_sha256": "4a778a3319fcf9ace2f728b37a1f9ad8b72844b7898c7cadbe4fc9f14c0e302c"
+      },
+      "not_verifier_evidence": true,
+      "priority": "high",
+      "query": "Beta founded founder",
+      "question_type": "person",
+      "request_id": "cite-search-3c0077f2bc5d2ad7",
+      "requires_timestamp": false,
+      "schema_version": 1,
+      "source_family_plan": {
+        "families": [
+          "official",
+          "reference",
+          "encyclopedic"
+        ],
+        "freshness_required": false,
+        "metadata": {
+          "keyword_terms": [
+            "founded",
+            "Beta"
+          ],
+          "question_type": "person"
+        },
+        "official_source_preferred": true,
+        "query_hints": [
+          "official profile",
+          "biography"
+        ],
+        "rationale": [
+          "person_or_role_claim"
+        ]
+      },
+      "usage": "source_discovery_only"
+    }
+  ],
+  "config": {
+    "corpus_name": "unresolved_blind_spot_citation_search",
+    "max_alternate_queries": 3,
+    "max_requests": null,
+    "max_results_per_request": null,
+    "query_mode": "claim_entity",
+    "source_kind": "external_citation_search_result"
+  },
+  "external_retrieval_corpus": null,
+  "label_usage": {
+    "adapter_results_are_verifier_evidence": false,
+    "labels_copied_to_adapter_requests": false,
+    "labels_used_for_adapter_requests": false,
+    "model_answers_copied_to_adapter_requests": false
+  },
+  "metadata": {
+    "evidence": "synthetic_smoke",
+    "source_workflow": "source_family_citation_search_workflow",
+    "suite": "source_family_workflow_smoke"
+  },
+  "paths": {
+    "adapter_requests": "artifacts/source-family-citation-search-workflow-smoke/source-family-citation-search-requests.jsonl",
+    "adapter_results": null,
+    "artifact_manifest": "artifacts/source-family-citation-search-workflow-smoke/request-handoff/artifact-manifest.json",
+    "external_retrieval_corpus": null,
+    "source_documents": "artifacts/source-family-citation-search-workflow-smoke/request-handoff/citation-search-source-docs.jsonl",
+    "unresolved_queue": "artifacts/source-family-citation-search-workflow-smoke/unresolved-evidence-queue.json"
+  },
+  "schema_version": 1,
+  "scope": "Citation/search adapter handoff for unresolved blind spots. Adapter requests omit labels, record ids, target ids, and model answers. Ingested results are external-candidate documents, not verifier evidence until provenance-audited.",
+  "source": {
+    "queue_adapter_request_count": 2,
+    "queue_status": "ready_for_adapter_execution",
+    "queue_target_count": 2,
+    "queue_workflow": "unresolved_blind_spot_evidence_queue"
+  },
+  "source_documents": [],
+  "status": "ready_for_external_adapter",
+  "summary": {
+    "adapter_request_count": 2,
+    "corpus_document_count": 0,
+    "freshness_required_count": 0,
+    "official_source_preferred_count": 1,
+    "priority_counts": {
+      "high": 2
+    },
+    "question_type_counts": {
+      "definition": 1,
+      "person": 1
+    },
+    "result_summary": {
+      "input_result_count": 0,
+      "matched_request_count": 0,
+      "result_documents_by_request": {},
+      "skipped_empty_result_count": 0,
+      "unknown_request_result_count": 0
+    },
+    "source_document_count": 0,
+    "source_family_counts": {
+      "encyclopedic": 2,
+      "official": 1,
+      "reference": 2,
+      "scholarly": 1
+    },
+    "source_provider_counts": {},
+    "source_queue_adapter_request_count": 2,
+    "source_queue_target_count": 2
+  },
+  "workflow": "citation_search_adapter_handoff"
+}

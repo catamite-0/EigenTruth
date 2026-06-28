@@ -1,0 +1,156 @@
+{
+  "audit_role": "grounding",
+  "document_samples": [
+    {
+      "exact_answer_match_count": 0,
+      "has_claim_id_link": false,
+      "has_label_metadata": false,
+      "has_row_link": false,
+      "matched_claim_ids": [],
+      "max_answer_token_overlap": 0.0,
+      "metadata_keys": [
+        "adapter_request_sha256",
+        "corpus_name",
+        "external_source",
+        "ingest_ordinal",
+        "ingestion_builder",
+        "provider",
+        "query_sha256",
+        "rank",
+        "result_sha256",
+        "source_family",
+        "source_family_confidence",
+        "source_file",
+        "source_kind",
+        "title"
+      ],
+      "source": "reference:alpha",
+      "source_text_match_count": 0,
+      "stress_control": null
+    },
+    {
+      "exact_answer_match_count": 0,
+      "has_claim_id_link": false,
+      "has_label_metadata": false,
+      "has_row_link": false,
+      "matched_claim_ids": [],
+      "max_answer_token_overlap": 0.0,
+      "metadata_keys": [
+        "adapter_request_sha256",
+        "corpus_name",
+        "external_source",
+        "ingest_ordinal",
+        "ingestion_builder",
+        "provider",
+        "query_sha256",
+        "rank",
+        "result_sha256",
+        "source_family",
+        "source_family_confidence",
+        "source_file",
+        "source_kind",
+        "title"
+      ],
+      "source": "official:beta",
+      "source_text_match_count": 0,
+      "stress_control": null
+    }
+  ],
+  "evidence_class": "external_candidate",
+  "gate": {
+    "blocking_reasons": [],
+    "external_domain_shift_ready": true,
+    "passed": true,
+    "role": "grounding",
+    "status": "pass",
+    "warnings": []
+  },
+  "input_provenance": {
+    "corpora": [
+      {
+        "corpus_type": "external_evidence_candidate",
+        "label_usage": {
+          "labels_copied_to_document_metadata": false,
+          "labels_used_for_documents": false
+        },
+        "n_documents": 2,
+        "path": "artifacts/source-family-citation-search-workflow-smoke/evidence-gate/citation-search-corpus.json"
+      }
+    ],
+    "score_dump": {
+      "exists": true,
+      "identity": {
+        "cache_key": "score-dump-identity-v1:c061a7c13980994a835463fddb6e47d512b315607effeaa501f6f8894e5a1572",
+        "content_hash": "9fa13f7e03506ffe4ac3a30a234337eb83b855f3145d7068d35dab44414cffcc",
+        "dataset_id": null,
+        "model_id": "synthetic",
+        "n_total": 4,
+        "primary_score_names": [
+          "truth_proj"
+        ],
+        "records_hash": null,
+        "schema_version": 1,
+        "score_schema_hash": "77e9d01294d8f96f3a0a1ba3112adea33283259e111aa578570f1ff031ab6b68",
+        "scoring_config_hash": "d894d6cb66a91bd1eaa63c778eadcca8299d8f17ab0f4d795c08ca2ca5847c80",
+        "source_format": "json",
+        "sweep_score_names": {},
+        "target_layer": -1
+      },
+      "kind": "file",
+      "path": "artifacts/source-family-citation-search-workflow-smoke/scores.json",
+      "sha256": "9fa13f7e03506ffe4ac3a30a234337eb83b855f3145d7068d35dab44414cffcc",
+      "size_bytes": 674,
+      "summary": {
+        "all_signal_names": [
+          "truth_proj"
+        ],
+        "has_statements": true,
+        "layer": -1,
+        "model": "synthetic",
+        "n_false": 2,
+        "n_total": 4,
+        "n_true": 2,
+        "score_count": 1,
+        "score_names": [
+          "truth_proj"
+        ],
+        "statement_count": 4,
+        "sweep_layer_count": 0,
+        "sweep_layers": [],
+        "sweep_score_count": 0,
+        "sweep_score_names": []
+      }
+    }
+  },
+  "passed": true,
+  "schema_version": 1,
+  "status": "pass",
+  "summary": {
+    "claim_id_link_documents": 0,
+    "claim_id_link_rate": 0.0,
+    "corpus_types": [
+      "external_evidence_candidate"
+    ],
+    "exact_answer_copy_documents": 0,
+    "exact_answer_copy_rate": 0.0,
+    "label_metadata_documents": 0,
+    "label_metadata_rate": 0.0,
+    "labels_copied_to_document_metadata": false,
+    "labels_used_for_documents": false,
+    "mean_max_answer_token_overlap": 0.0,
+    "n_corpora": 1,
+    "n_documents": 2,
+    "row_link_documents": 0,
+    "row_link_rate": 0.0,
+    "source_text_copy_documents": 0,
+    "source_text_copy_rate": 0.0,
+    "stress_control_documents": 0,
+    "stress_control_rate": 0.0
+  },
+  "thresholds": {
+    "max_claim_id_link_rate": 0.0,
+    "max_exact_answer_copy_rate": 0.8,
+    "max_label_metadata_rate": 0.0
+  },
+  "workflow": "retrieval_corpus_provenance_audit"
+}

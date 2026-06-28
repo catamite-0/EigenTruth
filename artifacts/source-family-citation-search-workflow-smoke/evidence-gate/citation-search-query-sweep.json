@@ -1,0 +1,197 @@
+{
+  "config": {
+    "alpha": 0.2,
+    "max_examples_per_bucket": 3,
+    "max_verified_false_alarm": 0.0,
+    "min_blind_refuted_rate": 1.0,
+    "query_fields": [
+      "question_answer"
+    ],
+    "repeats": 1,
+    "retrieval_limit": 2,
+    "retriever_min_overlaps": [
+      0.5
+    ],
+    "seed": 0,
+    "signal": "truth_proj",
+    "target_route": "retrieval_structured_qa",
+    "verifier_min_overlap": 0.65
+  },
+  "metadata": {
+    "evidence": "synthetic_smoke",
+    "source_workflow": "citation_search_evidence_workflow",
+    "suite": "source_family_workflow_smoke"
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/source-family-citation-search-workflow-smoke/evidence-gate/citation-search-query-sweep-manifest.json"
+  },
+  "schema_version": 1,
+  "source": {
+    "blind_spots_path": "artifacts/source-family-citation-search-workflow-smoke/blind-spots.json",
+    "corpora": [
+      {
+        "corpus_type": "external_evidence_candidate",
+        "path": "artifacts/source-family-citation-search-workflow-smoke/evidence-gate/citation-search-corpus.json",
+        "summary": {
+          "n_documents": 2,
+          "n_documents_with_source": 2,
+          "n_documents_with_timestamp": 0,
+          "n_documents_with_url": 0,
+          "n_skipped_short": 0,
+          "n_sources": 1
+        }
+      }
+    ],
+    "corpus_paths": [
+      "artifacts/source-family-citation-search-workflow-smoke/evidence-gate/citation-search-corpus.json"
+    ],
+    "scores_path": "artifacts/source-family-citation-search-workflow-smoke/scores.json"
+  },
+  "status": "complete",
+  "strategies": [
+    {
+      "blind_spot": {
+        "any_route_refuted_count": 0,
+        "any_route_refuted_rate": 0.0,
+        "any_route_supported_count": 1,
+        "any_route_supported_rate": 0.5,
+        "average_retrieval_hits_per_record": 1.0,
+        "blind_spot_count": 2,
+        "feature_counts": {},
+        "final_status_counts": {
+          "insufficient_evidence": 1,
+          "supported": 1
+        },
+        "matched_verified_record_count": 2,
+        "matched_verified_record_rate": 1.0,
+        "outcome_counts": {
+          "not_selected_by_target_route": 2
+        },
+        "question_type_counts": {
+          "definition": 1,
+          "person": 1
+        },
+        "records_with_retrieval_hits": 2,
+        "records_with_retrieval_hits_rate": 1.0,
+        "selected_route_counts": {
+          "retrieval_groundedness": 2
+        },
+        "target_route": "retrieval_structured_qa",
+        "target_route_insufficient_count": 0,
+        "target_route_refuted_count": 0,
+        "target_route_refuted_rate": 0.0,
+        "target_route_refuted_when_selected_rate": 0.0,
+        "target_route_selected_count": 0,
+        "target_route_selected_rate": 0.0,
+        "target_route_supported_count": 0,
+        "target_route_supported_when_selected_rate": 0.0,
+        "top_hit_sources": [
+          {
+            "count": 1,
+            "value": "reference:alpha"
+          },
+          {
+            "count": 1,
+            "value": "official:beta"
+          }
+        ],
+        "total_retrieval_hits": 2,
+        "unresolved_count": 2,
+        "unresolved_feature_counts": {},
+        "unresolved_question_type_counts": {
+          "definition": 1,
+          "person": 1
+        },
+        "unresolved_rate": 1.0
+      },
+      "examples": {
+        "not_selected_by_target_route": [
+          {
+            "answer": "Wrong A1",
+            "cell": null,
+            "cell_margin": null,
+            "decision_rule": "low_overlap",
+            "explanation": "best evidence did not cover enough claim tokens",
+            "final_status": "insufficient_evidence",
+            "hit_count": 1,
+            "hit_sources": [
+              "reference:alpha"
+            ],
+            "label": 1,
+            "outcome": "not_selected_by_target_route",
+            "question": "What is Alpha?",
+            "question_type": "definition",
+            "record_index": 1,
+            "selected_route": "retrieval_groundedness",
+            "target_route_selected": false,
+            "text": "What is Alpha? Wrong A1"
+          },
+          {
+            "answer": "Wrong B",
+            "cell": null,
+            "cell_margin": null,
+            "decision_rule": "token_overlap",
+            "explanation": "claim tokens are covered by evidence above threshold",
+            "final_status": "supported",
+            "hit_count": 1,
+            "hit_sources": [
+              "official:beta"
+            ],
+            "label": 1,
+            "outcome": "not_selected_by_target_route",
+            "question": "Who founded Beta?",
+            "question_type": "person",
+            "record_index": 2,
+            "selected_route": "retrieval_groundedness",
+            "target_route_selected": false,
+            "text": "Who founded Beta? Wrong B"
+          }
+        ]
+      },
+      "gate": {
+        "blind_refuted_rate": 0.0,
+        "max_verified_false_alarm": 0.0,
+        "min_blind_refuted_rate": 1.0,
+        "pass": false,
+        "verified_false_alarm": 0.0
+      },
+      "key": "question_answer_overlap_0p5",
+      "query_field": "question_answer",
+      "retrieval": {
+        "average_hits_per_record": 1.0,
+        "n_records": 4,
+        "records_with_hits": 4,
+        "total_hits": 4
+      },
+      "retriever_min_overlap": 0.5,
+      "target_route_quality": {},
+      "target_route_summary": {},
+      "verification": {
+        "internal": {
+          "coverage": 1.0,
+          "detection": 0.0,
+          "false_alarm": 0.0,
+          "pass": false
+        },
+        "verified": {
+          "coverage": 1.0,
+          "detection": 0.0,
+          "false_alarm": 0.0,
+          "pass": true
+        }
+      }
+    }
+  ],
+  "summary": {
+    "baseline_blind_refuted_count": null,
+    "baseline_strategy": null,
+    "best_blind_refuted_count": 0,
+    "best_passing_blind_refuted_count": null,
+    "best_passing_strategy": null,
+    "best_strategy": "question_answer_overlap_0p5",
+    "blind_spot_count": 2,
+    "controlled_corpus_warning": null,
+    "strategy_count": 1
+  },
+  "workflow": "blind_spot_retrieval_query_sweep"
+}

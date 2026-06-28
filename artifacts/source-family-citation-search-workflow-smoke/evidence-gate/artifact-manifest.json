@@ -1,0 +1,153 @@
+{
+  "artifacts": {
+    "adapter_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-adapter-requests.jsonl",
+      "sha256": "3d1dd098ddb51dbd876b2cd7076e2d3b6e85a4b417596ab3ddac880ee29b2ea0",
+      "size_bytes": 2319
+    },
+    "adapter_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../source-family-citation-search-results.jsonl",
+      "sha256": "b6e10cb4f947318fd4416e6d9c1a0715277d1aea61eee76de444b0c9658d65cb",
+      "size_bytes": 2024
+    },
+    "blind_spots": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../blind-spots.json",
+      "sha256": "399386968e1920a95bc73f8762c143d087278b8f20b01de65408e2aba1543034",
+      "size_bytes": 534
+    },
+    "controlled_sweep_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../controlled-query-sweep.json",
+      "sha256": "30440ec091beb3cf92539d29c2829afe331c4c474ad07e7a789455a55b97af46",
+      "size_bytes": 1086
+    },
+    "external_retrieval_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-corpus.json",
+      "sha256": "83ad9e4e68c578e91f6fd3a934679ea6dfac20a558973b687a2c6b13f649ab11",
+      "size_bytes": 3344
+    },
+    "handoff_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-handoff-manifest.json",
+      "sha256": "bf7f5b7dd9d5d40a9d829a8a971be4ba96f82fcf4317c738a319d29d01d6fecf",
+      "size_bytes": 2165
+    },
+    "handoff_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-handoff.json",
+      "sha256": "8e61e9a140434eb70f81d8466e8ffa78aa70f2070801dc0f8180b318944ffc3e",
+      "size_bytes": 11274
+    },
+    "provenance_audit": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-provenance-audit.json",
+      "sha256": "ef92bb95920f4a04aeeb2c99c6ede0e621d1c5c9e39dd096ea17aec281611fa0",
+      "size_bytes": 4441
+    },
+    "query_sweep": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-query-sweep.json",
+      "sha256": "d101e1a81a83d239053449503afe31661ee51869862abaa751f12eb3bdabc95d",
+      "size_bytes": 6126
+    },
+    "query_sweep_comparison": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-query-sweep-comparison.json",
+      "sha256": "e37140ca6b7b17cdff65ffeb7883ae0a0b6c0fd44557859e7e2f51c7a9d3895f",
+      "size_bytes": 5562
+    },
+    "query_sweep_comparison_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-query-sweep-comparison-manifest.json",
+      "sha256": "8d1342bb9cc3dcc0d2837b0594b0783ff771a53d87e895f7286e1a1b2fded19b",
+      "size_bytes": 1308
+    },
+    "query_sweep_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-query-sweep-manifest.json",
+      "sha256": "8f937949dda6701942eaf833a97a07c69d3cf4ec720526fb3e30f38cb0b07af5",
+      "size_bytes": 1468
+    },
+    "queue_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-evidence-queue.json",
+      "sha256": "d087e2ae62e785ad85997564f6bf3e04741705604cbe4b69327bc2ef06aa3923",
+      "size_bytes": 1416
+    },
+    "scores": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../scores.json",
+      "sha256": "9fa13f7e03506ffe4ac3a30a234337eb83b855f3145d7068d35dab44414cffcc",
+      "size_bytes": 674
+    },
+    "source_documents": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-source-docs.jsonl",
+      "sha256": "32206a2e190f0d814423e94c7b196159db160fcd0c7584cf576a284f46e312f5",
+      "size_bytes": 1233
+    },
+    "workflow_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-evidence-workflow.json",
+      "sha256": "6f1dedb53d9ae74ab626a30617ddd34e53a45f77c42e67aa79b2be2c3b8a7f1a",
+      "size_bytes": 4242
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "adapter_request_count": 2,
+    "blocking_reason_count": 2,
+    "corpus_document_count": 2,
+    "evidence": "synthetic_smoke",
+    "passed": false,
+    "promotion_ready": false,
+    "source_document_count": 2,
+    "source_workflow": "source_family_citation_search_workflow",
+    "status": "blocked",
+    "suite": "source_family_workflow_smoke",
+    "workflow": "citation_search_evidence_workflow"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 16,
+    "directory_count": 0,
+    "file_count": 16,
+    "missing_count": 0
+  }
+}

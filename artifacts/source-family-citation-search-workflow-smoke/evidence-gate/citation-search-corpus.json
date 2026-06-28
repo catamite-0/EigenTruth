@@ -1,0 +1,81 @@
+{
+  "config": {
+    "builder": "build_external_retrieval_corpus",
+    "corpus_name": "unresolved_blind_spot_citation_search",
+    "default_timestamp": null,
+    "min_chars": 1,
+    "require_source": true,
+    "source_kind": "external_citation_search_result",
+    "trusted_source": []
+  },
+  "corpus_type": "external_evidence_candidate",
+  "description": "External-candidate retrieval corpus built from caller-supplied local source files. This builder rejects score labels, claim ids, and score-dump row links in document metadata.",
+  "documents": [
+    {
+      "metadata": {
+        "adapter_request_sha256": "96e4df2a4b42c1d7fabc06ab5e094f71b10a5406863fb9f34e6aa1272c58259a",
+        "corpus_name": "unresolved_blind_spot_citation_search",
+        "external_source": true,
+        "ingest_ordinal": 1,
+        "ingestion_builder": "build_external_retrieval_corpus",
+        "provider": "synthetic-source-family-catalog",
+        "query_sha256": "27095c16da2b662aebd04bbf6a3a6b0ce07e40c92891a2cad0c3e50f424cfd1b",
+        "rank": 1,
+        "result_sha256": "61fcecc7d7de61fd20dc32f62920d8f834b5551b4ce9af32f5f71acc7509d914",
+        "source_family": "reference",
+        "source_family_confidence": 1.0,
+        "source_file": "artifacts/source-family-citation-search-workflow-smoke/evidence-gate/citation-search-source-docs.jsonl",
+        "source_kind": "external_citation_search_result",
+        "title": "Alpha reference source"
+      },
+      "source": "reference:alpha",
+      "text": "What is Alpha? Alpha is described in an independent reference source."
+    },
+    {
+      "metadata": {
+        "adapter_request_sha256": "f542efd15a0a90b4d353f8cfc44f72bb0e0460eb2d947aeb73a94d00fe08b509",
+        "corpus_name": "unresolved_blind_spot_citation_search",
+        "external_source": true,
+        "ingest_ordinal": 2,
+        "ingestion_builder": "build_external_retrieval_corpus",
+        "provider": "synthetic-source-family-catalog",
+        "query_sha256": "016118cd7e8db4fcb1c46bb30163d8f61d4620f2ad213c8042e0a528554acf0d",
+        "rank": 1,
+        "result_sha256": "4318a471bfb4fd31e3e2b44cedd75fbe4f8b1c9c9dc02598b2984d5c5a628609",
+        "source_family": "official",
+        "source_family_confidence": 1.0,
+        "source_file": "artifacts/source-family-citation-search-workflow-smoke/evidence-gate/citation-search-source-docs.jsonl",
+        "source_kind": "external_citation_search_result",
+        "title": "Beta official source"
+      },
+      "source": "official:beta",
+      "text": "Who founded Beta? Beta has an official profile in this local catalog."
+    }
+  ],
+  "input_provenance": {
+    "builder": "build_external_retrieval_corpus",
+    "sources": [
+      {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/source-family-citation-search-workflow-smoke/evidence-gate/citation-search-source-docs.jsonl",
+        "sha256": "32206a2e190f0d814423e94c7b196159db160fcd0c7584cf576a284f46e312f5",
+        "size_bytes": 1233
+      }
+    ]
+  },
+  "label_usage": {
+    "labels_copied_to_document_metadata": false,
+    "labels_used_for_documents": false
+  },
+  "schema_version": 1,
+  "summary": {
+    "n_documents": 2,
+    "n_documents_with_source": 2,
+    "n_documents_with_timestamp": 0,
+    "n_documents_with_url": 0,
+    "n_skipped_short": 0,
+    "n_sources": 1
+  }
+}

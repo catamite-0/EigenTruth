@@ -1,0 +1,41 @@
+{
+  "config": {
+    "default_source_family": "reference",
+    "max_query_variants": 3,
+    "max_results": 3,
+    "min_text_overlap": 0.05
+  },
+  "input_path": "artifacts/source-family-citation-search-workflow-smoke/source-family-citation-search-requests.jsonl",
+  "metadata": {
+    "evidence": "synthetic_smoke",
+    "source_workflow": "source_family_citation_search_workflow",
+    "suite": "source_family_workflow_smoke"
+  },
+  "output_path": "artifacts/source-family-citation-search-workflow-smoke/source-family-citation-search-results.jsonl",
+  "schema_version": 1,
+  "source_catalog_paths": [
+    "artifacts/source-family-citation-search-workflow-smoke/source-family-catalog.jsonl"
+  ],
+  "summary": {
+    "catalog_provider_counts": {
+      "synthetic-source-family-catalog": 2
+    },
+    "catalog_source_family_counts": {
+      "official": 1,
+      "reference": 1
+    },
+    "request_count": 2,
+    "request_error_count": 0,
+    "request_with_results_count": 2,
+    "result_count": 2,
+    "result_provider_counts": {
+      "synthetic-source-family-catalog": 2
+    },
+    "result_source_family_counts": {
+      "official": 1,
+      "reference": 1
+    },
+    "source_document_count": 2
+  },
+  "workflow": "source_family_citation_search_adapter"
+}

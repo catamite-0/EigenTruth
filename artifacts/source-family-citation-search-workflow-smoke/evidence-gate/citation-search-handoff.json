@@ -1,0 +1,310 @@
+{
+  "adapter_requests": [
+    {
+      "adapter_family": "external_citation_search",
+      "alternate_queries": [
+        "Alpha",
+        "What is Alpha?"
+      ],
+      "metadata": {
+        "entity_candidates": [
+          "Alpha"
+        ],
+        "freshness_required": false,
+        "keyword_terms": [
+          "Alpha"
+        ],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "query_mode": "claim_entity",
+        "query_strategy": "claim_entity",
+        "query_variant_count": 3,
+        "queue_workflow": "unresolved_blind_spot_evidence_queue",
+        "removed_disallowed_phrase_count": 1,
+        "source_queue_request_sha256": "885eb3d4a90639a5cf1824f4aa9fcfa0eb877570be0fed5ce4838c296a894a88"
+      },
+      "not_verifier_evidence": true,
+      "priority": "high",
+      "query": "Alpha definition",
+      "question_type": "definition",
+      "request_id": "cite-search-925e10b771d77f7b",
+      "requires_timestamp": false,
+      "schema_version": 1,
+      "source_family_plan": {
+        "families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "freshness_required": false,
+        "metadata": {
+          "keyword_terms": [
+            "Alpha"
+          ],
+          "question_type": "definition"
+        },
+        "official_source_preferred": false,
+        "query_hints": [
+          "definition",
+          "reference"
+        ],
+        "rationale": [
+          "definition_or_term_claim"
+        ]
+      },
+      "usage": "source_discovery_only"
+    },
+    {
+      "adapter_family": "external_citation_search",
+      "alternate_queries": [
+        "founded Beta",
+        "Who founded Beta?"
+      ],
+      "metadata": {
+        "entity_candidates": [
+          "Beta",
+          "founded Beta"
+        ],
+        "freshness_required": false,
+        "keyword_terms": [
+          "founded",
+          "Beta"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic"
+        ],
+        "query_mode": "claim_entity",
+        "query_strategy": "claim_entity",
+        "query_variant_count": 3,
+        "queue_workflow": "unresolved_blind_spot_evidence_queue",
+        "removed_disallowed_phrase_count": 1,
+        "source_queue_request_sha256": "4a778a3319fcf9ace2f728b37a1f9ad8b72844b7898c7cadbe4fc9f14c0e302c"
+      },
+      "not_verifier_evidence": true,
+      "priority": "high",
+      "query": "Beta founded founder",
+      "question_type": "person",
+      "request_id": "cite-search-3c0077f2bc5d2ad7",
+      "requires_timestamp": false,
+      "schema_version": 1,
+      "source_family_plan": {
+        "families": [
+          "official",
+          "reference",
+          "encyclopedic"
+        ],
+        "freshness_required": false,
+        "metadata": {
+          "keyword_terms": [
+            "founded",
+            "Beta"
+          ],
+          "question_type": "person"
+        },
+        "official_source_preferred": true,
+        "query_hints": [
+          "official profile",
+          "biography"
+        ],
+        "rationale": [
+          "person_or_role_claim"
+        ]
+      },
+      "usage": "source_discovery_only"
+    }
+  ],
+  "config": {
+    "corpus_name": "unresolved_blind_spot_citation_search",
+    "max_alternate_queries": 3,
+    "max_requests": null,
+    "max_results_per_request": null,
+    "query_mode": "claim_entity",
+    "source_kind": "external_citation_search_result"
+  },
+  "external_retrieval_corpus": {
+    "config": {
+      "builder": "build_external_retrieval_corpus",
+      "corpus_name": "unresolved_blind_spot_citation_search",
+      "default_timestamp": null,
+      "min_chars": 1,
+      "require_source": true,
+      "source_kind": "external_citation_search_result",
+      "trusted_source": []
+    },
+    "corpus_type": "external_evidence_candidate",
+    "description": "External-candidate retrieval corpus built from caller-supplied local source files. This builder rejects score labels, claim ids, and score-dump row links in document metadata.",
+    "documents": [
+      {
+        "metadata": {
+          "adapter_request_sha256": "96e4df2a4b42c1d7fabc06ab5e094f71b10a5406863fb9f34e6aa1272c58259a",
+          "corpus_name": "unresolved_blind_spot_citation_search",
+          "external_source": true,
+          "ingest_ordinal": 1,
+          "ingestion_builder": "build_external_retrieval_corpus",
+          "provider": "synthetic-source-family-catalog",
+          "query_sha256": "27095c16da2b662aebd04bbf6a3a6b0ce07e40c92891a2cad0c3e50f424cfd1b",
+          "rank": 1,
+          "result_sha256": "61fcecc7d7de61fd20dc32f62920d8f834b5551b4ce9af32f5f71acc7509d914",
+          "source_family": "reference",
+          "source_family_confidence": 1.0,
+          "source_file": "artifacts/source-family-citation-search-workflow-smoke/evidence-gate/citation-search-source-docs.jsonl",
+          "source_kind": "external_citation_search_result",
+          "title": "Alpha reference source"
+        },
+        "source": "reference:alpha",
+        "text": "What is Alpha? Alpha is described in an independent reference source."
+      },
+      {
+        "metadata": {
+          "adapter_request_sha256": "f542efd15a0a90b4d353f8cfc44f72bb0e0460eb2d947aeb73a94d00fe08b509",
+          "corpus_name": "unresolved_blind_spot_citation_search",
+          "external_source": true,
+          "ingest_ordinal": 2,
+          "ingestion_builder": "build_external_retrieval_corpus",
+          "provider": "synthetic-source-family-catalog",
+          "query_sha256": "016118cd7e8db4fcb1c46bb30163d8f61d4620f2ad213c8042e0a528554acf0d",
+          "rank": 1,
+          "result_sha256": "4318a471bfb4fd31e3e2b44cedd75fbe4f8b1c9c9dc02598b2984d5c5a628609",
+          "source_family": "official",
+          "source_family_confidence": 1.0,
+          "source_file": "artifacts/source-family-citation-search-workflow-smoke/evidence-gate/citation-search-source-docs.jsonl",
+          "source_kind": "external_citation_search_result",
+          "title": "Beta official source"
+        },
+        "source": "official:beta",
+        "text": "Who founded Beta? Beta has an official profile in this local catalog."
+      }
+    ],
+    "input_provenance": {
+      "builder": "build_external_retrieval_corpus",
+      "sources": [
+        {
+          "exists": true,
+          "file_count": 1,
+          "kind": "file",
+          "path": "artifacts/source-family-citation-search-workflow-smoke/evidence-gate/citation-search-source-docs.jsonl",
+          "sha256": "32206a2e190f0d814423e94c7b196159db160fcd0c7584cf576a284f46e312f5",
+          "size_bytes": 1233
+        }
+      ]
+    },
+    "label_usage": {
+      "labels_copied_to_document_metadata": false,
+      "labels_used_for_documents": false
+    },
+    "schema_version": 1,
+    "summary": {
+      "n_documents": 2,
+      "n_documents_with_source": 2,
+      "n_documents_with_timestamp": 0,
+      "n_documents_with_url": 0,
+      "n_skipped_short": 0,
+      "n_sources": 1
+    }
+  },
+  "label_usage": {
+    "adapter_results_are_verifier_evidence": false,
+    "labels_copied_to_adapter_requests": false,
+    "labels_used_for_adapter_requests": false,
+    "model_answers_copied_to_adapter_requests": false
+  },
+  "metadata": {
+    "evidence": "synthetic_smoke",
+    "source_workflow": "source_family_citation_search_workflow",
+    "suite": "source_family_workflow_smoke"
+  },
+  "paths": {
+    "adapter_requests": "artifacts/source-family-citation-search-workflow-smoke/evidence-gate/citation-search-adapter-requests.jsonl",
+    "adapter_results": "artifacts/source-family-citation-search-workflow-smoke/source-family-citation-search-results.jsonl",
+    "artifact_manifest": "artifacts/source-family-citation-search-workflow-smoke/evidence-gate/citation-search-handoff-manifest.json",
+    "external_retrieval_corpus": "artifacts/source-family-citation-search-workflow-smoke/evidence-gate/citation-search-corpus.json",
+    "source_documents": "artifacts/source-family-citation-search-workflow-smoke/evidence-gate/citation-search-source-docs.jsonl",
+    "unresolved_queue": "artifacts/source-family-citation-search-workflow-smoke/unresolved-evidence-queue.json"
+  },
+  "schema_version": 1,
+  "scope": "Citation/search adapter handoff for unresolved blind spots. Adapter requests omit labels, record ids, target ids, and model answers. Ingested results are external-candidate documents, not verifier evidence until provenance-audited.",
+  "source": {
+    "queue_adapter_request_count": 2,
+    "queue_status": "ready_for_adapter_execution",
+    "queue_target_count": 2,
+    "queue_workflow": "unresolved_blind_spot_evidence_queue"
+  },
+  "source_documents": [
+    {
+      "metadata": {
+        "adapter_request_sha256": "96e4df2a4b42c1d7fabc06ab5e094f71b10a5406863fb9f34e6aa1272c58259a",
+        "external_source": true,
+        "provider": "synthetic-source-family-catalog",
+        "query_sha256": "27095c16da2b662aebd04bbf6a3a6b0ce07e40c92891a2cad0c3e50f424cfd1b",
+        "rank": 1,
+        "result_sha256": "61fcecc7d7de61fd20dc32f62920d8f834b5551b4ce9af32f5f71acc7509d914",
+        "source_family": "reference",
+        "source_family_confidence": 1.0,
+        "source_kind": "external_citation_search_result",
+        "title": "Alpha reference source"
+      },
+      "source": "reference:alpha",
+      "text": "What is Alpha? Alpha is described in an independent reference source."
+    },
+    {
+      "metadata": {
+        "adapter_request_sha256": "f542efd15a0a90b4d353f8cfc44f72bb0e0460eb2d947aeb73a94d00fe08b509",
+        "external_source": true,
+        "provider": "synthetic-source-family-catalog",
+        "query_sha256": "016118cd7e8db4fcb1c46bb30163d8f61d4620f2ad213c8042e0a528554acf0d",
+        "rank": 1,
+        "result_sha256": "4318a471bfb4fd31e3e2b44cedd75fbe4f8b1c9c9dc02598b2984d5c5a628609",
+        "source_family": "official",
+        "source_family_confidence": 1.0,
+        "source_kind": "external_citation_search_result",
+        "title": "Beta official source"
+      },
+      "source": "official:beta",
+      "text": "Who founded Beta? Beta has an official profile in this local catalog."
+    }
+  ],
+  "status": "collected",
+  "summary": {
+    "adapter_request_count": 2,
+    "corpus_document_count": 2,
+    "freshness_required_count": 0,
+    "official_source_preferred_count": 1,
+    "priority_counts": {
+      "high": 2
+    },
+    "question_type_counts": {
+      "definition": 1,
+      "person": 1
+    },
+    "result_summary": {
+      "input_result_count": 2,
+      "matched_request_count": 2,
+      "result_documents_by_request": {
+        "cite-search-3c0077f2bc5d2ad7": 1,
+        "cite-search-925e10b771d77f7b": 1
+      },
+      "skipped_empty_result_count": 0,
+      "unknown_request_result_count": 0
+    },
+    "source_document_count": 2,
+    "source_family_counts": {
+      "encyclopedic": 2,
+      "official": 1,
+      "reference": 2,
+      "scholarly": 1
+    },
+    "source_provider_counts": {
+      "synthetic-source-family-catalog": 2
+    },
+    "source_queue_adapter_request_count": 2,
+    "source_queue_target_count": 2
+  },
+  "workflow": "citation_search_adapter_handoff"
+}
