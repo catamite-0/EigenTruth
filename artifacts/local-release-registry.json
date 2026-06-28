@@ -5455,6 +5455,23 @@
       "name": "truthfulqa-frontier-smollm2-l80-question-property-correction-handoff",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-question-property-correction-handoff/question-property-correction-handoff.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "adapter_request_count": 182,
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue/artifact-manifest.json",
+        "evidence": "smollm2_l80_unresolved_blind_spot_adapter_queue",
+        "external_citation_count": 176,
+        "resolved_by_question_property_count": 1,
+        "status": "ready_for_adapter_execution",
+        "target_count": 46,
+        "workflow": "unresolved_blind_spot_evidence_queue",
+        "world_model_rule_count": 6
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue/unresolved-evidence-queue.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

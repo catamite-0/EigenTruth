@@ -409,12 +409,17 @@ For product features:
   records a high-risk abstain decision, and dry-runs the abstain action. The
   product route can use that slot as precise property evidence, but broad
   blind-spot recall still needs citation or world-model expansion.
+- The unresolved queue has now been made executable without promoting it as
+  evidence: `build_unresolved_blind_spot_evidence_queue.py` filters the
+  high-priority collection corpus through the question/property mapping report,
+  removes the `1` resolved Tesla/P112 slot, and emits an adapter-ready queue
+  with `46` unresolved targets, `176` citation/search requests, and `6`
+  world-model or calculator-rule authoring requests. The queue is manifest and
+  registry backed, but remains `source_discovery_only` / rule-authoring input
+  until external documents are ingested and provenance-audited.
 
 ### Next Verification Adapter Work
 
-- Expand the unresolved blind-spot evidence queue beyond the `1/89` mapped KG
-  slot, prioritizing citation/search adapters and world-model rules for records
-  with no joined facts or only generic fact joins.
 - Execute the unresolved high-priority citation/search requests through
   external source adapters, ingest the resulting documents through
   `build_external_retrieval_corpus.py`, and audit provenance before any route

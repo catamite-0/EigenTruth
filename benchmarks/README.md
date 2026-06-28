@@ -1557,6 +1557,38 @@ Elon Musk." using the two mapped `P112` facts, then plans an `abstain` action
 and records a dry-run action result. This is the first end-to-end path from
 blind-spot mapping to product control trace.
 
+## `build_unresolved_blind_spot_evidence_queue.py`
+
+Builds the next adapter execution queue after explicit question/property
+corrections have been handled. It filters out records already covered by a
+mapped correction gate and emits JSON/JSONL requests for citation/search
+adapters plus deterministic world-model or calculator rule authoring. The
+output is deliberately marked as source-discovery/rule-authoring work, not
+verifier evidence.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue
+
+python benchmarks/build_unresolved_blind_spot_evidence_queue.py \
+  --plan artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-evidence-expansion-plan/blind-spot-evidence-expansion-plan.json \
+  --collection-corpus artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-evidence-collection-corpus/blind-spot-evidence-collection-corpus.json \
+  --question-property-mapping artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-question-property-mapping/blind-spot-question-property-mapping.json \
+  --covered-fact-mapping artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-covered-fact-mapping/blind-spot-covered-fact-mapping.json \
+  --output-dir "$OUT" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue \
+  --version 0.1
+```
+
+The current registered queue
+(`report:truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue:0.1`)
+has status `ready_for_adapter_execution`: it starts from the `65`
+high-priority collection targets, removes the `1` resolved Tesla/P112 property
+slot, and emits `182` adapter requests over `46` unresolved targets. The queue
+contains `176` external citation/search requests and `6` world-model or
+calculator rule-authoring requests; `20` queued targets have no joined facts and
+`7` have only generic fact joins. Its manifest verifies recursively.
+
 ## `eval_verifier_ensemble.py`
 
 Compares a single calibrated internal diagnostic against a retrieval/verifier

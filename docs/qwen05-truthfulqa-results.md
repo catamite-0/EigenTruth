@@ -1211,6 +1211,16 @@ selected product route remains `structured_qa` with retrieval use gated at
 `0.0` and mean attempted routes gated at `1.1`; retrieval is required as audit
 evidence, not as the default low-latency path.
 
+The blind-spot correction path now has a follow-up execution queue after the
+single explicit property handoff. The registered
+`report:truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue:0.1`
+artifact removes the Tesla/P112 slot already handled by
+`question_property_structured_qa`, then exposes `46` unresolved high-priority
+targets with `182` adapter requests: `176` citation/search requests and `6`
+world-model or calculator-rule tasks. This is the next executable input for
+external-source collection and world-model adapter work; it is not verifier
+evidence until those sources are ingested and provenance-audited.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because

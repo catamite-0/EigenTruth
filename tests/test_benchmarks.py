@@ -35834,6 +35834,259 @@ def test_question_property_correction_handoff_writes_trace_and_corpus(tmp_path):
     assert record.metadata["suite"] == "unit"
 
 
+def test_unresolved_blind_spot_evidence_queue_filters_resolved_property_slot(tmp_path):
+    module = importlib.import_module("benchmarks.build_unresolved_blind_spot_evidence_queue")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    plan_path = tmp_path / "evidence-expansion-plan.json"
+    collection_path = tmp_path / "collection-corpus.json"
+    mapping_path = tmp_path / "question-property-mapping.json"
+    covered_path = tmp_path / "covered-fact-mapping.json"
+    output_dir = tmp_path / "queue"
+    registry_path = tmp_path / "registry.json"
+    plan_targets = [
+        {
+            "record_index": 1,
+            "priority": "high",
+            "question_type": "person",
+            "question": "Who first started Acme Motors?",
+            "answer": "Alice",
+            "recommended_routes": ["structured_fact", "structured_qa", "retrieval_citation"],
+        },
+        {
+            "record_index": 2,
+            "priority": "high",
+            "question_type": "definition",
+            "question": "What is Alpha Syndrome?",
+            "answer": "A moon.",
+            "recommended_routes": ["structured_fact", "structured_qa", "retrieval_citation"],
+        },
+        {
+            "record_index": 3,
+            "priority": "high",
+            "question_type": "method",
+            "question": "Why do Beta devices fail?",
+            "answer": "Because of magnets.",
+            "recommended_routes": ["retrieval_citation", "world_model_rule"],
+        },
+    ]
+    plan_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "blind_spot_evidence_expansion_plan",
+            "status": "needs_evidence_collection",
+            "summary": {"target_count": 3},
+            "targets": plan_targets,
+        }),
+        encoding="utf-8",
+    )
+    collection_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "blind_spot_evidence_collection_corpus",
+            "status": "ready_for_collection",
+            "summary": {"target_count": 3},
+            "targets": [
+                {
+                    "target_id": "record-1",
+                    "record_index": 1,
+                    "priority": "high",
+                    "question_type": "person",
+                    "question": "Who first started Acme Motors?",
+                    "model_answer": "Alice",
+                    "recommended_routes": ["structured_fact", "structured_qa", "retrieval_citation"],
+                    "entity_candidates": ["Acme Motors"],
+                    "query_seeds": ["Acme Motors founder Alice"],
+                    "wikidata_property_hints": ["founded_by:P112"],
+                },
+                {
+                    "target_id": "record-2",
+                    "record_index": 2,
+                    "priority": "high",
+                    "question_type": "definition",
+                    "question": "What is Alpha Syndrome?",
+                    "model_answer": "A moon.",
+                    "recommended_routes": ["structured_fact", "structured_qa", "retrieval_citation"],
+                    "entity_candidates": ["Alpha Syndrome"],
+                    "query_seeds": ["Alpha Syndrome A moon", "What is Alpha Syndrome"],
+                    "wikidata_property_hints": ["description", "instance_of:P31"],
+                },
+                {
+                    "target_id": "record-3",
+                    "record_index": 3,
+                    "priority": "high",
+                    "question_type": "method",
+                    "question": "Why do Beta devices fail?",
+                    "model_answer": "Because of magnets.",
+                    "recommended_routes": ["retrieval_citation", "world_model_rule"],
+                    "entity_candidates": ["Beta devices"],
+                    "query_seeds": ["Beta devices fail magnets"],
+                    "wikidata_property_hints": ["procedure_citation"],
+                },
+            ],
+            "requests": {
+                "external_citation": [
+                    {
+                        "request_id": "cite:record-1:1",
+                        "target_id": "record-1",
+                        "request_type": "external_citation",
+                        "priority": "high",
+                        "question_type": "person",
+                        "query": "Acme Motors founder Alice",
+                        "question": "Who first started Acme Motors?",
+                        "model_answer": "Alice",
+                        "usage": "source_discovery_only",
+                    },
+                    {
+                        "request_id": "cite:record-2:1",
+                        "target_id": "record-2",
+                        "request_type": "external_citation",
+                        "priority": "high",
+                        "question_type": "definition",
+                        "query": "Alpha Syndrome A moon",
+                        "question": "What is Alpha Syndrome?",
+                        "model_answer": "A moon.",
+                        "usage": "source_discovery_only",
+                    },
+                    {
+                        "request_id": "cite:record-2:2",
+                        "target_id": "record-2",
+                        "request_type": "external_citation",
+                        "priority": "high",
+                        "question_type": "definition",
+                        "query": "What is Alpha Syndrome",
+                        "question": "What is Alpha Syndrome?",
+                        "model_answer": "A moon.",
+                        "usage": "source_discovery_only",
+                    },
+                ],
+                "world_model_or_calculator_rule": [
+                    {
+                        "request_id": "rule:record-3:1",
+                        "target_id": "record-3",
+                        "request_type": "world_model_or_calculator_rule",
+                        "priority": "high",
+                        "question_type": "method",
+                        "rule_family": "causal_or_procedural_consistency",
+                        "rule_seed": "Check Beta device failure mechanism",
+                        "question": "Why do Beta devices fail?",
+                        "model_answer": "Because of magnets.",
+                        "usage": "deterministic_check_authoring",
+                    },
+                ],
+            },
+        }),
+        encoding="utf-8",
+    )
+    mapping_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "blind_spot_question_property_mapping",
+            "status": "observed",
+            "summary": {"target_count": 3, "mapped_correction_candidate_count": 1},
+            "records": [
+                {
+                    "record_index": 1,
+                    "question": "Who first started Acme Motors?",
+                    "answer": "Alice",
+                    "mapping_decision": "mapped_correction_candidate",
+                    "source_mapping_status": "candidate_fact_coverage",
+                    "correction_candidate": True,
+                    "best_mapping_score": 0.95,
+                },
+                {
+                    "record_index": 2,
+                    "question": "What is Alpha Syndrome?",
+                    "answer": "A moon.",
+                    "mapping_decision": "no_joined_facts",
+                    "source_mapping_status": "no_joined_facts",
+                    "correction_candidate": False,
+                },
+                {
+                    "record_index": 3,
+                    "question": "Why do Beta devices fail?",
+                    "answer": "Because of magnets.",
+                    "mapping_decision": "generic_fact_only",
+                    "source_mapping_status": "candidate_fact_coverage",
+                    "correction_candidate": False,
+                    "best_mapping_score": 0.2,
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    covered_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "blind_spot_covered_fact_mapping_audit",
+            "status": "observed",
+            "records": [
+                {
+                    "record_index": 2,
+                    "mapping_status": "no_joined_facts",
+                    "joined_fact_count": 0,
+                    "joined_property_counts": {},
+                },
+                {
+                    "record_index": 3,
+                    "mapping_status": "candidate_fact_coverage",
+                    "joined_fact_count": 2,
+                    "joined_property_counts": {"description": 2},
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        plan_path=plan_path,
+        collection_corpus_path=collection_path,
+        question_property_mapping_path=mapping_path,
+        covered_fact_mapping_path=covered_path,
+        output_dir=output_dir,
+        registry_path=registry_path,
+        name="unresolved-blind-spot-queue-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    targets = [
+        json.loads(line)
+        for line in (output_dir / "unresolved-targets.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    requests = [
+        json.loads(line)
+        for line in (output_dir / "adapter-requests.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    manifest_path = output_dir / "artifact-manifest.json"
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:unresolved-blind-spot-queue-unit:0.1"
+    )
+
+    assert payload["status"] == "ready_for_adapter_execution"
+    assert payload["summary"]["source_collection_target_count"] == 3
+    assert payload["summary"]["resolved_by_question_property_count"] == 1
+    assert payload["summary"]["target_count"] == 2
+    assert payload["summary"]["adapter_request_count"] == 3
+    assert payload["summary"]["request_type_counts"] == {
+        "external_citation": 2,
+        "world_model_or_calculator_rule": 1,
+    }
+    assert payload["summary"]["evidence_status_counts"] == {"generic_fact_only": 1, "no_joined_facts": 1}
+    assert {target["record_index"] for target in targets} == {2, 3}
+    assert {request["record_index"] for request in requests} == {2, 3}
+    assert any(request["adapter_family"] == "external_citation_search" for request in requests)
+    assert any(request["adapter_family"] == "world_model_rule_authoring" for request in requests)
+    assert all(request["not_verifier_evidence"] is True for request in requests)
+    assert all("label" not in target for target in targets)
+    assert all("label" not in request for request in requests)
+    assert payload["label_usage"]["requests_are_verifier_evidence"] is False
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "unresolved_blind_spot_evidence_queue"
+    assert record.metadata["adapter_request_count"] == 3
+    assert record.metadata["resolved_by_question_property_count"] == 1
+    assert record.metadata["suite"] == "unit"
+
+
 def test_eval_score_ensemble_compares_single_and_combined_signals(tmp_path):
     module = importlib.import_module("benchmarks.eval_score_ensemble")
     scores_path = tmp_path / "scores.json"
