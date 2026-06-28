@@ -5281,6 +5281,53 @@
       "name": "truthfulqa-frontier-smollm2-l80-blind-spot-evidence-collection-corpus",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-evidence-collection-corpus/blind-spot-evidence-collection-corpus.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-evidence/artifact-manifest.json",
+        "document_count": 292,
+        "evidence": "smollm2_l80_high_priority_blind_spot_wikidata_source_docs",
+        "request_count": 505,
+        "resolved_entity_count": 61,
+        "status": "collected",
+        "workflow": "blind_spot_wikidata_evidence_fetch"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-evidence",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-evidence/wikidata-evidence-fetch-report.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-query-sweep/artifact-manifest.json",
+        "best_blind_refuted_count": 0,
+        "best_passing_blind_refuted_count": null,
+        "best_passing_strategy": null,
+        "best_strategy": "question_answer_overlap_0p95",
+        "blind_spot_count": 89,
+        "evidence": "smollm2_l80_blind_spot_wikidata_high_priority_query_sweep",
+        "status": "complete",
+        "workflow": "blind_spot_retrieval_query_sweep"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-query-sweep",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-query-sweep/blind-spot-wikidata-query-sweep.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-wikidata-query-sweep-provenance-comparison/artifact-manifest.json",
+        "evidence": "smollm2_l80_blind_spot_wikidata_query_sweep_provenance_gate",
+        "passed": false,
+        "recommended_controlled_strategy": "question_answer_overlap_0p5",
+        "recommended_external_strategy": null,
+        "status": "blocked",
+        "workflow": "blind_spot_query_sweep_provenance_comparison"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-wikidata-query-sweep-provenance-comparison",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-wikidata-query-sweep-provenance-comparison/query-sweep-provenance-comparison.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

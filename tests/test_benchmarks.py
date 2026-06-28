@@ -35230,6 +35230,140 @@ def test_build_blind_spot_evidence_collection_corpus_compiles_requests(tmp_path)
     assert record.metadata["suite"] == "unit"
 
 
+def test_fetch_blind_spot_wikidata_evidence_writes_clean_source_docs(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.fetch_blind_spot_wikidata_evidence")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    collection_path = tmp_path / "collection-corpus.json"
+    source_path = tmp_path / "wikidata-source-docs.jsonl"
+    report_path = tmp_path / "wikidata-fetch-report.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    collection_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "blind_spot_evidence_collection_corpus",
+            "status": "ready_for_collection",
+            "summary": {"target_count": 1},
+            "requests": {
+                "wikidata_entity_property": [
+                    {
+                        "request_id": "wd:record-7:1",
+                        "target_id": "record-7",
+                        "request_type": "wikidata_entity_property",
+                        "entity": "Alpha Syndrome",
+                        "property_hint": "instance_of:P31",
+                        "property_id": "P31",
+                        "question": "What is Alpha Syndrome?",
+                        "model_answer": "A moon.",
+                    },
+                    {
+                        "request_id": "wd:record-7:2",
+                        "target_id": "record-7",
+                        "request_type": "wikidata_entity_property",
+                        "entity": "Alpha Syndrome",
+                        "property_hint": "official_website:P856",
+                        "property_id": "P856",
+                        "question": "What is Alpha Syndrome?",
+                        "model_answer": "A moon.",
+                    },
+                    {
+                        "request_id": "wd:record-7:3",
+                        "target_id": "record-7",
+                        "request_type": "wikidata_entity_property",
+                        "entity": "Alpha Syndrome",
+                        "property_hint": "description",
+                        "property_id": None,
+                        "question": "What is Alpha Syndrome?",
+                        "model_answer": "A moon.",
+                    },
+                ]
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    entities = {
+        "Q100": {
+            "id": "Q100",
+            "labels": {"en": {"value": "Alpha Syndrome"}},
+            "descriptions": {"en": {"value": "fictional medical condition"}},
+            "claims": {
+                "P31": [
+                    {
+                        "mainsnak": {
+                            "datatype": "wikibase-item",
+                            "datavalue": {
+                                "value": {"entity-type": "item", "numeric-id": 12136, "id": "Q12136"}
+                            },
+                        }
+                    }
+                ],
+                "P856": [
+                    {
+                        "mainsnak": {
+                            "datatype": "url",
+                            "datavalue": {"value": "https://example.org/alpha"},
+                        }
+                    }
+                ],
+            },
+        },
+        "Q12136": {"id": "Q12136", "labels": {"en": {"value": "disease"}}, "claims": {}},
+        "P31": {"id": "P31", "labels": {"en": {"value": "instance of"}}, "claims": {}},
+        "P856": {"id": "P856", "labels": {"en": {"value": "official website"}}, "claims": {}},
+    }
+
+    class FakeClient:
+        def __init__(self, **_kwargs):
+            pass
+
+        def search_entities(self, query, limit):
+            assert query == "Alpha Syndrome"
+            assert limit == 5
+            return [{"id": "Q100", "label": "Alpha Syndrome", "description": "fictional medical condition"}]
+
+        def load_entities(self, ids):
+            return {item: entities[item] for item in ids if item in entities}
+
+    monkeypatch.setattr(module, "WikidataAPIClient", FakeClient)
+
+    payload = module.run(
+        collection_corpus_path=collection_path,
+        source_jsonl_path=source_path,
+        report_json_path=report_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="blind-spot-wikidata-unit",
+        version="0.1",
+        fetched_at="2026-06-27T00:00:00+00:00",
+        metadata={"suite": "unit"},
+    )
+    rows = [json.loads(line) for line in source_path.read_text(encoding="utf-8").splitlines()]
+    saved = json.loads(report_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:blind-spot-wikidata-unit:0.1"
+    )
+    source_metadata_keys = set().union(*(row["metadata"].keys() for row in rows))
+
+    assert payload["status"] == "collected"
+    assert payload["summary"]["request_count"] == 3
+    assert payload["summary"]["document_count"] == 3
+    assert payload["summary"]["request_status_counts"] == {"documented": 3}
+    assert saved["source_documents"]["count"] == 3
+    assert {row["metadata"]["statement_property"] for row in rows} == {"P31", "P856", "description"}
+    assert any("Alpha Syndrome has instance of disease" in row["text"] for row in rows)
+    assert all(row["metadata"]["provider"] == "wikidata" for row in rows)
+    assert "label" not in source_metadata_keys
+    assert "record_index" not in source_metadata_keys
+    assert "target_id" not in source_metadata_keys
+    assert "model_answer" not in source_metadata_keys
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "blind_spot_wikidata_evidence_fetch"
+    assert record.metadata["document_count"] == 3
+    assert record.metadata["suite"] == "unit"
+
+
 def test_eval_score_ensemble_compares_single_and_combined_signals(tmp_path):
     module = importlib.import_module("benchmarks.eval_score_ensemble")
     scores_path = tmp_path / "scores.json"

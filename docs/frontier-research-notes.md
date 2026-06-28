@@ -670,17 +670,19 @@ Added the first monitor-first tool-selection audit layer:
   claim to solve tool selection; it makes tool-routing mistakes measurable so
   future internal-representation tool-selection or world-model-corrected
   executor policies have a stable target metric.
-- The SmolLM2 L80 detectability blind-spot path now has an executable
-  source-discovery queue: `build_blind_spot_evidence_collection_corpus.py`
-  compiles the registered 89-record expansion plan into high-priority
-  Wikidata/entity-property, citation, counterfactual, and rule-authoring
-  requests without treating request text as verifier evidence. This gives the
-  next frontier step a concrete fetch/curation interface before rerunning the
-  external provenance gate.
+- The SmolLM2 L80 detectability blind-spot path now has a target-specific
+  Wikidata source collection loop: `build_blind_spot_evidence_collection_corpus.py`
+  creates the source-discovery queue, `fetch_blind_spot_wikidata_evidence.py`
+  resolves the high-priority Wikidata requests into `292` CC0 source docs, and
+  the provenance audit passes as external evidence. The rerun query sweep still
+  refutes `0/89` blind spots, which turns the frontier requirement from
+  retrieval-threshold tuning into structured-fact/QA corpus construction over
+  the documented claims.
 
 ## Next Research-to-Code Candidates
 
-1. Execute the high-priority blind-spot source-discovery queue against real Wikidata/search/citation sources, build a provenance-audited external corpus, and rerun the blind-spot query provenance gate.
-2. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
-3. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
-4. Materialize a real `frontier_audit` release candidate with the registered covered-facts external-evidence handoff and external-prediction triple matrix artifact, then export the resulting promotion contract.
+1. Convert the target-specific Wikidata source docs into structured-fact/QA corpora, then rerun the blind-spot correction-route audit instead of another lexical overlap sweep.
+2. Extend the high-priority source collection queue to citation/search sources for claims that remain unresolved or documented only by descriptions.
+3. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
+4. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
+5. Materialize a real `frontier_audit` release candidate with the registered covered-facts external-evidence handoff and external-prediction triple matrix artifact, then export the resulting promotion contract.

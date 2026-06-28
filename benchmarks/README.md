@@ -1440,6 +1440,37 @@ pass focused on the targets most likely to unlock structured fact or citation
 coverage before rerunning `sweep_blind_spot_retrieval_queries.py` and
 `compare_blind_spot_query_sweeps.py`.
 
+## `fetch_blind_spot_wikidata_evidence.py`
+
+Fetches CC0 Wikidata source documents for the collection corpus. Request and
+target identifiers stay in the report; the emitted source docs only carry
+external Wikidata provenance plus a request fingerprint, so
+`build_external_retrieval_corpus.py` can ingest them without score-row links.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-evidence
+
+python benchmarks/fetch_blind_spot_wikidata_evidence.py \
+  --collection-corpus artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-evidence-collection-corpus/blind-spot-evidence-collection-corpus.json \
+  --source-jsonl "$OUT/wikidata-source-docs.jsonl" \
+  --report-json "$OUT/wikidata-evidence-fetch-report.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-evidence \
+  --version 0.1
+```
+
+The first registered run deduplicates the high-priority queue into `505`
+Wikidata requests, resolves `61` entities, and writes `292` source documents.
+After ingestion with `build_external_retrieval_corpus.py`, the provenance audit
+passes as `external_candidate` with `0` claim-id links, `0` row links, and `0`
+label metadata documents. A rerun of `sweep_blind_spot_retrieval_queries.py`
+against this target-specific Wikidata corpus still refutes `0/89` blind spots,
+so the updated provenance comparison remains `blocked`. The actionable result
+is therefore: source collection works, lexical retrieval is still the wrong
+coverage lever, and the next pass should turn documented Wikidata claims into
+structured-fact/QA route corpora.
+
 ## `eval_verifier_ensemble.py`
 
 Compares a single calibrated internal diagnostic against a retrieval/verifier

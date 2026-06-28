@@ -1,0 +1,65 @@
+{
+  "artifacts": {
+    "corpus.1.wikidata-external-corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "wikidata-external-corpus.json",
+      "sha256": "db25bed67926c85aba0f973614adee550567abf415784706bac6868022aee4fa",
+      "size_bytes": 390169
+    },
+    "provenance_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "provenance-audit.json",
+      "sha256": "20df9a95bd14d88ff77a805eb5a5eeac4eec9245f9fa0e3d4b5ec7a3f5240c7a",
+      "size_bytes": 13605
+    },
+    "scores": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_truthfulqa_l80_scores_with_statements.json",
+      "sha256": "39a53894be76a24513ec5549a8c67269d54a80b995e29161743aafb813b094d9",
+      "size_bytes": 572345
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "audit_role": "grounding",
+    "evidence_class": "external_candidate",
+    "passed": true,
+    "status": "pass",
+    "summary": {
+      "claim_id_link_documents": 0,
+      "claim_id_link_rate": 0.0,
+      "corpus_types": [
+        "external_evidence_candidate"
+      ],
+      "exact_answer_copy_documents": 22,
+      "exact_answer_copy_rate": 0.07534246575342465,
+      "label_metadata_documents": 0,
+      "label_metadata_rate": 0.0,
+      "labels_copied_to_document_metadata": false,
+      "labels_used_for_documents": false,
+      "mean_max_answer_token_overlap": 0.46206376386170905,
+      "n_corpora": 1,
+      "n_documents": 292,
+      "row_link_documents": 0,
+      "row_link_rate": 0.0,
+      "source_text_copy_documents": 0,
+      "source_text_copy_rate": 0.0,
+      "stress_control_documents": 0,
+      "stress_control_rate": 0.0
+    },
+    "workflow": "retrieval_corpus_provenance_audit"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

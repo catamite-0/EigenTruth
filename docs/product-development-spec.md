@@ -395,13 +395,21 @@ For product features:
   targets. The artifact is explicit that requests are not verifier evidence,
   preserving the release gate invariant that only provenance-audited external
   sources can support a future route promotion.
+- That handoff has now been executed for Wikidata: the target-specific fetch
+  resolves `61` entities and writes `292` CC0 source docs, provenance-audited as
+  `external_candidate` with no claim-id, row-link, or label metadata leakage.
+  The lexical query rerun still refutes `0/89` entrenched false blind spots, so
+  the product route should move those facts into structured-fact/QA adapters
+  instead of tuning local retrieval overlap.
 
 ### Next Verification Adapter Work
 
-- Execute the high-priority blind-spot collection corpus against real
-  Wikidata/search/citation sources, ingest the resulting documents through
-  `build_external_retrieval_corpus.py`, audit provenance, and rerun the
-  blind-spot query provenance gate.
+- Convert the target-specific Wikidata source docs into structured-fact/QA
+  corpora, then rerun the blind-spot correction-route audit and provenance gate.
+- Execute the unresolved high-priority citation/search requests through
+  external source adapters, ingest the resulting documents through
+  `build_external_retrieval_corpus.py`, and audit provenance before any route
+  promotion.
 - Connect `StructuredStateVerifier` to additional live database, business-rule, and domain-state sources behind optional adapters; the current reproducible path uses local JSON state sources, stdlib SQLite, and mapped local tool outputs.
 - Connect additional QA/database/world-model route policies to production adapters while preserving trace-visible match reasons for each selected or skipped tool.
 - Generalize real side-effecting executors behind the same trace, execution-policy, timeout, idempotency-ledger, and tool-output mapping interfaces; the current production-like demo proves the path with a guarded local SQLite mutation and optional JSON/SQLite replay, while hard cancellation remains adapter-specific.

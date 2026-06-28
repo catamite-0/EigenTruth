@@ -975,6 +975,19 @@ world-model/calculator rule-authoring requests. The artifact explicitly marks th
 `source_discovery_only`, so they can drive evidence collection without being
 mistaken for verifier evidence or release-gate grounding.
 
+The target-specific Wikidata fetch is registered as
+`report:truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-evidence:0.1`.
+It deduplicates the high-priority queue into `505` Wikidata requests, resolves
+`61` entities, documents `124` requests, and writes `292` CC0 source docs.
+Those docs pass the external retrieval-corpus provenance audit as
+`external_candidate`: `0` claim-id links, `0` row links, `0` label metadata
+documents, and exact-answer copy rate `0.075`. A follow-up query sweep against
+this target-specific Wikidata corpus still refutes `0/89` blind spots, and
+`report:truthfulqa-frontier-smollm2-l80-wikidata-query-sweep-provenance-comparison:0.1`
+therefore remains `blocked`. The next correction lever is not lexical overlap;
+it is converting the documented Wikidata claims into structured-fact/QA route
+corpora.
+
 A local release-candidate smoke artifact now pairs that staged route baseline
 with a tiny-gpt2 offline readiness/runtime baseline:
 
