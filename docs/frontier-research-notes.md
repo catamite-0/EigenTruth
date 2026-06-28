@@ -34,6 +34,7 @@ Added DECK-style detectability taxonomy reports:
 - `deck_taxonomy_report(...)` combines a consistency-style score and a confidence-style score into Drift / Entrenched / Confabulation / Knotted cells, reporting all-sample counts, false-record distribution, blind-spot counts, and scorer families expected to catch each regime.
 - `benchmarks/eval_detectability_taxonomy.py` reads existing JSON or JSONL score dumps with selected-column loading and writes a JSON report without loading a model.
 - `benchmarks/run_truthfulqa_frontier_workflow.py` can now emit those taxonomy reports per frontier cell, add them to the top-level artifact manifest, and carry the paths forward into release-evidence comparison.
+- The registered l80 replay `report:truthfulqa-frontier-qwen-smollm2-l80-detectability:0.1` reuses existing Qwen/SmolLM2 score dumps and writes per-cell taxonomy reports in 7.5s. With `eigenscore` and `nll_answer` treated as lower-is-risk axes, Qwen has entrenched false-rate `0.000`, while SmolLM2 has `89/306 = 0.291`.
 - This is evidence-only: entrenched false records should route to independent verifier, retrieval, citation, structured-fact, or world-model correction paths; the taxonomy does not promote a new control default by itself.
 
 Added prompt-answer pathway diagnostics:
@@ -163,6 +164,7 @@ Added a combined frontier release-evidence comparator:
 - It emits separate verifier, abstention, and detectability track verdicts plus one fail-closed release decision.
 - When taxonomy reports are supplied, the comparator gates the `entrenched` false-record share because that high-consistency/high-confidence cell is the expected blind spot for output-level uncertainty and should be handed to independent verifier, retrieval, citation, structured-fact, or world-model routes.
 - On the current l80 artifacts, verifier stability promotes while abstention stability blocks; this records the correct product posture: staged verifier routing is supported by current evidence, participation-gate promotion is not.
+- The detectability-gated release artifact `report:truthfulqa-frontier-qwen-smollm2-l80-release-evidence-detectability:0.1` keeps that verdict blocked and adds a second explicit blocker: SmolLM2's entrenched false-rate `0.29085` exceeds the default `0.25` blind-spot gate, while Qwen's detectability track promotes.
 
 Added dependency-free fact-level claim metadata:
 

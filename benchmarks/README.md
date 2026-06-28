@@ -1189,8 +1189,8 @@ OUT=artifacts/truthfulqa-frontier-qwen-smollm2-l80-release-evidence
 python benchmarks/compare_frontier_release_evidence.py \
   --verifier-stability-report artifacts/truthfulqa-frontier-qwen-smollm2-l80-verifier-stability/verifier-stability-report.json \
   --abstention-stability-report artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json \
-  --detectability-taxonomy-report artifacts/qwen05_detectability_taxonomy.json \
-  --detectability-taxonomy-report artifacts/smollm2_detectability_taxonomy.json \
+  --detectability-taxonomy-report artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/qwen05-l80/detectability-taxonomy-report.json \
+  --detectability-taxonomy-report artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/detectability-taxonomy-report.json \
   --max-detectability-entrenched-false-rate 0.25 \
   --json "$OUT/frontier-release-evidence.json" \
   --artifact-manifest "$OUT/artifact-manifest.json" \
@@ -1208,6 +1208,14 @@ When `--detectability-taxonomy-report` is supplied, each run must have a matchin
 taxonomy report. The default blind-spot gate blocks if more than 25% of false
 records fall into the `entrenched` cell, because that cell is repeatable and
 high-confidence enough that output-level uncertainty is expected to miss it.
+The registered detectability replay
+(`report:truthfulqa-frontier-qwen-smollm2-l80-detectability:0.1`) reuses the
+l80 score dumps and emits per-cell reports in 7.5s: Qwen has entrenched
+false-rate `0.000`, while SmolLM2 has `89/306 = 0.291`. The corresponding
+release-evidence artifact
+(`report:truthfulqa-frontier-qwen-smollm2-l80-release-evidence-detectability:0.1`)
+keeps verifier stability promoted, keeps abstention blocked, and also blocks
+the detectability track on SmolLM2 at the default `0.25` blind-spot gate.
 
 ## `eval_verifier_ensemble.py`
 

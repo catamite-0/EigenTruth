@@ -517,8 +517,7 @@ def _run_command(command: Sequence[str]) -> None:
 
 def _score_materialization_requested(config: CalibratedObservabilityWorkflowConfig) -> bool:
     return (
-        config.cache_only
-        or config.refresh_statement_encoding_cache
+        config.refresh_statement_encoding_cache
         or config.refresh_layer_stats_cache
         or config.refresh_eval_reps_cache
     )

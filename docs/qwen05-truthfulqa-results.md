@@ -902,6 +902,20 @@ The report is registered as
 verified manifest is registered as
 `benchmark_manifest:truthfulqa-frontier-qwen-smollm2-l80-verifier-stability:0.1`.
 
+The DECK detectability replay is now registered as
+`report:truthfulqa-frontier-qwen-smollm2-l80-detectability:0.1`. It reuses the
+current l80 score dumps and emits per-cell taxonomy reports through
+`run_truthfulqa_frontier_workflow.py` without model reruns. With `eigenscore`
+and `nll_answer` interpreted as lower-is-risk axes, Qwen has entrenched
+false-rate `0.000`, while SmolLM2 has `89/306 = 0.291`. The paired release
+evidence report
+`report:truthfulqa-frontier-qwen-smollm2-l80-release-evidence-detectability:0.1`
+keeps verifier stability promoted, keeps abstention blocked, and adds a
+SmolLM2 detectability blocker because `0.29085` exceeds the default `0.25`
+entrenched blind-spot gate. Its recursive artifact-manifest verification passes
+and fingerprints both taxonomy reports plus the existing verifier/abstention
+stability inputs.
+
 A local release-candidate smoke artifact now pairs that staged route baseline
 with a tiny-gpt2 offline readiness/runtime baseline:
 

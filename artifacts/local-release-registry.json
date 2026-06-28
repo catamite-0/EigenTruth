@@ -5001,6 +5001,141 @@
       "name": "smollm2-l8-selected-fusion-product-promotion-contract",
       "path": "artifacts/smollm2_l8_selected_fusion_product_promotion_contract_v0_3/product-promotion-contract.json",
       "version": "0.3"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/artifact-manifest.json",
+        "detectability_confidence_signal": "nll_answer",
+        "detectability_consistency_signal": "eigenscore",
+        "models": [
+          "qwen05",
+          "smollm2"
+        ],
+        "scales": [
+          "l80"
+        ],
+        "score_ensemble_report": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/score-ensemble-report.json",
+        "signals": [
+          "truth_proj",
+          "maha_last",
+          "subspace_resid",
+          "resid_update_norm",
+          "eigenscore"
+        ],
+        "status": "complete",
+        "sweep_band_scales": [],
+        "sweep_layers_from_band_report": null,
+        "workflow": "run_truthfulqa_frontier_workflow"
+      },
+      "name": "truthfulqa-frontier-qwen-smollm2-l80-detectability",
+      "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/truthfulqa-frontier-workflow.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "abstention_signals": [
+          "maha_last",
+          "truth_proj",
+          "subspace_resid",
+          "disp_euclid",
+          "disp_hse",
+          "nll_answer",
+          "eigenscore",
+          "resid_update_norm"
+        ],
+        "abstention_track_status": "blocked",
+        "artifact_manifest": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-release-evidence-detectability/artifact-manifest.json",
+        "blocking_reasons": [
+          "abstention_stability.qwen05-l80.conditional_correctness_lower_bound_mean 0.49756 is below required minimum 0.8",
+          "abstention_stability.qwen05-l80.release_gate_pass_seed_rate 0 is below required minimum 1",
+          "abstention_stability.smollm2-l80.conditional_correctness_lower_bound_mean 0.48451 is below required minimum 0.8",
+          "abstention_stability.smollm2-l80.release_gate_pass_seed_rate 0 is below required minimum 1",
+          "detectability_taxonomy.smollm2-l80.entrenched_false_rate 0.29085 exceeds maximum 0.25"
+        ],
+        "detectability_report_count": 2,
+        "detectability_track_status": "blocked",
+        "manifest_verification_report": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-release-evidence-detectability/manifest-verification.json",
+        "manifest_verified": true,
+        "run_names": [
+          "qwen05-l80",
+          "smollm2-l80"
+        ],
+        "status": "blocked",
+        "verifier_signal": "truth_proj",
+        "verifier_track_status": "promote",
+        "workflow": "compare_frontier_release_evidence"
+      },
+      "name": "truthfulqa-frontier-qwen-smollm2-l80-release-evidence-detectability",
+      "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-release-evidence-detectability/frontier-release-evidence.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "benchmark_manifest",
+      "metadata": {
+        "abstention_signals": [
+          "maha_last",
+          "truth_proj",
+          "subspace_resid",
+          "disp_euclid",
+          "disp_hse",
+          "nll_answer",
+          "eigenscore",
+          "resid_update_norm"
+        ],
+        "abstention_track_status": "blocked",
+        "artifact_manifest": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-release-evidence-detectability/artifact-manifest.json",
+        "blocking_reasons": [
+          "abstention_stability.qwen05-l80.conditional_correctness_lower_bound_mean 0.49756 is below required minimum 0.8",
+          "abstention_stability.qwen05-l80.release_gate_pass_seed_rate 0 is below required minimum 1",
+          "abstention_stability.smollm2-l80.conditional_correctness_lower_bound_mean 0.48451 is below required minimum 0.8",
+          "abstention_stability.smollm2-l80.release_gate_pass_seed_rate 0 is below required minimum 1",
+          "detectability_taxonomy.smollm2-l80.entrenched_false_rate 0.29085 exceeds maximum 0.25"
+        ],
+        "checked": 7,
+        "detectability_report_count": 2,
+        "detectability_track_status": "blocked",
+        "failure_count": 0,
+        "manifest_metadata": {
+          "abstention_track_status": "blocked",
+          "detectability_track_status": "blocked",
+          "runner": "compare_frontier_release_evidence",
+          "status": "blocked",
+          "verifier_track_status": "promote"
+        },
+        "manifest_summary": {
+          "artifact_count": 7,
+          "directory_count": 0,
+          "file_count": 7,
+          "missing_count": 0
+        },
+        "manifest_verification_report": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-release-evidence-detectability/manifest-verification.json",
+        "manifest_verified": true,
+        "run_names": [
+          "qwen05-l80",
+          "smollm2-l80"
+        ],
+        "status": "blocked",
+        "verifier_signal": "truth_proj",
+        "verifier_track_status": "promote",
+        "workflow": "compare_frontier_release_evidence"
+      },
+      "name": "truthfulqa-frontier-qwen-smollm2-l80-release-evidence-detectability",
+      "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-release-evidence-detectability/artifact-manifest.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "manifest_verification",
+      "metadata": {
+        "manifest_name": "truthfulqa-frontier-qwen-smollm2-l80-release-evidence-detectability",
+        "manifest_path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-release-evidence-detectability/artifact-manifest.json",
+        "passed": true,
+        "recursive": true
+      },
+      "name": "truthfulqa-frontier-qwen-smollm2-l80-release-evidence-detectability-verification",
+      "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-release-evidence-detectability/manifest-verification.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

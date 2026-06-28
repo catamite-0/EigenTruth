@@ -1,0 +1,31 @@
+{
+  "calibration_dataset_metadata": {
+    "best_by": "auroc",
+    "n_false": 306,
+    "n_true": 250,
+    "scores": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json",
+    "scores_path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json",
+    "source": "eval_conformal.py"
+  },
+  "commit_sha": null,
+  "created_at": "2026-06-28T04:47:14.376359+00:00",
+  "eigentruth_version": "0.2.0",
+  "model_id": "HuggingFaceTB/SmolLM2-135M-Instruct",
+  "model_revision": null,
+  "schema_version": 1,
+  "scores": [
+    {
+      "conformal_alpha": 0.1,
+      "direction": "higher",
+      "name": "truth_proj",
+      "threshold": 1.1312869787216187
+    }
+  ],
+  "steering_policy": {
+    "max_steering_lambda": null,
+    "mode": "disabled",
+    "steering_lambda": 0.0
+  },
+  "target_layer": -16,
+  "warmup_dataset_metadata": {}
+}

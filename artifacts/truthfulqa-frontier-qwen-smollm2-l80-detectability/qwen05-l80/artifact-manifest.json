@@ -1,0 +1,101 @@
+{
+  "artifacts": {
+    "best_calibration": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "best-calibration.json",
+      "sha256": "3a3bc459a65fd0ef4c5e7e5f252ae97ea2d5b6a082f978684796e33007beb413",
+      "size_bytes": 890
+    },
+    "conformal_artifact_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "conformal-artifact-manifest.json",
+      "sha256": "c653e06f8a748bbe56c82d809f1fba0ba8d1f822d6bc824c47cd0e2bc1500803",
+      "size_bytes": 1504
+    },
+    "conformal_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "conformal-report.json",
+      "sha256": "b9fffa217f526000695e0240adcd8965d0406897fe4d1302b5a15e0c7c3be4b0",
+      "size_bytes": 28917
+    },
+    "eval_reps_cache": {
+      "exists": true,
+      "file_count": 36,
+      "kind": "directory",
+      "path": "../../cache/truthfulqa-frontier-qwen-smollm2/qwen05-l80/eval-reps-cache",
+      "sha256": "220af5f01d2d48f6733d6ccb82cb98ea2b5c8eea880b371b9223a3160a25e916",
+      "size_bytes": 245554621
+    },
+    "layer_stats_cache": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../cache/truthfulqa-frontier-qwen-smollm2/qwen05-l80/layer-stats.pt",
+      "sha256": "6ac06b70cc8438dbd4a9135f9da56fe85bb768296dda7c8f01e0d58d11118734",
+      "size_bytes": 16231336
+    },
+    "score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "scores.manifest.json",
+      "sha256": "68767b83a06d66c2932e64935b1603fac835f9ddad6663c8856f187771a27439",
+      "size_bytes": 3236
+    },
+    "score_dump_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "scores.manifest.records.jsonl",
+      "sha256": "2a5ef4fe89528a557989cac73ef0049e02092e4034cca60f14d7d715c2fbd60a",
+      "size_bytes": 861209
+    },
+    "sweep_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "sweep-report.json",
+      "sha256": "a02f37ee5d723bf5c5601a8d13e62700c9ceeb29db00ef0b6851541a0f471dfd",
+      "size_bytes": 12354
+    },
+    "workflow_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "calibrated-observability-workflow.json",
+      "sha256": "1f56bf3b483031315a0fc241cb9bf149c6ca87a5065962fe873304e04bb0a472",
+      "size_bytes": 10167
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "artifact_alpha": 0.1,
+    "best_by": "auroc",
+    "cache_only": true,
+    "conformal_verdict": "ACCEPT",
+    "dry_run": false,
+    "dtype": "float32",
+    "dump_scores_format": "jsonl",
+    "layer": -12,
+    "model": "Qwen/Qwen2.5-0.5B-Instruct",
+    "offline": false,
+    "runner": "run_calibrated_observability_workflow",
+    "runtime_preset": "custom",
+    "score_dump_reused": true,
+    "status": "complete",
+    "sweep_layers_source": null
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 9,
+    "directory_count": 1,
+    "file_count": 8,
+    "missing_count": 0
+  }
+}

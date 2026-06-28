@@ -2719,6 +2719,28 @@ def test_calibrated_observability_cache_refresh_forces_score_materialization(tmp
     assert payload["execution"]["score_dump_reused"] is False
 
 
+def test_calibrated_observability_cache_only_reuses_existing_score_dump(tmp_path):
+    module = importlib.import_module("benchmarks.run_calibrated_observability_workflow")
+    scores_path = tmp_path / "workflow" / "scores.manifest.json"
+    scores_path.parent.mkdir(parents=True)
+    scores_path.write_text("{}", encoding="utf-8")
+
+    payload = module.run_calibrated_observability_workflow(
+        module.CalibratedObservabilityWorkflowConfig(
+            output_dir=tmp_path / "workflow",
+            scores_path=scores_path,
+            layer_stats_cache=tmp_path / "cache" / "layer-stats.pt",
+            eval_reps_cache=tmp_path / "cache" / "eval-reps-cache",
+            cache_only=True,
+            dry_run=True,
+            python_executable=sys.executable,
+        )
+    )
+
+    assert payload["execution"]["score_dump_reused"] is True
+    assert "--cache-only" in payload["execution"]["truthfulqa_command"]
+
+
 def test_calibrated_observability_rejects_refresh_without_cache_path(tmp_path):
     module = importlib.import_module("benchmarks.run_calibrated_observability_workflow")
 

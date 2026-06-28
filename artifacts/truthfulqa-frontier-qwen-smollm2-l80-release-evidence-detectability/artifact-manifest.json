@@ -1,0 +1,75 @@
+{
+  "artifacts": {
+    "abstention_stability_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/artifact-manifest.json",
+      "sha256": "9bd1ec46cb1168f23a620f4ece11e32e182d5314e460aa4aab8545e48fbf51af",
+      "size_bytes": 1998
+    },
+    "abstention_stability_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json",
+      "sha256": "22d2123e24be22b6c8ff192d725870e585f39674f010b3def5a09570ff8b9626",
+      "size_bytes": 321821
+    },
+    "detectability_taxonomy_report_0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-qwen-smollm2-l80-detectability/qwen05-l80/detectability-taxonomy-report.json",
+      "sha256": "7067f0d1547109a835018f3259692673c2092d7b5749dadeba58fff72441bb60",
+      "size_bytes": 12447
+    },
+    "detectability_taxonomy_report_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/detectability-taxonomy-report.json",
+      "sha256": "d4acd8d350cbaeba986376adf10592924e4c4acd416042f9e02a5ee647104cb6",
+      "size_bytes": 12718
+    },
+    "frontier_release_evidence_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-release-evidence.json",
+      "sha256": "e45df66c686a09831f5ffed3587501bc905f0f8796fb334521cc984c1ee79edc",
+      "size_bytes": 15082
+    },
+    "verifier_stability_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-qwen-smollm2-l80-verifier-stability/artifact-manifest.json",
+      "sha256": "92e366fd3cece7d44883e0c80438abd269aae3316d9fad0c8d6fec7a726820fe",
+      "size_bytes": 2241
+    },
+    "verifier_stability_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-qwen-smollm2-l80-verifier-stability/verifier-stability-report.json",
+      "sha256": "101aa8cb130c024a42772477abdb8bc8c320c1e9e8d964a33c82b97e02853489",
+      "size_bytes": 96839
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "abstention_track_status": "blocked",
+    "detectability_track_status": "blocked",
+    "runner": "compare_frontier_release_evidence",
+    "status": "blocked",
+    "verifier_track_status": "promote"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 7,
+    "directory_count": 0,
+    "file_count": 7,
+    "missing_count": 0
+  }
+}

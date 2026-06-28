@@ -1,0 +1,101 @@
+{
+  "artifacts": {
+    "best_calibration": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "best-calibration.json",
+      "sha256": "0ea6f7cbd63b5b1b5af7a916bb4877788c08c2d46e8f8403c6c2904ccf254f26",
+      "size_bytes": 901
+    },
+    "conformal_artifact_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "conformal-artifact-manifest.json",
+      "sha256": "50dcec07deb95fb6682889486c0ef1e11c9d6dd6c1b75ca9bcd046721315646e",
+      "size_bytes": 1504
+    },
+    "conformal_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "conformal-report.json",
+      "sha256": "acfe1307c90d0ea7e32fd1614671c36127c5ffaf4e83f74309d7809e3a777bb4",
+      "size_bytes": 28978
+    },
+    "eval_reps_cache": {
+      "exists": true,
+      "file_count": 36,
+      "kind": "directory",
+      "path": "../../cache/truthfulqa-frontier-qwen-smollm2/smollm2-l80/eval-reps-cache",
+      "sha256": "089a8d8e967eea04ee76f8d3432541ced709770cd035cffb259cc865c05f985b",
+      "size_bytes": 160240134
+    },
+    "layer_stats_cache": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../cache/truthfulqa-frontier-qwen-smollm2/smollm2-l80/layer-stats.pt",
+      "sha256": "cdcba7d11183432be16be61675c3fdf9dd4da3a368b26093f29ae0e444cd486c",
+      "size_bytes": 6752936
+    },
+    "score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "scores.manifest.json",
+      "sha256": "2fb7b3e3d31bf01bc4df035891208055ae1bda08ecb2c0e6396e86b866f609dc",
+      "size_bytes": 3248
+    },
+    "score_dump_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "scores.manifest.records.jsonl",
+      "sha256": "ca00ae6a2fa86fab0056d22e63b3f021047eb957ec7d7908195b288d3f27587f",
+      "size_bytes": 857544
+    },
+    "sweep_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "sweep-report.json",
+      "sha256": "bda6c1fbc6e9588b6357ffff9ddc5e346ef94054f92dadc86545dfa583b2f65c",
+      "size_bytes": 12364
+    },
+    "workflow_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "calibrated-observability-workflow.json",
+      "sha256": "9f8b797923dee9348c6b2e328f7c989b3226cb54de0e4f270a9646f6f864af77",
+      "size_bytes": 10225
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "artifact_alpha": 0.1,
+    "best_by": "auroc",
+    "cache_only": true,
+    "conformal_verdict": "ACCEPT",
+    "dry_run": false,
+    "dtype": "float32",
+    "dump_scores_format": "jsonl",
+    "layer": -12,
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "offline": false,
+    "runner": "run_calibrated_observability_workflow",
+    "runtime_preset": "custom",
+    "score_dump_reused": true,
+    "status": "complete",
+    "sweep_layers_source": null
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 9,
+    "directory_count": 1,
+    "file_count": 8,
+    "missing_count": 0
+  }
+}
