@@ -6521,6 +6521,21 @@
       "name": "truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-rule-authoring-adapter",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-rule-authoring-adapter/world-model-rule-authoring-adapter.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-world-model-rule-input-collection-plan/artifact-manifest.json",
+        "batch_count": 4,
+        "evidence": "source_family_structured_qa_post_correction_rule_authoring_adapter",
+        "status": "ready_for_input_collection",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "task_count": 37,
+        "workflow": "world_model_rule_input_collection_plan"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-world-model-rule-input-collection-plan",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-world-model-rule-input-collection-plan/rule-input-collection-plan.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

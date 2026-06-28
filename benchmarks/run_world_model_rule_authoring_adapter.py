@@ -204,7 +204,7 @@ def _evaluate_stub(stub: Mapping[str, Any], rule_input: Mapping[str, Any] | None
                 "candidate_results_require_promotion_gate": True,
             },
         )
-    missing = _missing_inputs(required_inputs, input_payload)
+    missing = _missing_inputs(required_inputs, input_payload, family=family)
     return _result(
         stub=stub,
         status="needs_inputs",
@@ -360,12 +360,21 @@ def _has_entity_role_inputs(rule_input: Mapping[str, Any]) -> bool:
     ) and bool(_clean(rule_input.get("expected_entity", rule_input.get("correct_entity"))))
 
 
-def _missing_inputs(required: Sequence[str], supplied: Mapping[str, Any]) -> tuple[str, ...]:
+def _missing_inputs(required: Sequence[str], supplied: Mapping[str, Any], *, family: str) -> tuple[str, ...]:
     if _calculation_input(supplied) is not None:
         return ()
     if _has_entity_role_inputs(supplied):
         return ()
-    return tuple(key for key in required if not _clean(supplied.get(key)))
+    missing = tuple(key for key in required if not _clean(supplied.get(key)))
+    if missing:
+        return missing
+    if family == "quantity_or_arithmetic":
+        return ("calculation.expression", "calculation.expected")
+    if family == "entity_disambiguation":
+        expected = _clean(supplied.get("expected_entity", supplied.get("correct_entity")))
+        if not expected:
+            return ("expected_entity",)
+    return ()
 
 
 def _load_rule_inputs(path: str | Path | None) -> dict[str, Mapping[str, Any]]:

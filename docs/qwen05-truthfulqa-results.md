@@ -360,9 +360,13 @@ The deterministic rule-authoring adapter now consumes those stubs and writes an
 explicit rule-input worklist. The registered run is `needs_inputs`: `0/37`
 stubs execute without a separate input file, and the missing work splits into
 `12` calculator checks, `12` entity-role disambiguation checks, `9`
-causal/procedural world-model checks, and `4` temporal-consistency checks. The
-next implementation step is therefore collecting/providing those inputs and
-running the promotion gate, not another source-backed catalog replay.
+causal/procedural world-model checks, and `4` temporal-consistency checks.
+`build_world_model_rule_input_collection_plan.py` now lowers that worklist into
+`37` typed input tasks and `4` batches, adding the execution-only fields the
+adapter needs (`expected_entity`, `calculation.expression`,
+`calculation.expected`, and per-task `source_citation`). The next
+implementation step is therefore filling those typed inputs and running the
+promotion gate, not another source-backed catalog replay.
 
 ## Product Trace Demo
 

@@ -1798,3 +1798,164 @@ def test_world_model_rule_authoring_adapter_executes_explicit_calculator_input(t
     assert results[0]["not_verifier_evidence"] is True
     assert results[0]["metadata"]["candidate_results_require_promotion_gate"] is True
     assert "calculator:" in results[0]["evidence"][0]
+
+
+def test_world_model_rule_authoring_adapter_keeps_partial_inputs_actionable(tmp_path):
+    module = importlib.import_module("benchmarks.run_world_model_rule_authoring_adapter")
+
+    stubs_path = tmp_path / "world-model-rule-stubs.jsonl"
+    inputs_path = tmp_path / "rule-inputs.json"
+    output_dir = tmp_path / "rule-adapter"
+    stubs_path.write_text(
+        "\n".join(
+            json.dumps(row)
+            for row in (
+                {
+                    "schema_version": 1,
+                    "workflow": "source_family_structured_qa_lane_batch_workflow",
+                    "request_id": "rule:entity:1",
+                    "target_id": "record-entity",
+                    "request_type": "world_model_or_calculator_rule",
+                    "rule_family": "entity_disambiguation",
+                    "required_inputs": ["subject_entity", "answer_entity", "requested_role"],
+                    "question": "Who first started Tesla Motors?",
+                    "not_verifier_evidence": True,
+                },
+                {
+                    "schema_version": 1,
+                    "workflow": "source_family_structured_qa_lane_batch_workflow",
+                    "request_id": "rule:quantity:1",
+                    "target_id": "record-quantity",
+                    "request_type": "world_model_or_calculator_rule",
+                    "rule_family": "quantity_or_arithmetic",
+                    "required_inputs": ["numeric_value", "unit", "reference_time"],
+                    "question": "Do more than 20% of Americans have passports?",
+                    "not_verifier_evidence": True,
+                },
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    inputs_path.write_text(
+        json.dumps({
+            "rule:entity:1": {
+                "subject_entity": "Tesla Motors",
+                "answer_entity": "Elon Musk",
+                "requested_role": "first starter",
+            },
+            "rule:quantity:1": {
+                "numeric_value": "20",
+                "unit": "percent",
+                "reference_time": "current",
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run_world_model_rule_authoring_adapter(
+        rule_stubs_path=stubs_path,
+        rule_inputs_path=inputs_path,
+        output_dir=output_dir,
+        metadata={"suite": "unit"},
+    )
+    results = [
+        json.loads(line)
+        for line in (output_dir / "world-model-rule-results.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    missing_by_request = {row["request_id"]: row["missing_inputs"] for row in results}
+
+    assert payload["status"] == "needs_inputs"
+    assert payload["summary"]["executed_count"] == 0
+    assert missing_by_request["rule:entity:1"] == ["expected_entity"]
+    assert missing_by_request["rule:quantity:1"] == ["calculation.expression", "calculation.expected"]
+
+
+def test_world_model_rule_input_collection_plan_builds_typed_batches(tmp_path):
+    module = importlib.import_module("benchmarks.build_world_model_rule_input_collection_plan")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    requests_path = tmp_path / "world-model-rule-input-requests.jsonl"
+    output_dir = tmp_path / "rule-input-plan"
+    registry_path = tmp_path / "registry.json"
+    requests_path.write_text(
+        "\n".join(
+            json.dumps(row)
+            for row in (
+                {
+                    "schema_version": 1,
+                    "workflow": "world_model_rule_authoring_adapter",
+                    "request_id": "rule:record-1:1",
+                    "target_id": "record-1",
+                    "rule_family": "entity_disambiguation",
+                    "adapter": "entity_role_disambiguation",
+                    "required_inputs": ["subject_entity", "answer_entity", "requested_role"],
+                    "missing_inputs": ["subject_entity", "answer_entity", "requested_role"],
+                    "question": "Who first started Tesla Motors?",
+                    "question_type": "person",
+                    "gap_type": "answer_entity_collision",
+                    "priority": "high",
+                    "not_verifier_evidence": True,
+                    "answer": "reserved field should be stripped",
+                },
+                {
+                    "schema_version": 1,
+                    "workflow": "world_model_rule_authoring_adapter",
+                    "request_id": "rule:record-11:1",
+                    "target_id": "record-11",
+                    "rule_family": "quantity_or_arithmetic",
+                    "adapter": "calculator",
+                    "required_inputs": ["numeric_value", "unit", "reference_time"],
+                    "missing_inputs": ["numeric_value", "unit", "reference_time"],
+                    "question": "Do more than 20% of Americans have passports?",
+                    "question_type": "quantity",
+                    "gap_type": "missing_property_or_indicator",
+                    "priority": "medium",
+                    "not_verifier_evidence": True,
+                },
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        input_requests_path=requests_path,
+        output_dir=output_dir,
+        registry_path=registry_path,
+        name="rule-input-plan-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+        max_tasks_per_batch=1,
+    )
+    tasks = [
+        json.loads(line)
+        for line in (output_dir / "rule-input-tasks.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    batches = [
+        json.loads(line)
+        for line in (output_dir / "rule-input-execution-batches.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    registry_record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:rule-input-plan-unit:0.1"
+    )
+
+    assert payload["status"] == "ready_for_input_collection"
+    assert payload["summary"]["task_count"] == 2
+    assert payload["summary"]["batch_count"] == 2
+    assert payload["summary"]["collection_family_counts"] == {
+        "entity_role_rule_input_collection": 1,
+        "numeric_rule_input_collection": 1,
+    }
+    assert tasks[0]["collection_family"] == "entity_role_rule_input_collection"
+    assert "expected_entity" in tasks[0]["execution_inputs"]
+    assert "answer" not in tasks[0]
+    assert tasks[0]["source_policy"]["not_verifier_evidence"] is True
+    assert batches[0]["not_verifier_evidence"] is True
+    assert registry_module.load_and_verify_artifact_manifest(output_dir / "artifact-manifest.json").passed is True
+    assert registry_record is not None
+    assert registry_record.metadata["status"] == "ready_for_input_collection"
+    assert registry_record.metadata["task_count"] == 2

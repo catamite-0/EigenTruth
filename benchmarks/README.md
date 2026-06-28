@@ -2642,6 +2642,30 @@ This gives the next pass a concrete input-collection contract while preserving
 the rule-stub boundary: no answer/model-answer/label fields are copied, and no
 rule result is promoted as verifier evidence.
 
+Compile those requests into typed input-collection batches before execution:
+
+```bash
+RULE_INPUT_PLAN=artifacts/truthfulqa-frontier-smollm2-l80-world-model-rule-input-collection-plan
+
+python benchmarks/build_world_model_rule_input_collection_plan.py \
+  --input-requests "$RULE_ADAPTER/world-model-rule-input-requests.jsonl" \
+  --output-dir "$RULE_INPUT_PLAN" \
+  --json "$RULE_INPUT_PLAN/rule-input-collection-plan.json" \
+  --input-tasks-jsonl "$RULE_INPUT_PLAN/rule-input-tasks.jsonl" \
+  --batches-jsonl "$RULE_INPUT_PLAN/rule-input-execution-batches.jsonl" \
+  --artifact-manifest "$RULE_INPUT_PLAN/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_post_correction_rule_authoring_adapter
+```
+
+The registered input plan is `ready_for_input_collection`: `37` rule-input
+tasks are grouped into `4` typed batches (`12` entity-role, `12` numeric, `9`
+mechanism, and `4` temporal snapshot tasks). The plan expands the executable
+contract with fields the deterministic adapter actually needs, including
+`expected_entity`, `calculation.expression`, `calculation.expected`, and a
+`source_citation` requirement for every task, while still treating every row as
+non-evidence.
+
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:
 
