@@ -1,0 +1,15 @@
+{
+  "checked": 4,
+  "failures": [],
+  "manifest_path": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-covered-facts-handoff/artifact-manifest.json",
+  "nested": [
+    {
+      "checked": 5,
+      "failures": [],
+      "manifest_path": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-covered-facts-handoff/../truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-structured-qa-route/artifact-manifest.json",
+      "nested": [],
+      "passed": true
+    }
+  ],
+  "passed": true
+}

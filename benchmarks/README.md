@@ -3731,6 +3731,10 @@ example `P36` capital, `P37` official language, and `P38` currency. It keeps
 label-use flags false, fingerprints source files, rejects reserved score-dump
 metadata keys, and skips QID-only labels by default so unlabeled Wikidata
 entities do not become awkward natural-language QA facts.
+For generic Wikidata source docs that already expose `subject`,
+`statement_property_label`, and `value` metadata, pass
+`--auto-template-from-source` to infer one QA template per `statement_property`
+without hand-authoring a template JSON file.
 
 ```bash
 python benchmarks/build_wikidata_qa_corpus.py \
@@ -3766,6 +3770,21 @@ score dump contains matching `question`/`answer` statement metadata. This route
 is a structured knowledge-graph bridge: it can support correct values and refute
 wrong values for covered properties, but it does not broaden the Wikidata source
 coverage by itself.
+
+The current SmolLM2 l80 blind-spot Wikidata source docs use the auto-template
+path:
+
+```bash
+python benchmarks/build_wikidata_qa_corpus.py \
+  --source artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-evidence/wikidata-source-docs.jsonl \
+  --output artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-structured-qa-route/wikidata-blind-spot-qa-corpus.json \
+  --auto-template-from-source \
+  --template-json-output artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-structured-qa-route/wikidata-blind-spot-qa-templates.json \
+  --artifact-manifest artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-structured-qa-route/qa-corpus-manifest.json
+```
+
+That run converts all `292` target-specific Wikidata source docs into
+structured QA rows across `10` properties.
 
 ## `run_wikidata_structured_qa_route_workflow.py`
 
@@ -3842,6 +3861,14 @@ natural-language claim rows (`1434` true / `1434` false), selects
 false-supported rate `0.0`; it is a
 surface-form robustness check for covered KG facts, not a broad open-domain
 claim.
+The target-specific SmolLM2 l80 blind-spot Wikidata structured-QA route is a
+second covered-facts artifact: `292` source docs over `10` properties produce
+`584` balanced rows, select `structured_qa` for all rows, support all `292` true
+facts, refute all `292` swapped-answer false facts, and promote through
+`run_covered_facts_external_evidence_workflow.py` as
+`report:truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-covered-facts-handoff:0.1`.
+This promotes the property-level correction path for those collected Wikidata
+facts; it still does not claim open-domain blind-spot recall.
 Use `compare_external_evidence_baselines.py --require-covered-facts-route`
 when one of these registered covered-facts route manifests should become the
 external-evidence comparator input for release gating. Add the per-property

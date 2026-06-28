@@ -988,6 +988,19 @@ therefore remains `blocked`. The next correction lever is not lexical overlap;
 it is converting the documented Wikidata claims into structured-fact/QA route
 corpora.
 
+That structured-QA conversion is now materialized for the target-specific
+Wikidata corpus. `build_wikidata_qa_corpus.py --auto-template-from-source`
+infers one template per Wikidata `statement_property`, turning all `292` source
+docs into QA facts over `10` properties without copying score labels, claim ids,
+or row links. `run_wikidata_structured_qa_route_workflow.py --route
+structured_qa` builds `584` balanced covered-fact rows, selects `structured_qa`
+for all rows, supports all `292` true facts, refutes all `292` swapped-answer
+false facts, and records decision accuracy `1.0`. The handoff
+`report:truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-covered-facts-handoff:0.1`
+promotes this as external covered-facts correction evidence. This is the
+property-level correction route for collected Wikidata facts, not a claim that
+all `89` entrenched TruthfulQA blind spots now have open-domain recall.
+
 A local release-candidate smoke artifact now pairs that staged route baseline
 with a tiny-gpt2 offline readiness/runtime baseline:
 

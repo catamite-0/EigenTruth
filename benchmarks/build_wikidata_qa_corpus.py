@@ -25,6 +25,8 @@ DEFAULT_PROPERTY = "P36"
 DEFAULT_PROPERTY_LABEL = "capital"
 DEFAULT_QUESTION_TEMPLATE = "What is the capital of {country}?"
 DEFAULT_ANSWER_FIELD = "capital"
+DEFAULT_AUTO_QUESTION_TEMPLATE = "What does Wikidata list as the {statement_property_label} for {subject}?"
+DEFAULT_AUTO_ANSWER_FIELD = "value"
 _QID_RE = re.compile(r"^Q[1-9][0-9]*$")
 _RESERVED_METADATA_KEYS = {
     "claim_id",
@@ -221,11 +223,72 @@ def build_input_provenance(
     }
 
 
+def infer_wikidata_qa_templates(
+    source_documents: Sequence[Mapping[str, Any]],
+    *,
+    question_template: str = DEFAULT_AUTO_QUESTION_TEMPLATE,
+    answer_field: str = DEFAULT_AUTO_ANSWER_FIELD,
+    qid_label_fields: Sequence[str] | None = None,
+) -> tuple[dict[str, Any], ...]:
+    """Infer one structured-QA template per Wikidata statement property."""
+    if not source_documents:
+        raise ValueError("source_documents must not be empty.")
+    templates_by_property: dict[str, dict[str, Any]] = {}
+    for item in source_documents:
+        metadata = item.get("metadata")
+        if not isinstance(metadata, Mapping):
+            continue
+        if str(metadata.get("provider", "")).strip().casefold() != "wikidata":
+            continue
+        statement_property = _clean_text(metadata.get("statement_property"))
+        if statement_property is None:
+            continue
+        if _clean_text(metadata.get(answer_field)) is None:
+            continue
+        for field in _template_fields(question_template):
+            if _clean_text(metadata.get(field)) is None:
+                break
+        else:
+            templates_by_property.setdefault(
+                statement_property,
+                {
+                    "statement_property": statement_property,
+                    "statement_property_label": (
+                        _clean_text(metadata.get("statement_property_label"))
+                        or statement_property
+                    ),
+                    "question_template": question_template,
+                    "answer_field": answer_field,
+                    "qid_label_fields": qid_label_fields,
+                },
+            )
+    if not templates_by_property:
+        raise ValueError("no Wikidata QA templates could be inferred from source documents.")
+    return _normalize_templates(
+        tuple(templates_by_property[key] for key in sorted(templates_by_property)),
+        statement_property=DEFAULT_PROPERTY,
+        statement_property_label=DEFAULT_PROPERTY_LABEL,
+        question_template=question_template,
+        answer_field=answer_field,
+        qid_label_fields=qid_label_fields,
+    )
+
+
 def run(args: argparse.Namespace) -> dict[str, Any]:
     """Run the CLI command."""
     source_paths = tuple(Path(path) for path in args.source)
     source_documents = load_source_documents(source_paths)
-    templates = _templates_from_args(args)
+    auto_template_from_source = bool(getattr(args, "auto_template_from_source", False))
+    templates = (
+        infer_wikidata_qa_templates(
+            source_documents,
+            question_template=getattr(args, "auto_question_template", DEFAULT_AUTO_QUESTION_TEMPLATE),
+            answer_field=getattr(args, "auto_answer_field", DEFAULT_AUTO_ANSWER_FIELD),
+            qid_label_fields=getattr(args, "qid_label_field", None),
+        )
+        if auto_template_from_source
+        else _templates_from_args(args)
+    )
     corpus = build_wikidata_qa_corpus(
         source_documents,
         templates=templates,
@@ -239,10 +302,21 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(corpus, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    template_output = getattr(args, "template_json_output", None)
+    if template_output:
+        template_output_path = Path(template_output)
+        template_output_path.parent.mkdir(parents=True, exist_ok=True)
+        template_output_path.write_text(
+            json.dumps({"templates": tuple(_public_template(template) for template in templates)},
+                       indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
     if args.artifact_manifest:
         manifest_path = Path(args.artifact_manifest)
         manifest_path.parent.mkdir(parents=True, exist_ok=True)
         artifacts = {"qa_corpus": output_path}
+        if template_output:
+            artifacts["qa_templates"] = Path(template_output)
         for idx, path in enumerate(source_paths, start=1):
             artifacts[f"source.{idx}.{path.stem}"] = path
         manifest = build_artifact_manifest(
@@ -255,6 +329,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 "templates": tuple(_public_template(template) for template in templates),
                 "n_documents": corpus["summary"]["n_documents"],
                 "skip_qid_labels": not bool(args.keep_qid_labels),
+                "auto_template_from_source": auto_template_from_source,
             },
         )
         manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -471,6 +546,14 @@ def main() -> None:
                         help="metadata field to reject when its value is a bare Wikidata QID; repeatable")
     parser.add_argument("--keep-qid-labels", action="store_true",
                         help="keep rows whose configured label fields are only Wikidata QIDs")
+    parser.add_argument("--auto-template-from-source", action="store_true",
+                        help="infer one generic QA template per Wikidata statement_property in the source docs")
+    parser.add_argument("--auto-question-template", default=DEFAULT_AUTO_QUESTION_TEMPLATE,
+                        help="question template used with --auto-template-from-source")
+    parser.add_argument("--auto-answer-field", default=DEFAULT_AUTO_ANSWER_FIELD,
+                        help="metadata answer field used with --auto-template-from-source")
+    parser.add_argument("--template-json-output", default=None,
+                        help="optional path to save inferred or resolved templates")
     parser.add_argument("--artifact-manifest", default=None, help="optional manifest path")
     run(parser.parse_args())
 

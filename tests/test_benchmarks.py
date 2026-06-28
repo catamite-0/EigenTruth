@@ -5173,6 +5173,97 @@ def test_build_wikidata_qa_corpus_supports_multiple_property_templates(tmp_path)
     assert corpus["input_provenance"]["config"]["templates"][2]["answer_field"] == "currency"
 
 
+def test_build_wikidata_qa_corpus_infers_property_templates_from_source_docs(tmp_path):
+    wikidata = importlib.import_module("benchmarks.build_wikidata_qa_corpus")
+    registry_module = importlib.import_module("eigentruth.registry")
+    source_path = tmp_path / "wikidata-blind-spot-source.jsonl"
+    qa_path = tmp_path / "wikidata-blind-spot-qa.json"
+    template_path = tmp_path / "wikidata-blind-spot-templates.json"
+    manifest_path = tmp_path / "wikidata-blind-spot-qa.manifest.json"
+    source_rows = [
+        {
+            "text": "According to Wikidata structured data, Nothing Technology Ltd. has instance of enterprise.",
+            "source": "wikidata:Q110339215:P31:Q6881511",
+            "metadata": {
+                "provider": "wikidata",
+                "license": "CC0-1.0",
+                "statement_property": "P31",
+                "statement_property_label": "instance of",
+                "subject": "Nothing Technology Ltd.",
+                "subject_qid": "Q110339215",
+                "value": "enterprise",
+                "value_qid": "Q6881511",
+            },
+        },
+        {
+            "text": (
+                "According to Wikidata entity metadata, Nothing Technology Ltd. "
+                "is described as English technology company based in London, England."
+            ),
+            "source": "wikidata:Q110339215:description",
+            "metadata": {
+                "provider": "wikidata",
+                "statement_property": "description",
+                "statement_property_label": "description",
+                "subject": "Nothing Technology Ltd.",
+                "subject_qid": "Q110339215",
+                "value": "English technology company based in London, England",
+                "value_qid": None,
+            },
+        },
+        {
+            "text": "According to Wikidata structured data, Q12345 has instance of example.",
+            "source": "wikidata:Q12345:P31:Q67890",
+            "metadata": {
+                "provider": "wikidata",
+                "statement_property": "P31",
+                "statement_property_label": "instance of",
+                "subject": "Q12345",
+                "subject_qid": "Q12345",
+                "value": "example",
+                "value_qid": "Q67890",
+            },
+        },
+    ]
+    source_path.write_text("\n".join(json.dumps(row) for row in source_rows) + "\n", encoding="utf-8")
+
+    corpus = wikidata.run(
+        SimpleNamespace(
+            source=[str(source_path)],
+            output=str(qa_path),
+            template_json=None,
+            statement_property="P36",
+            statement_property_label="capital",
+            question_template="What is the capital of {country}?",
+            answer_field="capital",
+            qid_label_field=None,
+            keep_qid_labels=False,
+            auto_template_from_source=True,
+            auto_question_template="What does Wikidata list as the {statement_property_label} for {subject}?",
+            auto_answer_field="value",
+            template_json_output=str(template_path),
+            artifact_manifest=str(manifest_path),
+        )
+    )
+    saved_templates = json.loads(template_path.read_text(encoding="utf-8"))
+    saved_corpus = json.loads(qa_path.read_text(encoding="utf-8"))
+    metadata_keys = set().union(*(item["metadata"].keys() for item in saved_corpus["documents"]))
+
+    assert corpus["summary"]["n_documents"] == 2
+    assert corpus["summary"]["skipped"]["qid_labels"] == 1
+    assert set(corpus["summary"]["by_property"]) == {"P31", "description"}
+    assert saved_templates["templates"][0]["statement_property"] == "P31"
+    assert saved_templates["templates"][1]["statement_property"] == "description"
+    assert saved_corpus["documents"][0]["question"] == (
+        "What does Wikidata list as the instance of for Nothing Technology Ltd.?"
+    )
+    assert saved_corpus["documents"][0]["answer"] == "enterprise"
+    assert "label" not in metadata_keys
+    assert "row_index" not in metadata_keys
+    assert "claim_id" not in metadata_keys
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+
+
 def test_wikidata_structured_qa_route_workflow_promotes_covered_facts(tmp_path):
     module = importlib.import_module("benchmarks.run_wikidata_structured_qa_route_workflow")
     qa_path = tmp_path / "wikidata-qa-corpus.json"

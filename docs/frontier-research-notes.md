@@ -40,6 +40,7 @@ Added DECK-style detectability taxonomy reports:
 - `benchmarks/sweep_blind_spot_retrieval_queries.py` then localizes the gap to query construction under the controlled correct-answer corpus: `question_answer@0.65` refutes `87/89` with verified false alarm `0.000`, and `question_answer@0.5` refutes `89/89` with verified false alarm `0.000`, while `question@0.95` is rejected as a high-false-alarm negative control (`0.176`). This points to question-aware retrieval against real external/structured corpora as the next experiment.
 - `benchmarks/compare_blind_spot_query_sweeps.py` closes that provenance loop: the same query sweep against Wikidata country-core-facts external retrieval and structured-QA retrieval documents refutes `0/89` blind spots, so the registered comparison `report:truthfulqa-frontier-smollm2-l80-query-sweep-provenance-comparison:0.1` is blocked with a `1.0` controlled-to-external generalization gap. The research target is now coverage expansion, not further controlled-corpus threshold tuning.
 - `benchmarks/plan_blind_spot_evidence_expansion.py` turns that blocked result into the next work queue: `report:truthfulqa-frontier-smollm2-l80-blind-spot-evidence-expansion-plan:0.1` covers all 89 targets, with 65 high-priority records, 80 structured-fact recommendations, 65 structured-QA recommendations, 63 citation-retrieval recommendations, 41 counterfactual-probe targets, and 21 world-model/calculator targets. This is the evidence collection plan to execute before rerunning the provenance gate.
+- The first target-specific Wikidata collection pass is now closed through a structured-QA covered-facts route. `fetch_blind_spot_wikidata_evidence.py` writes `292` label-free CC0 source docs over `10` properties, lexical retrieval still refutes `0/89` blind spots, but `build_wikidata_qa_corpus.py --auto-template-from-source` plus `run_wikidata_structured_qa_route_workflow.py --route structured_qa` promotes a covered-facts correction artifact with `584` balanced rows, decision accuracy `1.0`, and false-supported rate `0.0`. This gives EigenTruth a precise property-level correction slot for collected Wikidata facts; the remaining research blocker is mapping generated claims into those covered facts and collecting citation/world-model evidence for unresolved blind spots.
 - This is evidence-only: entrenched false records should route to independent verifier, retrieval, citation, structured-fact, or world-model correction paths; the taxonomy does not promote a new control default by itself.
 
 Added prompt-answer pathway diagnostics:
@@ -285,8 +286,9 @@ Added a retrieval corpus provenance audit gate:
   next iteration should expand source predicates or add a structured Wikidata
   verifier rather than only tuning lexical overlap thresholds.
 - `build_wikidata_qa_corpus.py` adds the first structured Wikidata bridge by
-  converting `P36` fact documents, or a template JSON of multiple properties
-  such as `P36`/`P37`/`P38`, into label-free `QuestionAnswerVerifier` corpora.
+  converting `P36` fact documents, a template JSON of multiple properties
+  such as `P36`/`P37`/`P38`, or auto-inferred `subject/property/value` source
+  docs into label-free `QuestionAnswerVerifier` corpora.
   This lets covered statements be supported or refuted by exact structured
   values through the existing `retrieval_structured_qa` route, while preserving
   the earlier blocked result for open-domain TruthfulQA coverage.

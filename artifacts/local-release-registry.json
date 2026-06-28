@@ -5328,6 +5328,88 @@
       "name": "truthfulqa-frontier-smollm2-l80-wikidata-query-sweep-provenance-comparison",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-wikidata-query-sweep-provenance-comparison/query-sweep-provenance-comparison.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-covered-facts-handoff/artifact-manifest.json",
+        "blocking_reasons": [],
+        "covered_facts_passed": true,
+        "covered_facts_property_count": 10,
+        "covered_facts_record": "benchmark_manifest:truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-covered-facts-handoff-blind-spot-wikidata-structured-qa:0.1",
+        "covered_facts_route": "structured_qa",
+        "covered_facts_route_summary": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-structured-qa-route/structured-qa-route-summary.json",
+        "manifest_verification_report": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-covered-facts-handoff/manifest-verification.json",
+        "manifest_verified": true,
+        "recommended_route": "structured_qa",
+        "recommended_route_record": "benchmark_manifest:truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-covered-facts-handoff-blind-spot-wikidata-structured-qa:0.1",
+        "route_passed": true,
+        "status": "promote",
+        "text_redline_passed": true,
+        "text_redline_run_count": 0,
+        "workflow": "compare_external_evidence_baselines"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-covered-facts-handoff",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-covered-facts-handoff/external-evidence-baseline-comparison.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "benchmark_manifest",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-covered-facts-handoff/artifact-manifest.json",
+        "blocking_reasons": [],
+        "checked": 4,
+        "covered_facts_passed": true,
+        "covered_facts_property_count": 10,
+        "covered_facts_record": "benchmark_manifest:truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-covered-facts-handoff-blind-spot-wikidata-structured-qa:0.1",
+        "covered_facts_route": "structured_qa",
+        "covered_facts_route_summary": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-structured-qa-route/structured-qa-route-summary.json",
+        "failure_count": 0,
+        "manifest_metadata": {
+          "covered_facts_passed": true,
+          "covered_facts_property_count": 10,
+          "covered_facts_record": "benchmark_manifest:truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-covered-facts-handoff-blind-spot-wikidata-structured-qa:0.1",
+          "covered_facts_route": "structured_qa",
+          "covered_facts_route_summary": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-structured-qa-route/structured-qa-route-summary.json",
+          "decision_status": "promote",
+          "recommended_route": "structured_qa",
+          "recommended_route_record": "benchmark_manifest:truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-covered-facts-handoff-blind-spot-wikidata-structured-qa:0.1",
+          "route_passed": true,
+          "runner": "compare_external_evidence_baselines",
+          "text_redline_passed": true,
+          "text_redline_run_count": 0,
+          "workflow": "external_evidence_baseline_comparison"
+        },
+        "manifest_summary": {
+          "artifact_count": 4,
+          "directory_count": 0,
+          "file_count": 4,
+          "missing_count": 0
+        },
+        "manifest_verification_report": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-covered-facts-handoff/manifest-verification.json",
+        "manifest_verified": true,
+        "recommended_route": "structured_qa",
+        "recommended_route_record": "benchmark_manifest:truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-covered-facts-handoff-blind-spot-wikidata-structured-qa:0.1",
+        "route_passed": true,
+        "status": "promote",
+        "text_redline_passed": true,
+        "text_redline_run_count": 0,
+        "workflow": "compare_external_evidence_baselines"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-covered-facts-handoff",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-covered-facts-handoff/artifact-manifest.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "manifest_verification",
+      "metadata": {
+        "manifest_name": "truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-covered-facts-handoff",
+        "manifest_path": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-covered-facts-handoff/artifact-manifest.json",
+        "passed": true
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-covered-facts-handoff-verification",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-covered-facts-handoff/manifest-verification.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1
