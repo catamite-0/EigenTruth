@@ -325,6 +325,13 @@ modeling. The next useful work is richer property/indicator collection,
 provenance-audited citation evidence, and explicit world-model/calculator rules,
 not lowering the conservative mapping threshold.
 
+`triage_source_family_structured_qa_gaps.py` now turns that result into an
+explicit next-action artifact. The registered triage is `needs_collection` with
+`0` handoff-ready targets, `1` answer-support audit row, and all `88` rows still
+blocked from correction handoff. It preserves the executable request inventory:
+`352` structured-fact, `174` citation, `159` entity-resolution, `41`
+disambiguation, and `38` world-model/calculator-rule requests.
+
 ## Product Trace Demo
 
 `examples/calibrated_control_demo.py` now defaults to the best repository l80

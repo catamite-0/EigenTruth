@@ -2495,6 +2495,33 @@ no-candidate rows. The next executable work is richer property/indicator
 collection plus citation or world-model rule authoring for those remaining
 gaps, not lowering the mapping gate.
 
+Use the gap triage workflow to turn that post-correction mapping into explicit
+next-action lanes:
+
+```bash
+TRIAGE=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-gap-triage
+
+python benchmarks/triage_source_family_structured_qa_gaps.py \
+  --claim-mapping "$MAP/source-family-structured-qa-post-correction-claim-mapping.json" \
+  --fact-expansion-plan "$OUT/source-family-structured-qa-post-correction-fact-expansion-plan.json" \
+  --fact-collection-corpus "$CORPUS/fact-collection-corpus.json" \
+  --fact-collection-workflow "$WORKFLOW/fact-collection-workflow.json" \
+  --output-dir "$TRIAGE" \
+  --json "$TRIAGE/gap-triage.json" \
+  --target-jsonl "$TRIAGE/triage-targets.jsonl" \
+  --artifact-manifest "$TRIAGE/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_post_correction_fact_collection_workflow
+```
+
+The registered triage is `needs_collection`: `0` handoff-ready targets, `1`
+answer-support audit target, and `88` rows blocked from correction handoff.
+Available request counts are preserved by lane (`352` structured-fact, `174`
+citation, `159` entity-resolution, `41` disambiguation, and `38`
+world-model/calculator-rule requests), so the next adapter/rule-authoring pass
+can prioritize the exact failure mode instead of replaying the whole queue
+blindly.
+
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:
 
