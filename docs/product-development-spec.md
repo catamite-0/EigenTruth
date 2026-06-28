@@ -461,14 +461,29 @@ For product features:
   coverage, but the next frontier adapter needs source-family, official-source,
   or structured claim-to-fact evidence rather than another generic lexical
   overlap sweep.
+- The source-family adapter contract is now part of the handoff:
+  `SourceFamilyPlan` and `plan_source_families(...)` add dependency-free
+  official/reference/encyclopedic/scholarly/news/statistical source-family hints
+  to each sanitized citation request. `build_citation_search_adapter_handoff.py`
+  writes the plan into request JSONL and summary counters, and preserves
+  adapter-returned `source_family` metadata during ingestion. This does not
+  promote evidence; the registered
+  `report:truthfulqa-frontier-smollm2-l80-source-family-citation-search-handoff:0.1`
+  artifact has `176` sanitized requests, `0` source docs, no reserved-field
+  leakage, and family counters `reference=176`, `encyclopedic=176`,
+  `scholarly=156`, `official=36`, `official_statistics=4`, `news=4`. It gives
+  the next official-source command adapter enough structure to route
+  quantitative, timestamped, definition, and person/role claims without
+  reintroducing labels or model answers.
 
 ### Next Verification Adapter Work
 
 - Improve evidence retrieval beyond generic Wikipedia lexical search: preserve
-  the same command boundary, but add source-family adapters, official structured
-  citation APIs, or claim-to-fact mapping that can target the unresolved
-  definition/person/location blind spots, then promote only if the provenance
-  audit, external query sweep, and controlled-vs-external comparison pass.
+  the same command boundary and consume `source_family_plan`, then add concrete
+  source-family adapters, official structured citation APIs, or claim-to-fact
+  mapping that can target the unresolved definition/person/location blind spots.
+  Promote only if the provenance audit, external query sweep, and
+  controlled-vs-external comparison pass.
 - Connect `StructuredStateVerifier` to additional live database, business-rule, and domain-state sources behind optional adapters; the current reproducible path uses local JSON state sources, stdlib SQLite, and mapped local tool outputs.
 - Connect additional QA/database/world-model route policies to production adapters while preserving trace-visible match reasons for each selected or skipped tool.
 - Generalize real side-effecting executors behind the same trace, execution-policy, timeout, idempotency-ledger, and tool-output mapping interfaces; the current production-like demo proves the path with a guarded local SQLite mutation and optional JSON/SQLite replay, while hard cancellation remains adapter-specific.

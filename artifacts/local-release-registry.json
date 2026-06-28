@@ -5540,6 +5540,23 @@
       "name": "truthfulqa-frontier-smollm2-l80-claim-entity-wikipedia-citation-search-adapter-workflow",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-claim-entity-wikipedia-citation-search-adapter-workflow/external-citation-search-adapter-workflow.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "adapter_request_count": 176,
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-citation-search-handoff/artifact-manifest.json",
+        "corpus_document_count": 0,
+        "query_planner": "claim_entity",
+        "source_document_count": 0,
+        "source_family_plan": "true",
+        "status": "ready_for_external_adapter",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "citation_search_adapter_handoff"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-source-family-citation-search-handoff",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-citation-search-handoff/citation-search-handoff.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

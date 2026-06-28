@@ -36248,6 +36248,85 @@ def test_citation_search_adapter_handoff_claim_entity_mode_removes_model_answer(
     assert "model_answer" not in request_text
 
 
+def test_citation_search_adapter_handoff_exports_source_family_plan(tmp_path):
+    module = importlib.import_module("benchmarks.build_citation_search_adapter_handoff")
+
+    queue_path = tmp_path / "unresolved-evidence-queue.json"
+    results_path = tmp_path / "adapter-results.jsonl"
+    output_dir = tmp_path / "citation-handoff"
+    raw_queue_request = {
+        "queue_id": "queue:record-9:external_citation:1",
+        "source_request_id": "cite:record-9:1",
+        "target_id": "record-9",
+        "record_index": 9,
+        "adapter_family": "external_citation_search",
+        "request_type": "external_citation",
+        "priority": "high",
+        "question_type": "quantity",
+        "question": "As of 2026, what is the population of Ireland?",
+        "model_answer": "It has one thousand people.",
+        "query": "Ireland population It has one thousand people.",
+        "requires_timestamp": True,
+        "usage": "source_discovery_only",
+    }
+    queue_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "unresolved_blind_spot_evidence_queue",
+            "status": "ready_for_adapter_execution",
+            "summary": {"target_count": 1, "adapter_request_count": 1},
+            "adapter_requests": [raw_queue_request],
+        }),
+        encoding="utf-8",
+    )
+    request_id = module._adapter_request_id(raw_queue_request)
+    results_path.write_text(
+        json.dumps({
+            "request_id": request_id,
+            "results": [
+                {
+                    "title": "Ireland population official statistics",
+                    "snippet": "The official statistics office reports Ireland population estimates.",
+                    "provider": "unit-official-search",
+                    "source_family": "official_statistics",
+                    "source_family_confidence": 0.95,
+                    "rank": 1,
+                },
+            ],
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        queue_report_path=queue_path,
+        adapter_results_path=results_path,
+        output_dir=output_dir,
+        query_mode="claim_entity",
+        max_alternate_queries=2,
+        source_kind="unit_official_source_result",
+    )
+    requests = [
+        json.loads(line)
+        for line in (output_dir / "citation-search-adapter-requests.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    source_docs = [
+        json.loads(line)
+        for line in (output_dir / "citation-search-source-docs.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    request = requests[0]
+
+    assert payload["summary"]["source_family_counts"]["official_statistics"] == 1
+    assert payload["summary"]["freshness_required_count"] == 1
+    assert payload["summary"]["official_source_preferred_count"] == 1
+    assert request["source_family_plan"]["freshness_required"] is True
+    assert request["source_family_plan"]["official_source_preferred"] is True
+    assert "official_statistics" in request["source_family_plan"]["families"]
+    assert request["metadata"]["preferred_source_families"] == request["source_family_plan"]["families"]
+    assert source_docs[0]["metadata"]["source_family"] == "official_statistics"
+    assert source_docs[0]["metadata"]["source_family_confidence"] == pytest.approx(0.95)
+
+
 def test_wikipedia_citation_search_adapter_writes_mediawiki_results(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.run_wikipedia_citation_search_adapter")
 

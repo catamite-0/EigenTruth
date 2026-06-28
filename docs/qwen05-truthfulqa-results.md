@@ -1274,6 +1274,18 @@ kept a `1.0` generalization gap. This closes the immediate rerun question and
 points the next work toward source-family adapters or structured official-source
 evidence rather than more generic Wikipedia lexical tuning.
 
+The source-family adapter contract is now implemented in the same request
+handoff path. `SourceFamilyPlan` annotates sanitized citation requests with
+official/statistical/reference/encyclopedic/scholarly/news source-family hints,
+freshness requirements, and summary counters; returned adapter results can
+preserve `source_family` metadata through corpus ingestion. This is still a
+contract and routing layer, not evidence: the registered
+`truthfulqa-frontier-smollm2-l80-source-family-citation-search-handoff` artifact
+keeps `176` requests, `0` source docs, `36` official-preferred requests, and `4`
+freshness-required requests. Its family counters are `reference=176`,
+`encyclopedic=176`, `scholarly=156`, `official=36`, `official_statistics=4`,
+and `news=4`, giving the next official-source adapter a stable input schema.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -1299,10 +1311,10 @@ evidence rather than more generic Wikipedia lexical tuning.
 6. Promote a Qwen l20/l80 readiness baseline through the same registry workflow
    if Qwen-specific runtime evidence is needed; SmolLM2 now has the first
    non-tiny registered readiness/release candidate.
-7. Build the next citation/fact adapter around source-family or structured
-   official-source evidence, preserving the same command boundary and promotion
-   gates; only promote if provenance, external query-sweep, and
-   controlled-vs-external comparison gates pass.
+7. Build the next citation/fact adapter to consume `source_family_plan` and
+   query source-family or structured official-source evidence, preserving the
+   same command boundary and promotion gates; only promote if provenance,
+   external query-sweep, and controlled-vs-external comparison gates pass.
 8. Extend the new verifier-stability path from structured QA to real retrieval,
    database, calculator, and world-model evidence under the same conformal
    false-alarm budgets. Use `benchmarks/build_evidence_fixture.py` with a local

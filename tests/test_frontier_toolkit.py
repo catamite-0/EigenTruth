@@ -99,6 +99,7 @@ from eigentruth.verify import (
     RoutedVerifier,
     RuleBasedTripleExtractor,
     SelfConsistencyVerifier,
+    SourceFamilyPlan,
     TripleEvidenceVerifier,
     TripleSlotEvidence,
     VerificationResult,
@@ -120,6 +121,7 @@ from eigentruth.verify import (
     infer_claim_dependencies,
     normalize_claim_text,
     plan_citation_search_query,
+    plan_source_families,
     sanitize_search_query,
 )
 
@@ -741,6 +743,40 @@ def test_citation_search_query_planner_sanitizes_answer_and_keeps_entity_variant
     assert "American" in extract_keyword_terms(plan.query, max_items=8)
     assert extract_entity_candidates('Who founded "Beta Labs"?')[0] == "Beta Labs"
     assert plan.to_dict()["removed_phrase_hashes"]
+
+
+def test_source_family_planner_targets_official_fresh_statistical_sources():
+    plan = plan_citation_search_query(
+        question="As of 2026, what is the population of Ireland?",
+        question_type="quantity",
+        strategy="claim_entity",
+        requires_timestamp=True,
+    )
+    direct = plan_source_families(
+        question="Who founded Tesla Motors?",
+        question_type="person",
+        keyword_terms=("Tesla", "founded"),
+    )
+    roundtrip = SourceFamilyPlan.from_dict({
+        "families": ["reference"],
+        "freshness_required": "false",
+        "official_source_preferred": "false",
+    })
+
+    assert isinstance(plan.source_family_plan, SourceFamilyPlan)
+    assert plan.source_family_plan.freshness_required is True
+    assert plan.source_family_plan.official_source_preferred is True
+    assert plan.source_family_plan.families[:2] == ("official", "news")
+    assert "official_statistics" in plan.source_family_plan.families
+    assert "official statistics" in plan.source_family_plan.query_hints
+    assert "fresh_or_time_sensitive" in plan.source_family_plan.rationale
+    assert "quantitative_or_statistical_claim" in plan.source_family_plan.rationale
+    assert direct.families[:2] == ("official", "reference")
+    assert direct.to_dict()["metadata"]["keyword_terms"] == ("Tesla", "founded")
+    assert roundtrip.freshness_required is False
+    assert roundtrip.official_source_preferred is False
+    with pytest.raises(ValueError, match="freshness_required"):
+        SourceFamilyPlan.from_dict({"families": ["reference"], "freshness_required": "maybe"})
 
 
 def test_rule_based_claim_triples_and_slot_audit_are_stricter_than_overlap():

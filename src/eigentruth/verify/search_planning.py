@@ -15,6 +15,15 @@ QUERY_PLAN_STRATEGIES = (
     "question_and_query",
     "claim_entity",
 )
+SOURCE_FAMILY_NAMES = (
+    "official",
+    "official_statistics",
+    "reference",
+    "encyclopedic",
+    "scholarly",
+    "news",
+    "domain_specific",
+)
 
 _CAPITALIZED_SPAN_RE = re.compile(r"\b[A-Z][A-Za-z0-9&.'-]*(?:\s+[A-Z][A-Za-z0-9&.'-]*)*")
 _QUOTED_SPAN_RE = re.compile(r"[\"'“”‘’](?P<span>[^\"'“”‘’]{2,80})[\"'“”‘’]")
@@ -110,6 +119,70 @@ _QUESTION_TYPE_HINTS = {
 
 
 @dataclass(frozen=True)
+class SourceFamilyPlan:
+    """Source-family hints for downstream citation/search adapters."""
+
+    families: Sequence[str]
+    query_hints: Sequence[str] = ()
+    freshness_required: bool = False
+    official_source_preferred: bool = False
+    rationale: Sequence[str] = ()
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        families = tuple(_unique_source_families(self.families))
+        if not families:
+            raise ValueError("source family plan must include at least one family.")
+        object.__setattr__(self, "families", families)
+        object.__setattr__(self, "query_hints", tuple(_unique(
+            clean_candidate(value) for value in self.query_hints
+        )))
+        object.__setattr__(
+            self,
+            "freshness_required",
+            _coerce_bool(self.freshness_required, name="freshness_required"),
+        )
+        object.__setattr__(
+            self,
+            "official_source_preferred",
+            _coerce_bool(self.official_source_preferred, name="official_source_preferred"),
+        )
+        object.__setattr__(self, "rationale", tuple(_unique(
+            clean_candidate(value) for value in self.rationale
+        )))
+        object.__setattr__(self, "metadata", dict(self.metadata))
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-safe source-family plan payload."""
+        return {
+            "families": tuple(self.families),
+            "query_hints": tuple(self.query_hints),
+            "freshness_required": self.freshness_required,
+            "official_source_preferred": self.official_source_preferred,
+            "rationale": tuple(self.rationale),
+            "metadata": to_jsonable(dict(self.metadata)),
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "SourceFamilyPlan":
+        """Build a source-family plan from JSON-like data."""
+        return cls(
+            families=_string_sequence(data.get("families", ())),
+            query_hints=_string_sequence(data.get("query_hints", ())),
+            freshness_required=_coerce_bool(
+                data.get("freshness_required", False),
+                name="freshness_required",
+            ),
+            official_source_preferred=_coerce_bool(
+                data.get("official_source_preferred", False),
+                name="official_source_preferred",
+            ),
+            rationale=_string_sequence(data.get("rationale", ())),
+            metadata=dict(data.get("metadata", {})),
+        )
+
+
+@dataclass(frozen=True)
 class CitationSearchQueryPlan:
     """A sanitized query plan for external citation/source discovery."""
 
@@ -119,6 +192,7 @@ class CitationSearchQueryPlan:
     entity_candidates: Sequence[str] = ()
     keyword_terms: Sequence[str] = ()
     removed_phrase_hashes: Sequence[str] = ()
+    source_family_plan: SourceFamilyPlan | Mapping[str, Any] | None = None
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -140,6 +214,10 @@ class CitationSearchQueryPlan:
             clean_candidate(value) for value in self.keyword_terms
         )))
         object.__setattr__(self, "removed_phrase_hashes", tuple(str(item) for item in self.removed_phrase_hashes))
+        source_family_plan = self.source_family_plan
+        if isinstance(source_family_plan, Mapping):
+            source_family_plan = SourceFamilyPlan.from_dict(source_family_plan)
+        object.__setattr__(self, "source_family_plan", source_family_plan)
         object.__setattr__(self, "metadata", dict(self.metadata))
 
     @property
@@ -156,6 +234,11 @@ class CitationSearchQueryPlan:
             "entity_candidates": tuple(self.entity_candidates),
             "keyword_terms": tuple(self.keyword_terms),
             "removed_phrase_hashes": tuple(self.removed_phrase_hashes),
+            "source_family_plan": (
+                None
+                if self.source_family_plan is None
+                else self.source_family_plan.to_dict()
+            ),
             "metadata": to_jsonable(dict(self.metadata)),
         }
 
@@ -170,6 +253,7 @@ def plan_citation_search_query(
     max_alternate_queries: int = 3,
     max_entity_candidates: int = 4,
     max_keyword_terms: int = 8,
+    requires_timestamp: bool = False,
 ) -> CitationSearchQueryPlan:
     """Build a sanitized citation search query plan.
 
@@ -196,6 +280,12 @@ def plan_citation_search_query(
     )
     entities = extract_entity_candidates(question_clean, max_items=int(max_entity_candidates))
     keyword_terms = extract_keyword_terms(question_clean, max_items=int(max_keyword_terms))
+    source_family_plan = plan_source_families(
+        question=question_clean,
+        question_type=question_type,
+        keyword_terms=keyword_terms,
+        requires_timestamp=requires_timestamp,
+    )
     variants = _variants_for_strategy(
         strategy,
         question=question_clean,
@@ -213,10 +303,117 @@ def plan_citation_search_query(
         entity_candidates=entities,
         keyword_terms=keyword_terms,
         removed_phrase_hashes=removed_hashes,
+        source_family_plan=source_family_plan,
         metadata={
             "question_type": str(question_type).strip(),
             "candidate_query_sanitized": bool(candidate_clean),
             "removed_disallowed_phrase_count": len(removed_hashes),
+        },
+    )
+
+
+def plan_source_families(
+    *,
+    question: str,
+    question_type: str = "",
+    keyword_terms: Sequence[str] = (),
+    requires_timestamp: bool = False,
+) -> SourceFamilyPlan:
+    """Plan source-family hints for a citation/search request.
+
+    The result is intentionally a hint, not a verifier decision. It lets an
+    external adapter route requests toward official statistics, reference
+    catalogs, scholarly sources, or recent sources while preserving the existing
+    fail-closed evidence gates.
+    """
+    question_clean = clean_search_query(question)
+    terms = tuple(keyword_terms) if keyword_terms else extract_keyword_terms(question_clean)
+    lowered_terms = {term.casefold() for term in terms}
+    question_type_key = str(question_type).strip().casefold()
+    question_lower = question_clean.casefold()
+    freshness_required = bool(requires_timestamp or _time_sensitive_query(question_lower, lowered_terms))
+    families: list[str] = []
+    query_hints: list[str] = []
+    rationale: list[str] = []
+
+    if freshness_required:
+        families.extend(("official", "news", "reference"))
+        query_hints.extend(("official source", "latest", "date"))
+        rationale.append("fresh_or_time_sensitive")
+
+    if question_type_key == "quantity" or lowered_terms & {
+        "population",
+        "statistics",
+        "statistic",
+        "rate",
+        "rates",
+        "count",
+        "counts",
+        "number",
+        "numbers",
+        "percentage",
+        "percent",
+    }:
+        families.extend(("official_statistics", "official", "encyclopedic"))
+        query_hints.extend(("official statistics", "data"))
+        rationale.append("quantitative_or_statistical_claim")
+
+    if question_type_key == "person" or lowered_terms & {
+        "founder",
+        "founded",
+        "ceo",
+        "president",
+        "minister",
+        "born",
+        "biography",
+    }:
+        families.extend(("official", "reference", "encyclopedic"))
+        query_hints.extend(("official profile", "biography"))
+        rationale.append("person_or_role_claim")
+
+    if question_type_key == "definition" or lowered_terms & {
+        "definition",
+        "define",
+        "meaning",
+        "term",
+        "called",
+    }:
+        families.extend(("reference", "scholarly", "encyclopedic"))
+        query_hints.extend(("definition", "reference"))
+        rationale.append("definition_or_term_claim")
+
+    if question_type_key == "location" or lowered_terms & {
+        "where",
+        "country",
+        "city",
+        "capital",
+        "located",
+        "location",
+    }:
+        families.extend(("official", "reference", "encyclopedic"))
+        query_hints.extend(("official", "geography"))
+        rationale.append("location_or_jurisdiction_claim")
+
+    if not families:
+        families.extend(("reference", "encyclopedic"))
+        query_hints.append("reference")
+        rationale.append("general_factual_claim")
+
+    families_tuple = tuple(_unique_source_families(families))
+    official_source_preferred = bool(
+        freshness_required
+        or "official" in families_tuple
+        or "official_statistics" in families_tuple
+    )
+    return SourceFamilyPlan(
+        families=families_tuple,
+        query_hints=tuple(query_hints),
+        freshness_required=freshness_required,
+        official_source_preferred=official_source_preferred,
+        rationale=tuple(rationale),
+        metadata={
+            "question_type": str(question_type).strip(),
+            "keyword_terms": tuple(terms),
         },
     )
 
@@ -342,6 +539,34 @@ def _question_type_hint(question_type: str, *, keyword_terms: Sequence[str]) -> 
     return hints[0] if hints else ""
 
 
+def _time_sensitive_query(question_lower: str, lowered_terms: set[str]) -> bool:
+    time_terms = {
+        "as",
+        "current",
+        "currently",
+        "latest",
+        "modern",
+        "now",
+        "recent",
+        "today",
+        "updated",
+    }
+    if lowered_terms & time_terms:
+        return True
+    return any(
+        phrase in question_lower
+        for phrase in (
+            "as of",
+            "right now",
+            "currently",
+            "latest",
+            "today",
+            "this year",
+            "in 20",
+        )
+    )
+
+
 def _keyword_query(keyword_terms: Sequence[str]) -> str:
     return clean_search_query(" ".join(keyword_terms))
 
@@ -422,6 +647,43 @@ def _unique(values: Sequence[str]) -> tuple[str, ...]:
         result.append(item)
         seen.add(folded)
     return tuple(result)
+
+
+def _unique_source_families(values: Sequence[str]) -> tuple[str, ...]:
+    result: list[str] = []
+    seen: set[str] = set()
+    valid = set(SOURCE_FAMILY_NAMES)
+    for value in values:
+        family = clean_candidate(value).casefold().replace("-", "_").replace(" ", "_")
+        if not family:
+            continue
+        if family not in valid:
+            raise ValueError(f"unknown source family {value!r}; expected one of: {', '.join(SOURCE_FAMILY_NAMES)}.")
+        if family in seen:
+            continue
+        result.append(family)
+        seen.add(family)
+    return tuple(result)
+
+
+def _string_sequence(value: Any) -> tuple[str, ...]:
+    if isinstance(value, str):
+        return tuple(item.strip() for item in value.split(",") if item.strip())
+    if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray)):
+        return tuple(str(item) for item in value)
+    return ()
+
+
+def _coerce_bool(value: Any, *, name: str) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        lowered = value.strip().casefold()
+        if lowered in {"true", "1", "yes", "on"}:
+            return True
+        if lowered in {"false", "0", "no", "off"}:
+            return False
+    raise ValueError(f"{name} must be a boolean or boolean string.")
 
 
 def _unique_queries(values: Sequence[str]) -> tuple[str, ...]:

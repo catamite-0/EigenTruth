@@ -61,11 +61,14 @@ from eigentruth.verify.protocols import Claim, VerificationResult, VerificationS
 from eigentruth.verify.routing import default_routed_verifier, default_verifier_routes
 from eigentruth.verify.rules import InMemoryVerifier, normalize_claim_text
 from eigentruth.verify.search_planning import (
+    SOURCE_FAMILY_NAMES,
     CitationSearchQueryPlan,
+    SourceFamilyPlan,
     clean_search_query,
     extract_entity_candidates,
     extract_keyword_terms,
     plan_citation_search_query,
+    plan_source_families,
     sanitize_search_query,
 )
 from eigentruth.verify.selfcheck import SelfConsistencyVerifier
@@ -134,6 +137,8 @@ __all__ = [
     "VerificationRouteHint",
     "SentenceClaimExtractor",
     "SelfConsistencyVerifier",
+    "SOURCE_FAMILY_NAMES",
+    "SourceFamilyPlan",
     "apply_claim_coherence",
     "audit_counterfactual_verification",
     "generate_counterfactual_probes",
@@ -156,6 +161,7 @@ __all__ = [
     "infer_claim_dependencies",
     "normalize_claim_text",
     "plan_citation_search_query",
+    "plan_source_families",
     "sanitize_search_query",
     "stable_cache_key",
     "verifier_cache_key",

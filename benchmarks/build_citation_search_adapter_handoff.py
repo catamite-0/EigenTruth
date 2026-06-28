@@ -290,12 +290,15 @@ def _adapter_request(
         request_id = request.get("queue_id") or request.get("source_request_id")
         raise ValueError(f"citation request {request_id} has no query.")
     request_id = _adapter_request_id(request)
+    source_family_plan = query_plan.source_family_plan
+    source_family_payload = None if source_family_plan is None else source_family_plan.to_dict()
     return {
         "schema_version": 1,
         "request_id": request_id,
         "adapter_family": "external_citation_search",
         "query": query_plan.query,
         "alternate_queries": tuple(query_plan.alternate_queries),
+        "source_family_plan": source_family_payload,
         "requires_timestamp": bool(request.get("requires_timestamp")),
         "question_type": str(request.get("question_type", "")),
         "priority": str(request.get("priority", "")),
@@ -309,6 +312,21 @@ def _adapter_request(
             "entity_candidates": tuple(query_plan.entity_candidates),
             "keyword_terms": tuple(query_plan.keyword_terms),
             "removed_disallowed_phrase_count": len(query_plan.removed_phrase_hashes),
+            "preferred_source_families": (
+                ()
+                if source_family_plan is None
+                else tuple(source_family_plan.families)
+            ),
+            "freshness_required": (
+                False
+                if source_family_plan is None
+                else source_family_plan.freshness_required
+            ),
+            "official_source_preferred": (
+                False
+                if source_family_plan is None
+                else source_family_plan.official_source_preferred
+            ),
             "queue_workflow": "unresolved_blind_spot_evidence_queue",
         },
     }
@@ -331,6 +349,7 @@ def _query_plan_for_request(
         disallowed_phrases=_disallowed_query_phrases(request),
         strategy=query_mode,
         max_alternate_queries=max_alternate_queries,
+        requires_timestamp=bool(request.get("requires_timestamp")),
     )
 
 
@@ -419,6 +438,8 @@ def _source_document(
         "external_source": True,
         "source_kind": source_kind,
         "provider": provider,
+        "source_family": _clean(result.get("source_family") or result.get("source_family_name")),
+        "source_family_confidence": _optional_float(result.get("source_family_confidence")),
         "title": title,
         "url": url,
         "published_at": _clean(result.get("published_at") or result.get("publication_date")),
@@ -446,6 +467,17 @@ def _summary(
 ) -> dict[str, Any]:
     priority_counts = Counter(str(item.get("priority")) for item in adapter_requests)
     question_type_counts = Counter(str(item.get("question_type")) for item in adapter_requests)
+    source_family_counts: Counter[str] = Counter()
+    freshness_required_count = 0
+    official_source_preferred_count = 0
+    for item in adapter_requests:
+        plan = _mapping(item.get("source_family_plan"))
+        if plan.get("freshness_required"):
+            freshness_required_count += 1
+        if plan.get("official_source_preferred"):
+            official_source_preferred_count += 1
+        for family in _string_sequence(plan.get("families", ())):
+            source_family_counts[family] += 1
     providers = Counter(str(_mapping(item.get("metadata")).get("provider")) for item in source_documents)
     return {
         "source_queue_target_count": _nested_int(queue_report, "summary", "target_count"),
@@ -455,6 +487,9 @@ def _summary(
         "corpus_document_count": len(source_documents),
         "priority_counts": _sorted_counter(priority_counts),
         "question_type_counts": _sorted_counter(question_type_counts),
+        "source_family_counts": _sorted_counter(source_family_counts),
+        "freshness_required_count": freshness_required_count,
+        "official_source_preferred_count": official_source_preferred_count,
         "source_provider_counts": _sorted_counter(providers),
         "result_summary": dict(result_summary),
     }
@@ -543,6 +578,21 @@ def _optional_int(value: Any) -> int | None:
         return None if value is None else int(value)
     except (TypeError, ValueError):
         return None
+
+
+def _optional_float(value: Any) -> float | None:
+    try:
+        return None if value is None else float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _string_sequence(value: Any) -> tuple[str, ...]:
+    if isinstance(value, str):
+        return tuple(item.strip() for item in value.split(",") if item.strip())
+    if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray)):
+        return tuple(str(item) for item in value)
+    return ()
 
 
 def _clean(value: Any) -> str:

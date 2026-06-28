@@ -717,11 +717,21 @@ Added the first monitor-first tool-selection audit layer:
   controlled-vs-external generalization gap at `1.0`. This is useful negative
   evidence: safer query planning helps source collection, but generic Wikipedia
   lexical search is not the current correction route.
+- The next source-family contract is now implemented in the same dependency-free
+  boundary. `SourceFamilyPlan` and `plan_source_families(...)` annotate sanitized
+  citation requests with official/statistical/reference/encyclopedic/scholarly
+  source-family hints plus freshness requirements, and the handoff summary now
+  records those counters. The registered SmolLM2 L80 source-family handoff keeps
+  `176` requests with `reference=176`, `encyclopedic=176`, `scholarly=156`,
+  `official=36`, `official_statistics=4`, `news=4`, and still has `0` source
+  docs. This is not retrieval evidence yet; it is the routing contract that lets
+  the next adapter choose official or structured sources before the usual
+  provenance and blind-spot gates run.
 
 ## Next Research-to-Code Candidates
 
 1. Convert the target-specific Wikidata source docs into structured-fact/QA corpora, then rerun the blind-spot correction-route audit instead of another lexical overlap sweep.
-2. Build the next source-family or official-source adapter behind the same command boundary, with claim-to-fact mapping rather than another generic Wikipedia overlap sweep.
+2. Implement a concrete source-family adapter that consumes `source_family_plan` and targets official/structured sources before another generic Wikipedia overlap sweep.
 3. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
 4. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
 5. Materialize a real `frontier_audit` release candidate with the registered covered-facts external-evidence handoff and external-prediction triple matrix artifact, then export the resulting promotion contract.
