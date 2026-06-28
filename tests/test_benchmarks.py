@@ -3221,6 +3221,8 @@ def test_truthfulqa_frontier_workflow_reuses_score_dumps_and_writes_ensemble(tmp
             conformal_signal="truth_proj",
             ensemble_methods=("max_rank",),
             alphas=(0.2,),
+            detectability_consistency_signal="truth_proj",
+            detectability_confidence_signal="subspace_resid",
             conformal_repeats=1,
             ensemble_repeats=1,
             artifact_alpha=0.2,
@@ -3236,11 +3238,19 @@ def test_truthfulqa_frontier_workflow_reuses_score_dumps_and_writes_ensemble(tmp
     assert payload["status"] == "complete"
     assert len(payload["cells"]) == 2
     assert payload["ensemble"]["runs"][0]["best_ensemble_at_alpha"]["name"] == "max_rank"
+    assert payload["detectability_taxonomy"]["report_count"] == 2
+    assert all(Path(report["path"]).exists() for report in payload["detectability_taxonomy"]["reports"])
+    assert payload["cells"][0]["detectability_taxonomy"]["status"] == "complete"
     assert ensemble_report["runs"][0]["signals"] == ["truth_proj", "subspace_resid"]
     assert manifest["metadata"]["runner"] == "run_truthfulqa_frontier_workflow"
+    assert manifest["metadata"]["detectability_consistency_signal"] == "truth_proj"
+    assert manifest["metadata"]["detectability_confidence_signal"] == "subspace_resid"
+    assert manifest["artifacts"]["cells.a-l2.detectability_taxonomy_report"]["exists"] is True
     assert manifest["summary"]["missing_count"] == 0
     assert record.metadata["workflow"] == "run_truthfulqa_frontier_workflow"
     assert record.metadata["signals"] == ["truth_proj", "subspace_resid"]
+    assert record.metadata["detectability_consistency_signal"] == "truth_proj"
+    assert record.metadata["detectability_confidence_signal"] == "subspace_resid"
 
 
 def test_eval_frontier_stability_builds_seed_summary_and_registry(tmp_path):

@@ -27,6 +27,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from benchmarks.config_utils import planned_artifact_manifest_summary  # noqa: E402
+from benchmarks.eval_detectability_taxonomy import build_detectability_taxonomy_report  # noqa: E402
 from benchmarks.eval_score_ensemble import build_ensemble_report  # noqa: E402
 from benchmarks.run_calibrated_observability_workflow import (  # noqa: E402
     CalibratedObservabilityWorkflowConfig,
@@ -156,6 +157,10 @@ class TruthfulQAFrontierWorkflowConfig:
     best_by: str = "auroc"
     ensemble_methods: Sequence[str] = DEFAULT_ENSEMBLE_METHODS
     alphas: Sequence[float] = DEFAULT_ALPHAS
+    detectability_consistency_signal: str | None = None
+    detectability_confidence_signal: str | None = None
+    detectability_consistency_direction: str = "higher"
+    detectability_confidence_direction: str = "higher"
     python_executable: str = sys.executable
     clean: bool = False
     dry_run: bool = False
@@ -218,6 +223,14 @@ class TruthfulQAFrontierWorkflowConfig:
             raise ValueError("dump_scores_format must be one of: json, jsonl.")
         if self.best_by not in {"auroc", "detection"}:
             raise ValueError("best_by must be one of: auroc, detection.")
+        if self.detectability_consistency_direction not in {"higher", "lower"}:
+            raise ValueError("detectability_consistency_direction must be one of: higher, lower.")
+        if self.detectability_confidence_direction not in {"higher", "lower"}:
+            raise ValueError("detectability_confidence_direction must be one of: higher, lower.")
+        if bool(self.detectability_consistency_signal) != bool(self.detectability_confidence_signal):
+            raise ValueError(
+                "detectability_consistency_signal and detectability_confidence_signal must be set together."
+            )
         if self.sweep_band_target_layer not in {None, "best", "band_best", "first"}:
             raise ValueError("sweep_band_target_layer must be one of: best, band_best, first.")
         signals = tuple(str(signal).strip() for signal in self.signals if str(signal).strip())
@@ -227,6 +240,14 @@ class TruthfulQAFrontierWorkflowConfig:
             if missing_scales:
                 raise ValueError(f"sweep_band_scales contains unknown scale names: {', '.join(missing_scales)}")
         conformal_signal = str(self.conformal_signal).strip()
+        detectability_consistency_signal = (
+            None if self.detectability_consistency_signal is None
+            else str(self.detectability_consistency_signal).strip()
+        )
+        detectability_confidence_signal = (
+            None if self.detectability_confidence_signal is None
+            else str(self.detectability_confidence_signal).strip()
+        )
         methods = tuple(str(method) for method in self.ensemble_methods if str(method))
         alphas = tuple(float(alpha) for alpha in self.alphas)
         if not signals:
@@ -235,6 +256,16 @@ class TruthfulQAFrontierWorkflowConfig:
             raise ValueError("conformal_signal must be non-empty.")
         if conformal_signal not in signals:
             raise ValueError("conformal_signal must be included in signals.")
+        if bool(detectability_consistency_signal) != bool(detectability_confidence_signal):
+            raise ValueError(
+                "detectability_consistency_signal and detectability_confidence_signal must be non-empty together."
+            )
+        if (
+            detectability_consistency_signal is not None
+            and detectability_confidence_signal is not None
+            and detectability_consistency_signal == detectability_confidence_signal
+        ):
+            raise ValueError("detectability_consistency_signal and detectability_confidence_signal must differ.")
         if not methods:
             raise ValueError("at least one ensemble method is required.")
         if any(not (0.0 < alpha < 1.0) for alpha in alphas):
@@ -250,6 +281,8 @@ class TruthfulQAFrontierWorkflowConfig:
             object.__setattr__(self, "sweep_band_target_layer", str(self.sweep_band_target_layer))
         object.__setattr__(self, "sweep_band_run_template", str(self.sweep_band_run_template))
         object.__setattr__(self, "conformal_signal", conformal_signal)
+        object.__setattr__(self, "detectability_consistency_signal", detectability_consistency_signal)
+        object.__setattr__(self, "detectability_confidence_signal", detectability_confidence_signal)
         object.__setattr__(self, "ensemble_methods", methods)
         object.__setattr__(self, "alphas", alphas)
         object.__setattr__(self, "batch_size", int(self.batch_size))
@@ -313,6 +346,7 @@ def run_truthfulqa_frontier_workflow(config: TruthfulQAFrontierWorkflowConfig) -
             encoding="utf-8",
         )
 
+    detectability_reports = _build_detectability_reports(config, cell_reports)
     artifacts = _artifact_paths(config, cell_reports)
     manifest_summary = planned_artifact_manifest_summary(artifacts, assume_file_paths=(config.report_path,))
     status = _workflow_status(config, cell_reports, ensemble_payload)
@@ -328,6 +362,7 @@ def run_truthfulqa_frontier_workflow(config: TruthfulQAFrontierWorkflowConfig) -
         },
         "cells": cell_reports,
         "ensemble": _ensemble_summary(ensemble_payload, path=config.ensemble_report_path),
+        "detectability_taxonomy": _detectability_summary(detectability_reports),
         "artifact_manifest_summary": manifest_summary,
         "execution": {
             "wall_clock_seconds": time.perf_counter() - started_at,
@@ -468,7 +503,72 @@ def _workflow_status(
         return "blocked"
     if ensemble_payload is None:
         return "blocked"
+    for cell in cells:
+        detectability = cell.get("detectability_taxonomy")
+        if isinstance(detectability, Mapping) and detectability.get("status") not in {None, "complete"}:
+            return "blocked"
     return "complete"
+
+
+def _build_detectability_reports(
+    config: TruthfulQAFrontierWorkflowConfig,
+    cell_reports: Sequence[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    if not _detectability_enabled(config):
+        return []
+    reports: list[dict[str, Any]] = []
+    for cell in cell_reports:
+        cell_name = str(cell["name"])
+        output_path = _detectability_report_path(config, cell_name=cell_name)
+        summary: dict[str, Any] = {
+            "path": str(output_path),
+            "consistency_signal": config.detectability_consistency_signal,
+            "confidence_signal": config.detectability_confidence_signal,
+            "consistency_direction": config.detectability_consistency_direction,
+            "confidence_direction": config.detectability_confidence_direction,
+        }
+        if config.dry_run:
+            summary["status"] = "planned"
+        else:
+            payload = build_detectability_taxonomy_report(
+                score_dump_path=_nested(cell, "score_dump", "path"),
+                consistency_signal=str(config.detectability_consistency_signal),
+                confidence_signal=str(config.detectability_confidence_signal),
+                consistency_direction=config.detectability_consistency_direction,
+                confidence_direction=config.detectability_confidence_direction,
+                metadata={"run_name": cell_name},
+            )
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            false_distribution = _mapping(payload.get("report", {}).get("false_distribution"))
+            entrenched = _mapping(false_distribution.get("entrenched"))
+            summary.update({
+                "status": payload.get("status"),
+                "n_total": _nested(payload, "report", "n_total"),
+                "n_false": _nested(payload, "report", "n_false"),
+                "entrenched_false_count": entrenched.get("count"),
+                "entrenched_false_rate": entrenched.get("rate"),
+            })
+        cell["detectability_taxonomy"] = summary
+        reports.append({"cell": cell_name, **summary})
+    return reports
+
+
+def _detectability_enabled(config: TruthfulQAFrontierWorkflowConfig) -> bool:
+    return bool(config.detectability_consistency_signal and config.detectability_confidence_signal)
+
+
+def _detectability_report_path(config: TruthfulQAFrontierWorkflowConfig, *, cell_name: str) -> Path:
+    return config.output_dir / cell_name / "detectability-taxonomy-report.json"
+
+
+def _detectability_summary(reports: Sequence[Mapping[str, Any]]) -> dict[str, Any] | None:
+    if not reports:
+        return None
+    return {
+        "report_count": len(reports),
+        "reports": tuple(dict(report) for report in reports),
+    }
 
 
 def _ensemble_summary(payload: Mapping[str, Any] | None, *, path: Path) -> dict[str, Any] | None:
@@ -507,6 +607,11 @@ def _artifact_paths(
         artifacts[f"cells.{name}.workflow_report"] = cell.get("workflow_report")
         artifacts[f"cells.{name}.artifact_manifest"] = cell.get("artifact_manifest")
         artifacts[f"cells.{name}.score_dump"] = _nested(cell, "score_dump", "path")
+        artifacts[f"cells.{name}.detectability_taxonomy_report"] = _nested(
+            cell,
+            "detectability_taxonomy",
+            "path",
+        )
     return artifacts
 
 
@@ -527,6 +632,10 @@ def _write_artifact_manifest(
             "scales": tuple(scale.name for scale in config.scales),
             "signals": tuple(config.signals),
             "ensemble_methods": tuple(config.ensemble_methods),
+            "detectability_consistency_signal": config.detectability_consistency_signal,
+            "detectability_confidence_signal": config.detectability_confidence_signal,
+            "detectability_consistency_direction": config.detectability_consistency_direction,
+            "detectability_confidence_direction": config.detectability_confidence_direction,
             "sweep_layers_from_band_report": (
                 None if config.sweep_layers_from_band_report is None else str(config.sweep_layers_from_band_report)
             ),
@@ -558,6 +667,8 @@ def _record_registry(config: TruthfulQAFrontierWorkflowConfig, report: Mapping[s
             "models": tuple(model.name for model in config.models),
             "scales": tuple(scale.name for scale in config.scales),
             "signals": tuple(config.signals),
+            "detectability_consistency_signal": config.detectability_consistency_signal,
+            "detectability_confidence_signal": config.detectability_confidence_signal,
             "sweep_layers_from_band_report": (
                 None if config.sweep_layers_from_band_report is None else str(config.sweep_layers_from_band_report)
             ),
@@ -616,6 +727,10 @@ def _config_payload(config: TruthfulQAFrontierWorkflowConfig) -> dict[str, Any]:
         "best_by": config.best_by,
         "ensemble_methods": tuple(config.ensemble_methods),
         "alphas": tuple(config.alphas),
+        "detectability_consistency_signal": config.detectability_consistency_signal,
+        "detectability_confidence_signal": config.detectability_confidence_signal,
+        "detectability_consistency_direction": config.detectability_consistency_direction,
+        "detectability_confidence_direction": config.detectability_confidence_direction,
         "dry_run": config.dry_run,
     }
 
@@ -627,6 +742,10 @@ def _nested(payload: Mapping[str, Any], *keys: str) -> Any:
             return None
         value = value.get(key)
     return value
+
+
+def _mapping(value: Any) -> dict[str, Any]:
+    return dict(value) if isinstance(value, Mapping) else {}
 
 
 def _cell_cache_config(config: TruthfulQAFrontierWorkflowConfig, *, cell_name: str) -> dict[str, Any]:
@@ -740,6 +859,10 @@ def _config_from_args(args: argparse.Namespace) -> TruthfulQAFrontierWorkflowCon
         best_by=args.best_by,
         ensemble_methods=_parse_csv(args.methods, name="--methods"),
         alphas=_parse_float_csv(args.alphas, name="--alphas"),
+        detectability_consistency_signal=args.detectability_consistency_signal,
+        detectability_confidence_signal=args.detectability_confidence_signal,
+        detectability_consistency_direction=args.detectability_consistency_direction,
+        detectability_confidence_direction=args.detectability_confidence_direction,
         python_executable=args.python,
         clean=args.clean,
         dry_run=args.dry_run,
@@ -838,6 +961,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--best-by", choices=("auroc", "detection"), default="auroc")
     parser.add_argument("--methods", default=",".join(DEFAULT_ENSEMBLE_METHODS))
     parser.add_argument("--alphas", default=",".join(str(alpha) for alpha in DEFAULT_ALPHAS))
+    parser.add_argument("--detectability-consistency-signal", default=None)
+    parser.add_argument("--detectability-confidence-signal", default=None)
+    parser.add_argument("--detectability-consistency-direction", choices=("higher", "lower"), default="higher")
+    parser.add_argument("--detectability-confidence-direction", choices=("higher", "lower"), default="higher")
     parser.add_argument("--python", default=sys.executable)
     parser.add_argument("--clean", action="store_true")
     parser.add_argument("--dry-run", action="store_true")

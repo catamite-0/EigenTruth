@@ -33,6 +33,7 @@ Added DECK-style detectability taxonomy reports:
 - `youden_j_threshold(...)` computes a dependency-free Youden's J split for a score axis where either higher or lower raw scores can mean healthier behavior.
 - `deck_taxonomy_report(...)` combines a consistency-style score and a confidence-style score into Drift / Entrenched / Confabulation / Knotted cells, reporting all-sample counts, false-record distribution, blind-spot counts, and scorer families expected to catch each regime.
 - `benchmarks/eval_detectability_taxonomy.py` reads existing JSON or JSONL score dumps with selected-column loading and writes a JSON report without loading a model.
+- `benchmarks/run_truthfulqa_frontier_workflow.py` can now emit those taxonomy reports per frontier cell, add them to the top-level artifact manifest, and carry the paths forward into release-evidence comparison.
 - This is evidence-only: entrenched false records should route to independent verifier, retrieval, citation, structured-fact, or world-model correction paths; the taxonomy does not promote a new control default by itself.
 
 Added prompt-answer pathway diagnostics:

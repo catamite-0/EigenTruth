@@ -1043,6 +1043,10 @@ python benchmarks/run_truthfulqa_frontier_workflow.py \
   --hidden-state-capture hooks \
   --cache-dir artifacts/cache/truthfulqa-frontier-qwen-smollm2 \
   --signals truth_proj,maha_last,subspace_resid,resid_update_norm,eigenscore \
+  --detectability-consistency-signal eigenscore \
+  --detectability-consistency-direction lower \
+  --detectability-confidence-signal nll_answer \
+  --detectability-confidence-direction lower \
   --registry artifacts/local-release-registry.json \
   --name truthfulqa-frontier-qwen-smollm2 \
   --version 0.1
@@ -1058,6 +1062,11 @@ build or when changing cache-defining model/data/layer parameters.
 Use `--attention-pathway --attn-implementation eager` with explicit `attn_*`
 entries in `--signals` when the frontier cells should collect optional
 attention-flow pathway evidence.
+Use `--detectability-consistency-signal` and
+`--detectability-confidence-signal` to write one DECK-style taxonomy report per
+cell. These reports are added to the top-level manifest and can be passed
+directly to `compare_frontier_release_evidence.py --detectability-taxonomy-report`
+for entrenched blind-spot gating.
 
 When a layer-band selector report should drive several frontier cells, pass the
 same report to the frontier workflow and let each cell match its own run name:
