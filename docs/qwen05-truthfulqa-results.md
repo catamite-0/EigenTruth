@@ -1456,6 +1456,18 @@ negative result keeps the product boundary honest: route quality is solved for
 the extracted source-family facts, but those facts do not yet cover the current
 blind spots.
 
+`benchmarks/plan_source_family_structured_qa_fact_expansion.py` turns that
+blocked mapping audit into the next executable queue. The artifact
+`artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-expansion-plan/`
+is `ready_for_collection` with all `89` gaps preserved as targets: `55` missing
+subject+intent, `11` missing property/indicator, `12` missing subject/entity
+resolution, `8` citation-before-promotion gaps, and `3` answer-entity
+collisions. It emits `89` structured fact requests, `70` entity-resolution
+requests, `66` external citation requests, `26` world-model/calculator-rule
+requests, and `14` fact-disambiguation tasks. The plan does not use labels for
+collection planning and does not treat tasks as verifier evidence; its manifest
+verifies `2/2`.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -1485,9 +1497,9 @@ blind spots.
    frontier queue: `official=36/36`, `official_statistics=4/4`,
    `scholarly=156/156`, and `news=4/4` are covered. The source-family
    structured QA route audit promotes exact covered-fact quality for `18`
-   extracted facts, so the next verification step is claim/blind-spot mapping:
-   prove which product claims actually correspond to those facts before creating
-   any correction handoff.
+   extracted facts, but claim/blind-spot mapping remains `0/89`; use the new
+   fact-expansion plan to collect claim-specific structured facts, citations,
+   and world-model/calculator rules before creating any correction handoff.
 8. Extend the new verifier-stability path from structured QA to real retrieval,
    database, calculator, and world-model evidence under the same conformal
    false-alarm budgets. Use `benchmarks/build_evidence_fixture.py` with a local

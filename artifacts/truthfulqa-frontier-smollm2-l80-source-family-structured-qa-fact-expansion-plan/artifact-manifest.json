@@ -1,0 +1,38 @@
+{
+  "artifacts": {
+    "source_family_structured_qa_claim_mapping": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-source-family-structured-qa-claim-mapping/source-family-structured-qa-claim-mapping.json",
+      "sha256": "58f30d13ef442701370003c1ca52ab75ca21b08d8c18a5689990f21542121802",
+      "size_bytes": 1372612
+    },
+    "source_family_structured_qa_fact_expansion_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-structured-qa-fact-expansion-plan.json",
+      "sha256": "5c5e2987b556e6bee04226c9b361dae0fb1f00be0fa74b6bb26c671521996e60",
+      "size_bytes": 1107464
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "high_priority_count": 81,
+    "source": "source_family_structured_qa_claim_mapping",
+    "status": "ready_for_collection",
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "target_count": 89,
+    "top_gap_type": "missing_subject_and_intent",
+    "top_task_type": "source_family_structured_fact_request",
+    "workflow": "source_family_structured_qa_fact_expansion_plan"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  }
+}

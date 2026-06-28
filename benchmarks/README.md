@@ -2235,6 +2235,38 @@ work must expand claim-specific structured facts, citation evidence, or
 world-model/calculator rules before any blind-spot correction handoff can use
 this corpus.
 
+## `plan_source_family_structured_qa_fact_expansion.py`
+
+Converts a blocked source-family structured QA claim-mapping report into
+claim-specific collection tasks. The output is a non-evidence plan: it preserves
+the mapping gaps, proposes structured-fact properties, citation queries,
+entity-resolution targets, and world-model/calculator-rule requests, but it does
+not fetch sources or promote any correction route.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-expansion-plan
+
+python benchmarks/plan_source_family_structured_qa_fact_expansion.py \
+  --claim-mapping artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-claim-mapping/source-family-structured-qa-claim-mapping.json \
+  --json "$OUT/source-family-structured-qa-fact-expansion-plan.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=source_family_structured_qa_claim_mapping
+
+python benchmarks/verify_artifact_manifest.py \
+  --manifest "$OUT/artifact-manifest.json" \
+  --json "$OUT/manifest-verification.json"
+```
+
+The current SmolLM2 l80 plan is `ready_for_collection` and keeps all `89`
+claim-mapping gaps as targets: `55` missing subject+intent, `11` missing
+property/indicator, `12` missing subject/entity resolution, `8` citation-before
+promotion gaps, and `3` answer-entity collisions. It emits `89` structured fact
+requests, `70` entity-resolution requests, `66` external citation requests,
+`26` world-model/calculator-rule requests, and `14` fact-disambiguation tasks.
+Labels are not used for collection planning, tasks are not verifier evidence,
+and the manifest verifies `2/2` files.
+
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:
 

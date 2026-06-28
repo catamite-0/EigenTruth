@@ -606,6 +606,20 @@ For product features:
   the evidence panel can now show source-family-complete coverage, but the
   product should still present the route as unpromoted until comparison-quality
   gates improve.
+- The source-family structured QA path now separates route quality from
+  blind-spot coverage. `build_source_family_qa_corpus.py` extracts `18`
+  label-free structured QA facts from the completed source-family result set,
+  and `run_source_family_structured_qa_route_workflow.py` promotes exact
+  covered-fact route quality with decision accuracy `1.0` and false-supported
+  rate `0.0`. The follow-up claim-mapping audit correctly blocks product
+  handoff because those `18` facts map to `0/89` current SmolLM2 entrenched
+  blind spots. `plan_source_family_structured_qa_fact_expansion.py` converts
+  that blocker into a `ready_for_collection` queue with `89` structured fact
+  requests, `70` entity-resolution requests, `66` citation requests, `26`
+  world-model/calculator-rule requests, and `14` fact-disambiguation tasks.
+  Product implication: the structured QA route is safe for exact covered facts,
+  but blind-spot correction needs this claim-specific expansion queue executed
+  and remapped before any ProductTrace correction handoff is allowed.
 
 ### Next Verification Adapter Work
 

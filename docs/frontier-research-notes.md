@@ -864,14 +864,23 @@ Added the first monitor-first tool-selection audit layer:
   subject-only, intent-only, weak-overlap, or answer-entity-collision cases.
   This is the right negative result because it prevents exact covered-fact
   route quality from being misread as blind-spot coverage.
+- `plan_source_family_structured_qa_fact_expansion.py` now converts that blocked
+  gate into the next executable queue. The SmolLM2 l80 plan is
+  `ready_for_collection` with all `89` gaps preserved: `55` missing
+  subject+intent, `11` missing property/indicator, `12` missing subject/entity
+  resolution, `8` citation-before-promotion gaps, and `3` answer-entity
+  collisions. It emits `89` structured fact requests, `70` entity-resolution
+  requests, `66` citation requests, `26` world-model/calculator-rule requests,
+  and `14` fact-disambiguation tasks while explicitly marking tasks as
+  non-evidence.
 
 ## Next Research-to-Code Candidates
 
-1. Expand source-family structured facts from the unresolved blind-spot queue:
-   current covered facts route perfectly, but the claim-mapping audit maps
-   `0/89` entrenched blind spots into them. The next code step should generate
-   claim-specific structured facts or world-model/calculator rules, then rerun
-   the mapping gate before creating any handoff.
+1. Execute the source-family structured QA fact-expansion plan: collect or
+   author the `89` claim-specific structured facts, citations, entity
+   resolutions, and world-model/calculator rules, then rebuild the structured QA
+   corpus and rerun the claim-mapping gate before creating any correction
+   handoff.
 2. Move from source-family acquisition to route-quality improvement: the current
    queue now has complete source-family coverage, but still has no passing
    blind-spot query strategy. The next code step should improve structured query

@@ -390,3 +390,165 @@ def test_source_family_structured_qa_claim_mapping_audits_claim_coverage(tmp_pat
     assert record.metadata["workflow"] == "source_family_structured_qa_claim_mapping_audit"
     assert record.metadata["mapped_qa_fact_candidate_count"] == 2
     assert record.metadata["suite"] == "unit"
+
+
+def test_source_family_structured_qa_fact_expansion_plans_mapping_gaps(tmp_path):
+    module = importlib.import_module("benchmarks.plan_source_family_structured_qa_fact_expansion")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    claim_mapping_path = tmp_path / "claim-mapping.json"
+    output_path = tmp_path / "fact-expansion-plan.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    claim_mapping_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "source_family_structured_qa_claim_mapping_audit",
+            "status": "blocked",
+            "source": {
+                "route_summary_status": "promote",
+                "route_summary_promoted": True,
+                "qa_document_count": 2,
+            },
+            "summary": {
+                "target_count": 6,
+                "covered_fact_match_count": 0,
+            },
+            "records": [
+                {
+                    "record_id": "row-1",
+                    "record_index": 1,
+                    "question": "What is Alpha Syndrome?",
+                    "answer": "A moon.",
+                    "text": "What is Alpha Syndrome? A moon.",
+                    "question_type": "definition",
+                    "mapping_decision": "no_candidate_fact",
+                    "gate_recommendation": "source_family_coverage_expansion",
+                    "top_fact_candidates": [],
+                },
+                {
+                    "record_id": "row-2",
+                    "record_index": 2,
+                    "question": "Who founded Beta Labs?",
+                    "answer": "Ada Beta.",
+                    "text": "Who founded Beta Labs? Ada Beta.",
+                    "question_type": "person",
+                    "mapping_decision": "subject_only_or_missing_intent",
+                    "top_fact_candidates": [
+                        {
+                            "provider": "wikidata",
+                            "source_family": "reference",
+                            "fact_type": "p31",
+                            "subject": "Beta Labs",
+                            "intent_terms": ["founder"],
+                            "mapping_score": 0.4,
+                        }
+                    ],
+                },
+                {
+                    "record_id": "row-3",
+                    "record_index": 3,
+                    "question": "How many moons does Gamma have?",
+                    "answer": "Twelve.",
+                    "text": "How many moons does Gamma have? Twelve.",
+                    "question_type": "quantity",
+                    "mapping_decision": "intent_only_or_missing_subject",
+                    "top_fact_candidates": [
+                        {
+                            "provider": "worldbank",
+                            "source_family": "official_statistics",
+                            "fact_type": "sp_pop_totl",
+                            "subject": "",
+                            "intent_terms": ["population"],
+                        }
+                    ],
+                },
+                {
+                    "record_id": "row-4",
+                    "record_index": 4,
+                    "question": "Why does Delta process fail?",
+                    "answer": "Because of pressure.",
+                    "text": "Why does Delta process fail? Because of pressure.",
+                    "question_type": "causal",
+                    "mapping_decision": "weak_textual_overlap",
+                    "top_fact_candidates": [
+                        {
+                            "provider": "crossref",
+                            "source_family": "scholarly",
+                            "fact_type": "causal_citation",
+                            "subject": "Delta process",
+                            "weak_textual_overlap": 0.22,
+                        }
+                    ],
+                },
+                {
+                    "record_id": "row-5",
+                    "record_index": 5,
+                    "question": "Who started Epsilon Motors?",
+                    "answer": "Epsilon Motors.",
+                    "text": "Who started Epsilon Motors? Epsilon Motors.",
+                    "question_type": "person",
+                    "mapping_decision": "answer_entity_collision",
+                    "collision_facts": [
+                        {
+                            "provider": "wikidata",
+                            "source_family": "reference",
+                            "fact_type": "p112",
+                            "subject": "Epsilon Motors",
+                            "answer_subject_overlap": 1.0,
+                        }
+                    ],
+                },
+                {
+                    "record_id": "row-6",
+                    "record_index": 6,
+                    "question": "Who founded Covered Labs?",
+                    "answer": "Ada Covered.",
+                    "text": "Who founded Covered Labs? Ada Covered.",
+                    "question_type": "person",
+                    "mapping_decision": "mapped_qa_fact_candidate",
+                    "mapped_facts": [],
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        claim_mapping_path=claim_mapping_path,
+        output_path=output_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="source-family-fact-expansion-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:source-family-fact-expansion-unit:0.1"
+    )
+    by_index = {item["record_index"]: item for item in payload["targets"]}
+    task_counts = payload["summary"]["task_type_counts"]
+
+    assert payload["status"] == "ready_for_collection"
+    assert payload["source"]["claim_mapping_status"] == "blocked"
+    assert payload["source"]["route_summary_promoted"] is True
+    assert payload["summary"]["input_record_count"] == 6
+    assert payload["summary"]["target_count"] == 5
+    assert payload["summary"]["skipped_resolved_count"] == 1
+    assert payload["summary"]["gap_type_counts"]["missing_subject_and_intent"] == 1
+    assert task_counts["source_family_structured_fact_request"] == 5
+    assert task_counts["external_citation_request"] == 3
+    assert task_counts["entity_resolution_request"] == 3
+    assert task_counts["source_family_fact_disambiguation"] == 2
+    assert task_counts["world_model_or_calculator_rule_request"] == 3
+    assert "Alpha Syndrome" in by_index[1]["entity_candidates"]
+    assert "Beta Labs" in by_index[2]["entity_candidates"]
+    assert by_index[3]["world_model_rule_targets"][0]["rule_family"] == "quantity_or_arithmetic"
+    assert by_index[4]["world_model_rule_targets"][0]["rule_family"] == "causal_or_procedural"
+    assert by_index[5]["world_model_rule_targets"][0]["rule_family"] == "entity_disambiguation"
+    assert all("label" not in target for target in payload["targets"])
+    assert payload["label_usage"]["tasks_are_verifier_evidence"] is False
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "source_family_structured_qa_fact_expansion_plan"
+    assert record.metadata["target_count"] == 5
+    assert record.metadata["suite"] == "unit"
