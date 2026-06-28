@@ -1314,6 +1314,17 @@ family split is `5` `quantity_or_arithmetic` stubs plus `1`
 typed tasks across `2` batches (`5` numeric, `1` temporal snapshot). These rows
 are now actionable input-collection work items, not product corrections.
 
+`benchmarks/audit_world_model_rule_input_plan.py` now audits that worklist
+before any values are collected. The registered audit
+`report:truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-input-plan-audit:0.1`
+is `needs_requeue`: it finds `9` pre-execution issues over the `6` tasks,
+including `4` rows where person/place/entity questions were routed to the
+numeric calculator lane and should be requeued as `entity_disambiguation`. It
+also records `5` numeric candidate-claim binding gaps. This keeps the rule lane
+honest: the next work is not to fill every numeric row, but to reroute the
+misclassified rows and only execute calculator checks once explicit
+candidate-claim values are supplied.
+
 The citation/search branch of that queue is now ready to hand to an external
 adapter. `build_citation_search_adapter_handoff.py` registers
 `report:truthfulqa-frontier-smollm2-l80-citation-search-adapter-handoff:0.1`

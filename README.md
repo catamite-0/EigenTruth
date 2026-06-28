@@ -524,6 +524,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `run_source_family_structured_qa_lane_batch_workflow.py` | Materializes selected lane execution batches as compatible fact-collection corpora, reuses the local source-family workflow for source-backed requests, emits rule-authoring stubs for rule-only batches, and records batch provenance before any downstream route/mapping/rule gate. |
 | `run_world_model_rule_authoring_adapter.py` | Converts world-model/calculator rule stubs into auditable input requests and executes deterministic calculator/entity-role checks only when explicit rule inputs are supplied; candidate results still require a promotion gate. |
 | `build_world_model_rule_input_collection_plan.py` | Lowers rule-authoring input requests into typed collection tasks and execution batches for numeric, entity-role, temporal, and mechanism inputs without copying answers or executing verifier candidates. |
+| `audit_world_model_rule_input_plan.py` | Audits typed rule-input tasks before value collection, flagging family/question-intent mismatches and candidate-claim binding gaps while emitting non-evidence requeue suggestions. |
 | `fill_world_model_rule_inputs_from_correction_handoff.py` | Fills a conservative subset of typed rule inputs from promoted source-family correction handoffs and ProductTrace claim bindings, then leaves filled rows as candidate-only adapter inputs. |
 | `promote_world_model_rule_candidates.py` | Fail-closed promotion gate for deterministic rule candidates; validates explicit rule inputs, confidence, source citation, and candidate metadata while leaving pending input rows queued. |
 | `build_world_model_rule_candidate_handoff.py` | Converts promoted deterministic rule candidates into target-specific ProductTrace/action-result handoffs, preserving source-citation provenance and failing closed on unpromoted or malformed candidates. |
@@ -841,6 +842,7 @@ false-accept-delta 上限。
 | `build_unresolved_world_model_rule_stubs.py` | 在 rule-authoring adapter 执行前，将 unresolved queue 的 world-model/calculator request 转成去敏 rule stub。 |
 | `run_world_model_rule_authoring_adapter.py` | 将 rule stub 转成显式 input request；若另行提供 rule-input 文件，则执行 deterministic calculator/entity-role 检查。 |
 | `build_world_model_rule_input_collection_plan.py` | 在 deterministic rule 执行前，将 rule input request 转成 typed collection task 和 batch。 |
+| `audit_world_model_rule_input_plan.py` | 在采集具体 rule input 前审计 typed task，标出 rule family 与问题意图不匹配、缺少 candidate-claim binding 的行，并输出非证据 requeue 建议。 |
 | `fill_world_model_rule_inputs_from_correction_handoff.py` | 从 promoted correction handoff 与 ProductTrace claim binding 中保守填充一部分 typed rule inputs。 |
 | `promote_world_model_rule_candidates.py` | 在下游 handoff 前对 deterministic rule candidate 做 promotion gate。 |
 | `build_world_model_rule_candidate_handoff.py` | 将 promoted deterministic rule candidate 接入 ProductTrace/action-result handoff，并保留 source-citation provenance。 |

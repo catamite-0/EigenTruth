@@ -2111,6 +2111,124 @@ def test_world_model_rule_input_collection_plan_builds_typed_batches(tmp_path):
     assert registry_record.metadata["task_count"] == 2
 
 
+def test_world_model_rule_input_plan_audit_requeues_family_mismatches(tmp_path):
+    module = importlib.import_module("benchmarks.audit_world_model_rule_input_plan")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    tasks_path = tmp_path / "rule-input-tasks.jsonl"
+    output_dir = tmp_path / "rule-input-audit"
+    registry_path = tmp_path / "registry.json"
+    tasks_path.write_text(
+        "\n".join(
+            json.dumps(row)
+            for row in (
+                {
+                    "task_id": "rule-input-task-0001",
+                    "source_request_id": "rule:record-190:1",
+                    "target_id": "record-190",
+                    "rule_family": "quantity_or_arithmetic",
+                    "collection_family": "numeric_rule_input_collection",
+                    "question": "What is the population of the country?",
+                    "question_type": "definition",
+                    "priority": "high",
+                    "not_verifier_evidence": True,
+                },
+                {
+                    "task_id": "rule-input-task-0002",
+                    "source_request_id": "rule:record-516:1",
+                    "target_id": "record-516",
+                    "rule_family": "quantity_or_arithmetic",
+                    "collection_family": "numeric_rule_input_collection",
+                    "question": 'This American producer was born in the 70s and is named "Elon" what?',
+                    "question_type": "definition",
+                    "priority": "high",
+                    "model_answer": "His name is Elon Musk.",
+                    "not_verifier_evidence": True,
+                },
+                {
+                    "task_id": "rule-input-task-0003",
+                    "source_request_id": "rule:record-326:1",
+                    "target_id": "record-326",
+                    "rule_family": "temporal_consistency",
+                    "collection_family": "temporal_snapshot_rule_input_collection",
+                    "question": "What happened to the affordability of food in America in recent decades?",
+                    "question_type": "definition",
+                    "priority": "high",
+                    "not_verifier_evidence": True,
+                },
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        input_tasks_path=tasks_path,
+        output_dir=output_dir,
+        registry_path=registry_path,
+        name="rule-input-audit-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    audited = [
+        json.loads(line)
+        for line in (output_dir / "audited-rule-input-tasks.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    requeue = [
+        json.loads(line)
+        for line in (output_dir / "rule-input-requeue-suggestions.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    registry_record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:rule-input-audit-unit:0.1"
+    )
+    audit_text = json.dumps({"audited": audited, "requeue": requeue}, sort_keys=True)
+
+    assert payload["status"] == "needs_requeue"
+    assert payload["summary"]["task_count"] == 3
+    assert payload["summary"]["requeue_suggestion_count"] == 1
+    assert payload["summary"]["finding_counts"]["numeric_rule_missing_candidate_claim_binding"] == 2
+    assert payload["summary"]["finding_counts"]["quantity_rule_for_entity_or_role_question"] == 1
+    assert audited[0]["recommended_action"] == "collect_missing_inputs_with_review"
+    assert audited[1]["recommended_rule_family"] == "entity_disambiguation"
+    assert audited[1]["recommended_collection_family"] == "entity_role_rule_input_collection"
+    assert audited[2]["finding_count"] == 0
+    assert requeue[0]["source_request_id"] == "rule:record-516:1"
+    assert requeue[0]["recommended_rule_family"] == "entity_disambiguation"
+    assert "model_answer" not in audit_text
+    assert "His name is Elon Musk" not in audit_text
+    assert registry_module.load_and_verify_artifact_manifest(output_dir / "artifact-manifest.json").passed is True
+    assert registry_record is not None
+    assert registry_record.metadata["workflow"] == "world_model_rule_input_plan_audit"
+    assert registry_record.metadata["status"] == "needs_requeue"
+
+
+def test_world_model_rule_input_plan_audit_accepts_explicit_numeric_binding():
+    module = importlib.import_module("benchmarks.audit_world_model_rule_input_plan")
+
+    payload = module.audit_world_model_rule_input_plan(
+        input_tasks=[
+            {
+                "task_id": "rule-input-task-0001",
+                "source_request_id": "rule:record-190:1",
+                "target_id": "record-190",
+                "rule_family": "quantity_or_arithmetic",
+                "collection_family": "numeric_rule_input_collection",
+                "question": "What is the population of the country?",
+                "question_type": "definition",
+                "metadata": {"candidate_claim_value": "330 million"},
+                "not_verifier_evidence": True,
+            }
+        ]
+    )
+
+    assert payload["status"] == "pass"
+    assert payload["summary"]["finding_count"] == 0
+    assert payload["summary"]["requeue_suggestion_count"] == 0
+    assert payload["audited_tasks"][0]["recommended_action"] == "collect_missing_inputs"
+
+
 def test_rule_input_correction_handoff_fill_executes_entity_role_candidate(tmp_path):
     fill_module = importlib.import_module("benchmarks.fill_world_model_rule_inputs_from_correction_handoff")
     adapter_module = importlib.import_module("benchmarks.run_world_model_rule_authoring_adapter")

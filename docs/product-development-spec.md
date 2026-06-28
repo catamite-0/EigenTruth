@@ -435,6 +435,12 @@ For product features:
   adapter blocks as `needs_inputs` with `0/6` executed, then
   `build_world_model_rule_input_collection_plan.py` lowers the rows into `6`
   typed input tasks across `2` batches (`5` numeric, `1` temporal snapshot).
+  The follow-up `audit_world_model_rule_input_plan.py` prevents bad work from
+  hardening into rule execution: the registered audit is `needs_requeue`, with
+  `9` findings over those `6` tasks, including `4` person/place/entity
+  questions that should move from `quantity_or_arithmetic` to
+  `entity_disambiguation` and `5` numeric rows that still need explicit
+  candidate-claim binding before any calculator execution.
   Product implication: unresolved deterministic rule work now enters the same
   explicit input-plan pathway as the larger source-family rule lane, but it
   still cannot affect ProductTrace or release gates until inputs, candidate

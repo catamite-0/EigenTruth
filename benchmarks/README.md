@@ -1644,6 +1644,27 @@ That follow-up chain is `needs_inputs` then `ready_for_input_collection`: all
 (`5` numeric, `1` temporal snapshot). No rule candidate is executed or promoted
 until explicit inputs and a later promotion gate are supplied.
 
+Audit the typed tasks before collecting values:
+
+```bash
+RULE_INPUT_AUDIT=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-input-plan-audit
+
+python benchmarks/audit_world_model_rule_input_plan.py \
+  --input-tasks "$RULE_INPUT_PLAN/rule-input-tasks.jsonl" \
+  --output-dir "$RULE_INPUT_AUDIT" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-input-plan-audit \
+  --version 0.1
+```
+
+The registered audit is `needs_requeue`: it keeps the temporal task and the
+population numeric task actionable, but flags `4` apparent family/question
+mismatches where person/place questions were routed into the numeric calculator
+lane. It emits `4` non-evidence requeue suggestions from
+`quantity_or_arithmetic` to `entity_disambiguation`, and also records that all
+`5` numeric tasks need explicit candidate-claim binding before execution. This
+prevents the rule lane from blindly filling numeric inputs for entity questions.
+
 ## `build_citation_search_adapter_handoff.py`
 
 Prepares the citation/search portion of the unresolved queue for an external

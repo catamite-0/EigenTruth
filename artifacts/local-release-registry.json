@@ -6675,6 +6675,22 @@
       "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-input-plan",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-input-plan/rule-input-collection-plan.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-input-plan-audit/artifact-manifest.json",
+        "evidence": "unresolved-world-model-rule-input-plan-audit",
+        "finding_count": 9,
+        "requeue_suggestion_count": 4,
+        "status": "needs_requeue",
+        "suite": "truthfulqa-smollm2-l80",
+        "task_count": 6,
+        "workflow": "world_model_rule_input_plan_audit"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-input-plan-audit",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-input-plan-audit/world-model-rule-input-plan-audit.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1
