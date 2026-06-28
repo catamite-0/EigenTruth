@@ -1264,6 +1264,16 @@ records `132` removed disallowed phrases, and still has `0` source docs until
 the next adapter run materializes result JSONL. A request sanity check finds no
 `record_index`, `target_id`, `model_answer`, or `label` fields.
 
+That next adapter run is now registered as
+`truthfulqa-frontier-smollm2-l80-claim-entity-wikipedia-citation-search-adapter-workflow`.
+The claim/entity Wikipedia rerun collected `528` result documents for `176/176`
+requests, passed provenance, and reduced exact model-answer copy rate from
+`0.310` to `0.235`. It still remained `blocked`: the external query sweep
+refuted `0/89` entrenched blind spots and the controlled-vs-external comparison
+kept a `1.0` generalization gap. This closes the immediate rerun question and
+points the next work toward source-family adapters or structured official-source
+evidence rather than more generic Wikipedia lexical tuning.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -1289,10 +1299,10 @@ the next adapter run materializes result JSONL. A request sanity check finds no
 6. Promote a Qwen l20/l80 readiness baseline through the same registry workflow
    if Qwen-specific runtime evidence is needed; SmolLM2 now has the first
    non-tiny registered readiness/release candidate.
-7. Rerun the blocked Wikipedia citation/search route with
-   `--query-mode claim_entity`, `--max-alternate-queries 3`, and adapter
-   `--max-query-variants 3`; only promote if provenance, external query-sweep,
-   and controlled-vs-external comparison gates pass.
+7. Build the next citation/fact adapter around source-family or structured
+   official-source evidence, preserving the same command boundary and promotion
+   gates; only promote if provenance, external query-sweep, and
+   controlled-vs-external comparison gates pass.
 8. Extend the new verifier-stability path from structured QA to real retrieval,
    database, calculator, and world-model evidence under the same conformal
    false-alarm budgets. Use `benchmarks/build_evidence_fixture.py` with a local

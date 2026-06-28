@@ -710,11 +710,18 @@ Added the first monitor-first tool-selection audit layer:
   keeps `176` requests, expands them to `555` query variants, removes `132`
   disallowed phrases, and remains `ready_for_external_adapter` until a real
   adapter result JSONL is collected and gated.
+- The claim/entity handoff has now been executed through the Wikipedia command
+  boundary. It improves collection coverage to `176/176` requests and `528`
+  result documents, and lowers exact model-answer copy rate to `0.235`, but it
+  still refutes `0/89` entrenched blind spots and leaves the
+  controlled-vs-external generalization gap at `1.0`. This is useful negative
+  evidence: safer query planning helps source collection, but generic Wikipedia
+  lexical search is not the current correction route.
 
 ## Next Research-to-Code Candidates
 
 1. Convert the target-specific Wikidata source docs into structured-fact/QA corpora, then rerun the blind-spot correction-route audit instead of another lexical overlap sweep.
-2. Rerun the Wikipedia command boundary with `--query-mode claim_entity` and `--max-query-variants 3`, then compare against the blocked question-only run before considering richer source-family adapters.
+2. Build the next source-family or official-source adapter behind the same command boundary, with claim-to-fact mapping rather than another generic Wikipedia overlap sweep.
 3. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
 4. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
 5. Materialize a real `frontier_audit` release candidate with the registered covered-facts external-evidence handoff and external-prediction triple matrix artifact, then export the resulting promotion contract.

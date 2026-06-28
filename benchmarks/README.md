@@ -1697,6 +1697,19 @@ requests, passed external-candidate provenance, then correctly remained
 answers and the controlled-vs-external comparison showed a `1.0` generalization
 gap. This is source collection evidence, not a promoted grounding route.
 
+The claim/entity-aware rerun is registered as
+`report:truthfulqa-frontier-smollm2-l80-claim-entity-wikipedia-citation-search-adapter-workflow:0.1`.
+With `--query-mode claim_entity`, `--max-alternate-queries 3`, and adapter
+`--max-query-variants 3`, it returned `528` Wikipedia result documents for
+`176/176` sanitized requests and again passed external-candidate provenance. It
+also reduced exact model-answer copy rate from the question-only run's `0.310`
+to `0.235`. The route still remains `blocked`: the external query sweep refuted
+`0/89` entrenched false answers and the controlled-vs-external comparison kept a
+`1.0` generalization gap. Treat this as evidence that query fallback improves
+coverage and reduces answer echo, but not as a correction route; the next
+retrieval work should move to source-family or structured official-source
+adapters behind the same command boundary.
+
 ## `run_external_citation_search_adapter_workflow.py`
 
 Runs the command-boundary version of the citation/search adapter path. The
@@ -1705,7 +1718,7 @@ a local external command without a shell, then feeds the returned result JSONL
 through `run_citation_search_evidence_workflow.py`.
 
 ```bash
-OUT=artifacts/truthfulqa-frontier-smollm2-l80-wikipedia-citation-search-adapter-workflow
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-claim-entity-wikipedia-citation-search-adapter-workflow
 
 python benchmarks/run_external_citation_search_adapter_workflow.py \
   --queue artifacts/truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue/unresolved-evidence-queue.json \
@@ -1717,7 +1730,7 @@ python benchmarks/run_external_citation_search_adapter_workflow.py \
   --controlled-sweep artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json \
   --output-dir "$OUT" \
   --registry artifacts/local-release-registry.json \
-  --name truthfulqa-frontier-smollm2-l80-wikipedia-citation-search-adapter-workflow \
+  --name truthfulqa-frontier-smollm2-l80-claim-entity-wikipedia-citation-search-adapter-workflow \
   --version 0.1
 ```
 

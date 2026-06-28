@@ -450,17 +450,25 @@ For product features:
   provenance, but it is still `blocked`: the external query sweep refuted
   `0/89` entrenched false answers and the controlled-vs-external comparison
   generalization gap is `1.0`.
+- The claim/entity-aware rerun is also registered:
+  `report:truthfulqa-frontier-smollm2-l80-claim-entity-wikipedia-citation-search-adapter-workflow:0.1`
+  runs the same command boundary with sanitized alternate queries. It returns
+  `528` result documents for `176/176` requests, passes provenance, and reduces
+  exact model-answer copy rate from `0.310` to `0.235`, but route promotion still
+  blocks because the external sweep refutes `0/89` entrenched false answers and
+  the controlled-vs-external generalization gap remains `1.0`. Product
+  implication: better Wikipedia query planning improves collection hygiene and
+  coverage, but the next frontier adapter needs source-family, official-source,
+  or structured claim-to-fact evidence rather than another generic lexical
+  overlap sweep.
 
 ### Next Verification Adapter Work
 
-- Rerun the command-boundary adapter on the claim/entity-aware handoff with
-  `--max-query-variants 3`, then keep the route blocked unless the same
-  provenance, blind-spot sweep, and controlled-vs-external gates pass.
 - Improve evidence retrieval beyond generic Wikipedia lexical search: preserve
-  the same command boundary, but add claim/entity-aware query rewriting,
-  source-family adapters, or structured citation APIs, then promote only if the
-  provenance audit, external query sweep, and controlled-vs-external comparison
-  pass.
+  the same command boundary, but add source-family adapters, official structured
+  citation APIs, or claim-to-fact mapping that can target the unresolved
+  definition/person/location blind spots, then promote only if the provenance
+  audit, external query sweep, and controlled-vs-external comparison pass.
 - Connect `StructuredStateVerifier` to additional live database, business-rule, and domain-state sources behind optional adapters; the current reproducible path uses local JSON state sources, stdlib SQLite, and mapped local tool outputs.
 - Connect additional QA/database/world-model route policies to production adapters while preserving trace-visible match reasons for each selected or skipped tool.
 - Generalize real side-effecting executors behind the same trace, execution-policy, timeout, idempotency-ledger, and tool-output mapping interfaces; the current production-like demo proves the path with a guarded local SQLite mutation and optional JSON/SQLite replay, while hard cancellation remains adapter-specific.

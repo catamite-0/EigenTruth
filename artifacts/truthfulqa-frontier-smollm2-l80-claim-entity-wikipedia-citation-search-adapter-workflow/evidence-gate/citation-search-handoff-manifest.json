@@ -1,0 +1,71 @@
+{
+  "artifacts": {
+    "adapter_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../external-citation-search-results.jsonl",
+      "sha256": "8e259ee8ce00293182486edb379e62af37630bf2496103241e0e5f62e5062fb5",
+      "size_bytes": 856876
+    },
+    "citation_search_adapter_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-adapter-requests.jsonl",
+      "sha256": "2032bd0fb7dd18c9af9d5aedb38424eb6a05be5d8e52084f65ef4c1ef2c8ce8c",
+      "size_bytes": 152175
+    },
+    "citation_search_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-corpus.json",
+      "sha256": "3af23e13b51de27efa09140075dbaa9fdce7d788c287a90c783046d86c1537aa",
+      "size_bytes": 1094800
+    },
+    "citation_search_handoff": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-handoff.json",
+      "sha256": "64d00b25b88bd79ba2b43606f0e3a4f427962812ceea5db7195b62aac0854795",
+      "size_bytes": 2243618
+    },
+    "citation_search_source_documents": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-source-docs.jsonl",
+      "sha256": "b400363dec4f694aeb1d7907f524d3108c2d46dbbd5599cfcb44236e9a1432b8",
+      "size_bytes": 857008
+    },
+    "unresolved_blind_spot_evidence_queue": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue/unresolved-evidence-queue.json",
+      "sha256": "1d56abbbab3cbeba421ea6937ec7604c0cf710e08b36ba137518c068826d443e",
+      "size_bytes": 291202
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "adapter": "wikipedia_mediawiki",
+    "adapter_request_count": 176,
+    "corpus_document_count": 528,
+    "query_planner": "claim_entity",
+    "source_document_count": 528,
+    "source_workflow": "external_citation_search_adapter_workflow",
+    "status": "collected",
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "workflow": "citation_search_adapter_handoff"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 6,
+    "directory_count": 0,
+    "file_count": 6,
+    "missing_count": 0
+  }
+}

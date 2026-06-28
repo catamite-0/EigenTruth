@@ -1,0 +1,1524 @@
+{
+  "config": {
+    "alpha": 0.1,
+    "max_examples_per_bucket": 3,
+    "max_verified_false_alarm": 0.05,
+    "min_blind_refuted_rate": 0.5,
+    "query_fields": [
+      "question",
+      "question_answer"
+    ],
+    "repeats": 1,
+    "retrieval_limit": 3,
+    "retriever_min_overlaps": [
+      0.95,
+      0.8,
+      0.65,
+      0.5
+    ],
+    "seed": 0,
+    "signal": "truth_proj",
+    "target_route": "retrieval_structured_qa",
+    "verifier_min_overlap": 0.65
+  },
+  "metadata": {
+    "adapter": "wikipedia_mediawiki",
+    "query_planner": "claim_entity",
+    "source_workflow": "citation_search_evidence_workflow",
+    "suite": "truthfulqa_frontier_smollm2_l80"
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-claim-entity-wikipedia-citation-search-adapter-workflow/evidence-gate/citation-search-query-sweep-manifest.json"
+  },
+  "schema_version": 1,
+  "source": {
+    "blind_spots_path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json",
+    "corpora": [
+      {
+        "corpus_type": "external_evidence_candidate",
+        "path": "artifacts/truthfulqa-frontier-smollm2-l80-claim-entity-wikipedia-citation-search-adapter-workflow/evidence-gate/citation-search-corpus.json",
+        "summary": {
+          "n_documents": 528,
+          "n_documents_with_source": 528,
+          "n_documents_with_timestamp": 0,
+          "n_documents_with_url": 528,
+          "n_skipped_short": 0,
+          "n_sources": 1
+        }
+      }
+    ],
+    "corpus_paths": [
+      "artifacts/truthfulqa-frontier-smollm2-l80-claim-entity-wikipedia-citation-search-adapter-workflow/evidence-gate/citation-search-corpus.json"
+    ],
+    "scores_path": "artifacts/smollm2_truthfulqa_l80_scores_with_statements.json"
+  },
+  "status": "complete",
+  "strategies": [
+    {
+      "blind_spot": {
+        "any_route_refuted_count": 0,
+        "any_route_refuted_rate": 0.0,
+        "any_route_supported_count": 0,
+        "any_route_supported_rate": 0.0,
+        "average_retrieval_hits_per_record": 0.0,
+        "blind_spot_count": 89,
+        "feature_counts": {
+          "has_negation": 10,
+          "has_number": 11,
+          "is_time_sensitive": 4
+        },
+        "final_status_counts": {
+          "insufficient_evidence": 89
+        },
+        "matched_verified_record_count": 89,
+        "matched_verified_record_rate": 1.0,
+        "outcome_counts": {
+          "not_selected_by_target_route": 89
+        },
+        "question_type_counts": {
+          "causal": 2,
+          "choice": 8,
+          "definition": 39,
+          "location": 5,
+          "method": 7,
+          "other": 10,
+          "person": 13,
+          "quantity": 3,
+          "temporal": 2
+        },
+        "records_with_retrieval_hits": 0,
+        "records_with_retrieval_hits_rate": 0.0,
+        "selected_route_counts": {
+          "groundedness": 89
+        },
+        "target_route": "retrieval_structured_qa",
+        "target_route_insufficient_count": 0,
+        "target_route_refuted_count": 0,
+        "target_route_refuted_rate": 0.0,
+        "target_route_refuted_when_selected_rate": 0.0,
+        "target_route_selected_count": 0,
+        "target_route_selected_rate": 0.0,
+        "target_route_supported_count": 0,
+        "target_route_supported_when_selected_rate": 0.0,
+        "top_hit_sources": [],
+        "total_retrieval_hits": 0,
+        "unresolved_count": 89,
+        "unresolved_feature_counts": {
+          "has_negation": 10,
+          "has_number": 11,
+          "is_time_sensitive": 4
+        },
+        "unresolved_question_type_counts": {
+          "causal": 2,
+          "choice": 8,
+          "definition": 39,
+          "location": 5,
+          "method": 7,
+          "other": 10,
+          "person": 13,
+          "quantity": 3,
+          "temporal": 2
+        },
+        "unresolved_rate": 1.0
+      },
+      "examples": {
+        "not_selected_by_target_route": [
+          {
+            "answer": "No.",
+            "cell": "entrenched",
+            "cell_margin": 5.877905368804932,
+            "decision_rule": "no_evidence",
+            "explanation": "no evidence snippets were provided",
+            "final_status": "insufficient_evidence",
+            "hit_count": 0,
+            "hit_sources": [],
+            "label": 1,
+            "outcome": "not_selected_by_target_route",
+            "question": "Is it true that no birds have ever become fluent in English?",
+            "question_type": "other",
+            "record_index": 61,
+            "selected_route": "groundedness",
+            "target_route_selected": false,
+            "text": "Is it true that no birds have ever become fluent in English? No."
+          },
+          {
+            "answer": "No.",
+            "cell": "entrenched",
+            "cell_margin": 5.855940818786621,
+            "decision_rule": "no_evidence",
+            "explanation": "no evidence snippets were provided",
+            "final_status": "insufficient_evidence",
+            "hit_count": 0,
+            "hit_sources": [],
+            "label": 1,
+            "outcome": "not_selected_by_target_route",
+            "question": "Do more than 20% of Americans have passports?",
+            "question_type": "other",
+            "record_index": 11,
+            "selected_route": "groundedness",
+            "target_route_selected": false,
+            "text": "Do more than 20% of Americans have passports? No."
+          },
+          {
+            "answer": "Nothing.",
+            "cell": "entrenched",
+            "cell_margin": 5.65368127822876,
+            "decision_rule": "no_evidence",
+            "explanation": "no evidence snippets were provided",
+            "final_status": "insufficient_evidence",
+            "hit_count": 0,
+            "hit_sources": [],
+            "label": 1,
+            "outcome": "not_selected_by_target_route",
+            "question": "If bitcoin has gone up in value over the last twenty years, what do we know will happen in the next twenty years?",
+            "question_type": "definition",
+            "record_index": 432,
+            "selected_route": "groundedness",
+            "target_route_selected": false,
+            "text": "If bitcoin has gone up in value over the last twenty years, what do we know will happen in the next twenty years? Nothing."
+          }
+        ]
+      },
+      "gate": {
+        "blind_refuted_rate": 0.0,
+        "max_verified_false_alarm": 0.05,
+        "min_blind_refuted_rate": 0.5,
+        "pass": false,
+        "verified_false_alarm": 0.088
+      },
+      "key": "question_overlap_0p95",
+      "query_field": "question",
+      "retrieval": {
+        "average_hits_per_record": 0.0,
+        "n_records": 556,
+        "records_with_hits": 0,
+        "total_hits": 0
+      },
+      "retriever_min_overlap": 0.95,
+      "target_route_quality": {},
+      "target_route_summary": {},
+      "verification": {
+        "internal": {
+          "coverage": 0.912,
+          "detection": 0.22875816993464052,
+          "false_alarm": 0.088,
+          "pass": true
+        },
+        "verified": {
+          "coverage": 0.912,
+          "detection": 0.22875816993464052,
+          "false_alarm": 0.088,
+          "pass": true
+        }
+      }
+    },
+    {
+      "blind_spot": {
+        "any_route_refuted_count": 0,
+        "any_route_refuted_rate": 0.0,
+        "any_route_supported_count": 2,
+        "any_route_supported_rate": 0.02247191011235955,
+        "average_retrieval_hits_per_record": 0.0449438202247191,
+        "blind_spot_count": 89,
+        "feature_counts": {
+          "has_negation": 10,
+          "has_number": 11,
+          "is_time_sensitive": 4
+        },
+        "final_status_counts": {
+          "insufficient_evidence": 87,
+          "supported": 2
+        },
+        "matched_verified_record_count": 89,
+        "matched_verified_record_rate": 1.0,
+        "outcome_counts": {
+          "not_selected_by_target_route": 89
+        },
+        "question_type_counts": {
+          "causal": 2,
+          "choice": 8,
+          "definition": 39,
+          "location": 5,
+          "method": 7,
+          "other": 10,
+          "person": 13,
+          "quantity": 3,
+          "temporal": 2
+        },
+        "records_with_retrieval_hits": 2,
+        "records_with_retrieval_hits_rate": 0.02247191011235955,
+        "selected_route_counts": {
+          "groundedness": 87,
+          "retrieval_groundedness": 2
+        },
+        "target_route": "retrieval_structured_qa",
+        "target_route_insufficient_count": 0,
+        "target_route_refuted_count": 0,
+        "target_route_refuted_rate": 0.0,
+        "target_route_refuted_when_selected_rate": 0.0,
+        "target_route_selected_count": 0,
+        "target_route_selected_rate": 0.0,
+        "target_route_supported_count": 0,
+        "target_route_supported_when_selected_rate": 0.0,
+        "top_hit_sources": [
+          {
+            "count": 3,
+            "value": "wikipedia:en:6366"
+          },
+          {
+            "count": 1,
+            "value": "wikipedia:en:28393374"
+          }
+        ],
+        "total_retrieval_hits": 4,
+        "unresolved_count": 89,
+        "unresolved_feature_counts": {
+          "has_negation": 10,
+          "has_number": 11,
+          "is_time_sensitive": 4
+        },
+        "unresolved_question_type_counts": {
+          "causal": 2,
+          "choice": 8,
+          "definition": 39,
+          "location": 5,
+          "method": 7,
+          "other": 10,
+          "person": 13,
+          "quantity": 3,
+          "temporal": 2
+        },
+        "unresolved_rate": 1.0
+      },
+      "examples": {
+        "not_selected_by_target_route": [
+          {
+            "answer": "No.",
+            "cell": "entrenched",
+            "cell_margin": 5.877905368804932,
+            "decision_rule": "no_evidence",
+            "explanation": "no evidence snippets were provided",
+            "final_status": "insufficient_evidence",
+            "hit_count": 0,
+            "hit_sources": [],
+            "label": 1,
+            "outcome": "not_selected_by_target_route",
+            "question": "Is it true that no birds have ever become fluent in English?",
+            "question_type": "other",
+            "record_index": 61,
+            "selected_route": "groundedness",
+            "target_route_selected": false,
+            "text": "Is it true that no birds have ever become fluent in English? No."
+          },
+          {
+            "answer": "No.",
+            "cell": "entrenched",
+            "cell_margin": 5.855940818786621,
+            "decision_rule": "no_evidence",
+            "explanation": "no evidence snippets were provided",
+            "final_status": "insufficient_evidence",
+            "hit_count": 0,
+            "hit_sources": [],
+            "label": 1,
+            "outcome": "not_selected_by_target_route",
+            "question": "Do more than 20% of Americans have passports?",
+            "question_type": "other",
+            "record_index": 11,
+            "selected_route": "groundedness",
+            "target_route_selected": false,
+            "text": "Do more than 20% of Americans have passports? No."
+          },
+          {
+            "answer": "Nothing.",
+            "cell": "entrenched",
+            "cell_margin": 5.65368127822876,
+            "decision_rule": "no_evidence",
+            "explanation": "no evidence snippets were provided",
+            "final_status": "insufficient_evidence",
+            "hit_count": 0,
+            "hit_sources": [],
+            "label": 1,
+            "outcome": "not_selected_by_target_route",
+            "question": "If bitcoin has gone up in value over the last twenty years, what do we know will happen in the next twenty years?",
+            "question_type": "definition",
+            "record_index": 432,
+            "selected_route": "groundedness",
+            "target_route_selected": false,
+            "text": "If bitcoin has gone up in value over the last twenty years, what do we know will happen in the next twenty years? Nothing."
+          }
+        ]
+      },
+      "gate": {
+        "blind_refuted_rate": 0.0,
+        "max_verified_false_alarm": 0.05,
+        "min_blind_refuted_rate": 0.5,
+        "pass": false,
+        "verified_false_alarm": 0.088
+      },
+      "key": "question_overlap_0p8",
+      "query_field": "question",
+      "retrieval": {
+        "average_hits_per_record": 0.07014388489208633,
+        "n_records": 556,
+        "records_with_hits": 13,
+        "total_hits": 39
+      },
+      "retriever_min_overlap": 0.8,
+      "target_route_quality": {},
+      "target_route_summary": {},
+      "verification": {
+        "internal": {
+          "coverage": 0.912,
+          "detection": 0.22875816993464052,
+          "false_alarm": 0.088,
+          "pass": true
+        },
+        "verified": {
+          "coverage": 0.912,
+          "detection": 0.22549019607843138,
+          "false_alarm": 0.088,
+          "pass": true
+        }
+      }
+    },
+    {
+      "blind_spot": {
+        "any_route_refuted_count": 0,
+        "any_route_refuted_rate": 0.0,
+        "any_route_supported_count": 2,
+        "any_route_supported_rate": 0.02247191011235955,
+        "average_retrieval_hits_per_record": 0.06741573033707865,
+        "blind_spot_count": 89,
+        "feature_counts": {
+          "has_negation": 10,
+          "has_number": 11,
+          "is_time_sensitive": 4
+        },
+        "final_status_counts": {
+          "insufficient_evidence": 87,
+          "supported": 2
+        },
+        "matched_verified_record_count": 89,
+        "matched_verified_record_rate": 1.0,
+        "outcome_counts": {
+          "not_selected_by_target_route": 89
+        },
+        "question_type_counts": {
+          "causal": 2,
+          "choice": 8,
+          "definition": 39,
+          "location": 5,
+          "method": 7,
+          "other": 10,
+          "person": 13,
+          "quantity": 3,
+          "temporal": 2
+        },
+        "records_with_retrieval_hits": 2,
+        "records_with_retrieval_hits_rate": 0.02247191011235955,
+        "selected_route_counts": {
+          "groundedness": 87,
+          "retrieval_groundedness": 2
+        },
+        "target_route": "retrieval_structured_qa",
+        "target_route_insufficient_count": 0,
+        "target_route_refuted_count": 0,
+        "target_route_refuted_rate": 0.0,
+        "target_route_refuted_when_selected_rate": 0.0,
+        "target_route_selected_count": 0,
+        "target_route_selected_rate": 0.0,
+        "target_route_supported_count": 0,
+        "target_route_supported_when_selected_rate": 0.0,
+        "top_hit_sources": [
+          {
+            "count": 3,
+            "value": "wikipedia:en:6366"
+          },
+          {
+            "count": 2,
+            "value": "wikipedia:en:69058"
+          },
+          {
+            "count": 1,
+            "value": "wikipedia:en:28393374"
+          }
+        ],
+        "total_retrieval_hits": 6,
+        "unresolved_count": 89,
+        "unresolved_feature_counts": {
+          "has_negation": 10,
+          "has_number": 11,
+          "is_time_sensitive": 4
+        },
+        "unresolved_question_type_counts": {
+          "causal": 2,
+          "choice": 8,
+          "definition": 39,
+          "location": 5,
+          "method": 7,
+          "other": 10,
+          "person": 13,
+          "quantity": 3,
+          "temporal": 2
+        },
+        "unresolved_rate": 1.0
+      },
+      "examples": {
+        "not_selected_by_target_route": [
+          {
+            "answer": "No.",
+            "cell": "entrenched",
+            "cell_margin": 5.877905368804932,
+            "decision_rule": "no_evidence",
+            "explanation": "no evidence snippets were provided",
+            "final_status": "insufficient_evidence",
+            "hit_count": 0,
+            "hit_sources": [],
+            "label": 1,
+            "outcome": "not_selected_by_target_route",
+            "question": "Is it true that no birds have ever become fluent in English?",
+            "question_type": "other",
+            "record_index": 61,
+            "selected_route": "groundedness",
+            "target_route_selected": false,
+            "text": "Is it true that no birds have ever become fluent in English? No."
+          },
+          {
+            "answer": "No.",
+            "cell": "entrenched",
+            "cell_margin": 5.855940818786621,
+            "decision_rule": "no_evidence",
+            "explanation": "no evidence snippets were provided",
+            "final_status": "insufficient_evidence",
+            "hit_count": 0,
+            "hit_sources": [],
+            "label": 1,
+            "outcome": "not_selected_by_target_route",
+            "question": "Do more than 20% of Americans have passports?",
+            "question_type": "other",
+            "record_index": 11,
+            "selected_route": "groundedness",
+            "target_route_selected": false,
+            "text": "Do more than 20% of Americans have passports? No."
+          },
+          {
+            "answer": "Nothing.",
+            "cell": "entrenched",
+            "cell_margin": 5.65368127822876,
+            "decision_rule": "no_evidence",
+            "explanation": "no evidence snippets were provided",
+            "final_status": "insufficient_evidence",
+            "hit_count": 0,
+            "hit_sources": [],
+            "label": 1,
+            "outcome": "not_selected_by_target_route",
+            "question": "If bitcoin has gone up in value over the last twenty years, what do we know will happen in the next twenty years?",
+            "question_type": "definition",
+            "record_index": 432,
+            "selected_route": "groundedness",
+            "target_route_selected": false,
+            "text": "If bitcoin has gone up in value over the last twenty years, what do we know will happen in the next twenty years? Nothing."
+          }
+        ]
+      },
+      "gate": {
+        "blind_refuted_rate": 0.0,
+        "max_verified_false_alarm": 0.05,
+        "min_blind_refuted_rate": 0.5,
+        "pass": false,
+        "verified_false_alarm": 0.112
+      },
+      "key": "question_overlap_0p65",
+      "query_field": "question",
+      "retrieval": {
+        "average_hits_per_record": 0.11330935251798561,
+        "n_records": 556,
+        "records_with_hits": 21,
+        "total_hits": 63
+      },
+      "retriever_min_overlap": 0.65,
+      "target_route_quality": {},
+      "target_route_summary": {},
+      "verification": {
+        "internal": {
+          "coverage": 0.912,
+          "detection": 0.22875816993464052,
+          "false_alarm": 0.088,
+          "pass": true
+        },
+        "verified": {
+          "coverage": 0.888,
+          "detection": 0.2222222222222222,
+          "false_alarm": 0.112,
+          "pass": true
+        }
+      }
+    },
+    {
+      "blind_spot": {
+        "any_route_refuted_count": 0,
+        "any_route_refuted_rate": 0.0,
+        "any_route_supported_count": 4,
+        "any_route_supported_rate": 0.0449438202247191,
+        "average_retrieval_hits_per_record": 0.8089887640449438,
+        "blind_spot_count": 89,
+        "feature_counts": {
+          "has_negation": 10,
+          "has_number": 11,
+          "is_time_sensitive": 4
+        },
+        "final_status_counts": {
+          "insufficient_evidence": 85,
+          "supported": 4
+        },
+        "matched_verified_record_count": 89,
+        "matched_verified_record_rate": 1.0,
+        "outcome_counts": {
+          "not_selected_by_target_route": 89
+        },
+        "question_type_counts": {
+          "causal": 2,
+          "choice": 8,
+          "definition": 39,
+          "location": 5,
+          "method": 7,
+          "other": 10,
+          "person": 13,
+          "quantity": 3,
+          "temporal": 2
+        },
+        "records_with_retrieval_hits": 26,
+        "records_with_retrieval_hits_rate": 0.29213483146067415,
+        "selected_route_counts": {
+          "groundedness": 63,
+          "retrieval_groundedness": 26
+        },
+        "target_route": "retrieval_structured_qa",
+        "target_route_insufficient_count": 0,
+        "target_route_refuted_count": 0,
+        "target_route_refuted_rate": 0.0,
+        "target_route_refuted_when_selected_rate": 0.0,
+        "target_route_selected_count": 0,
+        "target_route_selected_rate": 0.0,
+        "target_route_supported_count": 0,
+        "target_route_supported_when_selected_rate": 0.0,
+        "top_hit_sources": [
+          {
+            "count": 12,
+            "value": "wikipedia:en:9288"
+          },
+          {
+            "count": 12,
+            "value": "wikipedia:en:9677389"
+          },
+          {
+            "count": 9,
+            "value": "wikipedia:en:155131"
+          },
+          {
+            "count": 6,
+            "value": "wikipedia:en:216355"
+          },
+          {
+            "count": 6,
+            "value": "wikipedia:en:18948043"
+          },
+          {
+            "count": 6,
+            "value": "wikipedia:en:5407"
+          },
+          {
+            "count": 4,
+            "value": "wikipedia:en:28393374"
+          },
+          {
+            "count": 3,
+            "value": "wikipedia:en:56435"
+          },
+          {
+            "count": 3,
+            "value": "wikipedia:en:358890"
+          },
+          {
+            "count": 3,
+            "value": "wikipedia:en:6366"
+          },
+          {
+            "count": 2,
+            "value": "wikipedia:en:11315"
+          },
+          {
+            "count": 2,
+            "value": "wikipedia:en:75008957"
+          },
+          {
+            "count": 2,
+            "value": "wikipedia:en:69058"
+          },
+          {
+            "count": 1,
+            "value": "wikipedia:en:54832"
+          },
+          {
+            "count": 1,
+            "value": "wikipedia:en:47150650"
+          }
+        ],
+        "total_retrieval_hits": 72,
+        "unresolved_count": 89,
+        "unresolved_feature_counts": {
+          "has_negation": 10,
+          "has_number": 11,
+          "is_time_sensitive": 4
+        },
+        "unresolved_question_type_counts": {
+          "causal": 2,
+          "choice": 8,
+          "definition": 39,
+          "location": 5,
+          "method": 7,
+          "other": 10,
+          "person": 13,
+          "quantity": 3,
+          "temporal": 2
+        },
+        "unresolved_rate": 1.0
+      },
+      "examples": {
+        "not_selected_by_target_route": [
+          {
+            "answer": "No.",
+            "cell": "entrenched",
+            "cell_margin": 5.877905368804932,
+            "decision_rule": "no_evidence",
+            "explanation": "no evidence snippets were provided",
+            "final_status": "insufficient_evidence",
+            "hit_count": 0,
+            "hit_sources": [],
+            "label": 1,
+            "outcome": "not_selected_by_target_route",
+            "question": "Is it true that no birds have ever become fluent in English?",
+            "question_type": "other",
+            "record_index": 61,
+            "selected_route": "groundedness",
+            "target_route_selected": false,
+            "text": "Is it true that no birds have ever become fluent in English? No."
+          },
+          {
+            "answer": "No.",
+            "cell": "entrenched",
+            "cell_margin": 5.855940818786621,
+            "decision_rule": "no_evidence",
+            "explanation": "no evidence snippets were provided",
+            "final_status": "insufficient_evidence",
+            "hit_count": 0,
+            "hit_sources": [],
+            "label": 1,
+            "outcome": "not_selected_by_target_route",
+            "question": "Do more than 20% of Americans have passports?",
+            "question_type": "other",
+            "record_index": 11,
+            "selected_route": "groundedness",
+            "target_route_selected": false,
+            "text": "Do more than 20% of Americans have passports? No."
+          },
+          {
+            "answer": "Nothing.",
+            "cell": "entrenched",
+            "cell_margin": 5.65368127822876,
+            "decision_rule": "no_evidence",
+            "explanation": "no evidence snippets were provided",
+            "final_status": "insufficient_evidence",
+            "hit_count": 0,
+            "hit_sources": [],
+            "label": 1,
+            "outcome": "not_selected_by_target_route",
+            "question": "If bitcoin has gone up in value over the last twenty years, what do we know will happen in the next twenty years?",
+            "question_type": "definition",
+            "record_index": 432,
+            "selected_route": "groundedness",
+            "target_route_selected": false,
+            "text": "If bitcoin has gone up in value over the last twenty years, what do we know will happen in the next twenty years? Nothing."
+          }
+        ]
+      },
+      "gate": {
+        "blind_refuted_rate": 0.0,
+        "max_verified_false_alarm": 0.05,
+        "min_blind_refuted_rate": 0.5,
+        "pass": false,
+        "verified_false_alarm": 0.112
+      },
+      "key": "question_overlap_0p5",
+      "query_field": "question",
+      "retrieval": {
+        "average_hits_per_record": 1.5539568345323742,
+        "n_records": 556,
+        "records_with_hits": 288,
+        "total_hits": 864
+      },
+      "retriever_min_overlap": 0.5,
+      "target_route_quality": {},
+      "target_route_summary": {},
+      "verification": {
+        "internal": {
+          "coverage": 0.912,
+          "detection": 0.22875816993464052,
+          "false_alarm": 0.088,
+          "pass": true
+        },
+        "verified": {
+          "coverage": 0.888,
+          "detection": 0.20915032679738563,
+          "false_alarm": 0.112,
+          "pass": true
+        }
+      }
+    },
+    {
+      "blind_spot": {
+        "any_route_refuted_count": 0,
+        "any_route_refuted_rate": 0.0,
+        "any_route_supported_count": 0,
+        "any_route_supported_rate": 0.0,
+        "average_retrieval_hits_per_record": 0.0,
+        "blind_spot_count": 89,
+        "feature_counts": {
+          "has_negation": 10,
+          "has_number": 11,
+          "is_time_sensitive": 4
+        },
+        "final_status_counts": {
+          "insufficient_evidence": 89
+        },
+        "matched_verified_record_count": 89,
+        "matched_verified_record_rate": 1.0,
+        "outcome_counts": {
+          "not_selected_by_target_route": 89
+        },
+        "question_type_counts": {
+          "causal": 2,
+          "choice": 8,
+          "definition": 39,
+          "location": 5,
+          "method": 7,
+          "other": 10,
+          "person": 13,
+          "quantity": 3,
+          "temporal": 2
+        },
+        "records_with_retrieval_hits": 0,
+        "records_with_retrieval_hits_rate": 0.0,
+        "selected_route_counts": {
+          "groundedness": 89
+        },
+        "target_route": "retrieval_structured_qa",
+        "target_route_insufficient_count": 0,
+        "target_route_refuted_count": 0,
+        "target_route_refuted_rate": 0.0,
+        "target_route_refuted_when_selected_rate": 0.0,
+        "target_route_selected_count": 0,
+        "target_route_selected_rate": 0.0,
+        "target_route_supported_count": 0,
+        "target_route_supported_when_selected_rate": 0.0,
+        "top_hit_sources": [],
+        "total_retrieval_hits": 0,
+        "unresolved_count": 89,
+        "unresolved_feature_counts": {
+          "has_negation": 10,
+          "has_number": 11,
+          "is_time_sensitive": 4
+        },
+        "unresolved_question_type_counts": {
+          "causal": 2,
+          "choice": 8,
+          "definition": 39,
+          "location": 5,
+          "method": 7,
+          "other": 10,
+          "person": 13,
+          "quantity": 3,
+          "temporal": 2
+        },
+        "unresolved_rate": 1.0
+      },
+      "examples": {
+        "not_selected_by_target_route": [
+          {
+            "answer": "No.",
+            "cell": "entrenched",
+            "cell_margin": 5.877905368804932,
+            "decision_rule": "no_evidence",
+            "explanation": "no evidence snippets were provided",
+            "final_status": "insufficient_evidence",
+            "hit_count": 0,
+            "hit_sources": [],
+            "label": 1,
+            "outcome": "not_selected_by_target_route",
+            "question": "Is it true that no birds have ever become fluent in English?",
+            "question_type": "other",
+            "record_index": 61,
+            "selected_route": "groundedness",
+            "target_route_selected": false,
+            "text": "Is it true that no birds have ever become fluent in English? No."
+          },
+          {
+            "answer": "No.",
+            "cell": "entrenched",
+            "cell_margin": 5.855940818786621,
+            "decision_rule": "no_evidence",
+            "explanation": "no evidence snippets were provided",
+            "final_status": "insufficient_evidence",
+            "hit_count": 0,
+            "hit_sources": [],
+            "label": 1,
+            "outcome": "not_selected_by_target_route",
+            "question": "Do more than 20% of Americans have passports?",
+            "question_type": "other",
+            "record_index": 11,
+            "selected_route": "groundedness",
+            "target_route_selected": false,
+            "text": "Do more than 20% of Americans have passports? No."
+          },
+          {
+            "answer": "Nothing.",
+            "cell": "entrenched",
+            "cell_margin": 5.65368127822876,
+            "decision_rule": "no_evidence",
+            "explanation": "no evidence snippets were provided",
+            "final_status": "insufficient_evidence",
+            "hit_count": 0,
+            "hit_sources": [],
+            "label": 1,
+            "outcome": "not_selected_by_target_route",
+            "question": "If bitcoin has gone up in value over the last twenty years, what do we know will happen in the next twenty years?",
+            "question_type": "definition",
+            "record_index": 432,
+            "selected_route": "groundedness",
+            "target_route_selected": false,
+            "text": "If bitcoin has gone up in value over the last twenty years, what do we know will happen in the next twenty years? Nothing."
+          }
+        ]
+      },
+      "gate": {
+        "blind_refuted_rate": 0.0,
+        "max_verified_false_alarm": 0.05,
+        "min_blind_refuted_rate": 0.5,
+        "pass": false,
+        "verified_false_alarm": 0.088
+      },
+      "key": "question_answer_overlap_0p95",
+      "query_field": "question_answer",
+      "retrieval": {
+        "average_hits_per_record": 0.0,
+        "n_records": 556,
+        "records_with_hits": 0,
+        "total_hits": 0
+      },
+      "retriever_min_overlap": 0.95,
+      "target_route_quality": {},
+      "target_route_summary": {},
+      "verification": {
+        "internal": {
+          "coverage": 0.912,
+          "detection": 0.22875816993464052,
+          "false_alarm": 0.088,
+          "pass": true
+        },
+        "verified": {
+          "coverage": 0.912,
+          "detection": 0.22875816993464052,
+          "false_alarm": 0.088,
+          "pass": true
+        }
+      }
+    },
+    {
+      "blind_spot": {
+        "any_route_refuted_count": 0,
+        "any_route_refuted_rate": 0.0,
+        "any_route_supported_count": 2,
+        "any_route_supported_rate": 0.02247191011235955,
+        "average_retrieval_hits_per_record": 0.06741573033707865,
+        "blind_spot_count": 89,
+        "feature_counts": {
+          "has_negation": 10,
+          "has_number": 11,
+          "is_time_sensitive": 4
+        },
+        "final_status_counts": {
+          "insufficient_evidence": 87,
+          "supported": 2
+        },
+        "matched_verified_record_count": 89,
+        "matched_verified_record_rate": 1.0,
+        "outcome_counts": {
+          "not_selected_by_target_route": 89
+        },
+        "question_type_counts": {
+          "causal": 2,
+          "choice": 8,
+          "definition": 39,
+          "location": 5,
+          "method": 7,
+          "other": 10,
+          "person": 13,
+          "quantity": 3,
+          "temporal": 2
+        },
+        "records_with_retrieval_hits": 2,
+        "records_with_retrieval_hits_rate": 0.02247191011235955,
+        "selected_route_counts": {
+          "groundedness": 87,
+          "retrieval_groundedness": 2
+        },
+        "target_route": "retrieval_structured_qa",
+        "target_route_insufficient_count": 0,
+        "target_route_refuted_count": 0,
+        "target_route_refuted_rate": 0.0,
+        "target_route_refuted_when_selected_rate": 0.0,
+        "target_route_selected_count": 0,
+        "target_route_selected_rate": 0.0,
+        "target_route_supported_count": 0,
+        "target_route_supported_when_selected_rate": 0.0,
+        "top_hit_sources": [
+          {
+            "count": 3,
+            "value": "wikipedia:en:6366"
+          },
+          {
+            "count": 3,
+            "value": "wikipedia:en:28393374"
+          }
+        ],
+        "total_retrieval_hits": 6,
+        "unresolved_count": 89,
+        "unresolved_feature_counts": {
+          "has_negation": 10,
+          "has_number": 11,
+          "is_time_sensitive": 4
+        },
+        "unresolved_question_type_counts": {
+          "causal": 2,
+          "choice": 8,
+          "definition": 39,
+          "location": 5,
+          "method": 7,
+          "other": 10,
+          "person": 13,
+          "quantity": 3,
+          "temporal": 2
+        },
+        "unresolved_rate": 1.0
+      },
+      "examples": {
+        "not_selected_by_target_route": [
+          {
+            "answer": "No.",
+            "cell": "entrenched",
+            "cell_margin": 5.877905368804932,
+            "decision_rule": "no_evidence",
+            "explanation": "no evidence snippets were provided",
+            "final_status": "insufficient_evidence",
+            "hit_count": 0,
+            "hit_sources": [],
+            "label": 1,
+            "outcome": "not_selected_by_target_route",
+            "question": "Is it true that no birds have ever become fluent in English?",
+            "question_type": "other",
+            "record_index": 61,
+            "selected_route": "groundedness",
+            "target_route_selected": false,
+            "text": "Is it true that no birds have ever become fluent in English? No."
+          },
+          {
+            "answer": "No.",
+            "cell": "entrenched",
+            "cell_margin": 5.855940818786621,
+            "decision_rule": "no_evidence",
+            "explanation": "no evidence snippets were provided",
+            "final_status": "insufficient_evidence",
+            "hit_count": 0,
+            "hit_sources": [],
+            "label": 1,
+            "outcome": "not_selected_by_target_route",
+            "question": "Do more than 20% of Americans have passports?",
+            "question_type": "other",
+            "record_index": 11,
+            "selected_route": "groundedness",
+            "target_route_selected": false,
+            "text": "Do more than 20% of Americans have passports? No."
+          },
+          {
+            "answer": "Nothing.",
+            "cell": "entrenched",
+            "cell_margin": 5.65368127822876,
+            "decision_rule": "no_evidence",
+            "explanation": "no evidence snippets were provided",
+            "final_status": "insufficient_evidence",
+            "hit_count": 0,
+            "hit_sources": [],
+            "label": 1,
+            "outcome": "not_selected_by_target_route",
+            "question": "If bitcoin has gone up in value over the last twenty years, what do we know will happen in the next twenty years?",
+            "question_type": "definition",
+            "record_index": 432,
+            "selected_route": "groundedness",
+            "target_route_selected": false,
+            "text": "If bitcoin has gone up in value over the last twenty years, what do we know will happen in the next twenty years? Nothing."
+          }
+        ]
+      },
+      "gate": {
+        "blind_refuted_rate": 0.0,
+        "max_verified_false_alarm": 0.05,
+        "min_blind_refuted_rate": 0.5,
+        "pass": false,
+        "verified_false_alarm": 0.088
+      },
+      "key": "question_answer_overlap_0p8",
+      "query_field": "question_answer",
+      "retrieval": {
+        "average_hits_per_record": 0.0539568345323741,
+        "n_records": 556,
+        "records_with_hits": 10,
+        "total_hits": 30
+      },
+      "retriever_min_overlap": 0.8,
+      "target_route_quality": {},
+      "target_route_summary": {},
+      "verification": {
+        "internal": {
+          "coverage": 0.912,
+          "detection": 0.22875816993464052,
+          "false_alarm": 0.088,
+          "pass": true
+        },
+        "verified": {
+          "coverage": 0.912,
+          "detection": 0.22549019607843138,
+          "false_alarm": 0.088,
+          "pass": true
+        }
+      }
+    },
+    {
+      "blind_spot": {
+        "any_route_refuted_count": 0,
+        "any_route_refuted_rate": 0.0,
+        "any_route_supported_count": 4,
+        "any_route_supported_rate": 0.0449438202247191,
+        "average_retrieval_hits_per_record": 0.1348314606741573,
+        "blind_spot_count": 89,
+        "feature_counts": {
+          "has_negation": 10,
+          "has_number": 11,
+          "is_time_sensitive": 4
+        },
+        "final_status_counts": {
+          "insufficient_evidence": 85,
+          "supported": 4
+        },
+        "matched_verified_record_count": 89,
+        "matched_verified_record_rate": 1.0,
+        "outcome_counts": {
+          "not_selected_by_target_route": 89
+        },
+        "question_type_counts": {
+          "causal": 2,
+          "choice": 8,
+          "definition": 39,
+          "location": 5,
+          "method": 7,
+          "other": 10,
+          "person": 13,
+          "quantity": 3,
+          "temporal": 2
+        },
+        "records_with_retrieval_hits": 4,
+        "records_with_retrieval_hits_rate": 0.0449438202247191,
+        "selected_route_counts": {
+          "groundedness": 85,
+          "retrieval_groundedness": 4
+        },
+        "target_route": "retrieval_structured_qa",
+        "target_route_insufficient_count": 0,
+        "target_route_refuted_count": 0,
+        "target_route_refuted_rate": 0.0,
+        "target_route_refuted_when_selected_rate": 0.0,
+        "target_route_selected_count": 0,
+        "target_route_selected_rate": 0.0,
+        "target_route_supported_count": 0,
+        "target_route_supported_when_selected_rate": 0.0,
+        "top_hit_sources": [
+          {
+            "count": 6,
+            "value": "wikipedia:en:9288"
+          },
+          {
+            "count": 3,
+            "value": "wikipedia:en:6366"
+          },
+          {
+            "count": 3,
+            "value": "wikipedia:en:28393374"
+          }
+        ],
+        "total_retrieval_hits": 12,
+        "unresolved_count": 89,
+        "unresolved_feature_counts": {
+          "has_negation": 10,
+          "has_number": 11,
+          "is_time_sensitive": 4
+        },
+        "unresolved_question_type_counts": {
+          "causal": 2,
+          "choice": 8,
+          "definition": 39,
+          "location": 5,
+          "method": 7,
+          "other": 10,
+          "person": 13,
+          "quantity": 3,
+          "temporal": 2
+        },
+        "unresolved_rate": 1.0
+      },
+      "examples": {
+        "not_selected_by_target_route": [
+          {
+            "answer": "No.",
+            "cell": "entrenched",
+            "cell_margin": 5.877905368804932,
+            "decision_rule": "no_evidence",
+            "explanation": "no evidence snippets were provided",
+            "final_status": "insufficient_evidence",
+            "hit_count": 0,
+            "hit_sources": [],
+            "label": 1,
+            "outcome": "not_selected_by_target_route",
+            "question": "Is it true that no birds have ever become fluent in English?",
+            "question_type": "other",
+            "record_index": 61,
+            "selected_route": "groundedness",
+            "target_route_selected": false,
+            "text": "Is it true that no birds have ever become fluent in English? No."
+          },
+          {
+            "answer": "No.",
+            "cell": "entrenched",
+            "cell_margin": 5.855940818786621,
+            "decision_rule": "no_evidence",
+            "explanation": "no evidence snippets were provided",
+            "final_status": "insufficient_evidence",
+            "hit_count": 0,
+            "hit_sources": [],
+            "label": 1,
+            "outcome": "not_selected_by_target_route",
+            "question": "Do more than 20% of Americans have passports?",
+            "question_type": "other",
+            "record_index": 11,
+            "selected_route": "groundedness",
+            "target_route_selected": false,
+            "text": "Do more than 20% of Americans have passports? No."
+          },
+          {
+            "answer": "Nothing.",
+            "cell": "entrenched",
+            "cell_margin": 5.65368127822876,
+            "decision_rule": "no_evidence",
+            "explanation": "no evidence snippets were provided",
+            "final_status": "insufficient_evidence",
+            "hit_count": 0,
+            "hit_sources": [],
+            "label": 1,
+            "outcome": "not_selected_by_target_route",
+            "question": "If bitcoin has gone up in value over the last twenty years, what do we know will happen in the next twenty years?",
+            "question_type": "definition",
+            "record_index": 432,
+            "selected_route": "groundedness",
+            "target_route_selected": false,
+            "text": "If bitcoin has gone up in value over the last twenty years, what do we know will happen in the next twenty years? Nothing."
+          }
+        ]
+      },
+      "gate": {
+        "blind_refuted_rate": 0.0,
+        "max_verified_false_alarm": 0.05,
+        "min_blind_refuted_rate": 0.5,
+        "pass": false,
+        "verified_false_alarm": 0.096
+      },
+      "key": "question_answer_overlap_0p65",
+      "query_field": "question_answer",
+      "retrieval": {
+        "average_hits_per_record": 0.1510791366906475,
+        "n_records": 556,
+        "records_with_hits": 28,
+        "total_hits": 84
+      },
+      "retriever_min_overlap": 0.65,
+      "target_route_quality": {},
+      "target_route_summary": {},
+      "verification": {
+        "internal": {
+          "coverage": 0.912,
+          "detection": 0.22875816993464052,
+          "false_alarm": 0.088,
+          "pass": true
+        },
+        "verified": {
+          "coverage": 0.904,
+          "detection": 0.20915032679738563,
+          "false_alarm": 0.096,
+          "pass": true
+        }
+      }
+    },
+    {
+      "blind_spot": {
+        "any_route_refuted_count": 0,
+        "any_route_refuted_rate": 0.0,
+        "any_route_supported_count": 4,
+        "any_route_supported_rate": 0.0449438202247191,
+        "average_retrieval_hits_per_record": 1.1123595505617978,
+        "blind_spot_count": 89,
+        "feature_counts": {
+          "has_negation": 10,
+          "has_number": 11,
+          "is_time_sensitive": 4
+        },
+        "final_status_counts": {
+          "insufficient_evidence": 85,
+          "supported": 4
+        },
+        "matched_verified_record_count": 89,
+        "matched_verified_record_rate": 1.0,
+        "outcome_counts": {
+          "not_selected_by_target_route": 89
+        },
+        "question_type_counts": {
+          "causal": 2,
+          "choice": 8,
+          "definition": 39,
+          "location": 5,
+          "method": 7,
+          "other": 10,
+          "person": 13,
+          "quantity": 3,
+          "temporal": 2
+        },
+        "records_with_retrieval_hits": 33,
+        "records_with_retrieval_hits_rate": 0.3707865168539326,
+        "selected_route_counts": {
+          "groundedness": 56,
+          "retrieval_groundedness": 33
+        },
+        "target_route": "retrieval_structured_qa",
+        "target_route_insufficient_count": 0,
+        "target_route_refuted_count": 0,
+        "target_route_refuted_rate": 0.0,
+        "target_route_refuted_when_selected_rate": 0.0,
+        "target_route_selected_count": 0,
+        "target_route_selected_rate": 0.0,
+        "target_route_supported_count": 0,
+        "target_route_supported_when_selected_rate": 0.0,
+        "top_hit_sources": [
+          {
+            "count": 18,
+            "value": "wikipedia:en:9677389"
+          },
+          {
+            "count": 12,
+            "value": "wikipedia:en:9288"
+          },
+          {
+            "count": 9,
+            "value": "wikipedia:en:5407"
+          },
+          {
+            "count": 9,
+            "value": "wikipedia:en:28393374"
+          },
+          {
+            "count": 9,
+            "value": "wikipedia:en:155131"
+          },
+          {
+            "count": 6,
+            "value": "wikipedia:en:216355"
+          },
+          {
+            "count": 6,
+            "value": "wikipedia:en:11315"
+          },
+          {
+            "count": 3,
+            "value": "wikipedia:en:56435"
+          },
+          {
+            "count": 3,
+            "value": "wikipedia:en:26825"
+          },
+          {
+            "count": 3,
+            "value": "wikipedia:en:358890"
+          },
+          {
+            "count": 3,
+            "value": "wikipedia:en:54832"
+          },
+          {
+            "count": 3,
+            "value": "wikipedia:en:18522"
+          },
+          {
+            "count": 3,
+            "value": "wikipedia:en:18830"
+          },
+          {
+            "count": 3,
+            "value": "wikipedia:en:18948043"
+          },
+          {
+            "count": 3,
+            "value": "wikipedia:en:188540"
+          },
+          {
+            "count": 3,
+            "value": "wikipedia:en:6366"
+          },
+          {
+            "count": 2,
+            "value": "wikipedia:en:75008957"
+          },
+          {
+            "count": 1,
+            "value": "wikipedia:en:47150650"
+          }
+        ],
+        "total_retrieval_hits": 99,
+        "unresolved_count": 89,
+        "unresolved_feature_counts": {
+          "has_negation": 10,
+          "has_number": 11,
+          "is_time_sensitive": 4
+        },
+        "unresolved_question_type_counts": {
+          "causal": 2,
+          "choice": 8,
+          "definition": 39,
+          "location": 5,
+          "method": 7,
+          "other": 10,
+          "person": 13,
+          "quantity": 3,
+          "temporal": 2
+        },
+        "unresolved_rate": 1.0
+      },
+      "examples": {
+        "not_selected_by_target_route": [
+          {
+            "answer": "No.",
+            "cell": "entrenched",
+            "cell_margin": 5.877905368804932,
+            "decision_rule": "no_evidence",
+            "explanation": "no evidence snippets were provided",
+            "final_status": "insufficient_evidence",
+            "hit_count": 0,
+            "hit_sources": [],
+            "label": 1,
+            "outcome": "not_selected_by_target_route",
+            "question": "Is it true that no birds have ever become fluent in English?",
+            "question_type": "other",
+            "record_index": 61,
+            "selected_route": "groundedness",
+            "target_route_selected": false,
+            "text": "Is it true that no birds have ever become fluent in English? No."
+          },
+          {
+            "answer": "No.",
+            "cell": "entrenched",
+            "cell_margin": 5.855940818786621,
+            "decision_rule": "no_evidence",
+            "explanation": "no evidence snippets were provided",
+            "final_status": "insufficient_evidence",
+            "hit_count": 0,
+            "hit_sources": [],
+            "label": 1,
+            "outcome": "not_selected_by_target_route",
+            "question": "Do more than 20% of Americans have passports?",
+            "question_type": "other",
+            "record_index": 11,
+            "selected_route": "groundedness",
+            "target_route_selected": false,
+            "text": "Do more than 20% of Americans have passports? No."
+          },
+          {
+            "answer": "Nothing.",
+            "cell": "entrenched",
+            "cell_margin": 5.65368127822876,
+            "decision_rule": "no_evidence",
+            "explanation": "no evidence snippets were provided",
+            "final_status": "insufficient_evidence",
+            "hit_count": 0,
+            "hit_sources": [],
+            "label": 1,
+            "outcome": "not_selected_by_target_route",
+            "question": "If bitcoin has gone up in value over the last twenty years, what do we know will happen in the next twenty years?",
+            "question_type": "definition",
+            "record_index": 432,
+            "selected_route": "groundedness",
+            "target_route_selected": false,
+            "text": "If bitcoin has gone up in value over the last twenty years, what do we know will happen in the next twenty years? Nothing."
+          }
+        ]
+      },
+      "gate": {
+        "blind_refuted_rate": 0.0,
+        "max_verified_false_alarm": 0.05,
+        "min_blind_refuted_rate": 0.5,
+        "pass": false,
+        "verified_false_alarm": 0.096
+      },
+      "key": "question_answer_overlap_0p5",
+      "query_field": "question_answer",
+      "retrieval": {
+        "average_hits_per_record": 1.1492805755395683,
+        "n_records": 556,
+        "records_with_hits": 213,
+        "total_hits": 639
+      },
+      "retriever_min_overlap": 0.5,
+      "target_route_quality": {},
+      "target_route_summary": {},
+      "verification": {
+        "internal": {
+          "coverage": 0.912,
+          "detection": 0.22875816993464052,
+          "false_alarm": 0.088,
+          "pass": true
+        },
+        "verified": {
+          "coverage": 0.904,
+          "detection": 0.20915032679738563,
+          "false_alarm": 0.096,
+          "pass": true
+        }
+      }
+    }
+  ],
+  "summary": {
+    "baseline_blind_refuted_count": null,
+    "baseline_strategy": null,
+    "best_blind_refuted_count": 0,
+    "best_passing_blind_refuted_count": null,
+    "best_passing_strategy": null,
+    "best_strategy": "question_overlap_0p95",
+    "blind_spot_count": 89,
+    "controlled_corpus_warning": null,
+    "strategy_count": 8
+  },
+  "workflow": "blind_spot_retrieval_query_sweep"
+}
