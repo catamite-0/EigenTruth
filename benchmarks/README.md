@@ -2199,6 +2199,42 @@ artifacts. This is route-quality evidence for exact covered facts, not proof
 that any remaining SmolLM2 blind spot maps to those facts or that open-domain
 lexical groundedness should promote.
 
+## `audit_source_family_structured_qa_claim_mapping.py`
+
+Audits whether blind spots, score-dump statements, or product claims can be
+conservatively mapped into a source-family structured QA corpus before creating
+any correction handoff. The mapper requires covered-fact subject coverage plus
+property/indicator intent evidence, separates model answers that are already
+supported by the covered fact, and keeps subject-only, intent-only, weak-overlap,
+and no-fact rows as coverage gaps.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-claim-mapping
+
+python benchmarks/audit_source_family_structured_qa_claim_mapping.py \
+  --claims artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
+  --qa-corpus artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-corpus/source-family-structured-qa-corpus.json \
+  --route-summary artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-route/structured-qa-route-summary.json \
+  --json "$OUT/source-family-structured-qa-claim-mapping.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_corpus
+
+python benchmarks/verify_artifact_manifest.py \
+  --manifest "$OUT/artifact-manifest.json" \
+  --json "$OUT/manifest-verification.json"
+```
+
+The current SmolLM2 l80 audit is intentionally blocked: the promoted
+covered-facts route is available, but the `18` source-family structured QA facts
+map to `0/89` entrenched blind spots under the conservative subject/intent gate.
+The report records `55` no-candidate rows, `11` subject-only rows, `12`
+intent-only rows, `8` weak-overlap rows, and `3` answer-entity collisions. This
+is a useful negative result: source-family route quality is real, but the next
+work must expand claim-specific structured facts, citation evidence, or
+world-model/calculator rules before any blind-spot correction handoff can use
+this corpus.
+
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:
 

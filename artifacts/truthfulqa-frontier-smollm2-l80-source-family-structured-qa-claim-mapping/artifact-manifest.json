@@ -1,0 +1,56 @@
+{
+  "artifacts": {
+    "claims": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json",
+      "sha256": "5990d22d8547cce21613bdc0c618058ca0f1d6c8766e16363b333595fec4ee5a",
+      "size_bytes": 123816
+    },
+    "qa_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-source-family-structured-qa-corpus/source-family-structured-qa-corpus.json",
+      "sha256": "4d2147825f82f2ba3d35415239ffda44c686d1902fe51b3eebf6881642fe0319",
+      "size_bytes": 23437
+    },
+    "route_summary": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-source-family-structured-qa-route/structured-qa-route-summary.json",
+      "sha256": "9f721b20e742c4854628d4d25117a2e82a724f1bbfb7b982863fee272ecb3e22",
+      "size_bytes": 14340
+    },
+    "source_family_structured_qa_claim_mapping": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-structured-qa-claim-mapping.json",
+      "sha256": "58f30d13ef442701370003c1ca52ab75ca21b08d8c18a5689990f21542121802",
+      "size_bytes": 1372612
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "answer_value_supported_count": 0,
+    "covered_fact_match_count": 0,
+    "evidence": "source_family_structured_qa_corpus",
+    "mapped_qa_fact_candidate_count": 0,
+    "no_candidate_fact_count": 55,
+    "route_summary_status": "promote",
+    "status": "blocked",
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "target_count": 89,
+    "workflow": "source_family_structured_qa_claim_mapping_audit"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

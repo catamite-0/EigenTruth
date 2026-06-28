@@ -1444,6 +1444,18 @@ source-family slices are `reference=32` and `official_statistics=4`. This
 promotes only exact covered-fact route quality; it still does not prove that the
 remaining SmolLM2 blind spots map to these facts.
 
+`benchmarks/audit_source_family_structured_qa_claim_mapping.py` adds that
+missing mapping check. Running it against the 89 SmolLM2 entrenched blind spots,
+the source-family structured QA corpus, and the promoted covered-fact route
+summary writes
+`artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-claim-mapping/`.
+The audit is blocked: `0/89` records pass the conservative covered-fact
+subject/intent gate, with `55` no-candidate rows, `11` subject-only rows, `12`
+intent-only rows, `8` weak-overlap rows, and `3` answer-entity collisions. This
+negative result keeps the product boundary honest: route quality is solved for
+the extracted source-family facts, but those facts do not yet cover the current
+blind spots.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because

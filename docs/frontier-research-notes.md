@@ -857,12 +857,21 @@ Added the first monitor-first tool-selection audit layer:
   mismatches, and reaches decision accuracy `1.0` with false-supported rate
   `0.0`. Provider slices are `wikidata=32` records and `worldbank=4` records.
   This promotes exact covered-fact route quality, not blind-spot recall.
+- `audit_source_family_structured_qa_claim_mapping.py` adds the missing
+  claim-to-covered-fact gate. Replaying the 89 SmolLM2 entrenched blind spots
+  against the new source-family structured QA corpus and promoted route summary
+  blocks with `0/89` mapped correction candidates: the closest rows are
+  subject-only, intent-only, weak-overlap, or answer-entity-collision cases.
+  This is the right negative result because it prevents exact covered-fact
+  route quality from being misread as blind-spot coverage.
 
 ## Next Research-to-Code Candidates
 
-1. Map current SmolLM2 blind spots and product claims into the new source-family
-   structured QA covered-fact set, then create correction handoffs only for
-   explicit matches.
+1. Expand source-family structured facts from the unresolved blind-spot queue:
+   current covered facts route perfectly, but the claim-mapping audit maps
+   `0/89` entrenched blind spots into them. The next code step should generate
+   claim-specific structured facts or world-model/calculator rules, then rerun
+   the mapping gate before creating any handoff.
 2. Move from source-family acquisition to route-quality improvement: the current
    queue now has complete source-family coverage, but still has no passing
    blind-spot query strategy. The next code step should improve structured query

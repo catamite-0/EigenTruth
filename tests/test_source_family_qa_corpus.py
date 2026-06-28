@@ -258,3 +258,135 @@ def test_source_family_structured_qa_route_workflow_audits_covered_facts(tmp_pat
     assert record.metadata["workflow"] == "source_family_structured_qa_route_workflow"
     assert record.metadata["status"] == "promote"
     assert record.metadata["suite"] == "unit"
+
+
+def test_source_family_structured_qa_claim_mapping_audits_claim_coverage(tmp_path):
+    module = importlib.import_module("benchmarks.audit_source_family_structured_qa_claim_mapping")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    claims_path = tmp_path / "claims.json"
+    qa_path = tmp_path / "source-family-qa-corpus.json"
+    route_summary_path = tmp_path / "structured-qa-route-summary.json"
+    output_path = tmp_path / "claim-mapping.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+
+    qa_path.write_text(
+        json.dumps({
+            "corpus_type": "source_family_structured_qa_external_evidence",
+            "documents": [
+                {
+                    "question": "What does Wikidata list as the founder for Tesla Motors?",
+                    "answer": "Martin Eberhard",
+                    "source": "wikidata:Q478214:P112:Q92743",
+                    "metadata": {
+                        "provider": "wikidata",
+                        "source_family": "reference",
+                        "statement_property": "P112",
+                        "statement_property_label": "founder",
+                        "subject": "Tesla Motors",
+                        "subject_qid": "Q478214",
+                    },
+                },
+                {
+                    "question": "What does the World Bank list as Population, total for Afghanistan in 2024?",
+                    "answer": "42,647,492",
+                    "source": "worldbank:SP.POP.TOTL:AFG:2024",
+                    "metadata": {
+                        "provider": "worldbank",
+                        "source_family": "official_statistics",
+                        "indicator": "SP.POP.TOTL",
+                        "indicator_name": "Population, total",
+                        "country_name": "Afghanistan",
+                        "country_code_iso3": "AFG",
+                        "reference_year": "2024",
+                    },
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    claims_path.write_text(
+        json.dumps({
+            "records": [
+                {
+                    "record_index": 10,
+                    "question": "Who first started Tesla Motors?",
+                    "answer": "Elon Musk",
+                    "text": "Who first started Tesla Motors? Elon Musk",
+                    "label": 1,
+                    "question_type": "person",
+                },
+                {
+                    "record_index": 11,
+                    "question": "Who first started Tesla Motors?",
+                    "answer": "Martin Eberhard",
+                    "text": "Who first started Tesla Motors? Martin Eberhard",
+                    "label": 0,
+                    "question_type": "person",
+                },
+                {
+                    "record_index": 12,
+                    "question": "What is the population of Afghanistan in 2024?",
+                    "answer": "1,000",
+                    "text": "What is the population of Afghanistan in 2024? 1,000",
+                    "label": 1,
+                    "question_type": "quantity",
+                },
+                {
+                    "record_index": 13,
+                    "question": "What is the capital of France?",
+                    "answer": "Paris",
+                    "text": "What is the capital of France? Paris",
+                    "label": 0,
+                    "question_type": "location",
+                },
+            ]
+        }),
+        encoding="utf-8",
+    )
+    route_summary_path.write_text(
+        json.dumps({
+            "workflow": "source_family_structured_qa_route_workflow",
+            "status": "promote",
+            "route": "structured_qa",
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        claims_path=claims_path,
+        qa_corpus_path=qa_path,
+        route_summary_path=route_summary_path,
+        output_path=output_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="source-family-qa-claim-mapping-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+
+    decisions = {
+        int(record["record_index"]): record["mapping_decision"]
+        for record in payload["records"]
+    }
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:source-family-qa-claim-mapping-unit:0.1"
+    )
+
+    assert payload["status"] == "observed"
+    assert payload["source"]["route_summary_promoted"] is True
+    assert payload["summary"]["target_count"] == 4
+    assert payload["summary"]["covered_fact_match_count"] == 3
+    assert payload["summary"]["mapped_qa_fact_candidate_count"] == 2
+    assert payload["summary"]["answer_value_supported_count"] == 1
+    assert decisions[10] == "mapped_qa_fact_candidate"
+    assert decisions[11] == "answer_value_supported_by_covered_fact"
+    assert decisions[12] == "mapped_qa_fact_candidate"
+    assert decisions[13] == "no_candidate_fact"
+    assert payload["records"][0]["matched_provider_counts"] == {"wikidata": 1}
+    assert payload["records"][2]["matched_source_family_counts"] == {"official_statistics": 1}
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "source_family_structured_qa_claim_mapping_audit"
+    assert record.metadata["mapped_qa_fact_candidate_count"] == 2
+    assert record.metadata["suite"] == "unit"
