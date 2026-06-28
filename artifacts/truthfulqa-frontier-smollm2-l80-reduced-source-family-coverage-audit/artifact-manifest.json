@@ -1,0 +1,52 @@
+{
+  "artifacts": {
+    "coverage_audit_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-coverage-audit.json",
+      "sha256": "3b7eb52949d0a92a10838f30f99de9fabc670a2e9341f78e4597694caff77a88",
+      "size_bytes": 41917
+    },
+    "source_family_acquisition_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-acquisition-plan.jsonl",
+      "sha256": "86328beb56f8aed1cadc1869736eb237c7b17e8ad61d43c280c98cf387889f0b",
+      "size_bytes": 47820
+    },
+    "source_family_adapter_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-reduced-source-family-citation-workflow/source-family-citation-search-results.jsonl",
+      "sha256": "f71edfaf02daacfd45e7c21a1d94930953785ebf2bc0dd9f9ea2ee0cdfa56471",
+      "size_bytes": 1145196
+    },
+    "source_family_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-reduced-source-family-citation-workflow/source-family-citation-search-requests.jsonl",
+      "sha256": "bd1066a0815031d0b943547f6c9655fc750c36f8afd3c88e2ec4e6fe1b431a29",
+      "size_bytes": 238759
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "acquisition_plan_count": 44,
+    "evidence": "wikidata_crossref_worldbank_reduced_scholarly_catalogs",
+    "request_count": 176,
+    "status": "needs_catalog_expansion",
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "workflow": "source_family_coverage_audit"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

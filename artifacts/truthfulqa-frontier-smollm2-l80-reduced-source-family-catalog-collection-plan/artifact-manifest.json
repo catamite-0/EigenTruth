@@ -1,0 +1,45 @@
+{
+  "artifacts": {
+    "collection_plan_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-catalog-collection-plan.json",
+      "sha256": "f2b7beb7b1b7b2c63752ae7a803d6917c949f8d81de11744d0bc298e25fc1e84",
+      "size_bytes": 23456
+    },
+    "source_family_acquisition_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-reduced-source-family-coverage-audit/source-family-acquisition-plan.jsonl",
+      "sha256": "86328beb56f8aed1cadc1869736eb237c7b17e8ad61d43c280c98cf387889f0b",
+      "size_bytes": 47820
+    },
+    "source_family_collection_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-catalog-collection-tasks.jsonl",
+      "sha256": "16676e08a21fc7b5804f00bcaaa0771851b32a905ef9d1d21392795dcb6f9291",
+      "size_bytes": 17773
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "acquisition_row_count": 44,
+    "collection_task_count": 9,
+    "family_gap_count": 56,
+    "source": "reduced_source_family_coverage_audit",
+    "status": "ready_for_source_collection",
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "workflow": "source_family_catalog_collection_plan"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

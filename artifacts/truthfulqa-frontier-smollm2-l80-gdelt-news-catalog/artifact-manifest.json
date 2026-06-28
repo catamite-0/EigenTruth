@@ -1,0 +1,46 @@
+{
+  "artifacts": {
+    "collection_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-worldbank-source-family-catalog-collection-plan/source-family-catalog-collection-tasks.jsonl",
+      "sha256": "9bf3b3d44b9b7357584ed80725157bd01ad1925888cc124f28b3fb05c17af53b",
+      "size_bytes": 25388
+    },
+    "gdelt_catalog_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "gdelt-news-catalog-report.json",
+      "sha256": "988747db61e6fd86ad026eb3e6f294ef7c4d2867f574fca2399633cc86c7bf61",
+      "size_bytes": 1749
+    },
+    "source_family_catalog": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "gdelt-news-catalog.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "error_count": 2,
+    "query_count": 2,
+    "source": "worldbank_source_family_catalog_collection_plan",
+    "source_document_count": 0,
+    "status": "empty",
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "task_count": 1,
+    "workflow": "gdelt_source_family_catalog_adapter"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

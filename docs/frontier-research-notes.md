@@ -790,11 +790,26 @@ Added the first monitor-first tool-selection audit layer:
   `100/156`. The correction route remains blocked by query/comparison gates,
   but the acquisition plan is smaller and more concrete: `official=5`,
   `scholarly=6`, and `news=1` tasks remain.
+- `run_gdelt_source_family_catalog_adapter.py` implements the news slot against
+  GDELT DOC 2.0 with the same label-free source-family catalog boundary. The
+  first registered live run is intentionally negative: the public endpoint
+  returned rate-limit errors, so the report is `empty` with `0` news documents
+  and `2` request errors. A reduced Crossref replay over the remaining scholarly
+  tasks is positive catalog evidence: `6` tasks, `48` query variants, `69`
+  deduplicated scholarly docs, and `0` request errors. Recombining the catalogs
+  keeps the correction route blocked, but improves the coverage audit from `84`
+  to `44` missing target rows and shrinks the next collection plan to `9` tasks:
+  `official=5`, `scholarly=3`, and `news=1`.
 
 ## Next Research-to-Code Candidates
 
 1. Convert the target-specific Wikidata source docs into structured-fact/QA corpora, then rerun the blind-spot correction-route audit instead of another lexical overlap sweep.
-2. Continue the reduced 12-task source-family collection plan beyond Crossref and World Bank: prioritize official-site and news/source-specific adapters, then rerun `run_source_family_citation_search_workflow.py`; the combined catalogs now cover `official_statistics=4/4` and `scholarly=100/156`, but still have no passing blind-spot query strategy.
+2. Continue the reduced 9-task source-family collection plan: implement
+   official-site retrieval first, retry or replace the rate-limited news slot,
+   and make the remaining scholarly tasks more source-specific before rerunning
+   `run_source_family_citation_search_workflow.py`. Current combined catalogs
+   cover `official_statistics=4/4` and `scholarly=140/156`, but still have no
+   passing blind-spot query strategy.
 3. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
 4. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
 5. Materialize a real `frontier_audit` release candidate with the registered covered-facts external-evidence handoff and external-prediction triple matrix artifact, then export the resulting promotion contract.

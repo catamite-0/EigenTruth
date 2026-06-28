@@ -1966,7 +1966,7 @@ API. The default indicator is `SP.POP.TOTL` (`Population, total`), using
 queried separately so aggregate regions can be filtered out by default. Output
 rows remain adapter-ready source-family catalog documents, not verifier
 evidence, and they do not copy label, target id, row id, model-answer, or
-request-id fields into the catalog boundary.
+request-id fields into the emitted catalog documents.
 
 ```bash
 OUT=artifacts/truthfulqa-frontier-smollm2-l80-worldbank-official-statistics-catalog
@@ -2001,6 +2001,72 @@ useful coverage improvement: `official_statistics` is covered for `4/4`
 requests and `scholarly` is covered for `100/156`, reducing missing target rows
 from `176` to `84`. The remaining acquisition plan compresses to `12` tasks:
 `official=5`, `scholarly=6`, and `news=1`.
+
+## `run_gdelt_source_family_catalog_adapter.py`
+
+Executes the news slice of a source-family collection plan through the GDELT
+DOC 2.0 API. The adapter emits `source_family=news` catalog rows with safe
+provider, URL, title, language, domain, and timestamp metadata, and rejects
+label, record id, target id, and model-answer metadata at the task boundary.
+Request coverage may remain on the non-evidence task report, but request ids are
+not copied into catalog documents. A live API rate-limit is treated as a
+fail-closed empty catalog report, not as evidence.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-gdelt-news-catalog
+
+python benchmarks/run_gdelt_source_family_catalog_adapter.py \
+  --tasks artifacts/truthfulqa-frontier-smollm2-l80-worldbank-source-family-catalog-collection-plan/source-family-catalog-collection-tasks.jsonl \
+  --output "$OUT/gdelt-news-catalog.jsonl" \
+  --report-json "$OUT/gdelt-news-catalog-report.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-gdelt-news-catalog \
+  --version 0.1 \
+  --max-query-variants 2 \
+  --max-records 5 \
+  --min-delay-seconds 6 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=worldbank_source_family_catalog_collection_plan
+```
+
+The registered live run consumed the single `news` collection task, attempted
+`2` query variants, and wrote an `empty` report with `0` documents and `2`
+request errors because the public GDELT endpoint returned rate-limit failures in
+this environment. The manifest verifies and the adapter boundary is tested, but
+this artifact is only a rate-limit/run-status record.
+
+The same reduced 12-task queue was also replayed through Crossref with a wider
+scholarly budget:
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-crossref-reduced-scholarly-catalog
+
+python benchmarks/run_crossref_source_family_catalog_adapter.py \
+  --tasks artifacts/truthfulqa-frontier-smollm2-l80-worldbank-source-family-catalog-collection-plan/source-family-catalog-collection-tasks.jsonl \
+  --output "$OUT/crossref-reduced-scholarly-catalog.jsonl" \
+  --report-json "$OUT/crossref-reduced-scholarly-catalog-report.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-crossref-reduced-scholarly-catalog \
+  --version 0.1 \
+  --max-query-variants 8 \
+  --rows-per-query 5 \
+  --min-delay-seconds 0.2 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=worldbank_source_family_catalog_collection_plan
+```
+
+That reduced Crossref pass consumes `6` scholarly tasks, runs `48` query
+variants, writes `69` deduplicated scholarly catalog documents, and records `0`
+request errors. Rerunning the source-family workflow with Wikidata reference,
+the original Crossref catalog, World Bank official statistics, and this reduced
+Crossref catalog keeps the route blocked, but improves source-family coverage:
+the workflow sees `626` catalog docs, returns `528` adapter rows, and the
+coverage audit drops missing target rows from `84` to `44`. Covered target
+families are now `official_statistics=4` and `scholarly=140`; remaining missing
+targets are `official=36`, `scholarly=16`, and `news=4`. The next collection
+plan is down to `9` tasks: `official=5`, `scholarly=3`, and `news=1`.
 
 ## `run_wikipedia_citation_search_adapter.py`
 

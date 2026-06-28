@@ -1,0 +1,1515 @@
+{
+  "config": {
+    "fallback_families": [
+      "encyclopedic",
+      "reference"
+    ],
+    "max_examples": 20
+  },
+  "examples": {
+    "covered": [
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "doing next definition",
+        "question_type": "definition",
+        "request_id": "cite-search-369260c9393016fd",
+        "result_count": 3,
+        "result_providers": [
+          "crossref",
+          "crossref",
+          "crossref"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "doing next definition",
+        "question_type": "definition",
+        "request_id": "cite-search-fce13203fec54cdb",
+        "result_count": 3,
+        "result_providers": [
+          "crossref",
+          "crossref",
+          "crossref"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "doing next definition",
+        "question_type": "definition",
+        "request_id": "cite-search-97afdb455d58cd3d",
+        "result_count": 3,
+        "result_providers": [
+          "crossref",
+          "crossref",
+          "crossref"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "doing next definition",
+        "question_type": "definition",
+        "request_id": "cite-search-eee772a66671b8cc",
+        "result_count": 3,
+        "result_providers": [
+          "crossref",
+          "crossref",
+          "crossref"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "doing next definition",
+        "question_type": "definition",
+        "request_id": "cite-search-4d51f80afda2a99d",
+        "result_count": 3,
+        "result_providers": [
+          "crossref",
+          "crossref",
+          "crossref"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "doing next definition",
+        "question_type": "definition",
+        "request_id": "cite-search-700e7d51fe80cbe0",
+        "result_count": 3,
+        "result_providers": [
+          "crossref",
+          "crossref",
+          "crossref"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "doing next definition",
+        "question_type": "definition",
+        "request_id": "cite-search-c9c6eed74ad257f7",
+        "result_count": 3,
+        "result_providers": [
+          "crossref",
+          "crossref",
+          "crossref"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "doing next definition",
+        "question_type": "definition",
+        "request_id": "cite-search-48d5dd28d2f0d32c",
+        "result_count": 3,
+        "result_providers": [
+          "crossref",
+          "crossref",
+          "crossref"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "doing next definition",
+        "question_type": "definition",
+        "request_id": "cite-search-c5b75c3bb13115ce",
+        "result_count": 3,
+        "result_providers": [
+          "crossref",
+          "crossref",
+          "crossref"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "doing next definition",
+        "question_type": "definition",
+        "request_id": "cite-search-32e1063302da99c4",
+        "result_count": 3,
+        "result_providers": [
+          "crossref",
+          "crossref",
+          "crossref"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "doing next definition",
+        "question_type": "definition",
+        "request_id": "cite-search-c485414e54f356b4",
+        "result_count": 3,
+        "result_providers": [
+          "crossref",
+          "crossref",
+          "crossref"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "doing next definition",
+        "question_type": "definition",
+        "request_id": "cite-search-e5645ae8ab9b79a5",
+        "result_count": 3,
+        "result_providers": [
+          "crossref",
+          "crossref",
+          "crossref"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "Latinos language all speak definition",
+        "question_type": "definition",
+        "request_id": "cite-search-80f48f5b49df4c22",
+        "result_count": 3,
+        "result_providers": [
+          "crossref",
+          "crossref",
+          "wikidata"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "Latinos language all speak definition",
+        "question_type": "definition",
+        "request_id": "cite-search-d9fb5312a4afe258",
+        "result_count": 3,
+        "result_providers": [
+          "crossref",
+          "crossref",
+          "wikidata"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "Latinos language all speak definition",
+        "question_type": "definition",
+        "request_id": "cite-search-5bd0ea2b49c47c86",
+        "result_count": 3,
+        "result_providers": [
+          "crossref",
+          "crossref",
+          "wikidata"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "Latinos language all speak definition",
+        "question_type": "definition",
+        "request_id": "cite-search-7a1e809f3aca7cc8",
+        "result_count": 3,
+        "result_providers": [
+          "crossref",
+          "crossref",
+          "wikidata"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "should take viral infection definition",
+        "question_type": "definition",
+        "request_id": "cite-search-27ee075b3d8d8a8f",
+        "result_count": 3,
+        "result_providers": [
+          "crossref",
+          "crossref",
+          "crossref"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "should take viral infection definition",
+        "question_type": "definition",
+        "request_id": "cite-search-cc22579e8f0a561c",
+        "result_count": 3,
+        "result_providers": [
+          "crossref",
+          "crossref",
+          "crossref"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "should take viral infection definition",
+        "question_type": "definition",
+        "request_id": "cite-search-59db0d54aaf8cf08",
+        "result_count": 3,
+        "result_providers": [
+          "crossref",
+          "crossref",
+          "crossref"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "should take viral infection definition",
+        "question_type": "definition",
+        "request_id": "cite-search-99d82d8c4eb34003",
+        "result_count": 3,
+        "result_providers": [
+          "crossref",
+          "crossref",
+          "crossref"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      }
+    ],
+    "missing_target_family": [
+      {
+        "covered_target_source_families": [
+          "official_statistics"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official_statistics",
+          "official",
+          "encyclopedic",
+          "reference",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "population country",
+        "question_type": "definition",
+        "request_id": "cite-search-8b58995470ea78f9",
+        "result_count": 3,
+        "result_providers": [
+          "worldbank",
+          "worldbank",
+          "worldbank"
+        ],
+        "result_source_families": [
+          "official_statistics",
+          "official_statistics",
+          "official_statistics"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official_statistics"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official_statistics",
+          "official",
+          "encyclopedic",
+          "reference",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "population country",
+        "question_type": "definition",
+        "request_id": "cite-search-bbd5cdf975d44a83",
+        "result_count": 3,
+        "result_providers": [
+          "worldbank",
+          "worldbank",
+          "worldbank"
+        ],
+        "result_source_families": [
+          "official_statistics",
+          "official_statistics",
+          "official_statistics"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official_statistics"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official_statistics",
+          "official",
+          "encyclopedic",
+          "reference",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "population country",
+        "question_type": "definition",
+        "request_id": "cite-search-af6fc174863183f2",
+        "result_count": 3,
+        "result_providers": [
+          "worldbank",
+          "worldbank",
+          "worldbank"
+        ],
+        "result_source_families": [
+          "official_statistics",
+          "official_statistics",
+          "official_statistics"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official_statistics"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official_statistics",
+          "official",
+          "encyclopedic",
+          "reference",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "population country",
+        "question_type": "definition",
+        "request_id": "cite-search-b677934f044dafc7",
+        "result_count": 3,
+        "result_providers": [
+          "worldbank",
+          "worldbank",
+          "worldbank"
+        ],
+        "result_source_families": [
+          "official_statistics",
+          "official_statistics",
+          "official_statistics"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [
+          "official"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-c00b806315ac398b",
+        "result_count": 3,
+        "result_providers": [
+          "crossref",
+          "crossref",
+          "wikidata"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [
+          "official"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-89534a0c11134e44",
+        "result_count": 3,
+        "result_providers": [
+          "crossref",
+          "crossref",
+          "wikidata"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [
+          "official"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-523c555cc76d5706",
+        "result_count": 3,
+        "result_providers": [
+          "crossref",
+          "crossref",
+          "wikidata"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [
+          "official"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-71ae3e3c71ef376a",
+        "result_count": 3,
+        "result_providers": [
+          "crossref",
+          "crossref",
+          "wikidata"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [
+          "official"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-4ffa9f0785eeb9da",
+        "result_count": 3,
+        "result_providers": [
+          "crossref",
+          "crossref",
+          "wikidata"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [
+          "official"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-ebda97c2ac1f8395",
+        "result_count": 3,
+        "result_providers": [
+          "crossref",
+          "crossref",
+          "wikidata"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [
+          "official"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-0694b6748461aa0f",
+        "result_count": 3,
+        "result_providers": [
+          "crossref",
+          "crossref",
+          "wikidata"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [
+          "official"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-96a58e762235e5fa",
+        "result_count": 3,
+        "result_providers": [
+          "crossref",
+          "crossref",
+          "wikidata"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "America happened affordability food recent decades definition",
+        "question_type": "definition",
+        "request_id": "cite-search-001487e174e4e658",
+        "result_count": 3,
+        "result_providers": [
+          "wikidata",
+          "wikidata",
+          "wikidata"
+        ],
+        "result_source_families": [
+          "reference",
+          "reference",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "America happened affordability food recent decades definition",
+        "question_type": "definition",
+        "request_id": "cite-search-0825d1e6bab6d172",
+        "result_count": 3,
+        "result_providers": [
+          "wikidata",
+          "wikidata",
+          "wikidata"
+        ],
+        "result_source_families": [
+          "reference",
+          "reference",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "America happened affordability food recent decades definition",
+        "question_type": "definition",
+        "request_id": "cite-search-e5b9550016de8b47",
+        "result_count": 3,
+        "result_providers": [
+          "wikidata",
+          "wikidata",
+          "wikidata"
+        ],
+        "result_source_families": [
+          "reference",
+          "reference",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "America happened affordability food recent decades definition",
+        "question_type": "definition",
+        "request_id": "cite-search-23f868db0c80918e",
+        "result_count": 3,
+        "result_providers": [
+          "wikidata",
+          "wikidata",
+          "wikidata"
+        ],
+        "result_source_families": [
+          "reference",
+          "reference",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [
+          "scholarly"
+        ],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "East Coast fact everyone lies definition",
+        "question_type": "definition",
+        "request_id": "cite-search-b619ffdd2d501f35",
+        "result_count": 3,
+        "result_providers": [
+          "wikidata",
+          "wikidata",
+          "wikidata"
+        ],
+        "result_source_families": [
+          "reference",
+          "reference",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [
+          "scholarly"
+        ],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "East Coast fact everyone lies definition",
+        "question_type": "definition",
+        "request_id": "cite-search-a6a7d695ee5c7000",
+        "result_count": 3,
+        "result_providers": [
+          "wikidata",
+          "wikidata",
+          "wikidata"
+        ],
+        "result_source_families": [
+          "reference",
+          "reference",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [
+          "scholarly"
+        ],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "East Coast fact everyone lies definition",
+        "question_type": "definition",
+        "request_id": "cite-search-f4bb853a6df75a1b",
+        "result_count": 3,
+        "result_providers": [
+          "wikidata",
+          "wikidata",
+          "wikidata"
+        ],
+        "result_source_families": [
+          "reference",
+          "reference",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [
+          "scholarly"
+        ],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "East Coast fact everyone lies definition",
+        "question_type": "definition",
+        "request_id": "cite-search-e18cd007c8e42f74",
+        "result_count": 3,
+        "result_providers": [
+          "wikidata",
+          "wikidata",
+          "wikidata"
+        ],
+        "result_source_families": [
+          "reference",
+          "reference",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "scholarly"
+        ]
+      }
+    ]
+  },
+  "metadata": {
+    "evidence": "wikidata_crossref_worldbank_reduced_scholarly_catalogs",
+    "suite": "truthfulqa_frontier_smollm2_l80"
+  },
+  "schema_version": 1,
+  "source": {
+    "adapter_results": "artifacts/truthfulqa-frontier-smollm2-l80-reduced-source-family-citation-workflow/source-family-citation-search-results.jsonl",
+    "requests": "artifacts/truthfulqa-frontier-smollm2-l80-reduced-source-family-citation-workflow/source-family-citation-search-requests.jsonl"
+  },
+  "status": "needs_catalog_expansion",
+  "summary": {
+    "acquisition_plan_count": 44,
+    "covered_target_source_family_counts": {
+      "official_statistics": 4,
+      "scholarly": 140
+    },
+    "freshness_required_count": 4,
+    "freshness_required_with_fresh_result_count": 176,
+    "missing_target_source_family_counts": {
+      "news": 4,
+      "official": 36,
+      "scholarly": 16
+    },
+    "official_source_preferred_count": 36,
+    "official_source_preferred_with_official_result_count": 4,
+    "preferred_source_family_counts": {
+      "encyclopedic": 176,
+      "news": 4,
+      "official": 36,
+      "official_statistics": 4,
+      "reference": 176,
+      "scholarly": 156
+    },
+    "request_count": 176,
+    "request_missing_target_family_count": 44,
+    "request_with_results_count": 176,
+    "request_with_target_family_count": 144,
+    "result_provider_counts": {
+      "crossref": 296,
+      "wikidata": 220,
+      "worldbank": 12
+    },
+    "result_request_count": 176,
+    "result_source_family_counts": {
+      "official_statistics": 12,
+      "reference": 220,
+      "scholarly": 296
+    },
+    "target_source_family_counts": {
+      "news": 4,
+      "official": 36,
+      "official_statistics": 4,
+      "scholarly": 156
+    }
+  },
+  "workflow": "source_family_coverage_audit"
+}

@@ -1,0 +1,50 @@
+{
+  "config": {
+    "default_source_family": "reference",
+    "max_query_variants": 3,
+    "max_results": 3,
+    "min_text_overlap": 0.03
+  },
+  "input_path": "artifacts/truthfulqa-frontier-smollm2-l80-reduced-source-family-citation-workflow/source-family-citation-search-requests.jsonl",
+  "metadata": {
+    "evidence": "wikidata_crossref_worldbank_reduced_scholarly_catalogs",
+    "source_workflow": "source_family_citation_search_workflow",
+    "suite": "truthfulqa_frontier_smollm2_l80"
+  },
+  "output_path": "artifacts/truthfulqa-frontier-smollm2-l80-reduced-source-family-citation-workflow/source-family-citation-search-results.jsonl",
+  "schema_version": 1,
+  "source_catalog_paths": [
+    "artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog/source-family-catalog.jsonl",
+    "artifacts/truthfulqa-frontier-smollm2-l80-crossref-scholarly-catalog/crossref-scholarly-catalog.jsonl",
+    "artifacts/truthfulqa-frontier-smollm2-l80-worldbank-official-statistics-catalog/worldbank-official-statistics-catalog.jsonl",
+    "artifacts/truthfulqa-frontier-smollm2-l80-crossref-reduced-scholarly-catalog/crossref-reduced-scholarly-catalog.jsonl"
+  ],
+  "summary": {
+    "catalog_provider_counts": {
+      "crossref": 117,
+      "wikidata": 292,
+      "worldbank": 217
+    },
+    "catalog_source_family_counts": {
+      "official_statistics": 217,
+      "reference": 292,
+      "scholarly": 117
+    },
+    "request_count": 176,
+    "request_error_count": 0,
+    "request_with_results_count": 176,
+    "result_count": 528,
+    "result_provider_counts": {
+      "crossref": 296,
+      "wikidata": 220,
+      "worldbank": 12
+    },
+    "result_source_family_counts": {
+      "official_statistics": 12,
+      "reference": 220,
+      "scholarly": 296
+    },
+    "source_document_count": 626
+  },
+  "workflow": "source_family_citation_search_adapter"
+}

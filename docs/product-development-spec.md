@@ -554,6 +554,20 @@ For product features:
   from `176` to `84`. Product implication: official data adapters can shrink
   the blind-spot acquisition frontier even before they are strong enough to
   change runtime route defaults.
+- `run_gdelt_source_family_catalog_adapter.py` adds the news-provider slot for
+  the reduced source-family plan. The command boundary is dependency-free and
+  rejects label, row id, target id, and model-answer metadata; request coverage
+  may stay in the non-evidence task/report, but request ids are not copied into
+  catalog documents. The registered live GDELT run is an `empty` fail-closed
+  artifact because the public API returned rate-limit errors for both query
+  variants in this environment. A wider reduced Crossref replay did progress
+  the scholarly side: `6` scholarly tasks produced `69` additional catalog docs
+  with `0` request errors. Combining Wikidata, both Crossref catalogs, and World
+  Bank gives the source-family workflow `626` source docs and reduces missing
+  target rows to `44` (`official=36`, `scholarly=16`, `news=4`). Product
+  implication: the next runtime-relevant work is official-site retrieval plus a
+  retried/news-specific source adapter; this is still catalog coverage, not
+  route promotion.
 
 ### Next Verification Adapter Work
 

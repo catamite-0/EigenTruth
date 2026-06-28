@@ -1,0 +1,78 @@
+{
+  "artifacts": {
+    "adapter_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-citation-search-adapter-report.json",
+      "sha256": "17438b8a6bc0e68fe775f5d9f7439db7e9b46f4fc77420b3df7b003e56c7b96d",
+      "size_bytes": 1865
+    },
+    "adapter_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-citation-search-requests.jsonl",
+      "sha256": "bd1066a0815031d0b943547f6c9655fc750c36f8afd3c88e2ec4e6fe1b431a29",
+      "size_bytes": 238759
+    },
+    "adapter_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-citation-search-results.jsonl",
+      "sha256": "f71edfaf02daacfd45e7c21a1d94930953785ebf2bc0dd9f9ea2ee0cdfa56471",
+      "size_bytes": 1145196
+    },
+    "source_catalog_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog/source-family-catalog.jsonl",
+      "sha256": "c3b4ecefc1ce62de36d4e91f38bc70eb78dbce8635a7a84c275afc8475fb7b76",
+      "size_bytes": 321194
+    },
+    "source_catalog_2": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-crossref-scholarly-catalog/crossref-scholarly-catalog.jsonl",
+      "sha256": "6db26a929c51531f1e54f6149314f509a39afca414d209ad5f30011fb95af47f",
+      "size_bytes": 72516
+    },
+    "source_catalog_3": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-worldbank-official-statistics-catalog/worldbank-official-statistics-catalog.jsonl",
+      "sha256": "7b1cb9c9f49e13a7097802d704e8c5a812026db1087c1585e968df092a95df92",
+      "size_bytes": 378137
+    },
+    "source_catalog_4": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-crossref-reduced-scholarly-catalog/crossref-reduced-scholarly-catalog.jsonl",
+      "sha256": "f82eac9b22eae5b19abe72cdcfe57c98b394c9879245ce2fe889b570b494b9aa",
+      "size_bytes": 112126
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "evidence": "wikidata_crossref_worldbank_reduced_scholarly_catalogs",
+    "request_count": 176,
+    "request_with_results_count": 176,
+    "result_count": 528,
+    "source_document_count": 626,
+    "source_workflow": "source_family_citation_search_workflow",
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "workflow": "source_family_citation_search_adapter"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 7,
+    "directory_count": 0,
+    "file_count": 7,
+    "missing_count": 0
+  }
+}

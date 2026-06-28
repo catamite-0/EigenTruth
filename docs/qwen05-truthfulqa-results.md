@@ -1360,6 +1360,18 @@ improves: `official_statistics=4/4` and `scholarly=100/156` are now covered,
 leaving `84` requests with missing target families. The refreshed collection
 plan is down to `12` tasks: `official=5`, `scholarly=6`, and `news=1`.
 
+`benchmarks/run_gdelt_source_family_catalog_adapter.py` now covers the news
+adapter shell against GDELT DOC 2.0. Its registered live run consumed the single
+news task and attempted `2` query variants, but the public endpoint returned
+rate-limit errors in this environment, so the artifact is an `empty` fail-closed
+run-status record with `0` news documents and `2` errors. A reduced Crossref
+replay over the remaining scholarly tasks did improve the catalog side:
+`6` tasks, `48` query variants, `69` deduplicated docs, and `0` request errors.
+The combined workflow with Wikidata, both Crossref catalogs, and World Bank now
+sees `626` source docs and the coverage audit drops missing target rows from
+`84` to `44`. The route still blocks at the evidence gates. The refreshed
+collection plan is now `9` tasks: `official=5`, `scholarly=3`, and `news=1`.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -1386,13 +1398,14 @@ plan is down to `12` tasks: `official=5`, `scholarly=6`, and `news=1`.
    if Qwen-specific runtime evidence is needed; SmolLM2 now has the first
    non-tiny registered readiness/release candidate.
 7. Continue the reduced source-family catalog collection plan after the
-   completed Crossref and World Bank slices: add official-site, news, and
-   source-specific scholarly adapters, then rerun
+   completed Crossref, World Bank, and GDELT-shell slices: add official-site
+   retrieval, retry or replace the rate-limited news source, and make the
+   remaining scholarly tasks more source-specific, then rerun
    `run_source_family_citation_search_workflow.py`. The combined catalogs now
-   cover official statistics and much of the scholarly target family, but still
-   have no passing blind-spot query strategy; only promote future catalogs if
-   provenance, external query-sweep, and controlled-vs-external comparison gates
-   pass.
+   cover official statistics and `140/156` scholarly target-family requests, but
+   still have no passing blind-spot query strategy; only promote future catalogs
+   if provenance, external query-sweep, and controlled-vs-external comparison
+   gates pass.
 8. Extend the new verifier-stability path from structured QA to real retrieval,
    database, calculator, and world-model evidence under the same conformal
    false-alarm budgets. Use `benchmarks/build_evidence_fixture.py` with a local

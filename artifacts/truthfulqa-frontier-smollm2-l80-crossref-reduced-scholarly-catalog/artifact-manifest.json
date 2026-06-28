@@ -1,0 +1,46 @@
+{
+  "artifacts": {
+    "collection_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-worldbank-source-family-catalog-collection-plan/source-family-catalog-collection-tasks.jsonl",
+      "sha256": "9bf3b3d44b9b7357584ed80725157bd01ad1925888cc124f28b3fb05c17af53b",
+      "size_bytes": 25388
+    },
+    "crossref_catalog_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "crossref-reduced-scholarly-catalog-report.json",
+      "sha256": "d7638898a425b3a6f1432915d27f1df2e76f5803fc84c57ba1016058686b7334",
+      "size_bytes": 1521
+    },
+    "source_family_catalog": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "crossref-reduced-scholarly-catalog.jsonl",
+      "sha256": "f82eac9b22eae5b19abe72cdcfe57c98b394c9879245ce2fe889b570b494b9aa",
+      "size_bytes": 112126
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "error_count": 0,
+    "query_count": 48,
+    "source": "worldbank_source_family_catalog_collection_plan",
+    "source_document_count": 69,
+    "status": "ready",
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "task_count": 6,
+    "workflow": "crossref_source_family_catalog_adapter"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}
