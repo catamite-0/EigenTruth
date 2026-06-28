@@ -1,0 +1,77 @@
+{
+  "artifacts": {
+    "adapter_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-adapter/world-model-rule-authoring-adapter.json",
+      "sha256": "6db5c13aa1b6ae8f2ec5efda21eae823144e739a79f6d019b515fb6ec6f386b6",
+      "size_bytes": 2124
+    },
+    "blocked_rule_candidates": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "blocked-rule-candidates.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "pending_rule_inputs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "pending-rule-inputs.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "promoted_rule_candidates": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "promoted-rule-candidates.jsonl",
+      "sha256": "fda591eb71dd9a097b696ad136c6ab299ae6241b5cbb91f9ad9e01940df841c8",
+      "size_bytes": 8394
+    },
+    "rule_candidate_promotion_gate": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-candidate-promotion-gate.json",
+      "sha256": "a849b12d9208b78aefb80c68bc0a9c9ab4ec795c2c8fd95846ba48a5166696f9",
+      "size_bytes": 12590
+    },
+    "rule_inputs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-binding-fill/rule-inputs.jsonl",
+      "sha256": "4d4931c056f688032c2a37208fe2aa18e8216f65fb364c29f94336438fabc579",
+      "size_bytes": 8727
+    },
+    "rule_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-adapter/world-model-rule-results.jsonl",
+      "sha256": "aa5367f681bcf687a17f01fbac2067a46d45b32077064696f410a2a8a104b2c0",
+      "size_bytes": 12433
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "blocked_count": 0,
+    "evidence": "source_backed_remaining_mechanism_adapter",
+    "pending_count": 0,
+    "promoted_count": 4,
+    "status": "promote",
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "workflow": "world_model_rule_candidate_promotion_gate"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 7,
+    "directory_count": 0,
+    "file_count": 7,
+    "missing_count": 0
+  }
+}

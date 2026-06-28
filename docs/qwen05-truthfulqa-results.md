@@ -394,8 +394,11 @@ registered chain covers four repeated Africa poverty trend records
 (`record-133`, `record-165`, `record-274`, `record-299`) with World Bank
 rate/headcount evidence; it fills `4/4`, promotes `4/4`, and writes four
 ProductTrace `accept/low` dry-run actions. This proves the path for two cited
-mechanism families and `5/9` causal/procedural tasks; Bill Gates and UFO rows
-still need real bindings.
+mechanism families. The remaining Bill Gates and UFO rows now close the typed
+mechanism queue: Bill Gates high-school records promote as `supported`, UFO
+extraterrestrial-premise records promote as `refuted`, and the mixed handoff
+writes two `accept/low` plus two `abstain/high` dry-run actions. Mechanism
+coverage is now `9/9` causal/procedural tasks.
 
 ## Product Trace Demo
 

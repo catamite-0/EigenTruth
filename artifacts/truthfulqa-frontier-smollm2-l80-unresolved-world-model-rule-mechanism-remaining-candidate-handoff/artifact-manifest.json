@@ -1,0 +1,61 @@
+{
+  "artifacts": {
+    "action_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "action-results.jsonl",
+      "sha256": "74b8455960cac5daeec82c2f909d59c84481941fe6b53abad5d145e265f38acf",
+      "size_bytes": 9162
+    },
+    "product_traces": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "product-traces.jsonl",
+      "sha256": "cc2c990dee7680c34ace5c5fa742d972d8944d218a832923db9f9005b8e4935f",
+      "size_bytes": 90649
+    },
+    "promoted_rule_candidates": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-promotion-gate/promoted-rule-candidates.jsonl",
+      "sha256": "fda591eb71dd9a097b696ad136c6ab299ae6241b5cbb91f9ad9e01940df841c8",
+      "size_bytes": 8394
+    },
+    "promotion_gate": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+      "sha256": "a849b12d9208b78aefb80c68bc0a9c9ab4ec795c2c8fd95846ba48a5166696f9",
+      "size_bytes": 12590
+    },
+    "world_model_rule_candidate_handoff": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-candidate-handoff.json",
+      "sha256": "c04c2580c776fe3bebdbfd86e6e4b9bde942bba4de65e099c608a9d1c45a2adb",
+      "size_bytes": 4286
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "action_result_count": 4,
+    "blocked_candidate_count": 0,
+    "evidence": "source_backed_remaining_mechanism_promotion",
+    "status": "promote",
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "trace_count": 4,
+    "workflow": "world_model_rule_candidate_handoff"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

@@ -2975,8 +2975,10 @@ adapter aligned with fact-level/tool-verification research without turning an
 LLM-as-judge or source lookup into a mandatory dependency. The first real
 source-backed TruthfulQA mechanism artifacts now cover two question families:
 `record-10` and the Africa poverty trend records
-`record-133`/`record-165`/`record-274`/`record-299`. The remaining
-causal/procedural rows still need citation-backed mechanism bindings.
+`record-133`/`record-165`/`record-274`/`record-299`; a final mixed-status
+artifact covers Bill Gates high-school records `record-27`/`record-134` and UFO
+extraterrestrial-premise records `record-212`/`record-224`. All nine
+causal/procedural rows now have citation-backed mechanism bindings.
 
 Mechanism inputs now also have a source-backed fill boundary:
 
@@ -3018,6 +3020,18 @@ promotes `4/4`, and the handoff writes four ProductTrace rows with `accept/low`
 plus dry-run accept actions. All four manifests verify. Combined with the
 diamond row, the registered mechanism lane now covers `5/9` causal/procedural
 input tasks across two source-backed mechanism families.
+
+The final remaining mechanism chain fills the Bill Gates and UFO rows. The Bill
+Gates bindings use Academy of Achievement plus Gates Foundation/Lakeside
+biographical evidence and promote as `supported`; the UFO bindings use NASA UAP
+FAQ/report and AARO historical-report evidence and promote as `refuted` because
+the question's premise asserts an established extraterrestrial truth. The chain
+is `filled -> observed -> promote -> handoff`: `4/4` inputs fill, `2` supported
+and `2` refuted `mechanism_consistency` candidates execute and promote, and the
+handoff writes two `accept/low` and two `abstain/high` dry-run ProductTrace
+actions. All four manifests verify. The registered mechanism lane now covers
+`9/9` causal/procedural input tasks across four source-backed mechanism
+families.
 
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:

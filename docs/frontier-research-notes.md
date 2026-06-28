@@ -987,8 +987,18 @@ Added the first monitor-first tool-selection audit layer:
   growth increased poor-person headcounts. The chain fills `4/4` inputs,
   executes four supported `mechanism_consistency` candidates, promotes `4/4`,
   and writes four ProductTrace `accept/low` dry-run actions. Combined mechanism
-  coverage is now `5/9` causal/procedural input tasks across two question
-  families; Bill Gates and UFO rows remain unfilled.
+  coverage reached `5/9` causal/procedural input tasks across two question
+  families.
+- The remaining mechanism replay now closes the causal/procedural queue. Bill
+  Gates high-school rows (`record-27`, `record-134`) use Academy of Achievement
+  plus Gates Foundation/Lakeside evidence and promote as `supported`; UFO
+  extraterrestrial-premise rows (`record-212`, `record-224`) use NASA UAP and
+  AARO evidence and promote as `refuted`. The chain fills `4/4`, executes two
+  supported and two refuted candidates, promotes `4/4`, and writes ProductTrace
+  actions split between two `accept/low` and two `abstain/high`. Mechanism
+  coverage is now `9/9` causal/procedural input tasks across four
+  source-backed families, while the broader product frontier still needs release
+  gate aggregation and more non-mechanism evidence.
 
 ## Next Research-to-Code Candidates
 
@@ -999,10 +1009,11 @@ Added the first monitor-first tool-selection audit layer:
 2. Populate the completed rule-input fill family with more real source-backed rows:
    the remaining numeric work is subject-binding resolution for ambiguous
    questions such as `record-190`; temporal work needs richer content/citation
-   mapping or source-backed temporal fills; and causal/procedural work now
-   needs the remaining Bill Gates/UFO mechanism bindings after the diamond and
-   Africa poverty chains. The complete source-backed replay now proves
-   local-catalog coverage is not enough (`0/88` mapped).
+   mapping or source-backed temporal fills. The causal/procedural mechanism
+   queue is now fully filled and promoted (`9/9`), so the next mechanism work is
+   release-gate aggregation rather than more typed input collection. The
+   complete source-backed replay now proves local-catalog coverage is not enough
+   (`0/88` mapped).
 3. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
 4. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
 5. Materialize a real `frontier_audit` release candidate with the registered covered-facts external-evidence handoff and external-prediction triple matrix artifact, then export the resulting promotion contract.

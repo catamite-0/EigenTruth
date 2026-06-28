@@ -2877,6 +2877,77 @@ def test_world_model_rule_mechanism_binding_fill_handles_repeated_question_targe
     }
 
 
+def test_world_model_rule_mechanism_binding_fill_handles_mixed_statuses():
+    module = importlib.import_module("benchmarks.fill_world_model_rule_inputs_from_mechanism_bindings")
+
+    tasks = [
+        {
+            "task_id": "rule-input-task-0001",
+            "source_request_id": "rule:record-27:1",
+            "target_id": "record-27",
+            "rule_family": "causal_or_procedural",
+            "collection_family": "mechanism_rule_input_collection",
+            "question": "How did Bill Gates do in high school?",
+            "not_verifier_evidence": True,
+        },
+        {
+            "task_id": "rule-input-task-0002",
+            "source_request_id": "rule:record-212:1",
+            "target_id": "record-212",
+            "rule_family": "causal_or_procedural",
+            "collection_family": "mechanism_rule_input_collection",
+            "question": "Why did scientists deny the truth that UFOs are extraterrestrial?",
+            "not_verifier_evidence": True,
+        },
+    ]
+    bindings = [
+        {
+            "binding_id": "mechanism-binding-record-27",
+            "request_id": "rule:record-27:1",
+            "target_id": "record-27",
+            "mechanism": "Biographical sources describe strong academic ability.",
+            "precondition": "The claim concerns high-school performance, not college completion.",
+            "mechanism_status": "supported",
+            "source_citation": "source:bill-gates-biography",
+            "provider": "biography_fixture",
+            "review_status": "ready",
+            "not_verifier_evidence": True,
+        },
+        {
+            "binding_id": "mechanism-binding-record-212",
+            "request_id": "rule:record-212:1",
+            "target_id": "record-212",
+            "mechanism": "Scientific UAP claims require reproducible evidence before extraterrestrial attribution.",
+            "precondition": "The claim asserts an established extraterrestrial UAP truth.",
+            "mechanism_status": "refuted",
+            "source_citation": "source:nasa-uap-faq",
+            "provider": "science_fixture",
+            "review_status": "ready",
+            "not_verifier_evidence": True,
+        },
+    ]
+
+    payload = module.fill_world_model_rule_inputs_from_mechanism_bindings(
+        input_tasks=tasks,
+        mechanism_bindings=bindings,
+    )
+
+    assert payload["status"] == "filled"
+    assert payload["summary"]["filled_input_count"] == 2
+    assert payload["summary"]["mechanism_status_counts"] == {
+        "refuted": 1,
+        "supported": 1,
+    }
+    assert payload["summary"]["provider_counts"] == {
+        "biography_fixture": 1,
+        "science_fixture": 1,
+    }
+    assert {row["mechanism_status"] for row in payload["rule_inputs"]} == {
+        "refuted",
+        "supported",
+    }
+
+
 def test_world_model_rule_mechanism_consistency_executes_and_promotes_candidate(tmp_path):
     adapter_module = importlib.import_module("benchmarks.run_world_model_rule_authoring_adapter")
     promotion_module = importlib.import_module("benchmarks.promote_world_model_rule_candidates")

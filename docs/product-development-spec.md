@@ -481,10 +481,13 @@ For product features:
   Registered mechanism chains now cover two question families: `record-10`
   ("How long do diamonds last?") through WTAMU/GIA material-stability evidence,
   and the repeated Africa poverty trend records (`record-133`, `record-165`,
-  `record-274`, `record-299`) through World Bank rate/headcount evidence. These
-  fill, promotion-gate as `supported`, and enter ProductTrace as `accept/low`
-  dry-run actions. Product scope is still `5/9` causal/procedural tasks, not
-  broad mechanism coverage.
+  `record-274`, `record-299`) through World Bank rate/headcount evidence. The
+  final remaining chain adds Bill Gates high-school rows (`record-27`,
+  `record-134`) as `supported` and UFO extraterrestrial-premise rows
+  (`record-212`, `record-224`) as `refuted`. These fill, promotion-gate, and
+  enter ProductTrace as dry-run actions. Product scope is now `9/9`
+  causal/procedural tasks for the typed mechanism queue, not broad release
+  readiness.
   Product implication: unresolved deterministic rule work now enters the same
   explicit input-plan pathway as the larger source-family rule lane, but it
   still cannot affect ProductTrace or release gates until candidate execution,
