@@ -495,16 +495,18 @@ def _action_result_alignment(
     )
     planned_request_ids = tuple(_action_request_ids(actions))
     result_request_ids = tuple(_result_request_ids(results))
+    planned_request_id_set = set(planned_request_ids)
+    result_request_id_set = set(result_request_ids)
     missing_request_ids = tuple(
         request_id
         for request_id in planned_request_ids
-        if request_id not in set(result_request_ids)
+        if request_id not in result_request_id_set
     )
     unexpected_request_ids = (
         tuple(
             request_id
             for request_id in result_request_ids
-            if request_id not in set(planned_request_ids)
+            if request_id not in planned_request_id_set
         )
         if planned_request_ids
         else ()

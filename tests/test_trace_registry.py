@@ -1184,6 +1184,43 @@ def test_product_trace_action_execution_summary_flags_result_alignment_gaps():
     assert bounded["summaries"]["action_execution"]["missing_result_count"] == 1
 
 
+def test_product_trace_action_execution_summary_handles_many_request_ids():
+    actions = tuple(
+        ActionRequest(
+            action=ControlAction.RETRIEVE,
+            reason="fetch",
+            request_id=f"request-{index}",
+        )
+        for index in range(32)
+    )
+    action_results = tuple(
+        ActionResult(
+            action=ControlAction.RETRIEVE,
+            status=ActionExecutionStatus.SUCCEEDED,
+            request_id=f"request-{index}",
+        )
+        for index in range(24)
+    ) + (
+        ActionResult(
+            action=ControlAction.RETRIEVE,
+            status=ActionExecutionStatus.SUCCEEDED,
+            request_id="request-extra",
+        ),
+    )
+    trace = ProductTrace(actions=actions, action_results=action_results)
+
+    summary = trace.action_execution_summary()
+
+    assert summary["alignment_passed"] is False
+    assert summary["missing_result_count"] == 7
+    assert summary["unexpected_result_count"] == 0
+    assert summary["request_id_mismatch_count"] == 9
+    assert summary["alignment"]["missing_request_ids"] == tuple(
+        f"request-{index}" for index in range(24, 32)
+    )
+    assert summary["alignment"]["unexpected_request_ids"] == ("request-extra",)
+
+
 def test_product_trace_runtime_summary_counts_phase_timings():
     trace = ProductTrace(
         runtime_trace=RuntimeTrace(
