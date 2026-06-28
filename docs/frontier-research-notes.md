@@ -933,6 +933,15 @@ Added the first monitor-first tool-selection audit layer:
   the rebuilt plan has one `entity_role_rule_input_collection` batch. This is
   still monitor-first bookkeeping, not verifier evidence, but it removes the
   dead-end between audit findings and the next executable adapter pass.
+- `fill_world_model_rule_inputs_from_entity_bindings.py` closes that requeued
+  entity-role batch with explicit source-backed bindings. The registered chain
+  fills `4/4` inputs, executes `4/4` corrected adapter stubs, and promotion-gates
+  all four candidate `refuted` rows with `0` blocked or pending. The two Sesame
+  Street rows bind candidate entities to a fictional-location citation, and the
+  two Elon rows bind the candidate `Elon Musk` answer to the source-backed
+  expected entity `Elon Gold`; each row remains candidate-only until the
+  promotion gate confirms matching source citations in the deterministic
+  evidence text.
 
 ## Next Research-to-Code Candidates
 
@@ -940,11 +949,11 @@ Added the first monitor-first tool-selection audit layer:
    unresolved rows should stay separated by gap type and feed richer property
    mapping, citation evidence, entity disambiguation, and deterministic
    world-model/calculator rules before entering ProductTrace or release gates.
-2. Expand `fill_world_model_rule_inputs_from_correction_handoff.py` or a sibling
-   adapter to fill more typed batches with provenance-backed values, then send
-   only deterministic calculator/entity-role/world-model results that pass the
-   promotion gate into the rule-candidate handoff. The complete source-backed
-   replay now proves local-catalog coverage is not enough (`0/88` mapped).
+2. Extend the rule-input fill family beyond the completed entity-binding batch:
+   numeric, temporal, and causal/procedural tasks still need provenance-backed
+   values before deterministic calculator/world-model results can pass the same
+   promotion gate into handoff. The complete source-backed replay now proves
+   local-catalog coverage is not enough (`0/88` mapped).
 3. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
 4. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
 5. Materialize a real `frontier_audit` release candidate with the registered covered-facts external-evidence handoff and external-prediction triple matrix artifact, then export the resulting promotion contract.

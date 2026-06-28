@@ -2871,6 +2871,41 @@ decision is `high/abstain`, and the action executor records a dry-run abstain
 result. The handoff remains target-specific and source-citation backed; pending
 rule-input rows remain non-evidence work items.
 
+The audited unresolved-rule requeue can now fill its four entity-role inputs
+from explicit source-backed bindings and pass the same adapter/promotion gate:
+
+```bash
+REQUEUED_PLAN=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-input-plan
+REQUEUED_STUBS=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-stub-requeue
+ENTITY_FILL=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-entity-binding-fill
+ENTITY_ADAPTER=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-entity-binding-adapter
+ENTITY_PROMOTION=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-entity-binding-promotion-gate
+
+python benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py \
+  --input-tasks "$REQUEUED_PLAN/rule-input-tasks.jsonl" \
+  --entity-bindings "$ENTITY_FILL/source-backed-entity-role-bindings.jsonl" \
+  --output-dir "$ENTITY_FILL"
+
+python benchmarks/run_world_model_rule_authoring_adapter.py \
+  --rule-stubs "$REQUEUED_STUBS/requeued-world-model-rule-stubs.jsonl" \
+  --rule-inputs "$ENTITY_FILL/rule-inputs.jsonl" \
+  --output-dir "$ENTITY_ADAPTER"
+
+python benchmarks/promote_world_model_rule_candidates.py \
+  --rule-results "$ENTITY_ADAPTER/world-model-rule-results.jsonl" \
+  --rule-inputs "$ENTITY_FILL/rule-inputs.jsonl" \
+  --adapter-report "$ENTITY_ADAPTER/world-model-rule-authoring-adapter.json" \
+  --output-dir "$ENTITY_PROMOTION"
+```
+
+The registered requeued entity-binding chain is `filled -> observed -> promote`:
+`4/4` source-backed entity-role tasks are filled, `4/4` adapter stubs execute as
+candidate `refuted` rows, and the promotion gate promotes all four with `0`
+blocked and `0` pending. The two Sesame Street rows use the fictional-location
+citation, and the two Elon rows use the Elon Gold citation; both citation paths
+remain non-evidence adapter inputs until the promotion gate verifies matching
+source citations in the deterministic candidate evidence.
+
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:
 

@@ -6738,6 +6738,54 @@
       "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-input-plan",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-input-plan/rule-input-collection-plan.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-entity-binding-fill/artifact-manifest.json",
+        "evidence": "unresolved-world-model-rule-requeued-entity-binding-fill",
+        "filled_input_count": 4,
+        "status": "filled",
+        "suite": "truthfulqa-smollm2-l80",
+        "unfilled_task_count": 0,
+        "workflow": "world_model_rule_input_entity_binding_fill"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-entity-binding-fill",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-entity-binding-fill/rule-input-entity-binding-fill.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-entity-binding-adapter/artifact-manifest.json",
+        "evidence": "unresolved-world-model-rule-requeued-entity-binding-adapter",
+        "executed_count": 4,
+        "input_request_count": 0,
+        "needs_input_count": 0,
+        "status": "observed",
+        "stub_count": 4,
+        "suite": "truthfulqa-smollm2-l80",
+        "workflow": "world_model_rule_authoring_adapter"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-entity-binding-adapter",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-entity-binding-adapter/world-model-rule-authoring-adapter.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-entity-binding-promotion-gate/artifact-manifest.json",
+        "blocked_count": 0,
+        "evidence": "unresolved-world-model-rule-requeued-entity-binding-promotion-gate",
+        "pending_count": 0,
+        "promoted_count": 4,
+        "status": "promote",
+        "suite": "truthfulqa-smollm2-l80",
+        "workflow": "world_model_rule_candidate_promotion_gate"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-entity-binding-promotion-gate",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-entity-binding-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

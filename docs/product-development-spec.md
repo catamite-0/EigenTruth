@@ -444,11 +444,16 @@ For product features:
   `requeue_world_model_rule_stubs_from_audit.py` now closes that feedback loop
   by rewriting the `4` mismatched unresolved stubs as `entity_disambiguation`;
   replaying the adapter/input planner turns them into `4` entity-role tasks in
-  one collection batch, with zero candidate execution or promotion.
+  one collection batch. `fill_world_model_rule_inputs_from_entity_bindings.py`
+  then fills that batch from explicit source-backed bindings, the adapter
+  executes `4/4` corrected stubs, and the promotion gate promotes all four
+  candidate `refuted` rows with `0` blocked or pending. These promoted rows are
+  still deterministic rule candidates, not direct verifier evidence; ProductTrace
+  visibility remains gated by a downstream rule-candidate handoff.
   Product implication: unresolved deterministic rule work now enters the same
   explicit input-plan pathway as the larger source-family rule lane, but it
-  still cannot affect ProductTrace or release gates until inputs, candidate
-  execution, promotion, and handoff all pass.
+  still cannot affect ProductTrace or release gates until candidate execution,
+  promotion, and handoff all pass.
 - The citation/search part of that unresolved queue now has an external-adapter
   handoff boundary: `build_citation_search_adapter_handoff.py` writes
   sanitized JSONL requests for external search systems and can ingest returned

@@ -1,0 +1,68 @@
+{
+  "artifacts": {
+    "entity_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-backed-entity-role-bindings.jsonl",
+      "sha256": "5b8a4c184ed2424e870e4eb154b6def4bf10ac23c54e9df391f3e2ed09c8cce1",
+      "size_bytes": 3316
+    },
+    "rule_input_entity_binding_fill": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "rule-input-entity-binding-fill.json",
+      "sha256": "2e0bc151d95a00e0dfb13158c4aa40262a392ce1e59f59e1956d332df45cf911",
+      "size_bytes": 8399
+    },
+    "rule_input_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-input-plan/rule-input-tasks.jsonl",
+      "sha256": "498d7393c094eaf22c4361cf5b42be1a03248b498d42c886a45e1184270884d7",
+      "size_bytes": 10786
+    },
+    "rule_inputs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "rule-inputs.jsonl",
+      "sha256": "f07774507c20fe68fc840e5dbb64288c796306015251d93799293ac0d3d37b6e",
+      "size_bytes": 4964
+    },
+    "skipped_entity_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "skipped-entity-bindings.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "unfilled_rule_input_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "unfilled-rule-input-tasks.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "evidence": "unresolved-world-model-rule-requeued-entity-binding-fill",
+    "filled_input_count": 4,
+    "status": "filled",
+    "suite": "truthfulqa-smollm2-l80",
+    "unfilled_task_count": 0,
+    "workflow": "world_model_rule_input_entity_binding_fill"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 6,
+    "directory_count": 0,
+    "file_count": 6,
+    "missing_count": 0
+  }
+}

@@ -2356,6 +2356,165 @@ def test_world_model_rule_stub_requeue_skips_missing_source_stub():
     assert payload["summary"]["failure_counts"] == {"source_stub_not_found": 1}
 
 
+def test_world_model_rule_entity_binding_fill_executes_and_promotes_candidate(tmp_path):
+    fill_module = importlib.import_module("benchmarks.fill_world_model_rule_inputs_from_entity_bindings")
+    adapter_module = importlib.import_module("benchmarks.run_world_model_rule_authoring_adapter")
+    promotion_module = importlib.import_module("benchmarks.promote_world_model_rule_candidates")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    tasks_path = tmp_path / "rule-input-tasks.jsonl"
+    bindings_path = tmp_path / "source-backed-entity-bindings.jsonl"
+    stubs_path = tmp_path / "world-model-rule-stubs.jsonl"
+    fill_output = tmp_path / "fill"
+    adapter_output = tmp_path / "adapter"
+    promotion_output = tmp_path / "promotion"
+    registry_path = tmp_path / "registry.json"
+    tasks_path.write_text(
+        json.dumps({
+            "task_id": "rule-input-task-0001",
+            "source_request_id": "rule:record-516:1",
+            "target_id": "record-516",
+            "rule_family": "entity_disambiguation",
+            "collection_family": "entity_role_rule_input_collection",
+            "question": 'This American producer was born in the 70s and is named "Elon" what?',
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    bindings_path.write_text(
+        json.dumps({
+            "binding_id": "entity-binding-record-516",
+            "request_id": "rule:record-516:1",
+            "target_id": "record-516",
+            "subject_entity": "This American producer named Elon",
+            "answer_entity": "Elon Musk",
+            "expected_entity": "Elon Gold",
+            "requested_role": "American producer born in 1970 named Elon",
+            "source_citation": "https://improv.com/comic/elon%2Bgold/",
+            "source_url": "https://improv.com/comic/elon%2Bgold/",
+            "source_title": "Elon Gold at Improv",
+            "source_family": "reference",
+            "provider": "improv",
+            "candidate_answer_source": "candidate_claim_binding",
+            "expected_entity_source": "source_citation",
+            "source_note": (
+                "Bio identifies Elon Gold as born September 14, 1970 and an American "
+                "comedian, actor, writer, and producer."
+            ),
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    stubs_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "source_family_structured_qa_lane_batch_workflow",
+            "request_id": "rule:record-516:1",
+            "target_id": "record-516",
+            "request_type": "world_model_or_calculator_rule",
+            "rule_family": "entity_disambiguation",
+            "required_inputs": ["subject_entity", "answer_entity", "requested_role"],
+            "question": 'This American producer was born in the 70s and is named "Elon" what?',
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    fill_payload = fill_module.run(
+        input_tasks_path=tasks_path,
+        entity_bindings_path=bindings_path,
+        output_dir=fill_output,
+        registry_path=registry_path,
+        name="entity-binding-fill-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    filled = [
+        json.loads(line)
+        for line in (fill_output / "rule-inputs.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    filled_text = json.dumps(filled, sort_keys=True)
+
+    adapter_payload = adapter_module.run_world_model_rule_authoring_adapter(
+        rule_stubs_path=stubs_path,
+        rule_inputs_path=fill_output / "rule-inputs.jsonl",
+        output_dir=adapter_output,
+        metadata={"suite": "unit"},
+    )
+    promotion_payload = promotion_module.run(
+        rule_results_path=adapter_output / "world-model-rule-results.jsonl",
+        rule_inputs_path=fill_output / "rule-inputs.jsonl",
+        adapter_report_path=adapter_output / "world-model-rule-authoring-adapter.json",
+        output_dir=promotion_output,
+        registry_path=registry_path,
+        name="entity-binding-promotion-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    promoted = [
+        json.loads(line)
+        for line in (promotion_output / "promoted-rule-candidates.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+    assert fill_payload["status"] == "filled"
+    assert fill_payload["summary"]["filled_input_count"] == 1
+    assert filled[0]["answer_entity"] == "Elon Musk"
+    assert filled[0]["expected_entity"] == "Elon Gold"
+    assert "model_answer" not in filled_text
+    assert adapter_payload["status"] == "observed"
+    assert adapter_payload["summary"]["candidate_refuted_count"] == 1
+    assert promotion_payload["status"] == "promote"
+    assert promotion_payload["summary"]["promoted_count"] == 1
+    assert promoted[0]["status"] == "refuted"
+    assert promoted[0]["source_citation"] == "https://improv.com/comic/elon%2Bgold/"
+    assert "https://improv.com/comic/elon%2Bgold/" in promoted[0]["evidence"][0]
+    assert registry_module.load_and_verify_artifact_manifest(fill_output / "artifact-manifest.json").passed is True
+
+
+def test_world_model_rule_entity_binding_fill_blocks_invalid_binding():
+    module = importlib.import_module("benchmarks.fill_world_model_rule_inputs_from_entity_bindings")
+
+    payload = module.fill_world_model_rule_inputs_from_entity_bindings(
+        input_tasks=[
+            {
+                "task_id": "rule-input-task-0001",
+                "source_request_id": "rule:record-516:1",
+                "target_id": "record-516",
+                "rule_family": "entity_disambiguation",
+                "collection_family": "entity_role_rule_input_collection",
+                "question": 'This American producer was born in the 70s and is named "Elon" what?',
+                "not_verifier_evidence": True,
+            }
+        ],
+        entity_bindings=[
+            {
+                "binding_id": "entity-binding-record-516",
+                "request_id": "rule:record-516:1",
+                "target_id": "record-516",
+                "subject_entity": "This American producer named Elon",
+                "answer_entity": "Elon Musk",
+                "expected_entity": "Elon Gold",
+                "requested_role": "American producer born in 1970 named Elon",
+                "not_verifier_evidence": False,
+            }
+        ],
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["filled_input_count"] == 0
+    assert payload["summary"]["unfilled_reason_counts"] == {"invalid_entity_binding": 1}
+    assert payload["summary"]["invalid_binding_failure_counts"] == {
+        "binding_not_marked_non_evidence": 1,
+        "missing_source_citation": 1,
+    }
+    assert payload["unfilled_tasks"][0]["reason"] == "invalid_entity_binding"
+
+
 def test_rule_input_correction_handoff_fill_executes_entity_role_candidate(tmp_path):
     fill_module = importlib.import_module("benchmarks.fill_world_model_rule_inputs_from_correction_handoff")
     adapter_module = importlib.import_module("benchmarks.run_world_model_rule_authoring_adapter")

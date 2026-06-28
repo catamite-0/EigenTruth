@@ -1634,6 +1634,17 @@ the risk decision is `high/abstain`, and the executor registry records one
 dry-run abstain action. The manifest verifies `5/5` files; the other `36` rule
 rows stay pending input work and are not verifier evidence.
 
+`benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py` now closes the
+audited unresolved-rule requeue batch. The registered SmolLM2 L80 chain at
+`artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-entity-binding-fill/`,
+`...-adapter/`, and `...-promotion-gate/` is `filled -> observed -> promote`:
+all `4` requeued entity-role tasks are filled from explicit source-backed
+bindings, all `4` corrected stubs execute, and all `4` deterministic candidate
+rows promote with `0` blocked and `0` pending. The Sesame Street candidates are
+bound against a fictional-location citation, and the Elon candidates are bound
+against the source-backed expected entity `Elon Gold`; the rows remain
+candidate-only until citation matching passes the promotion gate.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
