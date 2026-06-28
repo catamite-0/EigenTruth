@@ -403,15 +403,18 @@ For product features:
   while structured QA over those covered facts promotes with decision accuracy
   `1.0`. The explicit question/property mapper then narrows the `10/89`
   covered-fact candidates to `1/89` deployable correction gate: Tesla founder
-  maps to Wikidata `P112`. The product route can use that slot as precise
-  property evidence, but broad blind-spot recall still needs citation or
-  world-model expansion.
+  maps to Wikidata `P112`. `build_question_property_correction_handoff.py` now
+  converts that slot into a target-specific structured-QA corpus and
+  ProductTrace JSONL: the existing verifier refutes the Elon Musk answer,
+  records a high-risk abstain decision, and dry-runs the abstain action. The
+  product route can use that slot as precise property evidence, but broad
+  blind-spot recall still needs citation or world-model expansion.
 
 ### Next Verification Adapter Work
 
-- Promote mapped question/property corrections as a separate verifier route
-  input so the Tesla/P112 covered-fact gate is visible in ProductTrace without
-  implying broad KG coverage.
+- Expand the unresolved blind-spot evidence queue beyond the `1/89` mapped KG
+  slot, prioritizing citation/search adapters and world-model rules for records
+  with no joined facts or only generic fact joins.
 - Execute the unresolved high-priority citation/search requests through
   external source adapters, ingest the resulting documents through
   `build_external_retrieval_corpus.py`, and audit provenance before any route

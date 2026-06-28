@@ -5440,6 +5440,21 @@
       "name": "truthfulqa-frontier-smollm2-l80-blind-spot-question-property-mapping",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-question-property-mapping/blind-spot-question-property-mapping.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-question-property-correction-handoff/artifact-manifest.json",
+        "corpus_document_count": 2,
+        "correction_candidate_count": 1,
+        "evidence": "smollm2_l80_question_property_product_trace_handoff",
+        "status": "promote",
+        "trace_count": 1,
+        "workflow": "question_property_correction_handoff"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-question-property-correction-handoff",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-question-property-correction-handoff/question-property-correction-handoff.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

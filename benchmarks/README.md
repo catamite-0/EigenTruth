@@ -1531,6 +1531,32 @@ Wikidata `P112` with Martin Eberhard and Marc Tarpenning as covered facts.
 Another `7` records are generic fact-only joins. This turns the Wikidata path
 into a precise property gate while making the remaining gap explicit.
 
+## `build_question_property_correction_handoff.py`
+
+Turns explicit question/property mapping candidates into a product-visible
+correction handoff. The workflow writes a target-specific structured-QA corpus
+for the original question, verifies the mapped model answer with the existing
+`QuestionAnswerVerifier`, and records a ProductTrace JSONL row with the selected
+route, refutation, risk decision, and dry-run action. The resulting corpus is
+marked as target-specific correction evidence, not a general retrieval corpus.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-question-property-correction-handoff
+
+python benchmarks/build_question_property_correction_handoff.py \
+  --question-property-mapping artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-question-property-mapping/blind-spot-question-property-mapping.json \
+  --output-dir "$OUT" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-question-property-correction-handoff \
+  --version 0.1
+```
+
+The current SmolLM2 l80 handoff promotes `1` ProductTrace-visible correction:
+`question_property_structured_qa` refutes "Who first started Tesla Motors?
+Elon Musk." using the two mapped `P112` facts, then plans an `abstain` action
+and records a dry-run action result. This is the first end-to-end path from
+blind-spot mapping to product control trace.
+
 ## `eval_verifier_ensemble.py`
 
 Compares a single calibrated internal diagnostic against a retrieval/verifier

@@ -35751,6 +35751,89 @@ def test_map_blind_spot_question_properties_promotes_explicit_properties(tmp_pat
     assert record.metadata["suite"] == "unit"
 
 
+def test_question_property_correction_handoff_writes_trace_and_corpus(tmp_path):
+    module = importlib.import_module("benchmarks.build_question_property_correction_handoff")
+    registry_module = importlib.import_module("eigentruth.registry")
+    mapping_path = tmp_path / "question-property-mapping.json"
+    output_dir = tmp_path / "handoff"
+    registry_path = tmp_path / "registry.json"
+    mapping_path.write_text(
+        json.dumps({
+            "workflow": "blind_spot_question_property_mapping",
+            "status": "observed",
+            "summary": {"target_count": 1, "mapped_correction_candidate_count": 1},
+            "records": [
+                {
+                    "record_index": 1,
+                    "question": "Who first started Acme Motors?",
+                    "answer": "Alice",
+                    "mapping_decision": "mapped_correction_candidate",
+                    "correction_candidate": True,
+                    "best_mapping_score": 0.95,
+                    "mapped_facts": [
+                        {
+                            "question": "What does Wikidata list as the founder for Acme Motors?",
+                            "answer": "Bob",
+                            "source": "wikidata:Q1:P112:Q10",
+                            "statement_property": "P112",
+                            "statement_property_label": "founder",
+                            "subject": "Acme Motors",
+                            "subject_qid": "Q1",
+                            "value_qid": "Q10",
+                            "matched_intents": ["founder"],
+                            "mapping_score": 0.95,
+                        },
+                    ],
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        mapping_report_path=mapping_path,
+        output_dir=output_dir,
+        registry_path=registry_path,
+        name="question-property-correction-handoff-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    report = payload["report"]
+    corpus = json.loads((output_dir / "question-property-correction-corpus.json").read_text(encoding="utf-8"))
+    traces = [
+        json.loads(line)
+        for line in (output_dir / "product-traces.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    manifest_path = output_dir / "artifact-manifest.json"
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:question-property-correction-handoff-unit:0.1"
+    )
+
+    assert report["status"] == "promote"
+    assert report["summary"]["correction_candidate_count"] == 1
+    assert report["summary"]["corpus_document_count"] == 1
+    assert report["summary"]["verification_status_counts"] == {"refuted": 1}
+    assert report["summary"]["action_counts"] == {"abstain": 1}
+    assert corpus["corpus_type"] == "target_specific_question_property_correction_qa"
+    assert corpus["documents"][0]["question"] == "Who first started Acme Motors?"
+    assert corpus["documents"][0]["answer"] == "Bob"
+    assert corpus["documents"][0]["metadata"]["statement_property"] == "P112"
+    assert traces[0]["verification_results"][0]["status"] == "refuted"
+    assert traces[0]["verification_results"][0]["metadata"]["selected_route"] == (
+        "question_property_structured_qa"
+    )
+    assert traces[0]["risk_decision"]["action"] == "abstain"
+    assert traces[0]["action_results"][0]["status"] == "dry_run"
+    assert traces[0]["bounded"]["summaries"]["verification_route"]["counts_by_selected_route"] == {
+        "question_property_structured_qa": 1
+    }
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "question_property_correction_handoff"
+    assert record.metadata["trace_count"] == 1
+    assert record.metadata["suite"] == "unit"
+
+
 def test_eval_score_ensemble_compares_single_and_combined_signals(tmp_path):
     module = importlib.import_module("benchmarks.eval_score_ensemble")
     scores_path = tmp_path / "scores.json"

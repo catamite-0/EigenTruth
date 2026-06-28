@@ -1023,6 +1023,17 @@ are answer-entity collisions, and `52` still have no joined facts. The product
 handoff should therefore treat target-specific Wikidata as a precise property
 gate for explicitly mapped claims, not as broad TruthfulQA recall.
 
+The product-visible handoff is now materialized as
+`report:truthfulqa-frontier-smollm2-l80-question-property-correction-handoff:0.1`.
+`build_question_property_correction_handoff.py` converts that single mapped
+Tesla/P112 slot into a target-specific structured-QA corpus with two answers
+and one ProductTrace row. The existing `QuestionAnswerVerifier` selects
+`question_property_structured_qa`, refutes "Who first started Tesla Motors?
+Elon Musk." with Marc Tarpenning and Martin Eberhard as evidence, records a
+high-risk `abstain` decision, and dry-runs the abstain action. This closes the
+first end-to-end KG path from blind-spot mapping to product trace, still scoped
+to `1/89` blind spots.
+
 A local release-candidate smoke artifact now pairs that staged route baseline
 with a tiny-gpt2 offline readiness/runtime baseline:
 

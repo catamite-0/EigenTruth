@@ -495,6 +495,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `audit_blind_spot_correction_routes.py` | Joins row-level blind spots with verifier sidecar records to measure which independent correction routes actually select, refute, support, or miss high-confidence false answers. |
 | `audit_blind_spot_covered_fact_mapping.py` | Joins blind-spot records to collected Wikidata source docs and structured QA facts through request fingerprints, reporting conservative claim-to-covered-fact mapping candidates, answer-entity collisions, and no-fact gaps. |
 | `map_blind_spot_question_properties.py` | Adds an explicit question-to-Wikidata-property gate on top of covered-fact mapping audits, promoting only facts whose property intent is visible in the original question and routing generic facts to citation or world-model evidence. |
+| `build_question_property_correction_handoff.py` | Converts explicitly mapped question/property corrections into a target-specific structured-QA corpus plus ProductTrace JSONL, showing verifier refutation, risk decision, and dry-run action without claiming broad KG coverage. |
 | `sweep_blind_spot_retrieval_queries.py` | Sweeps local retrieval query fields and overlap thresholds against blind spots, measuring route coverage, verified false alarm, and controlled-corpus provenance before any retriever default changes. |
 | `compare_blind_spot_query_sweeps.py` | Compares controlled and external/structured query-sweep reports with fail-closed gates, blocking controlled-only query coverage from becoming product evidence. |
 | `plan_blind_spot_evidence_expansion.py` | Turns blocked blind-spot coverage into per-record external evidence collection targets, including structured-fact properties, citation queries, counterfactual probes, and world-model/calculator tasks. |
@@ -502,6 +503,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `fetch_blind_spot_wikidata_evidence.py` | Resolves blind-spot Wikidata collection requests through the Wikidata API, writes CC0 source docs with score-row links stripped from evidence metadata, and records request-level resolution/documentation outcomes before external-corpus ingestion. |
 | `audit_blind_spot_covered_fact_mapping.py` | Audits whether target-specific Wikidata covered facts actually map back to original blind-spot questions, without treating joined facts as proof of open-domain refutation. |
 | `map_blind_spot_question_properties.py` | Converts covered-fact mapping candidates into a stricter explicit question/property correction gate, keeping generic joined facts diagnostic until citation or world-model evidence validates them. |
+| `build_question_property_correction_handoff.py` | Builds the ProductTrace-visible handoff for explicitly mapped property corrections, including a target-specific structured-QA corpus, refutation trace, risk decision, and dry-run action result. |
 | `select_fusion_signals_from_ablation.py` | Converts a saved fusion ablation matrix into a run-specific signal-selection report, keeping optional signals such as trajectory conditional instead of global defaults. |
 | `build_selected_fusion_artifacts.py` | Builds per-run `RankScoreFusionArtifact` files from a signal-selection report and matching score dumps, turning conditional signal choices into calibrated deployable artifacts. |
 | `eval_frontier_stability.py` | Replays saved frontier score dumps across multiple split-conformal seeds, summarizes best-signal stability, fingerprints source score records, and optionally registers the post-hoc stability report. |
@@ -670,6 +672,7 @@ evidence rates and maximum final false-accept / false-accept-delta thresholds.
 | `audit_blind_spot_correction_routes.py` | 将逐条 blind spot 与 verifier sidecar 记录对齐，衡量独立校正路线是否真正选中、refute、support 或漏掉高置信错误。 |
 | `audit_blind_spot_covered_fact_mapping.py` | 通过 request fingerprint 将 blind spot records 连接到已采集 Wikidata source docs 和 structured QA facts，报告保守的 covered-fact mapping candidates、答案实体碰撞和无事实缺口。 |
 | `map_blind_spot_question_properties.py` | 在 covered-fact mapping audit 之上增加显式 question-to-Wikidata-property gate，只提升原问题中有明确 property 意图的事实，把 generic fact 留给 citation 或 world-model 证据。 |
+| `build_question_property_correction_handoff.py` | 将显式 question/property correction 转成目标特定 structured-QA corpus 和 ProductTrace JSONL，记录 verifier refutation、risk decision 与 dry-run action，不声称 KG 广泛覆盖。 |
 | `sweep_blind_spot_retrieval_queries.py` | 对 blind spot 扫描本地 retrieval query field 和 overlap 阈值，报告 route 覆盖、verified false alarm 和受控 corpus provenance，再决定是否调整 retriever 默认策略。 |
 | `compare_blind_spot_query_sweeps.py` | 对比 controlled 与 external/structured query-sweep report，用 fail-closed gate 阻止 controlled-only 覆盖被误当成产品证据。 |
 | `plan_blind_spot_evidence_expansion.py` | 将 blocked blind-spot 覆盖转成逐条外部证据采集目标，包括 structured-fact property、citation query、counterfactual probe 和 world-model/calculator 任务。 |
@@ -677,6 +680,7 @@ evidence rates and maximum final false-accept / false-accept-delta thresholds.
 | `fetch_blind_spot_wikidata_evidence.py` | 通过 Wikidata API 解析 blind-spot Wikidata collection request，写出已剥离 score-row link 的 CC0 source docs，并在进入 external-corpus ingestion 前记录 request 级解析/文档化结果。 |
 | `audit_blind_spot_covered_fact_mapping.py` | 审计目标相关 Wikidata covered facts 是否真的映射回原始 blind-spot 问题，不把 joined facts 直接当成 open-domain refutation。 |
 | `map_blind_spot_question_properties.py` | 将 covered-fact mapping candidates 收紧为显式 question/property 纠错门；generic joined facts 只能作为诊断，直到 citation 或 world-model 证据补齐。 |
+| `build_question_property_correction_handoff.py` | 为显式映射的 property correction 构建产品 trace handoff，包含目标特定 structured-QA corpus、refutation trace、risk decision 与 dry-run action result。 |
 | `select_fusion_signals_from_ablation.py` | 将已保存 fusion ablation matrix 转成按 run 选择的 signal-selection report，让 trajectory 等可选信号保持条件式启用，而不是全局默认。 |
 | `build_selected_fusion_artifacts.py` | 基于 signal-selection report 和匹配 score dump 生成 per-run `RankScoreFusionArtifact`，把条件式信号选择落成可校准加载的 artifact。 |
 | `eval_frontier_stability.py` | 对已保存 frontier score dump 做多 seed split-conformal 重放，总结最佳信号稳定性，指纹化 source score records，并可选登记 post-hoc stability report。 |
