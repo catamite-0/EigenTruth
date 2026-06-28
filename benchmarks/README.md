@@ -2299,6 +2299,93 @@ also writes `764` source-discovery document rows for local collection tooling.
 The request JSONL sidecars contain no `label`, `answer`, or `model_answer`
 fields; the manifest verifies `8/8` files.
 
+## `run_source_family_structured_qa_fact_collection_workflow.py`
+
+Executes the structured QA fact-collection corpus against local source-family
+catalogs. It normalizes structured-fact, entity-resolution, citation, and
+fact-disambiguation requests into the existing local source-family catalog
+ranker, writes one combined adapter-result JSONL, rebuilds a conservative
+structured QA candidate corpus from matched structured metadata, and preserves
+world-model/calculator tasks as rule-authoring stubs. The output is still a
+candidate evidence bundle; route quality and claim mapping must be rerun before
+any correction handoff.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-workflow
+
+python benchmarks/run_source_family_structured_qa_fact_collection_workflow.py \
+  --collection-corpus artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-corpus/fact-collection-corpus.json \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog/source-family-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-worldbank-official-statistics-catalog/worldbank-official-statistics-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-crossref-scholarly-catalog/crossref-scholarly-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-official-site-catalog/official-site-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-openalex-scholarly-catalog/openalex-scholarly-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-catalog/seeded-news-catalog.jsonl \
+  --output-dir "$OUT" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-workflow \
+  --version 0.1 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=source_family_structured_qa_fact_collection_corpus \
+  --compact-json
+
+python benchmarks/verify_artifact_manifest.py \
+  --manifest "$OUT/artifact-manifest.json" \
+  --json "$OUT/manifest-verification.json"
+```
+
+The registered SmolLM2 l80 workflow is `ready_for_fact_mapping`: `778`
+source-backed requests all return local catalog results (`2334` candidate
+result rows over `622` catalog documents), `28` world-model/calculator rule
+stubs are preserved, and the rebuilt structured QA corpus contains `70`
+candidate facts. Candidate result providers include Wikidata/reference,
+World Bank official statistics, Crossref/OpenAlex scholarly rows, and official
+site rows; no reserved `label`, `answer`, or `model_answer` fields appear in
+adapter requests or result source-document metadata, and the manifest verifies
+`21/21` files.
+
+The resulting candidate corpus was rerun through the covered-fact route and
+claim-mapping gates:
+
+```bash
+ROUTE=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-route
+
+python benchmarks/run_source_family_structured_qa_route_workflow.py \
+  --qa-corpus "$OUT/source-family-structured-qa-corpus.json" \
+  --output-dir "$ROUTE" \
+  --score-name source-family-fact-collection-covered-facts-smollm2-l80 \
+  --alpha 0.1 \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-route \
+  --version 0.1 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_fact_collection_workflow \
+  --compact-json
+
+MAP=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-claim-mapping
+
+python benchmarks/audit_source_family_structured_qa_claim_mapping.py \
+  --claims artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
+  --qa-corpus "$OUT/source-family-structured-qa-corpus.json" \
+  --route-summary "$ROUTE/structured-qa-route-summary.json" \
+  --json "$MAP/source-family-structured-qa-fact-collection-claim-mapping.json" \
+  --artifact-manifest "$MAP/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-claim-mapping \
+  --version 0.1 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_fact_collection_workflow \
+  --compact-json
+```
+
+The route audit promotes on `140` balanced covered-fact rows. The claim-mapping
+audit improves the previous `0/89` coverage to `1/89` mapped correction
+candidate: the Tesla founder blind spot maps to Wikidata `P112` founder
+evidence for Martin Eberhard. The result remains `observed`, not a broad route
+promotion; the remaining records are `13` answer-entity collisions, `28`
+subject-only gaps, `2` intent-only gaps, `7` weak-overlap rows, and `38`
+no-candidate rows.
+
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:
 

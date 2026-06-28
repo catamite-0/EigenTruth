@@ -1480,6 +1480,22 @@ rows. The JSONL request sidecars intentionally contain no `label`, `answer`, or
 copying the model's wrong answer into external search. Its manifest verifies
 `8/8`.
 
+`benchmarks/run_source_family_structured_qa_fact_collection_workflow.py` now
+executes that request boundary against the local source-family catalogs. The
+registered artifact
+`artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-workflow/`
+is `ready_for_fact_mapping`: `778` source-backed requests all return local
+catalog matches, producing `2334` candidate result rows over `622` catalog
+documents and `28` preserved world-model/calculator rule stubs. Rebuilding
+structured QA from those matches yields `70` candidate facts; the follow-up
+covered-fact route audit promotes on `140` balanced rows, and the new
+claim-mapping audit improves blind-spot coverage from `0/89` to `1/89`. The
+single mapped correction candidate is the Tesla founder record: the model answer
+claims Elon Musk founded Tesla, while the mapped Wikidata `P112` fact gives
+Martin Eberhard. The claim-mapping report remains `observed`, not promoted as a
+broad route; the rest of the blind spots still require richer property mapping,
+source citations, entity disambiguation, or deterministic world-model rules.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -1508,11 +1524,13 @@ copying the model's wrong answer into external search. Its manifest verifies
 7. Source-family catalog acquisition is now closed for the current SmolLM2 l80
    frontier queue: `official=36/36`, `official_statistics=4/4`,
    `scholarly=156/156`, and `news=4/4` are covered. The source-family
-   structured QA route audit promotes exact covered-fact quality for `18`
-   extracted facts, but claim/blind-spot mapping remains `0/89`; use the new
-   fact-expansion collection corpus to execute claim-specific structured fact,
-   citation, entity-resolution, disambiguation, and world-model/calculator-rule
-   collection before creating any correction handoff.
+   structured QA route audit now promotes both the original `18` extracted
+   facts and the `70` fact-collection candidates. Claim/blind-spot mapping has
+   moved from `0/89` to `1/89`, recovering the Tesla/Martin Eberhard correction
+   slot; next, build a source-family structured QA correction handoff for mapped
+   candidates and continue routing the unresolved rows to richer property
+   mapping, citation evidence, entity disambiguation, and deterministic
+   world-model/calculator rules.
 8. Extend the new verifier-stability path from structured QA to real retrieval,
    database, calculator, and world-model evidence under the same conformal
    false-alarm budgets. Use `benchmarks/build_evidence_fixture.py` with a local

@@ -881,14 +881,24 @@ Added the first monitor-first tool-selection audit layer:
   plus `764` source-discovery document rows. The sidecars are manifest-backed,
   mark requests as non-evidence, and do not copy `label`, `answer`, or
   `model_answer` fields into request rows.
+- `run_source_family_structured_qa_fact_collection_workflow.py` executes those
+  sidecars against local source-family catalogs and turns candidate matches back
+  into a structured QA corpus. The registered SmolLM2 l80 workflow returns
+  `2334` candidate adapter results for `778/778` source-backed requests, keeps
+  `28` world-model/calculator rule stubs, and yields `70` candidate QA facts.
+  The follow-up covered-fact route audit promotes on `140` balanced records, and
+  the claim-mapping audit recovers `1/89` structured QA correction candidate
+  from the previous `0/89`: the Tesla founder blind spot maps to Wikidata `P112`
+  with Martin Eberhard. The result is still an `observed` correction candidate,
+  not broad open-domain route promotion.
 
 ## Next Research-to-Code Candidates
 
-1. Execute the source-family structured QA fact-collection corpus: run the
-   request sidecars through source-family fact adapters, citation/search
-   adapters, entity-resolution, disambiguation, and rule-authoring workflows,
-   then rebuild the structured QA corpus and rerun the claim-mapping gate before
-   creating any correction handoff.
+1. Build the source-family structured QA correction handoff for mapped
+   candidates and keep it fail-closed: the current fact-collection workflow
+   produces `1/89` correction candidate, so the product handoff should carry the
+   mapped fact, source provenance, route summary, and claim-mapping audit before
+   entering product traces or release gates.
 2. Move from source-family acquisition to route-quality improvement: the current
    queue now has complete source-family coverage, but still has no passing
    blind-spot query strategy. The next code step should improve structured query

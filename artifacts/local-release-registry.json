@@ -6112,6 +6112,58 @@
       "name": "truthfulqa-frontier-smollm2-l80-seeded-news-source-family-coverage-audit",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-source-family-coverage-audit/source-family-coverage-audit.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "adapter_result_count": 2334,
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-workflow/artifact-manifest.json",
+        "request_with_results_count": 778,
+        "rule_stub_count": 28,
+        "source": "source_family_structured_qa_fact_collection_corpus",
+        "source_backed_request_count": 778,
+        "status": "ready_for_fact_mapping",
+        "structured_qa_document_count": 70,
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "source_family_structured_qa_fact_collection_workflow"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-workflow",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-workflow/fact-collection-workflow.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-route/artifact-manifest.json",
+        "evidence": "source_family_structured_qa_fact_collection_workflow",
+        "fact_group_count": 9,
+        "n_records": 140,
+        "provider_count": 2,
+        "route": "structured_qa",
+        "source_family_count": 2,
+        "status": "promote",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "source_family_structured_qa_route_workflow"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-route",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-route/structured-qa-route-summary.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-claim-mapping/artifact-manifest.json",
+        "covered_fact_match_count": 1,
+        "evidence": "source_family_structured_qa_fact_collection_workflow",
+        "mapped_qa_fact_candidate_count": 1,
+        "status": "observed",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "target_count": 89,
+        "workflow": "source_family_structured_qa_claim_mapping_audit"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-claim-mapping",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-claim-mapping/source-family-structured-qa-fact-collection-claim-mapping.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

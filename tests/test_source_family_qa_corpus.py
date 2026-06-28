@@ -696,3 +696,184 @@ def test_source_family_structured_qa_fact_collection_compiles_request_sidecars(t
     assert record.metadata["workflow"] == "source_family_structured_qa_fact_collection_corpus"
     assert record.metadata["total_request_count"] == payload["summary"]["total_request_count"]
     assert record.metadata["suite"] == "unit"
+
+
+def test_source_family_structured_qa_fact_collection_workflow_executes_local_catalog(tmp_path):
+    module = importlib.import_module("benchmarks.run_source_family_structured_qa_fact_collection_workflow")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    collection_path = tmp_path / "fact-collection-corpus.json"
+    source_catalog_path = tmp_path / "source-family-catalog.jsonl"
+    output_dir = tmp_path / "workflow"
+    registry_path = tmp_path / "registry.json"
+
+    collection_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "source_family_structured_qa_fact_collection_corpus",
+            "status": "ready_for_collection",
+            "summary": {
+                "target_count": 1,
+                "total_request_count": 5,
+            },
+            "requests": {
+                "source_family_structured_fact": [
+                    {
+                        "request_id": "sfact:record-1:1",
+                        "target_id": "record-1",
+                        "request_type": "source_family_structured_fact",
+                        "priority": "high",
+                        "question_type": "person",
+                        "gap_type": "missing_property_or_indicator",
+                        "question": "Who founded Beta Labs?",
+                        "query": "Who founded Beta Labs Beta Labs founder P112 reference",
+                        "source_family": "reference",
+                        "provider_hint": "wikidata",
+                        "entity_candidates": ["Beta Labs"],
+                        "property_hints": ["founder", "P112"],
+                        "usage": "source_discovery_only",
+                        "not_verifier_evidence": True,
+                    }
+                ],
+                "entity_resolution": [
+                    {
+                        "request_id": "entity:record-1:1",
+                        "target_id": "record-1",
+                        "request_type": "entity_resolution",
+                        "priority": "high",
+                        "question_type": "person",
+                        "gap_type": "missing_property_or_indicator",
+                        "question": "Who founded Beta Labs?",
+                        "entity": "Beta Labs",
+                        "query": "Beta Labs founder",
+                        "property_hints": ["P112"],
+                        "usage": "source_discovery_only",
+                        "not_verifier_evidence": True,
+                    }
+                ],
+                "external_citation": [
+                    {
+                        "request_id": "cite:record-1:1",
+                        "target_id": "record-1",
+                        "request_type": "external_citation",
+                        "priority": "high",
+                        "question_type": "person",
+                        "gap_type": "missing_property_or_indicator",
+                        "question": "Who founded Beta Labs?",
+                        "query": "Beta Labs founder",
+                        "source_family_hints": ["reference"],
+                        "usage": "source_discovery_only",
+                        "not_verifier_evidence": True,
+                    }
+                ],
+                "source_family_fact_disambiguation": [
+                    {
+                        "request_id": "disambig:record-1:1",
+                        "target_id": "record-1",
+                        "request_type": "source_family_fact_disambiguation",
+                        "priority": "high",
+                        "question_type": "person",
+                        "gap_type": "answer_entity_collision",
+                        "question": "Who founded Beta Labs?",
+                        "query": "Beta Labs founder disambiguation",
+                        "entities": ["Beta Labs"],
+                        "property_hints": ["P112"],
+                        "usage": "source_discovery_only",
+                        "not_verifier_evidence": True,
+                    }
+                ],
+                "world_model_or_calculator_rule": [
+                    {
+                        "request_id": "rule:record-1:1",
+                        "target_id": "record-1",
+                        "request_type": "world_model_or_calculator_rule",
+                        "priority": "high",
+                        "question_type": "person",
+                        "gap_type": "answer_entity_collision",
+                        "question": "Who founded Beta Labs?",
+                        "rule_family": "entity_disambiguation",
+                        "rule_reason": "unit",
+                        "rule_seed": "Check founder entity for Beta Labs",
+                        "required_inputs": ["subject", "founder"],
+                        "usage": "source_discovery_only",
+                        "not_verifier_evidence": True,
+                    }
+                ],
+            },
+        }),
+        encoding="utf-8",
+    )
+    source_catalog_path.write_text(
+        json.dumps({
+            "provider": "wikidata",
+            "source_family": "reference",
+            "source": "wikidata:QUNIT:P112:QADA",
+            "title": "Beta Labs founder",
+            "text": "Beta Labs founder Ada Beta reference P112.",
+            "url": "https://www.wikidata.org/wiki/QUNIT",
+            "metadata": {
+                "provider": "wikidata",
+                "source_family": "reference",
+                "statement_property": "P112",
+                "statement_property_label": "founder",
+                "subject": "Beta Labs",
+                "subject_qid": "QUNIT",
+                "value": "Ada Beta",
+                "value_qid": "QADA",
+                "retrieved_at": "2026-06-28T00:00:00+00:00",
+            },
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = module.run_source_family_structured_qa_fact_collection_workflow(
+        collection_corpus_path=collection_path,
+        source_catalog_paths=(source_catalog_path,),
+        output_dir=output_dir,
+        registry_path=registry_path,
+        name="source-family-fact-collection-workflow-unit",
+        version="0.1",
+        adapter_max_results=1,
+        adapter_min_text_overlap=0.0,
+        metadata={"suite": "unit"},
+    )
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:source-family-fact-collection-workflow-unit:0.1"
+    )
+    qa_corpus = json.loads(
+        (output_dir / "source-family-structured-qa-corpus.json").read_text(encoding="utf-8")
+    )
+    combined_rows = [
+        json.loads(line)
+        for line in (output_dir / "fact-collection-adapter-results.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    adapter_requests = [
+        json.loads(line)
+        for line in (
+            output_dir / "source-family-structured-fact-adapter-requests.jsonl"
+        ).read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+    assert payload["status"] == "ready_for_fact_mapping"
+    assert payload["summary"]["source_backed_request_count"] == 4
+    assert payload["summary"]["request_with_results_count"] == 4
+    assert payload["summary"]["adapter_result_count"] == 4
+    assert payload["summary"]["structured_qa_document_count"] == 1
+    assert payload["summary"]["structured_qa_candidate_document_count"] == 4
+    assert payload["summary"]["rule_stub_count"] == 1
+    assert payload["summary"]["reserved_source_document_field_hits"] == {}
+    assert payload["label_usage"]["adapter_results_are_verifier_evidence"] is False
+    assert qa_corpus["documents"][0]["question"] == "What does Wikidata list as the founder for Beta Labs?"
+    assert qa_corpus["documents"][0]["answer"] == "Ada Beta"
+    assert all(row["not_verifier_evidence"] is True for row in combined_rows)
+    assert all("target_id" not in result["metadata"] for row in combined_rows for result in row["results"])
+    assert all("answer" not in request for request in adapter_requests)
+    assert all("model_answer" not in request for request in adapter_requests)
+    assert all("label" not in request for request in adapter_requests)
+    assert registry_module.load_and_verify_artifact_manifest(output_dir / "artifact-manifest.json").passed is True
+    assert record.metadata["workflow"] == "source_family_structured_qa_fact_collection_workflow"
+    assert record.metadata["structured_qa_document_count"] == 1
+    assert record.metadata["suite"] == "unit"

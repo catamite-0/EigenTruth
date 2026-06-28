@@ -1,0 +1,72 @@
+{
+  "artifacts": {
+    "covered_fact_score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "covered-facts-scores.json",
+      "sha256": "4d5ab726dd1fa8525e6ed163a1ac6574c4152348dfa5a42affecbf434f807816",
+      "size_bytes": 172367
+    },
+    "qa_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-workflow/source-family-structured-qa-corpus.json",
+      "sha256": "be961114e444f652421351d11d57e6a541bf3e64fc6e3e2febf0f76482c21aa9",
+      "size_bytes": 66148
+    },
+    "route_summary": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "structured-qa-route-summary.json",
+      "sha256": "0260aa98c4d8b35786278f98bbe121c152b74c0d8b1e47ddc6c36604eff90b0a",
+      "size_bytes": 13679
+    },
+    "verified_records_jsonl": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "verified-records.jsonl",
+      "sha256": "bcea8f3d0e854a39cb7a6f398fa7333964647ccabdc5fe0d544ff3e052ad1182",
+      "size_bytes": 633939
+    },
+    "verifier_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "structured-qa-verifier-report.json",
+      "sha256": "f48d76dfb7ec8009ea6e3c70abc11f2f89f796274d85d512f54eb5ac1897ae0d",
+      "size_bytes": 9530
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "alpha": 0.1,
+    "evidence": "source_family_structured_qa_fact_collection_workflow",
+    "fact_group_count": 9,
+    "n_false": 70,
+    "n_records": 140,
+    "n_true": 70,
+    "promotes_covered_facts_route": true,
+    "provider_count": 2,
+    "route": "structured_qa",
+    "score_name": "source-family-fact-collection-covered-facts-smollm2-l80",
+    "signal": "truth_proj",
+    "source_family_count": 2,
+    "status": "promote",
+    "structured_qa_decision_accuracy": 1.0,
+    "structured_qa_false_refuted_rate": 1.0,
+    "structured_qa_false_supported_rate": 0.0,
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "workflow": "source_family_structured_qa_route_workflow"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}
