@@ -1,0 +1,62 @@
+{
+  "artifacts": {
+    "rule_authoring_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-authoring-adapter.json",
+      "sha256": "13f994ffc89fdcefad6675734e4fe06c13dff6f73f418976d7abe5d29bf645b0",
+      "size_bytes": 2041
+    },
+    "rule_input_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-input-requests.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "rule_inputs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-binding-fill/rule-inputs.jsonl",
+      "sha256": "5b0ffb9b58fa240520be4fc71e6e7f4d3ce6cbad65b15fb4e6806fda7afc63e4",
+      "size_bytes": 1911
+    },
+    "rule_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-results.jsonl",
+      "sha256": "d16674fd2e5529f5516a5bc076e0e107b3b32ab6b392bf6b872e053081a89372",
+      "size_bytes": 2864
+    },
+    "rule_stubs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "record-10-mechanism-rule-stub.jsonl",
+      "sha256": "7a17f371b12090eeff6afb7cadec8cd1c5ba3262128f48bf4869faaef83617f0",
+      "size_bytes": 674
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "evidence": "source_backed_diamond_mechanism_binding_fill",
+    "executed_count": 1,
+    "input_request_count": 0,
+    "needs_input_count": 0,
+    "status": "observed",
+    "stub_count": 1,
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "workflow": "world_model_rule_authoring_adapter"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

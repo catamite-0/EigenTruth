@@ -1,0 +1,68 @@
+{
+  "artifacts": {
+    "mechanism_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-backed-mechanism-bindings.jsonl",
+      "sha256": "bc85cd870ac78034ddd0884b52b80ea70fb3d6ff3032c5272b303fd716f67220",
+      "size_bytes": 1675
+    },
+    "rule_input_mechanism_binding_fill": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "rule-input-mechanism-binding-fill.json",
+      "sha256": "3e94a5f62f280dc2e99701cf8501b79ec6066e8ad4d51bb87e84822f706a9f0d",
+      "size_bytes": 4840
+    },
+    "rule_input_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-backed-mechanism-rule-input-tasks.jsonl",
+      "sha256": "d49db74c9bb3d9463deb987db504a134f7145aae0133ec80afe6e19f18c32341",
+      "size_bytes": 2294
+    },
+    "rule_inputs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "rule-inputs.jsonl",
+      "sha256": "5b0ffb9b58fa240520be4fc71e6e7f4d3ce6cbad65b15fb4e6806fda7afc63e4",
+      "size_bytes": 1911
+    },
+    "skipped_mechanism_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "skipped-mechanism-bindings.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "unfilled_rule_input_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "unfilled-rule-input-tasks.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "evidence": "source_backed_diamond_mechanism_binding",
+    "filled_input_count": 1,
+    "status": "filled",
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "unfilled_task_count": 0,
+    "workflow": "world_model_rule_input_mechanism_binding_fill"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 6,
+    "directory_count": 0,
+    "file_count": 6,
+    "missing_count": 0
+  }
+}

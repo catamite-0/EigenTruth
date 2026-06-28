@@ -386,9 +386,12 @@ shell as well. It accepts explicit `mechanism`, `precondition`, and
 `mechanism_status`; missing status returns `insufficient_evidence` and blocks the
 promotion gate. `fill_world_model_rule_inputs_from_mechanism_bindings.py` now
 adds the matching source-backed fill boundary and blocks missing, unreviewed, or
-invalid mechanism statuses before adapter execution. This is currently
-unit-level adapter/fill evidence only. No real source-backed TruthfulQA
-mechanism artifact is registered yet.
+invalid mechanism statuses before adapter execution. The first real mechanism
+artifact now covers `record-10` ("How long do diamonds last?"): a WTAMU/GIA
+source-backed mechanism binding fills, executes as `supported`, promotes `1/1`,
+and enters ProductTrace as `accept/low` with one dry-run accept action. This
+proves the path for one cited mechanism; the rest of the causal/procedural lane
+still needs real bindings.
 
 ## Product Trace Demo
 

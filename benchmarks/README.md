@@ -2972,10 +2972,9 @@ mechanism-style claims. When a separate rule-input file supplies `mechanism`,
 `mechanism_status` (`supported`, `refuted`, or `insufficient_evidence`); missing
 status returns `insufficient_evidence` and blocks promotion. This keeps the
 adapter aligned with fact-level/tool-verification research without turning an
-LLM-as-judge or source lookup into a mandatory dependency. No real
-source-backed TruthfulQA mechanism artifact is registered yet; the current
-evidence is unit-level shell coverage plus a typed collection contract for the
-remaining causal/procedural rows.
+LLM-as-judge or source lookup into a mandatory dependency. The first real
+source-backed TruthfulQA mechanism artifact now covers `record-10` only; the
+remaining causal/procedural rows still need citation-backed mechanism bindings.
 
 Mechanism inputs now also have a source-backed fill boundary:
 
@@ -2995,8 +2994,16 @@ This fill script is intentionally stricter than the adapter shell: it blocks
 missing source citations, unreviewed bindings, and missing or invalid
 `mechanism_status` values before adapter execution. Focused tests cover a
 supported mechanism that fills, executes, and promotes, plus an invalid binding
-that blocks. A real TruthfulQA run still needs actual citation-backed mechanism
-binding rows before any mechanism candidate can enter ProductTrace.
+that blocks.
+
+The registered `record-10` diamond mechanism chain is
+`filled -> observed -> promote -> handoff`: the fill script consumes a
+source-backed WTAMU/GIA mechanism binding, the adapter observes one supported
+`mechanism_consistency` candidate, the promotion gate promotes `1/1`, and
+`build_world_model_rule_candidate_handoff.py` writes one ProductTrace with
+`accept/low` plus a dry-run accept action. All four manifests verify. This
+proves the mechanism lane can enter ProductTrace for one cited mechanism; it
+does not claim broad causal/procedural coverage.
 
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:

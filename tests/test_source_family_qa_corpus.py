@@ -3542,6 +3542,62 @@ def test_world_model_rule_candidate_handoff_writes_trace_and_action_results(tmp_
     assert action_record.metadata["action_result_count"] == 2
 
 
+def test_world_model_rule_candidate_handoff_preserves_mechanism_claim_metadata():
+    module = importlib.import_module("benchmarks.build_world_model_rule_candidate_handoff")
+
+    payload = module.build_world_model_rule_candidate_handoff(
+        {
+            "workflow": "world_model_rule_candidate_promotion_gate",
+            "status": "promote",
+            "summary": {"promoted_count": 1},
+        },
+        promoted_candidates=[
+            {
+                "schema_version": 1,
+                "workflow": "world_model_rule_candidate_promotion_gate",
+                "request_id": "rule:record-10:1",
+                "target_id": "record-10",
+                "rule_family": "causal_or_procedural",
+                "status": "supported",
+                "confidence": 0.95,
+                "adapter": "mechanism_consistency",
+                "question": "How long do diamonds last?",
+                "source_citation": "source:diamond-material-stability",
+                "source_url": "https://example.test/diamond-material-stability",
+                "evidence": [
+                    "mechanism_consistency: explicit mechanism status applied; "
+                    "mechanism=Diamond crystal bonds are stable under ordinary storage conditions.; "
+                    "precondition=Ordinary jewelry conditions.; mechanism_status=supported; "
+                    "source_citation=source:diamond-material-stability"
+                ],
+                "rule_input": {
+                    "mechanism": "Diamond crystal bonds are stable under ordinary storage conditions.",
+                    "precondition": "Ordinary jewelry conditions.",
+                    "mechanism_status": "supported",
+                    "provider": "unit_fixture",
+                    "source_family": "reference",
+                },
+                "promotion": {
+                    "status": "promote",
+                    "gate": "world_model_rule_candidate_promotion_gate",
+                    "candidate_only_requires_downstream_handoff": True,
+                },
+            }
+        ],
+    )
+
+    trace = payload["product_traces"][0]
+    claim = trace["claims"][0]
+
+    assert payload["report"]["status"] == "promote"
+    assert trace["risk_decision"]["action"] == "accept"
+    assert "Mechanism: Diamond crystal bonds" in claim["text"]
+    assert "Mechanism status: supported" in claim["text"]
+    assert claim["metadata"]["mechanism_status"] == "supported"
+    assert claim["metadata"]["provider"] == "unit_fixture"
+    assert claim["metadata"]["source_family"] == "reference"
+
+
 def test_world_model_rule_candidate_handoff_blocks_missing_handoff_marker():
     module = importlib.import_module("benchmarks.build_world_model_rule_candidate_handoff")
 

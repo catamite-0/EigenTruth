@@ -478,6 +478,11 @@ For product features:
   unreviewed or invalid statuses before adapter execution. This completes the
   tool slot but not the evidence collection; real causal/procedural corrections
   still need source-backed mechanism bindings before handoff.
+  The first registered mechanism chain now covers only `record-10` ("How long do
+  diamonds last?"): a WTAMU/GIA source-backed mechanism fill executes,
+  promotion-gates as `supported`, and enters ProductTrace as `accept/low` with a
+  dry-run accept action. Product scope remains one-row evidence, not broad
+  mechanism coverage.
   Product implication: unresolved deterministic rule work now enters the same
   explicit input-plan pathway as the larger source-family rule lane, but it
   still cannot affect ProductTrace or release gates until candidate execution,

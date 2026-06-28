@@ -1,0 +1,61 @@
+{
+  "artifacts": {
+    "action_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "action-results.jsonl",
+      "sha256": "39f04f25b36d6cf4c1856f3ec284754b9120ae5e3ede406ace22b9f2ae8eeed7",
+      "size_bytes": 944
+    },
+    "product_traces": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "product-traces.jsonl",
+      "sha256": "e3065c279ddbb82964c1a68a67e48b4f10d86d9e7191b9874b60920b4afe0345",
+      "size_bytes": 18496
+    },
+    "promoted_rule_candidates": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-promotion-gate/promoted-rule-candidates.jsonl",
+      "sha256": "ca96924e25bae32ed51e0d5aa942fbbafb6a1ca7d19bae33454ef657f819d9f1",
+      "size_bytes": 1896
+    },
+    "promotion_gate": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+      "sha256": "24a99f2740dc39bdb9ff32d3da0e78cfa2e20b314e0214049ecd3a940df7f843",
+      "size_bytes": 5314
+    },
+    "world_model_rule_candidate_handoff": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-candidate-handoff.json",
+      "sha256": "845e0bcfbc9afe1bbdf112c454252ae448c8622f76449771fec4e0e8c092f5d7",
+      "size_bytes": 3054
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "action_result_count": 1,
+    "blocked_candidate_count": 0,
+    "evidence": "source_backed_diamond_mechanism_promotion",
+    "status": "promote",
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "trace_count": 1,
+    "workflow": "world_model_rule_candidate_handoff"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

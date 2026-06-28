@@ -337,7 +337,18 @@ def _claim(candidate: Mapping[str, Any]) -> Claim:
     rule_input = _mapping(candidate.get("rule_input"))
     question = str(candidate.get("question") or "").strip()
     answer_entity = str(rule_input.get("answer_entity") or "").strip()
-    claim_text = f"{question} {answer_entity}".strip() or str(candidate.get("request_id") or "")
+    mechanism = str(rule_input.get("mechanism") or "").strip()
+    precondition = str(rule_input.get("precondition") or "").strip()
+    mechanism_status = str(rule_input.get("mechanism_status") or "").strip()
+    if mechanism:
+        claim_text = _mechanism_claim_text(
+            question=question,
+            mechanism=mechanism,
+            precondition=precondition,
+            mechanism_status=mechanism_status,
+        )
+    else:
+        claim_text = f"{question} {answer_entity}".strip() or str(candidate.get("request_id") or "")
     return Claim(
         text=claim_text,
         claim_id=f"{candidate.get('request_id')}:rule-candidate-claim",
@@ -347,13 +358,36 @@ def _claim(candidate: Mapping[str, Any]) -> Claim:
             "expected_entity": rule_input.get("expected_entity"),
             "subject_entity": rule_input.get("subject_entity"),
             "requested_role": rule_input.get("requested_role"),
+            "mechanism": mechanism,
+            "precondition": precondition,
+            "mechanism_status": mechanism_status,
             "rule_family": candidate.get("rule_family"),
+            "source_family": rule_input.get("source_family"),
+            "provider": rule_input.get("provider"),
             "source_citation": candidate.get("source_citation"),
             "source_url": candidate.get("source_url"),
             "requires_verification": True,
             "world_model_rule_candidate_handoff": True,
         },
     )
+
+
+def _mechanism_claim_text(
+    *,
+    question: str,
+    mechanism: str,
+    precondition: str,
+    mechanism_status: str,
+) -> str:
+    parts = []
+    if question:
+        parts.append(question)
+    parts.append(f"Mechanism: {mechanism}")
+    if precondition:
+        parts.append(f"Precondition: {precondition}")
+    if mechanism_status:
+        parts.append(f"Mechanism status: {mechanism_status}")
+    return " ".join(parts)
 
 
 def _verification_result(

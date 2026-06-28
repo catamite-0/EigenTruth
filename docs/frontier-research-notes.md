@@ -973,6 +973,14 @@ Added the first monitor-first tool-selection audit layer:
   rows candidate-only until adapter execution plus promotion. This is still a
   shell plus test evidence; the real research gap is collecting citation-backed
   mechanism rows for the unresolved causal/procedural TruthfulQA tasks.
+- The first real mechanism replay is now registered for `record-10` ("How long
+  do diamonds last?"). A WTAMU physics source supplies the kinetic-barrier
+  mechanism for diamond persistence under ordinary conditions, with GIA diamond
+  age background as supporting context. The chain is
+  `filled -> observed -> promote -> handoff`: one supported
+  `mechanism_consistency` candidate promotes and produces one ProductTrace
+  `accept/low` dry-run action. This is genuine citation-backed mechanism
+  evidence for that row only, not a release-wide world-model coverage claim.
 
 ## Next Research-to-Code Candidates
 
@@ -980,14 +988,14 @@ Added the first monitor-first tool-selection audit layer:
    unresolved rows should stay separated by gap type and feed richer property
    mapping, citation evidence, entity disambiguation, and deterministic
    world-model/calculator rules before entering ProductTrace or release gates.
-2. Populate the completed rule-input fill family with real source-backed rows:
+2. Populate the completed rule-input fill family with more real source-backed rows:
    the remaining numeric work is subject-binding resolution for ambiguous
    questions such as `record-190`; temporal work needs richer content/citation
-   mapping or source-backed temporal fills; and causal/procedural work now needs
-   citation-backed mechanism bindings that pass the fill script before
-   deterministic world-model results can pass the same promotion gate into
-   handoff. The complete source-backed replay now proves local-catalog coverage
-   is not enough (`0/88` mapped).
+   mapping or source-backed temporal fills; and causal/procedural work needs
+   more citation-backed mechanism bindings beyond the single `record-10`
+   diamond chain before deterministic world-model results can contribute
+   meaningful coverage. The complete source-backed replay now proves
+   local-catalog coverage is not enough (`0/88` mapped).
 3. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
 4. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
 5. Materialize a real `frontier_audit` release candidate with the registered covered-facts external-evidence handoff and external-prediction triple matrix artifact, then export the resulting promotion contract.
