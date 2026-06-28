@@ -36194,6 +36194,85 @@ def test_citation_search_adapter_handoff_sanitizes_requests_and_ingests_results(
     assert record.metadata["suite"] == "unit"
 
 
+def test_wikipedia_citation_search_adapter_writes_mediawiki_results(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_wikipedia_citation_search_adapter")
+
+    requests_path = tmp_path / "citation-search-requests.jsonl"
+    results_path = tmp_path / "wikipedia-results.jsonl"
+    requests_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "request_id": "cite-search-alpha",
+            "adapter_family": "external_citation_search",
+            "query": "What is Alpha?",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    def fake_fetch_json(api_url, params, **kwargs):
+        assert api_url == "https://unit.test/w/api.php"
+        assert kwargs["headers"]["User-Agent"] == "unit-agent"
+        if params.get("list") == "search":
+            assert params["srsearch"] == "What is Alpha?"
+            return {
+                "query": {
+                    "search": [
+                        {
+                            "pageid": 101,
+                            "title": "Alpha",
+                            "snippet": "Alpha is a <span class=\"searchmatch\">test</span> entity.",
+                            "timestamp": "2026-01-01T00:00:00Z",
+                        }
+                    ]
+                }
+            }
+        if params.get("prop") == "extracts|info":
+            assert params["pageids"] == "101"
+            return {
+                "query": {
+                    "pages": {
+                        "101": {
+                            "pageid": 101,
+                            "title": "Alpha",
+                            "extract": "Alpha is a deterministic unit-test entity with an external page.",
+                            "fullurl": "https://unit.test/wiki/Alpha",
+                        }
+                    }
+                }
+            }
+        raise AssertionError(f"unexpected params: {params}")
+
+    monkeypatch.setattr(module, "_fetch_json", fake_fetch_json)
+
+    payload = module.run_wikipedia_citation_search_adapter(
+        input_path=requests_path,
+        output_path=results_path,
+        api_url="https://unit.test/w/api.php",
+        max_results=1,
+        workers=1,
+        user_agent="unit-agent",
+    )
+    rows = [json.loads(line) for line in results_path.read_text(encoding="utf-8").splitlines()]
+    result = rows[0]["results"][0]
+
+    assert payload["summary"]["request_count"] == 1
+    assert payload["summary"]["unique_query_count"] == 1
+    assert payload["summary"]["request_with_results_count"] == 1
+    assert payload["summary"]["request_error_count"] == 0
+    assert rows[0]["request_id"] == "cite-search-alpha"
+    assert result["provider"] == "wikipedia_mediawiki"
+    assert result["source"] == "wikipedia:en:101"
+    assert result["rank"] == 1
+    assert result["snippet"] == "Alpha is a test entity."
+    assert result["text"] == "Alpha is a deterministic unit-test entity with an external page."
+    assert result["url"] == "https://unit.test/wiki/Alpha"
+    assert "record_index" not in result
+    assert "target_id" not in result
+    assert "model_answer" not in result
+
+
 def test_citation_search_evidence_workflow_runs_gates_and_blocks_unsupported_results(tmp_path):
     module = importlib.import_module("benchmarks.run_citation_search_evidence_workflow")
     handoff_module = importlib.import_module("benchmarks.build_citation_search_adapter_handoff")

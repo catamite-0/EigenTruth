@@ -1646,6 +1646,30 @@ python benchmarks/run_citation_search_evidence_workflow.py \
 This command does not fetch network content. Adapter results remain local input,
 and promotion requires both provenance and route-quality gates to pass.
 
+## `run_wikipedia_citation_search_adapter.py`
+
+Runs a dependency-free MediaWiki/Wikipedia search adapter for sanitized
+citation/search requests. It writes the JSONL result schema expected by
+`run_external_citation_search_adapter_workflow.py`, with query de-duplication,
+global rate limiting, retries, snippets, and optional page extracts.
+
+```bash
+python benchmarks/run_wikipedia_citation_search_adapter.py \
+  --input artifacts/truthfulqa-frontier-smollm2-l80-citation-search-adapter-handoff/citation-search-adapter-requests.jsonl \
+  --output artifacts/wikipedia-citation-search-results.jsonl \
+  --max-results 3 \
+  --workers 1 \
+  --min-delay-seconds 1 \
+  --retries 4
+```
+
+The registered SmolLM2 L80 run uses this command through the external adapter
+workflow. It returned `504` Wikipedia result documents for `168/176` sanitized
+requests, passed external-candidate provenance, then correctly remained
+`blocked` because the blind-spot query sweep refuted `0/89` entrenched false
+answers and the controlled-vs-external comparison showed a `1.0` generalization
+gap. This is source collection evidence, not a promoted grounding route.
+
 ## `run_external_citation_search_adapter_workflow.py`
 
 Runs the command-boundary version of the citation/search adapter path. The
@@ -1654,17 +1678,17 @@ a local external command without a shell, then feeds the returned result JSONL
 through `run_citation_search_evidence_workflow.py`.
 
 ```bash
-OUT=artifacts/truthfulqa-frontier-smollm2-l80-external-citation-search-adapter-workflow
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-wikipedia-citation-search-adapter-workflow
 
 python benchmarks/run_external_citation_search_adapter_workflow.py \
   --queue artifacts/truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue/unresolved-evidence-queue.json \
-  --search-command "python path/to/search_adapter.py {input} {output}" \
+  --search-command "python benchmarks/run_wikipedia_citation_search_adapter.py --input {input} --output {output} --max-results 3 --workers 1 --min-delay-seconds 1 --retries 4" \
   --scores artifacts/smollm2_truthfulqa_l80_scores_with_statements.json \
   --blind-spots artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
   --controlled-sweep artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json \
   --output-dir "$OUT" \
   --registry artifacts/local-release-registry.json \
-  --name truthfulqa-frontier-smollm2-l80-external-citation-search-adapter-workflow \
+  --name truthfulqa-frontier-smollm2-l80-wikipedia-citation-search-adapter-workflow \
   --version 0.1
 ```
 

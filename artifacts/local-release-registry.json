@@ -5487,6 +5487,24 @@
       "name": "truthfulqa-frontier-smollm2-l80-citation-search-adapter-handoff",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-citation-search-adapter-handoff/citation-search-handoff.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "adapter": "wikipedia_mediawiki",
+        "adapter_request_count": 176,
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-wikipedia-citation-search-adapter-workflow/artifact-manifest.json",
+        "corpus_document_count": 504,
+        "gate_passed": false,
+        "promotion_ready": false,
+        "source_document_count": 504,
+        "status": "blocked",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "external_citation_search_adapter_workflow"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-wikipedia-citation-search-adapter-workflow",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-wikipedia-citation-search-adapter-workflow/external-citation-search-adapter-workflow.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

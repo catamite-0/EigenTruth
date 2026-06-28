@@ -1243,6 +1243,16 @@ path with a concrete command boundary: it writes the sanitized request JSONL,
 invokes a local adapter command with `{input}` and `{output}` placeholders, and
 then runs the evidence workflow on the returned JSONL.
 
+The first real command-boundary adapter run used
+`benchmarks/run_wikipedia_citation_search_adapter.py`. It collected `504`
+Wikipedia result documents for `168/176` sanitized requests and passed the
+external-candidate provenance audit, but remained `blocked`: the external query
+sweep refuted `0/89` entrenched false blind spots, while the controlled
+correct-answer sweep still refuted all blind spots. This makes the next blocker
+specific: generic Wikipedia lexical search is not enough; the route needs
+claim/entity-aware query rewriting or structured source-family adapters before
+promotion.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -1268,9 +1278,9 @@ then runs the evidence workflow on the returned JSONL.
 6. Promote a Qwen l20/l80 readiness baseline through the same registry workflow
    if Qwen-specific runtime evidence is needed; SmolLM2 now has the first
    non-tiny registered readiness/release candidate.
-7. Execute a real local citation/search adapter through
-   `run_external_citation_search_adapter_workflow.py`; only treat returned
-   documents as verifier evidence if provenance, external query-sweep, and
+7. Improve the blocked Wikipedia citation/search route with claim/entity-aware
+   query rewriting or structured source-family adapters, then rerun the same
+   external workflow and only promote if provenance, external query-sweep, and
    controlled-vs-external comparison gates pass.
 8. Extend the new verifier-stability path from structured QA to real retrieval,
    database, calculator, and world-model evidence under the same conformal

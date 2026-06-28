@@ -696,11 +696,16 @@ Added the first monitor-first tool-selection audit layer:
   boundary on top of that gate: it writes sanitized `{input}` request JSONL,
   requires the adapter to write `{output}` result JSONL, and then runs the
   return-side evidence workflow before any promotion metadata is recorded.
+- `run_wikipedia_citation_search_adapter.py` is the first real external search
+  command behind that boundary. The SmolLM2 L80 run collected `504` Wikipedia
+  result documents for `168/176` requests and passed provenance, but refuted
+  `0/89` entrenched blind spots under the external query sweep, so the route is
+  correctly blocked instead of promoted.
 
 ## Next Research-to-Code Candidates
 
 1. Convert the target-specific Wikidata source docs into structured-fact/QA corpora, then rerun the blind-spot correction-route audit instead of another lexical overlap sweep.
-2. Run a real local citation/search adapter through `run_external_citation_search_adapter_workflow.py`, then promote only if the return-side evidence gates pass.
+2. Add claim/entity-aware query rewriting or structured source-family adapters on top of the Wikipedia command boundary, then promote only if the return-side evidence gates pass.
 3. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
 4. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
 5. Materialize a real `frontier_audit` release candidate with the registered covered-facts external-evidence handoff and external-prediction triple matrix artifact, then export the resulting promotion contract.

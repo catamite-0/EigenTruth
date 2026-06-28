@@ -439,11 +439,19 @@ For product features:
   `{output}` placeholders, then automatically runs the same fail-closed evidence
   workflow. This is the preferred next adapter entry point because command
   output cannot bypass provenance, query-sweep, or controlled-comparison gates.
+- A first real adapter run is registered:
+  `run_wikipedia_citation_search_adapter.py` uses MediaWiki/Wikipedia search
+  with query de-duplication, rate limiting, retries, snippets, and extracts. The
+  SmolLM2 L80 workflow returned `504` result documents for `168/176` sanitized
+  requests and passed provenance, but it is still `blocked`: the external query
+  sweep refuted `0/89` entrenched false answers and the controlled-vs-external
+  comparison generalization gap is `1.0`.
 
 ### Next Verification Adapter Work
 
-- Run a real local citation/search adapter through
-  `run_external_citation_search_adapter_workflow.py`; promote only if the
+- Improve evidence retrieval beyond generic Wikipedia lexical search: preserve
+  the same command boundary, but add claim/entity-aware query rewriting,
+  source-family adapters, or structured citation APIs, then promote only if the
   provenance audit, external query sweep, and controlled-vs-external comparison
   pass.
 - Connect `StructuredStateVerifier` to additional live database, business-rule, and domain-state sources behind optional adapters; the current reproducible path uses local JSON state sources, stdlib SQLite, and mapped local tool outputs.
