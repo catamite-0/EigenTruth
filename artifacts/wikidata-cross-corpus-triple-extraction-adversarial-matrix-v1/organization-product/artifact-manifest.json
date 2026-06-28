@@ -1,0 +1,108 @@
+{
+  "artifacts": {
+    "external_predictions.lookup_gold": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../external-predictions/organization-product-lookup-gold-predictions.json",
+      "sha256": "f9f47423b0c7289817c83563128832488577f8e4bd8c0d836702ba8857fac329",
+      "size_bytes": 14329
+    },
+    "fact_corpus.1.wikidata-organization-product-source": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../wikidata-organization-product-core-facts/wikidata-organization-product-source.jsonl",
+      "sha256": "f4cd3dc8d01c7c4e5b11de0e1e38041e70827115cb02f4fdc1e4d1899a454f94",
+      "size_bytes": 9663
+    },
+    "patterns": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "triple-extraction-regex-patterns.json",
+      "sha256": "f23c26639c3529f2172ed780577dac8ae55536439e2a6d5032d552e4f5b2fc76",
+      "size_bytes": 4780
+    },
+    "records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "triple-extraction-records.json",
+      "sha256": "a28ab1ed892c7d511d88835fbfb26113a502becdd74e14b619c3add1a5a2d7e3",
+      "size_bytes": 161418
+    },
+    "report.composite": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "composite-triple-extraction-report.json",
+      "sha256": "566fe52ac925b09a3c71dde1be82e390a27bd601ed7487da47a83c1da1f659f8",
+      "size_bytes": 3311
+    },
+    "report.external_lookup_gold": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "external_lookup_gold-triple-extraction-report.json",
+      "sha256": "d05a01ba7c4340dbc4de044d330d418f42c53f06f7f67b183cd494cc3fd89f21",
+      "size_bytes": 3511
+    },
+    "report.regex_rule_based": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "regex_rule_based-triple-extraction-report.json",
+      "sha256": "7a0e5cefe07d88c940eaca5c971b75134a1b81159ca762a376a13a7282fdcace",
+      "size_bytes": 3318
+    },
+    "report.rule_based": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "rule_based-triple-extraction-report.json",
+      "sha256": "bee9dbed6af737d7bc18370ea7c12a433759a71b4b083d01bd43717a03922917",
+      "size_bytes": 27616
+    },
+    "workflow_summary": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "triple-extraction-workflow-summary.json",
+      "sha256": "6609980be974a059b194beda10b4abaa8d4a286f7bdce0dd6f15eadcddeb6f24",
+      "size_bytes": 73264
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "baseline_f1": 0.0,
+    "best_adversarial_false_positive_rate": 0.0,
+    "best_ambiguity_false_positive_rate": 0.0,
+    "best_extractor": "regex_rule_based",
+    "best_f1": 1.0,
+    "best_metalinguistic_false_positive_rate": 0.0,
+    "best_non_assertive_false_positive_rate": 0.0,
+    "best_predicate_confusion_f1": 1.0,
+    "best_temporal_false_positive_rate": 0.0,
+    "external_prediction_count": 1,
+    "f1_lift": 1.0,
+    "n_adversarial_negative_records": 8,
+    "n_ambiguity_negative_records": 8,
+    "n_metalinguistic_negative_records": 8,
+    "n_non_assertive_negative_records": 8,
+    "n_predicate_confusion_records": 8,
+    "n_records": 80,
+    "n_temporal_negative_records": 8,
+    "pattern_count": 15,
+    "promotes_augmented_extractor": true,
+    "status": "promote",
+    "workflow": "triple_extraction_fixture_workflow"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 9,
+    "directory_count": 0,
+    "file_count": 9,
+    "missing_count": 0
+  }
+}

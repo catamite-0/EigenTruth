@@ -1,0 +1,562 @@
+{
+  "claim_id:0001-headquarters_location_of-headquarters-headquartered-in": [
+    {
+      "object": "Cupertino",
+      "predicate": "headquarters_location_of",
+      "subject": "Apple Inc"
+    }
+  ],
+  "claim_id:0001-headquarters_location_of-headquarters-object-first": [
+    {
+      "object": "Cupertino",
+      "predicate": "headquarters_location_of",
+      "subject": "Apple Inc"
+    }
+  ],
+  "claim_id:0001-headquarters_location_of-headquarters-of": [
+    {
+      "object": "Cupertino",
+      "predicate": "headquarters_location_of",
+      "subject": "Apple Inc"
+    }
+  ],
+  "claim_id:0001-headquarters_location_of-headquarters-possessive": [
+    {
+      "object": "Cupertino",
+      "predicate": "headquarters_location_of",
+      "subject": "Apple Inc"
+    }
+  ],
+  "claim_id:0001-headquarters_location_of-predicate-confusion-headquarters-as-manufacturer": [
+    {
+      "object": "Cupertino",
+      "predicate": "manufacturer_of",
+      "subject": "Apple Inc"
+    }
+  ],
+  "claim_id:0002-inception_of-inception-date-subject": [
+    {
+      "object": "1976-04-01T00:00:00Z",
+      "predicate": "inception_of",
+      "subject": "Apple Inc"
+    }
+  ],
+  "claim_id:0002-inception_of-inception-founded-in": [
+    {
+      "object": "1976-04-01T00:00:00Z",
+      "predicate": "inception_of",
+      "subject": "Apple Inc"
+    }
+  ],
+  "claim_id:0002-inception_of-inception-object-first": [
+    {
+      "object": "1976-04-01T00:00:00Z",
+      "predicate": "inception_of",
+      "subject": "Apple Inc"
+    }
+  ],
+  "claim_id:0002-inception_of-inception-possessive": [
+    {
+      "object": "1976-04-01T00:00:00Z",
+      "predicate": "inception_of",
+      "subject": "Apple Inc"
+    }
+  ],
+  "claim_id:0002-inception_of-predicate-confusion-inception-as-headquarters": [
+    {
+      "object": "1976-04-01T00:00:00Z",
+      "predicate": "headquarters_location_of",
+      "subject": "Apple Inc"
+    }
+  ],
+  "claim_id:0003-headquarters_location_of-headquarters-headquartered-in": [
+    {
+      "object": "San Francisco",
+      "predicate": "headquarters_location_of",
+      "subject": "OpenAI"
+    }
+  ],
+  "claim_id:0003-headquarters_location_of-headquarters-object-first": [
+    {
+      "object": "San Francisco",
+      "predicate": "headquarters_location_of",
+      "subject": "OpenAI"
+    }
+  ],
+  "claim_id:0003-headquarters_location_of-headquarters-of": [
+    {
+      "object": "San Francisco",
+      "predicate": "headquarters_location_of",
+      "subject": "OpenAI"
+    }
+  ],
+  "claim_id:0003-headquarters_location_of-headquarters-possessive": [
+    {
+      "object": "San Francisco",
+      "predicate": "headquarters_location_of",
+      "subject": "OpenAI"
+    }
+  ],
+  "claim_id:0003-headquarters_location_of-predicate-confusion-headquarters-as-manufacturer": [
+    {
+      "object": "San Francisco",
+      "predicate": "manufacturer_of",
+      "subject": "OpenAI"
+    }
+  ],
+  "claim_id:0004-inception_of-inception-date-subject": [
+    {
+      "object": "2015-12-08T00:00:00Z",
+      "predicate": "inception_of",
+      "subject": "OpenAI"
+    }
+  ],
+  "claim_id:0004-inception_of-inception-founded-in": [
+    {
+      "object": "2015-12-08T00:00:00Z",
+      "predicate": "inception_of",
+      "subject": "OpenAI"
+    }
+  ],
+  "claim_id:0004-inception_of-inception-object-first": [
+    {
+      "object": "2015-12-08T00:00:00Z",
+      "predicate": "inception_of",
+      "subject": "OpenAI"
+    }
+  ],
+  "claim_id:0004-inception_of-inception-possessive": [
+    {
+      "object": "2015-12-08T00:00:00Z",
+      "predicate": "inception_of",
+      "subject": "OpenAI"
+    }
+  ],
+  "claim_id:0004-inception_of-predicate-confusion-inception-as-headquarters": [
+    {
+      "object": "2015-12-08T00:00:00Z",
+      "predicate": "headquarters_location_of",
+      "subject": "OpenAI"
+    }
+  ],
+  "claim_id:0005-headquarters_location_of-headquarters-headquartered-in": [
+    {
+      "object": "Austin",
+      "predicate": "headquarters_location_of",
+      "subject": "Tesla"
+    }
+  ],
+  "claim_id:0005-headquarters_location_of-headquarters-object-first": [
+    {
+      "object": "Austin",
+      "predicate": "headquarters_location_of",
+      "subject": "Tesla"
+    }
+  ],
+  "claim_id:0005-headquarters_location_of-headquarters-of": [
+    {
+      "object": "Austin",
+      "predicate": "headquarters_location_of",
+      "subject": "Tesla"
+    }
+  ],
+  "claim_id:0005-headquarters_location_of-headquarters-possessive": [
+    {
+      "object": "Austin",
+      "predicate": "headquarters_location_of",
+      "subject": "Tesla"
+    }
+  ],
+  "claim_id:0005-headquarters_location_of-predicate-confusion-headquarters-as-manufacturer": [
+    {
+      "object": "Austin",
+      "predicate": "manufacturer_of",
+      "subject": "Tesla"
+    }
+  ],
+  "claim_id:0006-inception_of-inception-date-subject": [
+    {
+      "object": "2003-07-01T00:00:00Z",
+      "predicate": "inception_of",
+      "subject": "Tesla"
+    }
+  ],
+  "claim_id:0006-inception_of-inception-founded-in": [
+    {
+      "object": "2003-07-01T00:00:00Z",
+      "predicate": "inception_of",
+      "subject": "Tesla"
+    }
+  ],
+  "claim_id:0006-inception_of-inception-object-first": [
+    {
+      "object": "2003-07-01T00:00:00Z",
+      "predicate": "inception_of",
+      "subject": "Tesla"
+    }
+  ],
+  "claim_id:0006-inception_of-inception-possessive": [
+    {
+      "object": "2003-07-01T00:00:00Z",
+      "predicate": "inception_of",
+      "subject": "Tesla"
+    }
+  ],
+  "claim_id:0006-inception_of-predicate-confusion-inception-as-headquarters": [
+    {
+      "object": "2003-07-01T00:00:00Z",
+      "predicate": "headquarters_location_of",
+      "subject": "Tesla"
+    }
+  ],
+  "claim_id:0007-manufacturer_of-manufacturer-made-by": [
+    {
+      "object": "Apple Inc",
+      "predicate": "manufacturer_of",
+      "subject": "iPhone"
+    }
+  ],
+  "claim_id:0007-manufacturer_of-manufacturer-object-first": [
+    {
+      "object": "Apple Inc",
+      "predicate": "manufacturer_of",
+      "subject": "iPhone"
+    }
+  ],
+  "claim_id:0007-manufacturer_of-manufacturer-possessive": [
+    {
+      "object": "Apple Inc",
+      "predicate": "manufacturer_of",
+      "subject": "iPhone"
+    }
+  ],
+  "claim_id:0007-manufacturer_of-manufacturer-subject-first": [
+    {
+      "object": "Apple Inc",
+      "predicate": "manufacturer_of",
+      "subject": "iPhone"
+    }
+  ],
+  "claim_id:0007-manufacturer_of-predicate-confusion-manufacturer-as-headquarters": [
+    {
+      "object": "Apple Inc",
+      "predicate": "headquarters_location_of",
+      "subject": "iPhone"
+    }
+  ],
+  "claim_id:0008-manufacturer_of-manufacturer-made-by": [
+    {
+      "object": "Foxconn",
+      "predicate": "manufacturer_of",
+      "subject": "iPhone"
+    }
+  ],
+  "claim_id:0008-manufacturer_of-manufacturer-object-first": [
+    {
+      "object": "Foxconn",
+      "predicate": "manufacturer_of",
+      "subject": "iPhone"
+    }
+  ],
+  "claim_id:0008-manufacturer_of-manufacturer-possessive": [
+    {
+      "object": "Foxconn",
+      "predicate": "manufacturer_of",
+      "subject": "iPhone"
+    }
+  ],
+  "claim_id:0008-manufacturer_of-manufacturer-subject-first": [
+    {
+      "object": "Foxconn",
+      "predicate": "manufacturer_of",
+      "subject": "iPhone"
+    }
+  ],
+  "claim_id:0008-manufacturer_of-predicate-confusion-manufacturer-as-headquarters": [
+    {
+      "object": "Foxconn",
+      "predicate": "headquarters_location_of",
+      "subject": "iPhone"
+    }
+  ],
+  "text:1976-04-01T00:00:00Z is the inception date of Apple Inc.": [
+    {
+      "object": "1976-04-01T00:00:00Z",
+      "predicate": "inception_of",
+      "subject": "Apple Inc"
+    }
+  ],
+  "text:2003-07-01T00:00:00Z is the inception date of Tesla.": [
+    {
+      "object": "2003-07-01T00:00:00Z",
+      "predicate": "inception_of",
+      "subject": "Tesla"
+    }
+  ],
+  "text:2015-12-08T00:00:00Z is the inception date of OpenAI.": [
+    {
+      "object": "2015-12-08T00:00:00Z",
+      "predicate": "inception_of",
+      "subject": "OpenAI"
+    }
+  ],
+  "text:Apple Inc is headquartered in 1976-04-01T00:00:00Z.": [
+    {
+      "object": "1976-04-01T00:00:00Z",
+      "predicate": "headquarters_location_of",
+      "subject": "Apple Inc"
+    }
+  ],
+  "text:Apple Inc is headquartered in Cupertino.": [
+    {
+      "object": "Cupertino",
+      "predicate": "headquarters_location_of",
+      "subject": "Apple Inc"
+    }
+  ],
+  "text:Apple Inc is manufactured by Cupertino.": [
+    {
+      "object": "Cupertino",
+      "predicate": "manufacturer_of",
+      "subject": "Apple Inc"
+    }
+  ],
+  "text:Apple Inc manufactures iPhone.": [
+    {
+      "object": "Apple Inc",
+      "predicate": "manufacturer_of",
+      "subject": "iPhone"
+    }
+  ],
+  "text:Apple Inc was founded in 1976-04-01T00:00:00Z.": [
+    {
+      "object": "1976-04-01T00:00:00Z",
+      "predicate": "inception_of",
+      "subject": "Apple Inc"
+    }
+  ],
+  "text:Apple Inc's headquarters are in Cupertino.": [
+    {
+      "object": "Cupertino",
+      "predicate": "headquarters_location_of",
+      "subject": "Apple Inc"
+    }
+  ],
+  "text:Apple Inc's inception date is 1976-04-01T00:00:00Z.": [
+    {
+      "object": "1976-04-01T00:00:00Z",
+      "predicate": "inception_of",
+      "subject": "Apple Inc"
+    }
+  ],
+  "text:Austin is the headquarters location of Tesla.": [
+    {
+      "object": "Austin",
+      "predicate": "headquarters_location_of",
+      "subject": "Tesla"
+    }
+  ],
+  "text:Cupertino is the headquarters location of Apple Inc.": [
+    {
+      "object": "Cupertino",
+      "predicate": "headquarters_location_of",
+      "subject": "Apple Inc"
+    }
+  ],
+  "text:Foxconn manufactures iPhone.": [
+    {
+      "object": "Foxconn",
+      "predicate": "manufacturer_of",
+      "subject": "iPhone"
+    }
+  ],
+  "text:OpenAI is headquartered in 2015-12-08T00:00:00Z.": [
+    {
+      "object": "2015-12-08T00:00:00Z",
+      "predicate": "headquarters_location_of",
+      "subject": "OpenAI"
+    }
+  ],
+  "text:OpenAI is headquartered in San Francisco.": [
+    {
+      "object": "San Francisco",
+      "predicate": "headquarters_location_of",
+      "subject": "OpenAI"
+    }
+  ],
+  "text:OpenAI is manufactured by San Francisco.": [
+    {
+      "object": "San Francisco",
+      "predicate": "manufacturer_of",
+      "subject": "OpenAI"
+    }
+  ],
+  "text:OpenAI was founded in 2015-12-08T00:00:00Z.": [
+    {
+      "object": "2015-12-08T00:00:00Z",
+      "predicate": "inception_of",
+      "subject": "OpenAI"
+    }
+  ],
+  "text:OpenAI's headquarters are in San Francisco.": [
+    {
+      "object": "San Francisco",
+      "predicate": "headquarters_location_of",
+      "subject": "OpenAI"
+    }
+  ],
+  "text:OpenAI's inception date is 2015-12-08T00:00:00Z.": [
+    {
+      "object": "2015-12-08T00:00:00Z",
+      "predicate": "inception_of",
+      "subject": "OpenAI"
+    }
+  ],
+  "text:San Francisco is the headquarters location of OpenAI.": [
+    {
+      "object": "San Francisco",
+      "predicate": "headquarters_location_of",
+      "subject": "OpenAI"
+    }
+  ],
+  "text:Tesla is headquartered in 2003-07-01T00:00:00Z.": [
+    {
+      "object": "2003-07-01T00:00:00Z",
+      "predicate": "headquarters_location_of",
+      "subject": "Tesla"
+    }
+  ],
+  "text:Tesla is headquartered in Austin.": [
+    {
+      "object": "Austin",
+      "predicate": "headquarters_location_of",
+      "subject": "Tesla"
+    }
+  ],
+  "text:Tesla is manufactured by Austin.": [
+    {
+      "object": "Austin",
+      "predicate": "manufacturer_of",
+      "subject": "Tesla"
+    }
+  ],
+  "text:Tesla was founded in 2003-07-01T00:00:00Z.": [
+    {
+      "object": "2003-07-01T00:00:00Z",
+      "predicate": "inception_of",
+      "subject": "Tesla"
+    }
+  ],
+  "text:Tesla's headquarters are in Austin.": [
+    {
+      "object": "Austin",
+      "predicate": "headquarters_location_of",
+      "subject": "Tesla"
+    }
+  ],
+  "text:Tesla's inception date is 2003-07-01T00:00:00Z.": [
+    {
+      "object": "2003-07-01T00:00:00Z",
+      "predicate": "inception_of",
+      "subject": "Tesla"
+    }
+  ],
+  "text:The headquarters of Apple Inc are in Cupertino.": [
+    {
+      "object": "Cupertino",
+      "predicate": "headquarters_location_of",
+      "subject": "Apple Inc"
+    }
+  ],
+  "text:The headquarters of OpenAI are in San Francisco.": [
+    {
+      "object": "San Francisco",
+      "predicate": "headquarters_location_of",
+      "subject": "OpenAI"
+    }
+  ],
+  "text:The headquarters of Tesla are in Austin.": [
+    {
+      "object": "Austin",
+      "predicate": "headquarters_location_of",
+      "subject": "Tesla"
+    }
+  ],
+  "text:The headquarters of iPhone are in Apple Inc.": [
+    {
+      "object": "Apple Inc",
+      "predicate": "headquarters_location_of",
+      "subject": "iPhone"
+    }
+  ],
+  "text:The headquarters of iPhone are in Foxconn.": [
+    {
+      "object": "Foxconn",
+      "predicate": "headquarters_location_of",
+      "subject": "iPhone"
+    }
+  ],
+  "text:The inception date of Apple Inc is 1976-04-01T00:00:00Z.": [
+    {
+      "object": "1976-04-01T00:00:00Z",
+      "predicate": "inception_of",
+      "subject": "Apple Inc"
+    }
+  ],
+  "text:The inception date of OpenAI is 2015-12-08T00:00:00Z.": [
+    {
+      "object": "2015-12-08T00:00:00Z",
+      "predicate": "inception_of",
+      "subject": "OpenAI"
+    }
+  ],
+  "text:The inception date of Tesla is 2003-07-01T00:00:00Z.": [
+    {
+      "object": "2003-07-01T00:00:00Z",
+      "predicate": "inception_of",
+      "subject": "Tesla"
+    }
+  ],
+  "text:iPhone is made by Apple Inc.": [
+    {
+      "object": "Apple Inc",
+      "predicate": "manufacturer_of",
+      "subject": "iPhone"
+    }
+  ],
+  "text:iPhone is made by Foxconn.": [
+    {
+      "object": "Foxconn",
+      "predicate": "manufacturer_of",
+      "subject": "iPhone"
+    }
+  ],
+  "text:iPhone is manufactured by Apple Inc.": [
+    {
+      "object": "Apple Inc",
+      "predicate": "manufacturer_of",
+      "subject": "iPhone"
+    }
+  ],
+  "text:iPhone is manufactured by Foxconn.": [
+    {
+      "object": "Foxconn",
+      "predicate": "manufacturer_of",
+      "subject": "iPhone"
+    }
+  ],
+  "text:iPhone's manufacturer is Apple Inc.": [
+    {
+      "object": "Apple Inc",
+      "predicate": "manufacturer_of",
+      "subject": "iPhone"
+    }
+  ],
+  "text:iPhone's manufacturer is Foxconn.": [
+    {
+      "object": "Foxconn",
+      "predicate": "manufacturer_of",
+      "subject": "iPhone"
+    }
+  ]
+}

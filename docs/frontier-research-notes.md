@@ -565,6 +565,14 @@ Added dependency-free triple extractor plug-ins and eval harness:
   false-positive rates are `0.000`. This promotes simple negative-context
   robustness for covered KG templates while preserving the broader open-domain
   extraction boundary.
+- `artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/`
+  replays that adversarial matrix with two local lookup prediction files through
+  the external-prediction adapter contract. This is a contract replay, not a
+  learned-extractor quality claim: it proves that a learned/OpenIE/LLM-json
+  extractor can be evaluated through the same dependency-free prediction-file
+  boundary. The v1 matrix promotes with `external_prediction_count=2`,
+  external-prediction coverage over both country-core and organization/product
+  corpora, `mean_best_external_f1=1.000`, and recursive manifest verification.
 
 Added the first stdlib-only external retrieval service shell:
 
@@ -1043,6 +1051,13 @@ Added the first monitor-first tool-selection audit layer:
   `artifacts/frontier-audit-release-candidate-v2/` keeps the overall candidate
   blocked but changes the product-trace replay gate from blocked to promote
   with both child gate reports present in the manifest.
+- `artifacts/frontier-audit-release-candidate-v3/` points the frontier audit at
+  the v1 external-prediction triple matrix. The overall candidate remains
+  blocked, but the triple-extraction fixture matrix gate now promotes with the
+  required external-prediction count, corpus coverage, and mean external F1
+  present. Remaining blockers are readiness/performance, required
+  retrieval-route selected/property coverage, and complete product-runtime-drift
+  handoff metrics.
 
 ## Next Research-to-Code Candidates
 

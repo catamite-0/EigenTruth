@@ -1635,6 +1635,41 @@ def test_triple_extraction_fixture_matrix_records_external_prediction_reports(tm
     ] is True
 
 
+def test_triple_extraction_fixture_matrix_cli_parses_external_predictions(monkeypatch, tmp_path):
+    module = importlib.import_module("benchmarks.run_triple_extraction_fixture_matrix")
+    facts_path = tmp_path / "facts.json"
+    predictions_path = tmp_path / "predictions.json"
+    facts_path.write_text(json.dumps({"facts": []}), encoding="utf-8")
+    predictions_path.write_text(json.dumps({}), encoding="utf-8")
+    captured = {}
+
+    def fake_run(config):
+        captured["config"] = config
+        return {"status": "promote"}
+
+    monkeypatch.setattr(module, "run_triple_extraction_fixture_matrix", fake_run)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "run_triple_extraction_fixture_matrix.py",
+            "--corpus",
+            f"country-core={facts_path}",
+            "--output-dir",
+            str(tmp_path / "matrix"),
+            "--external-predictions",
+            f"country-core:lookup_gold={predictions_path}",
+        ],
+    )
+
+    module.main()
+
+    config = captured["config"]
+    assert config.external_prediction_paths_by_corpus == {
+        "country-core": {"lookup_gold": predictions_path}
+    }
+
+
 def test_triple_extraction_fixture_matrix_reports_adversarial_gate(tmp_path):
     module = importlib.import_module("benchmarks.run_triple_extraction_fixture_matrix")
     country_corpus = tmp_path / "country-facts.json"
