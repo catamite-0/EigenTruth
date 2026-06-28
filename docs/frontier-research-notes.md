@@ -966,6 +966,13 @@ Added the first monitor-first tool-selection audit layer:
   blocked by the promotion gate. This follows the current fact-level
   verification direction while keeping world-model execution dependency-free
   and citation-bound. No real TruthfulQA mechanism artifact is promoted yet.
+- `fill_world_model_rule_inputs_from_mechanism_bindings.py` closes the next
+  mechanical gap by filling mechanism inputs only from explicit source-backed
+  bindings. It requires `mechanism`, `precondition`, `mechanism_status`, and
+  `source_citation`, rejects unreviewed or ambiguous statuses, and leaves filled
+  rows candidate-only until adapter execution plus promotion. This is still a
+  shell plus test evidence; the real research gap is collecting citation-backed
+  mechanism rows for the unresolved causal/procedural TruthfulQA tasks.
 
 ## Next Research-to-Code Candidates
 
@@ -973,14 +980,14 @@ Added the first monitor-first tool-selection audit layer:
    unresolved rows should stay separated by gap type and feed richer property
    mapping, citation evidence, entity disambiguation, and deterministic
    world-model/calculator rules before entering ProductTrace or release gates.
-2. Extend the rule-input fill family beyond the completed entity, numeric,
-   temporal, and mechanism shells: the remaining numeric work is subject-binding
-   resolution for ambiguous questions such as `record-190`; temporal work needs
-   richer content/citation mapping or source-backed temporal fills; and
-   causal/procedural work now needs source-backed `mechanism_status` fills
-   before deterministic world-model results can pass the same promotion gate
-   into handoff. The complete source-backed replay now proves local-catalog
-   coverage is not enough (`0/88` mapped).
+2. Populate the completed rule-input fill family with real source-backed rows:
+   the remaining numeric work is subject-binding resolution for ambiguous
+   questions such as `record-190`; temporal work needs richer content/citation
+   mapping or source-backed temporal fills; and causal/procedural work now needs
+   citation-backed mechanism bindings that pass the fill script before
+   deterministic world-model results can pass the same promotion gate into
+   handoff. The complete source-backed replay now proves local-catalog coverage
+   is not enough (`0/88` mapped).
 3. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
 4. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
 5. Materialize a real `frontier_audit` release candidate with the registered covered-facts external-evidence handoff and external-prediction triple matrix artifact, then export the resulting promotion contract.

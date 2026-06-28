@@ -384,8 +384,11 @@ The causal/procedural rule lane now has a `mechanism_consistency` execution
 shell as well. It accepts explicit `mechanism`, `precondition`, and
 `source_citation` inputs, but it will not promote without a source-backed
 `mechanism_status`; missing status returns `insufficient_evidence` and blocks the
-promotion gate. This is currently unit-level adapter evidence only. No real
-source-backed TruthfulQA mechanism artifact is registered yet.
+promotion gate. `fill_world_model_rule_inputs_from_mechanism_bindings.py` now
+adds the matching source-backed fill boundary and blocks missing, unreviewed, or
+invalid mechanism statuses before adapter execution. This is currently
+unit-level adapter/fill evidence only. No real source-backed TruthfulQA
+mechanism artifact is registered yet.
 
 ## Product Trace Demo
 

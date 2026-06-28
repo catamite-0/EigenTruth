@@ -2977,6 +2977,27 @@ source-backed TruthfulQA mechanism artifact is registered yet; the current
 evidence is unit-level shell coverage plus a typed collection contract for the
 remaining causal/procedural rows.
 
+Mechanism inputs now also have a source-backed fill boundary:
+
+```bash
+MECHANISM_FILL=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-binding-fill
+
+python benchmarks/fill_world_model_rule_inputs_from_mechanism_bindings.py \
+  --input-tasks "$MECHANISM_FILL/source-backed-mechanism-rule-input-tasks.jsonl" \
+  --mechanism-bindings "$MECHANISM_FILL/source-backed-mechanism-bindings.jsonl" \
+  --output-dir "$MECHANISM_FILL" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-binding-fill \
+  --version 0.1
+```
+
+This fill script is intentionally stricter than the adapter shell: it blocks
+missing source citations, unreviewed bindings, and missing or invalid
+`mechanism_status` values before adapter execution. Focused tests cover a
+supported mechanism that fills, executes, and promotes, plus an invalid binding
+that blocks. A real TruthfulQA run still needs actual citation-backed mechanism
+binding rows before any mechanism candidate can enter ProductTrace.
+
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:
 

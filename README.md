@@ -530,6 +530,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `requeue_world_model_rule_stubs_from_audit.py` | Applies rule-input audit requeue suggestions back to sanitized rule stubs, producing corrected non-evidence stubs for the existing rule-authoring adapter. |
 | `fill_world_model_rule_inputs_from_correction_handoff.py` | Fills a conservative subset of typed rule inputs from promoted source-family correction handoffs and ProductTrace claim bindings, then leaves filled rows as candidate-only adapter inputs. |
 | `fill_world_model_rule_inputs_from_numeric_bindings.py` | Fills explicit numeric/calculator rule inputs from source-backed numeric bindings, fail-closing ambiguous subject bindings before adapter execution. |
+| `fill_world_model_rule_inputs_from_mechanism_bindings.py` | Fills causal/procedural mechanism rule inputs from explicit source-backed mechanism bindings, requiring `mechanism_status` before adapter execution. |
 | `promote_world_model_rule_candidates.py` | Fail-closed promotion gate for deterministic rule candidates; validates explicit rule inputs, confidence, source citation, and candidate metadata while leaving pending input rows queued. |
 | `build_world_model_rule_candidate_handoff.py` | Converts promoted deterministic rule candidates into target-specific ProductTrace/action-result handoffs, preserving source-citation provenance and failing closed on unpromoted or malformed candidates. |
 | `build_source_family_structured_qa_correction_handoff.py` | Converts promoted source-family `mapped_qa_fact_candidate` rows into a target-specific structured-QA correction corpus plus ProductTrace/action-result JSONL, fail-closing unless the upstream covered-fact route was promoted. |
@@ -625,6 +626,7 @@ evidence rates and maximum final false-accept / false-accept-delta thresholds.
 | `build_world_model_rule_input_collection_plan.py` | Turns rule input requests into typed collection tasks and batches before any deterministic rule execution. |
 | `fill_world_model_rule_inputs_from_correction_handoff.py` | Fills a conservative subset of typed rule inputs from promoted correction handoffs and ProductTrace claim bindings. |
 | `fill_world_model_rule_inputs_from_numeric_bindings.py` | Fills numeric/calculator rule inputs from source-backed bindings, but blocks bindings that still need subject review. |
+| `fill_world_model_rule_inputs_from_mechanism_bindings.py` | Fills causal/procedural mechanism rule inputs from source-backed bindings, but blocks missing or invalid mechanism status. |
 | `promote_world_model_rule_candidates.py` | Promotion-gates deterministic rule candidates before downstream handoff. |
 | `build_world_model_rule_candidate_handoff.py` | Turns promoted deterministic rule candidates into ProductTrace/action-result handoffs with source-citation provenance. |
 | `build_source_family_structured_qa_correction_handoff.py` | Turns promoted source-family mapped QA facts into target-specific correction ProductTrace/action-result handoffs while fail-closing unpromoted route inputs. |
@@ -756,6 +758,7 @@ evidence rates and maximum final false-accept / false-accept-delta thresholds.
 | `build_world_model_rule_input_collection_plan.py` | 将 rule-authoring input request 降成 numeric、entity-role、temporal、mechanism 输入采集任务与执行 batch，不复制答案，也不执行 verifier 候选。 |
 | `fill_world_model_rule_inputs_from_correction_handoff.py` | 从已 promoted source-family correction handoff 和 ProductTrace claim binding 中保守填充部分 typed rule inputs，填充结果仍只是候选 adapter 输入。 |
 | `fill_world_model_rule_inputs_from_numeric_bindings.py` | 从 source-backed numeric binding 填充 calculator rule input；如果 subject binding 仍需人工确认则 fail-closed。 |
+| `fill_world_model_rule_inputs_from_mechanism_bindings.py` | 从 source-backed mechanism binding 填充 causal/procedural rule input；缺少或无法识别 `mechanism_status` 时阻塞。 |
 | `promote_world_model_rule_candidates.py` | 对 deterministic rule candidate 做 fail-closed promotion gate，检查显式 rule input、confidence、source citation 与 candidate metadata。 |
 | `build_world_model_rule_candidate_handoff.py` | 将已 promoted deterministic rule candidate 转成目标特定 ProductTrace/action-result handoff，保留 source citation provenance，并对未 promoted 或 malformed candidate fail-closed。 |
 | `build_source_family_structured_qa_correction_handoff.py` | 将已 promoted source-family `mapped_qa_fact_candidate` 行转换成目标特定 structured-QA correction corpus 与 ProductTrace/action-result JSONL；若上游 covered-fact route 未 promoted 则 fail-closed。 |
@@ -852,6 +855,7 @@ false-accept-delta 上限。
 | `requeue_world_model_rule_stubs_from_audit.py` | 将 audit requeue 建议应用回去敏 rule stub，生成修正后的非证据 rule-authoring stub。 |
 | `fill_world_model_rule_inputs_from_correction_handoff.py` | 从 promoted correction handoff 与 ProductTrace claim binding 中保守填充一部分 typed rule inputs。 |
 | `fill_world_model_rule_inputs_from_numeric_bindings.py` | 从 source-backed numeric binding 填充 calculator rule input；subject 不明确时阻塞而不是猜测。 |
+| `fill_world_model_rule_inputs_from_mechanism_bindings.py` | 从 source-backed mechanism binding 填充 causal/procedural rule input；机制状态缺失或模糊时阻塞。 |
 | `promote_world_model_rule_candidates.py` | 在下游 handoff 前对 deterministic rule candidate 做 promotion gate。 |
 | `build_world_model_rule_candidate_handoff.py` | 将 promoted deterministic rule candidate 接入 ProductTrace/action-result handoff，并保留 source-citation provenance。 |
 | `build_source_family_structured_qa_correction_handoff.py` | 将已 promoted source-family mapped QA fact 转成目标特定 correction ProductTrace/action-result handoff，并对未 promoted route 输入 fail-closed。 |

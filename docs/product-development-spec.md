@@ -472,6 +472,12 @@ For product features:
   before promotion. Missing status produces `insufficient_evidence`, so
   ProductTrace remains blocked until a citation-backed fill, promotion, and
   handoff all pass.
+  `fill_world_model_rule_inputs_from_mechanism_bindings.py` now supplies that
+  citation-backed fill boundary for mechanism rows: it requires an explicit
+  `mechanism_status`, source citation, and non-evidence marker, and rejects
+  unreviewed or invalid statuses before adapter execution. This completes the
+  tool slot but not the evidence collection; real causal/procedural corrections
+  still need source-backed mechanism bindings before handoff.
   Product implication: unresolved deterministic rule work now enters the same
   explicit input-plan pathway as the larger source-family rule lane, but it
   still cannot affect ProductTrace or release gates until candidate execution,

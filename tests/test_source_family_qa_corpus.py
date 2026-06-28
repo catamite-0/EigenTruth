@@ -2673,6 +2673,159 @@ def test_world_model_rule_numeric_binding_fill_blocks_review_required_binding():
     }
 
 
+def test_world_model_rule_mechanism_binding_fill_executes_and_promotes_candidate(tmp_path):
+    fill_module = importlib.import_module("benchmarks.fill_world_model_rule_inputs_from_mechanism_bindings")
+    adapter_module = importlib.import_module("benchmarks.run_world_model_rule_authoring_adapter")
+    promotion_module = importlib.import_module("benchmarks.promote_world_model_rule_candidates")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    tasks_path = tmp_path / "rule-input-tasks.jsonl"
+    bindings_path = tmp_path / "source-backed-mechanism-bindings.jsonl"
+    stubs_path = tmp_path / "world-model-rule-stubs.jsonl"
+    fill_output = tmp_path / "fill"
+    adapter_output = tmp_path / "adapter"
+    promotion_output = tmp_path / "promotion"
+    tasks_path.write_text(
+        json.dumps({
+            "task_id": "rule-input-task-0001",
+            "source_request_id": "rule:record-10:1",
+            "target_id": "record-10",
+            "rule_family": "causal_or_procedural",
+            "collection_family": "mechanism_rule_input_collection",
+            "question": "How long do diamonds last?",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    bindings_path.write_text(
+        json.dumps({
+            "binding_id": "mechanism-binding-record-10",
+            "request_id": "rule:record-10:1",
+            "target_id": "record-10",
+            "mechanism": "Diamond crystal bonds are stable under ordinary storage conditions.",
+            "precondition": "The claim concerns ordinary material persistence, not burning or cutting.",
+            "mechanism_status": "supports",
+            "source_citation": "source:diamond-material-stability",
+            "source_url": "https://example.test/diamond-material-stability",
+            "source_title": "Diamond material stability reference",
+            "source_family": "reference",
+            "provider": "unit_fixture",
+            "mechanism_source": "source_citation",
+            "precondition_source": "claim_scope",
+            "mechanism_status_source": "source_citation",
+            "review_status": "ready",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    stubs_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "source_family_structured_qa_lane_batch_workflow",
+            "request_id": "rule:record-10:1",
+            "target_id": "record-10",
+            "request_type": "world_model_or_calculator_rule",
+            "rule_family": "causal_or_procedural",
+            "required_inputs": ["mechanism", "precondition", "source_citation", "mechanism_status"],
+            "question": "How long do diamonds last?",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    fill_payload = fill_module.run(
+        input_tasks_path=tasks_path,
+        mechanism_bindings_path=bindings_path,
+        output_dir=fill_output,
+        registry_path=tmp_path / "registry.json",
+        name="mechanism-binding-fill-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    filled = [
+        json.loads(line)
+        for line in (fill_output / "rule-inputs.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    filled_text = json.dumps(filled, sort_keys=True)
+
+    adapter_payload = adapter_module.run_world_model_rule_authoring_adapter(
+        rule_stubs_path=stubs_path,
+        rule_inputs_path=fill_output / "rule-inputs.jsonl",
+        output_dir=adapter_output,
+        metadata={"suite": "unit"},
+    )
+    promotion_payload = promotion_module.run(
+        rule_results_path=adapter_output / "world-model-rule-results.jsonl",
+        rule_inputs_path=fill_output / "rule-inputs.jsonl",
+        adapter_report_path=adapter_output / "world-model-rule-authoring-adapter.json",
+        output_dir=promotion_output,
+        metadata={"suite": "unit"},
+    )
+    promoted = [
+        json.loads(line)
+        for line in (promotion_output / "promoted-rule-candidates.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+    assert fill_payload["status"] == "filled"
+    assert fill_payload["summary"]["filled_input_count"] == 1
+    assert fill_payload["summary"]["mechanism_status_counts"] == {"supported": 1}
+    assert filled[0]["mechanism_status"] == "supported"
+    assert filled[0]["source_citation"] == "source:diamond-material-stability"
+    assert "model_answer" not in filled_text
+    assert adapter_payload["status"] == "observed"
+    assert adapter_payload["summary"]["candidate_supported_count"] == 1
+    assert promotion_payload["status"] == "promote"
+    assert promoted[0]["rule_input"]["mechanism_status"] == "supported"
+    assert promoted[0]["source_citation"] == "source:diamond-material-stability"
+    assert registry_module.load_and_verify_artifact_manifest(fill_output / "artifact-manifest.json").passed is True
+
+
+def test_world_model_rule_mechanism_binding_fill_blocks_invalid_binding():
+    module = importlib.import_module("benchmarks.fill_world_model_rule_inputs_from_mechanism_bindings")
+
+    payload = module.fill_world_model_rule_inputs_from_mechanism_bindings(
+        input_tasks=[
+            {
+                "task_id": "rule-input-task-0001",
+                "source_request_id": "rule:record-10:1",
+                "target_id": "record-10",
+                "rule_family": "causal_or_procedural",
+                "collection_family": "mechanism_rule_input_collection",
+                "question": "How long do diamonds last?",
+                "not_verifier_evidence": True,
+            }
+        ],
+        mechanism_bindings=[
+            {
+                "binding_id": "mechanism-binding-record-10",
+                "request_id": "rule:record-10:1",
+                "target_id": "record-10",
+                "mechanism": "Diamond crystal bonds are stable under ordinary storage conditions.",
+                "precondition": "The claim concerns ordinary material persistence.",
+                "mechanism_status": "maybe",
+                "review_status": "needs_review",
+                "not_verifier_evidence": False,
+            }
+        ],
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["filled_input_count"] == 0
+    assert payload["summary"]["unfilled_reason_counts"] == {"invalid_mechanism_binding": 1}
+    assert payload["summary"]["invalid_binding_failure_counts"] == {
+        "binding_not_marked_non_evidence": 1,
+        "binding_requires_review": 1,
+        "invalid_mechanism_status": 1,
+        "missing_source_citation": 1,
+    }
+    assert payload["summary"]["mechanism_status_counts"] == {"invalid_or_missing": 1}
+
+
 def test_world_model_rule_mechanism_consistency_executes_and_promotes_candidate(tmp_path):
     adapter_module = importlib.import_module("benchmarks.run_world_model_rule_authoring_adapter")
     promotion_module = importlib.import_module("benchmarks.promote_world_model_rule_candidates")
