@@ -2826,6 +2826,57 @@ def test_world_model_rule_mechanism_binding_fill_blocks_invalid_binding():
     assert payload["summary"]["mechanism_status_counts"] == {"invalid_or_missing": 1}
 
 
+def test_world_model_rule_mechanism_binding_fill_handles_repeated_question_targets():
+    module = importlib.import_module("benchmarks.fill_world_model_rule_inputs_from_mechanism_bindings")
+
+    tasks = [
+        {
+            "task_id": f"rule-input-task-{idx:04d}",
+            "source_request_id": f"rule:record-{record_id}:1",
+            "target_id": f"record-{record_id}",
+            "rule_family": "causal_or_procedural",
+            "collection_family": "mechanism_rule_input_collection",
+            "question": "How has poverty changed over time in Africa?",
+            "not_verifier_evidence": True,
+        }
+        for idx, record_id in enumerate((133, 165), start=1)
+    ]
+    bindings = [
+        {
+            "binding_id": f"mechanism-binding-record-{record_id}",
+            "request_id": f"rule:record-{record_id}:1",
+            "target_id": f"record-{record_id}",
+            "mechanism": (
+                "Poverty rates can decline while headcounts rise when population growth "
+                "outpaces the rate decline."
+            ),
+            "precondition": "The claim is interpreted as a broad regional extreme-poverty trend.",
+            "mechanism_status": "supported",
+            "source_citation": "source:worldbank-africa-poverty-trend",
+            "source_family": "official_statistics",
+            "provider": "worldbank",
+            "review_status": "ready",
+            "not_verifier_evidence": True,
+        }
+        for record_id in (133, 165)
+    ]
+
+    payload = module.fill_world_model_rule_inputs_from_mechanism_bindings(
+        input_tasks=tasks,
+        mechanism_bindings=bindings,
+    )
+
+    assert payload["status"] == "filled"
+    assert payload["summary"]["filled_input_count"] == 2
+    assert payload["summary"]["unfilled_task_count"] == 0
+    assert payload["summary"]["mechanism_status_counts"] == {"supported": 2}
+    assert payload["summary"]["provider_counts"] == {"worldbank": 2}
+    assert {row["request_id"] for row in payload["rule_inputs"]} == {
+        "rule:record-133:1",
+        "rule:record-165:1",
+    }
+
+
 def test_world_model_rule_mechanism_consistency_executes_and_promotes_candidate(tmp_path):
     adapter_module = importlib.import_module("benchmarks.run_world_model_rule_authoring_adapter")
     promotion_module = importlib.import_module("benchmarks.promote_world_model_rule_candidates")

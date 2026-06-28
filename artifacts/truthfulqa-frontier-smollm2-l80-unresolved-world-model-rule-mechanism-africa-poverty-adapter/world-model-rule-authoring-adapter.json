@@ -1,0 +1,47 @@
+{
+  "label_usage": {
+    "answers_copied_to_rule_inputs": false,
+    "candidate_results_require_promotion_gate": true,
+    "labels_used_for_rule_execution": false,
+    "rule_stubs_are_verifier_evidence": false
+  },
+  "metadata": {
+    "evidence": "source_backed_africa_poverty_mechanism_binding_fill",
+    "suite": "truthfulqa_frontier_smollm2_l80"
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-adapter/artifact-manifest.json",
+    "input_requests": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-adapter/world-model-rule-input-requests.jsonl",
+    "report": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-adapter/world-model-rule-authoring-adapter.json",
+    "rule_results": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-adapter/world-model-rule-results.jsonl"
+  },
+  "schema_version": 1,
+  "scope": "Executes deterministic calculator/entity-role/temporal checks only when explicit rule inputs are provided. Missing-input rows are rule-authoring work items, not verifier evidence.",
+  "source": {
+    "rule_inputs": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-binding-fill/rule-inputs.jsonl",
+    "rule_stubs": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-adapter/africa-poverty-mechanism-rule-stubs.jsonl"
+  },
+  "status": "observed",
+  "summary": {
+    "adapter_counts": {
+      "mechanism_consistency": 4
+    },
+    "candidate_error_count": 0,
+    "candidate_insufficient_evidence_count": 0,
+    "candidate_refuted_count": 0,
+    "candidate_supported_count": 4,
+    "executed_count": 4,
+    "input_request_count": 0,
+    "missing_input_counts": {},
+    "needs_input_count": 0,
+    "result_count": 4,
+    "rule_family_counts": {
+      "causal_or_procedural": 4
+    },
+    "status_counts": {
+      "supported": 4
+    },
+    "stub_count": 4
+  },
+  "workflow": "world_model_rule_authoring_adapter"
+}

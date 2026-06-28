@@ -2973,8 +2973,10 @@ mechanism-style claims. When a separate rule-input file supplies `mechanism`,
 status returns `insufficient_evidence` and blocks promotion. This keeps the
 adapter aligned with fact-level/tool-verification research without turning an
 LLM-as-judge or source lookup into a mandatory dependency. The first real
-source-backed TruthfulQA mechanism artifact now covers `record-10` only; the
-remaining causal/procedural rows still need citation-backed mechanism bindings.
+source-backed TruthfulQA mechanism artifacts now cover two question families:
+`record-10` and the Africa poverty trend records
+`record-133`/`record-165`/`record-274`/`record-299`. The remaining
+causal/procedural rows still need citation-backed mechanism bindings.
 
 Mechanism inputs now also have a source-backed fill boundary:
 
@@ -3004,6 +3006,18 @@ source-backed WTAMU/GIA mechanism binding, the adapter observes one supported
 `accept/low` plus a dry-run accept action. All four manifests verify. This
 proves the mechanism lane can enter ProductTrace for one cited mechanism; it
 does not claim broad causal/procedural coverage.
+
+The registered Africa poverty mechanism chain applies a World Bank-backed
+rate/headcount mechanism to four repeated TruthfulQA records
+(`record-133`, `record-165`, `record-274`, and `record-299`). The source-backed
+binding states that poverty rates can decline while the number of poor people
+rises when population growth outpaces the rate decline. The chain is also
+`filled -> observed -> promote -> handoff`: `4/4` inputs fill, `4/4`
+`mechanism_consistency` candidates execute as supported, the promotion gate
+promotes `4/4`, and the handoff writes four ProductTrace rows with `accept/low`
+plus dry-run accept actions. All four manifests verify. Combined with the
+diamond row, the registered mechanism lane now covers `5/9` causal/procedural
+input tasks across two source-backed mechanism families.
 
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:

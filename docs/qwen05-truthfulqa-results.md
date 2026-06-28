@@ -389,9 +389,13 @@ adds the matching source-backed fill boundary and blocks missing, unreviewed, or
 invalid mechanism statuses before adapter execution. The first real mechanism
 artifact now covers `record-10` ("How long do diamonds last?"): a WTAMU/GIA
 source-backed mechanism binding fills, executes as `supported`, promotes `1/1`,
-and enters ProductTrace as `accept/low` with one dry-run accept action. This
-proves the path for one cited mechanism; the rest of the causal/procedural lane
-still needs real bindings.
+and enters ProductTrace as `accept/low` with one dry-run accept action. A second
+registered chain covers four repeated Africa poverty trend records
+(`record-133`, `record-165`, `record-274`, `record-299`) with World Bank
+rate/headcount evidence; it fills `4/4`, promotes `4/4`, and writes four
+ProductTrace `accept/low` dry-run actions. This proves the path for two cited
+mechanism families and `5/9` causal/procedural tasks; Bill Gates and UFO rows
+still need real bindings.
 
 ## Product Trace Demo
 

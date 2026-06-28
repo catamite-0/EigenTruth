@@ -1,0 +1,62 @@
+{
+  "artifacts": {
+    "rule_authoring_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-authoring-adapter.json",
+      "sha256": "8269828e128d5878b7fd188cb38d4eb9c3e61a81936bae109f48dcc247b1bc29",
+      "size_bytes": 2144
+    },
+    "rule_input_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-input-requests.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "rule_inputs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-binding-fill/rule-inputs.jsonl",
+      "sha256": "200b1b73f2e15b15917e2e736f98033a6fcfffeddd800a0539ceed19955d17ea",
+      "size_bytes": 9240
+    },
+    "rule_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-results.jsonl",
+      "sha256": "d4063f2583790825cf3bf635be6748806df06e8ab58de89b3763da392d279692",
+      "size_bytes": 12908
+    },
+    "rule_stubs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "africa-poverty-mechanism-rule-stubs.jsonl",
+      "sha256": "cffad76f94806c98b3f490ff3f1e108cf92888653b8d24f694bfb87bc157c767",
+      "size_bytes": 2848
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "evidence": "source_backed_africa_poverty_mechanism_binding_fill",
+    "executed_count": 4,
+    "input_request_count": 0,
+    "needs_input_count": 0,
+    "status": "observed",
+    "stub_count": 4,
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "workflow": "world_model_rule_authoring_adapter"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

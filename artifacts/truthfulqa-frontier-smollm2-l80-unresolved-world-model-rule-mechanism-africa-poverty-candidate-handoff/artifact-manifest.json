@@ -1,0 +1,61 @@
+{
+  "artifacts": {
+    "action_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "action-results.jsonl",
+      "sha256": "8b51fd7e332653d88faaae7ef0f25cb19019a08ecd96e6da17b32d423c6ddef2",
+      "size_bytes": 3784
+    },
+    "product_traces": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "product-traces.jsonl",
+      "sha256": "0ed3dc5807f86422c326201201c8975f5eaba516a745dcb47879a3cb35dc2e1c",
+      "size_bytes": 78064
+    },
+    "promoted_rule_candidates": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-promotion-gate/promoted-rule-candidates.jsonl",
+      "sha256": "23315df91e9c6bb48d98a273fbe8689ea79f733de10efc52523d0006d142fea5",
+      "size_bytes": 9048
+    },
+    "promotion_gate": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+      "sha256": "c9180871bf6d74ae3f71067dd2d8af9866cbcc2b87c3aa7e144bbb4a451b927e",
+      "size_bytes": 13248
+    },
+    "world_model_rule_candidate_handoff": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-candidate-handoff.json",
+      "sha256": "a14126c88502bd51573ea13e0811accd6c3ac258f638ce76044c26189605f2a0",
+      "size_bytes": 4434
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "action_result_count": 4,
+    "blocked_candidate_count": 0,
+    "evidence": "source_backed_africa_poverty_mechanism_promotion",
+    "status": "promote",
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "trace_count": 4,
+    "workflow": "world_model_rule_candidate_handoff"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

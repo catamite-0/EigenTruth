@@ -1,0 +1,77 @@
+{
+  "artifacts": {
+    "adapter_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-adapter/world-model-rule-authoring-adapter.json",
+      "sha256": "8269828e128d5878b7fd188cb38d4eb9c3e61a81936bae109f48dcc247b1bc29",
+      "size_bytes": 2144
+    },
+    "blocked_rule_candidates": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "blocked-rule-candidates.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "pending_rule_inputs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "pending-rule-inputs.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "promoted_rule_candidates": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "promoted-rule-candidates.jsonl",
+      "sha256": "23315df91e9c6bb48d98a273fbe8689ea79f733de10efc52523d0006d142fea5",
+      "size_bytes": 9048
+    },
+    "rule_candidate_promotion_gate": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-candidate-promotion-gate.json",
+      "sha256": "c9180871bf6d74ae3f71067dd2d8af9866cbcc2b87c3aa7e144bbb4a451b927e",
+      "size_bytes": 13248
+    },
+    "rule_inputs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-binding-fill/rule-inputs.jsonl",
+      "sha256": "200b1b73f2e15b15917e2e736f98033a6fcfffeddd800a0539ceed19955d17ea",
+      "size_bytes": 9240
+    },
+    "rule_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-adapter/world-model-rule-results.jsonl",
+      "sha256": "d4063f2583790825cf3bf635be6748806df06e8ab58de89b3763da392d279692",
+      "size_bytes": 12908
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "blocked_count": 0,
+    "evidence": "source_backed_africa_poverty_mechanism_adapter",
+    "pending_count": 0,
+    "promoted_count": 4,
+    "status": "promote",
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "workflow": "world_model_rule_candidate_promotion_gate"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 7,
+    "directory_count": 0,
+    "file_count": 7,
+    "missing_count": 0
+  }
+}

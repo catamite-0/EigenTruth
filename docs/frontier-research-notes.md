@@ -965,14 +965,14 @@ Added the first monitor-first tool-selection audit layer:
   `mechanism_status`; missing status becomes `insufficient_evidence` and is
   blocked by the promotion gate. This follows the current fact-level
   verification direction while keeping world-model execution dependency-free
-  and citation-bound. No real TruthfulQA mechanism artifact is promoted yet.
+  and citation-bound.
 - `fill_world_model_rule_inputs_from_mechanism_bindings.py` closes the next
   mechanical gap by filling mechanism inputs only from explicit source-backed
   bindings. It requires `mechanism`, `precondition`, `mechanism_status`, and
   `source_citation`, rejects unreviewed or ambiguous statuses, and leaves filled
-  rows candidate-only until adapter execution plus promotion. This is still a
-  shell plus test evidence; the real research gap is collecting citation-backed
-  mechanism rows for the unresolved causal/procedural TruthfulQA tasks.
+  rows candidate-only until adapter execution plus promotion. This keeps the
+  remaining research gap concrete: collect more citation-backed mechanism rows
+  for unresolved causal/procedural TruthfulQA tasks.
 - The first real mechanism replay is now registered for `record-10` ("How long
   do diamonds last?"). A WTAMU physics source supplies the kinetic-barrier
   mechanism for diamond persistence under ordinary conditions, with GIA diamond
@@ -981,6 +981,14 @@ Added the first monitor-first tool-selection audit layer:
   `mechanism_consistency` candidate promotes and produces one ProductTrace
   `accept/low` dry-run action. This is genuine citation-backed mechanism
   evidence for that row only, not a release-wide world-model coverage claim.
+- A second registered mechanism replay covers the repeated Africa poverty trend
+  question (`record-133`, `record-165`, `record-274`, `record-299`) with World
+  Bank rate/headcount evidence: poverty shares declined while rapid population
+  growth increased poor-person headcounts. The chain fills `4/4` inputs,
+  executes four supported `mechanism_consistency` candidates, promotes `4/4`,
+  and writes four ProductTrace `accept/low` dry-run actions. Combined mechanism
+  coverage is now `5/9` causal/procedural input tasks across two question
+  families; Bill Gates and UFO rows remain unfilled.
 
 ## Next Research-to-Code Candidates
 
@@ -991,10 +999,9 @@ Added the first monitor-first tool-selection audit layer:
 2. Populate the completed rule-input fill family with more real source-backed rows:
    the remaining numeric work is subject-binding resolution for ambiguous
    questions such as `record-190`; temporal work needs richer content/citation
-   mapping or source-backed temporal fills; and causal/procedural work needs
-   more citation-backed mechanism bindings beyond the single `record-10`
-   diamond chain before deterministic world-model results can contribute
-   meaningful coverage. The complete source-backed replay now proves
+   mapping or source-backed temporal fills; and causal/procedural work now
+   needs the remaining Bill Gates/UFO mechanism bindings after the diamond and
+   Africa poverty chains. The complete source-backed replay now proves
    local-catalog coverage is not enough (`0/88` mapped).
 3. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
 4. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
