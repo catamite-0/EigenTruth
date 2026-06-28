@@ -6327,6 +6327,58 @@
       "name": "truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-lane-execution-queue",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-lane-execution-queue/lane-execution-queue.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "adapter_result_count": 36,
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-lane-batch-0001-disambiguation/artifact-manifest.json",
+        "batch_count": 1,
+        "evidence": "source_family_structured_qa_post_correction_lane_execution_queue",
+        "source_backed_request_count": 12,
+        "status": "ready_for_fact_mapping",
+        "structured_qa_document_count": 9,
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "target_count": 12,
+        "workflow": "source_family_structured_qa_lane_batch_workflow"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-lane-batch-0001-disambiguation",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-lane-batch-0001-disambiguation/lane-batch-workflow.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-lane-batch-0001-route/artifact-manifest.json",
+        "evidence": "source_family_structured_qa_post_correction_lane_batch_0001_disambiguation",
+        "fact_group_count": 3,
+        "n_records": 18,
+        "provider_count": 1,
+        "route": "structured_qa",
+        "source_family_count": 1,
+        "status": "promote",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "source_family_structured_qa_route_workflow"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-lane-batch-0001-route",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-lane-batch-0001-route/structured-qa-route-summary.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-lane-batch-0001-claim-mapping/artifact-manifest.json",
+        "covered_fact_match_count": 0,
+        "evidence": "source_family_structured_qa_post_correction_lane_batch_0001_route",
+        "mapped_qa_fact_candidate_count": 0,
+        "status": "blocked",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "target_count": 88,
+        "workflow": "source_family_structured_qa_claim_mapping_audit"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-lane-batch-0001-claim-mapping",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-lane-batch-0001-claim-mapping/source-family-structured-qa-lane-batch-0001-claim-mapping.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

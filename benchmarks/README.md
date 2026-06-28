@@ -2546,6 +2546,39 @@ adapter/rule requests, and `29` lane-aware batches. It intentionally excludes
 the `1` audit-only row and keeps answer/model-answer fields out of adapter
 requests; the first batch is `answer_collision_audit` disambiguation.
 
+Replay the first disambiguation batch through the local source-family catalogs:
+
+```bash
+BATCH=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-lane-batch-0001-disambiguation
+
+python benchmarks/run_source_family_structured_qa_lane_batch_workflow.py \
+  --lane-queue "$QUEUE/lane-execution-queue.json" \
+  --collection-corpus "$CORPUS/fact-collection-corpus.json" \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog/source-family-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-worldbank-official-statistics-catalog/worldbank-official-statistics-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-crossref-scholarly-catalog/crossref-scholarly-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-official-site-catalog/official-site-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-openalex-scholarly-catalog/openalex-scholarly-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-catalog/seeded-news-catalog.jsonl \
+  --batch-id sfqa-lane-batch-0001 \
+  --output-dir "$BATCH" \
+  --json "$BATCH/lane-batch-workflow.json" \
+  --batch-collection-corpus "$BATCH/lane-batch-collection-corpus.json" \
+  --artifact-manifest "$BATCH/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_post_correction_lane_execution_queue
+```
+
+The batch replay is `ready_for_fact_mapping`: `12` disambiguation requests over
+`12` answer-collision targets return `36` candidate results and rebuild `9`
+structured QA facts. The covered-fact route over those `9` facts promotes on
+`18` balanced true/mismatch rows with decision accuracy `1.0`, but the follow-up
+claim-mapping audit remains blocked (`0/88` covered matches and `0/88` mapped
+correction candidates). This is a clean negative result: the first
+disambiguation batch improves covered-fact quality but does not yet align to the
+unresolved claim intents, so the next pass should run the adjacent
+structured-fact/entity/citation/rule batches rather than lowering thresholds.
+
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:
 

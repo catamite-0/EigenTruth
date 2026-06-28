@@ -340,6 +340,15 @@ them into `29` batches. The first batch is `answer_collision_audit` fact
 disambiguation, so the next run can start with the highest-risk entity-collision
 lane before broader source-family coverage expansion.
 
+`run_source_family_structured_qa_lane_batch_workflow.py` now replays that first
+batch. `sfqa-lane-batch-0001` runs `12` disambiguation requests over `12`
+answer-collision targets, returns `36` candidate results, and rebuilds `9`
+structured QA facts. The covered-fact route promotes on `18` balanced rows with
+decision accuracy `1.0`, but claim mapping against the `88` unresolved rows is
+still blocked with `0` covered matches and `0` mapped correction candidates.
+This is a clean negative result: the disambiguation facts are locally reliable,
+but they do not yet answer the unresolved claim intents.
+
 ## Product Trace Demo
 
 `examples/calibrated_control_demo.py` now defaults to the best repository l80

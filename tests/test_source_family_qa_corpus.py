@@ -1464,3 +1464,114 @@ def test_source_family_structured_qa_lane_execution_queue_batches_requests(tmp_p
     assert registry_module.load_and_verify_artifact_manifest(output_dir / "artifact-manifest.json").passed is True
     assert registry_record is not None
     assert registry_record.metadata["adapter_request_count"] == 5
+
+
+def test_source_family_structured_qa_lane_batch_workflow_replays_selected_batch(tmp_path):
+    module = importlib.import_module("benchmarks.run_source_family_structured_qa_lane_batch_workflow")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    lane_queue_path = tmp_path / "lane-execution-queue.json"
+    collection_path = tmp_path / "fact-collection-corpus.json"
+    catalog_path = tmp_path / "source-catalog.jsonl"
+    output_dir = tmp_path / "lane-batch"
+    registry_path = tmp_path / "registry.json"
+    lane_queue_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "source_family_structured_qa_lane_execution_queue",
+            "status": "ready_for_adapter_execution",
+            "execution_batches": [
+                {
+                    "batch_id": "sfqa-lane-batch-0001",
+                    "next_lane": "answer_collision_audit",
+                    "lane_status": "blocked_needs_disambiguation",
+                    "request_type": "source_family_fact_disambiguation",
+                    "adapter_family": "source_family_fact_disambiguation",
+                    "target_ids": ["record-3"],
+                    "source_request_ids": ["disambig:record-3:1"],
+                    "not_verifier_evidence": True,
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
+    collection_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "source_family_structured_qa_fact_collection_corpus",
+            "status": "ready_for_collection",
+            "summary": {"target_count": 1, "total_request_count": 1},
+            "targets": [
+                {
+                    "target_id": "record-3",
+                    "record_index": 3,
+                    "question": "Who is Gamma?",
+                    "answer": "Gamma",
+                    "question_type": "definition",
+                    "priority": "high",
+                }
+            ],
+            "requests": {
+                "source_family_fact_disambiguation": [
+                    {
+                        "target_id": "record-3",
+                        "request_id": "disambig:record-3:1",
+                        "request_type": "source_family_fact_disambiguation",
+                        "query": "Gamma disambiguation",
+                        "question": "Who is Gamma?",
+                        "question_type": "definition",
+                        "priority": "high",
+                        "answer": "Gamma",
+                        "model_answer": "Gamma",
+                    }
+                ],
+            },
+        }),
+        encoding="utf-8",
+    )
+    catalog_path.write_text(
+        json.dumps({
+            "text": "Gamma disambiguation identifies Gamma as a separate company and entity.",
+            "title": "Gamma entity note",
+            "source": "unit:gamma",
+            "provider": "unit_catalog",
+            "source_family": "reference",
+            "metadata": {"provider": "unit_catalog"},
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = module.run_source_family_structured_qa_lane_batch_workflow(
+        lane_queue_path=lane_queue_path,
+        collection_corpus_path=collection_path,
+        source_catalog_paths=(catalog_path,),
+        output_dir=output_dir,
+        batch_ids=("sfqa-lane-batch-0001",),
+        registry_path=registry_path,
+        name="source-family-lane-batch-unit",
+        version="0.1",
+        adapter_min_text_overlap=0.0,
+        metadata={"suite": "unit"},
+    )
+    batch_collection = json.loads((output_dir / "lane-batch-collection-corpus.json").read_text(encoding="utf-8"))
+    registry_record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:source-family-lane-batch-unit:0.1"
+    )
+
+    assert payload["status"] == "observed"
+    assert payload["summary"]["batch_count"] == 1
+    assert payload["summary"]["target_count"] == 1
+    assert payload["summary"]["source_backed_request_count"] == 1
+    assert payload["summary"]["adapter_result_count"] == 1
+    assert batch_collection["summary"]["stripped_reserved_field_counts"] == {
+        "answer": 1,
+        "model_answer": 1,
+        "target.answer": 1,
+    }
+    assert "answer" not in batch_collection["targets"][0]
+    assert "answer" not in batch_collection["requests"]["source_family_fact_disambiguation"][0]
+    assert "model_answer" not in batch_collection["requests"]["source_family_fact_disambiguation"][0]
+    assert registry_module.load_and_verify_artifact_manifest(output_dir / "artifact-manifest.json").passed is True
+    assert registry_record is not None
+    assert registry_record.metadata["source_backed_request_count"] == 1
