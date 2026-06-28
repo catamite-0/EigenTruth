@@ -1302,6 +1302,19 @@ provenance, and remains intentionally `blocked` because the external query
 sweep and controlled-vs-external comparison do not pass. This proves the
 one-command local catalog loop without promoting weak synthetic evidence.
 
+`benchmarks/build_source_family_catalog.py` now converts cached external source
+docs into adapter-ready catalogs without losing provenance. The registered
+Wikidata catalog artifact converts all `292` target-specific cached Wikidata
+source docs into `reference` catalog rows with provider `wikidata`, timestamps,
+URLs, and a verified manifest. Running
+`truthfulqa-frontier-smollm2-l80-wikidata-source-family-citation-workflow`
+through the source-family evidence loop consumes `176` unresolved citation
+requests, returns results for `160/176`, writes `480` Wikidata-backed adapter
+results, and passes provenance. It remains `blocked`: the external query sweep
+refutes `0/89` entrenched blind spots, verified false alarm is `0.088`, and the
+controlled-vs-external generalization gap remains `1.0`. This is real negative
+evidence for generic cached Wikidata reference matching, not a route promotion.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -1327,10 +1340,11 @@ one-command local catalog loop without promoting weak synthetic evidence.
 6. Promote a Qwen l20/l80 readiness baseline through the same registry workflow
    if Qwen-specific runtime evidence is needed; SmolLM2 now has the first
    non-tiny registered readiness/release candidate.
-7. Populate `run_source_family_citation_search_workflow.py` with real official
-   or structured catalogs for the unresolved blind spots; only promote if
-   provenance, external query-sweep, and controlled-vs-external comparison gates
-   pass.
+7. Populate `run_source_family_citation_search_workflow.py` with more targeted
+   official/source-specific catalogs for unresolved blind spots. The cached
+   Wikidata reference catalog now proves the workflow executes, but it still
+   refutes `0/89`; only promote future catalogs if provenance, external
+   query-sweep, and controlled-vs-external comparison gates pass.
 8. Extend the new verifier-stability path from structured QA to real retrieval,
    database, calculator, and world-model evidence under the same conformal
    false-alarm budgets. Use `benchmarks/build_evidence_fixture.py` with a local

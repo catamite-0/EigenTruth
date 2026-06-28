@@ -1,0 +1,31 @@
+{
+  "config": {
+    "default_provider": "local_source_catalog",
+    "default_source_family": "reference",
+    "provider_source_families": {
+      "wikidata": "reference"
+    }
+  },
+  "input_paths": [
+    "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-evidence/wikidata-source-docs.jsonl"
+  ],
+  "metadata": {
+    "source": "wikidata_cached_docs",
+    "suite": "truthfulqa_frontier_smollm2_l80"
+  },
+  "output_path": "artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog/source-family-catalog.jsonl",
+  "schema_version": 1,
+  "summary": {
+    "catalog_document_count": 292,
+    "input_document_count": 292,
+    "provider_counts": {
+      "wikidata": 292
+    },
+    "skipped_empty_count": 0,
+    "source_family_counts": {
+      "reference": 292
+    },
+    "timestamped_document_count": 292
+  },
+  "workflow": "source_family_catalog_builder"
+}

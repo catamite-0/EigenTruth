@@ -5593,6 +5593,41 @@
       "name": "source-family-citation-search-workflow-smoke",
       "path": "artifacts/source-family-citation-search-workflow-smoke/source-family-citation-search-workflow.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog/artifact-manifest.json",
+        "catalog_document_count": 292,
+        "input_document_count": 292,
+        "skipped_empty_count": 0,
+        "source": "wikidata_cached_docs",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "source_family_catalog_builder"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog/source-family-catalog-report.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "adapter_request_count": 176,
+        "adapter_result_count": 480,
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-citation-workflow/artifact-manifest.json",
+        "catalog_source_document_count": 292,
+        "corpus_document_count": 480,
+        "evidence": "wikidata_cached_source_family_catalog",
+        "evidence_source_document_count": 480,
+        "gate_passed": false,
+        "promotion_ready": false,
+        "status": "blocked",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "source_family_citation_search_workflow"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-wikidata-source-family-citation-workflow",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-citation-workflow/source-family-citation-search-workflow.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

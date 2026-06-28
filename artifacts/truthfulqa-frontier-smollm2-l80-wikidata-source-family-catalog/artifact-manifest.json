@@ -1,0 +1,44 @@
+{
+  "artifacts": {
+    "catalog_builder_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-catalog-report.json",
+      "sha256": "ca69a2829d11b250cbfe324c1d5eda9105c899440a8527d209b664d1fa256a19",
+      "size_bytes": 877
+    },
+    "source_family_catalog": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-catalog.jsonl",
+      "sha256": "c3b4ecefc1ce62de36d4e91f38bc70eb78dbce8635a7a84c275afc8475fb7b76",
+      "size_bytes": 321194
+    },
+    "source_input_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-evidence/wikidata-source-docs.jsonl",
+      "sha256": "257e86d0ff60ca6cdab55f69864dd1ca004249fcdb9a3ce6c93013f2088518ab",
+      "size_bytes": 236534
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "catalog_document_count": 292,
+    "input_document_count": 292,
+    "skipped_empty_count": 0,
+    "source": "wikidata_cached_docs",
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "workflow": "source_family_catalog_builder"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

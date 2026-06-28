@@ -36441,6 +36441,86 @@ def test_source_family_citation_search_adapter_rejects_reserved_catalog_fields(t
         )
 
 
+def test_build_source_family_catalog_lifts_source_metadata(tmp_path):
+    module = importlib.import_module("benchmarks.build_source_family_catalog")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    source_path = tmp_path / "source-docs.jsonl"
+    catalog_path = tmp_path / "source-family-catalog.jsonl"
+    report_path = tmp_path / "source-family-catalog-report.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    source_path.write_text(
+        json.dumps({
+            "text": "According to Wikidata structured data, Beta has founder Ada Example.",
+            "source": "wikidata:Q1:P112:Q2",
+            "metadata": {
+                "provider": "wikidata",
+                "url": "https://www.wikidata.org/wiki/Q1",
+                "retrieved_at": "2026-06-28T00:00:00+00:00",
+                "statement_property": "P112",
+                "statement_property_label": "founder",
+                "subject": "Beta",
+                "value": "Ada Example",
+            },
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = module.build_source_family_catalog(
+        (source_path,),
+        output_path=catalog_path,
+        report_json_path=report_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="source-family-catalog-unit",
+        version="0.1",
+        provider_source_families={"wikidata": "reference"},
+        metadata={"suite": "unit"},
+    )
+    rows = [json.loads(line) for line in catalog_path.read_text(encoding="utf-8").splitlines()]
+    row = rows[0]
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:source-family-catalog-unit:0.1"
+    )
+
+    assert payload["summary"]["catalog_document_count"] == 1
+    assert payload["summary"]["provider_counts"] == {"wikidata": 1}
+    assert payload["summary"]["source_family_counts"] == {"reference": 1}
+    assert row["provider"] == "wikidata"
+    assert row["url"] == "https://www.wikidata.org/wiki/Q1"
+    assert row["source_family"] == "reference"
+    assert row["timestamp"] == "2026-06-28T00:00:00+00:00"
+    assert row["title"] == "Beta - founder"
+    assert row["metadata"]["source_document_sha256"]
+    assert "record_index" not in row["metadata"]
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "source_family_catalog_builder"
+    assert record.metadata["suite"] == "unit"
+
+
+def test_build_source_family_catalog_rejects_reserved_source_fields(tmp_path):
+    module = importlib.import_module("benchmarks.build_source_family_catalog")
+
+    source_path = tmp_path / "source-docs.jsonl"
+    catalog_path = tmp_path / "catalog.jsonl"
+    source_path.write_text(
+        json.dumps({
+            "text": "Unsafe source doc.",
+            "metadata": {"provider": "unit", "label": 1},
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="reserved fields: label"):
+        module.build_source_family_catalog(
+            (source_path,),
+            output_path=catalog_path,
+        )
+
+
 def test_wikipedia_citation_search_adapter_writes_mediawiki_results(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.run_wikipedia_citation_search_adapter")
 

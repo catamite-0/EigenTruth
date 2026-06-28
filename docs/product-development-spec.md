@@ -493,12 +493,28 @@ For product features:
   adapter results, provenance pass, but no passing external blind-spot strategy
   or controlled-vs-external comparison. This proves the closed local-catalog
   workflow without letting weak catalog matches bypass release gates.
+- Cached external source docs can now be normalized into source-family catalogs:
+  `build_source_family_catalog.py` lifts safe provenance fields such as
+  provider, URL, and timestamps out of metadata while rejecting reserved
+  label/model-answer fields. The registered Wikidata catalog artifact converts
+  `292/292` target-specific cached Wikidata source docs into adapter-ready
+  `reference` catalog rows with provider `wikidata` and a verified manifest.
+- The first real cached-source source-family workflow is registered as
+  `report:truthfulqa-frontier-smollm2-l80-wikidata-source-family-citation-workflow:0.1`.
+  It consumes `176` unresolved citation requests, returns results for `160/176`,
+  writes `480` Wikidata-backed adapter results, and passes provenance. It still
+  blocks route promotion: the external query sweep refutes `0/89` entrenched
+  blind spots, verified false alarm is above the external gate, and the
+  controlled-vs-external generalization gap remains `1.0`. Product implication:
+  the source-family workflow is real, but generic cached Wikidata reference
+  facts are not enough; the next evidence source needs more targeted official,
+  citation, or claim-specific structured catalogs.
 
 ### Next Verification Adapter Work
 
 - Improve evidence retrieval beyond generic Wikipedia lexical search: preserve
   the same command boundary and consume `source_family_plan`, then feed real
-  official/source-family catalogs or structured citation APIs through
+  official/source-specific catalogs or structured citation APIs through
   `run_source_family_citation_search_workflow.py`. Promote only if the
   provenance audit, external query sweep, and controlled-vs-external comparison
   pass.

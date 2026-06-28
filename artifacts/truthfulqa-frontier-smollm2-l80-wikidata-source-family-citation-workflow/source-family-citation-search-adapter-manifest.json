@@ -1,0 +1,54 @@
+{
+  "artifacts": {
+    "adapter_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-citation-search-adapter-report.json",
+      "sha256": "7357c3e85501190106e6299d46f71b3b0e5477c57b2c1df4598b335263c22641",
+      "size_bytes": 1277
+    },
+    "adapter_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-citation-search-requests.jsonl",
+      "sha256": "bd1066a0815031d0b943547f6c9655fc750c36f8afd3c88e2ec4e6fe1b431a29",
+      "size_bytes": 238759
+    },
+    "adapter_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-citation-search-results.jsonl",
+      "sha256": "91364471659d601d64d747c625baa3c68e0e76e14c69316fe963e0f616671708",
+      "size_bytes": 863236
+    },
+    "source_catalog_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog/source-family-catalog.jsonl",
+      "sha256": "c3b4ecefc1ce62de36d4e91f38bc70eb78dbce8635a7a84c275afc8475fb7b76",
+      "size_bytes": 321194
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "evidence": "wikidata_cached_source_family_catalog",
+    "request_count": 176,
+    "request_with_results_count": 160,
+    "result_count": 480,
+    "source_document_count": 292,
+    "source_workflow": "source_family_citation_search_workflow",
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "workflow": "source_family_citation_search_adapter"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

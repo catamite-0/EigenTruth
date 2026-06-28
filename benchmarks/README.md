@@ -1688,6 +1688,34 @@ python benchmarks/run_citation_search_evidence_workflow.py \
 This command does not fetch network content. Adapter results remain local input,
 and promotion requires both provenance and route-quality gates to pass.
 
+## `build_source_family_catalog.py`
+
+Normalizes local source documents into the catalog schema consumed by
+`run_source_family_citation_search_adapter.py`. This is useful when an evidence
+collector stores provenance such as `provider`, `url`, timestamps, or source
+family hints inside `metadata`; the builder lifts safe fields to top-level
+catalog fields and rejects reserved label/model-answer metadata before the
+catalog can enter a citation/search workflow.
+
+```bash
+python benchmarks/build_source_family_catalog.py \
+  --source artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-evidence/wikidata-source-docs.jsonl \
+  --output artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog/source-family-catalog.jsonl \
+  --report-json artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog/source-family-catalog-report.json \
+  --artifact-manifest artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog \
+  --version 0.1 \
+  --provider-source-family wikidata=reference \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=wikidata_cached_docs
+```
+
+The registered Wikidata catalog artifact converts `292/292` cached
+target-specific source docs into adapter catalog rows, keeps provider
+`wikidata`, timestamps all rows, assigns `reference` source family, and verifies
+its manifest. It is a catalog handoff, not a route-quality claim.
+
 ## `run_source_family_citation_search_adapter.py`
 
 Runs a dependency-free local adapter that consumes sanitized citation/search
@@ -1759,6 +1787,34 @@ local catalog docs into `2` adapter results, passes provenance, but does not
 pass the blind-spot query-sweep or controlled-vs-external gates. This proves the
 end-to-end local catalog wiring and manifest chain without promoting weak
 source-family evidence.
+
+The first real cached-source run uses the target-specific Wikidata catalog:
+
+```bash
+python benchmarks/run_source_family_citation_search_workflow.py \
+  --queue artifacts/truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue/unresolved-evidence-queue.json \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog/source-family-catalog.jsonl \
+  --scores artifacts/smollm2_truthfulqa_l80_scores_with_statements.json \
+  --blind-spots artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
+  --controlled-sweep artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json \
+  --output-dir artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-citation-workflow \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-wikidata-source-family-citation-workflow \
+  --version 0.1 \
+  --query-mode claim_entity \
+  --adapter-min-text-overlap 0.03 \
+  --query-fields question_answer \
+  --retriever-min-overlaps 0.5 \
+  --metadata evidence=wikidata_cached_source_family_catalog
+```
+
+That run consumes all `176` unresolved citation requests, returns results for
+`160/176`, produces `480` Wikidata-backed adapter result documents, and passes
+provenance. It remains `blocked`: the external query sweep refutes `0/89`
+entrenched blind spots and the controlled-vs-external comparison keeps a `1.0`
+generalization gap. Treat this as real negative evidence for generic Wikidata
+reference matching, and as a prompt to collect more targeted official/source-
+specific catalogs rather than tuning lexical overlap further.
 
 ## `run_wikipedia_citation_search_adapter.py`
 
