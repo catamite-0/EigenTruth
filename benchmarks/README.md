@@ -2164,6 +2164,41 @@ is rejected rather than copied into document metadata. This is a covered-fact
 candidate corpus for the structured QA route, not evidence that the blocked
 lexical groundedness route should be promoted.
 
+## `run_source_family_structured_qa_route_workflow.py`
+
+Runs the covered-facts route-quality audit for a source-family structured QA
+corpus. It creates a balanced score dump with known answers and mismatched
+answers, verifies those rows through `QuestionAnswerVerifier`, writes a
+verified-records JSONL sidecar, and reports provider, source-family, and
+fact-group quality metrics. The artifact is scoped to facts already present in
+the structured corpus.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-route
+
+python benchmarks/run_source_family_structured_qa_route_workflow.py \
+  --qa-corpus artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-corpus/source-family-structured-qa-corpus.json \
+  --output-dir "$OUT" \
+  --score-name source-family-covered-facts-smollm2-l80 \
+  --alpha 0.1 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_corpus
+
+python benchmarks/verify_artifact_manifest.py \
+  --manifest "$OUT/artifact-manifest.json" \
+  --json "$OUT/manifest-verification.json"
+```
+
+The current route audit promotes only the covered-facts route: `18` structured
+QA facts become `36` balanced true/mismatch records, `structured_qa` selects all
+`36`, supports all `18` true rows, refutes all `18` mismatched rows, and records
+decision accuracy `1.0` with false-supported rate `0.0`. Provider slices are
+`wikidata=32` records and `worldbank=4` records; source-family slices are
+`reference=32` and `official_statistics=4`; the manifest verifies `5/5`
+artifacts. This is route-quality evidence for exact covered facts, not proof
+that any remaining SmolLM2 blind spot maps to those facts or that open-domain
+lexical groundedness should promote.
+
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:
 

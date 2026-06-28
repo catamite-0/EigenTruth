@@ -1433,6 +1433,17 @@ facts, and it rejects reserved label/model-answer/request metadata at the
 builder boundary. This is a covered-fact candidate corpus for structured QA
 verification, not a promotion of the blocked lexical groundedness route.
 
+`benchmarks/run_source_family_structured_qa_route_workflow.py` closes the next
+covered-facts audit step for that corpus. The resulting artifact
+`artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-route/`
+turns the `18` structured QA facts into `36` balanced true/mismatch rows,
+selects `structured_qa` for all rows, supports all `18` true rows, refutes all
+`18` mismatched rows, and records decision accuracy `1.0` with false-supported
+rate `0.0`. Provider slices are `wikidata=32` records and `worldbank=4` records;
+source-family slices are `reference=32` and `official_statistics=4`. This
+promotes only exact covered-fact route quality; it still does not prove that the
+remaining SmolLM2 blind spots map to these facts.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -1460,11 +1471,11 @@ verification, not a promotion of the blocked lexical groundedness route.
    non-tiny registered readiness/release candidate.
 7. Source-family catalog acquisition is now closed for the current SmolLM2 l80
    frontier queue: `official=36/36`, `official_statistics=4/4`,
-   `scholarly=156/156`, and `news=4/4` are covered. The new source-family
-   structured QA builder extracts `18` safe covered-fact candidates from that
-   queue, so the next verification step is to turn those candidates into a
-   route-quality audit rather than adding another catalog source or promoting
-   lexical groundedness.
+   `scholarly=156/156`, and `news=4/4` are covered. The source-family
+   structured QA route audit promotes exact covered-fact quality for `18`
+   extracted facts, so the next verification step is claim/blind-spot mapping:
+   prove which product claims actually correspond to those facts before creating
+   any correction handoff.
 8. Extend the new verifier-stability path from structured QA to real retrieval,
    database, calculator, and world-model evidence under the same conformal
    false-alarm budgets. Use `benchmarks/build_evidence_fixture.py` with a local

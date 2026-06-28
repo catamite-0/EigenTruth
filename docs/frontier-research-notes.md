@@ -850,12 +850,19 @@ Added the first monitor-first tool-selection audit layer:
   writes `18` label-free structured QA records (`16` Wikidata, `2` World Bank).
   This creates a covered-fact candidate corpus for structured QA route audits;
   it does not promote `retrieval_groundedness`.
+- `run_source_family_structured_qa_route_workflow.py` runs that audit without
+  reusing Wikidata-specific assumptions. The first SmolLM2 l80 artifact turns
+  those `18` facts into `36` balanced known-answer/mismatched-answer rows,
+  selects `structured_qa` for every row, supports all true rows, refutes all
+  mismatches, and reaches decision accuracy `1.0` with false-supported rate
+  `0.0`. Provider slices are `wikidata=32` records and `worldbank=4` records.
+  This promotes exact covered-fact route quality, not blind-spot recall.
 
 ## Next Research-to-Code Candidates
 
-1. Run a route-quality audit over the new source-family structured QA candidate
-   corpus, and only then decide whether any of those facts should become a
-   covered-fact correction handoff.
+1. Map current SmolLM2 blind spots and product claims into the new source-family
+   structured QA covered-fact set, then create correction handoffs only for
+   explicit matches.
 2. Move from source-family acquisition to route-quality improvement: the current
    queue now has complete source-family coverage, but still has no passing
    blind-spot query strategy. The next code step should improve structured query

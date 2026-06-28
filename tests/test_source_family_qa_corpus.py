@@ -1,5 +1,8 @@
 import importlib
 import json
+from types import SimpleNamespace
+
+import pytest
 
 
 def test_build_source_family_qa_corpus_extracts_only_structured_metadata(tmp_path):
@@ -123,4 +126,135 @@ def test_build_source_family_qa_corpus_extracts_only_structured_metadata(tmp_pat
     assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
     assert record.metadata["workflow"] == "source_family_structured_qa_corpus_builder"
     assert record.metadata["document_count"] == 2
+    assert record.metadata["suite"] == "unit"
+
+
+def test_source_family_structured_qa_route_workflow_audits_covered_facts(tmp_path):
+    module = importlib.import_module("benchmarks.run_source_family_structured_qa_route_workflow")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    qa_path = tmp_path / "source-family-qa-corpus.json"
+    output_dir = tmp_path / "workflow"
+    registry_path = tmp_path / "registry.json"
+    qa_path.write_text(
+        json.dumps({
+            "corpus_type": "source_family_structured_qa_external_evidence",
+            "source": {
+                "builder": "source_family_structured_qa_corpus_builder",
+                "accepted_providers": ["wikidata", "worldbank"],
+            },
+            "summary": {
+                "n_documents": 4,
+                "by_provider": {"wikidata": 2, "worldbank": 2},
+                "by_source_family": {"official_statistics": 2, "reference": 2},
+            },
+            "documents": [
+                {
+                    "question": "What does Wikidata list as the founder for Tesla Motors?",
+                    "answer": "Martin Eberhard",
+                    "source": "wikidata:Q478214:P112:Q92743",
+                    "metadata": {
+                        "provider": "wikidata",
+                        "source_family": "reference",
+                        "statement_property": "P112",
+                        "statement_property_label": "founder",
+                    },
+                },
+                {
+                    "question": "What does Wikidata list as the founder for OpenAI?",
+                    "answer": "Sam Altman",
+                    "source": "wikidata:Q21708200:P112:Q565549",
+                    "metadata": {
+                        "provider": "wikidata",
+                        "source_family": "reference",
+                        "statement_property": "P112",
+                        "statement_property_label": "founder",
+                    },
+                },
+                {
+                    "question": "What does the World Bank list as Population, total for Afghanistan in 2024?",
+                    "answer": "42,647,492",
+                    "source": "worldbank:SP.POP.TOTL:AFG:2024",
+                    "metadata": {
+                        "provider": "worldbank",
+                        "source_family": "official_statistics",
+                        "indicator": "SP.POP.TOTL",
+                        "indicator_name": "Population, total",
+                        "country_name": "Afghanistan",
+                        "reference_year": "2024",
+                    },
+                },
+                {
+                    "question": "What does the World Bank list as Population, total for Albania in 2024?",
+                    "answer": "2,402,113",
+                    "source": "worldbank:SP.POP.TOTL:ALB:2024",
+                    "metadata": {
+                        "provider": "worldbank",
+                        "source_family": "official_statistics",
+                        "indicator": "SP.POP.TOTL",
+                        "indicator_name": "Population, total",
+                        "country_name": "Albania",
+                        "reference_year": "2024",
+                    },
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    summary = module.run(
+        SimpleNamespace(
+            qa_corpus=str(qa_path),
+            output_dir=str(output_dir),
+            score_name="source-family-covered-facts-unit",
+            signal="truth_proj",
+            alpha=0.2,
+            seed=0,
+            limit=None,
+            score_dump_json=None,
+            verifier_report_json=None,
+            verified_records_jsonl=None,
+            artifact_manifest=None,
+            json=None,
+            registry=str(registry_path),
+            name="source-family-structured-qa-route-unit",
+            version="0.1",
+            metadata=("suite=unit",),
+            compact_json=False,
+        )
+    )
+
+    score_dump = json.loads((output_dir / "covered-facts-scores.json").read_text(encoding="utf-8"))
+    report = json.loads((output_dir / "structured-qa-verifier-report.json").read_text(encoding="utf-8"))
+    manifest = json.loads((output_dir / "artifact-manifest.json").read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:source-family-structured-qa-route-unit:0.1"
+    )
+
+    assert summary["status"] == "promote"
+    assert summary["selected_route_counts"] == {"structured_qa": 8}
+    assert summary["structured_qa_metrics"]["decision_accuracy"] == pytest.approx(1.0)
+    assert summary["structured_qa_metrics"]["false_refuted_rate"] == pytest.approx(1.0)
+    assert summary["structured_qa_metrics"]["false_supported_rate"] == pytest.approx(0.0)
+    assert score_dump["summary"]["n_records"] == 8
+    assert score_dump["summary"]["n_true"] == 4
+    assert score_dump["summary"]["n_false"] == 4
+    assert score_dump["summary"]["by_provider"] == {"wikidata": 2, "worldbank": 2}
+    assert set(score_dump["summary"]["by_fact_group"]) == {
+        "wikidata:reference:p112",
+        "worldbank:official_statistics:sp_pop_totl",
+    }
+    assert report["qa_verifier"]["enabled"] is True
+    assert summary["provider_metrics"]["wikidata"]["false_refuted_rate"] == pytest.approx(1.0)
+    assert summary["provider_metrics"]["worldbank"]["decision_accuracy"] == pytest.approx(1.0)
+    assert summary["source_family_metrics"]["official_statistics"]["n_records"] == 4
+    assert summary["fact_group_metrics"]["worldbank:official_statistics:sp_pop_totl"]["n_records"] == 4
+    assert manifest["metadata"]["workflow"] == "source_family_structured_qa_route_workflow"
+    assert manifest["metadata"]["promotes_covered_facts_route"] is True
+    assert manifest["metadata"]["provider_count"] == 2
+    assert manifest["metadata"]["fact_group_count"] == 2
+    assert manifest["metadata"]["suite"] == "unit"
+    assert registry_module.load_and_verify_artifact_manifest(output_dir / "artifact-manifest.json").passed is True
+    assert record.metadata["workflow"] == "source_family_structured_qa_route_workflow"
+    assert record.metadata["status"] == "promote"
     assert record.metadata["suite"] == "unit"
