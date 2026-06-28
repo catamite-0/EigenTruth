@@ -1,0 +1,87 @@
+{
+  "artifacts": {
+    "entity_resolution": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "entity-resolution-requests.jsonl",
+      "sha256": "60cac5a9338d6ec4077072e75bd3448a282667edcffcc730ab909c0a893138ef",
+      "size_bytes": 153292
+    },
+    "external_citation": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-requests.jsonl",
+      "sha256": "d31cff46840d7bc1910196612ddcc27ea69a36ce4014ccbd038e27566573a019",
+      "size_bytes": 120460
+    },
+    "source_discovery_documents": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-discovery-documents.jsonl",
+      "sha256": "ad9daa1f647dd91c04ae71df70b3f306d907fd7986f7183592d57d9a98d37e99",
+      "size_bytes": 296526
+    },
+    "source_family_fact_disambiguation": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "fact-disambiguation-requests.jsonl",
+      "sha256": "cdaabb2d9a65847f35565012d9146aada8b2ce90c5dd92da623257ac2d70e535",
+      "size_bytes": 25723
+    },
+    "source_family_structured_fact": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "structured-fact-requests.jsonl",
+      "sha256": "5c28c672299cd7501513b72a481aaef94ef7738168fe8a5f50117cfd5c3d0a90",
+      "size_bytes": 375557
+    },
+    "source_family_structured_qa_fact_collection_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "fact-collection-corpus.json",
+      "sha256": "b6267a30403a035f3d61261caf9233a2e03a75d1df22a5b88c3aa4ba06747150",
+      "size_bytes": 1528596
+    },
+    "source_family_structured_qa_fact_expansion_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-expansion-plan/source-family-structured-qa-fact-expansion-plan.json",
+      "sha256": "5c5e2987b556e6bee04226c9b361dae0fb1f00be0fa74b6bb26c671521996e60",
+      "size_bytes": 1107464
+    },
+    "world_model_or_calculator_rule": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-requests.jsonl",
+      "sha256": "ef466ec27054e77012e1cb238017b8c100ba2082764a7de58c5714c412652c72",
+      "size_bytes": 21716
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "citation_request_count": 198,
+    "rule_request_count": 28,
+    "source": "source_family_structured_qa_fact_expansion_plan",
+    "status": "ready_for_collection",
+    "structured_fact_request_count": 356,
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "target_count": 89,
+    "total_request_count": 806,
+    "workflow": "source_family_structured_qa_fact_collection_corpus"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 8,
+    "directory_count": 0,
+    "file_count": 8,
+    "missing_count": 0
+  }
+}

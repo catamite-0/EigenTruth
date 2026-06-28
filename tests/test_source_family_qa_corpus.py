@@ -552,3 +552,147 @@ def test_source_family_structured_qa_fact_expansion_plans_mapping_gaps(tmp_path)
     assert record.metadata["workflow"] == "source_family_structured_qa_fact_expansion_plan"
     assert record.metadata["target_count"] == 5
     assert record.metadata["suite"] == "unit"
+
+
+def test_source_family_structured_qa_fact_collection_compiles_request_sidecars(tmp_path):
+    module = importlib.import_module("benchmarks.build_source_family_structured_qa_fact_collection_corpus")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    plan_path = tmp_path / "fact-expansion-plan.json"
+    output_dir = tmp_path / "collection"
+    manifest_path = output_dir / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    plan_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "source_family_structured_qa_fact_expansion_plan",
+            "status": "ready_for_collection",
+            "summary": {"target_count": 2},
+            "targets": [
+                {
+                    "target_id": "record-1",
+                    "record_index": 1,
+                    "priority": "high",
+                    "question_type": "definition",
+                    "question": "What is Alpha Syndrome?",
+                    "answer": "A moon.",
+                    "mapping_decision": "no_candidate_fact",
+                    "gap_type": "missing_subject_and_intent",
+                    "entity_candidates": ["Alpha Syndrome"],
+                    "wikidata_property_hints": ["description", "instance_of:P31"],
+                    "source_family_targets": [
+                        {
+                            "provider": "wikidata",
+                            "source_family": "reference",
+                            "reason": "unit",
+                        },
+                        {
+                            "provider": "source_family_adapter",
+                            "source_family": "official_site",
+                            "reason": "unit",
+                        },
+                    ],
+                    "query_seeds": [
+                        "Alpha Syndrome A moon",
+                        "What is Alpha Syndrome?",
+                    ],
+                    "world_model_rule_targets": [
+                        {
+                            "rule_family": "entity_disambiguation",
+                            "reason": "unit",
+                        }
+                    ],
+                    "collection_tasks": [
+                        {"task_type": "entity_resolution_request"},
+                        {"task_type": "source_family_structured_fact_request"},
+                        {"task_type": "external_citation_request"},
+                        {"task_type": "world_model_or_calculator_rule_request"},
+                    ],
+                },
+                {
+                    "target_id": "record-2",
+                    "record_index": 2,
+                    "priority": "medium",
+                    "question_type": "person",
+                    "question": "Who started Beta Labs?",
+                    "answer": "Beta Labs.",
+                    "mapping_decision": "answer_entity_collision",
+                    "gap_type": "answer_entity_collision",
+                    "entity_candidates": ["Beta Labs"],
+                    "wikidata_property_hints": ["founded_by:P112"],
+                    "source_family_targets": [
+                        {
+                            "provider": "wikidata",
+                            "source_family": "reference",
+                            "reason": "unit",
+                        }
+                    ],
+                    "nearest_fact_candidates": [
+                        {
+                            "provider": "wikidata",
+                            "source_family": "reference",
+                            "fact_type": "p112",
+                            "subject": "Beta Labs",
+                            "mapping_score": 0.42,
+                        }
+                    ],
+                    "world_model_rule_targets": [
+                        {
+                            "rule_family": "entity_disambiguation",
+                            "reason": "unit",
+                        }
+                    ],
+                    "collection_tasks": [
+                        {"task_type": "source_family_structured_fact_request"},
+                        {"task_type": "source_family_fact_disambiguation"},
+                        {"task_type": "world_model_or_calculator_rule_request"},
+                    ],
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        plan_path=plan_path,
+        output_dir=output_dir,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="source-family-fact-collection-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:source-family-fact-collection-unit:0.1"
+    )
+    requests = payload["requests"]
+    citation_rows = [
+        json.loads(line)
+        for line in (output_dir / "citation-requests.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    all_requests = [
+        request
+        for bucket in requests.values()
+        for request in bucket
+    ]
+
+    assert payload["status"] == "ready_for_collection"
+    assert payload["summary"]["target_count"] == 2
+    assert payload["summary"]["request_counts"]["source_family_structured_fact"] == 3
+    assert payload["summary"]["request_counts"]["entity_resolution"] == 1
+    assert payload["summary"]["request_counts"]["external_citation"] == 3
+    assert payload["summary"]["request_counts"]["source_family_fact_disambiguation"] == 1
+    assert payload["summary"]["request_counts"]["world_model_or_calculator_rule"] == 2
+    assert payload["summary"]["source_discovery_document_count"] == 7
+    assert len(citation_rows) == 3
+    assert all("A moon" not in row["query"] for row in citation_rows)
+    assert all("model_answer" not in request for request in all_requests)
+    assert all("answer" not in request for request in all_requests)
+    assert all("label" not in request for request in all_requests)
+    assert payload["label_usage"]["model_answers_copied_to_collection_requests"] is False
+    assert (output_dir / "structured-fact-requests.jsonl").exists()
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "source_family_structured_qa_fact_collection_corpus"
+    assert record.metadata["total_request_count"] == payload["summary"]["total_request_count"]
+    assert record.metadata["suite"] == "unit"

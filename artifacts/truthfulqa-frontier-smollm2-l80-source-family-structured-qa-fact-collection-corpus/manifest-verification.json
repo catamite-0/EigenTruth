@@ -1,0 +1,7 @@
+{
+  "checked": 8,
+  "failures": [],
+  "manifest_path": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-corpus/artifact-manifest.json",
+  "nested": [],
+  "passed": true
+}

@@ -617,8 +617,13 @@ For product features:
   that blocker into a `ready_for_collection` queue with `89` structured fact
   requests, `70` entity-resolution requests, `66` citation requests, `26`
   world-model/calculator-rule requests, and `14` fact-disambiguation tasks.
+  `build_source_family_structured_qa_fact_collection_corpus.py` then compiles
+  that queue into adapter-ready JSONL sidecars: `356` structured-fact requests,
+  `210` entity-resolution requests, `198` citation requests, `14`
+  fact-disambiguation requests, and `28` world-model/calculator-rule requests,
+  with no `label`, `answer`, or `model_answer` fields in the request rows.
   Product implication: the structured QA route is safe for exact covered facts,
-  but blind-spot correction needs this claim-specific expansion queue executed
+  but blind-spot correction needs this claim-specific request corpus executed
   and remapped before any ProductTrace correction handoff is allowed.
 
 ### Next Verification Adapter Work

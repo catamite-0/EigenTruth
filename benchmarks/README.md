@@ -2267,6 +2267,38 @@ requests, `70` entity-resolution requests, `66` external citation requests,
 Labels are not used for collection planning, tasks are not verifier evidence,
 and the manifest verifies `2/2` files.
 
+## `build_source_family_structured_qa_fact_collection_corpus.py`
+
+Compiles the fact-expansion plan into request buckets and JSONL sidecars that
+source-family fact adapters, citation/search adapters, entity-resolution tools,
+disambiguation audits, and world-model/calculator rule authors can consume. The
+compiler keeps the plan non-evidence and removes labels/model answers from the
+request boundary.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-corpus
+
+python benchmarks/build_source_family_structured_qa_fact_collection_corpus.py \
+  --plan artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-expansion-plan/source-family-structured-qa-fact-expansion-plan.json \
+  --output-dir "$OUT" \
+  --json "$OUT/fact-collection-corpus.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=source_family_structured_qa_fact_expansion_plan
+
+python benchmarks/verify_artifact_manifest.py \
+  --manifest "$OUT/artifact-manifest.json" \
+  --json "$OUT/manifest-verification.json"
+```
+
+The current SmolLM2 l80 collection corpus is `ready_for_collection` with `89`
+targets and `806` request rows: `356` source-family structured-fact requests,
+`210` entity-resolution requests, `198` citation requests, `14`
+fact-disambiguation requests, and `28` world-model/calculator-rule requests. It
+also writes `764` source-discovery document rows for local collection tooling.
+The request JSONL sidecars contain no `label`, `answer`, or `model_answer`
+fields; the manifest verifies `8/8` files.
+
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:
 

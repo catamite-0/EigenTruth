@@ -873,14 +873,22 @@ Added the first monitor-first tool-selection audit layer:
   requests, `66` citation requests, `26` world-model/calculator-rule requests,
   and `14` fact-disambiguation tasks while explicitly marking tasks as
   non-evidence.
+- `build_source_family_structured_qa_fact_collection_corpus.py` lowers that
+  queue into concrete JSONL sidecars. The registered SmolLM2 l80 collection
+  corpus contains `806` request rows: `356` source-family structured-fact
+  requests, `210` entity-resolution requests, `198` citation requests, `14`
+  fact-disambiguation requests, and `28` world-model/calculator-rule requests,
+  plus `764` source-discovery document rows. The sidecars are manifest-backed,
+  mark requests as non-evidence, and do not copy `label`, `answer`, or
+  `model_answer` fields into request rows.
 
 ## Next Research-to-Code Candidates
 
-1. Execute the source-family structured QA fact-expansion plan: collect or
-   author the `89` claim-specific structured facts, citations, entity
-   resolutions, and world-model/calculator rules, then rebuild the structured QA
-   corpus and rerun the claim-mapping gate before creating any correction
-   handoff.
+1. Execute the source-family structured QA fact-collection corpus: run the
+   request sidecars through source-family fact adapters, citation/search
+   adapters, entity-resolution, disambiguation, and rule-authoring workflows,
+   then rebuild the structured QA corpus and rerun the claim-mapping gate before
+   creating any correction handoff.
 2. Move from source-family acquisition to route-quality improvement: the current
    queue now has complete source-family coverage, but still has no passing
    blind-spot query strategy. The next code step should improve structured query
