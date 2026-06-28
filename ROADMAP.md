@@ -4,7 +4,18 @@ EigenTruth is an alpha-stage research preview. This roadmap focuses on making ex
 
 The product and development charter lives in [`docs/product-development-spec.md`](docs/product-development-spec.md). It defines EigenTruth as a representation-observability and factuality-control toolkit rather than a standalone truth oracle.
 
+The current packaged baseline is [`0.2.0`](docs/release-0.2.0.md): a calibrated-observability research release with local control-plane traces, dry-run/in-memory verification adapters, training telemetry primitives, and documented negative results. It remains alpha research software.
+
 ## Near-Term Milestones
+
+### 0.3 Control And Verification Hardening
+
+- Build stricter claim audit paths from structured triples and slot-level evidence coverage.
+- Replicate the strongest diagnostics on additional small and mid-sized models.
+- Replicate conservative layer-band selector audits on denser layer grids without replacing calibrated sweeps.
+- Promote only routes backed by artifact manifests, replay checks, and release gates.
+- Keep network retrieval, external databases, and rewrite LLMs behind optional adapters.
+- Convert more product traces into deterministic regression fixtures.
 
 ### Examples Cleanup
 

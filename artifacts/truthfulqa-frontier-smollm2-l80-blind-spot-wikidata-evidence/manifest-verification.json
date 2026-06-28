@@ -1,0 +1,7 @@
+{
+  "checked": 3,
+  "failures": [],
+  "manifest_path": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-evidence/artifact-manifest.json",
+  "nested": [],
+  "passed": true
+}

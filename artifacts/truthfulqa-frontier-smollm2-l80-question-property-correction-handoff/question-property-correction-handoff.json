@@ -1,0 +1,49 @@
+{
+  "config": {
+    "route_name": "question_property_structured_qa",
+    "verifier_name": "QuestionAnswerVerifier"
+  },
+  "metadata": {
+    "evidence": "smollm2_l80_question_property_product_trace_handoff"
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-question-property-correction-handoff/artifact-manifest.json",
+    "product_traces": "artifacts/truthfulqa-frontier-smollm2-l80-question-property-correction-handoff/product-traces.jsonl",
+    "qa_corpus": "artifacts/truthfulqa-frontier-smollm2-l80-question-property-correction-handoff/question-property-correction-corpus.json",
+    "question_property_mapping": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-question-property-mapping/blind-spot-question-property-mapping.json"
+  },
+  "schema_version": 1,
+  "scope": "Target-specific handoff for explicitly mapped blind-spot question/property corrections. It is not a broad retrieval corpus or a claim that unmapped blind spots are covered.",
+  "source": {
+    "mapped_correction_candidate_count": 1,
+    "question_property_mapping_status": "observed",
+    "question_property_mapping_target_count": 89,
+    "question_property_mapping_workflow": "blind_spot_question_property_mapping"
+  },
+  "status": "promote",
+  "summary": {
+    "action_counts": {
+      "abstain": 1
+    },
+    "corpus_document_count": 2,
+    "correction_candidate_count": 1,
+    "property_counts": {
+      "P112": 2
+    },
+    "trace_count": 1,
+    "verification_status_counts": {
+      "refuted": 1
+    }
+  },
+  "trace_summaries": [
+    {
+      "action_count": 1,
+      "evidence_count": 2,
+      "request_id": "blind-spot-record-1",
+      "risk_action": "abstain",
+      "selected_route": "question_property_structured_qa",
+      "status": "refuted"
+    }
+  ],
+  "workflow": "question_property_correction_handoff"
+}

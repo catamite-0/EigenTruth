@@ -9,10 +9,17 @@ import math
 import torch
 
 from eigentruth.core.math_engine import (
+    COVARIANCE_MODES,
+    CovarianceSpectrum,
     TruthManifold,
     _poincare_distance,
+    covariance_shrinkage_intensity,
+    covariance_spectrum,
+    gaussian_wasserstein_distance,
     hyperbolic_semantic_entropy,
     mahalanobis_distance,
+    manifold_distance,
+    manifold_wasserstein_distance,
     poincare_map,
     sherman_morrison_update,
 )
@@ -136,6 +143,18 @@ class TestMahalanobisDistance:
         expected = 2.0 * math.sqrt(d)
         assert torch.isclose(dist, torch.tensor(expected), atol=1e-3)
 
+    def test_accepts_diagonal_precision_vector(self):
+        """对角精度向量等价于显式对角矩阵。"""
+        d = 8
+        mean = torch.zeros(d)
+        h = torch.arange(1, d + 1, dtype=torch.float32)
+        precision_diag = torch.linspace(0.5, 2.0, d)
+
+        vector_dist = mahalanobis_distance(h, mean, precision_diag)
+        dense_dist = mahalanobis_distance(h, mean, torch.diag(precision_diag))
+
+        assert torch.isclose(vector_dist, dense_dist, atol=1e-6)
+
     def test_non_negative(self):
         """距离始终 >= 0。"""
         d = 64
@@ -146,6 +165,79 @@ class TestMahalanobisDistance:
             cov_inv = torch.eye(d)
             dist = mahalanobis_distance(h, mean, cov_inv)
             assert dist >= 0.0
+
+
+# ===================================================================
+# Gaussian / Manifold Wasserstein Distance
+# ===================================================================
+
+class TestGaussianWassersteinDistance:
+    """Closed-form Gaussian 2-Wasserstein distance tests."""
+
+    def test_identical_diag_gaussians_have_zero_distance(self):
+        mean = torch.tensor([1.0, -2.0, 0.5])
+        covariance = torch.tensor([1.0, 4.0, 9.0])
+
+        dist = gaussian_wasserstein_distance(mean, covariance, mean, covariance)
+
+        assert torch.isclose(dist, torch.tensor(0.0), atol=1e-6)
+
+    def test_identical_full_gaussians_have_zero_distance(self):
+        mean = torch.tensor([0.0, 1.0])
+        covariance = torch.tensor([[2.0, 0.25], [0.25, 1.0]])
+
+        dist = gaussian_wasserstein_distance(mean, covariance, mean, covariance)
+
+        assert torch.isclose(dist, torch.tensor(0.0), atol=1e-4)
+
+    def test_symmetric_for_full_covariances(self):
+        mean_a = torch.tensor([0.0, 0.0])
+        mean_b = torch.tensor([1.0, -1.0])
+        cov_a = torch.tensor([[3.0, 0.4], [0.4, 1.0]])
+        cov_b = torch.tensor([[1.5, -0.1], [-0.1, 2.0]])
+
+        ab = gaussian_wasserstein_distance(mean_a, cov_a, mean_b, cov_b)
+        ba = gaussian_wasserstein_distance(mean_b, cov_b, mean_a, cov_a)
+
+        assert torch.isclose(ab, ba, atol=1e-5)
+        assert ab > 0.0
+
+    def test_diag_closed_form_matches_expected(self):
+        mean_a = torch.zeros(3)
+        mean_b = torch.tensor([1.0, 2.0, 2.0])
+        cov_a = torch.tensor([1.0, 4.0, 9.0])
+        cov_b = torch.tensor([4.0, 9.0, 16.0])
+        expected_sq = torch.tensor(9.0) + (torch.sqrt(cov_a) - torch.sqrt(cov_b)).square().sum()
+
+        actual_sq = gaussian_wasserstein_distance(mean_a, cov_a, mean_b, cov_b, squared=True)
+
+        assert torch.isclose(actual_sq, expected_sq, atol=1e-6)
+
+    def test_identical_covariance_reduces_to_euclidean_mean_distance(self):
+        mean_a = torch.tensor([1.0, 2.0, 3.0])
+        mean_b = torch.tensor([2.0, 4.0, 5.0])
+        covariance = torch.eye(3)
+
+        dist = gaussian_wasserstein_distance(mean_a, covariance, mean_b, covariance)
+
+        assert torch.isclose(dist, torch.norm(mean_a - mean_b), atol=1e-5)
+
+    def test_rejects_invalid_inputs(self):
+        import pytest
+
+        with pytest.raises(ValueError, match="mean dimension mismatch"):
+            gaussian_wasserstein_distance(torch.zeros(2), torch.ones(2), torch.zeros(3), torch.ones(2))
+        with pytest.raises(ValueError, match="shape mismatch"):
+            gaussian_wasserstein_distance(torch.zeros(2), torch.eye(3), torch.zeros(2), torch.eye(2))
+        with pytest.raises(ValueError, match="finite"):
+            gaussian_wasserstein_distance(
+                torch.zeros(2),
+                torch.tensor([1.0, float("nan")]),
+                torch.zeros(2),
+                torch.ones(2),
+            )
+        with pytest.raises(ValueError, match="non-negative"):
+            gaussian_wasserstein_distance(torch.zeros(2), torch.tensor([1.0, -0.1]), torch.zeros(2), torch.ones(2))
 
 
 # ===================================================================
@@ -297,6 +389,96 @@ class TestPoincareDistance:
 class TestTruthManifold:
     """真值流形增量构建测试。"""
 
+    def test_covariance_modes_are_public(self):
+        assert COVARIANCE_MODES == ("full", "diag", "low_rank", "shrinkage")
+
+    def test_covariance_shrinkage_intensity_is_bounded_and_isotropic_goes_full(self):
+        cov = torch.diag(torch.tensor([9.0, 1.0, 1.0, 1.0]))
+        alpha = covariance_shrinkage_intensity(cov, sample_count=16)
+        isotropic_alpha = covariance_shrinkage_intensity(torch.eye(4), sample_count=16)
+
+        assert 0.0 <= alpha <= 1.0
+        assert isotropic_alpha == 1.0
+
+    def test_covariance_spectrum_reports_mp_spike_and_effective_rank(self):
+        """An anisotropic covariance exposes an out-of-bulk spectral spike."""
+        cov = torch.diag(torch.tensor([9.0, 1.0, 1.0, 1.0]))
+        report = covariance_spectrum(cov, sample_count=100)
+
+        assert isinstance(report, CovarianceSpectrum)
+        assert report.source == "full"
+        assert report.hidden_dim == 4
+        assert report.spike_count == 1
+        assert report.eigenvalues.tolist() == [9.0, 1.0, 1.0, 1.0]
+        assert report.effective_rank < 4.0
+        assert report.participation_ratio < 4.0
+        payload = report.to_dict()
+        assert payload["spike_count"] == 1
+        assert payload["eigenvalues"] == [9.0, 1.0, 1.0, 1.0]
+        assert "eigenvalues" not in report.to_dict(include_eigenvalues=False)
+
+    def test_truth_manifold_spectrum_uses_full_scatter_when_available(self):
+        torch.manual_seed(303)
+        samples = torch.randn(240, 8)
+        samples[:, 0] *= 4.0
+        m = TruthManifold()
+        m.update_many(samples)
+
+        report = m.spectrum()
+
+        assert report.source == "full"
+        assert report.sample_count == 240
+        assert report.hidden_dim == 8
+        assert report.spike_count >= 1
+        assert report.eigenvalues[0] > report.marchenko_pastur_upper
+        assert 1.0 <= report.effective_rank <= 8.0
+
+    def test_truth_manifold_spectrum_handles_diag_mode_without_full_scatter(self):
+        torch.manual_seed(404)
+        m = TruthManifold(covariance_mode="diag")
+        m.update_many(torch.randn(32, 5))
+
+        report = m.covariance_spectrum()
+
+        assert report.source == "diagonal"
+        assert report.hidden_dim == 5
+        assert m._M2 is None  # noqa: SLF001 - verifies diag mode stays memory-saving.
+        assert torch.all(report.eigenvalues[:-1] >= report.eigenvalues[1:])
+        assert report.to_dict(include_eigenvalues=False)["source"] == "diagonal"
+
+    def test_truth_manifold_spectrum_handles_degenerate_covariance(self):
+        m = TruthManifold()
+        m.update_many(torch.ones(6, 4))
+
+        report = m.spectrum()
+
+        assert report.spike_count == 0
+        assert report.effective_rank == 0.0
+        assert report.participation_ratio == 0.0
+        assert report.stable_rank == 0.0
+        assert report.condition_number == 0.0
+        assert report.marchenko_pastur_upper == 0.0
+
+    def test_covariance_spectrum_rejects_invalid_inputs(self):
+        import pytest
+
+        with pytest.raises(ValueError, match="sample_count"):
+            covariance_spectrum(torch.eye(2), sample_count=1)
+        with pytest.raises(ValueError, match="square"):
+            covariance_spectrum(torch.randn(2, 3), sample_count=10)
+        with pytest.raises(ValueError, match="finite"):
+            covariance_spectrum(torch.tensor([1.0, float("nan")]), sample_count=10)
+
+    def test_truth_manifold_spectrum_requires_two_samples(self):
+        import pytest
+
+        m = TruthManifold()
+        with pytest.raises(ValueError, match="at least two samples"):
+            m.spectrum()
+        m.update(torch.randn(3))
+        with pytest.raises(ValueError, match="at least two samples"):
+            m.spectrum()
+
     def test_first_update_initializes(self):
         """首次更新初始化 mean 和 cov_inv。"""
         m = TruthManifold()
@@ -347,6 +529,43 @@ class TestTruthManifold:
         for i in range(10):
             m.update(torch.randn(8))
         assert m.n == 10
+
+    def test_update_many_matches_sequential_updates_across_covariance_modes(self):
+        """batch update 与逐样本 update 保持统计量和距离一致。"""
+        torch.manual_seed(1234)
+        samples = torch.randn(11, 7)
+        probe = torch.randn(7)
+        for mode in COVARIANCE_MODES:
+            sequential = TruthManifold(covariance_mode=mode, covariance_low_rank=3)
+            batched = TruthManifold(covariance_mode=mode, covariance_low_rank=3)
+            for sample in samples:
+                sequential.update(sample)
+            batched.update_many(samples[:5])
+            batched.update_many(samples[5:])
+
+            assert batched.n == sequential.n
+            assert batched.hidden_dim == sequential.hidden_dim
+            assert torch.allclose(batched.mean, sequential.mean, atol=1e-6)
+            assert torch.allclose(batched._M2_diag, sequential._M2_diag, atol=1e-5)  # noqa: SLF001
+            if mode == "diag":
+                assert batched._M2 is None  # noqa: SLF001
+            else:
+                assert torch.allclose(batched._M2, sequential._M2, atol=1e-5)  # noqa: SLF001
+            assert torch.isclose(
+                batched.mahalanobis_distance(probe),
+                sequential.mahalanobis_distance(probe),
+                atol=1e-5,
+            )
+
+    def test_update_many_rejects_bad_shapes_and_dimension_mismatch(self):
+        m = TruthManifold()
+        import pytest
+        with pytest.raises(ValueError, match="2D hidden state batch"):
+            m.update_many(torch.randn(8))
+
+        m.update_many(torch.randn(2, 8))
+        with pytest.raises(ValueError, match="Hidden dimension mismatch"):
+            m.update_many(torch.randn(2, 9))
 
     def test_rejects_non_vector_update(self):
         """update 只接受单个 1D hidden state。"""
@@ -416,6 +635,136 @@ class TestTruthManifold:
         assert m2.contrastive_direction is not None
         assert torch.allclose(m2.false_mean, m.false_mean)
         assert torch.allclose(m2.contrastive_direction, m.contrastive_direction)
+
+    def test_diag_covariance_mode_avoids_full_scatter_and_matches_manual_distance(self, tmp_path):
+        """diag 模式只保存对角散布，距离与手工对角精度一致。"""
+        torch.manual_seed(101)
+        d = 10
+        m = TruthManifold(covariance_mode="diag")
+        samples = torch.randn(12, d)
+        for sample in samples:
+            m.update(sample)
+
+        assert m.is_ready()
+        assert m._M2 is None  # noqa: SLF001 - verifies memory-saving mode.
+        assert m._M2_diag is not None  # noqa: SLF001
+        probe = torch.randn(d)
+        cov_diag = m._M2_diag / (m.n - 1)  # noqa: SLF001
+        tau = cov_diag.mean().clamp(min=1e-6)
+        precision_diag = torch.reciprocal((cov_diag + m.ridge_lambda * tau).clamp(min=1e-12))
+        expected = mahalanobis_distance(probe, m.mean, precision_diag)
+
+        assert torch.isclose(m.mahalanobis_distance(probe), expected, atol=1e-6)
+        assert m.cov_inv.shape == (d, d)  # legacy dense property remains available.
+
+        loaded_path = tmp_path / "diag_manifold.pt"
+        m.save(loaded_path)
+        loaded = TruthManifold.load(loaded_path)
+        assert loaded.is_ready()
+        assert loaded._M2 is None  # noqa: SLF001
+        assert loaded._M2_diag is not None  # noqa: SLF001
+
+    def test_low_rank_covariance_mode_is_finite_and_roundtrips(self, tmp_path):
+        """low_rank 模式产生有限距离，并保留序列化配置。"""
+        torch.manual_seed(202)
+        d = 12
+        m = TruthManifold(covariance_mode="low_rank", covariance_low_rank=3)
+        for _ in range(10):
+            m.update(torch.randn(d))
+
+        probe = torch.randn(d)
+        dist = m.mahalanobis_distance(probe)
+        assert torch.isfinite(dist).all()
+
+        path = tmp_path / "low_rank_manifold.pt"
+        m.save(path)
+        loaded = TruthManifold.load(path)
+
+        assert loaded.covariance_mode == "low_rank"
+        assert loaded.covariance_low_rank == 3
+        assert torch.isclose(
+            loaded.mahalanobis_distance(probe),
+            dist,
+            atol=1e-5,
+        )
+
+    def test_shrinkage_covariance_mode_is_finite_reports_alpha_and_roundtrips(self, tmp_path):
+        """shrinkage 模式使用 full scatter 估计 OAS 收缩强度并可序列化。"""
+        torch.manual_seed(505)
+        d = 10
+        samples = torch.randn(8, d)
+        samples[:, 0] *= 4.0
+        m = TruthManifold(covariance_mode="shrinkage")
+        m.update_many(samples)
+
+        alpha = m.covariance_shrinkage_alpha()
+        probe = torch.randn(d)
+        dist = m.mahalanobis_distance(probe)
+
+        assert m.is_ready()
+        assert m._M2 is not None  # noqa: SLF001 - shrinkage needs full scatter statistics.
+        assert 0.0 <= alpha <= 1.0
+        assert torch.isfinite(m.cov_inv).all()
+        assert torch.isfinite(dist).all()
+
+        path = tmp_path / "shrinkage_manifold.pt"
+        m.save(path)
+        loaded = TruthManifold.load(path)
+
+        assert loaded.covariance_mode == "shrinkage"
+        assert loaded._M2 is not None  # noqa: SLF001
+        assert math.isclose(loaded.covariance_shrinkage_alpha(), alpha, rel_tol=0.0, abs_tol=1e-7)
+        assert torch.isclose(loaded.mahalanobis_distance(probe), dist, atol=1e-5)
+
+    def test_invalid_covariance_mode_rejected(self):
+        import pytest
+
+        with pytest.raises(ValueError, match="covariance_mode"):
+            TruthManifold(covariance_mode="bad")
+
+    def test_manifold_distance_is_zero_and_symmetric_for_matching_manifolds(self):
+        torch.manual_seed(606)
+        samples = torch.randn(24, 5)
+        shifted = samples + torch.tensor([1.0, 0.0, 0.0, 0.0, 0.0])
+        m1 = TruthManifold()
+        m2 = TruthManifold()
+        m3 = TruthManifold()
+        m1.update_many(samples)
+        m2.update_many(samples)
+        m3.update_many(shifted)
+
+        assert torch.isclose(m1.manifold_distance(m2), torch.tensor(0.0), atol=1e-4)
+        forward = manifold_distance(m1, m3)
+        backward = manifold_wasserstein_distance(m3, m1)
+
+        assert torch.isclose(forward, backward, atol=1e-5)
+        assert forward > 0.0
+
+    def test_manifold_distance_supports_diag_and_shrinkage_modes(self):
+        torch.manual_seed(707)
+        samples_a = torch.randn(20, 4)
+        samples_b = torch.randn(20, 4) + 0.2
+        for mode in ["diag", "shrinkage"]:
+            m1 = TruthManifold(covariance_mode=mode)
+            m2 = TruthManifold(covariance_mode=mode)
+            m1.update_many(samples_a)
+            m2.update_many(samples_b)
+
+            dist = manifold_distance(m1, m2)
+
+            assert torch.isfinite(dist).all()
+            assert dist >= 0.0
+
+    def test_manifold_distance_requires_ready_manifolds(self):
+        import pytest
+
+        m1 = TruthManifold()
+        m2 = TruthManifold()
+        m1.update(torch.zeros(2))
+        m2.update_many(torch.randn(2, 2))
+
+        with pytest.raises(ValueError, match="at least two samples"):
+            manifold_distance(m1, m2)
 
 
 # ===================================================================

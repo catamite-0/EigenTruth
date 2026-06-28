@@ -1,0 +1,81 @@
+{
+  "artifacts": {
+    "audit.provenance_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "provenance-audit-manifest.json",
+      "sha256": "616805770c2d91cc46217b974b0e2958945367848ca5ad76b48cf90937bc8f26",
+      "size_bytes": 1912
+    },
+    "audit.provenance_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "provenance-audit.json",
+      "sha256": "aa03d368939b9805fd1376ed46eb335f08a0be6ebe2adba103bde9cbaa968a59",
+      "size_bytes": 13038
+    },
+    "corpus.external_corpus_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "external-corpus-manifest.json",
+      "sha256": "2e55866f13067bd62f16eadf55bc9fd71864ed16a647a55fe288c1d9dcb30d8d",
+      "size_bytes": 1076
+    },
+    "corpus.wikidata_country_capitals": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "wikidata-country-capitals-corpus.json",
+      "sha256": "6925c26ece6a1b16e1dd232b206a9ff72744e254c57995cfe565d9c4f4a3e76f",
+      "size_bytes": 168255
+    },
+    "scores.qwen05_l80_statements": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../qwen05_truthfulqa_l80_scores_with_statements.json",
+      "sha256": "afe25f1a8741c6b3f609172afa322033627e1765b378d37126c468d5089d5f52",
+      "size_bytes": 572479
+    },
+    "source.wikidata_country_capitals_jsonl": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "wikidata-country-capitals-source.jsonl",
+      "sha256": "e0c400b36ca4ea89834b385e0bbc2649d80bf02ed8ace4aebab44fcf5794ea60",
+      "size_bytes": 107058
+    },
+    "source.wikidata_source_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "wikidata-source-manifest.json",
+      "sha256": "3a3907fcacc52b60afc8f6682a22f240d33ad32c56894863659311e3e4d2b656",
+      "size_bytes": 827
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "corpus_type": "external_evidence_candidate",
+    "external_domain_shift_ready": true,
+    "license": "CC0-1.0",
+    "n_documents": 120,
+    "promotes_verifier_route": false,
+    "provenance_audit_status": "pass",
+    "provenance_evidence_class": "external_candidate",
+    "provider": "wikidata",
+    "scope": "external evidence source/provenance gate only",
+    "source_query_preset": "country_capitals",
+    "workflow": "wikidata_external_retrieval_corpus_gate"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 7,
+    "directory_count": 0,
+    "file_count": 7,
+    "missing_count": 0
+  }
+}

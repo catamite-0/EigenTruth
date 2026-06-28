@@ -1,0 +1,107 @@
+{
+  "artifacts": {
+    "gpt2_selected_fusion_artifact": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "gpt2-selected-fusion-artifact.json",
+      "sha256": "71de2d77ba1e7bbe670b506f1223b6cbddcac54f78636da26128681dc1ec0af1",
+      "size_bytes": 14579
+    },
+    "gpt2_trajectory_enhanced_score_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "gpt2-trajectory-enhanced-scores.manifest.json",
+      "sha256": "e4b126d8048b1002848f1497eb5ee8bcd162ee22d911102867af0edbfcbf15c4",
+      "size_bytes": 5793
+    },
+    "gpt2_trajectory_enhanced_score_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "gpt2-trajectory-enhanced-scores.manifest.records.jsonl",
+      "sha256": "f205365bd6c439dcf588f1c1f3d5fd8d3f09a5aae310846cf9c28596ea1e171e",
+      "size_bytes": 61354
+    },
+    "gpt2_trajectory_enhanced_score_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "gpt2-trajectory-enhanced-score-report.json",
+      "sha256": "0a77df268f9439ac954a45a700c95ce6048b35c56a5739e345142e9b46b3514c",
+      "size_bytes": 963
+    },
+    "selected_fusion_artifact_build_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "selected-fusion-artifact-build-report.json",
+      "sha256": "86d8cd7e3938ca0f137d075b19c7a1215b9fd3a3c2fe7f26c7d02ebb7c304442",
+      "size_bytes": 3623
+    },
+    "smollm2_selected_fusion_artifact": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-selected-fusion-artifact.json",
+      "sha256": "a99787abc740841efa644f06a9221d0957b717bd8f74ccabc8e78ac80cd96a79",
+      "size_bytes": 12759
+    },
+    "smollm2_trajectory_enhanced_score_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-trajectory-enhanced-scores.manifest.json",
+      "sha256": "8802c3fdd23622e1f9121879e8492048f335d92375643aab1d04f46d424864df",
+      "size_bytes": 5797
+    },
+    "smollm2_trajectory_enhanced_score_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-trajectory-enhanced-scores.manifest.records.jsonl",
+      "sha256": "0b234ea0dfd658de3d7019819bc852e7e0b2d2e94ae7213e55472663805a3e3b",
+      "size_bytes": 61354
+    },
+    "smollm2_trajectory_enhanced_score_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-trajectory-enhanced-score-report.json",
+      "sha256": "07642236e10e2a50091b262969bebdfc39f107c459c7bb91051880e8ade7c794",
+      "size_bytes": 967
+    },
+    "trajectory_fusion_ablation_matrix": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "trajectory-fusion-ablation-matrix.json",
+      "sha256": "ae4d639629f8edde8fc0f6cc0b70746bf28fd50e7621b2766487704b8946d0cd",
+      "size_bytes": 24193
+    },
+    "trajectory_fusion_signal_selection_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "trajectory-fusion-signal-selection-report.json",
+      "sha256": "750722add0aa867a4072e0f810eba029509a36829d0bf94d2c14ff83253b854e",
+      "size_bytes": 3504
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "input_evidence_gate": "trajectory-sweep-evidence-gate.json",
+    "release_gate_effect": "none",
+    "source": "benchmarks/run_fusion_ablation_matrix.py + benchmarks/select_fusion_signals_from_ablation.py + benchmarks/build_selected_fusion_artifacts.py",
+    "status": "analysis_only",
+    "workflow": "trajectory_fusion_ablation_selection_artifact_build"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 11,
+    "directory_count": 0,
+    "file_count": 11,
+    "missing_count": 0
+  }
+}

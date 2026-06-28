@@ -1,0 +1,848 @@
+{
+  "alphas": [
+    0.1
+  ],
+  "best_alpha": 0.1,
+  "candidates": [
+    {
+      "name": "geometry",
+      "signals": [
+        "truth_proj",
+        "subspace_resid",
+        "eigenscore",
+        "maha_last"
+      ]
+    },
+    {
+      "name": "trajectory",
+      "signals": [
+        "trajectory_convergence"
+      ]
+    },
+    {
+      "name": "uncertainty",
+      "signals": [
+        "nll_answer",
+        "answer_token_count",
+        "question_answer_token_overlap"
+      ]
+    },
+    {
+      "name": "geometry_trajectory",
+      "signals": [
+        "truth_proj",
+        "subspace_resid",
+        "eigenscore",
+        "maha_last",
+        "trajectory_convergence"
+      ]
+    },
+    {
+      "name": "geometry_uncertainty",
+      "signals": [
+        "truth_proj",
+        "subspace_resid",
+        "eigenscore",
+        "maha_last",
+        "nll_answer",
+        "answer_token_count",
+        "question_answer_token_overlap"
+      ]
+    },
+    {
+      "name": "all",
+      "signals": [
+        "truth_proj",
+        "subspace_resid",
+        "eigenscore",
+        "maha_last",
+        "nll_answer",
+        "answer_token_count",
+        "question_answer_token_overlap",
+        "trajectory_convergence"
+      ]
+    }
+  ],
+  "methods": [
+    "max_rank",
+    "mean_rank"
+  ],
+  "repeats": 20,
+  "runs": [
+    {
+      "best_at_alpha": {
+        "auroc": 0.7013294956140351,
+        "coverage": 0.9465517241379311,
+        "detection": 0.22890625,
+        "false_alarm": 0.05344827586206896,
+        "method": "mean_rank",
+        "name": "geometry_trajectory:mean_rank",
+        "signals": [
+          "truth_proj",
+          "subspace_resid",
+          "eigenscore",
+          "maha_last",
+          "trajectory_convergence"
+        ]
+      },
+      "candidate_results": {
+        "all:max_rank": {
+          "alphas": {
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.5226493969298246,
+          "direction": "higher",
+          "method": "max_rank",
+          "name": "all",
+          "signals": [
+            "truth_proj",
+            "subspace_resid",
+            "eigenscore",
+            "maha_last",
+            "nll_answer",
+            "answer_token_count",
+            "question_answer_token_overlap",
+            "trajectory_convergence"
+          ]
+        },
+        "all:mean_rank": {
+          "alphas": {
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 0.9517241379310345,
+              "detection": 0.03671875,
+              "false_alarm": 0.04827586206896552,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.5924273574561403,
+          "direction": "higher",
+          "method": "mean_rank",
+          "name": "all",
+          "signals": [
+            "truth_proj",
+            "subspace_resid",
+            "eigenscore",
+            "maha_last",
+            "nll_answer",
+            "answer_token_count",
+            "question_answer_token_overlap",
+            "trajectory_convergence"
+          ]
+        },
+        "geometry:max_rank": {
+          "alphas": {
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.6939144736842106,
+          "direction": "higher",
+          "method": "max_rank",
+          "name": "geometry",
+          "signals": [
+            "truth_proj",
+            "subspace_resid",
+            "eigenscore",
+            "maha_last"
+          ]
+        },
+        "geometry:mean_rank": {
+          "alphas": {
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 0.9706896551724138,
+              "detection": 0.22421875,
+              "false_alarm": 0.029310344827586203,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.6923519736842105,
+          "direction": "higher",
+          "method": "mean_rank",
+          "name": "geometry",
+          "signals": [
+            "truth_proj",
+            "subspace_resid",
+            "eigenscore",
+            "maha_last"
+          ]
+        },
+        "geometry_trajectory:max_rank": {
+          "alphas": {
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.6932839912280702,
+          "direction": "higher",
+          "method": "max_rank",
+          "name": "geometry_trajectory",
+          "signals": [
+            "truth_proj",
+            "subspace_resid",
+            "eigenscore",
+            "maha_last",
+            "trajectory_convergence"
+          ]
+        },
+        "geometry_trajectory:mean_rank": {
+          "alphas": {
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 0.9465517241379311,
+              "detection": 0.22890625,
+              "false_alarm": 0.05344827586206896,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.7013294956140351,
+          "direction": "higher",
+          "method": "mean_rank",
+          "name": "geometry_trajectory",
+          "signals": [
+            "truth_proj",
+            "subspace_resid",
+            "eigenscore",
+            "maha_last",
+            "trajectory_convergence"
+          ]
+        },
+        "geometry_uncertainty:max_rank": {
+          "alphas": {
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.5139939692982456,
+          "direction": "higher",
+          "method": "max_rank",
+          "name": "geometry_uncertainty",
+          "signals": [
+            "truth_proj",
+            "subspace_resid",
+            "eigenscore",
+            "maha_last",
+            "nll_answer",
+            "answer_token_count",
+            "question_answer_token_overlap"
+          ]
+        },
+        "geometry_uncertainty:mean_rank": {
+          "alphas": {
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 0.9724137931034482,
+              "detection": 0.0296875,
+              "false_alarm": 0.027586206896551724,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.5655359100877193,
+          "direction": "higher",
+          "method": "mean_rank",
+          "name": "geometry_uncertainty",
+          "signals": [
+            "truth_proj",
+            "subspace_resid",
+            "eigenscore",
+            "maha_last",
+            "nll_answer",
+            "answer_token_count",
+            "question_answer_token_overlap"
+          ]
+        },
+        "trajectory": {
+          "alphas": {
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 0.943103448275862,
+              "detection": 0.11953125,
+              "false_alarm": 0.056896551724137934,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.6077302631578947,
+          "direction": "higher",
+          "method": "native",
+          "name": "trajectory_convergence",
+          "signals": [
+            "trajectory_convergence"
+          ]
+        },
+        "uncertainty:max_rank": {
+          "alphas": {
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.37413651315789476,
+          "direction": "higher",
+          "method": "max_rank",
+          "name": "uncertainty",
+          "signals": [
+            "nll_answer",
+            "answer_token_count",
+            "question_answer_token_overlap"
+          ]
+        },
+        "uncertainty:mean_rank": {
+          "alphas": {
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 0.9413793103448276,
+              "detection": 0.0078125,
+              "false_alarm": 0.05862068965517242,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.3090871710526316,
+          "direction": "higher",
+          "method": "mean_rank",
+          "name": "uncertainty",
+          "signals": [
+            "nll_answer",
+            "answer_token_count",
+            "question_answer_token_overlap"
+          ]
+        }
+      },
+      "directions": {
+        "answer_token_count": "higher",
+        "eigenscore": "higher",
+        "maha_last": "higher",
+        "nll_answer": "higher",
+        "question_answer_token_overlap": "lower",
+        "subspace_resid": "higher",
+        "trajectory_convergence": "higher",
+        "truth_proj": "higher"
+      },
+      "loaded_signals": [
+        "truth_proj",
+        "subspace_resid",
+        "eigenscore",
+        "maha_last",
+        "trajectory_convergence",
+        "nll_answer",
+        "answer_token_count",
+        "question_answer_token_overlap"
+      ],
+      "n_false": 64,
+      "n_total": 121,
+      "n_true": 57,
+      "name": "gpt2",
+      "score_dump": {
+        "exists": true,
+        "identity": {
+          "cache_key": "score-dump-identity-v1:36e9446617c0495fb0b7f2d86518f53bd393026c9b369a20023015b65fc549d5",
+          "content_hash": "e4b126d8048b1002848f1497eb5ee8bcd162ee22d911102867af0edbfcbf15c4",
+          "dataset_id": null,
+          "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+          "n_total": 121,
+          "primary_score_names": [
+            "answer_token_count",
+            "eigenscore",
+            "maha_last",
+            "nll_answer",
+            "question_answer_token_overlap",
+            "subspace_resid",
+            "trajectory_convergence",
+            "truth_proj"
+          ],
+          "records_hash": "f205365bd6c439dcf588f1c1f3d5fd8d3f09a5aae310846cf9c28596ea1e171e",
+          "schema_version": 1,
+          "score_schema_hash": "29af77c37da52414c3fd31f9659d647ae383b535b15560096096620b0b13ea80",
+          "scoring_config_hash": "7f3660469c5b563a12ef835f551aaeea1859e315df1d9710a392b4eb1a8f4cb8",
+          "source_format": "eigentruth.score_dump.jsonl",
+          "sweep_score_names": {},
+          "target_layer": -12
+        },
+        "kind": "file",
+        "path": "artifacts/e7-truthfulqa-trajectory-multimodel/gpt2-trajectory-enhanced-scores.manifest.json",
+        "records": {
+          "exists": true,
+          "kind": "file",
+          "path": "artifacts/e7-truthfulqa-trajectory-multimodel/gpt2-trajectory-enhanced-scores.manifest.records.jsonl",
+          "sha256": "f205365bd6c439dcf588f1c1f3d5fd8d3f09a5aae310846cf9c28596ea1e171e",
+          "size_bytes": 61354
+        },
+        "sha256": "e4b126d8048b1002848f1497eb5ee8bcd162ee22d911102867af0edbfcbf15c4",
+        "size_bytes": 5793,
+        "source_format": "eigentruth.score_dump.jsonl",
+        "summary": {
+          "all_signal_names": [
+            "answer_token_count",
+            "eigenscore",
+            "maha_last",
+            "nll_answer",
+            "question_answer_token_overlap",
+            "subspace_resid",
+            "trajectory_convergence",
+            "truth_proj"
+          ],
+          "has_statements": true,
+          "layer": -12,
+          "model": "Qwen/Qwen2.5-0.5B-Instruct",
+          "n_false": 64,
+          "n_total": 121,
+          "n_true": 57,
+          "score_count": 8,
+          "score_names": [
+            "truth_proj",
+            "subspace_resid",
+            "eigenscore",
+            "maha_last",
+            "nll_answer",
+            "answer_token_count",
+            "question_answer_token_overlap",
+            "trajectory_convergence"
+          ],
+          "statement_count": 121,
+          "sweep_layer_count": 0,
+          "sweep_layers": [],
+          "sweep_score_count": 0,
+          "sweep_score_names": []
+        }
+      },
+      "scores_path": "artifacts/e7-truthfulqa-trajectory-multimodel/gpt2-trajectory-enhanced-scores.manifest.json"
+    },
+    {
+      "best_at_alpha": {
+        "auroc": 0.6923519736842105,
+        "coverage": 0.9706896551724138,
+        "detection": 0.22421875,
+        "false_alarm": 0.029310344827586203,
+        "method": "mean_rank",
+        "name": "geometry:mean_rank",
+        "signals": [
+          "truth_proj",
+          "subspace_resid",
+          "eigenscore",
+          "maha_last"
+        ]
+      },
+      "candidate_results": {
+        "all:max_rank": {
+          "alphas": {
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.5030564692982457,
+          "direction": "higher",
+          "method": "max_rank",
+          "name": "all",
+          "signals": [
+            "truth_proj",
+            "subspace_resid",
+            "eigenscore",
+            "maha_last",
+            "nll_answer",
+            "answer_token_count",
+            "question_answer_token_overlap",
+            "trajectory_convergence"
+          ]
+        },
+        "all:mean_rank": {
+          "alphas": {
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 0.9586206896551724,
+              "detection": 0.0640625,
+              "false_alarm": 0.041379310344827586,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.5644942434210527,
+          "direction": "higher",
+          "method": "mean_rank",
+          "name": "all",
+          "signals": [
+            "truth_proj",
+            "subspace_resid",
+            "eigenscore",
+            "maha_last",
+            "nll_answer",
+            "answer_token_count",
+            "question_answer_token_overlap",
+            "trajectory_convergence"
+          ]
+        },
+        "geometry:max_rank": {
+          "alphas": {
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.6939144736842106,
+          "direction": "higher",
+          "method": "max_rank",
+          "name": "geometry",
+          "signals": [
+            "truth_proj",
+            "subspace_resid",
+            "eigenscore",
+            "maha_last"
+          ]
+        },
+        "geometry:mean_rank": {
+          "alphas": {
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 0.9706896551724138,
+              "detection": 0.22421875,
+              "false_alarm": 0.029310344827586203,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.6923519736842105,
+          "direction": "higher",
+          "method": "mean_rank",
+          "name": "geometry",
+          "signals": [
+            "truth_proj",
+            "subspace_resid",
+            "eigenscore",
+            "maha_last"
+          ]
+        },
+        "geometry_trajectory:max_rank": {
+          "alphas": {
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.6657552083333333,
+          "direction": "higher",
+          "method": "max_rank",
+          "name": "geometry_trajectory",
+          "signals": [
+            "truth_proj",
+            "subspace_resid",
+            "eigenscore",
+            "maha_last",
+            "trajectory_convergence"
+          ]
+        },
+        "geometry_trajectory:mean_rank": {
+          "alphas": {
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 0.9620689655172414,
+              "detection": 0.14453125,
+              "false_alarm": 0.03793103448275862,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.6742598684210527,
+          "direction": "higher",
+          "method": "mean_rank",
+          "name": "geometry_trajectory",
+          "signals": [
+            "truth_proj",
+            "subspace_resid",
+            "eigenscore",
+            "maha_last",
+            "trajectory_convergence"
+          ]
+        },
+        "geometry_uncertainty:max_rank": {
+          "alphas": {
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.5139939692982456,
+          "direction": "higher",
+          "method": "max_rank",
+          "name": "geometry_uncertainty",
+          "signals": [
+            "truth_proj",
+            "subspace_resid",
+            "eigenscore",
+            "maha_last",
+            "nll_answer",
+            "answer_token_count",
+            "question_answer_token_overlap"
+          ]
+        },
+        "geometry_uncertainty:mean_rank": {
+          "alphas": {
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 0.9724137931034482,
+              "detection": 0.0296875,
+              "false_alarm": 0.027586206896551724,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.5655359100877193,
+          "direction": "higher",
+          "method": "mean_rank",
+          "name": "geometry_uncertainty",
+          "signals": [
+            "truth_proj",
+            "subspace_resid",
+            "eigenscore",
+            "maha_last",
+            "nll_answer",
+            "answer_token_count",
+            "question_answer_token_overlap"
+          ]
+        },
+        "trajectory": {
+          "alphas": {
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 0.9275862068965517,
+              "detection": 0.12265625,
+              "false_alarm": 0.07241379310344828,
+              "pass": true,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.5603070175438597,
+          "direction": "lower",
+          "method": "native",
+          "name": "trajectory_convergence",
+          "signals": [
+            "trajectory_convergence"
+          ]
+        },
+        "uncertainty:max_rank": {
+          "alphas": {
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.37413651315789476,
+          "direction": "higher",
+          "method": "max_rank",
+          "name": "uncertainty",
+          "signals": [
+            "nll_answer",
+            "answer_token_count",
+            "question_answer_token_overlap"
+          ]
+        },
+        "uncertainty:mean_rank": {
+          "alphas": {
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 0.9413793103448276,
+              "detection": 0.0078125,
+              "false_alarm": 0.05862068965517242,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.3090871710526316,
+          "direction": "higher",
+          "method": "mean_rank",
+          "name": "uncertainty",
+          "signals": [
+            "nll_answer",
+            "answer_token_count",
+            "question_answer_token_overlap"
+          ]
+        }
+      },
+      "directions": {
+        "answer_token_count": "higher",
+        "eigenscore": "higher",
+        "maha_last": "higher",
+        "nll_answer": "higher",
+        "question_answer_token_overlap": "lower",
+        "subspace_resid": "higher",
+        "trajectory_convergence": "lower",
+        "truth_proj": "higher"
+      },
+      "loaded_signals": [
+        "truth_proj",
+        "subspace_resid",
+        "eigenscore",
+        "maha_last",
+        "trajectory_convergence",
+        "nll_answer",
+        "answer_token_count",
+        "question_answer_token_overlap"
+      ],
+      "n_false": 64,
+      "n_total": 121,
+      "n_true": 57,
+      "name": "smollm2",
+      "score_dump": {
+        "exists": true,
+        "identity": {
+          "cache_key": "score-dump-identity-v1:7d2f3f56df3bbe1ab60cc1a76ef2e00b858a799e7148f11f0461e520ed54798c",
+          "content_hash": "8802c3fdd23622e1f9121879e8492048f335d92375643aab1d04f46d424864df",
+          "dataset_id": null,
+          "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+          "n_total": 121,
+          "primary_score_names": [
+            "answer_token_count",
+            "eigenscore",
+            "maha_last",
+            "nll_answer",
+            "question_answer_token_overlap",
+            "subspace_resid",
+            "trajectory_convergence",
+            "truth_proj"
+          ],
+          "records_hash": "0b234ea0dfd658de3d7019819bc852e7e0b2d2e94ae7213e55472663805a3e3b",
+          "schema_version": 1,
+          "score_schema_hash": "29af77c37da52414c3fd31f9659d647ae383b535b15560096096620b0b13ea80",
+          "scoring_config_hash": "ff56cc1e2ecf72498ad4a2583aebd5233c15f260a0fcfdff9adebbd2713e531a",
+          "source_format": "eigentruth.score_dump.jsonl",
+          "sweep_score_names": {},
+          "target_layer": -12
+        },
+        "kind": "file",
+        "path": "artifacts/e7-truthfulqa-trajectory-multimodel/smollm2-trajectory-enhanced-scores.manifest.json",
+        "records": {
+          "exists": true,
+          "kind": "file",
+          "path": "artifacts/e7-truthfulqa-trajectory-multimodel/smollm2-trajectory-enhanced-scores.manifest.records.jsonl",
+          "sha256": "0b234ea0dfd658de3d7019819bc852e7e0b2d2e94ae7213e55472663805a3e3b",
+          "size_bytes": 61354
+        },
+        "sha256": "8802c3fdd23622e1f9121879e8492048f335d92375643aab1d04f46d424864df",
+        "size_bytes": 5797,
+        "source_format": "eigentruth.score_dump.jsonl",
+        "summary": {
+          "all_signal_names": [
+            "answer_token_count",
+            "eigenscore",
+            "maha_last",
+            "nll_answer",
+            "question_answer_token_overlap",
+            "subspace_resid",
+            "trajectory_convergence",
+            "truth_proj"
+          ],
+          "has_statements": true,
+          "layer": -12,
+          "model": "Qwen/Qwen2.5-0.5B-Instruct",
+          "n_false": 64,
+          "n_total": 121,
+          "n_true": 57,
+          "score_count": 8,
+          "score_names": [
+            "truth_proj",
+            "subspace_resid",
+            "eigenscore",
+            "maha_last",
+            "nll_answer",
+            "answer_token_count",
+            "question_answer_token_overlap",
+            "trajectory_convergence"
+          ],
+          "statement_count": 121,
+          "sweep_layer_count": 0,
+          "sweep_layers": [],
+          "sweep_score_count": 0,
+          "sweep_score_names": []
+        }
+      },
+      "scores_path": "artifacts/e7-truthfulqa-trajectory-multimodel/smollm2-trajectory-enhanced-scores.manifest.json"
+    }
+  ],
+  "schema_version": 1,
+  "score_dump_cache": {
+    "cache_entries": 10,
+    "enabled": true,
+    "fingerprint": {
+      "attempts": 4,
+      "hit_rate": 0.5,
+      "hits": 2,
+      "misses": 2,
+      "writes": 4
+    },
+    "jsonl_manifest": {
+      "attempts": 4,
+      "hit_rate": 0.5,
+      "hits": 2,
+      "misses": 2,
+      "writes": 2
+    },
+    "jsonl_summary": {
+      "attempts": 2,
+      "hit_rate": 1.0,
+      "hits": 2,
+      "misses": 0,
+      "writes": 2
+    },
+    "jsonl_view": {
+      "attempts": 2,
+      "hit_rate": 0.0,
+      "hits": 0,
+      "misses": 2,
+      "writes": 2
+    }
+  },
+  "seed": 0,
+  "status": "complete",
+  "workflow": "fusion_ablation_matrix"
+}

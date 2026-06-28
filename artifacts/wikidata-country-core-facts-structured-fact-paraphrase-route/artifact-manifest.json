@@ -1,0 +1,67 @@
+{
+  "artifacts": {
+    "covered_fact_score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "covered-facts-scores.json",
+      "sha256": "67804e20d771dffbe3483fcd48e4f380a330319efa658338b8591d4cf3e50239",
+      "size_bytes": 1692898
+    },
+    "qa_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../wikidata-country-core-facts-external-corpus/wikidata-country-core-facts-qa-corpus.json",
+      "sha256": "7fe6ef66b23620304327894ef8fb5feb3b4ec0c62e012f1c7f3961dd805bb98c",
+      "size_bytes": 417766
+    },
+    "route_summary": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "structured-fact-route-summary.json",
+      "sha256": "e3c4e8b3cbddc2c7dd4e5e72563b160e4e3051b818f1e03c86138cf6c1cbf62c",
+      "size_bytes": 3827
+    },
+    "verified_records_jsonl": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "verified-records.jsonl",
+      "sha256": "1ef5c254b850a0a24571000d0349a5b06970b348175c08d1907d58af340f9b33",
+      "size_bytes": 14988791
+    },
+    "verifier_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "structured-fact-verifier-report.json",
+      "sha256": "7e2135ff3c0a8204b2c74e0ecfa31debe37d509c61af062972d9081c60f624da",
+      "size_bytes": 9666
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "alpha": 0.1,
+    "n_false": 1434,
+    "n_records": 2868,
+    "n_true": 1434,
+    "promotes_covered_facts_route": true,
+    "route": "structured_fact",
+    "score_name": "wikidata-country-core-facts-structured-fact-paraphrase",
+    "signal": "truth_proj",
+    "status": "promote",
+    "structured_fact_decision_accuracy": 1.0,
+    "structured_fact_false_refuted_rate": 1.0,
+    "structured_fact_false_supported_rate": 0.0,
+    "workflow": "wikidata_structured_qa_route_workflow"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

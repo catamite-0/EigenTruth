@@ -1,0 +1,143 @@
+{
+  "config": {
+    "batch_size": 8,
+    "cache_only": false,
+    "eigenscore_alpha": 0.001,
+    "eval_reps_cache": "/tmp/eigentruth-smollm2-l80/eval-reps-cache",
+    "eval_reps_cache_shard_size": 256,
+    "hidden_dim": 576,
+    "inside_batch_size": 1,
+    "inside_max_new_tokens": 12,
+    "inside_pooling": "last",
+    "inside_samples": 0,
+    "inside_temperature": 0.7,
+    "inside_top_p": 0.9,
+    "inside_trigger_signal": null,
+    "inside_trigger_threshold": null,
+    "inside_trigger_top_fraction": null,
+    "layer": -12,
+    "layer_stats_cache": "/tmp/eigentruth-smollm2-l80/layer-stats.pt",
+    "length_bucketed_batches": true,
+    "manifold_n": 266,
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "n_manifold_false": 338,
+    "n_neg": 250,
+    "n_pos": 306,
+    "offline": false,
+    "progress_every": 50,
+    "refresh_eval_reps_cache": false,
+    "refresh_layer_stats_cache": false,
+    "seed": 0,
+    "subspace_rank": 2,
+    "sweep_layers": [
+      -12,
+      -16,
+      -14,
+      -10,
+      -8
+    ],
+    "verifier_signal_score_dump": {
+      "builder": "build_verifier_signal_score_dump",
+      "run_name": "smollm2-l80",
+      "signals": [
+        "verifier_not_supported",
+        "verifier_refuted",
+        "verifier_insufficient",
+        "verifier_refute_confidence",
+        "verifier_uncertainty",
+        "verifier_no_retrieval_hit",
+        "selfcheck_refute_rate",
+        "selfcheck_disagreement",
+        "selfcheck_insufficient"
+      ],
+      "source_scores_path": "artifacts/smollm2_truthfulqa_l80_scores_with_statements.json",
+      "verified_records_path": "artifacts/truthfulqa-l80-staged-qa-verifier-signals/verified-records.jsonl"
+    },
+    "warmup_checkpoint": "/tmp/eigentruth-smollm2-l80/warmup-checkpoint.pt",
+    "warmup_checkpoint_every": 50
+  },
+  "extras": {
+    "verifier_signal_metadata": {
+      "run_name": "smollm2-l80",
+      "signal_definitions": {
+        "selfcheck_disagreement": "1 - max(support_rate, refute_rate) when selfcheck executed, else 0.",
+        "selfcheck_insufficient": "1 when selfcheck status is insufficient_evidence, else 0.",
+        "selfcheck_refute_rate": "self-consistency refute rate when selfcheck executed, else 0.",
+        "verifier_insufficient": "1 when final verifier status is insufficient_evidence; higher is more uncertain.",
+        "verifier_no_retrieval_hit": "1 when the verifier record has no retrieval hits; higher is less grounded.",
+        "verifier_not_supported": "1 when final verifier status is not supported; higher is more risky.",
+        "verifier_refute_confidence": "final verifier confidence when refuted, else 0; higher is more risky.",
+        "verifier_refuted": "1 when final verifier status is refuted; higher is more risky.",
+        "verifier_uncertainty": "1 for insufficient/not-applicable outcomes, else 1 - final confidence."
+      },
+      "signals": [
+        "verifier_not_supported",
+        "verifier_refuted",
+        "verifier_insufficient",
+        "verifier_refute_confidence",
+        "verifier_uncertainty",
+        "verifier_no_retrieval_hit",
+        "selfcheck_refute_rate",
+        "selfcheck_disagreement",
+        "selfcheck_insufficient"
+      ],
+      "source_scores_path": "artifacts/smollm2_truthfulqa_l80_scores_with_statements.json",
+      "verified_records_path": "artifacts/truthfulqa-l80-staged-qa-verifier-signals/verified-records.jsonl"
+    }
+  },
+  "format": "eigentruth.score_dump.jsonl",
+  "has_statements": true,
+  "n_false": 306,
+  "n_total": 556,
+  "n_true": 250,
+  "records_path": "smollm2-l80-enhanced-scores.manifest.records.jsonl",
+  "schema_version": 1,
+  "score_names": [
+    "truth_proj",
+    "maha_last",
+    "subspace_resid",
+    "eigenscore",
+    "nll_answer",
+    "verifier_not_supported",
+    "verifier_refuted",
+    "verifier_insufficient",
+    "verifier_refute_confidence",
+    "verifier_uncertainty",
+    "verifier_no_retrieval_hit",
+    "selfcheck_refute_rate",
+    "selfcheck_disagreement",
+    "selfcheck_insufficient"
+  ],
+  "sweep_scores": {
+    "-10": [
+      "maha_last",
+      "truth_proj",
+      "subspace_resid",
+      "eigenscore"
+    ],
+    "-12": [
+      "maha_last",
+      "truth_proj",
+      "subspace_resid",
+      "eigenscore"
+    ],
+    "-14": [
+      "maha_last",
+      "truth_proj",
+      "subspace_resid",
+      "eigenscore"
+    ],
+    "-16": [
+      "maha_last",
+      "truth_proj",
+      "subspace_resid",
+      "eigenscore"
+    ],
+    "-8": [
+      "maha_last",
+      "truth_proj",
+      "subspace_resid",
+      "eigenscore"
+    ]
+  }
+}

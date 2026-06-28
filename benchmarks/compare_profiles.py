@@ -1,0 +1,743 @@
+"""Compare EigenTruth benchmark profile payloads across runs.
+
+This is a post-processing helper for ``eval_truthfulqa.py --profile`` and
+``--profile-json`` outputs. It does not load models.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import math
+import statistics
+from pathlib import Path
+from typing import Any, Mapping, Sequence
+
+
+def _parse_named_path(value: str) -> tuple[str, Path]:
+    if "=" not in value:
+        path = Path(value)
+        return path.stem, path
+    name, path = value.split("=", 1)
+    name = name.strip()
+    if not name:
+        raise ValueError("profile name cannot be empty.")
+    return name, Path(path)
+
+
+def _parse_named_float(value: str, *, flag: str) -> tuple[str, float]:
+    if "=" not in value:
+        raise ValueError(f"{flag} must be formatted as name=value.")
+    name, raw_value = value.split("=", 1)
+    name = name.strip()
+    if not name:
+        raise ValueError(f"{flag} name cannot be empty.")
+    try:
+        threshold = float(raw_value)
+    except ValueError as exc:
+        raise ValueError(f"{flag} value for {name!r} must be numeric.") from exc
+    if threshold < 0:
+        raise ValueError(f"{flag} value for {name!r} must be non-negative.")
+    return name, threshold
+
+
+def _load_profile(path: Path) -> dict[str, Any]:
+    with open(path, encoding="utf-8") as f:
+        payload = json.load(f)
+    profile = payload.get("profile", payload)
+    if not isinstance(profile, Mapping):
+        raise ValueError(f"profile payload in {path} must be a JSON object.")
+    if "total_seconds" not in profile or "phases" not in profile:
+        raise ValueError(f"profile payload in {path} must include total_seconds and phases.")
+    phases = profile["phases"]
+    if not isinstance(phases, Mapping):
+        raise ValueError(f"profile phases in {path} must be a JSON object.")
+    total_seconds = float(profile["total_seconds"])
+    phase_seconds = {str(name): float(seconds) for name, seconds in phases.items()}
+    if (
+        not math.isfinite(total_seconds)
+        or any(not math.isfinite(seconds) for seconds in phase_seconds.values())
+        or total_seconds < 0
+        or any(seconds < 0 for seconds in phase_seconds.values())
+    ):
+        raise ValueError(f"profile payload in {path} contains invalid timing values.")
+    summary = profile.get("summary")
+    if not isinstance(summary, Mapping):
+        summary = _minimal_profile_summary(phase_seconds, total_seconds)
+    return {
+        "total_seconds": total_seconds,
+        "phases": phase_seconds,
+        "summary": dict(summary),
+    }
+
+
+def _minimal_profile_summary(phases: Mapping[str, float], total_seconds: float) -> dict[str, Any]:
+    top_phases = [
+        {"name": name, "seconds": seconds, "share": _safe_div(seconds, total_seconds)}
+        for name, seconds in sorted(phases.items(), key=lambda item: item[1], reverse=True)[:5]
+    ]
+    return {
+        "bottleneck": top_phases[0]["name"] if top_phases else None,
+        "top_phases": top_phases,
+        "groups": {},
+        "throughput": {},
+        "cache_efficiency": {},
+    }
+
+
+def _profile_summary_from_parts(
+    *,
+    phases: Mapping[str, float],
+    total_seconds: float,
+    groups: Mapping[str, float] | None = None,
+    throughput: Mapping[str, float] | None = None,
+    cache_efficiency: Mapping[str, float] | None = None,
+) -> dict[str, Any]:
+    top_phases = [
+        {"name": name, "seconds": seconds, "share": _safe_div(seconds, total_seconds)}
+        for name, seconds in sorted(phases.items(), key=lambda item: item[1], reverse=True)[:5]
+    ]
+    return {
+        "bottleneck": top_phases[0]["name"] if top_phases else None,
+        "top_phases": top_phases,
+        "groups": {
+            name: {"seconds": seconds, "share": _safe_div(seconds, total_seconds)}
+            for name, seconds in sorted(dict(groups or {}).items())
+        },
+        "throughput": dict(sorted(dict(throughput or {}).items())),
+        "cache_efficiency": dict(sorted(dict(cache_efficiency or {}).items())),
+    }
+
+
+def _safe_div(numerator: float, denominator: float) -> float | None:
+    if denominator == 0:
+        return None
+    return float(numerator) / float(denominator)
+
+
+def _delta(current: float, baseline: float) -> dict[str, float | None]:
+    ratio = _safe_div(current, baseline)
+    return {
+        "seconds": current,
+        "baseline_seconds": baseline,
+        "delta_seconds": current - baseline,
+        "ratio_to_baseline": ratio,
+        "speedup_vs_baseline": None if ratio in {None, 0.0} else 1.0 / ratio,
+    }
+
+
+def _phase_deltas(current: Mapping[str, float], baseline: Mapping[str, float]) -> dict[str, dict[str, float | None]]:
+    names = sorted(set(current) | set(baseline))
+    return {
+        name: _delta(float(current.get(name, 0.0)), float(baseline.get(name, 0.0)))
+        for name in names
+    }
+
+
+def _group_seconds(summary: Mapping[str, Any]) -> dict[str, float]:
+    groups = summary.get("groups", {})
+    if not isinstance(groups, Mapping):
+        return {}
+    result = {}
+    for name, payload in groups.items():
+        if isinstance(payload, Mapping):
+            result[str(name)] = float(payload.get("seconds", 0.0))
+    return result
+
+
+def _throughput_values(summary: Mapping[str, Any]) -> dict[str, float]:
+    values = summary.get("throughput", {})
+    if not isinstance(values, Mapping):
+        return {}
+    return {str(name): float(value) for name, value in values.items()}
+
+
+def _float_metric(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        metric = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(metric):
+        return None
+    return metric
+
+
+def _cache_efficiency_values(summary: Mapping[str, Any]) -> dict[str, float]:
+    values = summary.get("cache_efficiency", {})
+    if not isinstance(values, Mapping):
+        return {}
+    result = {}
+    for name, payload in values.items():
+        if isinstance(payload, Mapping):
+            for metric_name, value in payload.items():
+                metric = _float_metric(value)
+                if metric is not None:
+                    result[f"{name}.{metric_name}"] = metric
+            continue
+        metric = _float_metric(payload)
+        if metric is not None:
+            result[str(name)] = metric
+    return result
+
+
+def _median(values: Sequence[float]) -> float:
+    if not values:
+        raise ValueError("cannot compute median for an empty sequence.")
+    return float(statistics.median(float(value) for value in values))
+
+
+def _quartiles(values: Sequence[float]) -> tuple[float, float]:
+    if not values:
+        raise ValueError("cannot compute quartiles for an empty sequence.")
+    sorted_values = sorted(float(value) for value in values)
+    midpoint = len(sorted_values) // 2
+    if len(sorted_values) == 1:
+        value = sorted_values[0]
+        return value, value
+    if len(sorted_values) % 2:
+        lower = sorted_values[:midpoint]
+        upper = sorted_values[midpoint + 1 :]
+    else:
+        lower = sorted_values[:midpoint]
+        upper = sorted_values[midpoint:]
+    if not lower or not upper:
+        value = sorted_values[0]
+        return value, value
+    return _median(lower), _median(upper)
+
+
+def _iqr(values: Sequence[float]) -> float:
+    q1, q3 = _quartiles(values)
+    return q3 - q1
+
+
+def _median_mapping(
+    rows: Sequence[Mapping[str, float]],
+    *,
+    missing_as_zero: bool,
+) -> dict[str, float]:
+    keys = sorted({key for row in rows for key in row})
+    result = {}
+    for key in keys:
+        if missing_as_zero:
+            values = [float(row.get(key, 0.0)) for row in rows]
+        else:
+            values = [float(row[key]) for row in rows if key in row]
+        if values:
+            result[key] = _median(values)
+    return result
+
+
+def _aggregate_profile_repeats(name: str, profiles: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    if not profiles:
+        raise ValueError(f"profile repeat group {name!r} is empty.")
+    sources = [str(profile["source"]) for profile in profiles]
+    totals = [float(profile["total_seconds"]) for profile in profiles]
+    total_seconds = _median(totals)
+    total_q1, total_q3 = _quartiles(totals)
+    phases = _median_mapping([profile["phases"] for profile in profiles], missing_as_zero=True)
+    groups = _median_mapping(
+        [_group_seconds(profile["summary"]) for profile in profiles],
+        missing_as_zero=True,
+    )
+    throughput = _median_mapping(
+        [_throughput_values(profile["summary"]) for profile in profiles],
+        missing_as_zero=False,
+    )
+    cache_efficiency = _median_mapping(
+        [_cache_efficiency_values(profile["summary"]) for profile in profiles],
+        missing_as_zero=False,
+    )
+    payload = {
+        "name": name,
+        "source": sources[0] if len(sources) == 1 else f"median:{name}",
+        "sources": sources,
+        "repeat_count": len(profiles),
+        "repeat_total_seconds": {
+            "median": total_seconds,
+            "min": min(totals),
+            "max": max(totals),
+            "q1": total_q1,
+            "q3": total_q3,
+            "iqr": total_q3 - total_q1,
+            "values": totals,
+        },
+        "total_seconds": total_seconds,
+        "phases": phases,
+        "summary": _profile_summary_from_parts(
+            phases=phases,
+            total_seconds=total_seconds,
+            groups=groups,
+            throughput=throughput,
+            cache_efficiency=cache_efficiency,
+        ),
+    }
+    return payload
+
+
+def _repeat_total_values(profile: Mapping[str, Any]) -> list[float] | None:
+    payload = profile.get("repeat_total_seconds")
+    if not isinstance(payload, Mapping):
+        return None
+    values = payload.get("values")
+    if not isinstance(values, (list, tuple)):
+        return None
+    result = [float(value) for value in values]
+    if any(not math.isfinite(value) or value < 0 for value in result):
+        return None
+    return result
+
+
+def _paired_repeat_total_ratio(
+    current: Mapping[str, Any],
+    baseline: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    current_values = _repeat_total_values(current)
+    baseline_values = _repeat_total_values(baseline)
+    if current_values is None or baseline_values is None:
+        return None
+    if len(current_values) != len(baseline_values) or not current_values:
+        return {
+            "paired": False,
+            "reason": "repeat count mismatch",
+            "repeat_count": len(current_values),
+            "baseline_repeat_count": len(baseline_values),
+        }
+    ratios: list[float | None] = []
+    for current_value, baseline_value in zip(current_values, baseline_values):
+        ratios.append(_safe_div(current_value, baseline_value))
+    finite_ratios = [float(value) for value in ratios if value is not None and math.isfinite(float(value))]
+    if len(finite_ratios) != len(ratios):
+        return {
+            "paired": False,
+            "reason": "non-finite paired repeat ratio",
+            "repeat_count": len(current_values),
+            "baseline_repeat_count": len(baseline_values),
+            "values": ratios,
+        }
+    q1, q3 = _quartiles(finite_ratios)
+    return {
+        "paired": True,
+        "repeat_count": len(current_values),
+        "values": finite_ratios,
+        "median": _median(finite_ratios),
+        "min": min(finite_ratios),
+        "max": max(finite_ratios),
+        "q1": q1,
+        "q3": q3,
+        "iqr": q3 - q1,
+    }
+
+
+def _numeric_metric_deltas(
+    current: Mapping[str, float],
+    baseline: Mapping[str, float],
+) -> dict[str, dict[str, float | None]]:
+    names = sorted(set(current) | set(baseline))
+    payload = {}
+    for name in names:
+        current_value = float(current.get(name, 0.0))
+        baseline_value = float(baseline.get(name, 0.0))
+        payload[name] = {
+            "value": current_value,
+            "baseline_value": baseline_value,
+            "delta": current_value - baseline_value,
+            "ratio_to_baseline": _safe_div(current_value, baseline_value),
+        }
+    return payload
+
+
+def _throughput_deltas(
+    current: Mapping[str, float],
+    baseline: Mapping[str, float],
+) -> dict[str, dict[str, float | None]]:
+    return _numeric_metric_deltas(current, baseline)
+
+
+def _check_max_ratio(
+    *,
+    ratio: float | None,
+    current: float,
+    baseline: float,
+    maximum: float,
+) -> bool:
+    if ratio is not None:
+        return ratio <= maximum
+    return current <= baseline
+
+
+def _check_min_ratio(*, ratio: float | None, minimum: float, current: float, baseline: float) -> bool:
+    if ratio is not None:
+        return ratio >= minimum
+    return current >= baseline
+
+
+def _build_regression_gate(
+    runs: Sequence[dict[str, Any]],
+    *,
+    baseline: str,
+    max_total_ratio: float | None,
+    max_run_total_ratios: Mapping[str, float],
+    max_phase_ratios: Mapping[str, float],
+    min_throughput_ratios: Mapping[str, float],
+    fail_on_any_repeat_regression: bool,
+) -> dict[str, Any] | None:
+    if (
+        max_total_ratio is None
+        and not max_run_total_ratios
+        and not max_phase_ratios
+        and not min_throughput_ratios
+    ):
+        return None
+    failures = []
+    checked_runs = [run for run in runs if run["name"] != baseline]
+    baseline_run = next((run for run in runs if run["name"] == baseline), None)
+    baseline_repeat_values = []
+    baseline_repeat_sources = []
+    if baseline_run is not None:
+        baseline_repeat_values = list(dict(baseline_run.get("repeat_total_seconds") or {}).get("values") or [])
+        baseline_repeat_sources = list(baseline_run.get("sources") or [])
+
+    for run in checked_runs:
+        name = run["name"]
+        run_repeat_values = list(dict(run.get("repeat_total_seconds") or {}).get("values") or [])
+        run_repeat_sources = list(run.get("sources") or [])
+        run_total_limit = max_run_total_ratios.get(name, max_total_ratio)
+        if run_total_limit is not None:
+            total = run["total_delta"]
+            if not _check_max_ratio(
+                ratio=total["ratio_to_baseline"],
+                current=total["seconds"],
+                baseline=total["baseline_seconds"],
+                maximum=run_total_limit,
+            ):
+                failures.append({
+                    "run": name,
+                    "metric": "total_seconds",
+                    "limit_type": "max_ratio_to_baseline",
+                    "limit": run_total_limit,
+                    "value": total["ratio_to_baseline"],
+                    "seconds": total["seconds"],
+                    "baseline_seconds": total["baseline_seconds"],
+                })
+            if fail_on_any_repeat_regression and "repeat_total_ratio_to_baseline" in run:
+                repeat_ratio = run["repeat_total_ratio_to_baseline"]
+                if not repeat_ratio.get("paired", False):
+                    failures.append({
+                        "run": name,
+                        "metric": "repeat_total_seconds",
+                        "limit_type": "max_ratio_to_baseline",
+                        "limit": run_total_limit,
+                        "value": None,
+                        "reason": repeat_ratio.get("reason", "paired repeat ratios unavailable"),
+                    })
+                for repeat_index, ratio in enumerate(repeat_ratio.get("values", ()), start=1):
+                    if ratio is None or not _check_max_ratio(
+                        ratio=float(ratio),
+                        current=float("inf"),
+                        baseline=1.0,
+                        maximum=run_total_limit,
+                    ):
+                        failure = {
+                            "run": name,
+                            "metric": "repeat_total_seconds",
+                            "repeat_index": repeat_index,
+                            "limit_type": "max_ratio_to_baseline",
+                            "limit": run_total_limit,
+                            "value": ratio,
+                        }
+                        value_index = repeat_index - 1
+                        if value_index < len(run_repeat_values):
+                            failure["seconds"] = run_repeat_values[value_index]
+                        if value_index < len(baseline_repeat_values):
+                            failure["baseline_seconds"] = baseline_repeat_values[value_index]
+                        if value_index < len(run_repeat_sources):
+                            failure["source"] = run_repeat_sources[value_index]
+                        if value_index < len(baseline_repeat_sources):
+                            failure["baseline_source"] = baseline_repeat_sources[value_index]
+                        failures.append(failure)
+
+        for phase_name, limit in max_phase_ratios.items():
+            phase = run["phase_deltas"].get(phase_name)
+            if phase is None:
+                failures.append({
+                    "run": name,
+                    "metric": f"phase:{phase_name}",
+                    "limit_type": "max_ratio_to_baseline",
+                    "limit": limit,
+                    "value": None,
+                    "reason": "phase missing from comparison",
+                })
+                continue
+            if not _check_max_ratio(
+                ratio=phase["ratio_to_baseline"],
+                current=phase["seconds"],
+                baseline=phase["baseline_seconds"],
+                maximum=limit,
+            ):
+                failures.append({
+                    "run": name,
+                    "metric": f"phase:{phase_name}",
+                    "limit_type": "max_ratio_to_baseline",
+                    "limit": limit,
+                    "value": phase["ratio_to_baseline"],
+                    "seconds": phase["seconds"],
+                    "baseline_seconds": phase["baseline_seconds"],
+                })
+
+        for metric_name, limit in min_throughput_ratios.items():
+            throughput = run["throughput_deltas"].get(metric_name)
+            if throughput is None:
+                failures.append({
+                    "run": name,
+                    "metric": f"throughput:{metric_name}",
+                    "limit_type": "min_ratio_to_baseline",
+                    "limit": limit,
+                    "value": None,
+                    "reason": "throughput metric missing from comparison",
+                })
+                continue
+            if not _check_min_ratio(
+                ratio=throughput["ratio_to_baseline"],
+                minimum=limit,
+                current=throughput["value"],
+                baseline=throughput["baseline_value"],
+            ):
+                failures.append({
+                    "run": name,
+                    "metric": f"throughput:{metric_name}",
+                    "limit_type": "min_ratio_to_baseline",
+                    "limit": limit,
+                    "value": throughput["ratio_to_baseline"],
+                    "throughput": throughput["value"],
+                    "baseline_throughput": throughput["baseline_value"],
+                })
+
+    return {
+        "enabled": True,
+        "passed": not failures,
+        "checked_runs": [run["name"] for run in checked_runs],
+        "config": {
+            "max_total_ratio": max_total_ratio,
+            "max_run_total_ratios": dict(max_run_total_ratios),
+            "max_phase_ratios": dict(max_phase_ratios),
+            "min_throughput_ratios": dict(min_throughput_ratios),
+            "fail_on_any_repeat_regression": bool(fail_on_any_repeat_regression),
+        },
+        "failures": failures,
+    }
+
+
+def _validate_non_negative_thresholds(
+    *,
+    max_total_ratio: float | None,
+    max_run_total_ratios: Mapping[str, float],
+    max_phase_ratios: Mapping[str, float],
+    min_throughput_ratios: Mapping[str, float],
+) -> None:
+    if max_total_ratio is not None and max_total_ratio < 0:
+        raise ValueError("max_total_ratio must be non-negative.")
+    for name, value in max_run_total_ratios.items():
+        if value < 0:
+            raise ValueError(f"max_run_total_ratios[{name!r}] must be non-negative.")
+    for name, value in max_phase_ratios.items():
+        if value < 0:
+            raise ValueError(f"max_phase_ratios[{name!r}] must be non-negative.")
+    for name, value in min_throughput_ratios.items():
+        if value < 0:
+            raise ValueError(f"min_throughput_ratios[{name!r}] must be non-negative.")
+
+
+def build_profile_comparison(
+    profiles: Sequence[tuple[str, Path]],
+    *,
+    baseline: str | None = None,
+    notes: Sequence[str] = (),
+    aggregate_repeats: str | None = None,
+    max_total_ratio: float | None = None,
+    max_run_total_ratios: Mapping[str, float] | None = None,
+    max_phase_ratios: Mapping[str, float] | None = None,
+    min_throughput_ratios: Mapping[str, float] | None = None,
+    fail_on_any_repeat_regression: bool = False,
+) -> dict[str, Any]:
+    if not profiles:
+        raise ValueError("at least one profile is required.")
+    if aggregate_repeats is not None and aggregate_repeats != "median":
+        raise ValueError("aggregate_repeats must be 'median' when set.")
+    max_run_total_ratios = dict(max_run_total_ratios or {})
+    max_phase_ratios = dict(max_phase_ratios or {})
+    min_throughput_ratios = dict(min_throughput_ratios or {})
+    _validate_non_negative_thresholds(
+        max_total_ratio=max_total_ratio,
+        max_run_total_ratios=max_run_total_ratios,
+        max_phase_ratios=max_phase_ratios,
+        min_throughput_ratios=min_throughput_ratios,
+    )
+    loaded_by_name: dict[str, list[dict[str, Any]]] = {}
+    ordered_names = []
+    for name, path in profiles:
+        if aggregate_repeats is None and name in loaded_by_name:
+            raise ValueError(f"profile name {name!r} is duplicated.")
+        if name not in loaded_by_name:
+            ordered_names.append(name)
+            loaded_by_name[name] = []
+        profile = _load_profile(path)
+        loaded_by_name[name].append({
+            "name": name,
+            "source": str(path),
+            **profile,
+        })
+    loaded = [
+        _aggregate_profile_repeats(name, loaded_by_name[name])
+        if aggregate_repeats == "median"
+        else loaded_by_name[name][0]
+        for name in ordered_names
+    ]
+
+    baseline_name = baseline or loaded[0]["name"]
+    baseline_profile = next((item for item in loaded if item["name"] == baseline_name), None)
+    if baseline_profile is None:
+        raise ValueError(f"baseline profile {baseline_name!r} was not provided.")
+
+    baseline_total = float(baseline_profile["total_seconds"])
+    baseline_phases = baseline_profile["phases"]
+    baseline_groups = _group_seconds(baseline_profile["summary"])
+    baseline_throughput = _throughput_values(baseline_profile["summary"])
+    baseline_cache_efficiency = _cache_efficiency_values(baseline_profile["summary"])
+
+    runs = []
+    for item in loaded:
+        total_seconds = float(item["total_seconds"])
+        summary = item["summary"]
+        cache_efficiency = _cache_efficiency_values(summary)
+        run = {
+            "name": item["name"],
+            "source": item["source"],
+            "total_seconds": total_seconds,
+            "bottleneck": summary.get("bottleneck"),
+            "total_delta": _delta(total_seconds, baseline_total),
+            "phase_deltas": _phase_deltas(item["phases"], baseline_phases),
+            "group_deltas": _phase_deltas(_group_seconds(summary), baseline_groups),
+            "throughput_deltas": _throughput_deltas(_throughput_values(summary), baseline_throughput),
+            "cache_efficiency": cache_efficiency,
+            "cache_efficiency_deltas": _numeric_metric_deltas(cache_efficiency, baseline_cache_efficiency),
+            "top_phases": summary.get("top_phases", []),
+        }
+        if "repeat_count" in item:
+            run["repeat_count"] = item["repeat_count"]
+            run["sources"] = item["sources"]
+            run["repeat_total_seconds"] = item["repeat_total_seconds"]
+            paired_ratio = _paired_repeat_total_ratio(item, baseline_profile)
+            if paired_ratio is not None:
+                run["repeat_total_ratio_to_baseline"] = paired_ratio
+        runs.append(run)
+
+    fastest = min(runs, key=lambda run: float(run["total_seconds"]))
+    slowest = max(runs, key=lambda run: float(run["total_seconds"]))
+    payload = {
+        "baseline": baseline_name,
+        "n_profiles": len(runs),
+        "fastest": {
+            "name": fastest["name"],
+            "total_seconds": fastest["total_seconds"],
+            "speedup_vs_baseline": fastest["total_delta"]["speedup_vs_baseline"],
+        },
+        "slowest": {
+            "name": slowest["name"],
+            "total_seconds": slowest["total_seconds"],
+            "speedup_vs_baseline": slowest["total_delta"]["speedup_vs_baseline"],
+        },
+        "runs": runs,
+        "notes": list(notes),
+    }
+    if aggregate_repeats is not None:
+        payload["repeat_aggregation"] = aggregate_repeats
+    gate = _build_regression_gate(
+        runs,
+        baseline=baseline_name,
+        max_total_ratio=max_total_ratio,
+        max_run_total_ratios=max_run_total_ratios,
+        max_phase_ratios=max_phase_ratios,
+        min_throughput_ratios=min_throughput_ratios,
+        fail_on_any_repeat_regression=bool(fail_on_any_repeat_regression),
+    )
+    if gate is not None:
+        payload["regression_gate"] = gate
+    return payload
+
+
+def run(args: argparse.Namespace) -> dict[str, Any]:
+    profiles = [_parse_named_path(value) for value in args.profile]
+    max_run_total_ratios = dict(_parse_named_float(value, flag="--max-run-total-ratio")
+                                for value in args.max_run_total_ratio)
+    max_phase_ratios = dict(_parse_named_float(value, flag="--max-phase-ratio")
+                            for value in args.max_phase_ratio)
+    min_throughput_ratios = dict(_parse_named_float(value, flag="--min-throughput-ratio")
+                                 for value in args.min_throughput_ratio)
+    payload = build_profile_comparison(
+        profiles,
+        baseline=args.baseline,
+        notes=args.note,
+        aggregate_repeats=args.aggregate_repeats,
+        max_total_ratio=args.max_total_ratio,
+        max_run_total_ratios=max_run_total_ratios,
+        max_phase_ratios=max_phase_ratios,
+        min_throughput_ratios=min_throughput_ratios,
+        fail_on_any_repeat_regression=bool(args.fail_on_any_repeat_regression),
+    )
+    if args.json:
+        output_path = Path(args.json)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2)
+        print(f"Wrote profile comparison to {output_path}")
+    return payload
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Compare EigenTruth benchmark profile payloads")
+    parser.add_argument("--profile", action="append", required=True,
+                        help="profile JSON path, optionally named as name=path; repeatable")
+    parser.add_argument("--baseline", default=None,
+                        help="profile name to use as the baseline; defaults to the first --profile")
+    parser.add_argument("--note", action="append", default=[],
+                        help="optional note to include in the output report; repeatable")
+    parser.add_argument("--aggregate-repeats", choices=("median",), default=None,
+                        help="allow repeated profile names and aggregate each run by median timing")
+    parser.add_argument("--json", default=None, help="optional path to write JSON report")
+    parser.add_argument("--max-total-ratio", type=float, default=None,
+                        help="fail when any non-baseline run exceeds this total-time ratio")
+    parser.add_argument("--max-run-total-ratio", action="append", default=[],
+                        help="fail when one named run exceeds this total-time ratio, formatted as run=ratio; "
+                             "overrides --max-total-ratio for that run")
+    parser.add_argument("--max-phase-ratio", action="append", default=[],
+                        help="fail when a phase exceeds this ratio, formatted as phase=ratio; repeatable")
+    parser.add_argument("--min-throughput-ratio", action="append", default=[],
+                        help="fail when throughput drops below this ratio, formatted as metric=ratio; repeatable")
+    parser.add_argument("--fail-on-any-repeat-regression", action="store_true",
+                        help="with --aggregate-repeats, fail the gate if any paired repeat exceeds its ratio limit")
+    args = parser.parse_args()
+    if args.max_total_ratio is not None and args.max_total_ratio < 0:
+        raise ValueError("--max-total-ratio must be non-negative.")
+    payload = run(args)
+    for item in payload["runs"]:
+        delta = item["total_delta"]
+        speedup = delta["speedup_vs_baseline"]
+        print(
+            f"{item['name']}: total={item['total_seconds']:.3f}s "
+            f"delta={delta['delta_seconds']:+.3f}s "
+            f"speedup={speedup if speedup is not None else 'n/a'} "
+            f"bottleneck={item['bottleneck']}"
+        )
+    gate = payload.get("regression_gate")
+    if gate is not None:
+        status = "passed" if gate["passed"] else "failed"
+        print(f"regression_gate={status}")
+        if not gate["passed"]:
+            raise SystemExit(1)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,78 @@
+{
+  "artifacts": {
+    "input_score_records.qwen05-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-qwen-smollm2-l80/qwen05-l80/scores.manifest.records.jsonl",
+      "sha256": "2a5ef4fe89528a557989cac73ef0049e02092e4034cca60f14d7d715c2fbd60a",
+      "size_bytes": 861209
+    },
+    "input_score_records.smollm2-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-qwen-smollm2-l80/smollm2-l80/scores.manifest.records.jsonl",
+      "sha256": "ca00ae6a2fa86fab0056d22e63b3f021047eb957ec7d7908195b288d3f27587f",
+      "size_bytes": 857544
+    },
+    "input_scores.qwen05-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-qwen-smollm2-l80/qwen05-l80/scores.manifest.json",
+      "sha256": "2dd8b2b555ce201828ab884d82cc8c8bc01155a254b79256e1ee9e8a1888c056",
+      "size_bytes": 3320
+    },
+    "input_scores.smollm2-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-qwen-smollm2-l80/smollm2-l80/scores.manifest.json",
+      "sha256": "a417279938bd6a153947ec43b39be0dc26206f0e0651aa85d8309310cfb14251",
+      "size_bytes": 3333
+    },
+    "qa_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa_l80_correct_answer_corpus.json",
+      "sha256": "c49ed9bb55c6bea83c1c1282f072ad05d5e86449f785f2559457fc29fd66a81c",
+      "size_bytes": 196938
+    },
+    "verifier_stability_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "verifier-stability-report.json",
+      "sha256": "101aa8cb130c024a42772477abdb8bc8c320c1e9e8d964a33c82b97e02853489",
+      "size_bytes": 96839
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "best_alpha": 0.1,
+    "runner": "eval_verifier_stability",
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "staged_verification": true,
+    "status": "complete"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 6,
+    "directory_count": 0,
+    "file_count": 6,
+    "missing_count": 0
+  }
+}

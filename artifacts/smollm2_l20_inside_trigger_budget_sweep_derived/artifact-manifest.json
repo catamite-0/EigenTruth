@@ -1,0 +1,107 @@
+{
+  "artifacts": {
+    "budgets.top_0p1.comparison_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "top_0p4/inside-sampling-profile-comparison.json",
+      "sha256": "b17bf79bf2c26a9f35c28bafc76adc5f6006564fdd229499e42218eb0af23b5d",
+      "size_bytes": 2593
+    },
+    "budgets.top_0p1.source_score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "top_0p4/scores-adaptive_selfcheck.json",
+      "sha256": "864ed2ebd17f4d9b11a4531340f7fb5b9aa3ccabd9bc3ca18bd13ae73d972ece",
+      "size_bytes": 73948
+    },
+    "budgets.top_0p25.comparison_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "top_0p4/inside-sampling-profile-comparison.json",
+      "sha256": "b17bf79bf2c26a9f35c28bafc76adc5f6006564fdd229499e42218eb0af23b5d",
+      "size_bytes": 2593
+    },
+    "budgets.top_0p25.source_score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "top_0p4/scores-adaptive_selfcheck.json",
+      "sha256": "864ed2ebd17f4d9b11a4531340f7fb5b9aa3ccabd9bc3ca18bd13ae73d972ece",
+      "size_bytes": 73948
+    },
+    "budgets.top_0p4.comparison_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "top_0p4/inside-sampling-profile-comparison.json",
+      "sha256": "b17bf79bf2c26a9f35c28bafc76adc5f6006564fdd229499e42218eb0af23b5d",
+      "size_bytes": 2593
+    },
+    "budgets.top_0p4.profile_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "top_0p4/artifact-manifest.json",
+      "sha256": "1a3d5a239a0d08793c15016c8cf1dd31e5ca9ea0748bc81ca07d79039488a0b1",
+      "size_bytes": 3737
+    },
+    "budgets.top_0p4.source_score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "top_0p4/scores-adaptive_selfcheck.json",
+      "sha256": "864ed2ebd17f4d9b11a4531340f7fb5b9aa3ccabd9bc3ca18bd13ae73d972ece",
+      "size_bytes": 73948
+    },
+    "sweep_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "inside-trigger-budget-sweep.json",
+      "sha256": "0a8bb401d76a90c32d38a71c2108aa1dae61bd7dbe7d0bfa38d63078223c6191",
+      "size_bytes": 11224
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "budgets": [
+      {
+        "kind": "top_fraction",
+        "value": 0.1
+      },
+      {
+        "kind": "top_fraction",
+        "value": 0.25
+      },
+      {
+        "kind": "top_fraction",
+        "value": 0.4
+      }
+    ],
+    "derive_from_max_budget": true,
+    "dry_run": false,
+    "dtype": "float32",
+    "eval_reps_cache_shard_size": 8,
+    "layer": -12,
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "offline": false,
+    "reference_report": "artifacts/smollm2_l20_inside_sampling/inside-sampling-profile-comparison.json",
+    "refresh_shared_caches": false,
+    "run_names": [
+      "adaptive_selfcheck"
+    ],
+    "runner": "run_inside_trigger_budget_sweep",
+    "shared_cache_dir": "artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/shared-caches",
+    "trigger_signal": "truth_proj"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 8,
+    "directory_count": 0,
+    "file_count": 8,
+    "missing_count": 0
+  }
+}

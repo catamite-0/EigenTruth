@@ -1,0 +1,92 @@
+{
+  "artifacts": {
+    "corpus.country-core.artifact_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "country-core/artifact-manifest.json",
+      "sha256": "b3aa153509bab318f7e8b1557f1e0889ddadbe6ff47ace07479420a4373deb0c",
+      "size_bytes": 3002
+    },
+    "corpus.country-core.source.1.wikidata-country-core-facts-source": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../wikidata-country-core-facts-external-corpus/wikidata-country-core-facts-source.jsonl",
+      "sha256": "4e542340473cf9582b85a86c59284852e3a5fb5650e9248a77b5c2e2464d7cd3",
+      "size_bytes": 388639
+    },
+    "corpus.country-core.workflow_summary": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "country-core/triple-extraction-workflow-summary.json",
+      "sha256": "3e1d584574f936751dd597d8c20bb3cc01f96b99a9af49d7c212e1ab5660c010",
+      "size_bytes": 69125
+    },
+    "corpus.organization-product.artifact_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "organization-product/artifact-manifest.json",
+      "sha256": "5d5dabc8e1d90c108f6ead87a8c97603c12edf0e6898a5fcc7f898b59c248fa9",
+      "size_bytes": 2955
+    },
+    "corpus.organization-product.source.1.wikidata-organization-product-source": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../wikidata-organization-product-core-facts/wikidata-organization-product-source.jsonl",
+      "sha256": "f4cd3dc8d01c7c4e5b11de0e1e38041e70827115cb02f4fdc1e4d1899a454f94",
+      "size_bytes": 9663
+    },
+    "corpus.organization-product.workflow_summary": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "organization-product/triple-extraction-workflow-summary.json",
+      "sha256": "461a57e2da39af3c040fc69655f19fc9cb2b7921c88ed7b3a0d173fd0a813337",
+      "size_bytes": 69798
+    },
+    "matrix_summary": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "triple-extraction-fixture-matrix.json",
+      "sha256": "a5e2dc75b0a483a915c9ee0754f07d4d7ecc6ffaf411125336f025ec8f27d9a3",
+      "size_bytes": 5818
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "distinct_predicate_count": 6,
+    "max_best_adversarial_false_positive_rate": 0.0,
+    "max_best_ambiguity_false_positive_rate": 0.0,
+    "max_best_metalinguistic_false_positive_rate": 0.0,
+    "max_best_non_assertive_false_positive_rate": 0.0,
+    "max_best_temporal_false_positive_rate": 0.0,
+    "mean_baseline_f1": 0.4000000000000001,
+    "mean_best_adversarial_false_positive_rate": 0.0,
+    "mean_best_ambiguity_false_positive_rate": 0.0,
+    "mean_best_f1": 1.0,
+    "mean_best_metalinguistic_false_positive_rate": 0.0,
+    "mean_best_non_assertive_false_positive_rate": 0.0,
+    "mean_best_predicate_confusion_f1": 1.0,
+    "mean_best_temporal_false_positive_rate": 0.0,
+    "mean_f1_lift": 0.5999999999999999,
+    "min_best_predicate_confusion_f1": 1.0,
+    "min_distinct_predicates": 6,
+    "n_corpora": 2,
+    "promoted_corpora": 2,
+    "promotes_cross_corpus_extractor": true,
+    "status": "promote",
+    "workflow": "triple_extraction_fixture_matrix"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 7,
+    "directory_count": 0,
+    "file_count": 7,
+    "missing_count": 0
+  }
+}

@@ -4,17 +4,19 @@ from __future__ import annotations
 
 import json
 import math
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Mapping, Optional, Sequence
+from typing import Any, Mapping, MutableMapping, Optional, Sequence
 
 import torch
 
 from eigentruth import __version__
 from eigentruth.calibration.artifacts import CalibrationArtifact, CalibrationScore, SteeringPolicyConfig
-from eigentruth.eval.conformal import directional_conformal_threshold, directional_trigger_rate
 from eigentruth.eval.metrics import roc_auc
+from eigentruth.eval.score_dump import ScoreDump, ScoreDumpLayerScores, load_score_dump_layer_scores
+from eigentruth.json_utils import strict_json_dumps
 
 ArrayLike = torch.Tensor | Sequence[float]
 
@@ -23,11 +25,55 @@ DEFAULT_SCORE_DIRECTIONS: dict[str, str] = {
     "maha": "higher",
     "truth_proj": "higher",
     "subspace_resid": "higher",
+    "resid_update_norm": "higher",
+    "resid_update_profile_area": "higher",
+    "resid_update_profile_peak": "higher",
+    "resid_update_profile_late_mass": "higher",
+    "resid_update_profile_concentration": "higher",
+    "prompt_answer_distance": "higher",
+    "prompt_answer_cosine_gap": "higher",
+    "answer_anchor_distance": "higher",
+    "answer_path_length": "higher",
+    "pathway_disagreement": "higher",
+    "attn_prompt_flow_loss": "higher",
+    "attn_answer_self_flow": "higher",
+    "attn_pathway_gap": "higher",
+    "attn_pathway_concentration": "higher",
     "disp_euclid": "higher",
     "disp_hse": "higher",
     "eigenscore": "higher",
     "inside_eigenscore": "higher",
+    "inside_semantic_entropy": "higher",
+    "inside_embedding_entropy": "higher",
+    "inside_semantic_energy": "higher",
+    "first_token_entropy": "higher",
     "nll_answer": "higher",
+    "answer_char_length": "higher",
+    "answer_token_count": "higher",
+    "claim_char_length": "higher",
+    "claim_token_count": "higher",
+    "question_answer_token_overlap": "lower",
+    "answer_negation_flag": "higher",
+    "answer_number_count": "higher",
+    "verifier_not_supported": "higher",
+    "verifier_refuted": "higher",
+    "verifier_insufficient": "higher",
+    "verifier_refute_confidence": "higher",
+    "verifier_uncertainty": "higher",
+    "verifier_no_retrieval_hit": "higher",
+    "selfcheck_support_rate": "lower",
+    "selfcheck_refute_rate": "higher",
+    "selfcheck_disagreement": "higher",
+    "selfcheck_insufficient": "higher",
+    "selfcheck_not_applicable": "higher",
+    "selfcheck_sample_count": "lower",
+    "selfcheck_best_overlap": "lower",
+    "world_model_disagreement": "higher",
+    "world_model_agreement_gap": "higher",
+    "world_model_low_agreement": "higher",
+    "world_model_conflict": "higher",
+    "world_model_conflict_delta": "higher",
+    "world_model_trace_gap": "higher",
 }
 
 
@@ -49,8 +95,15 @@ class SweepScoreResult:
     def __post_init__(self) -> None:
         if self.direction not in {"higher", "lower"}:
             raise ValueError("direction must be 'higher' or 'lower'.")
-        if not (0.0 < self.conformal_alpha < 1.0):
+        if isinstance(self.threshold, bool):
+            raise ValueError("threshold must be numeric and must not be bool.")
+        object.__setattr__(self, "threshold", float(self.threshold))
+        if isinstance(self.conformal_alpha, bool):
             raise ValueError("conformal_alpha must be in (0, 1).")
+        conformal_alpha = float(self.conformal_alpha)
+        if not (0.0 < conformal_alpha < 1.0):
+            raise ValueError("conformal_alpha must be in (0, 1).")
+        object.__setattr__(self, "conformal_alpha", conformal_alpha)
 
     def score_config(self) -> CalibrationScore:
         """Return this sweep result as a calibration score config."""
@@ -83,8 +136,8 @@ class SweepScoreResult:
             layer=int(data["layer"]),
             score_name=str(data["score_name"]),
             direction=str(data.get("direction", "higher")),
-            threshold=float(data["threshold"]),
-            conformal_alpha=float(data["conformal_alpha"]),
+            threshold=data["threshold"],
+            conformal_alpha=data["conformal_alpha"],
             auroc=float(data["auroc"]),
             false_alarm=float(data["false_alarm"]),
             detection=float(data["detection"]),
@@ -220,7 +273,7 @@ class LayerScoreSweepReport:
 
     def save_json(self, path: str | Path) -> None:
         """Save the sweep report as UTF-8 JSON."""
-        Path(path).write_text(json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        Path(path).write_text(strict_json_dumps(self.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     @classmethod
     def load_json(cls, path: str | Path) -> "LayerScoreSweepReport":
@@ -234,12 +287,19 @@ class LayerScoreSweepCalibrator:
 
     alpha: float = 0.1
     best_by: str = "auroc"
+    max_workers: int = 1
 
     def __post_init__(self) -> None:
         if not (0.0 < self.alpha < 1.0):
             raise ValueError("alpha must be in (0, 1).")
         if self.best_by not in {"auroc", "detection"}:
             raise ValueError("best_by must be 'auroc' or 'detection'.")
+        if (
+            isinstance(self.max_workers, bool)
+            or not isinstance(self.max_workers, int)
+            or self.max_workers < 1
+        ):
+            raise ValueError("max_workers must be a positive integer.")
 
     def calibrate_from_file(
         self,
@@ -253,17 +313,81 @@ class LayerScoreSweepCalibrator:
         commit_sha: Optional[str] = None,
         eigentruth_version: str = __version__,
         metadata: Optional[Mapping[str, Any]] = None,
+        cache: MutableMapping[str, Any] | None = None,
     ) -> LayerScoreSweepReport:
         """Load a score dump and build a layer/score sweep report."""
         dump_path = Path(path)
-        dump = json.loads(dump_path.read_text(encoding="utf-8"))
-        return self.calibrate_from_dump(
-            dump,
+        layer_dump = load_score_dump_layer_scores(dump_path, signals=signals, cache=cache)
+        return self.calibrate_from_layer_scores(
+            layer_dump,
             signals=signals,
             directions=directions,
             model_id=model_id,
             model_revision=model_revision,
             scores_path=str(dump_path),
+            created_at=created_at,
+            commit_sha=commit_sha,
+            eigentruth_version=eigentruth_version,
+            metadata=metadata,
+        )
+
+    def calibrate_from_layer_scores(
+        self,
+        layer_scores: ScoreDumpLayerScores,
+        *,
+        signals: Optional[Sequence[str]] = None,
+        directions: Optional[Mapping[str, str]] = None,
+        model_id: Optional[str] = None,
+        model_revision: Optional[str] = None,
+        scores_path: Optional[str] = None,
+        created_at: Optional[str] = None,
+        commit_sha: Optional[str] = None,
+        eigentruth_version: str = __version__,
+        metadata: Optional[Mapping[str, Any]] = None,
+    ) -> LayerScoreSweepReport:
+        """Build a layer/score sweep report from preloaded layer-score columns."""
+        return self._calibrate_layer_scores(
+            labels=torch.as_tensor(layer_scores.labels, dtype=torch.float64),
+            config=dict(layer_scores.config),
+            layer_scores=layer_scores.layer_scores,
+            signals=signals,
+            directions=directions,
+            model_id=model_id,
+            model_revision=model_revision,
+            scores_path=scores_path,
+            created_at=created_at,
+            commit_sha=commit_sha,
+            eigentruth_version=eigentruth_version,
+            metadata=metadata,
+        )
+
+    def calibrate_from_score_dump(
+        self,
+        score_dump: ScoreDump,
+        *,
+        signals: Optional[Sequence[str]] = None,
+        directions: Optional[Mapping[str, str]] = None,
+        model_id: Optional[str] = None,
+        model_revision: Optional[str] = None,
+        scores_path: Optional[str] = None,
+        created_at: Optional[str] = None,
+        commit_sha: Optional[str] = None,
+        eigentruth_version: str = __version__,
+        metadata: Optional[Mapping[str, Any]] = None,
+    ) -> LayerScoreSweepReport:
+        """Build a layer/score sweep report from a validated ``ScoreDump``."""
+        labels = torch.as_tensor(score_dump.labels, dtype=torch.float64)
+        config = dict(score_dump.config)
+        layer_scores = _collect_layer_scores_from_score_dump(score_dump)
+        return self._calibrate_layer_scores(
+            labels=labels,
+            config=config,
+            layer_scores=layer_scores,
+            signals=signals,
+            directions=directions,
+            model_id=model_id,
+            model_revision=model_revision,
+            scores_path=scores_path,
             created_at=created_at,
             commit_sha=commit_sha,
             eigentruth_version=eigentruth_version,
@@ -285,33 +409,81 @@ class LayerScoreSweepCalibrator:
         metadata: Optional[Mapping[str, Any]] = None,
     ) -> LayerScoreSweepReport:
         """Build a layer/score sweep report from an ``eval_truthfulqa`` score dump."""
-        labels = torch.as_tensor(dump["labels"], dtype=torch.int64)
-        config = dict(dump.get("config", {}))
-        layer_scores = _collect_layer_scores(dump)
+        score_dump = ScoreDump.from_mapping(dump)
+        labels = torch.as_tensor(score_dump.labels, dtype=torch.float64)
+        config = dict(score_dump.config)
+        layer_scores = _collect_layer_scores_from_score_dump(score_dump)
+        return self._calibrate_layer_scores(
+            labels=labels,
+            config=config,
+            layer_scores=layer_scores,
+            signals=signals,
+            directions=directions,
+            model_id=model_id,
+            model_revision=model_revision,
+            scores_path=scores_path,
+            created_at=created_at,
+            commit_sha=commit_sha,
+            eigentruth_version=eigentruth_version,
+            metadata=metadata,
+        )
+
+    def _calibrate_layer_scores(
+        self,
+        *,
+        labels: torch.Tensor,
+        config: Mapping[str, Any],
+        layer_scores: Mapping[int, Mapping[str, Sequence[float]]],
+        signals: Optional[Sequence[str]],
+        directions: Optional[Mapping[str, str]],
+        model_id: Optional[str],
+        model_revision: Optional[str],
+        scores_path: Optional[str],
+        created_at: Optional[str],
+        commit_sha: Optional[str],
+        eigentruth_version: str,
+        metadata: Optional[Mapping[str, Any]],
+    ) -> LayerScoreSweepReport:
+        """Build a layer/score sweep report from validated score families."""
         selected = set(signals) if signals is not None else _all_score_names(layer_scores)
-        results = []
+        labels_t, true_mask, false_mask = _prepare_labels(labels)
+        jobs: list[_SweepScoreJob] = []
         for layer in sorted(layer_scores):
-            score_results = []
             for score_name in sorted(layer_scores[layer]):
                 if score_name not in selected:
                     continue
                 direction = _score_direction(score_name, directions)
-                score_results.append(
-                    _calibrate_score(
+                scores_t = _prepare_sweep_score_tensor(layer_scores[layer][score_name], score_name=score_name)
+                jobs.append(
+                    _SweepScoreJob(
                         layer=layer,
                         score_name=score_name,
-                        scores=layer_scores[layer][score_name],
-                        labels=labels,
+                        scores=scores_t,
+                        labels=labels_t,
+                        true_mask=true_mask,
+                        false_mask=false_mask,
                         alpha=self.alpha,
                         direction=direction,
                     )
                 )
-            if score_results:
-                results.append(LayerScoreSweepResult(layer=layer, scores=tuple(score_results)))
 
-        if not results:
+        score_results = _calibrate_score_jobs(jobs, max_workers=int(self.max_workers))
+        if not score_results:
             raise ValueError("no matching layer/score results were found in the score dump.")
 
+        results_by_layer: dict[int, list[SweepScoreResult]] = {}
+        for result in score_results:
+            results_by_layer.setdefault(result.layer, []).append(result)
+        results = [
+            LayerScoreSweepResult(layer=layer, scores=tuple(results_by_layer[layer]))
+            for layer in sorted(results_by_layer)
+        ]
+        report_metadata = (
+            dict(metadata)
+            if metadata is not None
+            else {"source": "eval_truthfulqa.py", "config": config}
+        )
+        report_metadata["sweep_max_workers"] = int(self.max_workers)
         return LayerScoreSweepReport(
             model_id=model_id or str(config.get("model", "unknown")),
             model_revision=model_revision,
@@ -322,8 +494,29 @@ class LayerScoreSweepCalibrator:
             scores_path=scores_path,
             created_at=created_at or datetime.now(timezone.utc).isoformat(),
             commit_sha=commit_sha,
-            metadata=metadata or {"source": "eval_truthfulqa.py", "config": config},
+            metadata=report_metadata,
         )
+
+
+@dataclass(frozen=True)
+class _SweepScoreJob:
+    layer: int
+    score_name: str
+    scores: torch.Tensor
+    labels: torch.Tensor
+    true_mask: torch.Tensor
+    false_mask: torch.Tensor
+    alpha: float
+    direction: str
+
+
+def _collect_layer_scores_from_score_dump(score_dump: ScoreDump) -> dict[int, dict[str, Sequence[float]]]:
+    primary_layer = int(score_dump.config.get("layer", 0))
+    layer_scores: dict[int, dict[str, Sequence[float]]] = {primary_layer: dict(score_dump.scores)}
+    for layer_key, scores in score_dump.sweep_scores.items():
+        layer = int(layer_key)
+        layer_scores.setdefault(layer, {}).update(dict(scores))
+    return layer_scores
 
 
 def _collect_layer_scores(dump: Mapping[str, Any]) -> dict[int, dict[str, Sequence[float]]]:
@@ -356,18 +549,42 @@ def _calibrate_score(
     alpha: float,
     direction: str,
 ) -> SweepScoreResult:
-    scores_t = torch.as_tensor(scores, dtype=torch.float64).flatten()
-    if scores_t.numel() != labels.numel():
-        raise ValueError(f"score '{score_name}' has {scores_t.numel()} values but labels has {labels.numel()}.")
-    true_scores = scores_t[labels == 0]
-    false_scores = scores_t[labels == 1]
+    labels_t, true_mask, false_mask = _prepare_labels(labels)
+    scores_t = _prepare_sweep_score_tensor(scores, score_name=score_name)
+    return _calibrate_prepared_score(
+        layer=layer,
+        score_name=score_name,
+        scores=scores_t,
+        labels=labels_t,
+        true_mask=true_mask,
+        false_mask=false_mask,
+        alpha=alpha,
+        direction=direction,
+    )
+
+
+def _calibrate_prepared_score(
+    *,
+    layer: int,
+    score_name: str,
+    scores: torch.Tensor,
+    labels: torch.Tensor,
+    true_mask: torch.Tensor,
+    false_mask: torch.Tensor,
+    alpha: float,
+    direction: str,
+) -> SweepScoreResult:
+    if scores.numel() != labels.numel():
+        raise ValueError(f"score '{score_name}' has {scores.numel()} values but labels has {labels.numel()}.")
+    true_scores = scores[true_mask]
+    false_scores = scores[false_mask]
     if true_scores.numel() == 0 or false_scores.numel() == 0:
         raise ValueError("sweep calibration requires at least one true and one false labeled score.")
 
-    threshold = directional_conformal_threshold(true_scores, alpha, direction)
-    anomaly_scores = _anomaly_scores(scores_t, direction)
-    false_alarm = directional_trigger_rate(true_scores, threshold, direction)
-    detection = directional_trigger_rate(false_scores, threshold, direction)
+    threshold = _directional_conformal_threshold_from_tensor(true_scores, alpha, direction)
+    anomaly_scores = _anomaly_scores(scores, direction)
+    false_alarm = _directional_trigger_rate_from_tensor(true_scores, threshold, direction)
+    detection = _directional_trigger_rate_from_tensor(false_scores, threshold, direction)
     return SweepScoreResult(
         layer=layer,
         score_name=score_name,
@@ -381,6 +598,87 @@ def _calibrate_score(
         n_false=int(false_scores.numel()),
     )
 
+
+def _calibrate_score_jobs(
+    jobs: Sequence[_SweepScoreJob],
+    *,
+    max_workers: int,
+) -> tuple[SweepScoreResult, ...]:
+    if not jobs:
+        return ()
+    if max_workers <= 1 or len(jobs) == 1:
+        return tuple(_calibrate_score_job(job) for job in jobs)
+    with ThreadPoolExecutor(max_workers=min(max_workers, len(jobs))) as executor:
+        return tuple(executor.map(_calibrate_score_job, jobs))
+
+
+def _calibrate_score_job(job: _SweepScoreJob) -> SweepScoreResult:
+    return _calibrate_prepared_score(
+        layer=job.layer,
+        score_name=job.score_name,
+        scores=job.scores,
+        labels=job.labels,
+        true_mask=job.true_mask,
+        false_mask=job.false_mask,
+        alpha=job.alpha,
+        direction=job.direction,
+    )
+
+
+def _prepare_labels(labels: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    raw_labels = torch.as_tensor(labels, dtype=torch.float64).flatten()
+    if not torch.isfinite(raw_labels).all():
+        raise ValueError("labels must contain only finite values.")
+    if not torch.logical_or(raw_labels == 0, raw_labels == 1).all():
+        raise ValueError("labels must be binary values in {0, 1}.")
+    labels_t = raw_labels.to(dtype=torch.int64)
+    true_mask = labels_t == 0
+    false_mask = labels_t == 1
+    return labels_t, true_mask, false_mask
+
+
+def _prepare_sweep_score_tensor(scores: ArrayLike, *, score_name: str) -> torch.Tensor:
+    scores_t = torch.as_tensor(scores, dtype=torch.float64).flatten()
+    if not torch.isfinite(scores_t).all():
+        raise ValueError(f"score '{score_name}' must contain only finite values.")
+    return scores_t
+
+
+def _directional_conformal_threshold_from_tensor(
+    true_scores: torch.Tensor,
+    alpha: float,
+    direction: str,
+) -> float:
+    if direction not in {"higher", "lower"}:
+        raise ValueError("direction must be 'higher' or 'lower'.")
+    if not (0.0 < alpha < 1.0):
+        raise ValueError(f"alpha must be in (0, 1), got {alpha}.")
+    n = true_scores.numel()
+    if n == 0:
+        raise ValueError("calibration scores must be non-empty.")
+    rank = math.ceil((n + 1) * (1.0 - alpha))
+    if rank > n:
+        threshold = float("inf")
+    else:
+        oriented = true_scores if direction == "higher" else -true_scores
+        threshold = float(torch.kthvalue(oriented, rank).values.item())
+    return threshold if direction == "higher" else -threshold
+
+
+def _directional_trigger_rate_from_tensor(
+    scores: torch.Tensor,
+    threshold: float,
+    direction: str,
+) -> float:
+    if direction not in {"higher", "lower"}:
+        raise ValueError("direction must be 'higher' or 'lower'.")
+    if math.isnan(float(threshold)):
+        raise ValueError("threshold must not be NaN.")
+    if scores.numel() == 0:
+        return 0.0
+    if direction == "higher":
+        return float((scores > threshold).double().mean().item())
+    return float((scores < threshold).double().mean().item())
 
 
 def _anomaly_scores(scores: torch.Tensor, direction: str) -> torch.Tensor:

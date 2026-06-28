@@ -1,0 +1,52 @@
+{
+  "artifacts": {
+    "product_traces": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "product-traces.jsonl",
+      "sha256": "876e2ea505701cff59efb3fcb451df55d31e3de6f3414ffac2d1d6ca2b8d7d0c",
+      "size_bytes": 13665
+    },
+    "question_property_correction_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "question-property-correction-corpus.json",
+      "sha256": "c7461578b1b9a6702121081897030d7394a5a73c6b1964de920a1969b6aed548",
+      "size_bytes": 2401
+    },
+    "question_property_correction_handoff": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "question-property-correction-handoff.json",
+      "sha256": "ddbcb80e4b4059b3f90ea9cd5d32e9260cfb593a256b95c52a4ff8f2197e24b8",
+      "size_bytes": 1835
+    },
+    "question_property_mapping": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-blind-spot-question-property-mapping/blind-spot-question-property-mapping.json",
+      "sha256": "3e4e2cd24569549a4598ce045b7934fc37ce117f32eb4c7cd3ee16caa8cae751",
+      "size_bytes": 303829
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "correction_candidate_count": 1,
+    "evidence": "smollm2_l80_question_property_product_trace_handoff",
+    "refuted_count": 1,
+    "status": "promote",
+    "trace_count": 1,
+    "workflow": "question_property_correction_handoff"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

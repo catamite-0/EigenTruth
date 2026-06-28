@@ -1,0 +1,55 @@
+{
+  "artifacts": {
+    "best_calibration_artifact": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "best-calibration.json",
+      "sha256": "1994cd7e144d7a5379a924fea36a820896a272d35d3e2653b408a16c9a38eb0a",
+      "size_bytes": 888
+    },
+    "conformal_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "conformal-report.json",
+      "sha256": "19ce1849751a6ef6d418140b81022bbb3214fbb2ae44e58186bd965d90d35ebd",
+      "size_bytes": 28933
+    },
+    "input_scores": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "scores.manifest.json",
+      "sha256": "cce211d3e6f80e3a32c3c59f65905bbdf1ccba7f7cb0ba1668441ca91d3cbb1e",
+      "size_bytes": 3246
+    },
+    "sweep_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "sweep-report.json",
+      "sha256": "701024f420f27bfedd99d1d5a663d30ac22ce3fae65753fece34b924a69e12d4",
+      "size_bytes": 12367
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "direction": "higher",
+    "has_abstention_comparison_report": false,
+    "has_abstention_release_gate": false,
+    "has_abstention_report": false,
+    "has_adaptive_report": false,
+    "has_sweep_report": true,
+    "runner": "eval_conformal",
+    "signal": "maha_last",
+    "verdict": "ACCEPT"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

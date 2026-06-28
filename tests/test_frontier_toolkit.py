@@ -1,33 +1,128 @@
 """Tests for the frontier-toolkit MVP modules."""
 
+import json
 import math
+import sqlite3
+import time
 
 import pytest
 import torch
 
-from eigentruth.adapters import InMemoryRetriever, InMemoryWorldModelAdapter, RetrievalActionExecutor
+from eigentruth.adapters import (
+    CachedRetriever,
+    CachedStateSource,
+    CalculatorVerifier,
+    EnsembleWorldModelAdapter,
+    HTTPJSONRetriever,
+    InMemoryRetriever,
+    InMemoryWorldModelAdapter,
+    ProvenanceFilteredRetriever,
+    QuestionAnswerFact,
+    QuestionAnswerVerifier,
+    RetrievalActionExecutor,
+    RetrievalQuery,
+    RuleBasedWorldModelAdapter,
+    SQLiteFTSRetriever,
+    SQLiteStateQuery,
+    SQLiteStateSource,
+    StateCheck,
+    StateTransitionCheck,
+    StateTransitionVerifier,
+    StructuredFact,
+    StructuredFactVerifier,
+    StructuredStateVerifier,
+    ToolOutputMapping,
+    ToolOutputStateSource,
+    WorldModelPrediction,
+    WorldModelReference,
+    WorldModelRule,
+)
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
 from eigentruth.control import (
+    RUNTIME_PROFILE_NAMES,
+    RUNTIME_PROFILES,
+    ActionExecutionPolicy,
     ActionExecutionStatus,
     ActionExecutorRegistry,
     ActionRequest,
+    ActionResult,
     ControlAction,
     ControlPolicyConfig,
     DefaultCorrectionPolicy,
     DryRunActionExecutor,
+    InMemoryActionExecutionLedger,
+    ParticipationGateConfig,
+    PlanAwareCorrectionPolicy,
+    PolicyGuardedActionExecutor,
+    PreGenerationRiskAssessment,
+    PreGenerationRiskPolicy,
     RiskController,
     RiskDecision,
     RiskLevel,
+    RuntimeProfile,
+    RuntimeProfileSelection,
+    RuntimeProfileSelectorPolicy,
+    SoftPreGenerationRiskConfig,
+    SoftPreGenerationRiskEstimate,
+    TimeoutActionExecutor,
+    get_runtime_profile,
+    select_pre_generation_profile,
+    select_runtime_profile,
 )
 from eigentruth.core import TruthSubspace
+from eigentruth.eval.conformal import (
+    conformal_abstention_comparison_report,
+    conformal_abstention_report,
+)
 from eigentruth.verify import (
+    CachedVerifier,
+    CitationRecord,
+    CitationSearchQueryPlan,
+    CitationVerifier,
+    Claim,
+    ClaimDependency,
+    ClaimTriple,
+    ClaimVerificationPlan,
+    CompositeTripleExtractor,
+    CompositeVerifier,
+    CounterfactualProbe,
+    CounterfactualProbeGenerator,
+    CounterfactualVerificationAuditor,
     EvidenceDocument,
+    EvidenceQualityPolicy,
     GroundednessVerifier,
     InMemoryVerifier,
+    JsonTraceCache,
+    LookupTripleExtractor,
+    RegexTripleExtractor,
+    RegexTriplePattern,
+    RoutedVerifier,
+    RuleBasedTripleExtractor,
+    SelfConsistencyVerifier,
+    SourceFamilyPlan,
+    TripleEvidenceVerifier,
+    TripleSlotEvidence,
     VerificationResult,
+    VerificationRouteHint,
     VerificationStatus,
+    VerifierRoute,
+    apply_claim_coherence,
+    audit_claim_triples,
+    audit_counterfactual_verification,
+    default_routed_verifier,
+    default_verifier_routes,
+    extract_calculation,
+    extract_citation_references,
+    extract_claim_triples,
     extract_claims,
+    extract_entity_candidates,
+    extract_keyword_terms,
+    generate_counterfactual_probes,
+    infer_claim_dependencies,
     normalize_claim_text,
+    plan_citation_search_query,
+    plan_source_families,
+    sanitize_search_query,
 )
 
 
@@ -62,6 +157,371 @@ def test_truth_subspace_contrastive_projection():
 def test_truth_subspace_rejects_single_factual_state():
     with pytest.raises(ValueError, match="at least two factual states"):
         TruthSubspace.fit(torch.tensor([[1.0, 2.0, 3.0]]), rank=1)
+
+
+def test_truth_subspace_clamps_rank_to_centered_sample_rank():
+    states = torch.tensor([
+        [0.0, 0.0, 0.0],
+        [2.0, 0.0, 0.0],
+    ])
+
+    subspace = TruthSubspace.fit(states, rank=3)
+
+    assert subspace.rank == 1
+    assert subspace.basis.shape == (3, 1)
+
+
+def test_truth_subspace_rejects_non_finite_states():
+    states = torch.tensor([[1.0, 2.0], [float("nan"), 3.0]])
+
+    with pytest.raises(ValueError, match="finite"):
+        TruthSubspace.fit(states, rank=1)
+
+
+def test_runtime_profiles_apply_only_missing_defaults():
+    profile = get_runtime_profile("latency")
+
+    assert isinstance(profile, RuntimeProfile)
+    assert RUNTIME_PROFILE_NAMES == ("latency", "balanced", "audit")
+    assert RUNTIME_PROFILES["balanced"].defaults["inside_trigger_budget_policy"] == "quality_balanced"
+    assert RUNTIME_PROFILES["latency"].control_defaults["staged_verification"] is True
+    assert RUNTIME_PROFILES["latency"].control_defaults["stage_verify_triggered_claims_only"] is True
+    assert RUNTIME_PROFILES["latency"].control_defaults["max_verifier_route_attempts"] == 1
+    assert RUNTIME_PROFILES["balanced"].control_defaults["max_verifier_route_attempts"] == 2
+    assert RUNTIME_PROFILES["audit"].control_defaults["staged_verification"] is False
+
+    merged, applied = profile.apply_defaults({
+        "inside_trigger_budget_policy": None,
+        "max_inside_sample_count_ratio": 0.5,
+        "max_inside_generation_seconds_ratio": None,
+        "max_mean_attempted_route_count": None,
+        "max_retrieval_use_rate": None,
+    })
+
+    assert merged["inside_trigger_budget_policy"] == "cost_first"
+    assert merged["max_inside_sample_count_ratio"] == pytest.approx(0.5)
+    assert merged["max_inside_generation_seconds_ratio"] == pytest.approx(0.35)
+    assert applied == {
+        "inside_trigger_budget_policy": "cost_first",
+        "max_inside_generation_seconds_ratio": 0.35,
+        "max_mean_attempted_route_count": 1.1,
+        "max_retrieval_use_rate": 0.0,
+    }
+    profile_payload = profile.to_dict()
+    assert profile_payload["defaults"]["max_retrieval_use_rate"] == pytest.approx(0.0)
+    assert profile_payload["control_defaults"]["stage_verify_risk_levels"] == ("high", "unknown")
+
+    with pytest.raises(ValueError, match="runtime_profile"):
+        get_runtime_profile("fast")
+
+
+def test_select_runtime_profile_routes_by_risk_and_claim_metadata():
+    low = RiskDecision(
+        action=ControlAction.ACCEPT,
+        risk_level=RiskLevel.LOW,
+        confidence=1.0,
+        reason="ok",
+    )
+    medium = RiskDecision(
+        action=ControlAction.RETRIEVE,
+        risk_level=RiskLevel.MEDIUM,
+        confidence=0.7,
+        reason="unsupported",
+    )
+    high = RiskDecision(
+        action=ControlAction.ABSTAIN,
+        risk_level=RiskLevel.HIGH,
+        confidence=0.9,
+        reason="risky",
+    )
+
+    low_selection = select_runtime_profile(
+        low,
+        claims=(Claim("Paris is the capital of France.", claim_id="c1", metadata={"features": {}}),),
+    )
+    sensitive_selection = select_runtime_profile(
+        low,
+        claims=(Claim("2 + 2 = 4.", claim_id="calc", metadata={"features": {"has_number": True}}),),
+    )
+    string_sensitive_selection = select_runtime_profile(
+        low,
+        claims=(
+            Claim(
+                "2 + 2 = 4.",
+                claim_id="calc-string",
+                metadata={"features": {"has_number": "true"}},
+            ),
+        ),
+    )
+    string_false_selection = select_runtime_profile(
+        low,
+        claims=(
+            Claim(
+                "Paris is the capital of France.",
+                claim_id="false-string",
+                metadata={"features": {"has_number": "false"}},
+            ),
+        ),
+    )
+    medium_selection = select_runtime_profile(medium, claims=())
+    high_selection = select_runtime_profile(high, claims=())
+
+    assert isinstance(low_selection, RuntimeProfileSelection)
+    assert low_selection.selected_profile == "latency"
+    assert low_selection.reason == "low diagnostic risk and no sensitive claim metadata"
+    assert sensitive_selection.selected_profile == "audit"
+    assert sensitive_selection.triggered_claim_ids == ("calc",)
+    assert sensitive_selection.triggered_features == {"calc": ("has_number",)}
+    assert string_sensitive_selection.selected_profile == "audit"
+    assert string_sensitive_selection.triggered_features == {"calc-string": ("has_number",)}
+    assert string_false_selection.selected_profile == "latency"
+    assert medium_selection.selected_profile == "balanced"
+    assert high_selection.selected_profile == "audit"
+
+
+def test_runtime_profile_selector_policy_roundtrip_and_routes():
+    low = RiskDecision(
+        action=ControlAction.ACCEPT,
+        risk_level=RiskLevel.LOW,
+        confidence=1.0,
+        reason="ok",
+    )
+    policy = RuntimeProfileSelectorPolicy.from_mapping({
+        "sensitive_profile": "balanced",
+        "sensitive_claim_feature_flags": ["has_citation"],
+        "sensitive_claim_metadata_keys": ["requires_review"],
+        "high_risk_actions": ["abstain"],
+    })
+
+    selection = select_runtime_profile(
+        low,
+        claims=(
+            Claim(
+                "2 + 2 = 4.",
+                claim_id="calc",
+                metadata={"features": {"has_number": True}},
+            ),
+        ),
+        selector_policy=policy,
+    )
+    citation_selection = select_runtime_profile(
+        low,
+        claims=(
+            Claim(
+                "A cited claim.",
+                claim_id="cite",
+                metadata={"features": {"has_citation": True}},
+            ),
+        ),
+        selector_policy=policy.to_dict(),
+    )
+
+    assert selection.selected_profile == "latency"
+    assert citation_selection.selected_profile == "balanced"
+    assert citation_selection.triggered_claim_ids == ("cite",)
+    assert policy.to_dict()["sensitive_claim_feature_flags"] == ("has_citation",)
+    with pytest.raises(ValueError, match="high_risk_levels"):
+        RuntimeProfileSelectorPolicy(high_risk_levels=("bad",))
+
+
+def test_select_runtime_profile_uses_verification_plan_cost_when_available():
+    low = RiskDecision(
+        action=ControlAction.ACCEPT,
+        risk_level=RiskLevel.LOW,
+        confidence=1.0,
+        reason="ok",
+    )
+    balanced_plan = ClaimVerificationPlan(
+        run_verifier=True,
+        reason="manual",
+        verification_scope="all",
+        claims=(
+            Claim("Current revenue is 10.", claim_id="c1"),
+            Claim("Current margin is 20.", claim_id="c2"),
+        ),
+        verify_claim_ids=("c1", "c2"),
+        route_hints=(
+            VerificationRouteHint("c1", ("retrieval", "groundedness")),
+            VerificationRouteHint("c2", ("retrieval", "groundedness")),
+        ),
+        retrieval_queries=(
+            {"claim_id": "c1", "query": "current revenue"},
+            {"claim_id": "c2", "query": "current margin"},
+        ),
+    )
+    audit_plan = ClaimVerificationPlan(
+        run_verifier=True,
+        reason="manual",
+        verification_scope="all",
+        claims=(
+            Claim("Current revenue is 10.", claim_id="c1"),
+            Claim("Current margin is 20.", claim_id="c2"),
+            Claim("Current forecast is 30.", claim_id="c3"),
+        ),
+        verify_claim_ids=("c1", "c2", "c3"),
+        route_hints=(
+            VerificationRouteHint("c1", ("retrieval", "groundedness")),
+            VerificationRouteHint("c2", ("retrieval", "groundedness")),
+            VerificationRouteHint("c3", ("retrieval", "groundedness")),
+        ),
+        retrieval_queries=(
+            {"claim_id": "c1", "query": "current revenue"},
+            {"claim_id": "c2", "query": "current margin"},
+            {"claim_id": "c3", "query": "current forecast"},
+        ),
+    )
+
+    balanced_selection = select_runtime_profile(low, verification_plan=balanced_plan)
+    audit_selection = select_runtime_profile(low, verification_plan=audit_plan)
+    disabled_selection = select_runtime_profile(
+        low,
+        verification_plan=audit_plan,
+        selector_policy=RuntimeProfileSelectorPolicy(
+            plan_balanced_cost_threshold=None,
+            plan_audit_cost_threshold=None,
+        ),
+    )
+
+    assert balanced_selection.selected_profile == "balanced"
+    assert balanced_selection.reason == "verification plan estimated cost requires balanced profile"
+    assert balanced_selection.verification_plan_cost["estimated_cost_units"] == pytest.approx(3.5)
+    assert audit_selection.selected_profile == "audit"
+    assert audit_selection.reason == "verification plan estimated cost requires audit profile"
+    assert audit_selection.verification_plan_cost["estimated_cost_units"] == pytest.approx(5.25)
+    assert disabled_selection.selected_profile == "latency"
+    assert disabled_selection.verification_plan_cost["estimated_cost_units"] == pytest.approx(5.25)
+
+
+def test_select_pre_generation_profile_routes_prompt_risk():
+    low = select_pre_generation_profile("Explain why warmup examples help calibration.")
+    current = select_pre_generation_profile("What is the latest price of BTC today?")
+    calculation = select_pre_generation_profile("Calculate 42 / 7 and explain the result.")
+    domain_state = select_pre_generation_profile(
+        "Can this order ship from inventory?",
+        metadata={"requires_domain_state": True},
+    )
+
+    assert isinstance(low, PreGenerationRiskAssessment)
+    assert low.selected_profile == "latency"
+    assert low.risk_level == "low"
+    assert low.triggered_features == ()
+    assert current.selected_profile == "audit"
+    assert current.risk_level == "high"
+    assert current.triggered_features == ("requires_retrieval", "is_time_sensitive")
+    assert current.prompt_features["has_number"] is False
+    assert calculation.selected_profile == "balanced"
+    assert calculation.risk_level == "medium"
+    assert calculation.triggered_features == ("has_number", "has_calculation")
+    assert domain_state.selected_profile == "audit"
+    assert domain_state.triggered_features == ("requires_domain_state",)
+    assert domain_state.triggered_metadata == ("requires_domain_state",)
+
+
+def test_pre_generation_risk_policy_roundtrip_and_bool_metadata():
+    policy = PreGenerationRiskPolicy.from_mapping({
+        "high_risk_profile": "balanced",
+        "high_risk_metadata_keys": ["needs_audit"],
+        "medium_risk_feature_flags": ["has_citation"],
+    })
+
+    disabled = select_pre_generation_profile(
+        "General explanation with no external facts.",
+        metadata={"needs_audit": "false"},
+        risk_policy=policy.to_dict(),
+    )
+    enabled = select_pre_generation_profile(
+        "General explanation with no external facts.",
+        metadata={"needs_audit": "yes"},
+        risk_policy=policy,
+    )
+    citation = select_pre_generation_profile("Use [1] as the reference.", risk_policy=policy)
+
+    assert disabled.selected_profile == "latency"
+    assert disabled.metadata_flags["needs_audit"] is False
+    assert enabled.selected_profile == "balanced"
+    assert enabled.risk_level == "high"
+    assert enabled.triggered_metadata == ("needs_audit",)
+    assert citation.selected_profile == "balanced"
+    assert citation.risk_level == "medium"
+    assert policy.to_dict()["high_risk_metadata_keys"] == ("needs_audit",)
+    direct_assessment = PreGenerationRiskAssessment(
+        selected_profile="latency",
+        risk_level="low",
+        reason="direct",
+        prompt_features={"has_number": "false", "has_citation": "yes"},
+        metadata_flags={"needs_audit": "false", "ambiguous": "maybe"},
+    )
+    assert direct_assessment.prompt_features == {
+        "has_number": False,
+        "has_citation": True,
+    }
+    assert direct_assessment.metadata_flags == {
+        "needs_audit": False,
+        "ambiguous": True,
+    }
+    with pytest.raises(ValueError, match="runtime profile selection"):
+        PreGenerationRiskPolicy(low_risk_profile="fast")
+
+
+def test_soft_pre_generation_risk_records_without_changing_default_route():
+    assessment = select_pre_generation_profile("Who founded XylophoneNet?")
+
+    assert assessment.selected_profile == "latency"
+    assert assessment.risk_level == "low"
+    assert isinstance(assessment.soft_risk, dict)
+    assert assessment.soft_risk["probability"] > 0.0
+    assert assessment.soft_risk["risk_level"] in {"low", "medium", "high"}
+    assert assessment.soft_risk["feature_contributions"]["has_question"] == pytest.approx(0.2)
+    assert assessment.to_dict()["soft_risk"]["feature_contributions"]["asks_exact_fact"] == pytest.approx(0.8)
+
+
+def test_soft_pre_generation_risk_can_route_when_configured():
+    policy = PreGenerationRiskPolicy(
+        soft_risk_config=SoftPreGenerationRiskConfig(
+            route_on_soft_risk=True,
+            bias=-1.0,
+            high_risk_probability_threshold=0.75,
+            medium_risk_probability_threshold=0.45,
+            feature_weights={
+                "has_question": 1.5,
+                "asks_exact_fact": 1.0,
+                "has_named_entity_hint": 1.0,
+            },
+            metadata_weights={},
+        )
+    )
+
+    assessment = select_pre_generation_profile("Who founded XylophoneNet?", risk_policy=policy.to_dict())
+
+    assert assessment.selected_profile == "audit"
+    assert assessment.risk_level == "high"
+    assert assessment.reason == "soft pre-generation risk estimate exceeded high threshold"
+    assert assessment.triggered_features == ("has_question", "asks_exact_fact", "has_named_entity_hint")
+    assert assessment.soft_risk["risk_level"] == "high"
+    assert assessment.soft_risk["probability"] > 0.9
+
+
+def test_soft_pre_generation_risk_config_roundtrip_and_validation():
+    config = SoftPreGenerationRiskConfig.from_mapping({
+        "enabled": "true",
+        "route_on_soft_risk": "yes",
+        "bias": "-0.5",
+        "feature_weights": {"has_question": "1.25"},
+        "metadata_weights": {"requires_review": "2.0"},
+    })
+    estimate = config.estimate(
+        {"has_question": True},
+        {"requires_review": True},
+    )
+
+    assert isinstance(estimate, SoftPreGenerationRiskEstimate)
+    assert config.to_dict()["route_on_soft_risk"] is True
+    assert estimate.score == pytest.approx(2.75)
+    assert estimate.to_dict()["metadata_contributions"]["requires_review"] == pytest.approx(2.0)
+    with pytest.raises(ValueError, match="route_on_soft_risk"):
+        SoftPreGenerationRiskConfig.from_mapping({"route_on_soft_risk": "maybe"})
+    with pytest.raises(ValueError, match="feature_weights.has_question"):
+        SoftPreGenerationRiskConfig(feature_weights={"has_question": float("nan")})
 
 
 def test_risk_controller_accepts_and_routes_threshold_exceedance():
@@ -161,6 +621,62 @@ def test_default_correction_policy_plans_action_payloads():
     assert abstain.payload["blocked_claims"][0]["evidence"] == ("nasa",)
 
 
+def test_plan_aware_correction_policy_injects_retrieval_queries():
+    base_policy = DefaultCorrectionPolicy()
+    policy = PlanAwareCorrectionPolicy(base_policy=base_policy)
+    claim = Claim("AlphaCorp has 10 offices.", claim_id="c1")
+    plan = ClaimVerificationPlan(
+        run_verifier=True,
+        reason="manual",
+        verification_scope="all",
+        claims=(claim,),
+        verify_claim_ids=("c1",),
+        route_hints=(VerificationRouteHint("c1", ("retrieval", "groundedness")),),
+        retrieval_queries=({"claim_id": "c1", "query": "zephyr-token retrieval-key"},),
+    )
+    retrieve_decision = RiskDecision(
+        action=ControlAction.RETRIEVE,
+        risk_level=RiskLevel.MEDIUM,
+        confidence=0.6,
+        reason="unsupported claim",
+    )
+    accept_decision = RiskDecision(
+        action=ControlAction.ACCEPT,
+        risk_level=RiskLevel.LOW,
+        confidence=0.9,
+        reason="diagnostics are low",
+    )
+    abstain_decision = RiskDecision(
+        action=ControlAction.ABSTAIN,
+        risk_level=RiskLevel.HIGH,
+        confidence=0.9,
+        reason="refuted claim",
+    )
+
+    retrieve_requests = policy.plan(
+        retrieve_decision,
+        claims=(claim,),
+        verification_results=(VerificationResult(VerificationStatus.INSUFFICIENT_EVIDENCE, 0.2),),
+        context={"verification_plan": plan},
+    )
+    accept_requests = policy.plan(accept_decision, claims=(claim,), context={"verification_plan": plan})
+    abstain_requests = policy.plan(abstain_decision, claims=(claim,), context={"verification_plan": plan})
+
+    retrieve = retrieve_requests[0]
+    assert len(retrieve_requests) == 1
+    assert retrieve.action is ControlAction.RETRIEVE
+    assert retrieve.payload["retrieval_targets"][0]["text"] == "AlphaCorp has 10 offices."
+    assert retrieve.payload["retrieval_targets"][1]["text"] == "zephyr-token retrieval-key"
+    assert retrieve.payload["retrieval_queries"][0]["query"] == "zephyr-token retrieval-key"
+    assert retrieve.metadata["plan_aware_policy"] == "PlanAwareCorrectionPolicy"
+    assert retrieve.metadata["verification_plan_action_injected"] is True
+    assert retrieve.metadata["verification_plan_cost"]["estimated_cost_units"] > 0.0
+    assert [request.action for request in accept_requests] == [ControlAction.ACCEPT, ControlAction.RETRIEVE]
+    assert accept_requests[1].payload["retrieval_queries"][0]["claim_id"] == "c1"
+    assert [request.action for request in abstain_requests] == [ControlAction.ABSTAIN]
+    assert abstain_requests[0].metadata["verification_plan_action_injected"] is False
+
+
 def test_dry_run_action_executor_records_execution_without_side_effects():
     decision = RiskDecision(
         action=ControlAction.ABSTAIN,
@@ -205,6 +721,645 @@ def test_claim_extraction_and_in_memory_verifier():
     assert results[1].status is VerificationStatus.REFUTED
 
 
+def test_citation_search_query_planner_sanitizes_answer_and_keeps_entity_variants():
+    query, removed_hashes = sanitize_search_query(
+        "What is Alpha Syndrome? A moon A moon.",
+        disallowed_phrases=("A moon.",),
+    )
+    plan = plan_citation_search_query(
+        question='This American producer was born in the 70s and is named "Elon" what?',
+        candidate_query="This American producer was born in the 70s and is named Elon what? His name is Elon Musk.",
+        question_type="person",
+        disallowed_phrases=("His name is Elon Musk.",),
+        strategy="claim_entity",
+        max_alternate_queries=3,
+    )
+
+    assert query == "What is Alpha Syndrome?"
+    assert removed_hashes
+    assert isinstance(plan, CitationSearchQueryPlan)
+    assert "Elon Musk" not in " ".join(plan.variants)
+    assert any("Elon" in item for item in plan.entity_candidates)
+    assert "American" in extract_keyword_terms(plan.query, max_items=8)
+    assert extract_entity_candidates('Who founded "Beta Labs"?')[0] == "Beta Labs"
+    assert plan.to_dict()["removed_phrase_hashes"]
+
+
+def test_source_family_planner_targets_official_fresh_statistical_sources():
+    plan = plan_citation_search_query(
+        question="As of 2026, what is the population of Ireland?",
+        question_type="quantity",
+        strategy="claim_entity",
+        requires_timestamp=True,
+    )
+    direct = plan_source_families(
+        question="Who founded Tesla Motors?",
+        question_type="person",
+        keyword_terms=("Tesla", "founded"),
+    )
+    roundtrip = SourceFamilyPlan.from_dict({
+        "families": ["reference"],
+        "freshness_required": "false",
+        "official_source_preferred": "false",
+    })
+
+    assert isinstance(plan.source_family_plan, SourceFamilyPlan)
+    assert plan.source_family_plan.freshness_required is True
+    assert plan.source_family_plan.official_source_preferred is True
+    assert plan.source_family_plan.families[:2] == ("official", "news")
+    assert "official_statistics" in plan.source_family_plan.families
+    assert "official statistics" in plan.source_family_plan.query_hints
+    assert "fresh_or_time_sensitive" in plan.source_family_plan.rationale
+    assert "quantitative_or_statistical_claim" in plan.source_family_plan.rationale
+    assert direct.families[:2] == ("official", "reference")
+    assert direct.to_dict()["metadata"]["keyword_terms"] == ("Tesla", "founded")
+    assert roundtrip.freshness_required is False
+    assert roundtrip.official_source_preferred is False
+    with pytest.raises(ValueError, match="freshness_required"):
+        SourceFamilyPlan.from_dict({"families": ["reference"], "freshness_required": "maybe"})
+
+
+def test_rule_based_claim_triples_and_slot_audit_are_stricter_than_overlap():
+    claims = extract_claims("Paris is the capital of France. AlphaCorp has 10 offices in Europe.")
+
+    first_triples = extract_claim_triples(claims[0])
+    second_triples = extract_claim_triples(claims[1])
+
+    assert first_triples == (
+        ClaimTriple(
+            subject="France",
+            predicate="capital_of",
+            object="Paris",
+            claim_id="c1",
+            source_text="Paris is the capital of France.",
+            confidence=0.55,
+            metadata={"extractor": "rule_based_triple_extractor", "source": "capital_of_rule"},
+        ),
+    )
+    assert second_triples[0].subject == "AlphaCorp"
+    assert second_triples[0].predicate == "has"
+    assert second_triples[0].object == "10 offices in Europe"
+
+    verifier = TripleEvidenceVerifier(
+        evidence=(
+            EvidenceDocument("France's capital is Paris.", source="atlas"),
+            EvidenceDocument("AlphaCorp has 12 offices in Europe.", source="annual-report"),
+        )
+    )
+
+    results = verifier.verify_many(claims)
+
+    assert results[0].status is VerificationStatus.SUPPORTED
+    assert results[0].metadata["audit_report"]["audits"][0]["covered_slots"] == (
+        "subject",
+        "predicate",
+        "object",
+    )
+    assert results[0].metadata["audit_report"]["covered_slot_count"] == 3
+    assert results[0].metadata["audit_report"]["missing_slot_count"] == 0
+    assert results[0].evidence == ("atlas: France's capital is Paris.",)
+    assert results[1].status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert results[1].metadata["audit_report"]["audits"][0]["missing_slots"] == ("object",)
+    assert results[1].metadata["audit_report"]["audits"][0]["slot_coverage"]["object"] < 1.0
+    failed_audit = results[1].metadata["audit_report"]["audits"][0]
+    object_slot = next(item for item in failed_audit["slot_evidence"] if item["slot"] == "object")
+    assert object_slot["expected"] == "10 offices in Europe"
+    assert object_slot["source"] == "annual-report"
+    assert object_slot["covered"] is False
+    assert object_slot["missing_tokens"] == ("10",)
+
+
+def test_rule_based_claim_triples_reject_explicit_negation():
+    examples = (
+        "The capital of France is not Paris.",
+        "OpenAI is not headquartered in San Francisco.",
+        'The claim "Paris is the capital of France" was reviewed.',
+        "A question asks whether Paris is the capital of France.",
+        "Either Paris is the capital of France or an alternate record says otherwise.",
+        "Historically, Paris is the capital of France for a past period.",
+        'The phrase "Paris is the capital of France" mentions Paris.',
+    )
+
+    for text in examples:
+        assert extract_claim_triples(extract_claims(text)[0]) == ()
+
+
+def test_rule_based_claim_triples_extract_stated_predicate_for_confusion_claim():
+    claim = extract_claims("The currency of France is Paris.")[0]
+
+    triple = extract_claim_triples(claim)[0]
+
+    assert triple.subject == "France"
+    assert triple.predicate == "currency_of"
+    assert triple.object == "Paris"
+
+
+def test_triple_evidence_audit_can_combine_slots_across_documents():
+    claim = extract_claims("AlphaCorp has 10 offices in Europe.")[0]
+    verifier = TripleEvidenceVerifier(
+        evidence=(
+            EvidenceDocument(
+                "AlphaCorp has offices.",
+                source="company-profile",
+                metadata={"entity": "AlphaCorp"},
+            ),
+            EvidenceDocument(
+                "The annual report lists 10 offices in Europe.",
+                source="annual-report",
+                metadata={"entity": "AlphaCorp"},
+            ),
+        )
+    )
+
+    result = verifier.verify(claim)
+    audit = result.metadata["audit_report"]["audits"][0]
+
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.evidence == (
+        "company-profile: AlphaCorp has offices.",
+        "annual-report: The annual report lists 10 offices in Europe.",
+    )
+    assert audit["covered_slots"] == ("subject", "predicate", "object")
+    assert audit["missing_slots"] == ()
+    assert audit["metadata"]["decision_rule"] == "multi_document_slot_coverage"
+    assert audit["metadata"]["evidence_link_passed"] is True
+    assert audit["metadata"]["evidence_link_rule"] == "subject_metadata"
+    assert audit["metadata"]["slot_sources"] == {
+        "subject": "company-profile",
+        "predicate": "company-profile",
+        "object": "annual-report",
+    }
+    slot_sources = {item["slot"]: item["source"] for item in audit["slot_evidence"]}
+    assert slot_sources == {
+        "subject": "company-profile",
+        "predicate": "company-profile",
+        "object": "annual-report",
+    }
+    assert result.metadata["audit_report"]["slot_summary"]["object"]["sources"] == ("annual-report",)
+
+
+def test_triple_evidence_audit_rejects_unlinked_cross_document_slots():
+    claim = extract_claims("AlphaCorp has 10 offices in Europe.")[0]
+    verifier = TripleEvidenceVerifier(
+        evidence=(
+            EvidenceDocument("AlphaCorp has offices.", source="company-profile"),
+            EvidenceDocument("BetaCorp has 10 offices in Europe.", source="annual-report"),
+        )
+    )
+
+    result = verifier.verify(claim)
+    audit = result.metadata["audit_report"]["audits"][0]
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert result.explanation == "one or more extracted claim triples have unlinked evidence slots"
+    assert audit["covered_slots"] == ("subject", "predicate", "object")
+    assert audit["missing_slots"] == ()
+    assert audit["metadata"]["decision_rule"] == "multi_document_slot_coverage"
+    assert audit["metadata"]["evidence_link_passed"] is False
+    assert audit["metadata"]["evidence_link_rule"] == "unlinked_multi_document_evidence"
+
+
+def test_structured_fact_verifier_supports_and_refutes_wikidata_claims():
+    verifier = StructuredFactVerifier.from_corpus({
+        "documents": [
+            {
+                "question": "What is the capital of France?",
+                "answer": "Paris",
+                "source": "wikidata:Q142:P36:Q90",
+                "metadata": {
+                    "country": "France",
+                    "statement_property": "P36",
+                    "statement_property_label": "capital",
+                },
+            },
+            {
+                "question": "What is an official language of Belgium?",
+                "answer": "Dutch",
+                "source": "wikidata:Q31:P37:Q7411",
+                "metadata": {
+                    "country": "Belgium",
+                    "statement_property": "P37",
+                    "statement_property_label": "official language",
+                },
+            },
+            {
+                "question": "What is an official language of Belgium?",
+                "answer": "French",
+                "source": "wikidata:Q31:P37:Q150",
+                "metadata": {
+                    "country": "Belgium",
+                    "statement_property": "P37",
+                    "statement_property_label": "official language",
+                },
+            },
+            {
+                "question": "What is the currency of Japan?",
+                "answer": "Japanese yen",
+                "source": "wikidata:Q17:P38:Q8146",
+                "metadata": {
+                    "country": "Japan",
+                    "statement_property": "P38",
+                    "statement_property_label": "currency",
+                },
+            },
+        ]
+    })
+
+    supported_capital = verifier.verify(Claim("Paris is the capital of France."))
+    refuted_capital = verifier.verify(Claim("Berlin is the capital of France."))
+    supported_language = verifier.verify(Claim("Dutch is an official language of Belgium."))
+    refuted_language = verifier.verify(Claim("German is an official language of Belgium."))
+    supported_currency = verifier.verify(Claim("The Japanese yen is the currency of Japan."))
+    missing_subject = verifier.verify(Claim("Ottawa is the capital of Canada."))
+    not_applicable = verifier.verify(Claim("Maybe."))
+
+    assert isinstance(StructuredFact("France", "P36", "Paris"), StructuredFact)
+    assert supported_capital.status is VerificationStatus.SUPPORTED
+    assert supported_capital.metadata["decision_rule"] == "all_triples_match"
+    assert refuted_capital.status is VerificationStatus.REFUTED
+    assert refuted_capital.metadata["decision_rule"] == "object_mismatch"
+    assert supported_language.status is VerificationStatus.SUPPORTED
+    assert refuted_language.status is VerificationStatus.REFUTED
+    assert supported_currency.status is VerificationStatus.SUPPORTED
+    assert missing_subject.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert not_applicable.status is VerificationStatus.NOT_APPLICABLE
+
+
+def test_counterfactual_verification_audit_passes_structured_fact_flip():
+    verifier = StructuredFactVerifier.from_corpus({
+        "facts": [
+            {
+                "subject": "France",
+                "predicate": "P36",
+                "object": "Paris",
+                "source": "wikidata:Q142:P36:Q90",
+            },
+        ],
+    })
+    probe = CounterfactualProbe(
+        original=Claim("Paris is the capital of France.", claim_id="capital_true"),
+        counterfactual=Claim("Berlin is the capital of France.", claim_id="capital_false"),
+        probe_id="capital_cf",
+        probe_type="entity_swap",
+    )
+
+    report = audit_counterfactual_verification(verifier, (probe,))
+    payload = report.to_dict()
+
+    assert payload["summary"]["record_count"] == 1
+    assert payload["summary"]["pass_rate"] == pytest.approx(1.0)
+    assert payload["summary"]["flip_success_count"] == 1
+    assert payload["results"][0]["original_result"]["status"] == "supported"
+    assert payload["results"][0]["counterfactual_result"]["status"] == "refuted"
+    assert payload["results"][0]["passed"] is True
+
+
+def test_counterfactual_verification_audit_flags_false_invariance():
+    verifier = InMemoryVerifier({
+        normalize_claim_text("Paris is the capital of France."): VerificationStatus.SUPPORTED,
+        normalize_claim_text("Berlin is the capital of France."): VerificationStatus.SUPPORTED,
+    })
+    probe = CounterfactualProbe(
+        original={"text": "Paris is the capital of France."},
+        counterfactual={"text": "Berlin is the capital of France."},
+        expected_counterfactual_status=VerificationStatus.SUPPORTED,
+        expected_flip=True,
+    )
+
+    report = CounterfactualVerificationAuditor(verifier).audit((probe,), max_examples=1)
+    summary = report.summary()
+
+    assert summary["passed_count"] == 0
+    assert summary["false_invariance_count"] == 1
+    assert summary["false_invariance_rate"] == pytest.approx(1.0)
+    assert report.error_examples()[0]["failure_reason"] == "false_invariance"
+
+
+def test_counterfactual_probe_generator_builds_metadata_numeric_temporal_and_negation_probes():
+    claims = (
+        Claim(
+            "Paris is the capital of France.",
+            claim_id="capital",
+            metadata={
+                "counterfactual_replacements": {"Paris": "Berlin"},
+                "counterfactual_variants": [
+                    {"text": "Paris is the capital of Germany.", "probe_type": "entity_swap"}
+                ],
+            },
+        ),
+        Claim("The company was founded in 2020.", claim_id="year"),
+        Claim("2 plus 2 is 4.", claim_id="quantity"),
+        Claim("The API is stable.", claim_id="negation"),
+    )
+
+    probes = generate_counterfactual_probes(claims, max_probes_per_claim=2)
+    by_type = {probe.probe_type: probe for probe in probes}
+
+    assert isinstance(CounterfactualProbeGenerator(max_probes_per_claim=1), CounterfactualProbeGenerator)
+    assert "entity_swap" in by_type
+    assert "year" in by_type
+    assert "quantity" in by_type
+    assert "negation" in by_type
+    assert any(probe.counterfactual.text == "Berlin is the capital of France." for probe in probes)
+    assert any(probe.counterfactual.text == "The company was founded in 2021." for probe in probes)
+    assert any(probe.counterfactual.text == "3 plus 2 is 4." for probe in probes)
+    assert any(probe.counterfactual.text == "The API is not stable." for probe in probes)
+    assert all(probe.expected_counterfactual_status is VerificationStatus.REFUTED for probe in probes)
+
+
+def test_structured_fact_verifier_handles_fact_paraphrases_and_object_lists():
+    verifier = StructuredFactVerifier.from_corpus({
+        "facts": [
+            {
+                "subject": "France",
+                "predicate": "P36",
+                "object": "Paris",
+                "metadata": {"subject_aliases": ["French Republic"]},
+            },
+            {"subject": "Belgium", "predicate": "P37", "object": "Dutch"},
+            {"subject": "Belgium", "predicate": "P37", "object": "French"},
+            {
+                "subject": "Japan",
+                "predicate": "P38",
+                "object": "Japanese yen",
+                "metadata": {"object_aliases": ["yen"]},
+            },
+        ],
+    })
+
+    possessive_capital = verifier.verify(Claim("France's capital is Paris."))
+    subject_first_capital = verifier.verify(Claim("The capital of the French Republic is Paris."))
+    language_list = verifier.verify(Claim("The official languages of Belgium include Dutch and French."))
+    possessive_language_list = verifier.verify(Claim("Belgium's official languages are Dutch and French."))
+    refuted_language_list = verifier.verify(Claim("The official languages of Belgium include Dutch and German."))
+    possessive_currency = verifier.verify(Claim("Japan's currency is yen."))
+    uses_currency = verifier.verify(Claim("Japan uses the Japanese yen as its currency."))
+
+    assert possessive_capital.status is VerificationStatus.SUPPORTED
+    assert subject_first_capital.status is VerificationStatus.SUPPORTED
+    assert language_list.status is VerificationStatus.SUPPORTED
+    assert language_list.metadata["all_triple_results"][0]["metadata"]["decision_rule"] == "all_list_objects_match"
+    assert possessive_language_list.status is VerificationStatus.SUPPORTED
+    assert refuted_language_list.status is VerificationStatus.REFUTED
+    assert refuted_language_list.metadata["decision_rule"] == "object_list_mismatch"
+    assert refuted_language_list.metadata["unmatched_objects"] == ("German",)
+    assert possessive_currency.status is VerificationStatus.SUPPORTED
+    assert uses_currency.status is VerificationStatus.SUPPORTED
+
+
+def test_claim_triple_audit_uses_metadata_triples_and_context_evidence():
+    claim = Claim(
+        "Revenue grew.",
+        claim_id="revenue",
+        metadata={
+            "triples": {
+                "subject": "Revenue",
+                "predicate": "grew_to",
+                "object": "10 million",
+                "confidence": 0.9,
+            }
+        },
+    )
+
+    missing = audit_claim_triples(claim, evidence=())
+    report = audit_claim_triples(
+        claim,
+        evidence=(),
+        context={"evidence": ({"text": "Revenue grew to 10 million.", "source": "filing"},)},
+    )
+
+    assert extract_claim_triples(claim)[0].confidence == pytest.approx(0.9)
+    assert missing.passed is False
+    assert missing.to_dict()["audits"][0]["missing_slots"] == ("subject", "predicate", "object")
+    assert report.passed is True
+    assert report.to_dict()["audits"][0]["metadata"]["best_source"] == "filing"
+    payload = report.to_dict()
+    assert payload["slot_summary"]["subject"]["covered_count"] == 1
+    assert payload["slot_summary"]["object"]["mean_coverage"] == pytest.approx(1.0)
+    assert TripleSlotEvidence(**payload["audits"][0]["slot_evidence"][0]).covered is True
+
+
+def test_triple_evidence_verifier_reports_not_applicable_for_unparsed_claim():
+    claim = Claim("Maybe.")
+
+    result = TripleEvidenceVerifier(evidence=("Maybe what?",)).verify(claim)
+
+    assert result.status is VerificationStatus.NOT_APPLICABLE
+    assert result.metadata["audit_report"]["triple_count"] == 0
+    assert isinstance(RuleBasedTripleExtractor(), RuleBasedTripleExtractor)
+
+
+def test_regex_triple_extractor_extends_rule_based_extraction():
+    claim = Claim("France has its capital at Paris.", claim_id="capital")
+    pattern = RegexTriplePattern(
+        pattern=r"^(?P<subject>.+?) has its capital at (?P<object>.+)$",
+        predicate="capital_of",
+        source="capital_at_template",
+    )
+    extractor = RegexTripleExtractor(patterns=(pattern,), fallback=RuleBasedTripleExtractor())
+
+    default_triple = extract_claim_triples(claim)[0]
+    extracted = extractor.extract(claim)
+
+    assert default_triple.predicate == "has"
+    assert extracted == (
+        ClaimTriple(
+            subject="France",
+            predicate="capital_of",
+            object="Paris",
+            claim_id="capital",
+            source_text="France has its capital at Paris.",
+            confidence=0.65,
+            metadata={
+                "extractor": "regex_triple_extractor",
+                "source": "capital_at_template",
+                "pattern": r"^(?P<subject>.+?) has its capital at (?P<object>.+)$",
+            },
+        ),
+    )
+
+
+def test_lookup_triple_extractor_replays_external_predictions_by_id_and_text():
+    id_claim = Claim("France has its capital at Paris.", claim_id="capital")
+    text_claim = Claim("OpenAI is headquartered in San Francisco.", claim_id="hq")
+    extractor = LookupTripleExtractor(
+        predictions={
+            "claim_id:capital": (
+                {
+                    "subject": "France",
+                    "predicate": "capital_of",
+                    "object": "Paris",
+                    "confidence": 0.91,
+                },
+            ),
+            "text_norm:openai is headquartered in san francisco": (
+                {
+                    "subject": "OpenAI",
+                    "predicate": "headquarters_location_of",
+                    "object": "San Francisco",
+                },
+            ),
+        },
+        extractor_name="external_smoke",
+    )
+
+    id_triple = extractor.extract(id_claim)[0]
+    text_triple = extractor.extract(text_claim)[0]
+
+    assert id_triple == ClaimTriple(
+        subject="France",
+        predicate="capital_of",
+        object="Paris",
+        claim_id="capital",
+        source_text="France has its capital at Paris.",
+        confidence=0.91,
+        metadata={"extractor": "external_smoke", "source": "lookup_prediction"},
+    )
+    assert text_triple.subject == "OpenAI"
+    assert text_triple.predicate == "headquarters_location_of"
+    assert text_triple.object == "San Francisco"
+    assert extractor.extract(Claim("No prediction here.", claim_id="missing")) == ()
+
+
+def test_regex_triple_extractor_rejects_blocked_contexts():
+    pattern = RegexTriplePattern(
+        pattern=r"^(?P<subject>.+?) is headquartered in (?P<object>.+)$",
+        predicate="headquarters_location_of",
+    )
+    extractor = RegexTripleExtractor(patterns=(pattern,), fallback=RuleBasedTripleExtractor())
+
+    examples = (
+        'The claim "OpenAI is headquartered in San Francisco" was reviewed.',
+        "Either OpenAI is headquartered in San Francisco or an alternate record says otherwise.",
+        "Historically, OpenAI is headquartered in San Francisco for a past period.",
+        'The phrase "OpenAI is headquartered in San Francisco" mentions San Francisco.',
+    )
+
+    for text in examples:
+        assert extractor.extract(Claim(text)) == ()
+
+
+def test_structured_fact_verifier_accepts_injected_triple_extractor():
+    claim = Claim("France has its capital at Paris.", claim_id="capital")
+    facts = (StructuredFact(subject="France", predicate="capital", object="Paris", source="wikidata:P36"),)
+    regex = RegexTripleExtractor(
+        patterns=(
+            {
+                "pattern": r"^(?P<subject>.+?) has its capital at (?P<object>.+)$",
+                "predicate": "capital_of",
+            },
+        )
+    )
+    composite = CompositeTripleExtractor((regex, RuleBasedTripleExtractor()))
+
+    default_result = StructuredFactVerifier(facts).verify(claim)
+    injected_result = StructuredFactVerifier(facts, extractor=composite).verify(claim)
+
+    assert default_result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert injected_result.status is VerificationStatus.SUPPORTED
+    assert injected_result.metadata["all_triple_results"][0]["metadata"]["triple"]["predicate"] == "capital_of"
+
+
+def test_claim_coherence_infers_metadata_and_discourse_dependencies():
+    claims = (
+        Claim("The trial enrolled 100 patients.", claim_id="c1"),
+        Claim("Therefore the treatment is proven effective.", claim_id="c2"),
+        Claim("The report requires review.", claim_id="c3", metadata={"depends_on": "c2"}),
+    )
+
+    dependencies = infer_claim_dependencies(claims)
+
+    assert dependencies == (
+        ClaimDependency(
+            parent_id="c1",
+            child_id="c2",
+            relation="discourse_marker",
+            source="text_rule",
+            reason="claim starts with a discourse marker",
+        ),
+        ClaimDependency(parent_id="c2", child_id="c3"),
+    )
+
+
+def test_claim_coherence_blocks_supported_child_when_parent_is_missing_or_unsupported():
+    claims = (
+        Claim("The trial was randomized.", claim_id="c1"),
+        Claim("Therefore the treatment is proven effective.", claim_id="c2", metadata={"depends_on": "c1"}),
+    )
+    results = (
+        VerificationResult(VerificationStatus.INSUFFICIENT_EVIDENCE, confidence=0.2),
+        VerificationResult(VerificationStatus.SUPPORTED, confidence=0.9, evidence=("abstract",)),
+    )
+
+    adjusted, report = apply_claim_coherence(claims, results)
+
+    assert adjusted[0].status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert adjusted[1].status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert adjusted[1].confidence == pytest.approx(0.5)
+    assert adjusted[1].metadata["claim_coherence"]["blocked"] is True
+    assert adjusted[1].metadata["claim_coherence"]["parent_status"] == "insufficient_evidence"
+    assert report.blocked_claim_ids == ("c2",)
+    assert report.issues[0].parent_id == "c1"
+
+    subset_adjusted, subset_report = apply_claim_coherence(
+        claims=(claims[1],),
+        verification_results=(VerificationResult(VerificationStatus.SUPPORTED, confidence=0.9),),
+        dependency_claims=claims,
+    )
+
+    assert subset_adjusted[0].status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert subset_report.missing_parent_ids == ("c1",)
+
+
+def test_claim_coherence_propagates_transitive_dependencies_independent_of_order():
+    claims = (
+        Claim("The trial was randomized.", claim_id="c1"),
+        Claim("The treatment caused improvement.", claim_id="c2"),
+        Claim("Therefore the treatment should be approved.", claim_id="c3"),
+    )
+    results = (
+        VerificationResult(VerificationStatus.INSUFFICIENT_EVIDENCE, confidence=0.2),
+        VerificationResult(VerificationStatus.SUPPORTED, confidence=0.9),
+        VerificationResult(VerificationStatus.SUPPORTED, confidence=0.9),
+    )
+    dependencies = (
+        ClaimDependency(parent_id="c2", child_id="c3"),
+        ClaimDependency(parent_id="c1", child_id="c2"),
+    )
+
+    adjusted, report = apply_claim_coherence(claims, results, dependencies=dependencies)
+
+    assert [result.status for result in adjusted] == [
+        VerificationStatus.INSUFFICIENT_EVIDENCE,
+        VerificationStatus.INSUFFICIENT_EVIDENCE,
+        VerificationStatus.INSUFFICIENT_EVIDENCE,
+    ]
+    assert report.blocked_claim_ids == ("c2", "c3")
+    assert [(issue.parent_id, issue.child_id) for issue in report.issues] == [("c1", "c2"), ("c2", "c3")]
+
+
+def test_claim_coherence_accepts_json_like_inputs_with_enum_statuses():
+    claims = (
+        {"text": "The parent claim.", "claim_id": "c1"},
+        {
+            "text": "The child claim.",
+            "claim_id": "c2",
+            "metadata": {"dependencies": [{"parent": "c1", "relation": "premise"}]},
+        },
+    )
+    results = (
+        {"status": VerificationStatus.REFUTED, "confidence": 0.8, "evidence": None},
+        {"status": VerificationStatus.SUPPORTED, "confidence": "0.9", "evidence": ("child evidence",)},
+    )
+
+    adjusted, report = apply_claim_coherence(claims, results)
+
+    assert adjusted[0].status is VerificationStatus.REFUTED
+    assert adjusted[1].status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert report.to_dict()["dependencies"][0]["relation"] == "premise"
+    assert report.to_dict()["issues"][0]["parent_status"] == "refuted"
+
+
 def test_groundedness_verifier_supports_refutes_and_reports_evidence():
     verifier = GroundednessVerifier(
         evidence=(
@@ -240,6 +1395,1303 @@ def test_groundedness_verifier_returns_insufficient_evidence_for_low_overlap():
     assert result.metadata["best_overlap"] < 0.8
 
 
+def test_self_consistency_verifier_supports_claim_with_majority_samples():
+    verifier = SelfConsistencyVerifier(
+        samples=(
+            {"text": "Paris is the capital of France.", "source": "sample-1"},
+            "Paris is the capital of France and a major European city.",
+            "The capital of France is Paris.",
+        ),
+        min_overlap=0.55,
+        support_threshold=0.60,
+    )
+    claim = extract_claims("Paris is the capital of France.")[0]
+
+    result = verifier.verify(claim)
+
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["support_count"] == 3
+    assert result.metadata["support_rate"] == pytest.approx(1.0)
+    assert result.metadata["decision_rule"] == "support_rate"
+    assert result.evidence[0].startswith("sample-1:")
+
+
+def test_self_consistency_verifier_refutes_numeric_and_negation_disagreement():
+    numeric_verifier = SelfConsistencyVerifier(
+        samples=(
+            "AlphaCorp has 12 offices in Europe.",
+            "AlphaCorp has 12 offices in Europe as of 2026.",
+            "AlphaCorp has 10 offices in Asia.",
+        ),
+        min_overlap=0.55,
+        refute_threshold=0.50,
+    )
+    numeric_claim = extract_claims("AlphaCorp has 10 offices in Europe.")[0]
+
+    numeric_result = numeric_verifier.verify(numeric_claim)
+
+    assert numeric_result.status is VerificationStatus.REFUTED
+    assert numeric_result.metadata["refute_count"] == 2
+    assert numeric_result.metadata["decision_rule"] == "refute_rate"
+    assert numeric_result.metadata["sample_decisions"][0]["reason"] == "number_mismatch"
+
+    negation_verifier = SelfConsistencyVerifier(
+        samples=("The moon is not made of cheese.", "The moon is not made of cheese."),
+        min_overlap=0.50,
+    )
+    negation_claim = extract_claims("The moon is made of cheese.")[0]
+
+    negation_result = negation_verifier.verify(negation_claim)
+
+    assert negation_result.status is VerificationStatus.REFUTED
+    assert negation_result.metadata["sample_decisions"][0]["reason"] == "negation_mismatch"
+
+
+def test_self_consistency_verifier_uses_context_samples():
+    verifier = SelfConsistencyVerifier(samples=(), min_overlap=0.55)
+    claim = extract_claims("Water boils at 100 degrees Celsius.")[0]
+
+    missing = verifier.verify(claim)
+    result = verifier.verify(
+        claim,
+        context={
+            "selfcheck_samples": (
+                "Water boils at 100 degrees Celsius at standard pressure.",
+                {"response": "At standard pressure, water boils at 100 degrees Celsius.", "source": "sample-2"},
+            )
+        },
+    )
+
+    assert missing.status is VerificationStatus.NOT_APPLICABLE
+    assert missing.metadata["decision_rule"] == "too_few_samples"
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["sample_count"] == 2
+    assert result.metadata["sample_decisions"][1]["source"] == "sample-2"
+
+
+def test_self_consistency_verifier_parses_config_without_bool_numeric_casts():
+    verifier = SelfConsistencyVerifier(
+        min_samples="2",  # type: ignore[arg-type]
+        max_samples="3",  # type: ignore[arg-type]
+        min_overlap="0.55",  # type: ignore[arg-type]
+        support_threshold="0.60",  # type: ignore[arg-type]
+        refute_threshold="0.50",  # type: ignore[arg-type]
+        early_stop="false",  # type: ignore[arg-type]
+    )
+
+    assert verifier.min_samples == 2
+    assert verifier.max_samples == 3
+    assert verifier.min_overlap == pytest.approx(0.55)
+    assert verifier.support_threshold == pytest.approx(0.60)
+    assert verifier.refute_threshold == pytest.approx(0.50)
+    assert verifier.early_stop is False
+    with pytest.raises(ValueError, match="min_samples"):
+        SelfConsistencyVerifier(min_samples=True)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="min_overlap"):
+        SelfConsistencyVerifier(min_overlap=True)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="support_threshold"):
+        SelfConsistencyVerifier(support_threshold=float("nan"))
+    with pytest.raises(ValueError, match="early_stop"):
+        SelfConsistencyVerifier(early_stop="maybe")  # type: ignore[arg-type]
+
+
+def test_self_consistency_verifier_early_stops_when_threshold_result_is_fixed():
+    verifier = SelfConsistencyVerifier(
+        samples=(
+            "AlphaCorp has 12 offices in Europe.",
+            "AlphaCorp has 12 offices in Europe as of 2026.",
+            "AlphaCorp has 10 offices in Europe.",
+            "AlphaCorp has 10 offices in Europe.",
+            "AlphaCorp has 10 offices in Europe.",
+        ),
+        min_samples=2,
+        min_overlap=0.55,
+        refute_threshold=0.40,
+        support_threshold=0.80,
+        early_stop=True,
+    )
+    claim = extract_claims("AlphaCorp has 10 offices in Europe.")[0]
+
+    result = verifier.verify(claim)
+
+    assert result.status is VerificationStatus.REFUTED
+    assert result.metadata["decision_rule"] == "refute_rate"
+    assert result.metadata["early_stop"] is True
+    assert result.metadata["early_stop_reason"] == "refute_threshold_guaranteed"
+    assert result.metadata["sample_count"] == 5
+    assert result.metadata["processed_sample_count"] == 2
+    assert result.metadata["skipped_sample_count"] == 3
+    assert result.metadata["refute_rate"] == pytest.approx(0.40)
+    assert result.metadata["processed_refute_rate"] == pytest.approx(1.0)
+    assert len(result.metadata["sample_decisions"]) == 2
+
+
+def test_self_consistency_sample_budget_status_reports_fixed_threshold_outcome():
+    verifier = SelfConsistencyVerifier(
+        min_samples=2,
+        min_overlap=0.55,
+        refute_threshold=0.40,
+        support_threshold=0.80,
+    )
+    claim = extract_claims("AlphaCorp has 10 offices in Europe.")[0]
+
+    status = verifier.sample_budget_status(
+        claim,
+        (
+            "AlphaCorp has 12 offices in Europe.",
+            "AlphaCorp has 12 offices in Europe as of 2026.",
+        ),
+        total_samples=5,
+    )
+
+    assert status["can_stop"] is True
+    assert status["reason"] == "refute_threshold_guaranteed"
+    assert status["sample_count"] == 2
+    assert status["remaining_samples"] == 3
+    assert status["refute_count"] == 2
+    assert status["refute_rate_lower_bound"] == pytest.approx(0.40)
+
+
+def test_cached_verifier_reuses_identical_claim_context_results():
+    class CountingVerifier:
+        def __init__(self):
+            self.calls = 0
+
+        def verify(self, claim, context=None):
+            self.calls += 1
+            return VerificationResult(
+                VerificationStatus.SUPPORTED,
+                confidence=0.9,
+                metadata={"claim": claim.text, "context": dict(context or {})},
+            )
+
+    base = CountingVerifier()
+    verifier = CachedVerifier(base)
+    claim = Claim("Inventory is available.", metadata={"state_check": StateCheck("inventory.sku.available")})
+    context = {"state": {"inventory": {"sku": {"available": 3}}}}
+
+    first = verifier.verify(claim, context=context)
+    second = verifier.verify(claim, context=context)
+    changed = verifier.verify(claim, context={"state": {"inventory": {"sku": {"available": 4}}}})
+
+    assert first is second
+    assert changed is not first
+    assert base.calls == 2
+    assert verifier.stats.to_dict()["hits"] == 1
+    assert verifier.stats.to_dict()["misses"] == 2
+
+
+def test_json_trace_cache_roundtrip(tmp_path):
+    cache = JsonTraceCache(tmp_path / "trace-cache.json", cache_type="unit_trace")
+
+    stored = cache.put(
+        "k1",
+        {"results": (VerificationResult(VerificationStatus.SUPPORTED, 0.9),)},
+        metadata={"source": "unit"},
+    )
+    loaded = JsonTraceCache(tmp_path / "trace-cache.json", cache_type="unit_trace").get_record("k1")
+
+    assert stored.key == "k1"
+    assert loaded is not None
+    assert loaded.payload["results"][0]["status"] == "supported"
+    assert loaded.metadata["source"] == "unit"
+    assert cache.summary()["records"] == 1
+    with pytest.raises(ValueError, match="cache_type"):
+        JsonTraceCache(tmp_path / "trace-cache.json", cache_type="other").get_record("k1")
+
+
+def test_cached_state_source_loads_once_and_copies_state():
+    class CountingStateSource:
+        def __init__(self):
+            self.calls = 0
+
+        def load_state(self):
+            self.calls += 1
+            return {"inventory": {"sku": {"available": 3}}}
+
+    source = CountingStateSource()
+    cached = CachedStateSource(source)
+
+    first = cached.load_state()
+    first["inventory"]["sku"]["available"] = 0
+    second = cached.load_state()
+
+    assert source.calls == 1
+    assert second["inventory"]["sku"]["available"] == 3
+    assert cached.stats.to_dict()["hits"] == 1
+    assert cached.stats.to_dict()["misses"] == 1
+
+
+def test_cached_retriever_reuses_query_results():
+    retriever = CachedRetriever(InMemoryRetriever(("Paris is the capital of France.",)))
+    query = RetrievalQuery(query="Paris capital France", claim_id="c1")
+
+    first = retriever.retrieve(query, limit=1)
+    second = retriever.retrieve(query, limit=1)
+
+    assert first == second
+    assert second[0].text == "Paris is the capital of France."
+    assert retriever.stats.to_dict()["hits"] == 1
+    assert retriever.stats.to_dict()["misses"] == 1
+
+
+def test_in_memory_retriever_preserves_mapping_metadata_fields():
+    retriever = InMemoryRetriever((
+        {
+            "text": "Order R1 is approved for expedited shipping.",
+            "source": "shipping:R1",
+            "question": "What shipping option is order R1 approved for?",
+            "answer": "Order R1 is approved for expedited shipping.",
+        },
+    ), min_overlap=0.5)
+
+    hits = retriever.retrieve(
+        RetrievalQuery(query="What shipping option is order R1 approved for?"),
+        limit=1,
+    )
+
+    assert hits[0].metadata["question"] == "What shipping option is order R1 approved for?"
+    assert hits[0].metadata["answer"] == "Order R1 is approved for expedited shipping."
+    assert hits[0].metadata["retriever"] == "InMemoryRetriever"
+
+
+def test_sqlite_fts_retriever_returns_overlap_hits_or_falls_back():
+    retriever = SQLiteFTSRetriever((
+        "Paris is the capital of France.",
+        "Lyon is a city in France.",
+    ), min_overlap=0.6)
+
+    hits = retriever.retrieve(RetrievalQuery(query="Paris capital France"), limit=1)
+
+    assert hits[0].text == "Paris is the capital of France."
+    assert hits[0].metadata["token_overlap"] == pytest.approx(1.0)
+    if retriever.available:
+        assert hits[0].metadata["retriever"] == "SQLiteFTSRetriever"
+        assert hits[0].metadata["retriever_backend"] == "sqlite_fts"
+    else:
+        assert hits[0].metadata["retriever"] == "InMemoryRetriever"
+        assert retriever.fallback_reason
+
+
+def test_sqlite_fts_retriever_can_reuse_persistent_index(tmp_path):
+    index_path = tmp_path / "retrieval.sqlite"
+    documents = (
+        "Paris is the capital of France.",
+        "Lyon is a city in France.",
+    )
+    first = SQLiteFTSRetriever(documents, min_overlap=0.6, index_path=index_path)
+
+    first_hits = first.retrieve(RetrievalQuery(query="Paris capital France"), limit=1)
+
+    assert first_hits[0].text == "Paris is the capital of France."
+    assert first.index_reused is False
+    if not first.available:
+        assert first.fallback_reason
+        return
+
+    assert first.index_path == index_path
+    assert index_path.exists()
+    second = SQLiteFTSRetriever(documents, min_overlap=0.6, index_path=index_path)
+    second_hits = second.retrieve(RetrievalQuery(query="Paris capital France"), limit=1)
+
+    assert second.available
+    assert second.index_reused is True
+    assert second.document_fingerprint == first.document_fingerprint
+    assert second_hits[0].text == "Paris is the capital of France."
+
+    changed = SQLiteFTSRetriever((*documents, "Marseille is a port city."), min_overlap=0.6, index_path=index_path)
+    assert changed.available
+    assert changed.index_reused is False
+    assert changed.document_fingerprint != first.document_fingerprint
+
+
+def test_http_json_retriever_parses_external_hits(monkeypatch):
+    seen = {}
+
+    class Headers:
+        def get_content_charset(self):
+            return "utf-8"
+
+    class Response:
+        status = 200
+        headers = Headers()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, traceback):
+            return False
+
+        def read(self, limit=-1):
+            return json.dumps({
+                "hits": [
+                    {
+                        "content": "Paris is the capital of France.",
+                        "source": "external:wiki",
+                        "score": 0.9,
+                        "rank": 1,
+                    }
+                ]
+            }).encode("utf-8")
+
+    def fake_urlopen(request, *, timeout):
+        seen["url"] = request.full_url
+        seen["timeout"] = timeout
+        seen["header"] = request.get_header("X-test")
+        return Response()
+
+    monkeypatch.setattr("eigentruth.adapters.retrieval.urllib.request.urlopen", fake_urlopen)
+    retriever = HTTPJSONRetriever(
+        "https://search.example/api?existing=1",
+        headers={"X-Test": "frontier"},
+        timeout_seconds=2.5,
+    )
+
+    hits = retriever.retrieve(RetrievalQuery(query="Paris capital", claim_id="c1"), limit=2)
+
+    assert "existing=1" in seen["url"]
+    assert "q=Paris+capital" in seen["url"]
+    assert "limit=2" in seen["url"]
+    assert seen["timeout"] == pytest.approx(2.5)
+    assert seen["header"] == "frontier"
+    assert hits[0].text == "Paris is the capital of France."
+    assert hits[0].source == "external:wiki"
+    assert hits[0].score == pytest.approx(0.9)
+    assert hits[0].metadata["rank"] == 1
+    assert hits[0].metadata["retriever"] == "HTTPJSONRetriever"
+    assert hits[0].metadata["retriever_backend"] == "http_json"
+    assert hits[0].metadata["claim_id"] == "c1"
+
+
+def test_retrieval_action_executor_fails_closed_when_retriever_errors():
+    class FailingRetriever:
+        def retrieve(self, query, *, limit=5):
+            raise RuntimeError("search backend offline")
+
+    request = ActionRequest(
+        action=ControlAction.RETRIEVE,
+        reason="unsupported claim",
+        payload={"retrieval_targets": ({"claim_id": "c1", "text": "Paris capital France"},)},
+        request_id="req-search",
+    )
+    executor = RetrievalActionExecutor(FailingRetriever())
+
+    result = executor.execute(request, context={"request_id": "req-search"})
+
+    assert result.status is ActionExecutionStatus.FAILED
+    assert result.request_id == "req-search"
+    assert result.error == "retrieval failed for 1 of 1 queries"
+    assert result.output["hits"] == ()
+    assert result.output["errors"][0]["error_type"] == "RuntimeError"
+    assert "search backend offline" in result.output["errors"][0]["error"]
+    assert result.output["hits_by_query"][0]["hits"] == ()
+    assert result.metadata["retriever"] == "FailingRetriever"
+    assert result.metadata["fail_closed"] is True
+    assert result.metadata["side_effects"] is False
+
+
+def test_provenance_filtered_retriever_enforces_source_score_and_metadata():
+    retriever = ProvenanceFilteredRetriever(
+        InMemoryRetriever((
+            {
+                "text": "Paris is the capital of France.",
+                "source": "external:wiki:france",
+                "score": 0.95,
+                "corpus_role": "grounding",
+            },
+            {
+                "text": "The answer says Paris, so Paris must be correct.",
+                "source": "answer_echo:truthfulqa",
+                "score": 1.0,
+                "corpus_role": "stress_control",
+            },
+            {
+                "text": "Paris is often mentioned in travel guides.",
+                "source": "external:blog",
+                "score": 0.7,
+                "corpus_role": "grounding",
+            },
+            {
+                "text": "France has Paris as its capital city.",
+                "source": "external:wiki:france",
+                "score": 0.9,
+                "corpus_role": "grounding",
+            },
+        ), min_overlap=0.2),
+        min_score=0.8,
+        require_source=True,
+        allowed_source_prefixes=("external:wiki",),
+        denied_source_prefixes=("answer_echo:",),
+        required_metadata={"corpus_role": "grounding"},
+        max_hits_per_source=1,
+    )
+
+    hits = retriever.retrieve(RetrievalQuery(query="Paris capital France"), limit=3)
+
+    assert len(hits) == 1
+    assert hits[0].text == "Paris is the capital of France."
+    assert hits[0].source == "external:wiki:france"
+    assert hits[0].metadata["provenance_filter"]["wrapped_retriever"] == "InMemoryRetriever"
+    assert hits[0].metadata["provenance_filter"]["allowed_source_prefixes"] == ("external:wiki",)
+    assert hits[0].metadata["provenance_filter"]["required_metadata"] == {"corpus_role": "grounding"}
+
+
+def test_provenance_filtered_retriever_blocks_untrusted_hits_from_action_result():
+    retriever = ProvenanceFilteredRetriever(
+        InMemoryRetriever((
+            {
+                "text": "The answer itself says Paris is correct.",
+                "source": "answer_echo:truthfulqa",
+                "score": 1.0,
+                "corpus_role": "stress_control",
+            },
+        ), min_overlap=0.2),
+        require_source=True,
+        allowed_source_prefixes=("external:",),
+        required_metadata={"corpus_role": "grounding"},
+    )
+    request = ActionRequest(
+        action=ControlAction.RETRIEVE,
+        reason="unsupported claim",
+        payload={"retrieval_targets": ({"claim_id": "c1", "text": "Paris capital France"},)},
+        request_id="req-filter",
+    )
+    executor = RetrievalActionExecutor(retriever)
+
+    result = executor.execute(request)
+
+    assert result.status is ActionExecutionStatus.SUCCEEDED
+    assert result.output["hits"] == ()
+    assert result.output["hits_by_query"][0]["hits"] == ()
+    assert result.output["errors"] == ()
+    assert result.metadata["retriever"] == "ProvenanceFilteredRetriever"
+    assert result.metadata["fail_closed"] is False
+
+
+def test_question_answer_verifier_checks_structured_question_answers():
+    verifier = QuestionAnswerVerifier([
+        QuestionAnswerFact(
+            question="What is the capital of France?",
+            answer="Paris",
+            source="qa:facts",
+        )
+    ])
+
+    supported = verifier.verify(
+        Claim("Paris", metadata={"question": "What is the capital of France?", "answer": "Paris"})
+    )
+    refuted = verifier.verify(
+        Claim("Lyon"),
+        context={"statement": {"question": "What is the capital of France?", "answer": "Lyon"}},
+    )
+    unknown = verifier.verify(
+        Claim("Madrid"),
+        context={"statement": {"question": "What is the capital of Spain?", "answer": "Madrid"}},
+    )
+
+    assert supported.status is VerificationStatus.SUPPORTED
+    assert supported.metadata["decision_rule"] == "answer_match"
+    assert refuted.status is VerificationStatus.REFUTED
+    assert refuted.metadata["decision_rule"] == "answer_mismatch"
+    assert "Paris" in refuted.evidence[0]
+    assert unknown.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert unknown.metadata["decision_rule"] == "question_not_found"
+
+
+def test_calculator_verifier_supports_and_refutes_arithmetic_claims():
+    verifier = CalculatorVerifier()
+
+    supported = verifier.verify(Claim("2 + 2 = 4."))
+    refuted = verifier.verify(Claim("2 + 2 = 5."))
+    extracted = verifier.verify(extract_claims("2 plus 2 is 5.")[0])
+    structured = verifier.verify(
+        Claim("The computed total is 12.", metadata={"calculation": {"expression": "3 * 4", "expected": 12}})
+    )
+
+    assert supported.status is VerificationStatus.SUPPORTED
+    assert supported.metadata["decision_rule"] == "calculation_match"
+    assert refuted.status is VerificationStatus.REFUTED
+    assert refuted.metadata["decision_rule"] == "calculation_mismatch"
+    assert refuted.metadata["actual"] == pytest.approx(4.0)
+    assert extracted.status is VerificationStatus.REFUTED
+    assert extracted.metadata["expression"] == "2 + 2"
+    assert structured.status is VerificationStatus.SUPPORTED
+    assert structured.evidence[0].startswith("calculator: 3 * 4 = 12")
+
+
+def test_calculator_verifier_handles_non_applicable_and_unsafe_expressions():
+    verifier = CalculatorVerifier()
+
+    not_applicable = verifier.verify(Claim("Paris is the capital of France."))
+    unsafe = verifier.verify(
+        Claim("Bad calculation.", metadata={"expression": "__import__('os').system('true')", "expected": 0})
+    )
+    divided_by_zero = verifier.verify(Claim("1 / 0 = 0."))
+
+    assert not_applicable.status is VerificationStatus.NOT_APPLICABLE
+    assert not_applicable.metadata["decision_rule"] == "no_calculation"
+    assert unsafe.status is VerificationStatus.ERROR
+    assert unsafe.metadata["decision_rule"] == "calculation_error"
+    assert divided_by_zero.status is VerificationStatus.ERROR
+    assert divided_by_zero.explanation == "division by zero"
+
+
+def test_calculator_verifier_rejects_non_finite_tolerance_and_expected_values():
+    verifier = CalculatorVerifier()
+
+    infinite_tolerance = verifier.verify(
+        Claim(
+            "Bad calculation.",
+            metadata={
+                "calculation": {
+                    "expression": "2 + 2",
+                    "expected": 5,
+                    "tolerance": "inf",
+                },
+            },
+        )
+    )
+    infinite_expected = verifier.verify(
+        Claim(
+            "Bad calculation.",
+            metadata={"calculation": {"expression": "2 + 2", "expected": "nan"}},
+        )
+    )
+
+    assert infinite_tolerance.status is VerificationStatus.ERROR
+    assert infinite_tolerance.metadata["decision_rule"] == "invalid_calculation_config"
+    assert infinite_expected.status is VerificationStatus.ERROR
+    assert infinite_expected.metadata["decision_rule"] == "invalid_calculation_config"
+    with pytest.raises(ValueError, match="default_tolerance"):
+        CalculatorVerifier(default_tolerance=float("inf"))
+    with pytest.raises(ValueError, match="max_abs_value"):
+        CalculatorVerifier(max_abs_value=float("nan"))
+
+
+def test_structured_state_verifier_supports_and_refutes_business_rules():
+    verifier = StructuredStateVerifier(
+        state={
+            "inventory": {"sku_123": {"available": 12}},
+            "account": {"status": "active", "tier": "enterprise"},
+        }
+    )
+
+    supported = verifier.verify(
+        Claim(
+            "SKU 123 has enough available inventory.",
+            metadata={"state_check": {"path": "inventory.sku_123.available", "operator": ">=", "value": 10}},
+        )
+    )
+    refuted = verifier.verify(
+        Claim(
+            "Account is suspended.",
+            metadata={"state_check": {"path": "account.status", "operator": "eq", "value": "suspended"}},
+        )
+    )
+    membership = verifier.verify(
+        Claim(
+            "Account tier is allowed.",
+            metadata={"state_check": {"path": "account.tier", "operator": "in", "value": ["pro", "enterprise"]}},
+        )
+    )
+
+    assert supported.status is VerificationStatus.SUPPORTED
+    assert supported.metadata["decision_rule"] == "state_check_passed"
+    assert supported.metadata["actual"] == 12
+    assert refuted.status is VerificationStatus.REFUTED
+    assert refuted.metadata["decision_rule"] == "state_check_failed"
+    assert "suspended" in refuted.evidence[0]
+    assert membership.status is VerificationStatus.SUPPORTED
+
+
+def test_structured_state_verifier_uses_context_state_and_claim_specific_checks():
+    verifier = StructuredStateVerifier(state={"inventory": {"sku_123": {"available": 2}}})
+    claim = Claim("Inventory is updated.", claim_id="c1")
+
+    result = verifier.verify(
+        claim,
+        context={
+            "state": {"inventory": {"sku_123": {"available": 5}}},
+            "state_checks": {
+                "c1": StateCheck(path="inventory.sku_123.available", operator="between", value=[3, 6])
+            },
+        },
+    )
+
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["actual"] == 5
+    assert result.metadata["operator"] == "between"
+
+
+def test_structured_state_verifier_reports_missing_and_invalid_checks():
+    verifier = StructuredStateVerifier(state={"account": {"balance": 10}})
+
+    not_applicable = verifier.verify(Claim("No structured state check."))
+    missing = verifier.verify(
+        Claim("Missing state.", metadata={"state_check": {"path": "account.limit", "operator": "exists"}})
+    )
+    invalid = verifier.verify(
+        Claim(
+            "Invalid numeric check.",
+            metadata={"state_check": {"path": "account.balance", "operator": ">", "value": "x"}},
+        )
+    )
+
+    assert not_applicable.status is VerificationStatus.NOT_APPLICABLE
+    assert not_applicable.metadata["decision_rule"] == "no_state_check"
+    assert missing.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert missing.metadata["decision_rule"] == "state_path_missing"
+    assert invalid.status is VerificationStatus.ERROR
+    assert invalid.metadata["decision_rule"] == "evaluation_error"
+
+
+def test_sqlite_state_source_loads_database_state_for_verifier(tmp_path):
+    db_path = tmp_path / "state.db"
+    connection = sqlite3.connect(db_path)
+    connection.execute("create table inventory (sku text primary key, available integer)")
+    connection.execute("create table accounts (id text primary key, status text, tier text)")
+    connection.execute("insert into inventory values (?, ?)", ("sku_123", 12))
+    connection.execute("insert into accounts values (?, ?, ?)", ("acct_1", "active", "enterprise"))
+    connection.commit()
+    connection.close()
+
+    source = SQLiteStateSource(
+        db_path,
+        queries=(
+            SQLiteStateQuery(
+                path="inventory.sku_123.available",
+                sql="select available from inventory where sku = ?",
+                params=("sku_123",),
+            ),
+            {
+                "path": "account.status",
+                "sql": "select status from accounts where id = ?",
+                "params": ("acct_1",),
+                "column": "status",
+            },
+            {
+                "path": "account.profile",
+                "sql": "select status, tier from accounts where id = ?",
+                "params": ("acct_1",),
+            },
+        ),
+    )
+
+    state = source.load_state()
+    verifier = StructuredStateVerifier.from_source(source)
+    supported = verifier.verify(
+        Claim(
+            "SKU 123 has enough inventory.",
+            metadata={"state_check": {"path": "inventory.sku_123.available", "operator": ">=", "value": 10}},
+        )
+    )
+    refuted = verifier.verify(
+        Claim("Account is suspended.", metadata={"state_check": {"path": "account.status", "value": "suspended"}})
+    )
+
+    assert state["inventory"]["sku_123"]["available"] == 12
+    assert state["account"]["status"] == "active"
+    assert state["account"]["profile"] == {"status": "active", "tier": "enterprise"}
+    assert supported.status is VerificationStatus.SUPPORTED
+    assert refuted.status is VerificationStatus.REFUTED
+    assert "sqlite" not in supported.metadata
+
+
+def test_sqlite_state_source_handles_missing_required_queries(tmp_path):
+    db_path = tmp_path / "state.db"
+    connection = sqlite3.connect(db_path)
+    connection.execute("create table inventory (sku text primary key, available integer)")
+    connection.commit()
+    connection.close()
+
+    optional = SQLiteStateSource(
+        db_path,
+        queries=(
+            {
+                "path": "inventory.missing.available",
+                "sql": "select available from inventory where sku = ?",
+                "params": ("missing",),
+                "required": "false",
+            },
+        ),
+    )
+    required = SQLiteStateSource(
+        db_path,
+        queries=(
+            {
+                "path": "inventory.missing.available",
+                "sql": "select available from inventory where sku = ?",
+                "params": ("missing",),
+                "required": True,
+            },
+        ),
+    )
+
+    assert optional.load_state() == {}
+    with pytest.raises(ValueError, match="returned no rows"):
+        required.load_state()
+    with pytest.raises(ValueError, match="required must be"):
+        SQLiteStateQuery.from_mapping({"path": "x", "sql": "select 1", "required": "maybe"})
+
+
+def test_tool_output_state_source_maps_action_results_for_state_verifier():
+    class ReservationToolExecutor:
+        def execute(self, request, context=None):
+            return ActionResult(
+                action=request.action,
+                status=ActionExecutionStatus.SUCCEEDED,
+                request_id=request.request_id,
+                output={
+                    "reservation": {
+                        "order_id": "ord_1",
+                        "sku": "sku_123",
+                        "status": "reserved",
+                        "remaining_available": 7,
+                    }
+                },
+                metadata={"executor": type(self).__name__, "context": dict(context or {})},
+            )
+
+        def execute_many(self, requests, context=None):
+            return tuple(self.execute(request, context=context) for request in requests)
+
+    request = ActionRequest(
+        action=ControlAction.RETRIEVE,
+        reason="check reservation tool output",
+        request_id="reserve-1",
+    )
+    registry = ActionExecutorRegistry().register(ControlAction.RETRIEVE, ReservationToolExecutor())
+    action_result = registry.execute(request, context={"request_id": "req-tool-output"})
+    source = ToolOutputStateSource(
+        action_results=(action_result,),
+        mappings=(
+            ToolOutputMapping(
+                state_path="inventory.sku_123.available",
+                output_path="reservation.remaining_available",
+                action=ControlAction.RETRIEVE,
+                request_id="reserve-1",
+                required=True,
+            ),
+            {
+                "state_path": "orders.ord_1.status",
+                "output_path": "reservation.status",
+                "action": "retrieve",
+                "request_id": "reserve-1",
+            },
+        ),
+    )
+
+    state = source.load_state()
+    verifier = StructuredStateVerifier.from_source(source)
+    supported = verifier.verify(
+        Claim(
+            "Reservation tool left 7 units available.",
+            metadata={
+                "state_check": {
+                    "path": "inventory.sku_123.available",
+                    "operator": "eq",
+                    "value": 7,
+                    "source": "reservation_tool_output",
+                }
+            },
+        )
+    )
+    refuted = verifier.verify(
+        Claim(
+            "Reservation tool left 9 units available.",
+            metadata={"state_check": {"path": "inventory.sku_123.available", "operator": "eq", "value": 9}},
+        )
+    )
+
+    assert state["inventory"]["sku_123"]["available"] == 7
+    assert state["orders"]["ord_1"]["status"] == "reserved"
+    assert state["tool_outputs"]["by_request_id"]["reserve-1"]["reservation"]["status"] == "reserved"
+    assert state["tool_outputs"]["first_by_action"]["retrieve"]["reservation"]["remaining_available"] == 7
+    assert supported.status is VerificationStatus.SUPPORTED
+    assert supported.metadata["actual"] == 7
+    assert refuted.status is VerificationStatus.REFUTED
+
+
+def test_tool_output_state_source_handles_raw_outputs_defaults_and_required_mappings():
+    source = ToolOutputStateSource(
+        outputs={"calculator": {"result": 42}},
+        mappings=(
+            {"state_path": "answers.value", "output_path": "calculator.result", "required": "true"},
+            {"state_path": "answers.units", "output_path": "calculator.units", "default": "items"},
+        ),
+    )
+    required_missing = ToolOutputStateSource(
+        outputs={"calculator": {"result": 42}},
+        mappings=(
+            {"state_path": "answers.value", "output_path": "calculator.missing", "required": True},
+        ),
+    )
+
+    state = source.load_state()
+
+    assert state["answers"] == {"value": 42, "units": "items"}
+    assert state["tool_outputs"]["input"]["calculator"]["result"] == 42
+    with pytest.raises(ValueError, match="required tool output mapping"):
+        required_missing.load_state()
+
+
+def test_tool_output_state_source_ignores_failed_action_outputs_for_state_mapping():
+    failed_result = ActionResult(
+        action=ControlAction.RETRIEVE,
+        status=ActionExecutionStatus.FAILED,
+        request_id="retrieve-failed",
+        output={"reservation": {"remaining_available": 0}},
+        error="tool failed",
+    )
+    timed_out_result = ActionResult(
+        action=ControlAction.RETRIEVE,
+        status=ActionExecutionStatus.TIMED_OUT,
+        request_id="retrieve-timeout",
+        output={"reservation": {"remaining_available": 1}},
+        error="tool timed out",
+    )
+    source = ToolOutputStateSource(
+        action_results=(failed_result, timed_out_result),
+        mappings=(
+            ToolOutputMapping(
+                state_path="inventory.sku_123.available",
+                output_path="reservation.remaining_available",
+                action=ControlAction.RETRIEVE,
+                request_id="retrieve-failed",
+                required=False,
+            ),
+        ),
+    )
+    required_source = ToolOutputStateSource(
+        action_results=(failed_result,),
+        mappings=(
+            ToolOutputMapping(
+                state_path="inventory.sku_123.available",
+                output_path="reservation.remaining_available",
+                action=ControlAction.RETRIEVE,
+                request_id="retrieve-failed",
+                required=True,
+            ),
+        ),
+    )
+
+    state = source.load_state()
+
+    assert "inventory" not in state
+    assert state["tool_outputs"]["results"][0]["status"] == "failed"
+    assert "by_request_id" not in state["tool_outputs"]
+    with pytest.raises(ValueError, match="required tool output mapping"):
+        required_source.load_state()
+
+
+def test_composite_verifier_skips_not_applicable_tool_results():
+    fallback = InMemoryVerifier({normalize_claim_text("Paris is the capital of France"): VerificationStatus.SUPPORTED})
+    verifier = CompositeVerifier((CalculatorVerifier(), fallback))
+
+    arithmetic = verifier.verify(Claim("2 + 2 = 5."))
+    factual = verifier.verify(Claim("Paris is the capital of France."))
+
+    assert arithmetic.status is VerificationStatus.REFUTED
+    assert arithmetic.metadata["selected_verifier"] == "CalculatorVerifier"
+    assert factual.status is VerificationStatus.SUPPORTED
+    assert factual.metadata["selected_verifier"] == "InMemoryVerifier"
+    assert factual.metadata["skipped_verifiers"][0]["verifier"] == "CalculatorVerifier"
+
+
+def test_routed_verifier_selects_routes_from_metadata_context_and_text():
+    fallback = InMemoryVerifier({normalize_claim_text("Paris is the capital of France"): VerificationStatus.SUPPORTED})
+    verifier = RoutedVerifier((
+        VerifierRoute(
+            "calculator",
+            CalculatorVerifier(),
+            metadata_keys=("calculation", "expression"),
+            context_keys=("calculation", "expression"),
+            text_patterns=(r"\d\s*[+*/-]\s*\d\s*=",),
+        ),
+        VerifierRoute("fallback", fallback, fallback=True),
+    ))
+
+    text_route = verifier.verify(Claim("2 + 2 = 5."))
+    context_route = verifier.verify(
+        Claim("The computed total is wrong."),
+        context={"calculation": {"expression": "6 / 3", "expected": 3}},
+    )
+    fallback_route = verifier.verify(Claim("Paris is the capital of France."))
+
+    assert text_route.status is VerificationStatus.REFUTED
+    assert text_route.metadata["selected_route"] == "calculator"
+    assert "text_pattern:" in text_route.metadata["matched_route_details"][0]["match_reasons"][0]
+    assert context_route.status is VerificationStatus.REFUTED
+    assert context_route.metadata["selected_route"] == "calculator"
+    assert context_route.metadata["matched_route_details"][0]["match_reasons"] == ("context:calculation",)
+    assert fallback_route.status is VerificationStatus.SUPPORTED
+    assert fallback_route.metadata["selected_route"] == "fallback"
+    assert fallback_route.metadata["matched_route_details"][0]["match_reasons"] == ("fallback",)
+    for routed in (text_route, context_route, fallback_route):
+        assert routed.metadata["attempted_route_count"] == 1.0
+        assert math.isfinite(routed.metadata["total_duration_seconds"])
+        assert math.isfinite(routed.metadata["selected_route_duration_seconds"])
+        assert routed.metadata["total_duration_seconds"] >= routed.metadata["selected_route_duration_seconds"] >= 0.0
+
+
+def test_routed_verifier_uses_extracted_calculation_metadata_without_text_pattern():
+    fallback = InMemoryVerifier({})
+    verifier = RoutedVerifier((
+        VerifierRoute("calculator", CalculatorVerifier(), metadata_keys=("calculation",)),
+        VerifierRoute("fallback", fallback, fallback=True),
+    ))
+
+    result = verifier.verify(extract_claims("2 plus 2 is 5.")[0])
+
+    assert result.status is VerificationStatus.REFUTED
+    assert result.metadata["selected_route"] == "calculator"
+    assert result.metadata["matched_route_details"][0]["match_reasons"] == ("metadata:calculation",)
+    assert result.metadata["expression"] == "2 + 2"
+
+
+def test_routed_verifier_parses_string_feature_flags():
+    verifier = RoutedVerifier((
+        VerifierRoute("calculator", CalculatorVerifier(), feature_flags=("has_calculation",)),
+    ))
+
+    matched = verifier.verify(
+        Claim(
+            "The computed answer is wrong.",
+            metadata={
+                "features": {"has_calculation": "true"},
+                "calculation": {"expression": "2 + 2", "expected": 5},
+            },
+        )
+    )
+    skipped = verifier.verify(
+        Claim(
+            "The computed answer is wrong.",
+            metadata={
+                "features": {"has_calculation": "false"},
+                "calculation": {"expression": "2 + 2", "expected": 5},
+            },
+        )
+    )
+
+    assert matched.status is VerificationStatus.REFUTED
+    assert matched.metadata["selected_route"] == "calculator"
+    assert matched.metadata["matched_route_details"][0]["match_reasons"] == (
+        "feature_flag:has_calculation",
+    )
+    assert skipped.status is VerificationStatus.NOT_APPLICABLE
+    assert skipped.metadata["matched_routes"] == ()
+
+
+def test_routed_verifier_can_prioritize_structured_state_adapter():
+    fallback = InMemoryVerifier({normalize_claim_text("Fallback fact"): VerificationStatus.SUPPORTED})
+    verifier = RoutedVerifier((
+        VerifierRoute(
+            "state",
+            StructuredStateVerifier(state={"quota": {"remaining": 0}}),
+            metadata_keys=("state_check",),
+        ),
+        VerifierRoute("fallback", fallback, fallback=True),
+    ))
+
+    state_route = verifier.verify(
+        Claim("Quota remains.", metadata={"state_check": {"path": "quota.remaining", "operator": ">", "value": 0}})
+    )
+    fallback_route = verifier.verify(Claim("Fallback fact."))
+
+    assert state_route.status is VerificationStatus.REFUTED
+    assert state_route.metadata["selected_route"] == "state"
+    assert state_route.metadata["selected_verifier"] == "StructuredStateVerifier"
+    assert fallback_route.status is VerificationStatus.SUPPORTED
+    assert fallback_route.metadata["selected_route"] == "fallback"
+
+
+def test_routed_verifier_reports_not_applicable_when_no_route_matches():
+    verifier = RoutedVerifier((
+        VerifierRoute("calculator", CalculatorVerifier(), metadata_keys=("calculation",)),
+    ))
+
+    result = verifier.verify(Claim("Paris is the capital of France."))
+
+    assert result.status is VerificationStatus.NOT_APPLICABLE
+    assert result.metadata["matched_routes"] == ()
+
+
+def test_routed_verifier_can_fall_through_on_insufficient_evidence():
+    qa = QuestionAnswerVerifier([QuestionAnswerFact(question="Q?", answer="A")])
+    fallback = InMemoryVerifier({normalize_claim_text("Fallback fact"): VerificationStatus.SUPPORTED})
+    verifier = RoutedVerifier((
+        VerifierRoute(
+            "structured_qa",
+            qa,
+            context_keys=("statement.question", "statement.answer"),
+            fallthrough_statuses=(VerificationStatus.INSUFFICIENT_EVIDENCE,),
+        ),
+        VerifierRoute("fallback", fallback, fallback=True),
+    ))
+
+    result = verifier.verify(
+        Claim("Fallback fact."),
+        context={"statement": {"question": "Unknown?", "answer": "A"}},
+    )
+
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["selected_route"] == "fallback"
+    assert result.metadata["skipped_routes"][0]["route"] == "structured_qa"
+    assert result.metadata["skipped_routes"][0]["match_reasons"] == (
+        "context:statement.question",
+        "context:statement.answer",
+    )
+    assert result.metadata["skipped_routes"][0]["status"] == "insufficient_evidence"
+    assert result.metadata["attempted_route_count"] == 2.0
+    assert math.isfinite(result.metadata["total_duration_seconds"])
+    assert math.isfinite(result.metadata["selected_route_duration_seconds"])
+    assert math.isfinite(result.metadata["skipped_routes"][0]["duration_seconds"])
+    assert result.metadata["total_duration_seconds"] >= result.metadata["selected_route_duration_seconds"] >= 0.0
+
+
+def test_routed_verifier_can_cap_route_fanout():
+    qa = QuestionAnswerVerifier([QuestionAnswerFact(question="Q?", answer="A")])
+    fallback = InMemoryVerifier({normalize_claim_text("Fallback fact"): VerificationStatus.SUPPORTED})
+    verifier = RoutedVerifier(
+        (
+            VerifierRoute(
+                "structured_qa",
+                qa,
+                context_keys=("statement.question", "statement.answer"),
+                fallthrough_statuses=(VerificationStatus.INSUFFICIENT_EVIDENCE,),
+            ),
+            VerifierRoute("fallback", fallback, fallback=True),
+        ),
+        max_attempted_routes=1,
+    )
+
+    result = verifier.verify(
+        Claim("Fallback fact."),
+        context={"statement": {"question": "Unknown?", "answer": "A"}},
+    )
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert result.metadata["selected_route"] == "structured_qa"
+    assert result.metadata["attempted_route_count"] == 1.0
+    assert result.metadata["route_budget_limit"] == 1
+    assert result.metadata["route_budget_exhausted"] is True
+    assert result.metadata["route_stop_reason"] == "max_attempted_routes"
+    assert result.metadata["selected_route_was_fallthrough"] is True
+    assert result.metadata["unattempted_routes"] == ("fallback",)
+    assert result.metadata["skipped_routes"] == ()
+
+
+def test_routed_verifier_fails_closed_when_not_applicable_route_exhausts_budget():
+    fallback = InMemoryVerifier({normalize_claim_text("Fallback fact"): VerificationStatus.SUPPORTED})
+    verifier = RoutedVerifier(
+        (
+            VerifierRoute("calculator", CalculatorVerifier(), fallback=True),
+            VerifierRoute("fallback", fallback, fallback=True),
+        ),
+        max_attempted_routes=1,
+    )
+
+    result = verifier.verify(Claim("Fallback fact."))
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert result.metadata["budget_exhaustion_original_status"] == "not_applicable"
+    assert result.metadata["route_budget_exhausted"] is True
+    assert result.metadata["unattempted_routes"] == ("fallback",)
+
+    artifact = CalibrationArtifact(
+        model_id="tiny",
+        target_layer=-1,
+        scores=(CalibrationScore("maha_last", threshold=1.0),),
+        eigentruth_version="0.1.0",
+    )
+    decision = RiskController(artifact).decide(
+        {"maha_last": 0.0},
+        verification_results=(result,),
+    )
+
+    assert decision.action is ControlAction.RETRIEVE
+    assert decision.risk_level is RiskLevel.MEDIUM
+
+
+def test_routed_verifier_rejects_invalid_route_fanout_budget():
+    route = VerifierRoute("calculator", CalculatorVerifier(), metadata_keys=("calculation",))
+
+    with pytest.raises(ValueError, match="max_attempted_routes"):
+        RoutedVerifier((route,), max_attempted_routes=0)
+    with pytest.raises(ValueError, match="max_attempted_routes"):
+        RoutedVerifier((route,), max_attempted_routes=True)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="max_attempted_routes"):
+        RoutedVerifier((route,), max_attempted_routes=1.5)  # type: ignore[arg-type]
+
+
+def test_citation_verifier_supports_catalog_matched_references():
+    record = CitationRecord(
+        citation_id="1",
+        title="Geometry-Calibrated Conformal Abstention for Language Models",
+        authors=("Nguyen", "Patel"),
+        year=2026,
+        doi="10.1234/eigentruth.2026",
+        url="https://example.org/eigentruth",
+    )
+    verifier = CitationVerifier(records=(record,))
+    claim = Claim(
+        "Geometry-calibrated abstention improved factual control [1].",
+        metadata={
+            "citation": {
+                "citation_id": "1",
+                "title": "Geometry Calibrated Conformal Abstention",
+                "author": "Nguyen",
+                "year": 2026,
+                "doi": "10.1234/EigenTruth.2026",
+            },
+            "features": {"has_citation": True},
+        },
+    )
+
+    refs = extract_citation_references(claim)
+    result = verifier.verify(claim)
+
+    assert refs[0]["citation_id"] == "1"
+    assert refs[1]["citation_id"] == "1"
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["matched_citation_ids"] == ("1",)
+    assert result.metadata["audits"][0]["status"] == "matched"
+    json.dumps(result.metadata)
+
+
+def test_citation_verifier_refutes_metadata_drift():
+    verifier = CitationVerifier(records=(
+        {
+            "id": "paper-a",
+            "title": "Reliable Citation Checking",
+            "authors": ["Rivera"],
+            "year": 2025,
+            "arxiv_id": "2501.12345",
+        },
+    ))
+    claim = Claim(
+        "Rivera (2026) introduced reliable citation checking.",
+        metadata={"citation": {"citation_id": "paper-a", "year": 2026, "arxiv_id": "2501.99999"}},
+    )
+
+    result = verifier.verify(claim)
+
+    assert result.status is VerificationStatus.REFUTED
+    assert result.metadata["mismatch_count"] >= 1
+    mismatched_fields = {
+        mismatch["field"]
+        for audit in result.metadata["audits"]
+        for mismatch in audit.get("mismatches", ())
+    }
+    assert {"year", "arxiv_id"} <= mismatched_fields
+
+
+def test_citation_verifier_reports_unresolved_references_fail_closed():
+    verifier = CitationVerifier(records=(
+        {"id": "known", "title": "Known Paper", "year": 2024},
+    ))
+
+    result = verifier.verify(Claim("A method was proposed in [missing]."))
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert result.metadata["unresolved_count"] == 1
+    assert result.explanation == "one or more citation references were not found in trusted catalog"
+
+
+def test_default_verifier_routes_can_fail_closed_on_citation_catalog_mismatch():
+    verifier = default_routed_verifier(
+        evidence=("Citation checking is a reliability method.",),
+        citation_records=(
+            {
+                "citation_id": "paper-a",
+                "title": "Citation Checking",
+                "authors": ["Rivera"],
+                "year": 2025,
+            },
+        ),
+    )
+
+    result = verifier.verify(
+        Claim(
+            "Citation checking is a reliability method [paper-a].",
+            metadata={"citation": {"citation_id": "paper-a", "year": 2026}, "features": {"has_citation": True}},
+        )
+    )
+
+    assert result.status is VerificationStatus.REFUTED
+    assert result.metadata["selected_route"] == "citation"
+    assert result.metadata["skipped_routes"] == ()
+    assert "groundedness" in result.metadata["matched_routes"]
+
+
+def test_default_verifier_routes_do_not_route_uncited_claims_only_because_catalog_exists():
+    verifier = default_routed_verifier(
+        evidence=("Paris is the capital of France.",),
+        citation_records=({"citation_id": "paper-a", "title": "Unrelated", "year": 2026},),
+    )
+
+    result = verifier.verify(Claim("Paris is the capital of France."))
+
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["selected_route"] == "groundedness"
+    assert "citation" not in result.metadata["matched_routes"]
+
+
+def test_default_verifier_routes_include_strict_triple_evidence_for_sensitive_claims():
+    verifier = default_routed_verifier(evidence=("AlphaCorp has 10 offices.",))
+
+    result = verifier.verify(
+        Claim(
+            "AlphaCorp has 10 offices.",
+            claim_id="alpha",
+            metadata={"features": {"has_number": True}},
+        )
+    )
+
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["selected_route"] == "triple_evidence"
+    assert result.metadata["selected_verifier"] == "TripleEvidenceVerifier"
+    assert result.metadata["matched_route_details"][0]["match_reasons"] == (
+        "feature_flag:has_number",
+    )
+    assert result.metadata["audit_report"]["passed"] is True
+
+
+def test_default_verifier_routes_fall_back_to_groundedness_for_ordinary_claims():
+    verifier = default_routed_verifier(evidence=("Paris is the capital of France.",))
+
+    result = verifier.verify(Claim("Paris is the capital of France."))
+
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["selected_route"] == "groundedness"
+    assert result.metadata["selected_verifier"] == "GroundednessVerifier"
+
+
+def test_default_verifier_routes_do_not_weaken_failed_triple_audits():
+    verifier = default_routed_verifier(evidence=("AlphaCorp has offices."))
+
+    result = verifier.verify(
+        Claim(
+            "AlphaCorp has 10 offices.",
+            claim_id="alpha",
+            metadata={"features": {"has_number": True}},
+        )
+    )
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert result.metadata["selected_route"] == "triple_evidence"
+    assert result.metadata["skipped_routes"] == ()
+    assert result.metadata["audit_report"]["failed_count"] == 1
+    assert result.metadata["audit_report"]["audits"][0]["missing_slots"] == ("object",)
+
+
+def test_default_verifier_routes_can_be_constructed_without_optional_routes():
+    routes = default_verifier_routes(include_calculator=False, include_triple_evidence=False)
+
+    assert tuple(route.name for route in routes) == ("groundedness",)
+    assert routes[0].fallback is True
+
+
 def test_in_memory_world_model_adapter_verifies_and_predicts_state():
     verifier = InMemoryVerifier({normalize_claim_text("Inventory is 10"): VerificationStatus.SUPPORTED})
     adapter = InMemoryWorldModelAdapter(verifier=verifier)
@@ -247,10 +2699,369 @@ def test_in_memory_world_model_adapter_verifies_and_predicts_state():
 
     result = adapter.verify(claim)
     prediction = adapter.predict({"inventory": 10}, {"set": {"inventory": 8}})
+    nested_prediction = adapter.predict(
+        {"inventory": {"sku_123": {"available": 10}}, "quota": {"used": 1}},
+        {
+            "decrement": {"inventory.sku_123.available": 3},
+            "increment": {"quota.used": 2},
+        },
+    )
 
     assert result.status is VerificationStatus.SUPPORTED
     assert prediction.state["inventory"] == 8
+    assert nested_prediction.state["inventory"]["sku_123"]["available"] == 7
+    assert nested_prediction.state["quota"]["used"] == 3
     assert "Inventory" in adapter.explain(claim)
+
+
+def test_rule_based_world_model_adapter_applies_auditable_domain_rules():
+    adapter = RuleBasedWorldModelAdapter(
+        rules=(
+            WorldModelRule(
+                name="ship_order_when_inventory_available",
+                action_match={"type": "ship_order", "sku": "sku_123"},
+                conditions=(
+                    {"path": "inventory.sku_123.available", "operator": "gte", "value": 3},
+                    {"path": "orders.ord_1.status", "operator": "eq", "value": "pending"},
+                ),
+                decrement_values={"inventory.sku_123.available": 3},
+                set_values={"orders.ord_1.status": "shipped"},
+                confidence=0.92,
+                explanation="shipping consumes reserved inventory and marks order shipped",
+            ),
+        )
+    )
+    verifier = StateTransitionVerifier(
+        world_model=adapter,
+        state={
+            "inventory": {"sku_123": {"available": 10}},
+            "orders": {"ord_1": {"status": "pending"}},
+        },
+        min_prediction_confidence=0.8,
+    )
+
+    prediction = adapter.predict(
+        {
+            "inventory": {"sku_123": {"available": 10}},
+            "orders": {"ord_1": {"status": "pending"}},
+        },
+        {"type": "ship_order", "sku": "sku_123"},
+    )
+    result = verifier.verify(
+        Claim(
+            "Shipping the order leaves 7 units available.",
+            metadata={
+                "state_transition": {
+                    "action": {"type": "ship_order", "sku": "sku_123"},
+                    "postcondition": {
+                        "path": "inventory.sku_123.available",
+                        "operator": "eq",
+                        "value": 7,
+                    },
+                }
+            },
+        )
+    )
+
+    assert prediction.state["inventory"]["sku_123"]["available"] == 7
+    assert prediction.state["orders"]["ord_1"]["status"] == "shipped"
+    assert prediction.confidence == pytest.approx(0.92)
+    assert prediction.metadata["matched_rules"][0]["rule"] == "ship_order_when_inventory_available"
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["world_model"] == "RuleBasedWorldModelAdapter"
+    assert result.metadata["prediction_metadata"]["decision_rule"] == "rule_transition_applied"
+
+
+def test_rule_based_world_model_adapter_fails_closed_when_no_rule_matches():
+    adapter = RuleBasedWorldModelAdapter(
+        rules=(
+            {
+                "name": "ship_order_when_inventory_available",
+                "action": {"type": "ship_order"},
+                "when": {"path": "inventory.sku_123.available", "operator": "gte", "value": 3},
+                "decrement": {"inventory.sku_123.available": 3},
+            },
+        )
+    )
+    verifier = StateTransitionVerifier(
+        world_model=adapter,
+        state={"inventory": {"sku_123": {"available": 1}}},
+    )
+    result = verifier.verify(
+        Claim(
+            "Shipping the order leaves negative inventory.",
+            metadata={
+                "state_transition": {
+                    "action": {"type": "ship_order"},
+                    "postcondition": {
+                        "path": "inventory.sku_123.available",
+                        "operator": "lt",
+                        "value": 0,
+                    },
+                }
+            },
+        )
+    )
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert result.metadata["decision_rule"] == "prediction_no_matching_rule"
+    assert result.metadata["prediction_metadata"]["no_rule_matched"] is True
+    assert result.metadata["prediction_metadata"]["skipped_rules"][0]["reason"] == "condition_failed"
+
+    with pytest.raises(ValueError, match="at least one rule"):
+        RuleBasedWorldModelAdapter(())
+
+
+def test_ensemble_world_model_adapter_confirms_consensus_predictions():
+    adapter_a = InMemoryWorldModelAdapter(verifier=InMemoryVerifier({}))
+    adapter_b = InMemoryWorldModelAdapter(verifier=InMemoryVerifier({}))
+    ensemble = EnsembleWorldModelAdapter((adapter_a, adapter_b), min_agreement=1.0)
+    verifier = StateTransitionVerifier(
+        world_model=ensemble,
+        state={"inventory": {"sku_123": {"available": 10}}},
+    )
+
+    prediction = ensemble.predict(
+        {"inventory": {"sku_123": {"available": 10}}},
+        {"decrement": {"inventory.sku_123.available": 3}},
+    )
+    result = verifier.verify(
+        Claim(
+            "The reservation leaves 7 units available.",
+            metadata={
+                "state_transition": {
+                    "action": {"decrement": {"inventory.sku_123.available": 3}},
+                    "postcondition": {
+                        "path": "inventory.sku_123.available",
+                        "operator": "eq",
+                        "value": 7,
+                    },
+                }
+            },
+        )
+    )
+
+    assert prediction.state["inventory"]["sku_123"]["available"] == 7
+    assert prediction.confidence == pytest.approx(1.0)
+    assert prediction.metadata["agreement_rate"] == pytest.approx(1.0)
+    assert prediction.metadata["below_min_agreement"] is False
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["world_model"] == "EnsembleWorldModelAdapter"
+    assert result.metadata["prediction_metadata"]["agreement_count"] == 2
+
+
+def test_ensemble_world_model_adapter_fails_closed_on_prediction_disagreement():
+    class DivergentWorldModel:
+        def verify(self, claim, context=None):
+            return VerificationResult(VerificationStatus.INSUFFICIENT_EVIDENCE, 0.2)
+
+        def predict(self, state, action):
+            next_state = dict(state)
+            next_state["inventory"] = {"sku_123": {"available": 8}}
+            return WorldModelPrediction(
+                state=next_state,
+                confidence=0.9,
+                explanation="divergent transition",
+            )
+
+        def explain(self, claim):
+            return "divergent world model"
+
+    base_adapter = InMemoryWorldModelAdapter(verifier=InMemoryVerifier({}))
+    ensemble = EnsembleWorldModelAdapter(
+        (base_adapter, DivergentWorldModel()),
+        min_agreement=1.0,
+    )
+    verifier = StateTransitionVerifier(
+        world_model=ensemble,
+        state={"inventory": {"sku_123": {"available": 10}}},
+    )
+
+    prediction = ensemble.predict(
+        {"inventory": {"sku_123": {"available": 10}}},
+        {"decrement": {"inventory.sku_123.available": 3}},
+    )
+    result = verifier.verify(
+        Claim(
+            "The reservation leaves 7 units available.",
+            metadata={
+                "state_transition": {
+                    "action": {"decrement": {"inventory.sku_123.available": 3}},
+                    "postcondition": {
+                        "path": "inventory.sku_123.available",
+                        "operator": "eq",
+                        "value": 7,
+                    },
+                }
+            },
+        )
+    )
+
+    assert prediction.confidence == pytest.approx(0.0)
+    assert prediction.metadata["below_min_agreement"] is True
+    assert prediction.metadata["agreement_rate"] == pytest.approx(0.5)
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert result.metadata["decision_rule"] == "prediction_agreement_below_threshold"
+    assert result.metadata["prediction_metadata"]["below_min_agreement"] is True
+
+    with pytest.raises(ValueError, match="world_models"):
+        EnsembleWorldModelAdapter(())
+    with pytest.raises(ValueError, match="min_agreement"):
+        EnsembleWorldModelAdapter((base_adapter,), min_agreement=0.0)
+
+
+def test_state_transition_verifier_checks_predicted_postconditions():
+    adapter = InMemoryWorldModelAdapter(verifier=InMemoryVerifier({}))
+    verifier = StateTransitionVerifier(
+        world_model=adapter,
+        state={"inventory": {"sku_123": {"available": 10}}, "orders": {"ord_1": {"status": "pending"}}},
+        reference=WorldModelReference(
+            reference_id="order_reservation_world",
+            source="order_world_model",
+            view_paths=("inventory.sku_123.available", "orders.ord_1.status"),
+            assumptions=("reservation actions decrement available inventory",),
+        ),
+    )
+    supported = verifier.verify(
+        Claim(
+            "Shipping the order leaves 7 units available.",
+            metadata={
+                "state_transition": StateTransitionCheck(
+                    action={
+                        "decrement": {"inventory.sku_123.available": 3},
+                        "set": {"orders.ord_1.status": "shipped"},
+                    },
+                    postcondition={"path": "inventory.sku_123.available", "operator": "eq", "value": 7},
+                    source="order_world_model",
+                )
+            },
+        )
+    )
+    refuted = verifier.verify(
+        Claim(
+            "Shipping the order leaves 10 units available.",
+            metadata={
+                "state_transition": {
+                    "action": {"decrement": {"inventory.sku_123.available": 3}},
+                    "postcondition": {"path": "inventory.sku_123.available", "operator": "eq", "value": 10},
+                }
+            },
+        )
+    )
+
+    assert supported.status is VerificationStatus.SUPPORTED
+    assert supported.metadata["verifier"] == "state_transition"
+    assert supported.metadata["decision_rule"] == "transition_postcondition_passed"
+    assert supported.metadata["world_model"] == "InMemoryWorldModelAdapter"
+    assert supported.metadata["actual"] == 7
+    assert supported.metadata["world_model_reference"]["reference_id"] == "order_reservation_world"
+    assert supported.metadata["world_model_reference"]["adapter"] == "InMemoryWorldModelAdapter"
+    assert supported.metadata["world_model_reference"]["source"] == "order_world_model"
+    assert supported.metadata["world_model_reference"]["view_paths"] == (
+        "inventory.sku_123.available",
+        "orders.ord_1.status",
+    )
+    assert supported.metadata["world_model_view"]["postcondition"]["path"] == "inventory.sku_123.available"
+    assert supported.metadata["world_model_view"]["inspected_paths"] == (
+        "inventory.sku_123.available",
+        "orders.ord_1.status",
+    )
+    assert supported.metadata["world_model_view"]["base_state_fingerprint"]
+    assert supported.metadata["world_model_view"]["predicted_state_fingerprint"]
+    assert refuted.status is VerificationStatus.REFUTED
+    assert refuted.metadata["decision_rule"] == "transition_postcondition_failed"
+    assert refuted.metadata["world_model_conflict"]["reference_id"] == "order_reservation_world"
+    assert refuted.metadata["world_model_conflict"]["path"] == "inventory.sku_123.available"
+    assert refuted.metadata["world_model_conflict"]["expected"] == 10
+    assert refuted.metadata["world_model_conflict"]["actual"] == 7
+    assert verifier.state["inventory"]["sku_123"]["available"] == 10
+
+
+def test_state_transition_verifier_fails_closed_on_low_confidence_prediction():
+    class LowConfidenceWorldModel:
+        def verify(self, claim, context=None):
+            return VerificationResult(VerificationStatus.INSUFFICIENT_EVIDENCE, 0.2)
+
+        def predict(self, state, action):
+            next_state = dict(state)
+            next_state["approved"] = True
+            return WorldModelPrediction(
+                state=next_state,
+                confidence=0.4,
+                explanation="weak simulated transition",
+            )
+
+        def explain(self, claim):
+            return "low-confidence world model"
+
+    verifier = StateTransitionVerifier(
+        world_model=LowConfidenceWorldModel(),
+        min_prediction_confidence=0.7,
+    )
+    result = verifier.verify(
+        Claim(
+            "The action is approved.",
+            metadata={
+                "state_transition": {
+                    "action": {"set": {"approved": True}},
+                    "postcondition": {"path": "approved", "operator": "eq", "value": True},
+                }
+            },
+        )
+    )
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert result.confidence == pytest.approx(0.4)
+    assert result.metadata["decision_rule"] == "prediction_confidence_below_threshold"
+    assert result.metadata["prediction_confidence"] == pytest.approx(0.4)
+    assert result.metadata["min_prediction_confidence"] == pytest.approx(0.7)
+
+    with pytest.raises(ValueError, match="min_prediction_confidence"):
+        StateTransitionVerifier(world_model=LowConfidenceWorldModel(), min_prediction_confidence=1.1)
+
+
+def test_state_transition_verifier_uses_context_state_and_claim_specific_transition():
+    adapter = InMemoryWorldModelAdapter(verifier=InMemoryVerifier({}))
+    verifier = StateTransitionVerifier(world_model=adapter, state={"quota": {"remaining": 5}})
+    result = verifier.verify(
+        Claim("The request consumes quota.", claim_id="c1"),
+        context={
+            "state": {"quota": {"remaining": 4}},
+            "state_transitions": {
+                "c1": {
+                    "action": {"set": {"quota.remaining": 2}},
+                    "state_check": {"path": "quota.remaining", "operator": "eq", "value": 2},
+                }
+            },
+        },
+    )
+    not_applicable = verifier.verify(Claim("No transition metadata."))
+    invalid = verifier.verify(
+        Claim("Invalid transition.", metadata={"state_transition": {"postcondition": {"path": "x"}}})
+    )
+
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["actual"] == 2
+    assert not_applicable.status is VerificationStatus.NOT_APPLICABLE
+    assert not_applicable.metadata["decision_rule"] == "no_state_transition"
+    assert invalid.status is VerificationStatus.ERROR
+    assert invalid.metadata["decision_rule"] == "invalid_state_transition"
+
+
+def test_default_verifier_routes_pass_world_model_confidence_gate():
+    adapter = InMemoryWorldModelAdapter(verifier=InMemoryVerifier({}))
+
+    routes = default_verifier_routes(
+        world_model=adapter,
+        state={"quota": {"remaining": 2}},
+        min_world_model_confidence=0.8,
+        include_calculator=False,
+        include_triple_evidence=False,
+        include_groundedness=False,
+    )
+
+    assert routes[0].name == "state_transition"
+    assert routes[0].verifier.min_prediction_confidence == pytest.approx(0.8)
 
 
 def test_action_executor_registry_uses_fallback_and_registered_executor():
@@ -284,6 +3095,361 @@ def test_action_executor_registry_uses_fallback_and_registered_executor():
     assert retrieve_result.metadata["executor"] == "RetrievalActionExecutor"
 
 
+def test_action_executor_registry_converts_executor_exception_to_failed_result():
+    class ExplodingExecutor:
+        def execute(self, request, context=None):
+            raise RuntimeError("boom")
+
+        def execute_many(self, requests, context=None):
+            return tuple(self.execute(request, context=context) for request in requests)
+
+    request = ActionRequest(action=ControlAction.RETRIEVE, reason="unsupported claim", request_id="req-explode")
+    registry = ActionExecutorRegistry({ControlAction.RETRIEVE: ExplodingExecutor()})
+
+    result = registry.execute(request, context={"request_id": "req-explode"})
+
+    assert result.status is ActionExecutionStatus.FAILED
+    assert result.request_id == "req-explode"
+    assert result.metadata["executor"] == "ActionExecutorRegistry"
+    assert result.metadata["wrapped_executor"] == "ExplodingExecutor"
+    assert result.metadata["possible_side_effects"] is True
+    assert "boom" in result.error
+
+
+def test_policy_guarded_action_executor_validates_side_effect_contract():
+    class RecordingExecutor:
+        def __init__(self):
+            self.calls = 0
+
+        def execute(self, request, context=None):
+            self.calls += 1
+            return ActionResult(
+                action=request.action,
+                status=ActionExecutionStatus.SUCCEEDED,
+                output={"ok": True},
+                metadata={"executor": type(self).__name__, "context": dict(context or {}), "side_effects": True},
+                request_id=request.request_id,
+            )
+
+        def execute_many(self, requests, context=None):
+            return tuple(self.execute(request, context=context) for request in requests)
+
+    wrapped = RecordingExecutor()
+    ledger = InMemoryActionExecutionLedger()
+    executor = PolicyGuardedActionExecutor(
+        wrapped,
+        policy=ActionExecutionPolicy(
+            side_effecting=True,
+            require_request_id=True,
+            require_idempotency_key=True,
+            max_timeout_seconds=5.0,
+        ),
+        idempotency_ledger=ledger,
+    )
+    missing_key = ActionRequest(
+        action=ControlAction.EXECUTE_TOOL,
+        reason="reserve inventory",
+        request_id="reserve-1",
+    )
+    blocked = executor.execute(missing_key)
+    too_slow = executor.execute(
+        ActionRequest(
+            action=ControlAction.EXECUTE_TOOL,
+            reason="reserve inventory",
+            metadata={"idempotency_key": "reserve-1", "timeout_seconds": 30.0},
+            request_id="reserve-1",
+        )
+    )
+    allowed = executor.execute(
+        ActionRequest(
+            action=ControlAction.EXECUTE_TOOL,
+            reason="reserve inventory",
+            metadata={"idempotency_key": "reserve-1", "timeout_seconds": 3.0},
+            request_id="reserve-1",
+        ),
+        context={"request_id": "req-1"},
+    )
+    replayed = executor.execute(
+        ActionRequest(
+            action=ControlAction.EXECUTE_TOOL,
+            reason="reserve inventory",
+            metadata={"idempotency_key": "reserve-1", "timeout_seconds": 3.0},
+            request_id="reserve-1",
+        ),
+        context={"request_id": "req-1"},
+    )
+    replay_mismatch = executor.execute(
+        ActionRequest(
+            action=ControlAction.EXECUTE_TOOL,
+            reason="reserve inventory",
+            metadata={"idempotency_key": "reserve-1", "timeout_seconds": 3.0},
+            request_id="reserve-1",
+        ),
+        context={"request_id": "req-2"},
+    )
+
+    assert blocked.status is ActionExecutionStatus.FAILED
+    assert "idempotency_key is required" in blocked.error
+    assert blocked.metadata["side_effects"] is False
+    assert too_slow.status is ActionExecutionStatus.FAILED
+    assert "timeout_seconds exceeds max_timeout_seconds" in too_slow.error
+    assert wrapped.calls == 1
+    assert allowed.status is ActionExecutionStatus.SUCCEEDED
+    assert allowed.metadata["policy_guard"] == "PolicyGuardedActionExecutor"
+    assert allowed.metadata["idempotency_key"] == "reserve-1"
+    assert allowed.metadata["idempotency_request_fingerprint"]
+    assert allowed.metadata["timeout_seconds"] == 3.0
+    assert allowed.metadata["timeout_enforced"] is False
+    assert allowed.metadata["idempotency_replayed"] is False
+    assert replayed.status is ActionExecutionStatus.SUCCEEDED
+    assert replayed.output == {"ok": True}
+    assert replayed.metadata["idempotency_replayed"] is True
+    assert replayed.metadata["idempotency_request_fingerprint"] == allowed.metadata["idempotency_request_fingerprint"]
+    assert replayed.metadata["side_effects"] is False
+    assert replayed.metadata["original_side_effects"] is True
+    assert replay_mismatch.status is ActionExecutionStatus.FAILED
+    assert replay_mismatch.metadata["idempotency_replay_blocked"] is True
+    assert replay_mismatch.metadata["idempotency_replayed"] is False
+    assert "fingerprint" in replay_mismatch.error
+    assert wrapped.calls == 1
+    assert ledger.get("reserve-1") == allowed
+
+
+def test_policy_guarded_action_executor_fails_closed_on_executor_and_ledger_errors():
+    class ExplodingExecutor:
+        def execute(self, request, context=None):
+            raise RuntimeError("executor boom")
+
+    class ExplodingLedger:
+        def __init__(self, *, fail_get=False, fail_record=False):
+            self.fail_get = fail_get
+            self.fail_record = fail_record
+
+        def get(self, key):
+            if self.fail_get:
+                raise RuntimeError("ledger get boom")
+            return None
+
+        def record(self, key, result):
+            if self.fail_record:
+                raise RuntimeError("ledger record boom")
+
+    class SuccessfulExecutor:
+        def execute(self, request, context=None):
+            return ActionResult(
+                action=request.action,
+                status=ActionExecutionStatus.SUCCEEDED,
+                output={"ok": True},
+                metadata={"side_effects": True},
+                request_id=request.request_id,
+            )
+
+    request = ActionRequest(
+        action=ControlAction.EXECUTE_TOOL,
+        reason="reserve inventory",
+        metadata={"idempotency_key": "reserve-2"},
+        request_id="reserve-2",
+    )
+    policy = ActionExecutionPolicy(side_effecting=True, require_idempotency_key=True)
+
+    missing_ledger = PolicyGuardedActionExecutor(SuccessfulExecutor(), policy=policy).execute(request)
+    wrapped_failure = PolicyGuardedActionExecutor(
+        ExplodingExecutor(),
+        policy=policy,
+        idempotency_ledger=InMemoryActionExecutionLedger(),
+    ).execute(request)
+    get_failure = PolicyGuardedActionExecutor(
+        SuccessfulExecutor(),
+        policy=policy,
+        idempotency_ledger=ExplodingLedger(fail_get=True),
+    ).execute(request)
+    record_failure = PolicyGuardedActionExecutor(
+        SuccessfulExecutor(),
+        policy=policy,
+        idempotency_ledger=ExplodingLedger(fail_record=True),
+    ).execute(request)
+
+    assert missing_ledger.status is ActionExecutionStatus.FAILED
+    assert "idempotency ledger" in missing_ledger.error
+    assert wrapped_failure.status is ActionExecutionStatus.FAILED
+    assert wrapped_failure.metadata["possible_side_effects"] is True
+    assert "executor boom" in wrapped_failure.error
+    assert get_failure.status is ActionExecutionStatus.FAILED
+    assert "ledger lookup" in get_failure.error
+    assert record_failure.status is ActionExecutionStatus.FAILED
+    assert record_failure.metadata["side_effect_status"] == "unknown_after_success"
+    assert record_failure.metadata["possible_side_effects"] is True
+
+
+def test_timeout_action_executor_returns_timed_out_result():
+    class SlowExecutor:
+        def execute(self, request, context=None):
+            time.sleep(0.20)
+            return ActionResult(
+                action=request.action,
+                status=ActionExecutionStatus.SUCCEEDED,
+                output={"ok": True},
+                metadata={"executor": type(self).__name__, "side_effects": False},
+                request_id=request.request_id,
+            )
+
+        def execute_many(self, requests, context=None):
+            return tuple(self.execute(request, context=context) for request in requests)
+
+    executor = TimeoutActionExecutor(SlowExecutor(), default_timeout_seconds=0.01)
+    request = ActionRequest(
+        action=ControlAction.RETRIEVE,
+        reason="slow evidence fetch",
+        request_id="req-timeout",
+    )
+
+    try:
+        result = executor.execute(request, context={"request_id": "req-timeout"})
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)
+
+    assert result.status is ActionExecutionStatus.TIMED_OUT
+    assert result.request_id == "req-timeout"
+    assert result.metadata["timeout_enforced"] is True
+    assert result.metadata["wrapped_executor"] == "SlowExecutor"
+    assert result.metadata["side_effects"] is None
+    assert result.metadata["side_effect_status"] == "unknown_after_timeout"
+    assert result.metadata["possible_side_effects"] is True
+    assert "timed out" in result.error
+
+
+def test_timeout_action_executor_converts_unbounded_executor_exception_to_failed_result():
+    class ExplodingExecutor:
+        def execute(self, request, context=None):
+            raise RuntimeError("boom")
+
+    executor = TimeoutActionExecutor(ExplodingExecutor())
+    request = ActionRequest(action=ControlAction.RETRIEVE, reason="explode", request_id="req-timeout-explode")
+
+    try:
+        result = executor.execute(request)
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)
+
+    assert result.status is ActionExecutionStatus.FAILED
+    assert result.request_id == "req-timeout-explode"
+    assert result.metadata["wrapped_executor"] == "ExplodingExecutor"
+    assert result.metadata["side_effect_status"] == "unknown_after_failure"
+    assert result.metadata["possible_side_effects"] is True
+    assert "boom" in result.error
+
+
+def test_timeout_action_executor_preserves_success_metadata():
+    class FastExecutor:
+        def execute(self, request, context=None):
+            return ActionResult(
+                action=request.action,
+                status=ActionExecutionStatus.SUCCEEDED,
+                output={"ok": True},
+                metadata={"executor": type(self).__name__, "side_effects": False},
+                request_id=request.request_id,
+            )
+
+        def execute_many(self, requests, context=None):
+            return tuple(self.execute(request, context=context) for request in requests)
+
+    executor = TimeoutActionExecutor(FastExecutor(), default_timeout_seconds=1.0)
+    request = ActionRequest(action=ControlAction.RETRIEVE, reason="fast evidence fetch", request_id="req-fast")
+
+    try:
+        result = executor.execute(request)
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)
+
+    assert result.status is ActionExecutionStatus.SUCCEEDED
+    assert result.output == {"ok": True}
+    assert result.metadata["executor"] == "FastExecutor"
+    assert result.metadata["timeout_wrapper"] == "TimeoutActionExecutor"
+    assert result.metadata["timeout_enforced"] is True
+    assert result.metadata["timeout_seconds"] == pytest.approx(1.0)
+
+
+def test_timeout_action_executor_rejects_non_finite_request_timeout():
+    class RecordingExecutor:
+        def __init__(self):
+            self.calls = 0
+
+        def execute(self, request, context=None):
+            self.calls += 1
+            return ActionResult(
+                action=request.action,
+                status=ActionExecutionStatus.SUCCEEDED,
+                output={"ok": True},
+                metadata={"executor": type(self).__name__, "side_effects": False},
+                request_id=request.request_id,
+            )
+
+        def execute_many(self, requests, context=None):
+            return tuple(self.execute(request, context=context) for request in requests)
+
+    wrapped = RecordingExecutor()
+    executor = TimeoutActionExecutor(wrapped)
+    request = ActionRequest(
+        action=ControlAction.RETRIEVE,
+        reason="invalid timeout",
+        metadata={"timeout_seconds": math.inf},
+        request_id="req-invalid-timeout",
+    )
+
+    try:
+        result = executor.execute(request)
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)
+
+    assert result.status is ActionExecutionStatus.FAILED
+    assert result.request_id == "req-invalid-timeout"
+    assert "positive finite" in result.error
+    assert result.metadata["timeout_enforced"] is False
+    assert wrapped.calls == 0
+
+
+def test_timeout_action_executor_rejects_bool_max_workers():
+    class FastExecutor:
+        def execute(self, request, context=None):
+            return ActionResult(action=request.action, status=ActionExecutionStatus.SUCCEEDED)
+
+    with pytest.raises(ValueError, match="max_workers"):
+        TimeoutActionExecutor(FastExecutor(), max_workers=True)  # type: ignore[arg-type]
+
+
+def test_policy_guard_preserves_timeout_enforcement_metadata():
+    class FastExecutor:
+        def execute(self, request, context=None):
+            return ActionResult(
+                action=request.action,
+                status=ActionExecutionStatus.SUCCEEDED,
+                output={"ok": True},
+                metadata={"executor": type(self).__name__, "side_effects": False},
+                request_id=request.request_id,
+            )
+
+        def execute_many(self, requests, context=None):
+            return tuple(self.execute(request, context=context) for request in requests)
+
+    timeout_executor = TimeoutActionExecutor(FastExecutor(), default_timeout_seconds=1.0)
+    executor = PolicyGuardedActionExecutor(
+        timeout_executor,
+        policy=ActionExecutionPolicy(max_timeout_seconds=2.0),
+    )
+    request = ActionRequest(action=ControlAction.RETRIEVE, reason="fast evidence fetch", request_id="req-fast")
+
+    try:
+        result = executor.execute(request)
+    finally:
+        timeout_executor.shutdown(wait=False, cancel_futures=True)
+
+    assert result.status is ActionExecutionStatus.SUCCEEDED
+    assert result.metadata["policy_guard"] == "PolicyGuardedActionExecutor"
+    assert result.metadata["timeout_wrapper"] == "TimeoutActionExecutor"
+    assert result.metadata["timeout_enforced"] is True
+    assert result.metadata["timeout_seconds"] == pytest.approx(1.0)
+
+
 def test_risk_controller_uses_configurable_control_policy():
     artifact = CalibrationArtifact(
         model_id="tiny",
@@ -315,14 +3481,163 @@ def test_risk_controller_uses_configurable_control_policy():
     assert unsupported.risk_level is RiskLevel.MEDIUM
 
 
+def test_risk_controller_applies_participation_gate_to_accepted_answers():
+    artifact = CalibrationArtifact(
+        model_id="tiny",
+        target_layer=-1,
+        scores=(CalibrationScore("maha", threshold=3.0),),
+        eigentruth_version="0.1.0",
+    )
+    gate_report = conformal_abstention_report(
+        [0.1, 0.2, 0.3, 0.4, 0.35, 0.9],
+        [1, 1, 1, 1, 0, 0],
+        0.5,
+        score_name="uncertainty",
+    )
+    controller = RiskController(artifact, participation_gate=gate_report)
+
+    accepted = controller.decide({"maha": 1.0, "uncertainty": 0.2})
+    abstained = controller.decide({"maha": 1.0, "uncertainty": 0.9})
+    skipped = controller.decide({"maha": 4.0})
+    missing = controller.decide({"maha": 1.0})
+
+    assert accepted.action is ControlAction.ACCEPT
+    assert accepted.diagnostics["participation_gate"]["status"] == "participate"
+    assert accepted.diagnostics["participation_gate"]["threshold"] == pytest.approx(0.3)
+    assert abstained.action is ControlAction.ABSTAIN
+    assert abstained.risk_level is RiskLevel.HIGH
+    assert abstained.diagnostics["participation_gate"]["status"] == "abstain"
+    assert abstained.diagnostics["participation_gate"]["value"] == pytest.approx(0.9)
+    assert "participation gate abstained" in abstained.reason
+    assert skipped.action is ControlAction.RETRIEVE
+    assert skipped.diagnostics["participation_gate"]["status"] == "skipped"
+    assert missing.action is ControlAction.CLARIFY
+    assert missing.risk_level is RiskLevel.UNKNOWN
+    assert missing.diagnostics["participation_gate"]["status"] == "missing_score"
+
+
+def test_participation_gate_can_be_overridden_by_strong_supported_verification():
+    artifact = CalibrationArtifact(
+        model_id="tiny",
+        target_layer=-1,
+        scores=(CalibrationScore("maha", threshold=3.0),),
+        eigentruth_version="0.1.0",
+    )
+    gate_report = conformal_abstention_report(
+        [0.1, 0.2, 0.3, 0.4, 0.35, 0.9],
+        [1, 1, 1, 1, 0, 0],
+        0.5,
+        score_name="uncertainty",
+    )
+    conservative = RiskController(artifact, participation_gate=gate_report)
+    verification_aware = RiskController(
+        artifact,
+        participation_gate=gate_report,
+        policy_config=ControlPolicyConfig(
+            participation_gate_supported_override=True,
+            participation_gate_supported_override_min_confidence=0.85,
+        ),
+    )
+
+    supported = (
+        VerificationResult(VerificationStatus.SUPPORTED, confidence=0.9),
+        VerificationResult(VerificationStatus.SUPPORTED, confidence=0.88),
+    )
+    weak_supported = (VerificationResult(VerificationStatus.SUPPORTED, confidence=0.7),)
+    unsupported = (VerificationResult(VerificationStatus.INSUFFICIENT_EVIDENCE, confidence=0.9),)
+    conservative_decision = conservative.decide(
+        {"maha": 1.0, "uncertainty": 0.9},
+        verification_results=supported,
+    )
+    overridden = verification_aware.decide(
+        {"maha": 1.0, "uncertainty": 0.9},
+        verification_results=supported,
+    )
+    weak = verification_aware.decide(
+        {"maha": 1.0, "uncertainty": 0.9},
+        verification_results=weak_supported,
+    )
+    retrieve = verification_aware.decide(
+        {"maha": 1.0, "uncertainty": 0.9},
+        verification_results=unsupported,
+    )
+
+    assert conservative_decision.action is ControlAction.ABSTAIN
+    assert conservative_decision.diagnostics["participation_gate"]["supported_override"][
+        "enabled"
+    ] is False
+    assert overridden.action is ControlAction.ACCEPT
+    assert overridden.diagnostics["participation_gate"]["status"] == "overridden_by_verification"
+    assert overridden.diagnostics["participation_gate"]["supported_override"]["applied"] is True
+    assert overridden.diagnostics["participation_gate"]["supported_override"][
+        "max_supported_confidence"
+    ] == pytest.approx(0.9)
+    assert weak.action is ControlAction.ABSTAIN
+    assert weak.diagnostics["participation_gate"]["supported_override"]["applied"] is False
+    assert retrieve.action is ControlAction.RETRIEVE
+    assert retrieve.diagnostics["participation_gate"]["status"] == "skipped"
+
+
+def test_participation_gate_can_use_abstention_comparison_recommendation_and_policy_scope():
+    artifact = CalibrationArtifact(
+        model_id="tiny",
+        target_layer=-1,
+        scores=(CalibrationScore("maha", threshold=3.0),),
+        eigentruth_version="0.1.0",
+    )
+    comparison = conformal_abstention_comparison_report(
+        {
+            "weak": [0.1, 0.2, 0.8, 0.9, 0.3, 0.4],
+            "strong": [0.1, 0.2, 0.3, 0.4, 0.35, 0.9],
+        },
+        [1, 1, 1, 1, 0, 0],
+        0.5,
+    )
+    gate = ParticipationGateConfig.from_dict(comparison.to_dict())
+    policy = ControlPolicyConfig.from_dict({
+        "participation_gate_action": "clarify",
+        "participation_gate_risk_level": "unknown",
+        "participation_gate_confidence_floor": 0.85,
+        "participation_gate_applies_to_actions": "accept,retrieve",
+    })
+    controller = RiskController(
+        artifact,
+        participation_gate=comparison.to_dict(),
+        policy_config=policy,
+    )
+
+    decision = controller.decide({"maha": 4.0, "strong": 0.9})
+
+    assert gate.score_name == "strong"
+    assert gate.source == "conformal_abstention_comparison_report"
+    assert gate.metadata["rank"] == 1
+    assert policy.to_dict()["participation_gate_applies_to_actions"] == ["accept", "retrieve"]
+    assert decision.action is ControlAction.CLARIFY
+    assert decision.risk_level is RiskLevel.UNKNOWN
+    assert decision.confidence == pytest.approx(0.85)
+    assert decision.diagnostics["participation_gate"]["score_name"] == "strong"
+    assert decision.diagnostics["participation_gate"]["status"] == "abstain"
+
+
 def test_control_policy_config_from_dict_parses_boolean_strings():
     disabled = ControlPolicyConfig.from_dict({"compound_verification_escalates": "false"})
     enabled = ControlPolicyConfig.from_dict({"compound_verification_escalates": "on"})
+    verification_aware = ControlPolicyConfig.from_dict({
+        "participation_gate_supported_override": "yes",
+        "participation_gate_supported_override_min_confidence": 0.9,
+    })
 
     assert disabled.compound_verification_escalates is False
     assert enabled.compound_verification_escalates is True
+    assert verification_aware.participation_gate_supported_override is True
+    assert verification_aware.to_dict()["participation_gate_supported_override"] is True
+    assert verification_aware.participation_gate_supported_override_min_confidence == pytest.approx(0.9)
     with pytest.raises(ValueError, match="compound_verification_escalates"):
         ControlPolicyConfig.from_dict({"compound_verification_escalates": "maybe"})
+    with pytest.raises(ValueError, match="participation_gate_supported_override"):
+        ControlPolicyConfig.from_dict({"participation_gate_supported_override": "maybe"})
+    with pytest.raises(ValueError, match="participation_gate_applies_to_actions"):
+        ControlPolicyConfig.from_dict({"participation_gate_applies_to_actions": "unknown"})
 
 
 def test_risk_controller_routes_non_finite_diagnostics_to_unknown():
@@ -354,6 +3669,43 @@ def test_risk_controller_routes_non_finite_diagnostics_to_unknown():
     assert unsupported.diagnostics["verification"]["counts"]["insufficient_evidence"] == 1
 
 
+def test_risk_controller_routes_missing_calibrated_scores_to_unknown():
+    artifact = CalibrationArtifact(
+        model_id="tiny",
+        target_layer=-1,
+        scores=(
+            CalibrationScore("maha", threshold=3.0),
+            CalibrationScore("maha_adaptive", threshold=4.0),
+        ),
+        eigentruth_version="0.1.0",
+    )
+    controller = RiskController(artifact)
+
+    decision = controller.decide({"maha": 1.0})
+
+    assert decision.action is ControlAction.CLARIFY
+    assert decision.risk_level is RiskLevel.UNKNOWN
+    assert decision.diagnostics["missing_scores"] == ("maha_adaptive",)
+    assert "missing calibrated diagnostic score" in decision.reason
+
+
+def test_risk_controller_routes_bool_diagnostics_to_unknown():
+    artifact = CalibrationArtifact(
+        model_id="tiny",
+        target_layer=-1,
+        scores=(CalibrationScore("maha", threshold=3.0),),
+        eigentruth_version="0.1.0",
+    )
+    controller = RiskController(artifact)
+
+    decision = controller.decide({"maha": True})
+
+    assert decision.action is ControlAction.CLARIFY
+    assert decision.risk_level is RiskLevel.UNKNOWN
+    assert decision.diagnostics["invalid_scores"] == ("maha",)
+    assert decision.diagnostics["invalid_values"]["maha"] is True
+
+
 def test_claim_extraction_adds_rule_based_metadata():
     claim = extract_claims("As of 2026, revenue is not 10 dollars [1].")[0]
 
@@ -363,15 +3715,135 @@ def test_claim_extraction_adds_rule_based_metadata():
     assert features["has_citation"] is True
     assert features["has_negation"] is True
     assert features["is_time_sensitive"] is True
+    assert features["has_calculation"] is False
+
+
+def test_claim_extraction_adds_structured_calculation_metadata():
+    symbolic, word_operator = extract_claims("3 * 4 = 12. 6 divided by 3 is 3.")
+
+    assert symbolic.metadata["features"]["has_calculation"] is True
+    assert symbolic.metadata["calculation"]["expression"] == "3 * 4"
+    assert symbolic.metadata["calculation"]["expected"] == 12.0
+    assert symbolic.metadata["calculation"]["parser"] == "symbolic"
+    assert word_operator.metadata["features"]["has_calculation"] is True
+    assert word_operator.metadata["calculation"]["expression"] == "6 / 3"
+    assert word_operator.metadata["calculation"]["expected"] == 3.0
+    assert word_operator.metadata["calculation"]["parser"] == "word_operator"
+    assert extract_calculation("expression: 10 / 2; expected: 5") == {
+        "expression": "10 / 2",
+        "expected": 5.0,
+        "source": "claim_text",
+        "parser": "labeled",
+    }
 
 
 def test_groundedness_verifier_uses_claim_metadata_for_failure_reason():
     verifier = GroundednessVerifier(evidence=("AlphaCorp has offices in Europe.",), min_overlap=0.95)
     claim = extract_claims("As of 2026, AlphaCorp has 10 offices.")[0]
+    explicit_false = Claim(
+        claim.text,
+        metadata={"features": {"is_time_sensitive": "false"}},
+    )
 
     result = verifier.verify(claim)
+    false_result = verifier.verify(explicit_false)
 
     assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
     assert result.metadata["claim_features"]["is_time_sensitive"] is True
     assert "time-sensitive" in result.explanation
+    assert false_result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert false_result.metadata["claim_features"]["is_time_sensitive"] is False
+    assert "time-sensitive" not in false_result.explanation
 
+
+def test_groundedness_evidence_quality_policy_downgrades_stale_time_sensitive_support():
+    verifier = GroundednessVerifier(
+        evidence=(
+            {
+                "text": "As of 2026, AlphaCorp has 10 offices.",
+                "source": "official.gov/company-registry",
+                "timestamp": "2025-01-01",
+            },
+        ),
+        min_overlap=0.7,
+        evidence_quality_policy=EvidenceQualityPolicy(
+            max_age_days=30,
+            reference_time="2026-06-25",
+            require_source=True,
+            trusted_sources=("official.gov",),
+            require_trusted_source=True,
+        ),
+    )
+    claim = extract_claims("As of 2026, AlphaCorp has 10 offices.")[0]
+
+    result = verifier.verify(claim)
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert result.metadata["decision_rule"] == "evidence_quality_failed"
+    assert result.metadata["evidence_quality"]["passed"] is False
+    assert "stale_evidence" in result.metadata["evidence_quality"]["reasons"]
+
+
+def test_groundedness_evidence_quality_policy_allows_fresh_trusted_evidence():
+    verifier = GroundednessVerifier(
+        evidence=(
+            {
+                "text": "As of 2026, AlphaCorp has 10 offices.",
+                "source": "official.gov/company-registry",
+                "metadata": {"published_at": "2026-06-20"},
+            },
+        ),
+        min_overlap=0.7,
+        evidence_quality_policy={
+            "max_age_days": 30,
+            "reference_time": "2026-06-25",
+            "require_source": "true",
+            "trusted_sources": "official.gov",
+            "require_trusted_source": "true",
+        },
+    )
+    claim = extract_claims("As of 2026, AlphaCorp has 10 offices.")[0]
+
+    result = verifier.verify(claim)
+
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["decision_rule"] == "exact_containment"
+    assert result.metadata["evidence_quality"]["passed"] is True
+    assert result.metadata["evidence_quality"]["age_days"] == pytest.approx(5.0)
+
+
+def test_groundedness_evidence_quality_policy_defaults_to_time_sensitive_claims_only():
+    verifier = GroundednessVerifier(
+        evidence=("Paris is the capital of France.",),
+        min_overlap=0.7,
+        evidence_quality_policy={
+            "max_age_days": 30,
+            "reference_time": "2026-06-25",
+            "require_source": "true",
+            "time_sensitive_only": "true",
+        },
+    )
+    claim = extract_claims("Paris is the capital of France.")[0]
+
+    result = verifier.verify(claim)
+
+    assert result.status is VerificationStatus.SUPPORTED
+    assert "evidence_quality" not in result.metadata
+
+
+def test_evidence_quality_policy_from_dict_strict_bool_parser():
+    policy = EvidenceQualityPolicy.from_dict({
+        "require_source": "false",
+        "require_trusted_source": "0",
+        "time_sensitive_only": "off",
+    })
+
+    assert policy.require_source is False
+    assert policy.require_trusted_source is False
+    assert policy.time_sensitive_only is False
+    with pytest.raises(ValueError, match="require_source"):
+        EvidenceQualityPolicy.from_dict({"require_source": "maybe"})
+    with pytest.raises(ValueError, match="max_age_days"):
+        EvidenceQualityPolicy.from_dict({"max_age_days": True})
+    with pytest.raises(ValueError, match="max_age_days"):
+        EvidenceQualityPolicy(max_age_days=1.5)

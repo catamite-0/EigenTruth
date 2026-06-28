@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
 
+from eigentruth.json_utils import strict_json_dumps, to_jsonable
+
 
 @dataclass(frozen=True)
 class RegistryRecord:
@@ -29,7 +31,7 @@ class RegistryRecord:
             "artifact_type": self.artifact_type,
             "path": self.path,
             "version": self.version,
-            "metadata": dict(self.metadata),
+            "metadata": to_jsonable(self.metadata),
         }
 
     @classmethod
@@ -106,6 +108,23 @@ class ArtifactRegistry:
             metadata=metadata,
         )
 
+    def record_score_fusion_artifact(
+        self,
+        *,
+        name: str,
+        path: str | Path,
+        version: str,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> "ArtifactRegistry":
+        """Record a calibrated diagnostic score-fusion artifact."""
+        return self.record_artifact(
+            name=name,
+            artifact_type="score_fusion_artifact",
+            path=path,
+            version=version,
+            metadata=metadata,
+        )
+
     def record_truth_subspace_artifact(
         self,
         *,
@@ -118,6 +137,23 @@ class ArtifactRegistry:
         return self.record_artifact(
             name=name,
             artifact_type="truth_subspace_artifact",
+            path=path,
+            version=version,
+            metadata=metadata,
+        )
+
+    def record_concept_artifact(
+        self,
+        *,
+        name: str,
+        path: str | Path,
+        version: str,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> "ArtifactRegistry":
+        """Record a reusable concept manifold artifact."""
+        return self.record_artifact(
+            name=name,
+            artifact_type="concept_artifact",
             path=path,
             version=version,
             metadata=metadata,
@@ -157,6 +193,40 @@ class ArtifactRegistry:
             metadata=metadata,
         )
 
+    def record_benchmark_manifest(
+        self,
+        *,
+        name: str,
+        path: str | Path,
+        version: str,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> "ArtifactRegistry":
+        """Record a verified benchmark artifact manifest."""
+        return self.record_artifact(
+            name=name,
+            artifact_type="benchmark_manifest",
+            path=path,
+            version=version,
+            metadata=metadata,
+        )
+
+    def record_manifest_verification(
+        self,
+        *,
+        name: str,
+        path: str | Path,
+        version: str,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> "ArtifactRegistry":
+        """Record a manifest verification report."""
+        return self.record_artifact(
+            name=name,
+            artifact_type="manifest_verification",
+            path=path,
+            version=version,
+            metadata=metadata,
+        )
+
     def record_action_result(
         self,
         *,
@@ -169,6 +239,91 @@ class ArtifactRegistry:
         return self.record_artifact(
             name=name,
             artifact_type="action_result",
+            path=path,
+            version=version,
+            metadata=metadata,
+        )
+
+    def record_performance_baseline(
+        self,
+        *,
+        name: str,
+        path: str | Path,
+        version: str,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> "ArtifactRegistry":
+        """Record a product performance baseline workflow report."""
+        return self.record_artifact(
+            name=name,
+            artifact_type="performance_baseline",
+            path=path,
+            version=version,
+            metadata=metadata,
+        )
+
+    def record_product_runtime_baseline(
+        self,
+        *,
+        name: str,
+        path: str | Path,
+        version: str,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> "ArtifactRegistry":
+        """Record an aggregate ProductTrace runtime baseline report."""
+        return self.record_artifact(
+            name=name,
+            artifact_type="product_runtime_baseline",
+            path=path,
+            version=version,
+            metadata=metadata,
+        )
+
+    def record_product_runtime_drift_report(
+        self,
+        *,
+        name: str,
+        path: str | Path,
+        version: str,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> "ArtifactRegistry":
+        """Record a ProductTrace runtime baseline drift report."""
+        return self.record_artifact(
+            name=name,
+            artifact_type="product_runtime_drift_report",
+            path=path,
+            version=version,
+            metadata=metadata,
+        )
+
+    def record_product_runtime_budget_policy(
+        self,
+        *,
+        name: str,
+        path: str | Path,
+        version: str,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> "ArtifactRegistry":
+        """Record a reusable ProductRuntimeBudgetPolicy artifact."""
+        return self.record_artifact(
+            name=name,
+            artifact_type="product_runtime_budget_policy",
+            path=path,
+            version=version,
+            metadata=metadata,
+        )
+
+    def record_product_promotion_contract(
+        self,
+        *,
+        name: str,
+        path: str | Path,
+        version: str,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> "ArtifactRegistry":
+        """Record a deployable ProductPromotionContract artifact."""
+        return self.record_artifact(
+            name=name,
+            artifact_type="product_promotion_contract",
             path=path,
             version=version,
             metadata=metadata,
@@ -213,7 +368,8 @@ class ArtifactRegistry:
     def save_json(self, path: str | Path | None = None) -> None:
         """Save registry records to UTF-8 JSON."""
         output_path = Path(path or self.path)
-        output_path.write_text(json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(strict_json_dumps(self.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     @classmethod
     def load_json(cls, path: str | Path) -> "ArtifactRegistry":

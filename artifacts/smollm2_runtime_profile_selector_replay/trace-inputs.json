@@ -1,0 +1,869 @@
+{
+  "paths": {
+    "report": "artifacts/smollm2_runtime_profile_selector_replay/runtime-profile-selector-replay.json",
+    "trace_inputs": "artifacts/smollm2_runtime_profile_selector_replay/trace-inputs.json"
+  },
+  "schema_version": 1,
+  "sources": [
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/calculator_refuted-r0.json",
+        "sha256": "d02087adf9c783935ee18b84ff5c2e002e3514cc1b94fc8ea331650f97df694a",
+        "size_bytes": 39309
+      },
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/calculator_refuted-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/diagnostic_refuted-r0.json",
+        "sha256": "68476bb48460b31e3403e4e85fa63ddecba54eb5f36955a08bf52b9e1f54c011",
+        "size_bytes": 40431
+      },
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/diagnostic_refuted-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/low_risk_supported-r0.json",
+        "sha256": "a48587ddd9e3f0bfa2092a170c9ecded1dbbefaa511e13fa264b1ba30dfd912e",
+        "size_bytes": 36783
+      },
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/low_risk_supported-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/auto/calculator_refuted-r0.json",
+        "sha256": "a7140605552033833a1b25b99d655831aae3ec656c425b6ab0040e3eaa4865cf",
+        "size_bytes": 40576
+      },
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/auto/calculator_refuted-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/auto/diagnostic_refuted-r0.json",
+        "sha256": "3ea2e419a99dc7278415f2b4db6971d67be6aaa0aff3f1ee4002fca024352610",
+        "size_bytes": 46218
+      },
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/auto/diagnostic_refuted-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/auto/low_risk_supported-r0.json",
+        "sha256": "12afd26f4a8c78f8c1b2a9b7b366f976d2971f3f7f6a843823a9a14a6a4ea211",
+        "size_bytes": 34166
+      },
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/auto/low_risk_supported-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/calculator_refuted-r0.json",
+        "sha256": "58ea3ab78c9d4fb864f9c25fa937bd38b911d2860d494ca401c861fe7c7ee5f6",
+        "size_bytes": 44357
+      },
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/calculator_refuted-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/diagnostic_refuted-r0.json",
+        "sha256": "79a57e1f5281c51a0d01667d10c1a9fca58bab22805b4c333d6df5568961d246",
+        "size_bytes": 45152
+      },
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/diagnostic_refuted-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/low_risk_supported-r0.json",
+        "sha256": "db7f5bd3a37850b4a7c2ae89132f7bb541ea00d845535915b8877fb343e22409",
+        "size_bytes": 33267
+      },
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/low_risk_supported-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/latency/calculator_refuted-r0.json",
+        "sha256": "718da025fc751970704ed1417c6772bd40743cb22be1a897a239601739d68ccd",
+        "size_bytes": 44087
+      },
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/latency/calculator_refuted-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/latency/diagnostic_refuted-r0.json",
+        "sha256": "8415896967d4ce1af54d23bfd7c532f2b749978335d14bcbae052ab986684b2d",
+        "size_bytes": 33438
+      },
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/latency/diagnostic_refuted-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/latency/low_risk_supported-r0.json",
+        "sha256": "4be668a2f5610227f6debc4a5dd61e3c5b276c7458d5b2795a8c61168df4e169",
+        "size_bytes": 33046
+      },
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/latency/low_risk_supported-r0.json"
+    }
+  ],
+  "summary": {
+    "source_count": 12,
+    "trace_count": 12
+  },
+  "traces": [
+    {
+      "claims": [
+        {
+          "claim_id": "c1",
+          "metadata": {
+            "calculation": {
+              "expected": 5.0,
+              "expression": "2 + 2",
+              "parser": "symbolic",
+              "source": "claim_text"
+            },
+            "extractor": "sentence_split",
+            "features": {
+              "has_calculation": true,
+              "has_citation": false,
+              "has_negation": false,
+              "has_number": true,
+              "is_time_sensitive": false
+            },
+            "source_index": 1
+          }
+        }
+      ],
+      "original_runtime_profile": "audit",
+      "original_total_seconds": 0.000534693943336606,
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/calculator_refuted-r0.json",
+      "request_id": "audit-calculator_refuted-r0",
+      "request_key": "calculator_refuted-r0",
+      "risk_decision": {
+        "action": "abstain",
+        "confidence": 0.99,
+        "diagnostics": {
+          "invalid_scores": [],
+          "invalid_values": {},
+          "missing_scores": [],
+          "severities": {
+            "truth_proj": 0.0
+          },
+          "thresholds": {
+            "truth_proj": 1.1314295530319214
+          },
+          "triggered_scores": [],
+          "verification": {
+            "counts": {
+              "error": 0,
+              "insufficient_evidence": 0,
+              "not_applicable": 0,
+              "refuted": 1,
+              "supported": 0
+            },
+            "max_confidence_by_status": {
+              "refuted": 0.99
+            },
+            "total": 1,
+            "triggered_statuses": [
+              "refuted"
+            ]
+          }
+        },
+        "reason": "claim verification refuted 1 claim(s)",
+        "risk_level": "high"
+      },
+      "runtime_pair_profile": "audit"
+    },
+    {
+      "claims": [
+        {
+          "claim_id": "c1",
+          "metadata": {
+            "extractor": "sentence_split",
+            "features": {
+              "has_calculation": false,
+              "has_citation": false,
+              "has_negation": false,
+              "has_number": false,
+              "is_time_sensitive": false
+            },
+            "source_index": 1
+          }
+        },
+        {
+          "claim_id": "c2",
+          "metadata": {
+            "extractor": "sentence_split",
+            "features": {
+              "has_calculation": false,
+              "has_citation": false,
+              "has_negation": false,
+              "has_number": false,
+              "is_time_sensitive": false
+            },
+            "source_index": 2
+          }
+        }
+      ],
+      "original_runtime_profile": "audit",
+      "original_total_seconds": 0.0005944980075582862,
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/diagnostic_refuted-r0.json",
+      "request_id": "audit-diagnostic_refuted-r0",
+      "request_key": "diagnostic_refuted-r0",
+      "risk_decision": {
+        "action": "abstain",
+        "confidence": 0.9,
+        "diagnostics": {
+          "invalid_scores": [],
+          "invalid_values": {},
+          "missing_scores": [],
+          "severities": {
+            "truth_proj": 0.10000000000000003
+          },
+          "thresholds": {
+            "truth_proj": 1.1314295530319214
+          },
+          "triggered_scores": [
+            "truth_proj"
+          ],
+          "verification": {
+            "counts": {
+              "error": 0,
+              "insufficient_evidence": 0,
+              "not_applicable": 0,
+              "refuted": 1,
+              "supported": 1
+            },
+            "max_confidence_by_status": {
+              "refuted": 0.9,
+              "supported": 0.9
+            },
+            "total": 2,
+            "triggered_statuses": [
+              "refuted"
+            ]
+          }
+        },
+        "reason": "claim verification refuted 1 claim(s); calibrated diagnostic threshold exceeded: truth_proj",
+        "risk_level": "high"
+      },
+      "runtime_pair_profile": "audit"
+    },
+    {
+      "claims": [
+        {
+          "claim_id": "c1",
+          "metadata": {
+            "extractor": "sentence_split",
+            "features": {
+              "has_calculation": false,
+              "has_citation": false,
+              "has_negation": false,
+              "has_number": false,
+              "is_time_sensitive": false
+            },
+            "source_index": 1
+          }
+        }
+      ],
+      "original_runtime_profile": "audit",
+      "original_total_seconds": 0.0006751170149073005,
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/low_risk_supported-r0.json",
+      "request_id": "audit-low_risk_supported-r0",
+      "request_key": "low_risk_supported-r0",
+      "risk_decision": {
+        "action": "accept",
+        "confidence": 1.0,
+        "diagnostics": {
+          "invalid_scores": [],
+          "invalid_values": {},
+          "missing_scores": [],
+          "severities": {
+            "truth_proj": 0.0
+          },
+          "thresholds": {
+            "truth_proj": 1.1314295530319214
+          },
+          "triggered_scores": [],
+          "verification": {
+            "counts": {
+              "error": 0,
+              "insufficient_evidence": 0,
+              "not_applicable": 0,
+              "refuted": 0,
+              "supported": 1
+            },
+            "max_confidence_by_status": {
+              "supported": 0.9
+            },
+            "total": 1,
+            "triggered_statuses": []
+          }
+        },
+        "reason": "no calibrated diagnostic threshold was exceeded",
+        "risk_level": "low"
+      },
+      "runtime_pair_profile": "audit"
+    },
+    {
+      "claims": [
+        {
+          "claim_id": "c1",
+          "metadata": {
+            "calculation": {
+              "expected": 5.0,
+              "expression": "2 + 2",
+              "parser": "symbolic",
+              "source": "claim_text"
+            },
+            "extractor": "sentence_split",
+            "features": {
+              "has_calculation": true,
+              "has_citation": false,
+              "has_negation": false,
+              "has_number": true,
+              "is_time_sensitive": false
+            },
+            "source_index": 1
+          }
+        }
+      ],
+      "original_runtime_profile": "audit",
+      "original_total_seconds": 0.00048477191012352705,
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/auto/calculator_refuted-r0.json",
+      "request_id": "auto-calculator_refuted-r0",
+      "request_key": "calculator_refuted-r0",
+      "risk_decision": {
+        "action": "abstain",
+        "confidence": 0.99,
+        "diagnostics": {
+          "invalid_scores": [],
+          "invalid_values": {},
+          "missing_scores": [],
+          "severities": {
+            "truth_proj": 0.0
+          },
+          "thresholds": {
+            "truth_proj": 1.1314295530319214
+          },
+          "triggered_scores": [],
+          "verification": {
+            "counts": {
+              "error": 0,
+              "insufficient_evidence": 0,
+              "not_applicable": 0,
+              "refuted": 1,
+              "supported": 0
+            },
+            "max_confidence_by_status": {
+              "refuted": 0.99
+            },
+            "total": 1,
+            "triggered_statuses": [
+              "refuted"
+            ]
+          }
+        },
+        "reason": "claim verification refuted 1 claim(s)",
+        "risk_level": "high"
+      },
+      "runtime_pair_profile": "audit"
+    },
+    {
+      "claims": [
+        {
+          "claim_id": "c1",
+          "metadata": {
+            "extractor": "sentence_split",
+            "features": {
+              "has_calculation": false,
+              "has_citation": false,
+              "has_negation": false,
+              "has_number": false,
+              "is_time_sensitive": false
+            },
+            "source_index": 1
+          }
+        },
+        {
+          "claim_id": "c2",
+          "metadata": {
+            "extractor": "sentence_split",
+            "features": {
+              "has_calculation": false,
+              "has_citation": false,
+              "has_negation": false,
+              "has_number": false,
+              "is_time_sensitive": false
+            },
+            "source_index": 2
+          }
+        }
+      ],
+      "original_runtime_profile": "balanced",
+      "original_total_seconds": 0.0005385909462347627,
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/auto/diagnostic_refuted-r0.json",
+      "request_id": "auto-diagnostic_refuted-r0",
+      "request_key": "diagnostic_refuted-r0",
+      "risk_decision": {
+        "action": "abstain",
+        "confidence": 0.9,
+        "diagnostics": {
+          "invalid_scores": [],
+          "invalid_values": {},
+          "missing_scores": [],
+          "severities": {
+            "truth_proj": 0.10000000000000003
+          },
+          "thresholds": {
+            "truth_proj": 1.1314295530319214
+          },
+          "triggered_scores": [
+            "truth_proj"
+          ],
+          "verification": {
+            "counts": {
+              "error": 0,
+              "insufficient_evidence": 0,
+              "not_applicable": 0,
+              "refuted": 1,
+              "supported": 1
+            },
+            "max_confidence_by_status": {
+              "refuted": 0.9,
+              "supported": 0.9
+            },
+            "total": 2,
+            "triggered_statuses": [
+              "refuted"
+            ]
+          }
+        },
+        "reason": "claim verification refuted 1 claim(s); calibrated diagnostic threshold exceeded: truth_proj",
+        "risk_level": "high"
+      },
+      "runtime_pair_profile": "balanced"
+    },
+    {
+      "claims": [
+        {
+          "claim_id": "c1",
+          "metadata": {
+            "extractor": "sentence_split",
+            "features": {
+              "has_calculation": false,
+              "has_citation": false,
+              "has_negation": false,
+              "has_number": false,
+              "is_time_sensitive": false
+            },
+            "source_index": 1
+          }
+        }
+      ],
+      "original_runtime_profile": "latency",
+      "original_total_seconds": 0.00023229792714118958,
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/auto/low_risk_supported-r0.json",
+      "request_id": "auto-low_risk_supported-r0",
+      "request_key": "low_risk_supported-r0",
+      "risk_decision": {
+        "action": "accept",
+        "confidence": 1.0,
+        "diagnostics": {
+          "invalid_scores": [],
+          "invalid_values": {},
+          "missing_scores": [],
+          "severities": {
+            "truth_proj": 0.0
+          },
+          "thresholds": {
+            "truth_proj": 1.1314295530319214
+          },
+          "triggered_scores": []
+        },
+        "reason": "no calibrated diagnostic threshold was exceeded",
+        "risk_level": "low"
+      },
+      "runtime_pair_profile": "latency"
+    },
+    {
+      "claims": [
+        {
+          "claim_id": "c1",
+          "metadata": {
+            "calculation": {
+              "expected": 5.0,
+              "expression": "2 + 2",
+              "parser": "symbolic",
+              "source": "claim_text"
+            },
+            "extractor": "sentence_split",
+            "features": {
+              "has_calculation": true,
+              "has_citation": false,
+              "has_negation": false,
+              "has_number": true,
+              "is_time_sensitive": false
+            },
+            "source_index": 1
+          }
+        }
+      ],
+      "original_runtime_profile": "balanced",
+      "original_total_seconds": 0.0005407320568338037,
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/calculator_refuted-r0.json",
+      "request_id": "balanced-calculator_refuted-r0",
+      "request_key": "calculator_refuted-r0",
+      "risk_decision": {
+        "action": "abstain",
+        "confidence": 0.99,
+        "diagnostics": {
+          "invalid_scores": [],
+          "invalid_values": {},
+          "missing_scores": [],
+          "severities": {
+            "truth_proj": 0.0
+          },
+          "thresholds": {
+            "truth_proj": 1.1314295530319214
+          },
+          "triggered_scores": [],
+          "verification": {
+            "counts": {
+              "error": 0,
+              "insufficient_evidence": 0,
+              "not_applicable": 0,
+              "refuted": 1,
+              "supported": 0
+            },
+            "max_confidence_by_status": {
+              "refuted": 0.99
+            },
+            "total": 1,
+            "triggered_statuses": [
+              "refuted"
+            ]
+          }
+        },
+        "reason": "claim verification refuted 1 claim(s)",
+        "risk_level": "high"
+      },
+      "runtime_pair_profile": "balanced"
+    },
+    {
+      "claims": [
+        {
+          "claim_id": "c1",
+          "metadata": {
+            "extractor": "sentence_split",
+            "features": {
+              "has_calculation": false,
+              "has_citation": false,
+              "has_negation": false,
+              "has_number": false,
+              "is_time_sensitive": false
+            },
+            "source_index": 1
+          }
+        },
+        {
+          "claim_id": "c2",
+          "metadata": {
+            "extractor": "sentence_split",
+            "features": {
+              "has_calculation": false,
+              "has_citation": false,
+              "has_negation": false,
+              "has_number": false,
+              "is_time_sensitive": false
+            },
+            "source_index": 2
+          }
+        }
+      ],
+      "original_runtime_profile": "balanced",
+      "original_total_seconds": 0.0005663760239258409,
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/diagnostic_refuted-r0.json",
+      "request_id": "balanced-diagnostic_refuted-r0",
+      "request_key": "diagnostic_refuted-r0",
+      "risk_decision": {
+        "action": "abstain",
+        "confidence": 0.9,
+        "diagnostics": {
+          "invalid_scores": [],
+          "invalid_values": {},
+          "missing_scores": [],
+          "severities": {
+            "truth_proj": 0.10000000000000003
+          },
+          "thresholds": {
+            "truth_proj": 1.1314295530319214
+          },
+          "triggered_scores": [
+            "truth_proj"
+          ],
+          "verification": {
+            "counts": {
+              "error": 0,
+              "insufficient_evidence": 0,
+              "not_applicable": 0,
+              "refuted": 1,
+              "supported": 1
+            },
+            "max_confidence_by_status": {
+              "refuted": 0.9,
+              "supported": 0.9
+            },
+            "total": 2,
+            "triggered_statuses": [
+              "refuted"
+            ]
+          }
+        },
+        "reason": "claim verification refuted 1 claim(s); calibrated diagnostic threshold exceeded: truth_proj",
+        "risk_level": "high"
+      },
+      "runtime_pair_profile": "balanced"
+    },
+    {
+      "claims": [
+        {
+          "claim_id": "c1",
+          "metadata": {
+            "extractor": "sentence_split",
+            "features": {
+              "has_calculation": false,
+              "has_citation": false,
+              "has_negation": false,
+              "has_number": false,
+              "is_time_sensitive": false
+            },
+            "source_index": 1
+          }
+        }
+      ],
+      "original_runtime_profile": "balanced",
+      "original_total_seconds": 0.00024313596077263355,
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/low_risk_supported-r0.json",
+      "request_id": "balanced-low_risk_supported-r0",
+      "request_key": "low_risk_supported-r0",
+      "risk_decision": {
+        "action": "accept",
+        "confidence": 1.0,
+        "diagnostics": {
+          "invalid_scores": [],
+          "invalid_values": {},
+          "missing_scores": [],
+          "severities": {
+            "truth_proj": 0.0
+          },
+          "thresholds": {
+            "truth_proj": 1.1314295530319214
+          },
+          "triggered_scores": []
+        },
+        "reason": "no calibrated diagnostic threshold was exceeded",
+        "risk_level": "low"
+      },
+      "runtime_pair_profile": "balanced"
+    },
+    {
+      "claims": [
+        {
+          "claim_id": "c1",
+          "metadata": {
+            "calculation": {
+              "expected": 5.0,
+              "expression": "2 + 2",
+              "parser": "symbolic",
+              "source": "claim_text"
+            },
+            "extractor": "sentence_split",
+            "features": {
+              "has_calculation": true,
+              "has_citation": false,
+              "has_negation": false,
+              "has_number": true,
+              "is_time_sensitive": false
+            },
+            "source_index": 1
+          }
+        }
+      ],
+      "original_runtime_profile": "latency",
+      "original_total_seconds": 0.0009586700471118093,
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/latency/calculator_refuted-r0.json",
+      "request_id": "latency-calculator_refuted-r0",
+      "request_key": "calculator_refuted-r0",
+      "risk_decision": {
+        "action": "abstain",
+        "confidence": 0.99,
+        "diagnostics": {
+          "invalid_scores": [],
+          "invalid_values": {},
+          "missing_scores": [],
+          "severities": {
+            "truth_proj": 0.0
+          },
+          "thresholds": {
+            "truth_proj": 1.1314295530319214
+          },
+          "triggered_scores": [],
+          "verification": {
+            "counts": {
+              "error": 0,
+              "insufficient_evidence": 0,
+              "not_applicable": 0,
+              "refuted": 1,
+              "supported": 0
+            },
+            "max_confidence_by_status": {
+              "refuted": 0.99
+            },
+            "total": 1,
+            "triggered_statuses": [
+              "refuted"
+            ]
+          }
+        },
+        "reason": "claim verification refuted 1 claim(s)",
+        "risk_level": "high"
+      },
+      "runtime_pair_profile": "latency"
+    },
+    {
+      "claims": [
+        {
+          "claim_id": "c1",
+          "metadata": {
+            "extractor": "sentence_split",
+            "features": {
+              "has_calculation": false,
+              "has_citation": false,
+              "has_negation": false,
+              "has_number": false,
+              "is_time_sensitive": false
+            },
+            "source_index": 1
+          }
+        },
+        {
+          "claim_id": "c2",
+          "metadata": {
+            "extractor": "sentence_split",
+            "features": {
+              "has_calculation": false,
+              "has_citation": false,
+              "has_negation": false,
+              "has_number": false,
+              "is_time_sensitive": false
+            },
+            "source_index": 2
+          }
+        }
+      ],
+      "original_runtime_profile": "latency",
+      "original_total_seconds": 0.00028293405193835497,
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/latency/diagnostic_refuted-r0.json",
+      "request_id": "latency-diagnostic_refuted-r0",
+      "request_key": "diagnostic_refuted-r0",
+      "risk_decision": {
+        "action": "retrieve",
+        "confidence": 0.55,
+        "diagnostics": {
+          "invalid_scores": [],
+          "invalid_values": {},
+          "missing_scores": [],
+          "severities": {
+            "truth_proj": 0.10000000000000003
+          },
+          "thresholds": {
+            "truth_proj": 1.1314295530319214
+          },
+          "triggered_scores": [
+            "truth_proj"
+          ]
+        },
+        "reason": "calibrated diagnostic threshold exceeded: truth_proj",
+        "risk_level": "medium"
+      },
+      "runtime_pair_profile": "latency"
+    },
+    {
+      "claims": [
+        {
+          "claim_id": "c1",
+          "metadata": {
+            "extractor": "sentence_split",
+            "features": {
+              "has_calculation": false,
+              "has_citation": false,
+              "has_negation": false,
+              "has_number": false,
+              "is_time_sensitive": false
+            },
+            "source_index": 1
+          }
+        }
+      ],
+      "original_runtime_profile": "latency",
+      "original_total_seconds": 0.000547852017916739,
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/latency/low_risk_supported-r0.json",
+      "request_id": "latency-low_risk_supported-r0",
+      "request_key": "low_risk_supported-r0",
+      "risk_decision": {
+        "action": "accept",
+        "confidence": 1.0,
+        "diagnostics": {
+          "invalid_scores": [],
+          "invalid_values": {},
+          "missing_scores": [],
+          "severities": {
+            "truth_proj": 0.0
+          },
+          "thresholds": {
+            "truth_proj": 1.1314295530319214
+          },
+          "triggered_scores": []
+        },
+        "reason": "no calibrated diagnostic threshold was exceeded",
+        "risk_level": "low"
+      },
+      "runtime_pair_profile": "latency"
+    }
+  ],
+  "workflow": "runtime_profile_selector_replay_trace_inputs"
+}

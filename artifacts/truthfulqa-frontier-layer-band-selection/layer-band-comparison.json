@@ -1,0 +1,783 @@
+{
+  "coverage_top_k": 2,
+  "notes": [
+    "cache-only l80 layer-band selector audit; combines intrinsic-dimension peak and spectrum heuristics"
+  ],
+  "recommended_strategy": {
+    "best_layer_in_band_rate": 1.0,
+    "mean_auroc_regret": 0.0,
+    "mean_candidate_layer_fraction": 0.4,
+    "mean_top_k_layer_coverage": 0.75,
+    "status": "pass",
+    "strategy": "spectrum_max_top_eigenvalue_to_mp_upper_radius_1"
+  },
+  "runs": [
+    {
+      "auroc_regret": 0.003124183006535941,
+      "avoided_layer_count": 2,
+      "band_best_auroc": 0.7613333333333333,
+      "band_best_layer": -12,
+      "band_best_rank": 2,
+      "best_layer": -10,
+      "best_layer_auroc": 0.7644575163398692,
+      "best_layer_in_band": false,
+      "candidate_layer_count": 3,
+      "candidate_layer_fraction": 0.6,
+      "candidate_layers": [
+        -16,
+        -14,
+        -12
+      ],
+      "components": [
+        {
+          "layers": [
+            -16,
+            -14,
+            -12
+          ],
+          "peak_intrinsic_dimension": 5.410904923878086,
+          "radius": 1,
+          "selected_layer": -14,
+          "source": "intrinsic_dimension"
+        }
+      ],
+      "coverage_top_k": 2,
+      "matched": true,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "n_ranked_layers": 5,
+      "name": "qwen05-l80",
+      "strategy": "intrinsic_radius_1",
+      "strategy_kind": "intrinsic",
+      "strategy_spec": "intrinsic:1",
+      "sweep_source": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-cache-only/qwen05-l80/sweep-report.json",
+      "top_k_layer_coverage": 0.5,
+      "top_k_layer_hit_count": 1,
+      "top_layers": [
+        {
+          "auroc": 0.7644575163398692,
+          "detection": 0.24183006535947713,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -10,
+          "score_name": "truth_proj"
+        },
+        {
+          "auroc": 0.7613333333333333,
+          "detection": 0.2973856209150327,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -12,
+          "score_name": "truth_proj"
+        }
+      ]
+    },
+    {
+      "auroc_regret": 0.0,
+      "avoided_layer_count": 1,
+      "band_best_auroc": 0.7644575163398692,
+      "band_best_layer": -10,
+      "band_best_rank": 1,
+      "best_layer": -10,
+      "best_layer_auroc": 0.7644575163398692,
+      "best_layer_in_band": true,
+      "candidate_layer_count": 4,
+      "candidate_layer_fraction": 0.8,
+      "candidate_layers": [
+        -16,
+        -14,
+        -12,
+        -10
+      ],
+      "components": [
+        {
+          "layers": [
+            -16,
+            -14,
+            -12,
+            -10
+          ],
+          "peak_intrinsic_dimension": 5.410904923878086,
+          "radius": 2,
+          "selected_layer": -14,
+          "source": "intrinsic_dimension"
+        }
+      ],
+      "coverage_top_k": 2,
+      "matched": true,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "n_ranked_layers": 5,
+      "name": "qwen05-l80",
+      "strategy": "intrinsic_radius_2",
+      "strategy_kind": "intrinsic",
+      "strategy_spec": "intrinsic:2",
+      "sweep_source": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-cache-only/qwen05-l80/sweep-report.json",
+      "top_k_layer_coverage": 1.0,
+      "top_k_layer_hit_count": 2,
+      "top_layers": [
+        {
+          "auroc": 0.7644575163398692,
+          "detection": 0.24183006535947713,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -10,
+          "score_name": "truth_proj"
+        },
+        {
+          "auroc": 0.7613333333333333,
+          "detection": 0.2973856209150327,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -12,
+          "score_name": "truth_proj"
+        }
+      ]
+    },
+    {
+      "auroc_regret": 0.0,
+      "avoided_layer_count": 3,
+      "band_best_auroc": 0.7644575163398692,
+      "band_best_layer": -10,
+      "band_best_rank": 1,
+      "best_layer": -10,
+      "best_layer_auroc": 0.7644575163398692,
+      "best_layer_in_band": true,
+      "candidate_layer_count": 2,
+      "candidate_layer_fraction": 0.4,
+      "candidate_layers": [
+        -10,
+        -8
+      ],
+      "components": [
+        {
+          "heuristic": "max_top_eigenvalue_to_mp_upper",
+          "layers": [
+            -10,
+            -8
+          ],
+          "metric_name": "top_eigenvalue_to_mp_upper",
+          "radius": 1,
+          "selected_layer": -8,
+          "selected_metric_value": 14.422626561346183,
+          "source": "spectrum"
+        }
+      ],
+      "coverage_top_k": 2,
+      "matched": true,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "n_ranked_layers": 5,
+      "name": "qwen05-l80",
+      "strategy": "spectrum_max_top_eigenvalue_to_mp_upper_radius_1",
+      "strategy_kind": "spectrum",
+      "strategy_spec": "spectrum:max_top_eigenvalue_to_mp_upper:1",
+      "sweep_source": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-cache-only/qwen05-l80/sweep-report.json",
+      "top_k_layer_coverage": 0.5,
+      "top_k_layer_hit_count": 1,
+      "top_layers": [
+        {
+          "auroc": 0.7644575163398692,
+          "detection": 0.24183006535947713,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -10,
+          "score_name": "truth_proj"
+        },
+        {
+          "auroc": 0.7613333333333333,
+          "detection": 0.2973856209150327,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -12,
+          "score_name": "truth_proj"
+        }
+      ]
+    },
+    {
+      "auroc_regret": 0.0,
+      "avoided_layer_count": 0,
+      "band_best_auroc": 0.7644575163398692,
+      "band_best_layer": -10,
+      "band_best_rank": 1,
+      "best_layer": -10,
+      "best_layer_auroc": 0.7644575163398692,
+      "best_layer_in_band": true,
+      "candidate_layer_count": 5,
+      "candidate_layer_fraction": 1.0,
+      "candidate_layers": [
+        -16,
+        -14,
+        -12,
+        -10,
+        -8
+      ],
+      "components": [
+        {
+          "layers": [
+            -16,
+            -14,
+            -12
+          ],
+          "peak_intrinsic_dimension": 5.410904923878086,
+          "radius": 1,
+          "selected_layer": -14,
+          "source": "intrinsic_dimension"
+        },
+        {
+          "heuristic": "max_top_eigenvalue_to_mp_upper",
+          "layers": [
+            -10,
+            -8
+          ],
+          "metric_name": "top_eigenvalue_to_mp_upper",
+          "radius": 1,
+          "selected_layer": -8,
+          "selected_metric_value": 14.422626561346183,
+          "source": "spectrum"
+        }
+      ],
+      "coverage_top_k": 2,
+      "matched": true,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "n_ranked_layers": 5,
+      "name": "qwen05-l80",
+      "strategy": "union_intrinsic_1_max_top_eigenvalue_to_mp_upper_1",
+      "strategy_kind": "union",
+      "strategy_spec": "union:1:max_top_eigenvalue_to_mp_upper:1",
+      "sweep_source": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-cache-only/qwen05-l80/sweep-report.json",
+      "top_k_layer_coverage": 1.0,
+      "top_k_layer_hit_count": 2,
+      "top_layers": [
+        {
+          "auroc": 0.7644575163398692,
+          "detection": 0.24183006535947713,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -10,
+          "score_name": "truth_proj"
+        },
+        {
+          "auroc": 0.7613333333333333,
+          "detection": 0.2973856209150327,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -12,
+          "score_name": "truth_proj"
+        }
+      ]
+    },
+    {
+      "auroc_regret": 0.003124183006535941,
+      "avoided_layer_count": 2,
+      "band_best_auroc": 0.7613333333333333,
+      "band_best_layer": -12,
+      "band_best_rank": 2,
+      "best_layer": -10,
+      "best_layer_auroc": 0.7644575163398692,
+      "best_layer_in_band": false,
+      "candidate_layer_count": 3,
+      "candidate_layer_fraction": 0.6,
+      "candidate_layers": [
+        -16,
+        -14,
+        -12
+      ],
+      "components": [
+        {
+          "layers": [
+            -16,
+            -14,
+            -12
+          ],
+          "peak_intrinsic_dimension": 5.410904923878086,
+          "radius": 1,
+          "selected_layer": -14,
+          "source": "intrinsic_dimension"
+        },
+        {
+          "heuristic": "max_effective_rank",
+          "layers": [
+            -16,
+            -14,
+            -12
+          ],
+          "metric_name": "effective_rank",
+          "radius": 1,
+          "selected_layer": -14,
+          "selected_metric_value": 66.30712127685547,
+          "source": "spectrum"
+        }
+      ],
+      "coverage_top_k": 2,
+      "matched": true,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "n_ranked_layers": 5,
+      "name": "qwen05-l80",
+      "strategy": "union_intrinsic_1_max_effective_rank_1",
+      "strategy_kind": "union",
+      "strategy_spec": "union:1:max_effective_rank:1",
+      "sweep_source": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-cache-only/qwen05-l80/sweep-report.json",
+      "top_k_layer_coverage": 0.5,
+      "top_k_layer_hit_count": 1,
+      "top_layers": [
+        {
+          "auroc": 0.7644575163398692,
+          "detection": 0.24183006535947713,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -10,
+          "score_name": "truth_proj"
+        },
+        {
+          "auroc": 0.7613333333333333,
+          "detection": 0.2973856209150327,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -12,
+          "score_name": "truth_proj"
+        }
+      ]
+    },
+    {
+      "auroc_regret": 0.0,
+      "avoided_layer_count": 2,
+      "band_best_auroc": 0.7819869281045752,
+      "band_best_layer": -16,
+      "band_best_rank": 1,
+      "best_layer": -16,
+      "best_layer_auroc": 0.7819869281045752,
+      "best_layer_in_band": true,
+      "candidate_layer_count": 3,
+      "candidate_layer_fraction": 0.6,
+      "candidate_layers": [
+        -16,
+        -14,
+        -12
+      ],
+      "components": [
+        {
+          "layers": [
+            -16,
+            -14,
+            -12
+          ],
+          "peak_intrinsic_dimension": 4.839667662487674,
+          "radius": 1,
+          "selected_layer": -14,
+          "source": "intrinsic_dimension"
+        }
+      ],
+      "coverage_top_k": 2,
+      "matched": true,
+      "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+      "n_ranked_layers": 5,
+      "name": "smollm2-l80",
+      "strategy": "intrinsic_radius_1",
+      "strategy_kind": "intrinsic",
+      "strategy_spec": "intrinsic:1",
+      "sweep_source": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-cache-only/smollm2-l80/sweep-report.json",
+      "top_k_layer_coverage": 1.0,
+      "top_k_layer_hit_count": 2,
+      "top_layers": [
+        {
+          "auroc": 0.7819869281045752,
+          "detection": 0.2647058823529412,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -16,
+          "score_name": "truth_proj"
+        },
+        {
+          "auroc": 0.7549150326797386,
+          "detection": 0.238562091503268,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -14,
+          "score_name": "truth_proj"
+        }
+      ]
+    },
+    {
+      "auroc_regret": 0.0,
+      "avoided_layer_count": 1,
+      "band_best_auroc": 0.7819869281045752,
+      "band_best_layer": -16,
+      "band_best_rank": 1,
+      "best_layer": -16,
+      "best_layer_auroc": 0.7819869281045752,
+      "best_layer_in_band": true,
+      "candidate_layer_count": 4,
+      "candidate_layer_fraction": 0.8,
+      "candidate_layers": [
+        -16,
+        -14,
+        -12,
+        -10
+      ],
+      "components": [
+        {
+          "layers": [
+            -16,
+            -14,
+            -12,
+            -10
+          ],
+          "peak_intrinsic_dimension": 4.839667662487674,
+          "radius": 2,
+          "selected_layer": -14,
+          "source": "intrinsic_dimension"
+        }
+      ],
+      "coverage_top_k": 2,
+      "matched": true,
+      "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+      "n_ranked_layers": 5,
+      "name": "smollm2-l80",
+      "strategy": "intrinsic_radius_2",
+      "strategy_kind": "intrinsic",
+      "strategy_spec": "intrinsic:2",
+      "sweep_source": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-cache-only/smollm2-l80/sweep-report.json",
+      "top_k_layer_coverage": 1.0,
+      "top_k_layer_hit_count": 2,
+      "top_layers": [
+        {
+          "auroc": 0.7819869281045752,
+          "detection": 0.2647058823529412,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -16,
+          "score_name": "truth_proj"
+        },
+        {
+          "auroc": 0.7549150326797386,
+          "detection": 0.238562091503268,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -14,
+          "score_name": "truth_proj"
+        }
+      ]
+    },
+    {
+      "auroc_regret": 0.0,
+      "avoided_layer_count": 3,
+      "band_best_auroc": 0.7819869281045752,
+      "band_best_layer": -16,
+      "band_best_rank": 1,
+      "best_layer": -16,
+      "best_layer_auroc": 0.7819869281045752,
+      "best_layer_in_band": true,
+      "candidate_layer_count": 2,
+      "candidate_layer_fraction": 0.4,
+      "candidate_layers": [
+        -16,
+        -14
+      ],
+      "components": [
+        {
+          "heuristic": "max_top_eigenvalue_to_mp_upper",
+          "layers": [
+            -16,
+            -14
+          ],
+          "metric_name": "top_eigenvalue_to_mp_upper",
+          "radius": 1,
+          "selected_layer": -16,
+          "selected_metric_value": 11.417110616126708,
+          "source": "spectrum"
+        }
+      ],
+      "coverage_top_k": 2,
+      "matched": true,
+      "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+      "n_ranked_layers": 5,
+      "name": "smollm2-l80",
+      "strategy": "spectrum_max_top_eigenvalue_to_mp_upper_radius_1",
+      "strategy_kind": "spectrum",
+      "strategy_spec": "spectrum:max_top_eigenvalue_to_mp_upper:1",
+      "sweep_source": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-cache-only/smollm2-l80/sweep-report.json",
+      "top_k_layer_coverage": 1.0,
+      "top_k_layer_hit_count": 2,
+      "top_layers": [
+        {
+          "auroc": 0.7819869281045752,
+          "detection": 0.2647058823529412,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -16,
+          "score_name": "truth_proj"
+        },
+        {
+          "auroc": 0.7549150326797386,
+          "detection": 0.238562091503268,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -14,
+          "score_name": "truth_proj"
+        }
+      ]
+    },
+    {
+      "auroc_regret": 0.0,
+      "avoided_layer_count": 2,
+      "band_best_auroc": 0.7819869281045752,
+      "band_best_layer": -16,
+      "band_best_rank": 1,
+      "best_layer": -16,
+      "best_layer_auroc": 0.7819869281045752,
+      "best_layer_in_band": true,
+      "candidate_layer_count": 3,
+      "candidate_layer_fraction": 0.6,
+      "candidate_layers": [
+        -16,
+        -14,
+        -12
+      ],
+      "components": [
+        {
+          "layers": [
+            -16,
+            -14,
+            -12
+          ],
+          "peak_intrinsic_dimension": 4.839667662487674,
+          "radius": 1,
+          "selected_layer": -14,
+          "source": "intrinsic_dimension"
+        },
+        {
+          "heuristic": "max_top_eigenvalue_to_mp_upper",
+          "layers": [
+            -16,
+            -14
+          ],
+          "metric_name": "top_eigenvalue_to_mp_upper",
+          "radius": 1,
+          "selected_layer": -16,
+          "selected_metric_value": 11.417110616126708,
+          "source": "spectrum"
+        }
+      ],
+      "coverage_top_k": 2,
+      "matched": true,
+      "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+      "n_ranked_layers": 5,
+      "name": "smollm2-l80",
+      "strategy": "union_intrinsic_1_max_top_eigenvalue_to_mp_upper_1",
+      "strategy_kind": "union",
+      "strategy_spec": "union:1:max_top_eigenvalue_to_mp_upper:1",
+      "sweep_source": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-cache-only/smollm2-l80/sweep-report.json",
+      "top_k_layer_coverage": 1.0,
+      "top_k_layer_hit_count": 2,
+      "top_layers": [
+        {
+          "auroc": 0.7819869281045752,
+          "detection": 0.2647058823529412,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -16,
+          "score_name": "truth_proj"
+        },
+        {
+          "auroc": 0.7549150326797386,
+          "detection": 0.238562091503268,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -14,
+          "score_name": "truth_proj"
+        }
+      ]
+    },
+    {
+      "auroc_regret": 0.0,
+      "avoided_layer_count": 2,
+      "band_best_auroc": 0.7819869281045752,
+      "band_best_layer": -16,
+      "band_best_rank": 1,
+      "best_layer": -16,
+      "best_layer_auroc": 0.7819869281045752,
+      "best_layer_in_band": true,
+      "candidate_layer_count": 3,
+      "candidate_layer_fraction": 0.6,
+      "candidate_layers": [
+        -16,
+        -14,
+        -12
+      ],
+      "components": [
+        {
+          "layers": [
+            -16,
+            -14,
+            -12
+          ],
+          "peak_intrinsic_dimension": 4.839667662487674,
+          "radius": 1,
+          "selected_layer": -14,
+          "source": "intrinsic_dimension"
+        },
+        {
+          "heuristic": "max_effective_rank",
+          "layers": [
+            -16,
+            -14,
+            -12
+          ],
+          "metric_name": "effective_rank",
+          "radius": 1,
+          "selected_layer": -14,
+          "selected_metric_value": 64.11634826660156,
+          "source": "spectrum"
+        }
+      ],
+      "coverage_top_k": 2,
+      "matched": true,
+      "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+      "n_ranked_layers": 5,
+      "name": "smollm2-l80",
+      "strategy": "union_intrinsic_1_max_effective_rank_1",
+      "strategy_kind": "union",
+      "strategy_spec": "union:1:max_effective_rank:1",
+      "sweep_source": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-cache-only/smollm2-l80/sweep-report.json",
+      "top_k_layer_coverage": 1.0,
+      "top_k_layer_hit_count": 2,
+      "top_layers": [
+        {
+          "auroc": 0.7819869281045752,
+          "detection": 0.2647058823529412,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -16,
+          "score_name": "truth_proj"
+        },
+        {
+          "auroc": 0.7549150326797386,
+          "detection": 0.238562091503268,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -14,
+          "score_name": "truth_proj"
+        }
+      ]
+    }
+  ],
+  "score_name": "truth_proj",
+  "strategies": [
+    {
+      "intrinsic_radius": 1,
+      "kind": "intrinsic",
+      "name": "intrinsic_radius_1",
+      "raw": "intrinsic:1",
+      "spectrum_heuristic": null,
+      "spectrum_radius": null
+    },
+    {
+      "intrinsic_radius": 2,
+      "kind": "intrinsic",
+      "name": "intrinsic_radius_2",
+      "raw": "intrinsic:2",
+      "spectrum_heuristic": null,
+      "spectrum_radius": null
+    },
+    {
+      "intrinsic_radius": null,
+      "kind": "spectrum",
+      "name": "spectrum_max_top_eigenvalue_to_mp_upper_radius_1",
+      "raw": "spectrum:max_top_eigenvalue_to_mp_upper:1",
+      "spectrum_heuristic": "max_top_eigenvalue_to_mp_upper",
+      "spectrum_radius": 1
+    },
+    {
+      "intrinsic_radius": 1,
+      "kind": "union",
+      "name": "union_intrinsic_1_max_top_eigenvalue_to_mp_upper_1",
+      "raw": "union:1:max_top_eigenvalue_to_mp_upper:1",
+      "spectrum_heuristic": "max_top_eigenvalue_to_mp_upper",
+      "spectrum_radius": 1
+    },
+    {
+      "intrinsic_radius": 1,
+      "kind": "union",
+      "name": "union_intrinsic_1_max_effective_rank_1",
+      "raw": "union:1:max_effective_rank:1",
+      "spectrum_heuristic": "max_effective_rank",
+      "spectrum_radius": 1
+    }
+  ],
+  "summary": {
+    "intrinsic_radius_1": {
+      "best_layer_in_band_rate": 0.5,
+      "coverage_top_k": 2,
+      "criterion": "best_layer_in_band",
+      "mean_auroc_regret": 0.0015620915032679705,
+      "mean_avoided_layer_count": 2.0,
+      "mean_candidate_layer_count": 3.0,
+      "mean_candidate_layer_fraction": 0.6,
+      "mean_top_k_layer_coverage": 0.75,
+      "n_best_layer_in_band": 1,
+      "n_matched": 2,
+      "n_missing": 0,
+      "n_runs": 2,
+      "status": "fail"
+    },
+    "intrinsic_radius_2": {
+      "best_layer_in_band_rate": 1.0,
+      "coverage_top_k": 2,
+      "criterion": "best_layer_in_band",
+      "mean_auroc_regret": 0.0,
+      "mean_avoided_layer_count": 1.0,
+      "mean_candidate_layer_count": 4.0,
+      "mean_candidate_layer_fraction": 0.8,
+      "mean_top_k_layer_coverage": 1.0,
+      "n_best_layer_in_band": 2,
+      "n_matched": 2,
+      "n_missing": 0,
+      "n_runs": 2,
+      "status": "pass"
+    },
+    "spectrum_max_top_eigenvalue_to_mp_upper_radius_1": {
+      "best_layer_in_band_rate": 1.0,
+      "coverage_top_k": 2,
+      "criterion": "best_layer_in_band",
+      "mean_auroc_regret": 0.0,
+      "mean_avoided_layer_count": 3.0,
+      "mean_candidate_layer_count": 2.0,
+      "mean_candidate_layer_fraction": 0.4,
+      "mean_top_k_layer_coverage": 0.75,
+      "n_best_layer_in_band": 2,
+      "n_matched": 2,
+      "n_missing": 0,
+      "n_runs": 2,
+      "status": "pass"
+    },
+    "union_intrinsic_1_max_effective_rank_1": {
+      "best_layer_in_band_rate": 0.5,
+      "coverage_top_k": 2,
+      "criterion": "best_layer_in_band",
+      "mean_auroc_regret": 0.0015620915032679705,
+      "mean_avoided_layer_count": 2.0,
+      "mean_candidate_layer_count": 3.0,
+      "mean_candidate_layer_fraction": 0.6,
+      "mean_top_k_layer_coverage": 0.75,
+      "n_best_layer_in_band": 1,
+      "n_matched": 2,
+      "n_missing": 0,
+      "n_runs": 2,
+      "status": "fail"
+    },
+    "union_intrinsic_1_max_top_eigenvalue_to_mp_upper_1": {
+      "best_layer_in_band_rate": 1.0,
+      "coverage_top_k": 2,
+      "criterion": "best_layer_in_band",
+      "mean_auroc_regret": 0.0,
+      "mean_avoided_layer_count": 1.0,
+      "mean_candidate_layer_count": 4.0,
+      "mean_candidate_layer_fraction": 0.8,
+      "mean_top_k_layer_coverage": 1.0,
+      "n_best_layer_in_band": 2,
+      "n_matched": 2,
+      "n_missing": 0,
+      "n_runs": 2,
+      "status": "pass"
+    }
+  },
+  "workflow": "compare_layer_band_selectors"
+}

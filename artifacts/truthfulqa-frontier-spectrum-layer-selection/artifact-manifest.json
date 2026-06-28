@@ -1,0 +1,68 @@
+{
+  "artifacts": {
+    "spectrum_layer_prediction_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "spectrum-layer-comparison.json",
+      "sha256": "bf916eedd5b256b093944463bbdb6e2b816968786b577b1f59e0c02939f4a013",
+      "size_bytes": 41605
+    },
+    "spectrum_report_0_qwen05-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen05-l80-spectrum-report.json",
+      "sha256": "65b84363bbf1ac24bb6b3c790937a494d1099cba930f3bb95b4d0630bace6b2e",
+      "size_bytes": 19683
+    },
+    "spectrum_report_1_smollm2-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80-spectrum-report.json",
+      "sha256": "3fadf8ad903064fabf300031ca2e5768a54fe50851f661f6f48324d8cc3db892",
+      "size_bytes": 19663
+    },
+    "sweep_report_0_qwen05-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-qwen-smollm2-l80-cache-only/qwen05-l80/sweep-report.json",
+      "sha256": "9faa5c4185f17580a08e52a86ca76f1a02cbcb21fd0b5b37c60d466f0ec4d537",
+      "size_bytes": 12351
+    },
+    "sweep_report_1_smollm2-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-qwen-smollm2-l80-cache-only/smollm2-l80/sweep-report.json",
+      "sha256": "2c8437a44d0dcb41811c0543c41dbdf93ccda862ba6d47c45f5501350ab773bf",
+      "size_bytes": 12361
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "heuristics": [
+      "max_spike_count",
+      "max_spike_fraction",
+      "max_effective_rank",
+      "max_effective_rank_fraction",
+      "max_participation_ratio",
+      "max_stable_rank",
+      "max_condition_number",
+      "max_top_eigenvalue",
+      "max_top_eigenvalue_to_mp_upper"
+    ],
+    "score_name": "truth_proj",
+    "top_k": 2,
+    "workflow": "compare_spectrum_layers"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

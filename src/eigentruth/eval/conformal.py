@@ -21,12 +21,617 @@ false-alarm rate of at most alpha.
 from __future__ import annotations
 
 import math
-from typing import Sequence, Union
+from collections.abc import Mapping
+from dataclasses import dataclass, field
+from typing import Any, Sequence, Union
 
 import torch
 from torch import Tensor
 
 ArrayLike = Union[Tensor, Sequence[float]]
+
+
+@dataclass(frozen=True)
+class AdaptiveScoreTransform:
+    """Feature-adjust a native score into a higher-is-anomalous score.
+
+    This is a dependency-free scoring primitive for adaptive conformal workflows:
+    the base score is first converted into anomaly direction, then caller-provided
+    feature values add a deterministic inflation term.
+    """
+
+    feature_weights: Mapping[str, float] = field(default_factory=dict)
+    intercept: float = 0.0
+    direction: str = "higher"
+
+    def __post_init__(self) -> None:
+        if self.direction not in {"higher", "lower"}:
+            raise ValueError("direction must be 'higher' or 'lower'.")
+        intercept = _finite_float(self.intercept, name="intercept")
+        weights = {
+            str(name): _finite_float(weight, name=f"feature_weights.{name}")
+            for name, weight in self.feature_weights.items()
+        }
+        object.__setattr__(self, "intercept", intercept)
+        object.__setattr__(self, "feature_weights", weights)
+
+    def transform(
+        self,
+        scores: ArrayLike,
+        feature_values: Mapping[str, ArrayLike] | None = None,
+    ) -> Tensor:
+        """Return adjusted scores where higher means more anomalous."""
+        return adaptive_anomaly_scores(
+            scores,
+            feature_values=feature_values,
+            feature_weights=self.feature_weights,
+            intercept=self.intercept,
+            direction=self.direction,
+        )
+
+    def to_dict(self) -> dict[str, object]:
+        """Return a JSON-serializable transform description."""
+        return {
+            "feature_weights": dict(self.feature_weights),
+            "intercept": self.intercept,
+            "direction": self.direction,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, object]) -> "AdaptiveScoreTransform":
+        """Build a transform from JSON-like data."""
+        raw_weights = data.get("feature_weights", {})
+        if not isinstance(raw_weights, Mapping):
+            raise ValueError("feature_weights must be a mapping.")
+        return cls(
+            feature_weights={str(name): weight for name, weight in raw_weights.items()},
+            intercept=data.get("intercept", 0.0),
+            direction=str(data.get("direction", "higher")),
+        )
+
+
+@dataclass(frozen=True)
+class ConformalAbstentionDecision:
+    """Runtime participation decision from a conformal abstention threshold."""
+
+    participate: bool
+    score: float
+    threshold: float
+    direction: str = "higher"
+    reason: str = ""
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if self.direction not in {"higher", "lower"}:
+            raise ValueError("direction must be 'higher' or 'lower'.")
+        score = _finite_float(self.score, name="score")
+        threshold = _threshold_float(self.threshold, name="threshold")
+        object.__setattr__(self, "score", score)
+        object.__setattr__(self, "threshold", threshold)
+        object.__setattr__(self, "reason", str(self.reason))
+        object.__setattr__(self, "metadata", dict(self.metadata))
+
+    @property
+    def action(self) -> str:
+        """Return ``participate`` or ``abstain`` for compact policy logs."""
+        return "participate" if self.participate else "abstain"
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable decision payload."""
+        return {
+            "participate": self.participate,
+            "action": self.action,
+            "score": self.score,
+            "threshold": self.threshold,
+            "direction": self.direction,
+            "reason": self.reason,
+            "metadata": dict(self.metadata),
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "ConformalAbstentionDecision":
+        """Build a decision from JSON-like data."""
+        return cls(
+            participate=bool(data["participate"]),
+            score=data["score"],
+            threshold=data["threshold"],
+            direction=str(data.get("direction", "higher")),
+            reason=str(data.get("reason", "")),
+            metadata=dict(data.get("metadata", {})),
+        )
+
+
+@dataclass(frozen=True)
+class ConformalAbstentionReport:
+    """Finite-sample participation and selective-correctness report.
+
+    ``direction`` describes which side of the uncertainty score means "less
+    reliable." For ``higher``, scores above ``threshold`` abstain. For ``lower``,
+    scores below ``threshold`` abstain.
+    """
+
+    threshold: float
+    alpha: float
+    direction: str = "higher"
+    n_calibration: int = 0
+    n_correct: int = 0
+    retained_count: int = 0
+    correct_retained_count: int = 0
+    abstained_count: int = 0
+    empirical_base_accuracy: float = 0.0
+    empirical_participation_rate: float = 0.0
+    empirical_abstention_rate: float = 0.0
+    empirical_selective_accuracy: float | None = None
+    correct_retention_rate: float = 0.0
+    correct_retention_lower_bound: float = 0.0
+    participation_upper_bound: float = 0.0
+    conditional_correctness_lower_bound: float = 0.0
+    score_name: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.direction not in {"higher", "lower"}:
+            raise ValueError("direction must be 'higher' or 'lower'.")
+        threshold = _threshold_float(self.threshold, name="threshold")
+        alpha = _alpha_float(self.alpha)
+        object.__setattr__(self, "threshold", threshold)
+        object.__setattr__(self, "alpha", alpha)
+        for name in (
+            "n_calibration",
+            "n_correct",
+            "retained_count",
+            "correct_retained_count",
+            "abstained_count",
+        ):
+            value = int(getattr(self, name))
+            if value < 0:
+                raise ValueError(f"{name} must be non-negative.")
+            object.__setattr__(self, name, value)
+        for name in (
+            "empirical_base_accuracy",
+            "empirical_participation_rate",
+            "empirical_abstention_rate",
+            "correct_retention_rate",
+            "correct_retention_lower_bound",
+            "participation_upper_bound",
+            "conditional_correctness_lower_bound",
+        ):
+            value = _unit_interval_float(getattr(self, name), name=name)
+            object.__setattr__(self, name, value)
+        if self.empirical_selective_accuracy is not None:
+            value = _unit_interval_float(
+                self.empirical_selective_accuracy,
+                name="empirical_selective_accuracy",
+            )
+            object.__setattr__(self, "empirical_selective_accuracy", value)
+        if self.score_name is not None:
+            object.__setattr__(self, "score_name", str(self.score_name))
+
+    def should_participate(self, score: float) -> bool:
+        """Return whether a runtime score is inside the retained region."""
+        value = _finite_float(score, name="score")
+        if self.direction == "higher":
+            return value <= self.threshold
+        return value >= self.threshold
+
+    def decide(
+        self,
+        score: float,
+        *,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> ConformalAbstentionDecision:
+        """Return a structured runtime abstention decision."""
+        value = _finite_float(score, name="score")
+        participate = self.should_participate(value)
+        operator = "<=" if self.direction == "higher" else ">="
+        reason = (
+            f"uncertainty score {value:.6g} {operator} conformal abstention "
+            f"threshold {self.threshold:.6g}"
+            if participate
+            else (
+                f"uncertainty score {value:.6g} outside conformal abstention "
+                f"threshold {self.threshold:.6g}"
+            )
+        )
+        return ConformalAbstentionDecision(
+            participate=participate,
+            score=value,
+            threshold=self.threshold,
+            direction=self.direction,
+            reason=reason,
+            metadata={
+                "alpha": self.alpha,
+                "score_name": self.score_name,
+                "conditional_correctness_lower_bound": self.conditional_correctness_lower_bound,
+                **({} if metadata is None else dict(metadata)),
+            },
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable abstention report."""
+        return {
+            "threshold": self.threshold,
+            "alpha": self.alpha,
+            "direction": self.direction,
+            "n_calibration": self.n_calibration,
+            "n_correct": self.n_correct,
+            "retained_count": self.retained_count,
+            "correct_retained_count": self.correct_retained_count,
+            "abstained_count": self.abstained_count,
+            "empirical_base_accuracy": self.empirical_base_accuracy,
+            "empirical_participation_rate": self.empirical_participation_rate,
+            "empirical_abstention_rate": self.empirical_abstention_rate,
+            "empirical_selective_accuracy": self.empirical_selective_accuracy,
+            "correct_retention_rate": self.correct_retention_rate,
+            "correct_retention_lower_bound": self.correct_retention_lower_bound,
+            "participation_upper_bound": self.participation_upper_bound,
+            "conditional_correctness_lower_bound": self.conditional_correctness_lower_bound,
+            "score_name": self.score_name,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "ConformalAbstentionReport":
+        """Build an abstention report from JSON-like data."""
+        return cls(
+            threshold=data["threshold"],
+            alpha=data["alpha"],
+            direction=str(data.get("direction", "higher")),
+            n_calibration=int(data.get("n_calibration", 0)),
+            n_correct=int(data.get("n_correct", 0)),
+            retained_count=int(data.get("retained_count", 0)),
+            correct_retained_count=int(data.get("correct_retained_count", 0)),
+            abstained_count=int(data.get("abstained_count", 0)),
+            empirical_base_accuracy=float(data.get("empirical_base_accuracy", 0.0)),
+            empirical_participation_rate=float(data.get("empirical_participation_rate", 0.0)),
+            empirical_abstention_rate=float(data.get("empirical_abstention_rate", 0.0)),
+            empirical_selective_accuracy=(
+                None
+                if data.get("empirical_selective_accuracy") is None
+                else float(data["empirical_selective_accuracy"])
+            ),
+            correct_retention_rate=float(data.get("correct_retention_rate", 0.0)),
+            correct_retention_lower_bound=float(data.get("correct_retention_lower_bound", 0.0)),
+            participation_upper_bound=float(data.get("participation_upper_bound", 0.0)),
+            conditional_correctness_lower_bound=float(
+                data.get("conditional_correctness_lower_bound", 0.0)
+            ),
+            score_name=None if data.get("score_name") is None else str(data["score_name"]),
+        )
+
+
+ABSTENTION_COMPARISON_METRICS = (
+    "conditional_correctness_lower_bound",
+    "empirical_selective_accuracy",
+    "empirical_participation_rate",
+    "correct_retention_lower_bound",
+    "correct_retention_rate",
+)
+
+
+@dataclass(frozen=True)
+class ConformalAbstentionComparisonCandidate:
+    """One ranked score candidate in a conformal abstention comparison."""
+
+    rank: int
+    score_name: str
+    direction: str
+    selection_metric: str
+    selection_value: float | None
+    report: ConformalAbstentionReport
+
+    def __post_init__(self) -> None:
+        rank = int(self.rank)
+        if rank < 1:
+            raise ValueError("rank must be >= 1.")
+        score_name = str(self.score_name)
+        if not score_name:
+            raise ValueError("score_name must be non-empty.")
+        if self.direction not in {"higher", "lower"}:
+            raise ValueError("direction must be 'higher' or 'lower'.")
+        if self.selection_metric not in ABSTENTION_COMPARISON_METRICS:
+            raise ValueError(
+                "selection_metric must be one of "
+                f"{ABSTENTION_COMPARISON_METRICS}."
+            )
+        if self.selection_value is not None:
+            value = _unit_interval_float(self.selection_value, name="selection_value")
+            object.__setattr__(self, "selection_value", value)
+        if not isinstance(self.report, ConformalAbstentionReport):
+            raise ValueError("report must be a ConformalAbstentionReport.")
+        object.__setattr__(self, "rank", rank)
+        object.__setattr__(self, "score_name", score_name)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable candidate payload."""
+        return {
+            "rank": self.rank,
+            "score_name": self.score_name,
+            "direction": self.direction,
+            "selection_metric": self.selection_metric,
+            "selection_value": self.selection_value,
+            "report": self.report.to_dict(),
+        }
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: Mapping[str, Any],
+    ) -> "ConformalAbstentionComparisonCandidate":
+        """Build a candidate from JSON-like data."""
+        raw_report = data.get("report")
+        if not isinstance(raw_report, Mapping):
+            raise ValueError("candidate report must be a mapping.")
+        return cls(
+            rank=int(data["rank"]),
+            score_name=str(data["score_name"]),
+            direction=str(data.get("direction", "higher")),
+            selection_metric=str(
+                data.get("selection_metric", "conditional_correctness_lower_bound")
+            ),
+            selection_value=(
+                None if data.get("selection_value") is None else float(data["selection_value"])
+            ),
+            report=ConformalAbstentionReport.from_dict(raw_report),
+        )
+
+
+@dataclass(frozen=True)
+class ConformalAbstentionComparisonReport:
+    """Rank several abstention signals under a shared correctness target."""
+
+    alpha: float
+    best_by: str
+    candidates: tuple[ConformalAbstentionComparisonCandidate, ...]
+
+    def __post_init__(self) -> None:
+        alpha = _alpha_float(self.alpha)
+        if self.best_by not in ABSTENTION_COMPARISON_METRICS:
+            raise ValueError(f"best_by must be one of {ABSTENTION_COMPARISON_METRICS}.")
+        candidates = tuple(self.candidates)
+        ranks = tuple(candidate.rank for candidate in candidates)
+        if ranks != tuple(range(1, len(candidates) + 1)):
+            raise ValueError("candidate ranks must be contiguous starting at 1.")
+        object.__setattr__(self, "alpha", alpha)
+        object.__setattr__(self, "candidates", candidates)
+
+    @property
+    def recommended(self) -> ConformalAbstentionComparisonCandidate | None:
+        """Return the top-ranked candidate, if any."""
+        return None if not self.candidates else self.candidates[0]
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable comparison report."""
+        recommended = self.recommended
+        return {
+            "alpha": self.alpha,
+            "best_by": self.best_by,
+            "candidate_count": len(self.candidates),
+            "recommended": None if recommended is None else recommended.to_dict(),
+            "candidates": [candidate.to_dict() for candidate in self.candidates],
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "ConformalAbstentionComparisonReport":
+        """Build a comparison report from JSON-like data."""
+        raw_candidates = data.get("candidates", ())
+        if not isinstance(raw_candidates, Sequence) or isinstance(raw_candidates, str):
+            raise ValueError("candidates must be a sequence.")
+        return cls(
+            alpha=data["alpha"],
+            best_by=str(data.get("best_by", "conditional_correctness_lower_bound")),
+            candidates=tuple(
+                ConformalAbstentionComparisonCandidate.from_dict(candidate)
+                for candidate in raw_candidates
+            ),
+        )
+
+
+@dataclass(frozen=True)
+class ConformalAbstentionReleaseGateResult:
+    """Release-gate verdict for a selected conformal abstention report."""
+
+    passed: bool
+    blocking_reasons: tuple[str, ...]
+    selected_score_name: str | None
+    metrics: Mapping[str, float | None]
+    thresholds: Mapping[str, float]
+    source: str = "conformal_abstention_report"
+    candidate_count: int | None = None
+    selected_report: ConformalAbstentionReport | None = None
+
+    def __post_init__(self) -> None:
+        reasons = tuple(str(reason) for reason in self.blocking_reasons)
+        metrics = dict(self.metrics)
+        thresholds = dict(self.thresholds)
+        for name, value in metrics.items():
+            if value is not None:
+                metrics[name] = _unit_interval_float(value, name=f"metrics.{name}")
+        for name, value in thresholds.items():
+            thresholds[name] = _unit_interval_float(value, name=f"thresholds.{name}")
+        candidate_count = self.candidate_count
+        if candidate_count is not None:
+            candidate_count = int(candidate_count)
+            if candidate_count < 0:
+                raise ValueError("candidate_count must be non-negative.")
+        if self.selected_report is not None and not isinstance(
+            self.selected_report,
+            ConformalAbstentionReport,
+        ):
+            raise ValueError("selected_report must be a ConformalAbstentionReport.")
+        object.__setattr__(self, "passed", bool(self.passed))
+        object.__setattr__(self, "blocking_reasons", reasons)
+        object.__setattr__(self, "metrics", metrics)
+        object.__setattr__(self, "thresholds", thresholds)
+        object.__setattr__(self, "source", str(self.source))
+        object.__setattr__(self, "candidate_count", candidate_count)
+        if self.selected_score_name is not None:
+            object.__setattr__(self, "selected_score_name", str(self.selected_score_name))
+
+    @property
+    def status(self) -> str:
+        """Return ``passed`` or ``blocked`` for release workflows."""
+        return "passed" if self.passed else "blocked"
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable release-gate payload."""
+        return {
+            "passed": self.passed,
+            "status": self.status,
+            "blocking_reasons": list(self.blocking_reasons),
+            "selected_score_name": self.selected_score_name,
+            "metrics": dict(self.metrics),
+            "thresholds": dict(self.thresholds),
+            "source": self.source,
+            "candidate_count": self.candidate_count,
+            "selected_report": (
+                None if self.selected_report is None else self.selected_report.to_dict()
+            ),
+        }
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: Mapping[str, Any],
+    ) -> "ConformalAbstentionReleaseGateResult":
+        """Build a release-gate result from JSON-like data."""
+        raw_report = data.get("selected_report")
+        return cls(
+            passed=bool(data["passed"]),
+            blocking_reasons=tuple(str(reason) for reason in data.get("blocking_reasons", ())),
+            selected_score_name=(
+                None
+                if data.get("selected_score_name") is None
+                else str(data["selected_score_name"])
+            ),
+            metrics=dict(data.get("metrics", {})),
+            thresholds=dict(data.get("thresholds", {})),
+            source=str(data.get("source", "conformal_abstention_report")),
+            candidate_count=(
+                None if data.get("candidate_count") is None else int(data["candidate_count"])
+            ),
+            selected_report=(
+                None
+                if raw_report is None
+                else ConformalAbstentionReport.from_dict(raw_report)
+            ),
+        )
+
+
+@dataclass(frozen=True)
+class ConformalAbstentionReleaseGate:
+    """Fail-closed promotion gate for conformal abstention candidates."""
+
+    min_conditional_correctness_lower_bound: float = 0.8
+    max_abstention_rate: float = 0.5
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "min_conditional_correctness_lower_bound",
+            _unit_interval_float(
+                self.min_conditional_correctness_lower_bound,
+                name="min_conditional_correctness_lower_bound",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "max_abstention_rate",
+            _unit_interval_float(self.max_abstention_rate, name="max_abstention_rate"),
+        )
+
+    def evaluate(
+        self,
+        report: (
+            ConformalAbstentionReport
+            | ConformalAbstentionComparisonCandidate
+            | ConformalAbstentionComparisonReport
+            | Mapping[str, Any]
+        ),
+    ) -> ConformalAbstentionReleaseGateResult:
+        """Evaluate a report, candidate, or comparison report against release thresholds."""
+        selected = _select_abstention_report_for_release_gate(report)
+        if selected is None:
+            thresholds = {
+                "min_conditional_correctness_lower_bound": (
+                    self.min_conditional_correctness_lower_bound
+                ),
+                "max_abstention_rate": self.max_abstention_rate,
+            }
+            return ConformalAbstentionReleaseGateResult(
+                passed=False,
+                blocking_reasons=("abstention comparison report has no candidates",),
+                selected_score_name=None,
+                metrics={},
+                thresholds=thresholds,
+                source="conformal_abstention_comparison_report",
+                candidate_count=0,
+                selected_report=None,
+            )
+        selected_report, source, candidate_count = selected
+        metrics = {
+            "conditional_correctness_lower_bound": (
+                selected_report.conditional_correctness_lower_bound
+            ),
+            "empirical_abstention_rate": selected_report.empirical_abstention_rate,
+            "empirical_participation_rate": selected_report.empirical_participation_rate,
+            "empirical_selective_accuracy": selected_report.empirical_selective_accuracy,
+            "correct_retention_lower_bound": selected_report.correct_retention_lower_bound,
+            "correct_retention_rate": selected_report.correct_retention_rate,
+        }
+        thresholds = {
+            "min_conditional_correctness_lower_bound": (
+                self.min_conditional_correctness_lower_bound
+            ),
+            "max_abstention_rate": self.max_abstention_rate,
+        }
+        blocking_reasons: list[str] = []
+        if (
+            selected_report.conditional_correctness_lower_bound
+            < self.min_conditional_correctness_lower_bound
+        ):
+            blocking_reasons.append(
+                "conditional_correctness_lower_bound "
+                f"{selected_report.conditional_correctness_lower_bound:.6g} "
+                "is below required minimum "
+                f"{self.min_conditional_correctness_lower_bound:.6g}"
+            )
+        if selected_report.empirical_abstention_rate > self.max_abstention_rate:
+            blocking_reasons.append(
+                "empirical_abstention_rate "
+                f"{selected_report.empirical_abstention_rate:.6g} "
+                "exceeds maximum "
+                f"{self.max_abstention_rate:.6g}"
+            )
+
+        return ConformalAbstentionReleaseGateResult(
+            passed=not blocking_reasons,
+            blocking_reasons=tuple(blocking_reasons),
+            selected_score_name=selected_report.score_name,
+            metrics=metrics,
+            thresholds=thresholds,
+            source=source,
+            candidate_count=candidate_count,
+            selected_report=selected_report,
+        )
+
+    def to_dict(self) -> dict[str, float]:
+        """Return release-gate threshold configuration."""
+        return {
+            "min_conditional_correctness_lower_bound": (
+                self.min_conditional_correctness_lower_bound
+            ),
+            "max_abstention_rate": self.max_abstention_rate,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "ConformalAbstentionReleaseGate":
+        """Build release-gate thresholds from JSON-like data."""
+        return cls(
+            min_conditional_correctness_lower_bound=data.get(
+                "min_conditional_correctness_lower_bound",
+                0.8,
+            ),
+            max_abstention_rate=data.get("max_abstention_rate", 0.5),
+        )
 
 
 def conformal_pvalues(calib_scores: ArrayLike, test_scores: ArrayLike) -> Tensor:
@@ -45,8 +650,8 @@ def conformal_pvalues(calib_scores: ArrayLike, test_scores: ArrayLike) -> Tensor
     Returns:
         p 值张量 / p-value tensor (float64), shape [n_test].
     """
-    calib = torch.as_tensor(calib_scores, dtype=torch.float64).flatten()
-    test = torch.as_tensor(test_scores, dtype=torch.float64).flatten()
+    calib = _finite_flat_tensor(calib_scores, name="calibration scores")
+    test = _finite_flat_tensor(test_scores, name="test scores")
     if calib.numel() == 0:
         raise ValueError("calibration scores must be non-empty.")
 
@@ -78,7 +683,7 @@ def conformal_threshold(calib_scores: ArrayLike, alpha: float) -> float:
     """
     if not (0.0 < alpha < 1.0):
         raise ValueError(f"alpha must be in (0, 1), got {alpha}.")
-    calib = torch.as_tensor(calib_scores, dtype=torch.float64).flatten()
+    calib = _finite_flat_tensor(calib_scores, name="calibration scores")
     n = calib.numel()
     if n == 0:
         raise ValueError("calibration scores must be non-empty.")
@@ -95,18 +700,410 @@ def directional_conformal_threshold(calib_scores: ArrayLike, alpha: float, direc
     if direction == "higher":
         return conformal_threshold(calib_scores, alpha)
     if direction == "lower":
-        threshold = conformal_threshold(-torch.as_tensor(calib_scores, dtype=torch.float64), alpha)
+        threshold = conformal_threshold(-_finite_flat_tensor(calib_scores, name="calibration scores"), alpha)
         return -threshold
     raise ValueError("direction must be 'higher' or 'lower'.")
+
+
+def directional_conformal_thresholds(
+    calib_scores: ArrayLike,
+    alphas: Sequence[float],
+    direction: str,
+) -> dict[float, float]:
+    """Return native-unit thresholds for several alphas using one calibration sort."""
+    if direction not in {"higher", "lower"}:
+        raise ValueError("direction must be 'higher' or 'lower'.")
+    calib = _finite_flat_tensor(calib_scores, name="calibration scores")
+    n = calib.numel()
+    if n == 0:
+        raise ValueError("calibration scores must be non-empty.")
+
+    oriented = calib if direction == "higher" else -calib
+    oriented_sorted, _ = torch.sort(oriented)
+    thresholds: dict[float, float] = {}
+    for alpha in alphas:
+        if not (0.0 < alpha < 1.0):
+            raise ValueError(f"alpha must be in (0, 1), got {alpha}.")
+        rank = math.ceil((n + 1) * (1.0 - alpha))
+        if rank > n:
+            oriented_threshold = float("inf")
+        else:
+            oriented_threshold = float(oriented_sorted[rank - 1].item())
+        thresholds[float(alpha)] = (
+            oriented_threshold if direction == "higher" else -oriented_threshold
+        )
+    return thresholds
 
 
 def directional_trigger_rate(scores: ArrayLike, threshold: float, direction: str) -> float:
     """Return the fraction of scores flagged by a directional conformal threshold."""
     if direction not in {"higher", "lower"}:
         raise ValueError("direction must be 'higher' or 'lower'.")
-    scores_t = torch.as_tensor(scores, dtype=torch.float64).flatten()
-    if scores_t.numel() == 0 or math.isinf(threshold):
+    if math.isnan(float(threshold)):
+        raise ValueError("threshold must not be NaN.")
+    scores_t = _finite_flat_tensor(scores, name="scores")
+    if scores_t.numel() == 0:
         return 0.0
     if direction == "higher":
         return float((scores_t > threshold).double().mean().item())
     return float((scores_t < threshold).double().mean().item())
+
+
+def conformal_abstention_report(
+    uncertainty_scores: ArrayLike,
+    correctness: Sequence[bool | int | float],
+    alpha: float,
+    *,
+    direction: str = "higher",
+    score_name: str | None = None,
+) -> ConformalAbstentionReport:
+    """Calibrate a conformal participation threshold and selective-accuracy report.
+
+    The threshold is calibrated on responses marked correct, then evaluated on all
+    calibration responses. For ``higher`` uncertainty, scores above the threshold
+    abstain; for ``lower`` uncertainty, scores below the threshold abstain.
+
+    Args:
+        uncertainty_scores: Reliability scores on calibration responses. ``direction``
+            determines which side is less reliable.
+        correctness: Binary correctness labels for the same calibration responses.
+        alpha: Correct-response miss budget in ``(0, 1)``. With exchangeable
+            correct responses, at most alpha should fall outside the retained
+            participation region.
+        direction: ``higher`` when larger scores are less reliable; ``lower`` when
+            smaller scores are less reliable.
+        score_name: Optional stable score name for trace metadata.
+    """
+    if direction not in {"higher", "lower"}:
+        raise ValueError("direction must be 'higher' or 'lower'.")
+    alpha_value = _alpha_float(alpha)
+    scores = _finite_flat_tensor(uncertainty_scores, name="uncertainty scores")
+    labels = _binary_flat_tensor(correctness, name="correctness")
+    if scores.numel() == 0:
+        raise ValueError("uncertainty scores must be non-empty.")
+    if labels.numel() != scores.numel():
+        raise ValueError("correctness must have the same length as uncertainty scores.")
+    correct_scores = scores[labels]
+    if correct_scores.numel() == 0:
+        raise ValueError("correctness must contain at least one correct response for calibration.")
+
+    threshold = directional_conformal_threshold(correct_scores, alpha_value, direction)
+    return evaluate_conformal_abstention(
+        scores,
+        labels.tolist(),
+        threshold=threshold,
+        alpha=alpha_value,
+        direction=direction,
+        score_name=score_name,
+    )
+
+
+def conformal_abstention_comparison_report(
+    uncertainty_scores: Mapping[str, ArrayLike],
+    correctness: Sequence[bool | int | float],
+    alpha: float,
+    *,
+    directions: Mapping[str, str] | None = None,
+    best_by: str = "conditional_correctness_lower_bound",
+) -> ConformalAbstentionComparisonReport:
+    """Rank several uncertainty scores as conformal abstention candidates.
+
+    All candidates share the same correctness labels and alpha. Higher values are
+    better for every supported ``best_by`` metric; ties are resolved by
+    conservative correctness, empirical selective accuracy, participation,
+    correct retention, then score name for deterministic reports.
+    """
+    if not isinstance(uncertainty_scores, Mapping):
+        raise ValueError("uncertainty_scores must be a mapping of score name to values.")
+    if not uncertainty_scores:
+        raise ValueError("uncertainty_scores must contain at least one score.")
+    if best_by not in ABSTENTION_COMPARISON_METRICS:
+        raise ValueError(f"best_by must be one of {ABSTENTION_COMPARISON_METRICS}.")
+    alpha_value = _alpha_float(alpha)
+    direction_map = (
+        {}
+        if directions is None
+        else {str(name): str(value) for name, value in directions.items()}
+    )
+
+    reports: list[ConformalAbstentionReport] = []
+    for raw_name, scores in uncertainty_scores.items():
+        name = str(raw_name)
+        if not name:
+            raise ValueError("score names must be non-empty.")
+        direction = direction_map.get(name, "higher")
+        reports.append(
+            conformal_abstention_report(
+                scores,
+                correctness,
+                alpha_value,
+                direction=direction,
+                score_name=name,
+            )
+        )
+
+    def metric_value(report: ConformalAbstentionReport, metric: str) -> float | None:
+        value = getattr(report, metric)
+        if value is None:
+            return None
+        return _unit_interval_float(value, name=metric)
+
+    def sortable_value(value: float | None) -> float:
+        return -1.0 if value is None else value
+
+    def sort_key(report: ConformalAbstentionReport) -> tuple[float, float, float, float, float, str]:
+        score_name = "" if report.score_name is None else report.score_name
+        return (
+            -sortable_value(metric_value(report, best_by)),
+            -sortable_value(metric_value(report, "conditional_correctness_lower_bound")),
+            -sortable_value(metric_value(report, "empirical_selective_accuracy")),
+            -sortable_value(metric_value(report, "empirical_participation_rate")),
+            -sortable_value(metric_value(report, "correct_retention_lower_bound")),
+            score_name,
+        )
+
+    ranked_reports = sorted(reports, key=sort_key)
+    candidates = tuple(
+        ConformalAbstentionComparisonCandidate(
+            rank=rank,
+            score_name=str(report.score_name),
+            direction=report.direction,
+            selection_metric=best_by,
+            selection_value=metric_value(report, best_by),
+            report=report,
+        )
+        for rank, report in enumerate(ranked_reports, start=1)
+    )
+    return ConformalAbstentionComparisonReport(
+        alpha=alpha_value,
+        best_by=best_by,
+        candidates=candidates,
+    )
+
+
+def conformal_abstention_release_gate(
+    report: (
+        ConformalAbstentionReport
+        | ConformalAbstentionComparisonCandidate
+        | ConformalAbstentionComparisonReport
+        | Mapping[str, Any]
+    ),
+    *,
+    min_conditional_correctness_lower_bound: float = 0.8,
+    max_abstention_rate: float = 0.5,
+) -> ConformalAbstentionReleaseGateResult:
+    """Evaluate a conformal abstention report as a promotion gate.
+
+    The gate is intentionally small and fail-closed: the selected candidate must
+    satisfy both a conservative conditional-correctness lower bound and an upper
+    bound on empirical abstention rate.
+    """
+    return ConformalAbstentionReleaseGate(
+        min_conditional_correctness_lower_bound=min_conditional_correctness_lower_bound,
+        max_abstention_rate=max_abstention_rate,
+    ).evaluate(report)
+
+
+def evaluate_conformal_abstention(
+    uncertainty_scores: ArrayLike,
+    correctness: Sequence[bool | int | float],
+    *,
+    threshold: float,
+    alpha: float,
+    direction: str = "higher",
+    score_name: str | None = None,
+) -> ConformalAbstentionReport:
+    """Evaluate selective participation metrics for a fixed abstention threshold."""
+    if direction not in {"higher", "lower"}:
+        raise ValueError("direction must be 'higher' or 'lower'.")
+    alpha_value = _alpha_float(alpha)
+    threshold_value = _threshold_float(threshold, name="threshold")
+    scores = _finite_flat_tensor(uncertainty_scores, name="uncertainty scores")
+    labels = _binary_flat_tensor(correctness, name="correctness")
+    if scores.numel() == 0:
+        raise ValueError("uncertainty scores must be non-empty.")
+    if labels.numel() != scores.numel():
+        raise ValueError("correctness must have the same length as uncertainty scores.")
+
+    retained = scores <= threshold_value if direction == "higher" else scores >= threshold_value
+    correct = labels
+    correct_retained = retained & correct
+    n = int(scores.numel())
+    n_correct = int(correct.sum().item())
+    retained_count = int(retained.sum().item())
+    correct_retained_count = int(correct_retained.sum().item())
+    abstained_count = n - retained_count
+
+    empirical_base_accuracy = n_correct / n
+    empirical_participation_rate = retained_count / n
+    empirical_abstention_rate = abstained_count / n
+    empirical_selective_accuracy = (
+        None if retained_count == 0 else correct_retained_count / retained_count
+    )
+    correct_retention_rate = 0.0 if n_correct == 0 else correct_retained_count / n_correct
+    # Conservative finite-sample style bounds used for post-hoc policy routing:
+    # correct-retention uses the correct-response calibration count, base accuracy
+    # uses the all-response calibration count, and participation uses the retained
+    # rank among all calibration samples.
+    correct_retention_lower_bound = (
+        0.0 if n_correct == 0 else correct_retained_count / (n_correct + 1.0)
+    )
+    base_accuracy_lower_bound = n_correct / (n + 1.0)
+    participation_upper_bound = min(1.0, (retained_count + 1.0) / (n + 1.0))
+    conditional_correctness_lower_bound = 0.0
+    if participation_upper_bound > 0.0:
+        conditional_correctness_lower_bound = (
+            correct_retention_lower_bound * base_accuracy_lower_bound / participation_upper_bound
+        )
+    conditional_correctness_lower_bound = max(0.0, min(1.0, conditional_correctness_lower_bound))
+
+    return ConformalAbstentionReport(
+        threshold=threshold_value,
+        alpha=alpha_value,
+        direction=direction,
+        n_calibration=n,
+        n_correct=n_correct,
+        retained_count=retained_count,
+        correct_retained_count=correct_retained_count,
+        abstained_count=abstained_count,
+        empirical_base_accuracy=empirical_base_accuracy,
+        empirical_participation_rate=empirical_participation_rate,
+        empirical_abstention_rate=empirical_abstention_rate,
+        empirical_selective_accuracy=empirical_selective_accuracy,
+        correct_retention_rate=correct_retention_rate,
+        correct_retention_lower_bound=correct_retention_lower_bound,
+        participation_upper_bound=participation_upper_bound,
+        conditional_correctness_lower_bound=conditional_correctness_lower_bound,
+        score_name=score_name,
+    )
+
+
+def adaptive_anomaly_scores(
+    scores: ArrayLike,
+    *,
+    feature_values: Mapping[str, ArrayLike] | None = None,
+    feature_weights: Mapping[str, float] | None = None,
+    intercept: float = 0.0,
+    direction: str = "higher",
+) -> Tensor:
+    """Return feature-adjusted anomaly scores for adaptive conformal calibration.
+
+    The returned tensor is always in higher-is-more-anomalous orientation. Feature
+    weights are additive: ``adjusted = oriented_score + intercept + sum(w_i*x_i)``.
+    """
+    if direction == "higher":
+        adjusted = _finite_flat_tensor(scores, name="scores")
+    elif direction == "lower":
+        adjusted = -_finite_flat_tensor(scores, name="scores")
+    else:
+        raise ValueError("direction must be 'higher' or 'lower'.")
+
+    offset = torch.full_like(adjusted, _finite_float(intercept, name="intercept"))
+    weights = {} if feature_weights is None else dict(feature_weights)
+    values = {} if feature_values is None else feature_values
+    for name, raw_weight in weights.items():
+        weight = _finite_float(raw_weight, name=f"feature_weights.{name}")
+        if name not in values:
+            raise ValueError(f"feature_values is missing required feature '{name}'.")
+        feature = _finite_flat_tensor(values[name], name=f"feature_values.{name}")
+        if feature.numel() != adjusted.numel():
+            raise ValueError("feature values must have the same length as scores.")
+        offset = offset + weight * feature
+    return adjusted + offset
+
+
+def _finite_flat_tensor(values: ArrayLike, *, name: str) -> Tensor:
+    tensor = torch.as_tensor(values, dtype=torch.float64).flatten()
+    if not torch.isfinite(tensor).all():
+        raise ValueError(f"{name} must contain only finite values.")
+    return tensor
+
+
+def _binary_flat_tensor(values: Sequence[bool | int | float], *, name: str) -> Tensor:
+    try:
+        tensor = torch.as_tensor(values)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a binary sequence.") from exc
+    tensor = tensor.flatten()
+    if tensor.dtype == torch.bool:
+        return tensor
+    numeric = torch.as_tensor(values, dtype=torch.float64).flatten()
+    if not torch.isfinite(numeric).all():
+        raise ValueError(f"{name} must contain only finite values.")
+    if not (((numeric == 0.0) | (numeric == 1.0)).all()):
+        raise ValueError(f"{name} must contain only 0/1 or bool labels.")
+    return numeric.to(torch.bool)
+
+
+def _alpha_float(value: object) -> float:
+    alpha = _finite_float(value, name="alpha")
+    if not (0.0 < alpha < 1.0):
+        raise ValueError(f"alpha must be in (0, 1), got {alpha}.")
+    return alpha
+
+
+def _finite_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool):
+        raise ValueError(f"{name} must be a finite number.")
+    try:
+        result = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite number.") from exc
+    if not math.isfinite(result):
+        raise ValueError(f"{name} must be a finite number.")
+    return result
+
+
+def _threshold_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool):
+        raise ValueError(f"{name} must be numeric and must not be NaN.")
+    try:
+        result = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be numeric and must not be NaN.") from exc
+    if math.isnan(result):
+        raise ValueError(f"{name} must be numeric and must not be NaN.")
+    return result
+
+
+def _unit_interval_float(value: object, *, name: str) -> float:
+    result = _finite_float(value, name=name)
+    if not (0.0 <= result <= 1.0):
+        raise ValueError(f"{name} must be in [0, 1].")
+    return result
+
+
+def _select_abstention_report_for_release_gate(
+    report: (
+        ConformalAbstentionReport
+        | ConformalAbstentionComparisonCandidate
+        | ConformalAbstentionComparisonReport
+        | Mapping[str, Any]
+    ),
+) -> tuple[ConformalAbstentionReport, str, int | None] | None:
+    if isinstance(report, ConformalAbstentionReport):
+        return report, "conformal_abstention_report", None
+    if isinstance(report, ConformalAbstentionComparisonCandidate):
+        return report.report, "conformal_abstention_comparison_candidate", None
+    if isinstance(report, ConformalAbstentionComparisonReport):
+        recommended = report.recommended
+        if recommended is None:
+            return None
+        return (
+            recommended.report,
+            "conformal_abstention_comparison_report",
+            len(report.candidates),
+        )
+    if not isinstance(report, Mapping):
+        raise ValueError("abstention release gate input must be a report or mapping.")
+    if "recommended" in report and "candidates" in report:
+        return _select_abstention_report_for_release_gate(
+            ConformalAbstentionComparisonReport.from_dict(report)
+        )
+    if "report" in report and "score_name" in report:
+        return _select_abstention_report_for_release_gate(
+            ConformalAbstentionComparisonCandidate.from_dict(report)
+        )
+    return _select_abstention_report_for_release_gate(
+        ConformalAbstentionReport.from_dict(report)
+    )

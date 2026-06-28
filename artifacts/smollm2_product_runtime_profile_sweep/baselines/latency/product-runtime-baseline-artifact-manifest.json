@@ -1,0 +1,62 @@
+{
+  "artifacts": {
+    "product_runtime_baseline_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "product-runtime-baseline.json",
+      "sha256": "fea04c83a8c05a14875a87c019c648fadf9984183fc8c5ea7b9bb2078d7848d9",
+      "size_bytes": 58899
+    },
+    "promotion_contract": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_registry_workflow.json",
+      "sha256": "feaebd93a7a4b92fc50adcabe4ea4ae5515b6b1e42fb3d086db37c2bf530b239",
+      "size_bytes": 53344
+    },
+    "trace_0000_low_risk_supported-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../traces/latency/low_risk_supported-r0.json",
+      "sha256": "4be668a2f5610227f6debc4a5dd61e3c5b276c7458d5b2795a8c61168df4e169",
+      "size_bytes": 33046
+    },
+    "trace_0001_diagnostic_refuted-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../traces/latency/diagnostic_refuted-r0.json",
+      "sha256": "8415896967d4ce1af54d23bfd7c532f2b749978335d14bcbae052ab986684b2d",
+      "size_bytes": 33438
+    },
+    "trace_0002_calculator_refuted-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../traces/latency/calculator_refuted-r0.json",
+      "sha256": "718da025fc751970704ed1417c6772bd40743cb22be1a897a239601739d68ccd",
+      "size_bytes": 44087
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "budget_enabled": true,
+    "budget_passed": true,
+    "compact_json": false,
+    "runner": "run_product_runtime_baseline",
+    "runtime_profile": "latency",
+    "source": "run_product_runtime_profile_sweep",
+    "status": "promote",
+    "trace_count": 3
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

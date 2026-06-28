@@ -1,0 +1,15 @@
+{
+  "checked": 7,
+  "failures": [],
+  "manifest_path": "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/retrieval-route-artifact-manifest.json",
+  "nested": [
+    {
+      "checked": 15,
+      "failures": [],
+      "manifest_path": "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/../truthfulqa-l80-answer-echo-retrieval-stress/artifact-manifest.json",
+      "nested": [],
+      "passed": true
+    }
+  ],
+  "passed": true
+}

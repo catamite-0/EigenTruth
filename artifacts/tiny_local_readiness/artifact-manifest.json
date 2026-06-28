@@ -1,0 +1,120 @@
+{
+  "artifacts": {
+    "adapter_family_matrix": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "adapter-family-matrix.json",
+      "sha256": "d66bde220057dbaac96f8b0945a7b9089f56f9f11cb5e5c8eec047f18c2fcfcb",
+      "size_bytes": 22983
+    },
+    "adapter_family_route_comparison": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "adapter-family/route-family-comparison.json",
+      "sha256": "87a8bd60ad7e304798c6a4c44cadeed264d8f7087eada689edd74b2193385ea9",
+      "size_bytes": 19843
+    },
+    "performance_matrix_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "cache-profile-matrix/artifact-manifest.json",
+      "sha256": "c3d4e3976537fb98999f6f639dc0e2e98a366c86119a21c128f510436ab80c1d",
+      "size_bytes": 1341
+    },
+    "performance_matrix_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "cache-profile-matrix/cache-profile-matrix-report.json",
+      "sha256": "934503d83f9f8ad124004a73e93047c4a26eb7e8ea4adf17503fd5207551fd5a",
+      "size_bytes": 12112
+    },
+    "readiness_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "adapter-readiness-report.json",
+      "sha256": "1d7d791eb67671a158c76c38c5692be340f772f4c5a3e210fcf38d6c679f702e",
+      "size_bytes": 35284
+    },
+    "runtime_recommendation": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "runtime-recommendation.json",
+      "sha256": "2db1dea10d045bf04db469655f87f2be8af19790de688ba98f996a8bb55c9a8c",
+      "size_bytes": 2134
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "adapter_family_status": "promote",
+    "batch_sizes": [
+      4
+    ],
+    "dtype": "float32",
+    "hidden_state_captures": [
+      "outputs"
+    ],
+    "inside_sampling_report": null,
+    "layers": [
+      -1
+    ],
+    "matrix_mode": "triplet",
+    "max_batch_token_budgets": null,
+    "max_batch_tokens": 0,
+    "max_runtime_total_seconds": null,
+    "model": "sshleifer/tiny-gpt2",
+    "offline": true,
+    "performance_dry_run": false,
+    "performance_max_workers": 1,
+    "performance_status": "promote",
+    "performance_wall_clock_seconds": 26.99016973399557,
+    "prefix_kv_cache": false,
+    "prefix_kv_cache_modes": null,
+    "readiness_status": "promote",
+    "recommended_batch_size": 4,
+    "recommended_best_quality_auroc": 0.6875,
+    "recommended_best_quality_signal": "disp_hse",
+    "recommended_hidden_state_capture": "outputs",
+    "recommended_inside_sampling": null,
+    "recommended_layer": -1,
+    "recommended_max_batch_tokens": 0,
+    "recommended_max_workers": 1,
+    "recommended_performance_cell": "layer_m1_batch_4_capture_outputs",
+    "recommended_prefix_kv_cache": false,
+    "recommended_quality_signals": {
+      "disp_euclid": 0.625,
+      "disp_hse": 0.6875,
+      "eigenscore": 0.5625,
+      "maha_last": 0.3125,
+      "nll_answer": 0.4375,
+      "subspace_resid": 0.46875,
+      "truth_proj": 0.5625
+    },
+    "recommended_route": "structured_qa",
+    "runner": "run_adapter_readiness_workflow",
+    "runtime_budget_enabled": false,
+    "runtime_budget_failures": [],
+    "runtime_budget_passed": true,
+    "runtime_budget_policy": {
+      "max_retrieval_hit_count": null,
+      "max_total_seconds": null,
+      "min_cache_hit_rate": null,
+      "min_claims_cache_hit_rate": null,
+      "min_verifier_trace_cache_hit_rate": null
+    },
+    "runtime_recommendation_status": "promote",
+    "wall_clock_seconds": 27.031344235991128
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 6,
+    "directory_count": 0,
+    "file_count": 6,
+    "missing_count": 0
+  }
+}

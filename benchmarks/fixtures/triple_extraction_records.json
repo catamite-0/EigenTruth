@@ -1,0 +1,115 @@
+{
+  "description": "Dependency-free labeled fixture for comparing claim triple extractors on KG-style facts and paraphrases.",
+  "records": [
+    {
+      "id": "capital_of_canonical",
+      "text": "Paris is the capital of France.",
+      "expected_triples": [
+        {
+          "subject": "France",
+          "predicate": "capital_of",
+          "object": "Paris"
+        }
+      ]
+    },
+    {
+      "id": "capital_of_has_template",
+      "text": "France has its capital at Paris.",
+      "expected_triples": [
+        {
+          "subject": "France",
+          "predicate": "capital_of",
+          "object": "Paris"
+        }
+      ]
+    },
+    {
+      "id": "official_language_canonical",
+      "text": "Portuguese is an official language of Brazil.",
+      "expected_triples": [
+        {
+          "subject": "Brazil",
+          "predicate": "official_language_of",
+          "object": "Portuguese"
+        }
+      ]
+    },
+    {
+      "id": "official_language_spoken_template",
+      "text": "The official language spoken in Brazil is Portuguese.",
+      "expected_triples": [
+        {
+          "subject": "Brazil",
+          "predicate": "official_language_of",
+          "object": "Portuguese"
+        }
+      ]
+    },
+    {
+      "id": "currency_use_canonical",
+      "text": "Japan uses the yen as its currency.",
+      "expected_triples": [
+        {
+          "subject": "Japan",
+          "predicate": "currency_of",
+          "object": "the yen"
+        }
+      ]
+    },
+    {
+      "id": "currency_possessive_inverse",
+      "text": "The yen is Japan's currency.",
+      "expected_triples": [
+        {
+          "subject": "Japan",
+          "predicate": "currency_of",
+          "object": "The yen"
+        }
+      ]
+    },
+    {
+      "id": "located_in_canonical",
+      "text": "The Eiffel Tower is located in Paris.",
+      "expected_triples": [
+        {
+          "subject": "The Eiffel Tower",
+          "predicate": "located_in",
+          "object": "Paris"
+        }
+      ]
+    },
+    {
+      "id": "born_in_template",
+      "text": "Ada Lovelace was born in London.",
+      "expected_triples": [
+        {
+          "subject": "Ada Lovelace",
+          "predicate": "born_in",
+          "object": "London"
+        }
+      ]
+    },
+    {
+      "id": "founded_template",
+      "text": "Claude Shannon founded information theory.",
+      "expected_triples": [
+        {
+          "subject": "Claude Shannon",
+          "predicate": "founded",
+          "object": "information theory"
+        }
+      ]
+    },
+    {
+      "id": "contains_canonical",
+      "text": "Water contains hydrogen.",
+      "expected_triples": [
+        {
+          "subject": "Water",
+          "predicate": "contains",
+          "object": "hydrogen"
+        }
+      ]
+    }
+  ]
+}

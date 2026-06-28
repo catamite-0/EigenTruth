@@ -1,0 +1,32 @@
+{
+  "default_profile": "balanced",
+  "high_risk_actions": [
+    "abstain",
+    "clarify",
+    "rewrite",
+    "steer_regenerate",
+    "execute_tool"
+  ],
+  "high_risk_levels": [
+    "high",
+    "unknown"
+  ],
+  "high_risk_profile": "audit",
+  "low_risk_actions": [
+    "accept"
+  ],
+  "low_risk_levels": [
+    "low"
+  ],
+  "low_risk_profile": "latency",
+  "sensitive_claim_feature_flags": [
+    "has_number",
+    "has_citation",
+    "is_time_sensitive",
+    "has_calculation"
+  ],
+  "sensitive_claim_metadata_keys": [
+    "requires_verification"
+  ],
+  "sensitive_profile": "audit"
+}

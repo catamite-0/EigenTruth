@@ -1,0 +1,112 @@
+{
+  "artifacts": {
+    "blind_spots": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json",
+      "sha256": "5990d22d8547cce21613bdc0c618058ca0f1d6c8766e16363b333595fec4ee5a",
+      "size_bytes": 123816
+    },
+    "controlled_sweep_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json",
+      "sha256": "55ea8ff6f134ca28d26e42e552f5b2c4a120ed2de678e08c95209e770506c368",
+      "size_bytes": 162471
+    },
+    "evidence_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "evidence-gate/artifact-manifest.json",
+      "sha256": "2e6890e89aa3c3a217ace4356b41d8b6bd2345847af8bb1d69b114d45507fe9b",
+      "size_bytes": 5137
+    },
+    "evidence_workflow": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "evidence-gate/citation-search-evidence-workflow.json",
+      "sha256": "0ff0f7e1e8f0e61534cf2e0e8c0d5812b9eece3bc6dae29f70ae4f1c1641e3b4",
+      "size_bytes": 4964
+    },
+    "external_citation_search_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "external-citation-search-requests.jsonl",
+      "sha256": "2032bd0fb7dd18c9af9d5aedb38424eb6a05be5d8e52084f65ef4c1ef2c8ce8c",
+      "size_bytes": 152175
+    },
+    "external_citation_search_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "external-citation-search-results.jsonl",
+      "sha256": "8e259ee8ce00293182486edb379e62af37630bf2496103241e0e5f62e5062fb5",
+      "size_bytes": 856876
+    },
+    "queue_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue/unresolved-evidence-queue.json",
+      "sha256": "1d56abbbab3cbeba421ea6937ec7604c0cf710e08b36ba137518c068826d443e",
+      "size_bytes": 291202
+    },
+    "request_handoff": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "request-handoff/citation-search-request-handoff.json",
+      "sha256": "5774b6d703f4f90aab88d82bd8b28d1bc2b688b54a74111b608ab2802048f95b",
+      "size_bytes": 200939
+    },
+    "request_handoff_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "request-handoff/artifact-manifest.json",
+      "sha256": "949851ea2e56cff27cf270a9dc7f7298d492249156ea98073dc33a7a59e70cd8",
+      "size_bytes": 1784
+    },
+    "scores": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_truthfulqa_l80_scores_with_statements.json",
+      "sha256": "39a53894be76a24513ec5549a8c67269d54a80b995e29161743aafb813b094d9",
+      "size_bytes": 572345
+    },
+    "workflow_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "external-citation-search-adapter-workflow.json",
+      "sha256": "0d159f6db7c9dce6f2dd6dd9c134c78fe0548f5e5239bc36c769940de7fcc818",
+      "size_bytes": 4730
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "adapter": "wikipedia_mediawiki",
+    "adapter_request_count": 176,
+    "corpus_document_count": 528,
+    "gate_passed": false,
+    "promotion_ready": false,
+    "query_planner": "claim_entity",
+    "source_document_count": 528,
+    "status": "blocked",
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "workflow": "external_citation_search_adapter_workflow"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 11,
+    "directory_count": 0,
+    "file_count": 11,
+    "missing_count": 0
+  }
+}

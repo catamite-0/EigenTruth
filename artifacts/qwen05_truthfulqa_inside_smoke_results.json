@@ -1,0 +1,435 @@
+{
+  "config": {
+    "model": "Qwen/Qwen2.5-0.5B-Instruct",
+    "layer": -12,
+    "offline": false,
+    "manifold_n": 30,
+    "n_manifold_false": 50,
+    "hidden_dim": 896,
+    "subspace_rank": 2,
+    "n_pos": 6,
+    "n_neg": 6,
+    "seed": 0,
+    "eigenscore_alpha": 0.001,
+    "batch_size": 4,
+    "inside_samples": 2,
+    "inside_batch_size": 1,
+    "inside_max_new_tokens": 4,
+    "inside_temperature": 0.7,
+    "inside_top_p": 0.9,
+    "inside_pooling": "last"
+  },
+  "auroc": {
+    "maha_last": 0.6111111111111112,
+    "truth_proj": 1.0,
+    "subspace_resid": 0.5277777777777778,
+    "disp_euclid": 0.3333333333333333,
+    "disp_hse": 0.25,
+    "eigenscore": 0.2777777777777778,
+    "nll_answer": 0.4722222222222222,
+    "inside_eigenscore": 0.3888888888888889
+  },
+  "selective": {
+    "maha_last": {
+      "alpha": 0.1,
+      "threshold": Infinity,
+      "direction": "higher",
+      "n_total": 12,
+      "n_true": 6,
+      "n_false": 6,
+      "n_flagged": 0,
+      "n_accepted": 12,
+      "coverage": 1.0,
+      "coverage_ci": {
+        "estimate": 1.0,
+        "lower": 1.0,
+        "upper": 1.0,
+        "successes": 12,
+        "total": 12
+      },
+      "selective_accuracy": 0.5,
+      "selective_accuracy_ci": {
+        "estimate": 0.5,
+        "lower": 0.21709836809708338,
+        "upper": 0.7829016319029166,
+        "successes": 6,
+        "total": 12
+      },
+      "accuracy": 0.5,
+      "accuracy_ci": {
+        "estimate": 0.5,
+        "lower": 0.21709836809708338,
+        "upper": 0.7829016319029166,
+        "successes": 6,
+        "total": 12
+      },
+      "detection": 0.0,
+      "detection_ci": {
+        "estimate": 0.0,
+        "lower": 0.0,
+        "upper": 0.0,
+        "successes": 0,
+        "total": 6
+      },
+      "false_alarm": 0.0,
+      "false_alarm_ci": {
+        "estimate": 0.0,
+        "lower": 0.0,
+        "upper": 0.0,
+        "successes": 0,
+        "total": 6
+      }
+    },
+    "truth_proj": {
+      "alpha": 0.1,
+      "threshold": Infinity,
+      "direction": "higher",
+      "n_total": 12,
+      "n_true": 6,
+      "n_false": 6,
+      "n_flagged": 0,
+      "n_accepted": 12,
+      "coverage": 1.0,
+      "coverage_ci": {
+        "estimate": 1.0,
+        "lower": 1.0,
+        "upper": 1.0,
+        "successes": 12,
+        "total": 12
+      },
+      "selective_accuracy": 0.5,
+      "selective_accuracy_ci": {
+        "estimate": 0.5,
+        "lower": 0.21709836809708338,
+        "upper": 0.7829016319029166,
+        "successes": 6,
+        "total": 12
+      },
+      "accuracy": 0.5,
+      "accuracy_ci": {
+        "estimate": 0.5,
+        "lower": 0.21709836809708338,
+        "upper": 0.7829016319029166,
+        "successes": 6,
+        "total": 12
+      },
+      "detection": 0.0,
+      "detection_ci": {
+        "estimate": 0.0,
+        "lower": 0.0,
+        "upper": 0.0,
+        "successes": 0,
+        "total": 6
+      },
+      "false_alarm": 0.0,
+      "false_alarm_ci": {
+        "estimate": 0.0,
+        "lower": 0.0,
+        "upper": 0.0,
+        "successes": 0,
+        "total": 6
+      }
+    },
+    "subspace_resid": {
+      "alpha": 0.1,
+      "threshold": Infinity,
+      "direction": "higher",
+      "n_total": 12,
+      "n_true": 6,
+      "n_false": 6,
+      "n_flagged": 0,
+      "n_accepted": 12,
+      "coverage": 1.0,
+      "coverage_ci": {
+        "estimate": 1.0,
+        "lower": 1.0,
+        "upper": 1.0,
+        "successes": 12,
+        "total": 12
+      },
+      "selective_accuracy": 0.5,
+      "selective_accuracy_ci": {
+        "estimate": 0.5,
+        "lower": 0.21709836809708338,
+        "upper": 0.7829016319029166,
+        "successes": 6,
+        "total": 12
+      },
+      "accuracy": 0.5,
+      "accuracy_ci": {
+        "estimate": 0.5,
+        "lower": 0.21709836809708338,
+        "upper": 0.7829016319029166,
+        "successes": 6,
+        "total": 12
+      },
+      "detection": 0.0,
+      "detection_ci": {
+        "estimate": 0.0,
+        "lower": 0.0,
+        "upper": 0.0,
+        "successes": 0,
+        "total": 6
+      },
+      "false_alarm": 0.0,
+      "false_alarm_ci": {
+        "estimate": 0.0,
+        "lower": 0.0,
+        "upper": 0.0,
+        "successes": 0,
+        "total": 6
+      }
+    },
+    "disp_euclid": {
+      "alpha": 0.1,
+      "threshold": Infinity,
+      "direction": "higher",
+      "n_total": 12,
+      "n_true": 6,
+      "n_false": 6,
+      "n_flagged": 0,
+      "n_accepted": 12,
+      "coverage": 1.0,
+      "coverage_ci": {
+        "estimate": 1.0,
+        "lower": 1.0,
+        "upper": 1.0,
+        "successes": 12,
+        "total": 12
+      },
+      "selective_accuracy": 0.5,
+      "selective_accuracy_ci": {
+        "estimate": 0.5,
+        "lower": 0.21709836809708338,
+        "upper": 0.7829016319029166,
+        "successes": 6,
+        "total": 12
+      },
+      "accuracy": 0.5,
+      "accuracy_ci": {
+        "estimate": 0.5,
+        "lower": 0.21709836809708338,
+        "upper": 0.7829016319029166,
+        "successes": 6,
+        "total": 12
+      },
+      "detection": 0.0,
+      "detection_ci": {
+        "estimate": 0.0,
+        "lower": 0.0,
+        "upper": 0.0,
+        "successes": 0,
+        "total": 6
+      },
+      "false_alarm": 0.0,
+      "false_alarm_ci": {
+        "estimate": 0.0,
+        "lower": 0.0,
+        "upper": 0.0,
+        "successes": 0,
+        "total": 6
+      }
+    },
+    "disp_hse": {
+      "alpha": 0.1,
+      "threshold": Infinity,
+      "direction": "higher",
+      "n_total": 12,
+      "n_true": 6,
+      "n_false": 6,
+      "n_flagged": 0,
+      "n_accepted": 12,
+      "coverage": 1.0,
+      "coverage_ci": {
+        "estimate": 1.0,
+        "lower": 1.0,
+        "upper": 1.0,
+        "successes": 12,
+        "total": 12
+      },
+      "selective_accuracy": 0.5,
+      "selective_accuracy_ci": {
+        "estimate": 0.5,
+        "lower": 0.21709836809708338,
+        "upper": 0.7829016319029166,
+        "successes": 6,
+        "total": 12
+      },
+      "accuracy": 0.5,
+      "accuracy_ci": {
+        "estimate": 0.5,
+        "lower": 0.21709836809708338,
+        "upper": 0.7829016319029166,
+        "successes": 6,
+        "total": 12
+      },
+      "detection": 0.0,
+      "detection_ci": {
+        "estimate": 0.0,
+        "lower": 0.0,
+        "upper": 0.0,
+        "successes": 0,
+        "total": 6
+      },
+      "false_alarm": 0.0,
+      "false_alarm_ci": {
+        "estimate": 0.0,
+        "lower": 0.0,
+        "upper": 0.0,
+        "successes": 0,
+        "total": 6
+      }
+    },
+    "eigenscore": {
+      "alpha": 0.1,
+      "threshold": Infinity,
+      "direction": "higher",
+      "n_total": 12,
+      "n_true": 6,
+      "n_false": 6,
+      "n_flagged": 0,
+      "n_accepted": 12,
+      "coverage": 1.0,
+      "coverage_ci": {
+        "estimate": 1.0,
+        "lower": 1.0,
+        "upper": 1.0,
+        "successes": 12,
+        "total": 12
+      },
+      "selective_accuracy": 0.5,
+      "selective_accuracy_ci": {
+        "estimate": 0.5,
+        "lower": 0.21709836809708338,
+        "upper": 0.7829016319029166,
+        "successes": 6,
+        "total": 12
+      },
+      "accuracy": 0.5,
+      "accuracy_ci": {
+        "estimate": 0.5,
+        "lower": 0.21709836809708338,
+        "upper": 0.7829016319029166,
+        "successes": 6,
+        "total": 12
+      },
+      "detection": 0.0,
+      "detection_ci": {
+        "estimate": 0.0,
+        "lower": 0.0,
+        "upper": 0.0,
+        "successes": 0,
+        "total": 6
+      },
+      "false_alarm": 0.0,
+      "false_alarm_ci": {
+        "estimate": 0.0,
+        "lower": 0.0,
+        "upper": 0.0,
+        "successes": 0,
+        "total": 6
+      }
+    },
+    "nll_answer": {
+      "alpha": 0.1,
+      "threshold": Infinity,
+      "direction": "higher",
+      "n_total": 12,
+      "n_true": 6,
+      "n_false": 6,
+      "n_flagged": 0,
+      "n_accepted": 12,
+      "coverage": 1.0,
+      "coverage_ci": {
+        "estimate": 1.0,
+        "lower": 1.0,
+        "upper": 1.0,
+        "successes": 12,
+        "total": 12
+      },
+      "selective_accuracy": 0.5,
+      "selective_accuracy_ci": {
+        "estimate": 0.5,
+        "lower": 0.21709836809708338,
+        "upper": 0.7829016319029166,
+        "successes": 6,
+        "total": 12
+      },
+      "accuracy": 0.5,
+      "accuracy_ci": {
+        "estimate": 0.5,
+        "lower": 0.21709836809708338,
+        "upper": 0.7829016319029166,
+        "successes": 6,
+        "total": 12
+      },
+      "detection": 0.0,
+      "detection_ci": {
+        "estimate": 0.0,
+        "lower": 0.0,
+        "upper": 0.0,
+        "successes": 0,
+        "total": 6
+      },
+      "false_alarm": 0.0,
+      "false_alarm_ci": {
+        "estimate": 0.0,
+        "lower": 0.0,
+        "upper": 0.0,
+        "successes": 0,
+        "total": 6
+      }
+    },
+    "inside_eigenscore": {
+      "alpha": 0.1,
+      "threshold": Infinity,
+      "direction": "higher",
+      "n_total": 12,
+      "n_true": 6,
+      "n_false": 6,
+      "n_flagged": 0,
+      "n_accepted": 12,
+      "coverage": 1.0,
+      "coverage_ci": {
+        "estimate": 1.0,
+        "lower": 1.0,
+        "upper": 1.0,
+        "successes": 12,
+        "total": 12
+      },
+      "selective_accuracy": 0.5,
+      "selective_accuracy_ci": {
+        "estimate": 0.5,
+        "lower": 0.21709836809708338,
+        "upper": 0.7829016319029166,
+        "successes": 6,
+        "total": 12
+      },
+      "accuracy": 0.5,
+      "accuracy_ci": {
+        "estimate": 0.5,
+        "lower": 0.21709836809708338,
+        "upper": 0.7829016319029166,
+        "successes": 6,
+        "total": 12
+      },
+      "detection": 0.0,
+      "detection_ci": {
+        "estimate": 0.0,
+        "lower": 0.0,
+        "upper": 0.0,
+        "successes": 0,
+        "total": 6
+      },
+      "false_alarm": 0.0,
+      "false_alarm_ci": {
+        "estimate": 0.0,
+        "lower": 0.0,
+        "upper": 0.0,
+        "successes": 0,
+        "total": 6
+      }
+    }
+  },
+  "sweep": null
+}

@@ -1,0 +1,25 @@
+{
+  "artifacts": {
+    "training_telemetry_tiny_finetune_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "training-telemetry-tiny-finetune-report.json",
+      "sha256": "685c8fe0eb041b23a31a119724aeb5ce6f90a38fc16e48bb07d0ebac8c318677",
+      "size_bytes": 146482
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "covariance_mode": "shrinkage",
+    "source": "tiny PyTorch clean-vs-duplicate fine-tune",
+    "workflow": "training_telemetry_tiny_finetune"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 1,
+    "directory_count": 0,
+    "file_count": 1,
+    "missing_count": 0
+  }
+}

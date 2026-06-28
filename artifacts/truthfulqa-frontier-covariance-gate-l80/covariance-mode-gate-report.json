@@ -1,0 +1,331 @@
+{
+  "blocking_reasons": [],
+  "gate": {
+    "baseline_covariance_mode": "full",
+    "decision_rule": "promote when each model has at least one non-full candidate with complete artifacts and maha_last AUROC drop <= max_maha_last_auroc_drop",
+    "max_maha_last_auroc_drop": 0.01,
+    "required_artifact_missing_count": 0,
+    "required_workflow_status": "complete"
+  },
+  "generated_at_unix": 1782413940.4008934,
+  "models": [
+    {
+      "baseline": {
+        "best_maha_last": {
+          "auroc": 0.5884313725490196,
+          "conformal_alpha": 0.1,
+          "detection": 0.15359477124183007,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -16,
+          "n_false": 306,
+          "n_true": 250,
+          "score_name": "maha_last",
+          "threshold": 56.899314880371094
+        },
+        "best_overall": {
+          "auroc": 0.7644575163398692,
+          "conformal_alpha": 0.1,
+          "detection": 0.24183006535947713,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -10,
+          "n_false": 306,
+          "n_true": 250,
+          "score_name": "truth_proj",
+          "threshold": 3.6069226264953613
+        },
+        "covariance_mode": "full",
+        "release_ready": true,
+        "status": "complete",
+        "sweep_report": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-cache-only/qwen05-l80/sweep-report.json",
+        "workflow_report": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-cache-only/qwen05-l80/calibrated-observability-workflow.json"
+      },
+      "candidates": [
+        {
+          "artifact_missing_count": 0,
+          "best_maha_last": {
+            "auroc": 0.49840522875816995,
+            "conformal_alpha": 0.1,
+            "detection": 0.10784313725490197,
+            "direction": "higher",
+            "false_alarm": 0.096,
+            "layer": -16,
+            "n_false": 306,
+            "n_true": 250,
+            "score_name": "maha_last",
+            "threshold": 35.99818801879883
+          },
+          "best_overall": {
+            "auroc": 0.7644575163398692,
+            "conformal_alpha": 0.1,
+            "detection": 0.24183006535947713,
+            "direction": "higher",
+            "false_alarm": 0.096,
+            "layer": -10,
+            "n_false": 306,
+            "n_true": 250,
+            "score_name": "truth_proj",
+            "threshold": 3.6069209575653076
+          },
+          "covariance_low_rank": 16,
+          "covariance_mode": "diag",
+          "layer_stats_manifest_missing_count": 0,
+          "layer_stats_rebuild_report": "artifacts/truthfulqa-frontier-covariance-gate-l80/qwen05-l80-diag/layer-stats-rebuild-report.json",
+          "maha_last_auroc_delta_vs_full": -0.09002614379084961,
+          "name": "diag",
+          "passed": false,
+          "rejection_reason": "maha_last AUROC delta -0.090026 below allowed -0.010000",
+          "release_ready": true,
+          "status": "complete",
+          "sweep_report": "artifacts/truthfulqa-frontier-covariance-gate-l80/qwen05-l80-diag/sweep-report.json",
+          "workflow_report": "artifacts/truthfulqa-frontier-covariance-gate-l80/qwen05-l80-diag/calibrated-observability-workflow.json"
+        },
+        {
+          "artifact_missing_count": 0,
+          "best_maha_last": {
+            "auroc": 0.5904575163398693,
+            "conformal_alpha": 0.1,
+            "detection": 0.12418300653594772,
+            "direction": "higher",
+            "false_alarm": 0.096,
+            "layer": -16,
+            "n_false": 306,
+            "n_true": 250,
+            "score_name": "maha_last",
+            "threshold": 90.39127349853516
+          },
+          "best_overall": {
+            "auroc": 0.7644575163398692,
+            "conformal_alpha": 0.1,
+            "detection": 0.24183006535947713,
+            "direction": "higher",
+            "false_alarm": 0.096,
+            "layer": -10,
+            "n_false": 306,
+            "n_true": 250,
+            "score_name": "truth_proj",
+            "threshold": 3.6069209575653076
+          },
+          "covariance_low_rank": 16,
+          "covariance_mode": "low_rank",
+          "layer_stats_manifest_missing_count": 0,
+          "layer_stats_rebuild_report": "artifacts/truthfulqa-frontier-covariance-gate-l80/qwen05-l80-low_rank_16/layer-stats-rebuild-report.json",
+          "maha_last_auroc_delta_vs_full": 0.002026143790849755,
+          "name": "low_rank_16",
+          "passed": true,
+          "rejection_reason": null,
+          "release_ready": true,
+          "status": "complete",
+          "sweep_report": "artifacts/truthfulqa-frontier-covariance-gate-l80/qwen05-l80-low_rank_16/sweep-report.json",
+          "workflow_report": "artifacts/truthfulqa-frontier-covariance-gate-l80/qwen05-l80-low_rank_16/calibrated-observability-workflow.json"
+        },
+        {
+          "artifact_missing_count": 0,
+          "best_maha_last": {
+            "auroc": 0.5909803921568627,
+            "conformal_alpha": 0.1,
+            "detection": 0.15359477124183007,
+            "direction": "higher",
+            "false_alarm": 0.096,
+            "layer": -16,
+            "n_false": 306,
+            "n_true": 250,
+            "score_name": "maha_last",
+            "threshold": 41.949092864990234
+          },
+          "best_overall": {
+            "auroc": 0.7644575163398692,
+            "conformal_alpha": 0.1,
+            "detection": 0.24183006535947713,
+            "direction": "higher",
+            "false_alarm": 0.096,
+            "layer": -10,
+            "n_false": 306,
+            "n_true": 250,
+            "score_name": "truth_proj",
+            "threshold": 3.6069209575653076
+          },
+          "covariance_low_rank": 16,
+          "covariance_mode": "shrinkage",
+          "layer_stats_manifest_missing_count": 0,
+          "layer_stats_rebuild_report": "artifacts/truthfulqa-frontier-covariance-gate-l80/qwen05-l80-shrinkage/layer-stats-rebuild-report.json",
+          "maha_last_auroc_delta_vs_full": 0.0025490196078431504,
+          "name": "shrinkage",
+          "passed": true,
+          "rejection_reason": null,
+          "release_ready": true,
+          "status": "complete",
+          "sweep_report": "artifacts/truthfulqa-frontier-covariance-gate-l80/qwen05-l80-shrinkage/sweep-report.json",
+          "workflow_report": "artifacts/truthfulqa-frontier-covariance-gate-l80/qwen05-l80-shrinkage/calibrated-observability-workflow.json"
+        }
+      ],
+      "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+      "name": "qwen05-l80",
+      "recommended_quality_preserving_modes": [
+        "low_rank_16",
+        "shrinkage"
+      ]
+    },
+    {
+      "baseline": {
+        "best_maha_last": {
+          "auroc": 0.6384183006535947,
+          "conformal_alpha": 0.1,
+          "detection": 0.14705882352941177,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -16,
+          "n_false": 306,
+          "n_true": 250,
+          "score_name": "maha_last",
+          "threshold": 38.84865188598633
+        },
+        "best_overall": {
+          "auroc": 0.7819869281045752,
+          "conformal_alpha": 0.1,
+          "detection": 0.2647058823529412,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -16,
+          "n_false": 306,
+          "n_true": 250,
+          "score_name": "truth_proj",
+          "threshold": 1.1312869787216187
+        },
+        "covariance_mode": "full",
+        "release_ready": true,
+        "status": "complete",
+        "sweep_report": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-cache-only/smollm2-l80/sweep-report.json",
+        "workflow_report": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-cache-only/smollm2-l80/calibrated-observability-workflow.json"
+      },
+      "candidates": [
+        {
+          "artifact_missing_count": 0,
+          "best_maha_last": {
+            "auroc": 0.5138431372549019,
+            "conformal_alpha": 0.1,
+            "detection": 0.0915032679738562,
+            "direction": "higher",
+            "false_alarm": 0.096,
+            "layer": -16,
+            "n_false": 306,
+            "n_true": 250,
+            "score_name": "maha_last",
+            "threshold": 27.65666389465332
+          },
+          "best_overall": {
+            "auroc": 0.7819869281045752,
+            "conformal_alpha": 0.1,
+            "detection": 0.2647058823529412,
+            "direction": "higher",
+            "false_alarm": 0.096,
+            "layer": -16,
+            "n_false": 306,
+            "n_true": 250,
+            "score_name": "truth_proj",
+            "threshold": 1.1314302682876587
+          },
+          "covariance_low_rank": 16,
+          "covariance_mode": "diag",
+          "layer_stats_manifest_missing_count": 0,
+          "layer_stats_rebuild_report": "artifacts/truthfulqa-frontier-covariance-gate-l80/smollm2-l80-diag/layer-stats-rebuild-report.json",
+          "maha_last_auroc_delta_vs_full": -0.12457516339869279,
+          "name": "diag",
+          "passed": false,
+          "rejection_reason": "maha_last AUROC delta -0.124575 below allowed -0.010000",
+          "release_ready": true,
+          "status": "complete",
+          "sweep_report": "artifacts/truthfulqa-frontier-covariance-gate-l80/smollm2-l80-diag/sweep-report.json",
+          "workflow_report": "artifacts/truthfulqa-frontier-covariance-gate-l80/smollm2-l80-diag/calibrated-observability-workflow.json"
+        },
+        {
+          "artifact_missing_count": 0,
+          "best_maha_last": {
+            "auroc": 0.6264183006535947,
+            "conformal_alpha": 0.1,
+            "detection": 0.13725490196078433,
+            "direction": "higher",
+            "false_alarm": 0.096,
+            "layer": -16,
+            "n_false": 306,
+            "n_true": 250,
+            "score_name": "maha_last",
+            "threshold": 64.24928283691406
+          },
+          "best_overall": {
+            "auroc": 0.7819869281045752,
+            "conformal_alpha": 0.1,
+            "detection": 0.2647058823529412,
+            "direction": "higher",
+            "false_alarm": 0.096,
+            "layer": -16,
+            "n_false": 306,
+            "n_true": 250,
+            "score_name": "truth_proj",
+            "threshold": 1.1314302682876587
+          },
+          "covariance_low_rank": 16,
+          "covariance_mode": "low_rank",
+          "layer_stats_manifest_missing_count": 0,
+          "layer_stats_rebuild_report": "artifacts/truthfulqa-frontier-covariance-gate-l80/smollm2-l80-low_rank_16/layer-stats-rebuild-report.json",
+          "maha_last_auroc_delta_vs_full": -0.01200000000000001,
+          "name": "low_rank_16",
+          "passed": false,
+          "rejection_reason": "maha_last AUROC delta -0.012000 below allowed -0.010000",
+          "release_ready": true,
+          "status": "complete",
+          "sweep_report": "artifacts/truthfulqa-frontier-covariance-gate-l80/smollm2-l80-low_rank_16/sweep-report.json",
+          "workflow_report": "artifacts/truthfulqa-frontier-covariance-gate-l80/smollm2-l80-low_rank_16/calibrated-observability-workflow.json"
+        },
+        {
+          "artifact_missing_count": 0,
+          "best_maha_last": {
+            "auroc": 0.6395294117647059,
+            "conformal_alpha": 0.1,
+            "detection": 0.14705882352941177,
+            "direction": "higher",
+            "false_alarm": 0.096,
+            "layer": -16,
+            "n_false": 306,
+            "n_true": 250,
+            "score_name": "maha_last",
+            "threshold": 29.58152198791504
+          },
+          "best_overall": {
+            "auroc": 0.7819869281045752,
+            "conformal_alpha": 0.1,
+            "detection": 0.2647058823529412,
+            "direction": "higher",
+            "false_alarm": 0.096,
+            "layer": -16,
+            "n_false": 306,
+            "n_true": 250,
+            "score_name": "truth_proj",
+            "threshold": 1.1314302682876587
+          },
+          "covariance_low_rank": 16,
+          "covariance_mode": "shrinkage",
+          "layer_stats_manifest_missing_count": 0,
+          "layer_stats_rebuild_report": "artifacts/truthfulqa-frontier-covariance-gate-l80/smollm2-l80-shrinkage/layer-stats-rebuild-report.json",
+          "maha_last_auroc_delta_vs_full": 0.0011111111111111738,
+          "name": "shrinkage",
+          "passed": true,
+          "rejection_reason": null,
+          "release_ready": true,
+          "status": "complete",
+          "sweep_report": "artifacts/truthfulqa-frontier-covariance-gate-l80/smollm2-l80-shrinkage/sweep-report.json",
+          "workflow_report": "artifacts/truthfulqa-frontier-covariance-gate-l80/smollm2-l80-shrinkage/calibrated-observability-workflow.json"
+        }
+      ],
+      "model_id": "HuggingFaceTB/SmolLM2-135M-Instruct",
+      "name": "smollm2-l80",
+      "recommended_quality_preserving_modes": [
+        "shrinkage"
+      ]
+    }
+  ],
+  "schema_version": 1,
+  "status": "promote",
+  "workflow": "truthfulqa_l80_covariance_mode_gate"
+}

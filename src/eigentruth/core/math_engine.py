@@ -13,6 +13,7 @@ All float-intensive computations are forced to FP32 internally to ensure numeric
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, Union
@@ -23,6 +24,108 @@ from torch import Tensor
 # ---------------------------------------------------------------------------
 # 数据结构
 # ---------------------------------------------------------------------------
+
+COVARIANCE_MODES: tuple[str, ...] = ("full", "diag", "low_rank", "shrinkage")
+
+
+def _validate_covariance_mode(mode: str) -> str:
+    if mode not in COVARIANCE_MODES:
+        raise ValueError(
+            f"covariance_mode must be one of {COVARIANCE_MODES}, got {mode!r}."
+        )
+    return mode
+
+
+@dataclass(frozen=True)
+class CovarianceSpectrum:
+    """Spectrum diagnostics for a representation covariance estimate.
+
+    Eigenvalues are sorted descending and clamped to non-negative values after
+    covariance symmetrization. Marchenko-Pastur edges use the average variance
+    as the isotropic noise scale and ``hidden_dim / (sample_count - 1)`` as the
+    aspect ratio. The report is a diagnostic, not a shrinkage estimator.
+    """
+
+    eigenvalues: Tensor
+    sample_count: int
+    hidden_dim: int
+    source: str
+    variance_scale: float
+    aspect_ratio: float
+    marchenko_pastur_lower: float
+    marchenko_pastur_upper: float
+    spike_count: int
+    effective_rank: float
+    participation_ratio: float
+    stable_rank: float
+    numerical_rank: int
+    condition_number: float
+
+    def to_dict(self, *, include_eigenvalues: bool = True) -> dict[str, object]:
+        """Return a JSON-ready spectrum report."""
+        payload: dict[str, object] = {
+            "sample_count": self.sample_count,
+            "hidden_dim": self.hidden_dim,
+            "source": self.source,
+            "variance_scale": self.variance_scale,
+            "aspect_ratio": self.aspect_ratio,
+            "marchenko_pastur_lower": self.marchenko_pastur_lower,
+            "marchenko_pastur_upper": self.marchenko_pastur_upper,
+            "spike_count": self.spike_count,
+            "effective_rank": self.effective_rank,
+            "participation_ratio": self.participation_ratio,
+            "stable_rank": self.stable_rank,
+            "numerical_rank": self.numerical_rank,
+            "condition_number": self.condition_number,
+        }
+        if include_eigenvalues:
+            payload["eigenvalues"] = [
+                float(value) for value in self.eigenvalues.detach().cpu().tolist()
+            ]
+        return payload
+
+
+def _oas_shrinkage_intensity(covariance: Tensor, sample_count: int, eps: float) -> Tensor:
+    if int(sample_count) < 2:
+        raise ValueError("sample_count must be >= 2.")
+    if eps <= 0.0:
+        raise ValueError("eps must be > 0.")
+    cov = torch.as_tensor(covariance, dtype=torch.float32)
+    if cov.ndim != 2 or cov.shape[0] != cov.shape[1] or cov.shape[0] < 1:
+        raise ValueError("covariance must be a non-empty square matrix.")
+    if not torch.isfinite(cov).all():
+        raise ValueError("covariance must contain only finite values.")
+    cov = 0.5 * (cov + cov.T)
+    hidden_dim = int(cov.shape[0])
+    mu = torch.trace(cov) / hidden_dim
+    alpha = torch.mean(cov * cov)
+    numerator = alpha + mu * mu
+    denominator = (float(sample_count) + 1.0) * (alpha - (mu * mu) / hidden_dim)
+    if not bool(torch.isfinite(denominator)) or float(denominator.detach().cpu()) <= eps:
+        return torch.tensor(1.0, device=cov.device, dtype=torch.float32)
+    shrinkage = numerator / denominator
+    return torch.clamp(shrinkage.to(torch.float32), min=0.0, max=1.0)
+
+
+def covariance_shrinkage_intensity(
+    covariance: Tensor,
+    *,
+    sample_count: int,
+    eps: float = 1e-12,
+) -> float:
+    """Return Oracle Approximating Shrinkage intensity for a covariance matrix.
+
+    The result is clipped to ``[0, 1]`` and targets the scaled identity matrix.
+    It is dependency-free and intended for small-sample/high-dimensional
+    covariance scoring experiments.
+    """
+
+    return float(
+        _oas_shrinkage_intensity(covariance, sample_count=sample_count, eps=eps)
+        .detach()
+        .cpu()
+    )
+
 
 @dataclass
 class TruthManifold:
@@ -55,6 +158,8 @@ class TruthManifold:
     n: int = 0
     hidden_dim: int = 0
     ridge_lambda: float = 0.1
+    covariance_mode: str = "full"
+    covariance_low_rank: int = 16
 
     # 扩展：支持方案 B (对比流形)
     false_mean: Optional[Tensor] = None
@@ -63,11 +168,20 @@ class TruthManifold:
     # 协方差散布矩阵 (Welford M2 = Σ (xᵢ-μ)(xᵢ-μ)ᵀ)，以及派生精度矩阵缓存
     # Covariance scatter matrix (Welford M2) and the cached derived precision matrix
     _M2: Optional[Tensor] = field(default=None, repr=False)
+    _M2_diag: Optional[Tensor] = field(default=None, repr=False)
     _cov_inv_cache: Optional[Tensor] = field(default=None, repr=False)
+    _precision_diag_cache: Optional[Tensor] = field(default=None, repr=False)
+    _low_rank_cache: Optional[tuple[Tensor, Tensor, Tensor]] = field(default=None, repr=False)
     _dirty: bool = field(default=True, repr=False)
 
     # 运行时设备跟踪（不参与序列化）
     _device: torch.device = field(default_factory=lambda: torch.device("cpu"), repr=False)
+
+    def __post_init__(self) -> None:
+        self.covariance_mode = _validate_covariance_mode(str(self.covariance_mode))
+        if int(self.covariance_low_rank) < 1:
+            raise ValueError("covariance_low_rank must be >= 1.")
+        self.covariance_low_rank = int(self.covariance_low_rank)
 
     # ------------------------------------------------------------------
     # 派生量：归一化、正则化的精度矩阵
@@ -86,7 +200,7 @@ class TruthManifold:
         """
         if self.mean is None:
             return None
-        if self.n < 2 or self._M2 is None:
+        if self.n < 2:
             return torch.eye(self.hidden_dim, device=self._device, dtype=torch.float32)
         if self._dirty or self._cov_inv_cache is None:
             self._cov_inv_cache = self._compute_precision()
@@ -94,15 +208,114 @@ class TruthManifold:
         return self._cov_inv_cache
 
     def _compute_precision(self) -> Tensor:
+        if self.covariance_mode == "diag":
+            return torch.diag(self._compute_diag_precision())
+        if self.covariance_mode == "low_rank":
+            return self._compute_low_rank_precision()
+        if self.covariance_mode == "shrinkage":
+            return self._compute_shrinkage_precision()
+        return self._compute_full_precision()
+
+    def _normalized_full_covariance(self) -> Tensor:
+        if self._M2 is None:
+            raise RuntimeError("full scatter statistics are required for this covariance mode.")
+        cov = self._M2.to(torch.float32) / (self.n - 1)
+        return 0.5 * (cov + cov.T)
+
+    def _compute_full_precision(self) -> Tensor:
         """由散布矩阵计算归一化、ridge 正则化的精度矩阵 (强制 FP32)。"""
         eye = torch.eye(self.hidden_dim, device=self._device, dtype=torch.float32)
-        cov = (self._M2.to(torch.float32) / (self.n - 1))
-        cov = 0.5 * (cov + cov.T)  # 对称化，消除浮点误差
+        cov = self._normalized_full_covariance()
         # τ = 平均对角方差，作为 ridge 的尺度，使 λ 成为无量纲的相对强度
         # τ = average diagonal variance; makes the ridge λ a dimensionless relative strength
         tau = cov.diagonal().mean().clamp(min=1e-6)
         reg = cov + (self.ridge_lambda * tau) * eye
         return torch.linalg.inv(reg)
+
+    def _shrinkage_covariance(self, *, eps: float = 1e-12) -> tuple[Tensor, Tensor]:
+        cov = self._normalized_full_covariance()
+        alpha = _oas_shrinkage_intensity(cov, sample_count=self.n, eps=eps).to(cov.device)
+        target_scale = cov.diagonal().mean().clamp(min=0.0)
+        eye = torch.eye(self.hidden_dim, device=self._device, dtype=torch.float32)
+        shrunk = ((1.0 - alpha) * cov) + (alpha * target_scale * eye)
+        return 0.5 * (shrunk + shrunk.T), alpha
+
+    def _compute_shrinkage_precision(self) -> Tensor:
+        cov, _alpha = self._shrinkage_covariance()
+        eye = torch.eye(self.hidden_dim, device=self._device, dtype=torch.float32)
+        tau = cov.diagonal().mean().clamp(min=1e-6)
+        reg = cov + (self.ridge_lambda * tau) * eye
+        return torch.linalg.inv(reg)
+
+    def covariance_shrinkage_alpha(self) -> float:
+        """Return OAS shrinkage intensity for the current full scatter statistics."""
+        if self.mean is None or self.n < 2:
+            raise ValueError("TruthManifold needs at least two samples before shrinkage diagnostics.")
+        cov = self._normalized_full_covariance()
+        return covariance_shrinkage_intensity(cov, sample_count=self.n)
+
+    def _normalized_cov_diag(self) -> Tensor:
+        if self.n < 2:
+            return torch.ones(self.hidden_dim, device=self._device, dtype=torch.float32)
+        if self._M2_diag is not None:
+            diag = self._M2_diag.to(torch.float32) / (self.n - 1)
+        elif self._M2 is not None:
+            diag = self._M2.to(torch.float32).diagonal() / (self.n - 1)
+        else:
+            raise RuntimeError("diagonal covariance precision requires scatter statistics.")
+        return torch.clamp(diag, min=0.0)
+
+    def _compute_diag_precision(self) -> Tensor:
+        if not self._dirty and self._precision_diag_cache is not None:
+            return self._precision_diag_cache
+        cov_diag = self._normalized_cov_diag()
+        tau = cov_diag.mean().clamp(min=1e-6)
+        reg_diag = cov_diag + (self.ridge_lambda * tau)
+        self._precision_diag_cache = torch.reciprocal(reg_diag.clamp(min=1e-12))
+        self._dirty = False
+        return self._precision_diag_cache
+
+    def _low_rank_components(self) -> tuple[Tensor, Tensor, Tensor]:
+        if not self._dirty and self._low_rank_cache is not None:
+            return self._low_rank_cache
+        if self._M2 is None:
+            raise RuntimeError("low_rank covariance precision requires a full scatter matrix.")
+        cov = self._M2.to(torch.float32) / (self.n - 1)
+        cov = 0.5 * (cov + cov.T)
+        cov_diag = torch.clamp(cov.diagonal(), min=0.0)
+        tau = cov_diag.mean().clamp(min=1e-6)
+        ridge = (self.ridge_lambda * tau).clamp(min=1e-12)
+        k = min(int(self.covariance_low_rank), self.hidden_dim, max(self.n - 1, 1))
+        if k <= 0:
+            vectors = torch.empty(self.hidden_dim, 0, device=self._device, dtype=torch.float32)
+            values = torch.empty(0, device=self._device, dtype=torch.float32)
+            self._low_rank_cache = (vectors, values, ridge)
+            self._dirty = False
+            return self._low_rank_cache
+
+        eigvals, eigvecs = torch.linalg.eigh(cov)
+        top_vals, top_idx = torch.topk(torch.clamp(eigvals, min=0.0), k=k)
+        keep = top_vals > 1e-12
+        vectors = eigvecs[:, top_idx][:, keep].contiguous()
+        values = top_vals[keep].contiguous()
+        self._low_rank_cache = (vectors, values, ridge)
+        self._dirty = False
+        return self._low_rank_cache
+
+    def _compute_low_rank_precision(self) -> Tensor:
+        vectors, values, ridge = self._low_rank_components()
+        eye = torch.eye(self.hidden_dim, device=self._device, dtype=torch.float32)
+        precision = eye / ridge
+        if values.numel() == 0:
+            return precision
+        weights = values / (ridge * (ridge + values))
+        return precision - (vectors * weights.unsqueeze(0)) @ vectors.T
+
+    def _invalidate_precision_cache(self) -> None:
+        self._cov_inv_cache = None
+        self._precision_diag_cache = None
+        self._low_rank_cache = None
+        self._dirty = True
 
     # ------------------------------------------------------------------
     # 公开方法
@@ -130,11 +343,15 @@ class TruthManifold:
             self.hidden_dim = h.shape[-1]
             self._device = h.device
             self.mean = h.clone().to(torch.float32)
-            self._M2 = torch.zeros(
-                self.hidden_dim, self.hidden_dim, device=self._device, dtype=torch.float32
-            )
+            if self.covariance_mode == "diag":
+                self._M2 = None
+            else:
+                self._M2 = torch.zeros(
+                    self.hidden_dim, self.hidden_dim, device=self._device, dtype=torch.float32
+                )
+            self._M2_diag = torch.zeros(self.hidden_dim, device=self._device, dtype=torch.float32)
             self.n = 1
-            self._dirty = True
+            self._invalidate_precision_cache()
             return
 
         if h.shape[-1] != self.hidden_dim:
@@ -149,8 +366,178 @@ class TruthManifold:
         delta = x - self.mean
         self.mean = self.mean + delta / self.n
         delta2 = x - self.mean
-        self._M2 = self._M2 + torch.outer(delta, delta2)
-        self._dirty = True
+        if self._M2_diag is None:
+            if self._M2 is not None:
+                self._M2_diag = self._M2.diagonal().clone()
+            else:
+                self._M2_diag = torch.zeros(self.hidden_dim, device=self._device, dtype=torch.float32)
+        self._M2_diag = self._M2_diag + delta * delta2
+        if self.covariance_mode != "diag":
+            if self._M2 is None:
+                raise RuntimeError(
+                    f"{self.covariance_mode!r} covariance mode requires full scatter statistics."
+                )
+            self._M2 = self._M2 + torch.outer(delta, delta2)
+        self._invalidate_precision_cache()
+
+    def update_many(self, states: Tensor) -> None:
+        """Batch-update the manifold with hidden states of shape ``[N, hidden_dim]``.
+
+        The update is equivalent to calling :meth:`update` for each row, but it
+        merges batch mean and scatter statistics in one step. This reduces Python
+        overhead and small matrix kernels during benchmark warmup.
+        """
+        states = states.detach()
+        if states.ndim != 2:
+            raise ValueError(
+                f"TruthManifold.update_many() expects a 2D hidden state batch, got shape {tuple(states.shape)}."
+            )
+        batch_n = int(states.shape[0])
+        if batch_n == 0:
+            return
+        if batch_n == 1:
+            self.update(states[0])
+            return
+
+        x = states.to(torch.float32)
+        batch_dim = int(x.shape[-1])
+        if self.mean is not None and batch_dim != self.hidden_dim:
+            raise ValueError(
+                f"Hidden dimension mismatch: expected {self.hidden_dim}, got {batch_dim}."
+            )
+
+        batch_mean = x.mean(dim=0)
+        centered = x - batch_mean
+        batch_m2_diag = (centered * centered).sum(dim=0)
+        batch_m2 = None
+        if self.covariance_mode != "diag":
+            batch_m2 = centered.T @ centered
+
+        if self.mean is None:
+            self.hidden_dim = batch_dim
+            self._device = x.device
+            self.mean = batch_mean.clone()
+            self._M2_diag = batch_m2_diag.clone()
+            self._M2 = None if self.covariance_mode == "diag" else batch_m2.clone()
+            self.n = batch_n
+            self._invalidate_precision_cache()
+            return
+
+        if x.device != self._device:
+            x = x.to(self._device)
+            batch_mean = batch_mean.to(self._device)
+            batch_m2_diag = batch_m2_diag.to(self._device)
+            if batch_m2 is not None:
+                batch_m2 = batch_m2.to(self._device)
+
+        old_n = int(self.n)
+        new_n = old_n + batch_n
+        delta = batch_mean - self.mean
+        self.mean = self.mean + delta * (batch_n / new_n)
+        correction = delta * delta * (old_n * batch_n / new_n)
+        if self._M2_diag is None:
+            if self._M2 is not None:
+                self._M2_diag = self._M2.diagonal().clone()
+            else:
+                self._M2_diag = torch.zeros(self.hidden_dim, device=self._device, dtype=torch.float32)
+        self._M2_diag = self._M2_diag + batch_m2_diag + correction
+        if self.covariance_mode != "diag":
+            if self._M2 is None:
+                raise RuntimeError(
+                    f"{self.covariance_mode!r} covariance mode requires full scatter statistics."
+                )
+            if batch_m2 is None:
+                raise RuntimeError("batch scatter statistics are missing.")
+            self._M2 = self._M2 + batch_m2 + torch.outer(delta, delta) * (old_n * batch_n / new_n)
+        self.n = new_n
+        self._invalidate_precision_cache()
+
+    def mahalanobis_distance(self, h: Tensor) -> Tensor:
+        """Compute Mahalanobis distance using the configured covariance approximation.
+
+        This method avoids materializing a dense precision matrix for diagonal and
+        low-rank modes. The legacy ``cov_inv`` property remains available for
+        callers that need a dense matrix.
+        """
+        if self.mean is None:
+            raise ValueError("TruthManifold has no mean; call update() before scoring.")
+        delta = (h.to(self._device) - self.mean).to(torch.float32)
+        if self.n < 2:
+            return torch.norm(delta, dim=-1)
+        if self.covariance_mode == "diag":
+            precision_diag = self._compute_diag_precision()
+            m_sq = (delta * precision_diag * delta).sum(dim=-1)
+        elif self.covariance_mode == "low_rank":
+            vectors, values, ridge = self._low_rank_components()
+            m_sq = (delta * delta).sum(dim=-1) / ridge
+            if values.numel() > 0:
+                proj = delta @ vectors
+                weights = values / (ridge * (ridge + values))
+                m_sq = m_sq - (proj * proj * weights).sum(dim=-1)
+        else:
+            m_sq = (delta @ self.cov_inv * delta).sum(dim=-1)
+        return torch.sqrt(torch.clamp(m_sq, min=0.0))
+
+    def distance(self, h: Tensor) -> Tensor:
+        """Alias for ``mahalanobis_distance``."""
+        return self.mahalanobis_distance(h)
+
+    def covariance_spectrum(self, *, eps: float = 1e-12) -> CovarianceSpectrum:
+        """Return covariance spectrum diagnostics for this manifold.
+
+        Full and low-rank covariance modes keep the full Welford scatter matrix,
+        so the report uses true covariance eigenvalues. Diagonal mode stores only
+        diagonal scatter statistics; in that mode the report is marked
+        ``source="diagonal"`` and uses sorted diagonal variances as an
+        approximation.
+        """
+        if self.mean is None or self.n < 2:
+            raise ValueError("TruthManifold needs at least two samples before spectrum diagnostics.")
+        if self._M2 is not None:
+            covariance = self._M2.to(torch.float32) / (self.n - 1)
+            return covariance_spectrum(covariance, sample_count=self.n, source="full", eps=eps)
+        if self._M2_diag is not None:
+            return covariance_spectrum(self._normalized_cov_diag(), sample_count=self.n, source="diagonal", eps=eps)
+        raise RuntimeError("TruthManifold has no covariance statistics.")
+
+    def spectrum(self, *, eps: float = 1e-12) -> CovarianceSpectrum:
+        """Alias for ``covariance_spectrum``."""
+        return self.covariance_spectrum(eps=eps)
+
+    def covariance_for_distance(self, *, covariance_mode: str = "model") -> Tensor:
+        """Return the covariance estimate used for Gaussian manifold distance.
+
+        ``covariance_mode="model"`` follows this manifold's configured scoring
+        mode. Diagonal mode returns a variance vector; shrinkage returns the OAS
+        covariance; full and low-rank modes return the empirical full covariance
+        currently stored by the manifold.
+        """
+        if not self.is_ready():
+            raise ValueError("TruthManifold needs at least two samples before manifold distance.")
+        mode = self.covariance_mode if covariance_mode == "model" else _validate_covariance_mode(covariance_mode)
+        if mode == "diag":
+            return self._normalized_cov_diag()
+        if mode == "shrinkage":
+            covariance, _alpha = self._shrinkage_covariance()
+            return covariance
+        return self._normalized_full_covariance()
+
+    def manifold_distance(
+        self,
+        other: "TruthManifold",
+        *,
+        squared: bool = False,
+        covariance_mode: str = "model",
+        eps: float = 1e-10,
+    ) -> Tensor:
+        """Return closed-form Gaussian 2-Wasserstein distance to another manifold."""
+        return manifold_distance(
+            self,
+            other,
+            squared=squared,
+            covariance_mode=covariance_mode,
+            eps=eps,
+        )
 
     def to(self, device: Union[str, torch.device]) -> "TruthManifold":
         """Move manifold tensors to a device in-place and return self."""
@@ -159,8 +546,15 @@ class TruthManifold:
             self.mean = self.mean.to(device)
         if self._M2 is not None:
             self._M2 = self._M2.to(device)
+        if self._M2_diag is not None:
+            self._M2_diag = self._M2_diag.to(device)
         if self._cov_inv_cache is not None:
             self._cov_inv_cache = self._cov_inv_cache.to(device)
+        if self._precision_diag_cache is not None:
+            self._precision_diag_cache = self._precision_diag_cache.to(device)
+        if self._low_rank_cache is not None:
+            vectors, values, ridge = self._low_rank_cache
+            self._low_rank_cache = (vectors.to(device), values.to(device), ridge.to(device))
         if self.false_mean is not None:
             self.false_mean = self.false_mean.to(device)
         if self.contrastive_direction is not None:
@@ -170,7 +564,11 @@ class TruthManifold:
 
     def is_ready(self) -> bool:
         """流形至少经过 2 个样本后方可使用。"""
-        return self.n >= 2 and self.mean is not None and self._M2 is not None
+        if self.n < 2 or self.mean is None:
+            return False
+        if self.covariance_mode == "diag":
+            return self._M2_diag is not None
+        return self._M2 is not None
 
     def save(self, path: Union[str, Path]) -> None:
         """将流形序列化到磁盘。
@@ -182,9 +580,12 @@ class TruthManifold:
             "format": 2,
             "mean": self.mean,
             "_M2": self._M2,
+            "_M2_diag": self._M2_diag,
             "n": self.n,
             "hidden_dim": self.hidden_dim,
             "ridge_lambda": self.ridge_lambda,
+            "covariance_mode": self.covariance_mode,
+            "covariance_low_rank": self.covariance_low_rank,
             "false_mean": self.false_mean,
             "contrastive_direction": self.contrastive_direction,
         }
@@ -201,9 +602,13 @@ class TruthManifold:
             恢复后的 TruthManifold 实例.
         """
         state = torch.load(path, weights_only=True)
-        manifold = cls()
+        manifold = cls(
+            covariance_mode=state.get("covariance_mode", "full"),
+            covariance_low_rank=int(state.get("covariance_low_rank", 16)),
+        )
         manifold.mean = state["mean"]
         manifold._M2 = state.get("_M2", None)
+        manifold._M2_diag = state.get("_M2_diag", None)
         manifold.n = state["n"]
         manifold.hidden_dim = state["hidden_dim"]
         manifold.ridge_lambda = state.get("ridge_lambda", 0.1)
@@ -218,6 +623,274 @@ class TruthManifold:
 # ---------------------------------------------------------------------------
 # 核心数学函数
 # ---------------------------------------------------------------------------
+
+
+def covariance_spectrum(
+    covariance: Tensor,
+    *,
+    sample_count: int,
+    source: str = "full",
+    eps: float = 1e-12,
+) -> CovarianceSpectrum:
+    """Compute covariance spectrum diagnostics with Marchenko-Pastur edges.
+
+    Args:
+        covariance: Full covariance matrix ``[D, D]`` or diagonal covariance
+            vector ``[D]``.
+        sample_count: Number of observations used to estimate the covariance.
+        source: Human-readable source marker, usually ``"full"`` or
+            ``"diagonal"``.
+        eps: Positive numerical tolerance for rank and entropy calculations.
+
+    Returns:
+        ``CovarianceSpectrum`` with descending eigenvalues and JSON-ready
+        summary metrics.
+    """
+    if int(sample_count) < 2:
+        raise ValueError("sample_count must be >= 2.")
+    if eps <= 0.0:
+        raise ValueError("eps must be > 0.")
+    cov = torch.as_tensor(covariance, dtype=torch.float32)
+    if cov.ndim == 1:
+        if cov.numel() < 1:
+            raise ValueError("diagonal covariance vector must be non-empty.")
+        if not torch.isfinite(cov).all():
+            raise ValueError("covariance must contain only finite values.")
+        eigenvalues = torch.sort(torch.clamp(cov, min=0.0), descending=True).values
+    elif cov.ndim == 2:
+        if cov.shape[0] != cov.shape[1] or cov.shape[0] < 1:
+            raise ValueError("full covariance must be a non-empty square matrix.")
+        if not torch.isfinite(cov).all():
+            raise ValueError("covariance must contain only finite values.")
+        symmetric = 0.5 * (cov + cov.T)
+        eigenvalues = torch.sort(torch.linalg.eigvalsh(symmetric).clamp_min(0.0), descending=True).values
+    else:
+        raise ValueError("covariance must be a vector [D] or square matrix [D, D].")
+
+    return _covariance_spectrum_from_eigenvalues(
+        eigenvalues,
+        sample_count=int(sample_count),
+        source=str(source),
+        eps=float(eps),
+    )
+
+
+def _covariance_spectrum_from_eigenvalues(
+    eigenvalues: Tensor,
+    *,
+    sample_count: int,
+    source: str,
+    eps: float,
+) -> CovarianceSpectrum:
+    hidden_dim = int(eigenvalues.numel())
+    total_variance = float(eigenvalues.sum().item())
+    max_eigenvalue = float(eigenvalues[0].item()) if hidden_dim else 0.0
+    variance_scale = total_variance / float(hidden_dim) if hidden_dim else 0.0
+    aspect_ratio = float(hidden_dim) / float(max(sample_count - 1, 1))
+    if variance_scale <= eps:
+        mp_lower = 0.0
+        mp_upper = 0.0
+        spike_count = 0
+    else:
+        sqrt_aspect = math.sqrt(aspect_ratio)
+        mp_lower = variance_scale * (1.0 - sqrt_aspect) ** 2
+        mp_upper = variance_scale * (1.0 + sqrt_aspect) ** 2
+        spike_margin = max(abs(mp_upper) * eps, eps)
+        spike_count = int((eigenvalues > (mp_upper + spike_margin)).sum().item())
+
+    if total_variance <= eps or max_eigenvalue <= eps:
+        effective_rank = 0.0
+        participation_ratio = 0.0
+        stable_rank = 0.0
+        numerical_rank = 0
+        condition_number = 0.0
+    else:
+        probs = eigenvalues / max(total_variance, eps)
+        entropy = -(probs * torch.log(probs.clamp_min(eps))).sum()
+        effective_rank = float(torch.exp(entropy).item())
+        variance_sq_sum = float(eigenvalues.square().sum().clamp_min(eps).item())
+        participation_ratio = float((total_variance * total_variance) / variance_sq_sum)
+        stable_rank = float(total_variance / max(max_eigenvalue, eps))
+        rank_threshold = max(max_eigenvalue * eps, eps)
+        positive = eigenvalues[eigenvalues > rank_threshold]
+        numerical_rank = int(positive.numel())
+        condition_number = (
+            float(max_eigenvalue / positive[-1].item())
+            if positive.numel() > 0
+            else 0.0
+        )
+
+    return CovarianceSpectrum(
+        eigenvalues=eigenvalues,
+        sample_count=sample_count,
+        hidden_dim=hidden_dim,
+        source=source,
+        variance_scale=variance_scale,
+        aspect_ratio=aspect_ratio,
+        marchenko_pastur_lower=mp_lower,
+        marchenko_pastur_upper=mp_upper,
+        spike_count=spike_count,
+        effective_rank=effective_rank,
+        participation_ratio=participation_ratio,
+        stable_rank=stable_rank,
+        numerical_rank=numerical_rank,
+        condition_number=condition_number,
+    )
+
+
+def _as_finite_vector(value: Tensor, *, name: str, device: torch.device | None = None) -> Tensor:
+    vector = torch.as_tensor(value, dtype=torch.float64, device=device)
+    if vector.ndim != 1 or vector.numel() < 1:
+        raise ValueError(f"{name} must be a non-empty vector [hidden_dim].")
+    if not torch.isfinite(vector).all():
+        raise ValueError(f"{name} must contain only finite values.")
+    return vector
+
+
+def _as_finite_covariance(
+    value: Tensor,
+    *,
+    name: str,
+    hidden_dim: int,
+    eps: float,
+    device: torch.device,
+) -> Tensor:
+    covariance = torch.as_tensor(value, dtype=torch.float64, device=device)
+    if covariance.ndim == 1:
+        if covariance.shape[0] != hidden_dim:
+            raise ValueError(
+                f"{name} diagonal dimension mismatch: expected {hidden_dim}, got {covariance.shape[0]}."
+            )
+        if not torch.isfinite(covariance).all():
+            raise ValueError(f"{name} must contain only finite values.")
+        if bool((covariance < -eps).any()):
+            raise ValueError(f"{name} diagonal covariance values must be non-negative.")
+        return torch.clamp(covariance, min=0.0)
+    if covariance.ndim == 2:
+        if covariance.shape != (hidden_dim, hidden_dim):
+            raise ValueError(
+                f"{name} full covariance shape mismatch: expected {(hidden_dim, hidden_dim)}, "
+                f"got {tuple(covariance.shape)}."
+            )
+        if not torch.isfinite(covariance).all():
+            raise ValueError(f"{name} must contain only finite values.")
+        return 0.5 * (covariance + covariance.T)
+    raise ValueError(f"{name} must be a vector [hidden_dim] or square matrix [hidden_dim, hidden_dim].")
+
+
+def _covariance_as_matrix(covariance: Tensor) -> Tensor:
+    if covariance.ndim == 1:
+        return torch.diag(covariance)
+    return covariance
+
+
+def _matrix_sqrt_psd(matrix: Tensor, *, eps: float) -> Tensor:
+    symmetric = 0.5 * (matrix + matrix.T)
+    eigenvalues, eigenvectors = torch.linalg.eigh(symmetric)
+    safe_values = torch.sqrt(torch.clamp(eigenvalues, min=0.0))
+    sqrt_matrix = (eigenvectors * safe_values.unsqueeze(0)) @ eigenvectors.T
+    sqrt_matrix = 0.5 * (sqrt_matrix + sqrt_matrix.T)
+    return torch.where(torch.abs(sqrt_matrix) < eps, torch.zeros_like(sqrt_matrix), sqrt_matrix)
+
+
+def gaussian_wasserstein_distance(
+    mean_a: Tensor,
+    covariance_a: Tensor,
+    mean_b: Tensor,
+    covariance_b: Tensor,
+    *,
+    squared: bool = False,
+    eps: float = 1e-10,
+) -> Tensor:
+    """Closed-form 2-Wasserstein distance between two Gaussian distributions.
+
+    Covariances may be full PSD matrices ``[D, D]`` or diagonal variance vectors
+    ``[D]``. The returned scalar is non-negative; set ``squared=True`` to return
+    the squared distance.
+    """
+    if eps <= 0.0:
+        raise ValueError("eps must be > 0.")
+    a_mean = _as_finite_vector(mean_a, name="mean_a")
+    b_mean = _as_finite_vector(mean_b, name="mean_b", device=a_mean.device)
+    if b_mean.shape != a_mean.shape:
+        raise ValueError(f"mean dimension mismatch: expected {a_mean.shape[0]}, got {b_mean.shape[0]}.")
+
+    hidden_dim = int(a_mean.shape[0])
+    a_cov = _as_finite_covariance(
+        covariance_a,
+        name="covariance_a",
+        hidden_dim=hidden_dim,
+        eps=float(eps),
+        device=a_mean.device,
+    )
+    b_cov = _as_finite_covariance(
+        covariance_b,
+        name="covariance_b",
+        hidden_dim=hidden_dim,
+        eps=float(eps),
+        device=a_mean.device,
+    )
+
+    mean_distance_sq = (a_mean - b_mean).square().sum()
+    if a_cov.ndim == 1 and b_cov.ndim == 1:
+        covariance_distance_sq = (torch.sqrt(a_cov) - torch.sqrt(b_cov)).square().sum()
+    else:
+        a_matrix = _covariance_as_matrix(a_cov)
+        b_matrix = _covariance_as_matrix(b_cov)
+        sqrt_a = _matrix_sqrt_psd(a_matrix, eps=float(eps))
+        middle = sqrt_a @ b_matrix @ sqrt_a
+        sqrt_middle = _matrix_sqrt_psd(middle, eps=float(eps))
+        covariance_distance_sq = torch.trace(a_matrix) + torch.trace(b_matrix) - 2.0 * torch.trace(sqrt_middle)
+
+    distance_sq = torch.clamp(mean_distance_sq + covariance_distance_sq, min=0.0)
+    if squared:
+        return distance_sq.to(torch.float32)
+    return torch.sqrt(distance_sq).to(torch.float32)
+
+
+def manifold_distance(
+    manifold_a: TruthManifold,
+    manifold_b: TruthManifold,
+    *,
+    squared: bool = False,
+    covariance_mode: str = "model",
+    eps: float = 1e-10,
+) -> Tensor:
+    """Return Gaussian 2-Wasserstein distance between two ``TruthManifold`` objects."""
+    if manifold_a.mean is None or manifold_b.mean is None:
+        raise ValueError("Both TruthManifold objects must be initialized before manifold distance.")
+    if manifold_a.hidden_dim != manifold_b.hidden_dim:
+        raise ValueError(
+            f"TruthManifold hidden dimension mismatch: expected {manifold_a.hidden_dim}, "
+            f"got {manifold_b.hidden_dim}."
+        )
+    return gaussian_wasserstein_distance(
+        manifold_a.mean,
+        manifold_a.covariance_for_distance(covariance_mode=covariance_mode),
+        manifold_b.mean,
+        manifold_b.covariance_for_distance(covariance_mode=covariance_mode),
+        squared=squared,
+        eps=eps,
+    )
+
+
+def manifold_wasserstein_distance(
+    manifold_a: TruthManifold,
+    manifold_b: TruthManifold,
+    *,
+    squared: bool = False,
+    covariance_mode: str = "model",
+    eps: float = 1e-10,
+) -> Tensor:
+    """Alias for ``manifold_distance`` with an explicit metric name."""
+    return manifold_distance(
+        manifold_a,
+        manifold_b,
+        squared=squared,
+        covariance_mode=covariance_mode,
+        eps=eps,
+    )
+
 
 def sherman_morrison_update(
     cov_inv: Tensor,
@@ -266,7 +939,8 @@ def mahalanobis_distance(
     Args:
         h: 隐状态向量 / Hidden state vector, shape [..., hidden_dim].
         mean: 质心向量 / Centroid vector, shape [hidden_dim].
-        cov_inv: 协方差逆矩阵 / Inverse covariance matrix, shape [hidden_dim, hidden_dim].
+        cov_inv: 协方差逆矩阵或对角精度向量 / Inverse covariance matrix,
+            shape [hidden_dim, hidden_dim], or diagonal precision vector, shape [hidden_dim].
 
     Returns:
         马氏距离张量 / Mahalanobis distance tensor, shape matching batch dimension of h (>=0).
@@ -276,7 +950,20 @@ def mahalanobis_distance(
     cov_inv_f32 = cov_inv.to(torch.float32)
 
     # δᵀ Σ⁻¹ δ 批量化计算
-    m_sq = (delta @ cov_inv_f32 * delta).sum(dim=-1)
+    if cov_inv_f32.ndim == 1:
+        if cov_inv_f32.shape[0] != delta.shape[-1]:
+            raise ValueError(
+                f"Diagonal precision dimension mismatch: expected {delta.shape[-1]}, "
+                f"got {cov_inv_f32.shape[0]}."
+            )
+        m_sq = (delta * cov_inv_f32 * delta).sum(dim=-1)
+    elif cov_inv_f32.ndim == 2:
+        m_sq = (delta @ cov_inv_f32 * delta).sum(dim=-1)
+    else:
+        raise ValueError(
+            "cov_inv must be a precision matrix [hidden_dim, hidden_dim] "
+            "or diagonal precision vector [hidden_dim]."
+        )
     # clamp 防止浮点误差导致 sqrt 负数
     return torch.sqrt(torch.clamp(m_sq, min=0.0))
 

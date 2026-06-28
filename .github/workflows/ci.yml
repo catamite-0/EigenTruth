@@ -36,10 +36,10 @@ jobs:
     name: Python ${{ matrix.python-version }} (${{ matrix.dependency-set }})
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6.3.0
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -57,6 +57,9 @@ jobs:
 
       - name: Run tests
         run: python -m pytest tests/ -v --cov=eigentruth --cov-report=term-missing
+
+      - name: Run profile gate smoke
+        run: python benchmarks/profile_gate_smoke.py
 
       - name: Build package
         run: python -m build

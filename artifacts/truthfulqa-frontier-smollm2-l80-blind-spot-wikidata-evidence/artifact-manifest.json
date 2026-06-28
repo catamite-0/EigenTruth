@@ -1,0 +1,45 @@
+{
+  "artifacts": {
+    "blind_spot_evidence_collection_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-blind-spot-evidence-collection-corpus/blind-spot-evidence-collection-corpus.json",
+      "sha256": "2555c8cc2c2d23939532b28a0b86a082bdf5076eaebaacbbb55d7717b577d2fb",
+      "size_bytes": 1125956
+    },
+    "blind_spot_wikidata_evidence_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "wikidata-evidence-fetch-report.json",
+      "sha256": "50fa4a6421c2143ce9fabfe20bc71eec3a2b8b1f3cd4f20880de0cd875259046",
+      "size_bytes": 201159
+    },
+    "wikidata_source_docs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "wikidata-source-docs.jsonl",
+      "sha256": "257e86d0ff60ca6cdab55f69864dd1ca004249fcdb9a3ce6c93013f2088518ab",
+      "size_bytes": 236534
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "document_count": 292,
+    "endpoint": "https://www.wikidata.org/w/api.php",
+    "fetched_at": "2026-06-28T06:24:23+00:00",
+    "request_count": 505,
+    "resolved_entity_count": 61,
+    "runner": "fetch_blind_spot_wikidata_evidence",
+    "status": "collected"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

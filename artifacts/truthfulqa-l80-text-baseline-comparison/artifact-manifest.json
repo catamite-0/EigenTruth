@@ -1,0 +1,98 @@
+{
+  "artifacts": {
+    "score_ensemble_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "score-ensemble-report.json",
+      "sha256": "f71903945442b27f04129ce6ea03937614f016bd33db030fefae1f426d30736e",
+      "size_bytes": 41442
+    },
+    "source_scores.qwen-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../qwen05_truthfulqa_l80_scores_with_statements.json",
+      "sha256": "afe25f1a8741c6b3f609172afa322033627e1765b378d37126c468d5089d5f52",
+      "size_bytes": 572479
+    },
+    "source_scores.smollm2-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_truthfulqa_l80_scores_with_statements.json",
+      "sha256": "39a53894be76a24513ec5549a8c67269d54a80b995e29161743aafb813b094d9",
+      "size_bytes": 572345
+    },
+    "text_baseline_records.qwen-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen-l80-text-baseline-scores.manifest.records.jsonl",
+      "sha256": "709d558cf44b4c7f7b830da4f81292a4b811727401410f7ce00242bc9a15836f",
+      "size_bytes": 792222
+    },
+    "text_baseline_records.smollm2-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80-text-baseline-scores.manifest.records.jsonl",
+      "sha256": "8d4b350315d29eb27466804666dc27a4bb634029232928fe43a0ea9debe65410",
+      "size_bytes": 791989
+    },
+    "text_baseline_report.qwen-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen-l80-text-baseline-report.json",
+      "sha256": "22a32ceabf4c28f97ebaffd30f3b6cbf55ee0fd7733d2011089f7c97ed94cad6",
+      "size_bytes": 1560
+    },
+    "text_baseline_report.smollm2-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80-text-baseline-report.json",
+      "sha256": "e55155cbdc026e42440cb05667bd6bf1a9227ee85b0d674dd20a9f4c5d0f58ec",
+      "size_bytes": 1564
+    },
+    "text_baseline_scores.qwen-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen-l80-text-baseline-scores.manifest.json",
+      "sha256": "45bc28339613cdb7b063949142109ee04fbc163eb4ddc8559c92ad707eed3bc3",
+      "size_bytes": 3657
+    },
+    "text_baseline_scores.smollm2-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80-text-baseline-scores.manifest.json",
+      "sha256": "55f90ece7e96fced8776101891cb87d6a0c54a6b110697acf9dae7d850ff90fc",
+      "size_bytes": 3801
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "purpose": "redline text/length baselines for hallucination-detection claims",
+    "runner": "build_text_baseline_score_dump + eval_score_ensemble",
+    "signals": [
+      "answer_char_length",
+      "answer_token_count",
+      "claim_char_length",
+      "claim_token_count",
+      "question_answer_token_overlap",
+      "answer_negation_flag",
+      "answer_number_count"
+    ],
+    "workflow": "truthfulqa_l80_text_baseline_comparison"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 9,
+    "directory_count": 0,
+    "file_count": 9,
+    "missing_count": 0
+  }
+}

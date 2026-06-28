@@ -1,0 +1,74 @@
+{
+  "checked": 6,
+  "failures": [],
+  "manifest_path": "artifacts/smollm2_l8_read_cache_worker_sweep_performance_baseline/artifact-manifest.json",
+  "nested": [
+    {
+      "checked": 4,
+      "failures": [],
+      "manifest_path": "artifacts/smollm2_l8_read_cache_worker_sweep_performance_baseline/../smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/artifact-manifest.json",
+      "nested": [
+        {
+          "checked": 11,
+          "failures": [],
+          "manifest_path": "artifacts/smollm2_l8_read_cache_worker_sweep_performance_baseline/../smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_1/artifact-manifest.json",
+          "nested": [],
+          "passed": true
+        },
+        {
+          "checked": 11,
+          "failures": [],
+          "manifest_path": "artifacts/smollm2_l8_read_cache_worker_sweep_performance_baseline/../smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_2/artifact-manifest.json",
+          "nested": [],
+          "passed": true
+        },
+        {
+          "checked": 11,
+          "failures": [],
+          "manifest_path": "artifacts/smollm2_l8_read_cache_worker_sweep_performance_baseline/../smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_4/artifact-manifest.json",
+          "nested": [],
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "checked": 3,
+      "failures": [],
+      "manifest_path": "artifacts/smollm2_l8_read_cache_worker_sweep_performance_baseline/../smollm2_l8_read_cache_worker_sweep/artifact-manifest.json",
+      "nested": [
+        {
+          "checked": 4,
+          "failures": [],
+          "manifest_path": "artifacts/smollm2_l8_read_cache_worker_sweep_performance_baseline/../smollm2_l8_read_cache_worker_sweep/workers_2/artifact-manifest.json",
+          "nested": [
+            {
+              "checked": 11,
+              "failures": [],
+              "manifest_path": "artifacts/smollm2_l8_read_cache_worker_sweep_performance_baseline/../smollm2_l8_read_cache_worker_sweep/workers_2/layer_m12_batch_4_capture_outputs_read_cache_1/artifact-manifest.json",
+              "nested": [],
+              "passed": true
+            },
+            {
+              "checked": 11,
+              "failures": [],
+              "manifest_path": "artifacts/smollm2_l8_read_cache_worker_sweep_performance_baseline/../smollm2_l8_read_cache_worker_sweep/workers_2/layer_m12_batch_4_capture_outputs_read_cache_2/artifact-manifest.json",
+              "nested": [],
+              "passed": true
+            },
+            {
+              "checked": 11,
+              "failures": [],
+              "manifest_path": "artifacts/smollm2_l8_read_cache_worker_sweep_performance_baseline/../smollm2_l8_read_cache_worker_sweep/workers_2/layer_m12_batch_4_capture_outputs_read_cache_4/artifact-manifest.json",
+              "nested": [],
+              "passed": true
+            }
+          ],
+          "passed": true
+        }
+      ],
+      "passed": true
+    }
+  ],
+  "passed": true
+}

@@ -36,12 +36,34 @@ logs/
 
 # Testing
 .pytest_cache/
+.ruff_cache/
 .coverage
 htmlcov/
 .tox/
 
 # Benchmark raw score dumps (large derived data;结果 JSON 提交，原始分数不提交)
 benchmarks/scores_*.json
+
+# Local benchmark/runtime scratch artifacts. Commit promoted reports/manifests
+# intentionally with git add -f when they are part of a maintained baseline.
+artifacts/runtime_evidence/
+artifacts/cache/truthfulqa-frontier-qwen-smollm2/
+artifacts/**/shared/
+artifacts/**/shared-caches/
+artifacts/**/eval-reps-cache/
+artifacts/**/trace-record-caches/
+artifacts/**/*.pt
+artifacts/**/records-*.pt
+artifacts/**/profile-*.json
+artifacts/**/result-*.json
+artifacts/**/cache-profile-triplet-commands.json
+artifacts/**/inside-sampling-profile-commands.json
+artifacts/**/*fingerprints.json
+artifacts/**/*artifact-json-cache.json
+artifacts/**/*source-cache.json
+artifacts/**/*corpus-cache.json
+artifacts/**/*trace-record-cache*.json
+artifacts/**/trace-inputs.json
 
 # Distribution
 *.tar.gz

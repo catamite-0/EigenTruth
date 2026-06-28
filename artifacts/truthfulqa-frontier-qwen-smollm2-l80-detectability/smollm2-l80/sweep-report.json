@@ -1,0 +1,421 @@
+{
+  "best": {
+    "auroc": 0.7819869281045752,
+    "conformal_alpha": 0.1,
+    "detection": 0.2647058823529412,
+    "direction": "higher",
+    "false_alarm": 0.096,
+    "layer": -16,
+    "n_false": 306,
+    "n_true": 250,
+    "score_name": "truth_proj",
+    "threshold": 1.1312869787216187
+  },
+  "best_by": "auroc",
+  "commit_sha": null,
+  "conformal_alpha": 0.1,
+  "created_at": "2026-06-28T04:47:14.376359+00:00",
+  "eigentruth_version": "0.2.0",
+  "layers": [
+    {
+      "layer": -16,
+      "scores": [
+        {
+          "auroc": 0.5325620915032679,
+          "conformal_alpha": 0.1,
+          "detection": 0.12091503267973856,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -16,
+          "n_false": 306,
+          "n_true": 250,
+          "score_name": "eigenscore",
+          "threshold": 7.975144386291504
+        },
+        {
+          "auroc": 0.6384183006535947,
+          "conformal_alpha": 0.1,
+          "detection": 0.14705882352941177,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -16,
+          "n_false": 306,
+          "n_true": 250,
+          "score_name": "maha_last",
+          "threshold": 38.84865188598633
+        },
+        {
+          "auroc": 0.46279738562091505,
+          "conformal_alpha": 0.1,
+          "detection": 0.016339869281045753,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -16,
+          "n_false": 306,
+          "n_true": 250,
+          "score_name": "resid_update_norm",
+          "threshold": 1.9936669667561848
+        },
+        {
+          "auroc": 0.6098431372549019,
+          "conformal_alpha": 0.1,
+          "detection": 0.19281045751633988,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -16,
+          "n_false": 306,
+          "n_true": 250,
+          "score_name": "subspace_resid",
+          "threshold": 44.590667724609375
+        },
+        {
+          "auroc": 0.7819869281045752,
+          "conformal_alpha": 0.1,
+          "detection": 0.2647058823529412,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -16,
+          "n_false": 306,
+          "n_true": 250,
+          "score_name": "truth_proj",
+          "threshold": 1.1312869787216187
+        }
+      ]
+    },
+    {
+      "layer": -14,
+      "scores": [
+        {
+          "auroc": 0.5175555555555555,
+          "conformal_alpha": 0.1,
+          "detection": 0.08496732026143791,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -14,
+          "n_false": 306,
+          "n_true": 250,
+          "score_name": "eigenscore",
+          "threshold": 8.24104118347168
+        },
+        {
+          "auroc": 0.6336470588235295,
+          "conformal_alpha": 0.1,
+          "detection": 0.16013071895424835,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -14,
+          "n_false": 306,
+          "n_true": 250,
+          "score_name": "maha_last",
+          "threshold": 40.501930236816406
+        },
+        {
+          "auroc": 0.5307712418300654,
+          "conformal_alpha": 0.1,
+          "detection": 0.0718954248366013,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -14,
+          "n_false": 306,
+          "n_true": 250,
+          "score_name": "resid_update_norm",
+          "threshold": 1.968321959177653
+        },
+        {
+          "auroc": 0.5907581699346405,
+          "conformal_alpha": 0.1,
+          "detection": 0.1568627450980392,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -14,
+          "n_false": 306,
+          "n_true": 250,
+          "score_name": "subspace_resid",
+          "threshold": 61.50415802001953
+        },
+        {
+          "auroc": 0.7549150326797386,
+          "conformal_alpha": 0.1,
+          "detection": 0.238562091503268,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -14,
+          "n_false": 306,
+          "n_true": 250,
+          "score_name": "truth_proj",
+          "threshold": 21.10915184020996
+        }
+      ]
+    },
+    {
+      "layer": -12,
+      "scores": [
+        {
+          "auroc": 0.5383398692810457,
+          "conformal_alpha": 0.1,
+          "detection": 0.08496732026143791,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -12,
+          "n_false": 306,
+          "n_true": 250,
+          "score_name": "eigenscore",
+          "threshold": 8.440770149230957
+        },
+        {
+          "auroc": 0.6308496732026144,
+          "conformal_alpha": 0.1,
+          "detection": 0.12745098039215685,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -12,
+          "n_false": 306,
+          "n_true": 250,
+          "score_name": "maha_last",
+          "threshold": 38.74065399169922
+        },
+        {
+          "auroc": 0.47984313725490196,
+          "conformal_alpha": 0.1,
+          "detection": 0.10784313725490197,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -12,
+          "n_false": 306,
+          "n_true": 250,
+          "score_name": "resid_update_norm",
+          "threshold": 2.3132429122924805
+        },
+        {
+          "auroc": 0.5685359477124183,
+          "conformal_alpha": 0.1,
+          "detection": 0.12091503267973856,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -12,
+          "n_false": 306,
+          "n_true": 250,
+          "score_name": "subspace_resid",
+          "threshold": 66.94373321533203
+        },
+        {
+          "auroc": 0.739764705882353,
+          "conformal_alpha": 0.1,
+          "detection": 0.23202614379084968,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -12,
+          "n_false": 306,
+          "n_true": 250,
+          "score_name": "truth_proj",
+          "threshold": 10.91116714477539
+        }
+      ]
+    },
+    {
+      "layer": -10,
+      "scores": [
+        {
+          "auroc": 0.5171764705882353,
+          "conformal_alpha": 0.1,
+          "detection": 0.11764705882352941,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -10,
+          "n_false": 306,
+          "n_true": 250,
+          "score_name": "eigenscore",
+          "threshold": 8.765886306762695
+        },
+        {
+          "auroc": 0.6115032679738562,
+          "conformal_alpha": 0.1,
+          "detection": 0.1503267973856209,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -10,
+          "n_false": 306,
+          "n_true": 250,
+          "score_name": "maha_last",
+          "threshold": 36.532554626464844
+        },
+        {
+          "auroc": 0.4923137254901961,
+          "conformal_alpha": 0.1,
+          "detection": 0.0915032679738562,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -10,
+          "n_false": 306,
+          "n_true": 250,
+          "score_name": "resid_update_norm",
+          "threshold": 3.3497241338094077
+        },
+        {
+          "auroc": 0.559124183006536,
+          "conformal_alpha": 0.1,
+          "detection": 0.10784313725490197,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -10,
+          "n_false": 306,
+          "n_true": 250,
+          "score_name": "subspace_resid",
+          "threshold": 87.64720916748047
+        },
+        {
+          "auroc": 0.7306274509803922,
+          "conformal_alpha": 0.1,
+          "detection": 0.1830065359477124,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -10,
+          "n_false": 306,
+          "n_true": 250,
+          "score_name": "truth_proj",
+          "threshold": 7.502265453338623
+        }
+      ]
+    },
+    {
+      "layer": -8,
+      "scores": [
+        {
+          "auroc": 0.5272549019607843,
+          "conformal_alpha": 0.1,
+          "detection": 0.11437908496732026,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -8,
+          "n_false": 306,
+          "n_true": 250,
+          "score_name": "eigenscore",
+          "threshold": 9.246602058410645
+        },
+        {
+          "auroc": 0.5578823529411765,
+          "conformal_alpha": 0.1,
+          "detection": 0.0915032679738562,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -8,
+          "n_false": 306,
+          "n_true": 250,
+          "score_name": "maha_last",
+          "threshold": 37.862518310546875
+        },
+        {
+          "auroc": 0.512313725490196,
+          "conformal_alpha": 0.1,
+          "detection": 0.08169934640522876,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -8,
+          "n_false": 306,
+          "n_true": 250,
+          "score_name": "resid_update_norm",
+          "threshold": 4.142718315124512
+        },
+        {
+          "auroc": 0.5083790849673203,
+          "conformal_alpha": 0.1,
+          "detection": 0.08169934640522876,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -8,
+          "n_false": 306,
+          "n_true": 250,
+          "score_name": "subspace_resid",
+          "threshold": 131.2149658203125
+        },
+        {
+          "auroc": 0.7387320261437909,
+          "conformal_alpha": 0.1,
+          "detection": 0.19607843137254902,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -8,
+          "n_false": 306,
+          "n_true": 250,
+          "score_name": "truth_proj",
+          "threshold": 31.10974884033203
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "config": {
+      "auto_batch_size": true,
+      "batch_size": 4,
+      "cache_only": true,
+      "cache_only_restored_eval_statements": true,
+      "covariance_low_rank": 16,
+      "covariance_mode": "full",
+      "dataset": "truthfulqa",
+      "dtype": "float32",
+      "dump_inside_samples": false,
+      "dump_scores_format": "jsonl",
+      "effective_batch_size": 4,
+      "eigenscore_alpha": 0.001,
+      "eval_reps_cache": "artifacts/cache/truthfulqa-frontier-qwen-smollm2/smollm2-l80/eval-reps-cache",
+      "eval_reps_cache_shard_size": 16,
+      "eval_reps_shard_read_cache_size": 2,
+      "hidden_dim": 576,
+      "hidden_state_capture": "hooks",
+      "inside_adaptive_sampling": false,
+      "inside_batch_size": 1,
+      "inside_diagnostics_cache": null,
+      "inside_embedding_threshold": 0.9,
+      "inside_max_new_tokens": 12,
+      "inside_min_samples": 2,
+      "inside_pooling": "last",
+      "inside_sample_step": 1,
+      "inside_samples": 0,
+      "inside_selfcheck_early_stop": false,
+      "inside_selfcheck_min_overlap": 0.65,
+      "inside_selfcheck_refute_threshold": 0.5,
+      "inside_selfcheck_support_threshold": 0.6,
+      "inside_stability_delta": 0.05,
+      "inside_temperature": 0.7,
+      "inside_top_p": 0.9,
+      "inside_trigger_signal": null,
+      "inside_trigger_threshold": null,
+      "inside_trigger_top_fraction": null,
+      "layer": -12,
+      "layer_stats_cache": "artifacts/cache/truthfulqa-frontier-qwen-smollm2/smollm2-l80/layer-stats.pt",
+      "length_bucketed_batches": true,
+      "manifold_n": 266,
+      "max_batch_tokens": 0,
+      "max_length": 96,
+      "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+      "n_manifold_false": 338,
+      "n_neg": 250,
+      "n_pos": 306,
+      "offline": false,
+      "prefix_kv_cache": false,
+      "progress_every": 20,
+      "refresh_eval_reps_cache": false,
+      "refresh_inside_diagnostics_cache": false,
+      "refresh_layer_stats_cache": false,
+      "refresh_statement_encoding_cache": false,
+      "seed": 0,
+      "statement_encoding_cache": null,
+      "subspace_rank": 2,
+      "sweep_layers": [
+        -12,
+        -16,
+        -14,
+        -10,
+        -8
+      ],
+      "warmup_checkpoint": "artifacts/cache/truthfulqa-frontier-qwen-smollm2/smollm2-l80/warmup-checkpoint.pt",
+      "warmup_checkpoint_every": 50
+    },
+    "source": "eval_conformal.py",
+    "sweep_max_workers": 1
+  },
+  "model_id": "HuggingFaceTB/SmolLM2-135M-Instruct",
+  "model_revision": null,
+  "schema_version": 1,
+  "scores_path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json"
+}

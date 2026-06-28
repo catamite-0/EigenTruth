@@ -1,0 +1,80 @@
+{
+  "total_seconds": 394.180668,
+  "phases": {
+    "load_data": 7.173247,
+    "load_model": 7.203306,
+    "build_layer_stats": 86.184348,
+    "forced_answer_forward": 40.601956,
+    "score_postprocess": 0.225967,
+    "inside_generation": 252.715132,
+    "reporting": 0.068528,
+    "sweep_reporting": 4e-06
+  },
+  "summary": {
+    "bottleneck": "inside_generation",
+    "top_phases": [
+      {
+        "name": "inside_generation",
+        "seconds": 252.715132,
+        "share": 0.641115
+      },
+      {
+        "name": "build_layer_stats",
+        "seconds": 86.184348,
+        "share": 0.218642
+      },
+      {
+        "name": "forced_answer_forward",
+        "seconds": 40.601956,
+        "share": 0.103003
+      },
+      {
+        "name": "load_model",
+        "seconds": 7.203306,
+        "share": 0.018274
+      },
+      {
+        "name": "load_data",
+        "seconds": 7.173247,
+        "share": 0.018198
+      }
+    ],
+    "groups": {
+      "startup": {
+        "seconds": 14.376553,
+        "share": 0.036472
+      },
+      "tokenization": {
+        "seconds": 0.0,
+        "share": 0.0
+      },
+      "model_forward": {
+        "seconds": 379.501436,
+        "share": 0.96276
+      },
+      "cache_io": {
+        "seconds": 0.0,
+        "share": 0.0
+      },
+      "postprocess": {
+        "seconds": 0.294499,
+        "share": 0.000747
+      }
+    },
+    "throughput": {
+      "forced_answer_records_per_second": 3.792921,
+      "warmup_records_per_second": 3.51572,
+      "end_to_end_eval_records_per_second": 0.390684
+    },
+    "accounted_seconds": 394.172488,
+    "accounted_share": 0.999979,
+    "unaccounted_seconds": 0.00818
+  },
+  "batch_size_fallback": {
+    "enabled": false,
+    "requested_batch_size": 8,
+    "effective_batch_size": 8,
+    "reductions": [],
+    "n_reductions": 0
+  }
+}

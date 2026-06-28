@@ -2,7 +2,16 @@
 
 from __future__ import annotations
 
+from eigentruth.control.action_audit import (
+    ActionAuditIssue,
+    ActionAuditPolicy,
+    ActionAuditReport,
+    ActionAuditSeverity,
+    audit_action_requests,
+)
 from eigentruth.control.actions import (
+    ActionExecutionLedger,
+    ActionExecutionPolicy,
     ActionExecutionStatus,
     ActionExecutor,
     ActionExecutorRegistry,
@@ -11,8 +20,29 @@ from eigentruth.control.actions import (
     CorrectionPolicy,
     DefaultCorrectionPolicy,
     DryRunActionExecutor,
+    InMemoryActionExecutionLedger,
+    JsonActionExecutionLedger,
+    PlanAwareCorrectionPolicy,
+    PolicyGuardedActionExecutor,
+    SQLiteActionExecutionLedger,
+    TimeoutActionExecutor,
 )
-from eigentruth.control.controller import ControlPolicyConfig, RiskController
+from eigentruth.control.controller import ControlPolicyConfig, ParticipationGateConfig, RiskController
+from eigentruth.control.feedback import (
+    FeedbackOutcome,
+    ProductFeedbackRecord,
+    ProductFeedbackStore,
+    iter_feedback_jsonl,
+    load_feedback_jsonl,
+    product_trace_fingerprint,
+    write_feedback_jsonl,
+)
+from eigentruth.control.finalization import (
+    FinalAnswer,
+    FinalAnswerStatus,
+    finalize_answer,
+    finalize_loop_answer,
+)
 from eigentruth.control.loop import (
     EvidenceBundle,
     VerificationLoopResult,
@@ -20,10 +50,46 @@ from eigentruth.control.loop import (
     run_verification_loop,
 )
 from eigentruth.control.policy import ControlAction, RiskDecision, RiskLevel
-from eigentruth.control.trace import ProductTrace, TraceEvent
+from eigentruth.control.promotion import (
+    LoadedProductPromotionContract,
+    ProductPromotionContract,
+    ProductRuntimeEvidenceBundle,
+    first_existing_product_promotion_contract_path,
+    load_product_promotion_contract,
+    load_product_runtime_evidence_bundle,
+    product_promotion_contract_metadata,
+    product_runtime_budget_policy_from_release_candidate,
+)
+from eigentruth.control.runtime_budget import (
+    ProductRuntimeBudgetPolicy,
+    evaluate_product_runtime_budget,
+    product_runtime_metrics,
+)
+from eigentruth.control.runtime_profiles import (
+    RUNTIME_PROFILE_NAMES,
+    RUNTIME_PROFILES,
+    PreGenerationRiskAssessment,
+    PreGenerationRiskPolicy,
+    RuntimeProfile,
+    RuntimeProfileSelection,
+    RuntimeProfileSelectorPolicy,
+    SoftPreGenerationRiskConfig,
+    SoftPreGenerationRiskEstimate,
+    get_runtime_profile,
+    select_pre_generation_profile,
+    select_runtime_profile,
+)
+from eigentruth.control.staging import StagedVerificationPolicy, VerificationStageDecision
+from eigentruth.control.trace import ProductTrace, RuntimePhaseTiming, RuntimeTrace, TraceEvent
 
 __all__ = [
     "ActionExecutionStatus",
+    "ActionAuditIssue",
+    "ActionAuditPolicy",
+    "ActionAuditReport",
+    "ActionAuditSeverity",
+    "ActionExecutionLedger",
+    "ActionExecutionPolicy",
     "ActionExecutorRegistry",
     "ActionExecutor",
     "ActionRequest",
@@ -34,12 +100,58 @@ __all__ = [
     "DefaultCorrectionPolicy",
     "DryRunActionExecutor",
     "EvidenceBundle",
+    "FeedbackOutcome",
+    "FinalAnswer",
+    "FinalAnswerStatus",
+    "InMemoryActionExecutionLedger",
+    "JsonActionExecutionLedger",
+    "PolicyGuardedActionExecutor",
+    "PlanAwareCorrectionPolicy",
+    "ParticipationGateConfig",
+    "SQLiteActionExecutionLedger",
+    "RUNTIME_PROFILE_NAMES",
+    "RUNTIME_PROFILES",
+    "StagedVerificationPolicy",
+    "TimeoutActionExecutor",
     "ProductTrace",
+    "LoadedProductPromotionContract",
+    "ProductPromotionContract",
+    "ProductFeedbackRecord",
+    "ProductFeedbackStore",
+    "ProductRuntimeEvidenceBundle",
+    "ProductRuntimeBudgetPolicy",
+    "PreGenerationRiskAssessment",
+    "PreGenerationRiskPolicy",
+    "RuntimePhaseTiming",
+    "RuntimeProfile",
+    "RuntimeProfileSelectorPolicy",
+    "RuntimeProfileSelection",
+    "RuntimeTrace",
+    "SoftPreGenerationRiskConfig",
+    "SoftPreGenerationRiskEstimate",
     "RiskController",
     "RiskDecision",
     "RiskLevel",
     "TraceEvent",
+    "VerificationStageDecision",
     "VerificationLoopResult",
+    "audit_action_requests",
     "evidence_bundle_from_action_results",
+    "evaluate_product_runtime_budget",
+    "finalize_answer",
+    "finalize_loop_answer",
+    "first_existing_product_promotion_contract_path",
+    "get_runtime_profile",
+    "iter_feedback_jsonl",
+    "load_feedback_jsonl",
+    "load_product_promotion_contract",
+    "load_product_runtime_evidence_bundle",
+    "product_promotion_contract_metadata",
+    "product_runtime_budget_policy_from_release_candidate",
+    "product_runtime_metrics",
+    "product_trace_fingerprint",
     "run_verification_loop",
+    "select_pre_generation_profile",
+    "select_runtime_profile",
+    "write_feedback_jsonl",
 ]

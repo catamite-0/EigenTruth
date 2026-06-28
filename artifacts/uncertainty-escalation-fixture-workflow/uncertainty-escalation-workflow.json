@@ -1,0 +1,269 @@
+{
+  "config": {
+    "compact_json": false,
+    "diagnostic_score_name": "maha_last",
+    "diagnostic_threshold": 3.0,
+    "diagnostic_value": 1.0,
+    "min_confidence": 0.65,
+    "name": "uncertainty-escalation-fixture-workflow",
+    "retrieval_limit": 5,
+    "retriever_min_overlap": 0.2,
+    "verifier_min_overlap": 0.65,
+    "version": "0.1"
+  },
+  "input": {
+    "record_count": 4,
+    "records_path": "artifacts/uncertainty-escalation-fixture-workflow/uncertain-verification-fixture.json"
+  },
+  "name": "uncertainty-escalation-fixture-workflow",
+  "paths": {
+    "artifact_manifest": "artifacts/uncertainty-escalation-fixture-workflow/artifact-manifest.json",
+    "loop_results_jsonl": "artifacts/uncertainty-escalation-fixture-workflow/verification-loop-results.jsonl",
+    "manifest_verification": "artifacts/uncertainty-escalation-fixture-workflow/manifest-verification.json",
+    "report": "artifacts/uncertainty-escalation-fixture-workflow/uncertainty-escalation-workflow.json"
+  },
+  "report": {
+    "action_execution": {
+      "mean_action_request_count": 2.0,
+      "mean_action_result_count": 2.0,
+      "retrieval_evidence_rate": {
+        "estimate": 1.0,
+        "lower": 1.0,
+        "successes": 4,
+        "total": 4,
+        "upper": 1.0
+      },
+      "retrieval_evidence_records": 4,
+      "retrieval_evidence_total": 4,
+      "retrieval_request_rate": {
+        "estimate": 1.0,
+        "lower": 1.0,
+        "successes": 4,
+        "total": 4,
+        "upper": 1.0
+      },
+      "retrieval_request_records": 4,
+      "retrieval_request_total": 4,
+      "retrieval_success_rate": {
+        "estimate": 1.0,
+        "lower": 1.0,
+        "successes": 4,
+        "total": 4,
+        "upper": 1.0
+      },
+      "retrieval_success_records": 4,
+      "retrieval_success_total": 4
+    },
+    "decision_changes": {
+      "accept_to_non_accept": 2,
+      "change_rate": {
+        "estimate": 0.5,
+        "lower": 0.010000000000000009,
+        "successes": 2,
+        "total": 4,
+        "upper": 0.99
+      },
+      "changed_records": 2,
+      "non_accept_to_accept": 0,
+      "transition_counts": {
+        "accept->abstain": 2
+      }
+    },
+    "final_decision": {
+      "acceptance": {
+        "estimate": 0.5,
+        "lower": 0.010000000000000009,
+        "successes": 2,
+        "total": 4,
+        "upper": 0.99
+      },
+      "action_counts": {
+        "abstain": 2,
+        "accept": 2
+      },
+      "non_acceptance": {
+        "estimate": 0.5,
+        "lower": 0.010000000000000009,
+        "successes": 2,
+        "total": 4,
+        "upper": 0.99
+      }
+    },
+    "initial_decision": {
+      "acceptance": {
+        "estimate": 1.0,
+        "lower": 1.0,
+        "successes": 4,
+        "total": 4,
+        "upper": 1.0
+      },
+      "action_counts": {
+        "accept": 4
+      },
+      "non_acceptance": {
+        "estimate": 0.0,
+        "lower": 0.0,
+        "successes": 0,
+        "total": 4,
+        "upper": 0.0
+      }
+    },
+    "label_summary": {
+      "false_rate": {
+        "estimate": 0.5,
+        "lower": 0.010000000000000009,
+        "successes": 2,
+        "total": 4,
+        "upper": 0.99
+      },
+      "n_false": 2,
+      "n_labeled": 4,
+      "n_true": 2
+    },
+    "n_total": 4,
+    "quality": {
+      "delta": {
+        "accepted_false": -2,
+        "accepted_records": -2,
+        "accepted_true": 0,
+        "coverage": -0.5,
+        "false_accept_rate": -1.0,
+        "selective_accuracy": 0.5,
+        "true_accept_rate": 0.0
+      },
+      "final": {
+        "accepted_false": 0,
+        "accepted_records": 2,
+        "accepted_true": 2,
+        "coverage": {
+          "estimate": 0.5,
+          "lower": 0.010000000000000009,
+          "successes": 2,
+          "total": 4,
+          "upper": 0.99
+        },
+        "false_accept_rate": {
+          "estimate": 0.0,
+          "lower": 0.0,
+          "successes": 0,
+          "total": 2,
+          "upper": 0.0
+        },
+        "false_routing_rate": {
+          "estimate": 1.0,
+          "lower": 1.0,
+          "successes": 2,
+          "total": 2,
+          "upper": 1.0
+        },
+        "routed_false": 2,
+        "selective_accuracy": {
+          "estimate": 1.0,
+          "lower": 1.0,
+          "successes": 2,
+          "total": 2,
+          "upper": 1.0
+        },
+        "true_accept_rate": {
+          "estimate": 1.0,
+          "lower": 1.0,
+          "successes": 2,
+          "total": 2,
+          "upper": 1.0
+        }
+      },
+      "initial": {
+        "accepted_false": 2,
+        "accepted_records": 4,
+        "accepted_true": 2,
+        "coverage": {
+          "estimate": 1.0,
+          "lower": 1.0,
+          "successes": 4,
+          "total": 4,
+          "upper": 1.0
+        },
+        "false_accept_rate": {
+          "estimate": 1.0,
+          "lower": 1.0,
+          "successes": 2,
+          "total": 2,
+          "upper": 1.0
+        },
+        "false_routing_rate": {
+          "estimate": 0.0,
+          "lower": 0.0,
+          "successes": 0,
+          "total": 2,
+          "upper": 0.0
+        },
+        "routed_false": 0,
+        "selective_accuracy": {
+          "estimate": 0.5,
+          "lower": 0.010000000000000009,
+          "successes": 2,
+          "total": 4,
+          "upper": 0.99
+        },
+        "true_accept_rate": {
+          "estimate": 1.0,
+          "lower": 1.0,
+          "successes": 2,
+          "total": 2,
+          "upper": 1.0
+        }
+      }
+    },
+    "uncertainty_escalation": {
+      "enabled_rate": {
+        "estimate": 1.0,
+        "lower": 1.0,
+        "successes": 4,
+        "total": 4,
+        "upper": 1.0
+      },
+      "enabled_records": 4,
+      "mean_retrieval_query_count": 1.0,
+      "mean_verify_claim_count": 1.0,
+      "retrieval_query_total": 4,
+      "route_counts": {
+        "retrieval": 4
+      },
+      "skipped_claim_total": 0,
+      "trigger_rate": {
+        "estimate": 1.0,
+        "lower": 1.0,
+        "successes": 4,
+        "total": 4,
+        "upper": 1.0
+      },
+      "triggered_records": 4,
+      "uncertainty_reason_counts": {
+        "confidence_below:0.65": 4
+      },
+      "verify_claim_total": 4
+    },
+    "verification_status": {
+      "final": {
+        "confidence_observations": 4,
+        "mean_confidence": 0.8736111111111111,
+        "min_confidence": 0.7944444444444444,
+        "status_counts": {
+          "refuted": 2,
+          "supported": 2
+        }
+      },
+      "initial": {
+        "confidence_observations": 4,
+        "mean_confidence": 0.4175,
+        "min_confidence": 0.4,
+        "status_counts": {
+          "supported": 4
+        }
+      }
+    }
+  },
+  "schema_version": 1,
+  "version": "0.1",
+  "workflow": "uncertainty_escalation_fixture_workflow"
+}

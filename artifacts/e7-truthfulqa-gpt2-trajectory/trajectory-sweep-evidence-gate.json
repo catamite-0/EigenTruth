@@ -1,0 +1,202 @@
+{
+  "artifact_manifest_summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  },
+  "config": {
+    "max_skip_rate": 0.2,
+    "min_best_auroc": 0.6,
+    "min_class_count": 20,
+    "min_model_count": 2,
+    "min_n_evaluated": 100,
+    "min_reports": 2
+  },
+  "decision": {
+    "blocking_reasons": [
+      "trajectory report count 1 is below required minimum 2",
+      "trajectory model count 1 is below required minimum 2",
+      "gpt2.n_evaluated 60 below required minimum 100"
+    ],
+    "status": "blocked",
+    "trajectory_track_status": "blocked"
+  },
+  "evidence_summary": {
+    "mean_best_auroc": 0.6028921023359288,
+    "min_best_auroc": 0.6028921023359288,
+    "model_count": 1,
+    "models": [
+      "gpt2"
+    ],
+    "promoted_report_count": 0,
+    "recommended_run": {
+      "best_layer": -1,
+      "model": "gpt2",
+      "name": "gpt2",
+      "path": "artifacts/e7-truthfulqa-gpt2-trajectory/gpt2-qwen-l80-limit64-layer-sweep-report.json",
+      "trajectory_score_best_auroc": 0.6028921023359288
+    },
+    "report_count": 1
+  },
+  "manifest_verification": {
+    "checked": 2,
+    "failure_count": 0,
+    "passed": true,
+    "path": "artifacts/e7-truthfulqa-gpt2-trajectory/trajectory-sweep-evidence-gate-manifest-verification.json",
+    "recursive": true
+  },
+  "notes": [
+    "gpt2 limit64 trajectory sweep is an initial mechanism check, not release evidence."
+  ],
+  "paths": {
+    "artifact_manifest": "artifacts/e7-truthfulqa-gpt2-trajectory/trajectory-sweep-evidence-gate-manifest.json",
+    "manifest_verification": "artifacts/e7-truthfulqa-gpt2-trajectory/trajectory-sweep-evidence-gate-manifest-verification.json",
+    "trajectory_sweep_evidence_report": "artifacts/e7-truthfulqa-gpt2-trajectory/trajectory-sweep-evidence-gate.json"
+  },
+  "run_decisions": [
+    {
+      "blocking_reasons": [
+        "gpt2.n_evaluated 60 below required minimum 100"
+      ],
+      "checks": [
+        {
+          "name": "gpt2.workflow",
+          "operator": "in",
+          "passed": true,
+          "reason": null,
+          "threshold": [
+            "truthfulqa_forced_answer_trajectory",
+            "truthfulqa_forced_answer_trajectory_layer_sweep"
+          ],
+          "value": "truthfulqa_forced_answer_trajectory_layer_sweep"
+        },
+        {
+          "name": "gpt2.status",
+          "operator": "in",
+          "passed": true,
+          "reason": null,
+          "threshold": [
+            "None",
+            "complete"
+          ],
+          "value": "complete"
+        },
+        {
+          "name": "gpt2.n_evaluated",
+          "operator": ">=",
+          "passed": false,
+          "reason": "gpt2.n_evaluated 60 below required minimum 100",
+          "threshold": 100,
+          "value": 60.0
+        },
+        {
+          "name": "gpt2.n_true",
+          "operator": ">=",
+          "passed": true,
+          "reason": null,
+          "threshold": 20,
+          "value": 29.0
+        },
+        {
+          "name": "gpt2.n_false",
+          "operator": ">=",
+          "passed": true,
+          "reason": null,
+          "threshold": 20,
+          "value": 31.0
+        },
+        {
+          "name": "gpt2.skip_rate",
+          "operator": "<=",
+          "passed": true,
+          "reason": null,
+          "threshold": 0.2,
+          "value": 0.0625
+        },
+        {
+          "name": "gpt2.trajectory_score_best_auroc",
+          "operator": ">=",
+          "passed": true,
+          "reason": null,
+          "threshold": 0.6,
+          "value": 0.6028921023359288
+        }
+      ],
+      "metrics": {
+        "best_layer": -1,
+        "best_resolved_layer": 12,
+        "layer_count": 2,
+        "layer_summaries": [
+          {
+            "layer": -1,
+            "layer_key": "-1",
+            "mean_false_convergence_score": 1.2676965781103524,
+            "mean_false_nll_answer": 3.0291132080939507,
+            "mean_true_convergence_score": 1.4626861802680113,
+            "mean_true_nll_answer": 3.468505152340593,
+            "n_evaluated": 60,
+            "n_false": 31,
+            "n_skipped": 4,
+            "n_total": 64,
+            "n_true": 29,
+            "nll_answer_higher_is_false_auroc": 0.3515016685205784,
+            "resolved_layer": 12,
+            "skip_reasons": {
+              "answer token count below min_answer_tokens": 4
+            },
+            "spearman_convergence_false_label": -0.17814005684723852,
+            "status": "pass",
+            "trajectory_score_best_auroc": 0.6028921023359288,
+            "trajectory_score_direction_for_false": "lower",
+            "trajectory_score_higher_is_false_auroc": 0.3971078976640712,
+            "trajectory_score_lower_is_false_auroc": 0.6028921023359288
+          },
+          {
+            "layer": -6,
+            "layer_key": "-6",
+            "mean_false_convergence_score": 0.9252908824938495,
+            "mean_false_nll_answer": 3.0291132080939507,
+            "mean_true_convergence_score": 0.8246649026343821,
+            "mean_true_nll_answer": 3.468505152340593,
+            "n_evaluated": 60,
+            "n_false": 31,
+            "n_skipped": 4,
+            "n_total": 64,
+            "n_true": 29,
+            "nll_answer_higher_is_false_auroc": 0.3515016685205784,
+            "resolved_layer": 7,
+            "skip_reasons": {
+              "answer token count below min_answer_tokens": 4
+            },
+            "spearman_convergence_false_label": 0.1338457724419792,
+            "status": "pass",
+            "trajectory_score_best_auroc": 0.5773081201334817,
+            "trajectory_score_direction_for_false": "higher",
+            "trajectory_score_higher_is_false_auroc": 0.5773081201334817,
+            "trajectory_score_lower_is_false_auroc": 0.42269187986651835
+          }
+        ],
+        "model": "gpt2",
+        "n_evaluated": 60,
+        "n_false": 31,
+        "n_skipped": 4,
+        "n_total": 64,
+        "n_true": 29,
+        "nll_answer_higher_is_false_auroc": 0.3515016685205784,
+        "skip_rate": 0.0625,
+        "source_scores_path": "artifacts/truthfulqa-l80-text-baseline-comparison/qwen-l80-text-baseline-scores.manifest.json",
+        "spearman_convergence_false_label": -0.17814005684723852,
+        "trajectory_score_best_auroc": 0.6028921023359288,
+        "trajectory_score_direction_for_false": "lower",
+        "workflow": "truthfulqa_forced_answer_trajectory_layer_sweep"
+      },
+      "name": "gpt2",
+      "path": "artifacts/e7-truthfulqa-gpt2-trajectory/gpt2-qwen-l80-limit64-layer-sweep-report.json",
+      "status": "blocked"
+    }
+  ],
+  "schema_version": 1,
+  "status": "complete",
+  "workflow": "trajectory_sweep_evidence_comparison"
+}

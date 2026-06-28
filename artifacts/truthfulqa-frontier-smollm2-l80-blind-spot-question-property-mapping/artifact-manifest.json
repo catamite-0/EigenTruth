@@ -1,0 +1,36 @@
+{
+  "artifacts": {
+    "covered_fact_mapping_audit": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-blind-spot-covered-fact-mapping/blind-spot-covered-fact-mapping.json",
+      "sha256": "71114ae19361a9beb5ccd80303353ada1b8ffa4f72686e44fe509c05c1f9e939",
+      "size_bytes": 186220
+    },
+    "question_property_mapping": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "blind-spot-question-property-mapping.json",
+      "sha256": "3e4e2cd24569549a4598ce045b7934fc37ce117f32eb4c7cd3ee16caa8cae751",
+      "size_bytes": 303829
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "evidence": "smollm2_l80_explicit_question_property_mapping",
+    "generic_fact_only_count": 7,
+    "mapped_correction_candidate_count": 1,
+    "status": "observed",
+    "target_count": 89,
+    "workflow": "blind_spot_question_property_mapping"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  }
+}

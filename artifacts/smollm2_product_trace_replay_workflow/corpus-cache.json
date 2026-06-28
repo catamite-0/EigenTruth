@@ -1,0 +1,242 @@
+{
+  "config": {
+    "payload": {
+      "child_paths": {
+        "artifact_manifest": "artifacts/smollm2_product_trace_replay_workflow/corpus/artifact-manifest.json",
+        "report": "artifacts/smollm2_product_trace_replay_workflow/corpus/product-trace-corpus.json",
+        "runtime_pair_index": "artifacts/smollm2_product_trace_replay_workflow/corpus/runtime-pair-index.json",
+        "source_cache": "artifacts/smollm2_product_trace_replay_workflow/corpus/source-cache.json",
+        "traces_dir": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces"
+      },
+      "compact_json": false,
+      "jsonl_paths": [],
+      "limit": null,
+      "metadata": {
+        "source": "run_product_trace_replay_workflow"
+      },
+      "redact_text": true,
+      "refresh_source_cache": false,
+      "require_runtime_trace": true,
+      "source_cache": "artifacts/smollm2_product_trace_replay_workflow/corpus/source-cache.json",
+      "strict": false,
+      "trace_paths": [
+        "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/calculator_refuted-r0.json",
+        "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/diagnostic_refuted-r0.json",
+        "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/low_risk_supported-r0.json",
+        "artifacts/smollm2_product_runtime_profile_sweep/traces/auto/calculator_refuted-r0.json",
+        "artifacts/smollm2_product_runtime_profile_sweep/traces/auto/diagnostic_refuted-r0.json",
+        "artifacts/smollm2_product_runtime_profile_sweep/traces/auto/low_risk_supported-r0.json",
+        "artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/calculator_refuted-r0.json",
+        "artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/diagnostic_refuted-r0.json",
+        "artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/low_risk_supported-r0.json",
+        "artifacts/smollm2_product_runtime_profile_sweep/traces/latency/calculator_refuted-r0.json",
+        "artifacts/smollm2_product_runtime_profile_sweep/traces/latency/diagnostic_refuted-r0.json",
+        "artifacts/smollm2_product_runtime_profile_sweep/traces/latency/low_risk_supported-r0.json"
+      ]
+    },
+    "signature": "{\"child_paths\":{\"artifact_manifest\":\"artifacts/smollm2_product_trace_replay_workflow/corpus/artifact-manifest.json\",\"report\":\"artifacts/smollm2_product_trace_replay_workflow/corpus/product-trace-corpus.json\",\"runtime_pair_index\":\"artifacts/smollm2_product_trace_replay_workflow/corpus/runtime-pair-index.json\",\"source_cache\":\"artifacts/smollm2_product_trace_replay_workflow/corpus/source-cache.json\",\"traces_dir\":\"artifacts/smollm2_product_trace_replay_workflow/corpus/traces\"},\"compact_json\":false,\"jsonl_paths\":[],\"limit\":null,\"metadata\":{\"source\":\"run_product_trace_replay_workflow\"},\"redact_text\":true,\"refresh_source_cache\":false,\"require_runtime_trace\":true,\"source_cache\":\"artifacts/smollm2_product_trace_replay_workflow/corpus/source-cache.json\",\"strict\":false,\"trace_paths\":[\"artifacts/smollm2_product_runtime_profile_sweep/traces/audit/calculator_refuted-r0.json\",\"artifacts/smollm2_product_runtime_profile_sweep/traces/audit/diagnostic_refuted-r0.json\",\"artifacts/smollm2_product_runtime_profile_sweep/traces/audit/low_risk_supported-r0.json\",\"artifacts/smollm2_product_runtime_profile_sweep/traces/auto/calculator_refuted-r0.json\",\"artifacts/smollm2_product_runtime_profile_sweep/traces/auto/diagnostic_refuted-r0.json\",\"artifacts/smollm2_product_runtime_profile_sweep/traces/auto/low_risk_supported-r0.json\",\"artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/calculator_refuted-r0.json\",\"artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/diagnostic_refuted-r0.json\",\"artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/low_risk_supported-r0.json\",\"artifacts/smollm2_product_runtime_profile_sweep/traces/latency/calculator_refuted-r0.json\",\"artifacts/smollm2_product_runtime_profile_sweep/traces/latency/diagnostic_refuted-r0.json\",\"artifacts/smollm2_product_runtime_profile_sweep/traces/latency/low_risk_supported-r0.json\"]}"
+  },
+  "outputs": {
+    "artifact_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/artifact-manifest.json",
+      "sha256": "b69392f4e704500bf309650b2729a53c69bbc5ca1bf4713cf724e2fd56786b3d",
+      "size_bytes": 5803
+    },
+    "report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/product-trace-corpus.json",
+      "sha256": "e785ab965a690a4a2f6c5bf610095fe4904773bf1bd4ffac498ff7e522ad91ce",
+      "size_bytes": 10831
+    },
+    "runtime_pair_index": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/runtime-pair-index.json",
+      "sha256": "45e6f28028a70032c3c00e0281cb9c91cb9f43b8d7327ff6baabdfbcb8003497",
+      "size_bytes": 3709
+    },
+    "source_cache": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/source-cache.json",
+      "sha256": "9f52fb8be24a30f47d2a14f8a12c25e5a8d0ef20e1ce6241119eff8ca66ca128",
+      "size_bytes": 337032
+    },
+    "traces_dir": {
+      "exists": true,
+      "file_count": 12,
+      "kind": "directory",
+      "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces",
+      "sha256": "104c00423b777d089d6a912331b0bdc0fa24c54ef1876f5b0c9013199f57692c",
+      "size_bytes": 475128
+    }
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/smollm2_product_trace_replay_workflow/corpus/artifact-manifest.json",
+    "corpus_cache": "artifacts/smollm2_product_trace_replay_workflow/corpus-cache.json",
+    "report": "artifacts/smollm2_product_trace_replay_workflow/corpus/product-trace-corpus.json",
+    "runtime_pair_index": "artifacts/smollm2_product_trace_replay_workflow/corpus/runtime-pair-index.json",
+    "source_cache": "artifacts/smollm2_product_trace_replay_workflow/corpus/source-cache.json",
+    "traces_dir": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces"
+  },
+  "schema_version": 1,
+  "sources": [
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/calculator_refuted-r0.json",
+        "sha256": "d02087adf9c783935ee18b84ff5c2e002e3514cc1b94fc8ea331650f97df694a",
+        "size_bytes": 39309
+      },
+      "kind": "trace",
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/calculator_refuted-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/diagnostic_refuted-r0.json",
+        "sha256": "68476bb48460b31e3403e4e85fa63ddecba54eb5f36955a08bf52b9e1f54c011",
+        "size_bytes": 40431
+      },
+      "kind": "trace",
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/diagnostic_refuted-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/low_risk_supported-r0.json",
+        "sha256": "a48587ddd9e3f0bfa2092a170c9ecded1dbbefaa511e13fa264b1ba30dfd912e",
+        "size_bytes": 36783
+      },
+      "kind": "trace",
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/low_risk_supported-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/auto/calculator_refuted-r0.json",
+        "sha256": "a7140605552033833a1b25b99d655831aae3ec656c425b6ab0040e3eaa4865cf",
+        "size_bytes": 40576
+      },
+      "kind": "trace",
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/auto/calculator_refuted-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/auto/diagnostic_refuted-r0.json",
+        "sha256": "3ea2e419a99dc7278415f2b4db6971d67be6aaa0aff3f1ee4002fca024352610",
+        "size_bytes": 46218
+      },
+      "kind": "trace",
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/auto/diagnostic_refuted-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/auto/low_risk_supported-r0.json",
+        "sha256": "12afd26f4a8c78f8c1b2a9b7b366f976d2971f3f7f6a843823a9a14a6a4ea211",
+        "size_bytes": 34166
+      },
+      "kind": "trace",
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/auto/low_risk_supported-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/calculator_refuted-r0.json",
+        "sha256": "58ea3ab78c9d4fb864f9c25fa937bd38b911d2860d494ca401c861fe7c7ee5f6",
+        "size_bytes": 44357
+      },
+      "kind": "trace",
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/calculator_refuted-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/diagnostic_refuted-r0.json",
+        "sha256": "79a57e1f5281c51a0d01667d10c1a9fca58bab22805b4c333d6df5568961d246",
+        "size_bytes": 45152
+      },
+      "kind": "trace",
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/diagnostic_refuted-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/low_risk_supported-r0.json",
+        "sha256": "db7f5bd3a37850b4a7c2ae89132f7bb541ea00d845535915b8877fb343e22409",
+        "size_bytes": 33267
+      },
+      "kind": "trace",
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/low_risk_supported-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/latency/calculator_refuted-r0.json",
+        "sha256": "718da025fc751970704ed1417c6772bd40743cb22be1a897a239601739d68ccd",
+        "size_bytes": 44087
+      },
+      "kind": "trace",
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/latency/calculator_refuted-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/latency/diagnostic_refuted-r0.json",
+        "sha256": "8415896967d4ce1af54d23bfd7c532f2b749978335d14bcbae052ab986684b2d",
+        "size_bytes": 33438
+      },
+      "kind": "trace",
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/latency/diagnostic_refuted-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/latency/low_risk_supported-r0.json",
+        "sha256": "4be668a2f5610227f6debc4a5dd61e3c5b276c7458d5b2795a8c61168df4e169",
+        "size_bytes": 33046
+      },
+      "kind": "trace",
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/latency/low_risk_supported-r0.json"
+    }
+  ],
+  "summary": {
+    "accepted_count": 12,
+    "rejected_count": 0,
+    "runtime_pair_index_record_count": 12
+  },
+  "workflow": "product_trace_replay_workflow_corpus_cache"
+}

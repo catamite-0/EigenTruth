@@ -1,0 +1,62 @@
+{
+  "artifacts": {
+    "product_runtime_baseline_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "product-runtime-baseline.json",
+      "sha256": "1f6e9d0a137380d8fa25c634445bbe4028c78cdda61a68a486e1ed3d257f1f3c",
+      "size_bytes": 61969
+    },
+    "promotion_contract": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_registry_workflow.json",
+      "sha256": "feaebd93a7a4b92fc50adcabe4ea4ae5515b6b1e42fb3d086db37c2bf530b239",
+      "size_bytes": 53344
+    },
+    "trace_0000_low_risk_supported-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../traces/audit/low_risk_supported-r0.json",
+      "sha256": "a48587ddd9e3f0bfa2092a170c9ecded1dbbefaa511e13fa264b1ba30dfd912e",
+      "size_bytes": 36783
+    },
+    "trace_0001_diagnostic_refuted-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../traces/audit/diagnostic_refuted-r0.json",
+      "sha256": "68476bb48460b31e3403e4e85fa63ddecba54eb5f36955a08bf52b9e1f54c011",
+      "size_bytes": 40431
+    },
+    "trace_0002_calculator_refuted-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../traces/audit/calculator_refuted-r0.json",
+      "sha256": "d02087adf9c783935ee18b84ff5c2e002e3514cc1b94fc8ea331650f97df694a",
+      "size_bytes": 39309
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "budget_enabled": true,
+    "budget_passed": true,
+    "compact_json": false,
+    "runner": "run_product_runtime_baseline",
+    "runtime_profile": "audit",
+    "source": "run_product_runtime_profile_sweep",
+    "status": "promote",
+    "trace_count": 3
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

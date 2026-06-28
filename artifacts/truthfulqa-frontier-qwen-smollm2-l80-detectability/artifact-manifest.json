@@ -1,0 +1,123 @@
+{
+  "artifacts": {
+    "cells.qwen05-l80.artifact_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen05-l80/artifact-manifest.json",
+      "sha256": "1326e9a98944c769e335c8f9a4796de06515851623264cd8b1ac61393ba6da48",
+      "size_bytes": 3048
+    },
+    "cells.qwen05-l80.detectability_taxonomy_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen05-l80/detectability-taxonomy-report.json",
+      "sha256": "7067f0d1547109a835018f3259692673c2092d7b5749dadeba58fff72441bb60",
+      "size_bytes": 12447
+    },
+    "cells.qwen05-l80.score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen05-l80/scores.manifest.json",
+      "sha256": "68767b83a06d66c2932e64935b1603fac835f9ddad6663c8856f187771a27439",
+      "size_bytes": 3236
+    },
+    "cells.qwen05-l80.workflow_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen05-l80/calibrated-observability-workflow.json",
+      "sha256": "1f56bf3b483031315a0fc241cb9bf149c6ca87a5065962fe873304e04bb0a472",
+      "size_bytes": 10167
+    },
+    "cells.smollm2-l80.artifact_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80/artifact-manifest.json",
+      "sha256": "4eee0b57493526a154868b2c6f077abf60ca8f675e72bb81913c95ca3bf2c2ad",
+      "size_bytes": 3058
+    },
+    "cells.smollm2-l80.detectability_taxonomy_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80/detectability-taxonomy-report.json",
+      "sha256": "d4acd8d350cbaeba986376adf10592924e4c4acd416042f9e02a5ee647104cb6",
+      "size_bytes": 12718
+    },
+    "cells.smollm2-l80.score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80/scores.manifest.json",
+      "sha256": "2fb7b3e3d31bf01bc4df035891208055ae1bda08ecb2c0e6396e86b866f609dc",
+      "size_bytes": 3248
+    },
+    "cells.smollm2-l80.workflow_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80/calibrated-observability-workflow.json",
+      "sha256": "9f8b797923dee9348c6b2e328f7c989b3226cb54de0e4f270a9646f6f864af77",
+      "size_bytes": 10225
+    },
+    "score_ensemble_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "score-ensemble-report.json",
+      "sha256": "1957611ffb7c9de04b56e29a72be3cfa79dfb93829d296739b46b5ec7e9d6274",
+      "size_bytes": 28644
+    },
+    "workflow_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "truthfulqa-frontier-workflow.json",
+      "sha256": "30416ef0804780e9869ff06b655e16af642e2588c1cf05a8448ca67574340b66",
+      "size_bytes": 10400
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "detectability_confidence_direction": "lower",
+    "detectability_confidence_signal": "nll_answer",
+    "detectability_consistency_direction": "lower",
+    "detectability_consistency_signal": "eigenscore",
+    "dry_run": false,
+    "ensemble_methods": [
+      "max_rank",
+      "mean_rank"
+    ],
+    "models": [
+      "qwen05",
+      "smollm2"
+    ],
+    "runner": "run_truthfulqa_frontier_workflow",
+    "scales": [
+      "l80"
+    ],
+    "signals": [
+      "truth_proj",
+      "maha_last",
+      "subspace_resid",
+      "resid_update_norm",
+      "eigenscore"
+    ],
+    "status": "complete",
+    "sweep_band_expand_radius": 0,
+    "sweep_band_scales": [],
+    "sweep_band_target_layer": null,
+    "sweep_layers_from_band_report": null
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 10,
+    "directory_count": 0,
+    "file_count": 10,
+    "missing_count": 0
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "artifacts": {
+    "product_runtime_baseline_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "product-runtime-baseline.json",
+      "sha256": "10a329159943e22086faa7fd1b406dac9eafb9e746da4c56657004cad4ff6b9a",
+      "size_bytes": 61845
+    },
+    "promotion_contract": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../../../smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_registry_workflow.json",
+      "sha256": "feaebd93a7a4b92fc50adcabe4ea4ae5515b6b1e42fb3d086db37c2bf530b239",
+      "size_bytes": 53344
+    },
+    "trace_0000_low_risk_supported-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../traces/auto/low_risk_supported-r0.json",
+      "sha256": "51f7643893c0c15c927f149942df5b4e0a1a815000984ddc994d7a2148b00aca",
+      "size_bytes": 34181
+    },
+    "trace_0001_diagnostic_refuted-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../traces/auto/diagnostic_refuted-r0.json",
+      "sha256": "0efc7c8e619a2de873dd01cd9d3b039eed92a7d24f7ee2a5848db46d6537bc26",
+      "size_bytes": 41568
+    },
+    "trace_0002_calculator_refuted-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../traces/auto/calculator_refuted-r0.json",
+      "sha256": "4bb6bbc7af933dfc22a1665965e3262a34c4d1814a6c9a745a937ed91c830a40",
+      "size_bytes": 40577
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "budget_enabled": true,
+    "budget_passed": true,
+    "compact_json": false,
+    "runner": "run_product_runtime_baseline",
+    "runtime_profile": "auto",
+    "selector_candidate": "audit_biased",
+    "source": "run_runtime_profile_selector_tuning",
+    "status": "promote",
+    "trace_count": 3
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

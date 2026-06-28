@@ -1,0 +1,128 @@
+{
+  "config": {
+    "batch_size": 4,
+    "cache_only": false,
+    "eigenscore_alpha": 0.001,
+    "eval_reps_cache": "/tmp/eigentruth-qwen-l80.8gzqXO/eval-reps-cache",
+    "eval_reps_cache_shard_size": 128,
+    "hidden_dim": 896,
+    "inside_batch_size": 1,
+    "inside_max_new_tokens": 12,
+    "inside_pooling": "last",
+    "inside_samples": 0,
+    "inside_temperature": 0.7,
+    "inside_top_p": 0.9,
+    "inside_trigger_signal": null,
+    "inside_trigger_threshold": null,
+    "inside_trigger_top_fraction": null,
+    "layer": -12,
+    "layer_stats_cache": "/tmp/eigentruth-qwen-l80.8gzqXO/layer-stats.pt",
+    "length_bucketed_batches": true,
+    "manifold_n": 266,
+    "model": "Qwen/Qwen2.5-0.5B-Instruct",
+    "n_manifold_false": 338,
+    "n_neg": 250,
+    "n_pos": 306,
+    "offline": false,
+    "refresh_eval_reps_cache": false,
+    "refresh_layer_stats_cache": false,
+    "seed": 0,
+    "subspace_rank": 2,
+    "sweep_layers": [
+      -12,
+      -16,
+      -14,
+      -10,
+      -8
+    ],
+    "text_baseline_score_dump": {
+      "builder": "build_text_baseline_score_dump",
+      "signals": [
+        "answer_char_length",
+        "answer_token_count",
+        "claim_char_length",
+        "claim_token_count",
+        "question_answer_token_overlap",
+        "answer_negation_flag",
+        "answer_number_count"
+      ],
+      "source_scores_path": "artifacts/qwen05_truthfulqa_l80_scores_with_statements.json"
+    }
+  },
+  "extras": {
+    "text_baseline_metadata": {
+      "signal_definitions": {
+        "answer_char_length": "Character count of the answer field; higher is a longer-answer baseline.",
+        "answer_negation_flag": "1 when the answer contains a simple negation token, else 0.",
+        "answer_number_count": "Count of numeric substrings in the answer field.",
+        "answer_token_count": "Regex token count of the answer field; higher is a longer-answer baseline.",
+        "claim_char_length": "Character count of the claim/text fallback used for verification.",
+        "claim_token_count": "Regex token count of the claim/text fallback used for verification.",
+        "question_answer_token_overlap": "Fraction of answer tokens that also appear in the question; lower can indicate lexical drift."
+      },
+      "signals": [
+        "answer_char_length",
+        "answer_token_count",
+        "claim_char_length",
+        "claim_token_count",
+        "question_answer_token_overlap",
+        "answer_negation_flag",
+        "answer_number_count"
+      ],
+      "source_scores_path": "artifacts/qwen05_truthfulqa_l80_scores_with_statements.json"
+    }
+  },
+  "format": "eigentruth.score_dump.jsonl",
+  "has_statements": true,
+  "n_false": 306,
+  "n_total": 556,
+  "n_true": 250,
+  "records_path": "qwen-l80-text-baseline-scores.manifest.records.jsonl",
+  "schema_version": 1,
+  "score_names": [
+    "truth_proj",
+    "maha_last",
+    "subspace_resid",
+    "eigenscore",
+    "nll_answer",
+    "answer_char_length",
+    "answer_token_count",
+    "claim_char_length",
+    "claim_token_count",
+    "question_answer_token_overlap",
+    "answer_negation_flag",
+    "answer_number_count"
+  ],
+  "sweep_scores": {
+    "-10": [
+      "maha_last",
+      "truth_proj",
+      "subspace_resid",
+      "eigenscore"
+    ],
+    "-12": [
+      "maha_last",
+      "truth_proj",
+      "subspace_resid",
+      "eigenscore"
+    ],
+    "-14": [
+      "maha_last",
+      "truth_proj",
+      "subspace_resid",
+      "eigenscore"
+    ],
+    "-16": [
+      "maha_last",
+      "truth_proj",
+      "subspace_resid",
+      "eigenscore"
+    ],
+    "-8": [
+      "maha_last",
+      "truth_proj",
+      "subspace_resid",
+      "eigenscore"
+    ]
+  }
+}

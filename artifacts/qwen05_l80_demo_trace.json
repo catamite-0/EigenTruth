@@ -1,0 +1,353 @@
+{
+  "action_results": [
+    {
+      "action": "abstain",
+      "error": null,
+      "metadata": {
+        "context": {
+          "request_id": "qwen05-l80-demo"
+        },
+        "executor": "DryRunActionExecutor",
+        "executor_name": "dry_run",
+        "request_metadata": {
+          "context": {},
+          "policy": "DefaultCorrectionPolicy"
+        },
+        "side_effects": false
+      },
+      "output": {
+        "blocked_claims": [
+          {
+            "claim_id": "c2",
+            "confidence": 0.9,
+            "evidence": [],
+            "metadata": {
+              "extractor": "sentence_split",
+              "features": {
+                "has_citation": false,
+                "has_negation": false,
+                "has_number": false,
+                "is_time_sensitive": false
+              },
+              "source_index": 2
+            },
+            "status": "refuted",
+            "text": "The moon is made of cheese."
+          }
+        ],
+        "message": "I cannot answer reliably with the available evidence.",
+        "would_execute": "abstain"
+      },
+      "request_id": null,
+      "status": "dry_run"
+    }
+  ],
+  "actions": [
+    {
+      "action": "abstain",
+      "metadata": {
+        "context": {},
+        "policy": "DefaultCorrectionPolicy"
+      },
+      "payload": {
+        "blocked_claims": [
+          {
+            "claim_id": "c2",
+            "confidence": 0.9,
+            "evidence": [],
+            "metadata": {
+              "extractor": "sentence_split",
+              "features": {
+                "has_citation": false,
+                "has_negation": false,
+                "has_number": false,
+                "is_time_sensitive": false
+              },
+              "source_index": 2
+            },
+            "status": "refuted",
+            "text": "The moon is made of cheese."
+          }
+        ],
+        "claim_status_counts": {
+          "error": 0,
+          "insufficient_evidence": 0,
+          "not_applicable": 0,
+          "refuted": 1,
+          "supported": 1
+        },
+        "decision_confidence": 0.9,
+        "decision_reason": "claim verification refuted 1 claim(s); calibrated diagnostic threshold exceeded: truth_proj",
+        "message": "I cannot answer reliably with the available evidence.",
+        "risk_level": "high"
+      },
+      "reason": "claim verification refuted 1 claim(s); calibrated diagnostic threshold exceeded: truth_proj",
+      "request_id": null
+    }
+  ],
+  "claims": [
+    {
+      "claim_id": "c1",
+      "metadata": {
+        "extractor": "sentence_split",
+        "features": {
+          "has_citation": false,
+          "has_negation": false,
+          "has_number": false,
+          "is_time_sensitive": false
+        },
+        "source_index": 1
+      },
+      "span": [
+        0,
+        31
+      ],
+      "text": "Paris is the capital of France."
+    },
+    {
+      "claim_id": "c2",
+      "metadata": {
+        "extractor": "sentence_split",
+        "features": {
+          "has_citation": false,
+          "has_negation": false,
+          "has_number": false,
+          "is_time_sensitive": false
+        },
+        "source_index": 2
+      },
+      "span": [
+        31,
+        59
+      ],
+      "text": "The moon is made of cheese."
+    }
+  ],
+  "diagnostics": {
+    "truth_proj": 3.9676206588745115
+  },
+  "events": [
+    {
+      "created_at": null,
+      "event_type": "initial_verification",
+      "payload": {
+        "n_claims": 2,
+        "results": [
+          {
+            "confidence": 0.9,
+            "evidence": [],
+            "explanation": "in-memory verifier matched status=supported",
+            "metadata": {
+              "key": "paris is the capital of france"
+            },
+            "status": "supported"
+          },
+          {
+            "confidence": 0.9,
+            "evidence": [],
+            "explanation": "in-memory verifier matched status=refuted",
+            "metadata": {
+              "key": "the moon is made of cheese"
+            },
+            "status": "refuted"
+          }
+        ]
+      }
+    },
+    {
+      "created_at": null,
+      "event_type": "initial_risk_decision",
+      "payload": {
+        "action": "abstain",
+        "confidence": 0.9,
+        "diagnostics": {
+          "invalid_scores": [],
+          "invalid_values": {},
+          "missing_scores": [],
+          "severities": {
+            "truth_proj": 0.09999999999999995
+          },
+          "thresholds": {
+            "truth_proj": 3.6069278717041016
+          },
+          "triggered_scores": [
+            "truth_proj"
+          ],
+          "verification": {
+            "counts": {
+              "error": 0,
+              "insufficient_evidence": 0,
+              "not_applicable": 0,
+              "refuted": 1,
+              "supported": 1
+            },
+            "max_confidence_by_status": {
+              "refuted": 0.9,
+              "supported": 0.9
+            },
+            "total": 2,
+            "triggered_statuses": [
+              "refuted"
+            ]
+          }
+        },
+        "reason": "claim verification refuted 1 claim(s); calibrated diagnostic threshold exceeded: truth_proj",
+        "risk_level": "high"
+      }
+    },
+    {
+      "created_at": null,
+      "event_type": "actions_planned",
+      "payload": {
+        "n_actions": 1
+      }
+    },
+    {
+      "created_at": null,
+      "event_type": "actions_executed",
+      "payload": {
+        "n_results": 1,
+        "summary": {
+          "counts_by_action": {
+            "abstain": 1
+          },
+          "counts_by_status": {
+            "dry_run": 1
+          },
+          "side_effects": false,
+          "total": 1
+        }
+      }
+    },
+    {
+      "created_at": null,
+      "event_type": "retrieval_evidence_collected",
+      "payload": {
+        "by_claim_id": {},
+        "claim_ids": [],
+        "evidence": [],
+        "total_evidence": 0
+      }
+    },
+    {
+      "created_at": null,
+      "event_type": "final_verification",
+      "payload": {
+        "n_claims": 2,
+        "used_retrieval_evidence": false
+      }
+    },
+    {
+      "created_at": null,
+      "event_type": "final_risk_decision",
+      "payload": {
+        "action": "abstain",
+        "confidence": 0.9,
+        "diagnostics": {
+          "invalid_scores": [],
+          "invalid_values": {},
+          "missing_scores": [],
+          "severities": {
+            "truth_proj": 0.09999999999999995
+          },
+          "thresholds": {
+            "truth_proj": 3.6069278717041016
+          },
+          "triggered_scores": [
+            "truth_proj"
+          ],
+          "verification": {
+            "counts": {
+              "error": 0,
+              "insufficient_evidence": 0,
+              "not_applicable": 0,
+              "refuted": 1,
+              "supported": 1
+            },
+            "max_confidence_by_status": {
+              "refuted": 0.9,
+              "supported": 0.9
+            },
+            "total": 2,
+            "triggered_statuses": [
+              "refuted"
+            ]
+          }
+        },
+        "reason": "claim verification refuted 1 claim(s); calibrated diagnostic threshold exceeded: truth_proj",
+        "risk_level": "high"
+      }
+    }
+  ],
+  "metadata": {
+    "action_executor_type": "ActionExecutorRegistry",
+    "artifact_model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+    "artifact_scores": [
+      "truth_proj"
+    ],
+    "artifact_source": "artifacts/qwen05_truthfulqa_l80_best_calibration.json",
+    "artifact_target_layer": -10,
+    "loop_version": "0.4",
+    "registered_actions": [],
+    "source": "examples/calibrated_control_demo.py",
+    "verifier_type": "InMemoryVerifier"
+  },
+  "request_id": "qwen05-l80-demo",
+  "risk_decision": {
+    "action": "abstain",
+    "confidence": 0.9,
+    "diagnostics": {
+      "invalid_scores": [],
+      "invalid_values": {},
+      "missing_scores": [],
+      "severities": {
+        "truth_proj": 0.09999999999999995
+      },
+      "thresholds": {
+        "truth_proj": 3.6069278717041016
+      },
+      "triggered_scores": [
+        "truth_proj"
+      ],
+      "verification": {
+        "counts": {
+          "error": 0,
+          "insufficient_evidence": 0,
+          "not_applicable": 0,
+          "refuted": 1,
+          "supported": 1
+        },
+        "max_confidence_by_status": {
+          "refuted": 0.9,
+          "supported": 0.9
+        },
+        "total": 2,
+        "triggered_statuses": [
+          "refuted"
+        ]
+      }
+    },
+    "reason": "claim verification refuted 1 claim(s); calibrated diagnostic threshold exceeded: truth_proj",
+    "risk_level": "high"
+  },
+  "verification_results": [
+    {
+      "confidence": 0.9,
+      "evidence": [],
+      "explanation": "in-memory verifier matched status=supported",
+      "metadata": {
+        "key": "paris is the capital of france"
+      },
+      "status": "supported"
+    },
+    {
+      "confidence": 0.9,
+      "evidence": [],
+      "explanation": "in-memory verifier matched status=refuted",
+      "metadata": {
+        "key": "the moon is made of cheese"
+      },
+      "status": "refuted"
+    }
+  ]
+}

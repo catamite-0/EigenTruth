@@ -1,0 +1,317 @@
+{
+  "artifact_manifest_summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  },
+  "config": {
+    "max_abstention_rate_mean": 0.5,
+    "max_verified_false_alarm_mean": 0.02,
+    "min_abstention_conditional_correctness_lower_bound_mean": 0.8,
+    "min_abstention_pass_seed_rate": 1.0,
+    "min_verified_detection_mean": 0.2,
+    "min_verifier_beats_internal_seed_rate": 1.0,
+    "min_verifier_delta_detection_mean": 0.0,
+    "min_verifier_pass_seed_rate": 1.0
+  },
+  "decision": {
+    "abstention_track_status": "blocked",
+    "blocking_reasons": [
+      "abstention_stability.qwen05-l80.conditional_correctness_lower_bound_mean 0.49756 is below required minimum 0.8",
+      "abstention_stability.qwen05-l80.release_gate_pass_seed_rate 0 is below required minimum 1",
+      "abstention_stability.smollm2-l80.conditional_correctness_lower_bound_mean 0.48451 is below required minimum 0.8",
+      "abstention_stability.smollm2-l80.release_gate_pass_seed_rate 0 is below required minimum 1"
+    ],
+    "status": "blocked",
+    "verifier_track_status": "promote"
+  },
+  "evidence_summary": {
+    "abstention_signals": [
+      "maha_last",
+      "truth_proj",
+      "subspace_resid",
+      "disp_euclid",
+      "disp_hse",
+      "nll_answer",
+      "eigenscore",
+      "resid_update_norm"
+    ],
+    "abstention_track_status": "blocked",
+    "run_count": 2,
+    "run_names": [
+      "qwen05-l80",
+      "smollm2-l80"
+    ],
+    "verifier_signal": "truth_proj",
+    "verifier_track_status": "promote"
+  },
+  "inputs": {
+    "abstention_stability_report": {
+      "artifact_manifest": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/artifact-manifest.json",
+      "artifact_manifest_summary": {
+        "artifact_count": 5,
+        "directory_count": 0,
+        "file_count": 5,
+        "missing_count": 0
+      },
+      "blocking_reasons": [],
+      "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json",
+      "status": "complete",
+      "workflow": "abstention_stability"
+    },
+    "verifier_stability_report": {
+      "artifact_manifest": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-verifier-stability/artifact-manifest.json",
+      "artifact_manifest_summary": {
+        "artifact_count": 6,
+        "directory_count": 0,
+        "file_count": 6,
+        "missing_count": 0
+      },
+      "blocking_reasons": [],
+      "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-verifier-stability/verifier-stability-report.json",
+      "status": "complete",
+      "workflow": "verifier_stability"
+    }
+  },
+  "manifest_verification": {
+    "checked": 5,
+    "failure_count": 0,
+    "passed": true,
+    "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-release-evidence/manifest-verification.json",
+    "recursive": true
+  },
+  "notes": [],
+  "paths": {
+    "artifact_manifest": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-release-evidence/artifact-manifest.json",
+    "frontier_release_evidence_report": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-release-evidence/frontier-release-evidence.json",
+    "manifest_verification": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-release-evidence/manifest-verification.json"
+  },
+  "run_decisions": [
+    {
+      "abstention_decision": {
+        "blocking_reasons": [
+          "abstention_stability.qwen05-l80.conditional_correctness_lower_bound_mean 0.49756 is below required minimum 0.8",
+          "abstention_stability.qwen05-l80.release_gate_pass_seed_rate 0 is below required minimum 1"
+        ],
+        "checks": [
+          {
+            "name": "abstention_stability.qwen05-l80.conditional_correctness_lower_bound_mean",
+            "operator": ">=",
+            "passed": false,
+            "reason": "abstention_stability.qwen05-l80.conditional_correctness_lower_bound_mean 0.49756 is below required minimum 0.8",
+            "threshold": 0.8,
+            "value": 0.49756007712932593
+          },
+          {
+            "name": "abstention_stability.qwen05-l80.empirical_abstention_rate_mean",
+            "operator": "<=",
+            "passed": true,
+            "reason": null,
+            "threshold": 0.5,
+            "value": 0.18597122302158273
+          },
+          {
+            "name": "abstention_stability.qwen05-l80.release_gate_pass_seed_rate",
+            "operator": ">=",
+            "passed": false,
+            "reason": "abstention_stability.qwen05-l80.release_gate_pass_seed_rate 0 is below required minimum 1",
+            "threshold": 1.0,
+            "value": 0.0
+          }
+        ],
+        "metrics": {
+          "conditional_correctness_lower_bound_mean": 0.49756007712932593,
+          "empirical_abstention_rate_mean": 0.18597122302158273,
+          "recommended_score_name_counts": {
+            "truth_proj": 10
+          },
+          "release_gate_block_seed_count": 10,
+          "release_gate_pass_seed_count": 0,
+          "release_gate_pass_seed_rate": 0.0,
+          "stable_recommended_score_name": "truth_proj"
+        },
+        "name": "qwen05-l80",
+        "status": "blocked",
+        "track": "abstention_stability"
+      },
+      "blocking_reasons": [
+        "abstention_stability.qwen05-l80.conditional_correctness_lower_bound_mean 0.49756 is below required minimum 0.8",
+        "abstention_stability.qwen05-l80.release_gate_pass_seed_rate 0 is below required minimum 1"
+      ],
+      "name": "qwen05-l80",
+      "status": "blocked",
+      "verifier_decision": {
+        "blocking_reasons": [],
+        "checks": [
+          {
+            "name": "verifier_stability.qwen05-l80.verified_false_alarm_mean",
+            "operator": "<=",
+            "passed": true,
+            "reason": null,
+            "threshold": 0.02,
+            "value": 0.00608
+          },
+          {
+            "name": "verifier_stability.qwen05-l80.verified_detection_mean",
+            "operator": ">=",
+            "passed": true,
+            "reason": null,
+            "threshold": 0.2,
+            "value": 0.3051143790849673
+          },
+          {
+            "name": "verifier_stability.qwen05-l80.delta_detection_mean",
+            "operator": ">=",
+            "passed": true,
+            "reason": null,
+            "threshold": 0.0,
+            "value": 0.02787581699346401
+          },
+          {
+            "name": "verifier_stability.qwen05-l80.verified_pass_seed_rate",
+            "operator": ">=",
+            "passed": true,
+            "reason": null,
+            "threshold": 1.0,
+            "value": 1.0
+          },
+          {
+            "name": "verifier_stability.qwen05-l80.verified_beats_internal_detection_seed_rate",
+            "operator": ">=",
+            "passed": true,
+            "reason": null,
+            "threshold": 1.0,
+            "value": 1.0
+          }
+        ],
+        "metrics": {
+          "delta_detection_mean": 0.02787581699346401,
+          "verified_beats_internal_detection_seed_count": 10,
+          "verified_beats_internal_detection_seed_rate": 1.0,
+          "verified_detection_mean": 0.3051143790849673,
+          "verified_false_alarm_mean": 0.00608,
+          "verified_pass_seed_count": 10,
+          "verified_pass_seed_rate": 1.0
+        },
+        "name": "qwen05-l80",
+        "status": "promote",
+        "track": "verifier_stability"
+      }
+    },
+    {
+      "abstention_decision": {
+        "blocking_reasons": [
+          "abstention_stability.smollm2-l80.conditional_correctness_lower_bound_mean 0.48451 is below required minimum 0.8",
+          "abstention_stability.smollm2-l80.release_gate_pass_seed_rate 0 is below required minimum 1"
+        ],
+        "checks": [
+          {
+            "name": "abstention_stability.smollm2-l80.conditional_correctness_lower_bound_mean",
+            "operator": ">=",
+            "passed": false,
+            "reason": "abstention_stability.smollm2-l80.conditional_correctness_lower_bound_mean 0.48451 is below required minimum 0.8",
+            "threshold": 0.8,
+            "value": 0.4845096335353289
+          },
+          {
+            "name": "abstention_stability.smollm2-l80.empirical_abstention_rate_mean",
+            "operator": "<=",
+            "passed": true,
+            "reason": null,
+            "threshold": 0.5,
+            "value": 0.16726618705035973
+          },
+          {
+            "name": "abstention_stability.smollm2-l80.release_gate_pass_seed_rate",
+            "operator": ">=",
+            "passed": false,
+            "reason": "abstention_stability.smollm2-l80.release_gate_pass_seed_rate 0 is below required minimum 1",
+            "threshold": 1.0,
+            "value": 0.0
+          }
+        ],
+        "metrics": {
+          "conditional_correctness_lower_bound_mean": 0.4845096335353289,
+          "empirical_abstention_rate_mean": 0.16726618705035973,
+          "recommended_score_name_counts": {
+            "truth_proj": 10
+          },
+          "release_gate_block_seed_count": 10,
+          "release_gate_pass_seed_count": 0,
+          "release_gate_pass_seed_rate": 0.0,
+          "stable_recommended_score_name": "truth_proj"
+        },
+        "name": "smollm2-l80",
+        "status": "blocked",
+        "track": "abstention_stability"
+      },
+      "blocking_reasons": [
+        "abstention_stability.smollm2-l80.conditional_correctness_lower_bound_mean 0.48451 is below required minimum 0.8",
+        "abstention_stability.smollm2-l80.release_gate_pass_seed_rate 0 is below required minimum 1"
+      ],
+      "name": "smollm2-l80",
+      "status": "blocked",
+      "verifier_decision": {
+        "blocking_reasons": [],
+        "checks": [
+          {
+            "name": "verifier_stability.smollm2-l80.verified_false_alarm_mean",
+            "operator": "<=",
+            "passed": true,
+            "reason": null,
+            "threshold": 0.02,
+            "value": 0.010239999999999999
+          },
+          {
+            "name": "verifier_stability.smollm2-l80.verified_detection_mean",
+            "operator": ">=",
+            "passed": true,
+            "reason": null,
+            "threshold": 0.2,
+            "value": 0.24387254901960786
+          },
+          {
+            "name": "verifier_stability.smollm2-l80.delta_detection_mean",
+            "operator": ">=",
+            "passed": true,
+            "reason": null,
+            "threshold": 0.0,
+            "value": 0.005375816993464089
+          },
+          {
+            "name": "verifier_stability.smollm2-l80.verified_pass_seed_rate",
+            "operator": ">=",
+            "passed": true,
+            "reason": null,
+            "threshold": 1.0,
+            "value": 1.0
+          },
+          {
+            "name": "verifier_stability.smollm2-l80.verified_beats_internal_detection_seed_rate",
+            "operator": ">=",
+            "passed": true,
+            "reason": null,
+            "threshold": 1.0,
+            "value": 1.0
+          }
+        ],
+        "metrics": {
+          "delta_detection_mean": 0.005375816993464089,
+          "verified_beats_internal_detection_seed_count": 10,
+          "verified_beats_internal_detection_seed_rate": 1.0,
+          "verified_detection_mean": 0.24387254901960786,
+          "verified_false_alarm_mean": 0.010239999999999999,
+          "verified_pass_seed_count": 10,
+          "verified_pass_seed_rate": 1.0
+        },
+        "name": "smollm2-l80",
+        "status": "promote",
+        "track": "verifier_stability"
+      }
+    }
+  ],
+  "schema_version": 1,
+  "status": "complete",
+  "workflow": "frontier_release_evidence_comparison"
+}

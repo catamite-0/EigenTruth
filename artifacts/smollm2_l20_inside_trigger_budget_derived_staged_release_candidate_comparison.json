@@ -1,0 +1,743 @@
+{
+  "config": {
+    "allow_unverified": false,
+    "max_cache_only_seconds": 1.0,
+    "max_false_supported_rate": 0.02,
+    "max_inside_generation_seconds_ratio": 1.05,
+    "max_inside_sample_count_ratio": 0.95,
+    "max_max_duration_seconds": null,
+    "max_mean_attempted_route_count": 1.1,
+    "max_mean_duration_seconds": null,
+    "max_p99_duration_seconds": 0.01,
+    "max_retrieval_hit_count": null,
+    "max_retrieval_use_rate": 0.0,
+    "max_runtime_total_seconds": null,
+    "max_uncached_forward_seconds": 45.0,
+    "max_verified_false_alarm": 0.02,
+    "min_best_quality_auroc": 0.65,
+    "min_claims_cache_hit_rate": null,
+    "min_decision_accuracy": 0.95,
+    "min_false_refuted_rate": 0.9,
+    "min_selected": 80,
+    "min_verified_detection": 0.2,
+    "min_verifier_trace_cache_hit_rate": null,
+    "readiness_baseline_keys": [
+      "benchmark_manifest:smollm2-l20-readiness-inside-trigger-budget-derived:0.8"
+    ],
+    "readiness_registry": "artifacts/local-readiness-registry.json",
+    "recursive": true,
+    "route_baseline_keys": [
+      "benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4"
+    ],
+    "route_registry": "artifacts/staged-route-registry.json"
+  },
+  "decision": {
+    "blocking_reasons": [],
+    "readiness_status": "promote",
+    "recommended_model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "recommended_readiness_record": "benchmark_manifest:smollm2-l20-readiness-inside-trigger-budget-derived:0.8",
+    "recommended_route": "structured_qa",
+    "recommended_route_record": "benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4",
+    "route_status": "promote",
+    "status": "promote"
+  },
+  "notes": [
+    "release candidate registry workflow"
+  ],
+  "readiness_baseline_comparison": {
+    "config": {
+      "allow_unverified": false,
+      "baseline_keys": [
+        "benchmark_manifest:smollm2-l20-readiness-inside-trigger-budget-derived:0.8"
+      ],
+      "max_cache_only_seconds": 1.0,
+      "max_inside_generation_seconds_ratio": 1.05,
+      "max_inside_sample_count_ratio": 0.95,
+      "max_uncached_forward_seconds": 45.0,
+      "min_best_quality_auroc": 0.65,
+      "recursive": true
+    },
+    "decision": {
+      "blocking_reasons": [],
+      "recommended_best_quality_signal": {
+        "auroc": 0.6823529411764706,
+        "name": "truth_proj"
+      },
+      "recommended_model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+      "recommended_record": "benchmark_manifest:smollm2-l20-readiness-inside-trigger-budget-derived:0.8",
+      "status": "promote"
+    },
+    "leaderboard": [
+      {
+        "adapter_family_status": "promote",
+        "batch_size": 8,
+        "benchmark_flags": {
+          "eval_truthfulqa": [
+            "--layer",
+            "-12",
+            "--batch-size",
+            "8",
+            "--hidden-state-capture",
+            "outputs",
+            "--length-bucketed-batches",
+            "--inside-samples",
+            "3",
+            "--inside-batch-size",
+            "1",
+            "--inside-max-new-tokens",
+            "4",
+            "--inside-pooling",
+            "last",
+            "--inside-adaptive-sampling",
+            "--inside-selfcheck-early-stop",
+            "--inside-trigger-signal",
+            "truth_proj",
+            "--inside-trigger-top-fraction",
+            "0.4"
+          ],
+          "run_adapter_readiness_workflow": [
+            "--layers",
+            "-12",
+            "--batch-sizes",
+            "8",
+            "--hidden-state-captures",
+            "outputs",
+            "--max-workers",
+            "1"
+          ],
+          "run_cache_profile_matrix": [
+            "--layers",
+            "-12",
+            "--batch-sizes",
+            "8",
+            "--hidden-state-captures",
+            "outputs",
+            "--max-workers",
+            "1"
+          ],
+          "run_inside_sampling_profile": [
+            "--inside-samples",
+            "3",
+            "--inside-batch-size",
+            "1",
+            "--inside-max-new-tokens",
+            "4",
+            "--inside-pooling",
+            "last",
+            "--inside-trigger-signal",
+            "truth_proj",
+            "--inside-trigger-top-fraction",
+            "0.4",
+            "--runs",
+            "adaptive_selfcheck"
+          ],
+          "run_inside_trigger_budget_sweep": [
+            "--trigger-signal",
+            "truth_proj",
+            "--top-fractions",
+            "0.1,0.25,0.4",
+            "--reference-report",
+            "artifacts/smollm2_l20_inside_sampling/inside-sampling-profile-comparison.json",
+            "--model",
+            "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-12",
+            "--limit",
+            "20",
+            "--manifold-questions",
+            "40",
+            "--batch-size",
+            "8",
+            "--max-batch-tokens",
+            "0",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--real-truthfulqa",
+            "--inside-samples",
+            "3",
+            "--inside-batch-size",
+            "1",
+            "--inside-max-new-tokens",
+            "4",
+            "--runs",
+            "adaptive_selfcheck",
+            "--shared-cache-dir",
+            "artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/shared-caches",
+            "--eval-reps-cache-shard-size",
+            "8",
+            "--derive-from-max-budget"
+          ]
+        },
+        "best_quality_signal": {
+          "auroc": 0.6823529411764706,
+          "name": "truth_proj"
+        },
+        "cache_only_total_seconds": 0.339105,
+        "dtype": "float32",
+        "gate": {
+          "blocking_reasons": [],
+          "passed": true
+        },
+        "hidden_state_capture": "outputs",
+        "inside_generation_seconds": 235.259019,
+        "inside_generation_seconds_ratio_for_gate": 0.5031603665201702,
+        "inside_generation_seconds_ratio_source": "inside_generation_seconds_ratio_to_reference",
+        "inside_generation_seconds_ratio_to_baseline": null,
+        "inside_generation_seconds_ratio_to_reference": 0.5031603665201702,
+        "inside_sampling": {
+          "adaptive": true,
+          "derive_from_max_budget": true,
+          "derived_source_budget_id": "top_0p4",
+          "inside_batch_size": 1,
+          "inside_generation_seconds": 235.259019,
+          "inside_generation_seconds_ratio_to_reference": 0.5031603665201702,
+          "inside_generation_seconds_source": "measured_source_run",
+          "inside_max_new_tokens": 4,
+          "inside_pooling": "last",
+          "inside_samples": 3,
+          "inside_trigger_budget_id": "top_0p4",
+          "inside_trigger_budget_source": "inside_trigger_budget_sweep",
+          "inside_trigger_signal": "truth_proj",
+          "inside_trigger_top_fraction": 0.4,
+          "mode": "triggered",
+          "recommended_run": "adaptive_selfcheck",
+          "sample_count_ratio_to_reference": 0.47186147186147187,
+          "selfcheck_early_stop": true,
+          "stop_reason_counts": {
+            "selfcheck_thresholds_unreachable": 13
+          },
+          "total_generated_samples": 218
+        },
+        "inside_sampling_recommended_run": "adaptive_selfcheck",
+        "inside_sampling_sample_count_ratio_for_gate": 0.47186147186147187,
+        "inside_sampling_sample_count_ratio_source": "sample_count_ratio_to_reference",
+        "inside_sampling_sample_count_ratio_to_baseline": null,
+        "inside_sampling_sample_count_ratio_to_reference": 0.47186147186147187,
+        "inside_sampling_stop_reason_counts": {
+          "selfcheck_thresholds_unreachable": 13
+        },
+        "inside_sampling_total_generated_samples": 218,
+        "inside_trigger_budget_derive_from_max_budget": true,
+        "inside_trigger_budget_id": "top_0p4",
+        "inside_trigger_budget_sweep": {
+          "batch_size": 8,
+          "best_quality_value": 0.5703324808184144,
+          "budget_kind": "top_fraction",
+          "budget_value": 0.4,
+          "budgets": [
+            {
+              "id": "top_0p1",
+              "kind": "top_fraction",
+              "value": 0.1
+            },
+            {
+              "id": "top_0p25",
+              "kind": "top_fraction",
+              "value": 0.25
+            },
+            {
+              "id": "top_0p4",
+              "kind": "top_fraction",
+              "value": 0.4
+            }
+          ],
+          "cost_metric": "inside_generation_seconds_ratio_to_reference",
+          "cost_value": 0.5031603665201702,
+          "derive_from_max_budget": true,
+          "derived_source_budget_id": "top_0p4",
+          "derived_source_score_dump": "artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/top_0p4/scores-adaptive_selfcheck.json",
+          "dtype": "float32",
+          "eval_reps_cache_shard_size": 8,
+          "hidden_state_capture": "outputs",
+          "inside_auroc": {
+            "inside_eigenscore": 0.4782608695652174,
+            "inside_embedding_entropy": 0.5670076726342711,
+            "inside_semantic_entropy": 0.5703324808184144
+          },
+          "inside_batch_size": 1,
+          "inside_generation_seconds": 235.259019,
+          "inside_generation_seconds_ratio_to_reference": 0.5031603665201702,
+          "inside_generation_seconds_source": "measured_source_run",
+          "inside_max_new_tokens": 4,
+          "inside_samples": 3,
+          "layer": -12,
+          "limit": 20,
+          "manifold_questions": 40,
+          "max_batch_tokens": 0,
+          "max_length": 64,
+          "mean_samples_per_record": 1.4155844155844155,
+          "mean_samples_per_sampled_record": 2.831168831168831,
+          "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+          "offline": false,
+          "quality_metric": "inside_semantic_entropy",
+          "quality_tolerance": 0.02,
+          "quality_value": 0.5703324808184144,
+          "reason": "lowest_cost_within_inside_quality_tolerance",
+          "recommendation_source": "quality_balanced_recommendation",
+          "recommended_budget_id": "top_0p4",
+          "recommended_run": "adaptive_selfcheck",
+          "reference_report": "artifacts/smollm2_l20_inside_sampling/inside-sampling-profile-comparison.json",
+          "refresh_shared_caches": false,
+          "report_path": "artifacts/smollm2_l20_readiness_inside_trigger_budget_derived/../smollm2_l20_inside_trigger_budget_sweep_derived/inside-trigger-budget-sweep.json",
+          "run_names": [
+            "adaptive_selfcheck"
+          ],
+          "sample_count_ratio_to_reference": 0.47186147186147187,
+          "sampled": 77,
+          "shared_cache_dir": "artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/shared-caches",
+          "skipped_by_trigger": 77,
+          "source_score_dump": "artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/top_0p4/scores-adaptive_selfcheck.json",
+          "stop_reason_counts": {
+            "selfcheck_thresholds_unreachable": 13
+          },
+          "total_generated_samples": 218,
+          "trigger_signal": "truth_proj"
+        },
+        "layer": -12,
+        "manifest_path": "artifacts/smollm2_l20_readiness_inside_trigger_budget_derived/artifact-manifest.json",
+        "max_batch_tokens": 0,
+        "max_workers": 1,
+        "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+        "name": "smollm2-l20-readiness-inside-trigger-budget-derived",
+        "performance_status": "promote",
+        "performance_wall_clock_seconds": 162.65887685900088,
+        "prefix_kv_cache": false,
+        "quality_signals": {
+          "disp_euclid": 0.45217391304347826,
+          "disp_hse": 0.4235294117647059,
+          "eigenscore": 0.4792838874680307,
+          "maha_last": 0.5914748508098892,
+          "nll_answer": 0.4584825234441603,
+          "subspace_resid": 0.5087809036658142,
+          "truth_proj": 0.6823529411764706
+        },
+        "readiness_status": "promote",
+        "recommended_performance_cell": "layer_m12_batch_8_capture_outputs",
+        "recommended_route": "structured_qa",
+        "record_key": "benchmark_manifest:smollm2-l20-readiness-inside-trigger-budget-derived:0.8",
+        "runtime_recommendation_source": "artifacts/smollm2_l20_readiness_inside_trigger_budget_derived/../smollm2_l20_readiness_inside/cache-profile-matrix/cache-profile-matrix-report.json",
+        "runtime_recommendation_status": "promote",
+        "truth_proj_auroc": 0.6823529411764706,
+        "uncached_forced_answer_forward_seconds": 38.786261,
+        "uncached_forward_cost_seconds": 38.786261,
+        "uncached_forward_cost_source": "uncached_forced_answer_forward_seconds",
+        "uncached_total_seconds": 138.677391,
+        "verification": {
+          "checked": 7,
+          "failures": [],
+          "manifest_path": "artifacts/smollm2_l20_readiness_inside_trigger_budget_derived/artifact-manifest.json",
+          "nested": [
+            {
+              "checked": 2,
+              "failures": [],
+              "manifest_path": "artifacts/smollm2_l20_readiness_inside_trigger_budget_derived/../smollm2_l20_readiness_inside/cache-profile-matrix/artifact-manifest.json",
+              "nested": [
+                {
+                  "checked": 11,
+                  "failures": [],
+                  "manifest_path": "artifacts/smollm2_l20_readiness_inside_trigger_budget_derived/../smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/artifact-manifest.json",
+                  "nested": [],
+                  "passed": true
+                }
+              ],
+              "passed": true
+            }
+          ],
+          "passed": true
+        },
+        "version": "0.8",
+        "wall_clock_seconds": 0.04928272299002856
+      }
+    ],
+    "notes": [
+      "release candidate readiness comparison"
+    ],
+    "registry": "artifacts/local-readiness-registry.json",
+    "schema_version": 1,
+    "summary": {
+      "passing_count": 1,
+      "recommended_record": "benchmark_manifest:smollm2-l20-readiness-inside-trigger-budget-derived:0.8",
+      "record_count": 1
+    },
+    "workflow": "readiness_baseline_comparison"
+  },
+  "release_candidate": {
+    "manifests": {
+      "readiness_manifest": "artifacts/smollm2_l20_readiness_inside_trigger_budget_derived/artifact-manifest.json",
+      "route_manifest": "artifacts/truthfulqa_l80_structured_qa_staged_adapter_promotion_manifest.json"
+    },
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "quality": {
+      "best_quality_signal": {
+        "auroc": 0.6823529411764706,
+        "name": "truth_proj"
+      },
+      "quality_signals": {
+        "disp_euclid": 0.45217391304347826,
+        "disp_hse": 0.4235294117647059,
+        "eigenscore": 0.4792838874680307,
+        "maha_last": 0.5914748508098892,
+        "nll_answer": 0.4584825234441603,
+        "subspace_resid": 0.5087809036658142,
+        "truth_proj": 0.6823529411764706
+      },
+      "truth_proj_auroc": 0.6823529411764706
+    },
+    "readiness_record": "benchmark_manifest:smollm2-l20-readiness-inside-trigger-budget-derived:0.8",
+    "route_record": "benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4",
+    "runtime": {
+      "batch_size": 8,
+      "benchmark_flags": {
+        "eval_truthfulqa": [
+          "--layer",
+          "-12",
+          "--batch-size",
+          "8",
+          "--hidden-state-capture",
+          "outputs",
+          "--length-bucketed-batches",
+          "--inside-samples",
+          "3",
+          "--inside-batch-size",
+          "1",
+          "--inside-max-new-tokens",
+          "4",
+          "--inside-pooling",
+          "last",
+          "--inside-adaptive-sampling",
+          "--inside-selfcheck-early-stop",
+          "--inside-trigger-signal",
+          "truth_proj",
+          "--inside-trigger-top-fraction",
+          "0.4"
+        ],
+        "run_adapter_readiness_workflow": [
+          "--layers",
+          "-12",
+          "--batch-sizes",
+          "8",
+          "--hidden-state-captures",
+          "outputs",
+          "--max-workers",
+          "1"
+        ],
+        "run_cache_profile_matrix": [
+          "--layers",
+          "-12",
+          "--batch-sizes",
+          "8",
+          "--hidden-state-captures",
+          "outputs",
+          "--max-workers",
+          "1"
+        ],
+        "run_inside_sampling_profile": [
+          "--inside-samples",
+          "3",
+          "--inside-batch-size",
+          "1",
+          "--inside-max-new-tokens",
+          "4",
+          "--inside-pooling",
+          "last",
+          "--inside-trigger-signal",
+          "truth_proj",
+          "--inside-trigger-top-fraction",
+          "0.4",
+          "--runs",
+          "adaptive_selfcheck"
+        ],
+        "run_inside_trigger_budget_sweep": [
+          "--trigger-signal",
+          "truth_proj",
+          "--top-fractions",
+          "0.1,0.25,0.4",
+          "--reference-report",
+          "artifacts/smollm2_l20_inside_sampling/inside-sampling-profile-comparison.json",
+          "--model",
+          "HuggingFaceTB/SmolLM2-135M-Instruct",
+          "--dtype",
+          "float32",
+          "--layer",
+          "-12",
+          "--limit",
+          "20",
+          "--manifold-questions",
+          "40",
+          "--batch-size",
+          "8",
+          "--max-batch-tokens",
+          "0",
+          "--max-length",
+          "64",
+          "--hidden-state-capture",
+          "outputs",
+          "--real-truthfulqa",
+          "--inside-samples",
+          "3",
+          "--inside-batch-size",
+          "1",
+          "--inside-max-new-tokens",
+          "4",
+          "--runs",
+          "adaptive_selfcheck",
+          "--shared-cache-dir",
+          "artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/shared-caches",
+          "--eval-reps-cache-shard-size",
+          "8",
+          "--derive-from-max-budget"
+        ]
+      },
+      "hidden_state_capture": "outputs",
+      "inside_sampling": {
+        "adaptive": true,
+        "derive_from_max_budget": true,
+        "derived_source_budget_id": "top_0p4",
+        "inside_batch_size": 1,
+        "inside_generation_seconds": 235.259019,
+        "inside_generation_seconds_ratio_to_reference": 0.5031603665201702,
+        "inside_generation_seconds_source": "measured_source_run",
+        "inside_max_new_tokens": 4,
+        "inside_pooling": "last",
+        "inside_samples": 3,
+        "inside_trigger_budget_id": "top_0p4",
+        "inside_trigger_budget_source": "inside_trigger_budget_sweep",
+        "inside_trigger_signal": "truth_proj",
+        "inside_trigger_top_fraction": 0.4,
+        "mode": "triggered",
+        "recommended_run": "adaptive_selfcheck",
+        "sample_count_ratio_to_reference": 0.47186147186147187,
+        "selfcheck_early_stop": true,
+        "stop_reason_counts": {
+          "selfcheck_thresholds_unreachable": 13
+        },
+        "total_generated_samples": 218
+      },
+      "inside_trigger_budget_sweep": {
+        "batch_size": 8,
+        "best_quality_value": 0.5703324808184144,
+        "budget_kind": "top_fraction",
+        "budget_value": 0.4,
+        "budgets": [
+          {
+            "id": "top_0p1",
+            "kind": "top_fraction",
+            "value": 0.1
+          },
+          {
+            "id": "top_0p25",
+            "kind": "top_fraction",
+            "value": 0.25
+          },
+          {
+            "id": "top_0p4",
+            "kind": "top_fraction",
+            "value": 0.4
+          }
+        ],
+        "cost_metric": "inside_generation_seconds_ratio_to_reference",
+        "cost_value": 0.5031603665201702,
+        "derive_from_max_budget": true,
+        "derived_source_budget_id": "top_0p4",
+        "derived_source_score_dump": "artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/top_0p4/scores-adaptive_selfcheck.json",
+        "dtype": "float32",
+        "eval_reps_cache_shard_size": 8,
+        "hidden_state_capture": "outputs",
+        "inside_auroc": {
+          "inside_eigenscore": 0.4782608695652174,
+          "inside_embedding_entropy": 0.5670076726342711,
+          "inside_semantic_entropy": 0.5703324808184144
+        },
+        "inside_batch_size": 1,
+        "inside_generation_seconds": 235.259019,
+        "inside_generation_seconds_ratio_to_reference": 0.5031603665201702,
+        "inside_generation_seconds_source": "measured_source_run",
+        "inside_max_new_tokens": 4,
+        "inside_samples": 3,
+        "layer": -12,
+        "limit": 20,
+        "manifold_questions": 40,
+        "max_batch_tokens": 0,
+        "max_length": 64,
+        "mean_samples_per_record": 1.4155844155844155,
+        "mean_samples_per_sampled_record": 2.831168831168831,
+        "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+        "offline": false,
+        "quality_metric": "inside_semantic_entropy",
+        "quality_tolerance": 0.02,
+        "quality_value": 0.5703324808184144,
+        "reason": "lowest_cost_within_inside_quality_tolerance",
+        "recommendation_source": "quality_balanced_recommendation",
+        "recommended_budget_id": "top_0p4",
+        "recommended_run": "adaptive_selfcheck",
+        "reference_report": "artifacts/smollm2_l20_inside_sampling/inside-sampling-profile-comparison.json",
+        "refresh_shared_caches": false,
+        "report_path": "artifacts/smollm2_l20_readiness_inside_trigger_budget_derived/../smollm2_l20_inside_trigger_budget_sweep_derived/inside-trigger-budget-sweep.json",
+        "run_names": [
+          "adaptive_selfcheck"
+        ],
+        "sample_count_ratio_to_reference": 0.47186147186147187,
+        "sampled": 77,
+        "shared_cache_dir": "artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/shared-caches",
+        "skipped_by_trigger": 77,
+        "source_score_dump": "artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/top_0p4/scores-adaptive_selfcheck.json",
+        "stop_reason_counts": {
+          "selfcheck_thresholds_unreachable": 13
+        },
+        "total_generated_samples": 218,
+        "trigger_signal": "truth_proj"
+      },
+      "layer": -12,
+      "max_batch_tokens": 0,
+      "max_workers": 1,
+      "performance_cell": "layer_m12_batch_8_capture_outputs",
+      "prefix_kv_cache": false
+    },
+    "runtime_cost": {
+      "cache_only_total_seconds": 0.339105,
+      "inside_generation_seconds": 235.259019,
+      "inside_generation_seconds_ratio_for_gate": 0.5031603665201702,
+      "inside_generation_seconds_ratio_source": "inside_generation_seconds_ratio_to_reference",
+      "inside_generation_seconds_ratio_to_baseline": null,
+      "inside_generation_seconds_ratio_to_reference": 0.5031603665201702,
+      "inside_sampling_recommended_run": "adaptive_selfcheck",
+      "inside_sampling_sample_count_ratio_for_gate": 0.47186147186147187,
+      "inside_sampling_sample_count_ratio_source": "sample_count_ratio_to_reference",
+      "inside_sampling_sample_count_ratio_to_baseline": null,
+      "inside_sampling_sample_count_ratio_to_reference": 0.47186147186147187,
+      "inside_sampling_stop_reason_counts": {
+        "selfcheck_thresholds_unreachable": 13
+      },
+      "inside_sampling_total_generated_samples": 218,
+      "inside_trigger_budget_derive_from_max_budget": true,
+      "inside_trigger_budget_id": "top_0p4",
+      "uncached_forward_cost_seconds": 38.786261,
+      "uncached_forward_cost_source": "uncached_forced_answer_forward_seconds"
+    },
+    "verifier_route": {
+      "claims_cache_hit_rate": null,
+      "decision_accuracy": 1.0,
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "max_duration_seconds": 0.0007935770554468036,
+      "mean_attempted_route_count": 1.0,
+      "mean_duration_seconds": 0.00010692605227675466,
+      "p99_duration_seconds": 0.0001987196248956039,
+      "retrieval_use_rate": 0.0,
+      "route": "structured_qa",
+      "runtime_retrieval_hit_count": null,
+      "runtime_total_seconds": null,
+      "selected": 210,
+      "verified_detection": 1.0,
+      "verified_false_alarm": 0.0,
+      "verifier_trace_cache_hit_rate": null
+    }
+  },
+  "route_baseline_comparison": {
+    "config": {
+      "allow_unverified": false,
+      "baseline_keys": [
+        "benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4"
+      ],
+      "max_false_supported_rate": 0.02,
+      "max_max_duration_seconds": null,
+      "max_mean_attempted_route_count": 1.1,
+      "max_mean_duration_seconds": null,
+      "max_p99_duration_seconds": 0.01,
+      "max_retrieval_hit_count": null,
+      "max_retrieval_use_rate": 0.0,
+      "max_runtime_total_seconds": null,
+      "max_verified_false_alarm": 0.02,
+      "min_claims_cache_hit_rate": null,
+      "min_decision_accuracy": 0.95,
+      "min_false_refuted_rate": 0.9,
+      "min_selected": 80,
+      "min_verified_detection": 0.2,
+      "min_verifier_trace_cache_hit_rate": null,
+      "recursive": true
+    },
+    "decision": {
+      "blocking_reasons": [],
+      "recommended_record": "benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4",
+      "recommended_route": "structured_qa",
+      "status": "promote"
+    },
+    "leaderboard": [
+      {
+        "claims_cache_hit_rate": null,
+        "decision_accuracy": 1.0,
+        "false_refuted_rate": 1.0,
+        "false_supported_rate": 0.0,
+        "gate": {
+          "blocking_reasons": [],
+          "passed": true
+        },
+        "invalid_metric_counts": {},
+        "manifest_path": "artifacts/truthfulqa_l80_structured_qa_staged_adapter_promotion_manifest.json",
+        "max_duration_seconds": 0.0007935770554468036,
+        "mean_attempted_route_count": 1.0,
+        "mean_duration_seconds": 0.00010692605227675466,
+        "name": "truthfulqa-l80-structured-qa-staged-route",
+        "p95_duration_seconds": 0.00012811180204153058,
+        "p99_duration_seconds": 0.0001987196248956039,
+        "recommended_route": "structured_qa",
+        "record_key": "benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4",
+        "retrieval_use_rate": 0.0,
+        "route_promotion_status": "promote",
+        "route_report_path": "artifacts/truthfulqa_l80_structured_qa_staged_registry_route_comparison.json",
+        "runtime_budget": {
+          "checks": [],
+          "enabled": false,
+          "failures": [],
+          "metrics": {
+            "cache_hit_rate": null,
+            "claims_cache_hit_rate": null,
+            "retrieval_hit_count": null,
+            "total_seconds": null,
+            "verifier_trace_cache_hit_rate": null
+          },
+          "passed": true,
+          "policy": {
+            "max_retrieval_hit_count": null,
+            "max_total_seconds": null,
+            "min_cache_hit_rate": null,
+            "min_claims_cache_hit_rate": null,
+            "min_verifier_trace_cache_hit_rate": null
+          }
+        },
+        "runtime_retrieval_hit_count": null,
+        "runtime_total_seconds": null,
+        "selected": 210,
+        "verification": {
+          "checked": 2,
+          "failures": [],
+          "manifest_path": "artifacts/truthfulqa_l80_structured_qa_staged_adapter_promotion_manifest.json",
+          "nested": [],
+          "passed": true
+        },
+        "verified_detection": 1.0,
+        "verified_false_alarm": 0.0,
+        "verifier_trace_cache_hit_rate": null,
+        "version": "0.4"
+      }
+    ],
+    "notes": [
+      "release candidate route comparison"
+    ],
+    "registry": "artifacts/staged-route-registry.json",
+    "schema_version": 1,
+    "summary": {
+      "passing_count": 1,
+      "recommended_record": "benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4",
+      "recommended_route": "structured_qa",
+      "record_count": 1
+    },
+    "workflow": "route_baseline_comparison"
+  },
+  "schema_version": 1,
+  "workflow": "release_candidate_comparison"
+}

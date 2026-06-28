@@ -1,0 +1,79 @@
+{
+  "artifacts": {
+    "fact_corpus.1.wikidata-country-core-facts-source": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../wikidata-country-core-facts-external-corpus/wikidata-country-core-facts-source.jsonl",
+      "sha256": "4e542340473cf9582b85a86c59284852e3a5fb5650e9248a77b5c2e2464d7cd3",
+      "size_bytes": 388639
+    },
+    "patterns": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "triple-extraction-regex-patterns.json",
+      "sha256": "f23c26639c3529f2172ed780577dac8ae55536439e2a6d5032d552e4f5b2fc76",
+      "size_bytes": 4780
+    },
+    "records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "triple-extraction-records.json",
+      "sha256": "87d19b4f4926c4a5efd226d6fb22b494f3a0f31b5ec74055d0f15a3b34e2e951",
+      "size_bytes": 2595426
+    },
+    "report.composite": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "composite-triple-extraction-report.json",
+      "sha256": "972173f8662b79c5c2219ef0ad8fd4d9ed3ef4a848905df732b7a06d13af281a",
+      "size_bytes": 590
+    },
+    "report.regex_rule_based": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "regex_rule_based-triple-extraction-report.json",
+      "sha256": "1576ff73e02789d90a9035c400aab97c973e39c0a2836700cab01c6d71cd5129",
+      "size_bytes": 597
+    },
+    "report.rule_based": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "rule_based-triple-extraction-report.json",
+      "sha256": "4c0428c2c8c6cdec06025ca352fccb92adaaaf7a629545e610aa67eaf9d8ae82",
+      "size_bytes": 24420
+    },
+    "workflow_summary": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "triple-extraction-workflow-summary.json",
+      "sha256": "143d1b938606d67d3b12efeeba1208370c6c653cef5318bcb54a8c73854ed0db",
+      "size_bytes": 52400
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "baseline_f1": 0.75,
+    "best_extractor": "regex_rule_based",
+    "best_f1": 1.0,
+    "f1_lift": 0.25,
+    "n_records": 1436,
+    "pattern_count": 15,
+    "promotes_augmented_extractor": true,
+    "status": "promote",
+    "workflow": "triple_extraction_fixture_workflow"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 7,
+    "directory_count": 0,
+    "file_count": 7,
+    "missing_count": 0
+  }
+}

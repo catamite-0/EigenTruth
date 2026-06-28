@@ -1,0 +1,941 @@
+{
+  "config": {
+    "scores": "artifacts/truthfulqa-frontier-covariance-gate-l80/smollm2-l80-low_rank_16/scores.manifest.json",
+    "signal": "maha_last",
+    "score_dump": {
+      "path": "artifacts/truthfulqa-frontier-covariance-gate-l80/smollm2-l80-low_rank_16/scores.manifest.json",
+      "exists": true,
+      "kind": "file",
+      "sha256": "3004577b329fc40604e8c5ffd127a25cd1a7b2ae60193d1565f3bad5ae648549",
+      "size_bytes": 3258,
+      "source_format": "eigentruth.score_dump.jsonl",
+      "records": {
+        "path": "artifacts/truthfulqa-frontier-covariance-gate-l80/smollm2-l80-low_rank_16/scores.manifest.records.jsonl",
+        "exists": true,
+        "kind": "file",
+        "sha256": "eb5deda405579e044ca318472c2cdd77afc383c7829789be58ef832d33e1fd58",
+        "size_bytes": 856710
+      },
+      "identity": {
+        "schema_version": 1,
+        "source_format": "eigentruth.score_dump.jsonl",
+        "model_id": "HuggingFaceTB/SmolLM2-135M-Instruct",
+        "dataset_id": "truthfulqa",
+        "target_layer": -12,
+        "n_total": 556,
+        "primary_score_names": [
+          "disp_euclid",
+          "disp_hse",
+          "eigenscore",
+          "maha_last",
+          "nll_answer",
+          "resid_update_norm",
+          "subspace_resid",
+          "truth_proj"
+        ],
+        "sweep_score_names": {
+          "-16": [
+            "eigenscore",
+            "maha_last",
+            "resid_update_norm",
+            "subspace_resid",
+            "truth_proj"
+          ],
+          "-14": [
+            "eigenscore",
+            "maha_last",
+            "resid_update_norm",
+            "subspace_resid",
+            "truth_proj"
+          ],
+          "-12": [
+            "eigenscore",
+            "maha_last",
+            "resid_update_norm",
+            "subspace_resid",
+            "truth_proj"
+          ],
+          "-10": [
+            "eigenscore",
+            "maha_last",
+            "resid_update_norm",
+            "subspace_resid",
+            "truth_proj"
+          ],
+          "-8": [
+            "eigenscore",
+            "maha_last",
+            "resid_update_norm",
+            "subspace_resid",
+            "truth_proj"
+          ]
+        },
+        "scoring_config_hash": "593b00804472e5abf16c945794aeae5c16ede2b15cf2fba416a3a7b78143a8fe",
+        "score_schema_hash": "40f115f972ed54e982cd2aa006f87b8a64002bbece8a5933155a8340c89d7955",
+        "content_hash": "3004577b329fc40604e8c5ffd127a25cd1a7b2ae60193d1565f3bad5ae648549",
+        "records_hash": "eb5deda405579e044ca318472c2cdd77afc383c7829789be58ef832d33e1fd58",
+        "cache_key": "score-dump-identity-v1:9bc0314d573651d90ccbdf1836ad06167221ca20ef8739e02ecdef6bbbf36ebf"
+      },
+      "summary": {
+        "n_total": 556,
+        "n_true": 250,
+        "n_false": 306,
+        "score_count": 8,
+        "score_names": [
+          "maha_last",
+          "truth_proj",
+          "subspace_resid",
+          "resid_update_norm",
+          "disp_euclid",
+          "disp_hse",
+          "eigenscore",
+          "nll_answer"
+        ],
+        "sweep_layer_count": 5,
+        "sweep_layers": [
+          "-16",
+          "-14",
+          "-12",
+          "-10",
+          "-8"
+        ],
+        "sweep_score_count": 25,
+        "sweep_score_names": [
+          "eigenscore",
+          "maha_last",
+          "resid_update_norm",
+          "subspace_resid",
+          "truth_proj"
+        ],
+        "all_signal_names": [
+          "disp_euclid",
+          "disp_hse",
+          "eigenscore",
+          "maha_last",
+          "nll_answer",
+          "resid_update_norm",
+          "subspace_resid",
+          "truth_proj"
+        ],
+        "has_statements": true,
+        "statement_count": 556,
+        "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+        "layer": -12
+      }
+    },
+    "direction": "higher",
+    "repeats": 20,
+    "seed": 0,
+    "n_true": 250,
+    "n_false": 306,
+    "confidence_audit": {
+      "enabled": true,
+      "confidence_signal": "nll_answer",
+      "confidence_direction": "lower",
+      "confidence_top_fraction": 0.25
+    }
+  },
+  "results": {
+    "0.05": {
+      "false_alarm": 0.04880000000000001,
+      "coverage": 0.9512,
+      "detection": 0.06633986928104575,
+      "pass": true,
+      "conservative": false,
+      "threshold": 68.02572631835938,
+      "selective_report": {
+        "threshold": 68.02572631835938,
+        "direction": "higher",
+        "n_total": 556,
+        "n_true": 250,
+        "n_false": 306,
+        "n_flagged": 31,
+        "n_accepted": 525,
+        "coverage": 0.9442446043165468,
+        "coverage_ci": {
+          "estimate": 0.9442446043165468,
+          "lower": 0.9251722466463621,
+          "upper": 0.9633169619867314,
+          "successes": 525,
+          "total": 556
+        },
+        "selective_accuracy": 0.4552380952380952,
+        "selective_accuracy_ci": {
+          "estimate": 0.4552380952380952,
+          "lower": 0.4126391267233704,
+          "upper": 0.49783706375282005,
+          "successes": 239,
+          "total": 525
+        },
+        "accuracy": 0.4658273381294964,
+        "accuracy_ci": {
+          "estimate": 0.4658273381294964,
+          "lower": 0.4243632622414999,
+          "upper": 0.5072914140174929,
+          "successes": 259,
+          "total": 556
+        },
+        "detection": 0.06535947712418301,
+        "detection_ci": {
+          "estimate": 0.06535947712418301,
+          "lower": 0.037666353396933194,
+          "upper": 0.09305260085143283,
+          "successes": 20,
+          "total": 306
+        },
+        "false_alarm": 0.044,
+        "false_alarm_ci": {
+          "estimate": 0.044,
+          "lower": 0.018576148018052022,
+          "upper": 0.06942385198194798,
+          "successes": 11,
+          "total": 250
+        }
+      },
+      "confidence_error_report": {
+        "anomaly_threshold": 68.02572631835938,
+        "anomaly_direction": "higher",
+        "confidence_direction": "lower",
+        "confidence_top_fraction": 0.25,
+        "confidence_threshold": 1.774985671043396,
+        "n_total": 556,
+        "n_high_confidence": 139,
+        "n_low_confidence": 417,
+        "n_high_confidence_true": 41,
+        "n_high_confidence_false": 98,
+        "n_low_confidence_true": 209,
+        "n_low_confidence_false": 208,
+        "high_confidence_false_rate": {
+          "estimate": 0.7050359712230215,
+          "lower": 0.6292238170400648,
+          "upper": 0.7808481254059783,
+          "successes": 98,
+          "total": 139
+        },
+        "n_high_confidence_accepted": 128,
+        "n_high_confidence_accepted_true": 39,
+        "n_high_confidence_accepted_false": 89,
+        "high_confidence_accepted_false_rate": {
+          "estimate": 0.6953125,
+          "lower": 0.6155739335270924,
+          "upper": 0.7750510664729076,
+          "successes": 89,
+          "total": 128
+        },
+        "high_confidence_accepted_selective_accuracy": {
+          "estimate": 0.3046875,
+          "lower": 0.22494893352709244,
+          "upper": 0.38442606647290756,
+          "successes": 39,
+          "total": 128
+        },
+        "n_high_confidence_flagged": 11,
+        "n_high_confidence_flagged_false": 9,
+        "high_confidence_false_capture_rate": {
+          "estimate": 0.09183673469387756,
+          "lower": 0.03465817441905041,
+          "upper": 0.1490152949687047,
+          "successes": 9,
+          "total": 98
+        },
+        "high_confidence_false_miss_rate": {
+          "estimate": 0.9081632653061225,
+          "lower": 0.8509847050312953,
+          "upper": 0.9653418255809496,
+          "successes": 89,
+          "total": 98
+        }
+      }
+    },
+    "0.1": {
+      "false_alarm": 0.09440000000000003,
+      "coverage": 0.9056,
+      "detection": 0.10375816993464053,
+      "pass": true,
+      "conservative": false,
+      "threshold": 65.62503814697266,
+      "selective_report": {
+        "threshold": 65.62503814697266,
+        "direction": "higher",
+        "n_total": 556,
+        "n_true": 250,
+        "n_false": 306,
+        "n_flagged": 56,
+        "n_accepted": 500,
+        "coverage": 0.8992805755395683,
+        "coverage_ci": {
+          "estimate": 0.8992805755395683,
+          "lower": 0.8742642857207297,
+          "upper": 0.9242968653584069,
+          "successes": 500,
+          "total": 556
+        },
+        "selective_accuracy": 0.452,
+        "selective_accuracy_ci": {
+          "estimate": 0.452,
+          "lower": 0.4083754896050397,
+          "upper": 0.4956245103949603,
+          "successes": 226,
+          "total": 500
+        },
+        "accuracy": 0.46402877697841727,
+        "accuracy_ci": {
+          "estimate": 0.46402877697841727,
+          "lower": 0.42257521357679745,
+          "upper": 0.5054823403800371,
+          "successes": 258,
+          "total": 556
+        },
+        "detection": 0.10457516339869281,
+        "detection_ci": {
+          "estimate": 0.10457516339869281,
+          "lower": 0.07028858065844107,
+          "upper": 0.13886174613894456,
+          "successes": 32,
+          "total": 306
+        },
+        "false_alarm": 0.096,
+        "false_alarm_ci": {
+          "estimate": 0.096,
+          "lower": 0.05948209127564942,
+          "upper": 0.1325179087243506,
+          "successes": 24,
+          "total": 250
+        }
+      },
+      "confidence_error_report": {
+        "anomaly_threshold": 65.62503814697266,
+        "anomaly_direction": "higher",
+        "confidence_direction": "lower",
+        "confidence_top_fraction": 0.25,
+        "confidence_threshold": 1.774985671043396,
+        "n_total": 556,
+        "n_high_confidence": 139,
+        "n_low_confidence": 417,
+        "n_high_confidence_true": 41,
+        "n_high_confidence_false": 98,
+        "n_low_confidence_true": 209,
+        "n_low_confidence_false": 208,
+        "high_confidence_false_rate": {
+          "estimate": 0.7050359712230215,
+          "lower": 0.6292238170400648,
+          "upper": 0.7808481254059783,
+          "successes": 98,
+          "total": 139
+        },
+        "n_high_confidence_accepted": 123,
+        "n_high_confidence_accepted_true": 38,
+        "n_high_confidence_accepted_false": 85,
+        "high_confidence_accepted_false_rate": {
+          "estimate": 0.6910569105691057,
+          "lower": 0.6093987363533704,
+          "upper": 0.772715084784841,
+          "successes": 85,
+          "total": 123
+        },
+        "high_confidence_accepted_selective_accuracy": {
+          "estimate": 0.3089430894308943,
+          "lower": 0.22728491521515906,
+          "upper": 0.3906012636466296,
+          "successes": 38,
+          "total": 123
+        },
+        "n_high_confidence_flagged": 16,
+        "n_high_confidence_flagged_false": 13,
+        "high_confidence_false_capture_rate": {
+          "estimate": 0.1326530612244898,
+          "lower": 0.06549500823281461,
+          "upper": 0.199811114216165,
+          "successes": 13,
+          "total": 98
+        },
+        "high_confidence_false_miss_rate": {
+          "estimate": 0.8673469387755102,
+          "lower": 0.800188885783835,
+          "upper": 0.9345049917671854,
+          "successes": 85,
+          "total": 98
+        }
+      }
+    },
+    "0.2": {
+      "false_alarm": 0.19760000000000005,
+      "coverage": 0.8024,
+      "detection": 0.23316993464052288,
+      "pass": true,
+      "conservative": false,
+      "threshold": 61.23771667480469,
+      "selective_report": {
+        "threshold": 61.23771667480469,
+        "direction": "higher",
+        "n_total": 556,
+        "n_true": 250,
+        "n_false": 306,
+        "n_flagged": 127,
+        "n_accepted": 429,
+        "coverage": 0.7715827338129496,
+        "coverage_ci": {
+          "estimate": 0.7715827338129496,
+          "lower": 0.7366868348687327,
+          "upper": 0.8064786327571666,
+          "successes": 429,
+          "total": 556
+        },
+        "selective_accuracy": 0.46853146853146854,
+        "selective_accuracy_ci": {
+          "estimate": 0.46853146853146854,
+          "lower": 0.4213104244535253,
+          "upper": 0.5157525126094118,
+          "successes": 201,
+          "total": 429
+        },
+        "accuracy": 0.5017985611510791,
+        "accuracy_ci": {
+          "estimate": 0.5017985611510791,
+          "lower": 0.46023757248418873,
+          "upper": 0.5433595498179695,
+          "successes": 279,
+          "total": 556
+        },
+        "detection": 0.2549019607843137,
+        "detection_ci": {
+          "estimate": 0.2549019607843137,
+          "lower": 0.20607174353699048,
+          "upper": 0.30373217803163693,
+          "successes": 78,
+          "total": 306
+        },
+        "false_alarm": 0.196,
+        "false_alarm_ci": {
+          "estimate": 0.196,
+          "lower": 0.14679127335929126,
+          "upper": 0.24520872664070875,
+          "successes": 49,
+          "total": 250
+        }
+      },
+      "confidence_error_report": {
+        "anomaly_threshold": 61.23771667480469,
+        "anomaly_direction": "higher",
+        "confidence_direction": "lower",
+        "confidence_top_fraction": 0.25,
+        "confidence_threshold": 1.774985671043396,
+        "n_total": 556,
+        "n_high_confidence": 139,
+        "n_low_confidence": 417,
+        "n_high_confidence_true": 41,
+        "n_high_confidence_false": 98,
+        "n_low_confidence_true": 209,
+        "n_low_confidence_false": 208,
+        "high_confidence_false_rate": {
+          "estimate": 0.7050359712230215,
+          "lower": 0.6292238170400648,
+          "upper": 0.7808481254059783,
+          "successes": 98,
+          "total": 139
+        },
+        "n_high_confidence_accepted": 96,
+        "n_high_confidence_accepted_true": 34,
+        "n_high_confidence_accepted_false": 62,
+        "high_confidence_accepted_false_rate": {
+          "estimate": 0.6458333333333334,
+          "lower": 0.5501614055477823,
+          "upper": 0.7415052611188845,
+          "successes": 62,
+          "total": 96
+        },
+        "high_confidence_accepted_selective_accuracy": {
+          "estimate": 0.3541666666666667,
+          "lower": 0.2584947388811156,
+          "upper": 0.44983859445221774,
+          "successes": 34,
+          "total": 96
+        },
+        "n_high_confidence_flagged": 43,
+        "n_high_confidence_flagged_false": 36,
+        "high_confidence_false_capture_rate": {
+          "estimate": 0.3673469387755102,
+          "lower": 0.2718995496984241,
+          "upper": 0.46279432785259633,
+          "successes": 36,
+          "total": 98
+        },
+        "high_confidence_false_miss_rate": {
+          "estimate": 0.6326530612244898,
+          "lower": 0.5372056721474038,
+          "upper": 0.7281004503015759,
+          "successes": 62,
+          "total": 98
+        }
+      }
+    }
+  },
+  "component_verdicts": {
+    "base_conformal": "ACCEPT"
+  },
+  "verdict": "ACCEPT",
+  "sweep_report": {
+    "schema_version": 1,
+    "model_id": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "model_revision": null,
+    "conformal_alpha": 0.1,
+    "best_by": "auroc",
+    "best": {
+      "layer": -16,
+      "score_name": "truth_proj",
+      "direction": "higher",
+      "threshold": 1.1314302682876587,
+      "conformal_alpha": 0.1,
+      "auroc": 0.7819869281045752,
+      "false_alarm": 0.096,
+      "detection": 0.2647058823529412,
+      "n_true": 250,
+      "n_false": 306
+    },
+    "layers": [
+      {
+        "layer": -16,
+        "scores": [
+          {
+            "layer": -16,
+            "score_name": "eigenscore",
+            "direction": "higher",
+            "threshold": 7.975144386291504,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5325620915032679,
+            "false_alarm": 0.096,
+            "detection": 0.12091503267973856,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -16,
+            "score_name": "maha_last",
+            "direction": "higher",
+            "threshold": 64.24928283691406,
+            "conformal_alpha": 0.1,
+            "auroc": 0.6264183006535947,
+            "false_alarm": 0.096,
+            "detection": 0.13725490196078433,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -16,
+            "score_name": "resid_update_norm",
+            "direction": "higher",
+            "threshold": 1.9936669667561848,
+            "conformal_alpha": 0.1,
+            "auroc": 0.46279738562091505,
+            "false_alarm": 0.096,
+            "detection": 0.016339869281045753,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -16,
+            "score_name": "subspace_resid",
+            "direction": "higher",
+            "threshold": 44.590667724609375,
+            "conformal_alpha": 0.1,
+            "auroc": 0.6098431372549019,
+            "false_alarm": 0.096,
+            "detection": 0.19281045751633988,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -16,
+            "score_name": "truth_proj",
+            "direction": "higher",
+            "threshold": 1.1314302682876587,
+            "conformal_alpha": 0.1,
+            "auroc": 0.7819869281045752,
+            "false_alarm": 0.096,
+            "detection": 0.2647058823529412,
+            "n_true": 250,
+            "n_false": 306
+          }
+        ]
+      },
+      {
+        "layer": -14,
+        "scores": [
+          {
+            "layer": -14,
+            "score_name": "eigenscore",
+            "direction": "higher",
+            "threshold": 8.24104118347168,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5175555555555555,
+            "false_alarm": 0.096,
+            "detection": 0.08496732026143791,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -14,
+            "score_name": "maha_last",
+            "direction": "higher",
+            "threshold": 68.05599212646484,
+            "conformal_alpha": 0.1,
+            "auroc": 0.6024575163398693,
+            "false_alarm": 0.096,
+            "detection": 0.13398692810457516,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -14,
+            "score_name": "resid_update_norm",
+            "direction": "higher",
+            "threshold": 1.968321959177653,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5307712418300654,
+            "false_alarm": 0.096,
+            "detection": 0.0718954248366013,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -14,
+            "score_name": "subspace_resid",
+            "direction": "higher",
+            "threshold": 61.50415802001953,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5907581699346405,
+            "false_alarm": 0.096,
+            "detection": 0.1568627450980392,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -14,
+            "score_name": "truth_proj",
+            "direction": "higher",
+            "threshold": 21.10919189453125,
+            "conformal_alpha": 0.1,
+            "auroc": 0.7549150326797386,
+            "false_alarm": 0.096,
+            "detection": 0.238562091503268,
+            "n_true": 250,
+            "n_false": 306
+          }
+        ]
+      },
+      {
+        "layer": -12,
+        "scores": [
+          {
+            "layer": -12,
+            "score_name": "eigenscore",
+            "direction": "higher",
+            "threshold": 8.440770149230957,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5383398692810457,
+            "false_alarm": 0.096,
+            "detection": 0.08496732026143791,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -12,
+            "score_name": "maha_last",
+            "direction": "higher",
+            "threshold": 65.62503814697266,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5885098039215686,
+            "false_alarm": 0.096,
+            "detection": 0.10457516339869281,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -12,
+            "score_name": "resid_update_norm",
+            "direction": "higher",
+            "threshold": 2.3132429122924805,
+            "conformal_alpha": 0.1,
+            "auroc": 0.47984313725490196,
+            "false_alarm": 0.096,
+            "detection": 0.10784313725490197,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -12,
+            "score_name": "subspace_resid",
+            "direction": "higher",
+            "threshold": 66.94373321533203,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5685359477124183,
+            "false_alarm": 0.096,
+            "detection": 0.12091503267973856,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -12,
+            "score_name": "truth_proj",
+            "direction": "higher",
+            "threshold": 10.911060333251953,
+            "conformal_alpha": 0.1,
+            "auroc": 0.739764705882353,
+            "false_alarm": 0.096,
+            "detection": 0.23202614379084968,
+            "n_true": 250,
+            "n_false": 306
+          }
+        ]
+      },
+      {
+        "layer": -10,
+        "scores": [
+          {
+            "layer": -10,
+            "score_name": "eigenscore",
+            "direction": "higher",
+            "threshold": 8.765886306762695,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5171764705882353,
+            "false_alarm": 0.096,
+            "detection": 0.11764705882352941,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -10,
+            "score_name": "maha_last",
+            "direction": "higher",
+            "threshold": 64.5185317993164,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5954509803921568,
+            "false_alarm": 0.096,
+            "detection": 0.1111111111111111,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -10,
+            "score_name": "resid_update_norm",
+            "direction": "higher",
+            "threshold": 3.3497241338094077,
+            "conformal_alpha": 0.1,
+            "auroc": 0.4923137254901961,
+            "false_alarm": 0.096,
+            "detection": 0.0915032679738562,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -10,
+            "score_name": "subspace_resid",
+            "direction": "higher",
+            "threshold": 87.64720916748047,
+            "conformal_alpha": 0.1,
+            "auroc": 0.559124183006536,
+            "false_alarm": 0.096,
+            "detection": 0.10784313725490197,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -10,
+            "score_name": "truth_proj",
+            "direction": "higher",
+            "threshold": 7.50254487991333,
+            "conformal_alpha": 0.1,
+            "auroc": 0.7306274509803922,
+            "false_alarm": 0.096,
+            "detection": 0.1830065359477124,
+            "n_true": 250,
+            "n_false": 306
+          }
+        ]
+      },
+      {
+        "layer": -8,
+        "scores": [
+          {
+            "layer": -8,
+            "score_name": "eigenscore",
+            "direction": "higher",
+            "threshold": 9.246602058410645,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5272549019607843,
+            "false_alarm": 0.096,
+            "detection": 0.11437908496732026,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -8,
+            "score_name": "maha_last",
+            "direction": "higher",
+            "threshold": 63.299537658691406,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5415947712418301,
+            "false_alarm": 0.096,
+            "detection": 0.10784313725490197,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -8,
+            "score_name": "resid_update_norm",
+            "direction": "higher",
+            "threshold": 4.142718315124512,
+            "conformal_alpha": 0.1,
+            "auroc": 0.512313725490196,
+            "false_alarm": 0.096,
+            "detection": 0.08169934640522876,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -8,
+            "score_name": "subspace_resid",
+            "direction": "higher",
+            "threshold": 131.2149658203125,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5083790849673203,
+            "false_alarm": 0.096,
+            "detection": 0.08169934640522876,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -8,
+            "score_name": "truth_proj",
+            "direction": "higher",
+            "threshold": 31.111743927001953,
+            "conformal_alpha": 0.1,
+            "auroc": 0.7387320261437909,
+            "false_alarm": 0.096,
+            "detection": 0.19607843137254902,
+            "n_true": 250,
+            "n_false": 306
+          }
+        ]
+      }
+    ],
+    "eigentruth_version": "0.1.0",
+    "scores_path": "artifacts/truthfulqa-frontier-covariance-gate-l80/smollm2-l80-low_rank_16/scores.manifest.json",
+    "created_at": "2026-06-25T18:56:48.397700+00:00",
+    "commit_sha": null,
+    "metadata": {
+      "source": "eval_conformal.py",
+      "config": {
+        "auto_batch_size": true,
+        "batch_size": 4,
+        "cache_only": true,
+        "cache_only_restored_eval_statements": true,
+        "covariance_low_rank": 16,
+        "covariance_mode": "low_rank",
+        "dataset": "truthfulqa",
+        "dtype": "float32",
+        "dump_inside_samples": false,
+        "dump_scores_format": "jsonl",
+        "effective_batch_size": 4,
+        "eigenscore_alpha": 0.001,
+        "eval_reps_cache": "artifacts/cache/truthfulqa-frontier-qwen-smollm2/smollm2-l80/eval-reps-cache",
+        "eval_reps_cache_shard_size": 0,
+        "eval_reps_shard_read_cache_size": 2,
+        "hidden_dim": 576,
+        "hidden_state_capture": "hooks",
+        "include_layer_spectra": false,
+        "inside_adaptive_sampling": false,
+        "inside_batch_size": 1,
+        "inside_diagnostics_cache": null,
+        "inside_embedding_threshold": 0.9,
+        "inside_max_new_tokens": 12,
+        "inside_min_samples": 2,
+        "inside_pooling": "last",
+        "inside_sample_step": 1,
+        "inside_samples": 0,
+        "inside_selfcheck_early_stop": false,
+        "inside_selfcheck_min_overlap": 0.65,
+        "inside_selfcheck_refute_threshold": 0.5,
+        "inside_selfcheck_support_threshold": 0.6,
+        "inside_stability_delta": 0.05,
+        "inside_temperature": 0.7,
+        "inside_top_p": 0.9,
+        "inside_trigger_signal": null,
+        "inside_trigger_threshold": null,
+        "inside_trigger_top_fraction": null,
+        "layer": -12,
+        "layer_spectrum_top_k": 16,
+        "layer_stats_cache": "artifacts/cache/truthfulqa-frontier-covariance-gate-l80/smollm2-l80/low_rank_16/layer-stats.pt",
+        "length_bucketed_batches": true,
+        "manifold_n": 266,
+        "max_batch_tokens": 0,
+        "max_length": 96,
+        "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+        "n_manifold_false": 338,
+        "n_neg": 250,
+        "n_pos": 306,
+        "offline": false,
+        "prefix_kv_cache": false,
+        "progress_every": 0,
+        "refresh_eval_reps_cache": false,
+        "refresh_inside_diagnostics_cache": false,
+        "refresh_layer_stats_cache": false,
+        "refresh_statement_encoding_cache": false,
+        "seed": 0,
+        "statement_encoding_cache": null,
+        "subspace_rank": 2,
+        "sweep_layers": [
+          -12,
+          -16,
+          -14,
+          -10,
+          -8
+        ],
+        "warmup_checkpoint": null,
+        "warmup_checkpoint_every": 50
+      },
+      "sweep_max_workers": 1
+    }
+  },
+  "score_dump_cache": {
+    "enabled": true,
+    "cache_entries": 7,
+    "fingerprint": {
+      "hits": 4,
+      "misses": 2,
+      "writes": 2,
+      "attempts": 6,
+      "hit_rate": 0.6666666666666666
+    },
+    "jsonl_manifest": {
+      "hits": 5,
+      "misses": 1,
+      "writes": 1,
+      "attempts": 6,
+      "hit_rate": 0.8333333333333334
+    },
+    "jsonl_summary": {
+      "hits": 2,
+      "misses": 0,
+      "writes": 4,
+      "attempts": 2,
+      "hit_rate": 1.0
+    },
+    "jsonl_view": {
+      "hits": 0,
+      "misses": 3,
+      "writes": 3,
+      "attempts": 3,
+      "hit_rate": 0.0
+    }
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/truthfulqa-frontier-covariance-gate-l80/smollm2-l80-low_rank_16/conformal-artifact-manifest.json"
+  },
+  "artifact_manifest_summary": {
+    "artifact_count": 4,
+    "missing_count": 0,
+    "directory_count": 0,
+    "file_count": 4
+  }
+}

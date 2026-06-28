@@ -1,0 +1,86 @@
+{
+  "total_seconds": 40.154361,
+  "phases": {
+    "load_data": 6.852645,
+    "load_model": 6.724344,
+    "tokenize_statements": 0.011087,
+    "save_statement_encoding_cache": 0.003049,
+    "build_layer_stats": 7.240028,
+    "save_layer_stats_cache": 0.004893,
+    "init_eval_reps_cache_writer": 0.000631,
+    "forced_answer_forward": 19.142808,
+    "write_eval_reps_cache_batch": 0.026497,
+    "score_postprocess": 0.113606,
+    "save_eval_reps_cache": 0.001345,
+    "reporting": 0.02877,
+    "sweep_reporting": 7e-06
+  },
+  "summary": {
+    "bottleneck": "forced_answer_forward",
+    "top_phases": [
+      {
+        "name": "forced_answer_forward",
+        "seconds": 19.142808,
+        "share": 0.47673
+      },
+      {
+        "name": "build_layer_stats",
+        "seconds": 7.240028,
+        "share": 0.180305
+      },
+      {
+        "name": "load_data",
+        "seconds": 6.852645,
+        "share": 0.170658
+      },
+      {
+        "name": "load_model",
+        "seconds": 6.724344,
+        "share": 0.167462
+      },
+      {
+        "name": "score_postprocess",
+        "seconds": 0.113606,
+        "share": 0.002829
+      }
+    ],
+    "groups": {
+      "startup": {
+        "seconds": 13.576989,
+        "share": 0.33812
+      },
+      "tokenization": {
+        "seconds": 0.014136,
+        "share": 0.000352
+      },
+      "model_forward": {
+        "seconds": 26.382836,
+        "share": 0.657035
+      },
+      "cache_io": {
+        "seconds": 0.033366,
+        "share": 0.000831
+      },
+      "postprocess": {
+        "seconds": 0.142383,
+        "share": 0.003546
+      }
+    },
+    "throughput": {
+      "forced_answer_records_per_second": 3.552248,
+      "warmup_records_per_second": 3.314904,
+      "end_to_end_eval_records_per_second": 1.693465
+    },
+    "cache_efficiency": {},
+    "accounted_seconds": 40.14971,
+    "accounted_share": 0.999884,
+    "unaccounted_seconds": 0.004651
+  },
+  "batch_size_fallback": {
+    "enabled": false,
+    "requested_batch_size": 4,
+    "effective_batch_size": 4,
+    "reductions": [],
+    "n_reductions": 0
+  }
+}

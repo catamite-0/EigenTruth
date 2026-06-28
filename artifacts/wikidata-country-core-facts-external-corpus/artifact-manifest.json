@@ -1,0 +1,154 @@
+{
+  "artifacts": {
+    "audit.provenance_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "provenance-audit-manifest.json",
+      "sha256": "e9f6527b8c0a3554e8b9254188c3f0a398503419f60f3af4717e55007ff277d4",
+      "size_bytes": 1933
+    },
+    "audit.provenance_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "provenance-audit.json",
+      "sha256": "987b40af127fcc1f257a814c9d680a51a6cf873de21e0facfd27b11b3735a5d1",
+      "size_bytes": 13515
+    },
+    "corpus.external_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "wikidata-country-core-facts-corpus.json",
+      "sha256": "7dcb0f4cfe5013c843e5e924b5157582c55bbb91f7e09c91c94e167218c954af",
+      "size_bytes": 577236
+    },
+    "corpus.external_corpus_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "external-corpus-manifest.json",
+      "sha256": "6cb7a703e76561869296638db13e1e1697aef08dc72135a59df1ce209bf1e418",
+      "size_bytes": 1082
+    },
+    "corpus.structured_qa": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "wikidata-country-core-facts-qa-corpus.json",
+      "sha256": "7fe6ef66b23620304327894ef8fb5feb3b4ec0c62e012f1c7f3961dd805bb98c",
+      "size_bytes": 417766
+    },
+    "corpus.structured_qa_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "wikidata-country-core-facts-qa-manifest.json",
+      "sha256": "a47f98bc8592924c8b9ee758080e0b0cb29317ab996f52e488d307279c10cf96",
+      "size_bytes": 1871
+    },
+    "corpus.structured_qa_templates": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "wikidata-country-core-facts-qa-templates.json",
+      "sha256": "5746ff7da972cca8476f4a3d4be48f4a7016948c5d359084ad2ed1c399c571f0",
+      "size_bytes": 836
+    },
+    "scores.qwen05_l80_statements": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../qwen05_truthfulqa_l80_scores_with_statements.json",
+      "sha256": "afe25f1a8741c6b3f609172afa322033627e1765b378d37126c468d5089d5f52",
+      "size_bytes": 572479
+    },
+    "source.wikidata_country_core_facts_jsonl": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "wikidata-country-core-facts-source.jsonl",
+      "sha256": "4e542340473cf9582b85a86c59284852e3a5fb5650e9248a77b5c2e2464d7cd3",
+      "size_bytes": 388639
+    },
+    "source.wikidata_source_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "wikidata-source-manifest.json",
+      "sha256": "b2b83b1e4e5e0b9ab6f39c3b2051b20674aff192ea551e11b8cd7ee02fd28d1e",
+      "size_bytes": 925
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "corpus_type": "external_evidence_candidate",
+    "external_domain_shift_ready": true,
+    "license": "CC0-1.0",
+    "n_external_documents": 359,
+    "n_source_documents": 359,
+    "n_structured_qa_documents": 359,
+    "promotes_verifier_route": false,
+    "properties": [
+      "P36",
+      "P37",
+      "P38"
+    ],
+    "provenance_audit_status": "pass",
+    "provenance_evidence_class": "external_candidate",
+    "provider": "wikidata",
+    "scope": "external multi-property source/provenance gate; route promotion measured separately",
+    "skip_qid_labels": true,
+    "source_query_preset": "country_core_facts",
+    "structured_qa_by_property": {
+      "P36": {
+        "n_documents": 103,
+        "skipped": {
+          "duplicates": 0,
+          "missing_fields": 0,
+          "missing_metadata": 0,
+          "property_mismatch": 0,
+          "provider_mismatch": 0,
+          "qid_labels": 0,
+          "reserved_metadata": 0
+        },
+        "statement_property_label": "capital"
+      },
+      "P37": {
+        "n_documents": 155,
+        "skipped": {
+          "duplicates": 0,
+          "missing_fields": 0,
+          "missing_metadata": 0,
+          "property_mismatch": 0,
+          "provider_mismatch": 0,
+          "qid_labels": 0,
+          "reserved_metadata": 0
+        },
+        "statement_property_label": "official language"
+      },
+      "P38": {
+        "n_documents": 101,
+        "skipped": {
+          "duplicates": 0,
+          "missing_fields": 0,
+          "missing_metadata": 0,
+          "property_mismatch": 0,
+          "provider_mismatch": 0,
+          "qid_labels": 0,
+          "reserved_metadata": 0
+        },
+        "statement_property_label": "currency"
+      }
+    },
+    "workflow": "wikidata_external_retrieval_corpus_gate"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 10,
+    "directory_count": 0,
+    "file_count": 10,
+    "missing_count": 0
+  }
+}

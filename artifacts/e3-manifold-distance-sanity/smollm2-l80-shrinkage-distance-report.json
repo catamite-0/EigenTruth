@@ -1,0 +1,153 @@
+{
+  "covariance_mode": "model",
+  "distance_matrix": [
+    [
+      0.0,
+      56.044036865234375,
+      84.2671127319336,
+      139.9840850830078,
+      263.43084716796875
+    ],
+    [
+      56.044036865234375,
+      0.0,
+      56.36837387084961,
+      115.661376953125,
+      239.42848205566406
+    ],
+    [
+      84.2671127319336,
+      56.36837387084961,
+      0.0,
+      93.71833801269531,
+      216.34922790527344
+    ],
+    [
+      139.9840850830078,
+      115.661376953125,
+      93.71833801269531,
+      0.0,
+      159.61636352539062
+    ],
+    [
+      263.43084716796875,
+      239.42848205566406,
+      216.34922790527344,
+      159.61636352539062,
+      0.0
+    ]
+  ],
+  "items": [
+    {
+      "covariance_low_rank": 16,
+      "covariance_mode": "shrinkage",
+      "hidden_dim": 576,
+      "id": "layer:-16",
+      "layer": -16,
+      "n": 266,
+      "source": "artifacts/cache/truthfulqa-frontier-covariance-gate-l80/smollm2-l80/shrinkage/layer-stats.pt"
+    },
+    {
+      "covariance_low_rank": 16,
+      "covariance_mode": "shrinkage",
+      "hidden_dim": 576,
+      "id": "layer:-14",
+      "layer": -14,
+      "n": 266,
+      "source": "artifacts/cache/truthfulqa-frontier-covariance-gate-l80/smollm2-l80/shrinkage/layer-stats.pt"
+    },
+    {
+      "covariance_low_rank": 16,
+      "covariance_mode": "shrinkage",
+      "hidden_dim": 576,
+      "id": "layer:-12",
+      "layer": -12,
+      "n": 266,
+      "source": "artifacts/cache/truthfulqa-frontier-covariance-gate-l80/smollm2-l80/shrinkage/layer-stats.pt"
+    },
+    {
+      "covariance_low_rank": 16,
+      "covariance_mode": "shrinkage",
+      "hidden_dim": 576,
+      "id": "layer:-10",
+      "layer": -10,
+      "n": 266,
+      "source": "artifacts/cache/truthfulqa-frontier-covariance-gate-l80/smollm2-l80/shrinkage/layer-stats.pt"
+    },
+    {
+      "covariance_low_rank": 16,
+      "covariance_mode": "shrinkage",
+      "hidden_dim": 576,
+      "id": "layer:-8",
+      "layer": -8,
+      "n": 266,
+      "source": "artifacts/cache/truthfulqa-frontier-covariance-gate-l80/smollm2-l80/shrinkage/layer-stats.pt"
+    }
+  ],
+  "layer_locality": {
+    "adjacent_mean_distance": 91.43677806854248,
+    "adjacent_pair_count": 4,
+    "adjacent_to_distant_ratio": 0.517996149721449,
+    "available": true,
+    "coherent": true,
+    "distant_mean_distance": 176.52018864949545,
+    "distant_pair_count": 6,
+    "min_layer_gap": 2,
+    "nearest_adjacent_fraction": 1.0
+  },
+  "metric": "gaussian_2_wasserstein",
+  "nearest_neighbors": [
+    {
+      "distance": 56.044036865234375,
+      "id": "layer:-16",
+      "nearest_id": "layer:-14"
+    },
+    {
+      "distance": 56.044036865234375,
+      "id": "layer:-14",
+      "nearest_id": "layer:-16"
+    },
+    {
+      "distance": 56.36837387084961,
+      "id": "layer:-12",
+      "nearest_id": "layer:-14"
+    },
+    {
+      "distance": 93.71833801269531,
+      "id": "layer:-10",
+      "nearest_id": "layer:-12"
+    },
+    {
+      "distance": 159.61636352539062,
+      "id": "layer:-8",
+      "nearest_id": "layer:-10"
+    }
+  ],
+  "source_cache": "artifacts/cache/truthfulqa-frontier-covariance-gate-l80/smollm2-l80/shrinkage/layer-stats.pt",
+  "source_metadata": {
+    "layer_stats_cache": {
+      "covariance_low_rank": 16,
+      "covariance_mode": "shrinkage",
+      "dtype": "float32",
+      "format": 1,
+      "layers": [
+        -12,
+        -16,
+        -14,
+        -10,
+        -8
+      ],
+      "length_bucketed_batches": true,
+      "max_length": 96,
+      "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+      "n_false": 338,
+      "n_layers": 30,
+      "n_true": 266,
+      "offline": false,
+      "subspace_rank": 2,
+      "warmup_fingerprint": "5167ef4038b598042417c01113d577074e54a01ebf6b35a4223f8047128bc5e4"
+    }
+  },
+  "squared": false,
+  "workflow": "compare_manifold_distances"
+}

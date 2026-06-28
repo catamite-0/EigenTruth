@@ -1,0 +1,66 @@
+{
+  "artifacts": {
+    "covered_fact_score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "covered-facts-scores.json",
+      "sha256": "a890d8bb82a7d30d4909b584f054d94678c224139b92bfd096b24b8b50bccc2b",
+      "size_bytes": 368658
+    },
+    "qa_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../wikidata-country-core-facts-external-corpus/wikidata-country-core-facts-qa-corpus.json",
+      "sha256": "7fe6ef66b23620304327894ef8fb5feb3b4ec0c62e012f1c7f3961dd805bb98c",
+      "size_bytes": 417766
+    },
+    "route_summary": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "structured-qa-route-summary.json",
+      "sha256": "1d87904827fcdfe3f14c64aaea7d9cba980998d48093f208eb7cc701db5dce4a",
+      "size_bytes": 2423
+    },
+    "verified_records_jsonl": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "verified-records.jsonl",
+      "sha256": "55add35a0178ae7c9b451356bb8110f87374fc0cceaaead93953abc4a378ce53",
+      "size_bytes": 2116742
+    },
+    "verifier_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "structured-qa-verifier-report.json",
+      "sha256": "86f52d013bfc6f5a067c89f2785ef516c39e8e33eb820aaaa7c157b08a80bbe8",
+      "size_bytes": 9353
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "alpha": 0.1,
+    "n_false": 359,
+    "n_records": 718,
+    "n_true": 359,
+    "promotes_covered_facts_route": true,
+    "score_name": "wikidata-country-core-facts-structured-qa",
+    "signal": "truth_proj",
+    "status": "promote",
+    "structured_qa_decision_accuracy": 1.0,
+    "structured_qa_false_refuted_rate": 1.0,
+    "structured_qa_false_supported_rate": 0.0,
+    "workflow": "wikidata_structured_qa_route_workflow"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

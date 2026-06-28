@@ -1,0 +1,114 @@
+{
+  "command": {
+    "args": [
+      ".venv/bin/python",
+      "benchmarks/run_wikipedia_citation_search_adapter.py",
+      "--input",
+      "artifacts/truthfulqa-frontier-smollm2-l80-claim-entity-wikipedia-citation-search-adapter-workflow/external-citation-search-requests.jsonl",
+      "--output",
+      "artifacts/truthfulqa-frontier-smollm2-l80-claim-entity-wikipedia-citation-search-adapter-workflow/external-citation-search-results.jsonl",
+      "--max-results",
+      "3",
+      "--max-query-variants",
+      "3",
+      "--workers",
+      "1",
+      "--timeout-seconds",
+      "30",
+      "--retries",
+      "4",
+      "--retry-delay-seconds",
+      "2",
+      "--min-delay-seconds",
+      "1"
+    ],
+    "returncode": 0,
+    "stderr": "",
+    "stdout": "wikipedia_citation_search_adapter_ok requests=176 unique_queries=23 with_results=176 results=528 errors=0\n"
+  },
+  "config": {
+    "command_timeout_seconds": 1200.0,
+    "corpus_name": "unresolved_blind_spot_citation_search",
+    "max_alternate_queries": 3,
+    "max_requests": null,
+    "max_results_per_request": 3,
+    "query_mode": "claim_entity",
+    "source_kind": "external_citation_search_result"
+  },
+  "evidence_summary": {
+    "adapter_request_count": 176,
+    "comparison_passed": false,
+    "comparison_status": "blocked",
+    "corpus_document_count": 528,
+    "evidence_class": "external_candidate",
+    "provenance_passed": true,
+    "provenance_status": "pass",
+    "query_sweep_best_passing_blind_refuted_count": null,
+    "query_sweep_best_passing_strategy": null,
+    "query_sweep_best_strategy": "question_overlap_0p95",
+    "recommended_external_strategy": null,
+    "source_document_count": 528
+  },
+  "gate": {
+    "blocking_reasons": [
+      {
+        "gate": "query_sweep",
+        "reason": "No blind-spot query strategy passed the configured gates."
+      },
+      {
+        "gate": "query_sweep_comparison",
+        "reason": "Controlled-vs-external comparison status is blocked."
+      }
+    ],
+    "passed": false,
+    "promotion_ready": false
+  },
+  "metadata": {
+    "adapter": "wikipedia_mediawiki",
+    "query_planner": "claim_entity",
+    "suite": "truthfulqa_frontier_smollm2_l80"
+  },
+  "paths": {
+    "adapter_results": "artifacts/truthfulqa-frontier-smollm2-l80-claim-entity-wikipedia-citation-search-adapter-workflow/external-citation-search-results.jsonl",
+    "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-claim-entity-wikipedia-citation-search-adapter-workflow/artifact-manifest.json",
+    "evidence_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-claim-entity-wikipedia-citation-search-adapter-workflow/evidence-gate/artifact-manifest.json",
+    "evidence_workflow": "artifacts/truthfulqa-frontier-smollm2-l80-claim-entity-wikipedia-citation-search-adapter-workflow/evidence-gate/citation-search-evidence-workflow.json",
+    "request_handoff": "artifacts/truthfulqa-frontier-smollm2-l80-claim-entity-wikipedia-citation-search-adapter-workflow/request-handoff/citation-search-request-handoff.json",
+    "request_handoff_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-claim-entity-wikipedia-citation-search-adapter-workflow/request-handoff/artifact-manifest.json",
+    "requests": "artifacts/truthfulqa-frontier-smollm2-l80-claim-entity-wikipedia-citation-search-adapter-workflow/external-citation-search-requests.jsonl",
+    "workflow_report": "artifacts/truthfulqa-frontier-smollm2-l80-claim-entity-wikipedia-citation-search-adapter-workflow/external-citation-search-adapter-workflow.json"
+  },
+  "request_summary": {
+    "adapter_request_count": 176,
+    "corpus_document_count": 0,
+    "priority_counts": {
+      "high": 176
+    },
+    "question_type_counts": {
+      "definition": 156,
+      "location": 20
+    },
+    "result_summary": {
+      "input_result_count": 0,
+      "matched_request_count": 0,
+      "result_documents_by_request": {},
+      "skipped_empty_result_count": 0,
+      "unknown_request_result_count": 0
+    },
+    "source_document_count": 0,
+    "source_provider_counts": {},
+    "source_queue_adapter_request_count": 182,
+    "source_queue_target_count": 46
+  },
+  "schema_version": 1,
+  "source": {
+    "blind_spots": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json",
+    "controlled_sweeps": [
+      "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json"
+    ],
+    "queue_report": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue/unresolved-evidence-queue.json",
+    "scores": "artifacts/smollm2_truthfulqa_l80_scores_with_statements.json"
+  },
+  "status": "blocked",
+  "workflow": "external_citation_search_adapter_workflow"
+}

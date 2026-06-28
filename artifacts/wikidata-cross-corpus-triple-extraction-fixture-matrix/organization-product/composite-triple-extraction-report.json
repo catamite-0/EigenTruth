@@ -1,0 +1,17 @@
+{
+  "extractor": "composite",
+  "pattern_count": 15,
+  "patterns_path": "artifacts/wikidata-cross-corpus-triple-extraction-fixture-matrix/organization-product/triple-extraction-regex-patterns.json",
+  "records_path": "artifacts/wikidata-cross-corpus-triple-extraction-fixture-matrix/organization-product/triple-extraction-records.json",
+  "report": {
+    "error_examples": [],
+    "exact_match_count": 32,
+    "expected_triple_count": 32,
+    "extracted_triple_count": 32,
+    "f1": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "record_count": 32
+  },
+  "workflow": "triple_extraction_eval"
+}

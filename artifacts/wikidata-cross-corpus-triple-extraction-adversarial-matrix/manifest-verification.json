@@ -1,0 +1,22 @@
+{
+  "checked": 7,
+  "failures": [],
+  "manifest_path": "artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix/artifact-manifest.json",
+  "nested": [
+    {
+      "checked": 7,
+      "failures": [],
+      "manifest_path": "artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix/country-core/artifact-manifest.json",
+      "nested": [],
+      "passed": true
+    },
+    {
+      "checked": 7,
+      "failures": [],
+      "manifest_path": "artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix/organization-product/artifact-manifest.json",
+      "nested": [],
+      "passed": true
+    }
+  ],
+  "passed": true
+}

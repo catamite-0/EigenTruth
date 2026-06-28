@@ -1,0 +1,74 @@
+{
+  "format": 2,
+  "metadata": {
+    "dtype": "float32",
+    "eigenscore_alpha": 0.001,
+    "eval_fingerprint": "2401e13844756bb7b645180dc30fb80ba045c4f457a6ac8cd511ed8a538d0134",
+    "eval_statements": [
+      {
+        "answer": "A triangle has three sides.",
+        "is_false": 0,
+        "question": ""
+      },
+      {
+        "answer": "The Sun rises in the east.",
+        "is_false": 0,
+        "question": ""
+      },
+      {
+        "answer": "Honey is made by bees.",
+        "is_false": 0,
+        "question": ""
+      },
+      {
+        "answer": "Mount Everest is the tallest mountain above sea level.",
+        "is_false": 0,
+        "question": ""
+      },
+      {
+        "answer": "A triangle has seven sides.",
+        "is_false": 1,
+        "question": ""
+      },
+      {
+        "answer": "The Sun rises in the west.",
+        "is_false": 1,
+        "question": ""
+      },
+      {
+        "answer": "Honey is made by spiders.",
+        "is_false": 1,
+        "question": ""
+      },
+      {
+        "answer": "Mount Everest is the shortest mountain on Earth.",
+        "is_false": 1,
+        "question": ""
+      }
+    ],
+    "format": 1,
+    "layers": [
+      -1
+    ],
+    "length_bucketed_batches": true,
+    "max_length": 64,
+    "model": "sshleifer/tiny-gpt2",
+    "n_eval": 8,
+    "n_layers": 2,
+    "offline": true
+  },
+  "record_count": 8,
+  "shard_size": 4,
+  "shards": [
+    {
+      "count": 4,
+      "path": "records-000000.pt",
+      "start": 0
+    },
+    {
+      "count": 4,
+      "path": "records-000001.pt",
+      "start": 4
+    }
+  ]
+}

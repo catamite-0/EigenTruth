@@ -1,0 +1,22 @@
+{
+  "records": [
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "accepted_false_delta": -2,
+        "artifact_manifest": "artifacts/uncertainty-escalation-fixture-workflow/artifact-manifest.json",
+        "compact_json": false,
+        "manifest_verification": "artifacts/uncertainty-escalation-fixture-workflow/manifest-verification.json",
+        "manifest_verified": true,
+        "record_count": 4,
+        "retrieval_evidence_records": 4,
+        "triggered_records": 4,
+        "workflow": "uncertainty_escalation_fixture_workflow"
+      },
+      "name": "uncertainty-escalation-fixture-workflow",
+      "path": "artifacts/uncertainty-escalation-fixture-workflow/uncertainty-escalation-workflow.json",
+      "version": "0.1"
+    }
+  ],
+  "schema_version": 1
+}

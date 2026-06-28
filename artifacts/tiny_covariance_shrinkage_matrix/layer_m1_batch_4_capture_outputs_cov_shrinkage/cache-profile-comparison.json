@@ -1,0 +1,787 @@
+{
+  "baseline": "uncached",
+  "n_profiles": 3,
+  "fastest": {
+    "name": "cache_only",
+    "total_seconds": 0.029427,
+    "speedup_vs_baseline": 270.56149114758557
+  },
+  "slowest": {
+    "name": "uncached",
+    "total_seconds": 7.961813,
+    "speedup_vs_baseline": 1.0
+  },
+  "runs": [
+    {
+      "name": "uncached",
+      "source": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage/profile-uncached.json",
+      "total_seconds": 7.961813,
+      "bottleneck": "load_model",
+      "total_delta": {
+        "seconds": 7.961813,
+        "baseline_seconds": 7.961813,
+        "delta_seconds": 0.0,
+        "ratio_to_baseline": 1.0,
+        "speedup_vs_baseline": 1.0
+      },
+      "phase_deltas": {
+        "build_layer_stats": {
+          "seconds": 0.020055,
+          "baseline_seconds": 0.020055,
+          "delta_seconds": 0.0,
+          "ratio_to_baseline": 1.0,
+          "speedup_vs_baseline": 1.0
+        },
+        "forced_answer_forward": {
+          "seconds": 0.066169,
+          "baseline_seconds": 0.066169,
+          "delta_seconds": 0.0,
+          "ratio_to_baseline": 1.0,
+          "speedup_vs_baseline": 1.0
+        },
+        "init_eval_reps_cache_writer": {
+          "seconds": 0.000535,
+          "baseline_seconds": 0.000535,
+          "delta_seconds": 0.0,
+          "ratio_to_baseline": 1.0,
+          "speedup_vs_baseline": 1.0
+        },
+        "load_data": {
+          "seconds": 3.3e-05,
+          "baseline_seconds": 3.3e-05,
+          "delta_seconds": 0.0,
+          "ratio_to_baseline": 1.0,
+          "speedup_vs_baseline": 1.0
+        },
+        "load_model": {
+          "seconds": 7.84083,
+          "baseline_seconds": 7.84083,
+          "delta_seconds": 0.0,
+          "ratio_to_baseline": 1.0,
+          "speedup_vs_baseline": 1.0
+        },
+        "reporting": {
+          "seconds": 0.009438,
+          "baseline_seconds": 0.009438,
+          "delta_seconds": 0.0,
+          "ratio_to_baseline": 1.0,
+          "speedup_vs_baseline": 1.0
+        },
+        "save_eval_reps_cache": {
+          "seconds": 0.000533,
+          "baseline_seconds": 0.000533,
+          "delta_seconds": 0.0,
+          "ratio_to_baseline": 1.0,
+          "speedup_vs_baseline": 1.0
+        },
+        "save_layer_stats_cache": {
+          "seconds": 0.001849,
+          "baseline_seconds": 0.001849,
+          "delta_seconds": 0.0,
+          "ratio_to_baseline": 1.0,
+          "speedup_vs_baseline": 1.0
+        },
+        "save_statement_encoding_cache": {
+          "seconds": 0.000786,
+          "baseline_seconds": 0.000786,
+          "delta_seconds": 0.0,
+          "ratio_to_baseline": 1.0,
+          "speedup_vs_baseline": 1.0
+        },
+        "score_postprocess": {
+          "seconds": 0.011361,
+          "baseline_seconds": 0.011361,
+          "delta_seconds": 0.0,
+          "ratio_to_baseline": 1.0,
+          "speedup_vs_baseline": 1.0
+        },
+        "sweep_reporting": {
+          "seconds": 7e-06,
+          "baseline_seconds": 7e-06,
+          "delta_seconds": 0.0,
+          "ratio_to_baseline": 1.0,
+          "speedup_vs_baseline": 1.0
+        },
+        "tokenize_statements": {
+          "seconds": 0.004698,
+          "baseline_seconds": 0.004698,
+          "delta_seconds": 0.0,
+          "ratio_to_baseline": 1.0,
+          "speedup_vs_baseline": 1.0
+        },
+        "write_eval_reps_cache_batch": {
+          "seconds": 0.002804,
+          "baseline_seconds": 0.002804,
+          "delta_seconds": 0.0,
+          "ratio_to_baseline": 1.0,
+          "speedup_vs_baseline": 1.0
+        }
+      },
+      "group_deltas": {
+        "cache_io": {
+          "seconds": 0.005721,
+          "baseline_seconds": 0.005721,
+          "delta_seconds": 0.0,
+          "ratio_to_baseline": 1.0,
+          "speedup_vs_baseline": 1.0
+        },
+        "model_forward": {
+          "seconds": 0.086224,
+          "baseline_seconds": 0.086224,
+          "delta_seconds": 0.0,
+          "ratio_to_baseline": 1.0,
+          "speedup_vs_baseline": 1.0
+        },
+        "postprocess": {
+          "seconds": 0.020806,
+          "baseline_seconds": 0.020806,
+          "delta_seconds": 0.0,
+          "ratio_to_baseline": 1.0,
+          "speedup_vs_baseline": 1.0
+        },
+        "startup": {
+          "seconds": 7.840863,
+          "baseline_seconds": 7.840863,
+          "delta_seconds": 0.0,
+          "ratio_to_baseline": 1.0,
+          "speedup_vs_baseline": 1.0
+        },
+        "tokenization": {
+          "seconds": 0.005484,
+          "baseline_seconds": 0.005484,
+          "delta_seconds": 0.0,
+          "ratio_to_baseline": 1.0,
+          "speedup_vs_baseline": 1.0
+        }
+      },
+      "throughput_deltas": {
+        "end_to_end_eval_records_per_second": {
+          "value": 1.004796,
+          "baseline_value": 1.004796,
+          "delta": 0.0,
+          "ratio_to_baseline": 1.0
+        },
+        "forced_answer_records_per_second": {
+          "value": 120.902537,
+          "baseline_value": 120.902537,
+          "delta": 0.0,
+          "ratio_to_baseline": 1.0
+        },
+        "warmup_records_per_second": {
+          "value": 598.354525,
+          "baseline_value": 598.354525,
+          "delta": 0.0,
+          "ratio_to_baseline": 1.0
+        }
+      },
+      "cache_efficiency": {},
+      "cache_efficiency_deltas": {},
+      "top_phases": [
+        {
+          "name": "load_model",
+          "seconds": 7.84083,
+          "share": 0.984805
+        },
+        {
+          "name": "forced_answer_forward",
+          "seconds": 0.066169,
+          "share": 0.008311
+        },
+        {
+          "name": "build_layer_stats",
+          "seconds": 0.020055,
+          "share": 0.002519
+        },
+        {
+          "name": "score_postprocess",
+          "seconds": 0.011361,
+          "share": 0.001427
+        },
+        {
+          "name": "reporting",
+          "seconds": 0.009438,
+          "share": 0.001185
+        }
+      ]
+    },
+    {
+      "name": "cached",
+      "source": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage/profile-cached.json",
+      "total_seconds": 7.274815,
+      "bottleneck": "load_model",
+      "total_delta": {
+        "seconds": 7.274815,
+        "baseline_seconds": 7.961813,
+        "delta_seconds": -0.686998,
+        "ratio_to_baseline": 0.9137133715649941,
+        "speedup_vs_baseline": 1.09443511621945
+      },
+      "phase_deltas": {
+        "build_layer_stats": {
+          "seconds": 0.0,
+          "baseline_seconds": 0.020055,
+          "delta_seconds": -0.020055,
+          "ratio_to_baseline": 0.0,
+          "speedup_vs_baseline": null
+        },
+        "forced_answer_forward": {
+          "seconds": 0.0,
+          "baseline_seconds": 0.066169,
+          "delta_seconds": -0.066169,
+          "ratio_to_baseline": 0.0,
+          "speedup_vs_baseline": null
+        },
+        "init_eval_reps_cache_writer": {
+          "seconds": 0.0,
+          "baseline_seconds": 0.000535,
+          "delta_seconds": -0.000535,
+          "ratio_to_baseline": 0.0,
+          "speedup_vs_baseline": null
+        },
+        "load_data": {
+          "seconds": 3.6e-05,
+          "baseline_seconds": 3.3e-05,
+          "delta_seconds": 2.9999999999999984e-06,
+          "ratio_to_baseline": 1.0909090909090908,
+          "speedup_vs_baseline": 0.9166666666666667
+        },
+        "load_eval_reps_cache": {
+          "seconds": 0.000987,
+          "baseline_seconds": 0.0,
+          "delta_seconds": 0.000987,
+          "ratio_to_baseline": null,
+          "speedup_vs_baseline": null
+        },
+        "load_layer_stats_cache": {
+          "seconds": 0.008407,
+          "baseline_seconds": 0.0,
+          "delta_seconds": 0.008407,
+          "ratio_to_baseline": null,
+          "speedup_vs_baseline": null
+        },
+        "load_model": {
+          "seconds": 7.217441,
+          "baseline_seconds": 7.84083,
+          "delta_seconds": -0.6233890000000004,
+          "ratio_to_baseline": 0.9204945139736481,
+          "speedup_vs_baseline": 1.0863725799767536
+        },
+        "load_statement_encoding_cache": {
+          "seconds": 0.000859,
+          "baseline_seconds": 0.0,
+          "delta_seconds": 0.000859,
+          "ratio_to_baseline": null,
+          "speedup_vs_baseline": null
+        },
+        "read_eval_reps_cache_batch": {
+          "seconds": 0.009436,
+          "baseline_seconds": 0.0,
+          "delta_seconds": 0.009436,
+          "ratio_to_baseline": null,
+          "speedup_vs_baseline": null
+        },
+        "reporting": {
+          "seconds": 0.008903,
+          "baseline_seconds": 0.009438,
+          "delta_seconds": -0.0005350000000000008,
+          "ratio_to_baseline": 0.9433142614960796,
+          "speedup_vs_baseline": 1.060092103785241
+        },
+        "save_eval_reps_cache": {
+          "seconds": 0.0,
+          "baseline_seconds": 0.000533,
+          "delta_seconds": -0.000533,
+          "ratio_to_baseline": 0.0,
+          "speedup_vs_baseline": null
+        },
+        "save_layer_stats_cache": {
+          "seconds": 0.0,
+          "baseline_seconds": 0.001849,
+          "delta_seconds": -0.001849,
+          "ratio_to_baseline": 0.0,
+          "speedup_vs_baseline": null
+        },
+        "save_statement_encoding_cache": {
+          "seconds": 0.0,
+          "baseline_seconds": 0.000786,
+          "delta_seconds": -0.000786,
+          "ratio_to_baseline": 0.0,
+          "speedup_vs_baseline": null
+        },
+        "score_postprocess": {
+          "seconds": 0.025464,
+          "baseline_seconds": 0.011361,
+          "delta_seconds": 0.014103000000000001,
+          "ratio_to_baseline": 2.24135199366253,
+          "speedup_vs_baseline": 0.44615928369462765
+        },
+        "sweep_reporting": {
+          "seconds": 9e-06,
+          "baseline_seconds": 7e-06,
+          "delta_seconds": 2.0000000000000003e-06,
+          "ratio_to_baseline": 1.2857142857142858,
+          "speedup_vs_baseline": 0.7777777777777777
+        },
+        "tokenize_statements": {
+          "seconds": 0.0,
+          "baseline_seconds": 0.004698,
+          "delta_seconds": -0.004698,
+          "ratio_to_baseline": 0.0,
+          "speedup_vs_baseline": null
+        },
+        "write_eval_reps_cache_batch": {
+          "seconds": 0.0,
+          "baseline_seconds": 0.002804,
+          "delta_seconds": -0.002804,
+          "ratio_to_baseline": 0.0,
+          "speedup_vs_baseline": null
+        }
+      },
+      "group_deltas": {
+        "cache_io": {
+          "seconds": 0.01883,
+          "baseline_seconds": 0.005721,
+          "delta_seconds": 0.013108999999999999,
+          "ratio_to_baseline": 3.291382625415137,
+          "speedup_vs_baseline": 0.3038236856080722
+        },
+        "model_forward": {
+          "seconds": 0.0,
+          "baseline_seconds": 0.086224,
+          "delta_seconds": -0.086224,
+          "ratio_to_baseline": 0.0,
+          "speedup_vs_baseline": null
+        },
+        "postprocess": {
+          "seconds": 0.034376,
+          "baseline_seconds": 0.020806,
+          "delta_seconds": 0.013569999999999995,
+          "ratio_to_baseline": 1.6522157070075938,
+          "speedup_vs_baseline": 0.6052478473353503
+        },
+        "startup": {
+          "seconds": 7.217477,
+          "baseline_seconds": 7.840863,
+          "delta_seconds": -0.623386,
+          "ratio_to_baseline": 0.9204952312009532,
+          "speedup_vs_baseline": 1.0863717335018872
+        },
+        "tokenization": {
+          "seconds": 0.000859,
+          "baseline_seconds": 0.005484,
+          "delta_seconds": -0.004625000000000001,
+          "ratio_to_baseline": 0.15663749088256745,
+          "speedup_vs_baseline": 6.384167636786962
+        }
+      },
+      "throughput_deltas": {
+        "end_to_end_eval_records_per_second": {
+          "value": 1.099684,
+          "baseline_value": 1.004796,
+          "delta": 0.09488800000000008,
+          "ratio_to_baseline": 1.0944350893116614
+        },
+        "forced_answer_records_per_second": {
+          "value": 0.0,
+          "baseline_value": 120.902537,
+          "delta": -120.902537,
+          "ratio_to_baseline": 0.0
+        },
+        "warmup_records_per_second": {
+          "value": 0.0,
+          "baseline_value": 598.354525,
+          "delta": -598.354525,
+          "ratio_to_baseline": 0.0
+        }
+      },
+      "cache_efficiency": {
+        "eval_reps_reader.records_per_read": 4.0,
+        "eval_reps_reader.shards_per_read": 1.0,
+        "eval_reps_reader.cross_shard_read_rate": 0.0,
+        "eval_reps_reader.shard_cache_hit_rate": 0.0,
+        "eval_reps_reader.shard_load_rate": 1.0,
+        "eval_reps_reader.shard_manifest_scans_per_read": 1.0,
+        "eval_reps_reader.shard_count": 2.0,
+        "eval_reps_reader.shard_cache_capacity": 2.0
+      },
+      "cache_efficiency_deltas": {
+        "eval_reps_reader.cross_shard_read_rate": {
+          "value": 0.0,
+          "baseline_value": 0.0,
+          "delta": 0.0,
+          "ratio_to_baseline": null
+        },
+        "eval_reps_reader.records_per_read": {
+          "value": 4.0,
+          "baseline_value": 0.0,
+          "delta": 4.0,
+          "ratio_to_baseline": null
+        },
+        "eval_reps_reader.shard_cache_capacity": {
+          "value": 2.0,
+          "baseline_value": 0.0,
+          "delta": 2.0,
+          "ratio_to_baseline": null
+        },
+        "eval_reps_reader.shard_cache_hit_rate": {
+          "value": 0.0,
+          "baseline_value": 0.0,
+          "delta": 0.0,
+          "ratio_to_baseline": null
+        },
+        "eval_reps_reader.shard_count": {
+          "value": 2.0,
+          "baseline_value": 0.0,
+          "delta": 2.0,
+          "ratio_to_baseline": null
+        },
+        "eval_reps_reader.shard_load_rate": {
+          "value": 1.0,
+          "baseline_value": 0.0,
+          "delta": 1.0,
+          "ratio_to_baseline": null
+        },
+        "eval_reps_reader.shard_manifest_scans_per_read": {
+          "value": 1.0,
+          "baseline_value": 0.0,
+          "delta": 1.0,
+          "ratio_to_baseline": null
+        },
+        "eval_reps_reader.shards_per_read": {
+          "value": 1.0,
+          "baseline_value": 0.0,
+          "delta": 1.0,
+          "ratio_to_baseline": null
+        }
+      },
+      "top_phases": [
+        {
+          "name": "load_model",
+          "seconds": 7.217441,
+          "share": 0.992113
+        },
+        {
+          "name": "score_postprocess",
+          "seconds": 0.025464,
+          "share": 0.0035
+        },
+        {
+          "name": "read_eval_reps_cache_batch",
+          "seconds": 0.009436,
+          "share": 0.001297
+        },
+        {
+          "name": "reporting",
+          "seconds": 0.008903,
+          "share": 0.001224
+        },
+        {
+          "name": "load_layer_stats_cache",
+          "seconds": 0.008407,
+          "share": 0.001156
+        }
+      ]
+    },
+    {
+      "name": "cache_only",
+      "source": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage/profile-cache_only.json",
+      "total_seconds": 0.029427,
+      "bottleneck": "score_postprocess",
+      "total_delta": {
+        "seconds": 0.029427,
+        "baseline_seconds": 7.961813,
+        "delta_seconds": -7.932386,
+        "ratio_to_baseline": 0.0036960174774263096,
+        "speedup_vs_baseline": 270.56149114758557
+      },
+      "phase_deltas": {
+        "build_layer_stats": {
+          "seconds": 0.0,
+          "baseline_seconds": 0.020055,
+          "delta_seconds": -0.020055,
+          "ratio_to_baseline": 0.0,
+          "speedup_vs_baseline": null
+        },
+        "forced_answer_forward": {
+          "seconds": 0.0,
+          "baseline_seconds": 0.066169,
+          "delta_seconds": -0.066169,
+          "ratio_to_baseline": 0.0,
+          "speedup_vs_baseline": null
+        },
+        "init_eval_reps_cache_writer": {
+          "seconds": 0.0,
+          "baseline_seconds": 0.000535,
+          "delta_seconds": -0.000535,
+          "ratio_to_baseline": 0.0,
+          "speedup_vs_baseline": null
+        },
+        "load_data": {
+          "seconds": 0.0,
+          "baseline_seconds": 3.3e-05,
+          "delta_seconds": -3.3e-05,
+          "ratio_to_baseline": 0.0,
+          "speedup_vs_baseline": null
+        },
+        "load_eval_reps_cache": {
+          "seconds": 0.000327,
+          "baseline_seconds": 0.0,
+          "delta_seconds": 0.000327,
+          "ratio_to_baseline": null,
+          "speedup_vs_baseline": null
+        },
+        "load_layer_stats_cache": {
+          "seconds": 0.002352,
+          "baseline_seconds": 0.0,
+          "delta_seconds": 0.002352,
+          "ratio_to_baseline": null,
+          "speedup_vs_baseline": null
+        },
+        "load_model": {
+          "seconds": 0.0,
+          "baseline_seconds": 7.84083,
+          "delta_seconds": -7.84083,
+          "ratio_to_baseline": 0.0,
+          "speedup_vs_baseline": null
+        },
+        "read_cache_metadata": {
+          "seconds": 0.003756,
+          "baseline_seconds": 0.0,
+          "delta_seconds": 0.003756,
+          "ratio_to_baseline": null,
+          "speedup_vs_baseline": null
+        },
+        "read_eval_reps_cache_batch": {
+          "seconds": 0.004673,
+          "baseline_seconds": 0.0,
+          "delta_seconds": 0.004673,
+          "ratio_to_baseline": null,
+          "speedup_vs_baseline": null
+        },
+        "reporting": {
+          "seconds": 0.007119,
+          "baseline_seconds": 0.009438,
+          "delta_seconds": -0.002319,
+          "ratio_to_baseline": 0.7542911633820725,
+          "speedup_vs_baseline": 1.32574799831437
+        },
+        "save_eval_reps_cache": {
+          "seconds": 0.0,
+          "baseline_seconds": 0.000533,
+          "delta_seconds": -0.000533,
+          "ratio_to_baseline": 0.0,
+          "speedup_vs_baseline": null
+        },
+        "save_layer_stats_cache": {
+          "seconds": 0.0,
+          "baseline_seconds": 0.001849,
+          "delta_seconds": -0.001849,
+          "ratio_to_baseline": 0.0,
+          "speedup_vs_baseline": null
+        },
+        "save_statement_encoding_cache": {
+          "seconds": 0.0,
+          "baseline_seconds": 0.000786,
+          "delta_seconds": -0.000786,
+          "ratio_to_baseline": 0.0,
+          "speedup_vs_baseline": null
+        },
+        "score_postprocess": {
+          "seconds": 0.009434,
+          "baseline_seconds": 0.011361,
+          "delta_seconds": -0.001927,
+          "ratio_to_baseline": 0.8303846492386233,
+          "speedup_vs_baseline": 1.2042611829552683
+        },
+        "sweep_reporting": {
+          "seconds": 5e-06,
+          "baseline_seconds": 7e-06,
+          "delta_seconds": -1.9999999999999995e-06,
+          "ratio_to_baseline": 0.7142857142857143,
+          "speedup_vs_baseline": 1.4
+        },
+        "tokenize_statements": {
+          "seconds": 0.0,
+          "baseline_seconds": 0.004698,
+          "delta_seconds": -0.004698,
+          "ratio_to_baseline": 0.0,
+          "speedup_vs_baseline": null
+        },
+        "write_eval_reps_cache_batch": {
+          "seconds": 0.0,
+          "baseline_seconds": 0.002804,
+          "delta_seconds": -0.002804,
+          "ratio_to_baseline": 0.0,
+          "speedup_vs_baseline": null
+        }
+      },
+      "group_deltas": {
+        "cache_io": {
+          "seconds": 0.011108,
+          "baseline_seconds": 0.005721,
+          "delta_seconds": 0.005386999999999999,
+          "ratio_to_baseline": 1.941618598147177,
+          "speedup_vs_baseline": 0.5150342095786821
+        },
+        "model_forward": {
+          "seconds": 0.0,
+          "baseline_seconds": 0.086224,
+          "delta_seconds": -0.086224,
+          "ratio_to_baseline": 0.0,
+          "speedup_vs_baseline": null
+        },
+        "postprocess": {
+          "seconds": 0.016558,
+          "baseline_seconds": 0.020806,
+          "delta_seconds": -0.004248000000000002,
+          "ratio_to_baseline": 0.7958281265019705,
+          "speedup_vs_baseline": 1.2565527237589083
+        },
+        "startup": {
+          "seconds": 0.0,
+          "baseline_seconds": 7.840863,
+          "delta_seconds": -7.840863,
+          "ratio_to_baseline": 0.0,
+          "speedup_vs_baseline": null
+        },
+        "tokenization": {
+          "seconds": 0.0,
+          "baseline_seconds": 0.005484,
+          "delta_seconds": -0.005484,
+          "ratio_to_baseline": 0.0,
+          "speedup_vs_baseline": null
+        }
+      },
+      "throughput_deltas": {
+        "end_to_end_eval_records_per_second": {
+          "value": 271.855389,
+          "baseline_value": 1.004796,
+          "delta": 270.850593,
+          "ratio_to_baseline": 270.5577938208353
+        },
+        "forced_answer_records_per_second": {
+          "value": 0.0,
+          "baseline_value": 120.902537,
+          "delta": -120.902537,
+          "ratio_to_baseline": 0.0
+        },
+        "warmup_records_per_second": {
+          "value": 0.0,
+          "baseline_value": 598.354525,
+          "delta": -598.354525,
+          "ratio_to_baseline": 0.0
+        }
+      },
+      "cache_efficiency": {
+        "eval_reps_reader.records_per_read": 4.0,
+        "eval_reps_reader.shards_per_read": 1.0,
+        "eval_reps_reader.cross_shard_read_rate": 0.0,
+        "eval_reps_reader.shard_cache_hit_rate": 0.0,
+        "eval_reps_reader.shard_load_rate": 1.0,
+        "eval_reps_reader.shard_manifest_scans_per_read": 1.0,
+        "eval_reps_reader.shard_count": 2.0,
+        "eval_reps_reader.shard_cache_capacity": 2.0
+      },
+      "cache_efficiency_deltas": {
+        "eval_reps_reader.cross_shard_read_rate": {
+          "value": 0.0,
+          "baseline_value": 0.0,
+          "delta": 0.0,
+          "ratio_to_baseline": null
+        },
+        "eval_reps_reader.records_per_read": {
+          "value": 4.0,
+          "baseline_value": 0.0,
+          "delta": 4.0,
+          "ratio_to_baseline": null
+        },
+        "eval_reps_reader.shard_cache_capacity": {
+          "value": 2.0,
+          "baseline_value": 0.0,
+          "delta": 2.0,
+          "ratio_to_baseline": null
+        },
+        "eval_reps_reader.shard_cache_hit_rate": {
+          "value": 0.0,
+          "baseline_value": 0.0,
+          "delta": 0.0,
+          "ratio_to_baseline": null
+        },
+        "eval_reps_reader.shard_count": {
+          "value": 2.0,
+          "baseline_value": 0.0,
+          "delta": 2.0,
+          "ratio_to_baseline": null
+        },
+        "eval_reps_reader.shard_load_rate": {
+          "value": 1.0,
+          "baseline_value": 0.0,
+          "delta": 1.0,
+          "ratio_to_baseline": null
+        },
+        "eval_reps_reader.shard_manifest_scans_per_read": {
+          "value": 1.0,
+          "baseline_value": 0.0,
+          "delta": 1.0,
+          "ratio_to_baseline": null
+        },
+        "eval_reps_reader.shards_per_read": {
+          "value": 1.0,
+          "baseline_value": 0.0,
+          "delta": 1.0,
+          "ratio_to_baseline": null
+        }
+      },
+      "top_phases": [
+        {
+          "name": "score_postprocess",
+          "seconds": 0.009434,
+          "share": 0.320585
+        },
+        {
+          "name": "reporting",
+          "seconds": 0.007119,
+          "share": 0.241917
+        },
+        {
+          "name": "read_eval_reps_cache_batch",
+          "seconds": 0.004673,
+          "share": 0.158798
+        },
+        {
+          "name": "read_cache_metadata",
+          "seconds": 0.003756,
+          "share": 0.127636
+        },
+        {
+          "name": "load_layer_stats_cache",
+          "seconds": 0.002352,
+          "share": 0.079925
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "same-machine uncached/cached/cache-only TruthfulQA profile triplet",
+    "profile repeats=1"
+  ],
+  "regression_gate": {
+    "enabled": true,
+    "passed": true,
+    "checked_runs": [
+      "cached",
+      "cache_only"
+    ],
+    "config": {
+      "max_total_ratio": null,
+      "max_run_total_ratios": {
+        "cached": 1.1,
+        "cache_only": 0.35
+      },
+      "max_phase_ratios": {},
+      "min_throughput_ratios": {},
+      "fail_on_any_repeat_regression": false
+    },
+    "failures": []
+  }
+}

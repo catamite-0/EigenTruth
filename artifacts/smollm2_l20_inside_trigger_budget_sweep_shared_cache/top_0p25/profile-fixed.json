@@ -1,0 +1,80 @@
+{
+  "total_seconds": 132.859814,
+  "phases": {
+    "load_data": 7.194385,
+    "load_model": 6.817721,
+    "load_statement_encoding_cache": 0.007266,
+    "load_layer_stats_cache": 0.005162,
+    "load_eval_reps_cache": 0.000562,
+    "read_eval_reps_cache_batch": 0.062284,
+    "score_postprocess": 0.21272,
+    "inside_generation": 118.482917,
+    "reporting": 0.068518,
+    "sweep_reporting": 5e-06
+  },
+  "summary": {
+    "bottleneck": "inside_generation",
+    "top_phases": [
+      {
+        "name": "inside_generation",
+        "seconds": 118.482917,
+        "share": 0.891789
+      },
+      {
+        "name": "load_data",
+        "seconds": 7.194385,
+        "share": 0.05415
+      },
+      {
+        "name": "load_model",
+        "seconds": 6.817721,
+        "share": 0.051315
+      },
+      {
+        "name": "score_postprocess",
+        "seconds": 0.21272,
+        "share": 0.001601
+      },
+      {
+        "name": "reporting",
+        "seconds": 0.068518,
+        "share": 0.000516
+      }
+    ],
+    "groups": {
+      "startup": {
+        "seconds": 14.012106,
+        "share": 0.105465
+      },
+      "tokenization": {
+        "seconds": 0.007266,
+        "share": 5.5e-05
+      },
+      "model_forward": {
+        "seconds": 118.482917,
+        "share": 0.891789
+      },
+      "cache_io": {
+        "seconds": 0.068008,
+        "share": 0.000512
+      },
+      "postprocess": {
+        "seconds": 0.281243,
+        "share": 0.002117
+      }
+    },
+    "throughput": {
+      "end_to_end_eval_records_per_second": 1.159116
+    },
+    "accounted_seconds": 132.85154,
+    "accounted_share": 0.999938,
+    "unaccounted_seconds": 0.008274
+  },
+  "batch_size_fallback": {
+    "enabled": false,
+    "requested_batch_size": 8,
+    "effective_batch_size": 8,
+    "reductions": [],
+    "n_reductions": 0
+  }
+}

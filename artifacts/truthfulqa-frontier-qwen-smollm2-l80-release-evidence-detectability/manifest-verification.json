@@ -1,0 +1,22 @@
+{
+  "checked": 7,
+  "failures": [],
+  "manifest_path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-release-evidence-detectability/artifact-manifest.json",
+  "nested": [
+    {
+      "checked": 5,
+      "failures": [],
+      "manifest_path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-release-evidence-detectability/../truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/artifact-manifest.json",
+      "nested": [],
+      "passed": true
+    },
+    {
+      "checked": 6,
+      "failures": [],
+      "manifest_path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-release-evidence-detectability/../truthfulqa-frontier-qwen-smollm2-l80-verifier-stability/artifact-manifest.json",
+      "nested": [],
+      "passed": true
+    }
+  ],
+  "passed": true
+}

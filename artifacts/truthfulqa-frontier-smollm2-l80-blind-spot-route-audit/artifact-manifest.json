@@ -1,0 +1,70 @@
+{
+  "artifacts": {
+    "blind_spot_correction_route_audit": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "blind-spot-route-audit.json",
+      "sha256": "a08c93ea525a519b27f89053353b0bd85d1033312c18eab9c2ccf4e27c8740a0",
+      "size_bytes": 73380
+    },
+    "blind_spots": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json",
+      "sha256": "5990d22d8547cce21613bdc0c618058ca0f1d6c8766e16363b333595fec4ee5a",
+      "size_bytes": 123816
+    },
+    "claims": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_l80_retrieval_structured_qa_route_v0_6/retrieval-claims.json",
+      "sha256": "e12fabda5e95c76d94dd2ddb19a6db840d33cbbcb2af025bed1cb027c67e3e37",
+      "size_bytes": 604280
+    },
+    "route_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_l80_retrieval_structured_qa_route_v0_6/retrieval-route-comparison.json",
+      "sha256": "0486f574f4c75039d89655311a6844821704744777f7a4d4a2376fe68d20f2f4",
+      "size_bytes": 19742
+    },
+    "verified_records_jsonl": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "verified-records.jsonl",
+      "sha256": "bfc7c095bd59fe3a1044712189cc8a7ed5e51e8140eb2efe12a7c98e95cf549b",
+      "size_bytes": 1541641
+    },
+    "verifier_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "retrieval-verifier-report-with-sidecar.json",
+      "sha256": "12eb1d7d9ff49f013186c6e7666acbdfe35ac6f62da11b98b6f95bbb7dc0d6a2",
+      "size_bytes": 23986
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "blind_spot_count": 89,
+    "matched_verified_record_count": 89,
+    "runner": "audit_blind_spot_correction_routes",
+    "status": "complete",
+    "target_route": "retrieval_structured_qa",
+    "target_route_refuted_count": 3,
+    "target_route_selected_count": 3,
+    "unresolved_count": 86
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 6,
+    "directory_count": 0,
+    "file_count": 6,
+    "missing_count": 0
+  }
+}

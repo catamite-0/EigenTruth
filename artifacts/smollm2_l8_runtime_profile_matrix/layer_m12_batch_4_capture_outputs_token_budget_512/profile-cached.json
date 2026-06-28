@@ -1,0 +1,90 @@
+{
+  "total_seconds": 14.603377,
+  "phases": {
+    "load_data": 7.708149,
+    "load_model": 6.699688,
+    "load_statement_encoding_cache": 0.001607,
+    "load_layer_stats_cache": 0.005981,
+    "load_eval_reps_cache": 0.000527,
+    "read_eval_reps_cache_batch": 0.034851,
+    "score_postprocess": 0.120967,
+    "reporting": 0.027228,
+    "sweep_reporting": 6e-06
+  },
+  "summary": {
+    "bottleneck": "load_data",
+    "top_phases": [
+      {
+        "name": "load_data",
+        "seconds": 7.708149,
+        "share": 0.527833
+      },
+      {
+        "name": "load_model",
+        "seconds": 6.699688,
+        "share": 0.458777
+      },
+      {
+        "name": "score_postprocess",
+        "seconds": 0.120967,
+        "share": 0.008283
+      },
+      {
+        "name": "read_eval_reps_cache_batch",
+        "seconds": 0.034851,
+        "share": 0.002387
+      },
+      {
+        "name": "reporting",
+        "seconds": 0.027228,
+        "share": 0.001865
+      }
+    ],
+    "groups": {
+      "startup": {
+        "seconds": 14.407837,
+        "share": 0.98661
+      },
+      "tokenization": {
+        "seconds": 0.001607,
+        "share": 0.00011
+      },
+      "model_forward": {
+        "seconds": 0.0,
+        "share": 0.0
+      },
+      "cache_io": {
+        "seconds": 0.041359,
+        "share": 0.002832
+      },
+      "postprocess": {
+        "seconds": 0.148201,
+        "share": 0.010148
+      }
+    },
+    "throughput": {
+      "end_to_end_eval_records_per_second": 4.656457
+    },
+    "cache_efficiency": {
+      "eval_reps_reader": {
+        "records_per_read": 4.0,
+        "shards_per_read": 1.0,
+        "cross_shard_read_rate": 0.0,
+        "shard_cache_hit_rate": 0.0,
+        "shard_load_rate": 1.0,
+        "shard_count": 17,
+        "shard_cache_capacity": 2
+      }
+    },
+    "accounted_seconds": 14.599004,
+    "accounted_share": 0.999701,
+    "unaccounted_seconds": 0.004373
+  },
+  "batch_size_fallback": {
+    "enabled": false,
+    "requested_batch_size": 4,
+    "effective_batch_size": 4,
+    "reductions": [],
+    "n_reductions": 0
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "artifacts": {
+    "intrinsic_dimension_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "intrinsic-dimension-report.json",
+      "sha256": "835f8ce0de164d3bc1c18b98286bc4649e83fa6735a217bfe7389db33b1c56b5",
+      "size_bytes": 8433
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "estimator": "twonn",
+    "source": "warmup checkpoint hidden states; no model forward pass",
+    "split": "true",
+    "workflow": "eval_intrinsic_dimension"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 1,
+    "directory_count": 0,
+    "file_count": 1,
+    "missing_count": 0
+  }
+}

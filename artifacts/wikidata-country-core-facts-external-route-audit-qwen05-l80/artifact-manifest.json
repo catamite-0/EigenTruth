@@ -1,0 +1,154 @@
+{
+  "artifacts": {
+    "gap_analysis_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "retrieval-route-gap-analysis-manifest.json",
+      "sha256": "4ed7d922802385a0b34f616693fcb6b74e3c90b30191e829e8c97b0c1be6681c",
+      "size_bytes": 1656
+    },
+    "gap_analysis_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "retrieval-route-gap-analysis.json",
+      "sha256": "1716d1f4ac748f30c064a37b4ced90542ca25ac4e3d616cd15e1bb323772064c",
+      "size_bytes": 15081
+    },
+    "promotion_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "retrieval-route-promotion.json",
+      "sha256": "84164e5132b74748af206fb398c258ed2c2f871afdc6a284d19d4b60f4903bf8",
+      "size_bytes": 21189
+    },
+    "retrieval_claims": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "retrieval-claims.json",
+      "sha256": "a85240e34d276f48fd26a99b9ee2739a30edfc366e35c23641d701396d29c159",
+      "size_bytes": 2758404
+    },
+    "route_comparison_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "retrieval-route-comparison.json",
+      "sha256": "727d49ce6e4c7868ac616374e7e25fa8ffee0b6f65c5ee4f800c15ccd1551892",
+      "size_bytes": 19394
+    },
+    "route_quality_summary": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "route-quality-summary.json",
+      "sha256": "b636e864b7e333f9b86ad5811cbaa170c052ab2f0c858a94eb0a35d523df9a12",
+      "size_bytes": 9860
+    },
+    "score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../qwen05_truthfulqa_l80_scores_with_statements.json",
+      "sha256": "afe25f1a8741c6b3f609172afa322033627e1765b378d37126c468d5089d5f52",
+      "size_bytes": 572479
+    },
+    "source_gate_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../wikidata-country-core-facts-external-corpus/artifact-manifest.json",
+      "sha256": "3022937afdc8e45e64629aa28955566475a9f37bae8a8cc4511feb95c0306eb5",
+      "size_bytes": 4763
+    },
+    "verified_records_jsonl": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "verified-records.jsonl",
+      "sha256": "d685f7e06f4b72a16f2c03599c2808ac9467e774bb8c4ca8b35ef530f57644b6",
+      "size_bytes": 3047303
+    },
+    "verifier_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "retrieval-verifier-report.json",
+      "sha256": "9f5e06557fd40408b3ccfdcf00900762d249753f724287e6c60e96413d4f63ab",
+      "size_bytes": 18795
+    },
+    "verifier_report_with_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "retrieval-verifier-report-with-records.json",
+      "sha256": "6e7c2b2b06e7e5b8ec6508c738efff2d072011b85b2f6ae928180c116f1bd616",
+      "size_bytes": 12211
+    },
+    "workflow_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "retrieval-route-artifact-manifest.json",
+      "sha256": "ad644eb0d385fc3aa56e703f91ec966e7a27dd120024373c4500fdbea0832e41",
+      "size_bytes": 4902
+    },
+    "workflow_manifest_verification": {
+      "exists": false,
+      "file_count": null,
+      "kind": "missing",
+      "path": "retrieval-route-manifest-verification.json",
+      "sha256": null,
+      "size_bytes": null
+    },
+    "workflow_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "local-retrieval-route-workflow.json",
+      "sha256": "b03c44e3a3f8c6f7defd0231eea45778bb7ce49fd69bad1989a757447acea623",
+      "size_bytes": 28208
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "blocking_reason": "Wikidata country-core-facts evidence improves coverage over country capitals, but retrieval_groundedness still fails the false-alarm gate and should not be promoted.",
+    "coverage_delta_vs_capitals": 0.03776978417266186,
+    "coverage_rate": 0.49460431654676257,
+    "final_status_counts": {
+      "insufficient_evidence": 555,
+      "supported": 1
+    },
+    "gap_counts": {
+      "false_negative": 155,
+      "low_overlap_after_retrieval": 119,
+      "no_retrieval_hits": 281,
+      "true_supported": 1
+    },
+    "hit_property_counts": {
+      "P36": 510,
+      "P37": 303,
+      "P38": 312
+    },
+    "n_records": 556,
+    "promotes_verifier_route": false,
+    "quality_gate_passed": false,
+    "records_with_hits": 275,
+    "retrieval_verified_detection": 0.3161290322580645,
+    "retrieval_verified_false_alarm": 0.15492957746478872,
+    "source_provider": "wikidata",
+    "source_scope": "country_core_facts:P36,P37,P38",
+    "status": "blocked",
+    "workflow": "wikidata_external_route_quality_audit"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 14,
+    "directory_count": 0,
+    "file_count": 13,
+    "missing_count": 1
+  }
+}

@@ -1,0 +1,167 @@
+{
+  "artifacts": {
+    "qa_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "wikidata-blind-spot-qa-corpus.json",
+      "sha256": "898e7710d547b59541aafe0ec16d5737c3532337fe1581bdea1d1683bfd2caa9",
+      "size_bytes": 382494
+    },
+    "qa_templates": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "wikidata-blind-spot-qa-templates.json",
+      "sha256": "4a2cdebea61476e528d331adeab98809fe53d34b52862e0cb5ec41af368a29fa",
+      "size_bytes": 3458
+    },
+    "source.1.wikidata-source-docs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-evidence/wikidata-source-docs.jsonl",
+      "sha256": "257e86d0ff60ca6cdab55f69864dd1ca004249fcdb9a3ce6c93013f2088518ab",
+      "size_bytes": 236534
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "auto_template_from_source": true,
+    "n_documents": 292,
+    "provider": "wikidata",
+    "skip_qid_labels": true,
+    "statement_properties": [
+      "P106",
+      "P112",
+      "P131",
+      "P17",
+      "P170",
+      "P27",
+      "P279",
+      "P31",
+      "P856",
+      "description"
+    ],
+    "templates": [
+      {
+        "answer_field": "value",
+        "qid_label_fields": [
+          "statement_property_label",
+          "subject",
+          "value"
+        ],
+        "question_template": "What does Wikidata list as the {statement_property_label} for {subject}?",
+        "statement_property": "P106",
+        "statement_property_label": "occupation"
+      },
+      {
+        "answer_field": "value",
+        "qid_label_fields": [
+          "statement_property_label",
+          "subject",
+          "value"
+        ],
+        "question_template": "What does Wikidata list as the {statement_property_label} for {subject}?",
+        "statement_property": "P112",
+        "statement_property_label": "founder"
+      },
+      {
+        "answer_field": "value",
+        "qid_label_fields": [
+          "statement_property_label",
+          "subject",
+          "value"
+        ],
+        "question_template": "What does Wikidata list as the {statement_property_label} for {subject}?",
+        "statement_property": "P131",
+        "statement_property_label": "located in the administrative territorial entity"
+      },
+      {
+        "answer_field": "value",
+        "qid_label_fields": [
+          "statement_property_label",
+          "subject",
+          "value"
+        ],
+        "question_template": "What does Wikidata list as the {statement_property_label} for {subject}?",
+        "statement_property": "P17",
+        "statement_property_label": "country"
+      },
+      {
+        "answer_field": "value",
+        "qid_label_fields": [
+          "statement_property_label",
+          "subject",
+          "value"
+        ],
+        "question_template": "What does Wikidata list as the {statement_property_label} for {subject}?",
+        "statement_property": "P170",
+        "statement_property_label": "creator"
+      },
+      {
+        "answer_field": "value",
+        "qid_label_fields": [
+          "statement_property_label",
+          "subject",
+          "value"
+        ],
+        "question_template": "What does Wikidata list as the {statement_property_label} for {subject}?",
+        "statement_property": "P27",
+        "statement_property_label": "country of citizenship"
+      },
+      {
+        "answer_field": "value",
+        "qid_label_fields": [
+          "statement_property_label",
+          "subject",
+          "value"
+        ],
+        "question_template": "What does Wikidata list as the {statement_property_label} for {subject}?",
+        "statement_property": "P279",
+        "statement_property_label": "subclass of"
+      },
+      {
+        "answer_field": "value",
+        "qid_label_fields": [
+          "statement_property_label",
+          "subject",
+          "value"
+        ],
+        "question_template": "What does Wikidata list as the {statement_property_label} for {subject}?",
+        "statement_property": "P31",
+        "statement_property_label": "instance of"
+      },
+      {
+        "answer_field": "value",
+        "qid_label_fields": [
+          "statement_property_label",
+          "subject",
+          "value"
+        ],
+        "question_template": "What does Wikidata list as the {statement_property_label} for {subject}?",
+        "statement_property": "P856",
+        "statement_property_label": "official website"
+      },
+      {
+        "answer_field": "value",
+        "qid_label_fields": [
+          "statement_property_label",
+          "subject",
+          "value"
+        ],
+        "question_template": "What does Wikidata list as the {statement_property_label} for {subject}?",
+        "statement_property": "description",
+        "statement_property_label": "description"
+      }
+    ],
+    "workflow": "build_wikidata_qa_corpus"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

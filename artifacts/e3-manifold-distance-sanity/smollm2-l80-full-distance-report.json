@@ -1,0 +1,153 @@
+{
+  "covariance_mode": "model",
+  "distance_matrix": [
+    [
+      0.0,
+      58.386260986328125,
+      86.52513885498047,
+      142.29238891601562,
+      265.5112609863281
+    ],
+    [
+      58.386260986328125,
+      0.0,
+      59.44843292236328,
+      118.94595336914062,
+      242.33021545410156
+    ],
+    [
+      86.52513885498047,
+      59.44843292236328,
+      0.0,
+      96.64496612548828,
+      219.188720703125
+    ],
+    [
+      142.29238891601562,
+      118.94595336914062,
+      96.64496612548828,
+      0.0,
+      162.50572204589844
+    ],
+    [
+      265.5112609863281,
+      242.33021545410156,
+      219.188720703125,
+      162.50572204589844,
+      0.0
+    ]
+  ],
+  "items": [
+    {
+      "covariance_low_rank": 16,
+      "covariance_mode": "full",
+      "hidden_dim": 576,
+      "id": "layer:-16",
+      "layer": -16,
+      "n": 266,
+      "source": "artifacts/cache/truthfulqa-frontier-qwen-smollm2/smollm2-l80/layer-stats.pt"
+    },
+    {
+      "covariance_low_rank": 16,
+      "covariance_mode": "full",
+      "hidden_dim": 576,
+      "id": "layer:-14",
+      "layer": -14,
+      "n": 266,
+      "source": "artifacts/cache/truthfulqa-frontier-qwen-smollm2/smollm2-l80/layer-stats.pt"
+    },
+    {
+      "covariance_low_rank": 16,
+      "covariance_mode": "full",
+      "hidden_dim": 576,
+      "id": "layer:-12",
+      "layer": -12,
+      "n": 266,
+      "source": "artifacts/cache/truthfulqa-frontier-qwen-smollm2/smollm2-l80/layer-stats.pt"
+    },
+    {
+      "covariance_low_rank": 16,
+      "covariance_mode": "full",
+      "hidden_dim": 576,
+      "id": "layer:-10",
+      "layer": -10,
+      "n": 266,
+      "source": "artifacts/cache/truthfulqa-frontier-qwen-smollm2/smollm2-l80/layer-stats.pt"
+    },
+    {
+      "covariance_low_rank": 16,
+      "covariance_mode": "full",
+      "hidden_dim": 576,
+      "id": "layer:-8",
+      "layer": -8,
+      "n": 266,
+      "source": "artifacts/cache/truthfulqa-frontier-qwen-smollm2/smollm2-l80/layer-stats.pt"
+    }
+  ],
+  "layer_locality": {
+    "adjacent_mean_distance": 94.24634552001953,
+    "adjacent_pair_count": 4,
+    "adjacent_to_distant_ratio": 0.5261270926184769,
+    "available": true,
+    "coherent": true,
+    "distant_mean_distance": 179.13227971394858,
+    "distant_pair_count": 6,
+    "min_layer_gap": 2,
+    "nearest_adjacent_fraction": 1.0
+  },
+  "metric": "gaussian_2_wasserstein",
+  "nearest_neighbors": [
+    {
+      "distance": 58.386260986328125,
+      "id": "layer:-16",
+      "nearest_id": "layer:-14"
+    },
+    {
+      "distance": 58.386260986328125,
+      "id": "layer:-14",
+      "nearest_id": "layer:-16"
+    },
+    {
+      "distance": 59.44843292236328,
+      "id": "layer:-12",
+      "nearest_id": "layer:-14"
+    },
+    {
+      "distance": 96.64496612548828,
+      "id": "layer:-10",
+      "nearest_id": "layer:-12"
+    },
+    {
+      "distance": 162.50572204589844,
+      "id": "layer:-8",
+      "nearest_id": "layer:-10"
+    }
+  ],
+  "source_cache": "artifacts/cache/truthfulqa-frontier-qwen-smollm2/smollm2-l80/layer-stats.pt",
+  "source_metadata": {
+    "layer_stats_cache": {
+      "covariance_low_rank": 16,
+      "covariance_mode": "full",
+      "dtype": "float32",
+      "format": 1,
+      "layers": [
+        -12,
+        -16,
+        -14,
+        -10,
+        -8
+      ],
+      "length_bucketed_batches": true,
+      "max_length": 96,
+      "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+      "n_false": 338,
+      "n_layers": 30,
+      "n_true": 266,
+      "offline": false,
+      "subspace_rank": 2,
+      "warmup_fingerprint": "5167ef4038b598042417c01113d577074e54a01ebf6b35a4223f8047128bc5e4"
+    }
+  },
+  "squared": false,
+  "workflow": "compare_manifold_distances"
+}

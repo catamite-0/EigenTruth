@@ -1,0 +1,14 @@
+{
+  "max_estimated_cost_units_mean": 2.3,
+  "max_observed_selected_total_seconds_mean": 0.0005,
+  "max_observed_selected_total_seconds_p95": 0.00061,
+  "min_observed_runtime_coverage_rate": 1.0,
+  "max_selected_profile_rates": {
+    "audit": 0.6
+  },
+  "min_selected_profile_counts": {
+    "latency": 1,
+    "balanced": 1,
+    "audit": 1
+  }
+}

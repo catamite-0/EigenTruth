@@ -1,0 +1,76 @@
+{
+  "checked": 6,
+  "failures": [],
+  "manifest_path": "artifacts/smollm2_l20_inside_trigger_budget_derived_structured_retrieval_audit_staged_release_candidate_manifest.json",
+  "nested": [
+    {
+      "checked": 6,
+      "failures": [],
+      "manifest_path": "artifacts/smollm2_l20_performance_baseline/artifact-manifest.json",
+      "nested": [
+        {
+          "checked": 8,
+          "failures": [],
+          "manifest_path": "artifacts/smollm2_l20_performance_baseline/../smollm2_l20_inside_trigger_budget_sweep_derived/artifact-manifest.json",
+          "nested": [
+            {
+              "checked": 9,
+              "failures": [],
+              "manifest_path": "artifacts/smollm2_l20_performance_baseline/../smollm2_l20_inside_trigger_budget_sweep_derived/top_0p4/artifact-manifest.json",
+              "nested": [],
+              "passed": true
+            }
+          ],
+          "passed": true
+        },
+        {
+          "checked": 2,
+          "failures": [],
+          "manifest_path": "artifacts/smollm2_l20_performance_baseline/../smollm2_l20_readiness_inside/cache-profile-matrix/artifact-manifest.json",
+          "nested": [
+            {
+              "checked": 11,
+              "failures": [],
+              "manifest_path": "artifacts/smollm2_l20_performance_baseline/../smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/artifact-manifest.json",
+              "nested": [],
+              "passed": true
+            }
+          ],
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "checked": 7,
+      "failures": [],
+      "manifest_path": "artifacts/smollm2_l20_readiness_inside_trigger_budget_derived/artifact-manifest.json",
+      "nested": [
+        {
+          "checked": 2,
+          "failures": [],
+          "manifest_path": "artifacts/smollm2_l20_readiness_inside_trigger_budget_derived/../smollm2_l20_readiness_inside/cache-profile-matrix/artifact-manifest.json",
+          "nested": [
+            {
+              "checked": 11,
+              "failures": [],
+              "manifest_path": "artifacts/smollm2_l20_readiness_inside_trigger_budget_derived/../smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/artifact-manifest.json",
+              "nested": [],
+              "passed": true
+            }
+          ],
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "checked": 2,
+      "failures": [],
+      "manifest_path": "artifacts/truthfulqa_l80_structured_qa_staged_adapter_promotion_manifest.json",
+      "nested": [],
+      "passed": true
+    }
+  ],
+  "passed": true
+}

@@ -10,10 +10,21 @@ import pytest
 import torch
 
 from eigentruth.eval.conformal import (
+    AdaptiveScoreTransform,
+    ConformalAbstentionComparisonReport,
+    ConformalAbstentionReleaseGate,
+    ConformalAbstentionReleaseGateResult,
+    ConformalAbstentionReport,
+    adaptive_anomaly_scores,
+    conformal_abstention_comparison_report,
+    conformal_abstention_release_gate,
+    conformal_abstention_report,
     conformal_pvalues,
     conformal_threshold,
     directional_conformal_threshold,
+    directional_conformal_thresholds,
     directional_trigger_rate,
+    evaluate_conformal_abstention,
 )
 
 
@@ -123,8 +134,280 @@ class TestConformalThreshold:
         assert threshold == pytest.approx(10.0)
         assert rate == pytest.approx(1.0 / 3.0)
 
+    def test_directional_thresholds_match_single_alpha_helper(self):
+        calib = torch.tensor([10.0, 11.0, 12.0, 13.0])
+
+        for direction in ("higher", "lower"):
+            thresholds = directional_conformal_thresholds(calib, (0.25, 0.5), direction)
+
+            assert thresholds[0.25] == pytest.approx(
+                directional_conformal_threshold(calib, 0.25, direction)
+            )
+            assert thresholds[0.5] == pytest.approx(
+                directional_conformal_threshold(calib, 0.5, direction)
+            )
+
     def test_directional_helpers_reject_invalid_direction(self):
         with pytest.raises(ValueError, match="direction"):
             directional_conformal_threshold(torch.tensor([1.0]), 0.1, "sideways")
         with pytest.raises(ValueError, match="direction"):
+            directional_conformal_thresholds(torch.tensor([1.0]), (0.1,), "sideways")
+        with pytest.raises(ValueError, match="direction"):
             directional_trigger_rate(torch.tensor([1.0]), 0.0, "sideways")
+
+    def test_directional_trigger_rate_preserves_infinite_threshold_comparison_semantics(self):
+        scores = torch.tensor([1.0, 2.0, 3.0])
+
+        assert directional_trigger_rate(scores, float("inf"), "higher") == 0.0
+        assert directional_trigger_rate(scores, float("-inf"), "higher") == 1.0
+        assert directional_trigger_rate(scores, float("-inf"), "lower") == 0.0
+        assert directional_trigger_rate(scores, float("inf"), "lower") == 1.0
+
+    def test_conformal_helpers_reject_non_finite_scores(self):
+        with pytest.raises(ValueError, match="finite"):
+            conformal_threshold(torch.tensor([1.0, float("nan")]), 0.1)
+        with pytest.raises(ValueError, match="finite"):
+            conformal_pvalues(torch.tensor([1.0, 2.0]), torch.tensor([float("inf")]))
+        with pytest.raises(ValueError, match="finite"):
+            directional_conformal_threshold(torch.tensor([1.0, float("-inf")]), 0.1, "lower")
+        with pytest.raises(ValueError, match="NaN"):
+            directional_trigger_rate(torch.tensor([1.0]), float("nan"), "higher")
+
+
+class TestConformalAbstention:
+    def test_higher_uncertainty_report_and_runtime_decision(self):
+        report = conformal_abstention_report(
+            [0.1, 0.2, 0.3, 0.4, 0.9],
+            [1, 1, 1, 0, 0],
+            0.4,
+            score_name="uncertainty",
+        )
+
+        assert report.threshold == pytest.approx(0.3)
+        assert report.n_calibration == 5
+        assert report.n_correct == 3
+        assert report.retained_count == 3
+        assert report.abstained_count == 2
+        assert report.correct_retained_count == 3
+        assert report.empirical_base_accuracy == pytest.approx(0.6)
+        assert report.empirical_participation_rate == pytest.approx(0.6)
+        assert report.empirical_selective_accuracy == pytest.approx(1.0)
+        assert report.correct_retention_lower_bound == pytest.approx(0.75)
+        assert report.participation_upper_bound == pytest.approx(4.0 / 6.0)
+        assert report.conditional_correctness_lower_bound == pytest.approx(0.75 * (3.0 / 6.0) / (4.0 / 6.0))
+
+        keep = report.decide(0.25, metadata={"request_id": "r1"})
+        abstain = report.decide(0.8)
+        loaded = ConformalAbstentionReport.from_dict(report.to_dict())
+
+        assert keep.participate is True
+        assert keep.action == "participate"
+        assert keep.metadata["request_id"] == "r1"
+        assert keep.metadata["score_name"] == "uncertainty"
+        assert abstain.participate is False
+        assert abstain.action == "abstain"
+        assert loaded == report
+
+    def test_lower_uncertainty_report_uses_lower_tail_as_abstain_region(self):
+        report = conformal_abstention_report(
+            [10.0, 9.0, 8.0, 7.0, 6.0],
+            [1, 1, 0, 0, 0],
+            0.4,
+            direction="lower",
+        )
+
+        assert report.threshold == pytest.approx(9.0)
+        assert report.retained_count == 2
+        assert report.abstained_count == 3
+        assert report.should_participate(9.0) is True
+        assert report.should_participate(8.0) is False
+        assert report.decide(8.0).action == "abstain"
+
+    def test_evaluate_conformal_abstention_handles_no_retained_or_correct_samples(self):
+        report = evaluate_conformal_abstention(
+            [1.0, 2.0, 3.0],
+            [0, 0, 0],
+            threshold=0.0,
+            alpha=0.5,
+        )
+
+        assert report.retained_count == 0
+        assert report.empirical_selective_accuracy is None
+        assert report.correct_retention_rate == 0.0
+        assert report.conditional_correctness_lower_bound == 0.0
+
+    def test_conformal_abstention_rejects_invalid_inputs(self):
+        with pytest.raises(ValueError, match="same length"):
+            conformal_abstention_report([1.0, 2.0], [1], 0.5)
+        with pytest.raises(ValueError, match="0/1"):
+            conformal_abstention_report([1.0, 2.0], [1, 0.5], 0.5)
+        with pytest.raises(ValueError, match="finite"):
+            conformal_abstention_report([1.0, float("nan")], [1, 0], 0.5)
+        with pytest.raises(ValueError, match="at least one correct"):
+            conformal_abstention_report([1.0, 2.0], [0, 0], 0.5)
+        with pytest.raises(ValueError, match="alpha"):
+            conformal_abstention_report([1.0, 2.0], [1, 0], 1.0)
+        with pytest.raises(ValueError, match="direction"):
+            conformal_abstention_report([1.0, 2.0], [1, 0], 0.5, direction="sideways")
+        with pytest.raises(ValueError, match="threshold"):
+            evaluate_conformal_abstention([1.0], [1], threshold=float("nan"), alpha=0.5)
+
+    def test_abstention_comparison_ranks_multiple_signals(self):
+        report = conformal_abstention_comparison_report(
+            {
+                "weak": [0.1, 0.2, 0.8, 0.9, 0.3, 0.4],
+                "strong": [0.1, 0.2, 0.3, 0.4, 0.35, 0.9],
+                "support": [10.0, 11.0, 12.0, 13.0, 12.5, 1.0],
+            },
+            [1, 1, 1, 1, 0, 0],
+            0.5,
+            directions={"weak": "higher", "strong": "higher", "support": "lower"},
+        )
+
+        loaded = ConformalAbstentionComparisonReport.from_dict(report.to_dict())
+
+        assert report.recommended is not None
+        assert report.recommended.score_name == "strong"
+        assert report.recommended.rank == 1
+        assert report.candidates[0].selection_metric == "conditional_correctness_lower_bound"
+        assert report.candidates[0].selection_value == pytest.approx(0.6)
+        assert report.candidates[1].score_name == "support"
+        assert report.candidates[1].direction == "lower"
+        assert loaded == report
+
+    def test_abstention_comparison_rejects_invalid_inputs(self):
+        with pytest.raises(ValueError, match="at least one score"):
+            conformal_abstention_comparison_report({}, [1], 0.5)
+        with pytest.raises(ValueError, match="best_by"):
+            conformal_abstention_comparison_report({"u": [1.0]}, [1], 0.5, best_by="bad")
+
+    def test_abstention_release_gate_passes_selected_report(self):
+        report = conformal_abstention_report(
+            [0.1, 0.2, 0.3, 0.4, 0.9],
+            [1, 1, 1, 0, 0],
+            0.4,
+            score_name="uncertainty",
+        )
+
+        gate = conformal_abstention_release_gate(
+            report,
+            min_conditional_correctness_lower_bound=0.5,
+            max_abstention_rate=0.5,
+        )
+        loaded = ConformalAbstentionReleaseGateResult.from_dict(gate.to_dict())
+
+        assert gate.passed is True
+        assert gate.status == "passed"
+        assert gate.blocking_reasons == ()
+        assert gate.selected_score_name == "uncertainty"
+        assert gate.metrics["conditional_correctness_lower_bound"] == pytest.approx(0.5625)
+        assert gate.metrics["empirical_abstention_rate"] == pytest.approx(0.4)
+        assert loaded == gate
+
+    def test_abstention_release_gate_blocks_weak_or_too_expensive_candidate(self):
+        report = conformal_abstention_report(
+            [0.1, 0.2, 0.3, 0.4, 0.9],
+            [1, 1, 1, 0, 0],
+            0.4,
+            score_name="uncertainty",
+        )
+
+        gate = ConformalAbstentionReleaseGate(
+            min_conditional_correctness_lower_bound=0.9,
+            max_abstention_rate=0.3,
+        ).evaluate(report.to_dict())
+
+        assert gate.passed is False
+        assert gate.status == "blocked"
+        assert len(gate.blocking_reasons) == 2
+        assert "conditional_correctness_lower_bound" in gate.blocking_reasons[0]
+        assert "empirical_abstention_rate" in gate.blocking_reasons[1]
+
+    def test_abstention_release_gate_uses_comparison_recommendation(self):
+        comparison = conformal_abstention_comparison_report(
+            {
+                "weak": [0.1, 0.2, 0.8, 0.9, 0.3, 0.4],
+                "strong": [0.1, 0.2, 0.3, 0.4, 0.35, 0.9],
+            },
+            [1, 1, 1, 1, 0, 0],
+            0.5,
+        )
+
+        gate = conformal_abstention_release_gate(
+            comparison.to_dict(),
+            min_conditional_correctness_lower_bound=0.5,
+            max_abstention_rate=0.5,
+        )
+
+        assert gate.passed is True
+        assert gate.source == "conformal_abstention_comparison_report"
+        assert gate.candidate_count == 2
+        assert gate.selected_score_name == "strong"
+
+    def test_abstention_release_gate_blocks_empty_comparison(self):
+        comparison = ConformalAbstentionComparisonReport(
+            alpha=0.5,
+            best_by="conditional_correctness_lower_bound",
+            candidates=(),
+        )
+
+        gate = conformal_abstention_release_gate(comparison)
+
+        assert gate.passed is False
+        assert gate.status == "blocked"
+        assert gate.candidate_count == 0
+        assert gate.blocking_reasons == ("abstention comparison report has no candidates",)
+
+
+class TestAdaptiveConformalScores:
+    def test_adaptive_anomaly_scores_inflate_by_features(self):
+        adjusted = adaptive_anomaly_scores(
+            [1.0, 2.0, 3.0],
+            feature_values={"entropy": [0.0, 1.0, 2.0], "citation": [1.0, 0.0, 1.0]},
+            feature_weights={"entropy": 0.5, "citation": 2.0},
+            intercept=0.25,
+        )
+
+        assert adjusted.tolist() == pytest.approx([3.25, 2.75, 6.25])
+
+    def test_adaptive_anomaly_scores_orient_lower_direction(self):
+        adjusted = adaptive_anomaly_scores(
+            [10.0, 8.0],
+            feature_values={"risk": [0.0, 1.0]},
+            feature_weights={"risk": 2.0},
+            direction="lower",
+        )
+
+        assert adjusted.tolist() == pytest.approx([-10.0, -6.0])
+        assert adjusted[1] > adjusted[0]
+
+    def test_adaptive_score_transform_roundtrip(self):
+        transform = AdaptiveScoreTransform(
+            feature_weights={"semantic_entropy": 1.5},
+            intercept=0.25,
+            direction="higher",
+        )
+
+        loaded = AdaptiveScoreTransform.from_dict(transform.to_dict())
+        adjusted = loaded.transform([1.0, 2.0], {"semantic_entropy": [0.0, 1.0]})
+
+        assert loaded == transform
+        assert adjusted.tolist() == pytest.approx([1.25, 3.75])
+
+    def test_adaptive_score_transform_rejects_invalid_inputs(self):
+        with pytest.raises(ValueError, match="direction"):
+            AdaptiveScoreTransform(direction="sideways")
+        with pytest.raises(ValueError, match="finite"):
+            AdaptiveScoreTransform(feature_weights={"risk": float("nan")})
+        with pytest.raises(ValueError, match="finite"):
+            AdaptiveScoreTransform.from_dict({"feature_weights": {"risk": True}})
+        with pytest.raises(ValueError, match="finite"):
+            AdaptiveScoreTransform.from_dict({"intercept": False})
+        with pytest.raises(ValueError, match="missing required feature"):
+            adaptive_anomaly_scores([1.0], feature_weights={"risk": 1.0})
+        with pytest.raises(ValueError, match="same length"):
+            adaptive_anomaly_scores(
+                [1.0, 2.0],
+                feature_values={"risk": [1.0]},
+                feature_weights={"risk": 1.0},
+            )

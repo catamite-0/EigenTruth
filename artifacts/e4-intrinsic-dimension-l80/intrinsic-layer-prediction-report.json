@@ -1,0 +1,161 @@
+{
+  "notes": [],
+  "runs": [
+    {
+      "absolute_layer_gap": 4,
+      "auroc_regret": 0.012718954248365999,
+      "best_layer": -10,
+      "best_layer_auroc": 0.7644575163398692,
+      "best_layer_score_name": "truth_proj",
+      "intrinsic_peak_dimension": 5.410904923878086,
+      "intrinsic_peak_layer": -14,
+      "intrinsic_report_name": "intrinsic-dimension-report",
+      "intrinsic_source": "artifacts/e4-intrinsic-dimension-l80/intrinsic-dimension-report.json",
+      "matched": true,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "n_ranked_layers": 5,
+      "name": "qwen05-l80",
+      "peak_in_top_k": true,
+      "score_name": "truth_proj",
+      "selected_layer_auroc": 0.7517385620915032,
+      "selected_layer_rank": 3,
+      "selected_layer_score_name": "truth_proj",
+      "shape": {
+        "available": true,
+        "falls_after_peak": true,
+        "intrinsic_dimensions": [
+          5.3592939587837956,
+          5.410904923878086,
+          5.225701918920064,
+          4.724939971947506,
+          4.588530259271193
+        ],
+        "layer_order": [
+          -16,
+          -14,
+          -12,
+          -10,
+          -8
+        ],
+        "peak_intrinsic_dimension": 5.410904923878086,
+        "peak_layer": -14,
+        "rise_then_fall": true,
+        "rises_to_peak": true
+      },
+      "sweep_name": "qwen05-l80",
+      "sweep_source": "artifacts/qwen05_truthfulqa_l80_sweep_report.json",
+      "top_layers": [
+        {
+          "auroc": 0.7644575163398692,
+          "detection": 0.24183006535947713,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -10,
+          "score_name": "truth_proj"
+        },
+        {
+          "auroc": 0.7613333333333333,
+          "detection": 0.2973856209150327,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -12,
+          "score_name": "truth_proj"
+        },
+        {
+          "auroc": 0.7517385620915032,
+          "detection": 0.2647058823529412,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -14,
+          "score_name": "truth_proj"
+        }
+      ]
+    },
+    {
+      "absolute_layer_gap": 2,
+      "auroc_regret": 0.027071895424836567,
+      "best_layer": -16,
+      "best_layer_auroc": 0.7819869281045752,
+      "best_layer_score_name": "truth_proj",
+      "intrinsic_peak_dimension": 4.839667662487674,
+      "intrinsic_peak_layer": -14,
+      "intrinsic_report_name": "intrinsic-dimension-report",
+      "intrinsic_source": "artifacts/e4-intrinsic-dimension-l80/intrinsic-dimension-report.json",
+      "matched": true,
+      "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+      "n_ranked_layers": 5,
+      "name": "smollm2-l80",
+      "peak_in_top_k": true,
+      "score_name": "truth_proj",
+      "selected_layer_auroc": 0.7549150326797386,
+      "selected_layer_rank": 2,
+      "selected_layer_score_name": "truth_proj",
+      "shape": {
+        "available": true,
+        "falls_after_peak": true,
+        "intrinsic_dimensions": [
+          4.600174737879613,
+          4.839667662487674,
+          4.474017764003026,
+          4.36017948354041,
+          3.918729802197133
+        ],
+        "layer_order": [
+          -16,
+          -14,
+          -12,
+          -10,
+          -8
+        ],
+        "peak_intrinsic_dimension": 4.839667662487674,
+        "peak_layer": -14,
+        "rise_then_fall": true,
+        "rises_to_peak": true
+      },
+      "sweep_name": "smollm2-l80",
+      "sweep_source": "artifacts/smollm2_truthfulqa_l80_sweep_report.json",
+      "top_layers": [
+        {
+          "auroc": 0.7819869281045752,
+          "detection": 0.2647058823529412,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -16,
+          "score_name": "truth_proj"
+        },
+        {
+          "auroc": 0.7549150326797386,
+          "detection": 0.238562091503268,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -14,
+          "score_name": "truth_proj"
+        },
+        {
+          "auroc": 0.739764705882353,
+          "detection": 0.23202614379084968,
+          "direction": "higher",
+          "false_alarm": 0.096,
+          "layer": -12,
+          "score_name": "truth_proj"
+        }
+      ]
+    }
+  ],
+  "score_name": "truth_proj",
+  "summary": {
+    "criterion": "in_top_3",
+    "exact_best_layer_rate": 0.0,
+    "mean_absolute_layer_gap": 3.0,
+    "mean_auroc_regret": 0.019895424836601283,
+    "n_exact_best_layer": 0,
+    "n_matched": 2,
+    "n_missing_sweep": 0,
+    "n_peak_in_top_k": 2,
+    "n_runs": 2,
+    "peak_in_top_k_rate": 1.0,
+    "status": "pass"
+  },
+  "top_k": 3,
+  "workflow": "compare_intrinsic_dimension_layers"
+}

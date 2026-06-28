@@ -1,0 +1,78 @@
+{
+  "fixture_type": "order_reservation_transition_state",
+  "schema_version": 1,
+  "state": {
+    "inventory": {
+      "sku_0001": {
+        "available": 6
+      },
+      "sku_0002": {
+        "available": 8
+      },
+      "sku_0003": {
+        "available": 8
+      },
+      "sku_0004": {
+        "available": 7
+      },
+      "sku_0005": {
+        "available": 7
+      },
+      "sku_0006": {
+        "available": 9
+      },
+      "sku_0007": {
+        "available": 6
+      },
+      "sku_0008": {
+        "available": 8
+      }
+    },
+    "orders": {
+      "ord_0001": {
+        "quantity": 1,
+        "sku": "sku_0001",
+        "status": "pending"
+      },
+      "ord_0002": {
+        "quantity": 2,
+        "sku": "sku_0002",
+        "status": "pending"
+      },
+      "ord_0003": {
+        "quantity": 3,
+        "sku": "sku_0003",
+        "status": "pending"
+      },
+      "ord_0004": {
+        "quantity": 1,
+        "sku": "sku_0004",
+        "status": "pending"
+      },
+      "ord_0005": {
+        "quantity": 2,
+        "sku": "sku_0005",
+        "status": "pending"
+      },
+      "ord_0006": {
+        "quantity": 3,
+        "sku": "sku_0006",
+        "status": "pending"
+      },
+      "ord_0007": {
+        "quantity": 1,
+        "sku": "sku_0007",
+        "status": "pending"
+      },
+      "ord_0008": {
+        "quantity": 2,
+        "sku": "sku_0008",
+        "status": "pending"
+      }
+    }
+  },
+  "summary": {
+    "n_inventory_items": 8,
+    "n_orders": 8
+  }
+}

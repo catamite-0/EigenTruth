@@ -1,0 +1,257 @@
+{
+  "artifacts": {
+    "claims": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "verifier-claims.json",
+      "sha256": "a5d2cc9bdd7451b0133e866ce2185c8868249f5109c0eaef8842c7c58d441033",
+      "size_bytes": 604261
+    },
+    "enhanced_records.qwen-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen-l80-enhanced-scores.manifest.records.jsonl",
+      "sha256": "d1d3c6cac023776a766515dd803bff3fa314945d4f5d4a005d8ac145b5babe01",
+      "size_bytes": 831588
+    },
+    "enhanced_records.smollm2-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80-enhanced-scores.manifest.records.jsonl",
+      "sha256": "c51cfe7d03a3929b649ad5870663b40acb3157c0b1f1d7c2e521a9f32d67af4e",
+      "size_bytes": 831355
+    },
+    "enhanced_report.qwen-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen-l80-enhanced-score-report.json",
+      "sha256": "4737ba1a780764d611f029653b099acd701b7c37726a99e68b47792e07cb9f61",
+      "size_bytes": 1572
+    },
+    "enhanced_report.smollm2-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80-enhanced-score-report.json",
+      "sha256": "b21b8cbf8a1320662220e97746101a77e2e8ea91258e4f4ae2f9783141d70af4",
+      "size_bytes": 1579
+    },
+    "enhanced_scores.qwen-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen-l80-enhanced-scores.manifest.json",
+      "sha256": "e06e0f0744ecf962bd7e500a4ab7776f11d81be0507f9ccb30cb4792357103a9",
+      "size_bytes": 4414
+    },
+    "enhanced_scores.smollm2-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80-enhanced-scores.manifest.json",
+      "sha256": "963cbeb91c3e4cfd706ef5021fca4807420bf131aae8c34054db624e5b1b2e38",
+      "size_bytes": 4564
+    },
+    "geometry_fusion_artifact.qwen-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen-l80-geometry-fusion-artifact.json",
+      "sha256": "e291a0a80003783b03bb1507bc009d49f232bb3f61223629bc17e3b681332d8f",
+      "size_bytes": 35676
+    },
+    "geometry_fusion_artifact.smollm2-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80-geometry-fusion-artifact.json",
+      "sha256": "31fb87241228e37f607793d53b676ede76857b94af5b66cca26bbf536266524c",
+      "size_bytes": 35620
+    },
+    "retrieval_corpora.1.truthfulqa_l80_correct_answer_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa_l80_correct_answer_corpus.json",
+      "sha256": "c49ed9bb55c6bea83c1c1282f072ad05d5e86449f785f2559457fc29fd66a81c",
+      "size_bytes": 196938
+    },
+    "score_ensemble_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "score-ensemble-report.json",
+      "sha256": "99d14106d389c44cd73522b57dd5292dd0268d4e3e37e41f2f2c9ca5ecbe4c49",
+      "size_bytes": 25160
+    },
+    "source_scores.qwen-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../qwen05_truthfulqa_l80_scores_with_statements.json",
+      "sha256": "afe25f1a8741c6b3f609172afa322033627e1765b378d37126c468d5089d5f52",
+      "size_bytes": 572479
+    },
+    "source_scores.smollm2-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_truthfulqa_l80_scores_with_statements.json",
+      "sha256": "39a53894be76a24513ec5549a8c67269d54a80b995e29161743aafb813b094d9",
+      "size_bytes": 572345
+    },
+    "verified_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "verified-records.jsonl",
+      "sha256": "91fd59f69d0be35a2e72679ba4348a322e75fce0b6708f560bc0e940a3b60f7f",
+      "size_bytes": 3069853
+    },
+    "verifier_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "verifier-ensemble-report.json",
+      "sha256": "f7ee9d41d09ac6fbefc9e2879bce6451402c1dbf40a9b753a6319e36d2149394",
+      "size_bytes": 33655
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "best_alpha": 0.1,
+    "claims_fixture_type": "local_retrieval_evidence",
+    "claims_summary": {
+      "average_hits_per_record": 0.737410071942446,
+      "n_records": 556,
+      "records_with_hits": 274,
+      "total_hits": 410
+    },
+    "fusion_signals": [
+      "truth_proj",
+      "subspace_resid",
+      "eigenscore",
+      "verifier_refuted",
+      "verifier_not_supported",
+      "verifier_refute_confidence",
+      "verifier_uncertainty"
+    ],
+    "fusion_summary": {
+      "runs": [
+        {
+          "best_ensemble_at_alpha": {
+            "auroc": 0.7887107843137254,
+            "detection": 0.4491830065359477,
+            "false_alarm": 0.09359999999999999,
+            "name": "mean_rank"
+          },
+          "best_geometry_fusion_at_alpha": {
+            "auroc": 0.972518954248366,
+            "detection": 0.7954248366013073,
+            "false_alarm": 0.0696,
+            "name": "noisy_or"
+          },
+          "best_single_at_alpha": {
+            "auroc": 0.7613333333333333,
+            "detection": 0.28202614379084967,
+            "false_alarm": 0.09559999999999999,
+            "name": "truth_proj"
+          },
+          "name": "qwen-l80"
+        },
+        {
+          "best_ensemble_at_alpha": {
+            "auroc": 0.786259477124183,
+            "detection": 0.3709150326797386,
+            "false_alarm": 0.0988,
+            "name": "mean_rank"
+          },
+          "best_geometry_fusion_at_alpha": {
+            "auroc": 0.9694460784313726,
+            "detection": 0.7949346405228759,
+            "false_alarm": 0.0692,
+            "name": "noisy_or"
+          },
+          "best_single_at_alpha": {
+            "auroc": 0.9475424836601307,
+            "detection": 0.24575163398692812,
+            "false_alarm": 0.0312,
+            "name": "verifier_uncertainty"
+          },
+          "name": "smollm2-l80"
+        }
+      ]
+    },
+    "geometry_artifact_count": 2,
+    "geometry_signals": [
+      "truth_proj",
+      "subspace_resid",
+      "eigenscore"
+    ],
+    "labels_copied_to_record_metadata": false,
+    "labels_used_for_retrieval": false,
+    "profile": {
+      "build_claims_fixture": 0.5922969179991924,
+      "build_geometry_fusion_artifacts": 0.07317862899799366,
+      "build_score_ensemble_report": 0.9833314300012717,
+      "build_verifier_report": 0.7290193230001023,
+      "build_verifier_signal_score_dumps": 0.22377560099994298,
+      "write_score_ensemble_report": 0.0016517160001967568,
+      "write_verifier_report": 0.0012881940019724425
+    },
+    "runner": "run_verifier_signal_fusion_workflow",
+    "score_names": [
+      "qwen-l80",
+      "smollm2-l80"
+    ],
+    "signal": "truth_proj",
+    "total_seconds": 2.6047162800023216,
+    "uncertainty_signals": [
+      "verifier_refuted",
+      "verifier_refute_confidence",
+      "verifier_not_supported"
+    ],
+    "uses_non_oracle_local_corpus": true,
+    "uses_selfcheck_samples": false,
+    "verifier_summary": {
+      "runs": [
+        {
+          "false_refuted_rate": 0.042483660130718956,
+          "name": "qwen-l80",
+          "selected_counts": {
+            "groundedness": 317,
+            "retrieval_groundedness": 1,
+            "retrieval_structured_qa": 238
+          },
+          "true_supported_rate": 0.892,
+          "verified_detection": 0.31584967320261437,
+          "verified_false_alarm": 0.0156
+        },
+        {
+          "false_refuted_rate": 0.042483660130718956,
+          "name": "smollm2-l80",
+          "selected_counts": {
+            "groundedness": 317,
+            "retrieval_groundedness": 1,
+            "retrieval_structured_qa": 238
+          },
+          "true_supported_rate": 0.892,
+          "verified_detection": 0.2671568627450981,
+          "verified_false_alarm": 0.0156
+        }
+      ]
+    },
+    "workflow": "verifier_signal_fusion_workflow"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 15,
+    "directory_count": 0,
+    "file_count": 15,
+    "missing_count": 0
+  }
+}

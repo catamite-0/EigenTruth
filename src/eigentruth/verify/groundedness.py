@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from datetime import date, datetime, timezone
 from typing import Any, Mapping, NamedTuple, Sequence
 
+from eigentruth.verify.features import normalized_feature_flags
 from eigentruth.verify.protocols import Claim, VerificationResult, VerificationStatus
 from eigentruth.verify.rules import normalize_claim_text
 
@@ -58,11 +60,104 @@ class EvidenceDocument:
         if text is None:
             raise ValueError("evidence mapping must contain 'text' or 'content'.")
         source = data.get("source")
+        metadata = dict(data.get("metadata", {}))
+        for key, value in data.items():
+            metadata_key = str(key)
+            if metadata_key not in {"text", "content", "source", "metadata"} and metadata_key not in metadata:
+                metadata[metadata_key] = value
         return cls(
             text=str(text),
             source=None if source is None else str(source),
-            metadata=dict(data.get("metadata", {})),
+            metadata=metadata,
         )
+
+
+@dataclass(frozen=True)
+class EvidenceQualityPolicy:
+    """Optional quality gate for evidence-backed groundedness decisions."""
+
+    max_age_days: int | None = None
+    reference_time: str | datetime | date | None = None
+    require_source: bool = False
+    trusted_sources: Sequence[str] = ()
+    require_trusted_source: bool = False
+    time_sensitive_only: bool = True
+
+    def __post_init__(self) -> None:
+        if self.max_age_days is not None:
+            object.__setattr__(self, "max_age_days", _coerce_non_negative_int(
+                self.max_age_days,
+                name="max_age_days",
+            ))
+        object.__setattr__(self, "require_source", _coerce_bool(self.require_source, name="require_source"))
+        object.__setattr__(
+            self,
+            "require_trusted_source",
+            _coerce_bool(self.require_trusted_source, name="require_trusted_source"),
+        )
+        object.__setattr__(
+            self,
+            "time_sensitive_only",
+            _coerce_bool(self.time_sensitive_only, name="time_sensitive_only"),
+        )
+        object.__setattr__(self, "trusted_sources", _coerce_trusted_sources(self.trusted_sources))
+        object.__setattr__(self, "reference_time", _coerce_reference_time(self.reference_time))
+
+    def reference_time_or_now(self) -> datetime:
+        """Return the configured reference time or the current UTC time."""
+        return self.reference_time or datetime.now(timezone.utc)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable representation."""
+        reference_time = self.reference_time
+        return {
+            "max_age_days": self.max_age_days,
+            "reference_time": None if reference_time is None else reference_time.isoformat(),
+            "require_source": self.require_source,
+            "trusted_sources": tuple(self.trusted_sources),
+            "require_trusted_source": self.require_trusted_source,
+            "time_sensitive_only": self.time_sensitive_only,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "EvidenceQualityPolicy":
+        """Build an evidence quality policy from JSON-like data."""
+        return cls(
+            max_age_days=data.get("max_age_days"),
+            reference_time=data.get("reference_time"),
+            require_source=_coerce_bool(data.get("require_source", False), name="require_source"),
+            trusted_sources=_coerce_trusted_sources(data.get("trusted_sources", ())),
+            require_trusted_source=_coerce_bool(
+                data.get("require_trusted_source", False),
+                name="require_trusted_source",
+            ),
+            time_sensitive_only=_coerce_bool(data.get("time_sensitive_only", True), name="time_sensitive_only"),
+        )
+
+
+@dataclass(frozen=True)
+class EvidenceQualityAssessment:
+    """Result of applying an evidence quality policy to one evidence snippet."""
+
+    passed: bool
+    applied: bool
+    reasons: tuple[str, ...] = ()
+    source: str | None = None
+    timestamp: str | None = None
+    age_days: float | None = None
+    trusted_source: bool | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable representation."""
+        return {
+            "passed": self.passed,
+            "applied": self.applied,
+            "reasons": self.reasons,
+            "source": self.source,
+            "timestamp": self.timestamp,
+            "age_days": self.age_days,
+            "trusted_source": self.trusted_source,
+        }
 
 
 class _DocumentMatch(NamedTuple):
@@ -70,6 +165,13 @@ class _DocumentMatch(NamedTuple):
     overlap: float
     exact: bool
     negation_mismatch: bool
+
+
+class _IndexedEvidenceDocument(NamedTuple):
+    document: EvidenceDocument
+    tokens: tuple[str, ...]
+    key: str
+    negated: bool
 
 
 @dataclass(frozen=True)
@@ -84,12 +186,18 @@ class GroundednessVerifier:
     evidence: Sequence[EvidenceDocument | Mapping[str, Any] | str]
     refutations: Mapping[str, Sequence[str] | str] = field(default_factory=dict)
     min_overlap: float = 0.65
+    evidence_quality_policy: EvidenceQualityPolicy | Mapping[str, Any] | None = None
 
     def __post_init__(self) -> None:
         if not (0.0 <= self.min_overlap <= 1.0):
             raise ValueError("min_overlap must be in [0, 1].")
-        object.__setattr__(self, "evidence", tuple(_coerce_evidence(item) for item in self.evidence))
+        evidence = tuple(_coerce_evidence(item) for item in self.evidence)
+        object.__setattr__(self, "evidence", evidence)
+        object.__setattr__(self, "_indexed_evidence", tuple(_index_document(item) for item in evidence))
         object.__setattr__(self, "refutations", _normalize_refutations(self.refutations))
+        object.__setattr__(self, "evidence_quality_policy", _coerce_evidence_quality_policy(
+            self.evidence_quality_policy,
+        ))
 
     def verify(self, claim: Claim, context: Mapping[str, Any] | None = None) -> VerificationResult:
         """Verify one claim against lexical evidence snippets."""
@@ -123,7 +231,7 @@ class GroundednessVerifier:
                 },
             )
 
-        documents = _documents_with_context(self.evidence, context)
+        documents = _documents_with_context(self._indexed_evidence, context)
         best = _best_document_match(claim.text, claim_tokens, documents)
         if best is None:
             return VerificationResult(
@@ -147,7 +255,16 @@ class GroundednessVerifier:
             "best_source": best.document.source,
             "min_overlap": self.min_overlap,
         }
+        quality = _assess_evidence_quality(
+            best.document,
+            features=features,
+            policy=self.evidence_quality_policy,
+        )
+        if quality.applied:
+            metadata["evidence_quality"] = quality.to_dict()
         if best.negation_mismatch and best.overlap >= self.min_overlap:
+            if not quality.passed:
+                return _quality_failure_result(evidence=evidence, metadata=metadata, quality=quality)
             return VerificationResult(
                 status=VerificationStatus.REFUTED,
                 confidence=min(0.85, 0.45 + 0.4 * best.overlap),
@@ -156,6 +273,8 @@ class GroundednessVerifier:
                 metadata={**metadata, "decision_rule": "negation_mismatch"},
             )
         if best.exact:
+            if not quality.passed:
+                return _quality_failure_result(evidence=evidence, metadata=metadata, quality=quality)
             return VerificationResult(
                 status=VerificationStatus.SUPPORTED,
                 confidence=0.9,
@@ -164,6 +283,8 @@ class GroundednessVerifier:
                 metadata={**metadata, "decision_rule": "exact_containment"},
             )
         if best.overlap >= self.min_overlap:
+            if not quality.passed:
+                return _quality_failure_result(evidence=evidence, metadata=metadata, quality=quality)
             return VerificationResult(
                 status=VerificationStatus.SUPPORTED,
                 confidence=min(0.85, 0.35 + 0.5 * best.overlap),
@@ -195,7 +316,7 @@ def _claim_features(claim: Claim) -> dict[str, bool]:
     raw_features = claim.metadata.get("features", {}) if isinstance(claim.metadata, Mapping) else {}
     if not isinstance(raw_features, Mapping):
         return {}
-    return {str(key): bool(value) for key, value in raw_features.items()}
+    return normalized_feature_flags(raw_features)
 
 
 def _coerce_evidence(value: EvidenceDocument | Mapping[str, Any] | str) -> EvidenceDocument:
@@ -204,6 +325,26 @@ def _coerce_evidence(value: EvidenceDocument | Mapping[str, Any] | str) -> Evide
     if isinstance(value, str):
         return EvidenceDocument(text=value)
     return EvidenceDocument.from_dict(value)
+
+
+def _coerce_evidence_quality_policy(
+    value: EvidenceQualityPolicy | Mapping[str, Any] | None,
+) -> EvidenceQualityPolicy | None:
+    if value is None:
+        return None
+    if isinstance(value, EvidenceQualityPolicy):
+        return value
+    return EvidenceQualityPolicy.from_dict(value)
+
+
+def _index_document(document: EvidenceDocument) -> _IndexedEvidenceDocument:
+    tokens = _tokens(document.text)
+    return _IndexedEvidenceDocument(
+        document=document,
+        tokens=tokens,
+        key=normalize_claim_text(document.text),
+        negated=_has_negation(tokens),
+    )
 
 
 def _normalize_refutations(refutations: Mapping[str, Sequence[str] | str]) -> dict[str, tuple[str, ...]]:
@@ -231,33 +372,178 @@ def _lookup_refutation(
 
 
 def _documents_with_context(
-    base_documents: Sequence[EvidenceDocument],
+    base_documents: Sequence[_IndexedEvidenceDocument],
     context: Mapping[str, Any] | None,
-) -> tuple[EvidenceDocument, ...]:
+) -> tuple[_IndexedEvidenceDocument, ...]:
     documents = tuple(base_documents)
     if context is None or "evidence" not in context:
         return documents
-    return documents + tuple(_coerce_evidence(item) for item in _as_sequence(context["evidence"]))
+    return documents + tuple(_index_document(_coerce_evidence(item)) for item in _as_sequence(context["evidence"]))
 
 
 def _best_document_match(
     claim_text: str,
     claim_tokens: tuple[str, ...],
-    documents: Sequence[EvidenceDocument],
+    documents: Sequence[_IndexedEvidenceDocument],
 ) -> _DocumentMatch | None:
     if not documents:
         return None
     claim_key = normalize_claim_text(claim_text)
     claim_negated = _has_negation(claim_tokens)
     matches = []
-    for document in documents:
-        document_tokens = _tokens(document.text)
-        document_key = normalize_claim_text(document.text)
-        exact = claim_key in document_key
-        overlap = _token_overlap(claim_tokens, document_tokens)
-        negation_mismatch = claim_negated != _has_negation(document_tokens)
-        matches.append(_DocumentMatch(document, overlap, exact, negation_mismatch))
+    for indexed in documents:
+        exact = claim_key in indexed.key
+        overlap = _token_overlap(claim_tokens, indexed.tokens)
+        negation_mismatch = claim_negated != indexed.negated
+        matches.append(_DocumentMatch(indexed.document, overlap, exact, negation_mismatch))
     return max(matches, key=lambda match: (match.exact, match.overlap))
+
+
+def _assess_evidence_quality(
+    document: EvidenceDocument,
+    *,
+    features: Mapping[str, bool],
+    policy: EvidenceQualityPolicy | None,
+) -> EvidenceQualityAssessment:
+    if policy is None:
+        return EvidenceQualityAssessment(passed=True, applied=False)
+    if policy.time_sensitive_only and not bool(features.get("is_time_sensitive", False)):
+        return EvidenceQualityAssessment(passed=True, applied=False)
+
+    reasons: list[str] = []
+    source = document.source
+    trusted_source = _trusted_source(source, policy.trusted_sources)
+    if policy.require_source and not source:
+        reasons.append("missing_source")
+    if policy.require_trusted_source and trusted_source is not True:
+        reasons.append("untrusted_source" if source else "missing_source")
+
+    timestamp = _document_timestamp(document)
+    age_days = None
+    if policy.max_age_days is not None:
+        if timestamp is None:
+            reasons.append("missing_timestamp")
+        else:
+            age_days = (policy.reference_time_or_now() - timestamp).total_seconds() / 86400.0
+            if age_days < -1.0:
+                reasons.append("future_timestamp")
+            elif age_days > policy.max_age_days:
+                reasons.append("stale_evidence")
+
+    return EvidenceQualityAssessment(
+        passed=not reasons,
+        applied=True,
+        reasons=tuple(dict.fromkeys(reasons)),
+        source=source,
+        timestamp=None if timestamp is None else timestamp.isoformat(),
+        age_days=None if age_days is None else round(float(age_days), 6),
+        trusted_source=trusted_source,
+    )
+
+
+def _quality_failure_result(
+    *,
+    evidence: tuple[str, ...],
+    metadata: Mapping[str, Any],
+    quality: EvidenceQualityAssessment,
+) -> VerificationResult:
+    reasons = ", ".join(quality.reasons) if quality.reasons else "unknown"
+    return VerificationResult(
+        status=VerificationStatus.INSUFFICIENT_EVIDENCE,
+        confidence=0.35,
+        evidence=evidence,
+        explanation=f"best evidence failed quality policy: {reasons}",
+        metadata={**dict(metadata), "decision_rule": "evidence_quality_failed"},
+    )
+
+
+def _document_timestamp(document: EvidenceDocument) -> datetime | None:
+    for key in ("timestamp", "published_at", "updated_at", "retrieved_at", "as_of", "date"):
+        raw_value = document.metadata.get(key)
+        if raw_value is None:
+            continue
+        parsed = _parse_datetime(raw_value)
+        if parsed is None:
+            return None
+        return parsed
+    return None
+
+
+def _parse_datetime(value: Any) -> datetime | None:
+    if isinstance(value, datetime):
+        return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
+    if isinstance(value, date):
+        return datetime(value.year, value.month, value.day, tzinfo=timezone.utc)
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        try:
+            return datetime.strptime(text, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        except ValueError:
+            return None
+    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=timezone.utc)
+
+
+def _coerce_reference_time(value: str | datetime | date | None) -> datetime | None:
+    if value is None:
+        return None
+    parsed = _parse_datetime(value)
+    if parsed is None:
+        raise ValueError("reference_time must be an ISO datetime or YYYY-MM-DD date.")
+    return parsed
+
+
+def _trusted_source(source: str | None, trusted_sources: Sequence[str]) -> bool | None:
+    if not trusted_sources:
+        return None
+    if not source:
+        return False
+    source_key = source.casefold()
+    return any(str(trusted).casefold() in source_key for trusted in trusted_sources)
+
+
+def _coerce_trusted_sources(value: Any) -> tuple[str, ...]:
+    if value in (None, ()):
+        return ()
+    if isinstance(value, str):
+        return (value,)
+    if not isinstance(value, Sequence):
+        raise ValueError("trusted_sources must be a string or sequence of strings.")
+    return tuple(str(source) for source in value)
+
+
+def _coerce_bool(value: Any, *, name: str) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().casefold()
+        if normalized in {"true", "1", "yes", "on"}:
+            return True
+        if normalized in {"false", "0", "no", "off"}:
+            return False
+    raise ValueError(f"{name} must be a boolean.")
+
+
+def _coerce_non_negative_int(value: Any, *, name: str) -> int:
+    if isinstance(value, bool):
+        raise ValueError(f"{name} must be a non-negative integer.")
+    if isinstance(value, int):
+        parsed = value
+    elif isinstance(value, str):
+        stripped = value.strip()
+        if not stripped.isdecimal():
+            raise ValueError(f"{name} must be a non-negative integer.")
+        parsed = int(stripped)
+    else:
+        raise ValueError(f"{name} must be a non-negative integer.")
+    if parsed < 0:
+        raise ValueError(f"{name} must be a non-negative integer.")
+    return parsed
 
 
 def _tokens(text: str) -> tuple[str, ...]:

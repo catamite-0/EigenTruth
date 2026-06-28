@@ -1,0 +1,1320 @@
+{
+  "best": {
+    "auroc": 0.7111679454390452,
+    "conformal_alpha": 0.1,
+    "detection": 0.09411764705882353,
+    "direction": "higher",
+    "false_alarm": 0.08695652173913043,
+    "layer": -12,
+    "n_false": 85,
+    "n_true": 69,
+    "score_name": "truth_proj",
+    "threshold": 4.510312080383301
+  },
+  "best_by": "auroc",
+  "commit_sha": null,
+  "conformal_alpha": 0.1,
+  "created_at": "2026-06-22T04:11:35.534702+00:00",
+  "eigentruth_version": "0.1.0",
+  "layers": [
+    {
+      "layer": -24,
+      "scores": [
+        {
+          "auroc": 0.484228473998295,
+          "conformal_alpha": 0.1,
+          "detection": 0.08235294117647059,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -24,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "eigenscore",
+          "threshold": 2.4910683631896973
+        },
+        {
+          "auroc": 0.5171355498721227,
+          "conformal_alpha": 0.1,
+          "detection": 0.03529411764705882,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -24,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "maha_last",
+          "threshold": 36.912845611572266
+        },
+        {
+          "auroc": 0.46939471440750213,
+          "conformal_alpha": 0.1,
+          "detection": 0.03529411764705882,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -24,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "subspace_resid",
+          "threshold": 0.8678513765335083
+        },
+        {
+          "auroc": 0.5863597612958227,
+          "conformal_alpha": 0.1,
+          "detection": 0.09411764705882353,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -24,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "truth_proj",
+          "threshold": -0.1679248809814453
+        }
+      ]
+    },
+    {
+      "layer": -23,
+      "scores": [
+        {
+          "auroc": 0.48388746803069055,
+          "conformal_alpha": 0.1,
+          "detection": 0.09411764705882353,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -23,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "eigenscore",
+          "threshold": 3.013181686401367
+        },
+        {
+          "auroc": 0.5227621483375959,
+          "conformal_alpha": 0.1,
+          "detection": 0.07058823529411765,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -23,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "maha_last",
+          "threshold": 65.26799774169922
+        },
+        {
+          "auroc": 0.5127024722932652,
+          "conformal_alpha": 0.1,
+          "detection": 0.10588235294117647,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -23,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "subspace_resid",
+          "threshold": 1.5754798650741577
+        },
+        {
+          "auroc": 0.5728900255754475,
+          "conformal_alpha": 0.1,
+          "detection": 0.08235294117647059,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -23,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "truth_proj",
+          "threshold": -0.5039099454879761
+        }
+      ]
+    },
+    {
+      "layer": -22,
+      "scores": [
+        {
+          "auroc": 0.4854219948849105,
+          "conformal_alpha": 0.1,
+          "detection": 0.08235294117647059,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -22,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "eigenscore",
+          "threshold": 3.3656373023986816
+        },
+        {
+          "auroc": 0.5410059676044331,
+          "conformal_alpha": 0.1,
+          "detection": 0.08235294117647059,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -22,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "maha_last",
+          "threshold": 68.33099365234375
+        },
+        {
+          "auroc": 0.541687979539642,
+          "conformal_alpha": 0.1,
+          "detection": 0.09411764705882353,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -22,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "subspace_resid",
+          "threshold": 2.082138776779175
+        },
+        {
+          "auroc": 0.5810741687979539,
+          "conformal_alpha": 0.1,
+          "detection": 0.07058823529411765,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -22,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "truth_proj",
+          "threshold": 0.3071947693824768
+        }
+      ]
+    },
+    {
+      "layer": -21,
+      "scores": [
+        {
+          "auroc": 0.4780903665814152,
+          "conformal_alpha": 0.1,
+          "detection": 0.09411764705882353,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -21,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "eigenscore",
+          "threshold": 3.5155649185180664
+        },
+        {
+          "auroc": 0.5705029838022165,
+          "conformal_alpha": 0.1,
+          "detection": 0.09411764705882353,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -21,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "maha_last",
+          "threshold": 81.52013397216797
+        },
+        {
+          "auroc": 0.5495311167945439,
+          "conformal_alpha": 0.1,
+          "detection": 0.10588235294117647,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -21,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "subspace_resid",
+          "threshold": 2.9140126705169678
+        },
+        {
+          "auroc": 0.5715260017050299,
+          "conformal_alpha": 0.1,
+          "detection": 0.09411764705882353,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -21,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "truth_proj",
+          "threshold": 0.3913527727127075
+        }
+      ]
+    },
+    {
+      "layer": -20,
+      "scores": [
+        {
+          "auroc": 0.486615515771526,
+          "conformal_alpha": 0.1,
+          "detection": 0.10588235294117647,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -20,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "eigenscore",
+          "threshold": 3.6758692264556885
+        },
+        {
+          "auroc": 0.5474850809889173,
+          "conformal_alpha": 0.1,
+          "detection": 0.07058823529411765,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -20,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "maha_last",
+          "threshold": 89.52220153808594
+        },
+        {
+          "auroc": 0.5130434782608696,
+          "conformal_alpha": 0.1,
+          "detection": 0.058823529411764705,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -20,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "subspace_resid",
+          "threshold": 4.674590587615967
+        },
+        {
+          "auroc": 0.6383631713554987,
+          "conformal_alpha": 0.1,
+          "detection": 0.21176470588235294,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -20,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "truth_proj",
+          "threshold": 2.84743332862854
+        }
+      ]
+    },
+    {
+      "layer": -19,
+      "scores": [
+        {
+          "auroc": 0.48098891730605287,
+          "conformal_alpha": 0.1,
+          "detection": 0.08235294117647059,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -19,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "eigenscore",
+          "threshold": 3.7394752502441406
+        },
+        {
+          "auroc": 0.5619778346121057,
+          "conformal_alpha": 0.1,
+          "detection": 0.07058823529411765,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -19,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "maha_last",
+          "threshold": 85.45222473144531
+        },
+        {
+          "auroc": 0.5161125319693095,
+          "conformal_alpha": 0.1,
+          "detection": 0.03529411764705882,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -19,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "subspace_resid",
+          "threshold": 5.234165668487549
+        },
+        {
+          "auroc": 0.6325660699062233,
+          "conformal_alpha": 0.1,
+          "detection": 0.17647058823529413,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -19,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "truth_proj",
+          "threshold": 0.5696201920509338
+        }
+      ]
+    },
+    {
+      "layer": -18,
+      "scores": [
+        {
+          "auroc": 0.48269394714407504,
+          "conformal_alpha": 0.1,
+          "detection": 0.08235294117647059,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -18,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "eigenscore",
+          "threshold": 3.8260555267333984
+        },
+        {
+          "auroc": 0.5520886615515771,
+          "conformal_alpha": 0.1,
+          "detection": 0.07058823529411765,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -18,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "maha_last",
+          "threshold": 87.98106384277344
+        },
+        {
+          "auroc": 0.5101449275362319,
+          "conformal_alpha": 0.1,
+          "detection": 0.058823529411764705,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -18,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "subspace_resid",
+          "threshold": 5.573502063751221
+        },
+        {
+          "auroc": 0.6298380221653879,
+          "conformal_alpha": 0.1,
+          "detection": 0.18823529411764706,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -18,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "truth_proj",
+          "threshold": 0.43404603004455566
+        }
+      ]
+    },
+    {
+      "layer": -17,
+      "scores": [
+        {
+          "auroc": 0.4799658994032396,
+          "conformal_alpha": 0.1,
+          "detection": 0.07058823529411765,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -17,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "eigenscore",
+          "threshold": 3.9213991165161133
+        },
+        {
+          "auroc": 0.5734015345268543,
+          "conformal_alpha": 0.1,
+          "detection": 0.08235294117647059,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -17,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "maha_last",
+          "threshold": 82.78943634033203
+        },
+        {
+          "auroc": 0.5292412617220802,
+          "conformal_alpha": 0.1,
+          "detection": 0.03529411764705882,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -17,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "subspace_resid",
+          "threshold": 6.0088725090026855
+        },
+        {
+          "auroc": 0.6639386189258312,
+          "conformal_alpha": 0.1,
+          "detection": 0.17647058823529413,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -17,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "truth_proj",
+          "threshold": 1.086646556854248
+        }
+      ]
+    },
+    {
+      "layer": -16,
+      "scores": [
+        {
+          "auroc": 0.4780903665814152,
+          "conformal_alpha": 0.1,
+          "detection": 0.08235294117647059,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -16,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "eigenscore",
+          "threshold": 3.9505789279937744
+        },
+        {
+          "auroc": 0.6001705029838023,
+          "conformal_alpha": 0.1,
+          "detection": 0.09411764705882353,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -16,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "maha_last",
+          "threshold": 82.37775421142578
+        },
+        {
+          "auroc": 0.548849104859335,
+          "conformal_alpha": 0.1,
+          "detection": 0.03529411764705882,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -16,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "subspace_resid",
+          "threshold": 6.752530097961426
+        },
+        {
+          "auroc": 0.680306905370844,
+          "conformal_alpha": 0.1,
+          "detection": 0.10588235294117647,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -16,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "truth_proj",
+          "threshold": 2.889859676361084
+        }
+      ]
+    },
+    {
+      "layer": -15,
+      "scores": [
+        {
+          "auroc": 0.4751918158567775,
+          "conformal_alpha": 0.1,
+          "detection": 0.07058823529411765,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -15,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "eigenscore",
+          "threshold": 4.000442028045654
+        },
+        {
+          "auroc": 0.5911338448422847,
+          "conformal_alpha": 0.1,
+          "detection": 0.10588235294117647,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -15,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "maha_last",
+          "threshold": 83.54497528076172
+        },
+        {
+          "auroc": 0.5471440750213129,
+          "conformal_alpha": 0.1,
+          "detection": 0.023529411764705882,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -15,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "subspace_resid",
+          "threshold": 7.777772426605225
+        },
+        {
+          "auroc": 0.6850809889173061,
+          "conformal_alpha": 0.1,
+          "detection": 0.15294117647058825,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -15,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "truth_proj",
+          "threshold": 2.7679357528686523
+        }
+      ]
+    },
+    {
+      "layer": -14,
+      "scores": [
+        {
+          "auroc": 0.473998294970162,
+          "conformal_alpha": 0.1,
+          "detection": 0.07058823529411765,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -14,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "eigenscore",
+          "threshold": 4.017926216125488
+        },
+        {
+          "auroc": 0.588917306052856,
+          "conformal_alpha": 0.1,
+          "detection": 0.11764705882352941,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -14,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "maha_last",
+          "threshold": 77.86872863769531
+        },
+        {
+          "auroc": 0.5282182438192669,
+          "conformal_alpha": 0.1,
+          "detection": 0.09411764705882353,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -14,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "subspace_resid",
+          "threshold": 7.897455215454102
+        },
+        {
+          "auroc": 0.6966751918158568,
+          "conformal_alpha": 0.1,
+          "detection": 0.08235294117647059,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -14,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "truth_proj",
+          "threshold": 3.1882009506225586
+        }
+      ]
+    },
+    {
+      "layer": -13,
+      "scores": [
+        {
+          "auroc": 0.4770673486786019,
+          "conformal_alpha": 0.1,
+          "detection": 0.058823529411764705,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -13,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "eigenscore",
+          "threshold": 4.0692524909973145
+        },
+        {
+          "auroc": 0.5594202898550724,
+          "conformal_alpha": 0.1,
+          "detection": 0.09411764705882353,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -13,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "maha_last",
+          "threshold": 81.28195190429688
+        },
+        {
+          "auroc": 0.5210571184995737,
+          "conformal_alpha": 0.1,
+          "detection": 0.07058823529411765,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -13,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "subspace_resid",
+          "threshold": 8.067140579223633
+        },
+        {
+          "auroc": 0.6995737425404944,
+          "conformal_alpha": 0.1,
+          "detection": 0.07058823529411765,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -13,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "truth_proj",
+          "threshold": 3.886685371398926
+        }
+      ]
+    },
+    {
+      "layer": -12,
+      "scores": [
+        {
+          "auroc": 0.4768968456947997,
+          "conformal_alpha": 0.1,
+          "detection": 0.058823529411764705,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -12,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "eigenscore",
+          "threshold": 4.09759521484375
+        },
+        {
+          "auroc": 0.5515771526001705,
+          "conformal_alpha": 0.1,
+          "detection": 0.058823529411764705,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -12,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "maha_last",
+          "threshold": 83.8221206665039
+        },
+        {
+          "auroc": 0.5200341005967605,
+          "conformal_alpha": 0.1,
+          "detection": 0.011764705882352941,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -12,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "subspace_resid",
+          "threshold": 8.96474552154541
+        },
+        {
+          "auroc": 0.7111679454390452,
+          "conformal_alpha": 0.1,
+          "detection": 0.09411764705882353,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -12,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "truth_proj",
+          "threshold": 4.510312080383301
+        }
+      ]
+    },
+    {
+      "layer": -11,
+      "scores": [
+        {
+          "auroc": 0.4780903665814152,
+          "conformal_alpha": 0.1,
+          "detection": 0.058823529411764705,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -11,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "eigenscore",
+          "threshold": 4.1732988357543945
+        },
+        {
+          "auroc": 0.5664109121909633,
+          "conformal_alpha": 0.1,
+          "detection": 0.11764705882352941,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -11,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "maha_last",
+          "threshold": 78.25308227539062
+        },
+        {
+          "auroc": 0.5098039215686274,
+          "conformal_alpha": 0.1,
+          "detection": 0.023529411764705882,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -11,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "subspace_resid",
+          "threshold": 9.020150184631348
+        },
+        {
+          "auroc": 0.7034953111679454,
+          "conformal_alpha": 0.1,
+          "detection": 0.08235294117647059,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -11,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "truth_proj",
+          "threshold": 3.1368656158447266
+        }
+      ]
+    },
+    {
+      "layer": -10,
+      "scores": [
+        {
+          "auroc": 0.478772378516624,
+          "conformal_alpha": 0.1,
+          "detection": 0.07058823529411765,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -10,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "eigenscore",
+          "threshold": 4.254026412963867
+        },
+        {
+          "auroc": 0.5454390451832907,
+          "conformal_alpha": 0.1,
+          "detection": 0.0,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -10,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "maha_last",
+          "threshold": 87.17501068115234
+        },
+        {
+          "auroc": 0.4997442455242967,
+          "conformal_alpha": 0.1,
+          "detection": 0.011764705882352941,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -10,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "subspace_resid",
+          "threshold": 10.219474792480469
+        },
+        {
+          "auroc": 0.6861040068201194,
+          "conformal_alpha": 0.1,
+          "detection": 0.047058823529411764,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -10,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "truth_proj",
+          "threshold": 4.335841655731201
+        }
+      ]
+    },
+    {
+      "layer": -9,
+      "scores": [
+        {
+          "auroc": 0.47911338448422847,
+          "conformal_alpha": 0.1,
+          "detection": 0.07058823529411765,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -9,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "eigenscore",
+          "threshold": 4.432743072509766
+        },
+        {
+          "auroc": 0.5338448422847399,
+          "conformal_alpha": 0.1,
+          "detection": 0.011764705882352941,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -9,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "maha_last",
+          "threshold": 87.84980773925781
+        },
+        {
+          "auroc": 0.48269394714407504,
+          "conformal_alpha": 0.1,
+          "detection": 0.047058823529411764,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -9,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "subspace_resid",
+          "threshold": 11.447369575500488
+        },
+        {
+          "auroc": 0.695311167945439,
+          "conformal_alpha": 0.1,
+          "detection": 0.1411764705882353,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -9,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "truth_proj",
+          "threshold": 4.00018835067749
+        }
+      ]
+    },
+    {
+      "layer": -8,
+      "scores": [
+        {
+          "auroc": 0.4780903665814152,
+          "conformal_alpha": 0.1,
+          "detection": 0.10588235294117647,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -8,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "eigenscore",
+          "threshold": 4.835316181182861
+        },
+        {
+          "auroc": 0.5311167945439045,
+          "conformal_alpha": 0.1,
+          "detection": 0.07058823529411765,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -8,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "maha_last",
+          "threshold": 86.9881820678711
+        },
+        {
+          "auroc": 0.47144075021312876,
+          "conformal_alpha": 0.1,
+          "detection": 0.023529411764705882,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -8,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "subspace_resid",
+          "threshold": 12.679125785827637
+        },
+        {
+          "auroc": 0.6845694799658995,
+          "conformal_alpha": 0.1,
+          "detection": 0.07058823529411765,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -8,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "truth_proj",
+          "threshold": 4.215353012084961
+        }
+      ]
+    },
+    {
+      "layer": -7,
+      "scores": [
+        {
+          "auroc": 0.47860187553282185,
+          "conformal_alpha": 0.1,
+          "detection": 0.08235294117647059,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -7,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "eigenscore",
+          "threshold": 5.056911468505859
+        },
+        {
+          "auroc": 0.5147485080988917,
+          "conformal_alpha": 0.1,
+          "detection": 0.023529411764705882,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -7,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "maha_last",
+          "threshold": 87.79312133789062
+        },
+        {
+          "auroc": 0.46751918158567773,
+          "conformal_alpha": 0.1,
+          "detection": 0.0,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -7,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "subspace_resid",
+          "threshold": 14.392724990844727
+        },
+        {
+          "auroc": 0.6816709292412617,
+          "conformal_alpha": 0.1,
+          "detection": 0.10588235294117647,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -7,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "truth_proj",
+          "threshold": 3.277216911315918
+        }
+      ]
+    },
+    {
+      "layer": -6,
+      "scores": [
+        {
+          "auroc": 0.47894288150042624,
+          "conformal_alpha": 0.1,
+          "detection": 0.07058823529411765,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -6,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "eigenscore",
+          "threshold": 5.231192111968994
+        },
+        {
+          "auroc": 0.5307757885763,
+          "conformal_alpha": 0.1,
+          "detection": 0.023529411764705882,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -6,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "maha_last",
+          "threshold": 96.44184875488281
+        },
+        {
+          "auroc": 0.48491048593350383,
+          "conformal_alpha": 0.1,
+          "detection": 0.011764705882352941,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -6,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "subspace_resid",
+          "threshold": 16.92748260498047
+        },
+        {
+          "auroc": 0.6872975277067349,
+          "conformal_alpha": 0.1,
+          "detection": 0.11764705882352941,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -6,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "truth_proj",
+          "threshold": 5.201841354370117
+        }
+      ]
+    },
+    {
+      "layer": -5,
+      "scores": [
+        {
+          "auroc": 0.48405797101449277,
+          "conformal_alpha": 0.1,
+          "detection": 0.08235294117647059,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -5,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "eigenscore",
+          "threshold": 5.5640459060668945
+        },
+        {
+          "auroc": 0.5285592497868713,
+          "conformal_alpha": 0.1,
+          "detection": 0.08235294117647059,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -5,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "maha_last",
+          "threshold": 99.94792938232422
+        },
+        {
+          "auroc": 0.4813299232736573,
+          "conformal_alpha": 0.1,
+          "detection": 0.03529411764705882,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -5,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "subspace_resid",
+          "threshold": 20.732908248901367
+        },
+        {
+          "auroc": 0.6770673486786019,
+          "conformal_alpha": 0.1,
+          "detection": 0.16470588235294117,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -5,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "truth_proj",
+          "threshold": 4.124261856079102
+        }
+      ]
+    },
+    {
+      "layer": -4,
+      "scores": [
+        {
+          "auroc": 0.49036658141517475,
+          "conformal_alpha": 0.1,
+          "detection": 0.058823529411764705,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -4,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "eigenscore",
+          "threshold": 5.906641006469727
+        },
+        {
+          "auroc": 0.5098039215686274,
+          "conformal_alpha": 0.1,
+          "detection": 0.11764705882352941,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -4,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "maha_last",
+          "threshold": 98.66708374023438
+        },
+        {
+          "auroc": 0.48695652173913045,
+          "conformal_alpha": 0.1,
+          "detection": 0.09411764705882353,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -4,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "subspace_resid",
+          "threshold": 27.993906021118164
+        },
+        {
+          "auroc": 0.6746803069053708,
+          "conformal_alpha": 0.1,
+          "detection": 0.18823529411764706,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -4,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "truth_proj",
+          "threshold": 10.710979461669922
+        }
+      ]
+    },
+    {
+      "layer": -3,
+      "scores": [
+        {
+          "auroc": 0.4990622335890878,
+          "conformal_alpha": 0.1,
+          "detection": 0.07058823529411765,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -3,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "eigenscore",
+          "threshold": 6.102138042449951
+        },
+        {
+          "auroc": 0.4774083546462063,
+          "conformal_alpha": 0.1,
+          "detection": 0.11764705882352941,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -3,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "maha_last",
+          "threshold": 99.64459228515625
+        },
+        {
+          "auroc": 0.46410912190963344,
+          "conformal_alpha": 0.1,
+          "detection": 0.15294117647058825,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -3,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "subspace_resid",
+          "threshold": 31.812719345092773
+        },
+        {
+          "auroc": 0.6629156010230179,
+          "conformal_alpha": 0.1,
+          "detection": 0.1411764705882353,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -3,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "truth_proj",
+          "threshold": 9.127365112304688
+        }
+      ]
+    },
+    {
+      "layer": -2,
+      "scores": [
+        {
+          "auroc": 0.49838022165387896,
+          "conformal_alpha": 0.1,
+          "detection": 0.09411764705882353,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -2,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "eigenscore",
+          "threshold": 6.283267498016357
+        },
+        {
+          "auroc": 0.46240409207161126,
+          "conformal_alpha": 0.1,
+          "detection": 0.08235294117647059,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -2,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "maha_last",
+          "threshold": 103.3907699584961
+        },
+        {
+          "auroc": 0.4584825234441603,
+          "conformal_alpha": 0.1,
+          "detection": 0.16470588235294117,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -2,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "subspace_resid",
+          "threshold": 35.693233489990234
+        },
+        {
+          "auroc": 0.6630861040068201,
+          "conformal_alpha": 0.1,
+          "detection": 0.15294117647058825,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -2,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "truth_proj",
+          "threshold": 12.465339660644531
+        }
+      ]
+    },
+    {
+      "layer": -1,
+      "scores": [
+        {
+          "auroc": 0.4750213128729753,
+          "conformal_alpha": 0.1,
+          "detection": 0.058823529411764705,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -1,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "eigenscore",
+          "threshold": 9.090235710144043
+        },
+        {
+          "auroc": 0.4734867860187553,
+          "conformal_alpha": 0.1,
+          "detection": 0.07058823529411765,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -1,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "maha_last",
+          "threshold": 96.70244598388672
+        },
+        {
+          "auroc": 0.4608695652173913,
+          "conformal_alpha": 0.1,
+          "detection": 0.10588235294117647,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -1,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "subspace_resid",
+          "threshold": 191.98451232910156
+        },
+        {
+          "auroc": 0.6294970161977834,
+          "conformal_alpha": 0.1,
+          "detection": 0.15294117647058825,
+          "direction": "higher",
+          "false_alarm": 0.08695652173913043,
+          "layer": -1,
+          "n_false": 85,
+          "n_true": 69,
+          "score_name": "truth_proj",
+          "threshold": 40.458900451660156
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "config": {
+      "batch_size": 4,
+      "eigenscore_alpha": 0.001,
+      "hidden_dim": 896,
+      "inside_batch_size": 1,
+      "inside_max_new_tokens": 12,
+      "inside_pooling": "last",
+      "inside_samples": 0,
+      "inside_temperature": 0.7,
+      "inside_top_p": 0.9,
+      "layer": -8,
+      "manifold_n": 126,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "n_manifold_false": 177,
+      "n_neg": 69,
+      "n_pos": 85,
+      "offline": false,
+      "seed": 0,
+      "subspace_rank": 2
+    },
+    "source": "eval_conformal.py"
+  },
+  "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+  "model_revision": null,
+  "schema_version": 1,
+  "scores_path": "artifacts/qwen05_truthfulqa_l20_scores.json"
+}

@@ -1,0 +1,40 @@
+{
+  "artifacts": {
+    "concept_registry_smoke_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "concept-registry-smoke.json",
+      "sha256": "36b1429c13d9d39baa50f4c7647df17f9e082b6e3f711212617d7e5a1384df77",
+      "size_bytes": 1700
+    },
+    "concepts.factuality": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "factuality.pt",
+      "sha256": "896385fe3e22c864a332dfbd828a8880af5c21dde5e5fc525ca6b2394e9de1e9",
+      "size_bytes": 2556
+    },
+    "concepts.policy_consistency": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "policy_consistency.pt",
+      "sha256": "fa83342eca826d73aab755daffe0d667e27e1456a60273eaeef2b520068a9e08",
+      "size_bytes": 2628
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "concept_count": 2,
+    "workflow": "concept_registry_smoke"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

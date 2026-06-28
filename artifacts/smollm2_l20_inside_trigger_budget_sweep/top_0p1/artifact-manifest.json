@@ -1,0 +1,79 @@
+{
+  "artifacts": {
+    "command_log": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "inside-sampling-profile-commands.json",
+      "sha256": "e05640f29ad8534546426c96f1d1ae4551a391e16188678c17ae428fe545d479",
+      "size_bytes": 2507
+    },
+    "comparison_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "inside-sampling-profile-comparison.json",
+      "sha256": "2bdac9707258ab5e46e1473f249d386a0d202fc11da693635a343c1130d86706",
+      "size_bytes": 4434
+    },
+    "profiles.adaptive_selfcheck": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "profile-adaptive_selfcheck.json",
+      "sha256": "141d8550b8778d78ca8047b3bbdd8881bc1ad4e4f932346dd7398043684d6a6b",
+      "size_bytes": 1806
+    },
+    "profiles.fixed": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "profile-fixed.json",
+      "sha256": "1554baac159cc125cd68f560c914964a20361c85364b7df3d77f5c1830de40c1",
+      "size_bytes": 1806
+    },
+    "results.adaptive_selfcheck": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "result-adaptive_selfcheck.json",
+      "sha256": "f20333d39f01e90f341c9946eb4146e2ffb715797b6da2d12dd137fff0063fdc",
+      "size_bytes": 19240
+    },
+    "results.fixed": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "result-fixed.json",
+      "sha256": "6c9808fcb805bb74ff4a3d38daaef914ca592b9de8f1448a82ea5348956829fc",
+      "size_bytes": 19160
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "dry_run": false,
+    "dtype": "float32",
+    "inside_min_samples": 2,
+    "inside_sample_step": 1,
+    "inside_samples": 3,
+    "inside_stability_delta": 0.05,
+    "inside_trigger_signal": "truth_proj",
+    "inside_trigger_threshold": null,
+    "inside_trigger_top_fraction": 0.1,
+    "layer": -12,
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "offline": false,
+    "run_names": [
+      "fixed",
+      "adaptive_selfcheck"
+    ],
+    "runner": "run_inside_sampling_profile"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 6,
+    "directory_count": 0,
+    "file_count": 6,
+    "missing_count": 0
+  }
+}

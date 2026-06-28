@@ -1,0 +1,930 @@
+{
+  "schema_version": 1,
+  "signals": [
+    "truth_proj",
+    "maha_last",
+    "subspace_resid",
+    "resid_update_norm",
+    "eigenscore"
+  ],
+  "methods": [
+    "max_rank",
+    "mean_rank"
+  ],
+  "alphas": [
+    0.05,
+    0.1,
+    0.2
+  ],
+  "repeats": 20,
+  "seed": 0,
+  "best_alpha": 0.1,
+  "score_dump_cache": {
+    "enabled": true,
+    "cache_entries": 10,
+    "fingerprint": {
+      "hits": 2,
+      "misses": 2,
+      "writes": 4,
+      "attempts": 4,
+      "hit_rate": 0.5
+    },
+    "jsonl_manifest": {
+      "hits": 2,
+      "misses": 2,
+      "writes": 2,
+      "attempts": 4,
+      "hit_rate": 0.5
+    },
+    "jsonl_summary": {
+      "hits": 2,
+      "misses": 0,
+      "writes": 2,
+      "attempts": 2,
+      "hit_rate": 1.0
+    },
+    "jsonl_view": {
+      "hits": 0,
+      "misses": 2,
+      "writes": 2,
+      "attempts": 2,
+      "hit_rate": 0.0
+    }
+  },
+  "runs": [
+    {
+      "name": "smollm2",
+      "scores_path": "artifacts/truthfulqa-frontier-smollm2-l20/smollm2-l20/scores.manifest.json",
+      "score_dump": {
+        "path": "artifacts/truthfulqa-frontier-smollm2-l20/smollm2-l20/scores.manifest.json",
+        "exists": true,
+        "kind": "file",
+        "sha256": "b42a620adaa7a17eb57a99ec1843b9f8059401ec48070dd214b7ec689ecda46c",
+        "size_bytes": 3017,
+        "source_format": "eigentruth.score_dump.jsonl",
+        "records": {
+          "path": "artifacts/truthfulqa-frontier-smollm2-l20/smollm2-l20/scores.manifest.records.jsonl",
+          "exists": true,
+          "kind": "file",
+          "sha256": "4eede2d68df86d763fe688e3afef9b871e375f461039cb9ca8ed432e811a4933",
+          "size_bytes": 237847
+        },
+        "identity": {
+          "schema_version": 1,
+          "source_format": "eigentruth.score_dump.jsonl",
+          "model_id": "HuggingFaceTB/SmolLM2-135M-Instruct",
+          "dataset_id": "truthfulqa",
+          "target_layer": -8,
+          "n_total": 154,
+          "primary_score_names": [
+            "disp_euclid",
+            "disp_hse",
+            "eigenscore",
+            "maha_last",
+            "nll_answer",
+            "resid_update_norm",
+            "subspace_resid",
+            "truth_proj"
+          ],
+          "sweep_score_names": {
+            "-16": [
+              "eigenscore",
+              "maha_last",
+              "resid_update_norm",
+              "subspace_resid",
+              "truth_proj"
+            ],
+            "-14": [
+              "eigenscore",
+              "maha_last",
+              "resid_update_norm",
+              "subspace_resid",
+              "truth_proj"
+            ],
+            "-12": [
+              "eigenscore",
+              "maha_last",
+              "resid_update_norm",
+              "subspace_resid",
+              "truth_proj"
+            ],
+            "-10": [
+              "eigenscore",
+              "maha_last",
+              "resid_update_norm",
+              "subspace_resid",
+              "truth_proj"
+            ],
+            "-8": [
+              "eigenscore",
+              "maha_last",
+              "resid_update_norm",
+              "subspace_resid",
+              "truth_proj"
+            ]
+          },
+          "scoring_config_hash": "91489d4ea561a47cfca5a8f2d610a7c39da68a213049c1f5a80a532c05b351ee",
+          "score_schema_hash": "779d2ce91264cf3ace621a084e211d77b4c17450cc10925c767a5cbe96548bd6",
+          "content_hash": "b42a620adaa7a17eb57a99ec1843b9f8059401ec48070dd214b7ec689ecda46c",
+          "records_hash": "4eede2d68df86d763fe688e3afef9b871e375f461039cb9ca8ed432e811a4933",
+          "cache_key": "score-dump-identity-v1:16f768bf63b689d6062f2b9a5e9784654803685bd43f2e40a20d57a2d122b302"
+        },
+        "summary": {
+          "n_total": 154,
+          "n_true": 69,
+          "n_false": 85,
+          "score_count": 8,
+          "score_names": [
+            "maha_last",
+            "truth_proj",
+            "subspace_resid",
+            "resid_update_norm",
+            "disp_euclid",
+            "disp_hse",
+            "eigenscore",
+            "nll_answer"
+          ],
+          "sweep_layer_count": 5,
+          "sweep_layers": [
+            "-16",
+            "-14",
+            "-12",
+            "-10",
+            "-8"
+          ],
+          "sweep_score_count": 25,
+          "sweep_score_names": [
+            "eigenscore",
+            "maha_last",
+            "resid_update_norm",
+            "subspace_resid",
+            "truth_proj"
+          ],
+          "all_signal_names": [
+            "disp_euclid",
+            "disp_hse",
+            "eigenscore",
+            "maha_last",
+            "nll_answer",
+            "resid_update_norm",
+            "subspace_resid",
+            "truth_proj"
+          ],
+          "has_statements": true,
+          "statement_count": 154,
+          "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+          "layer": -8
+        }
+      },
+      "config": {
+        "auto_batch_size": true,
+        "batch_size": 4,
+        "cache_only": false,
+        "cache_only_restored_eval_statements": false,
+        "covariance_low_rank": 16,
+        "covariance_mode": "full",
+        "dataset": "truthfulqa",
+        "dtype": "float32",
+        "dump_inside_samples": false,
+        "dump_scores_format": "jsonl",
+        "effective_batch_size": 4,
+        "eigenscore_alpha": 0.001,
+        "eval_reps_cache": null,
+        "eval_reps_cache_shard_size": 0,
+        "eval_reps_shard_read_cache_size": 2,
+        "hidden_dim": 576,
+        "hidden_state_capture": "hooks",
+        "inside_adaptive_sampling": false,
+        "inside_batch_size": 1,
+        "inside_diagnostics_cache": null,
+        "inside_embedding_threshold": 0.9,
+        "inside_max_new_tokens": 12,
+        "inside_min_samples": 2,
+        "inside_pooling": "last",
+        "inside_sample_step": 1,
+        "inside_samples": 0,
+        "inside_selfcheck_early_stop": false,
+        "inside_selfcheck_min_overlap": 0.65,
+        "inside_selfcheck_refute_threshold": 0.5,
+        "inside_selfcheck_support_threshold": 0.6,
+        "inside_stability_delta": 0.05,
+        "inside_temperature": 0.7,
+        "inside_top_p": 0.9,
+        "inside_trigger_signal": null,
+        "inside_trigger_threshold": null,
+        "inside_trigger_top_fraction": null,
+        "layer": -8,
+        "layer_stats_cache": null,
+        "length_bucketed_batches": true,
+        "manifold_n": 126,
+        "max_batch_tokens": 0,
+        "max_length": 96,
+        "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+        "n_manifold_false": 177,
+        "n_neg": 69,
+        "n_pos": 85,
+        "offline": false,
+        "prefix_kv_cache": false,
+        "progress_every": 0,
+        "refresh_eval_reps_cache": false,
+        "refresh_inside_diagnostics_cache": false,
+        "refresh_layer_stats_cache": false,
+        "refresh_statement_encoding_cache": false,
+        "seed": 0,
+        "statement_encoding_cache": null,
+        "subspace_rank": 2,
+        "sweep_layers": [
+          -8,
+          -16,
+          -14,
+          -12,
+          -10
+        ],
+        "warmup_checkpoint": null,
+        "warmup_checkpoint_every": 50
+      },
+      "signals": [
+        "truth_proj",
+        "maha_last",
+        "subspace_resid",
+        "resid_update_norm",
+        "eigenscore"
+      ],
+      "directions": {
+        "truth_proj": "higher",
+        "maha_last": "higher",
+        "subspace_resid": "higher",
+        "resid_update_norm": "higher",
+        "eigenscore": "higher"
+      },
+      "n_total": 154,
+      "n_true": 69,
+      "n_false": 85,
+      "single_results": {
+        "truth_proj": {
+          "direction": "higher",
+          "auroc": 0.6603580562659846,
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "false_alarm": 0.041428571428571426,
+              "coverage": 0.9585714285714286,
+              "detection": 0.043529411764705886,
+              "pass": true,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "false_alarm": 0.09428571428571428,
+              "coverage": 0.9057142857142857,
+              "detection": 0.1,
+              "pass": true,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "false_alarm": 0.21999999999999997,
+              "coverage": 0.78,
+              "detection": 0.22647058823529412,
+              "pass": true,
+              "repeats": 20
+            }
+          }
+        },
+        "maha_last": {
+          "direction": "higher",
+          "auroc": 0.5539641943734015,
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "false_alarm": 0.02571428571428571,
+              "coverage": 0.9742857142857143,
+              "detection": 0.007058823529411765,
+              "pass": true,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "false_alarm": 0.08714285714285715,
+              "coverage": 0.9128571428571428,
+              "detection": 0.07294117647058825,
+              "pass": true,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "false_alarm": 0.19714285714285715,
+              "coverage": 0.8028571428571428,
+              "detection": 0.22176470588235295,
+              "pass": true,
+              "repeats": 20
+            }
+          }
+        },
+        "subspace_resid": {
+          "direction": "higher",
+          "auroc": 0.4971867007672634,
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "false_alarm": 0.024285714285714285,
+              "coverage": 0.9757142857142858,
+              "detection": 0.0,
+              "pass": true,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "false_alarm": 0.0757142857142857,
+              "coverage": 0.9242857142857143,
+              "detection": 0.038235294117647055,
+              "pass": true,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "false_alarm": 0.19714285714285712,
+              "coverage": 0.8028571428571429,
+              "detection": 0.20411764705882357,
+              "pass": true,
+              "repeats": 20
+            }
+          }
+        },
+        "resid_update_norm": {
+          "direction": "higher",
+          "auroc": 0.5473145780051151,
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "false_alarm": 0.019999999999999997,
+              "coverage": 0.98,
+              "detection": 0.0058823529411764705,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "false_alarm": 0.07428571428571429,
+              "coverage": 0.9257142857142857,
+              "detection": 0.047058823529411764,
+              "pass": true,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "false_alarm": 0.19142857142857145,
+              "coverage": 0.8085714285714285,
+              "detection": 0.18705882352941178,
+              "pass": true,
+              "repeats": 20
+            }
+          }
+        },
+        "eigenscore": {
+          "direction": "higher",
+          "auroc": 0.49411764705882355,
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "false_alarm": 0.02857142857142857,
+              "coverage": 0.9714285714285714,
+              "detection": 0.008823529411764706,
+              "pass": true,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "false_alarm": 0.07285714285714286,
+              "coverage": 0.9271428571428572,
+              "detection": 0.038235294117647055,
+              "pass": true,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "false_alarm": 0.1957142857142857,
+              "coverage": 0.8042857142857143,
+              "detection": 0.13470588235294118,
+              "pass": true,
+              "repeats": 20
+            }
+          }
+        }
+      },
+      "ensemble_results": {
+        "max_rank": {
+          "method": "max_rank",
+          "direction": "higher",
+          "auroc": 0.47154305200341007,
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "false_alarm": 0.0,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "false_alarm": 0.0,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "false_alarm": 0.13999999999999999,
+              "coverage": 0.86,
+              "detection": 0.08294117647058824,
+              "pass": false,
+              "repeats": 20
+            }
+          }
+        },
+        "mean_rank": {
+          "method": "mean_rank",
+          "direction": "higher",
+          "auroc": 0.5730818414322251,
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "false_alarm": 0.032857142857142856,
+              "coverage": 0.9671428571428572,
+              "detection": 0.024117647058823532,
+              "pass": true,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "false_alarm": 0.06571428571428571,
+              "coverage": 0.9342857142857143,
+              "detection": 0.14176470588235296,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "false_alarm": 0.16857142857142857,
+              "coverage": 0.8314285714285714,
+              "detection": 0.3058823529411765,
+              "pass": false,
+              "repeats": 20
+            }
+          }
+        }
+      },
+      "best_single_at_alpha": {
+        "name": "truth_proj",
+        "auroc": 0.6603580562659846,
+        "false_alarm": 0.09428571428571428,
+        "detection": 0.1
+      },
+      "best_ensemble_at_alpha": {
+        "name": "mean_rank",
+        "auroc": 0.5730818414322251,
+        "false_alarm": 0.06571428571428571,
+        "detection": 0.14176470588235296
+      }
+    },
+    {
+      "name": "qwen05",
+      "scores_path": "artifacts/truthfulqa-frontier-qwen05-l20/qwen05-l20/scores.manifest.json",
+      "score_dump": {
+        "path": "artifacts/truthfulqa-frontier-qwen05-l20/qwen05-l20/scores.manifest.json",
+        "exists": true,
+        "kind": "file",
+        "sha256": "edf2eb1d3920701af71eb6498d04482cfb8370bf226318de7d8879f41869f0a2",
+        "size_bytes": 3008,
+        "source_format": "eigentruth.score_dump.jsonl",
+        "records": {
+          "path": "artifacts/truthfulqa-frontier-qwen05-l20/qwen05-l20/scores.manifest.records.jsonl",
+          "exists": true,
+          "kind": "file",
+          "sha256": "7c879b862aa62cbf020da12f2830d86c471874904f58574d17f06fbdda1b51ac",
+          "size_bytes": 238872
+        },
+        "identity": {
+          "schema_version": 1,
+          "source_format": "eigentruth.score_dump.jsonl",
+          "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+          "dataset_id": "truthfulqa",
+          "target_layer": -8,
+          "n_total": 154,
+          "primary_score_names": [
+            "disp_euclid",
+            "disp_hse",
+            "eigenscore",
+            "maha_last",
+            "nll_answer",
+            "resid_update_norm",
+            "subspace_resid",
+            "truth_proj"
+          ],
+          "sweep_score_names": {
+            "-16": [
+              "eigenscore",
+              "maha_last",
+              "resid_update_norm",
+              "subspace_resid",
+              "truth_proj"
+            ],
+            "-14": [
+              "eigenscore",
+              "maha_last",
+              "resid_update_norm",
+              "subspace_resid",
+              "truth_proj"
+            ],
+            "-12": [
+              "eigenscore",
+              "maha_last",
+              "resid_update_norm",
+              "subspace_resid",
+              "truth_proj"
+            ],
+            "-10": [
+              "eigenscore",
+              "maha_last",
+              "resid_update_norm",
+              "subspace_resid",
+              "truth_proj"
+            ],
+            "-8": [
+              "eigenscore",
+              "maha_last",
+              "resid_update_norm",
+              "subspace_resid",
+              "truth_proj"
+            ]
+          },
+          "scoring_config_hash": "5399c177abdf7a12c152a9b684a3c235b9e31ee404c37fc10a2d9dbbba2930a6",
+          "score_schema_hash": "779d2ce91264cf3ace621a084e211d77b4c17450cc10925c767a5cbe96548bd6",
+          "content_hash": "edf2eb1d3920701af71eb6498d04482cfb8370bf226318de7d8879f41869f0a2",
+          "records_hash": "7c879b862aa62cbf020da12f2830d86c471874904f58574d17f06fbdda1b51ac",
+          "cache_key": "score-dump-identity-v1:85af6f8109c67e830ff17aa00c8186714d7eeb06e7049d4558368bc07f7d253b"
+        },
+        "summary": {
+          "n_total": 154,
+          "n_true": 69,
+          "n_false": 85,
+          "score_count": 8,
+          "score_names": [
+            "maha_last",
+            "truth_proj",
+            "subspace_resid",
+            "resid_update_norm",
+            "disp_euclid",
+            "disp_hse",
+            "eigenscore",
+            "nll_answer"
+          ],
+          "sweep_layer_count": 5,
+          "sweep_layers": [
+            "-16",
+            "-14",
+            "-12",
+            "-10",
+            "-8"
+          ],
+          "sweep_score_count": 25,
+          "sweep_score_names": [
+            "eigenscore",
+            "maha_last",
+            "resid_update_norm",
+            "subspace_resid",
+            "truth_proj"
+          ],
+          "all_signal_names": [
+            "disp_euclid",
+            "disp_hse",
+            "eigenscore",
+            "maha_last",
+            "nll_answer",
+            "resid_update_norm",
+            "subspace_resid",
+            "truth_proj"
+          ],
+          "has_statements": true,
+          "statement_count": 154,
+          "model": "Qwen/Qwen2.5-0.5B-Instruct",
+          "layer": -8
+        }
+      },
+      "config": {
+        "auto_batch_size": true,
+        "batch_size": 2,
+        "cache_only": false,
+        "cache_only_restored_eval_statements": false,
+        "covariance_low_rank": 16,
+        "covariance_mode": "full",
+        "dataset": "truthfulqa",
+        "dtype": "float32",
+        "dump_inside_samples": false,
+        "dump_scores_format": "jsonl",
+        "effective_batch_size": 2,
+        "eigenscore_alpha": 0.001,
+        "eval_reps_cache": null,
+        "eval_reps_cache_shard_size": 0,
+        "eval_reps_shard_read_cache_size": 2,
+        "hidden_dim": 896,
+        "hidden_state_capture": "hooks",
+        "inside_adaptive_sampling": false,
+        "inside_batch_size": 1,
+        "inside_diagnostics_cache": null,
+        "inside_embedding_threshold": 0.9,
+        "inside_max_new_tokens": 12,
+        "inside_min_samples": 2,
+        "inside_pooling": "last",
+        "inside_sample_step": 1,
+        "inside_samples": 0,
+        "inside_selfcheck_early_stop": false,
+        "inside_selfcheck_min_overlap": 0.65,
+        "inside_selfcheck_refute_threshold": 0.5,
+        "inside_selfcheck_support_threshold": 0.6,
+        "inside_stability_delta": 0.05,
+        "inside_temperature": 0.7,
+        "inside_top_p": 0.9,
+        "inside_trigger_signal": null,
+        "inside_trigger_threshold": null,
+        "inside_trigger_top_fraction": null,
+        "layer": -8,
+        "layer_stats_cache": null,
+        "length_bucketed_batches": true,
+        "manifold_n": 126,
+        "max_batch_tokens": 0,
+        "max_length": 96,
+        "model": "Qwen/Qwen2.5-0.5B-Instruct",
+        "n_manifold_false": 177,
+        "n_neg": 69,
+        "n_pos": 85,
+        "offline": false,
+        "prefix_kv_cache": false,
+        "progress_every": 0,
+        "refresh_eval_reps_cache": false,
+        "refresh_inside_diagnostics_cache": false,
+        "refresh_layer_stats_cache": false,
+        "refresh_statement_encoding_cache": false,
+        "seed": 0,
+        "statement_encoding_cache": null,
+        "subspace_rank": 2,
+        "sweep_layers": [
+          -8,
+          -16,
+          -14,
+          -12,
+          -10
+        ],
+        "warmup_checkpoint": null,
+        "warmup_checkpoint_every": 50
+      },
+      "signals": [
+        "truth_proj",
+        "maha_last",
+        "subspace_resid",
+        "resid_update_norm",
+        "eigenscore"
+      ],
+      "directions": {
+        "truth_proj": "higher",
+        "maha_last": "higher",
+        "subspace_resid": "higher",
+        "resid_update_norm": "higher",
+        "eigenscore": "higher"
+      },
+      "n_total": 154,
+      "n_true": 69,
+      "n_false": 85,
+      "single_results": {
+        "truth_proj": {
+          "direction": "higher",
+          "auroc": 0.6845694799658995,
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "false_alarm": 0.02571428571428571,
+              "coverage": 0.9742857142857143,
+              "detection": 0.02,
+              "pass": true,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "false_alarm": 0.07142857142857142,
+              "coverage": 0.9285714285714286,
+              "detection": 0.07352941176470588,
+              "pass": true,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "false_alarm": 0.18857142857142856,
+              "coverage": 0.8114285714285714,
+              "detection": 0.2958823529411765,
+              "pass": true,
+              "repeats": 20
+            }
+          }
+        },
+        "maha_last": {
+          "direction": "higher",
+          "auroc": 0.5311167945439045,
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "false_alarm": 0.019999999999999997,
+              "coverage": 0.98,
+              "detection": 0.001176470588235294,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "false_alarm": 0.06571428571428571,
+              "coverage": 0.9342857142857143,
+              "detection": 0.023529411764705882,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "false_alarm": 0.1757142857142857,
+              "coverage": 0.8242857142857143,
+              "detection": 0.14411764705882352,
+              "pass": true,
+              "repeats": 20
+            }
+          }
+        },
+        "subspace_resid": {
+          "direction": "higher",
+          "auroc": 0.47144075021312876,
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "false_alarm": 0.02571428571428571,
+              "coverage": 0.9742857142857143,
+              "detection": 0.0017647058823529412,
+              "pass": true,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "false_alarm": 0.07714285714285715,
+              "coverage": 0.9228571428571428,
+              "detection": 0.017058823529411765,
+              "pass": true,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "false_alarm": 0.16999999999999998,
+              "coverage": 0.8300000000000001,
+              "detection": 0.11294117647058824,
+              "pass": false,
+              "repeats": 20
+            }
+          }
+        },
+        "resid_update_norm": {
+          "direction": "higher",
+          "auroc": 0.48695652173913045,
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "false_alarm": 0.027142857142857142,
+              "coverage": 0.9728571428571429,
+              "detection": 0.008823529411764706,
+              "pass": true,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "false_alarm": 0.08,
+              "coverage": 0.92,
+              "detection": 0.058823529411764705,
+              "pass": true,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "false_alarm": 0.21142857142857144,
+              "coverage": 0.7885714285714286,
+              "detection": 0.18941176470588236,
+              "pass": true,
+              "repeats": 20
+            }
+          }
+        },
+        "eigenscore": {
+          "direction": "higher",
+          "auroc": 0.4768968456947997,
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "false_alarm": 0.02857142857142857,
+              "coverage": 0.9714285714285714,
+              "detection": 0.011764705882352941,
+              "pass": true,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "false_alarm": 0.08142857142857143,
+              "coverage": 0.9185714285714286,
+              "detection": 0.06294117647058824,
+              "pass": true,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "false_alarm": 0.19,
+              "coverage": 0.81,
+              "detection": 0.15,
+              "pass": true,
+              "repeats": 20
+            }
+          }
+        }
+      },
+      "ensemble_results": {
+        "max_rank": {
+          "method": "max_rank",
+          "direction": "higher",
+          "auroc": 0.4799658994032396,
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "false_alarm": 0.0,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "false_alarm": 0.0,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "false_alarm": 0.12285714285714285,
+              "coverage": 0.8771428571428571,
+              "detection": 0.0688235294117647,
+              "pass": false,
+              "repeats": 20
+            }
+          }
+        },
+        "mean_rank": {
+          "method": "mean_rank",
+          "direction": "higher",
+          "auroc": 0.5399531116794544,
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "false_alarm": 0.017142857142857144,
+              "coverage": 0.9828571428571429,
+              "detection": 0.047058823529411764,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "false_alarm": 0.05857142857142857,
+              "coverage": 0.9414285714285714,
+              "detection": 0.09294117647058824,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "false_alarm": 0.13857142857142857,
+              "coverage": 0.8614285714285714,
+              "detection": 0.16352941176470587,
+              "pass": false,
+              "repeats": 20
+            }
+          }
+        }
+      },
+      "best_single_at_alpha": {
+        "name": "truth_proj",
+        "auroc": 0.6845694799658995,
+        "false_alarm": 0.07142857142857142,
+        "detection": 0.07352941176470588
+      },
+      "best_ensemble_at_alpha": {
+        "name": "mean_rank",
+        "auroc": 0.5399531116794544,
+        "false_alarm": 0.05857142857142857,
+        "detection": 0.09294117647058824
+      }
+    }
+  ]
+}

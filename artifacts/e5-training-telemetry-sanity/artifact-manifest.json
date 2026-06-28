@@ -1,0 +1,25 @@
+{
+  "artifacts": {
+    "training_telemetry_sanity_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "training-telemetry-sanity-report.json",
+      "sha256": "444ae35cc3a6773846aeca720c15817c776bc05ea515387eab7bd1fc59949fd5",
+      "size_bytes": 19639
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "covariance_mode": "shrinkage",
+    "source": "synthetic clean-vs-corrupt hidden-state trajectories",
+    "workflow": "training_telemetry_sanity"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 1,
+    "directory_count": 0,
+    "file_count": 1,
+    "missing_count": 0
+  }
+}

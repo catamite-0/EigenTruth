@@ -1,0 +1,90 @@
+{
+  "artifacts": {
+    "audit.answer_echo_grounding": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "answer-echo-grounding-audit.json",
+      "sha256": "5fb02fb49e9902334ea713d9a95e8d2f652785c3bd7ffd7f82f2fee6909f1f8f",
+      "size_bytes": 10494
+    },
+    "audit.answer_echo_stress_control": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "answer-echo-stress-control-audit.json",
+      "sha256": "d5b204411eec8a2b7ed5c3544ff01cd67cbcf5c13e95fdbf79cf5b3887e33d1b",
+      "size_bytes": 10386
+    },
+    "audit.correct_answer_controlled_baseline": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "correct-answer-controlled-baseline-audit.json",
+      "sha256": "9fa353246dd2cf3deaa048b21bdf9b7abd533279dd16a6bf66e4f93c597f2029",
+      "size_bytes": 9001
+    },
+    "audit.correct_answer_grounding": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "correct-answer-grounding-audit.json",
+      "sha256": "c8d239c2b2bdf8becabdd5797d8e4b079de56b0bd4cad27cad71a178e5e8110f",
+      "size_bytes": 9075
+    },
+    "corpus.answer_echo": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-l80-answer-echo-retrieval-stress/answer-echo-corpus.json",
+      "sha256": "6a25d0b933646980fb044a58770e6fc6a79c078bcf1083064d8c1b8d7acf117f",
+      "size_bytes": 283186
+    },
+    "corpus.correct_answer": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa_l80_correct_answer_corpus.json",
+      "sha256": "c49ed9bb55c6bea83c1c1282f072ad05d5e86449f785f2559457fc29fd66a81c",
+      "size_bytes": 196938
+    },
+    "scores.qwen05_l80_statements": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../qwen05_truthfulqa_l80_scores_with_statements.json",
+      "sha256": "afe25f1a8741c6b3f609172afa322033627e1765b378d37126c468d5089d5f52",
+      "size_bytes": 572479
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "audit_statuses": {
+      "audit.answer_echo_grounding": "fail",
+      "audit.answer_echo_stress_control": "pass",
+      "audit.correct_answer_controlled_baseline": "pass",
+      "audit.correct_answer_grounding": "fail"
+    },
+    "evidence_classes": {
+      "audit.answer_echo_grounding": "answer_echo_stress_control",
+      "audit.answer_echo_stress_control": "answer_echo_stress_control",
+      "audit.correct_answer_controlled_baseline": "controlled_dataset_baseline",
+      "audit.correct_answer_grounding": "controlled_dataset_baseline"
+    },
+    "external_domain_shift_ready": {
+      "audit.answer_echo_grounding": false,
+      "audit.answer_echo_stress_control": false,
+      "audit.correct_answer_controlled_baseline": false,
+      "audit.correct_answer_grounding": false
+    },
+    "runner": "audit_retrieval_corpus_provenance",
+    "workflow": "retrieval_corpus_provenance_audit_matrix"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 7,
+    "directory_count": 0,
+    "file_count": 7,
+    "missing_count": 0
+  }
+}

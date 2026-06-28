@@ -1,0 +1,45 @@
+{
+  "artifacts": {
+    "fixture_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "uncertain-verification-fixture.json",
+      "sha256": "552dcc71f6182c2a5648e994534faa8e408c755b3bb00de8e738e93ca6fa677f",
+      "size_bytes": 1955
+    },
+    "loop_results_jsonl": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "verification-loop-results.jsonl",
+      "sha256": "3b62c799a8388daa306cdb9629844e32727e8b1a6c27dd49323da624502b1a2c",
+      "size_bytes": 138515
+    },
+    "workflow_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "uncertainty-escalation-workflow.json",
+      "sha256": "0c25a11561940e188744615f94ff33cbc6fa46456e0fbb8db13d369c4870cefb",
+      "size_bytes": 6726
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "accepted_false_delta": -2,
+    "name": "uncertainty-escalation-fixture-workflow",
+    "record_count": 4,
+    "retrieval_evidence_records": 4,
+    "triggered_records": 4,
+    "version": "0.1",
+    "workflow": "uncertainty_escalation_fixture_workflow"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

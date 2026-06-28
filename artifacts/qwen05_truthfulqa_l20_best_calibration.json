@@ -1,0 +1,31 @@
+{
+  "calibration_dataset_metadata": {
+    "best_by": "auroc",
+    "n_false": 85,
+    "n_true": 69,
+    "scores": "artifacts/qwen05_truthfulqa_l20_scores.json",
+    "scores_path": "artifacts/qwen05_truthfulqa_l20_scores.json",
+    "source": "eval_conformal.py"
+  },
+  "commit_sha": null,
+  "created_at": "2026-06-22T04:11:35.534702+00:00",
+  "eigentruth_version": "0.1.0",
+  "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+  "model_revision": null,
+  "schema_version": 1,
+  "scores": [
+    {
+      "conformal_alpha": 0.1,
+      "direction": "higher",
+      "name": "truth_proj",
+      "threshold": 4.510312080383301
+    }
+  ],
+  "steering_policy": {
+    "max_steering_lambda": null,
+    "mode": "disabled",
+    "steering_lambda": 0.0
+  },
+  "target_layer": -12,
+  "warmup_dataset_metadata": {}
+}

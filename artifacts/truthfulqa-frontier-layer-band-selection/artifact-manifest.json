@@ -1,0 +1,107 @@
+{
+  "artifacts": {
+    "intrinsic_report_0_intrinsic-dimension-report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../e4-intrinsic-dimension-l80/intrinsic-dimension-report.json",
+      "sha256": "835f8ce0de164d3bc1c18b98286bc4649e83fa6735a217bfe7389db33b1c56b5",
+      "size_bytes": 8433
+    },
+    "layer_band_selector_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "layer-band-comparison.json",
+      "sha256": "c763bdc28a01b39ebaabd9e44c9f154ff62066623105d5bfdf48177ae4f6f333",
+      "size_bytes": 22626
+    },
+    "spectrum_report_0_qwen05-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-spectrum-layer-selection/qwen05-l80-spectrum-report.json",
+      "sha256": "65b84363bbf1ac24bb6b3c790937a494d1099cba930f3bb95b4d0630bace6b2e",
+      "size_bytes": 19683
+    },
+    "spectrum_report_1_smollm2-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-spectrum-layer-selection/smollm2-l80-spectrum-report.json",
+      "sha256": "3fadf8ad903064fabf300031ca2e5768a54fe50851f661f6f48324d8cc3db892",
+      "size_bytes": 19663
+    },
+    "sweep_report_0_qwen05-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-qwen-smollm2-l80-cache-only/qwen05-l80/sweep-report.json",
+      "sha256": "9faa5c4185f17580a08e52a86ca76f1a02cbcb21fd0b5b37c60d466f0ec4d537",
+      "size_bytes": 12351
+    },
+    "sweep_report_1_smollm2-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-qwen-smollm2-l80-cache-only/smollm2-l80/sweep-report.json",
+      "sha256": "2c8437a44d0dcb41811c0543c41dbdf93ccda862ba6d47c45f5501350ab773bf",
+      "size_bytes": 12361
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "coverage_top_k": 2,
+    "score_name": "truth_proj",
+    "strategies": [
+      {
+        "intrinsic_radius": 1,
+        "kind": "intrinsic",
+        "name": "intrinsic_radius_1",
+        "raw": "intrinsic:1",
+        "spectrum_heuristic": null,
+        "spectrum_radius": null
+      },
+      {
+        "intrinsic_radius": 2,
+        "kind": "intrinsic",
+        "name": "intrinsic_radius_2",
+        "raw": "intrinsic:2",
+        "spectrum_heuristic": null,
+        "spectrum_radius": null
+      },
+      {
+        "intrinsic_radius": null,
+        "kind": "spectrum",
+        "name": "spectrum_max_top_eigenvalue_to_mp_upper_radius_1",
+        "raw": "spectrum:max_top_eigenvalue_to_mp_upper:1",
+        "spectrum_heuristic": "max_top_eigenvalue_to_mp_upper",
+        "spectrum_radius": 1
+      },
+      {
+        "intrinsic_radius": 1,
+        "kind": "union",
+        "name": "union_intrinsic_1_max_top_eigenvalue_to_mp_upper_1",
+        "raw": "union:1:max_top_eigenvalue_to_mp_upper:1",
+        "spectrum_heuristic": "max_top_eigenvalue_to_mp_upper",
+        "spectrum_radius": 1
+      },
+      {
+        "intrinsic_radius": 1,
+        "kind": "union",
+        "name": "union_intrinsic_1_max_effective_rank_1",
+        "raw": "union:1:max_effective_rank:1",
+        "spectrum_heuristic": "max_effective_rank",
+        "spectrum_radius": 1
+      }
+    ],
+    "workflow": "compare_layer_band_selectors"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 6,
+    "directory_count": 0,
+    "file_count": 6,
+    "missing_count": 0
+  }
+}

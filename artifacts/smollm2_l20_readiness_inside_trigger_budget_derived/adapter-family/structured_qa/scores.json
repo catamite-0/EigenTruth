@@ -1,0 +1,74 @@
+{
+  "config": {
+    "fixture_type": "structured_qa_route_family",
+    "layer": -1,
+    "model": "synthetic-structured-qa",
+    "n_records": 8,
+    "signal": "truth_proj"
+  },
+  "labels": [
+    0,
+    0,
+    0,
+    0,
+    1,
+    1,
+    1,
+    1
+  ],
+  "schema_version": 1,
+  "scores": {
+    "truth_proj": [
+      0.2,
+      0.21,
+      0.22,
+      0.23,
+      0.7,
+      0.71,
+      0.72,
+      0.73
+    ]
+  },
+  "statements": [
+    {
+      "answer": "Correct answer 1",
+      "question": "Order policy question 1?",
+      "text": "Order policy question 1? Correct answer 1"
+    },
+    {
+      "answer": "Correct answer 2",
+      "question": "Order policy question 2?",
+      "text": "Order policy question 2? Correct answer 2"
+    },
+    {
+      "answer": "Correct answer 3",
+      "question": "Order policy question 3?",
+      "text": "Order policy question 3? Correct answer 3"
+    },
+    {
+      "answer": "Correct answer 4",
+      "question": "Order policy question 4?",
+      "text": "Order policy question 4? Correct answer 4"
+    },
+    {
+      "answer": "Wrong answer 1",
+      "question": "Order policy question 1?",
+      "text": "Order policy question 1? Wrong answer 1"
+    },
+    {
+      "answer": "Wrong answer 2",
+      "question": "Order policy question 2?",
+      "text": "Order policy question 2? Wrong answer 2"
+    },
+    {
+      "answer": "Wrong answer 3",
+      "question": "Order policy question 3?",
+      "text": "Order policy question 3? Wrong answer 3"
+    },
+    {
+      "answer": "Wrong answer 4",
+      "question": "Order policy question 4?",
+      "text": "Order policy question 4? Wrong answer 4"
+    }
+  ]
+}

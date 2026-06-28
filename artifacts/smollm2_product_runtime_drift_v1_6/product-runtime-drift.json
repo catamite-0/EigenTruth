@@ -1,0 +1,171 @@
+{
+  "artifact_manifest_summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  },
+  "baseline": {
+    "optimization": {},
+    "path": "artifacts/smollm2_product_runtime_profile_sweep/baselines/auto/product-runtime-baseline.json",
+    "record": null,
+    "record_key": null,
+    "registry": null,
+    "source": "file",
+    "status": "promote"
+  },
+  "config": {
+    "compact_json": false,
+    "max_cache_hit_rate_drop": 0.0,
+    "max_mean_attempted_route_count_delta": 0.0,
+    "max_mean_route_duration_ratio": 1.2,
+    "max_p95_route_duration_ratio": 1.2,
+    "max_retrieval_use_rate_delta": 0.0,
+    "max_total_seconds_mean_ratio": 1.3,
+    "max_total_seconds_p95_ratio": 1.6,
+    "max_verification_skip_rate_drop": 0.0,
+    "metadata": {
+      "evidence": "smollm2_product_runtime_drift_refresh_v1_6"
+    },
+    "min_current_trace_count": 12,
+    "runtime_budget_policy_key": null,
+    "runtime_budget_policy_path": null
+  },
+  "current": {
+    "optimization": {},
+    "path": "artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/product-runtime-baseline.json",
+    "status": "observed"
+  },
+  "decision": {
+    "blocking_reasons": [],
+    "status": "promote"
+  },
+  "metrics": [
+    {
+      "absolute_delta": 9.808556448357797e-05,
+      "baseline": 0.00041855359449982643,
+      "comparison": "max_ratio",
+      "current": 0.0005166391589834044,
+      "metric": "total_seconds.mean",
+      "ratio_to_baseline": 1.2343440977989706,
+      "reason": null,
+      "status": "pass",
+      "threshold": 1.3
+    },
+    {
+      "absolute_delta": 0.00026950683677569017,
+      "baseline": 0.0005332090426236391,
+      "comparison": "max_ratio",
+      "current": 0.0008027158793993293,
+      "metric": "total_seconds.p95",
+      "ratio_to_baseline": 1.505443109984763,
+      "reason": null,
+      "status": "pass",
+      "threshold": 1.6
+    },
+    {
+      "absolute_delta": 3.6776376267274243e-06,
+      "baseline": 3.624181651199857e-05,
+      "comparison": "max_ratio",
+      "current": 3.9919454138725996e-05,
+      "metric": "route.mean_duration_seconds.mean",
+      "ratio_to_baseline": 1.1014749805796813,
+      "reason": null,
+      "status": "pass",
+      "threshold": 1.2
+    },
+    {
+      "absolute_delta": 3.576434877080216e-06,
+      "baseline": 3.700455223831038e-05,
+      "comparison": "max_ratio",
+      "current": 4.0580987115390595e-05,
+      "metric": "route.p95_duration_seconds.mean",
+      "ratio_to_baseline": 1.0966485110817683,
+      "reason": null,
+      "status": "pass",
+      "threshold": 1.2
+    },
+    {
+      "absolute_delta": 0.0,
+      "baseline": 0.6666666666666666,
+      "comparison": "max_increase",
+      "current": 0.6666666666666666,
+      "metric": "mean_attempted_route_count.mean",
+      "reason": null,
+      "status": "pass",
+      "threshold": 0.0
+    },
+    {
+      "absolute_delta": 0.0,
+      "baseline": 0.0,
+      "comparison": "max_increase",
+      "current": 0.0,
+      "metric": "retrieval_use_rate.mean",
+      "reason": null,
+      "status": "pass",
+      "threshold": 0.0
+    },
+    {
+      "absolute_delta": 0.0,
+      "absolute_drop": 0.0,
+      "baseline": 0.0,
+      "comparison": "max_drop",
+      "current": 0.0,
+      "metric": "cache_hit_rate.mean",
+      "reason": null,
+      "status": "pass",
+      "threshold": 0.0
+    },
+    {
+      "absolute_delta": 0.0,
+      "absolute_drop": 0.0,
+      "baseline": 0.3333333333333333,
+      "comparison": "max_drop",
+      "current": 0.3333333333333333,
+      "metric": "verification_skip_rate.mean",
+      "reason": null,
+      "status": "pass",
+      "threshold": 0.0
+    },
+    {
+      "baseline": null,
+      "comparison": "min_current",
+      "current": 12.0,
+      "metric": "n_traces",
+      "reason": null,
+      "status": "pass",
+      "threshold": 12
+    }
+  ],
+  "paths": {
+    "artifact_manifest": "artifacts/smollm2_product_runtime_drift_v1_6/artifact-manifest.json",
+    "report": "artifacts/smollm2_product_runtime_drift_v1_6/product-runtime-drift.json",
+    "runtime_budget_policy": null
+  },
+  "runtime_budget_policy_gate": {
+    "aggregation": "current_product_runtime_baseline_summary",
+    "check_count": 0,
+    "checks": [],
+    "enabled": false,
+    "failed_count": 0,
+    "failures": [],
+    "passed": null,
+    "policy": null,
+    "policy_metadata": {},
+    "source": null
+  },
+  "schema_version": 1,
+  "status": "promote",
+  "summary": {
+    "blocked_metric_count": 0,
+    "compared_metric_count": 9,
+    "drift_gate_enabled": true,
+    "gate_enabled": true,
+    "observed_metric_count": 0,
+    "runtime_budget_policy_check_count": 0,
+    "runtime_budget_policy_failed_count": 0,
+    "runtime_budget_policy_gate_enabled": false,
+    "runtime_budget_policy_passed": null
+  },
+  "workflow": "product_runtime_drift_comparison"
+}

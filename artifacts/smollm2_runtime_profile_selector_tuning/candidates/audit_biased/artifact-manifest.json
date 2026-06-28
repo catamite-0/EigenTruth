@@ -1,0 +1,99 @@
+{
+  "artifacts": {
+    "auto_baseline": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "baselines/auto/product-runtime-baseline.json",
+      "sha256": "10a329159943e22086faa7fd1b406dac9eafb9e746da4c56657004cad4ff6b9a",
+      "size_bytes": 61845
+    },
+    "auto_baseline_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "baselines/auto/product-runtime-baseline-artifact-manifest.json",
+      "sha256": "d8021d35651fd1571adbd225ede6bbe95729334192d84da790afbadfc59d589c",
+      "size_bytes": 2024
+    },
+    "auto_trace_0000": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "traces/auto/low_risk_supported-r0.json",
+      "sha256": "51f7643893c0c15c927f149942df5b4e0a1a815000984ddc994d7a2148b00aca",
+      "size_bytes": 34181
+    },
+    "auto_trace_0001": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "traces/auto/diagnostic_refuted-r0.json",
+      "sha256": "0efc7c8e619a2de873dd01cd9d3b039eed92a7d24f7ee2a5848db46d6537bc26",
+      "size_bytes": 41568
+    },
+    "auto_trace_0002": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "traces/auto/calculator_refuted-r0.json",
+      "sha256": "4bb6bbc7af933dfc22a1665965e3262a34c4d1814a6c9a745a937ed91c830a40",
+      "size_bytes": 40577
+    },
+    "product_runtime_profile_sweep_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "product-runtime-profile-sweep.json",
+      "sha256": "5302275561ec12d776011f881d338c35d590ab620e049d773a33b55b25ea6488",
+      "size_bytes": 11813
+    },
+    "promotion_contract": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_registry_workflow.json",
+      "sha256": "feaebd93a7a4b92fc50adcabe4ea4ae5515b6b1e42fb3d086db37c2bf530b239",
+      "size_bytes": 53344
+    },
+    "runtime_profile_selector_policy": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../policies/audit_biased.json",
+      "sha256": "edb1aaa6ca11a4edd7ee80dcc3468e66c6a6610178316978da1cfaaf5afd8a7c",
+      "size_bytes": 599
+    },
+    "slo_policy": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../smollm2_product_runtime_profile_sweep/runtime-profile-slo-policy.json",
+      "sha256": "3628f98fa77b8f19f07d0441a46666229b53f1acdad17328f7cda04fa185f380",
+      "size_bytes": 289
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "compact_json": false,
+    "max_workers": 1,
+    "profile_count": 1,
+    "recommended_profile": "auto",
+    "repeats": 1,
+    "runner": "run_product_runtime_profile_sweep",
+    "runtime_profile_selector_policy": "artifacts/smollm2_runtime_profile_selector_tuning/policies/audit_biased.json",
+    "scenario_count": 3,
+    "selector_candidate": "audit_biased",
+    "slo_enabled": true,
+    "slo_passed": false,
+    "source": "run_runtime_profile_selector_tuning",
+    "status": "blocked"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 9,
+    "directory_count": 0,
+    "file_count": 9,
+    "missing_count": 0
+  }
+}

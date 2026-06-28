@@ -1,0 +1,68 @@
+{
+  "artifacts": {
+    "qwen05_score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-qwen05-l20/qwen05-l20/scores.manifest.json",
+      "sha256": "edf2eb1d3920701af71eb6498d04482cfb8370bf226318de7d8879f41869f0a2",
+      "size_bytes": 3008
+    },
+    "qwen05_workflow_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-qwen05-l20/artifact-manifest.json",
+      "sha256": "8c05b22c08d868b6bf5e92fcd580a6a667a41fc319c375feeb8836bfc20dfa5c",
+      "size_bytes": 1666
+    },
+    "score_ensemble_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "score-ensemble-report.json",
+      "sha256": "d186034e845bad0f3f86c29c1235d489914ac1828da5644a176b3dc902ff5a68",
+      "size_bytes": 27927
+    },
+    "smollm2_score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l20/smollm2-l20/scores.manifest.json",
+      "sha256": "b42a620adaa7a17eb57a99ec1843b9f8059401ec48070dd214b7ec689ecda46c",
+      "size_bytes": 3017
+    },
+    "smollm2_workflow_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l20/artifact-manifest.json",
+      "sha256": "5ef11954d9b0853aa18cc26971bb39d049a6ef2ef81452199d7632aada7f70f9",
+      "size_bytes": 1671
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "models": [
+      "smollm2",
+      "qwen05"
+    ],
+    "runner": "eval_score_ensemble",
+    "scale": "l20",
+    "signals": [
+      "truth_proj",
+      "maha_last",
+      "subspace_resid",
+      "resid_update_norm",
+      "eigenscore"
+    ],
+    "status": "complete"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

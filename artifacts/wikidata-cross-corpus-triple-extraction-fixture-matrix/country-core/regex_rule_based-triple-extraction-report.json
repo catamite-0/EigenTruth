@@ -1,0 +1,17 @@
+{
+  "extractor": "regex_rule_based",
+  "pattern_count": 15,
+  "patterns_path": "artifacts/wikidata-cross-corpus-triple-extraction-fixture-matrix/country-core/triple-extraction-regex-patterns.json",
+  "records_path": "artifacts/wikidata-cross-corpus-triple-extraction-fixture-matrix/country-core/triple-extraction-records.json",
+  "report": {
+    "error_examples": [],
+    "exact_match_count": 1436,
+    "expected_triple_count": 1436,
+    "extracted_triple_count": 1436,
+    "f1": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "record_count": 1436
+  },
+  "workflow": "triple_extraction_eval"
+}

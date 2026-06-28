@@ -1,0 +1,34 @@
+{
+  "templates": [
+    {
+      "answer_field": "capital",
+      "qid_label_fields": [
+        "country",
+        "capital"
+      ],
+      "question_template": "What is the capital of {country}?",
+      "statement_property": "P36",
+      "statement_property_label": "capital"
+    },
+    {
+      "answer_field": "language",
+      "qid_label_fields": [
+        "country",
+        "language"
+      ],
+      "question_template": "What is an official language of {country}?",
+      "statement_property": "P37",
+      "statement_property_label": "official language"
+    },
+    {
+      "answer_field": "currency",
+      "qid_label_fields": [
+        "country",
+        "currency"
+      ],
+      "question_template": "What is a currency of {country}?",
+      "statement_property": "P38",
+      "statement_property_label": "currency"
+    }
+  ]
+}

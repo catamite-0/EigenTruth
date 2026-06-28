@@ -1,0 +1,80 @@
+{
+  "artifacts": {
+    "corpus.country-core.artifact_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "country-core/artifact-manifest.json",
+      "sha256": "0eda7688bdf1df4bb4aa22f03af39b75098af94615e5f3e133992c26fa488d47",
+      "size_bytes": 2429
+    },
+    "corpus.country-core.source.1.wikidata-country-core-facts-source": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../wikidata-country-core-facts-external-corpus/wikidata-country-core-facts-source.jsonl",
+      "sha256": "4e542340473cf9582b85a86c59284852e3a5fb5650e9248a77b5c2e2464d7cd3",
+      "size_bytes": 388639
+    },
+    "corpus.country-core.workflow_summary": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "country-core/triple-extraction-workflow-summary.json",
+      "sha256": "143d1b938606d67d3b12efeeba1208370c6c653cef5318bcb54a8c73854ed0db",
+      "size_bytes": 52400
+    },
+    "corpus.organization-product.artifact_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "organization-product/artifact-manifest.json",
+      "sha256": "4e18f4060aa1812a97e764d8619fdbacca14725734a9d2d13e5f3771f85a5031",
+      "size_bytes": 2422
+    },
+    "corpus.organization-product.source.1.wikidata-organization-product-source": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../wikidata-organization-product-core-facts/wikidata-organization-product-source.jsonl",
+      "sha256": "f4cd3dc8d01c7c4e5b11de0e1e38041e70827115cb02f4fdc1e4d1899a454f94",
+      "size_bytes": 9663
+    },
+    "corpus.organization-product.workflow_summary": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "organization-product/triple-extraction-workflow-summary.json",
+      "sha256": "6cc32d0565941c9831209a74b82ea880adfc4357f07fe529e3b34f7223b74f0f",
+      "size_bytes": 52756
+    },
+    "matrix_summary": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "triple-extraction-fixture-matrix.json",
+      "sha256": "8f5e9eec6f645507c1a5b6820a937779d1437269475d6d9a21ae45274e49243c",
+      "size_bytes": 2805
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "distinct_predicate_count": 6,
+    "mean_baseline_f1": 0.375,
+    "mean_best_f1": 1.0,
+    "mean_f1_lift": 0.625,
+    "min_distinct_predicates": 6,
+    "n_corpora": 2,
+    "promoted_corpora": 2,
+    "promotes_cross_corpus_extractor": true,
+    "status": "promote",
+    "workflow": "triple_extraction_fixture_matrix"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 7,
+    "directory_count": 0,
+    "file_count": 7,
+    "missing_count": 0
+  }
+}

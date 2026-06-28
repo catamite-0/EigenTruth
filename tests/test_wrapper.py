@@ -100,6 +100,7 @@ class TestWrapperInit:
         assert wrapper.target_layer_idx == -10
         assert wrapper.steering_lambda == 0.1
         assert wrapper.mahalanobis_threshold == 15.0
+        assert wrapper.track_hse is False
         assert not wrapper.is_warmed_up
 
     def test_custom_params(self):
@@ -107,11 +108,13 @@ class TestWrapperInit:
         wrapper = EigenTruthWrapper(
             model, target_layer_idx=-2, steering_lambda=0.5,
             mahalanobis_threshold=20.0, hse_warning_threshold=10.0,
+            track_hse=True,
         )
         assert wrapper.target_layer_idx == -2
         assert wrapper.steering_lambda == 0.5
         assert wrapper.mahalanobis_threshold == 20.0
         assert wrapper.hse_warning_threshold == 10.0
+        assert wrapper.track_hse is True
 
     def test_model_is_stored(self):
         model = MockCausalLM()
@@ -242,6 +245,7 @@ class TestHSEWarning:
         wrapper = EigenTruthWrapper(
             model, target_layer_idx=-1,
             hse_warning_threshold=0.001, mahalanobis_threshold=1000.0,
+            track_hse=True,
         )
         tokenizer = MockTokenizer()
         wrapper.warmup(["事实一", "事实二", "事实三"], tokenizer)

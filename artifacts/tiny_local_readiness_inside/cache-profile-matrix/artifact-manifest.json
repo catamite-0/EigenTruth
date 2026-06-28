@@ -1,0 +1,56 @@
+{
+  "artifacts": {
+    "cells.layer_m1_batch_4_capture_outputs.triplet_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "layer_m1_batch_4_capture_outputs/artifact-manifest.json",
+      "sha256": "a8aac47efd4590f27b7393a34d610a2213894b320d09695b1b86cc41cac21c6c",
+      "size_bytes": 3387
+    },
+    "matrix_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "cache-profile-matrix-report.json",
+      "sha256": "83cecea3b1c6491e0f2fdbfc4943151366a52b3020c51b94e676af45dfbd6c5c",
+      "size_bytes": 12317
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "batch_sizes": [
+      4
+    ],
+    "dry_run": false,
+    "dtype": "float32",
+    "hidden_state_captures": [
+      "outputs"
+    ],
+    "layers": [
+      -1
+    ],
+    "matrix_mode": "triplet",
+    "max_batch_token_budgets": [
+      0
+    ],
+    "max_batch_tokens": 0,
+    "max_workers": 1,
+    "model": "sshleifer/tiny-gpt2",
+    "offline": true,
+    "prefix_kv_cache": false,
+    "prefix_kv_cache_modes": [
+      false
+    ],
+    "runner": "run_cache_profile_matrix",
+    "shared_cache_dir": null,
+    "wall_clock_seconds": 26.40906395704951
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  }
+}

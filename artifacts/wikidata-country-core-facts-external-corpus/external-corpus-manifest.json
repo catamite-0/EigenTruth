@@ -1,0 +1,40 @@
+{
+  "artifacts": {
+    "corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "wikidata-country-core-facts-corpus.json",
+      "sha256": "7dcb0f4cfe5013c843e5e924b5157582c55bbb91f7e09c91c94e167218c954af",
+      "size_bytes": 577236
+    },
+    "source.1.wikidata-country-core-facts-source": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "wikidata-country-core-facts-source.jsonl",
+      "sha256": "4e542340473cf9582b85a86c59284852e3a5fb5650e9248a77b5c2e2464d7cd3",
+      "size_bytes": 388639
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "corpus_type": "external_evidence_candidate",
+    "summary": {
+      "n_documents": 359,
+      "n_documents_with_source": 359,
+      "n_documents_with_timestamp": 359,
+      "n_documents_with_url": 359,
+      "n_skipped_short": 0,
+      "n_sources": 1
+    },
+    "workflow": "build_external_retrieval_corpus"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  }
+}

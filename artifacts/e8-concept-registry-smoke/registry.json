@@ -1,0 +1,77 @@
+{
+  "records": [
+    {
+      "artifact_type": "concept_artifact",
+      "metadata": {
+        "description": "Synthetic factuality concept for E8 smoke.",
+        "layer_idx": 0,
+        "manifold": {
+          "covariance_low_rank": 16,
+          "covariance_mode": "diag",
+          "has_contrastive_direction": true,
+          "has_false_mean": false,
+          "hidden_dim": 8,
+          "n": 12,
+          "ready": true
+        },
+        "metadata": {
+          "axis": "dim0",
+          "source": "synthetic"
+        },
+        "name": "factuality",
+        "schema_version": 1,
+        "version": "e8-smoke"
+      },
+      "name": "factuality",
+      "path": "artifacts/e8-concept-registry-smoke/factuality.pt",
+      "version": "e8-smoke"
+    },
+    {
+      "artifact_type": "concept_artifact",
+      "metadata": {
+        "description": "Synthetic policy-consistency concept for E8 smoke.",
+        "layer_idx": 1,
+        "manifold": {
+          "covariance_low_rank": 16,
+          "covariance_mode": "diag",
+          "has_contrastive_direction": true,
+          "has_false_mean": false,
+          "hidden_dim": 8,
+          "n": 12,
+          "ready": true
+        },
+        "metadata": {
+          "axis": "dim1",
+          "source": "synthetic"
+        },
+        "name": "policy_consistency",
+        "schema_version": 1,
+        "version": "e8-smoke"
+      },
+      "name": "policy_consistency",
+      "path": "artifacts/e8-concept-registry-smoke/policy_consistency.pt",
+      "version": "e8-smoke"
+    },
+    {
+      "artifact_type": "benchmark_manifest",
+      "metadata": {
+        "concept_count": 2,
+        "workflow": "concept_registry_smoke"
+      },
+      "name": "concept-registry-smoke",
+      "path": "artifacts/e8-concept-registry-smoke/artifact-manifest.json",
+      "version": "e8-smoke"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "status": "pass",
+        "workflow": "concept_registry_smoke"
+      },
+      "name": "concept-registry-smoke",
+      "path": "artifacts/e8-concept-registry-smoke/concept-registry-smoke.json",
+      "version": "e8-smoke"
+    }
+  ],
+  "schema_version": 1
+}

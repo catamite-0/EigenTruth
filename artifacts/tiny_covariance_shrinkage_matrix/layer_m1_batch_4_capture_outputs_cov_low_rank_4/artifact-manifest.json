@@ -1,0 +1,123 @@
+{
+  "artifacts": {
+    "caches.eval_reps_cache": {
+      "exists": true,
+      "file_count": 3,
+      "kind": "directory",
+      "path": "eval-reps-cache",
+      "sha256": "585c1c306094573428cf4a65d4308d74a67fa1dd09be9957e27c5a6444267b28",
+      "size_bytes": 6846
+    },
+    "caches.layer_stats_cache": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "layer-stats.pt",
+      "sha256": "050b9024b2435ff36ef81e1e990732e30b01d8de849bde6b04813f13d9610c00",
+      "size_bytes": 4229
+    },
+    "caches.statement_encoding_cache": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "statement-encodings.json",
+      "sha256": "7cfb436fc2e076d96c23f2034c15bfca21213edd23ffb13cb33facba9cef50a2",
+      "size_bytes": 1818
+    },
+    "command_log": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "cache-profile-triplet-commands.json",
+      "sha256": "724991bfb55978dc24b2fb8b390d8e6d57098904ccd3b5797141497ddffea509",
+      "size_bytes": 3978
+    },
+    "comparison_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "cache-profile-comparison.json",
+      "sha256": "34ea2a24f0ad0787a7936a2ff7ef3ab05b68388f9630ba84082ab2d28744cc9b",
+      "size_bytes": 24162
+    },
+    "profiles.cache_only": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "profile-cache_only.json",
+      "sha256": "eb396b0fb22820796553402b0768fa483e655e5a7bb23d818dbc01e591f36f0f",
+      "size_bytes": 2053
+    },
+    "profiles.cached": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "profile-cached.json",
+      "sha256": "1575a9faa2446e903dd4cc1825047cae7a4dcc07b4f9ea881c855a5d742fa186",
+      "size_bytes": 2117
+    },
+    "profiles.uncached": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "profile-uncached.json",
+      "sha256": "9b8f4e6a1e9804e0aea5b6ccc5fcfcbb5a0a0e34384b1faa4350cd1dc706c498",
+      "size_bytes": 2053
+    },
+    "results.cache_only": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "result-cache_only.json",
+      "sha256": "28c5e06e711d24b8f86e20a2f6e6ef8025d03f301962a0582499d594948260d6",
+      "size_bytes": 14291
+    },
+    "results.cached": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "result-cached.json",
+      "sha256": "818526339018f2821a529f217e7f972a26995f185aab0026b344708a9f1ba161",
+      "size_bytes": 14474
+    },
+    "results.uncached": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "result-uncached.json",
+      "sha256": "2b418cc5976e43874126140b2ec9a838e99f3173f98dcd8253c7eed0913e605d",
+      "size_bytes": 14029
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "batch_size": 4,
+    "covariance_low_rank": 4,
+    "covariance_mode": "low_rank",
+    "dry_run": false,
+    "dtype": "float32",
+    "eval_reps_cache_shard_size": 4,
+    "eval_reps_shard_read_cache_size": 2,
+    "hidden_state_capture": "outputs",
+    "layer": -1,
+    "max_batch_tokens": 0,
+    "model": "sshleifer/tiny-gpt2",
+    "offline": true,
+    "prefix_kv_cache": false,
+    "repeats": 1,
+    "run_names": [
+      "uncached",
+      "cached",
+      "cache_only"
+    ],
+    "runner": "run_cache_profile_triplet",
+    "uncached_cache_mode": "refresh"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 11,
+    "directory_count": 1,
+    "file_count": 10,
+    "missing_count": 0
+  }
+}

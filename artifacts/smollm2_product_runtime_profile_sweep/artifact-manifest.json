@@ -1,0 +1,217 @@
+{
+  "artifacts": {
+    "audit_baseline": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "baselines/audit/product-runtime-baseline.json",
+      "sha256": "1f6e9d0a137380d8fa25c634445bbe4028c78cdda61a68a486e1ed3d257f1f3c",
+      "size_bytes": 61969
+    },
+    "audit_baseline_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "baselines/audit/product-runtime-baseline-artifact-manifest.json",
+      "sha256": "28b6ee1091a0be32dc6e474db4cd50589b3f1a85a591aa5daa5ad3e1f712b351",
+      "size_bytes": 1978
+    },
+    "audit_trace_0000": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "traces/audit/low_risk_supported-r0.json",
+      "sha256": "a48587ddd9e3f0bfa2092a170c9ecded1dbbefaa511e13fa264b1ba30dfd912e",
+      "size_bytes": 36783
+    },
+    "audit_trace_0001": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "traces/audit/diagnostic_refuted-r0.json",
+      "sha256": "68476bb48460b31e3403e4e85fa63ddecba54eb5f36955a08bf52b9e1f54c011",
+      "size_bytes": 40431
+    },
+    "audit_trace_0002": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "traces/audit/calculator_refuted-r0.json",
+      "sha256": "d02087adf9c783935ee18b84ff5c2e002e3514cc1b94fc8ea331650f97df694a",
+      "size_bytes": 39309
+    },
+    "auto_baseline": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "baselines/auto/product-runtime-baseline.json",
+      "sha256": "1f8df4db040cbdc11a1e97357605a82a6d7bea7b626e222b3513989950e17f9f",
+      "size_bytes": 63469
+    },
+    "auto_baseline_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "baselines/auto/product-runtime-baseline-artifact-manifest.json",
+      "sha256": "f8076b21e19fcfdaca85342d202d7ce9b5b7f95f5f860a3d385faaf7ab7074a0",
+      "size_bytes": 1974
+    },
+    "auto_trace_0000": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "traces/auto/low_risk_supported-r0.json",
+      "sha256": "12afd26f4a8c78f8c1b2a9b7b366f976d2971f3f7f6a843823a9a14a6a4ea211",
+      "size_bytes": 34166
+    },
+    "auto_trace_0001": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "traces/auto/diagnostic_refuted-r0.json",
+      "sha256": "3ea2e419a99dc7278415f2b4db6971d67be6aaa0aff3f1ee4002fca024352610",
+      "size_bytes": 46218
+    },
+    "auto_trace_0002": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "traces/auto/calculator_refuted-r0.json",
+      "sha256": "a7140605552033833a1b25b99d655831aae3ec656c425b6ab0040e3eaa4865cf",
+      "size_bytes": 40576
+    },
+    "balanced_baseline": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "baselines/balanced/product-runtime-baseline.json",
+      "sha256": "e83c5e7da07b5d0ebd37e749208a0af6f8920c3e7703007dffbd6e29ef0d33b8",
+      "size_bytes": 65703
+    },
+    "balanced_baseline_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "baselines/balanced/product-runtime-baseline-artifact-manifest.json",
+      "sha256": "417789227cdb4eded021c27eb1cae46d4b2d738204756bf5155e7a7fbd32ecbd",
+      "size_bytes": 1990
+    },
+    "balanced_trace_0000": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "traces/balanced/low_risk_supported-r0.json",
+      "sha256": "db7f5bd3a37850b4a7c2ae89132f7bb541ea00d845535915b8877fb343e22409",
+      "size_bytes": 33267
+    },
+    "balanced_trace_0001": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "traces/balanced/diagnostic_refuted-r0.json",
+      "sha256": "79a57e1f5281c51a0d01667d10c1a9fca58bab22805b4c333d6df5568961d246",
+      "size_bytes": 45152
+    },
+    "balanced_trace_0002": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "traces/balanced/calculator_refuted-r0.json",
+      "sha256": "58ea3ab78c9d4fb864f9c25fa937bd38b911d2860d494ca401c861fe7c7ee5f6",
+      "size_bytes": 44357
+    },
+    "latency_baseline": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "baselines/latency/product-runtime-baseline.json",
+      "sha256": "fea04c83a8c05a14875a87c019c648fadf9984183fc8c5ea7b9bb2078d7848d9",
+      "size_bytes": 58899
+    },
+    "latency_baseline_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "baselines/latency/product-runtime-baseline-artifact-manifest.json",
+      "sha256": "462083bb72f95e7cd4980c89fd1a2686a79c730923cdc73555602968b269cf28",
+      "size_bytes": 1986
+    },
+    "latency_trace_0000": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "traces/latency/low_risk_supported-r0.json",
+      "sha256": "4be668a2f5610227f6debc4a5dd61e3c5b276c7458d5b2795a8c61168df4e169",
+      "size_bytes": 33046
+    },
+    "latency_trace_0001": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "traces/latency/diagnostic_refuted-r0.json",
+      "sha256": "8415896967d4ce1af54d23bfd7c532f2b749978335d14bcbae052ab986684b2d",
+      "size_bytes": 33438
+    },
+    "latency_trace_0002": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "traces/latency/calculator_refuted-r0.json",
+      "sha256": "718da025fc751970704ed1417c6772bd40743cb22be1a897a239601739d68ccd",
+      "size_bytes": 44087
+    },
+    "product_runtime_profile_sweep_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "product-runtime-profile-sweep.json",
+      "sha256": "865a87b1cf52818d2e286555398bd4584c6ff8eade869896e82b5afa57c8a45a",
+      "size_bytes": 30789
+    },
+    "promotion_contract": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_registry_workflow.json",
+      "sha256": "feaebd93a7a4b92fc50adcabe4ea4ae5515b6b1e42fb3d086db37c2bf530b239",
+      "size_bytes": 53344
+    },
+    "runtime_profile_selector_policy": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "runtime-profile-selector-policy.json",
+      "sha256": "c7cd901069257eec6aba8373150fb48291f46c2b6efdf02395e39e32969e6773",
+      "size_bytes": 551
+    },
+    "slo_policy": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "runtime-profile-slo-policy.json",
+      "sha256": "3628f98fa77b8f19f07d0441a46666229b53f1acdad17328f7cda04fa185f380",
+      "size_bytes": 289
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "compact_json": false,
+    "max_workers": 1,
+    "profile_count": 4,
+    "recommended_profile": "auto",
+    "repeats": 1,
+    "runner": "run_product_runtime_profile_sweep",
+    "runtime_profile_selector_policy": "artifacts/smollm2_product_runtime_profile_sweep/runtime-profile-selector-policy.json",
+    "scenario_count": 3,
+    "slo_enabled": true,
+    "slo_passed": true,
+    "status": "promote"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 24,
+    "directory_count": 0,
+    "file_count": 24,
+    "missing_count": 0
+  }
+}

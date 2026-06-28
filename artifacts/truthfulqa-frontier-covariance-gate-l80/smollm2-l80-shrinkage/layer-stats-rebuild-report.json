@@ -1,0 +1,122 @@
+{
+  "artifact_manifest_summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  },
+  "config": {
+    "covariance_low_rank": 16,
+    "covariance_mode": "shrinkage",
+    "layers": [
+      -12,
+      -16,
+      -14,
+      -10,
+      -8
+    ],
+    "subspace_rank": 2
+  },
+  "execution": {
+    "wall_clock_seconds": 1.3477194749993942
+  },
+  "layers": [
+    {
+      "hidden_dim": 576,
+      "layer": -12,
+      "n_false": 338,
+      "n_true": 266,
+      "shrinkage_alpha": 0.11426403373479843,
+      "subspace_ready": true
+    },
+    {
+      "hidden_dim": 576,
+      "layer": -16,
+      "n_false": 338,
+      "n_true": 266,
+      "shrinkage_alpha": 0.10383567959070206,
+      "subspace_ready": true
+    },
+    {
+      "hidden_dim": 576,
+      "layer": -14,
+      "n_false": 338,
+      "n_true": 266,
+      "shrinkage_alpha": 0.12380233407020569,
+      "subspace_ready": true
+    },
+    {
+      "hidden_dim": 576,
+      "layer": -10,
+      "n_false": 338,
+      "n_true": 266,
+      "shrinkage_alpha": 0.10297785699367523,
+      "subspace_ready": true
+    },
+    {
+      "hidden_dim": 576,
+      "layer": -8,
+      "n_false": 338,
+      "n_true": 266,
+      "shrinkage_alpha": 0.10524003207683563,
+      "subspace_ready": true
+    }
+  ],
+  "paths": {
+    "artifact_manifest": "artifacts/truthfulqa-frontier-covariance-gate-l80/smollm2-l80-shrinkage/layer-stats-artifact-manifest.json",
+    "json_report": "artifacts/truthfulqa-frontier-covariance-gate-l80/smollm2-l80-shrinkage/layer-stats-rebuild-report.json",
+    "layer_stats_cache": "artifacts/cache/truthfulqa-frontier-covariance-gate-l80/smollm2-l80/shrinkage/layer-stats.pt",
+    "warmup_checkpoint": "artifacts/cache/truthfulqa-frontier-qwen-smollm2/smollm2-l80/warmup-checkpoint.pt"
+  },
+  "progress": {
+    "false_done": 338,
+    "true_done": 266
+  },
+  "rebuilt_metadata": {
+    "covariance_low_rank": 16,
+    "covariance_mode": "shrinkage",
+    "dtype": "float32",
+    "format": 1,
+    "layers": [
+      -12,
+      -16,
+      -14,
+      -10,
+      -8
+    ],
+    "length_bucketed_batches": true,
+    "max_length": 96,
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "n_false": 338,
+    "n_layers": 30,
+    "n_true": 266,
+    "offline": false,
+    "subspace_rank": 2,
+    "warmup_fingerprint": "5167ef4038b598042417c01113d577074e54a01ebf6b35a4223f8047128bc5e4"
+  },
+  "schema_version": 1,
+  "source_metadata": {
+    "covariance_low_rank": 16,
+    "covariance_mode": "full",
+    "dtype": "float32",
+    "format": 1,
+    "layers": [
+      -12,
+      -16,
+      -14,
+      -10,
+      -8
+    ],
+    "length_bucketed_batches": true,
+    "max_length": 96,
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "n_false": 338,
+    "n_layers": 30,
+    "n_true": 266,
+    "offline": false,
+    "subspace_rank": 2,
+    "warmup_fingerprint": "5167ef4038b598042417c01113d577074e54a01ebf6b35a4223f8047128bc5e4"
+  },
+  "status": "complete",
+  "workflow": "rebuild_layer_stats_from_warmup_checkpoint"
+}

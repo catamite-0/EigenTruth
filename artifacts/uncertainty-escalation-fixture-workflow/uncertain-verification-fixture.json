@@ -1,0 +1,63 @@
+{
+  "description": "Deterministic local fixture for uncertainty-escalated verification loop replay. Labels use 0=true and 1=false.",
+  "records": [
+    {
+      "claim": "Paris is the capital of France.",
+      "id": "true-paris-capital",
+      "label": 0,
+      "preliminary_confidence": 0.4,
+      "preliminary_status": "supported",
+      "retrieval_documents": [
+        {
+          "source": "fixture:country-capital",
+          "text": "Paris is the capital of France."
+        }
+      ]
+    },
+    {
+      "claim": "Water freezes at 0 degrees Celsius at standard pressure.",
+      "id": "true-water-freezing-point",
+      "label": 0,
+      "preliminary_confidence": 0.45,
+      "preliminary_status": "supported",
+      "retrieval_documents": [
+        {
+          "source": "fixture:physical-constant",
+          "text": "At standard atmospheric pressure, water freezes at 0 degrees Celsius."
+        }
+      ]
+    },
+    {
+      "claim": "The moon is made of cheese.",
+      "id": "false-moon-cheese",
+      "label": 1,
+      "preliminary_confidence": 0.4,
+      "preliminary_status": "supported",
+      "refutations": [
+        "Apollo samples and lunar geology show the moon is made of rock, not cheese."
+      ],
+      "retrieval_documents": [
+        {
+          "source": "fixture:lunar-geology",
+          "text": "Apollo samples and lunar geology show the moon is made of rock, not cheese."
+        }
+      ]
+    },
+    {
+      "claim": "The sun revolves around Earth.",
+      "id": "false-geocentric-sun",
+      "label": 1,
+      "preliminary_confidence": 0.42,
+      "preliminary_status": "supported",
+      "refutations": [
+        "Modern astronomy shows Earth revolves around the Sun, not the Sun around Earth."
+      ],
+      "retrieval_documents": [
+        {
+          "source": "fixture:heliocentrism",
+          "text": "Modern astronomy shows Earth revolves around the Sun, not the Sun around Earth."
+        }
+      ]
+    }
+  ]
+}

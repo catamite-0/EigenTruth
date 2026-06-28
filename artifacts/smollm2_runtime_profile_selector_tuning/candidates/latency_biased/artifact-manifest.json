@@ -1,0 +1,99 @@
+{
+  "artifacts": {
+    "auto_baseline": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "baselines/auto/product-runtime-baseline.json",
+      "sha256": "03cfc9ea9bf4db58e202d6a8d8fe9832601be83d62a7dde3ac01f7e943f99445",
+      "size_bytes": 65845
+    },
+    "auto_baseline_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "baselines/auto/product-runtime-baseline-artifact-manifest.json",
+      "sha256": "2b805acd52ce2ae52b86539f095d63d0fc1f90e2a749fa673fcf9ad8e10fd1ec",
+      "size_bytes": 2026
+    },
+    "auto_trace_0000": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "traces/auto/low_risk_supported-r0.json",
+      "sha256": "cd77db17e0dfd588c671d4860fc5cb3e692555816730c0de58b3edc283c88e3c",
+      "size_bytes": 34115
+    },
+    "auto_trace_0001": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "traces/auto/diagnostic_refuted-r0.json",
+      "sha256": "4e757c12cb36291960f748cbfcb5ed05817d01a7561bf41e8910933ff7214b01",
+      "size_bytes": 46179
+    },
+    "auto_trace_0002": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "traces/auto/calculator_refuted-r0.json",
+      "sha256": "aa2a18aeee51120807d196462f5950f5503f04f1a78ad45212a89caaedf2557d",
+      "size_bytes": 45146
+    },
+    "product_runtime_profile_sweep_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "product-runtime-profile-sweep.json",
+      "sha256": "d1cf15524d9b6202c045b4bd42bd3e762518a41d162c07e76dd23bae7f6100ea",
+      "size_bytes": 11723
+    },
+    "promotion_contract": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_registry_workflow.json",
+      "sha256": "feaebd93a7a4b92fc50adcabe4ea4ae5515b6b1e42fb3d086db37c2bf530b239",
+      "size_bytes": 53344
+    },
+    "runtime_profile_selector_policy": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../policies/latency_biased.json",
+      "sha256": "fe11a19c513505c53cadb9e72b3076f1f3972d8ee36163054b32b9d07ca8c4c6",
+      "size_bytes": 542
+    },
+    "slo_policy": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../smollm2_product_runtime_profile_sweep/runtime-profile-slo-policy.json",
+      "sha256": "3628f98fa77b8f19f07d0441a46666229b53f1acdad17328f7cda04fa185f380",
+      "size_bytes": 289
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "compact_json": false,
+    "max_workers": 1,
+    "profile_count": 1,
+    "recommended_profile": "auto",
+    "repeats": 1,
+    "runner": "run_product_runtime_profile_sweep",
+    "runtime_profile_selector_policy": "artifacts/smollm2_runtime_profile_selector_tuning/policies/latency_biased.json",
+    "scenario_count": 3,
+    "selector_candidate": "latency_biased",
+    "slo_enabled": true,
+    "slo_passed": false,
+    "source": "run_runtime_profile_selector_tuning",
+    "status": "blocked"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 9,
+    "directory_count": 0,
+    "file_count": 9,
+    "missing_count": 0
+  }
+}

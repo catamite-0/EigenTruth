@@ -1,0 +1,534 @@
+{
+  "schema_version": 1,
+  "signals": [
+    "truth_proj",
+    "maha_last",
+    "subspace_resid",
+    "eigenscore"
+  ],
+  "methods": [
+    "max_rank",
+    "mean_rank"
+  ],
+  "alphas": [
+    0.05,
+    0.1,
+    0.2
+  ],
+  "repeats": 50,
+  "seed": 0,
+  "best_alpha": 0.1,
+  "runs": [
+    {
+      "name": "qwen-l80",
+      "scores_path": "artifacts/qwen05_truthfulqa_l80_scores.json",
+      "config": {
+        "model": "Qwen/Qwen2.5-0.5B-Instruct",
+        "layer": -12,
+        "offline": false,
+        "manifold_n": 266,
+        "n_manifold_false": 338,
+        "hidden_dim": 896,
+        "subspace_rank": 2,
+        "n_pos": 306,
+        "n_neg": 250,
+        "seed": 0,
+        "eigenscore_alpha": 0.001,
+        "batch_size": 4,
+        "inside_samples": 0,
+        "inside_batch_size": 1,
+        "inside_max_new_tokens": 12,
+        "inside_temperature": 0.7,
+        "inside_top_p": 0.9,
+        "inside_pooling": "last",
+        "inside_trigger_signal": null,
+        "inside_trigger_threshold": null,
+        "inside_trigger_top_fraction": null,
+        "length_bucketed_batches": true,
+        "cache_only": false,
+        "layer_stats_cache": "/tmp/eigentruth-qwen-l80.8gzqXO/layer-stats.pt",
+        "refresh_layer_stats_cache": false,
+        "eval_reps_cache": "/tmp/eigentruth-qwen-l80.8gzqXO/eval-reps-cache",
+        "eval_reps_cache_shard_size": 128,
+        "refresh_eval_reps_cache": false,
+        "sweep_layers": [
+          -12,
+          -16,
+          -14,
+          -10,
+          -8
+        ]
+      },
+      "signals": [
+        "truth_proj",
+        "maha_last",
+        "subspace_resid",
+        "eigenscore"
+      ],
+      "directions": {
+        "truth_proj": "higher",
+        "maha_last": "higher",
+        "subspace_resid": "higher",
+        "eigenscore": "higher"
+      },
+      "n_total": 556,
+      "n_true": 250,
+      "n_false": 306,
+      "single_results": {
+        "truth_proj": {
+          "direction": "higher",
+          "auroc": 0.7613333333333333,
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "false_alarm": 0.0424,
+              "coverage": 0.9576,
+              "detection": 0.14516339869281045,
+              "pass": true,
+              "repeats": 50
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "false_alarm": 0.09087999999999999,
+              "coverage": 0.90912,
+              "detection": 0.27908496732026145,
+              "pass": true,
+              "repeats": 50
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "false_alarm": 0.1912,
+              "coverage": 0.8088,
+              "detection": 0.4896078431372549,
+              "pass": true,
+              "repeats": 50
+            }
+          }
+        },
+        "maha_last": {
+          "direction": "higher",
+          "auroc": 0.5679346405228758,
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "false_alarm": 0.04688,
+              "coverage": 0.95312,
+              "detection": 0.08960784313725491,
+              "pass": true,
+              "repeats": 50
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "false_alarm": 0.0992,
+              "coverage": 0.9008,
+              "detection": 0.18431372549019606,
+              "pass": true,
+              "repeats": 50
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "false_alarm": 0.20367999999999997,
+              "coverage": 0.79632,
+              "detection": 0.2747058823529412,
+              "pass": true,
+              "repeats": 50
+            }
+          }
+        },
+        "subspace_resid": {
+          "direction": "higher",
+          "auroc": 0.5232418300653595,
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "false_alarm": 0.05152,
+              "coverage": 0.94848,
+              "detection": 0.05751633986928104,
+              "pass": true,
+              "repeats": 50
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "false_alarm": 0.09664,
+              "coverage": 0.9033599999999999,
+              "detection": 0.12751633986928104,
+              "pass": true,
+              "repeats": 50
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "false_alarm": 0.20015999999999998,
+              "coverage": 0.79984,
+              "detection": 0.24411764705882352,
+              "pass": true,
+              "repeats": 50
+            }
+          }
+        },
+        "eigenscore": {
+          "direction": "higher",
+          "auroc": 0.5143267973856209,
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "false_alarm": 0.04912,
+              "coverage": 0.95088,
+              "detection": 0.02816993464052288,
+              "pass": true,
+              "repeats": 50
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "false_alarm": 0.09727999999999999,
+              "coverage": 0.90272,
+              "detection": 0.08797385620915034,
+              "pass": true,
+              "repeats": 50
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "false_alarm": 0.2048,
+              "coverage": 0.7952,
+              "detection": 0.21065359477124182,
+              "pass": true,
+              "repeats": 50
+            }
+          }
+        }
+      },
+      "ensemble_results": {
+        "max_rank": {
+          "method": "max_rank",
+          "direction": "higher",
+          "auroc": 0.6381915032679738,
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "false_alarm": 0.0328,
+              "coverage": 0.9672,
+              "detection": 0.06091503267973856,
+              "pass": true,
+              "repeats": 50
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "false_alarm": 0.07856,
+              "coverage": 0.92144,
+              "detection": 0.14248366013071895,
+              "pass": true,
+              "repeats": 50
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "false_alarm": 0.18528,
+              "coverage": 0.81472,
+              "detection": 0.3175163398692811,
+              "pass": true,
+              "repeats": 50
+            }
+          }
+        },
+        "mean_rank": {
+          "method": "mean_rank",
+          "direction": "higher",
+          "auroc": 0.6510569934640523,
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "false_alarm": 0.044800000000000006,
+              "coverage": 0.9552,
+              "detection": 0.1384967320261438,
+              "pass": true,
+              "repeats": 50
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "false_alarm": 0.09008,
+              "coverage": 0.9099200000000001,
+              "detection": 0.23535947712418304,
+              "pass": true,
+              "repeats": 50
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "false_alarm": 0.19376000000000002,
+              "coverage": 0.80624,
+              "detection": 0.39444444444444443,
+              "pass": true,
+              "repeats": 50
+            }
+          }
+        }
+      },
+      "best_single_at_alpha": {
+        "name": "truth_proj",
+        "auroc": 0.7613333333333333,
+        "false_alarm": 0.09087999999999999,
+        "detection": 0.27908496732026145
+      },
+      "best_ensemble_at_alpha": {
+        "name": "mean_rank",
+        "auroc": 0.6510569934640523,
+        "false_alarm": 0.09008,
+        "detection": 0.23535947712418304
+      }
+    },
+    {
+      "name": "smollm2-l80",
+      "scores_path": "artifacts/smollm2_truthfulqa_l80_scores.json",
+      "config": {
+        "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+        "layer": -12,
+        "offline": false,
+        "manifold_n": 266,
+        "n_manifold_false": 338,
+        "hidden_dim": 576,
+        "subspace_rank": 2,
+        "n_pos": 306,
+        "n_neg": 250,
+        "seed": 0,
+        "eigenscore_alpha": 0.001,
+        "batch_size": 8,
+        "inside_samples": 0,
+        "inside_batch_size": 1,
+        "inside_max_new_tokens": 12,
+        "inside_temperature": 0.7,
+        "inside_top_p": 0.9,
+        "inside_pooling": "last",
+        "inside_trigger_signal": null,
+        "inside_trigger_threshold": null,
+        "inside_trigger_top_fraction": null,
+        "length_bucketed_batches": true,
+        "cache_only": false,
+        "layer_stats_cache": "/tmp/eigentruth-smollm2-l80/layer-stats.pt",
+        "refresh_layer_stats_cache": false,
+        "eval_reps_cache": "/tmp/eigentruth-smollm2-l80/eval-reps-cache",
+        "eval_reps_cache_shard_size": 256,
+        "refresh_eval_reps_cache": false,
+        "progress_every": 50,
+        "warmup_checkpoint": "/tmp/eigentruth-smollm2-l80/warmup-checkpoint.pt",
+        "warmup_checkpoint_every": 50,
+        "sweep_layers": [
+          -12,
+          -16,
+          -14,
+          -10,
+          -8
+        ]
+      },
+      "signals": [
+        "truth_proj",
+        "maha_last",
+        "subspace_resid",
+        "eigenscore"
+      ],
+      "directions": {
+        "truth_proj": "higher",
+        "maha_last": "higher",
+        "subspace_resid": "higher",
+        "eigenscore": "higher"
+      },
+      "n_total": 556,
+      "n_true": 250,
+      "n_false": 306,
+      "single_results": {
+        "truth_proj": {
+          "direction": "higher",
+          "auroc": 0.739764705882353,
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "false_alarm": 0.04992,
+              "coverage": 0.95008,
+              "detection": 0.11398692810457517,
+              "pass": true,
+              "repeats": 50
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "false_alarm": 0.09504,
+              "coverage": 0.90496,
+              "detection": 0.22941176470588234,
+              "pass": true,
+              "repeats": 50
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "false_alarm": 0.18975999999999998,
+              "coverage": 0.8102400000000001,
+              "detection": 0.4054248366013072,
+              "pass": true,
+              "repeats": 50
+            }
+          }
+        },
+        "maha_last": {
+          "direction": "higher",
+          "auroc": 0.6308496732026144,
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "false_alarm": 0.043680000000000004,
+              "coverage": 0.95632,
+              "detection": 0.10379084967320262,
+              "pass": true,
+              "repeats": 50
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "false_alarm": 0.0928,
+              "coverage": 0.9072,
+              "detection": 0.12856209150326797,
+              "pass": true,
+              "repeats": 50
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "false_alarm": 0.19792,
+              "coverage": 0.80208,
+              "detection": 0.2415032679738562,
+              "pass": true,
+              "repeats": 50
+            }
+          }
+        },
+        "subspace_resid": {
+          "direction": "higher",
+          "auroc": 0.5685359477124183,
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "false_alarm": 0.04992,
+              "coverage": 0.95008,
+              "detection": 0.06725490196078432,
+              "pass": true,
+              "repeats": 50
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "false_alarm": 0.10096,
+              "coverage": 0.8990400000000001,
+              "detection": 0.1322222222222222,
+              "pass": true,
+              "repeats": 50
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "false_alarm": 0.2,
+              "coverage": 0.8,
+              "detection": 0.2570588235294118,
+              "pass": true,
+              "repeats": 50
+            }
+          }
+        },
+        "eigenscore": {
+          "direction": "higher",
+          "auroc": 0.533437908496732,
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "false_alarm": 0.04976,
+              "coverage": 0.95024,
+              "detection": 0.044379084967320265,
+              "pass": true,
+              "repeats": 50
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "false_alarm": 0.10048,
+              "coverage": 0.89952,
+              "detection": 0.08895424836601308,
+              "pass": true,
+              "repeats": 50
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "false_alarm": 0.20352,
+              "coverage": 0.79648,
+              "detection": 0.22803921568627453,
+              "pass": true,
+              "repeats": 50
+            }
+          }
+        }
+      },
+      "ensemble_results": {
+        "max_rank": {
+          "method": "max_rank",
+          "direction": "higher",
+          "auroc": 0.6057192156862745,
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "false_alarm": 0.02864,
+              "coverage": 0.97136,
+              "detection": 0.07856209150326797,
+              "pass": true,
+              "repeats": 50
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "false_alarm": 0.08927999999999998,
+              "coverage": 0.91072,
+              "detection": 0.15457516339869282,
+              "pass": true,
+              "repeats": 50
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "false_alarm": 0.18111999999999998,
+              "coverage": 0.81888,
+              "detection": 0.2533333333333333,
+              "pass": true,
+              "repeats": 50
+            }
+          }
+        },
+        "mean_rank": {
+          "method": "mean_rank",
+          "direction": "higher",
+          "auroc": 0.6789917647058823,
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "false_alarm": 0.04656,
+              "coverage": 0.95344,
+              "detection": 0.1327450980392157,
+              "pass": true,
+              "repeats": 50
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "false_alarm": 0.08975999999999999,
+              "coverage": 0.91024,
+              "detection": 0.19640522875816996,
+              "pass": true,
+              "repeats": 50
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "false_alarm": 0.19312,
+              "coverage": 0.80688,
+              "detection": 0.3686274509803921,
+              "pass": true,
+              "repeats": 50
+            }
+          }
+        }
+      },
+      "best_single_at_alpha": {
+        "name": "truth_proj",
+        "auroc": 0.739764705882353,
+        "false_alarm": 0.09504,
+        "detection": 0.22941176470588234
+      },
+      "best_ensemble_at_alpha": {
+        "name": "mean_rank",
+        "auroc": 0.6789917647058823,
+        "false_alarm": 0.08975999999999999,
+        "detection": 0.19640522875816996
+      }
+    }
+  ]
+}

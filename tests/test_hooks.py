@@ -307,11 +307,27 @@ class TestOutputFormatHandling:
 class TestHSETracking:
     """双曲语义熵历史追踪测试。"""
 
+    def test_hse_tracking_is_disabled_by_default(self):
+        """默认路径不采集 HSE 历史。"""
+        model = MockModel(n_layers=4, hidden_dim=32)
+        manifold = _build_manifold(32)
+        probe = TruthProbe(manifold, threshold=1e10)
+        probe.register(model, layer_idx=-1)
+
+        x = torch.randn(2, 3, 32)
+        with torch.no_grad():
+            _ = model(x)
+
+        assert probe.track_hse is False
+        assert probe.last_hse == 0.0
+        assert len(probe._poincare_history) == 0
+        probe.remove()
+
     def test_hse_accumulates_and_truncates(self):
         """多次前向传播后 HSE 被计算，且不超出 hse_window_size。"""
         model = MockModel(n_layers=4, hidden_dim=32)
         manifold = _build_manifold(32)
-        probe = TruthProbe(manifold, threshold=1e10, hse_window_size=3)
+        probe = TruthProbe(manifold, threshold=1e10, hse_window_size=3, track_hse=True)
         probe.register(model, layer_idx=-1)
 
         for _ in range(5):
@@ -329,7 +345,7 @@ class TestHSETracking:
         """reset_history 清空 HSE 历史。"""
         model = MockModel(n_layers=4, hidden_dim=32)
         manifold = _build_manifold(32)
-        probe = TruthProbe(manifold, threshold=1e10)
+        probe = TruthProbe(manifold, threshold=1e10, track_hse=True)
         probe.register(model, layer_idx=-1)
 
         x = torch.randn(1, 3, 32)

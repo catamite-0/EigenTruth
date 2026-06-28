@@ -1,0 +1,939 @@
+{
+  "config": {
+    "scores": "artifacts/truthfulqa-frontier-smollm2-l20/smollm2-l20/scores.manifest.json",
+    "signal": "maha_last",
+    "score_dump": {
+      "path": "artifacts/truthfulqa-frontier-smollm2-l20/smollm2-l20/scores.manifest.json",
+      "exists": true,
+      "kind": "file",
+      "sha256": "b42a620adaa7a17eb57a99ec1843b9f8059401ec48070dd214b7ec689ecda46c",
+      "size_bytes": 3017,
+      "source_format": "eigentruth.score_dump.jsonl",
+      "records": {
+        "path": "artifacts/truthfulqa-frontier-smollm2-l20/smollm2-l20/scores.manifest.records.jsonl",
+        "exists": true,
+        "kind": "file",
+        "sha256": "4eede2d68df86d763fe688e3afef9b871e375f461039cb9ca8ed432e811a4933",
+        "size_bytes": 237847
+      },
+      "identity": {
+        "schema_version": 1,
+        "source_format": "eigentruth.score_dump.jsonl",
+        "model_id": "HuggingFaceTB/SmolLM2-135M-Instruct",
+        "dataset_id": "truthfulqa",
+        "target_layer": -8,
+        "n_total": 154,
+        "primary_score_names": [
+          "disp_euclid",
+          "disp_hse",
+          "eigenscore",
+          "maha_last",
+          "nll_answer",
+          "resid_update_norm",
+          "subspace_resid",
+          "truth_proj"
+        ],
+        "sweep_score_names": {
+          "-16": [
+            "eigenscore",
+            "maha_last",
+            "resid_update_norm",
+            "subspace_resid",
+            "truth_proj"
+          ],
+          "-14": [
+            "eigenscore",
+            "maha_last",
+            "resid_update_norm",
+            "subspace_resid",
+            "truth_proj"
+          ],
+          "-12": [
+            "eigenscore",
+            "maha_last",
+            "resid_update_norm",
+            "subspace_resid",
+            "truth_proj"
+          ],
+          "-10": [
+            "eigenscore",
+            "maha_last",
+            "resid_update_norm",
+            "subspace_resid",
+            "truth_proj"
+          ],
+          "-8": [
+            "eigenscore",
+            "maha_last",
+            "resid_update_norm",
+            "subspace_resid",
+            "truth_proj"
+          ]
+        },
+        "scoring_config_hash": "91489d4ea561a47cfca5a8f2d610a7c39da68a213049c1f5a80a532c05b351ee",
+        "score_schema_hash": "779d2ce91264cf3ace621a084e211d77b4c17450cc10925c767a5cbe96548bd6",
+        "content_hash": "b42a620adaa7a17eb57a99ec1843b9f8059401ec48070dd214b7ec689ecda46c",
+        "records_hash": "4eede2d68df86d763fe688e3afef9b871e375f461039cb9ca8ed432e811a4933",
+        "cache_key": "score-dump-identity-v1:16f768bf63b689d6062f2b9a5e9784654803685bd43f2e40a20d57a2d122b302"
+      },
+      "summary": {
+        "n_total": 154,
+        "n_true": 69,
+        "n_false": 85,
+        "score_count": 8,
+        "score_names": [
+          "maha_last",
+          "truth_proj",
+          "subspace_resid",
+          "resid_update_norm",
+          "disp_euclid",
+          "disp_hse",
+          "eigenscore",
+          "nll_answer"
+        ],
+        "sweep_layer_count": 5,
+        "sweep_layers": [
+          "-16",
+          "-14",
+          "-12",
+          "-10",
+          "-8"
+        ],
+        "sweep_score_count": 25,
+        "sweep_score_names": [
+          "eigenscore",
+          "maha_last",
+          "resid_update_norm",
+          "subspace_resid",
+          "truth_proj"
+        ],
+        "all_signal_names": [
+          "disp_euclid",
+          "disp_hse",
+          "eigenscore",
+          "maha_last",
+          "nll_answer",
+          "resid_update_norm",
+          "subspace_resid",
+          "truth_proj"
+        ],
+        "has_statements": true,
+        "statement_count": 154,
+        "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+        "layer": -8
+      }
+    },
+    "direction": "higher",
+    "repeats": 20,
+    "seed": 0,
+    "n_true": 69,
+    "n_false": 85,
+    "confidence_audit": {
+      "enabled": true,
+      "confidence_signal": "nll_answer",
+      "confidence_direction": "lower",
+      "confidence_top_fraction": 0.25
+    }
+  },
+  "results": {
+    "0.05": {
+      "false_alarm": 0.025714285714285717,
+      "coverage": 0.9742857142857143,
+      "detection": 0.007058823529411765,
+      "pass": true,
+      "conservative": false,
+      "threshold": 52.77650833129883,
+      "selective_report": {
+        "threshold": 52.77650833129883,
+        "direction": "higher",
+        "n_total": 154,
+        "n_true": 69,
+        "n_false": 85,
+        "n_flagged": 5,
+        "n_accepted": 149,
+        "coverage": 0.9675324675324676,
+        "coverage_ci": {
+          "estimate": 0.9675324675324676,
+          "lower": 0.9395392301823442,
+          "upper": 0.995525704882591,
+          "successes": 149,
+          "total": 154
+        },
+        "selective_accuracy": 0.44966442953020136,
+        "selective_accuracy_ci": {
+          "estimate": 0.44966442953020136,
+          "lower": 0.3697875673078328,
+          "upper": 0.5295412917525699,
+          "successes": 67,
+          "total": 149
+        },
+        "accuracy": 0.45454545454545453,
+        "accuracy_ci": {
+          "estimate": 0.45454545454545453,
+          "lower": 0.37590180609866775,
+          "upper": 0.5331891029922413,
+          "successes": 70,
+          "total": 154
+        },
+        "detection": 0.03529411764705882,
+        "detection_ci": {
+          "estimate": 0.03529411764705882,
+          "lower": 0.0,
+          "upper": 0.0745220336178384,
+          "successes": 3,
+          "total": 85
+        },
+        "false_alarm": 0.028985507246376812,
+        "false_alarm_ci": {
+          "estimate": 0.028985507246376812,
+          "lower": 0.0,
+          "upper": 0.06857088871622166,
+          "successes": 2,
+          "total": 69
+        }
+      },
+      "confidence_error_report": {
+        "anomaly_threshold": 52.77650833129883,
+        "anomaly_direction": "higher",
+        "confidence_direction": "lower",
+        "confidence_top_fraction": 0.25,
+        "confidence_threshold": 1.662584900856018,
+        "n_total": 154,
+        "n_high_confidence": 39,
+        "n_low_confidence": 115,
+        "n_high_confidence_true": 15,
+        "n_high_confidence_false": 24,
+        "n_low_confidence_true": 54,
+        "n_low_confidence_false": 61,
+        "high_confidence_false_rate": {
+          "estimate": 0.6153846153846154,
+          "lower": 0.4626946800396934,
+          "upper": 0.7680745507295375,
+          "successes": 24,
+          "total": 39
+        },
+        "n_high_confidence_accepted": 38,
+        "n_high_confidence_accepted_true": 15,
+        "n_high_confidence_accepted_false": 23,
+        "high_confidence_accepted_false_rate": {
+          "estimate": 0.6052631578947368,
+          "lower": 0.4498491272494405,
+          "upper": 0.7606771885400332,
+          "successes": 23,
+          "total": 38
+        },
+        "high_confidence_accepted_selective_accuracy": {
+          "estimate": 0.39473684210526316,
+          "lower": 0.2393228114599668,
+          "upper": 0.5501508727505595,
+          "successes": 15,
+          "total": 38
+        },
+        "n_high_confidence_flagged": 1,
+        "n_high_confidence_flagged_false": 1,
+        "high_confidence_false_capture_rate": {
+          "estimate": 0.041666666666666664,
+          "lower": 0.0,
+          "upper": 0.12161384251375915,
+          "successes": 1,
+          "total": 24
+        },
+        "high_confidence_false_miss_rate": {
+          "estimate": 0.9583333333333334,
+          "lower": 0.8783861574862409,
+          "upper": 1.0,
+          "successes": 23,
+          "total": 24
+        }
+      }
+    },
+    "0.1": {
+      "false_alarm": 0.08714285714285715,
+      "coverage": 0.9128571428571428,
+      "detection": 0.07294117647058823,
+      "pass": true,
+      "conservative": false,
+      "threshold": 48.34532165527344,
+      "selective_report": {
+        "threshold": 48.34532165527344,
+        "direction": "higher",
+        "n_total": 154,
+        "n_true": 69,
+        "n_false": 85,
+        "n_flagged": 13,
+        "n_accepted": 141,
+        "coverage": 0.9155844155844156,
+        "coverage_ci": {
+          "estimate": 0.9155844155844156,
+          "lower": 0.8716751450134572,
+          "upper": 0.959493686155374,
+          "successes": 141,
+          "total": 154
+        },
+        "selective_accuracy": 0.44680851063829785,
+        "selective_accuracy_ci": {
+          "estimate": 0.44680851063829785,
+          "lower": 0.3647459662314066,
+          "upper": 0.5288710550451892,
+          "successes": 63,
+          "total": 141
+        },
+        "accuracy": 0.45454545454545453,
+        "accuracy_ci": {
+          "estimate": 0.45454545454545453,
+          "lower": 0.37590180609866775,
+          "upper": 0.5331891029922413,
+          "successes": 70,
+          "total": 154
+        },
+        "detection": 0.08235294117647059,
+        "detection_ci": {
+          "estimate": 0.08235294117647059,
+          "lower": 0.023911084597065174,
+          "upper": 0.140794797755876,
+          "successes": 7,
+          "total": 85
+        },
+        "false_alarm": 0.08695652173913043,
+        "false_alarm_ci": {
+          "estimate": 0.08695652173913043,
+          "lower": 0.020470808030140508,
+          "upper": 0.15344223544812036,
+          "successes": 6,
+          "total": 69
+        }
+      },
+      "confidence_error_report": {
+        "anomaly_threshold": 48.34532165527344,
+        "anomaly_direction": "higher",
+        "confidence_direction": "lower",
+        "confidence_top_fraction": 0.25,
+        "confidence_threshold": 1.662584900856018,
+        "n_total": 154,
+        "n_high_confidence": 39,
+        "n_low_confidence": 115,
+        "n_high_confidence_true": 15,
+        "n_high_confidence_false": 24,
+        "n_low_confidence_true": 54,
+        "n_low_confidence_false": 61,
+        "high_confidence_false_rate": {
+          "estimate": 0.6153846153846154,
+          "lower": 0.4626946800396934,
+          "upper": 0.7680745507295375,
+          "successes": 24,
+          "total": 39
+        },
+        "n_high_confidence_accepted": 38,
+        "n_high_confidence_accepted_true": 15,
+        "n_high_confidence_accepted_false": 23,
+        "high_confidence_accepted_false_rate": {
+          "estimate": 0.6052631578947368,
+          "lower": 0.4498491272494405,
+          "upper": 0.7606771885400332,
+          "successes": 23,
+          "total": 38
+        },
+        "high_confidence_accepted_selective_accuracy": {
+          "estimate": 0.39473684210526316,
+          "lower": 0.2393228114599668,
+          "upper": 0.5501508727505595,
+          "successes": 15,
+          "total": 38
+        },
+        "n_high_confidence_flagged": 1,
+        "n_high_confidence_flagged_false": 1,
+        "high_confidence_false_capture_rate": {
+          "estimate": 0.041666666666666664,
+          "lower": 0.0,
+          "upper": 0.12161384251375915,
+          "successes": 1,
+          "total": 24
+        },
+        "high_confidence_false_miss_rate": {
+          "estimate": 0.9583333333333334,
+          "lower": 0.8783861574862409,
+          "upper": 1.0,
+          "successes": 23,
+          "total": 24
+        }
+      }
+    },
+    "0.2": {
+      "false_alarm": 0.19714285714285712,
+      "coverage": 0.8028571428571429,
+      "detection": 0.22176470588235292,
+      "pass": true,
+      "conservative": false,
+      "threshold": 44.67285919189453,
+      "selective_report": {
+        "threshold": 44.67285919189453,
+        "direction": "higher",
+        "n_total": 154,
+        "n_true": 69,
+        "n_false": 85,
+        "n_flagged": 30,
+        "n_accepted": 124,
+        "coverage": 0.8051948051948052,
+        "coverage_ci": {
+          "estimate": 0.8051948051948052,
+          "lower": 0.742642047596955,
+          "upper": 0.8677475627926555,
+          "successes": 124,
+          "total": 154
+        },
+        "selective_accuracy": 0.45161290322580644,
+        "selective_accuracy_ci": {
+          "estimate": 0.45161290322580644,
+          "lower": 0.36401937629110276,
+          "upper": 0.5392064301605102,
+          "successes": 56,
+          "total": 124
+        },
+        "accuracy": 0.474025974025974,
+        "accuracy_ci": {
+          "estimate": 0.474025974025974,
+          "lower": 0.3951619506387321,
+          "upper": 0.552889997413216,
+          "successes": 73,
+          "total": 154
+        },
+        "detection": 0.2,
+        "detection_ci": {
+          "estimate": 0.2,
+          "lower": 0.11496326053508679,
+          "upper": 0.28503673946491326,
+          "successes": 17,
+          "total": 85
+        },
+        "false_alarm": 0.18840579710144928,
+        "false_alarm_ci": {
+          "estimate": 0.18840579710144928,
+          "lower": 0.09613843064928683,
+          "upper": 0.2806731635536117,
+          "successes": 13,
+          "total": 69
+        }
+      },
+      "confidence_error_report": {
+        "anomaly_threshold": 44.67285919189453,
+        "anomaly_direction": "higher",
+        "confidence_direction": "lower",
+        "confidence_top_fraction": 0.25,
+        "confidence_threshold": 1.662584900856018,
+        "n_total": 154,
+        "n_high_confidence": 39,
+        "n_low_confidence": 115,
+        "n_high_confidence_true": 15,
+        "n_high_confidence_false": 24,
+        "n_low_confidence_true": 54,
+        "n_low_confidence_false": 61,
+        "high_confidence_false_rate": {
+          "estimate": 0.6153846153846154,
+          "lower": 0.4626946800396934,
+          "upper": 0.7680745507295375,
+          "successes": 24,
+          "total": 39
+        },
+        "n_high_confidence_accepted": 36,
+        "n_high_confidence_accepted_true": 15,
+        "n_high_confidence_accepted_false": 21,
+        "high_confidence_accepted_false_rate": {
+          "estimate": 0.5833333333333334,
+          "lower": 0.42228449479339936,
+          "upper": 0.7443821718732674,
+          "successes": 21,
+          "total": 36
+        },
+        "high_confidence_accepted_selective_accuracy": {
+          "estimate": 0.4166666666666667,
+          "lower": 0.2556178281267327,
+          "upper": 0.5777155052066006,
+          "successes": 15,
+          "total": 36
+        },
+        "n_high_confidence_flagged": 3,
+        "n_high_confidence_flagged_false": 3,
+        "high_confidence_false_capture_rate": {
+          "estimate": 0.125,
+          "lower": 0.0,
+          "upper": 0.2573151225924938,
+          "successes": 3,
+          "total": 24
+        },
+        "high_confidence_false_miss_rate": {
+          "estimate": 0.875,
+          "lower": 0.7426848774075062,
+          "upper": 1.0,
+          "successes": 21,
+          "total": 24
+        }
+      }
+    }
+  },
+  "component_verdicts": {
+    "base_conformal": "ACCEPT"
+  },
+  "verdict": "ACCEPT",
+  "sweep_report": {
+    "schema_version": 1,
+    "model_id": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "model_revision": null,
+    "conformal_alpha": 0.1,
+    "best_by": "auroc",
+    "best": {
+      "layer": -16,
+      "score_name": "truth_proj",
+      "direction": "higher",
+      "threshold": -3.0460472106933594,
+      "conformal_alpha": 0.1,
+      "auroc": 0.7254901960784313,
+      "false_alarm": 0.08695652173913043,
+      "detection": 0.21176470588235294,
+      "n_true": 69,
+      "n_false": 85
+    },
+    "layers": [
+      {
+        "layer": -16,
+        "scores": [
+          {
+            "layer": -16,
+            "score_name": "eigenscore",
+            "direction": "higher",
+            "threshold": 8.082239151000977,
+            "conformal_alpha": 0.1,
+            "auroc": 0.486615515771526,
+            "false_alarm": 0.08695652173913043,
+            "detection": 0.03529411764705882,
+            "n_true": 69,
+            "n_false": 85
+          },
+          {
+            "layer": -16,
+            "score_name": "maha_last",
+            "direction": "higher",
+            "threshold": 57.18162536621094,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5798806479113384,
+            "false_alarm": 0.08695652173913043,
+            "detection": 0.058823529411764705,
+            "n_true": 69,
+            "n_false": 85
+          },
+          {
+            "layer": -16,
+            "score_name": "resid_update_norm",
+            "direction": "higher",
+            "threshold": 2.0633373260498047,
+            "conformal_alpha": 0.1,
+            "auroc": 0.4272804774083546,
+            "false_alarm": 0.08695652173913043,
+            "detection": 0.011764705882352941,
+            "n_true": 69,
+            "n_false": 85
+          },
+          {
+            "layer": -16,
+            "score_name": "subspace_resid",
+            "direction": "higher",
+            "threshold": 50.61091995239258,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5317988064791134,
+            "false_alarm": 0.08695652173913043,
+            "detection": 0.07058823529411765,
+            "n_true": 69,
+            "n_false": 85
+          },
+          {
+            "layer": -16,
+            "score_name": "truth_proj",
+            "direction": "higher",
+            "threshold": -3.0460472106933594,
+            "conformal_alpha": 0.1,
+            "auroc": 0.7254901960784313,
+            "false_alarm": 0.08695652173913043,
+            "detection": 0.21176470588235294,
+            "n_true": 69,
+            "n_false": 85
+          }
+        ]
+      },
+      {
+        "layer": -14,
+        "scores": [
+          {
+            "layer": -14,
+            "score_name": "eigenscore",
+            "direction": "higher",
+            "threshold": 8.289554595947266,
+            "conformal_alpha": 0.1,
+            "auroc": 0.4857630008525149,
+            "false_alarm": 0.08695652173913043,
+            "detection": 0.03529411764705882,
+            "n_true": 69,
+            "n_false": 85
+          },
+          {
+            "layer": -14,
+            "score_name": "maha_last",
+            "direction": "higher",
+            "threshold": 56.81721115112305,
+            "conformal_alpha": 0.1,
+            "auroc": 0.6040920716112532,
+            "false_alarm": 0.08695652173913043,
+            "detection": 0.12941176470588237,
+            "n_true": 69,
+            "n_false": 85
+          },
+          {
+            "layer": -14,
+            "score_name": "resid_update_norm",
+            "direction": "higher",
+            "threshold": 1.9383522669474285,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5696504688832055,
+            "false_alarm": 0.08695652173913043,
+            "detection": 0.12941176470588237,
+            "n_true": 69,
+            "n_false": 85
+          },
+          {
+            "layer": -14,
+            "score_name": "subspace_resid",
+            "direction": "higher",
+            "threshold": 63.001136779785156,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5473145780051151,
+            "false_alarm": 0.08695652173913043,
+            "detection": 0.10588235294117647,
+            "n_true": 69,
+            "n_false": 85
+          },
+          {
+            "layer": -14,
+            "score_name": "truth_proj",
+            "direction": "higher",
+            "threshold": 13.905875205993652,
+            "conformal_alpha": 0.1,
+            "auroc": 0.7011082693947144,
+            "false_alarm": 0.08695652173913043,
+            "detection": 0.18823529411764706,
+            "n_true": 69,
+            "n_false": 85
+          }
+        ]
+      },
+      {
+        "layer": -12,
+        "scores": [
+          {
+            "layer": -12,
+            "score_name": "eigenscore",
+            "direction": "higher",
+            "threshold": 8.482217788696289,
+            "conformal_alpha": 0.1,
+            "auroc": 0.4917306052855925,
+            "false_alarm": 0.08695652173913043,
+            "detection": 0.10588235294117647,
+            "n_true": 69,
+            "n_false": 85
+          },
+          {
+            "layer": -12,
+            "score_name": "maha_last",
+            "direction": "higher",
+            "threshold": 53.332061767578125,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5914748508098892,
+            "false_alarm": 0.08695652173913043,
+            "detection": 0.1411764705882353,
+            "n_true": 69,
+            "n_false": 85
+          },
+          {
+            "layer": -12,
+            "score_name": "resid_update_norm",
+            "direction": "higher",
+            "threshold": 2.408109188079834,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5036658141517476,
+            "false_alarm": 0.08695652173913043,
+            "detection": 0.08235294117647059,
+            "n_true": 69,
+            "n_false": 85
+          },
+          {
+            "layer": -12,
+            "score_name": "subspace_resid",
+            "direction": "higher",
+            "threshold": 66.34801483154297,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5087809036658142,
+            "false_alarm": 0.08695652173913043,
+            "detection": 0.12941176470588237,
+            "n_true": 69,
+            "n_false": 85
+          },
+          {
+            "layer": -12,
+            "score_name": "truth_proj",
+            "direction": "higher",
+            "threshold": 7.132753372192383,
+            "conformal_alpha": 0.1,
+            "auroc": 0.6823529411764706,
+            "false_alarm": 0.08695652173913043,
+            "detection": 0.18823529411764706,
+            "n_true": 69,
+            "n_false": 85
+          }
+        ]
+      },
+      {
+        "layer": -10,
+        "scores": [
+          {
+            "layer": -10,
+            "score_name": "eigenscore",
+            "direction": "higher",
+            "threshold": 8.915283203125,
+            "conformal_alpha": 0.1,
+            "auroc": 0.4815004262574595,
+            "false_alarm": 0.08695652173913043,
+            "detection": 0.058823529411764705,
+            "n_true": 69,
+            "n_false": 85
+          },
+          {
+            "layer": -10,
+            "score_name": "maha_last",
+            "direction": "higher",
+            "threshold": 49.949649810791016,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5846547314578006,
+            "false_alarm": 0.08695652173913043,
+            "detection": 0.07058823529411765,
+            "n_true": 69,
+            "n_false": 85
+          },
+          {
+            "layer": -10,
+            "score_name": "resid_update_norm",
+            "direction": "higher",
+            "threshold": 3.413630485534668,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5026427962489344,
+            "false_alarm": 0.08695652173913043,
+            "detection": 0.047058823529411764,
+            "n_true": 69,
+            "n_false": 85
+          },
+          {
+            "layer": -10,
+            "score_name": "subspace_resid",
+            "direction": "higher",
+            "threshold": 83.38080596923828,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5065643648763853,
+            "false_alarm": 0.08695652173913043,
+            "detection": 0.10588235294117647,
+            "n_true": 69,
+            "n_false": 85
+          },
+          {
+            "layer": -10,
+            "score_name": "truth_proj",
+            "direction": "higher",
+            "threshold": 5.701387405395508,
+            "conformal_alpha": 0.1,
+            "auroc": 0.6586530264279625,
+            "false_alarm": 0.08695652173913043,
+            "detection": 0.08235294117647059,
+            "n_true": 69,
+            "n_false": 85
+          }
+        ]
+      },
+      {
+        "layer": -8,
+        "scores": [
+          {
+            "layer": -8,
+            "score_name": "eigenscore",
+            "direction": "higher",
+            "threshold": 9.421004295349121,
+            "conformal_alpha": 0.1,
+            "auroc": 0.49411764705882355,
+            "false_alarm": 0.08695652173913043,
+            "detection": 0.03529411764705882,
+            "n_true": 69,
+            "n_false": 85
+          },
+          {
+            "layer": -8,
+            "score_name": "maha_last",
+            "direction": "higher",
+            "threshold": 48.34532165527344,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5539641943734015,
+            "false_alarm": 0.08695652173913043,
+            "detection": 0.08235294117647059,
+            "n_true": 69,
+            "n_false": 85
+          },
+          {
+            "layer": -8,
+            "score_name": "resid_update_norm",
+            "direction": "higher",
+            "threshold": 4.134054819742839,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5473145780051151,
+            "false_alarm": 0.08695652173913043,
+            "detection": 0.08235294117647059,
+            "n_true": 69,
+            "n_false": 85
+          },
+          {
+            "layer": -8,
+            "score_name": "subspace_resid",
+            "direction": "higher",
+            "threshold": 123.10343933105469,
+            "conformal_alpha": 0.1,
+            "auroc": 0.4971867007672634,
+            "false_alarm": 0.08695652173913043,
+            "detection": 0.09411764705882353,
+            "n_true": 69,
+            "n_false": 85
+          },
+          {
+            "layer": -8,
+            "score_name": "truth_proj",
+            "direction": "higher",
+            "threshold": 39.45183563232422,
+            "conformal_alpha": 0.1,
+            "auroc": 0.6603580562659846,
+            "false_alarm": 0.08695652173913043,
+            "detection": 0.09411764705882353,
+            "n_true": 69,
+            "n_false": 85
+          }
+        ]
+      }
+    ],
+    "eigentruth_version": "0.1.0",
+    "scores_path": "artifacts/truthfulqa-frontier-smollm2-l20/smollm2-l20/scores.manifest.json",
+    "created_at": "2026-06-25T06:18:54.292405+00:00",
+    "commit_sha": null,
+    "metadata": {
+      "source": "eval_conformal.py",
+      "config": {
+        "auto_batch_size": true,
+        "batch_size": 4,
+        "cache_only": false,
+        "cache_only_restored_eval_statements": false,
+        "covariance_low_rank": 16,
+        "covariance_mode": "full",
+        "dataset": "truthfulqa",
+        "dtype": "float32",
+        "dump_inside_samples": false,
+        "dump_scores_format": "jsonl",
+        "effective_batch_size": 4,
+        "eigenscore_alpha": 0.001,
+        "eval_reps_cache": null,
+        "eval_reps_cache_shard_size": 0,
+        "eval_reps_shard_read_cache_size": 2,
+        "hidden_dim": 576,
+        "hidden_state_capture": "hooks",
+        "inside_adaptive_sampling": false,
+        "inside_batch_size": 1,
+        "inside_diagnostics_cache": null,
+        "inside_embedding_threshold": 0.9,
+        "inside_max_new_tokens": 12,
+        "inside_min_samples": 2,
+        "inside_pooling": "last",
+        "inside_sample_step": 1,
+        "inside_samples": 0,
+        "inside_selfcheck_early_stop": false,
+        "inside_selfcheck_min_overlap": 0.65,
+        "inside_selfcheck_refute_threshold": 0.5,
+        "inside_selfcheck_support_threshold": 0.6,
+        "inside_stability_delta": 0.05,
+        "inside_temperature": 0.7,
+        "inside_top_p": 0.9,
+        "inside_trigger_signal": null,
+        "inside_trigger_threshold": null,
+        "inside_trigger_top_fraction": null,
+        "layer": -8,
+        "layer_stats_cache": null,
+        "length_bucketed_batches": true,
+        "manifold_n": 126,
+        "max_batch_tokens": 0,
+        "max_length": 96,
+        "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+        "n_manifold_false": 177,
+        "n_neg": 69,
+        "n_pos": 85,
+        "offline": false,
+        "prefix_kv_cache": false,
+        "progress_every": 0,
+        "refresh_eval_reps_cache": false,
+        "refresh_inside_diagnostics_cache": false,
+        "refresh_layer_stats_cache": false,
+        "refresh_statement_encoding_cache": false,
+        "seed": 0,
+        "statement_encoding_cache": null,
+        "subspace_rank": 2,
+        "sweep_layers": [
+          -8,
+          -16,
+          -14,
+          -12,
+          -10
+        ],
+        "warmup_checkpoint": null,
+        "warmup_checkpoint_every": 50
+      },
+      "sweep_max_workers": 1
+    }
+  },
+  "score_dump_cache": {
+    "enabled": true,
+    "cache_entries": 6,
+    "fingerprint": {
+      "hits": 2,
+      "misses": 2,
+      "writes": 2,
+      "attempts": 4,
+      "hit_rate": 0.5
+    },
+    "jsonl_manifest": {
+      "hits": 3,
+      "misses": 1,
+      "writes": 1,
+      "attempts": 4,
+      "hit_rate": 0.75
+    },
+    "jsonl_summary": {
+      "hits": 1,
+      "misses": 0,
+      "writes": 3,
+      "attempts": 1,
+      "hit_rate": 1.0
+    },
+    "jsonl_view": {
+      "hits": 0,
+      "misses": 2,
+      "writes": 2,
+      "attempts": 2,
+      "hit_rate": 0.0
+    }
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l20/smollm2-l20/conformal-artifact-manifest.json"
+  },
+  "artifact_manifest_summary": {
+    "artifact_count": 4,
+    "missing_count": 0,
+    "directory_count": 0,
+    "file_count": 4
+  }
+}

@@ -1,0 +1,118 @@
+{
+  "artifacts": {
+    "audit_biased_selector_policy": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "policies/audit_biased.json",
+      "sha256": "edb1aaa6ca11a4edd7ee80dcc3468e66c6a6610178316978da1cfaaf5afd8a7c",
+      "size_bytes": 599
+    },
+    "audit_biased_sweep_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "candidates/audit_biased/artifact-manifest.json",
+      "sha256": "a084d6fd65a40eb46960d733e61f5bf72105f3a791183ff57097c1d5403e9763",
+      "size_bytes": 3284
+    },
+    "audit_biased_sweep_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "candidates/audit_biased/product-runtime-profile-sweep.json",
+      "sha256": "5302275561ec12d776011f881d338c35d590ab620e049d773a33b55b25ea6488",
+      "size_bytes": 11813
+    },
+    "default_selector_policy": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "policies/default.json",
+      "sha256": "eeec317a7de790e8f190d2d083634e812fb6679e2e5e64543038eea38a612cc5",
+      "size_bytes": 583
+    },
+    "default_sweep_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "candidates/default/artifact-manifest.json",
+      "sha256": "f68edf33c66a3e2d6e4ad2d11e2c20444bf06a77b6302d2f06c5b3a71bee4f82",
+      "size_bytes": 3268
+    },
+    "default_sweep_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "candidates/default/product-runtime-profile-sweep.json",
+      "sha256": "134e701b687ca947002546dda0dda9b89bf6d46685c6c7578e8b4ce34d5cfe4d",
+      "size_bytes": 11450
+    },
+    "latency_biased_selector_policy": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "policies/latency_biased.json",
+      "sha256": "fe11a19c513505c53cadb9e72b3076f1f3972d8ee36163054b32b9d07ca8c4c6",
+      "size_bytes": 542
+    },
+    "latency_biased_sweep_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "candidates/latency_biased/artifact-manifest.json",
+      "sha256": "7029f5da9be68b7fce9e04884b9473d6f8afc4ade7f4a143d8b6439258c01799",
+      "size_bytes": 3290
+    },
+    "latency_biased_sweep_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "candidates/latency_biased/product-runtime-profile-sweep.json",
+      "sha256": "d1cf15524d9b6202c045b4bd42bd3e762518a41d162c07e76dd23bae7f6100ea",
+      "size_bytes": 11723
+    },
+    "promotion_contract": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_registry_workflow.json",
+      "sha256": "feaebd93a7a4b92fc50adcabe4ea4ae5515b6b1e42fb3d086db37c2bf530b239",
+      "size_bytes": 53344
+    },
+    "runtime_profile_selector_tuning_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "runtime-profile-selector-tuning.json",
+      "sha256": "683423ba010385cab83c25fde19e993c705438b7b40052896ffb2e98f836b24f",
+      "size_bytes": 12504
+    },
+    "slo_policy": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_product_runtime_profile_sweep/runtime-profile-slo-policy.json",
+      "sha256": "3628f98fa77b8f19f07d0441a46666229b53f1acdad17328f7cda04fa185f380",
+      "size_bytes": 289
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "candidate_count": 3,
+    "compact_json": false,
+    "recommended_candidate": "default",
+    "recommended_policy_path": "artifacts/smollm2_runtime_profile_selector_tuning/policies/default.json",
+    "repeats": 1,
+    "runner": "run_runtime_profile_selector_tuning",
+    "scenario_count": 3,
+    "status": "promote"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 12,
+    "directory_count": 0,
+    "file_count": 12,
+    "missing_count": 0
+  }
+}

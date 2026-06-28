@@ -6,6 +6,7 @@ Pure functions over scores/representations (no model or dataset deps); CPU-testa
 
 from __future__ import annotations
 
+import math
 from typing import Any, Sequence, Union
 
 import torch
@@ -19,18 +20,18 @@ def _average_ranks(x: Tensor) -> Tensor:
     Return 1-based ranks with ties resolved to the average rank (like scipy rankdata).
     """
     n = x.numel()
+    if n == 0:
+        return torch.empty(0, dtype=torch.float64, device=x.device)
     order = torch.argsort(x)
     sorted_x = x[order]
-    ranks = torch.empty(n, dtype=torch.float64)
-    i = 0
-    while i < n:
-        j = i
-        while j + 1 < n and bool(sorted_x[j + 1] == sorted_x[i]):
-            j += 1
-        # i..j 是一组平局，取 1-based 排名 (i+1)..(j+1) 的平均
-        avg_rank = (i + j) / 2.0 + 1.0
-        ranks[order[i : j + 1]] = avg_rank
-        i = j + 1
+    _, counts = torch.unique_consecutive(sorted_x, return_counts=True)
+    counts_f = counts.to(dtype=torch.float64)
+    group_ends = torch.cumsum(counts_f, dim=0)
+    group_starts = group_ends - counts_f + 1.0
+    group_ranks = (group_starts + group_ends) / 2.0
+    sorted_ranks = torch.repeat_interleave(group_ranks, counts)
+    ranks = torch.empty(n, dtype=torch.float64, device=sorted_ranks.device)
+    ranks[order] = sorted_ranks
     return ranks
 
 
@@ -56,6 +57,10 @@ def roc_auc(scores: ArrayLike, labels: ArrayLike) -> float:
     labels_t = torch.as_tensor(labels, dtype=torch.float64).flatten()
     if scores_t.numel() != labels_t.numel():
         raise ValueError("scores and labels must have the same length.")
+    if not torch.isfinite(scores_t).all():
+        raise ValueError("scores must contain only finite values.")
+    if not torch.logical_or(labels_t == 0, labels_t == 1).all():
+        raise ValueError("labels must be binary values in {0, 1}.")
 
     pos_mask = labels_t == 1
     neg_mask = labels_t == 0
@@ -68,6 +73,26 @@ def roc_auc(scores: ArrayLike, labels: ArrayLike) -> float:
     sum_ranks_pos = float(ranks[pos_mask].sum().item())
     # AUROC = (R+ - n_pos(n_pos+1)/2) / (n_pos * n_neg)
     return (sum_ranks_pos - n_pos * (n_pos + 1) / 2.0) / (n_pos * n_neg)
+
+
+def spearman_correlation(x: ArrayLike, y: ArrayLike) -> float:
+    """Return Spearman rank correlation with average ranks for ties."""
+    x_t = torch.as_tensor(x, dtype=torch.float64).flatten()
+    y_t = torch.as_tensor(y, dtype=torch.float64).flatten()
+    if x_t.numel() != y_t.numel():
+        raise ValueError("x and y must have the same length.")
+    if int(x_t.numel()) < 2:
+        raise ValueError("Spearman correlation requires at least two samples.")
+    if not torch.isfinite(x_t).all() or not torch.isfinite(y_t).all():
+        raise ValueError("x and y must contain only finite values.")
+    x_rank = _average_ranks(x_t)
+    y_rank = _average_ranks(y_t)
+    x_centered = x_rank - x_rank.mean()
+    y_centered = y_rank - y_rank.mean()
+    denominator = torch.sqrt((x_centered * x_centered).sum() * (y_centered * y_centered).sum())
+    if float(denominator.item()) == 0.0:
+        return float("nan")
+    return float(((x_centered * y_centered).sum() / denominator).item())
 
 
 def euclidean_dispersion(points: Tensor) -> Tensor:
@@ -86,6 +111,36 @@ def euclidean_dispersion(points: Tensor) -> Tensor:
         return torch.tensor(0.0)
     centroid = points.mean(dim=0, keepdim=True)
     return torch.norm(points - centroid, dim=-1).mean()
+
+
+def topk_normalized_entropy(logits: Tensor, *, top_k: int = 20) -> Tensor:
+    """Return normalized entropy over the top-k logits.
+
+    The result is in ``[0, 1]`` for finite logits. ``0`` means the top-k
+    distribution is concentrated on one token, while ``1`` means it is uniform
+    across the retained tokens. This is a dependency-free primitive for
+    first-token uncertainty baselines.
+    """
+    if int(top_k) < 1:
+        raise ValueError("top_k must be >= 1.")
+    logits_t = torch.as_tensor(logits, dtype=torch.float32)
+    if logits_t.numel() == 0 or logits_t.shape[-1] == 0:
+        raise ValueError("logits must have a non-empty vocabulary dimension.")
+    if not torch.isfinite(logits_t).all():
+        raise ValueError("logits must contain only finite values.")
+    k = min(int(top_k), int(logits_t.shape[-1]))
+    if k <= 1:
+        return torch.zeros(logits_t.shape[:-1], dtype=torch.float32, device=logits_t.device)
+    top_logits = torch.topk(logits_t, k=k, dim=-1).values
+    log_probs = torch.log_softmax(top_logits, dim=-1)
+    probs = log_probs.exp()
+    entropy = -(probs * log_probs).sum(dim=-1)
+    return entropy / math.log(float(k))
+
+
+def first_token_confidence(logits: Tensor, *, top_k: int = 20) -> Tensor:
+    """Return ``1 - topk_normalized_entropy(logits)`` for first-token scoring."""
+    return 1.0 - topk_normalized_entropy(logits, top_k=top_k)
 
 
 def binomial_confidence_interval(successes: int, total: int, *, z: float = 1.96) -> dict[str, Any]:
@@ -180,3 +235,357 @@ def selective_classification_report(
         "false_alarm_ci": false_alarm_ci,
     }
 
+
+def confidence_error_report(
+    anomaly_scores: ArrayLike,
+    labels: ArrayLike,
+    anomaly_threshold: float,
+    confidence_scores: ArrayLike,
+    *,
+    anomaly_direction: str = "higher",
+    confidence_direction: str = "higher",
+    confidence_top_fraction: float = 0.25,
+) -> dict[str, Any]:
+    """Summarize high-confidence errors under a calibrated anomaly gate.
+
+    ``label == 1`` denotes the anomalous/false class. ``confidence_scores`` are
+    transformed so higher values mean higher confidence; set
+    ``confidence_direction="lower"`` for signals such as NLL where lower values
+    mean the model is more confident.
+    """
+    if anomaly_direction not in {"higher", "lower"}:
+        raise ValueError("anomaly_direction must be 'higher' or 'lower'.")
+    if confidence_direction not in {"higher", "lower"}:
+        raise ValueError("confidence_direction must be 'higher' or 'lower'.")
+    if not (0.0 < confidence_top_fraction <= 1.0):
+        raise ValueError("confidence_top_fraction must be in (0, 1].")
+
+    anomaly_t = torch.as_tensor(anomaly_scores, dtype=torch.float64).flatten()
+    labels_t = torch.as_tensor(labels, dtype=torch.int64).flatten()
+    confidence_raw = torch.as_tensor(confidence_scores, dtype=torch.float64).flatten()
+    if anomaly_t.numel() != labels_t.numel() or confidence_raw.numel() != labels_t.numel():
+        raise ValueError("scores and labels must have the same length.")
+    if not torch.logical_or(labels_t == 0, labels_t == 1).all():
+        raise ValueError("labels must be binary values in {0, 1}.")
+    if not torch.isfinite(anomaly_t).all() or not torch.isfinite(confidence_raw).all():
+        raise ValueError("scores must contain only finite values.")
+
+    if anomaly_direction == "higher":
+        flagged = anomaly_t > float(anomaly_threshold)
+    else:
+        flagged = anomaly_t < float(anomaly_threshold)
+    accepted = ~flagged
+
+    confidence_native = confidence_raw if confidence_direction == "higher" else -confidence_raw
+    top_count = max(1, int(math.ceil(float(confidence_top_fraction) * confidence_native.numel())))
+    sorted_confidence, _ = torch.sort(confidence_native)
+    confidence_native_threshold = sorted_confidence[-top_count]
+    high_confidence = confidence_native >= confidence_native_threshold
+    confidence_threshold = (
+        float(confidence_native_threshold.item())
+        if confidence_direction == "higher"
+        else float((-confidence_native_threshold).item())
+    )
+
+    normal = labels_t == 0
+    anomalous = labels_t == 1
+    high_false = torch.logical_and(high_confidence, anomalous)
+    high_true = torch.logical_and(high_confidence, normal)
+    high_accepted = torch.logical_and(high_confidence, accepted)
+    high_flagged = torch.logical_and(high_confidence, flagged)
+    high_accepted_false = torch.logical_and(high_accepted, anomalous)
+    high_accepted_true = torch.logical_and(high_accepted, normal)
+    high_flagged_false = torch.logical_and(high_flagged, anomalous)
+    low_confidence = ~high_confidence
+    low_true = torch.logical_and(low_confidence, normal)
+    low_false = torch.logical_and(low_confidence, anomalous)
+
+    n_total = int(labels_t.numel())
+    n_high = int(high_confidence.sum().item())
+    n_high_false = int(high_false.sum().item())
+    n_high_true = int(high_true.sum().item())
+    n_high_accepted = int(high_accepted.sum().item())
+    n_high_accepted_false = int(high_accepted_false.sum().item())
+    n_high_accepted_true = int(high_accepted_true.sum().item())
+    n_high_flagged = int(high_flagged.sum().item())
+    n_high_flagged_false = int(high_flagged_false.sum().item())
+    n_low_true = int(low_true.sum().item())
+    n_low_false = int(low_false.sum().item())
+
+    return {
+        "anomaly_threshold": float(anomaly_threshold),
+        "anomaly_direction": anomaly_direction,
+        "confidence_direction": confidence_direction,
+        "confidence_top_fraction": float(confidence_top_fraction),
+        "confidence_threshold": confidence_threshold,
+        "n_total": n_total,
+        "n_high_confidence": n_high,
+        "n_low_confidence": n_total - n_high,
+        "n_high_confidence_true": n_high_true,
+        "n_high_confidence_false": n_high_false,
+        "n_low_confidence_true": n_low_true,
+        "n_low_confidence_false": n_low_false,
+        "high_confidence_false_rate": binomial_confidence_interval(n_high_false, n_high),
+        "n_high_confidence_accepted": n_high_accepted,
+        "n_high_confidence_accepted_true": n_high_accepted_true,
+        "n_high_confidence_accepted_false": n_high_accepted_false,
+        "high_confidence_accepted_false_rate": binomial_confidence_interval(
+            n_high_accepted_false,
+            n_high_accepted,
+        ),
+        "high_confidence_accepted_selective_accuracy": binomial_confidence_interval(
+            n_high_accepted_true,
+            n_high_accepted,
+        ),
+        "n_high_confidence_flagged": n_high_flagged,
+        "n_high_confidence_flagged_false": n_high_flagged_false,
+        "high_confidence_false_capture_rate": binomial_confidence_interval(
+            n_high_flagged_false,
+            n_high_false,
+        ),
+        "high_confidence_false_miss_rate": binomial_confidence_interval(
+            n_high_accepted_false,
+            n_high_false,
+        ),
+    }
+
+
+DECK_CELL_SPECS: dict[str, dict[str, Any]] = {
+    "drift": {
+        "consistency": "low",
+        "confidence": "high",
+        "detected_by": ("black_box_consistency",),
+        "description": "inconsistent but locally confident outputs; consistency scorers should carry signal.",
+    },
+    "entrenched": {
+        "consistency": "high",
+        "confidence": "high",
+        "detected_by": ("judge_or_external_verifier",),
+        "description": "repeatable high-confidence errors; output-level uncertainty can miss these.",
+    },
+    "confabulation": {
+        "consistency": "low",
+        "confidence": "low",
+        "detected_by": ("black_box_consistency", "white_box_confidence"),
+        "description": "both inconsistent and low-confidence outputs; both scorer families should carry signal.",
+    },
+    "knotted": {
+        "consistency": "high",
+        "confidence": "low",
+        "detected_by": ("white_box_confidence",),
+        "description": "consistent but low-confidence outputs; token/probability confidence should carry signal.",
+    },
+}
+
+
+def youden_j_threshold(
+    scores: ArrayLike,
+    labels: ArrayLike,
+    *,
+    direction: str = "higher",
+) -> dict[str, Any]:
+    """Return the Youden's J threshold for a score axis.
+
+    ``label == 1`` denotes the anomalous/false class. ``direction`` describes
+    which raw-score direction means more normal/healthy. For example,
+    consistency or confidence probabilities usually use ``"higher"``, while
+    NLL-style confidence costs usually use ``"lower"``.
+    """
+    if direction not in {"higher", "lower"}:
+        raise ValueError("direction must be 'higher' or 'lower'.")
+    scores_t = torch.as_tensor(scores, dtype=torch.float64).flatten()
+    labels_t = torch.as_tensor(labels, dtype=torch.int64).flatten()
+    if scores_t.numel() != labels_t.numel():
+        raise ValueError("scores and labels must have the same length.")
+    if scores_t.numel() == 0:
+        raise ValueError("scores must contain at least one value.")
+    if not torch.isfinite(scores_t).all():
+        raise ValueError("scores must contain only finite values.")
+    if not torch.logical_or(labels_t == 0, labels_t == 1).all():
+        raise ValueError("labels must be binary values in {0, 1}.")
+    n_false = int((labels_t == 1).sum().item())
+    n_true = int((labels_t == 0).sum().item())
+    if n_false == 0 or n_true == 0:
+        raise ValueError("Youden's J threshold requires both true and false labels.")
+
+    health_scores = scores_t if direction == "higher" else -scores_t
+    candidates = _threshold_candidates(health_scores)
+    best: dict[str, Any] | None = None
+    best_key: tuple[float, float, float, float] | None = None
+    for candidate in candidates:
+        flagged = health_scores < candidate
+        true_positive = int(torch.logical_and(flagged, labels_t == 1).sum().item())
+        false_positive = int(torch.logical_and(flagged, labels_t == 0).sum().item())
+        true_negative = n_true - false_positive
+        sensitivity = true_positive / n_false
+        specificity = true_negative / n_true
+        false_alarm = false_positive / n_true
+        j_value = sensitivity + specificity - 1.0
+        key = (-j_value, false_alarm, -sensitivity, float(candidate.item()))
+        if best_key is None or key < best_key:
+            threshold = float(candidate.item())
+            raw_threshold = threshold if direction == "higher" else -threshold
+            best_key = key
+            best = {
+                "threshold": raw_threshold,
+                "normalized_threshold": threshold,
+                "direction": direction,
+                "youden_j": j_value,
+                "sensitivity": sensitivity,
+                "specificity": specificity,
+                "false_alarm": false_alarm,
+                "flag_rate": int(flagged.sum().item()) / int(labels_t.numel()),
+                "n_true": n_true,
+                "n_false": n_false,
+            }
+    assert best is not None
+    return best
+
+
+def deck_taxonomy_report(
+    consistency_scores: ArrayLike,
+    confidence_scores: ArrayLike,
+    labels: ArrayLike,
+    *,
+    consistency_direction: str = "higher",
+    confidence_direction: str = "higher",
+    include_assignments: bool = False,
+) -> dict[str, Any]:
+    """Classify samples into a consistency x confidence detectability taxonomy.
+
+    This is a dependency-free DECK-style diagnostic report. It uses Youden's J
+    on each axis to split samples into low/high consistency and low/high
+    confidence. The four cells explain which scorer families are expected to
+    catch each error mode:
+
+    - ``drift``: low consistency, high confidence
+    - ``entrenched``: high consistency, high confidence
+    - ``confabulation``: low consistency, low confidence
+    - ``knotted``: high consistency, low confidence
+
+    The function reports all samples, while ``false_distribution`` focuses on
+    the hallucinated/false subset (``label == 1``).
+    """
+    if consistency_direction not in {"higher", "lower"}:
+        raise ValueError("consistency_direction must be 'higher' or 'lower'.")
+    if confidence_direction not in {"higher", "lower"}:
+        raise ValueError("confidence_direction must be 'higher' or 'lower'.")
+
+    consistency_t = torch.as_tensor(consistency_scores, dtype=torch.float64).flatten()
+    confidence_t = torch.as_tensor(confidence_scores, dtype=torch.float64).flatten()
+    labels_t = torch.as_tensor(labels, dtype=torch.int64).flatten()
+    if consistency_t.numel() != labels_t.numel() or confidence_t.numel() != labels_t.numel():
+        raise ValueError("scores and labels must have the same length.")
+    if consistency_t.numel() == 0:
+        raise ValueError("scores must contain at least one value.")
+    if not torch.isfinite(consistency_t).all() or not torch.isfinite(confidence_t).all():
+        raise ValueError("scores must contain only finite values.")
+    if not torch.logical_or(labels_t == 0, labels_t == 1).all():
+        raise ValueError("labels must be binary values in {0, 1}.")
+
+    consistency_axis = youden_j_threshold(
+        consistency_t,
+        labels_t,
+        direction=consistency_direction,
+    )
+    confidence_axis = youden_j_threshold(
+        confidence_t,
+        labels_t,
+        direction=confidence_direction,
+    )
+    consistency_health = consistency_t if consistency_direction == "higher" else -consistency_t
+    confidence_health = confidence_t if confidence_direction == "higher" else -confidence_t
+    low_consistency = consistency_health < float(consistency_axis["normalized_threshold"])
+    low_confidence = confidence_health < float(confidence_axis["normalized_threshold"])
+
+    assignments = [
+        _deck_cell_name(bool(low_c.item()), bool(low_conf.item()))
+        for low_c, low_conf in zip(low_consistency, low_confidence)
+    ]
+    cells = {
+        name: _deck_cell_payload(name, assignments, labels_t)
+        for name in ("drift", "entrenched", "confabulation", "knotted")
+    }
+    n_total = int(labels_t.numel())
+    n_false = int((labels_t == 1).sum().item())
+    n_true = int((labels_t == 0).sum().item())
+    false_counts = {name: int(cells[name]["n_false"]) for name in cells}
+    payload: dict[str, Any] = {
+        "method": "deck_consistency_confidence_taxonomy",
+        "n_total": n_total,
+        "n_true": n_true,
+        "n_false": n_false,
+        "axes": {
+            "consistency": consistency_axis,
+            "confidence": confidence_axis,
+        },
+        "cells": cells,
+        "false_distribution": {
+            name: {
+                "count": count,
+                "rate": (count / n_false if n_false else None),
+            }
+            for name, count in false_counts.items()
+        },
+        "blind_spot": cells["entrenched"],
+    }
+    if include_assignments:
+        payload["assignments"] = assignments
+    return payload
+
+
+def _threshold_candidates(scores: Tensor) -> Tensor:
+    unique = torch.unique(scores, sorted=True)
+    if unique.numel() == 1:
+        value = unique[0]
+        margin = torch.tensor(
+            max(abs(float(value.item())) * 1e-12, 1e-12),
+            dtype=torch.float64,
+            device=scores.device,
+        )
+        return torch.stack((value - margin, value + margin))
+    mids = (unique[:-1] + unique[1:]) / 2.0
+    span = float((unique[-1] - unique[0]).item())
+    margin_value = max(abs(span) * 1e-12, 1e-12)
+    margin = torch.tensor(margin_value, dtype=torch.float64, device=scores.device)
+    return torch.cat((unique[:1] - margin, mids, unique[-1:] + margin))
+
+
+def _deck_cell_name(low_consistency: bool, low_confidence: bool) -> str:
+    if low_consistency and low_confidence:
+        return "confabulation"
+    if low_consistency:
+        return "drift"
+    if low_confidence:
+        return "knotted"
+    return "entrenched"
+
+
+def _deck_cell_payload(name: str, assignments: Sequence[str], labels: Tensor) -> dict[str, Any]:
+    mask_values = torch.tensor(
+        [assignment == name for assignment in assignments],
+        dtype=torch.bool,
+        device=labels.device,
+    )
+    false_mask = labels == 1
+    true_mask = labels == 0
+    n_total = int(mask_values.sum().item())
+    n_false = int(torch.logical_and(mask_values, false_mask).sum().item())
+    n_true = int(torch.logical_and(mask_values, true_mask).sum().item())
+    total_false = int(false_mask.sum().item())
+    total_true = int(true_mask.sum().item())
+    spec = DECK_CELL_SPECS[name]
+    return {
+        "cell": name,
+        "consistency": spec["consistency"],
+        "confidence": spec["confidence"],
+        "detected_by": list(spec["detected_by"]),
+        "description": spec["description"],
+        "n_total": n_total,
+        "n_true": n_true,
+        "n_false": n_false,
+        "sample_rate": binomial_confidence_interval(n_total, int(labels.numel())),
+        "error_rate": binomial_confidence_interval(n_false, n_total),
+        "share_of_false": binomial_confidence_interval(n_false, total_false),
+        "share_of_true": binomial_confidence_interval(n_true, total_true),
+    }

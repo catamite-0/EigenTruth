@@ -1,0 +1,84 @@
+{
+  "artifacts": {
+    "matrix_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_l8_runtime_profile_matrix/artifact-manifest.json",
+      "sha256": "a6d58554ed31cbafbf6877fa2893554f4a0467203268ee0a3217653eb13b75ba",
+      "size_bytes": 2605
+    },
+    "matrix_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_l8_runtime_profile_matrix/cache-profile-matrix-report.json",
+      "sha256": "f9bf95f7f318c45c6c90d8c1ff138e553d75560c82465b49e8ab72bc8a4e3a01",
+      "size_bytes": 67661
+    },
+    "performance_baseline_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "performance-baseline-workflow.json",
+      "sha256": "9ab46bc1915a6bfaf87d9d5aebc8de380cd75cffca55a107c829148e71110175",
+      "size_bytes": 11320
+    },
+    "runtime_recommendation": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "runtime-recommendation.json",
+      "sha256": "5a41046e458031bfbec2fe337d03b46bfe9dde8166d28379b0366731cf6535c7",
+      "size_bytes": 4724
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "batch_sizes": [
+      4,
+      8
+    ],
+    "dry_run": false,
+    "dtype": "float32",
+    "eval_reps_cache_shard_size": 4,
+    "eval_reps_shard_read_cache_size": 2,
+    "hidden_state_captures": [
+      "outputs"
+    ],
+    "inside_sampling_enabled": false,
+    "inside_trigger_budget_policy": "quality_balanced",
+    "inside_trigger_budget_sweep_enabled": false,
+    "layers": [
+      -12
+    ],
+    "matrix_report_reused": true,
+    "max_batch_token_budgets": [
+      0,
+      512
+    ],
+    "max_batch_tokens": 0,
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "offline": false,
+    "prefix_kv_cache": false,
+    "prefix_kv_cache_modes": [
+      false
+    ],
+    "recommended_batch_size": 4,
+    "recommended_best_quality_signal": "truth_proj",
+    "recommended_cell": "layer_m12_batch_4_capture_outputs_token_budget_512",
+    "recommended_layer": -12,
+    "recommended_max_workers": 1,
+    "runner": "run_performance_baseline_workflow",
+    "runtime_recommendation_status": "promote",
+    "status": "promote",
+    "worker_sweep_enabled": false
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

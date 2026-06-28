@@ -1,0 +1,60 @@
+{
+  "artifacts": {
+    "inside_diagnostics_cache": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_l20_inside_trigger_budget_sweep_derived/shared-caches/inside-diagnostics.json",
+      "sha256": "78301f728bbb94a6dedfa3c648561ec381d552ce92486b0b63a271be8e07c4b8",
+      "size_bytes": 51315
+    },
+    "samples": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "inside-diagnostics-samples.json",
+      "sha256": "84a8f069d427a78541dbc0db1202f9a17cceaf67c4f600693999b7d2445253d6",
+      "size_bytes": 129199
+    },
+    "scores": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_l20_inside_trigger_budget_sweep_derived/top_0p4/scores-adaptive_selfcheck.json",
+      "sha256": "864ed2ebd17f4d9b11a4531340f7fb5b9aa3ccabd9bc3ca18bd13ae73d972ece",
+      "size_bytes": 73948
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "inside_diagnostics_cache_path": "artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/shared-caches/inside-diagnostics.json",
+    "output_path": "artifacts/smollm2-l20-direct-selfcheck-signal-fusion/inside-diagnostics-samples.json",
+    "scores_path": "artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/top_0p4/scores-adaptive_selfcheck.json",
+    "summary": {
+      "cache_stats": {
+        "entries": 154,
+        "hit_rate": 0.5,
+        "hits": 77,
+        "misses": 77,
+        "path": "artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/shared-caches/inside-diagnostics.json",
+        "requests": 154,
+        "writes": 0
+      },
+      "matched_records": 77,
+      "missing_records": 77,
+      "n_records": 154,
+      "n_score_records": 154,
+      "records_dropped_below_min_samples": 0,
+      "records_meeting_min_samples": 25,
+      "total_non_empty_samples": 72
+    },
+    "workflow": "export_inside_diagnostics_samples"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

@@ -1,0 +1,205 @@
+{
+  "artifacts": {
+    "gate_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "covariance-mode-gate-report.json",
+      "sha256": "9f043600e8981db2465e4d89d49ecee1becab5532ce61d276d745f3efcd7a9f7",
+      "size_bytes": 13022
+    },
+    "qwen05-l80.baseline.sweep": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-qwen-smollm2-l80-cache-only/qwen05-l80/sweep-report.json",
+      "sha256": "9faa5c4185f17580a08e52a86ca76f1a02cbcb21fd0b5b37c60d466f0ec4d537",
+      "size_bytes": 12351
+    },
+    "qwen05-l80.baseline.workflow": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-qwen-smollm2-l80-cache-only/qwen05-l80/calibrated-observability-workflow.json",
+      "sha256": "dd3977e7063398487a4dfcce8e24203a94e2817ac0426392bc22c500a66329d0",
+      "size_bytes": 9639
+    },
+    "qwen05-l80.diag.layer_stats_rebuild": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen05-l80-diag/layer-stats-rebuild-report.json",
+      "sha256": "6173787333c2a9f1c9ce7cd6d514fdb2ba84fb24c4c7639f0bf4c8f0f2ce0460",
+      "size_bytes": 2881
+    },
+    "qwen05-l80.diag.sweep": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen05-l80-diag/sweep-report.json",
+      "sha256": "d5f2ed663b31cef037e44b23ad93b02a3e28be2c1628fcc56aedcd50d757ea49",
+      "size_bytes": 12353
+    },
+    "qwen05-l80.diag.workflow": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen05-l80-diag/calibrated-observability-workflow.json",
+      "sha256": "da7189de79eff62f39c6cffc25bb38beecd0a0edadac654b0a6c1541e11f505f",
+      "size_bytes": 9021
+    },
+    "qwen05-l80.low_rank_16.layer_stats_rebuild": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen05-l80-low_rank_16/layer-stats-rebuild-report.json",
+      "sha256": "e7ce59b447d37648ddb3647770c3231bd91ee0026241d9d5b56218f00819a7a6",
+      "size_bytes": 2911
+    },
+    "qwen05-l80.low_rank_16.sweep": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen05-l80-low_rank_16/sweep-report.json",
+      "sha256": "9a314aeae5448799260f15fe9d3889931d39bba45e32f47f6bc2435c6345b809",
+      "size_bytes": 12365
+    },
+    "qwen05-l80.low_rank_16.workflow": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen05-l80-low_rank_16/calibrated-observability-workflow.json",
+      "sha256": "d1765ffcc9325417832eac524617d140a4ecf132d916219b7595d175e91ae9c5",
+      "size_bytes": 9248
+    },
+    "qwen05-l80.shrinkage.layer_stats_rebuild": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen05-l80-shrinkage/layer-stats-rebuild-report.json",
+      "sha256": "5155ad2d8937499a4094428bbe58fbe5be5cb9f80a1d2587b2301a5c8253a233",
+      "size_bytes": 2980
+    },
+    "qwen05-l80.shrinkage.sweep": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen05-l80-shrinkage/sweep-report.json",
+      "sha256": "701024f420f27bfedd99d1d5a663d30ac22ce3fae65753fece34b924a69e12d4",
+      "size_bytes": 12367
+    },
+    "qwen05-l80.shrinkage.workflow": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen05-l80-shrinkage/calibrated-observability-workflow.json",
+      "sha256": "b604beaec2371a9787a309fb788bb4301638ef0e0575a74e861d088cd4655fb5",
+      "size_bytes": 9156
+    },
+    "smollm2-l80.baseline.sweep": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-qwen-smollm2-l80-cache-only/smollm2-l80/sweep-report.json",
+      "sha256": "2c8437a44d0dcb41811c0543c41dbdf93ccda862ba6d47c45f5501350ab773bf",
+      "size_bytes": 12361
+    },
+    "smollm2-l80.baseline.workflow": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-qwen-smollm2-l80-cache-only/smollm2-l80/calibrated-observability-workflow.json",
+      "sha256": "f18700b4b95ca7cb4da06399458c364b7eda9cec547b5aabb74a1d24ac07d0e4",
+      "size_bytes": 9696
+    },
+    "smollm2-l80.diag.layer_stats_rebuild": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80-diag/layer-stats-rebuild-report.json",
+      "sha256": "5a88bc76c35b2161b25a5cd6edf274c27c9bb015d3db7885aa63ae8be6a12b7b",
+      "size_bytes": 2904
+    },
+    "smollm2-l80.diag.sweep": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80-diag/sweep-report.json",
+      "sha256": "97968015bc594d2462e73fb94dd2de0cdd4fd749506615c61f445261501f1e76",
+      "size_bytes": 12362
+    },
+    "smollm2-l80.diag.workflow": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80-diag/calibrated-observability-workflow.json",
+      "sha256": "1cbc7a3707f56d47e103326771ade94eaa84e95e4f815a611886752c98896a36",
+      "size_bytes": 9074
+    },
+    "smollm2-l80.low_rank_16.layer_stats_rebuild": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80-low_rank_16/layer-stats-rebuild-report.json",
+      "sha256": "f6df86f9c9427d7b5eacfc3dc22ac4972682b5c7988771aa2fde325e866ccddc",
+      "size_bytes": 2933
+    },
+    "smollm2-l80.low_rank_16.sweep": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80-low_rank_16/sweep-report.json",
+      "sha256": "e077986f6bc1a8ecb924f54228a198b8ba2e24c24aa44ecbfaf99b1906b12db5",
+      "size_bytes": 12378
+    },
+    "smollm2-l80.low_rank_16.workflow": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80-low_rank_16/calibrated-observability-workflow.json",
+      "sha256": "c08ef05fb3e27b3489a0de84e1b5f54f5f8a41733d3738423c96d9ab50bf9621",
+      "size_bytes": 9300
+    },
+    "smollm2-l80.shrinkage.layer_stats_rebuild": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80-shrinkage/layer-stats-rebuild-report.json",
+      "sha256": "607b2374de5fe57d1a81d6567593ee8417dceb320b6925c3fa3d058d60cdfdd8",
+      "size_bytes": 3004
+    },
+    "smollm2-l80.shrinkage.sweep": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80-shrinkage/sweep-report.json",
+      "sha256": "1615ec410ce0d50130e6c5276a3542de3ce5cdf08557d7880fe6abd3f2ddc253",
+      "size_bytes": 12379
+    },
+    "smollm2-l80.shrinkage.workflow": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80-shrinkage/calibrated-observability-workflow.json",
+      "sha256": "587989787c25e65d6e26d47cfa45072f916e68c58269f2fc2fbd162a5b8e5c45",
+      "size_bytes": 9209
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "max_maha_last_auroc_drop": 0.01,
+    "models": [
+      "qwen05-l80",
+      "smollm2-l80"
+    ],
+    "runner": "truthfulqa_l80_covariance_mode_gate",
+    "status": "promote"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 23,
+    "directory_count": 0,
+    "file_count": 23,
+    "missing_count": 0
+  }
+}

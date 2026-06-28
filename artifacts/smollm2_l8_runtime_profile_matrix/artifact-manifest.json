@@ -1,0 +1,84 @@
+{
+  "artifacts": {
+    "cells.layer_m12_batch_4_capture_outputs_token_budget_0.triplet_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "layer_m12_batch_4_capture_outputs_token_budget_0/artifact-manifest.json",
+      "sha256": "c12df3f0bcd7afbaad4e041839d1533909a54acff756c54dae336c70b3f00b6e",
+      "size_bytes": 3829
+    },
+    "cells.layer_m12_batch_4_capture_outputs_token_budget_512.triplet_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "layer_m12_batch_4_capture_outputs_token_budget_512/artifact-manifest.json",
+      "sha256": "911c01d10a3ad47bc2ff2e7fd99ca2714cbf26215d431aa332583beb13f1032d",
+      "size_bytes": 3834
+    },
+    "cells.layer_m12_batch_8_capture_outputs_token_budget_0.triplet_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "layer_m12_batch_8_capture_outputs_token_budget_0/artifact-manifest.json",
+      "sha256": "9fe444706014284390fb7a287e9ef21b2d7d91cccbde87c34bf13adf74941956",
+      "size_bytes": 3832
+    },
+    "cells.layer_m12_batch_8_capture_outputs_token_budget_512.triplet_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "layer_m12_batch_8_capture_outputs_token_budget_512/artifact-manifest.json",
+      "sha256": "fdfbba167df8b188199dda6001de615950a8b19656f1ac29af6a380f1d09f79a",
+      "size_bytes": 3834
+    },
+    "matrix_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "cache-profile-matrix-report.json",
+      "sha256": "f9bf95f7f318c45c6c90d8c1ff138e553d75560c82465b49e8ab72bc8a4e3a01",
+      "size_bytes": 67661
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "batch_sizes": [
+      4,
+      8
+    ],
+    "dry_run": false,
+    "dtype": "float32",
+    "eval_reps_cache_shard_size": 4,
+    "eval_reps_shard_read_cache_size": 2,
+    "hidden_state_captures": [
+      "outputs"
+    ],
+    "layers": [
+      -12
+    ],
+    "matrix_mode": "triplet",
+    "max_batch_token_budgets": [
+      0,
+      512
+    ],
+    "max_batch_tokens": 0,
+    "max_workers": 1,
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "offline": false,
+    "prefix_kv_cache": false,
+    "prefix_kv_cache_modes": [
+      false
+    ],
+    "runner": "run_cache_profile_matrix",
+    "shared_cache_dir": "artifacts/cache/smollm2_l8_runtime_profile_matrix",
+    "wall_clock_seconds": 236.26958069007378
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

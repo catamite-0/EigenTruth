@@ -1,0 +1,79 @@
+{
+  "artifacts": {
+    "command_log": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "inside-sampling-profile-commands.json",
+      "sha256": "78bb8d89ff1daaebf762742047778d58758b68e0c65a201026941876daf678bb",
+      "size_bytes": 2513
+    },
+    "comparison_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "inside-sampling-profile-comparison.json",
+      "sha256": "494e39158f2cc964c31010409f20b44ade83e820604db0f8e4dbf5dcccc66bdc",
+      "size_bytes": 4478
+    },
+    "profiles.adaptive_selfcheck": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "profile-adaptive_selfcheck.json",
+      "sha256": "8cd19ce9e22827ded33fda8626dadc1bcc4fd68490fd841dff76737e0732b37d",
+      "size_bytes": 1808
+    },
+    "profiles.fixed": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "profile-fixed.json",
+      "sha256": "c6a8ba8b0c6c5a494b15c0fa3bff54990fc86cf57740122b883ce976a226464c",
+      "size_bytes": 1806
+    },
+    "results.adaptive_selfcheck": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "result-adaptive_selfcheck.json",
+      "sha256": "3ce5aebeafd841d2da195c8f7d725a53a21b99db04d2b5f8c8ab5e3f1699c86e",
+      "size_bytes": 19214
+    },
+    "results.fixed": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "result-fixed.json",
+      "sha256": "a27afab9feb42faf7ab598373ab02dd7abe0be8ed144e364ea57188d1e0d59dc",
+      "size_bytes": 19155
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "dry_run": false,
+    "dtype": "float32",
+    "inside_min_samples": 2,
+    "inside_sample_step": 1,
+    "inside_samples": 3,
+    "inside_stability_delta": 0.05,
+    "inside_trigger_signal": "truth_proj",
+    "inside_trigger_threshold": null,
+    "inside_trigger_top_fraction": 0.25,
+    "layer": -12,
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "offline": false,
+    "run_names": [
+      "fixed",
+      "adaptive_selfcheck"
+    ],
+    "runner": "run_inside_sampling_profile"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 6,
+    "directory_count": 0,
+    "file_count": 6,
+    "missing_count": 0
+  }
+}

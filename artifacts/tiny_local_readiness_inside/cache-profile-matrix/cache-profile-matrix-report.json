@@ -1,0 +1,330 @@
+{
+  "dry_run": false,
+  "config": {
+    "model": "sshleifer/tiny-gpt2",
+    "dtype": "float32",
+    "layers": [
+      -1
+    ],
+    "batch_sizes": [
+      4
+    ],
+    "hidden_state_captures": [
+      "outputs"
+    ],
+    "limit": null,
+    "manifold_questions": null,
+    "max_length": 64,
+    "max_batch_tokens": 0,
+    "max_batch_token_budgets": [
+      0
+    ],
+    "prefix_kv_cache": false,
+    "prefix_kv_cache_modes": [
+      false
+    ],
+    "eval_reps_cache_shard_size": 4,
+    "offline": true,
+    "length_bucketed_batches": true,
+    "shared_cache_dir": null,
+    "shared_cache_root": null,
+    "matrix_mode": "triplet",
+    "max_workers": 1
+  },
+  "cells": [
+    {
+      "id": "layer_m1_batch_4_capture_outputs",
+      "layer": -1,
+      "batch_size": 4,
+      "hidden_state_capture": "outputs",
+      "max_batch_tokens": 0,
+      "max_batch_tokens_component": null,
+      "prefix_kv_cache": false,
+      "prefix_kv_cache_component": null,
+      "output_dir": "artifacts/tiny_local_readiness_inside/cache-profile-matrix/layer_m1_batch_4_capture_outputs",
+      "shared_cache_group": null,
+      "uncached_cache_mode": "refresh",
+      "run_names": [
+        "uncached",
+        "cached",
+        "cache_only"
+      ],
+      "execution_seconds": 26.407759591005743,
+      "triplet": {
+        "dry_run": false,
+        "output_dir": "artifacts/tiny_local_readiness_inside/cache-profile-matrix/layer_m1_batch_4_capture_outputs",
+        "commands": {
+          "uncached": [
+            ".venv/bin/python",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "sshleifer/tiny-gpt2",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-1",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "0",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/tiny_local_readiness_inside/cache-profile-matrix/layer_m1_batch_4_capture_outputs/result-uncached.json",
+            "--profile-json",
+            "artifacts/tiny_local_readiness_inside/cache-profile-matrix/layer_m1_batch_4_capture_outputs/profile-uncached.json",
+            "--offline",
+            "--length-bucketed-batches",
+            "--statement-encoding-cache",
+            "artifacts/tiny_local_readiness_inside/cache-profile-matrix/layer_m1_batch_4_capture_outputs/statement-encodings.json",
+            "--refresh-statement-encoding-cache",
+            "--layer-stats-cache",
+            "artifacts/tiny_local_readiness_inside/cache-profile-matrix/layer_m1_batch_4_capture_outputs/layer-stats.pt",
+            "--refresh-layer-stats-cache",
+            "--eval-reps-cache",
+            "artifacts/tiny_local_readiness_inside/cache-profile-matrix/layer_m1_batch_4_capture_outputs/eval-reps-cache",
+            "--eval-reps-cache-shard-size",
+            "4",
+            "--refresh-eval-reps-cache"
+          ],
+          "cached": [
+            ".venv/bin/python",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "sshleifer/tiny-gpt2",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-1",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "0",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/tiny_local_readiness_inside/cache-profile-matrix/layer_m1_batch_4_capture_outputs/result-cached.json",
+            "--profile-json",
+            "artifacts/tiny_local_readiness_inside/cache-profile-matrix/layer_m1_batch_4_capture_outputs/profile-cached.json",
+            "--offline",
+            "--length-bucketed-batches",
+            "--statement-encoding-cache",
+            "artifacts/tiny_local_readiness_inside/cache-profile-matrix/layer_m1_batch_4_capture_outputs/statement-encodings.json",
+            "--layer-stats-cache",
+            "artifacts/tiny_local_readiness_inside/cache-profile-matrix/layer_m1_batch_4_capture_outputs/layer-stats.pt",
+            "--eval-reps-cache",
+            "artifacts/tiny_local_readiness_inside/cache-profile-matrix/layer_m1_batch_4_capture_outputs/eval-reps-cache"
+          ],
+          "cache_only": [
+            ".venv/bin/python",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "sshleifer/tiny-gpt2",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-1",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "0",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/tiny_local_readiness_inside/cache-profile-matrix/layer_m1_batch_4_capture_outputs/result-cache_only.json",
+            "--profile-json",
+            "artifacts/tiny_local_readiness_inside/cache-profile-matrix/layer_m1_batch_4_capture_outputs/profile-cache_only.json",
+            "--offline",
+            "--length-bucketed-batches",
+            "--cache-only",
+            "--layer-stats-cache",
+            "artifacts/tiny_local_readiness_inside/cache-profile-matrix/layer_m1_batch_4_capture_outputs/layer-stats.pt",
+            "--eval-reps-cache",
+            "artifacts/tiny_local_readiness_inside/cache-profile-matrix/layer_m1_batch_4_capture_outputs/eval-reps-cache"
+          ]
+        },
+        "run_names": [
+          "uncached",
+          "cached",
+          "cache_only"
+        ],
+        "profiles": {
+          "uncached": "artifacts/tiny_local_readiness_inside/cache-profile-matrix/layer_m1_batch_4_capture_outputs/profile-uncached.json",
+          "cached": "artifacts/tiny_local_readiness_inside/cache-profile-matrix/layer_m1_batch_4_capture_outputs/profile-cached.json",
+          "cache_only": "artifacts/tiny_local_readiness_inside/cache-profile-matrix/layer_m1_batch_4_capture_outputs/profile-cache_only.json"
+        },
+        "results": {
+          "uncached": "artifacts/tiny_local_readiness_inside/cache-profile-matrix/layer_m1_batch_4_capture_outputs/result-uncached.json",
+          "cached": "artifacts/tiny_local_readiness_inside/cache-profile-matrix/layer_m1_batch_4_capture_outputs/result-cached.json",
+          "cache_only": "artifacts/tiny_local_readiness_inside/cache-profile-matrix/layer_m1_batch_4_capture_outputs/result-cache_only.json"
+        },
+        "comparison_report": "artifacts/tiny_local_readiness_inside/cache-profile-matrix/layer_m1_batch_4_capture_outputs/cache-profile-comparison.json",
+        "comparison_skipped_reason": null,
+        "regression_gate": {
+          "enabled": true,
+          "passed": true,
+          "checked_runs": [
+            "cached",
+            "cache_only"
+          ],
+          "config": {
+            "max_total_ratio": null,
+            "max_run_total_ratios": {
+              "cached": 1.1,
+              "cache_only": 0.35
+            },
+            "max_phase_ratios": {},
+            "min_throughput_ratios": {}
+          },
+          "failures": []
+        },
+        "caches": {
+          "statement_encoding_cache": "artifacts/tiny_local_readiness_inside/cache-profile-matrix/layer_m1_batch_4_capture_outputs/statement-encodings.json",
+          "layer_stats_cache": "artifacts/tiny_local_readiness_inside/cache-profile-matrix/layer_m1_batch_4_capture_outputs/layer-stats.pt",
+          "eval_reps_cache": "artifacts/tiny_local_readiness_inside/cache-profile-matrix/layer_m1_batch_4_capture_outputs/eval-reps-cache"
+        },
+        "uncached_cache_mode": "refresh",
+        "command_log": "artifacts/tiny_local_readiness_inside/cache-profile-matrix/layer_m1_batch_4_capture_outputs/cache-profile-triplet-commands.json",
+        "artifact_manifest": "artifacts/tiny_local_readiness_inside/cache-profile-matrix/layer_m1_batch_4_capture_outputs/artifact-manifest.json",
+        "artifact_manifest_summary": {
+          "artifact_count": 11,
+          "missing_count": 0,
+          "directory_count": 1,
+          "file_count": 10
+        }
+      },
+      "summary": {
+        "dry_run": false,
+        "regression_gate": {
+          "enabled": true,
+          "passed": true,
+          "checked_runs": [
+            "cached",
+            "cache_only"
+          ],
+          "config": {
+            "max_total_ratio": null,
+            "max_run_total_ratios": {
+              "cached": 1.1,
+              "cache_only": 0.35
+            },
+            "max_phase_ratios": {},
+            "min_throughput_ratios": {}
+          },
+          "failures": []
+        },
+        "fastest": {
+          "name": "cache_only",
+          "total_seconds": 0.031362,
+          "speedup_vs_baseline": 280.00162617180024
+        },
+        "quality_signals": {
+          "maha_last": 0.3125,
+          "truth_proj": 0.5625,
+          "subspace_resid": 0.46875,
+          "disp_euclid": 0.625,
+          "disp_hse": 0.6875,
+          "eigenscore": 0.5625,
+          "nll_answer": 0.4375
+        },
+        "truth_proj_auroc": 0.5625,
+        "totals": {
+          "uncached": {
+            "total_seconds": 8.781411,
+            "bottleneck": "load_model",
+            "speedup_vs_baseline": 1.0,
+            "ratio_to_baseline": 1.0,
+            "forced_answer_forward_seconds": 0.056022,
+            "model_forward_seconds": 0.140075
+          },
+          "cached": {
+            "total_seconds": 8.25993,
+            "bottleneck": "load_model",
+            "speedup_vs_baseline": 1.063133828010649,
+            "ratio_to_baseline": 0.9406153521341843,
+            "model_forward_seconds": 0.0
+          },
+          "cache_only": {
+            "total_seconds": 0.031362,
+            "bottleneck": "score_postprocess",
+            "speedup_vs_baseline": 280.00162617180024,
+            "ratio_to_baseline": 0.003571407829561787,
+            "model_forward_seconds": 0.0
+          }
+        }
+      }
+    }
+  ],
+  "leaderboard": [
+    {
+      "id": "layer_m1_batch_4_capture_outputs",
+      "layer": -1,
+      "batch_size": 4,
+      "hidden_state_capture": "outputs",
+      "max_batch_tokens": 0,
+      "prefix_kv_cache": false,
+      "uncached_cache_mode": "refresh",
+      "shared_cache_group": null,
+      "uncached_total_seconds": 8.781411,
+      "cached_total_seconds": 8.25993,
+      "cache_only_total_seconds": 0.031362,
+      "uncached_forced_answer_forward_seconds": 0.056022,
+      "uncached_model_forward_seconds": 0.140075,
+      "cache_only_speedup_vs_baseline": 280.00162617180024,
+      "truth_proj_auroc": 0.5625,
+      "gate_passed": true,
+      "recommendation_metric": "cache_only_total_seconds"
+    }
+  ],
+  "leaderboard_sort_metric": "cache_only_total_seconds",
+  "prefix_kv_comparisons": [],
+  "matrix_decision": {
+    "status": "promote",
+    "recommended_cell": "layer_m1_batch_4_capture_outputs",
+    "recommended": {
+      "id": "layer_m1_batch_4_capture_outputs",
+      "layer": -1,
+      "batch_size": 4,
+      "hidden_state_capture": "outputs",
+      "max_batch_tokens": 0,
+      "prefix_kv_cache": false,
+      "uncached_cache_mode": "refresh",
+      "shared_cache_group": null,
+      "uncached_total_seconds": 8.781411,
+      "cached_total_seconds": 8.25993,
+      "cache_only_total_seconds": 0.031362,
+      "uncached_forced_answer_forward_seconds": 0.056022,
+      "uncached_model_forward_seconds": 0.140075,
+      "cache_only_speedup_vs_baseline": 280.00162617180024,
+      "truth_proj_auroc": 0.5625,
+      "gate_passed": true,
+      "recommendation_metric": "cache_only_total_seconds"
+    },
+    "checked_cell_count": 1,
+    "candidate_count": 1,
+    "failed_cells": [],
+    "unchecked_cells": [],
+    "recommendation_metric": "cache_only_total_seconds",
+    "blocking_reasons": []
+  },
+  "execution": {
+    "wall_clock_seconds": 26.40906395704951,
+    "cell_count": 1,
+    "max_workers": 1,
+    "shared_cache_refresh_barrier": false
+  },
+  "report_path": "artifacts/tiny_local_readiness_inside/cache-profile-matrix/cache-profile-matrix-report.json",
+  "artifact_manifest": "artifacts/tiny_local_readiness_inside/cache-profile-matrix/artifact-manifest.json"
+}

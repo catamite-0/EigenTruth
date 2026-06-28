@@ -1,0 +1,33 @@
+{
+  "artifacts": {
+    "trajectory_sweep_evidence_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "trajectory-sweep-evidence-gate.json",
+      "sha256": "3fef4074a1399d9a7b798516bf8a01ab86c7f2756c37de20824786b41530fdd9",
+      "size_bytes": 6688
+    },
+    "trajectory_sweep_report_0_gpt2": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "gpt2-qwen-l80-limit64-layer-sweep-report.json",
+      "sha256": "7d393a6fcf7fbf00d84b0a02a3e77ab345f8dbb1fb20ac7bd224d0f652c245e4",
+      "size_bytes": 134438
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "runner": "compare_trajectory_sweeps",
+    "status": "blocked",
+    "trajectory_track_status": "blocked"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  }
+}

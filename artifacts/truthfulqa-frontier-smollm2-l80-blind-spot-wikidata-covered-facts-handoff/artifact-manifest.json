@@ -1,0 +1,59 @@
+{
+  "artifacts": {
+    "covered_fact_route_summary": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-structured-qa-route/structured-qa-route-summary.json",
+      "sha256": "26f795994b36ee5bc422c2acf5fff23129afa9cc6fc493b2d6712725cc2caaf0",
+      "size_bytes": 14878
+    },
+    "external_evidence_baseline_comparison_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "external-evidence-baseline-comparison.json",
+      "sha256": "bc626c1c95705621080ea5999f7d6daa9148241ce9d2af863d4a9f792aca7274",
+      "size_bytes": 35284
+    },
+    "route_manifest_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-structured-qa-route/artifact-manifest.json",
+      "sha256": "ecca9c43b071144c92499b133e7b8d519525619da5867a13688b4c48986e7fd8",
+      "size_bytes": 9461
+    },
+    "route_registry": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "route-registry.json",
+      "sha256": "2d3cb19b6a55a8f3150a3c6ba50e81186fafaa2de50ff952c2eef619d8a89321",
+      "size_bytes": 18333
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "covered_facts_passed": true,
+    "covered_facts_property_count": 10,
+    "covered_facts_record": "benchmark_manifest:truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-covered-facts-handoff-blind-spot-wikidata-structured-qa:0.1",
+    "covered_facts_route": "structured_qa",
+    "covered_facts_route_summary": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-structured-qa-route/structured-qa-route-summary.json",
+    "decision_status": "promote",
+    "recommended_route": "structured_qa",
+    "recommended_route_record": "benchmark_manifest:truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-covered-facts-handoff-blind-spot-wikidata-structured-qa:0.1",
+    "route_passed": true,
+    "runner": "compare_external_evidence_baselines",
+    "text_redline_passed": true,
+    "text_redline_run_count": 0,
+    "workflow": "external_evidence_baseline_comparison"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

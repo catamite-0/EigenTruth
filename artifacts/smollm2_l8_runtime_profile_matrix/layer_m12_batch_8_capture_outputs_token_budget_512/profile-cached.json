@@ -1,0 +1,90 @@
+{
+  "total_seconds": 13.924559,
+  "phases": {
+    "load_data": 6.902139,
+    "load_model": 6.839336,
+    "load_statement_encoding_cache": 0.001385,
+    "load_layer_stats_cache": 0.005314,
+    "load_eval_reps_cache": 0.000514,
+    "read_eval_reps_cache_batch": 0.032672,
+    "score_postprocess": 0.111162,
+    "reporting": 0.028143,
+    "sweep_reporting": 6e-06
+  },
+  "summary": {
+    "bottleneck": "load_data",
+    "top_phases": [
+      {
+        "name": "load_data",
+        "seconds": 6.902139,
+        "share": 0.495681
+      },
+      {
+        "name": "load_model",
+        "seconds": 6.839336,
+        "share": 0.491171
+      },
+      {
+        "name": "score_postprocess",
+        "seconds": 0.111162,
+        "share": 0.007983
+      },
+      {
+        "name": "read_eval_reps_cache_batch",
+        "seconds": 0.032672,
+        "share": 0.002346
+      },
+      {
+        "name": "reporting",
+        "seconds": 0.028143,
+        "share": 0.002021
+      }
+    ],
+    "groups": {
+      "startup": {
+        "seconds": 13.741475,
+        "share": 0.986852
+      },
+      "tokenization": {
+        "seconds": 0.001385,
+        "share": 9.9e-05
+      },
+      "model_forward": {
+        "seconds": 0.0,
+        "share": 0.0
+      },
+      "cache_io": {
+        "seconds": 0.0385,
+        "share": 0.002765
+      },
+      "postprocess": {
+        "seconds": 0.139311,
+        "share": 0.010005
+      }
+    },
+    "throughput": {
+      "end_to_end_eval_records_per_second": 4.883458
+    },
+    "cache_efficiency": {
+      "eval_reps_reader": {
+        "records_per_read": 7.555556,
+        "shards_per_read": 1.888889,
+        "cross_shard_read_rate": 0.888889,
+        "shard_cache_hit_rate": 0.0,
+        "shard_load_rate": 1.0,
+        "shard_count": 17,
+        "shard_cache_capacity": 2
+      }
+    },
+    "accounted_seconds": 13.920671,
+    "accounted_share": 0.999721,
+    "unaccounted_seconds": 0.003888
+  },
+  "batch_size_fallback": {
+    "enabled": false,
+    "requested_batch_size": 8,
+    "effective_batch_size": 8,
+    "reductions": [],
+    "n_reductions": 0
+  }
+}

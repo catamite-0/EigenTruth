@@ -1,0 +1,63 @@
+{
+  "artifacts": {
+    "product_runtime_baseline_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "product-runtime-baseline.json",
+      "sha256": "ee2466658a1e2df3489043ba4aaa5dae61dacd56a38c1cdf2fe38ca05af2d3a2",
+      "size_bytes": 63634
+    },
+    "promotion_contract": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../../../smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_registry_workflow.json",
+      "sha256": "feaebd93a7a4b92fc50adcabe4ea4ae5515b6b1e42fb3d086db37c2bf530b239",
+      "size_bytes": 53344
+    },
+    "trace_0000_low_risk_supported-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../traces/auto/low_risk_supported-r0.json",
+      "sha256": "e068bc8d9f0a9dc531df144744c8afdf28dfedc32180eac60ebbb139c28fbd74",
+      "size_bytes": 34117
+    },
+    "trace_0001_diagnostic_refuted-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../traces/auto/diagnostic_refuted-r0.json",
+      "sha256": "c1108dd35cc81ed78755f62460a868d920a7e1c4d51ad73b04ec682f166c8ea8",
+      "size_bytes": 46186
+    },
+    "trace_0002_calculator_refuted-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../traces/auto/calculator_refuted-r0.json",
+      "sha256": "a557ac2a841309e64587f6dd64c51a03c1880a05fa4099bdd852556edb819ead",
+      "size_bytes": 40615
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "budget_enabled": true,
+    "budget_passed": true,
+    "compact_json": false,
+    "runner": "run_product_runtime_baseline",
+    "runtime_profile": "auto",
+    "selector_candidate": "default",
+    "source": "run_runtime_profile_selector_tuning",
+    "status": "promote",
+    "trace_count": 3
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

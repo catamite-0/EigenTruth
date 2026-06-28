@@ -1,0 +1,908 @@
+{
+  "alphas": [
+    0.05,
+    0.1,
+    0.2
+  ],
+  "best_alpha": 0.1,
+  "geometry_fusion_methods": [
+    "interaction",
+    "product",
+    "weighted_mean",
+    "noisy_or"
+  ],
+  "geometry_method": "mean_rank",
+  "geometry_signals": [
+    "truth_proj",
+    "subspace_resid",
+    "eigenscore"
+  ],
+  "methods": [
+    "max_rank",
+    "mean_rank"
+  ],
+  "repeats": 20,
+  "runs": [
+    {
+      "best_ensemble_at_alpha": {
+        "auroc": 0.5193648763853368,
+        "detection": 0.058235294117647066,
+        "false_alarm": 0.022857142857142857,
+        "name": "mean_rank"
+      },
+      "best_geometry_fusion_at_alpha": {
+        "auroc": 0.5608653026427962,
+        "detection": 0.09647058823529411,
+        "false_alarm": 0.041428571428571426,
+        "name": "interaction"
+      },
+      "best_single_at_alpha": {
+        "auroc": 0.6823529411764706,
+        "detection": 0.17823529411764708,
+        "false_alarm": 0.09142857142857143,
+        "name": "truth_proj"
+      },
+      "config": {
+        "auto_batch_size": false,
+        "batch_size": 8,
+        "cache_only": false,
+        "cache_only_restored_eval_statements": false,
+        "dtype": "float32",
+        "dump_inside_samples": false,
+        "effective_batch_size": 8,
+        "eigenscore_alpha": 0.001,
+        "eval_reps_cache": "artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/shared-caches/eval-reps-cache",
+        "eval_reps_cache_shard_size": 8,
+        "hidden_dim": 576,
+        "hidden_state_capture": "outputs",
+        "inside_adaptive_sampling": true,
+        "inside_batch_size": 1,
+        "inside_diagnostics_cache": "artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/shared-caches/inside-diagnostics.json",
+        "inside_embedding_threshold": 0.9,
+        "inside_max_new_tokens": 4,
+        "inside_min_samples": 2,
+        "inside_pooling": "last",
+        "inside_sample_step": 1,
+        "inside_samples": 3,
+        "inside_selfcheck_early_stop": true,
+        "inside_selfcheck_min_overlap": 0.65,
+        "inside_selfcheck_refute_threshold": 0.5,
+        "inside_selfcheck_support_threshold": 0.6,
+        "inside_stability_delta": 0.05,
+        "inside_temperature": 0.7,
+        "inside_top_p": 0.9,
+        "inside_trigger_signal": "truth_proj",
+        "inside_trigger_threshold": null,
+        "inside_trigger_top_fraction": 0.4,
+        "layer": -12,
+        "layer_stats_cache": "artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/shared-caches/layer-stats.pt",
+        "length_bucketed_batches": true,
+        "manifold_n": 126,
+        "max_batch_tokens": 0,
+        "max_length": 64,
+        "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+        "n_manifold_false": 177,
+        "n_neg": 69,
+        "n_pos": 85,
+        "offline": false,
+        "prefix_kv_cache": false,
+        "progress_every": 0,
+        "refresh_eval_reps_cache": false,
+        "refresh_inside_diagnostics_cache": false,
+        "refresh_layer_stats_cache": false,
+        "refresh_statement_encoding_cache": false,
+        "seed": 0,
+        "selfcheck_signal_score_dump": {
+          "builder": "build_selfcheck_signal_score_dump",
+          "early_stop": false,
+          "max_samples": null,
+          "min_overlap": 0.5,
+          "min_samples": 2,
+          "refute_threshold": 0.5,
+          "sample_paths": [
+            "artifacts/smollm2-l20-direct-selfcheck-signal-fusion/inside-diagnostics-samples.json"
+          ],
+          "signals": [
+            "selfcheck_support_rate",
+            "selfcheck_refute_rate",
+            "selfcheck_disagreement",
+            "selfcheck_insufficient",
+            "selfcheck_not_applicable",
+            "selfcheck_sample_count",
+            "selfcheck_best_overlap"
+          ],
+          "source_scores_path": "artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/top_0p4/scores-adaptive_selfcheck.json",
+          "support_threshold": 0.6
+        },
+        "statement_encoding_cache": "artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/shared-caches/statement-encodings.json",
+        "subspace_rank": 2,
+        "sweep_layers": null,
+        "warmup_checkpoint": null,
+        "warmup_checkpoint_every": 50
+      },
+      "directions": {
+        "eigenscore": "higher",
+        "inside_eigenscore": "higher",
+        "inside_embedding_entropy": "higher",
+        "inside_semantic_entropy": "higher",
+        "selfcheck_best_overlap": "lower",
+        "selfcheck_disagreement": "higher",
+        "selfcheck_not_applicable": "higher",
+        "selfcheck_refute_rate": "higher",
+        "selfcheck_support_rate": "lower",
+        "subspace_resid": "higher",
+        "truth_proj": "higher"
+      },
+      "ensemble_results": {
+        "max_rank": {
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.5,
+          "direction": "higher",
+          "method": "max_rank"
+        },
+        "mean_rank": {
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "coverage": 0.9957142857142857,
+              "detection": 0.03705882352941177,
+              "false_alarm": 0.004285714285714286,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 0.9771428571428571,
+              "detection": 0.058235294117647066,
+              "false_alarm": 0.022857142857142857,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "coverage": 0.8528571428571429,
+              "detection": 0.12823529411764706,
+              "false_alarm": 0.14714285714285713,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.5193648763853368,
+          "direction": "higher",
+          "method": "mean_rank"
+        }
+      },
+      "geometry_fusion_results": {
+        "interaction": {
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "coverage": 0.9857142857142858,
+              "detection": 0.03470588235294118,
+              "false_alarm": 0.014285714285714285,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 0.9585714285714286,
+              "detection": 0.09647058823529411,
+              "false_alarm": 0.041428571428571426,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "coverage": 0.8428571428571429,
+              "detection": 0.29411764705882354,
+              "false_alarm": 0.15714285714285714,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.5608653026427962,
+          "direction": "higher",
+          "fusion_method": "interaction",
+          "geometry_method": "mean_rank",
+          "geometry_signals": [
+            "truth_proj",
+            "subspace_resid",
+            "eigenscore"
+          ],
+          "uncertainty_method": "mean_rank",
+          "uncertainty_signals": [
+            "selfcheck_support_rate",
+            "selfcheck_refute_rate",
+            "selfcheck_disagreement",
+            "selfcheck_not_applicable",
+            "selfcheck_best_overlap"
+          ]
+        },
+        "noisy_or": {
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.46686274509803927,
+          "direction": "higher",
+          "fusion_method": "noisy_or",
+          "geometry_method": "mean_rank",
+          "geometry_signals": [
+            "truth_proj",
+            "subspace_resid",
+            "eigenscore"
+          ],
+          "uncertainty_method": "mean_rank",
+          "uncertainty_signals": [
+            "selfcheck_support_rate",
+            "selfcheck_refute_rate",
+            "selfcheck_disagreement",
+            "selfcheck_not_applicable",
+            "selfcheck_best_overlap"
+          ]
+        },
+        "product": {
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "coverage": 0.9857142857142858,
+              "detection": 0.03529411764705882,
+              "false_alarm": 0.014285714285714285,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 0.9571428571428572,
+              "detection": 0.09647058823529411,
+              "false_alarm": 0.04285714285714286,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "coverage": 0.8428571428571429,
+              "detection": 0.2952941176470588,
+              "false_alarm": 0.15714285714285714,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.5657928388746802,
+          "direction": "higher",
+          "fusion_method": "product",
+          "geometry_method": "mean_rank",
+          "geometry_signals": [
+            "truth_proj",
+            "subspace_resid",
+            "eigenscore"
+          ],
+          "uncertainty_method": "mean_rank",
+          "uncertainty_signals": [
+            "selfcheck_support_rate",
+            "selfcheck_refute_rate",
+            "selfcheck_disagreement",
+            "selfcheck_not_applicable",
+            "selfcheck_best_overlap"
+          ]
+        },
+        "weighted_mean": {
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "coverage": 0.9857142857142858,
+              "detection": 0.03470588235294118,
+              "false_alarm": 0.014285714285714285,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 0.9585714285714286,
+              "detection": 0.09647058823529411,
+              "false_alarm": 0.041428571428571426,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "coverage": 0.8428571428571429,
+              "detection": 0.29411764705882354,
+              "false_alarm": 0.15714285714285714,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.5556223358908781,
+          "direction": "higher",
+          "fusion_method": "weighted_mean",
+          "geometry_method": "mean_rank",
+          "geometry_signals": [
+            "truth_proj",
+            "subspace_resid",
+            "eigenscore"
+          ],
+          "uncertainty_method": "mean_rank",
+          "uncertainty_signals": [
+            "selfcheck_support_rate",
+            "selfcheck_refute_rate",
+            "selfcheck_disagreement",
+            "selfcheck_not_applicable",
+            "selfcheck_best_overlap"
+          ]
+        }
+      },
+      "geometry_signals": [
+        "truth_proj",
+        "subspace_resid",
+        "eigenscore"
+      ],
+      "loaded_signals": [
+        "truth_proj",
+        "subspace_resid",
+        "eigenscore",
+        "inside_eigenscore",
+        "inside_semantic_entropy",
+        "inside_embedding_entropy",
+        "selfcheck_support_rate",
+        "selfcheck_refute_rate",
+        "selfcheck_disagreement",
+        "selfcheck_not_applicable",
+        "selfcheck_best_overlap"
+      ],
+      "n_false": 85,
+      "n_total": 154,
+      "n_true": 69,
+      "name": "smollm2-l20",
+      "score_dump": {
+        "exists": true,
+        "identity": {
+          "cache_key": "score-dump-identity-v1:6428eb02df74d9302e83c1f21e89ca71c58abb5fb93787dece6b14f2301586ff",
+          "content_hash": "bd295b221d8d32d334659e15255842692d61ec7e1e35fc1304d5f844f6ff5cc3",
+          "dataset_id": null,
+          "model_id": "HuggingFaceTB/SmolLM2-135M-Instruct",
+          "n_total": 154,
+          "primary_score_names": [
+            "eigenscore",
+            "inside_eigenscore",
+            "inside_embedding_entropy",
+            "inside_semantic_entropy",
+            "maha_last",
+            "nll_answer",
+            "selfcheck_best_overlap",
+            "selfcheck_disagreement",
+            "selfcheck_insufficient",
+            "selfcheck_not_applicable",
+            "selfcheck_refute_rate",
+            "selfcheck_sample_count",
+            "selfcheck_support_rate",
+            "subspace_resid",
+            "truth_proj"
+          ],
+          "records_hash": "5ed30f3df8dde0c98be030a2843d3d414968fd2979135b72ccaf70322c69cde1",
+          "schema_version": 1,
+          "score_schema_hash": "89fcc5063b58e0fadc504fa47d350ff08b9358e46da6bfd38548cdd15e70524b",
+          "scoring_config_hash": "1b15b8873e9b4a35f1890f792d75320247c7c9787b64785f5279d29c42d21adb",
+          "source_format": "eigentruth.score_dump.jsonl",
+          "sweep_score_names": {},
+          "target_layer": -12
+        },
+        "kind": "file",
+        "path": "artifacts/smollm2-l20-direct-selfcheck-signal-fusion/smollm2-l20-selfcheck-scores.manifest.json",
+        "records": {
+          "exists": true,
+          "kind": "file",
+          "path": "artifacts/smollm2-l20-direct-selfcheck-signal-fusion/smollm2-l20-selfcheck-scores.manifest.records.jsonl",
+          "sha256": "5ed30f3df8dde0c98be030a2843d3d414968fd2979135b72ccaf70322c69cde1",
+          "size_bytes": 122047
+        },
+        "sha256": "bd295b221d8d32d334659e15255842692d61ec7e1e35fc1304d5f844f6ff5cc3",
+        "size_bytes": 16805,
+        "source_format": "eigentruth.score_dump.jsonl",
+        "summary": {
+          "all_signal_names": [
+            "eigenscore",
+            "inside_eigenscore",
+            "inside_embedding_entropy",
+            "inside_semantic_entropy",
+            "maha_last",
+            "nll_answer",
+            "selfcheck_best_overlap",
+            "selfcheck_disagreement",
+            "selfcheck_insufficient",
+            "selfcheck_not_applicable",
+            "selfcheck_refute_rate",
+            "selfcheck_sample_count",
+            "selfcheck_support_rate",
+            "subspace_resid",
+            "truth_proj"
+          ],
+          "has_statements": true,
+          "layer": -12,
+          "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+          "n_false": 85,
+          "n_total": 154,
+          "n_true": 69,
+          "score_count": 15,
+          "score_names": [
+            "truth_proj",
+            "maha_last",
+            "subspace_resid",
+            "eigenscore",
+            "inside_eigenscore",
+            "inside_semantic_entropy",
+            "inside_embedding_entropy",
+            "nll_answer",
+            "selfcheck_support_rate",
+            "selfcheck_refute_rate",
+            "selfcheck_disagreement",
+            "selfcheck_insufficient",
+            "selfcheck_not_applicable",
+            "selfcheck_sample_count",
+            "selfcheck_best_overlap"
+          ],
+          "statement_count": 154,
+          "sweep_layer_count": 0,
+          "sweep_layers": [],
+          "sweep_score_count": 0,
+          "sweep_score_names": []
+        }
+      },
+      "scores_path": "artifacts/smollm2-l20-direct-selfcheck-signal-fusion/smollm2-l20-selfcheck-scores.manifest.json",
+      "signals": [
+        "truth_proj",
+        "subspace_resid",
+        "eigenscore",
+        "inside_eigenscore",
+        "inside_semantic_entropy",
+        "inside_embedding_entropy",
+        "selfcheck_support_rate",
+        "selfcheck_refute_rate",
+        "selfcheck_disagreement",
+        "selfcheck_not_applicable",
+        "selfcheck_best_overlap"
+      ],
+      "single_results": {
+        "eigenscore": {
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "coverage": 0.9714285714285714,
+              "detection": 0.010588235294117647,
+              "false_alarm": 0.02857142857142857,
+              "pass": true,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 0.9428571428571428,
+              "detection": 0.044117647058823525,
+              "false_alarm": 0.05714285714285714,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "coverage": 0.8214285714285714,
+              "detection": 0.14823529411764708,
+              "false_alarm": 0.17857142857142855,
+              "pass": true,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.4792838874680307,
+          "direction": "higher"
+        },
+        "inside_eigenscore": {
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "coverage": 0.9828571428571429,
+              "detection": 0.017058823529411765,
+              "false_alarm": 0.017142857142857144,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 0.9157142857142857,
+              "detection": 0.09529411764705882,
+              "false_alarm": 0.08428571428571428,
+              "pass": true,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "coverage": 0.8428571428571429,
+              "detection": 0.25588235294117645,
+              "false_alarm": 0.15714285714285714,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.4782608695652174,
+          "direction": "higher"
+        },
+        "inside_embedding_entropy": {
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 0.9871428571428571,
+              "detection": 0.012352941176470589,
+              "false_alarm": 0.012857142857142855,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "coverage": 0.8357142857142857,
+              "detection": 0.24,
+              "false_alarm": 0.16428571428571428,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.5670076726342711,
+          "direction": "higher"
+        },
+        "inside_semantic_entropy": {
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 0.94,
+              "detection": 0.08470588235294117,
+              "false_alarm": 0.06,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "coverage": 0.86,
+              "detection": 0.2152941176470588,
+              "false_alarm": 0.13999999999999999,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.5703324808184144,
+          "direction": "higher"
+        },
+        "selfcheck_best_overlap": {
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.5087809036658142,
+          "direction": "lower"
+        },
+        "selfcheck_disagreement": {
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.5,
+          "direction": "higher"
+        },
+        "selfcheck_not_applicable": {
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.4656436487638534,
+          "direction": "higher"
+        },
+        "selfcheck_refute_rate": {
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.5,
+          "direction": "higher"
+        },
+        "selfcheck_support_rate": {
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "coverage": 1.0,
+              "detection": 0.0,
+              "false_alarm": 0.0,
+              "pass": false,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.5,
+          "direction": "lower"
+        },
+        "subspace_resid": {
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "coverage": 0.9814285714285714,
+              "detection": 0.005294117647058823,
+              "false_alarm": 0.018571428571428572,
+              "pass": false,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 0.9257142857142857,
+              "detection": 0.08294117647058824,
+              "false_alarm": 0.07428571428571429,
+              "pass": true,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "coverage": 0.7885714285714286,
+              "detection": 0.17294117647058824,
+              "false_alarm": 0.21142857142857144,
+              "pass": true,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.5087809036658142,
+          "direction": "higher"
+        },
+        "truth_proj": {
+          "alphas": {
+            "0.05": {
+              "alpha": 0.05,
+              "coverage": 0.9742857142857143,
+              "detection": 0.09941176470588235,
+              "false_alarm": 0.02571428571428571,
+              "pass": true,
+              "repeats": 20
+            },
+            "0.1": {
+              "alpha": 0.1,
+              "coverage": 0.9085714285714286,
+              "detection": 0.17823529411764708,
+              "false_alarm": 0.09142857142857143,
+              "pass": true,
+              "repeats": 20
+            },
+            "0.2": {
+              "alpha": 0.2,
+              "coverage": 0.8028571428571429,
+              "detection": 0.27588235294117647,
+              "false_alarm": 0.19714285714285712,
+              "pass": true,
+              "repeats": 20
+            }
+          },
+          "auroc": 0.6823529411764706,
+          "direction": "higher"
+        }
+      },
+      "uncertainty_signals": [
+        "selfcheck_support_rate",
+        "selfcheck_refute_rate",
+        "selfcheck_disagreement",
+        "selfcheck_not_applicable",
+        "selfcheck_best_overlap"
+      ]
+    }
+  ],
+  "schema_version": 1,
+  "score_dump_cache": {
+    "cache_entries": 5,
+    "enabled": true,
+    "fingerprint": {
+      "attempts": 2,
+      "hit_rate": 0.5,
+      "hits": 1,
+      "misses": 1,
+      "writes": 2
+    },
+    "jsonl_manifest": {
+      "attempts": 2,
+      "hit_rate": 0.5,
+      "hits": 1,
+      "misses": 1,
+      "writes": 1
+    },
+    "jsonl_summary": {
+      "attempts": 1,
+      "hit_rate": 1.0,
+      "hits": 1,
+      "misses": 0,
+      "writes": 1
+    },
+    "jsonl_view": {
+      "attempts": 1,
+      "hit_rate": 0.0,
+      "hits": 0,
+      "misses": 1,
+      "writes": 1
+    }
+  },
+  "seed": 0,
+  "signals": [
+    "truth_proj",
+    "subspace_resid",
+    "eigenscore",
+    "inside_eigenscore",
+    "inside_semantic_entropy",
+    "inside_embedding_entropy",
+    "selfcheck_support_rate",
+    "selfcheck_refute_rate",
+    "selfcheck_disagreement",
+    "selfcheck_not_applicable",
+    "selfcheck_best_overlap"
+  ],
+  "uncertainty_method": "mean_rank",
+  "uncertainty_signals": [
+    "selfcheck_support_rate",
+    "selfcheck_refute_rate",
+    "selfcheck_disagreement",
+    "selfcheck_not_applicable",
+    "selfcheck_best_overlap"
+  ]
+}
