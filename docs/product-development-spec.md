@@ -441,6 +441,10 @@ For product features:
   questions that should move from `quantity_or_arithmetic` to
   `entity_disambiguation` and `5` numeric rows that still need explicit
   candidate-claim binding before any calculator execution.
+  `requeue_world_model_rule_stubs_from_audit.py` now closes that feedback loop
+  by rewriting the `4` mismatched unresolved stubs as `entity_disambiguation`;
+  replaying the adapter/input planner turns them into `4` entity-role tasks in
+  one collection batch, with zero candidate execution or promotion.
   Product implication: unresolved deterministic rule work now enters the same
   explicit input-plan pathway as the larger source-family rule lane, but it
   still cannot affect ProductTrace or release gates until inputs, candidate

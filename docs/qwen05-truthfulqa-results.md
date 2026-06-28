@@ -1325,6 +1325,17 @@ honest: the next work is not to fill every numeric row, but to reroute the
 misclassified rows and only execute calculator checks once explicit
 candidate-claim values are supplied.
 
+`benchmarks/requeue_world_model_rule_stubs_from_audit.py` now performs that
+reroute without turning the rows into evidence. The registered requeue
+`report:truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-stub-requeue:0.1`
+is `ready_for_rule_authoring`: `4/4` audit suggestions become
+`entity_disambiguation` stubs, with `0` skipped suggestions and no copied
+answer/model-answer fields. Replaying `run_world_model_rule_authoring_adapter.py`
+over the requeued stubs blocks as `needs_inputs` (`0/4` executed), and
+`build_world_model_rule_input_collection_plan.py` rebuilds a one-batch
+`entity_role_rule_input_collection` plan with `4` tasks. The unresolved rule
+branch now has a real audit feedback path instead of a dead-end warning.
+
 The citation/search branch of that queue is now ready to hand to an external
 adapter. `build_citation_search_adapter_handoff.py` registers
 `report:truthfulqa-frontier-smollm2-l80-citation-search-adapter-handoff:0.1`

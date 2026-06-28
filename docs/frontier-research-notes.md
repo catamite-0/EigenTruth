@@ -927,6 +927,12 @@ Added the first monitor-first tool-selection audit layer:
   calculator lane and emits non-evidence requeue suggestions to
   `entity_disambiguation`; it also flags `5` numeric rows that still need
   explicit candidate-claim binding before a calculator can produce a candidate.
+- `requeue_world_model_rule_stubs_from_audit.py` turns those suggestions into
+  a corrected rule-authoring worklist: `4/4` suggestions become
+  `entity_disambiguation` stubs, the adapter emits `4` needs-input rows, and
+  the rebuilt plan has one `entity_role_rule_input_collection` batch. This is
+  still monitor-first bookkeeping, not verifier evidence, but it removes the
+  dead-end between audit findings and the next executable adapter pass.
 
 ## Next Research-to-Code Candidates
 

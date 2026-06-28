@@ -1665,6 +1665,46 @@ lane. It emits `4` non-evidence requeue suggestions from
 `5` numeric tasks need explicit candidate-claim binding before execution. This
 prevents the rule lane from blindly filling numeric inputs for entity questions.
 
+Apply the requeue suggestions back to sanitized stubs and rebuild the typed
+entity-role collection plan:
+
+```bash
+RULE_STUB_REQUEUE=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-stub-requeue
+RULE_REQUEUED_ADAPTER=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-authoring-adapter
+RULE_REQUEUED_PLAN=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-input-plan
+
+python benchmarks/requeue_world_model_rule_stubs_from_audit.py \
+  --rule-stubs "$OUT/world-model-rule-stubs.jsonl" \
+  --requeue-suggestions "$RULE_INPUT_AUDIT/rule-input-requeue-suggestions.jsonl" \
+  --output-dir "$RULE_STUB_REQUEUE" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-stub-requeue \
+  --version 0.1
+
+python benchmarks/run_world_model_rule_authoring_adapter.py \
+  --rule-stubs "$RULE_STUB_REQUEUE/requeued-world-model-rule-stubs.jsonl" \
+  --output-dir "$RULE_REQUEUED_ADAPTER" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-authoring-adapter \
+  --version 0.1
+
+python benchmarks/build_world_model_rule_input_collection_plan.py \
+  --input-requests "$RULE_REQUEUED_ADAPTER/world-model-rule-input-requests.jsonl" \
+  --output-dir "$RULE_REQUEUED_PLAN" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-input-plan \
+  --version 0.1
+```
+
+The requeue chain is `ready_for_rule_authoring -> needs_inputs ->
+ready_for_input_collection`: `4/4` audit suggestions become
+`entity_disambiguation` stubs, the adapter emits `4` entity-role input
+requests, and the rebuilt plan groups `4` tasks into one
+`entity_role_rule_input_collection` batch with `subject_entity`,
+`answer_entity`, `requested_role`, `expected_entity`, and `source_citation`
+fields. These rows are still not verifier evidence; they are corrected work
+items for later source-backed filling and promotion.
+
 ## `build_citation_search_adapter_handoff.py`
 
 Prepares the citation/search portion of the unresolved queue for an external

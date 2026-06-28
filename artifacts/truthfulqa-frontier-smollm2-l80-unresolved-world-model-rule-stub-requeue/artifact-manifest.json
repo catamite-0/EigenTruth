@@ -1,0 +1,60 @@
+{
+  "artifacts": {
+    "requeued_world_model_rule_stubs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "requeued-world-model-rule-stubs.jsonl",
+      "sha256": "93634791a78932d66bda97625fb81caff07becd18a201fa30244d2a1ee08c10f",
+      "size_bytes": 8722
+    },
+    "rule_input_requeue_suggestions": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-input-plan-audit/rule-input-requeue-suggestions.jsonl",
+      "sha256": "8737265f19a30bcb31fbf424a60acc4d32938431b97e817ed62a548162b5076c",
+      "size_bytes": 2724
+    },
+    "skipped_requeue_suggestions": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "skipped-requeue-suggestions.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "source_world_model_rule_stubs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-stubs/world-model-rule-stubs.jsonl",
+      "sha256": "cdb1a17e9d9dd3377d287ce534425c3a905df358dbf494361eeae7949948d89f",
+      "size_bytes": 8646
+    },
+    "world_model_rule_stub_requeue": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-stub-requeue.json",
+      "sha256": "3a9ff2ac89b3c596ad952f4c4b0d40566051c38428820fe33d8cd9be716f8e8d",
+      "size_bytes": 12526
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "evidence": "unresolved-world-model-rule-stub-requeue",
+    "requeued_stub_count": 4,
+    "skipped_suggestion_count": 0,
+    "status": "ready_for_rule_authoring",
+    "suite": "truthfulqa-smollm2-l80",
+    "workflow": "world_model_rule_stub_requeue"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

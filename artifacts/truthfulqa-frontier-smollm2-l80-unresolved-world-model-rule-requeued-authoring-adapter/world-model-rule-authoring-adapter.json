@@ -1,0 +1,50 @@
+{
+  "label_usage": {
+    "answers_copied_to_rule_inputs": false,
+    "candidate_results_require_promotion_gate": true,
+    "labels_used_for_rule_execution": false,
+    "rule_stubs_are_verifier_evidence": false
+  },
+  "metadata": {
+    "evidence": "unresolved-world-model-rule-requeued-authoring-adapter",
+    "suite": "truthfulqa-smollm2-l80"
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-authoring-adapter/artifact-manifest.json",
+    "input_requests": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-authoring-adapter/world-model-rule-input-requests.jsonl",
+    "report": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-authoring-adapter/world-model-rule-authoring-adapter.json",
+    "rule_results": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-authoring-adapter/world-model-rule-results.jsonl"
+  },
+  "schema_version": 1,
+  "scope": "Executes deterministic calculator/entity-role checks only when explicit rule inputs are provided. Missing-input rows are rule-authoring work items, not verifier evidence.",
+  "source": {
+    "rule_inputs": null,
+    "rule_stubs": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-stub-requeue/requeued-world-model-rule-stubs.jsonl"
+  },
+  "status": "needs_inputs",
+  "summary": {
+    "adapter_counts": {
+      "entity_role_disambiguation": 4
+    },
+    "candidate_error_count": 0,
+    "candidate_refuted_count": 0,
+    "candidate_supported_count": 0,
+    "executed_count": 0,
+    "input_request_count": 4,
+    "missing_input_counts": {
+      "answer_entity": 4,
+      "requested_role": 4,
+      "subject_entity": 4
+    },
+    "needs_input_count": 4,
+    "result_count": 4,
+    "rule_family_counts": {
+      "entity_disambiguation": 4
+    },
+    "status_counts": {
+      "needs_inputs": 4
+    },
+    "stub_count": 4
+  },
+  "workflow": "world_model_rule_authoring_adapter"
+}

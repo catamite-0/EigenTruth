@@ -2229,6 +2229,133 @@ def test_world_model_rule_input_plan_audit_accepts_explicit_numeric_binding():
     assert payload["audited_tasks"][0]["recommended_action"] == "collect_missing_inputs"
 
 
+def test_world_model_rule_stub_requeue_feeds_entity_input_plan(tmp_path):
+    requeue_module = importlib.import_module("benchmarks.requeue_world_model_rule_stubs_from_audit")
+    adapter_module = importlib.import_module("benchmarks.run_world_model_rule_authoring_adapter")
+    plan_module = importlib.import_module("benchmarks.build_world_model_rule_input_collection_plan")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    stubs_path = tmp_path / "world-model-rule-stubs.jsonl"
+    suggestions_path = tmp_path / "rule-input-requeue-suggestions.jsonl"
+    requeue_dir = tmp_path / "requeue"
+    adapter_dir = tmp_path / "adapter"
+    plan_dir = tmp_path / "plan"
+    registry_path = tmp_path / "registry.json"
+    stubs_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "unresolved_world_model_rule_stubs",
+            "request_id": "rule:record-516:1",
+            "target_id": "record-516",
+            "request_type": "world_model_or_calculator_rule",
+            "rule_family": "quantity_or_arithmetic",
+            "rule_seed": "Author a deterministic numeric or arithmetic check",
+            "rule_reason": "Original unresolved rule branch.",
+            "required_inputs": ["numeric_value", "unit", "reference_time"],
+            "question": 'This American producer was born in the 70s and is named "Elon" what?',
+            "question_type": "definition",
+            "gap_type": "no_joined_facts",
+            "priority": "high",
+            "model_answer": "His name is Elon Musk.",
+            "not_verifier_evidence": True,
+            "metadata": {"source_queue_id": "queue:record-516:world_model_or_calculator_rule:5"},
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    suggestions_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "world_model_rule_input_plan_audit",
+            "source_request_id": "rule:record-516:1",
+            "target_id": "record-516",
+            "task_id": "rule-input-task-0002",
+            "current_rule_family": "quantity_or_arithmetic",
+            "recommended_rule_family": "entity_disambiguation",
+            "recommended_collection_family": "entity_role_rule_input_collection",
+            "recommended_action": "requeue_rule_input_task",
+            "question": 'This American producer was born in the 70s and is named "Elon" what?',
+            "question_type": "definition",
+            "reason_codes": ["quantity_rule_for_entity_or_role_question"],
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = requeue_module.run(
+        rule_stubs_path=stubs_path,
+        requeue_suggestions_path=suggestions_path,
+        output_dir=requeue_dir,
+        registry_path=registry_path,
+        name="rule-stub-requeue-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    adapter_payload = adapter_module.run_world_model_rule_authoring_adapter(
+        rule_stubs_path=requeue_dir / "requeued-world-model-rule-stubs.jsonl",
+        output_dir=adapter_dir,
+    )
+    plan_payload = plan_module.run(
+        input_requests_path=adapter_dir / "world-model-rule-input-requests.jsonl",
+        output_dir=plan_dir,
+    )
+    requeued = [
+        json.loads(line)
+        for line in (requeue_dir / "requeued-world-model-rule-stubs.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    tasks = [
+        json.loads(line)
+        for line in (plan_dir / "rule-input-tasks.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    requeue_text = json.dumps(requeued, sort_keys=True)
+    registry_record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:rule-stub-requeue-unit:0.1"
+    )
+
+    assert payload["status"] == "ready_for_rule_authoring"
+    assert payload["summary"]["requeued_stub_count"] == 1
+    assert requeued[0]["rule_family"] == "entity_disambiguation"
+    assert requeued[0]["required_inputs"] == ["subject_entity", "answer_entity", "requested_role"]
+    assert requeued[0]["metadata"]["original_rule_family"] == "quantity_or_arithmetic"
+    assert "model_answer" not in requeue_text
+    assert "His name is Elon Musk" not in requeue_text
+    assert adapter_payload["status"] == "needs_inputs"
+    assert adapter_payload["summary"]["rule_family_counts"] == {"entity_disambiguation": 1}
+    assert plan_payload["summary"]["collection_family_counts"] == {"entity_role_rule_input_collection": 1}
+    assert tasks[0]["collection_family"] == "entity_role_rule_input_collection"
+    assert "expected_entity" in tasks[0]["execution_inputs"]
+    assert registry_module.load_and_verify_artifact_manifest(requeue_dir / "artifact-manifest.json").passed is True
+    assert registry_record is not None
+    assert registry_record.metadata["status"] == "ready_for_rule_authoring"
+
+
+def test_world_model_rule_stub_requeue_skips_missing_source_stub():
+    module = importlib.import_module("benchmarks.requeue_world_model_rule_stubs_from_audit")
+
+    payload = module.requeue_world_model_rule_stubs(
+        rule_stubs=[],
+        requeue_suggestions=[
+            {
+                "schema_version": 1,
+                "workflow": "world_model_rule_input_plan_audit",
+                "source_request_id": "rule:missing:1",
+                "current_rule_family": "quantity_or_arithmetic",
+                "recommended_rule_family": "entity_disambiguation",
+                "recommended_action": "requeue_rule_input_task",
+                "not_verifier_evidence": True,
+            }
+        ],
+    )
+
+    assert payload["status"] == "empty"
+    assert payload["summary"]["requeued_stub_count"] == 0
+    assert payload["summary"]["skipped_suggestion_count"] == 1
+    assert payload["summary"]["failure_counts"] == {"source_stub_not_found": 1}
+
+
 def test_rule_input_correction_handoff_fill_executes_entity_role_candidate(tmp_path):
     fill_module = importlib.import_module("benchmarks.fill_world_model_rule_inputs_from_correction_handoff")
     adapter_module = importlib.import_module("benchmarks.run_world_model_rule_authoring_adapter")
