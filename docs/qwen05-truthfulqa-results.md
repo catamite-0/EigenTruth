@@ -1334,6 +1334,19 @@ fingerprints while remaining `not_verifier_evidence`. This is the next input to
 real OpenAlex/Crossref, official-site, statistics, news, or source-specific
 catalog adapters.
 
+`benchmarks/run_crossref_source_family_catalog_adapter.py` executes the first
+provider-specific slice of that plan. The registered Crossref scholarly catalog
+consumes the `21` scholarly tasks, runs `42` query variants, writes `48`
+deduplicated source-family documents, records `0` request errors, and excludes
+labels, target ids, row ids, and model answers from catalog metadata. Rerunning
+the source-family workflow with the cached Wikidata reference catalog plus this
+Crossref scholarly catalog gives `340` source catalog documents, `528` adapter
+results for `176/176` requests, and `164` Crossref scholarly result rows.
+Provenance passes, but route promotion stays blocked because no blind-spot
+query strategy passes and the controlled-vs-external comparison remains
+blocked. So this is a real catalog-family coverage step, not a correction-route
+promotion.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -1359,13 +1372,14 @@ catalog adapters.
 6. Promote a Qwen l20/l80 readiness baseline through the same registry workflow
    if Qwen-specific runtime evidence is needed; SmolLM2 now has the first
    non-tiny registered readiness/release candidate.
-7. Execute the 28-task source-family catalog collection plan with targeted
-   official/statistical, scholarly, news, or source-specific adapters, then
-   rerun `run_source_family_citation_search_workflow.py`. The cached Wikidata
-   reference catalog now proves the workflow executes, but it covers `0/176`
-   non-fallback family targets and still refutes `0/89`; only promote future
-   catalogs if provenance, external query-sweep, and controlled-vs-external
-   comparison gates pass.
+7. Continue the source-family catalog collection plan after the completed
+   Crossref scholarly slice: add official/statistical, news, and more
+   source-specific adapters, then rerun
+   `run_source_family_citation_search_workflow.py`. The Wikidata plus Crossref
+   workflow now proves execution and fills a scholarly catalog slot, but still
+   has no passing blind-spot query strategy; only promote future catalogs if
+   provenance, external query-sweep, and controlled-vs-external comparison gates
+   pass.
 8. Extend the new verifier-stability path from structured QA to real retrieval,
    database, calculator, and world-model evidence under the same conformal
    false-alarm budgets. Use `benchmarks/build_evidence_fixture.py` with a local

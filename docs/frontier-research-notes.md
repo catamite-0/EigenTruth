@@ -768,11 +768,22 @@ Added the first monitor-first tool-selection audit layer:
   search, official-site search, statistics APIs/catalogs, and news archives.
   This is still not evidence, but it is the executable boundary for the next
   source-specific adapter pass.
+- `run_crossref_source_family_catalog_adapter.py` now fills the first real
+  provider-specific slice of that graph. The registered Crossref scholarly
+  catalog consumes `21` scholarly tasks, runs `42` bibliographic query variants,
+  writes `48` deduplicated catalog docs, and records `0` request errors. When
+  combined with the cached Wikidata reference catalog, the source-family
+  workflow sees `340` source docs and returns `528` adapter results for
+  `176/176` requests, including `164` scholarly result rows. It still remains
+  `blocked`: provenance passes, but no blind-spot query strategy passes and the
+  controlled-vs-external comparison is blocked. This is the expected
+  fail-closed result for a broad scholarly catalog: it improves catalog-family
+  coverage without yet proving correction quality.
 
 ## Next Research-to-Code Candidates
 
 1. Convert the target-specific Wikidata source docs into structured-fact/QA corpora, then rerun the blind-spot correction-route audit instead of another lexical overlap sweep.
-2. Execute the 28-task source-family catalog collection plan with targeted official/statistical/scholarly/news/source-specific adapters, then rerun `run_source_family_citation_search_workflow.py`; the cached Wikidata reference catalog proves execution but covers `0/176` non-fallback family targets and refutes `0/89` blind spots.
+2. Continue the source-family catalog collection plan beyond the completed Crossref scholarly slice: add official/statistical, news, and more source-specific adapters, then rerun `run_source_family_citation_search_workflow.py`; the combined Wikidata plus Crossref run proves execution and scholarly coverage, but still has no passing blind-spot query strategy.
 3. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
 4. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
 5. Materialize a real `frontier_audit` release candidate with the registered covered-facts external-evidence handoff and external-prediction triple matrix artifact, then export the resulting promotion contract.

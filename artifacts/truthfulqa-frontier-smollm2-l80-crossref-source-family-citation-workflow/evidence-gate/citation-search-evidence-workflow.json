@@ -1,0 +1,92 @@
+{
+  "config": {
+    "alpha": 0.1,
+    "corpus_name": "unresolved_blind_spot_citation_search",
+    "max_alternate_queries": 3,
+    "max_claim_id_link_rate": 0.0,
+    "max_controlled_verified_false_alarm": 0.05,
+    "max_exact_answer_copy_rate": 0.8,
+    "max_external_verified_false_alarm": 0.05,
+    "max_label_metadata_rate": 0.0,
+    "max_requests": null,
+    "max_results_per_request": null,
+    "max_verified_false_alarm": 0.05,
+    "min_blind_refuted_rate": 0.5,
+    "min_controlled_blind_refuted_rate": 0.5,
+    "min_external_blind_refuted_rate": 0.5,
+    "query_fields": [
+      "question_answer"
+    ],
+    "query_mode": "claim_entity",
+    "repeats": 1,
+    "retrieval_limit": 3,
+    "retriever_min_overlaps": [
+      0.5
+    ],
+    "seed": 0,
+    "signal": "truth_proj",
+    "source_kind": "external_citation_search_result",
+    "verifier_min_overlap": 0.65
+  },
+  "gate": {
+    "blocking_reasons": [
+      {
+        "gate": "query_sweep",
+        "reason": "No blind-spot query strategy passed the configured gates."
+      },
+      {
+        "gate": "query_sweep_comparison",
+        "reason": "Controlled-vs-external comparison status is blocked."
+      }
+    ],
+    "comparison_required": true,
+    "passed": false,
+    "promotion_ready": false,
+    "status": "blocked"
+  },
+  "metadata": {
+    "evidence": "wikidata_reference_plus_crossref_scholarly_catalog",
+    "source_workflow": "source_family_citation_search_workflow",
+    "suite": "truthfulqa_frontier_smollm2_l80"
+  },
+  "paths": {
+    "adapter_requests": "artifacts/truthfulqa-frontier-smollm2-l80-crossref-source-family-citation-workflow/evidence-gate/citation-search-adapter-requests.jsonl",
+    "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-crossref-source-family-citation-workflow/evidence-gate/artifact-manifest.json",
+    "external_retrieval_corpus": "artifacts/truthfulqa-frontier-smollm2-l80-crossref-source-family-citation-workflow/evidence-gate/citation-search-corpus.json",
+    "handoff_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-crossref-source-family-citation-workflow/evidence-gate/citation-search-handoff-manifest.json",
+    "handoff_report": "artifacts/truthfulqa-frontier-smollm2-l80-crossref-source-family-citation-workflow/evidence-gate/citation-search-handoff.json",
+    "provenance_audit": "artifacts/truthfulqa-frontier-smollm2-l80-crossref-source-family-citation-workflow/evidence-gate/citation-search-provenance-audit.json",
+    "query_sweep": "artifacts/truthfulqa-frontier-smollm2-l80-crossref-source-family-citation-workflow/evidence-gate/citation-search-query-sweep.json",
+    "query_sweep_comparison": "artifacts/truthfulqa-frontier-smollm2-l80-crossref-source-family-citation-workflow/evidence-gate/citation-search-query-sweep-comparison.json",
+    "query_sweep_comparison_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-crossref-source-family-citation-workflow/evidence-gate/citation-search-query-sweep-comparison-manifest.json",
+    "query_sweep_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-crossref-source-family-citation-workflow/evidence-gate/citation-search-query-sweep-manifest.json",
+    "source_documents": "artifacts/truthfulqa-frontier-smollm2-l80-crossref-source-family-citation-workflow/evidence-gate/citation-search-source-docs.jsonl",
+    "workflow_report": "artifacts/truthfulqa-frontier-smollm2-l80-crossref-source-family-citation-workflow/evidence-gate/citation-search-evidence-workflow.json"
+  },
+  "schema_version": 1,
+  "source": {
+    "adapter_results": "artifacts/truthfulqa-frontier-smollm2-l80-crossref-source-family-citation-workflow/source-family-citation-search-results.jsonl",
+    "blind_spots": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json",
+    "controlled_sweeps": [
+      "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json"
+    ],
+    "queue_report": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue/unresolved-evidence-queue.json",
+    "scores": "artifacts/smollm2_truthfulqa_l80_scores_with_statements.json"
+  },
+  "status": "blocked",
+  "summary": {
+    "adapter_request_count": 176,
+    "comparison_passed": false,
+    "comparison_status": "blocked",
+    "corpus_document_count": 528,
+    "evidence_class": "external_candidate",
+    "provenance_passed": true,
+    "provenance_status": "pass",
+    "query_sweep_best_passing_blind_refuted_count": null,
+    "query_sweep_best_passing_strategy": null,
+    "query_sweep_best_strategy": "question_answer_overlap_0p5",
+    "recommended_external_strategy": null,
+    "source_document_count": 528
+  },
+  "workflow": "citation_search_evidence_workflow"
+}

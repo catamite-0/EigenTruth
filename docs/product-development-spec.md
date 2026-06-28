@@ -529,6 +529,19 @@ For product features:
   OpenAlex/Crossref, official-site, statistics API, news, or source-specific
   adapters can now fill a small task set before the resulting catalogs re-enter
   `run_source_family_citation_search_workflow.py`.
+- `run_crossref_source_family_catalog_adapter.py` executes the first real
+  provider-specific collection pass for the scholarly slice. The registered
+  Crossref catalog consumes the `21` scholarly tasks, runs `42` query variants,
+  writes `48` deduplicated scholarly source-family documents, and keeps label,
+  row id, target id, and model-answer fields out of the catalog boundary. A
+  combined Wikidata-reference plus Crossref-scholarly source-family workflow
+  then has `340` source catalog documents, returns `528` adapter results for
+  `176/176` requests, and passes provenance, but still blocks promotion because
+  no external query strategy passes and the controlled-vs-external comparison is
+  blocked. Product implication: the scholarly catalog slot is now executable
+  and auditable, but broad bibliographic Crossref matching is not enough; the
+  next catalogs need better query relevance, official/statistical coverage, or
+  source-specific semantics before route defaults can change.
 
 ### Next Verification Adapter Work
 

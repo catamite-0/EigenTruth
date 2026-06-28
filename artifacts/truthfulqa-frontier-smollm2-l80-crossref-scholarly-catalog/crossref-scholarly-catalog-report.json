@@ -1,0 +1,54 @@
+{
+  "config": {
+    "api_base_url": "https://api.crossref.org/works",
+    "include_abstracts": false,
+    "max_query_variants": 2,
+    "max_tasks": null,
+    "min_delay_seconds": 0.2,
+    "rows_per_query": 2,
+    "source_family": "scholarly",
+    "timeout_seconds": 20.0
+  },
+  "errors": [],
+  "metadata": {
+    "source": "source_family_catalog_collection_plan",
+    "suite": "truthfulqa_frontier_smollm2_l80"
+  },
+  "output_path": "artifacts/truthfulqa-frontier-smollm2-l80-crossref-scholarly-catalog/crossref-scholarly-catalog.jsonl",
+  "schema_version": 1,
+  "source": {
+    "collection_tasks": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-catalog-collection-plan/source-family-catalog-collection-tasks.jsonl"
+  },
+  "status": "ready",
+  "summary": {
+    "crossref_type_counts": {
+      "book": 1,
+      "book-chapter": 23,
+      "component": 4,
+      "dataset": 1,
+      "dissertation": 1,
+      "journal-article": 6,
+      "other": 2,
+      "posted-content": 3,
+      "proceedings-article": 1,
+      "reference-book": 2,
+      "reference-entry": 2,
+      "report-component": 2
+    },
+    "error_count": 0,
+    "provider_counts": {
+      "crossref": 48
+    },
+    "query_count": 42,
+    "skipped_duplicate_count": 36,
+    "source_document_count": 48,
+    "source_family_counts": {
+      "scholarly": 48
+    },
+    "task_count": 21,
+    "task_source_family_counts": {
+      "scholarly": 21
+    }
+  },
+  "workflow": "crossref_source_family_catalog_adapter"
+}

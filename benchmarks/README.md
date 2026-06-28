@@ -1882,6 +1882,82 @@ label/model-answer fields out of the boundary. This is the next executable
 handoff before filling real source catalogs and rerunning
 `run_source_family_citation_search_workflow.py`.
 
+## `run_crossref_source_family_catalog_adapter.py`
+
+Executes the scholarly slice of the source-family collection plan through the
+Crossref REST `/works` endpoint. The adapter uses `query.bibliographic` over
+collection-task query variants, emits adapter-ready source-family catalog JSONL,
+deduplicates by DOI or stable title/container fingerprints, and keeps label,
+record id, target id, and model-answer fields out of the catalog boundary.
+Abstracts are excluded by default so the artifact is a compact bibliographic
+catalog, not a high-volume text corpus.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-crossref-scholarly-catalog
+
+python benchmarks/run_crossref_source_family_catalog_adapter.py \
+  --tasks artifacts/truthfulqa-frontier-smollm2-l80-source-family-catalog-collection-plan/source-family-catalog-collection-tasks.jsonl \
+  --output "$OUT/crossref-scholarly-catalog.jsonl" \
+  --report-json "$OUT/crossref-scholarly-catalog-report.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-crossref-scholarly-catalog \
+  --version 0.1 \
+  --max-query-variants 2 \
+  --rows-per-query 2 \
+  --min-delay-seconds 0.2 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=source_family_catalog_collection_plan
+```
+
+The registered Crossref catalog consumes the `21` scholarly collection tasks,
+runs `42` query variants, writes `48` deduplicated scholarly catalog documents,
+and records `0` request errors. The resulting catalog can be combined with the
+cached Wikidata reference catalog and passed back through the fail-closed
+source-family workflow:
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-crossref-source-family-citation-workflow
+
+python benchmarks/run_source_family_citation_search_workflow.py \
+  --queue artifacts/truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue/unresolved-evidence-queue.json \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog/source-family-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-crossref-scholarly-catalog/crossref-scholarly-catalog.jsonl \
+  --scores artifacts/smollm2_truthfulqa_l80_scores_with_statements.json \
+  --blind-spots artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
+  --controlled-sweep artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json \
+  --output-dir "$OUT" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-crossref-source-family-citation-workflow \
+  --version 0.1 \
+  --query-mode claim_entity \
+  --max-alternate-queries 3 \
+  --adapter-max-results 3 \
+  --adapter-max-query-variants 3 \
+  --adapter-min-text-overlap 0.03 \
+  --query-fields question_answer \
+  --retriever-min-overlaps 0.5 \
+  --retrieval-limit 3 \
+  --alpha 0.1 \
+  --max-verified-false-alarm 0.05 \
+  --min-blind-refuted-rate 0.5 \
+  --min-controlled-blind-refuted-rate 0.5 \
+  --min-external-blind-refuted-rate 0.5 \
+  --max-controlled-verified-false-alarm 0.05 \
+  --max-external-verified-false-alarm 0.05 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=wikidata_reference_plus_crossref_scholarly_catalog
+```
+
+The combined registered workflow has `340` source catalog documents
+(`292` Wikidata reference plus `48` Crossref scholarly), returns `528` adapter
+results for `176/176` requests, and includes `164` Crossref scholarly result
+rows. Provenance passes, but route promotion remains blocked because no blind
+spot query strategy passes the configured gates and the controlled-vs-external
+comparison is still blocked. This is useful partial evidence: the scholarly
+catalog slot is filled and auditable, but broad Crossref bibliographic matching
+is not enough to promote the correction route.
+
 ## `run_wikipedia_citation_search_adapter.py`
 
 Runs a dependency-free MediaWiki/Wikipedia search adapter for sanitized

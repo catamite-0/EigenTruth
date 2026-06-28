@@ -1,0 +1,62 @@
+{
+  "artifacts": {
+    "adapter_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-citation-search-adapter-report.json",
+      "sha256": "e56b5bd6f5bbd21f9a881d69baa1fd2797a4adf6aed86184ca7aacad2fb44581",
+      "size_bytes": 1491
+    },
+    "adapter_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-citation-search-requests.jsonl",
+      "sha256": "bd1066a0815031d0b943547f6c9655fc750c36f8afd3c88e2ec4e6fe1b431a29",
+      "size_bytes": 238759
+    },
+    "adapter_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-citation-search-results.jsonl",
+      "sha256": "6287641d8fb7dea8a09af3557d9cb5c77112b97fe17f74abd1a8aa7e4dac402c",
+      "size_bytes": 1007184
+    },
+    "source_catalog_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog/source-family-catalog.jsonl",
+      "sha256": "c3b4ecefc1ce62de36d4e91f38bc70eb78dbce8635a7a84c275afc8475fb7b76",
+      "size_bytes": 321194
+    },
+    "source_catalog_2": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-crossref-scholarly-catalog/crossref-scholarly-catalog.jsonl",
+      "sha256": "6db26a929c51531f1e54f6149314f509a39afca414d209ad5f30011fb95af47f",
+      "size_bytes": 72516
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "evidence": "wikidata_reference_plus_crossref_scholarly_catalog",
+    "request_count": 176,
+    "request_with_results_count": 176,
+    "result_count": 528,
+    "source_document_count": 340,
+    "source_workflow": "source_family_citation_search_workflow",
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "workflow": "source_family_citation_search_adapter"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}
