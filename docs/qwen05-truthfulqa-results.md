@@ -1422,6 +1422,17 @@ The practical conclusion is that source-family coverage is solved for this
 queue; next work should improve structured correction routes, not broaden
 lexical groundedness catalogs.
 
+`benchmarks/build_source_family_qa_corpus.py` is the first structured route
+bridge for that complete source-family queue. Running it on the seeded-news
+groundedness workflow results writes
+`artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-corpus/`:
+`528` source-family result docs produce `164` structured-metadata candidates and
+`18` label-free structured QA records (`16` Wikidata/reference, `2` World Bank
+official-statistics). It skips unsupported providers and duplicate structured
+facts, and it rejects reserved label/model-answer/request metadata at the
+builder boundary. This is a covered-fact candidate corpus for structured QA
+verification, not a promotion of the blocked lexical groundedness route.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -1449,11 +1460,11 @@ lexical groundedness catalogs.
    non-tiny registered readiness/release candidate.
 7. Source-family catalog acquisition is now closed for the current SmolLM2 l80
    frontier queue: `official=36/36`, `official_statistics=4/4`,
-   `scholarly=156/156`, and `news=4/4` are covered. The next verification step
-   is not another catalog source; it is converting this coverage into a stronger
-   route gate by improving the blind-spot query strategy and
-   controlled-vs-external comparison, then promoting only if provenance,
-   external query-sweep, and comparison gates pass.
+   `scholarly=156/156`, and `news=4/4` are covered. The new source-family
+   structured QA builder extracts `18` safe covered-fact candidates from that
+   queue, so the next verification step is to turn those candidates into a
+   route-quality audit rather than adding another catalog source or promoting
+   lexical groundedness.
 8. Extend the new verifier-stability path from structured QA to real retrieval,
    database, calculator, and world-model evidence under the same conformal
    false-alarm budgets. Use `benchmarks/build_evidence_fixture.py` with a local

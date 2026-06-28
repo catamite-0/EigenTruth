@@ -2135,6 +2135,35 @@ controlled groundedness sweep refutes `1/89`, and external verified false alarm
 is `0.136` against the `0.05` gate. Treat it as diagnostic evidence, not a
 route-promotion artifact.
 
+## `build_source_family_qa_corpus.py`
+
+Builds a conservative structured QA corpus from source-family catalog or adapter
+results. The builder only materializes facts already present as structured
+metadata, currently Wikidata `subject/property/value` rows and World Bank
+`country/indicator/year/value` rows. Free-form news pages, scholarly records,
+official pages, and generic web text remain source documents and are not
+promoted into verifier facts by this command.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-corpus
+
+python benchmarks/build_source_family_qa_corpus.py \
+  --source artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-groundedness-source-family-citation-workflow/source-family-citation-search-results.jsonl \
+  --output "$OUT/source-family-structured-qa-corpus.json" \
+  --report-json "$OUT/source-family-structured-qa-corpus-report.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --metadata evidence=seeded_news_source_family_groundedness
+```
+
+The current artifact reads `528` source-family adapter result documents and
+finds `164` structured-metadata candidates. It writes `18` label-free structured
+QA records: `16` from Wikidata/reference metadata and `2` from World Bank
+official-statistics metadata. It skips `364` unsupported provider rows and
+`146` duplicate structured facts; reserved label/model-answer/request metadata
+is rejected rather than copied into document metadata. This is a covered-fact
+candidate corpus for the structured QA route, not evidence that the blocked
+lexical groundedness route should be promoted.
+
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:
 

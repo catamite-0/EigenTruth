@@ -1,0 +1,44 @@
+{
+  "artifacts": {
+    "source_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-seeded-news-groundedness-source-family-citation-workflow/source-family-citation-search-results.jsonl",
+      "sha256": "83bf21fca170ab8fb7de0a3bd95e57314b8f91e0e58b261eead02eb6ea948d6d",
+      "size_bytes": 2725648
+    },
+    "source_family_structured_qa_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-structured-qa-corpus.json",
+      "sha256": "4d2147825f82f2ba3d35415239ffda44c686d1902fe51b3eebf6881642fe0319",
+      "size_bytes": 23437
+    },
+    "source_family_structured_qa_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-structured-qa-corpus-report.json",
+      "sha256": "fa323ac4a45dfa41e9ac90e0eca91b967f88fd8abe1785d627c753cce636e766",
+      "size_bytes": 1281
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "candidate_document_count": 164,
+    "corpus_type": "source_family_structured_qa_external_evidence",
+    "document_count": 18,
+    "evidence": "seeded_news_source_family_groundedness",
+    "status": "ready",
+    "workflow": "source_family_structured_qa_corpus_builder"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

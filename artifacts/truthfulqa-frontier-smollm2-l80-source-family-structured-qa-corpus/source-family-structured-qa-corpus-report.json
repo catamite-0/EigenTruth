@@ -1,0 +1,41 @@
+{
+  "config": {
+    "skip_qid_values": true
+  },
+  "metadata": {
+    "evidence": "seeded_news_source_family_groundedness"
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-corpus/artifact-manifest.json",
+    "qa_corpus": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-corpus/source-family-structured-qa-corpus.json",
+    "report": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-corpus/source-family-structured-qa-corpus-report.json"
+  },
+  "schema_version": 1,
+  "source": {
+    "source_paths": [
+      "artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-groundedness-source-family-citation-workflow/source-family-citation-search-results.jsonl"
+    ]
+  },
+  "status": "ready",
+  "summary": {
+    "by_provider": {
+      "wikidata": 16,
+      "worldbank": 2
+    },
+    "by_source_family": {
+      "official_statistics": 2,
+      "reference": 16
+    },
+    "n_candidate_documents": 164,
+    "n_documents": 18,
+    "n_source_documents": 528,
+    "skipped": {
+      "duplicates": 146,
+      "missing_fields": 0,
+      "qid_values": 0,
+      "reserved_metadata": 0,
+      "unsupported_provider": 364
+    }
+  },
+  "workflow": "source_family_structured_qa_corpus_builder"
+}

@@ -841,10 +841,21 @@ Added the first monitor-first tool-selection audit layer:
   controlled `retrieval_groundedness` sweep reaches only `1/89`. Conclusion:
   the source-family acquisition loop is complete, but groundedness-style lexical
   evidence should stay diagnostic until structured route-quality improves.
+- `build_source_family_qa_corpus.py` adds the conservative structured bridge out
+  of that completed acquisition loop. It only promotes rows that already carry
+  structured metadata, currently Wikidata `subject/property/value` and World
+  Bank `country/indicator/year/value`, and leaves free-form news/scholarly/web
+  text as source documents. On the seeded-news groundedness source-family
+  workflow it reads `528` result docs, finds `164` structured candidates, and
+  writes `18` label-free structured QA records (`16` Wikidata, `2` World Bank).
+  This creates a covered-fact candidate corpus for structured QA route audits;
+  it does not promote `retrieval_groundedness`.
 
 ## Next Research-to-Code Candidates
 
-1. Convert the target-specific Wikidata source docs into structured-fact/QA corpora, then rerun the blind-spot correction-route audit instead of another lexical overlap sweep.
+1. Run a route-quality audit over the new source-family structured QA candidate
+   corpus, and only then decide whether any of those facts should become a
+   covered-fact correction handoff.
 2. Move from source-family acquisition to route-quality improvement: the current
    queue now has complete source-family coverage, but still has no passing
    blind-spot query strategy. The next code step should improve structured query
