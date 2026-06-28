@@ -349,6 +349,16 @@ still blocked with `0` covered matches and `0` mapped correction candidates.
 This is a clean negative result: the disambiguation facts are locally reliable,
 but they do not yet answer the unresolved claim intents.
 
+The full lane replay confirms that negative result at the current local-catalog
+coverage ceiling. Replaying all `24` source-backed batches runs `715` requests
+over `87` targets, returns `2145` candidate results, and rebuilds `63`
+structured QA facts; the covered-fact route still promotes on `126` balanced
+rows, but unresolved-claim mapping remains `0/88`. Rule-only lane execution is
+now wired separately: the `5` world-model/calculator batches emit `37`
+non-evidence rule stubs over `34` targets and are `ready_for_rule_authoring`.
+The next implementation step is therefore a deterministic calculator/world-model
+executor for those stubs, not another source-backed catalog replay.
+
 ## Product Trace Demo
 
 `examples/calibrated_control_demo.py` now defaults to the best repository l80

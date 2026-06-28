@@ -2579,6 +2579,45 @@ disambiguation batch improves covered-fact quality but does not yet align to the
 unresolved claim intents, so the next pass should run the adjacent
 structured-fact/entity/citation/rule batches rather than lowering thresholds.
 
+The adjacent source-backed lanes and the full source-backed queue have now been
+replayed with the same manifest boundary. Batches `0003`-`0005` run `120`
+source-backed requests over the same `12` answer-collision targets, return `360`
+candidate results, and rebuild `39` structured QA documents. The full
+source-backed queue (`24` non-rule batches) runs `715` requests over `87`
+targets, returns `2145` candidate results, and rebuilds `63` structured QA
+documents. Both covered-fact route audits promote (`78` and `126` balanced
+records respectively), but both claim-mapping audits remain blocked with `0/88`
+covered matches and `0/88` mapped correction candidates. This establishes the
+current local-catalog coverage ceiling: the source-backed facts are internally
+verifiable but still do not answer the unresolved TruthfulQA claim intents.
+
+Rule-only batches are now executable as non-evidence rule-authoring artifacts:
+
+```bash
+RULE=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-lane-batches-rule-authoring-all
+
+python benchmarks/run_source_family_structured_qa_lane_batch_workflow.py \
+  --lane-queue "$QUEUE/lane-execution-queue.json" \
+  --collection-corpus "$CORPUS/fact-collection-corpus.json" \
+  --batch-id sfqa-lane-batch-0002 \
+  --batch-id sfqa-lane-batch-0007 \
+  --batch-id sfqa-lane-batch-0011 \
+  --batch-id sfqa-lane-batch-0015 \
+  --batch-id sfqa-lane-batch-0027 \
+  --output-dir "$RULE" \
+  --json "$RULE/lane-batch-workflow.json" \
+  --batch-collection-corpus "$RULE/lane-batch-collection-corpus.json" \
+  --artifact-manifest "$RULE/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_post_correction_lane_execution_queue
+```
+
+That registered run is `ready_for_rule_authoring`: `5` rule batches cover `34`
+targets and emit `37` `world_model_or_calculator_rule` stubs, with no child
+source-catalog adapter execution and no verifier-evidence claim. The next
+implementation step is a deterministic calculator/world-model executor for
+those stubs, not another source-backed catalog replay.
+
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:
 

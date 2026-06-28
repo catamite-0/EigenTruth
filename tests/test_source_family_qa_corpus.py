@@ -1575,3 +1575,113 @@ def test_source_family_structured_qa_lane_batch_workflow_replays_selected_batch(
     assert registry_module.load_and_verify_artifact_manifest(output_dir / "artifact-manifest.json").passed is True
     assert registry_record is not None
     assert registry_record.metadata["source_backed_request_count"] == 1
+
+
+def test_source_family_structured_qa_lane_batch_workflow_emits_rule_only_batch(tmp_path):
+    module = importlib.import_module("benchmarks.run_source_family_structured_qa_lane_batch_workflow")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    lane_queue_path = tmp_path / "lane-execution-queue.json"
+    collection_path = tmp_path / "fact-collection-corpus.json"
+    output_dir = tmp_path / "rule-lane-batch"
+    registry_path = tmp_path / "registry.json"
+    lane_queue_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "source_family_structured_qa_lane_execution_queue",
+            "status": "ready_for_adapter_execution",
+            "execution_batches": [
+                {
+                    "batch_id": "sfqa-lane-batch-0002",
+                    "next_lane": "world_model_rule_authoring",
+                    "lane_status": "needs_rule_authoring",
+                    "request_type": "world_model_or_calculator_rule",
+                    "adapter_family": "world_model_rule_authoring",
+                    "target_ids": ["record-11"],
+                    "source_request_ids": ["rule:record-11:1"],
+                    "not_verifier_evidence": True,
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
+    collection_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "source_family_structured_qa_fact_collection_corpus",
+            "status": "ready_for_collection",
+            "summary": {"target_count": 1, "total_request_count": 1},
+            "targets": [
+                {
+                    "target_id": "record-11",
+                    "record_index": 11,
+                    "question": "Do more than 20% of Americans have passports?",
+                    "answer": "No.",
+                    "question_type": "quantity",
+                    "priority": "high",
+                }
+            ],
+            "requests": {
+                "world_model_or_calculator_rule": [
+                    {
+                        "target_id": "record-11",
+                        "request_id": "rule:record-11:1",
+                        "request_type": "world_model_or_calculator_rule",
+                        "rule_family": "quantity_or_arithmetic",
+                        "rule_reason": "numeric claim needs denominator and reference time",
+                        "rule_seed": "Author a deterministic numeric check",
+                        "required_inputs": ["numeric_value", "unit", "reference_time"],
+                        "question": "Do more than 20% of Americans have passports?",
+                        "question_type": "quantity",
+                        "priority": "high",
+                        "answer": "No.",
+                        "model_answer": "No.",
+                    }
+                ],
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run_source_family_structured_qa_lane_batch_workflow(
+        lane_queue_path=lane_queue_path,
+        collection_corpus_path=collection_path,
+        source_catalog_paths=(),
+        output_dir=output_dir,
+        batch_ids=("sfqa-lane-batch-0002",),
+        registry_path=registry_path,
+        name="source-family-rule-lane-batch-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    batch_collection = json.loads((output_dir / "lane-batch-collection-corpus.json").read_text(encoding="utf-8"))
+    rule_rows = [
+        json.loads(line)
+        for line in (output_dir / "world-model-rule-stubs.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    registry_record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:source-family-rule-lane-batch-unit:0.1"
+    )
+
+    assert payload["status"] == "ready_for_rule_authoring"
+    assert payload["paths"]["child_workflow_report"] is None
+    assert payload["summary"]["source_backed_request_count"] == 0
+    assert payload["summary"]["adapter_result_count"] == 0
+    assert payload["summary"]["structured_qa_document_count"] == 0
+    assert payload["summary"]["rule_stub_count"] == 1
+    assert payload["summary"]["request_type_counts"] == {"world_model_or_calculator_rule": 1}
+    assert batch_collection["summary"]["stripped_reserved_field_counts"] == {
+        "answer": 1,
+        "model_answer": 1,
+        "target.answer": 1,
+    }
+    assert "answer" not in batch_collection["targets"][0]
+    assert "answer" not in batch_collection["requests"]["world_model_or_calculator_rule"][0]
+    assert rule_rows[0]["rule_family"] == "quantity_or_arithmetic"
+    assert rule_rows[0]["required_inputs"] == ["numeric_value", "unit", "reference_time"]
+    assert rule_rows[0]["not_verifier_evidence"] is True
+    assert registry_module.load_and_verify_artifact_manifest(output_dir / "artifact-manifest.json").passed is True
+    assert registry_record is not None
+    assert registry_record.metadata["status"] == "ready_for_rule_authoring"
+    assert registry_record.metadata["rule_stub_count"] == 1

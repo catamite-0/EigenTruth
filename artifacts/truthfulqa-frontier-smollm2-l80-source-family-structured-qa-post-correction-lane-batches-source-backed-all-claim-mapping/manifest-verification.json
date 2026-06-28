@@ -1,0 +1,7 @@
+{
+  "checked": 4,
+  "failures": [],
+  "manifest_path": "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-lane-batches-source-backed-all-claim-mapping/artifact-manifest.json",
+  "nested": [],
+  "passed": true
+}

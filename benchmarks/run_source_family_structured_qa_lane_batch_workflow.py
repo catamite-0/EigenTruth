@@ -2,8 +2,10 @@
 
 The lane execution queue is a scheduling artifact. This workflow materializes a
 selected batch as a compatible fact-collection corpus, then reuses the existing
-local source-family fact-collection workflow. It preserves the boundary that
-adapter matches are candidate inputs only, not verifier evidence.
+local source-family fact-collection workflow when source-backed requests are
+present. Rule-only batches are emitted as rule-authoring stubs. It preserves the
+boundary that adapter matches and rule stubs are candidate inputs only, not
+verifier evidence.
 """
 
 from __future__ import annotations
@@ -62,8 +64,6 @@ def run_source_family_structured_qa_lane_batch_workflow(
     """Run selected lane batches through the local fact-collection workflow."""
     if registry_path is not None and (not name or not version):
         raise ValueError("registry_path requires name and version.")
-    if not source_catalog_paths:
-        raise ValueError("source_catalog_paths must contain at least one path.")
     selected_batch_ids = tuple(dict.fromkeys(str(item).strip() for item in batch_ids if str(item).strip()))
     if not selected_batch_ids:
         raise ValueError("at least one batch id is required.")
@@ -83,8 +83,9 @@ def run_source_family_structured_qa_lane_batch_workflow(
         for request_type in SOURCE_BACKED_REQUEST_TYPES
         if batch_collection["requests"].get(request_type)
     )
-    if not source_backed_request_types:
-        raise ValueError("selected batches contain no source-backed request types.")
+    if source_backed_request_types and not source_catalog_paths:
+        raise ValueError("source_catalog_paths must contain at least one path for source-backed requests.")
+    rule_stubs = _rule_stubs(batch_collection)
 
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
@@ -92,41 +93,59 @@ def run_source_family_structured_qa_lane_batch_workflow(
     collection_path = Path(batch_collection_corpus_path or output / "lane-batch-collection-corpus.json")
     manifest_path = Path(artifact_manifest_path or output / "artifact-manifest.json")
     child_dir = output / "fact-collection-workflow"
+    rules_path = output / "world-model-rule-stubs.jsonl"
     _write_json(collection_path, batch_collection, compact=compact_json)
+    if rule_stubs:
+        _write_jsonl(rules_path, rule_stubs, compact=compact_json)
 
-    child_payload = run_source_family_structured_qa_fact_collection_workflow(
-        collection_corpus_path=collection_path,
-        source_catalog_paths=source_catalog_paths,
-        output_dir=child_dir,
-        request_types=source_backed_request_types,
-        adapter_max_results=adapter_max_results,
-        adapter_max_query_variants=adapter_max_query_variants,
-        adapter_min_text_overlap=adapter_min_text_overlap,
-        adapter_diversify_source_families=adapter_diversify_source_families,
-        default_source_family=default_source_family,
-        keep_qid_values=keep_qid_values,
-        metadata={
-            **dict(metadata or {}),
-            "source_workflow": WORKFLOW,
-            "lane_queue": str(lane_queue_path),
-            "batch_ids": ",".join(selected_batch_ids),
-        },
-        compact_json=compact_json,
-        fail_on_blocked=False,
-    )
+    child_payload: dict[str, Any] | None = None
+    if source_backed_request_types:
+        child_payload = run_source_family_structured_qa_fact_collection_workflow(
+            collection_corpus_path=collection_path,
+            source_catalog_paths=source_catalog_paths,
+            output_dir=child_dir,
+            request_types=source_backed_request_types,
+            adapter_max_results=adapter_max_results,
+            adapter_max_query_variants=adapter_max_query_variants,
+            adapter_min_text_overlap=adapter_min_text_overlap,
+            adapter_diversify_source_families=adapter_diversify_source_families,
+            default_source_family=default_source_family,
+            keep_qid_values=keep_qid_values,
+            metadata={
+                **dict(metadata or {}),
+                "source_workflow": WORKFLOW,
+                "lane_queue": str(lane_queue_path),
+                "batch_ids": ",".join(selected_batch_ids),
+            },
+            compact_json=compact_json,
+            fail_on_blocked=False,
+        )
     summary = _summary(
         selected_batches=selected_batches,
         batch_collection=batch_collection,
         child_payload=child_payload,
+        rule_stubs=rule_stubs,
     )
+    paths: dict[str, Any] = {
+        "workflow_report": str(report_path),
+        "batch_collection_corpus": str(collection_path),
+        "child_workflow_report": None,
+        "child_artifact_manifest": None,
+        "world_model_rule_stubs": str(rules_path) if rule_stubs else None,
+        "artifact_manifest": str(manifest_path),
+    }
+    if child_payload is not None:
+        paths["child_workflow_report"] = child_payload["paths"]["workflow_report"]
+        paths["child_artifact_manifest"] = child_payload["paths"]["artifact_manifest"]
     payload = {
         "schema_version": 1,
         "workflow": WORKFLOW,
-        "status": _status(child_payload),
+        "status": _status(child_payload, rule_stubs=rule_stubs),
         "scope": (
             "Executes selected lane queue batches by materializing a compatible "
-            "source-family fact-collection corpus. Results remain candidate "
-            "adapter outputs and require downstream route/mapping gates."
+            "source-family fact-collection corpus. Results and rule stubs remain "
+            "candidate inputs and require downstream route/mapping or rule "
+            "authoring gates."
         ),
         "source": {
             "lane_queue": str(lane_queue_path),
@@ -138,6 +157,7 @@ def run_source_family_structured_qa_lane_batch_workflow(
         "config": {
             "batch_ids": selected_batch_ids,
             "source_backed_request_types": source_backed_request_types,
+            "rule_request_type": RULE_REQUEST_TYPE if rule_stubs else None,
             "adapter_max_results": int(adapter_max_results),
             "adapter_max_query_variants": int(adapter_max_query_variants),
             "adapter_min_text_overlap": float(adapter_min_text_overlap),
@@ -150,30 +170,30 @@ def run_source_family_structured_qa_lane_batch_workflow(
             "answers_copied_to_batch_collection": False,
             "model_answers_copied_to_batch_collection": False,
             "adapter_results_are_verifier_evidence": False,
+            "rule_stubs_are_verifier_evidence": False,
         },
-        "paths": {
-            "workflow_report": str(report_path),
-            "batch_collection_corpus": str(collection_path),
-            "child_workflow_report": child_payload["paths"]["workflow_report"],
-            "child_artifact_manifest": child_payload["paths"]["artifact_manifest"],
-            "artifact_manifest": str(manifest_path),
-        },
+        "paths": paths,
         "summary": summary,
-        "child_workflow_summary": child_payload["summary"],
+        "child_workflow_summary": {} if child_payload is None else child_payload["summary"],
         "selected_batches": tuple(dict(batch) for batch in selected_batches),
+        "rule_stubs": rule_stubs,
         "metadata": dict(metadata or {}),
     }
     _write_json(report_path, payload, compact=compact_json)
+    manifest_artifacts: dict[str, Path] = {
+        "lane_batch_workflow": report_path,
+        "lane_batch_collection_corpus": collection_path,
+        "lane_queue": Path(lane_queue_path),
+        "source_collection_corpus": Path(collection_corpus_path),
+        **{f"source_catalog_{idx}": Path(path) for idx, path in enumerate(source_catalog_paths, start=1)},
+    }
+    if child_payload is not None:
+        manifest_artifacts["child_fact_collection_workflow"] = Path(child_payload["paths"]["workflow_report"])
+        manifest_artifacts["child_fact_collection_manifest"] = Path(child_payload["paths"]["artifact_manifest"])
+    if rule_stubs:
+        manifest_artifacts["world_model_rule_stubs"] = rules_path
     manifest = build_artifact_manifest(
-        {
-            "lane_batch_workflow": report_path,
-            "lane_batch_collection_corpus": collection_path,
-            "lane_queue": Path(lane_queue_path),
-            "source_collection_corpus": Path(collection_corpus_path),
-            "child_fact_collection_workflow": Path(child_payload["paths"]["workflow_report"]),
-            "child_fact_collection_manifest": Path(child_payload["paths"]["artifact_manifest"]),
-            **{f"source_catalog_{idx}": Path(path) for idx, path in enumerate(source_catalog_paths, start=1)},
-        },
+        manifest_artifacts,
         root=manifest_path.parent,
         metadata={
             "workflow": WORKFLOW,
@@ -183,6 +203,7 @@ def run_source_family_structured_qa_lane_batch_workflow(
             "source_backed_request_count": summary["source_backed_request_count"],
             "adapter_result_count": summary["adapter_result_count"],
             "structured_qa_document_count": summary["structured_qa_document_count"],
+            "rule_stub_count": summary["rule_stub_count"],
             **dict(metadata or {}),
         },
     )
@@ -201,6 +222,7 @@ def run_source_family_structured_qa_lane_batch_workflow(
                 "source_backed_request_count": summary["source_backed_request_count"],
                 "adapter_result_count": summary["adapter_result_count"],
                 "structured_qa_document_count": summary["structured_qa_document_count"],
+                "rule_stub_count": summary["rule_stub_count"],
                 "artifact_manifest": str(manifest_path),
                 **dict(metadata or {}),
             },
@@ -305,15 +327,18 @@ def _summary(
     *,
     selected_batches: Sequence[Mapping[str, Any]],
     batch_collection: Mapping[str, Any],
-    child_payload: Mapping[str, Any],
+    child_payload: Mapping[str, Any] | None,
+    rule_stubs: Sequence[Mapping[str, Any]],
 ) -> dict[str, Any]:
-    child_summary = child_payload.get("summary", {})
+    child_summary = {} if child_payload is None else child_payload.get("summary", {})
     request_counts = Counter()
     requests_payload = batch_collection.get("requests", {})
     if isinstance(requests_payload, Mapping):
         for request_type, rows in requests_payload.items():
             if isinstance(rows, Sequence) and not isinstance(rows, (str, bytes, bytearray)):
-                request_counts[str(request_type)] = len(rows)
+                count = len(rows)
+                if count:
+                    request_counts[str(request_type)] = count
     lane_counts = Counter(str(batch.get("next_lane") or "") for batch in selected_batches)
     lane_status_counts = Counter(str(batch.get("lane_status") or "") for batch in selected_batches)
     return {
@@ -325,18 +350,20 @@ def _summary(
         "request_with_results_count": int(child_summary.get("request_with_results_count", 0)),
         "adapter_result_count": int(child_summary.get("adapter_result_count", 0)),
         "structured_qa_document_count": int(child_summary.get("structured_qa_document_count", 0)),
-        "rule_stub_count": int(child_summary.get("rule_stub_count", 0)),
+        "rule_stub_count": max(int(child_summary.get("rule_stub_count", 0)), len(rule_stubs)),
         "request_type_counts": _sorted_counter(request_counts),
         "lane_counts": _sorted_counter(lane_counts),
         "lane_status_counts": _sorted_counter(lane_status_counts),
-        "child_status": child_payload.get("status"),
+        "child_status": None if child_payload is None else child_payload.get("status"),
         "reserved_source_document_field_hits": dict(
             child_summary.get("reserved_source_document_field_hits") or {}
         ),
     }
 
 
-def _status(child_payload: Mapping[str, Any]) -> str:
+def _status(child_payload: Mapping[str, Any] | None, *, rule_stubs: Sequence[Mapping[str, Any]]) -> str:
+    if child_payload is None:
+        return "ready_for_rule_authoring" if rule_stubs else "blocked"
     child_status = str(child_payload.get("status") or "")
     if child_status == "ready_for_fact_mapping":
         return "ready_for_fact_mapping"
@@ -400,6 +427,32 @@ def _strip_reserved(row: Mapping[str, Any]) -> tuple[dict[str, Any], Counter[str
     return output, stripped
 
 
+def _rule_stubs(batch_collection: Mapping[str, Any]) -> tuple[dict[str, Any], ...]:
+    requests_payload = batch_collection.get("requests", {})
+    if not isinstance(requests_payload, Mapping):
+        return ()
+    stubs = []
+    for request in _mapping_sequence(requests_payload.get(RULE_REQUEST_TYPE, ())):
+        stubs.append({
+            "schema_version": 1,
+            "workflow": WORKFLOW,
+            "request_id": str(request.get("request_id") or ""),
+            "target_id": str(request.get("target_id") or ""),
+            "request_type": RULE_REQUEST_TYPE,
+            "status": "requires_deterministic_rule_adapter",
+            "rule_family": str(request.get("rule_family") or "world_model_consistency"),
+            "rule_reason": str(request.get("rule_reason") or ""),
+            "rule_seed": str(request.get("rule_seed") or ""),
+            "required_inputs": _string_sequence(request.get("required_inputs", ())),
+            "question": str(request.get("question") or ""),
+            "question_type": str(request.get("question_type") or ""),
+            "gap_type": str(request.get("gap_type") or ""),
+            "priority": str(request.get("priority") or ""),
+            "not_verifier_evidence": True,
+        })
+    return tuple(stubs)
+
+
 def _mapping_sequence(value: Any) -> tuple[Mapping[str, Any], ...]:
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
         return tuple(item for item in value if isinstance(item, Mapping))
@@ -440,6 +493,16 @@ def _write_json(path: str | Path, payload: Mapping[str, Any], *, compact: bool) 
     output.write_text(text, encoding="utf-8")
 
 
+def _write_jsonl(path: str | Path, rows: Sequence[Mapping[str, Any]], *, compact: bool) -> None:
+    output = Path(path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    if compact:
+        text = "".join(strict_json_dumps(row, sort_keys=True, separators=(",", ":")) + "\n" for row in rows)
+    else:
+        text = "".join(strict_json_dumps(row, sort_keys=True) + "\n" for row in rows)
+    output.write_text(text, encoding="utf-8")
+
+
 def _parse_metadata(values: Sequence[str]) -> dict[str, str]:
     metadata: dict[str, str] = {}
     for value in values:
@@ -457,7 +520,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--lane-queue", required=True)
     parser.add_argument("--collection-corpus", required=True)
-    parser.add_argument("--source-catalog", action="append", required=True)
+    parser.add_argument("--source-catalog", action="append", default=[])
     parser.add_argument("--batch-id", action="append", required=True)
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--json", default=None)
@@ -506,7 +569,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         f"targets={summary['target_count']} "
         f"requests={summary['source_backed_request_count']} "
         f"results={summary['adapter_result_count']} "
-        f"qa_docs={summary['structured_qa_document_count']}"
+        f"qa_docs={summary['structured_qa_document_count']} "
+        f"rules={summary['rule_stub_count']}"
     )
 
 
