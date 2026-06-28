@@ -5164,6 +5164,25 @@
       "name": "truthfulqa-frontier-smollm2-l80-entrenched-blind-spots",
       "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-route-audit/artifact-manifest.json",
+        "blind_spot_count": 89,
+        "evidence": "smollm2_l80_entrenched_false_route_correction",
+        "matched_verified_record_count": 89,
+        "status": "complete",
+        "target_route": "retrieval_structured_qa",
+        "target_route_refuted_count": 3,
+        "target_route_refuted_rate": 0.033707865168539325,
+        "target_route_selected_count": 3,
+        "unresolved_count": 86,
+        "workflow": "blind_spot_correction_route_audit"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-blind-spot-route-audit",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-route-audit/blind-spot-route-audit.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

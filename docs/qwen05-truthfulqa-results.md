@@ -927,6 +927,16 @@ confusions, and simple choice facts, which makes these records the immediate
 target set for structured fact lookup, entity disambiguation, and world-model
 correction experiments.
 
+The correction-route audit is registered as
+`report:truthfulqa-frontier-smollm2-l80-blind-spot-route-audit:0.1`. It replays
+the existing l80 retrieval claims through `eval_verifier_ensemble.py` with a
+per-record sidecar, then joins the 89 blind spots against that sidecar. The
+current `retrieval_structured_qa` route selects and refutes `3/89` entrenched
+false records, supports `0/89`, and leaves `86/89` outside the target route.
+The artifact manifest verifies, so the conclusion is reproducible: selected
+retrieval-structured-QA evidence is precise, but coverage is far too narrow to
+remove the SmolLM2 detectability blocker.
+
 A local release-candidate smoke artifact now pairs that staged route baseline
 with a tiny-gpt2 offline readiness/runtime baseline:
 

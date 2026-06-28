@@ -34645,6 +34645,181 @@ def test_analyze_detectability_blind_spots_exports_rows_manifest_registry(tmp_pa
     assert record.metadata["suite"] == "unit"
 
 
+def test_audit_blind_spot_correction_routes_joins_verified_sidecar(tmp_path):
+    module = importlib.import_module("benchmarks.audit_blind_spot_correction_routes")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    blind_spots_path = tmp_path / "blind-spots.json"
+    verified_path = tmp_path / "verified-records.jsonl"
+    output_path = tmp_path / "route-audit.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    blind_spots_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "detectability_blind_spot_analysis",
+            "records": [
+                {
+                    "record_index": 1,
+                    "label": 1,
+                    "cell": "entrenched",
+                    "question_type": "definition",
+                    "features": {"has_number": True},
+                    "question": "What is ExampleCo?",
+                    "answer": "A moon.",
+                    "text": "What is ExampleCo? A moon.",
+                    "cell_margin": 2.0,
+                },
+                {
+                    "record_index": 2,
+                    "label": 1,
+                    "cell": "entrenched",
+                    "question_type": "person",
+                    "features": {"has_citation": True},
+                    "question": "Who founded ExampleCo?",
+                    "answer": "Grace.",
+                    "text": "Who founded ExampleCo? Grace.",
+                    "cell_margin": 1.5,
+                },
+                {
+                    "record_index": 3,
+                    "label": 1,
+                    "cell": "entrenched",
+                    "question_type": "choice",
+                    "features": {},
+                    "question": "Which one is true?",
+                    "answer": "The false one.",
+                    "text": "Which one is true? The false one.",
+                    "cell_margin": 1.0,
+                },
+                {
+                    "record_index": 4,
+                    "label": 1,
+                    "cell": "entrenched",
+                    "question_type": "temporal",
+                    "features": {"is_time_sensitive": True},
+                    "question": "What time is it?",
+                    "answer": "10:00 AM.",
+                    "text": "What time is it? 10:00 AM.",
+                    "cell_margin": 0.5,
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    verified_rows = [
+        {
+            "schema_version": 1,
+            "workflow": "verifier_ensemble_verified_record",
+            "run": "unit",
+            "record_index": 1,
+            "label": 1,
+            "score": 0.8,
+            "record": {
+                "claim": {"text": "What is ExampleCo? A moon."},
+                "final": {
+                    "status": "refuted",
+                    "explanation": "Structured QA answer mismatch.",
+                    "metadata": {"decision_rule": "qa_answer_mismatch"},
+                },
+                "route": {"selected_route": "retrieval_structured_qa", "used_retrieval": True},
+                "retrieval_hits": [{"source": "qa:exampleco", "score": 1.0, "text": "ExampleCo is a company."}],
+            },
+        },
+        {
+            "schema_version": 1,
+            "workflow": "verifier_ensemble_verified_record",
+            "run": "unit",
+            "record_index": 2,
+            "label": 1,
+            "score": 0.7,
+            "record": {
+                "claim": {"text": "Who founded ExampleCo? Grace."},
+                "final": {"status": "supported", "metadata": {"decision_rule": "qa_answer_match"}},
+                "route": {"selected_route": "retrieval_structured_qa", "used_retrieval": True},
+                "retrieval_hits": [{"source": "qa:founder", "score": 1.0, "text": "Grace founded ExampleCo."}],
+            },
+        },
+        {
+            "schema_version": 1,
+            "workflow": "verifier_ensemble_verified_record",
+            "run": "unit",
+            "record_index": 3,
+            "label": 1,
+            "score": 0.6,
+            "record": {
+                "claim": {"text": "Which one is true? The false one."},
+                "final": {"status": "insufficient_evidence", "metadata": {"decision_rule": "low_overlap"}},
+                "route": {"selected_route": "groundedness", "used_retrieval": False},
+                "retrieval_hits": [],
+            },
+        },
+        {
+            "schema_version": 1,
+            "workflow": "verifier_ensemble_verified_record",
+            "run": "unit",
+            "record_index": 9,
+            "label": 1,
+            "score": 0.5,
+            "record": {
+                "claim": {"text": "Ignored extra row."},
+                "final": {"status": "refuted"},
+                "route": {"selected_route": "retrieval_structured_qa", "used_retrieval": True},
+                "retrieval_hits": [],
+            },
+        },
+    ]
+    verified_path.write_text(
+        "\n".join(json.dumps(row, sort_keys=True) for row in verified_rows) + "\n",
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        blind_spots_path=blind_spots_path,
+        verified_records_jsonl_path=verified_path,
+        output_path=output_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="blind-spot-route-audit-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    saved = json.loads(output_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:blind-spot-route-audit-unit:0.1"
+    )
+
+    summary = payload["summary"]
+    assert payload["status"] == "partial"
+    assert summary["blind_spot_count"] == 4
+    assert summary["matched_verified_record_count"] == 3
+    assert summary["target_route_selected_count"] == 2
+    assert summary["target_route_refuted_count"] == 1
+    assert summary["target_route_supported_count"] == 1
+    assert summary["records_with_retrieval_hits"] == 2
+    assert summary["unresolved_count"] == 3
+    assert summary["outcome_counts"] == {
+        "corrected_refuted": 1,
+        "false_supported": 1,
+        "missing_verified_record": 1,
+        "not_selected_by_target_route": 1,
+    }
+    assert summary["unresolved_question_type_counts"] == {
+        "choice": 1,
+        "person": 1,
+        "temporal": 1,
+    }
+    assert saved["records"][0]["outcome"] == "corrected_refuted"
+    assert saved["examples"]["false_supported"][0]["record_index"] == 2
+    assert manifest["summary"]["missing_count"] == 0
+    assert manifest["artifacts"]["blind_spot_correction_route_audit"]["exists"] is True
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "blind_spot_correction_route_audit"
+    assert record.metadata["target_route_refuted_count"] == 1
+    assert record.metadata["suite"] == "unit"
+
+
 def test_eval_score_ensemble_compares_single_and_combined_signals(tmp_path):
     module = importlib.import_module("benchmarks.eval_score_ensemble")
     scores_path = tmp_path / "scores.json"

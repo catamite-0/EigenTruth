@@ -1244,6 +1244,52 @@ The largest groups are definition/what questions (`39`), person questions
 These records are the next concrete target for verifier/world-model correction
 route design.
 
+## `audit_blind_spot_correction_routes.py`
+
+Joins a row-level blind-spot report with
+`eval_verifier_ensemble.py --verified-records-jsonl` output. Use it to check
+whether an independent route actually covers the high-confidence false records
+that detectability gates blocked.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-route-audit
+
+python benchmarks/eval_verifier_ensemble.py \
+  --scores retrieval=artifacts/smollm2_truthfulqa_l80_scores_with_statements.json \
+  --claims artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/retrieval-claims.json \
+  --signal truth_proj \
+  --alphas 0.1 \
+  --repeats 1 \
+  --seed 0 \
+  --verifier-min-overlap 0.65 \
+  --retriever-min-overlap 0.95 \
+  --retrieval-limit 3 \
+  --verified-records-jsonl "$OUT/verified-records.jsonl" \
+  --json "$OUT/retrieval-verifier-report-with-sidecar.json"
+
+python benchmarks/audit_blind_spot_correction_routes.py \
+  --blind-spots artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
+  --verified-records-jsonl "$OUT/verified-records.jsonl" \
+  --verifier-report "$OUT/retrieval-verifier-report-with-sidecar.json" \
+  --claims artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/retrieval-claims.json \
+  --route-report artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/retrieval-route-comparison.json \
+  --json "$OUT/blind-spot-route-audit.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-blind-spot-route-audit \
+  --version 0.1
+```
+
+The registered SmolLM2 audit
+(`report:truthfulqa-frontier-smollm2-l80-blind-spot-route-audit:0.1`) verifies
+all `89` blind-spot records against the sidecar. The promoted
+`retrieval_structured_qa` route selects and refutes `3/89` records, supports
+`0/89`, and leaves `86/89` outside the target route. That means the route's
+selected subset is precise, but the blind-spot correction problem is now
+coverage: expand query construction, external corpora, structured-fact
+predicates, citation checks, and world-model routes before using this evidence
+to relax the detectability release blocker.
+
 ## `eval_verifier_ensemble.py`
 
 Compares a single calibrated internal diagnostic against a retrieval/verifier

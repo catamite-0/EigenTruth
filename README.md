@@ -492,6 +492,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `eval_score_ensemble.py` | Benchmarks direction-aware rank fusion and geometry-by-uncertainty interaction fusion across saved diagnostic score dumps, and can save deployable `RankScoreFusionArtifact` or `GeometryScoreFusionArtifact` outputs in one run. |
 | `eval_detectability_taxonomy.py` | Builds a DECK-style consistency x confidence detectability taxonomy from two saved score-dump signals, exposing drift, entrenched, confabulation, and knotted error regimes without loading a model. |
 | `analyze_detectability_blind_spots.py` | Exports row-level examples, score margins, claim features, and question-type summaries from a blocked DECK taxonomy cell, turning blind-spot release gates into concrete correction targets. |
+| `audit_blind_spot_correction_routes.py` | Joins row-level blind spots with verifier sidecar records to measure which independent correction routes actually select, refute, support, or miss high-confidence false answers. |
 | `select_fusion_signals_from_ablation.py` | Converts a saved fusion ablation matrix into a run-specific signal-selection report, keeping optional signals such as trajectory conditional instead of global defaults. |
 | `build_selected_fusion_artifacts.py` | Builds per-run `RankScoreFusionArtifact` files from a signal-selection report and matching score dumps, turning conditional signal choices into calibrated deployable artifacts. |
 | `eval_frontier_stability.py` | Replays saved frontier score dumps across multiple split-conformal seeds, summarizes best-signal stability, fingerprints source score records, and optionally registers the post-hoc stability report. |
@@ -657,6 +658,7 @@ evidence rates and maximum final false-accept / false-accept-delta thresholds.
 | `eval_score_ensemble.py` | 对已保存诊断 score dump 执行方向感知 rank fusion 与 geometry-by-uncertainty interaction fusion benchmark，并可在一次运行中保存可部署的 `RankScoreFusionArtifact` 或 `GeometryScoreFusionArtifact`。 |
 | `eval_detectability_taxonomy.py` | 从两个已保存 score-dump 信号构建 DECK 风格 consistency x confidence detectability taxonomy，离线暴露 drift、entrenched、confabulation、knotted 错误机制。 |
 | `analyze_detectability_blind_spots.py` | 从被 release gate 拦下的 DECK taxonomy cell 导出逐条样例、score margin、claim feature 和 question-type summary，把 blind spot 变成具体校正目标。 |
+| `audit_blind_spot_correction_routes.py` | 将逐条 blind spot 与 verifier sidecar 记录对齐，衡量独立校正路线是否真正选中、refute、support 或漏掉高置信错误。 |
 | `select_fusion_signals_from_ablation.py` | 将已保存 fusion ablation matrix 转成按 run 选择的 signal-selection report，让 trajectory 等可选信号保持条件式启用，而不是全局默认。 |
 | `build_selected_fusion_artifacts.py` | 基于 signal-selection report 和匹配 score dump 生成 per-run `RankScoreFusionArtifact`，把条件式信号选择落成可校准加载的 artifact。 |
 | `eval_frontier_stability.py` | 对已保存 frontier score dump 做多 seed split-conformal 重放，总结最佳信号稳定性，指纹化 source score records，并可选登记 post-hoc stability report。 |
