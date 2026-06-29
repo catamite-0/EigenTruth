@@ -11,10 +11,11 @@ used by default; otherwise the script falls back to the Qwen l80 artifact and
 then toy thresholds. When the SmolLM2 structured-retrieval-audit release
 candidate is present, its product promotion contract supplies the default
 verifier route, calibrated control defaults, adapter-family metadata, and
-required-audit metadata. When that contract carries promoted release-efficiency
-evidence, it also supplies the default runtime profile unless an explicit or
-pre-generation profile is selected; pass it explicitly with
-`--promotion-contract` to also enforce its runtime budget policy.
+required-audit metadata. When the contract has a sibling enriched handoff
+manifest, the trace also records its frontier-audit evidence summary. When that
+contract carries promoted release-efficiency evidence, it supplies the default
+runtime profile unless an explicit or pre-generation profile is selected; pass it
+explicitly with `--promotion-contract` to also enforce its runtime budget policy.
 """
 
 from __future__ import annotations
@@ -73,6 +74,9 @@ DEFAULT_QWEN_ARTIFACT_PATH = (
     Path(__file__).resolve().parents[1] / "artifacts" / "qwen05_truthfulqa_l80_best_calibration.json"
 )
 DEFAULT_PROMOTION_CONTRACT_FILENAMES = (
+    "smollm2_product_promotion_contract_v1_9/product-promotion-contract.json",
+    "smollm2_product_promotion_contract_v1_8/product-promotion-contract.json",
+    "smollm2_product_promotion_contract_v1_6/product-promotion-contract.json",
     "smollm2_product_promotion_contract_v1_5/product-promotion-contract.json",
     (
         "smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_"
@@ -836,6 +840,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         getattr(args, "promotion_contract", None),
         default_contract_paths=DEFAULT_PROMOTION_CONTRACT_PATHS,
         manifest_path=getattr(args, "promotion_contract_manifest", None),
+        evidence_handoff_manifest_path=getattr(
+            args,
+            "promotion_contract_evidence_handoff_manifest",
+            None,
+        ),
         registry_path=getattr(args, "promotion_contract_registry", None),
         registry_key=getattr(args, "promotion_contract_registry_key", None),
     )
@@ -869,6 +878,13 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         else runtime_evidence_bundle.runtime_metadata(
             budget_enabled=explicit_promotion_contract,
             verify_manifest=bool(getattr(args, "verify_promotion_contract_manifest", False)),
+            verify_evidence_handoff_manifest=bool(
+                getattr(
+                    args,
+                    "verify_promotion_contract_evidence_handoff_manifest",
+                    False,
+                )
+            ),
             verify_selfcheck_signal_fusion_manifest=verify_selfcheck_signal_fusion_manifest,
             include_selfcheck_signal_fusion_record=include_selfcheck_signal_fusion_record,
         )
@@ -1174,12 +1190,16 @@ def main() -> None:
                         help="optional ProductPromotionContract or release-candidate report JSON path")
     parser.add_argument("--promotion-contract-manifest", default=None,
                         help="optional artifact manifest for the promotion contract")
+    parser.add_argument("--promotion-contract-evidence-handoff-manifest", default=None,
+                        help="optional enriched evidence-handoff artifact manifest for the promotion contract")
     parser.add_argument("--promotion-contract-registry", default=None,
                         help="optional ArtifactRegistry JSON containing the promotion contract record")
     parser.add_argument("--promotion-contract-registry-key", default=None,
                         help="optional product_promotion_contract registry key")
     parser.add_argument("--verify-promotion-contract-manifest", action="store_true",
                         help="verify the promotion contract artifact manifest before recording metadata")
+    parser.add_argument("--verify-promotion-contract-evidence-handoff-manifest", action="store_true",
+                        help="verify the promotion contract evidence-handoff manifest before recording metadata")
     parser.add_argument("--verify-selfcheck-signal-fusion-manifest", action="store_true",
                         help="verify the selfcheck-signal-fusion workflow manifest from the promotion contract")
     parser.add_argument("--include-selfcheck-signal-fusion-record", action="store_true",

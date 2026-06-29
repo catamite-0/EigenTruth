@@ -4059,6 +4059,117 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
     ]["metadata"] == {"artifact_manifest": str(triple_matrix_manifest_path)}
 
 
+def test_product_runtime_evidence_bundle_exposes_evidence_handoff_manifest(tmp_path):
+    contract_path = tmp_path / "product-promotion-contract.json"
+    handoff_path = tmp_path / "product-promotion-contract-evidence-handoff.json"
+    audit_path = tmp_path / "product-promotion-contract-evidence-handoff-audit.json"
+    handoff_manifest_path = tmp_path / "evidence-handoff-artifact-manifest.json"
+
+    ProductPromotionContract(
+        model_id="demo-model",
+        source_status="promote",
+        metadata={"recommended_runtime_seconds": 0.2},
+    ).save_json(contract_path)
+    handoff_path.write_text(
+        json.dumps({
+            "workflow": "product_promotion_contract",
+            "source_contract": str(contract_path),
+            "contract": {"workflow": "product_promotion_contract"},
+            "audit": {"status": "promote"},
+        }),
+        encoding="utf-8",
+    )
+    audit_path.write_text(
+        json.dumps({
+            "workflow": "product_promotion_evidence_handoff_audit",
+            "status": "promote",
+            "summary": {
+                "blocked_group_count": 0,
+                "expected_metric_count": 38,
+                "groups": {
+                    "promotion": "promote",
+                    "pre_generation": "promote",
+                    "counterfactual": "promote",
+                    "action_gate": "promote",
+                    "triple_audit": "promote",
+                    "covered_fact_property": "promote",
+                },
+                "missing_metric_count": 0,
+                "present_metric_count": 38,
+            },
+        }),
+        encoding="utf-8",
+    )
+    handoff_manifest = build_artifact_manifest(
+        {
+            "source_contract": contract_path,
+            "product_promotion_contract_evidence_handoff": handoff_path,
+            "product_promotion_contract_evidence_handoff_audit": audit_path,
+        },
+        root=tmp_path,
+        metadata={
+            "after_missing_metric_count": 0,
+            "before_missing_metric_count": 24,
+            "filled_groups": [
+                "promotion",
+                "pre_generation",
+                "counterfactual",
+                "action_gate",
+                "triple_audit",
+                "covered_fact_property",
+            ],
+            "resolved_missing_metric_count": 24,
+            "status": "promote",
+        },
+    )
+    handoff_manifest_path.write_text(json.dumps(handoff_manifest), encoding="utf-8")
+
+    bundle = load_product_runtime_evidence_bundle(
+        default_contract_paths=(contract_path,),
+    )
+
+    assert bundle is not None
+    assert bundle.evidence_handoff_manifest_path == handoff_manifest_path
+    metadata = bundle.runtime_metadata(budget_enabled=True)
+    assert metadata["promotion_contract_evidence_handoff_manifest"] == str(
+        handoff_manifest_path
+    )
+    assert metadata["promotion_contract_evidence_handoff_contract"] == str(handoff_path)
+    assert metadata["promotion_contract_evidence_handoff_audit"] == str(audit_path)
+    assert metadata["promotion_contract_evidence_handoff_status"] == "promote"
+    assert metadata["promotion_contract_evidence_handoff_before_missing_metric_count"] == 24
+    assert metadata["promotion_contract_evidence_handoff_after_missing_metric_count"] == 0
+    assert metadata["promotion_contract_evidence_handoff_resolved_missing_metric_count"] == 24
+    assert metadata["promotion_contract_evidence_handoff_present_metric_count"] == 38
+    assert metadata["promotion_contract_evidence_handoff_missing_metric_count"] == 0
+    assert metadata["promotion_contract_evidence_handoff_group_statuses"] == {
+        "action_gate": "promote",
+        "counterfactual": "promote",
+        "covered_fact_property": "promote",
+        "pre_generation": "promote",
+        "promotion": "promote",
+        "triple_audit": "promote",
+    }
+    assert metadata["promotion_contract_evidence_handoff_manifest_verification"] is None
+
+    verified_metadata = bundle.runtime_metadata(
+        budget_enabled=True,
+        verify_evidence_handoff_manifest=True,
+    )
+    assert (
+        verified_metadata["promotion_contract_evidence_handoff_manifest_verification"][
+            "passed"
+        ]
+        is True
+    )
+    assert (
+        verified_metadata["promotion_contract_evidence_handoff_manifest_verification"][
+            "checked"
+        ]
+        == 3
+    )
+
+
 def test_artifact_registry_records_trace_report_and_action_result(tmp_path):
     registry_path = tmp_path / "registry.json"
     registry = ArtifactRegistry.load_json(registry_path)

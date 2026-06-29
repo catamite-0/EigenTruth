@@ -1211,6 +1211,7 @@ class ProductRuntimeEvidenceBundle:
 
     loaded_contract: LoadedProductPromotionContract
     manifest_path: Path | None = None
+    evidence_handoff_manifest_path: Path | None = None
     registry_path: Path | None = None
     registry_key: str | None = None
     manifest_recursive: bool = True
@@ -1221,6 +1222,24 @@ class ProductRuntimeEvidenceBundle:
         repr=False,
     )
     _registry_record: RegistryRecord | None = field(
+        default=None,
+        init=False,
+        compare=False,
+        repr=False,
+    )
+    _evidence_handoff_manifest_payload: Mapping[str, Any] | None = field(
+        default=None,
+        init=False,
+        compare=False,
+        repr=False,
+    )
+    _evidence_handoff_manifest_verification: ArtifactManifestVerification | None = field(
+        default=None,
+        init=False,
+        compare=False,
+        repr=False,
+    )
+    _evidence_handoff_audit_payload: Mapping[str, Any] | None = field(
         default=None,
         init=False,
         compare=False,
@@ -1366,6 +1385,144 @@ class ProductRuntimeEvidenceBundle:
             )
             object.__setattr__(self, "_registry_record", record)
         return self._registry_record
+
+    def verify_evidence_handoff_manifest(self) -> ArtifactManifestVerification | None:
+        """Lazily verify the optional enriched handoff artifact manifest."""
+        if self.evidence_handoff_manifest_path is None:
+            return None
+        if self._evidence_handoff_manifest_verification is None:
+            object.__setattr__(
+                self,
+                "_evidence_handoff_manifest_verification",
+                load_and_verify_artifact_manifest(
+                    self.evidence_handoff_manifest_path,
+                    recursive=self.manifest_recursive,
+                ),
+            )
+        return self._evidence_handoff_manifest_verification
+
+    def evidence_handoff_manifest_payload(self) -> Mapping[str, Any] | None:
+        """Return the parsed enriched handoff manifest payload, if available."""
+        if self.evidence_handoff_manifest_path is None:
+            return None
+        if self._evidence_handoff_manifest_payload is None:
+            payload = json.loads(
+                self.evidence_handoff_manifest_path.read_text(encoding="utf-8")
+            )
+            if not isinstance(payload, Mapping):
+                raise ValueError("promotion handoff manifest JSON must contain an object.")
+            object.__setattr__(self, "_evidence_handoff_manifest_payload", payload)
+        return self._evidence_handoff_manifest_payload
+
+    @property
+    def evidence_handoff_contract_path(self) -> Path | None:
+        """Return the enriched handoff contract path referenced by its manifest."""
+        return _artifact_manifest_entry_path(
+            self.evidence_handoff_manifest_path,
+            self.evidence_handoff_manifest_payload(),
+            "product_promotion_contract_evidence_handoff",
+        )
+
+    @property
+    def evidence_handoff_audit_path(self) -> Path | None:
+        """Return the enriched handoff audit path referenced by its manifest."""
+        return _artifact_manifest_entry_path(
+            self.evidence_handoff_manifest_path,
+            self.evidence_handoff_manifest_payload(),
+            "product_promotion_contract_evidence_handoff_audit",
+        )
+
+    def evidence_handoff_audit_payload(self) -> Mapping[str, Any] | None:
+        """Return the parsed enriched handoff audit payload, if available."""
+        audit_path = self.evidence_handoff_audit_path
+        if audit_path is None:
+            return None
+        if self._evidence_handoff_audit_payload is None:
+            payload = json.loads(audit_path.read_text(encoding="utf-8"))
+            if not isinstance(payload, Mapping):
+                raise ValueError("promotion handoff audit JSON must contain an object.")
+            object.__setattr__(self, "_evidence_handoff_audit_payload", payload)
+        return self._evidence_handoff_audit_payload
+
+    def evidence_handoff_metadata(
+        self,
+        *,
+        verify_manifest: bool = False,
+    ) -> dict[str, Any]:
+        """Return JSON-ready enriched handoff provenance metadata."""
+        manifest_payload = self.evidence_handoff_manifest_payload()
+        manifest_metadata = _mapping(
+            None if manifest_payload is None else manifest_payload.get("metadata")
+        )
+        manifest_summary = _mapping(
+            None if manifest_payload is None else manifest_payload.get("summary")
+        )
+        audit_payload = self.evidence_handoff_audit_payload()
+        audit_summary = _mapping(
+            None if audit_payload is None else audit_payload.get("summary")
+        )
+        group_statuses = _mapping(audit_summary.get("groups"))
+        manifest_verification = (
+            self.verify_evidence_handoff_manifest() if verify_manifest else None
+        )
+        return {
+            "promotion_contract_evidence_handoff_manifest": (
+                None
+                if self.evidence_handoff_manifest_path is None
+                else str(self.evidence_handoff_manifest_path)
+            ),
+            "promotion_contract_evidence_handoff_manifest_verification": (
+                None if manifest_verification is None else manifest_verification.to_dict()
+            ),
+            "promotion_contract_evidence_handoff_manifest_summary": (
+                None if not manifest_summary else dict(manifest_summary)
+            ),
+            "promotion_contract_evidence_handoff_manifest_metadata": (
+                None if not manifest_metadata else dict(manifest_metadata)
+            ),
+            "promotion_contract_evidence_handoff_contract": (
+                None
+                if self.evidence_handoff_contract_path is None
+                else str(self.evidence_handoff_contract_path)
+            ),
+            "promotion_contract_evidence_handoff_audit": (
+                None
+                if self.evidence_handoff_audit_path is None
+                else str(self.evidence_handoff_audit_path)
+            ),
+            "promotion_contract_evidence_handoff_workflow": (
+                None if audit_payload is None else audit_payload.get("workflow")
+            ),
+            "promotion_contract_evidence_handoff_status": _first_present(
+                None if audit_payload is None else audit_payload.get("status"),
+                manifest_metadata.get("status"),
+            ),
+            "promotion_contract_evidence_handoff_before_missing_metric_count": (
+                manifest_metadata.get("before_missing_metric_count")
+            ),
+            "promotion_contract_evidence_handoff_after_missing_metric_count": (
+                manifest_metadata.get("after_missing_metric_count")
+            ),
+            "promotion_contract_evidence_handoff_resolved_missing_metric_count": (
+                manifest_metadata.get("resolved_missing_metric_count")
+            ),
+            "promotion_contract_evidence_handoff_filled_groups": (
+                manifest_metadata.get("filled_groups")
+            ),
+            "promotion_contract_evidence_handoff_expected_metric_count": (
+                audit_summary.get("expected_metric_count")
+            ),
+            "promotion_contract_evidence_handoff_present_metric_count": (
+                audit_summary.get("present_metric_count")
+            ),
+            "promotion_contract_evidence_handoff_missing_metric_count": (
+                audit_summary.get("missing_metric_count")
+            ),
+            "promotion_contract_evidence_handoff_blocked_group_count": (
+                audit_summary.get("blocked_group_count")
+            ),
+            "promotion_contract_evidence_handoff_group_statuses": dict(group_statuses),
+        }
 
     def evidence_metadata(
         self,
@@ -2209,6 +2366,7 @@ class ProductRuntimeEvidenceBundle:
         *,
         budget_enabled: bool,
         verify_manifest: bool = False,
+        verify_evidence_handoff_manifest: bool = False,
         include_registry_record: bool = True,
         verify_selfcheck_signal_fusion_manifest: bool = False,
         include_selfcheck_signal_fusion_record: bool = False,
@@ -2230,6 +2388,9 @@ class ProductRuntimeEvidenceBundle:
             **self.evidence_metadata(
                 verify_manifest=verify_manifest,
                 include_registry_record=include_registry_record,
+            ),
+            **self.evidence_handoff_metadata(
+                verify_manifest=verify_evidence_handoff_manifest,
             ),
             **self.selfcheck_signal_fusion_evidence_metadata(
                 verify_manifest=verify_selfcheck_signal_fusion_manifest,
@@ -2266,6 +2427,7 @@ def load_product_runtime_evidence_bundle(
     *,
     default_contract_paths: Iterable[str | Path] = (),
     manifest_path: str | Path | None = None,
+    evidence_handoff_manifest_path: str | Path | None = None,
     registry_path: str | Path | None = None,
     registry_key: str | None = None,
     require_promoted: bool = True,
@@ -2283,9 +2445,16 @@ def load_product_runtime_evidence_bundle(
         loaded_contract.path,
         manifest_path=manifest_path,
     )
+    resolved_evidence_handoff_manifest_path = (
+        _resolve_product_promotion_contract_evidence_handoff_manifest_path(
+            loaded_contract.path,
+            evidence_handoff_manifest_path=evidence_handoff_manifest_path,
+        )
+    )
     return ProductRuntimeEvidenceBundle(
         loaded_contract=loaded_contract,
         manifest_path=resolved_manifest_path,
+        evidence_handoff_manifest_path=resolved_evidence_handoff_manifest_path,
         registry_path=None if registry_path is None else Path(registry_path),
         registry_key=registry_key,
         manifest_recursive=manifest_recursive,
@@ -3611,6 +3780,38 @@ def _resolve_product_promotion_contract_manifest_path(
     if sibling_manifest.exists():
         return sibling_manifest
     return None
+
+
+def _resolve_product_promotion_contract_evidence_handoff_manifest_path(
+    contract_path: Path | None,
+    *,
+    evidence_handoff_manifest_path: str | Path | None,
+) -> Path | None:
+    if evidence_handoff_manifest_path is not None:
+        return Path(evidence_handoff_manifest_path)
+    if contract_path is None:
+        return None
+    sibling_manifest = contract_path.parent / "evidence-handoff-artifact-manifest.json"
+    if sibling_manifest.exists():
+        return sibling_manifest
+    return None
+
+
+def _artifact_manifest_entry_path(
+    manifest_path: Path | None,
+    manifest_payload: Mapping[str, Any] | None,
+    artifact_key: str,
+) -> Path | None:
+    if manifest_path is None or manifest_payload is None:
+        return None
+    artifact = _mapping(_mapping(manifest_payload.get("artifacts")).get(artifact_key))
+    raw_path = artifact.get("path")
+    if raw_path is None:
+        return None
+    path = Path(str(raw_path))
+    if path.is_absolute():
+        return path
+    return manifest_path.parent / path
 
 
 def _resolve_contract_metadata_path(

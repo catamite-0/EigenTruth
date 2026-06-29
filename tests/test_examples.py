@@ -52,11 +52,16 @@ def test_calibrated_control_demo_default_trace_uses_artifact_diagnostics():
     assert payload["metadata"]["artifact_model_id"] == demo.default_artifact().model_id
     assert payload["metadata"]["artifact_source"] == demo.artifact_source(None)
     if demo.default_promotion_contract_path() is not None:
-        assert "v1_5" in payload["metadata"]["promotion_contract_source"]
+        assert "v1_9" in payload["metadata"]["promotion_contract_source"]
         assert payload["metadata"]["promotion_contract_model_id"] == "HuggingFaceTB/SmolLM2-135M-Instruct"
         assert payload["metadata"]["promotion_contract_budget_enabled"] is False
+        assert payload["metadata"]["promotion_contract_recommended_runtime_seconds"] == pytest.approx(0.191662)
+        assert payload["metadata"]["promotion_contract_recommended_runtime_cost_source"] == "cache_only_total_seconds"
+        assert payload["metadata"]["promotion_contract_evidence_handoff_status"] == "promote"
+        assert payload["metadata"]["promotion_contract_evidence_handoff_present_metric_count"] == 38
+        assert payload["metadata"]["promotion_contract_evidence_handoff_missing_metric_count"] == 0
         assert payload["metadata"]["promotion_contract_metadata"]["recommended_performance_baseline_record"] == (
-            "performance_baseline:smollm2-l20-performance-baseline:0.9"
+            "performance_baseline:smollm2-l8-read-cache-worker-sweep-score-fusion-performance-baseline:0.2"
         )
         assert payload["metadata"]["promotion_contract_metadata"]["recommended_selector_replay_candidate"] == "default"
         assert payload["metadata"]["promotion_contract_metadata"]["selector_replay_status"] == "promote"
@@ -65,11 +70,12 @@ def test_calibrated_control_demo_default_trace_uses_artifact_diagnostics():
         assert payload["metadata"]["promotion_contract_metadata"]["adapter_family_required_routes"] == [
             "structured_state",
             "state_transition",
-            "retrieval_groundedness",
-            "retrieval_structured_qa",
+            "triple_evidence",
         ]
         assert payload["metadata"]["promotion_contract_metadata"]["required_route_baseline_routes"] == [
-            "retrieval_structured_qa"
+            "retrieval_structured_qa",
+            "structured_fact",
+            "structured_fact",
         ]
     for score_name in demo.default_artifact().score_names():
         assert score_name in payload["diagnostics"]
@@ -123,7 +129,7 @@ def test_calibrated_control_demo_can_emit_bounded_trace():
     assert payload["truncation"]["verification_results"]["included"] <= 1
     assert payload["metadata"]["artifact_source"] == demo.artifact_source(None)
     if demo.default_promotion_contract_path() is not None:
-        assert "v1_5" in payload["metadata"]["promotion_contract_source"]
+        assert "v1_9" in payload["metadata"]["promotion_contract_source"]
 
 
 def test_calibrated_control_demo_can_route_calculator_refutations():
@@ -963,11 +969,11 @@ def test_calibrated_control_demo_can_enforce_claim_coherence():
     assert "initial_claim_coherence" in event_types
 
 
-def test_calibrated_control_demo_can_use_default_structured_retrieval_audit_contract_budget():
+def test_calibrated_control_demo_can_use_default_frontier_audit_contract_evidence():
     demo = importlib.import_module("examples.calibrated_control_demo")
     contract_path = demo.default_promotion_contract_path()
     assert contract_path is not None
-    assert "smollm2_product_promotion_contract_v1_5" in str(contract_path)
+    assert "smollm2_product_promotion_contract_v1_9" in str(contract_path)
     assert contract_path.name == "product-promotion-contract.json"
 
     payload = demo.run(
@@ -986,9 +992,11 @@ def test_calibrated_control_demo_can_use_default_structured_retrieval_audit_cont
             runtime_trace=True,
             promotion_contract=str(contract_path),
             promotion_contract_manifest=None,
+            promotion_contract_evidence_handoff_manifest=None,
             promotion_contract_registry="artifacts/local-release-registry.json",
             promotion_contract_registry_key=None,
             verify_promotion_contract_manifest=True,
+            verify_promotion_contract_evidence_handoff_manifest=True,
             cache_verifier=False,
             cache_retriever=False,
             max_runtime_total_seconds=None,
@@ -1019,10 +1027,28 @@ def test_calibrated_control_demo_can_use_default_structured_retrieval_audit_cont
     assert payload["metadata"]["promotion_contract_manifest_verification"]["checked"] == 2
     assert payload["metadata"]["promotion_contract_registry"] == "artifacts/local-release-registry.json"
     assert payload["metadata"]["promotion_contract_registry_key"] == (
-        "product_promotion_contract:smollm2-product-promotion-contract:1.5"
+        "product_promotion_contract:smollm2-product-promotion-contract:1.9"
     )
+    assert payload["metadata"]["promotion_contract_recommended_runtime_seconds"] == pytest.approx(0.191662)
+    assert payload["metadata"]["promotion_contract_recommended_runtime_cost_source"] == "cache_only_total_seconds"
+    assert payload["metadata"]["promotion_contract_evidence_handoff_manifest"].endswith(
+        "evidence-handoff-artifact-manifest.json"
+    )
+    assert payload["metadata"]["promotion_contract_evidence_handoff_manifest_verification"]["passed"] is True
+    assert payload["metadata"]["promotion_contract_evidence_handoff_manifest_verification"]["checked"] == 9
+    assert payload["metadata"]["promotion_contract_evidence_handoff_status"] == "promote"
+    assert payload["metadata"]["promotion_contract_evidence_handoff_present_metric_count"] == 38
+    assert payload["metadata"]["promotion_contract_evidence_handoff_missing_metric_count"] == 0
+    assert payload["metadata"]["promotion_contract_evidence_handoff_group_statuses"] == {
+        "action_gate": "promote",
+        "counterfactual": "promote",
+        "covered_fact_property": "promote",
+        "pre_generation": "promote",
+        "promotion": "promote",
+        "triple_audit": "promote",
+    }
     assert payload["metadata"]["promotion_contract_metadata"]["recommended_performance_baseline_record"] == (
-        "performance_baseline:smollm2-l20-performance-baseline:0.9"
+        "performance_baseline:smollm2-l8-read-cache-worker-sweep-score-fusion-performance-baseline:0.2"
     )
     assert payload["metadata"]["promotion_contract_metadata"]["recommended_selector_replay_candidate"] == "default"
     assert payload["metadata"]["promotion_contract_metadata"]["selector_replay_status"] == "promote"
@@ -1032,24 +1058,28 @@ def test_calibrated_control_demo_can_use_default_structured_retrieval_audit_cont
     assert payload["metadata"]["promotion_contract_metadata"]["adapter_family_required_routes"] == [
         "structured_state",
         "state_transition",
-        "retrieval_groundedness",
-        "retrieval_structured_qa",
+        "triple_evidence",
     ]
     assert payload["metadata"]["promotion_contract_metadata"]["required_route_baseline_status"] == "promote"
     assert payload["metadata"]["promotion_contract_metadata"]["required_route_baseline_records"] == [
-        "benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.5"
+        "benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.6",
+        "benchmark_manifest:wikidata-country-core-facts-structured-fact-canonical-route:0.1",
+        "benchmark_manifest:wikidata-country-core-facts-structured-fact-paraphrase-route:0.1",
     ]
     assert payload["metadata"]["promotion_contract_metadata"]["required_route_baseline_routes"] == [
-        "retrieval_structured_qa"
+        "retrieval_structured_qa",
+        "structured_fact",
+        "structured_fact",
     ]
     assert payload["metadata"]["promotion_contract_metadata"]["required_route_budget_policy"][
-        "required_route_max_retrieval_hit_count"
-    ] == 450.0
+        "required_route_min_selected"
+    ] == 200.0
     assert payload["verification_results"][0]["metadata"]["selected_route"] == "structured_qa"
     assert route_summary["mean_attempted_route_count"] == 1.0
     assert runtime_budget["passed"] is True
-    assert runtime_budget["policy"]["max_mean_attempted_route_count"] == 1.1
-    assert runtime_budget["policy"]["max_retrieval_use_rate"] == 0.0
+    assert runtime_budget["enabled"] is False
+    assert runtime_budget["policy"]["max_mean_attempted_route_count"] is None
+    assert runtime_budget["policy"]["max_retrieval_use_rate"] is None
 
 
 def test_sqlite_state_control_demo_refutes_database_state_claim(tmp_path):
