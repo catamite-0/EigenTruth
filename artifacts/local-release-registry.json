@@ -7107,6 +7107,29 @@
       "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff",
       "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff/action-results.jsonl",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "product_promotion_evidence_audit",
+      "metadata": {
+        "blocked_group_count": 6,
+        "contract": "artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract.json",
+        "missing_metric_count": 37,
+        "recommended_action_ids": [
+          "export_promotion_contract_runtime_evidence",
+          "run_pre_generation_probe_comparison",
+          "run_counterfactual_verifier_audit",
+          "add_trace_level_triple_audit",
+          "refresh_covered_fact_property_routes",
+          "rerun_product_trace_action_gates"
+        ],
+        "scope": "frontier_runtime_drift",
+        "source_status": "promote",
+        "status": "blocked",
+        "workflow": "product_promotion_evidence_handoff_audit"
+      },
+      "name": "smollm2-product-promotion-contract-v1-6-evidence-handoff",
+      "path": "artifacts/smollm2_product_promotion_contract_v1_6/evidence-handoff-audit.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

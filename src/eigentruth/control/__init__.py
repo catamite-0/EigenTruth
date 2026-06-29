@@ -34,6 +34,12 @@ from eigentruth.control.evidence_gaps import (
     EvidenceGapPlan,
     plan_evidence_gaps_from_release_candidate,
 )
+from eigentruth.control.evidence_handoff import (
+    ProductPromotionEvidenceAudit,
+    ProductPromotionEvidenceGroup,
+    ProductPromotionEvidenceMetric,
+    audit_product_promotion_contract_evidence,
+)
 from eigentruth.control.feedback import (
     FeedbackOutcome,
     ProductFeedbackRecord,
@@ -125,6 +131,9 @@ __all__ = [
     "ProductTrace",
     "LoadedProductPromotionContract",
     "ProductPromotionContract",
+    "ProductPromotionEvidenceAudit",
+    "ProductPromotionEvidenceGroup",
+    "ProductPromotionEvidenceMetric",
     "ProductFeedbackRecord",
     "ProductFeedbackStore",
     "ProductRuntimeEvidenceBundle",
@@ -145,6 +154,7 @@ __all__ = [
     "VerificationStageDecision",
     "VerificationLoopResult",
     "audit_action_requests",
+    "audit_product_promotion_contract_evidence",
     "evidence_bundle_from_action_results",
     "evaluate_product_runtime_budget",
     "finalize_answer",

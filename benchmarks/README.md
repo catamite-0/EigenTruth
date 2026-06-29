@@ -4814,6 +4814,24 @@ root-cause/research-axis tags, and prioritized next actions. The output is a
 planning artifact only; it does not satisfy a release gate or promote verifier
 evidence.
 
+Before rerunning product-runtime drift gates, audit the deployable promotion
+contract for the exact evidence handoff fields expected by `frontier_audit`:
+
+```bash
+python benchmarks/audit_product_promotion_contract_evidence.py \
+  --contract artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract.json \
+  --json artifacts/smollm2_product_promotion_contract_v1_6/evidence-handoff-audit.json \
+  --registry artifacts/local-release-registry.json \
+  --name smollm2-product-promotion-contract-v1-6-evidence-handoff \
+  --version 0.1
+```
+
+The audit writes `workflow=product_promotion_evidence_handoff_audit` with the
+same promotion, pre-generation, counterfactual, triple-audit, covered-fact, and
+action-gate metric names used by release drift blockers. Treat it as
+pre-flight evidence hygiene: it explains why a contract will not satisfy a
+runtime-drift gate, but it does not itself satisfy the gate.
+
 ```bash
 python benchmarks/run_release_candidate_registry_workflow.py \
   --readiness-registry artifacts/registry.json \

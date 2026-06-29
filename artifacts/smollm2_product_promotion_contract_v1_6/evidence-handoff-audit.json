@@ -1,0 +1,558 @@
+{
+  "schema_version": 1,
+  "workflow": "product_promotion_evidence_handoff_audit",
+  "status": "blocked",
+  "source_workflow": "release_candidate_comparison",
+  "source_status": "promote",
+  "model_id": "HuggingFaceTB/SmolLM2-135M-Instruct",
+  "required_groups": [
+    "promotion",
+    "pre_generation",
+    "counterfactual",
+    "triple_audit",
+    "covered_fact_property",
+    "action_gate"
+  ],
+  "groups": [
+    {
+      "group": "promotion",
+      "status": "blocked",
+      "required": true,
+      "expected_metric_count": 4,
+      "present_metric_count": 1,
+      "missing_metric_count": 3,
+      "missing_metrics": [
+        "promotion_contract.triple_extraction_fixture_matrix.coverage_rate",
+        "promotion_contract.triple_extraction_fixture_matrix.mean_best_f1.mean",
+        "promotion_contract.triple_extraction_fixture_matrix.mean_f1_lift.mean"
+      ],
+      "recommended_action_id": "export_promotion_contract_runtime_evidence",
+      "metrics": [
+        {
+          "group": "promotion",
+          "metric": "promotion_contract.coverage_rate",
+          "evidence_key": "promotion_contract_coverage_rate",
+          "value": 1.0,
+          "source_path": [
+            "workflow"
+          ],
+          "status": "present",
+          "present": true
+        },
+        {
+          "group": "promotion",
+          "metric": "promotion_contract.triple_extraction_fixture_matrix.coverage_rate",
+          "evidence_key": "triple_extraction_fixture_matrix_coverage_rate",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "promotion",
+          "metric": "promotion_contract.triple_extraction_fixture_matrix.mean_best_f1.mean",
+          "evidence_key": "triple_extraction_fixture_matrix_mean_best_f1",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "promotion",
+          "metric": "promotion_contract.triple_extraction_fixture_matrix.mean_f1_lift.mean",
+          "evidence_key": "triple_extraction_fixture_matrix_mean_f1_lift",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        }
+      ],
+      "metadata": {}
+    },
+    {
+      "group": "pre_generation",
+      "status": "blocked",
+      "required": true,
+      "expected_metric_count": 8,
+      "present_metric_count": 0,
+      "missing_metric_count": 8,
+      "missing_metrics": [
+        "promotion_contract.pre_generation_probe_comparison.coverage_rate",
+        "promotion_contract.pre_generation_probe_comparison.manifest_verified_rate",
+        "promotion_contract.pre_generation_probe_comparison.model_count.mean",
+        "promotion_contract.pre_generation_probe_comparison.run_count.mean",
+        "promotion_contract.pre_generation_probe_comparison.redline_pass_rate",
+        "promotion_contract.pre_generation_probe_comparison.best_test_label_auroc.mean",
+        "promotion_contract.pre_generation_probe_comparison.best_redline_auroc.mean",
+        "promotion_contract.pre_generation_probe_comparison.best_redline_margin.mean"
+      ],
+      "recommended_action_id": "run_pre_generation_probe_comparison",
+      "metrics": [
+        {
+          "group": "pre_generation",
+          "metric": "promotion_contract.pre_generation_probe_comparison.coverage_rate",
+          "evidence_key": "pre_generation_probe_comparison_coverage_rate",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "pre_generation",
+          "metric": "promotion_contract.pre_generation_probe_comparison.manifest_verified_rate",
+          "evidence_key": "pre_generation_probe_comparison_manifest_verified_rate",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "pre_generation",
+          "metric": "promotion_contract.pre_generation_probe_comparison.model_count.mean",
+          "evidence_key": "pre_generation_probe_comparison_model_count",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "pre_generation",
+          "metric": "promotion_contract.pre_generation_probe_comparison.run_count.mean",
+          "evidence_key": "pre_generation_probe_comparison_run_count",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "pre_generation",
+          "metric": "promotion_contract.pre_generation_probe_comparison.redline_pass_rate",
+          "evidence_key": "pre_generation_probe_comparison_redline_passed",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "pre_generation",
+          "metric": "promotion_contract.pre_generation_probe_comparison.best_test_label_auroc.mean",
+          "evidence_key": "pre_generation_probe_comparison_best_test_label_auroc",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "pre_generation",
+          "metric": "promotion_contract.pre_generation_probe_comparison.best_redline_auroc.mean",
+          "evidence_key": "pre_generation_probe_comparison_best_redline_auroc",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "pre_generation",
+          "metric": "promotion_contract.pre_generation_probe_comparison.best_redline_margin.mean",
+          "evidence_key": "pre_generation_probe_comparison_best_redline_margin",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        }
+      ],
+      "metadata": {}
+    },
+    {
+      "group": "counterfactual",
+      "status": "blocked",
+      "required": true,
+      "expected_metric_count": 6,
+      "present_metric_count": 0,
+      "missing_metric_count": 6,
+      "missing_metrics": [
+        "promotion_contract.counterfactual_verification.coverage_rate",
+        "promotion_contract.counterfactual_verification.manifest_verified_rate",
+        "promotion_contract.counterfactual_verification.record_count.mean",
+        "promotion_contract.counterfactual_verification.pass_rate.mean",
+        "promotion_contract.counterfactual_verification.false_invariance_rate.mean",
+        "promotion_contract.counterfactual_verification.flip_success_count.mean"
+      ],
+      "recommended_action_id": "run_counterfactual_verifier_audit",
+      "metrics": [
+        {
+          "group": "counterfactual",
+          "metric": "promotion_contract.counterfactual_verification.coverage_rate",
+          "evidence_key": "counterfactual_verification_coverage_rate",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "counterfactual",
+          "metric": "promotion_contract.counterfactual_verification.manifest_verified_rate",
+          "evidence_key": "counterfactual_verification_manifest_verified_rate",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "counterfactual",
+          "metric": "promotion_contract.counterfactual_verification.record_count.mean",
+          "evidence_key": "counterfactual_verification_record_count",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "counterfactual",
+          "metric": "promotion_contract.counterfactual_verification.pass_rate.mean",
+          "evidence_key": "counterfactual_verification_pass_rate",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "counterfactual",
+          "metric": "promotion_contract.counterfactual_verification.false_invariance_rate.mean",
+          "evidence_key": "counterfactual_verification_false_invariance_rate",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "counterfactual",
+          "metric": "promotion_contract.counterfactual_verification.flip_success_count.mean",
+          "evidence_key": "counterfactual_verification_flip_success_count",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        }
+      ],
+      "metadata": {}
+    },
+    {
+      "group": "triple_audit",
+      "status": "blocked",
+      "required": true,
+      "expected_metric_count": 4,
+      "present_metric_count": 0,
+      "missing_metric_count": 4,
+      "missing_metrics": [
+        "triple_coverage.claim_triple_coverage_rate",
+        "triple_coverage.audit_claim_coverage_rate",
+        "triple_coverage.audit_pass_rate",
+        "triple_coverage.slot_coverage_rate"
+      ],
+      "recommended_action_id": "add_trace_level_triple_audit",
+      "metrics": [
+        {
+          "group": "triple_audit",
+          "metric": "triple_coverage.claim_triple_coverage_rate",
+          "evidence_key": "triple_claim_coverage_rate",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "triple_audit",
+          "metric": "triple_coverage.audit_claim_coverage_rate",
+          "evidence_key": "triple_audit_claim_coverage_rate",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "triple_audit",
+          "metric": "triple_coverage.audit_pass_rate",
+          "evidence_key": "triple_audit_pass_rate",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "triple_audit",
+          "metric": "triple_coverage.slot_coverage_rate",
+          "evidence_key": "triple_slot_coverage_rate",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        }
+      ],
+      "metadata": {}
+    },
+    {
+      "group": "covered_fact_property",
+      "status": "blocked",
+      "required": true,
+      "expected_metric_count": 6,
+      "present_metric_count": 0,
+      "missing_metric_count": 6,
+      "missing_metrics": [
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.property_metric_count.mean",
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_records.mean",
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_source_documents.mean",
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_decision_accuracy.mean",
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.max_false_supported_rate.mean",
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_false_refuted_rate.mean"
+      ],
+      "recommended_action_id": "refresh_covered_fact_property_routes",
+      "metrics": [
+        {
+          "group": "covered_fact_property",
+          "metric": "promotion_contract.covered_fact_properties.recommended_route_property_metrics.property_metric_count.mean",
+          "evidence_key": "covered_fact_recommended_route_property_metric_count",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "covered_fact_property",
+          "metric": "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_records.mean",
+          "evidence_key": "covered_fact_recommended_route_min_records",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "covered_fact_property",
+          "metric": "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_source_documents.mean",
+          "evidence_key": "covered_fact_recommended_route_min_source_documents",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "covered_fact_property",
+          "metric": "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_decision_accuracy.mean",
+          "evidence_key": "covered_fact_recommended_route_min_decision_accuracy",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "covered_fact_property",
+          "metric": "promotion_contract.covered_fact_properties.recommended_route_property_metrics.max_false_supported_rate.mean",
+          "evidence_key": "covered_fact_recommended_route_max_false_supported_rate",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "covered_fact_property",
+          "metric": "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_false_refuted_rate.mean",
+          "evidence_key": "covered_fact_recommended_route_min_false_refuted_rate",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        }
+      ],
+      "metadata": {}
+    },
+    {
+      "group": "action_gate",
+      "status": "blocked",
+      "required": true,
+      "expected_metric_count": 10,
+      "present_metric_count": 0,
+      "missing_metric_count": 10,
+      "missing_metrics": [
+        "promotion_contract.product_trace_replay.action_audit_gate.error_rate.mean",
+        "promotion_contract.product_trace_replay.action_audit_gate.missing_retrieval_action_rate.mean",
+        "promotion_contract.product_trace_replay.action_audit_gate.missing_plan_retrieval_query_rate.mean",
+        "promotion_contract.product_trace_replay.action_audit_gate.malformed_payload_rate.mean",
+        "promotion_contract.product_trace_replay.action_audit_gate.unexpected_action_rate.mean",
+        "promotion_contract.product_trace_replay.action_audit_gate.unknown_claim_id_rate.mean",
+        "promotion_contract.product_trace_replay.action_execution_gate.alignment_failed_trace_rate.mean",
+        "promotion_contract.product_trace_replay.action_execution_gate.missing_result_rate.mean",
+        "promotion_contract.product_trace_replay.action_execution_gate.unexpected_result_rate.mean",
+        "promotion_contract.product_trace_replay.action_execution_gate.request_id_mismatch_rate.mean"
+      ],
+      "recommended_action_id": "rerun_product_trace_action_gates",
+      "metrics": [
+        {
+          "group": "action_gate",
+          "metric": "promotion_contract.product_trace_replay.action_audit_gate.error_rate.mean",
+          "evidence_key": "product_trace_action_audit_error_rate",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "action_gate",
+          "metric": "promotion_contract.product_trace_replay.action_audit_gate.missing_retrieval_action_rate.mean",
+          "evidence_key": "product_trace_action_audit_missing_retrieval_action_rate",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "action_gate",
+          "metric": "promotion_contract.product_trace_replay.action_audit_gate.missing_plan_retrieval_query_rate.mean",
+          "evidence_key": "product_trace_action_audit_missing_plan_retrieval_query_rate",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "action_gate",
+          "metric": "promotion_contract.product_trace_replay.action_audit_gate.malformed_payload_rate.mean",
+          "evidence_key": "product_trace_action_audit_malformed_payload_rate",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "action_gate",
+          "metric": "promotion_contract.product_trace_replay.action_audit_gate.unexpected_action_rate.mean",
+          "evidence_key": "product_trace_action_audit_unexpected_action_rate",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "action_gate",
+          "metric": "promotion_contract.product_trace_replay.action_audit_gate.unknown_claim_id_rate.mean",
+          "evidence_key": "product_trace_action_audit_unknown_claim_id_rate",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "action_gate",
+          "metric": "promotion_contract.product_trace_replay.action_execution_gate.alignment_failed_trace_rate.mean",
+          "evidence_key": "product_trace_action_execution_alignment_failed_trace_rate",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "action_gate",
+          "metric": "promotion_contract.product_trace_replay.action_execution_gate.missing_result_rate.mean",
+          "evidence_key": "product_trace_action_execution_missing_result_rate",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "action_gate",
+          "metric": "promotion_contract.product_trace_replay.action_execution_gate.unexpected_result_rate.mean",
+          "evidence_key": "product_trace_action_execution_unexpected_result_rate",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        },
+        {
+          "group": "action_gate",
+          "metric": "promotion_contract.product_trace_replay.action_execution_gate.request_id_mismatch_rate.mean",
+          "evidence_key": "product_trace_action_execution_request_id_mismatch_rate",
+          "value": null,
+          "source_path": [],
+          "status": "missing",
+          "present": false
+        }
+      ],
+      "metadata": {}
+    }
+  ],
+  "missing_metrics": [
+    "promotion_contract.triple_extraction_fixture_matrix.coverage_rate",
+    "promotion_contract.triple_extraction_fixture_matrix.mean_best_f1.mean",
+    "promotion_contract.triple_extraction_fixture_matrix.mean_f1_lift.mean",
+    "promotion_contract.pre_generation_probe_comparison.coverage_rate",
+    "promotion_contract.pre_generation_probe_comparison.manifest_verified_rate",
+    "promotion_contract.pre_generation_probe_comparison.model_count.mean",
+    "promotion_contract.pre_generation_probe_comparison.run_count.mean",
+    "promotion_contract.pre_generation_probe_comparison.redline_pass_rate",
+    "promotion_contract.pre_generation_probe_comparison.best_test_label_auroc.mean",
+    "promotion_contract.pre_generation_probe_comparison.best_redline_auroc.mean",
+    "promotion_contract.pre_generation_probe_comparison.best_redline_margin.mean",
+    "promotion_contract.counterfactual_verification.coverage_rate",
+    "promotion_contract.counterfactual_verification.manifest_verified_rate",
+    "promotion_contract.counterfactual_verification.record_count.mean",
+    "promotion_contract.counterfactual_verification.pass_rate.mean",
+    "promotion_contract.counterfactual_verification.false_invariance_rate.mean",
+    "promotion_contract.counterfactual_verification.flip_success_count.mean",
+    "triple_coverage.claim_triple_coverage_rate",
+    "triple_coverage.audit_claim_coverage_rate",
+    "triple_coverage.audit_pass_rate",
+    "triple_coverage.slot_coverage_rate",
+    "promotion_contract.covered_fact_properties.recommended_route_property_metrics.property_metric_count.mean",
+    "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_records.mean",
+    "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_source_documents.mean",
+    "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_decision_accuracy.mean",
+    "promotion_contract.covered_fact_properties.recommended_route_property_metrics.max_false_supported_rate.mean",
+    "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_false_refuted_rate.mean",
+    "promotion_contract.product_trace_replay.action_audit_gate.error_rate.mean",
+    "promotion_contract.product_trace_replay.action_audit_gate.missing_retrieval_action_rate.mean",
+    "promotion_contract.product_trace_replay.action_audit_gate.missing_plan_retrieval_query_rate.mean",
+    "promotion_contract.product_trace_replay.action_audit_gate.malformed_payload_rate.mean",
+    "promotion_contract.product_trace_replay.action_audit_gate.unexpected_action_rate.mean",
+    "promotion_contract.product_trace_replay.action_audit_gate.unknown_claim_id_rate.mean",
+    "promotion_contract.product_trace_replay.action_execution_gate.alignment_failed_trace_rate.mean",
+    "promotion_contract.product_trace_replay.action_execution_gate.missing_result_rate.mean",
+    "promotion_contract.product_trace_replay.action_execution_gate.unexpected_result_rate.mean",
+    "promotion_contract.product_trace_replay.action_execution_gate.request_id_mismatch_rate.mean"
+  ],
+  "recommended_action_ids": [
+    "export_promotion_contract_runtime_evidence",
+    "run_pre_generation_probe_comparison",
+    "run_counterfactual_verifier_audit",
+    "add_trace_level_triple_audit",
+    "refresh_covered_fact_property_routes",
+    "rerun_product_trace_action_gates"
+  ],
+  "summary": {
+    "group_count": 6,
+    "required_group_count": 6,
+    "expected_metric_count": 38,
+    "present_metric_count": 1,
+    "missing_metric_count": 37,
+    "blocked_group_count": 6,
+    "groups": {
+      "promotion": "blocked",
+      "pre_generation": "blocked",
+      "counterfactual": "blocked",
+      "triple_audit": "blocked",
+      "covered_fact_property": "blocked",
+      "action_gate": "blocked"
+    },
+    "recommended_action_ids": [
+      "export_promotion_contract_runtime_evidence",
+      "run_pre_generation_probe_comparison",
+      "run_counterfactual_verifier_audit",
+      "add_trace_level_triple_audit",
+      "refresh_covered_fact_property_routes",
+      "rerun_product_trace_action_gates"
+    ]
+  },
+  "metadata": {
+    "contract": "artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract.json",
+    "scope": "frontier_runtime_drift"
+  }
+}

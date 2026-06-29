@@ -1084,6 +1084,18 @@ Added the first monitor-first tool-selection audit layer:
   property robustness, and promotion-contract runtime evidence. This is the
   current root-cause-aware research loop: fail closed, then lower blockers into
   concrete evidence queues.
+- `ProductPromotionEvidenceAudit` now audits a deployable promotion contract
+  before runtime-drift replay. `benchmarks/audit_product_promotion_contract_evidence.py`
+  checks the exact `frontier_audit` evidence groups expected by drift gates:
+  promotion/triple-matrix, pre-generation probe comparison, counterfactual
+  verifier audit, trace-level triple audit, covered-fact property metrics, and
+  product-trace action gates. Running it on
+  `artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract.json`
+  writes
+  `artifacts/smollm2_product_promotion_contract_v1_6/evidence-handoff-audit.json`
+  and blocks with `37/38` missing metrics. This confirms the current v1.6
+  contract is not enough for the v4 frontier runtime-drift gate; the next work
+  is to populate those evidence fields, not to relax the gate.
 
 ## Next Research-to-Code Candidates
 
@@ -1103,6 +1115,8 @@ Added the first monitor-first tool-selection audit layer:
 3. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
 4. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
 5. Use `benchmarks/plan_release_evidence_gaps.py` as the default bridge from a
-   blocked `frontier_audit` materialization to executable work. The current v4
-   plan says the next concrete evidence is readiness/performance refresh plus
-   complete runtime-drift handoff metrics, not another broad detector signal.
+   blocked `frontier_audit` materialization to executable work, then use
+   `benchmarks/audit_product_promotion_contract_evidence.py` before rerunning
+   runtime-drift gates. The current v4/v1.6 evidence says the next concrete work
+   is readiness/performance refresh plus complete runtime-drift handoff metrics,
+   not another broad detector signal.
