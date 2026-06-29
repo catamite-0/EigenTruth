@@ -32,6 +32,7 @@ from eigentruth.control.runtime_drift_keys import (
     PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_KEYS,
     PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_KEYS,
     PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_KEYS,
 )
 from eigentruth.registry import RegistryRecord
 from eigentruth.verify import Claim, ClaimDependency, VerificationResult, VerificationStatus
@@ -64,6 +65,7 @@ def test_runtime_drift_evidence_keys_are_grouped_without_duplicates():
         + PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_KEYS
         + PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_KEYS
         + PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_KEYS
         + PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_KEYS
     )
 
@@ -85,6 +87,9 @@ def test_runtime_drift_evidence_keys_are_grouped_without_duplicates():
     )
     assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["evidence_handoff"] == (
         PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS
+    )
+    assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["world_model"] == (
+        PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_KEYS
     )
     assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["frontier_release_evidence"] == (
         PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_KEYS

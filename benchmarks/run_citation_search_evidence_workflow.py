@@ -65,6 +65,7 @@ def run(
     registry_path: str | Path | None = None,
     name: str | None = None,
     version: str | None = None,
+    batch_ids: Sequence[str] = (),
     query_mode: str = "question",
     max_requests: int | None = None,
     max_results_per_request: int | None = None,
@@ -110,6 +111,7 @@ def run(
         source_jsonl_path=paths["source_documents"],
         corpus_json_path=paths["corpus"],
         artifact_manifest_path=paths["handoff_manifest"],
+        batch_ids=batch_ids,
         query_mode=query_mode,
         max_requests=max_requests,
         max_results_per_request=max_results_per_request,
@@ -193,6 +195,7 @@ def run(
             "controlled_sweeps": tuple(str(path) for path in controlled_sweep_paths),
         },
         "config": {
+            "batch_ids": tuple(str(item) for item in batch_ids),
             "query_mode": query_mode,
             "max_requests": max_requests,
             "max_results_per_request": max_results_per_request,
@@ -259,6 +262,8 @@ def run(
             "promotion_ready": gate["promotion_ready"],
             "target_route": target_route,
             "blocking_reason_count": len(gate["blocking_reasons"]),
+            "selected_batch_count": _nested_int(handoff, "summary", "selected_batch_count"),
+            "selected_batch_ids": _nested(handoff, "summary", "selected_batch_ids"),
             "adapter_request_count": _nested_int(handoff, "summary", "adapter_request_count"),
             "source_document_count": _nested_int(handoff, "summary", "source_document_count"),
             "corpus_document_count": _nested_int(handoff, "summary", "corpus_document_count"),
@@ -279,6 +284,8 @@ def run(
                 "passed": gate["passed"],
                 "promotion_ready": gate["promotion_ready"],
                 "target_route": target_route,
+                "selected_batch_count": _nested_int(handoff, "summary", "selected_batch_count"),
+                "selected_batch_ids": _nested(handoff, "summary", "selected_batch_ids"),
                 "adapter_request_count": _nested_int(handoff, "summary", "adapter_request_count"),
                 "source_document_count": _nested_int(handoff, "summary", "source_document_count"),
                 "corpus_document_count": _nested_int(handoff, "summary", "corpus_document_count"),
@@ -371,6 +378,13 @@ def _summary(
     comparison_report: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
     return {
+        "selected_batch_count": _nested_int(handoff, "summary", "selected_batch_count"),
+        "selected_batch_ids": _nested(handoff, "summary", "selected_batch_ids"),
+        "selected_batch_source_request_count": _nested_int(
+            handoff,
+            "summary",
+            "selected_batch_source_request_count",
+        ),
         "adapter_request_count": _nested_int(handoff, "summary", "adapter_request_count"),
         "source_document_count": _nested_int(handoff, "summary", "source_document_count"),
         "corpus_document_count": _nested_int(handoff, "summary", "corpus_document_count"),
@@ -528,6 +542,12 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--registry", default=None)
     parser.add_argument("--name", default=None)
     parser.add_argument("--version", default=None)
+    parser.add_argument(
+        "--batch-id",
+        action="append",
+        default=[],
+        help="Execution batch id from the unresolved queue to pass into the citation/search handoff.",
+    )
     parser.add_argument("--query-mode", choices=QUERY_MODES, default="question")
     parser.add_argument("--max-requests", type=int, default=None)
     parser.add_argument("--max-results-per-request", type=int, default=None)
@@ -567,6 +587,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         registry_path=args.registry,
         name=args.name,
         version=args.version,
+        batch_ids=tuple(args.batch_id or ()),
         query_mode=args.query_mode,
         max_requests=args.max_requests,
         max_results_per_request=args.max_results_per_request,

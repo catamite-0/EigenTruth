@@ -69,6 +69,206 @@ def test_evidence_gap_plan_reports_ready_when_no_blockers():
     assert plan.actions == ()
 
 
+def test_evidence_gap_plan_maps_multiple_testing_frontier_blocker():
+    plan = plan_evidence_gaps_from_release_candidate({
+        "workflow": "release_candidate_comparison",
+        "decision": {
+            "status": "blocked",
+            "blocking_reasons": [
+                {
+                    "gate": "frontier_release_evidence",
+                    "status": "blocked",
+                    "reasons": (
+                        "frontier release evidence multiple_testing_track_status is "
+                        "'blocked', expected 'promote' or 'not_required'",
+                    ),
+                }
+            ],
+        },
+    })
+
+    payload = plan.to_dict()
+    actions = {action["action_id"]: action for action in payload["actions"]}
+    gaps = payload["gaps"]
+
+    assert payload["status"] == "needs_evidence"
+    assert payload["summary"]["gap_count"] == 1
+    assert payload["summary"]["research_axes"] == {"multi_signal_calibration": 1}
+    assert payload["summary"]["top_action_ids"] == ("rerun_frontier_multiple_testing_gate",)
+    assert gaps[0]["root_cause"] == "model"
+    assert gaps[0]["metadata"]["evidence_kind"] == "frontier_multiple_testing"
+    assert gaps[0]["recommended_action_ids"] == ("rerun_frontier_multiple_testing_gate",)
+    assert actions["rerun_frontier_multiple_testing_gate"]["evidence_routes"] == (
+        "truthfulqa_frontier_workflow",
+        "multiple_testing_gate",
+        "frontier_release_evidence",
+    )
+
+
+def test_evidence_gap_plan_maps_frontier_release_evidence_report_tracks():
+    plan = plan_evidence_gaps_from_release_candidate({
+        "schema_version": 1,
+        "workflow": "frontier_release_evidence_comparison",
+        "status": "complete",
+        "decision": {
+            "status": "blocked",
+            "verifier_track_status": "promote",
+            "abstention_track_status": "blocked",
+            "detectability_track_status": "blocked",
+            "multiple_testing_track_status": "blocked",
+            "citation_batch_track_status": "blocked",
+            "blocking_reasons": (
+                "abstention_stability.synthetic.conditional_correctness_lower_bound_mean "
+                "0.5 is below required minimum 0.8",
+                "detectability_taxonomy.synthetic.entrenched_false_rate 0.4 exceeds maximum 0.25",
+                "truthfulqa_frontier_workflow.synthetic.multiple_testing_gate.all_pass is not true",
+                "citation_batch_rollup.citation-rollup.summary.missing_expected_batch_count "
+                "1 is non-zero",
+            ),
+        },
+        "evidence_summary": {
+            "citation_batch_rollup_names": ("citation-rollup",),
+            "citation_batch_missing_expected_batch_count": 1,
+            "citation_batch_missing_expected_batches": (
+                {
+                    "rollup": "citation-rollup",
+                    "batch_id": "unresolved-evidence-batch-0002",
+                },
+            ),
+            "citation_batch_expected_batch_ids": (
+                "unresolved-evidence-batch-0001",
+                "unresolved-evidence-batch-0002",
+            ),
+            "citation_batch_observed_batch_ids": ("unresolved-evidence-batch-0001",),
+        },
+        "multiple_testing_decisions": (
+            {
+                "name": "synthetic",
+                "metrics": {
+                    "failed_cells": (
+                        {
+                            "cell": "synthetic-l2",
+                            "status": "failed",
+                            "false_alarm": 0.04,
+                            "detection": 0.62,
+                            "report": "synthetic-l2/multiple-testing-report.json",
+                            "calibration": "synthetic-l2/multiple-testing-calibration.json",
+                        },
+                    ),
+                    "unknown_cells": (),
+                },
+            },
+        ),
+    })
+
+    payload = plan.to_dict()
+    actions = {action["action_id"]: action for action in payload["actions"]}
+    gaps = {gap["gate"]: gap for gap in payload["gaps"]}
+
+    assert payload["status"] == "needs_evidence"
+    assert payload["source_workflow"] == "frontier_release_evidence_comparison"
+    assert payload["summary"]["gates"] == {
+        "abstention_stability": 1,
+        "citation_batch_evidence": 1,
+        "detectability_taxonomy": 1,
+        "frontier_multiple_testing": 1,
+    }
+    assert payload["summary"]["research_axes"] == {
+        "blind_spot_taxonomy": 1,
+        "external_citation": 1,
+        "multi_signal_calibration": 1,
+        "participation_calibration": 1,
+    }
+    assert gaps["abstention_stability"]["recommended_action_ids"] == (
+        "improve_abstention_participation_gate",
+    )
+    assert gaps["detectability_taxonomy"]["recommended_action_ids"] == (
+        "audit_detectability_blind_spots",
+    )
+    assert gaps["frontier_multiple_testing"]["recommended_action_ids"] == (
+        "rerun_frontier_multiple_testing_gate",
+    )
+    assert gaps["citation_batch_evidence"]["recommended_action_ids"] == (
+        "complete_citation_batch_evidence_rollup",
+    )
+    assert gaps["citation_batch_evidence"]["metadata"]["citation_batch_missing_expected_batches"] == (
+        {
+            "rollup": "citation-rollup",
+            "batch_id": "unresolved-evidence-batch-0002",
+        },
+    )
+    assert gaps["frontier_multiple_testing"]["metadata"]["multiple_testing_failed_cells"] == (
+        {
+            "run": "synthetic",
+            "cell": "synthetic-l2",
+            "status": "failed",
+            "false_alarm": 0.04,
+            "detection": 0.62,
+            "report": "synthetic-l2/multiple-testing-report.json",
+            "calibration": "synthetic-l2/multiple-testing-calibration.json",
+        },
+    )
+    assert actions["improve_abstention_participation_gate"]["evidence_routes"] == (
+        "abstention_stability",
+        "participation_gate",
+        "frontier_release_evidence",
+    )
+    assert actions["complete_citation_batch_evidence_rollup"]["evidence_routes"] == (
+        "unresolved_evidence_queue",
+        "citation_search_evidence",
+        "source_family_citation",
+        "frontier_release_evidence",
+    )
+
+
+def test_evidence_gap_plan_maps_product_runtime_world_model_blockers():
+    plan = plan_evidence_gaps_from_release_candidate({
+        "workflow": "release_candidate_comparison",
+        "decision": {
+            "status": "blocked",
+            "blocking_reasons": [
+                {
+                    "gate": "product_runtime_drift",
+                    "status": "blocked",
+                    "reasons": (
+                        "product runtime drift world-model evidence metrics are incomplete: "
+                        "world_model.participating_trace_rate, world_model.trace_gap_rate",
+                        "product runtime drift world-model evidence blocked 1 metric(s)",
+                    ),
+                }
+            ],
+        },
+    })
+
+    payload = plan.to_dict()
+    actions = {action["action_id"]: action for action in payload["actions"]}
+
+    assert payload["status"] == "needs_evidence"
+    assert payload["summary"]["gap_count"] == 2
+    assert payload["summary"]["action_count"] == 1
+    assert payload["summary"]["missing_metric_count"] == 2
+    assert payload["summary"]["root_causes"] == {"world_model": 2}
+    assert payload["summary"]["research_axes"] == {"runtime_drift": 2}
+    assert payload["summary"]["top_action_ids"] == (
+        "rerun_product_trace_world_model_evidence",
+    )
+    assert actions["rerun_product_trace_world_model_evidence"]["evidence_routes"] == (
+        "product_trace_replay",
+        "product_runtime_drift",
+        "world_model_evidence",
+    )
+    for gap in payload["gaps"]:
+        assert gap["metadata"]["evidence_kind"] == "product_runtime_world_model_evidence"
+        assert gap["recommended_action_ids"] == (
+            "rerun_product_trace_world_model_evidence",
+        )
+    assert payload["gaps"][0]["missing_metrics"] == (
+        "world_model.participating_trace_rate",
+        "world_model.trace_gap_rate",
+    )
+    assert payload["gaps"][1]["missing_metrics"] == ()
+
+
 def test_plan_release_evidence_gaps_cli_helper_writes_and_registers(tmp_path):
     source = tmp_path / "release-workflow.json"
     output = tmp_path / "evidence-gap-plan.json"

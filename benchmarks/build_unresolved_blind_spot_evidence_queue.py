@@ -28,6 +28,7 @@ from eigentruth.json_utils import strict_json_dumps  # noqa: E402
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
 
 DEFAULT_REQUEST_TYPES = ("external_citation", "world_model_or_calculator_rule")
+DEFAULT_MAX_REQUESTS_PER_BATCH = 50
 REQUEST_TYPE_TO_ADAPTER = {
     "external_citation": "external_citation_search",
     "world_model_or_calculator_rule": "world_model_rule_authoring",
@@ -54,6 +55,7 @@ def build_unresolved_blind_spot_evidence_queue(
     priorities: Sequence[str] = (),
     max_targets: int | None = None,
     max_requests_per_target: int | None = None,
+    max_requests_per_batch: int = DEFAULT_MAX_REQUESTS_PER_BATCH,
     metadata: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return a JSON-ready unresolved adapter queue."""
@@ -64,6 +66,8 @@ def build_unresolved_blind_spot_evidence_queue(
         raise ValueError("max_targets must be positive when provided.")
     if max_requests_per_target is not None and int(max_requests_per_target) <= 0:
         raise ValueError("max_requests_per_target must be positive when provided.")
+    if int(max_requests_per_batch) <= 0:
+        raise ValueError("max_requests_per_batch must be positive.")
 
     plan_by_record = _records_by_index(plan.get("targets", ()))
     mapping_by_record = _records_by_index(question_property_mapping.get("records", ()))
@@ -150,9 +154,14 @@ def build_unresolved_blind_spot_evidence_queue(
                 request_ordinal=request_ordinal,
             ))
 
+    execution_batches = _batches(
+        request_queue,
+        max_requests_per_batch=int(max_requests_per_batch),
+    )
     summary = _summary(
         target_queue=target_queue,
         request_queue=request_queue,
+        execution_batches=execution_batches,
         skipped_targets=skipped_targets,
         resolved_record_indices=resolved_record_indices,
         source_collection_targets=collection_targets,
@@ -190,10 +199,12 @@ def build_unresolved_blind_spot_evidence_queue(
             "priorities": selected_priorities,
             "max_targets": max_targets,
             "max_requests_per_target": max_requests_per_target,
+            "max_requests_per_batch": int(max_requests_per_batch),
         },
         "summary": summary,
         "targets": tuple(target_queue),
         "adapter_requests": tuple(request_queue),
+        "execution_batches": tuple(execution_batches),
         "skipped_targets": tuple(skipped_targets),
         "metadata": dict(metadata or {}),
     }
@@ -209,6 +220,7 @@ def run(
     report_json_path: str | Path | None = None,
     target_jsonl_path: str | Path | None = None,
     request_jsonl_path: str | Path | None = None,
+    batch_jsonl_path: str | Path | None = None,
     artifact_manifest_path: str | Path | None = None,
     registry_path: str | Path | None = None,
     name: str | None = None,
@@ -217,6 +229,7 @@ def run(
     priorities: Sequence[str] = (),
     max_targets: int | None = None,
     max_requests_per_target: int | None = None,
+    max_requests_per_batch: int = DEFAULT_MAX_REQUESTS_PER_BATCH,
     metadata: Mapping[str, Any] | None = None,
     compact_json: bool = False,
 ) -> dict[str, Any]:
@@ -227,6 +240,7 @@ def run(
     report_path = Path(report_json_path) if report_json_path is not None else output / "unresolved-evidence-queue.json"
     target_path = Path(target_jsonl_path) if target_jsonl_path is not None else output / "unresolved-targets.jsonl"
     request_path = Path(request_jsonl_path) if request_jsonl_path is not None else output / "adapter-requests.jsonl"
+    batch_path = Path(batch_jsonl_path) if batch_jsonl_path is not None else output / "execution-batches.jsonl"
     manifest_path = (
         Path(artifact_manifest_path)
         if artifact_manifest_path is not None
@@ -245,6 +259,7 @@ def run(
         priorities=priorities,
         max_targets=max_targets,
         max_requests_per_target=max_requests_per_target,
+        max_requests_per_batch=max_requests_per_batch,
         metadata=metadata,
     )
     report = dict(payload)
@@ -255,6 +270,7 @@ def run(
         "covered_fact_mapping": None if covered_fact_mapping_path is None else str(covered_fact_mapping_path),
         "targets_jsonl": str(target_path),
         "adapter_requests_jsonl": str(request_path),
+        "execution_batches_jsonl": str(batch_path),
         "artifact_manifest": str(manifest_path),
     }
     payload = dict(payload)
@@ -263,11 +279,13 @@ def run(
     _write_json(report_path, report, compact=compact_json)
     _write_jsonl(target_path, payload["targets"])
     _write_jsonl(request_path, payload["adapter_requests"])
+    _write_jsonl(batch_path, payload["execution_batches"])
     manifest = build_artifact_manifest(
         {
             "unresolved_blind_spot_evidence_queue": report_path,
             "unresolved_targets": target_path,
             "adapter_requests": request_path,
+            "execution_batches": batch_path,
             "blind_spot_evidence_expansion_plan": Path(plan_path),
             "blind_spot_evidence_collection_corpus": Path(collection_corpus_path),
             "question_property_mapping": Path(question_property_mapping_path),
@@ -279,6 +297,7 @@ def run(
             "status": report["status"],
             "target_count": report["summary"]["target_count"],
             "adapter_request_count": report["summary"]["adapter_request_count"],
+            "batch_count": report["summary"]["batch_count"],
             "resolved_by_question_property_count": report["summary"]["resolved_by_question_property_count"],
             "external_citation_count": report["summary"]["request_type_counts"].get("external_citation", 0),
             "world_model_rule_count": report["summary"]["request_type_counts"].get(
@@ -301,6 +320,7 @@ def run(
                 "status": report["status"],
                 "target_count": report["summary"]["target_count"],
                 "adapter_request_count": report["summary"]["adapter_request_count"],
+                "batch_count": report["summary"]["batch_count"],
                 "resolved_by_question_property_count": report["summary"]["resolved_by_question_property_count"],
                 "external_citation_count": report["summary"]["request_type_counts"].get("external_citation", 0),
                 "world_model_rule_count": report["summary"]["request_type_counts"].get(
@@ -404,10 +424,51 @@ def _queue_request(
     }
 
 
+def _batches(
+    request_queue: Sequence[Mapping[str, Any]],
+    *,
+    max_requests_per_batch: int,
+) -> tuple[dict[str, Any], ...]:
+    grouped: defaultdict[str, list[Mapping[str, Any]]] = defaultdict(list)
+    for request in request_queue:
+        grouped[str(request.get("request_type") or "")].append(request)
+
+    batches: list[dict[str, Any]] = []
+    ordinal = 1
+    for request_type, rows in sorted(grouped.items(), key=lambda item: (_request_type_rank(item[0]), item[0])):
+        rows = sorted(rows, key=_queued_request_sort_key)
+        for offset in range(0, len(rows), max_requests_per_batch):
+            chunk = rows[offset : offset + max_requests_per_batch]
+            target_ids = tuple(dict.fromkeys(str(item.get("target_id")) for item in chunk))
+            batches.append({
+                "batch_id": f"unresolved-evidence-batch-{ordinal:04d}",
+                "request_type": request_type,
+                "adapter_family": str(chunk[0].get("adapter_family") or request_type) if chunk else request_type,
+                "request_count": len(chunk),
+                "target_count": len(target_ids),
+                "target_ids": target_ids,
+                "source_request_ids": tuple(str(item.get("source_request_id")) for item in chunk),
+                "min_priority_score": min(float(item.get("priority_score") or 0.0) for item in chunk),
+                "max_priority_score": max(float(item.get("priority_score") or 0.0) for item in chunk),
+                "not_verifier_evidence": True,
+            })
+            ordinal += 1
+    return tuple(batches)
+
+
+def _queued_request_sort_key(item: Mapping[str, Any]) -> tuple[float, int, str]:
+    return (
+        -float(item.get("priority_score") or 0.0),
+        int(item.get("target_rank") or 10**12),
+        str(item.get("source_request_id") or ""),
+    )
+
+
 def _summary(
     *,
     target_queue: Sequence[Mapping[str, Any]],
     request_queue: Sequence[Mapping[str, Any]],
+    execution_batches: Sequence[Mapping[str, Any]],
     skipped_targets: Sequence[Mapping[str, Any]],
     resolved_record_indices: set[int],
     source_collection_targets: Sequence[Mapping[str, Any]],
@@ -433,6 +494,7 @@ def _summary(
         "resolved_by_question_property_count": len(resolved_record_indices),
         "target_count": len(target_queue),
         "adapter_request_count": len(request_queue),
+        "batch_count": len(execution_batches),
         "request_type_counts": _sorted_counter(request_type_counts),
         "adapter_family_counts": _sorted_counter(adapter_counts),
         "evidence_status_counts": _sorted_counter(evidence_status_counts),
@@ -447,6 +509,13 @@ def _summary(
             "evidence_status": target_queue[0]["evidence_status"],
             "priority_score": target_queue[0]["priority_score"],
             "question_type": target_queue[0]["question_type"],
+        },
+        "top_batch": None if not execution_batches else {
+            "batch_id": execution_batches[0]["batch_id"],
+            "request_type": execution_batches[0]["request_type"],
+            "adapter_family": execution_batches[0]["adapter_family"],
+            "request_count": execution_batches[0]["request_count"],
+            "target_count": execution_batches[0]["target_count"],
         },
     }
 
@@ -646,6 +715,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--report-json", default=None)
     parser.add_argument("--target-jsonl", default=None)
     parser.add_argument("--request-jsonl", default=None)
+    parser.add_argument("--batch-jsonl", default=None)
     parser.add_argument("--artifact-manifest", default=None)
     parser.add_argument("--registry", default=None)
     parser.add_argument("--name", default=None)
@@ -654,6 +724,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--priority", action="append", default=[])
     parser.add_argument("--max-targets", type=int, default=None)
     parser.add_argument("--max-requests-per-target", type=int, default=None)
+    parser.add_argument("--max-requests-per-batch", type=int, default=DEFAULT_MAX_REQUESTS_PER_BATCH)
     parser.add_argument("--metadata", action="append", default=[])
     parser.add_argument("--compact-json", action="store_true")
     args = parser.parse_args(argv)
@@ -666,6 +737,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         report_json_path=args.report_json,
         target_jsonl_path=args.target_jsonl,
         request_jsonl_path=args.request_jsonl,
+        batch_jsonl_path=args.batch_jsonl,
         artifact_manifest_path=args.artifact_manifest,
         registry_path=args.registry,
         name=args.name,
@@ -674,6 +746,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         priorities=tuple(args.priority or ()),
         max_targets=args.max_targets,
         max_requests_per_target=args.max_requests_per_target,
+        max_requests_per_batch=args.max_requests_per_batch,
         metadata=_parse_metadata(args.metadata or ()),
         compact_json=bool(args.compact_json),
     )
@@ -683,6 +756,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         f"status={payload['status']} "
         f"targets={summary['target_count']} "
         f"requests={summary['adapter_request_count']} "
+        f"batches={summary['batch_count']} "
         f"resolved={summary['resolved_by_question_property_count']} "
         f"citations={summary['request_type_counts'].get('external_citation', 0)} "
         f"rules={summary['request_type_counts'].get('world_model_or_calculator_rule', 0)}"

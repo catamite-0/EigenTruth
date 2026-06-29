@@ -60,6 +60,7 @@ def run_external_citation_search_adapter_workflow(
     registry_path: str | Path | None = None,
     name: str | None = None,
     version: str | None = None,
+    batch_ids: Sequence[str] = (),
     query_mode: str = "question",
     max_requests: int | None = None,
     max_results_per_request: int | None = None,
@@ -91,6 +92,7 @@ def run_external_citation_search_adapter_workflow(
         request_jsonl_path=request_jsonl,
         source_jsonl_path=preflight_dir / "citation-search-source-docs.jsonl",
         artifact_manifest_path=preflight_dir / "artifact-manifest.json",
+        batch_ids=batch_ids,
         query_mode=query_mode,
         max_requests=max_requests,
         max_results_per_request=max_results_per_request,
@@ -119,6 +121,7 @@ def run_external_citation_search_adapter_workflow(
         blind_spots_path=blind_spots_path,
         controlled_sweep_paths=controlled_sweep_paths,
         output_dir=evidence_dir,
+        batch_ids=batch_ids,
         query_mode=query_mode,
         max_requests=max_requests,
         max_results_per_request=max_results_per_request,
@@ -146,6 +149,7 @@ def run_external_citation_search_adapter_workflow(
             "controlled_sweeps": tuple(str(path) for path in controlled_sweep_paths),
         },
         "config": {
+            "batch_ids": tuple(str(item) for item in batch_ids),
             "query_mode": query_mode,
             "max_requests": max_requests,
             "max_results_per_request": max_results_per_request,
@@ -196,6 +200,8 @@ def run_external_citation_search_adapter_workflow(
             "gate_passed": gate["passed"],
             "promotion_ready": gate["promotion_ready"],
             "target_route": target_route,
+            "selected_batch_count": payload["request_summary"].get("selected_batch_count"),
+            "selected_batch_ids": payload["request_summary"].get("selected_batch_ids"),
             "adapter_request_count": payload["request_summary"].get("adapter_request_count"),
             "source_document_count": payload["evidence_summary"].get("source_document_count"),
             "corpus_document_count": payload["evidence_summary"].get("corpus_document_count"),
@@ -215,6 +221,8 @@ def run_external_citation_search_adapter_workflow(
                 "gate_passed": gate["passed"],
                 "promotion_ready": gate["promotion_ready"],
                 "target_route": target_route,
+                "selected_batch_count": payload["request_summary"].get("selected_batch_count"),
+                "selected_batch_ids": payload["request_summary"].get("selected_batch_ids"),
                 "adapter_request_count": payload["request_summary"].get("adapter_request_count"),
                 "source_document_count": payload["evidence_summary"].get("source_document_count"),
                 "corpus_document_count": payload["evidence_summary"].get("corpus_document_count"),
@@ -337,6 +345,12 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--registry", default=None)
     parser.add_argument("--name", default=None)
     parser.add_argument("--version", default=None)
+    parser.add_argument(
+        "--batch-id",
+        action="append",
+        default=[],
+        help="Execution batch id from the unresolved queue to pass into request handoff and evidence gating.",
+    )
     parser.add_argument("--query-mode", choices=QUERY_MODES, default="question")
     parser.add_argument("--max-requests", type=int, default=None)
     parser.add_argument("--max-results-per-request", type=int, default=None)
@@ -363,6 +377,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         registry_path=args.registry,
         name=args.name,
         version=args.version,
+        batch_ids=tuple(args.batch_id or ()),
         query_mode=args.query_mode,
         max_requests=args.max_requests,
         max_results_per_request=args.max_results_per_request,

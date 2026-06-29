@@ -86,6 +86,250 @@ def test_calibrated_control_demo_default_trace_uses_artifact_diagnostics():
     assert payload["runtime_trace"]["summary"]["phase_counts"]["action_execution"] == 1
 
 
+def test_calibrated_control_demo_can_use_multiple_testing_gate(tmp_path):
+    demo = importlib.import_module("examples.calibrated_control_demo")
+    eval_conformal = importlib.import_module("benchmarks.eval_conformal")
+    from eigentruth.calibration import (
+        CalibrationArtifact,
+        CalibrationScore,
+    )
+
+    artifact_path = tmp_path / "calibration.json"
+    gate_path = tmp_path / "multiple-testing-calibration.json"
+    report_path = tmp_path / "multiple-testing-report.json"
+    scores_path = tmp_path / "scores.json"
+    CalibrationArtifact(
+        model_id="demo-model",
+        target_layer=-1,
+        scores=(CalibrationScore("maha_last", threshold=1000.0),),
+        eigentruth_version="0.1.0",
+    ).save_json(artifact_path)
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "demo-model", "layer": -1},
+            "labels": [0] * 20 + [1, 1, 1, 1],
+            "scores": {
+                "support_score": list(range(100, 120)) + [0, 1, 115, 116],
+                "maha_last": list(range(20)) + [100, 101, 5, 6],
+            },
+        }),
+        encoding="utf-8",
+    )
+    eval_conformal.run(
+        SimpleNamespace(
+            scores=str(scores_path),
+            signal="support_score",
+            signals=None,
+            repeats=1,
+            seed=0,
+            json=None,
+            save_calibration=None,
+            save_adaptive_calibration=None,
+            save_abstention_report=None,
+            include_abstention_report=False,
+            save_abstention_comparison=None,
+            include_abstention_comparison=False,
+            save_abstention_release_gate=None,
+            include_abstention_release_gate=False,
+            save_multiple_testing_report=str(report_path),
+            save_multiple_testing_calibration=str(gate_path),
+            include_multiple_testing_report=False,
+            multiple_testing_signals="support_score,maha_last",
+            multiple_testing_alpha=0.30,
+            multiple_testing_method="by",
+            save_sweep_report=None,
+            save_best_calibration=None,
+            best_by="auroc",
+            artifact_alpha=0.10,
+            abstention_alpha=0.10,
+            abstention_signal=None,
+            abstention_direction=None,
+            abstention_signals=None,
+            abstention_best_by="conditional_correctness_lower_bound",
+            min_abstention_conditional_correctness_lower_bound=0.8,
+            max_abstention_rate=0.5,
+            direction="lower",
+            adaptive_feature=(),
+            adaptive_feature_weight=(),
+            adaptive_intercept=0.0,
+            adaptive_score_name="adaptive",
+            confidence_signal="nll_answer",
+            confidence_direction=None,
+            confidence_top_fraction=0.25,
+            disable_confidence_audit=True,
+            model_id=None,
+            model_revision=None,
+            target_layer=None,
+            created_at="2026-06-29T00:00:00+00:00",
+            commit_sha=None,
+            artifact_manifest=None,
+        )
+    )
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["config"]["directions"] == {
+        "support_score": "lower",
+        "maha_last": "higher",
+    }
+    assert gate_path.exists()
+
+    payload = demo.run(
+        SimpleNamespace(
+            artifact=str(artifact_path),
+            multiple_testing_gate=str(gate_path),
+            diagnostics='{"maha_last": 100.0, "support_score": 0.0}',
+            text="Paris is the capital of France.",
+            facts='{"Paris is the capital of France": "supported"}',
+            evidence=None,
+            refutations=None,
+            retrieval_evidence=None,
+            enable_calculator=False,
+            calculator_context=None,
+            runtime_profile=None,
+            staged_verification=None,
+            runtime_trace=True,
+            request_id="multiple-testing-gate-demo",
+            output=None,
+            registry=None,
+        )
+    )
+    gate_trace = payload["risk_decision"]["diagnostics"]["multiple_testing_gate"]
+
+    assert payload["risk_decision"]["action"] == "abstain"
+    assert payload["final_answer"]["status"] == "abstained"
+    assert payload["metadata"]["multiple_testing_gate_enabled"] is True
+    assert payload["metadata"]["multiple_testing_gate_source"] == str(gate_path)
+    assert payload["metadata"]["multiple_testing_gate_signals"] == ("support_score", "maha_last")
+    assert gate_trace["status"] == "rejected"
+    assert set(gate_trace["rejected_signal_names"]) == {"support_score", "maha_last"}
+
+
+def test_calibrated_control_demo_preserves_bool_diagnostics_for_fail_closed(tmp_path):
+    demo = importlib.import_module("examples.calibrated_control_demo")
+    from eigentruth.calibration import CalibrationArtifact, CalibrationScore
+
+    artifact_path = tmp_path / "calibration.json"
+    CalibrationArtifact(
+        model_id="demo-model",
+        target_layer=-1,
+        scores=(CalibrationScore("maha_last", threshold=1.0),),
+        eigentruth_version="0.1.0",
+    ).save_json(artifact_path)
+
+    payload = demo.run(
+        SimpleNamespace(
+            artifact=str(artifact_path),
+            multiple_testing_gate=None,
+            sequential_gate=None,
+            diagnostics='{"maha_last": true}',
+            diagnostics_sequence=None,
+            text="Paris is the capital of France.",
+            facts='{"Paris is the capital of France": "supported"}',
+            evidence=None,
+            refutations=None,
+            retrieval_evidence=None,
+            enable_calculator=False,
+            calculator_context=None,
+            runtime_profile=None,
+            staged_verification=None,
+            runtime_trace=True,
+            promotion_contract=None,
+            request_id="bool-diagnostic-demo",
+            output=None,
+            registry=None,
+        )
+    )
+
+    assert payload["risk_decision"]["action"] == "clarify"
+    assert payload["risk_decision"]["risk_level"] == "unknown"
+    assert payload["risk_decision"]["diagnostics"]["invalid_scores"] == ("maha_last",)
+
+
+def test_calibrated_control_demo_rejects_bool_runtime_budget_mapping():
+    demo = importlib.import_module("examples.calibrated_control_demo")
+
+    with pytest.raises(ValueError, match="max_phase_seconds.initial_verification"):
+        demo.runtime_budget_policy_from_args(
+            SimpleNamespace(
+                promotion_contract=None,
+                max_runtime_phase_seconds='{"initial_verification": true}',
+            )
+        )
+
+
+def test_calibrated_control_demo_can_replay_sequential_gate_trace(tmp_path):
+    demo = importlib.import_module("examples.calibrated_control_demo")
+    from eigentruth.calibration import (
+        CalibrationArtifact,
+        CalibrationScore,
+        SequentialConformalCalibrator,
+    )
+
+    artifact_path = tmp_path / "calibration.json"
+    gate_path = tmp_path / "sequential-calibration.json"
+    output_path = tmp_path / "sequence-trace.json"
+    CalibrationArtifact(
+        model_id="demo-model",
+        target_layer=-1,
+        scores=(CalibrationScore("maha_last", threshold=1000.0),),
+        eigentruth_version="0.1.0",
+    ).save_json(artifact_path)
+    SequentialConformalCalibrator(alpha=0.5, schedule="linear").calibrate(
+        model_id="demo-model",
+        target_layer=-1,
+        signal_name="support_score",
+        calibration_scores=[10.0, 11.0, 12.0, 13.0],
+        direction="lower",
+        eigentruth_version="0.1.0",
+    ).save_json(gate_path)
+
+    payload = demo.run(
+        SimpleNamespace(
+            artifact=str(artifact_path),
+            multiple_testing_gate=None,
+            sequential_gate=str(gate_path),
+            diagnostics=None,
+            diagnostics_sequence=json.dumps((
+                {"maha_last": 1.0, "support_score": 9.0},
+                {"maha_last": 1.0, "support_score": 12.0},
+            )),
+            text="Paris is the capital of France.",
+            facts='{"Paris is the capital of France": "supported"}',
+            evidence=None,
+            refutations=None,
+            retrieval_evidence=None,
+            enable_calculator=False,
+            calculator_context=None,
+            runtime_profile=None,
+            staged_verification=None,
+            runtime_trace=True,
+            promotion_contract=None,
+            request_id="sequential-gate-demo",
+            output=str(output_path),
+            registry=None,
+            compact_json=False,
+        )
+    )
+    written = json.loads(output_path.read_text(encoding="utf-8"))
+    first_gate = payload["risk_decisions"][0]["diagnostics"]["sequential_gate"]
+    second_gate = payload["risk_decisions"][1]["diagnostics"]["sequential_gate"]
+
+    assert written["trace_format"] == "risk_decision_sequence"
+    assert payload["trace_format"] == "risk_decision_sequence"
+    assert payload["metadata"]["sequential_gate_enabled"] is True
+    assert payload["metadata"]["sequential_gate_source"] == str(gate_path)
+    assert payload["metadata"]["sequence_decision_summary"]["action_counts"] == {
+        "abstain": 1,
+        "accept": 1,
+    }
+    assert payload["risk_decisions"][0]["action"] == "abstain"
+    assert payload["risk_decisions"][1]["action"] == "accept"
+    assert first_gate["status"] == "rejected"
+    assert first_gate["step"] == 1
+    assert first_gate["report_summary"]["rejected_steps"] == (1,)
+    assert second_gate["status"] == "passed"
+    assert payload["events"][0]["event_type"] == "sequence_risk_decision"
+
+
 def test_calibrated_control_demo_can_emit_bounded_trace():
     demo = importlib.import_module("examples.calibrated_control_demo")
 

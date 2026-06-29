@@ -33,6 +33,9 @@ _PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_PREFIXES = (
 _PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS
 )
+_PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_KEYS
+)
 _PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_KEYS
 )
@@ -484,6 +487,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
         metrics.update(_verification_plan_metrics(trace))
         metrics.update(_claim_risk_localization_metrics(trace))
         metrics.update(_triple_coverage_metrics(trace))
+        metrics.update(_world_model_metrics(trace))
         metrics.update(_final_answer_metrics(trace))
         metrics.update(_promotion_contract_metrics(trace))
         return metrics
@@ -525,6 +529,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
     metrics.update(_verification_plan_metrics(trace))
     metrics.update(_claim_risk_localization_metrics(trace))
     metrics.update(_triple_coverage_metrics(trace))
+    metrics.update(_world_model_metrics(trace))
     metrics.update(_final_answer_metrics(trace))
     metrics.update(_promotion_contract_metrics(trace))
     return metrics
@@ -989,6 +994,60 @@ def _metadata_triple_coverage_summary(payload: Mapping[str, Any]) -> dict[str, A
     )
 
 
+def _world_model_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:
+    if isinstance(trace, ProductTrace):
+        summary = trace.world_model_summary()
+        source = "full_trace"
+    else:
+        payload = dict(trace)
+        summary = _mapping(_mapping(payload.get("summaries")).get("world_model"))
+        if summary:
+            source = "bounded_summary"
+        else:
+            summary = _metadata_world_model_summary(payload)
+            if summary:
+                source = "metadata_summary"
+            else:
+                summary = ProductTrace(
+                    verification_results=tuple(_sequence(payload.get("verification_results", ()))),
+                ).world_model_summary()
+                source = "full_trace"
+    return {
+        "world_model_summary": summary,
+        "world_model_source": source,
+        "world_model_total": _finite_float(summary.get("world_model_total")),
+        "world_model_coverage_rate": _finite_float(summary.get("coverage_rate")),
+        "world_model_conflict_count": _finite_float(summary.get("conflict_count")),
+        "world_model_conflict_rate": _finite_float(summary.get("conflict_rate")),
+        "world_model_low_agreement_count": _finite_float(summary.get("low_agreement_count")),
+        "world_model_low_agreement_rate": _finite_float(summary.get("low_agreement_rate")),
+        "world_model_no_rule_matched_count": _finite_float(summary.get("no_rule_matched_count")),
+        "world_model_trace_gap_count": _finite_float(summary.get("trace_gap_count")),
+        "world_model_trace_gap_rate": _finite_float(summary.get("trace_gap_rate")),
+        "world_model_traceable": _optional_bool(summary.get("traceable")),
+        "world_model_prediction_confidence_mean": _finite_float(
+            summary.get("prediction_confidence_mean")
+        ),
+        "world_model_prediction_confidence_min": _finite_float(
+            summary.get("prediction_confidence_min")
+        ),
+        "world_model_agreement_rate_mean": _finite_float(summary.get("agreement_rate_mean")),
+        "world_model_agreement_rate_min": _finite_float(summary.get("agreement_rate_min")),
+        "world_model_counts_by_adapter": _int_mapping(summary.get("counts_by_adapter")),
+        "world_model_counts_by_reference_id": _int_mapping(summary.get("counts_by_reference_id")),
+        "world_model_counts_by_decision_rule": _int_mapping(summary.get("counts_by_decision_rule")),
+        "world_model_conflict_paths": _int_mapping(summary.get("conflict_paths")),
+    }
+
+
+def _metadata_world_model_summary(payload: Mapping[str, Any]) -> dict[str, Any]:
+    metadata = _mapping(payload.get("metadata"))
+    trace_corpus = _mapping(metadata.get("trace_corpus"))
+    return _mapping(trace_corpus.get("world_model_summary")) or _mapping(
+        metadata.get("world_model_summary")
+    )
+
+
 def _final_answer_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:
     if isinstance(trace, ProductTrace):
         payload = trace.to_dict()
@@ -1318,6 +1377,30 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
             ),
             "abstention_track_status": _optional_string(
                 frontier_release_evidence.get("abstention_track_status")
+            ),
+            "multiple_testing_track_status": _optional_string(
+                frontier_release_evidence.get("multiple_testing_track_status")
+            ),
+            "citation_batch_track_status": _optional_string(
+                frontier_release_evidence.get("citation_batch_track_status")
+            ),
+            "citation_batch_rollup_count": _finite_float(
+                frontier_release_evidence.get("citation_batch_rollup_count")
+            ),
+            "citation_batch_expected_batch_count": _finite_float(
+                frontier_release_evidence.get("citation_batch_expected_batch_count")
+            ),
+            "citation_batch_observed_batch_count": _finite_float(
+                frontier_release_evidence.get("citation_batch_observed_batch_count")
+            ),
+            "citation_batch_missing_expected_batch_count": _finite_float(
+                frontier_release_evidence.get("citation_batch_missing_expected_batch_count")
+            ),
+            "citation_batch_duplicate_batch_count": _finite_float(
+                frontier_release_evidence.get("citation_batch_duplicate_batch_count")
+            ),
+            "citation_batch_unexpected_batch_count": _finite_float(
+                frontier_release_evidence.get("citation_batch_unexpected_batch_count")
             ),
             "run_count": float(len(frontier_release_evidence_run_names))
             if frontier_release_evidence_run_names
@@ -2088,6 +2171,32 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         ),
         "promotion_contract_frontier_release_evidence_abstention_track_status": (
             frontier_release_evidence_summary.get("abstention_track_status")
+        ),
+        "promotion_contract_frontier_release_evidence_multiple_testing_track_status": (
+            frontier_release_evidence_summary.get("multiple_testing_track_status")
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_track_status": (
+            frontier_release_evidence_summary.get("citation_batch_track_status")
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_rollup_count": (
+            frontier_release_evidence_summary.get("citation_batch_rollup_count")
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_expected_batch_count": (
+            frontier_release_evidence_summary.get("citation_batch_expected_batch_count")
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_observed_batch_count": (
+            frontier_release_evidence_summary.get("citation_batch_observed_batch_count")
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_missing_expected_batch_count": (
+            frontier_release_evidence_summary.get(
+                "citation_batch_missing_expected_batch_count"
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_duplicate_batch_count": (
+            frontier_release_evidence_summary.get("citation_batch_duplicate_batch_count")
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_unexpected_batch_count": (
+            frontier_release_evidence_summary.get("citation_batch_unexpected_batch_count")
         ),
         "promotion_contract_frontier_release_evidence_run_count": _finite_float(
             frontier_release_evidence_summary.get("run_count")
@@ -2869,6 +2978,11 @@ def _promotion_contract_runtime_drift_from_metadata(
         contract_metadata=contract_metadata,
         prefixes=_PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES,
     )
+    world_model_evidence = _promotion_contract_runtime_drift_evidence(
+        metadata,
+        contract_metadata=contract_metadata,
+        prefixes=_PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_PREFIXES,
+    )
     frontier_release_evidence = _promotion_contract_runtime_drift_evidence(
         metadata,
         contract_metadata=contract_metadata,
@@ -2905,6 +3019,9 @@ def _promotion_contract_runtime_drift_from_metadata(
         ),
         "evidence_handoff_evidence_required": _optional_bool(
             value("product_runtime_drift_evidence_handoff_evidence_required")
+        ),
+        "world_model_evidence_required": _optional_bool(
+            value("product_runtime_drift_world_model_evidence_required")
         ),
         "frontier_release_evidence_required": _optional_bool(
             value("product_runtime_drift_frontier_release_evidence_required")
@@ -2961,6 +3078,12 @@ def _promotion_contract_runtime_drift_from_metadata(
         "evidence_handoff_evidence_blocked_metric_count": _finite_float(
             value("product_runtime_drift_evidence_handoff_evidence_blocked_metric_count")
         ),
+        "world_model_evidence_metric_count": _finite_float(
+            value("product_runtime_drift_world_model_evidence_metric_count")
+        ),
+        "world_model_evidence_blocked_metric_count": _finite_float(
+            value("product_runtime_drift_world_model_evidence_blocked_metric_count")
+        ),
         "frontier_release_evidence_metric_count": _finite_float(
             value("product_runtime_drift_frontier_release_evidence_metric_count")
         ),
@@ -2975,6 +3098,7 @@ def _promotion_contract_runtime_drift_from_metadata(
         "action_gate_evidence": action_gate_evidence,
         "trajectory_audit_evidence": trajectory_audit_evidence,
         "evidence_handoff_evidence": evidence_handoff_evidence,
+        "world_model_evidence": world_model_evidence,
         "frontier_release_evidence": frontier_release_evidence,
     }
     drift["available"] = any(
@@ -2991,6 +3115,7 @@ def _promotion_contract_runtime_drift_from_metadata(
             "action_gate_evidence",
             "trajectory_audit_evidence",
             "evidence_handoff_evidence",
+            "world_model_evidence",
             "frontier_release_evidence",
         }
     ) or _runtime_drift_evidence_available(
@@ -3002,6 +3127,7 @@ def _promotion_contract_runtime_drift_from_metadata(
         action_gate_evidence,
         trajectory_audit_evidence,
         evidence_handoff_evidence,
+        world_model_evidence,
         frontier_release_evidence,
     )
     return drift
@@ -3091,6 +3217,9 @@ def _promotion_contract_runtime_drift_metric_values(runtime_drift: Mapping[str, 
         "promotion_contract_product_runtime_drift_evidence_handoff_evidence_required": (
             runtime_drift.get("evidence_handoff_evidence_required")
         ),
+        "promotion_contract_product_runtime_drift_world_model_evidence_required": (
+            runtime_drift.get("world_model_evidence_required")
+        ),
         "promotion_contract_product_runtime_drift_frontier_release_evidence_required": (
             runtime_drift.get("frontier_release_evidence_required")
         ),
@@ -3148,6 +3277,12 @@ def _promotion_contract_runtime_drift_metric_values(runtime_drift: Mapping[str, 
         "promotion_contract_product_runtime_drift_evidence_handoff_evidence_blocked_metric_count": (
             runtime_drift.get("evidence_handoff_evidence_blocked_metric_count")
         ),
+        "promotion_contract_product_runtime_drift_world_model_evidence_metric_count": (
+            runtime_drift.get("world_model_evidence_metric_count")
+        ),
+        "promotion_contract_product_runtime_drift_world_model_evidence_blocked_metric_count": (
+            runtime_drift.get("world_model_evidence_blocked_metric_count")
+        ),
         "promotion_contract_product_runtime_drift_frontier_release_evidence_metric_count": (
             runtime_drift.get("frontier_release_evidence_metric_count")
         ),
@@ -3191,6 +3326,11 @@ def _promotion_contract_runtime_drift_metric_values(runtime_drift: Mapping[str, 
                 f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
             ] = _mapping(values).get(suffix)
     for prefix, values in _mapping(runtime_drift.get("evidence_handoff_evidence")).items():
+        for suffix in ("baseline", "current", "status"):
+            metrics[
+                f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
+            ] = _mapping(values).get(suffix)
+    for prefix, values in _mapping(runtime_drift.get("world_model_evidence")).items():
         for suffix in ("baseline", "current", "status"):
             metrics[
                 f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
@@ -3461,6 +3601,16 @@ def _frontier_release_evidence_from_flat_metadata(
         "decision_status": value("decision_status"),
         "verifier_track_status": value("verifier_track_status"),
         "abstention_track_status": value("abstention_track_status"),
+        "multiple_testing_track_status": value("multiple_testing_track_status"),
+        "citation_batch_track_status": value("citation_batch_track_status"),
+        "citation_batch_rollup_count": value("citation_batch_rollup_count"),
+        "citation_batch_expected_batch_count": value("citation_batch_expected_batch_count"),
+        "citation_batch_observed_batch_count": value("citation_batch_observed_batch_count"),
+        "citation_batch_missing_expected_batch_count": value(
+            "citation_batch_missing_expected_batch_count"
+        ),
+        "citation_batch_duplicate_batch_count": value("citation_batch_duplicate_batch_count"),
+        "citation_batch_unexpected_batch_count": value("citation_batch_unexpected_batch_count"),
         "run_names": value("run_names"),
         "blocking_reasons": value("blocking_reasons"),
     }

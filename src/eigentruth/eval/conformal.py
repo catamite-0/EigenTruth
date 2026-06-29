@@ -28,6 +28,8 @@ from typing import Any, Sequence, Union
 import torch
 from torch import Tensor
 
+from eigentruth.json_utils import to_jsonable
+
 ArrayLike = Union[Tensor, Sequence[float]]
 
 
@@ -139,6 +141,257 @@ class ConformalAbstentionDecision:
             reason=str(data.get("reason", "")),
             metadata=dict(data.get("metadata", {})),
         )
+
+
+@dataclass(frozen=True)
+class MultipleTestingSignalResult:
+    """One signal's contribution to a conformal multiple-testing decision."""
+
+    name: str
+    score: float
+    direction: str
+    p_value: float
+    rank: int
+    threshold: float
+    rejected: bool
+    calibration_count: int
+    method: str
+    rejection_cutoff: float | None = None
+
+    def __post_init__(self) -> None:
+        if self.direction not in {"higher", "lower"}:
+            raise ValueError("direction must be 'higher' or 'lower'.")
+        score = _finite_float(self.score, name="score")
+        p_value = _unit_interval_float(self.p_value, name="p_value")
+        threshold = _unit_interval_float(self.threshold, name="threshold")
+        rank = int(self.rank)
+        if rank < 1:
+            raise ValueError("rank must be positive.")
+        calibration_count = int(self.calibration_count)
+        if calibration_count < 1:
+            raise ValueError("calibration_count must be positive.")
+        cutoff = None
+        if self.rejection_cutoff is not None:
+            cutoff = _unit_interval_float(self.rejection_cutoff, name="rejection_cutoff")
+        object.__setattr__(self, "name", str(self.name))
+        object.__setattr__(self, "score", score)
+        object.__setattr__(self, "p_value", p_value)
+        object.__setattr__(self, "rank", rank)
+        object.__setattr__(self, "threshold", threshold)
+        object.__setattr__(self, "rejected", bool(self.rejected))
+        object.__setattr__(self, "calibration_count", calibration_count)
+        object.__setattr__(self, "method", _multiple_testing_method(self.method))
+        object.__setattr__(self, "rejection_cutoff", cutoff)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable signal result."""
+        return {
+            "name": self.name,
+            "score": self.score,
+            "direction": self.direction,
+            "p_value": self.p_value,
+            "rank": self.rank,
+            "threshold": self.threshold,
+            "rejected": self.rejected,
+            "calibration_count": self.calibration_count,
+            "method": self.method,
+            "rejection_cutoff": self.rejection_cutoff,
+        }
+
+
+@dataclass(frozen=True)
+class MultipleTestingHallucinationReport:
+    """Global hallucination decision from several conformal signal p-values.
+
+    The report controls one false-alarm budget across several mixed-direction
+    signals. ``method="by"`` is the conservative default for dependent signals;
+    ``method="bh"`` is less conservative, and ``method="bonferroni"`` uses a
+    simple per-signal alpha split.
+    """
+
+    alpha: float
+    method: str
+    correction: float
+    rejected: bool
+    rejected_count: int
+    min_p_value: float
+    signals: tuple[MultipleTestingSignalResult, ...]
+    rejection_cutoff: float | None = None
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        alpha = _alpha_float(self.alpha)
+        method = _multiple_testing_method(self.method)
+        correction = _finite_float(self.correction, name="correction")
+        if correction <= 0.0:
+            raise ValueError("correction must be positive.")
+        rejected_count = int(self.rejected_count)
+        if rejected_count < 0:
+            raise ValueError("rejected_count must be non-negative.")
+        min_p_value = _unit_interval_float(self.min_p_value, name="min_p_value")
+        signals = tuple(self.signals)
+        if not signals:
+            raise ValueError("signals must be non-empty.")
+        cutoff = None
+        if self.rejection_cutoff is not None:
+            cutoff = _unit_interval_float(self.rejection_cutoff, name="rejection_cutoff")
+        object.__setattr__(self, "alpha", alpha)
+        object.__setattr__(self, "method", method)
+        object.__setattr__(self, "correction", correction)
+        object.__setattr__(self, "rejected", bool(self.rejected))
+        object.__setattr__(self, "rejected_count", rejected_count)
+        object.__setattr__(self, "min_p_value", min_p_value)
+        object.__setattr__(self, "signals", signals)
+        object.__setattr__(self, "rejection_cutoff", cutoff)
+        object.__setattr__(self, "metadata", dict(self.metadata))
+
+    @property
+    def rejected_signal_names(self) -> tuple[str, ...]:
+        """Return signal names rejected by the global multiple-testing rule."""
+        return tuple(signal.name for signal in self.signals if signal.rejected)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable report."""
+        return {
+            "alpha": self.alpha,
+            "method": self.method,
+            "correction": self.correction,
+            "rejected": self.rejected,
+            "rejected_count": self.rejected_count,
+            "rejected_signal_names": list(self.rejected_signal_names),
+            "min_p_value": self.min_p_value,
+            "rejection_cutoff": self.rejection_cutoff,
+            "signals": [signal.to_dict() for signal in self.signals],
+            "metadata": to_jsonable(self.metadata),
+        }
+
+
+@dataclass(frozen=True)
+class SequentialConformalStepResult:
+    """One step in a sequential alpha-spending conformal monitor."""
+
+    step: int
+    p_value: float
+    alpha_spent: float
+    cumulative_alpha_spent: float
+    rejected: bool
+    score: float | None = None
+    direction: str | None = None
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        step = int(self.step)
+        if step < 1:
+            raise ValueError("step must be positive.")
+        p_value = _unit_interval_float(self.p_value, name="p_value")
+        alpha_spent = _unit_interval_float(self.alpha_spent, name="alpha_spent")
+        cumulative_alpha_spent = _unit_interval_float(
+            self.cumulative_alpha_spent,
+            name="cumulative_alpha_spent",
+        )
+        if alpha_spent <= 0.0:
+            raise ValueError("alpha_spent must be positive.")
+        if cumulative_alpha_spent < alpha_spent:
+            raise ValueError("cumulative_alpha_spent must be at least alpha_spent.")
+        if self.score is not None:
+            object.__setattr__(self, "score", _finite_float(self.score, name="score"))
+        if self.direction is not None and self.direction not in {"higher", "lower"}:
+            raise ValueError("direction must be 'higher' or 'lower'.")
+        object.__setattr__(self, "step", step)
+        object.__setattr__(self, "p_value", p_value)
+        object.__setattr__(self, "alpha_spent", alpha_spent)
+        object.__setattr__(self, "cumulative_alpha_spent", cumulative_alpha_spent)
+        object.__setattr__(self, "rejected", bool(self.rejected))
+        object.__setattr__(self, "metadata", dict(self.metadata))
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable step payload."""
+        return {
+            "step": self.step,
+            "p_value": self.p_value,
+            "alpha_spent": self.alpha_spent,
+            "cumulative_alpha_spent": self.cumulative_alpha_spent,
+            "rejected": self.rejected,
+            "score": self.score,
+            "direction": self.direction,
+            "metadata": to_jsonable(self.metadata),
+        }
+
+
+@dataclass(frozen=True)
+class SequentialConformalReport:
+    """Alpha-spending monitor over a sequence of conformal p-values.
+
+    The report controls the total alarm budget over a finite sequence by
+    spending per-step alpha values whose sum is at most ``alpha``. This is a
+    conservative monitor-first primitive for sessions, batches, or repeated
+    release checks; it makes no independence assumption beyond each p-value's
+    conformal super-uniformity.
+    """
+
+    alpha: float
+    schedule: str
+    horizon: int
+    alpha_spent_total: float
+    rejected: bool
+    rejected_count: int
+    steps: tuple[SequentialConformalStepResult, ...]
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        alpha = _alpha_float(self.alpha)
+        schedule = _alpha_spending_schedule_name(self.schedule)
+        horizon = _positive_int(self.horizon, name="horizon")
+        alpha_spent_total = _unit_interval_float(
+            self.alpha_spent_total,
+            name="alpha_spent_total",
+        )
+        if alpha_spent_total > alpha + 1e-12:
+            raise ValueError("alpha_spent_total must not exceed alpha.")
+        rejected_count = int(self.rejected_count)
+        if rejected_count < 0:
+            raise ValueError("rejected_count must be non-negative.")
+        steps = tuple(self.steps)
+        if len(steps) > horizon:
+            raise ValueError("steps cannot exceed horizon.")
+        expected_steps = tuple(range(1, len(steps) + 1))
+        if tuple(step.step for step in steps) != expected_steps:
+            raise ValueError("step numbers must be contiguous starting at 1.")
+        if rejected_count != sum(1 for step in steps if step.rejected):
+            raise ValueError("rejected_count must match rejected steps.")
+        object.__setattr__(self, "alpha", alpha)
+        object.__setattr__(self, "schedule", schedule)
+        object.__setattr__(self, "horizon", horizon)
+        object.__setattr__(self, "alpha_spent_total", alpha_spent_total)
+        object.__setattr__(self, "rejected", bool(self.rejected))
+        object.__setattr__(self, "rejected_count", rejected_count)
+        object.__setattr__(self, "steps", steps)
+        object.__setattr__(self, "metadata", dict(self.metadata))
+
+    @property
+    def remaining_alpha(self) -> float:
+        """Return unspent alpha budget."""
+        return max(0.0, self.alpha - self.alpha_spent_total)
+
+    @property
+    def rejected_steps(self) -> tuple[int, ...]:
+        """Return step numbers rejected by the sequential monitor."""
+        return tuple(step.step for step in self.steps if step.rejected)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable sequential monitor report."""
+        return {
+            "alpha": self.alpha,
+            "schedule": self.schedule,
+            "horizon": self.horizon,
+            "alpha_spent_total": self.alpha_spent_total,
+            "remaining_alpha": self.remaining_alpha,
+            "rejected": self.rejected,
+            "rejected_count": self.rejected_count,
+            "rejected_steps": list(self.rejected_steps),
+            "steps": [step.to_dict() for step in self.steps],
+            "metadata": to_jsonable(self.metadata),
+        }
 
 
 @dataclass(frozen=True)
@@ -662,6 +915,264 @@ def conformal_pvalues(calib_scores: ArrayLike, test_scores: ArrayLike) -> Tensor
     return (1.0 + n_ge.to(torch.float64)) / (calib.numel() + 1.0)
 
 
+def directional_conformal_pvalues(
+    calib_scores: ArrayLike,
+    test_scores: ArrayLike,
+    direction: str,
+) -> Tensor:
+    """Return conformal p-values for native scores with explicit anomaly direction."""
+    if direction == "higher":
+        return conformal_pvalues(calib_scores, test_scores)
+    if direction == "lower":
+        calib = -_finite_flat_tensor(calib_scores, name="calibration scores")
+        test = -_finite_flat_tensor(test_scores, name="test scores")
+        return conformal_pvalues(calib, test)
+    raise ValueError("direction must be 'higher' or 'lower'.")
+
+
+def multiple_testing_conformal_report(
+    calibration_scores_by_signal: Mapping[str, ArrayLike],
+    test_scores: Mapping[str, float],
+    *,
+    alpha: float,
+    directions: Mapping[str, str] | None = None,
+    method: str = "by",
+    metadata: Mapping[str, Any] | None = None,
+) -> MultipleTestingHallucinationReport:
+    """Combine several directional conformal p-values under one false-alarm budget.
+
+    Args:
+        calibration_scores_by_signal: Per-signal calibration scores from the
+            normal/correct population.
+        test_scores: One native score per signal for the runtime item.
+        alpha: Global false-alarm budget in ``(0, 1)``.
+        directions: Optional per-signal anomaly direction. Missing signals
+            default to ``"higher"``.
+        method: ``"by"`` (default), ``"bh"``, or ``"bonferroni"``.
+        metadata: Optional JSON-ready context copied into the report.
+
+    Returns:
+        A JSON-serializable global report with per-signal p-values and rejected
+        signal names.
+    """
+    alpha_value = _alpha_float(alpha)
+    method_name = _multiple_testing_method(method)
+    calibration_items = tuple(
+        (str(name), values) for name, values in calibration_scores_by_signal.items()
+    )
+    signal_names = tuple(name for name, _ in calibration_items)
+    if not signal_names:
+        raise ValueError("calibration_scores_by_signal must be non-empty.")
+    if len(set(signal_names)) != len(signal_names):
+        raise ValueError("signal names must be unique after string conversion.")
+    calibration_by_name = dict(calibration_items)
+
+    test_items = tuple((str(name), value) for name, value in test_scores.items())
+    test_names = {name for name, _ in test_items}
+    if len(test_names) != len(test_items):
+        raise ValueError("test score names must be unique after string conversion.")
+    test_by_name = dict(test_items)
+    calibration_names = set(signal_names)
+    missing = sorted(calibration_names - test_names)
+    extra = sorted(test_names - calibration_names)
+    if missing or extra:
+        raise ValueError(
+            "test_scores must contain exactly the calibration signals "
+            f"(missing={missing}, extra={extra})."
+        )
+
+    raw_directions = {} if directions is None else {str(name): str(value) for name, value in directions.items()}
+    extra_directions = sorted(set(raw_directions.keys()) - calibration_names)
+    if extra_directions:
+        raise ValueError(f"directions contains unknown signals: {extra_directions}.")
+
+    prelim: list[dict[str, Any]] = []
+    for name in signal_names:
+        direction = raw_directions.get(name, "higher")
+        if direction not in {"higher", "lower"}:
+            raise ValueError("direction must be 'higher' or 'lower'.")
+        score = _finite_float(test_by_name[name], name=f"test_scores.{name}")
+        calibration = _finite_flat_tensor(
+            calibration_by_name[name],
+            name=f"calibration_scores_by_signal.{name}",
+        )
+        if calibration.numel() == 0:
+            raise ValueError(f"calibration scores for signal '{name}' must be non-empty.")
+        p_value = float(
+            directional_conformal_pvalues(
+                calibration,
+                torch.tensor([score], dtype=torch.float64),
+                direction,
+            )[0].item()
+        )
+        prelim.append(
+            {
+                "name": name,
+                "score": score,
+                "direction": direction,
+                "p_value": p_value,
+                "calibration_count": int(calibration.numel()),
+            }
+        )
+
+    ordered = sorted(prelim, key=lambda item: (float(item["p_value"]), str(item["name"])))
+    m = len(ordered)
+    correction = _multiple_testing_correction(method_name, m)
+    thresholds: dict[str, float] = {}
+    ranks: dict[str, int] = {}
+    cutoff: float | None = None
+
+    for rank, item in enumerate(ordered, start=1):
+        name = str(item["name"])
+        threshold = _multiple_testing_rank_threshold(method_name, alpha_value, rank, m, correction)
+        thresholds[name] = threshold
+        ranks[name] = rank
+        if float(item["p_value"]) <= threshold:
+            cutoff = float(item["p_value"])
+
+    rejected_names = {
+        str(item["name"])
+        for item in ordered
+        if cutoff is not None and float(item["p_value"]) <= cutoff
+    }
+
+    signals = tuple(
+        MultipleTestingSignalResult(
+            name=str(item["name"]),
+            score=float(item["score"]),
+            direction=str(item["direction"]),
+            p_value=float(item["p_value"]),
+            rank=ranks[str(item["name"])],
+            threshold=thresholds[str(item["name"])],
+            rejected=str(item["name"]) in rejected_names,
+            calibration_count=int(item["calibration_count"]),
+            method=method_name,
+            rejection_cutoff=cutoff,
+        )
+        for item in sorted(ordered, key=lambda item: ranks[str(item["name"])])
+    )
+
+    return MultipleTestingHallucinationReport(
+        alpha=alpha_value,
+        method=method_name,
+        correction=correction,
+        rejected=bool(rejected_names),
+        rejected_count=len(rejected_names),
+        min_p_value=float(ordered[0]["p_value"]),
+        signals=signals,
+        rejection_cutoff=cutoff,
+        metadata={} if metadata is None else dict(metadata),
+    )
+
+
+def alpha_spending_schedule(
+    alpha: float,
+    horizon: int,
+    *,
+    schedule: str = "harmonic",
+) -> tuple[float, ...]:
+    """Return per-step alpha budgets whose sum is at most ``alpha``.
+
+    Supported schedules:
+
+    - ``linear``: equal spending across the finite horizon.
+    - ``harmonic``: front-loaded ``1 / t`` spending, normalized over horizon.
+    - ``geometric``: conservative ``alpha / 2**t`` spending, leaving a small
+      reserve for the finite horizon and matching the infinite-tail intuition.
+    """
+    alpha_value = _alpha_float(alpha)
+    horizon_value = _positive_int(horizon, name="horizon")
+    schedule_name = _alpha_spending_schedule_name(schedule)
+    if schedule_name == "linear":
+        return tuple(alpha_value / horizon_value for _ in range(horizon_value))
+    if schedule_name == "harmonic":
+        normalizer = sum(1.0 / step for step in range(1, horizon_value + 1))
+        return tuple(alpha_value * (1.0 / step) / normalizer for step in range(1, horizon_value + 1))
+    return tuple(alpha_value / (2.0**step) for step in range(1, horizon_value + 1))
+
+
+def sequential_pvalue_monitor(
+    p_values: ArrayLike,
+    *,
+    alpha: float,
+    schedule: str = "harmonic",
+    metadata: Mapping[str, Any] | None = None,
+) -> SequentialConformalReport:
+    """Apply alpha spending to a sequence of already-calibrated p-values."""
+    p_tensor = _pvalue_flat_tensor(p_values, name="p_values")
+    if p_tensor.numel() == 0:
+        raise ValueError("p_values must be non-empty.")
+    spends = alpha_spending_schedule(alpha, int(p_tensor.numel()), schedule=schedule)
+    steps: list[SequentialConformalStepResult] = []
+    cumulative = 0.0
+    for index, (p_value, alpha_spent) in enumerate(zip(p_tensor.tolist(), spends, strict=True), start=1):
+        cumulative += float(alpha_spent)
+        steps.append(
+            SequentialConformalStepResult(
+                step=index,
+                p_value=float(p_value),
+                alpha_spent=float(alpha_spent),
+                cumulative_alpha_spent=cumulative,
+                rejected=float(p_value) <= float(alpha_spent),
+            )
+        )
+    return SequentialConformalReport(
+        alpha=alpha,
+        schedule=schedule,
+        horizon=int(p_tensor.numel()),
+        alpha_spent_total=cumulative,
+        rejected=any(step.rejected for step in steps),
+        rejected_count=sum(1 for step in steps if step.rejected),
+        steps=tuple(steps),
+        metadata={} if metadata is None else dict(metadata),
+    )
+
+
+def sequential_conformal_monitor(
+    calib_scores: ArrayLike,
+    test_scores: ArrayLike,
+    *,
+    alpha: float,
+    direction: str = "higher",
+    schedule: str = "harmonic",
+    metadata: Mapping[str, Any] | None = None,
+) -> SequentialConformalReport:
+    """Run an alpha-spending monitor over native conformal anomaly scores."""
+    if direction not in {"higher", "lower"}:
+        raise ValueError("direction must be 'higher' or 'lower'.")
+    scores = _finite_flat_tensor(test_scores, name="test_scores")
+    p_values = directional_conformal_pvalues(calib_scores, scores, direction)
+    report = sequential_pvalue_monitor(
+        p_values,
+        alpha=alpha,
+        schedule=schedule,
+        metadata=metadata,
+    )
+    steps = tuple(
+        SequentialConformalStepResult(
+            step=step.step,
+            p_value=step.p_value,
+            alpha_spent=step.alpha_spent,
+            cumulative_alpha_spent=step.cumulative_alpha_spent,
+            rejected=step.rejected,
+            score=float(score),
+            direction=direction,
+            metadata=step.metadata,
+        )
+        for step, score in zip(report.steps, scores.tolist(), strict=True)
+    )
+    return SequentialConformalReport(
+        alpha=report.alpha,
+        schedule=report.schedule,
+        horizon=report.horizon,
+        alpha_spent_total=report.alpha_spent_total,
+        rejected=report.rejected,
+        rejected_count=report.rejected_count,
+        steps=steps,
+        metadata=dict(report.metadata),
+    )
+
+
 def conformal_threshold(calib_scores: ArrayLike, alpha: float) -> float:
     """给定误报预算 alpha，返回报警阈值 t。
     Alarm threshold t for a false-alarm budget alpha.
@@ -1012,10 +1523,86 @@ def adaptive_anomaly_scores(
     return adjusted + offset
 
 
+def _multiple_testing_method(value: object) -> str:
+    method = str(value).strip().lower().replace("_", "-")
+    aliases = {
+        "by": "by",
+        "benjamini-yekutieli": "by",
+        "dependency-safe": "by",
+        "bh": "bh",
+        "benjamini-hochberg": "bh",
+        "bonferroni": "bonferroni",
+    }
+    if method not in aliases:
+        raise ValueError("method must be one of: by, bh, bonferroni.")
+    return aliases[method]
+
+
+def _multiple_testing_correction(method: str, signal_count: int) -> float:
+    if signal_count < 1:
+        raise ValueError("signal_count must be positive.")
+    if method == "by":
+        return float(sum(1.0 / rank for rank in range(1, signal_count + 1)))
+    if method == "bonferroni":
+        return float(signal_count)
+    if method == "bh":
+        return 1.0
+    raise ValueError("method must be one of: by, bh, bonferroni.")
+
+
+def _multiple_testing_rank_threshold(
+    method: str,
+    alpha: float,
+    rank: int,
+    signal_count: int,
+    correction: float,
+) -> float:
+    if method == "bonferroni":
+        return alpha / signal_count
+    return rank * alpha / (signal_count * correction)
+
+
+def _alpha_spending_schedule_name(value: object) -> str:
+    schedule = str(value).strip().lower().replace("_", "-")
+    aliases = {
+        "linear": "linear",
+        "equal": "linear",
+        "harmonic": "harmonic",
+        "front-loaded": "harmonic",
+        "geometric": "geometric",
+        "halving": "geometric",
+    }
+    if schedule not in aliases:
+        raise ValueError("schedule must be one of: linear, harmonic, geometric.")
+    return aliases[schedule]
+
+
+def _positive_int(value: object, *, name: str) -> int:
+    if isinstance(value, bool):
+        raise ValueError(f"{name} must be a positive integer, not bool.")
+    try:
+        as_float = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a positive integer.") from exc
+    if not math.isfinite(as_float) or not as_float.is_integer():
+        raise ValueError(f"{name} must be a positive integer.")
+    integer = int(as_float)
+    if integer < 1:
+        raise ValueError(f"{name} must be positive.")
+    return integer
+
+
 def _finite_flat_tensor(values: ArrayLike, *, name: str) -> Tensor:
     tensor = torch.as_tensor(values, dtype=torch.float64).flatten()
     if not torch.isfinite(tensor).all():
         raise ValueError(f"{name} must contain only finite values.")
+    return tensor
+
+
+def _pvalue_flat_tensor(values: ArrayLike, *, name: str) -> Tensor:
+    tensor = _finite_flat_tensor(values, name=name)
+    if not (((tensor >= 0.0) & (tensor <= 1.0)).all()):
+        raise ValueError(f"{name} must contain p-values in [0, 1].")
     return tensor
 
 

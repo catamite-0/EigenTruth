@@ -27,7 +27,13 @@ from eigentruth.control.actions import (
     SQLiteActionExecutionLedger,
     TimeoutActionExecutor,
 )
-from eigentruth.control.controller import ControlPolicyConfig, ParticipationGateConfig, RiskController
+from eigentruth.control.controller import (
+    ControlPolicyConfig,
+    MultipleTestingGateConfig,
+    ParticipationGateConfig,
+    RiskController,
+    SequentialGateConfig,
+)
 from eigentruth.control.evidence_gaps import (
     EvidenceGap,
     EvidenceGapAction,
@@ -132,6 +138,8 @@ __all__ = [
     "PolicyGuardedActionExecutor",
     "PlanAwareCorrectionPolicy",
     "ParticipationGateConfig",
+    "MultipleTestingGateConfig",
+    "SequentialGateConfig",
     "SQLiteActionExecutionLedger",
     "RUNTIME_PROFILE_NAMES",
     "RUNTIME_PROFILES",

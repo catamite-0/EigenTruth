@@ -82,6 +82,13 @@ PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS: tuple[str, ...] = (
     "evidence_handoff_blocked_group_count",
     "evidence_handoff_promoted_group_rate",
 )
+PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_KEYS: tuple[str, ...] = (
+    "world_model_participating_trace_rate",
+    "world_model_coverage_rate",
+    "world_model_conflict_rate",
+    "world_model_low_agreement_rate",
+    "world_model_trace_gap_rate",
+)
 PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_KEYS: tuple[str, ...] = (
     "frontier_release_evidence_coverage_rate",
     "frontier_release_evidence_report_present_rate",
@@ -90,7 +97,14 @@ PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_KEYS: tuple[str, ...] = (
     "frontier_release_evidence_decision_promote_rate",
     "frontier_release_evidence_verifier_track_promote_rate",
     "frontier_release_evidence_abstention_track_promote_rate",
+    "frontier_release_evidence_citation_batch_track_promote_rate",
     "frontier_release_evidence_run_count",
+    "frontier_release_evidence_citation_batch_rollup_count",
+    "frontier_release_evidence_citation_batch_expected_batch_count",
+    "frontier_release_evidence_citation_batch_observed_batch_count",
+    "frontier_release_evidence_citation_batch_missing_expected_batch_count",
+    "frontier_release_evidence_citation_batch_duplicate_batch_count",
+    "frontier_release_evidence_citation_batch_unexpected_batch_count",
 )
 
 PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS: dict[str, tuple[str, ...]] = {
@@ -103,6 +117,7 @@ PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS: dict[str, tuple[str, ...]] = {
     "action_gate": PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_KEYS,
     "trajectory_audit": PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_KEYS,
     "evidence_handoff": PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS,
+    "world_model": PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_KEYS,
     "frontier_release_evidence": PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_KEYS,
 }
 

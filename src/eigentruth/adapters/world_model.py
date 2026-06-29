@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from collections import Counter
 from dataclasses import dataclass, field
 from typing import Any, Mapping, Protocol, Sequence, runtime_checkable
@@ -21,8 +22,11 @@ class WorldModelPrediction:
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        if not (0.0 <= self.confidence <= 1.0):
-            raise ValueError("confidence must be in [0, 1].")
+        object.__setattr__(
+            self,
+            "confidence",
+            _unit_interval_float(self.confidence, name="confidence"),
+        )
 
 
 @dataclass(frozen=True)
@@ -201,14 +205,17 @@ class WorldModelRule:
             condition if isinstance(condition, StateCheck) else StateCheck.from_mapping(condition)
             for condition in self.conditions
         )
-        if not (0.0 <= self.confidence <= 1.0):
-            raise ValueError("world model rule confidence must be in [0, 1].")
+        confidence = _unit_interval_float(
+            self.confidence,
+            name="world model rule confidence",
+        )
         object.__setattr__(self, "name", name)
         object.__setattr__(self, "action_match", dict(self.action_match))
         object.__setattr__(self, "conditions", conditions)
         object.__setattr__(self, "set_values", dict(self.set_values))
         object.__setattr__(self, "increment_values", dict(self.increment_values))
         object.__setattr__(self, "decrement_values", dict(self.decrement_values))
+        object.__setattr__(self, "confidence", confidence)
         object.__setattr__(self, "metadata", dict(self.metadata))
 
     @classmethod
@@ -241,7 +248,7 @@ class WorldModelRule:
             set_values=dict(raw_set),
             increment_values=dict(raw_increment),
             decrement_values=dict(raw_decrement),
-            confidence=float(data.get("confidence", 1.0)),
+            confidence=data.get("confidence", 1.0),
             explanation=str(data.get("explanation", "")),
             metadata=dict(data.get("metadata", {})),
         )
@@ -312,8 +319,14 @@ class StateTransitionVerifier:
     reference: WorldModelReference | Mapping[str, Any] | None = None
 
     def __post_init__(self) -> None:
-        if not (0.0 <= self.min_prediction_confidence <= 1.0):
-            raise ValueError("min_prediction_confidence must be in [0, 1].")
+        object.__setattr__(
+            self,
+            "min_prediction_confidence",
+            _unit_interval_float(
+                self.min_prediction_confidence,
+                name="min_prediction_confidence",
+            ),
+        )
         reference = self.reference
         if reference is not None and not isinstance(reference, WorldModelReference):
             reference = WorldModelReference.from_mapping(reference)
@@ -684,9 +697,13 @@ class EnsembleWorldModelAdapter:
         world_models = tuple(self.world_models)
         if not world_models:
             raise ValueError("world_models must contain at least one adapter.")
-        if not (0.0 < self.min_agreement <= 1.0):
-            raise ValueError("min_agreement must be in (0, 1].")
+        min_agreement = _unit_interval_float(
+            self.min_agreement,
+            name="min_agreement",
+            lower_exclusive=True,
+        )
         object.__setattr__(self, "world_models", world_models)
+        object.__setattr__(self, "min_agreement", min_agreement)
 
     def verify(self, claim: Claim, context: Mapping[str, Any] | None = None) -> VerificationResult:
         results: list[tuple[int, WorldModelAdapter, VerificationResult]] = []
@@ -866,6 +883,22 @@ class EnsembleWorldModelAdapter:
 
     def explain(self, claim: Claim) -> str:
         return f"world-model ensemble checked claim with {len(self.world_models)} members: {claim.text}"
+
+
+def _unit_interval_float(value: Any, *, name: str, lower_exclusive: bool = False) -> float:
+    if isinstance(value, bool):
+        raise ValueError(f"{name} must be a finite numeric value.")
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite numeric value.") from exc
+    if not math.isfinite(numeric):
+        raise ValueError(f"{name} must be finite.")
+    lower_ok = numeric > 0.0 if lower_exclusive else numeric >= 0.0
+    if not lower_ok or numeric > 1.0:
+        interval = "(0, 1]" if lower_exclusive else "[0, 1]"
+        raise ValueError(f"{name} must be in {interval}.")
+    return numeric
 
 
 def _transition_check_source(

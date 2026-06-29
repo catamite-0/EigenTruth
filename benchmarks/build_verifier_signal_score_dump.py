@@ -197,7 +197,8 @@ def verifier_signal_definitions() -> dict[str, str]:
             "absolute numeric expected-vs-actual delta for world-model conflicts, else 0."
         ),
         "world_model_trace_gap": (
-            "1 when a state-transition verifier record lacks world_model_reference or world_model_view metadata."
+            "1 when a state-transition verifier record lacks top-level or prediction_metadata "
+            "world_model_reference/world_model_view metadata."
         ),
     }
 
@@ -295,20 +296,27 @@ def _world_model_signal_features(
     transition = _mapping(record.get("transition"))
     transition_present = bool(transition)
     metadata_candidates = [
-        _mapping(transition.get("metadata")),
-        _mapping(final.get("metadata")),
+        (_mapping(transition.get("metadata")), transition_present),
+        (_mapping(final.get("metadata")), False),
     ]
-    for metadata in metadata_candidates:
+    for metadata, is_transition_metadata in metadata_candidates:
         if not metadata:
             continue
+        direct_metadata = _is_direct_world_model_metadata(metadata)
+        trace_metadata = _has_world_model_trace_metadata(metadata)
         features.update(
             _world_model_trace_features(
                 metadata,
-                transition_present=transition_present,
+                transition_present=is_transition_metadata,
             )
         )
         prediction_metadata = _mapping(metadata.get("prediction_metadata"))
-        if prediction_metadata:
+        if prediction_metadata and (
+            is_transition_metadata
+            or direct_metadata
+            or trace_metadata
+            or _is_world_model_prediction_metadata(prediction_metadata)
+        ):
             features.update(
                 _world_model_metadata_features(
                     prediction_metadata,
@@ -316,7 +324,7 @@ def _world_model_signal_features(
                 )
             )
             return features
-        if _is_direct_world_model_metadata(metadata):
+        if direct_metadata:
             features.update(
                 _world_model_metadata_features(
                     metadata,
@@ -343,14 +351,37 @@ def _world_model_trace_features(
     *,
     transition_present: bool,
 ) -> dict[str, float]:
-    conflict = _mapping(metadata.get("world_model_conflict"))
-    reference = _mapping(metadata.get("world_model_reference"))
-    view = _mapping(metadata.get("world_model_view"))
+    conflict = _world_model_trace_mapping(metadata, "world_model_conflict")
+    reference = _world_model_trace_mapping(metadata, "world_model_reference")
+    view = _world_model_trace_mapping(metadata, "world_model_view")
     return {
         "world_model_conflict": 1.0 if conflict else 0.0,
         "world_model_conflict_delta": _world_model_conflict_delta(conflict),
         "world_model_trace_gap": 1.0 if transition_present and (not reference or not view) else 0.0,
     }
+
+
+def _world_model_trace_mapping(metadata: Mapping[str, Any], key: str) -> Mapping[str, Any]:
+    value = _mapping(metadata.get(key))
+    if value:
+        return value
+    prediction_metadata = _mapping(metadata.get("prediction_metadata"))
+    return _mapping(prediction_metadata.get(key))
+
+
+def _has_world_model_trace_metadata(metadata: Mapping[str, Any]) -> bool:
+    return any(
+        _world_model_trace_mapping(metadata, key)
+        for key in (
+            "world_model_reference",
+            "world_model_view",
+            "world_model_conflict",
+        )
+    ) or metadata.get("world_model") is not None
+
+
+def _is_world_model_prediction_metadata(metadata: Mapping[str, Any]) -> bool:
+    return _has_world_model_trace_metadata(metadata) or _is_direct_world_model_metadata(metadata)
 
 
 def _world_model_conflict_delta(conflict: Mapping[str, Any]) -> float:

@@ -1,6 +1,7 @@
 # EigenTruth 0.2.0 Research Release Notes
 
 Date: 2026-06-25
+Last validated: 2026-06-29
 
 ## Status
 
@@ -24,14 +25,23 @@ models remain optional or adapter-level integrations.
 - JSON and JSONL benchmark score dumps with provenance, fingerprinting, selected
   column loading, and artifact manifests for release checks.
 - Direction-aware conformal thresholds, abstention reports, selective accuracy,
-  coverage metrics, confidence intervals, and release gates.
+  coverage metrics, confidence intervals, multiple-testing conformal reports,
+  sequential conformal alpha-spending sidecars, and release gates.
 - Calibration artifacts, adaptive conformal calibration, layer/score sweep
-  reports, and rank-calibrated score-fusion artifacts.
+  reports, rank-calibrated score-fusion artifacts, multi-signal conformal
+  artifacts, and sequential conformal runtime artifacts.
 - Claim extraction metadata, claim verification planning, staged verification
   loops, retrieval shells, structured-state checks, world-model adapter shells,
   feedback records, runtime summaries, and replayable product traces.
 - Action executor registry, dry-run execution, timeout wrappers, guarded
   execution policy, idempotency ledgers, and local JSON/SQLite replay support.
+- ProductTrace summaries for action audits, action execution alignment,
+  trajectory-audit findings, claim-risk localization, route costs, final answers,
+  and world-model participation/conflict/low-agreement/trace-gap evidence.
+- Frontier release-evidence gates that combine verifier stability, abstention,
+  detectability taxonomy, optional multiple-testing evidence, and citation or
+  source-family batch rollups without treating adapter requests as evidence
+  before provenance-audited source documents exist.
 - Training-side representation telemetry with per-layer norms, variance trace,
   spectrum rank diagnostics, and Gaussian 2-Wasserstein/Bures distance to a
   baseline.
@@ -59,6 +69,10 @@ models remain optional or adapter-level integrations.
 | E7 trajectory monitor | Accepted as synthetic monitor primitive. | Synthetic convergence score correlates with quality and NLL proxies; real gpt2/TruthfulQA trajectory replication is still pending. |
 | E8 concept registry/multi-probe | Accepted as platform glue. | Synthetic two-concept smoke saves artifacts, records registry metadata, and monitors both concepts on a toy model. |
 | E9 cleanup | Accepted as compatible consolidation. | HSE default demotion plus `Representation*` aliases covered by unit tests and docs. |
+| Multi-signal conformal gate | Accepted as release-gate primitive, not as a new detector. | `multiple_testing_conformal_report(...)`, `MultipleTestingConformalArtifact`, `RiskController(..., multiple_testing_gate=...)`, and `eval_conformal.py --save-multiple-testing-report` are covered by unit and benchmark smoke tests. |
+| Sequential conformal replay | Accepted as session/batch audit primitive. | `sequential_pvalue_monitor(...)`, `SequentialConformalArtifact`, `RiskController(..., sequential_gate=...)`, and demo replay tests cover finite alpha spending; sequence traces are kept separate from timed ProductTrace runtime budgets. |
+| World-model traceability | Accepted as observable control-plane evidence. | `StateTransitionVerifier` emits reference/view/conflict metadata; `ProductTrace.world_model_summary()` and verifier-signal dumps preserve nested world-model metadata while ignoring generic prediction metadata. |
+| Frontier evidence handoff | Accepted as fail-closed local release boundary. | Release workflows preserve frontier evidence track status, multiple-testing status, and citation/source-family batch rollup counts through registry metadata, ProductPromotionContract, bounded ProductTrace metadata, runtime baselines, and drift gates. |
 
 ## Known Non-Claims
 
@@ -84,6 +98,12 @@ make check
 make release-check
 ```
 
+The current working tree was revalidated with `make release-check` on
+2026-06-29: ruff passed, `pytest tests/ -v` reported `1214 passed`,
+`pip check` reported no broken requirements, deterministic smoke workflows ran,
+and package build produced `eigentruth-0.2.0.tar.gz` plus
+`eigentruth-0.2.0-py3-none-any.whl`.
+
 Representative calibrated-observability chain:
 
 ```bash
@@ -93,9 +113,23 @@ python benchmarks/eval_truthfulqa.py --model gpt2 --layer -8 --sweep \
 
 python benchmarks/eval_conformal.py --scores benchmarks/scores.manifest.json \
   --json artifacts/gpt2-conformal-report.json \
+  --multiple-testing-signals maha_last,truth_proj,subspace_resid,first_token_entropy,inside_eigenscore \
+  --save-multiple-testing-report artifacts/gpt2-multiple-testing.json \
+  --save-multiple-testing-calibration artifacts/gpt2-multiple-testing-calibration.json \
   --save-sweep-report artifacts/gpt2-sweep-report.json \
   --save-best-calibration artifacts/gpt2-best-calibration.json \
   --artifact-manifest artifacts/gpt2-conformal-manifest.json
+```
+
+Representative sequential conformal replay:
+
+```bash
+python benchmarks/eval_conformal.py --scores benchmarks/scores.manifest.json \
+  --signal maha_last \
+  --sequential-alpha 0.1 \
+  --sequential-schedule harmonic \
+  --save-sequential-report artifacts/gpt2-sequential-conformal.json \
+  --save-sequential-calibration artifacts/gpt2-sequential-calibration.json
 ```
 
 Representative artifact-manifest verification:
@@ -111,6 +145,9 @@ python benchmarks/verify_artifact_manifest.py \
 - Turn fact-level claim checks into a stricter triple/evidence audit path.
 - Combine internal representation diagnostics, semantic-energy confidence, and
   external verification into one release-gated product route.
+- Promote external citation/source-family and world-model rule lanes only after
+  adapter results become provenance-audited source evidence or promoted
+  deterministic rule candidates.
 - Run denser manifold-distance matrices before using Bures/Wasserstein distance
   as a fine-grained checkpoint-drift signal.
 - Replicate trajectory convergence and concept-monitoring checks on real

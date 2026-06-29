@@ -235,7 +235,10 @@ def plan_evidence_gaps_from_release_candidate(
     decision = _mapping(comparison.get("decision"))
     source_workflow = _optional_str(payload.get("workflow") or comparison.get("workflow"))
     source_status = _optional_str(decision.get("status") or comparison.get("status"))
-    blocker_records = _blocking_records(decision)
+    if comparison.get("workflow") == "frontier_release_evidence_comparison":
+        blocker_records = _frontier_release_evidence_blocking_records(comparison, decision)
+    else:
+        blocker_records = _blocking_records(decision)
 
     gaps: list[EvidenceGap] = []
     action_sources: dict[str, set[str]] = {}
@@ -243,6 +246,7 @@ def plan_evidence_gaps_from_release_candidate(
     for gap_index, blocker in enumerate(blocker_records, start=1):
         gate = blocker["gate"]
         gate_status = blocker["status"]
+        blocker_metadata = _mapping(blocker.get("metadata"))
         for reason_index, reason in enumerate(blocker["reasons"], start=1):
             missing_metrics = _extract_missing_metrics(reason)
             kind = _classify_gap(gate, reason, missing_metrics=missing_metrics)
@@ -267,6 +271,7 @@ def plan_evidence_gaps_from_release_candidate(
                     metadata={
                         "evidence_kind": kind["evidence_kind"],
                         "research_axis": kind["research_axis"],
+                        **blocker_metadata,
                     },
                 )
             )
@@ -323,6 +328,264 @@ def _blocking_records(decision: Mapping[str, Any]) -> tuple[dict[str, Any], ...]
     return tuple(record for record in records if record["reasons"])
 
 
+def _frontier_release_evidence_blocking_records(
+    payload: Mapping[str, Any],
+    decision: Mapping[str, Any],
+) -> tuple[dict[str, Any], ...]:
+    raw_reasons = list(_string_tuple(decision.get("blocking_reasons", ())))
+    if not raw_reasons:
+        raw_reasons = list(_nested_frontier_blocking_reasons(payload))
+    multiple_testing_metadata = _frontier_multiple_testing_metadata(payload)
+    citation_batch_metadata = _frontier_citation_batch_metadata(payload)
+    records: list[dict[str, Any]] = []
+    used_indices: set[int] = set()
+    track_specs = (
+        (
+            "verifier_stability",
+            "verifier_track_status",
+            ("verifier_stability",),
+        ),
+        (
+            "abstention_stability",
+            "abstention_track_status",
+            ("abstention_stability", "participation-gate", "participation gate"),
+        ),
+        (
+            "detectability_taxonomy",
+            "detectability_track_status",
+            ("detectability_taxonomy", "entrenched_false_rate"),
+        ),
+        (
+            "frontier_multiple_testing",
+            "multiple_testing_track_status",
+            (
+                "multiple_testing",
+                "multiple-testing",
+                "multiple testing",
+                "family-wise",
+                "familywise",
+                "truthfulqa_frontier_workflow",
+            ),
+        ),
+        (
+            "citation_batch_evidence",
+            "citation_batch_track_status",
+            (
+                "citation_batch",
+                "citation batch",
+                "citation_search_batch_evidence_rollup",
+                "batch_coverage",
+                "unresolved evidence batch",
+            ),
+        ),
+    )
+    for gate, status_key, patterns in track_specs:
+        status = _optional_str(decision.get(status_key))
+        if status != "blocked":
+            continue
+        reasons = []
+        for index, reason in enumerate(raw_reasons):
+            reason_lower = reason.lower()
+            if any(pattern in reason_lower for pattern in patterns):
+                used_indices.add(index)
+                reasons.append(reason)
+        if not reasons:
+            reasons.append(f"frontier release evidence {status_key} is blocked")
+        record = {
+            "gate": gate,
+            "status": "blocked",
+            "reasons": tuple(reasons),
+        }
+        if gate == "frontier_multiple_testing" and multiple_testing_metadata:
+            record["metadata"] = multiple_testing_metadata
+        if gate == "citation_batch_evidence" and citation_batch_metadata:
+            record["metadata"] = citation_batch_metadata
+        records.append(record)
+    remaining_reasons = tuple(
+        reason for index, reason in enumerate(raw_reasons) if index not in used_indices
+    )
+    if remaining_reasons:
+        records.append({
+            "gate": "frontier_release_evidence",
+            "status": _optional_str(decision.get("status")) or "blocked",
+            "reasons": remaining_reasons,
+        })
+    if not records and _optional_str(decision.get("status")) not in {None, "promote"}:
+        records.append({
+            "gate": "frontier_release_evidence",
+            "status": _optional_str(decision.get("status")) or "blocked",
+            "reasons": ("frontier release evidence decision is blocked",),
+        })
+    return tuple(records)
+
+
+def _nested_frontier_blocking_reasons(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    reasons: list[str] = []
+    for key in ("run_decisions", "multiple_testing_decisions", "citation_batch_decisions"):
+        for item in _mapping_sequence(payload.get(key, ())):
+            reasons.extend(_string_tuple(item.get("blocking_reasons", ())))
+            for nested_key in (
+                "verifier_decision",
+                "abstention_decision",
+                "detectability_decision",
+            ):
+                nested = item.get(nested_key)
+                if isinstance(nested, Mapping):
+                    reasons.extend(_string_tuple(nested.get("blocking_reasons", ())))
+    return tuple(reason for reason in reasons if reason)
+
+
+def _frontier_citation_batch_metadata(payload: Mapping[str, Any]) -> dict[str, Any]:
+    evidence_summary = _mapping(payload.get("evidence_summary"))
+    missing_batches = [
+        _citation_batch_metadata(item)
+        for item in _mapping_sequence(evidence_summary.get("citation_batch_missing_expected_batches", ()))
+    ]
+    duplicate_batches = [
+        _citation_batch_metadata(item)
+        for item in _mapping_sequence(evidence_summary.get("citation_batch_duplicate_batches", ()))
+    ]
+    unexpected_batches = [
+        _citation_batch_metadata(item)
+        for item in _mapping_sequence(evidence_summary.get("citation_batch_unexpected_batches", ()))
+    ]
+    for decision in _mapping_sequence(payload.get("citation_batch_decisions", ())):
+        rollup = _optional_str(decision.get("name"))
+        metrics = _mapping(decision.get("metrics"))
+        for batch_id in _string_tuple(metrics.get("missing_expected_batch_ids", ())):
+            missing_batches.append({"rollup": rollup, "batch_id": batch_id})
+        for batch_id in _string_tuple(metrics.get("duplicate_batch_ids", ())):
+            duplicate_batches.append({"rollup": rollup, "batch_id": batch_id})
+        for batch_id in _string_tuple(metrics.get("unexpected_batch_ids", ())):
+            unexpected_batches.append({"rollup": rollup, "batch_id": batch_id})
+    metadata = {
+        "citation_batch_rollup_names": _string_tuple(
+            evidence_summary.get("citation_batch_rollup_names", ())
+        ),
+        "citation_batch_blocked_rollups": _string_tuple(
+            evidence_summary.get("citation_batch_blocked_rollups", ())
+        ),
+        "citation_batch_expected_batch_ids": _string_tuple(
+            evidence_summary.get("citation_batch_expected_batch_ids", ())
+        ),
+        "citation_batch_observed_batch_ids": _string_tuple(
+            evidence_summary.get("citation_batch_observed_batch_ids", ())
+        ),
+        "citation_batch_missing_expected_batches": tuple(
+            _unique_citation_batch_rows(missing_batches)
+        ),
+        "citation_batch_duplicate_batches": tuple(
+            _unique_citation_batch_rows(duplicate_batches)
+        ),
+        "citation_batch_unexpected_batches": tuple(
+            _unique_citation_batch_rows(unexpected_batches)
+        ),
+        "citation_batch_missing_expected_batch_count": evidence_summary.get(
+            "citation_batch_missing_expected_batch_count"
+        ),
+        "citation_batch_duplicate_batch_count": evidence_summary.get(
+            "citation_batch_duplicate_batch_count"
+        ),
+        "citation_batch_unexpected_batch_count": evidence_summary.get(
+            "citation_batch_unexpected_batch_count"
+        ),
+        "citation_batch_child_manifest_failed_count": evidence_summary.get(
+            "citation_batch_child_manifest_failed_count"
+        ),
+        "citation_batch_blocked_child_report_count": evidence_summary.get(
+            "citation_batch_blocked_child_report_count"
+        ),
+    }
+    return {
+        key: value
+        for key, value in metadata.items()
+        if value is not None and value != () and value != []
+    }
+
+
+def _citation_batch_metadata(item: Mapping[str, Any]) -> dict[str, str | None]:
+    return {
+        "rollup": _optional_str(item.get("rollup")),
+        "batch_id": _optional_str(item.get("batch_id")) or "",
+    }
+
+
+def _unique_citation_batch_rows(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, str | None]]:
+    seen: set[tuple[str | None, str]] = set()
+    unique: list[dict[str, str | None]] = []
+    for row in rows:
+        rollup = _optional_str(row.get("rollup"))
+        batch_id = _optional_str(row.get("batch_id")) or ""
+        key = (rollup, batch_id)
+        if key in seen or not batch_id:
+            continue
+        seen.add(key)
+        unique.append({"rollup": rollup, "batch_id": batch_id})
+    return unique
+
+
+def _frontier_multiple_testing_metadata(payload: Mapping[str, Any]) -> dict[str, Any]:
+    failed_cells: list[dict[str, Any]] = []
+    unknown_cells: list[dict[str, Any]] = []
+    evidence_summary = _mapping(payload.get("evidence_summary"))
+    for key, target in (
+        ("multiple_testing_failed_cells", failed_cells),
+        ("multiple_testing_unknown_cells", unknown_cells),
+    ):
+        for item in _mapping_sequence(evidence_summary.get(key, ())):
+            target.append(_multiple_testing_cell_metadata(item))
+    for decision in _mapping_sequence(payload.get("multiple_testing_decisions", ())):
+        run_name = _optional_str(decision.get("name"))
+        metrics = _mapping(decision.get("metrics"))
+        for item in _mapping_sequence(metrics.get("failed_cells", ())):
+            failed_cells.append(_multiple_testing_cell_metadata(item, run_name=run_name))
+        for item in _mapping_sequence(metrics.get("unknown_cells", ())):
+            unknown_cells.append(_multiple_testing_cell_metadata(item, run_name=run_name))
+    failed_cells = _unique_multiple_testing_cells(failed_cells)
+    unknown_cells = _unique_multiple_testing_cells(unknown_cells)
+    blocked_cells = failed_cells + unknown_cells
+    if not blocked_cells:
+        return {}
+    return {
+        "multiple_testing_failed_cells": tuple(failed_cells),
+        "multiple_testing_unknown_cells": tuple(unknown_cells),
+        "multiple_testing_blocked_cells": tuple(blocked_cells),
+    }
+
+
+def _multiple_testing_cell_metadata(
+    item: Mapping[str, Any],
+    *,
+    run_name: str | None = None,
+) -> dict[str, Any]:
+    run = _optional_str(item.get("run")) or run_name
+    return {
+        "run": run,
+        "cell": _optional_str(item.get("cell")) or "",
+        "status": _optional_str(item.get("status")) or "unknown",
+        "false_alarm": item.get("false_alarm"),
+        "detection": item.get("detection"),
+        "report": item.get("report"),
+        "calibration": item.get("calibration"),
+    }
+
+
+def _unique_multiple_testing_cells(cells: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    seen: set[tuple[str | None, str, str]] = set()
+    unique: list[dict[str, Any]] = []
+    for cell in cells:
+        key = (
+            _optional_str(cell.get("run")),
+            _optional_str(cell.get("cell")) or "",
+            _optional_str(cell.get("status")) or "unknown",
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(dict(cell))
+    return unique
+
+
 def _classify_gap(
     gate: str,
     reason: str,
@@ -330,8 +593,32 @@ def _classify_gap(
     missing_metrics: Sequence[str],
 ) -> dict[str, str]:
     text = f"{gate} {reason}".lower()
+    if _is_product_runtime_world_model_evidence(gate, text, missing_metrics):
+        return _kind("product_runtime_world_model_evidence", "world_model", "runtime_drift")
+    if (
+        "multiple_testing" in text
+        or "multiple-testing" in text
+        or "multiple testing" in text
+        or "family-wise" in text
+        or "familywise" in text
+    ):
+        return _kind("frontier_multiple_testing", "model", "multi_signal_calibration")
+    if (
+        "citation_batch" in text
+        or "citation batch" in text
+        or "citation_search_batch_evidence_rollup" in text
+        or "batch_coverage" in text
+        or "unresolved evidence batch" in text
+    ):
+        return _kind("citation_batch_evidence", "evidence_coverage", "external_citation")
     if "pre-generation" in text or "pre_generation" in text:
         return _kind("pre_generation_probe", "model", "internal_state")
+    if "abstention_stability" in text or "participation-gate" in text or "participation gate" in text:
+        return _kind("abstention_stability", "model", "participation_calibration")
+    if "verifier_stability" in text:
+        return _kind("verifier_stability", "evidence_coverage", "external_verification")
+    if "detectability_taxonomy" in text or "entrenched_false_rate" in text:
+        return _kind("detectability_taxonomy", "model", "blind_spot_taxonomy")
     if "counterfactual" in text:
         return _kind("counterfactual_verification", "context", "counterfactual")
     if "triple audit" in text or "triple_audit" in text or "triple_coverage" in text:
@@ -357,6 +644,30 @@ def _classify_gap(
     if missing_metrics:
         return _kind("missing_metrics", "evidence_coverage", "release_gate")
     return _kind("manual_triage", "unknown", "release_gate")
+
+
+def _is_product_runtime_world_model_evidence(
+    gate: str,
+    text: str,
+    missing_metrics: Sequence[str],
+) -> bool:
+    gate_text = gate.lower()
+    metric_text = " ".join(str(metric).lower() for metric in missing_metrics)
+    runtime_drift_context = (
+        gate_text == "product_runtime_drift"
+        or "product runtime drift" in text
+        or "product_runtime_drift" in text
+        or "product_runtime_drift" in metric_text
+    )
+    if not runtime_drift_context:
+        return False
+    return (
+        "world-model evidence" in text
+        or "world model evidence" in text
+        or "world_model_evidence" in text
+        or "world_model." in text
+        or "world_model." in metric_text
+    )
 
 
 def _kind(evidence_kind: str, root_cause: str, research_axis: str) -> dict[str, str]:
@@ -411,6 +722,101 @@ def _action_template(kind: Mapping[str, str], *, gate: str, reason: str) -> Evid
             evidence_routes=("pre_generation_probe_comparison", "product_runtime_drift"),
             suggested_commands=("benchmarks/compare_pre_generation_probe_workflows.py",),
         )
+    if evidence_kind == "frontier_multiple_testing":
+        return EvidenceGapAction(
+            action_id="rerun_frontier_multiple_testing_gate",
+            title="Rerun frontier workflow multi-signal conformal gate",
+            action_type="experiment",
+            priority=89,
+            rationale=(
+                "The release is blocked by the family-wise multi-signal hallucination gate; "
+                "rerun or inspect the frontier workflow cells to identify failing signal/layer "
+                "families before promoting runtime defaults."
+            ),
+            evidence_routes=(
+                "truthfulqa_frontier_workflow",
+                "multiple_testing_gate",
+                "frontier_release_evidence",
+            ),
+            suggested_commands=(
+                "benchmarks/run_truthfulqa_frontier_workflow.py --multiple-testing-signals ...",
+                "benchmarks/compare_frontier_release_evidence.py --frontier-workflow-report ...",
+            ),
+        )
+    if evidence_kind == "citation_batch_evidence":
+        return EvidenceGapAction(
+            action_id="complete_citation_batch_evidence_rollup",
+            title="Complete citation batch evidence rollup",
+            action_type="workflow",
+            priority=88,
+            rationale=(
+                "The frontier release is blocked because one or more unresolved citation "
+                "or source-family evidence batches did not produce promotion-ready, "
+                "manifest-backed child evidence."
+            ),
+            evidence_routes=(
+                "unresolved_evidence_queue",
+                "citation_search_evidence",
+                "source_family_citation",
+                "frontier_release_evidence",
+            ),
+            suggested_commands=(
+                "benchmarks/run_external_citation_search_adapter_workflow.py --batch-id ...",
+                "benchmarks/run_source_family_citation_search_workflow.py --batch-id ...",
+                "benchmarks/rollup_citation_search_batch_evidence.py --queue ... --batch-report ...",
+                "benchmarks/compare_frontier_release_evidence.py --citation-batch-rollup-report ...",
+            ),
+        )
+    if evidence_kind == "abstention_stability":
+        return EvidenceGapAction(
+            action_id="improve_abstention_participation_gate",
+            title="Improve abstention participation-gate stability",
+            action_type="experiment",
+            priority=89,
+            rationale=(
+                "The frontier release is blocked because retained-answer quality or "
+                "abstention cost is not stable enough across held-out splits; compare "
+                "candidate participation signals before changing runtime defaults."
+            ),
+            evidence_routes=(
+                "abstention_stability",
+                "participation_gate",
+                "frontier_release_evidence",
+            ),
+            suggested_commands=(
+                "benchmarks/eval_abstention_stability.py",
+                "benchmarks/eval_conformal.py --save-abstention-release-gate ...",
+            ),
+        )
+    if evidence_kind == "verifier_stability":
+        return EvidenceGapAction(
+            action_id="rerun_verifier_stability_replay",
+            title="Rerun staged verifier-stability replay",
+            action_type="experiment",
+            priority=86,
+            rationale=(
+                "The frontier release needs stable verifier false-alarm and detection "
+                "improvement evidence before verifier routing can be promoted."
+            ),
+            evidence_routes=("verifier_stability", "frontier_release_evidence"),
+            suggested_commands=("benchmarks/eval_verifier_stability.py",),
+        )
+    if evidence_kind == "detectability_taxonomy":
+        return EvidenceGapAction(
+            action_id="audit_detectability_blind_spots",
+            title="Audit detectability-taxonomy blind spots",
+            action_type="analysis",
+            priority=85,
+            rationale=(
+                "High-confidence/high-consistency false records need explicit blind-spot "
+                "analysis before output-level uncertainty signals are trusted."
+            ),
+            evidence_routes=("detectability_taxonomy", "blind_spot_audit"),
+            suggested_commands=(
+                "benchmarks/eval_detectability_taxonomy.py",
+                "benchmarks/analyze_detectability_blind_spots.py",
+            ),
+        )
     if evidence_kind == "counterfactual_verification":
         return EvidenceGapAction(
             action_id="run_counterfactual_verifier_audit",
@@ -436,6 +842,24 @@ def _action_template(kind: Mapping[str, str], *, gate: str, reason: str) -> Evid
             ),
             evidence_routes=("product_trace_replay", "action_audit", "action_execution"),
             suggested_commands=("benchmarks/run_product_trace_replay_workflow.py",),
+        )
+    if evidence_kind == "product_runtime_world_model_evidence":
+        return EvidenceGapAction(
+            action_id="rerun_product_trace_world_model_evidence",
+            title="Replay product traces with world-model evidence summaries",
+            action_type="workflow",
+            priority=86,
+            rationale=(
+                "Frontier runtime drift gates need trace-level world-model participation, "
+                "coverage, conflict, low-agreement, and trace-gap evidence before the "
+                "release can trust model-state correction signals."
+            ),
+            evidence_routes=("product_trace_replay", "product_runtime_drift", "world_model_evidence"),
+            suggested_commands=(
+                "benchmarks/run_product_trace_replay_workflow.py",
+                "benchmarks/run_product_runtime_baseline.py",
+                "benchmarks/compare_product_runtime_baselines.py",
+            ),
         )
     if evidence_kind == "triple_audit":
         return EvidenceGapAction(

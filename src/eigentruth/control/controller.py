@@ -6,7 +6,12 @@ import math
 from dataclasses import dataclass
 from typing import Any, Mapping, Sequence
 
-from eigentruth.calibration import CalibrationArtifact, CalibrationScore
+from eigentruth.calibration import (
+    CalibrationArtifact,
+    CalibrationScore,
+    MultipleTestingConformalArtifact,
+    SequentialConformalArtifact,
+)
 from eigentruth.control.policy import ControlAction, RiskDecision, RiskLevel
 from eigentruth.eval.conformal import ConformalAbstentionReport
 from eigentruth.verify.protocols import VerificationResult, VerificationStatus
@@ -156,6 +161,107 @@ class ParticipationGateConfig:
 
 
 @dataclass(frozen=True)
+class MultipleTestingGateConfig:
+    """Runtime hallucination gate derived from a multi-signal conformal artifact."""
+
+    artifact: MultipleTestingConformalArtifact
+    source: str = "multiple_testing_conformal_artifact"
+    metadata: Mapping[str, Any] | None = None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.artifact, MultipleTestingConformalArtifact):
+            raise ValueError("artifact must be a MultipleTestingConformalArtifact.")
+        object.__setattr__(self, "source", str(self.source))
+        object.__setattr__(self, "metadata", {} if self.metadata is None else dict(self.metadata))
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "MultipleTestingGateConfig":
+        """Build a gate from config or an embedded artifact payload."""
+        if "multiple_testing_gate" in data:
+            nested = data["multiple_testing_gate"]
+            if not isinstance(nested, Mapping):
+                raise ValueError("multiple_testing_gate must be a mapping.")
+            return cls.from_dict(nested)
+        raw_artifact: object
+        if "artifact" in data:
+            raw_artifact = data["artifact"]
+        elif {"model_id", "target_layer", "signals", "alpha"}.issubset(data):
+            raw_artifact = data
+        else:
+            raise ValueError("multiple-testing gate config must include an artifact.")
+        if not isinstance(raw_artifact, Mapping):
+            raise ValueError("multiple-testing gate artifact must be a mapping.")
+        return cls(
+            artifact=MultipleTestingConformalArtifact.from_dict(raw_artifact),
+            source=str(data.get("source", "multiple_testing_conformal_artifact")),
+            metadata=dict(data.get("metadata", {})),
+        )
+
+    def signal_names(self) -> tuple[str, ...]:
+        """Return required diagnostic signal names."""
+        return self.artifact.signal_names()
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable gate configuration."""
+        return {
+            "source": self.source,
+            "metadata": dict(self.metadata or {}),
+            "artifact": self.artifact.to_dict(),
+        }
+
+
+@dataclass(frozen=True)
+class SequentialGateConfig:
+    """Runtime sequence gate derived from a sequential conformal artifact."""
+
+    artifact: SequentialConformalArtifact
+    source: str = "sequential_conformal_artifact"
+    metadata: Mapping[str, Any] | None = None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.artifact, SequentialConformalArtifact):
+            raise ValueError("artifact must be a SequentialConformalArtifact.")
+        object.__setattr__(self, "source", str(self.source))
+        object.__setattr__(self, "metadata", {} if self.metadata is None else dict(self.metadata))
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "SequentialGateConfig":
+        """Build a sequence gate from config or an embedded artifact payload."""
+        if "sequential_gate" in data:
+            nested = data["sequential_gate"]
+            if not isinstance(nested, Mapping):
+                raise ValueError("sequential_gate must be a mapping.")
+            return cls.from_dict(nested)
+        raw_artifact: object
+        if "artifact" in data:
+            raw_artifact = data["artifact"]
+        elif {"model_id", "target_layer", "signal_name", "calibration_scores", "alpha"}.issubset(data):
+            raw_artifact = data
+        else:
+            raise ValueError("sequential gate config must include an artifact.")
+        if not isinstance(raw_artifact, Mapping):
+            raise ValueError("sequential gate artifact must be a mapping.")
+        return cls(
+            artifact=SequentialConformalArtifact.from_dict(raw_artifact),
+            source=str(data.get("source", "sequential_conformal_artifact")),
+            metadata=dict(data.get("metadata", {})),
+        )
+
+    @property
+    def signal_name(self) -> str:
+        """Return the required diagnostic signal name."""
+        return self.artifact.signal_name
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable gate configuration."""
+        return {
+            "source": self.source,
+            "metadata": dict(self.metadata or {}),
+            "artifact": self.artifact.to_dict(),
+        }
+
+
+@dataclass(frozen=True)
 class ControlPolicyConfig:
     """Configurable routing policy for composing diagnostics and verification."""
 
@@ -170,21 +276,63 @@ class ControlPolicyConfig:
     participation_gate_confidence_floor: float = 0.75
     participation_gate_supported_override: bool = False
     participation_gate_supported_override_min_confidence: float = 0.85
+    multiple_testing_gate_action: ControlAction = ControlAction.ABSTAIN
+    multiple_testing_gate_applies_to_actions: tuple[ControlAction, ...] = (ControlAction.ACCEPT,)
+    multiple_testing_gate_risk_level: RiskLevel = RiskLevel.HIGH
+    multiple_testing_gate_confidence_floor: float = 0.8
+    sequential_gate_action: ControlAction = ControlAction.ABSTAIN
+    sequential_gate_applies_to_actions: tuple[ControlAction, ...] = (ControlAction.ACCEPT,)
+    sequential_gate_risk_level: RiskLevel = RiskLevel.HIGH
+    sequential_gate_confidence_floor: float = 0.8
     refuted_risk_level: RiskLevel = RiskLevel.HIGH
     unsupported_risk_level: RiskLevel = RiskLevel.MEDIUM
     verification_error_risk_level: RiskLevel = RiskLevel.UNKNOWN
     compound_risk_level: RiskLevel = RiskLevel.HIGH
 
     def __post_init__(self) -> None:
-        participation_gate_action = (
-            self.participation_gate_action
-            if isinstance(self.participation_gate_action, ControlAction)
-            else ControlAction(str(self.participation_gate_action))
+        refuted_action = _control_action(self.refuted_action, name="refuted_action")
+        unsupported_action = _control_action(self.unsupported_action, name="unsupported_action")
+        verification_error_action = _control_action(
+            self.verification_error_action,
+            name="verification_error_action",
         )
-        participation_gate_risk_level = (
-            self.participation_gate_risk_level
-            if isinstance(self.participation_gate_risk_level, RiskLevel)
-            else RiskLevel(str(self.participation_gate_risk_level))
+        compound_risk_action = _control_action(
+            self.compound_risk_action,
+            name="compound_risk_action",
+        )
+        participation_gate_action = _control_action(
+            self.participation_gate_action,
+            name="participation_gate_action",
+        )
+        multiple_testing_gate_action = _control_action(
+            self.multiple_testing_gate_action,
+            name="multiple_testing_gate_action",
+        )
+        sequential_gate_action = _control_action(
+            self.sequential_gate_action,
+            name="sequential_gate_action",
+        )
+        refuted_risk_level = _risk_level(self.refuted_risk_level, name="refuted_risk_level")
+        unsupported_risk_level = _risk_level(
+            self.unsupported_risk_level,
+            name="unsupported_risk_level",
+        )
+        verification_error_risk_level = _risk_level(
+            self.verification_error_risk_level,
+            name="verification_error_risk_level",
+        )
+        compound_risk_level = _risk_level(self.compound_risk_level, name="compound_risk_level")
+        participation_gate_risk_level = _risk_level(
+            self.participation_gate_risk_level,
+            name="participation_gate_risk_level",
+        )
+        multiple_testing_gate_risk_level = _risk_level(
+            self.multiple_testing_gate_risk_level,
+            name="multiple_testing_gate_risk_level",
+        )
+        sequential_gate_risk_level = _risk_level(
+            self.sequential_gate_risk_level,
+            name="sequential_gate_risk_level",
         )
         actions = tuple(
             action if isinstance(action, ControlAction) else ControlAction(str(action))
@@ -192,18 +340,62 @@ class ControlPolicyConfig:
         )
         if not actions:
             raise ValueError("participation_gate_applies_to_actions must be non-empty.")
+        multiple_testing_actions = tuple(
+            action if isinstance(action, ControlAction) else ControlAction(str(action))
+            for action in self.multiple_testing_gate_applies_to_actions
+        )
+        if not multiple_testing_actions:
+            raise ValueError("multiple_testing_gate_applies_to_actions must be non-empty.")
+        sequential_actions = tuple(
+            action if isinstance(action, ControlAction) else ControlAction(str(action))
+            for action in self.sequential_gate_applies_to_actions
+        )
+        if not sequential_actions:
+            raise ValueError("sequential_gate_applies_to_actions must be non-empty.")
+        object.__setattr__(self, "refuted_action", refuted_action)
+        object.__setattr__(self, "unsupported_action", unsupported_action)
+        object.__setattr__(self, "verification_error_action", verification_error_action)
+        object.__setattr__(self, "compound_risk_action", compound_risk_action)
+        object.__setattr__(self, "refuted_risk_level", refuted_risk_level)
+        object.__setattr__(self, "unsupported_risk_level", unsupported_risk_level)
+        object.__setattr__(self, "verification_error_risk_level", verification_error_risk_level)
+        object.__setattr__(self, "compound_risk_level", compound_risk_level)
         object.__setattr__(self, "participation_gate_action", participation_gate_action)
         object.__setattr__(self, "participation_gate_risk_level", participation_gate_risk_level)
         object.__setattr__(self, "participation_gate_applies_to_actions", actions)
+        object.__setattr__(self, "multiple_testing_gate_action", multiple_testing_gate_action)
+        object.__setattr__(self, "multiple_testing_gate_risk_level", multiple_testing_gate_risk_level)
+        object.__setattr__(self, "multiple_testing_gate_applies_to_actions", multiple_testing_actions)
+        object.__setattr__(self, "sequential_gate_action", sequential_gate_action)
+        object.__setattr__(self, "sequential_gate_risk_level", sequential_gate_risk_level)
+        object.__setattr__(self, "sequential_gate_applies_to_actions", sequential_actions)
         confidence_floor = _unit_interval_float(
             self.participation_gate_confidence_floor,
             name="participation_gate_confidence_floor",
+        )
+        multiple_testing_confidence_floor = _unit_interval_float(
+            self.multiple_testing_gate_confidence_floor,
+            name="multiple_testing_gate_confidence_floor",
+        )
+        sequential_confidence_floor = _unit_interval_float(
+            self.sequential_gate_confidence_floor,
+            name="sequential_gate_confidence_floor",
         )
         override_min_confidence = _unit_interval_float(
             self.participation_gate_supported_override_min_confidence,
             name="participation_gate_supported_override_min_confidence",
         )
         object.__setattr__(self, "participation_gate_confidence_floor", confidence_floor)
+        object.__setattr__(
+            self,
+            "multiple_testing_gate_confidence_floor",
+            multiple_testing_confidence_floor,
+        )
+        object.__setattr__(
+            self,
+            "sequential_gate_confidence_floor",
+            sequential_confidence_floor,
+        )
         object.__setattr__(
             self,
             "participation_gate_supported_override",
@@ -236,6 +428,18 @@ class ControlPolicyConfig:
             "participation_gate_supported_override_min_confidence": (
                 self.participation_gate_supported_override_min_confidence
             ),
+            "multiple_testing_gate_action": self.multiple_testing_gate_action.value,
+            "multiple_testing_gate_applies_to_actions": [
+                action.value for action in self.multiple_testing_gate_applies_to_actions
+            ],
+            "multiple_testing_gate_risk_level": self.multiple_testing_gate_risk_level.value,
+            "multiple_testing_gate_confidence_floor": self.multiple_testing_gate_confidence_floor,
+            "sequential_gate_action": self.sequential_gate_action.value,
+            "sequential_gate_applies_to_actions": [
+                action.value for action in self.sequential_gate_applies_to_actions
+            ],
+            "sequential_gate_risk_level": self.sequential_gate_risk_level.value,
+            "sequential_gate_confidence_floor": self.sequential_gate_confidence_floor,
             "refuted_risk_level": self.refuted_risk_level.value,
             "unsupported_risk_level": self.unsupported_risk_level.value,
             "verification_error_risk_level": self.verification_error_risk_level.value,
@@ -276,6 +480,32 @@ class ControlPolicyConfig:
             participation_gate_supported_override_min_confidence=float(
                 data.get("participation_gate_supported_override_min_confidence", 0.85)
             ),
+            multiple_testing_gate_action=ControlAction(
+                str(data.get("multiple_testing_gate_action", ControlAction.ABSTAIN.value))
+            ),
+            multiple_testing_gate_applies_to_actions=_parse_action_tuple(
+                data.get("multiple_testing_gate_applies_to_actions", (ControlAction.ACCEPT.value,)),
+                name="multiple_testing_gate_applies_to_actions",
+            ),
+            multiple_testing_gate_risk_level=RiskLevel(
+                str(data.get("multiple_testing_gate_risk_level", RiskLevel.HIGH.value))
+            ),
+            multiple_testing_gate_confidence_floor=float(
+                data.get("multiple_testing_gate_confidence_floor", 0.8)
+            ),
+            sequential_gate_action=ControlAction(
+                str(data.get("sequential_gate_action", ControlAction.ABSTAIN.value))
+            ),
+            sequential_gate_applies_to_actions=_parse_action_tuple(
+                data.get("sequential_gate_applies_to_actions", (ControlAction.ACCEPT.value,)),
+                name="sequential_gate_applies_to_actions",
+            ),
+            sequential_gate_risk_level=RiskLevel(
+                str(data.get("sequential_gate_risk_level", RiskLevel.HIGH.value))
+            ),
+            sequential_gate_confidence_floor=float(
+                data.get("sequential_gate_confidence_floor", 0.8)
+            ),
             refuted_risk_level=RiskLevel(str(data.get("refuted_risk_level", RiskLevel.HIGH.value))),
             unsupported_risk_level=RiskLevel(str(data.get("unsupported_risk_level", RiskLevel.MEDIUM.value))),
             verification_error_risk_level=RiskLevel(
@@ -295,17 +525,49 @@ class RiskController:
     high_trigger_count: int = 2
     policy_config: ControlPolicyConfig | None = None
     participation_gate: ParticipationGateConfig | ConformalAbstentionReport | Mapping[str, Any] | None = None
+    multiple_testing_gate: (
+        MultipleTestingGateConfig | MultipleTestingConformalArtifact | Mapping[str, Any] | None
+    ) = None
+    sequential_gate: SequentialGateConfig | SequentialConformalArtifact | Mapping[str, Any] | None = None
 
     def __post_init__(self) -> None:
-        if self.participation_gate is None or isinstance(self.participation_gate, ParticipationGateConfig):
-            return
-        if isinstance(self.participation_gate, ConformalAbstentionReport):
-            gate = ParticipationGateConfig.from_abstention_report(self.participation_gate)
-        elif isinstance(self.participation_gate, Mapping):
-            gate = ParticipationGateConfig.from_dict(self.participation_gate)
-        else:
-            raise ValueError("participation_gate must be a ParticipationGateConfig, abstention report, or mapping.")
-        object.__setattr__(self, "participation_gate", gate)
+        participation_gate = self.participation_gate
+        if participation_gate is not None and not isinstance(participation_gate, ParticipationGateConfig):
+            if isinstance(participation_gate, ConformalAbstentionReport):
+                gate = ParticipationGateConfig.from_abstention_report(participation_gate)
+            elif isinstance(participation_gate, Mapping):
+                gate = ParticipationGateConfig.from_dict(participation_gate)
+            else:
+                raise ValueError(
+                    "participation_gate must be a ParticipationGateConfig, abstention report, or mapping."
+                )
+            object.__setattr__(self, "participation_gate", gate)
+
+        multiple_testing_gate = self.multiple_testing_gate
+        if multiple_testing_gate is not None and not isinstance(multiple_testing_gate, MultipleTestingGateConfig):
+            if isinstance(multiple_testing_gate, MultipleTestingConformalArtifact):
+                gate = MultipleTestingGateConfig(artifact=multiple_testing_gate)
+            elif isinstance(multiple_testing_gate, Mapping):
+                gate = MultipleTestingGateConfig.from_dict(multiple_testing_gate)
+            else:
+                raise ValueError(
+                    "multiple_testing_gate must be a MultipleTestingGateConfig, "
+                    "MultipleTestingConformalArtifact, or mapping."
+                )
+            object.__setattr__(self, "multiple_testing_gate", gate)
+
+        sequential_gate = self.sequential_gate
+        if sequential_gate is not None and not isinstance(sequential_gate, SequentialGateConfig):
+            if isinstance(sequential_gate, SequentialConformalArtifact):
+                gate = SequentialGateConfig(artifact=sequential_gate)
+            elif isinstance(sequential_gate, Mapping):
+                gate = SequentialGateConfig.from_dict(sequential_gate)
+            else:
+                raise ValueError(
+                    "sequential_gate must be a SequentialGateConfig, "
+                    "SequentialConformalArtifact, or mapping."
+                )
+            object.__setattr__(self, "sequential_gate", gate)
 
     def decide(
         self,
@@ -316,13 +578,13 @@ class RiskController:
         diagnostic_decision = self._decide_diagnostics(diagnostics)
         policy = self._effective_policy()
         if verification_results is None:
-            return self._apply_participation_gate(diagnostic_decision, diagnostics, policy)
+            return self._apply_control_gates(diagnostic_decision, diagnostics, policy)
 
         verification = _summarize_verification(verification_results)
         trace = dict(diagnostic_decision.diagnostics)
         trace["verification"] = verification
         if verification["total"] == 0:
-            return self._apply_participation_gate(
+            return self._apply_control_gates(
                 _with_diagnostics(diagnostic_decision, trace),
                 diagnostics,
                 policy,
@@ -353,7 +615,7 @@ class RiskController:
             )
 
         if diagnostic_decision.risk_level is RiskLevel.UNKNOWN:
-            return self._apply_participation_gate(
+            return self._apply_control_gates(
                 _with_diagnostics(diagnostic_decision, trace),
                 diagnostics,
                 policy,
@@ -364,7 +626,7 @@ class RiskController:
             and diagnostic_decision.risk_level in {RiskLevel.MEDIUM, RiskLevel.HIGH}
             and policy.compound_verification_escalates
         ):
-            return self._apply_participation_gate(
+            return self._apply_control_gates(
                 RiskDecision(
                     action=policy.compound_risk_action,
                     risk_level=policy.compound_risk_level,
@@ -385,7 +647,7 @@ class RiskController:
             )
 
         if unsupported_count:
-            return self._apply_participation_gate(
+            return self._apply_control_gates(
                 RiskDecision(
                     action=policy.unsupported_action,
                     risk_level=policy.unsupported_risk_level,
@@ -407,7 +669,7 @@ class RiskController:
             and diagnostic_decision.risk_level in {RiskLevel.MEDIUM, RiskLevel.HIGH}
             and policy.compound_verification_escalates
         ):
-            return self._apply_participation_gate(
+            return self._apply_control_gates(
                 RiskDecision(
                     action=policy.compound_risk_action,
                     risk_level=policy.compound_risk_level,
@@ -425,7 +687,7 @@ class RiskController:
             )
 
         if error_count:
-            return self._apply_participation_gate(
+            return self._apply_control_gates(
                 RiskDecision(
                     action=policy.verification_error_action,
                     risk_level=policy.verification_error_risk_level,
@@ -442,11 +704,39 @@ class RiskController:
                 policy,
             )
 
-        return self._apply_participation_gate(
+        return self._apply_control_gates(
             _with_diagnostics(diagnostic_decision, trace),
             diagnostics,
             policy,
         )
+
+    def decide_sequence(
+        self,
+        diagnostics_sequence: Sequence[Mapping[str, float]],
+        verification_results_sequence: Sequence[Sequence[VerificationResult | Mapping[str, Any]] | None] | None = None,
+    ) -> tuple[RiskDecision, ...]:
+        """Evaluate a request/session sequence and optionally apply sequential conformal gating.
+
+        The single-item ``decide(...)`` path remains stateless. This method is the
+        explicit state boundary for session or batch alpha spending: it first
+        computes ordinary per-item decisions, then spends the sequential gate's
+        alpha only across decisions whose actions are in the configured gate
+        scope.
+        """
+        diagnostics_items = tuple(diagnostics_sequence)
+        if verification_results_sequence is None:
+            verification_items: tuple[Sequence[VerificationResult | Mapping[str, Any]] | None, ...] = (
+                (None,) * len(diagnostics_items)
+            )
+        else:
+            verification_items = tuple(verification_results_sequence)
+            if len(verification_items) != len(diagnostics_items):
+                raise ValueError("verification_results_sequence must match diagnostics_sequence length.")
+        decisions = tuple(
+            self.decide(diagnostics, verification)
+            for diagnostics, verification in zip(diagnostics_items, verification_items, strict=True)
+        )
+        return self._apply_sequential_gate(decisions, diagnostics_items, self._effective_policy())
 
     def _effective_policy(self) -> ControlPolicyConfig:
         """Return a policy config while preserving legacy action overrides."""
@@ -457,6 +747,273 @@ class RiskController:
             unsupported_action=self.medium_action,
             verification_error_action=ControlAction.CLARIFY,
             compound_risk_action=self.high_action,
+        )
+
+    def _apply_control_gates(
+        self,
+        decision: RiskDecision,
+        diagnostics: Mapping[str, float],
+        policy: ControlPolicyConfig,
+    ) -> RiskDecision:
+        """Apply optional runtime gates in deterministic order."""
+        decision = self._apply_multiple_testing_gate(decision, diagnostics, policy)
+        return self._apply_participation_gate(decision, diagnostics, policy)
+
+    def _apply_sequential_gate(
+        self,
+        decisions: Sequence[RiskDecision],
+        diagnostics_sequence: Sequence[Mapping[str, float]],
+        policy: ControlPolicyConfig,
+    ) -> tuple[RiskDecision, ...]:
+        """Apply an explicit sequence-level conformal gate without hidden state."""
+        gate = self.sequential_gate
+        if gate is None:
+            return tuple(decisions)
+        if not isinstance(gate, SequentialGateConfig):
+            raise ValueError("sequential_gate was not normalized.")
+        if len(decisions) != len(diagnostics_sequence):
+            raise ValueError("decisions and diagnostics_sequence must have the same length.")
+
+        output: list[RiskDecision] = []
+        monitored_positions: list[int] = []
+        monitored_scores: list[float] = []
+        for index, (decision, diagnostics) in enumerate(zip(decisions, diagnostics_sequence, strict=True)):
+            trace = dict(decision.diagnostics)
+            gate_trace: dict[str, Any] = {
+                "enabled": True,
+                "source": gate.source,
+                "signal_name": gate.signal_name,
+                "alpha": gate.artifact.alpha,
+                "schedule": gate.artifact.schedule,
+                "direction": gate.artifact.direction,
+                "sequence_index": index,
+                "applies_to_actions": tuple(
+                    action.value for action in policy.sequential_gate_applies_to_actions
+                ),
+                "configured_action": policy.sequential_gate_action.value,
+                "metadata": dict(gate.metadata or {}),
+            }
+            trace["sequential_gate"] = gate_trace
+            if decision.action not in policy.sequential_gate_applies_to_actions:
+                gate_trace["status"] = "skipped"
+                gate_trace["reason"] = f"decision action {decision.action.value!r} is outside gate scope"
+                output.append(_with_diagnostics(decision, trace))
+                continue
+            if gate.signal_name not in diagnostics:
+                gate_trace["status"] = "missing_score"
+                output.append(
+                    RiskDecision(
+                        action=ControlAction.CLARIFY,
+                        risk_level=RiskLevel.UNKNOWN,
+                        confidence=1.0,
+                        reason=f"missing sequential gate score: {gate.signal_name}",
+                        diagnostics=trace,
+                    )
+                )
+                continue
+            raw_value = diagnostics[gate.signal_name]
+            if isinstance(raw_value, bool):
+                gate_trace["status"] = "invalid_score"
+                gate_trace["value"] = raw_value
+                output.append(
+                    RiskDecision(
+                        action=ControlAction.CLARIFY,
+                        risk_level=RiskLevel.UNKNOWN,
+                        confidence=1.0,
+                        reason=f"invalid sequential gate score: {gate.signal_name}",
+                        diagnostics=trace,
+                    )
+                )
+                continue
+            try:
+                value = float(raw_value)
+            except (TypeError, ValueError):
+                gate_trace["status"] = "invalid_score"
+                gate_trace["value"] = _diagnostic_value_for_trace(raw_value)
+                output.append(
+                    RiskDecision(
+                        action=ControlAction.CLARIFY,
+                        risk_level=RiskLevel.UNKNOWN,
+                        confidence=1.0,
+                        reason=f"invalid sequential gate score: {gate.signal_name}",
+                        diagnostics=trace,
+                    )
+                )
+                continue
+            if not math.isfinite(value):
+                gate_trace["status"] = "invalid_score"
+                gate_trace["value"] = _diagnostic_value_for_trace(raw_value)
+                output.append(
+                    RiskDecision(
+                        action=ControlAction.CLARIFY,
+                        risk_level=RiskLevel.UNKNOWN,
+                        confidence=1.0,
+                        reason=f"invalid sequential gate score: {gate.signal_name}",
+                        diagnostics=trace,
+                    )
+                )
+                continue
+            gate_trace["status"] = "pending"
+            gate_trace["value"] = value
+            monitored_positions.append(index)
+            monitored_scores.append(value)
+            output.append(_with_diagnostics(decision, trace))
+
+        if not monitored_scores:
+            return tuple(output)
+
+        report = gate.artifact.decide_sequence(
+            monitored_scores,
+            metadata={
+                "gate_source": gate.source,
+                "monitored_count": len(monitored_scores),
+                **dict(gate.metadata or {}),
+            },
+        )
+        report_summary = {
+            "horizon": report.horizon,
+            "alpha_spent_total": report.alpha_spent_total,
+            "remaining_alpha": report.remaining_alpha,
+            "rejected": report.rejected,
+            "rejected_count": report.rejected_count,
+            "rejected_steps": report.rejected_steps,
+        }
+        for position, step in zip(monitored_positions, report.steps, strict=True):
+            decision = output[position]
+            trace = dict(decision.diagnostics)
+            gate_trace = dict(trace["sequential_gate"])
+            gate_trace.update({
+                "status": "rejected" if step.rejected else "passed",
+                "step": step.step,
+                "p_value": step.p_value,
+                "alpha_spent": step.alpha_spent,
+                "cumulative_alpha_spent": step.cumulative_alpha_spent,
+                "rejected": step.rejected,
+                "report_summary": report_summary,
+            })
+            trace["sequential_gate"] = gate_trace
+            if not step.rejected:
+                output[position] = _with_diagnostics(decision, trace)
+                continue
+            output[position] = RiskDecision(
+                action=policy.sequential_gate_action,
+                risk_level=policy.sequential_gate_risk_level,
+                confidence=min(
+                    1.0,
+                    max(decision.confidence, policy.sequential_gate_confidence_floor),
+                ),
+                reason=(
+                    f"sequential conformal gate rejected {gate.signal_name} "
+                    f"at monitored step {step.step}"
+                ),
+                diagnostics=trace,
+            )
+        return tuple(output)
+
+    def _apply_multiple_testing_gate(
+        self,
+        decision: RiskDecision,
+        diagnostics: Mapping[str, float],
+        policy: ControlPolicyConfig,
+    ) -> RiskDecision:
+        """Escalate accepted answers when the global conformal gate rejects."""
+        gate = self.multiple_testing_gate
+        if gate is None:
+            return decision
+        if not isinstance(gate, MultipleTestingGateConfig):
+            raise ValueError("multiple_testing_gate was not normalized.")
+        trace = dict(decision.diagnostics)
+        gate_trace: dict[str, Any] = {
+            "enabled": True,
+            "source": gate.source,
+            "signals": gate.signal_names(),
+            "alpha": gate.artifact.alpha,
+            "method": gate.artifact.method,
+            "applies_to_actions": tuple(
+                action.value for action in policy.multiple_testing_gate_applies_to_actions
+            ),
+            "configured_action": policy.multiple_testing_gate_action.value,
+            "metadata": dict(gate.metadata or {}),
+        }
+        trace["multiple_testing_gate"] = gate_trace
+        if decision.action not in policy.multiple_testing_gate_applies_to_actions:
+            gate_trace["status"] = "skipped"
+            gate_trace["reason"] = f"decision action {decision.action.value!r} is outside gate scope"
+            return _with_diagnostics(decision, trace)
+
+        runtime_scores: dict[str, float] = {}
+        invalid: dict[str, Any] = {}
+        missing: list[str] = []
+        for signal_name in gate.signal_names():
+            if signal_name not in diagnostics:
+                missing.append(signal_name)
+                continue
+            raw_value = diagnostics[signal_name]
+            if isinstance(raw_value, bool):
+                invalid[signal_name] = _diagnostic_value_for_trace(raw_value)
+                continue
+            try:
+                value = float(raw_value)
+            except (TypeError, ValueError):
+                invalid[signal_name] = _diagnostic_value_for_trace(raw_value)
+                continue
+            if not math.isfinite(value):
+                invalid[signal_name] = _diagnostic_value_for_trace(raw_value)
+                continue
+            runtime_scores[signal_name] = value
+
+        if missing:
+            gate_trace["status"] = "missing_score"
+            gate_trace["missing_scores"] = tuple(missing)
+            return RiskDecision(
+                action=ControlAction.CLARIFY,
+                risk_level=RiskLevel.UNKNOWN,
+                confidence=1.0,
+                reason=f"missing multiple-testing gate score(s): {', '.join(missing)}",
+                diagnostics=trace,
+            )
+        if invalid:
+            gate_trace["status"] = "invalid_score"
+            gate_trace["invalid_scores"] = tuple(invalid)
+            gate_trace["invalid_values"] = invalid
+            return RiskDecision(
+                action=ControlAction.CLARIFY,
+                risk_level=RiskLevel.UNKNOWN,
+                confidence=1.0,
+                reason=f"invalid multiple-testing gate score(s): {', '.join(invalid)}",
+                diagnostics=trace,
+            )
+
+        report = gate.artifact.decide(
+            runtime_scores,
+            metadata={
+                "gate_source": gate.source,
+                "base_action": decision.action.value,
+                **dict(gate.metadata or {}),
+            },
+        )
+        gate_trace["status"] = "rejected" if report.rejected else "passed"
+        gate_trace["rejected"] = report.rejected
+        gate_trace["rejected_signal_names"] = report.rejected_signal_names
+        gate_trace["rejected_count"] = report.rejected_count
+        gate_trace["min_p_value"] = report.min_p_value
+        gate_trace["rejection_cutoff"] = report.rejection_cutoff
+        gate_trace["signals"] = tuple(signal.to_dict() for signal in report.signals)
+        if not report.rejected:
+            return _with_diagnostics(decision, trace)
+
+        return RiskDecision(
+            action=policy.multiple_testing_gate_action,
+            risk_level=policy.multiple_testing_gate_risk_level,
+            confidence=min(
+                1.0,
+                max(decision.confidence, policy.multiple_testing_gate_confidence_floor),
+            ),
+            reason=(
+                "multiple-testing conformal gate rejected signal(s): "
+                f"{', '.join(report.rejected_signal_names)}"
+            ),
+            diagnostics=trace,
         )
 
     def _apply_participation_gate(
@@ -669,6 +1226,20 @@ def _parse_action_tuple(value: Any, *, name: str) -> tuple[ControlAction, ...]:
         )
     except ValueError as exc:
         raise ValueError(f"{name} contains an unknown control action.") from exc
+
+
+def _control_action(value: Any, *, name: str) -> ControlAction:
+    try:
+        return value if isinstance(value, ControlAction) else ControlAction(str(value))
+    except ValueError as exc:
+        raise ValueError(f"{name} must be a valid ControlAction.") from exc
+
+
+def _risk_level(value: Any, *, name: str) -> RiskLevel:
+    try:
+        return value if isinstance(value, RiskLevel) else RiskLevel(str(value))
+    except ValueError as exc:
+        raise ValueError(f"{name} must be a valid RiskLevel.") from exc
 
 
 def _finite_float(value: Any, *, name: str) -> float:

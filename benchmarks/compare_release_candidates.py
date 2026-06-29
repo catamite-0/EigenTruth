@@ -273,6 +273,13 @@ _PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_FIELDS: tuple[tuple[str, str], 
         "evidence_handoff_promoted_group_rate",
     ),
 )
+_PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = (
+    ("world_model.participating_trace_rate", "world_model_participating_trace_rate"),
+    ("world_model.coverage_rate", "world_model_coverage_rate"),
+    ("world_model.conflict_rate", "world_model_conflict_rate"),
+    ("world_model.low_agreement_rate", "world_model_low_agreement_rate"),
+    ("world_model.trace_gap_rate", "world_model_trace_gap_rate"),
+)
 _PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = (
     (
         "promotion_contract.frontier_release_evidence.coverage_rate",
@@ -303,8 +310,36 @@ _PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_FIELDS: tuple[tuple[str, str], 
         "frontier_release_evidence_abstention_track_promote_rate",
     ),
     (
+        "promotion_contract.frontier_release_evidence.citation_batch_track_promote_rate",
+        "frontier_release_evidence_citation_batch_track_promote_rate",
+    ),
+    (
         "promotion_contract.frontier_release_evidence.run_count.mean",
         "frontier_release_evidence_run_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.citation_batch_rollup_count.mean",
+        "frontier_release_evidence_citation_batch_rollup_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.citation_batch_expected_batch_count.mean",
+        "frontier_release_evidence_citation_batch_expected_batch_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.citation_batch_observed_batch_count.mean",
+        "frontier_release_evidence_citation_batch_observed_batch_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.citation_batch_missing_expected_batch_count.mean",
+        "frontier_release_evidence_citation_batch_missing_expected_batch_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.citation_batch_duplicate_batch_count.mean",
+        "frontier_release_evidence_citation_batch_duplicate_batch_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.citation_batch_unexpected_batch_count.mean",
+        "frontier_release_evidence_citation_batch_unexpected_batch_count",
     ),
 )
 
@@ -343,6 +378,7 @@ def compare_release_candidates(
     require_product_runtime_drift_action_gate_evidence: bool = False,
     require_product_runtime_drift_trajectory_audit_evidence: bool = False,
     require_product_runtime_drift_evidence_handoff_evidence: bool = False,
+    require_product_runtime_drift_world_model_evidence: bool = False,
     require_product_runtime_drift_frontier_release_evidence: bool = False,
     release_efficiency_report_path: str | Path | None = None,
     external_evidence_baseline_comparison_path: str | Path | None = None,
@@ -589,6 +625,9 @@ def compare_release_candidates(
                 "require_product_runtime_drift_evidence_handoff_evidence": (
                     require_product_runtime_drift_evidence_handoff_evidence
                 ),
+                "require_product_runtime_drift_world_model_evidence": (
+                    require_product_runtime_drift_world_model_evidence
+                ),
                 "require_product_runtime_drift_frontier_release_evidence": (
                     require_product_runtime_drift_frontier_release_evidence
                 ),
@@ -716,6 +755,9 @@ def compare_release_candidates(
     )
     require_product_runtime_drift_evidence_handoff_evidence = bool(
         release_policy_values["require_product_runtime_drift_evidence_handoff_evidence"]
+    )
+    require_product_runtime_drift_world_model_evidence = bool(
+        release_policy_values.get("require_product_runtime_drift_world_model_evidence", False)
     )
     require_product_runtime_drift_frontier_release_evidence = bool(
         release_policy_values.get(
@@ -1294,6 +1336,7 @@ def compare_release_candidates(
         require_evidence_handoff_evidence=(
             require_product_runtime_drift_evidence_handoff_evidence
         ),
+        require_world_model_evidence=require_product_runtime_drift_world_model_evidence,
         require_frontier_release_evidence=(
             require_product_runtime_drift_frontier_release_evidence
         ),
@@ -1528,6 +1571,9 @@ def compare_release_candidates(
             ),
             "require_product_runtime_drift_evidence_handoff_evidence": bool(
                 require_product_runtime_drift_evidence_handoff_evidence
+            ),
+            "require_product_runtime_drift_world_model_evidence": bool(
+                require_product_runtime_drift_world_model_evidence
             ),
             "require_product_runtime_drift_frontier_release_evidence": bool(
                 require_product_runtime_drift_frontier_release_evidence
@@ -5501,7 +5547,25 @@ def _frontier_release_evidence_gate(
         "decision_status": decision.get("status"),
         "verifier_track_status": decision.get("verifier_track_status"),
         "abstention_track_status": decision.get("abstention_track_status"),
+        "multiple_testing_track_status": decision.get("multiple_testing_track_status"),
+        "citation_batch_track_status": decision.get("citation_batch_track_status"),
         "run_names": tuple(summary.get("run_names", ())),
+        "citation_batch_rollup_count": summary.get("citation_batch_rollup_count"),
+        "citation_batch_expected_batch_count": summary.get(
+            "citation_batch_expected_batch_count"
+        ),
+        "citation_batch_observed_batch_count": summary.get(
+            "citation_batch_observed_batch_count"
+        ),
+        "citation_batch_missing_expected_batch_count": summary.get(
+            "citation_batch_missing_expected_batch_count"
+        ),
+        "citation_batch_duplicate_batch_count": summary.get(
+            "citation_batch_duplicate_batch_count"
+        ),
+        "citation_batch_unexpected_batch_count": summary.get(
+            "citation_batch_unexpected_batch_count"
+        ),
         "blocking_reasons": tuple(decision.get("blocking_reasons", ())),
         "verification": verification,
         "gate": gate,
@@ -5543,6 +5607,18 @@ def _frontier_release_evidence_report_gate(
             failures.append(
                 f"frontier release evidence {track} is {decision.get(track)!r}, expected 'promote'"
             )
+    multiple_testing_track_status = decision.get("multiple_testing_track_status")
+    if multiple_testing_track_status not in {None, "promote", "not_required"}:
+        failures.append(
+            "frontier release evidence multiple_testing_track_status is "
+            f"{multiple_testing_track_status!r}, expected 'promote' or 'not_required'"
+        )
+    citation_batch_track_status = decision.get("citation_batch_track_status")
+    if citation_batch_track_status not in {None, "promote", "not_required"}:
+        failures.append(
+            "frontier release evidence citation_batch_track_status is "
+            f"{citation_batch_track_status!r}, expected 'promote' or 'not_required'"
+        )
     summary = _mapping(report.get("evidence_summary"))
     run_count = _float_or_none(summary.get("run_count"))
     if run_count is None:
@@ -6176,6 +6252,7 @@ def _product_runtime_drift_gate(
     require_action_gate_evidence: bool,
     require_trajectory_audit_evidence: bool,
     require_evidence_handoff_evidence: bool,
+    require_world_model_evidence: bool,
     require_frontier_release_evidence: bool,
     recursive: bool,
     allow_unverified: bool,
@@ -6193,6 +6270,7 @@ def _product_runtime_drift_gate(
             or require_action_gate_evidence
             or require_trajectory_audit_evidence
             or require_evidence_handoff_evidence
+            or require_world_model_evidence
             or require_frontier_release_evidence
         ):
             gate = {
@@ -6303,6 +6381,15 @@ def _product_runtime_drift_gate(
                         )
                     ) if require_evidence_handoff_evidence else (),
                     "evidence_handoff_evidence_blocked_metric_count": 0,
+                    "world_model_evidence_required": bool(require_world_model_evidence),
+                    "world_model_evidence_metric_count": 0,
+                    "world_model_evidence_missing_metrics": tuple(
+                        metric_name
+                        for metric_name, _prefix in (
+                            _PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_FIELDS
+                        )
+                    ) if require_world_model_evidence else (),
+                    "world_model_evidence_blocked_metric_count": 0,
                     "frontier_release_evidence_required": bool(
                         require_frontier_release_evidence
                     ),
@@ -6381,6 +6468,10 @@ def _product_runtime_drift_gate(
             required=require_frontier_release_evidence,
         )
     )
+    world_model_evidence_summary = _product_runtime_drift_world_model_evidence_summary(
+        metrics,
+        required=require_world_model_evidence,
+    )
     gate = _product_runtime_drift_report_gate(
         report=report,
         report_error=report_error,
@@ -6404,6 +6495,8 @@ def _product_runtime_drift_gate(
         require_trajectory_audit_evidence=require_trajectory_audit_evidence,
         evidence_handoff_evidence_summary=evidence_handoff_evidence_summary,
         require_evidence_handoff_evidence=require_evidence_handoff_evidence,
+        world_model_evidence_summary=world_model_evidence_summary,
+        require_world_model_evidence=require_world_model_evidence,
         frontier_release_evidence_summary=frontier_release_evidence_summary,
         require_frontier_release_evidence=require_frontier_release_evidence,
         allow_unverified=allow_unverified,
@@ -6433,6 +6526,7 @@ def _product_runtime_drift_gate(
             **action_gate_evidence_summary,
             **trajectory_audit_evidence_summary,
             **evidence_handoff_evidence_summary,
+            **world_model_evidence_summary,
             **frontier_release_evidence_summary,
         },
         "metrics": metrics,
@@ -6465,6 +6559,8 @@ def _product_runtime_drift_report_gate(
     require_trajectory_audit_evidence: bool,
     evidence_handoff_evidence_summary: Mapping[str, Any],
     require_evidence_handoff_evidence: bool,
+    world_model_evidence_summary: Mapping[str, Any],
+    require_world_model_evidence: bool,
     frontier_release_evidence_summary: Mapping[str, Any],
     require_frontier_release_evidence: bool,
     allow_unverified: bool,
@@ -6653,6 +6749,23 @@ def _product_runtime_drift_report_gate(
         if blocked_metric_count is not None and blocked_metric_count > 0:
             failures.append(
                 "product runtime drift evidence-handoff evidence blocked "
+                f"{int(blocked_metric_count)} metric(s)"
+            )
+    if require_world_model_evidence:
+        missing_metrics = tuple(
+            world_model_evidence_summary.get("world_model_evidence_missing_metrics") or ()
+        )
+        if missing_metrics:
+            failures.append(
+                "product runtime drift world-model evidence metrics are incomplete: "
+                + ", ".join(str(metric) for metric in missing_metrics)
+            )
+        blocked_metric_count = _float_or_none(
+            world_model_evidence_summary.get("world_model_evidence_blocked_metric_count")
+        )
+        if blocked_metric_count is not None and blocked_metric_count > 0:
+            failures.append(
+                "product runtime drift world-model evidence blocked "
                 f"{int(blocked_metric_count)} metric(s)"
             )
     if require_frontier_release_evidence:
@@ -7017,6 +7130,40 @@ def _product_runtime_drift_evidence_handoff_evidence_summary(
             summary["evidence_handoff_evidence_blocked_metric_count"] += 1
     summary["evidence_handoff_evidence_metric_count"] = metric_count
     summary["evidence_handoff_evidence_missing_metrics"] = tuple(missing_metrics)
+    return summary
+
+
+def _product_runtime_drift_world_model_evidence_summary(
+    metrics: Sequence[Mapping[str, Any]],
+    *,
+    required: bool = False,
+) -> dict[str, Any]:
+    metrics_by_name = {
+        str(metric["metric"]): metric
+        for metric in metrics
+        if isinstance(metric, Mapping) and isinstance(metric.get("metric"), str)
+    }
+    missing_metrics: list[str] = []
+    metric_count = 0
+    summary: dict[str, Any] = {
+        "world_model_evidence_required": bool(required),
+        "world_model_evidence_metric_count": 0,
+        "world_model_evidence_missing_metrics": (),
+        "world_model_evidence_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_FIELDS:
+        metric = metrics_by_name.get(metric_name)
+        summary[f"{prefix}_baseline"] = None if metric is None else metric.get("baseline")
+        summary[f"{prefix}_current"] = None if metric is None else metric.get("current")
+        summary[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is None or metric.get("current") is None:
+            missing_metrics.append(metric_name)
+            continue
+        metric_count += 1
+        if metric.get("status") == "blocked":
+            summary["world_model_evidence_blocked_metric_count"] += 1
+    summary["world_model_evidence_metric_count"] = metric_count
+    summary["world_model_evidence_missing_metrics"] = tuple(missing_metrics)
     return summary
 
 
@@ -7983,6 +8130,30 @@ def _candidate_with_gates(
             "decision_status": frontier_release_evidence.get("decision_status"),
             "verifier_track_status": frontier_release_evidence.get("verifier_track_status"),
             "abstention_track_status": frontier_release_evidence.get("abstention_track_status"),
+            "multiple_testing_track_status": frontier_release_evidence.get(
+                "multiple_testing_track_status"
+            ),
+            "citation_batch_track_status": frontier_release_evidence.get(
+                "citation_batch_track_status"
+            ),
+            "citation_batch_rollup_count": frontier_release_evidence.get(
+                "citation_batch_rollup_count"
+            ),
+            "citation_batch_expected_batch_count": frontier_release_evidence.get(
+                "citation_batch_expected_batch_count"
+            ),
+            "citation_batch_observed_batch_count": frontier_release_evidence.get(
+                "citation_batch_observed_batch_count"
+            ),
+            "citation_batch_missing_expected_batch_count": frontier_release_evidence.get(
+                "citation_batch_missing_expected_batch_count"
+            ),
+            "citation_batch_duplicate_batch_count": frontier_release_evidence.get(
+                "citation_batch_duplicate_batch_count"
+            ),
+            "citation_batch_unexpected_batch_count": frontier_release_evidence.get(
+                "citation_batch_unexpected_batch_count"
+            ),
             "run_names": tuple(frontier_release_evidence.get("run_names", ())),
             "blocking_reasons": tuple(frontier_release_evidence.get("blocking_reasons", ())),
         }
@@ -8481,6 +8652,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         require_product_runtime_drift_evidence_handoff_evidence=bool(
             args.require_product_runtime_drift_evidence_handoff_evidence
         ),
+        require_product_runtime_drift_world_model_evidence=bool(
+            args.require_product_runtime_drift_world_model_evidence
+        ),
         require_product_runtime_drift_frontier_release_evidence=bool(
             args.require_product_runtime_drift_frontier_release_evidence
         ),
@@ -8770,6 +8944,9 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="require the product runtime drift report to include promotion-contract "
                              "evidence handoff coverage, manifest, metric completeness, and promoted-group "
                              "drift metrics")
+    parser.add_argument("--require-product-runtime-drift-world-model-evidence", action="store_true",
+                        help="require the product runtime drift report to include trace-level world-model "
+                             "participation, coverage, conflict, low-agreement, and trace-gap metrics")
     parser.add_argument("--require-product-runtime-drift-frontier-release-evidence", action="store_true",
                         help="require the product runtime drift report to include frontier release "
                              "evidence coverage, artifact presence, promote-rate, and run-count metrics")

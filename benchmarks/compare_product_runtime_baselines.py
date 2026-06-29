@@ -202,8 +202,36 @@ _FRONTIER_RELEASE_EVIDENCE_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
         "frontier_release_evidence_abstention_track_promote_rate",
     ),
     (
+        "promotion_contract.frontier_release_evidence.citation_batch_track_promote_rate",
+        "frontier_release_evidence_citation_batch_track_promote_rate",
+    ),
+    (
         "promotion_contract.frontier_release_evidence.run_count.mean",
         "frontier_release_evidence_run_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.citation_batch_rollup_count.mean",
+        "frontier_release_evidence_citation_batch_rollup_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.citation_batch_expected_batch_count.mean",
+        "frontier_release_evidence_citation_batch_expected_batch_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.citation_batch_observed_batch_count.mean",
+        "frontier_release_evidence_citation_batch_observed_batch_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.citation_batch_missing_expected_batch_count.mean",
+        "frontier_release_evidence_citation_batch_missing_expected_batch_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.citation_batch_duplicate_batch_count.mean",
+        "frontier_release_evidence_citation_batch_duplicate_batch_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.citation_batch_unexpected_batch_count.mean",
+        "frontier_release_evidence_citation_batch_unexpected_batch_count",
     ),
 )
 
@@ -212,6 +240,13 @@ _TRIPLE_COVERAGE_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
     ("triple_coverage.audit_claim_coverage_rate", "triple_audit_claim_coverage_rate"),
     ("triple_coverage.audit_pass_rate", "triple_audit_pass_rate"),
     ("triple_coverage.slot_coverage_rate", "triple_slot_coverage_rate"),
+)
+_WORLD_MODEL_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
+    ("world_model.participating_trace_rate", "world_model_participating_trace_rate"),
+    ("world_model.coverage_rate", "world_model_coverage_rate"),
+    ("world_model.conflict_rate", "world_model_conflict_rate"),
+    ("world_model.low_agreement_rate", "world_model_low_agreement_rate"),
+    ("world_model.trace_gap_rate", "world_model_trace_gap_rate"),
 )
 _COVERED_FACT_PROPERTY_SCOPES: dict[str, str] = {
     "recommended_route": "recommended_route_property_metrics",
@@ -402,6 +437,35 @@ _PRODUCT_TRACE_TRAJECTORY_AUDIT_METRIC_SPECS: tuple[tuple[str, tuple[str, ...], 
         "max_product_trace_trajectory_audit_scope_rate_increase",
     ),
 )
+_WORLD_MODEL_MIN_METRIC_SPECS: tuple[tuple[str, tuple[str, ...], str], ...] = (
+    (
+        "world_model.participating_trace_rate",
+        ("world_model", "participating_trace_rate"),
+        "min_world_model_participating_trace_rate",
+    ),
+    (
+        "world_model.coverage_rate",
+        ("world_model", "coverage_rate"),
+        "min_world_model_coverage_rate",
+    ),
+)
+_WORLD_MODEL_INCREASE_METRIC_SPECS: tuple[tuple[str, tuple[str, ...], str], ...] = (
+    (
+        "world_model.conflict_rate",
+        ("world_model", "conflict_rate"),
+        "max_world_model_conflict_rate_increase",
+    ),
+    (
+        "world_model.low_agreement_rate",
+        ("world_model", "low_agreement_rate"),
+        "max_world_model_low_agreement_rate_increase",
+    ),
+    (
+        "world_model.trace_gap_rate",
+        ("world_model", "trace_gap_rate"),
+        "max_world_model_trace_gap_rate_increase",
+    ),
+)
 
 
 def compare_product_runtime_baselines(
@@ -469,7 +533,20 @@ def compare_product_runtime_baselines(
     min_frontier_release_evidence_decision_promote_rate: float | None = None,
     min_frontier_release_evidence_verifier_track_promote_rate: float | None = None,
     min_frontier_release_evidence_abstention_track_promote_rate: float | None = None,
+    min_frontier_release_evidence_citation_batch_track_promote_rate: (
+        float | None
+    ) = None,
     min_frontier_release_evidence_run_count: float | None = None,
+    min_frontier_release_evidence_citation_batch_rollup_count: float | None = None,
+    max_frontier_release_evidence_citation_batch_missing_expected_batch_count: (
+        float | None
+    ) = None,
+    max_frontier_release_evidence_citation_batch_duplicate_batch_count: (
+        float | None
+    ) = None,
+    max_frontier_release_evidence_citation_batch_unexpected_batch_count: (
+        float | None
+    ) = None,
     min_triple_extraction_fixture_matrix_coverage: float | None = None,
     max_triple_extraction_fixture_matrix_mean_best_f1_drop: float | None = None,
     max_triple_extraction_fixture_matrix_mean_f1_lift_drop: float | None = None,
@@ -477,6 +554,11 @@ def compare_product_runtime_baselines(
     min_triple_audit_claim_coverage: float | None = None,
     min_triple_audit_pass_rate: float | None = None,
     min_triple_slot_coverage: float | None = None,
+    min_world_model_participating_trace_rate: float | None = None,
+    min_world_model_coverage_rate: float | None = None,
+    max_world_model_conflict_rate_increase: float | None = None,
+    max_world_model_low_agreement_rate_increase: float | None = None,
+    max_world_model_trace_gap_rate_increase: float | None = None,
     promotion_contract_covered_fact_property_scopes: Sequence[str] | None = None,
     min_promotion_contract_covered_fact_property_metric_count: float | None = None,
     min_promotion_contract_covered_fact_min_records: float | None = None,
@@ -662,8 +744,29 @@ def compare_product_runtime_baselines(
         "min_frontier_release_evidence_abstention_track_promote_rate": _optional_rate_float(
             min_frontier_release_evidence_abstention_track_promote_rate
         ),
+        "min_frontier_release_evidence_citation_batch_track_promote_rate": _optional_rate_float(
+            min_frontier_release_evidence_citation_batch_track_promote_rate
+        ),
         "min_frontier_release_evidence_run_count": _optional_non_negative_float(
             min_frontier_release_evidence_run_count
+        ),
+        "min_frontier_release_evidence_citation_batch_rollup_count": _optional_non_negative_float(
+            min_frontier_release_evidence_citation_batch_rollup_count
+        ),
+        "max_frontier_release_evidence_citation_batch_missing_expected_batch_count": (
+            _optional_non_negative_float(
+                max_frontier_release_evidence_citation_batch_missing_expected_batch_count
+            )
+        ),
+        "max_frontier_release_evidence_citation_batch_duplicate_batch_count": (
+            _optional_non_negative_float(
+                max_frontier_release_evidence_citation_batch_duplicate_batch_count
+            )
+        ),
+        "max_frontier_release_evidence_citation_batch_unexpected_batch_count": (
+            _optional_non_negative_float(
+                max_frontier_release_evidence_citation_batch_unexpected_batch_count
+            )
         ),
         "min_triple_extraction_fixture_matrix_coverage": _optional_rate_float(
             min_triple_extraction_fixture_matrix_coverage
@@ -678,6 +781,19 @@ def compare_product_runtime_baselines(
         "min_triple_audit_claim_coverage": _optional_rate_float(min_triple_audit_claim_coverage),
         "min_triple_audit_pass_rate": _optional_rate_float(min_triple_audit_pass_rate),
         "min_triple_slot_coverage": _optional_rate_float(min_triple_slot_coverage),
+        "min_world_model_participating_trace_rate": _optional_rate_float(
+            min_world_model_participating_trace_rate
+        ),
+        "min_world_model_coverage_rate": _optional_rate_float(min_world_model_coverage_rate),
+        "max_world_model_conflict_rate_increase": _optional_rate_float(
+            max_world_model_conflict_rate_increase
+        ),
+        "max_world_model_low_agreement_rate_increase": _optional_rate_float(
+            max_world_model_low_agreement_rate_increase
+        ),
+        "max_world_model_trace_gap_rate_increase": _optional_rate_float(
+            max_world_model_trace_gap_rate_increase
+        ),
         "promotion_contract_covered_fact_property_scopes": _covered_fact_property_scopes(
             promotion_contract_covered_fact_property_scopes
         ),
@@ -1004,6 +1120,7 @@ def _comparison_metrics(
     metrics.extend(_covered_fact_property_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_product_trace_action_gate_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_product_trace_trajectory_audit_metrics(baseline_summary, current_summary, gates=gates))
+    metrics.extend(_world_model_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_pre_generation_probe_comparison_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_claim_factuality_probe_comparison_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_counterfactual_verification_metrics(baseline_summary, current_summary, gates=gates))
@@ -1415,10 +1532,66 @@ def _frontier_release_evidence_metrics(
             gates.get("min_frontier_release_evidence_abstention_track_promote_rate"),
         ),
         _min_current_metric(
+            "promotion_contract.frontier_release_evidence.citation_batch_track_promote_rate",
+            _finite_float(baseline.get("citation_batch_track_promote_rate")),
+            _finite_float(current.get("citation_batch_track_promote_rate")),
+            gates.get(
+                "min_frontier_release_evidence_citation_batch_track_promote_rate"
+            ),
+        ),
+        _min_current_metric(
             "promotion_contract.frontier_release_evidence.run_count.mean",
             _nested_float(baseline, ("run_count", "mean")),
             _nested_float(current, ("run_count", "mean")),
             gates.get("min_frontier_release_evidence_run_count"),
+        ),
+        _min_current_metric(
+            "promotion_contract.frontier_release_evidence.citation_batch_rollup_count.mean",
+            _nested_float(baseline, ("citation_batch_rollup_count", "mean")),
+            _nested_float(current, ("citation_batch_rollup_count", "mean")),
+            gates.get("min_frontier_release_evidence_citation_batch_rollup_count"),
+        ),
+        _max_current_metric(
+            "promotion_contract.frontier_release_evidence.citation_batch_missing_expected_batch_count.mean",
+            _nested_float(
+                baseline,
+                ("citation_batch_missing_expected_batch_count", "mean"),
+            ),
+            _nested_float(
+                current,
+                ("citation_batch_missing_expected_batch_count", "mean"),
+            ),
+            gates.get(
+                "max_frontier_release_evidence_citation_batch_missing_expected_batch_count"
+            ),
+        ),
+        _max_current_metric(
+            "promotion_contract.frontier_release_evidence.citation_batch_duplicate_batch_count.mean",
+            _nested_float(
+                baseline,
+                ("citation_batch_duplicate_batch_count", "mean"),
+            ),
+            _nested_float(
+                current,
+                ("citation_batch_duplicate_batch_count", "mean"),
+            ),
+            gates.get(
+                "max_frontier_release_evidence_citation_batch_duplicate_batch_count"
+            ),
+        ),
+        _max_current_metric(
+            "promotion_contract.frontier_release_evidence.citation_batch_unexpected_batch_count.mean",
+            _nested_float(
+                baseline,
+                ("citation_batch_unexpected_batch_count", "mean"),
+            ),
+            _nested_float(
+                current,
+                ("citation_batch_unexpected_batch_count", "mean"),
+            ),
+            gates.get(
+                "max_frontier_release_evidence_citation_batch_unexpected_batch_count"
+            ),
         ),
     ]
 
@@ -1434,7 +1607,12 @@ def _frontier_release_evidence_gate_enabled(gates: Mapping[str, Any]) -> bool:
             "min_frontier_release_evidence_decision_promote_rate",
             "min_frontier_release_evidence_verifier_track_promote_rate",
             "min_frontier_release_evidence_abstention_track_promote_rate",
+            "min_frontier_release_evidence_citation_batch_track_promote_rate",
             "min_frontier_release_evidence_run_count",
+            "min_frontier_release_evidence_citation_batch_rollup_count",
+            "max_frontier_release_evidence_citation_batch_missing_expected_batch_count",
+            "max_frontier_release_evidence_citation_batch_duplicate_batch_count",
+            "max_frontier_release_evidence_citation_batch_unexpected_batch_count",
         )
     )
 
@@ -1610,6 +1788,45 @@ def _product_trace_trajectory_audit_gate_enabled(gates: Mapping[str, Any]) -> bo
     return any(
         gates.get(gate_key) is not None
         for _, _, gate_key in _PRODUCT_TRACE_TRAJECTORY_AUDIT_METRIC_SPECS
+    )
+
+
+def _world_model_metrics(
+    baseline_summary: Mapping[str, Any],
+    current_summary: Mapping[str, Any],
+    *,
+    gates: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    if not _world_model_gate_enabled(gates):
+        return []
+    rows = [
+        _min_current_metric(
+            metric_name,
+            _nested_float(baseline_summary, metric_path),
+            _nested_float(current_summary, metric_path),
+            gates.get(gate_key),
+        )
+        for metric_name, metric_path, gate_key in _WORLD_MODEL_MIN_METRIC_SPECS
+    ]
+    rows.extend(
+        _delta_metric(
+            metric_name,
+            _nested_float(baseline_summary, metric_path),
+            _nested_float(current_summary, metric_path),
+            gates.get(gate_key),
+        )
+        for metric_name, metric_path, gate_key in _WORLD_MODEL_INCREASE_METRIC_SPECS
+    )
+    return rows
+
+
+def _world_model_gate_enabled(gates: Mapping[str, Any]) -> bool:
+    return any(
+        gates.get(gate_key) is not None
+        for _, _, gate_key in (
+            *_WORLD_MODEL_MIN_METRIC_SPECS,
+            *_WORLD_MODEL_INCREASE_METRIC_SPECS,
+        )
     )
 
 
@@ -2252,6 +2469,7 @@ def _drift_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
         **_frontier_release_evidence_metadata(report),
         **_covered_fact_property_metadata(report),
         **_triple_coverage_metadata(report),
+        **_world_model_metadata(report),
         **_product_trace_action_gate_metadata(report),
         **_product_trace_trajectory_audit_metadata(report),
     }
@@ -2382,6 +2600,21 @@ def _triple_coverage_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
         metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
         if metric is not None and metric.get("status") == "blocked":
             metadata["triple_coverage_blocked_metric_count"] += 1
+    return metadata
+
+
+def _world_model_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    metrics = _metrics_by_name(report.get("metrics"))
+    metadata: dict[str, Any] = {
+        "world_model_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _WORLD_MODEL_METADATA_FIELDS:
+        metric = metrics.get(metric_name)
+        metadata[f"{prefix}_baseline"] = _finite_float(None if metric is None else metric.get("baseline"))
+        metadata[f"{prefix}_current"] = _finite_float(None if metric is None else metric.get("current"))
+        metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is not None and metric.get("status") == "blocked":
+            metadata["world_model_blocked_metric_count"] += 1
     return metadata
 
 
@@ -2691,8 +2924,23 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         min_frontier_release_evidence_abstention_track_promote_rate=(
             args.min_frontier_release_evidence_abstention_track_promote_rate
         ),
+        min_frontier_release_evidence_citation_batch_track_promote_rate=(
+            args.min_frontier_release_evidence_citation_batch_track_promote_rate
+        ),
         min_frontier_release_evidence_run_count=(
             args.min_frontier_release_evidence_run_count
+        ),
+        min_frontier_release_evidence_citation_batch_rollup_count=(
+            args.min_frontier_release_evidence_citation_batch_rollup_count
+        ),
+        max_frontier_release_evidence_citation_batch_missing_expected_batch_count=(
+            args.max_frontier_release_evidence_citation_batch_missing_expected_batch_count
+        ),
+        max_frontier_release_evidence_citation_batch_duplicate_batch_count=(
+            args.max_frontier_release_evidence_citation_batch_duplicate_batch_count
+        ),
+        max_frontier_release_evidence_citation_batch_unexpected_batch_count=(
+            args.max_frontier_release_evidence_citation_batch_unexpected_batch_count
         ),
         min_triple_extraction_fixture_matrix_coverage=(
             args.min_triple_extraction_fixture_matrix_coverage
@@ -2707,6 +2955,19 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         min_triple_audit_claim_coverage=args.min_triple_audit_claim_coverage,
         min_triple_audit_pass_rate=args.min_triple_audit_pass_rate,
         min_triple_slot_coverage=args.min_triple_slot_coverage,
+        min_world_model_participating_trace_rate=(
+            args.min_world_model_participating_trace_rate
+        ),
+        min_world_model_coverage_rate=args.min_world_model_coverage_rate,
+        max_world_model_conflict_rate_increase=(
+            args.max_world_model_conflict_rate_increase
+        ),
+        max_world_model_low_agreement_rate_increase=(
+            args.max_world_model_low_agreement_rate_increase
+        ),
+        max_world_model_trace_gap_rate_increase=(
+            args.max_world_model_trace_gap_rate_increase
+        ),
         promotion_contract_covered_fact_property_scopes=(
             args.promotion_contract_covered_fact_property_scope
         ),
@@ -2937,7 +3198,32 @@ def main(argv: Sequence[str] | None = None) -> None:
         type=float,
         default=None,
     )
+    parser.add_argument(
+        "--min-frontier-release-evidence-citation-batch-track-promote-rate",
+        type=float,
+        default=None,
+    )
     parser.add_argument("--min-frontier-release-evidence-run-count", type=float, default=None)
+    parser.add_argument(
+        "--min-frontier-release-evidence-citation-batch-rollup-count",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-frontier-release-evidence-citation-batch-missing-expected-batch-count",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-frontier-release-evidence-citation-batch-duplicate-batch-count",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-frontier-release-evidence-citation-batch-unexpected-batch-count",
+        type=float,
+        default=None,
+    )
     parser.add_argument("--min-triple-extraction-fixture-matrix-coverage", type=float, default=None)
     parser.add_argument("--max-triple-extraction-fixture-matrix-mean-best-f1-drop", type=float, default=None)
     parser.add_argument("--max-triple-extraction-fixture-matrix-mean-f1-lift-drop", type=float, default=None)
@@ -2945,6 +3231,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--min-triple-audit-claim-coverage", type=float, default=None)
     parser.add_argument("--min-triple-audit-pass-rate", type=float, default=None)
     parser.add_argument("--min-triple-slot-coverage", type=float, default=None)
+    parser.add_argument("--min-world-model-participating-trace-rate", type=float, default=None)
+    parser.add_argument("--min-world-model-coverage-rate", type=float, default=None)
+    parser.add_argument("--max-world-model-conflict-rate-increase", type=float, default=None)
+    parser.add_argument("--max-world-model-low-agreement-rate-increase", type=float, default=None)
+    parser.add_argument("--max-world-model-trace-gap-rate-increase", type=float, default=None)
     parser.add_argument(
         "--promotion-contract-covered-fact-property-scope",
         action="append",

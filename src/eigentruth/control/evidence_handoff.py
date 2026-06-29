@@ -784,6 +784,7 @@ def _frontier_release_evidence_handoff_from_report(
         or decision.get("status") != "promote"
         or decision.get("verifier_track_status") != "promote"
         or decision.get("abstention_track_status") != "promote"
+        or decision.get("multiple_testing_track_status") not in {None, "promote", "not_required"}
         or blocking_reasons
     ):
         status = "blocked"
@@ -798,6 +799,7 @@ def _frontier_release_evidence_handoff_from_report(
             "decision_status": decision.get("status"),
             "verifier_track_status": decision.get("verifier_track_status"),
             "abstention_track_status": decision.get("abstention_track_status"),
+            "multiple_testing_track_status": decision.get("multiple_testing_track_status"),
             "run_names": tuple(summary.get("run_names") or ()),
             "blocking_reasons": blocking_reasons,
         }
@@ -818,6 +820,9 @@ def _frontier_release_evidence_flat_metadata(
             "frontier_release_evidence_decision_status": evidence.get("decision_status"),
             "frontier_release_evidence_verifier_track_status": (evidence.get("verifier_track_status")),
             "frontier_release_evidence_abstention_track_status": (evidence.get("abstention_track_status")),
+            "frontier_release_evidence_multiple_testing_track_status": (
+                evidence.get("multiple_testing_track_status")
+            ),
             "frontier_release_evidence_run_names": evidence.get("run_names"),
             "frontier_release_evidence_blocking_reasons": evidence.get("blocking_reasons"),
         }
@@ -1359,6 +1364,10 @@ _GROUP_BUILDERS = {
         _frontier_release_evidence_metric(
             "abstention_track_status",
             "abstention_track_status",
+        ),
+        _frontier_release_evidence_metric(
+            "multiple_testing_track_status",
+            "multiple_testing_track_status",
         ),
         _frontier_release_evidence_metric("run_names", "run_names"),
     ),

@@ -13,8 +13,12 @@ from eigentruth.calibration import (
     ConformalCalibrator,
     GeometryScoreFusionArtifact,
     GeometryScoreFusionCalibrator,
+    MultipleTestingConformalArtifact,
+    MultipleTestingConformalCalibrator,
     RankScoreFusionArtifact,
     RankScoreFusionCalibrator,
+    SequentialConformalArtifact,
+    SequentialConformalCalibrator,
     SteeringPolicyConfig,
 )
 from eigentruth.eval import (
@@ -154,6 +158,140 @@ def test_conformal_calibrator_rejects_invalid_inputs():
 
     with pytest.raises(ValueError, match="alpha"):
         AdaptiveConformalCalibrator(alpha=0.0)
+
+
+def test_multiple_testing_conformal_artifact_roundtrip_and_runtime_decision(tmp_path):
+    calibrator = MultipleTestingConformalCalibrator(alpha=0.3, method="by")
+    artifact = calibrator.calibrate(
+        model_id="tiny-model",
+        target_layer=-4,
+        calibration_scores={
+            "support_score": list(range(100, 120)),
+            "maha_last": list(range(20)),
+        },
+        directions={"support_score": "lower", "maha_last": "higher"},
+        calibration_dataset_metadata={"name": "truthfulqa-mini"},
+        created_at="2026-06-29T00:00:00+00:00",
+        eigentruth_version="0.1.0",
+    )
+
+    report = artifact.decide(
+        {"support_score": 0.0, "maha_last": 5.0},
+        metadata={"request_id": "req-1", "model_id": "spoofed"},
+    )
+    path = tmp_path / "multiple-testing-calibration.json"
+    artifact.save_json(path)
+    loaded = MultipleTestingConformalArtifact.load_json(path)
+    loaded_report = loaded.decide(
+        {"support_score": 0.0, "maha_last": 5.0},
+        metadata={"request_id": "req-1", "model_id": "spoofed"},
+    )
+
+    assert loaded == artifact
+    assert artifact.signal_names() == ("support_score", "maha_last")
+    assert report.rejected is True
+    assert report.rejected_signal_names == ("support_score",)
+    assert report.metadata["request_id"] == "req-1"
+    assert report.metadata["model_id"] == "tiny-model"
+    assert report.metadata["runtime_metadata"]["model_id"] == "spoofed"
+    assert loaded_report.to_dict() == report.to_dict()
+
+
+def test_multiple_testing_conformal_calibrator_rejects_invalid_inputs():
+    with pytest.raises(ValueError, match="alpha"):
+        MultipleTestingConformalCalibrator(alpha=1.0)
+    with pytest.raises(ValueError, match="method"):
+        MultipleTestingConformalCalibrator(method="sidak")
+
+    calibrator = MultipleTestingConformalCalibrator(alpha=0.3)
+    with pytest.raises(ValueError, match="at least one"):
+        calibrator.calibrate(model_id="m", target_layer=0, calibration_scores={})
+    with pytest.raises(ValueError, match="unknown"):
+        calibrator.calibrate(
+            model_id="m",
+            target_layer=0,
+            calibration_scores={"maha": [1.0, 2.0]},
+            directions={"other": "higher"},
+        )
+    with pytest.raises(ValueError, match="direction"):
+        calibrator.calibrate(
+            model_id="m",
+            target_layer=0,
+            calibration_scores={"maha": [1.0, 2.0]},
+            directions={"maha": "sideways"},
+        )
+    with pytest.raises(ValueError, match="bool"):
+        calibrator.calibrate(model_id="m", target_layer=0, calibration_scores={"maha": [True, False]})
+    with pytest.raises(ValueError, match="finite"):
+        calibrator.calibrate(model_id="m", target_layer=0, calibration_scores={"maha": [1.0, math.inf]})
+
+
+def test_sequential_conformal_artifact_roundtrip_and_runtime_sequence(tmp_path):
+    calibrator = SequentialConformalCalibrator(alpha=0.5, schedule="linear")
+    artifact = calibrator.calibrate(
+        model_id="tiny-model",
+        target_layer=-4,
+        signal_name="support_score",
+        calibration_scores=[10.0, 11.0, 12.0, 13.0],
+        direction="lower",
+        calibration_dataset_metadata={"name": "truthfulqa-mini"},
+        created_at="2026-06-29T00:00:00+00:00",
+        eigentruth_version="0.1.0",
+    )
+
+    report = artifact.decide_sequence(
+        [9.0, 12.0],
+        metadata={"session_id": "s1", "signal_name": "spoofed"},
+    )
+    path = tmp_path / "sequential-calibration.json"
+    artifact.save_json(path)
+    loaded = SequentialConformalArtifact.load_json(path)
+    loaded_report = loaded.decide_sequence(
+        [9.0, 12.0],
+        metadata={"session_id": "s1", "signal_name": "spoofed"},
+    )
+
+    assert loaded == artifact
+    assert artifact.calibration_count == 4
+    assert artifact.direction == "lower"
+    assert artifact.schedule == "linear"
+    assert report.rejected_steps == (1,)
+    assert report.steps[0].score == pytest.approx(9.0)
+    assert report.metadata["session_id"] == "s1"
+    assert report.metadata["signal_name"] == "support_score"
+    assert report.metadata["runtime_metadata"]["signal_name"] == "spoofed"
+    assert loaded_report.to_dict() == report.to_dict()
+
+
+def test_sequential_conformal_calibrator_rejects_invalid_inputs():
+    with pytest.raises(ValueError, match="alpha"):
+        SequentialConformalCalibrator(alpha=1.0)
+    with pytest.raises(ValueError, match="schedule"):
+        SequentialConformalCalibrator(schedule="sidak")
+
+    calibrator = SequentialConformalCalibrator(alpha=0.3)
+    with pytest.raises(ValueError, match="direction"):
+        calibrator.calibrate(
+            model_id="m",
+            target_layer=0,
+            signal_name="score",
+            calibration_scores=[1.0, 2.0],
+            direction="sideways",
+        )
+    with pytest.raises(ValueError, match="bool"):
+        calibrator.calibrate(
+            model_id="m",
+            target_layer=0,
+            signal_name="score",
+            calibration_scores=[True, False],
+        )
+    with pytest.raises(ValueError, match="finite"):
+        calibrator.calibrate(
+            model_id="m",
+            target_layer=0,
+            signal_name="score",
+            calibration_scores=[1.0, math.inf],
+        )
 
 
 def test_rank_score_fusion_artifact_roundtrip_and_directional_flags(tmp_path):

@@ -27,7 +27,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Sequence
+from typing import Mapping, Sequence
 
 import torch
 
@@ -42,6 +42,8 @@ from eigentruth.calibration import (  # noqa: E402
     AdaptiveConformalCalibrator,
     ConformalCalibrator,
     LayerScoreSweepCalibrator,
+    MultipleTestingConformalCalibrator,
+    SequentialConformalCalibrator,
 )
 from eigentruth.eval.conformal import (  # noqa: E402
     ABSTENTION_COMPARISON_METRICS,
@@ -52,6 +54,8 @@ from eigentruth.eval.conformal import (  # noqa: E402
     conformal_abstention_report,
     directional_conformal_thresholds,
     directional_trigger_rate,
+    multiple_testing_conformal_report,
+    sequential_conformal_monitor,
 )
 from eigentruth.eval.metrics import confidence_error_report, selective_classification_report  # noqa: E402
 from eigentruth.eval.score_dump import (  # noqa: E402
@@ -67,6 +71,7 @@ from eigentruth.eval.score_dump import (  # noqa: E402
     score_dump_cache_summary,
     score_dump_file_metadata,
 )
+from eigentruth.json_utils import strict_json_dumps  # noqa: E402
 from eigentruth.registry import build_artifact_manifest  # noqa: E402
 
 ALPHAS = (0.05, 0.10, 0.20)
@@ -80,6 +85,34 @@ def _parse_signals(value: str | None) -> tuple[str, ...] | None:
     if not signals:
         raise ValueError("--signals must contain at least one signal name.")
     return signals
+
+
+def _parse_signal_direction_overrides(value: str | None, *, name: str) -> dict[str, str]:
+    if value is None:
+        return {}
+    overrides: dict[str, str] = {}
+    for part in value.split(","):
+        item = part.strip()
+        if not item:
+            continue
+        if ":" in item:
+            signal, direction = item.split(":", 1)
+        elif "=" in item:
+            signal, direction = item.split("=", 1)
+        else:
+            raise ValueError(f"{name} entries must use SIGNAL:higher/lower.")
+        signal = signal.strip()
+        direction = direction.strip()
+        if not signal:
+            raise ValueError(f"{name} entries must include a signal name.")
+        if direction not in {"higher", "lower"}:
+            raise ValueError(f"{name} direction for {signal!r} must be 'higher' or 'lower'.")
+        if signal in overrides:
+            raise ValueError(f"{name} contains duplicate signal {signal!r}.")
+        overrides[signal] = direction
+    if not overrides:
+        raise ValueError(f"{name} must contain at least one SIGNAL:direction entry.")
+    return overrides
 
 
 def _parse_adaptive_feature_names(values: object) -> tuple[str, ...]:
@@ -339,6 +372,10 @@ def _artifact_paths(args) -> dict[str, str | Path | None]:
         "abstention_report": getattr(args, "save_abstention_report", None),
         "abstention_comparison_report": getattr(args, "save_abstention_comparison", None),
         "abstention_release_gate": getattr(args, "save_abstention_release_gate", None),
+        "multiple_testing_report": getattr(args, "save_multiple_testing_report", None),
+        "multiple_testing_calibration_artifact": getattr(args, "save_multiple_testing_calibration", None),
+        "sequential_report": getattr(args, "save_sequential_report", None),
+        "sequential_calibration_artifact": getattr(args, "save_sequential_calibration", None),
         "sweep_report": args.save_sweep_report,
         "best_calibration_artifact": args.save_best_calibration,
     }
@@ -576,6 +613,276 @@ def _resolve_abstention_comparison_signals(
     return tuple(dict.fromkeys((abstention_signal, args.signal)))
 
 
+def _resolve_multiple_testing_signals(args, *, enabled: bool) -> tuple[str, ...]:
+    if not enabled:
+        return ()
+    parsed = _parse_signals(getattr(args, "multiple_testing_signals", None))
+    if parsed is not None:
+        return parsed
+    sweep_signals = _parse_signals(getattr(args, "signals", None))
+    if sweep_signals is not None:
+        return sweep_signals
+    return (str(args.signal),)
+
+
+def _run_multiple_testing_report(
+    *,
+    score_dump: ScoreDumpColumns,
+    labels: torch.Tensor,
+    signals: Sequence[str],
+    alpha: float,
+    method: str,
+    direction_override: str | None,
+    direction_overrides: Mapping[str, str] | None,
+    base_signal: str,
+    repeats: int,
+    seed: int,
+) -> dict:
+    if repeats < 1:
+        raise ValueError("repeats must be >= 1.")
+    missing = tuple(signal for signal in signals if signal not in score_dump.scores)
+    if missing:
+        available = tuple(sorted(str(name) for name in score_dump.scores))
+        raise ValueError(
+            f"score dump is missing multiple-testing signal(s) {missing}; "
+            f"available signals: {available}"
+        )
+
+    signal_scores = {
+        signal: torch.tensor(score_dump.scores[signal], dtype=torch.float64)
+        for signal in signals
+    }
+    explicit_direction_overrides = dict(direction_overrides or {})
+    unknown_overrides = tuple(sorted(set(explicit_direction_overrides) - set(signals)))
+    if unknown_overrides:
+        raise ValueError(
+            "multiple-testing direction override references unknown signal(s) "
+            f"{unknown_overrides}; configured signals: {tuple(signals)}"
+        )
+    directions = {
+        signal: _direction_for(signal, explicit_direction_overrides.get(signal))
+        if signal in explicit_direction_overrides
+        else _direction_for(signal, direction_override if signal == base_signal else None)
+        for signal in signals
+    }
+    true_indices = torch.nonzero(labels == 0, as_tuple=False).flatten()
+    false_indices = torch.nonzero(labels == 1, as_tuple=False).flatten()
+    n_true, n_false = int(true_indices.numel()), int(false_indices.numel())
+    if n_true < 2:
+        raise ValueError("score dump must contain at least two true statements for split conformal.")
+
+    repeats_payload = []
+    false_alarm_sum = 0.0
+    detection_sum = 0.0
+    true_rejected_by_signal = {signal: 0 for signal in signals}
+    false_rejected_by_signal = {signal: 0 for signal in signals}
+
+    for repeat_idx in range(repeats):
+        generator = torch.Generator().manual_seed(seed + repeat_idx)
+        shuffled_true = true_indices[torch.randperm(n_true, generator=generator)]
+        split = n_true // 2
+        calibration_indices = shuffled_true[:split]
+        test_true_indices = shuffled_true[split:]
+        calibration_scores = {
+            signal: scores[calibration_indices]
+            for signal, scores in signal_scores.items()
+        }
+
+        true_rejected = 0
+        false_rejected = 0
+        repeat_true_by_signal = {signal: 0 for signal in signals}
+        repeat_false_by_signal = {signal: 0 for signal in signals}
+
+        for index in test_true_indices.tolist():
+            item_report = multiple_testing_conformal_report(
+                calibration_scores,
+                {signal: float(signal_scores[signal][index].item()) for signal in signals},
+                alpha=alpha,
+                directions=directions,
+                method=method,
+            )
+            if item_report.rejected:
+                true_rejected += 1
+            for signal in item_report.rejected_signal_names:
+                repeat_true_by_signal[signal] += 1
+
+        for index in false_indices.tolist():
+            item_report = multiple_testing_conformal_report(
+                calibration_scores,
+                {signal: float(signal_scores[signal][index].item()) for signal in signals},
+                alpha=alpha,
+                directions=directions,
+                method=method,
+            )
+            if item_report.rejected:
+                false_rejected += 1
+            for signal in item_report.rejected_signal_names:
+                repeat_false_by_signal[signal] += 1
+
+        false_alarm = true_rejected / max(1, int(test_true_indices.numel()))
+        detection = false_rejected / max(1, n_false)
+        false_alarm_sum += false_alarm
+        detection_sum += detection
+        for signal in signals:
+            true_rejected_by_signal[signal] += repeat_true_by_signal[signal]
+            false_rejected_by_signal[signal] += repeat_false_by_signal[signal]
+        repeats_payload.append({
+            "repeat": repeat_idx,
+            "n_calibration": int(calibration_indices.numel()),
+            "n_test_true": int(test_true_indices.numel()),
+            "n_false": n_false,
+            "false_alarm": false_alarm,
+            "coverage": 1.0 - false_alarm,
+            "detection": detection,
+            "true_rejected_count": true_rejected,
+            "false_rejected_count": false_rejected,
+            "true_rejected_by_signal": repeat_true_by_signal,
+            "false_rejected_by_signal": repeat_false_by_signal,
+        })
+
+    false_alarm = false_alarm_sum / repeats
+    detection = detection_sum / repeats
+    total_true_tests = sum(int(item["n_test_true"]) for item in repeats_payload)
+    total_false_tests = sum(int(item["n_false"]) for item in repeats_payload)
+    passed = false_alarm <= alpha + TOLERANCE
+
+    return {
+        "config": {
+            "signals": list(signals),
+            "directions": directions,
+            "alpha": alpha,
+            "method": method,
+            "n_true": n_true,
+            "n_false": n_false,
+            "repeats": repeats,
+            "seed": seed,
+        },
+        "false_alarm": false_alarm,
+        "coverage": 1.0 - false_alarm,
+        "detection": detection,
+        "pass": passed,
+        "conservative": false_alarm < max(0.0, alpha - TOLERANCE),
+        "true_rejected_by_signal": {
+            signal: {
+                "count": count,
+                "rate": count / max(1, total_true_tests),
+            }
+            for signal, count in true_rejected_by_signal.items()
+        },
+        "false_rejected_by_signal": {
+            signal: {
+                "count": count,
+                "rate": count / max(1, total_false_tests),
+            }
+            for signal, count in false_rejected_by_signal.items()
+        },
+        "repeats": repeats_payload,
+    }
+
+
+def _run_sequential_conformal_report(
+    *,
+    score_dump: ScoreDumpColumns,
+    labels: torch.Tensor,
+    signal: str,
+    direction: str,
+    alpha: float,
+    schedule: str,
+    seed: int,
+) -> dict:
+    if signal not in score_dump.scores:
+        available = tuple(sorted(str(name) for name in score_dump.scores))
+        raise ValueError(
+            f"score dump is missing sequential conformal signal {signal!r}; "
+            f"available signals: {available}"
+        )
+    signal_scores = torch.tensor(score_dump.scores[signal], dtype=torch.float64)
+    true_indices = torch.nonzero(labels == 0, as_tuple=False).flatten()
+    false_indices = torch.nonzero(labels == 1, as_tuple=False).flatten()
+    n_true, n_false = int(true_indices.numel()), int(false_indices.numel())
+    if n_true < 2:
+        raise ValueError("score dump must contain at least two true statements for sequential conformal.")
+
+    generator = torch.Generator().manual_seed(seed)
+    shuffled_true = true_indices[torch.randperm(n_true, generator=generator)]
+    split = n_true // 2
+    calibration_indices = shuffled_true[:split]
+    calibration_index_set = set(int(index) for index in calibration_indices.tolist())
+    replay_indices = tuple(
+        index for index in range(int(labels.numel())) if index not in calibration_index_set
+    )
+    if not replay_indices:
+        raise ValueError("sequential conformal replay sequence must be non-empty.")
+
+    replay_scores = signal_scores[list(replay_indices)]
+    replay_labels = labels[list(replay_indices)]
+    monitor = sequential_conformal_monitor(
+        signal_scores[calibration_indices],
+        replay_scores,
+        alpha=alpha,
+        direction=direction,
+        schedule=schedule,
+        metadata={
+            "signal": signal,
+            "direction": direction,
+            "seed": seed,
+            "calibration_source": "split_true_scores",
+            "replay_order": "score_dump_record_order",
+        },
+    )
+    true_rejected_count = 0
+    false_rejected_count = 0
+    rejected_indices: list[int] = []
+    rejected_true_indices: list[int] = []
+    rejected_false_indices: list[int] = []
+    for step, label, record_index in zip(monitor.steps, replay_labels.tolist(), replay_indices, strict=True):
+        if not step.rejected:
+            continue
+        rejected_indices.append(int(record_index))
+        if int(label) == 0:
+            true_rejected_count += 1
+            rejected_true_indices.append(int(record_index))
+        else:
+            false_rejected_count += 1
+            rejected_false_indices.append(int(record_index))
+
+    n_replay_true = int((replay_labels == 0).sum().item())
+    n_replay_false = int((replay_labels == 1).sum().item())
+    false_alarm_rate = true_rejected_count / max(1, n_replay_true)
+    detection_rate = false_rejected_count / max(1, n_replay_false)
+    report = monitor.to_dict()
+    report["sequence_indices"] = list(replay_indices)
+    report["labels"] = [int(label) for label in replay_labels.tolist()]
+    return {
+        "config": {
+            "signal": signal,
+            "direction": direction,
+            "alpha": float(alpha),
+            "schedule": schedule,
+            "seed": int(seed),
+            "n_true": n_true,
+            "n_false": n_false,
+            "n_calibration_true": int(calibration_indices.numel()),
+            "n_replay_true": n_replay_true,
+            "n_replay_false": n_replay_false,
+        },
+        "report": report,
+        "label_metrics": {
+            "true_rejected_count": true_rejected_count,
+            "false_rejected_count": false_rejected_count,
+            "rejected_count": true_rejected_count + false_rejected_count,
+            "false_alarm_event": true_rejected_count > 0,
+            "false_alarm_rate": false_alarm_rate,
+            "coverage": 1.0 - false_alarm_rate,
+            "detection": detection_rate,
+            "rejected_indices": rejected_indices,
+            "rejected_true_indices": rejected_true_indices,
+            "rejected_false_indices": rejected_false_indices,
+        },
+        "budget_status": "true_alarm_observed" if true_rejected_count else "clean_true_replay",
+    }
+
+
 def _add_planned_manifest_fields(args, payload: dict) -> None:
     artifact_manifest = getattr(args, "artifact_manifest", None)
     if artifact_manifest is None:
@@ -597,6 +904,13 @@ def _write_artifact_manifest(args, payload: dict) -> dict | None:
     if artifact_manifest is None:
         return None
     manifest_path = Path(artifact_manifest)
+    multiple_testing_report = payload.get("multiple_testing_report")
+    multiple_testing_config = (
+        dict(multiple_testing_report.get("config", {}))
+        if isinstance(multiple_testing_report, Mapping)
+        and isinstance(multiple_testing_report.get("config"), Mapping)
+        else None
+    )
     manifest = build_artifact_manifest(
         _artifact_paths(args),
         root=manifest_path.parent,
@@ -610,10 +924,32 @@ def _write_artifact_manifest(args, payload: dict) -> dict | None:
             "has_abstention_report": "abstention_report" in payload,
             "has_abstention_comparison_report": "abstention_comparison_report" in payload,
             "has_abstention_release_gate": "abstention_release_gate" in payload,
+            "has_multiple_testing_report": "multiple_testing_report" in payload,
+            "has_multiple_testing_calibration_artifact": (
+                getattr(args, "save_multiple_testing_calibration", None) is not None
+            ),
+            "has_sequential_report": "sequential_conformal_report" in payload,
+            "has_sequential_calibration_artifact": (
+                getattr(args, "save_sequential_calibration", None) is not None
+            ),
+            "multiple_testing": (
+                None
+                if multiple_testing_config is None
+                else {
+                    "signals": list(multiple_testing_config.get("signals", ())),
+                    "directions": dict(multiple_testing_config.get("directions", {})),
+                    "alpha": multiple_testing_config.get("alpha"),
+                    "method": multiple_testing_config.get("method"),
+                    "pass": bool(multiple_testing_report.get("pass", False)),
+                }
+            ),
         },
     )
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
-    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest_path.write_text(
+        strict_json_dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     payload.setdefault("paths", {})["artifact_manifest"] = str(manifest_path)
     print(f"\nWrote artifact manifest to {manifest_path}")
     return manifest
@@ -665,6 +1001,28 @@ def run(args) -> dict:
             and getattr(args, "abstention_signals", None) is not None
         )
     )
+    wants_multiple_testing = bool(
+        getattr(args, "save_multiple_testing_report", None)
+        or getattr(args, "save_multiple_testing_calibration", None)
+        or getattr(args, "include_multiple_testing_report", False)
+    )
+    sequential_signal = getattr(args, "sequential_signal", None)
+    if sequential_signal is None:
+        sequential_signal = args.signal
+    else:
+        sequential_signal = str(sequential_signal)
+    sequential_direction = _direction_for(
+        sequential_signal,
+        getattr(args, "sequential_direction", None),
+    )
+    wants_sequential_report = bool(
+        getattr(args, "save_sequential_report", None)
+        or getattr(args, "include_sequential_report", False)
+    )
+    wants_sequential = bool(
+        wants_sequential_report
+        or getattr(args, "save_sequential_calibration", None)
+    )
     if wants_abstention_release_gate and not wants_abstention_comparison:
         wants_abstention_report = True
     abstention_comparison_signals = _resolve_abstention_comparison_signals(
@@ -672,10 +1030,20 @@ def run(args) -> dict:
         abstention_signal=abstention_signal,
         enabled=wants_abstention_comparison,
     )
+    multiple_testing_signals = _resolve_multiple_testing_signals(
+        args,
+        enabled=wants_multiple_testing,
+    )
+    multiple_testing_direction_overrides = _parse_signal_direction_overrides(
+        getattr(args, "multiple_testing_directions", None),
+        name="--multiple-testing-directions",
+    )
     additional_signals = tuple(dict.fromkeys((
         *adaptive_feature_names,
         *(name for name in (abstention_signal,) if name != args.signal),
         *(name for name in abstention_comparison_signals if name != args.signal),
+        *(name for name in multiple_testing_signals if name != args.signal),
+        *(name for name in (sequential_signal,) if wants_sequential and name != args.signal),
     )))
     if getattr(args, "save_adaptive_calibration", None) and not adaptive_feature_names:
         raise ValueError("--save-adaptive-calibration requires at least one --adaptive-feature.")
@@ -796,6 +1164,146 @@ def run(args) -> dict:
     abstention_report = None
     abstention_comparison_report = None
 
+    if wants_multiple_testing:
+        multiple_testing_alpha = float(getattr(args, "multiple_testing_alpha", args.artifact_alpha))
+        multiple_testing_method = str(getattr(args, "multiple_testing_method", "by"))
+        multiple_testing_report = _run_multiple_testing_report(
+            score_dump=score_dump,
+            labels=labels,
+            signals=multiple_testing_signals,
+            alpha=multiple_testing_alpha,
+            method=multiple_testing_method,
+            direction_override=getattr(args, "direction", None),
+            direction_overrides=multiple_testing_direction_overrides,
+            base_signal=args.signal,
+            repeats=args.repeats,
+            seed=args.seed,
+        )
+        if getattr(args, "save_multiple_testing_report", None) or bool(
+            getattr(args, "include_multiple_testing_report", False)
+        ):
+            payload["multiple_testing_report"] = multiple_testing_report
+        payload.setdefault("component_verdicts", {})["multiple_testing"] = (
+            "ACCEPT" if multiple_testing_report["pass"] else "REJECT"
+        )
+        if not multiple_testing_report["pass"]:
+            payload["verdict"] = "REJECT"
+        save_multiple_testing_report = getattr(args, "save_multiple_testing_report", None)
+        if save_multiple_testing_report:
+            Path(save_multiple_testing_report).parent.mkdir(parents=True, exist_ok=True)
+            Path(save_multiple_testing_report).write_text(
+                strict_json_dumps(multiple_testing_report, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            print(f"\nWrote multiple-testing report to {save_multiple_testing_report}")
+        save_multiple_testing_calibration = getattr(args, "save_multiple_testing_calibration", None)
+        if save_multiple_testing_calibration:
+            true_mask = labels == 0
+            signal_scores = {
+                signal: torch.tensor(score_dump.scores[signal], dtype=torch.float64)[true_mask]
+                for signal in multiple_testing_signals
+            }
+            artifact = MultipleTestingConformalCalibrator(
+                alpha=multiple_testing_alpha,
+                method=multiple_testing_method,
+            ).calibrate(
+                model_id=args.model_id or dump_config.get("model", "unknown"),
+                model_revision=args.model_revision,
+                target_layer=args.target_layer if args.target_layer is not None else int(dump_config.get("layer", 0)),
+                calibration_scores=signal_scores,
+                directions=multiple_testing_report["config"]["directions"],
+                calibration_dataset_metadata={
+                    "scores": args.scores,
+                    "signals": list(multiple_testing_signals),
+                    "n_true": int(n_true),
+                    "source": "eval_conformal.py",
+                    "report_pass": bool(multiple_testing_report["pass"]),
+                },
+                created_at=args.created_at,
+                commit_sha=args.commit_sha,
+            )
+            Path(save_multiple_testing_calibration).parent.mkdir(parents=True, exist_ok=True)
+            artifact.save_json(save_multiple_testing_calibration)
+            print(f"\nWrote multiple-testing calibration artifact to {save_multiple_testing_calibration}")
+        print(
+            "\n  Multiple-testing conformal: "
+            f"signals={','.join(multiple_testing_signals)} "
+            f"method={multiple_testing_report['config']['method']} "
+            f"alpha={multiple_testing_report['config']['alpha']:.3f} "
+            f"false_alarm={multiple_testing_report['false_alarm']:.3f} "
+            f"detection={multiple_testing_report['detection']:.3f} "
+            f"{'PASS' if multiple_testing_report['pass'] else 'FAIL'}"
+        )
+
+    if wants_sequential_report:
+        sequential_report = _run_sequential_conformal_report(
+            score_dump=score_dump,
+            labels=labels,
+            signal=sequential_signal,
+            direction=sequential_direction,
+            alpha=float(getattr(args, "sequential_alpha", args.artifact_alpha)),
+            schedule=str(getattr(args, "sequential_schedule", "harmonic")),
+            seed=int(
+                args.seed
+                if getattr(args, "sequential_seed", None) is None
+                else getattr(args, "sequential_seed")
+            ),
+        )
+        if getattr(args, "save_sequential_report", None) or bool(
+            getattr(args, "include_sequential_report", False)
+        ):
+            payload["sequential_conformal_report"] = sequential_report
+        save_sequential_report = getattr(args, "save_sequential_report", None)
+        if save_sequential_report:
+            Path(save_sequential_report).parent.mkdir(parents=True, exist_ok=True)
+            Path(save_sequential_report).write_text(
+                strict_json_dumps(sequential_report, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            print(f"\nWrote sequential conformal report to {save_sequential_report}")
+        metrics = sequential_report["label_metrics"]
+        print(
+            "\n  Sequential conformal: "
+            f"signal={sequential_signal} "
+            f"schedule={sequential_report['config']['schedule']} "
+            f"alpha={sequential_report['config']['alpha']:.3f} "
+            f"true_rejected={metrics['true_rejected_count']} "
+            f"false_rejected={metrics['false_rejected_count']} "
+            f"status={sequential_report['budget_status']}"
+        )
+
+    save_sequential_calibration = getattr(args, "save_sequential_calibration", None)
+    if save_sequential_calibration:
+        if sequential_signal not in score_dump.scores:
+            available = tuple(sorted(str(name) for name in score_dump.scores))
+            raise ValueError(
+                f"score dump is missing sequential conformal signal {sequential_signal!r}; "
+                f"available signals: {available}"
+            )
+        sequential_scores = torch.tensor(score_dump.scores[sequential_signal], dtype=torch.float64)
+        artifact = SequentialConformalCalibrator(
+            alpha=float(getattr(args, "sequential_alpha", args.artifact_alpha)),
+            schedule=str(getattr(args, "sequential_schedule", "harmonic")),
+        ).calibrate(
+            model_id=args.model_id or dump_config.get("model", "unknown"),
+            model_revision=args.model_revision,
+            target_layer=args.target_layer if args.target_layer is not None else int(dump_config.get("layer", 0)),
+            signal_name=sequential_signal,
+            calibration_scores=sequential_scores[labels == 0],
+            direction=sequential_direction,
+            calibration_dataset_metadata={
+                "scores": args.scores,
+                "signal": sequential_signal,
+                "n_true": int(n_true),
+                "source": "eval_conformal.py",
+            },
+            created_at=args.created_at,
+            commit_sha=args.commit_sha,
+        )
+        Path(save_sequential_calibration).parent.mkdir(parents=True, exist_ok=True)
+        artifact.save_json(save_sequential_calibration)
+        print(f"\nWrote sequential conformal calibration artifact to {save_sequential_calibration}")
+
     if wants_abstention_report:
         if abstention_signal not in score_dump.scores:
             available = tuple(sorted(str(name) for name in score_dump.scores))
@@ -819,7 +1327,7 @@ def run(args) -> dict:
         if save_abstention_report:
             Path(save_abstention_report).parent.mkdir(parents=True, exist_ok=True)
             Path(save_abstention_report).write_text(
-                json.dumps(abstention_report, indent=2, sort_keys=True) + "\n",
+                strict_json_dumps(abstention_report, indent=2, sort_keys=True) + "\n",
                 encoding="utf-8",
             )
             print(f"\nWrote abstention report to {save_abstention_report}")
@@ -851,7 +1359,7 @@ def run(args) -> dict:
         if save_abstention_comparison:
             Path(save_abstention_comparison).parent.mkdir(parents=True, exist_ok=True)
             Path(save_abstention_comparison).write_text(
-                json.dumps(abstention_comparison_report, indent=2, sort_keys=True) + "\n",
+                strict_json_dumps(abstention_comparison_report, indent=2, sort_keys=True) + "\n",
                 encoding="utf-8",
             )
             print(f"\nWrote abstention comparison report to {save_abstention_comparison}")
@@ -889,7 +1397,7 @@ def run(args) -> dict:
         if save_abstention_release_gate:
             Path(save_abstention_release_gate).parent.mkdir(parents=True, exist_ok=True)
             Path(save_abstention_release_gate).write_text(
-                json.dumps(abstention_release_gate, indent=2, sort_keys=True) + "\n",
+                strict_json_dumps(abstention_release_gate, indent=2, sort_keys=True) + "\n",
                 encoding="utf-8",
             )
             print(f"\nWrote abstention release gate to {save_abstention_release_gate}")
@@ -1039,8 +1547,7 @@ def run(args) -> dict:
     payload["score_dump_cache"] = score_dump_cache_summary(score_dump_metadata_cache)
     _add_planned_manifest_fields(args, payload)
     if args.json:
-        with open(args.json, "w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=2)
+        Path(args.json).write_text(strict_json_dumps(payload, indent=2) + "\n", encoding="utf-8")
         print(f"\nWrote {args.json}")
     manifest = _write_artifact_manifest(args, payload)
     if manifest is not None:
@@ -1075,6 +1582,40 @@ def main():
                    help="optional path to write an abstention release-gate verdict JSON")
     p.add_argument("--include-abstention-release-gate", action="store_true",
                    help="include an abstention release-gate verdict in the main JSON payload")
+    p.add_argument("--multiple-testing-signals", default=None,
+                   help="optional comma-list of primary signals for conformal multiple-testing; "
+                        "defaults to --signals when present, otherwise --signal")
+    p.add_argument("--multiple-testing-alpha", type=float, default=0.10,
+                   help="global false-alarm budget for conformal multiple-testing")
+    p.add_argument("--multiple-testing-method", choices=("by", "bh", "bonferroni"),
+                   default="by",
+                   help="multiple-testing correction method for conformal p-values")
+    p.add_argument("--multiple-testing-directions", default=None,
+                   help="optional comma-list of SIGNAL:higher/lower overrides for "
+                        "multiple-testing signals")
+    p.add_argument("--save-multiple-testing-report", default=None,
+                   help="optional path to write a conformal multiple-testing report JSON")
+    p.add_argument("--save-multiple-testing-calibration", default=None,
+                   help="optional path to write a runtime conformal multiple-testing calibration artifact")
+    p.add_argument("--include-multiple-testing-report", action="store_true",
+                   help="include the conformal multiple-testing report in the main JSON payload")
+    p.add_argument("--sequential-signal", default=None,
+                   help="optional signal for sequential conformal replay; defaults to --signal")
+    p.add_argument("--sequential-direction", choices=("higher", "lower"), default=None,
+                   help="optional override for sequential conformal anomaly direction")
+    p.add_argument("--sequential-alpha", type=float, default=0.10,
+                   help="finite alpha budget spent across the sequential replay")
+    p.add_argument("--sequential-schedule", choices=("linear", "harmonic", "geometric"),
+                   default="harmonic",
+                   help="alpha-spending schedule used for sequential conformal replay")
+    p.add_argument("--sequential-seed", type=int, default=None,
+                   help="optional seed for the true-score calibration split; defaults to --seed")
+    p.add_argument("--save-sequential-report", default=None,
+                   help="optional path to write a sequential conformal replay report JSON")
+    p.add_argument("--save-sequential-calibration", default=None,
+                   help="optional path to write a runtime sequential conformal calibration artifact")
+    p.add_argument("--include-sequential-report", action="store_true",
+                   help="include a sequential conformal replay report in the main JSON payload")
     p.add_argument("--save-sweep-report", default=None,
                    help="optional path to write a LayerScoreSweepReport JSON")
     p.add_argument("--save-best-calibration", default=None,

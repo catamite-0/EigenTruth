@@ -512,6 +512,7 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
                 "verifier",
                 "abstention",
             ],
+            "promotion_contract_frontier_release_evidence_run_count": 2,
             "external_evidence_baseline_comparison_source": "registry",
             "external_evidence_baseline_comparison_status": "promote",
             "external_evidence_baseline_comparison_decision_status": "promote",
@@ -621,6 +622,7 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
         "_truncated": True,
         "_omitted_keys": 5,
     }
+    assert payload["metadata"]["promotion_contract_frontier_release_evidence_run_count"] == 2
     assert payload["metadata"]["promotion_contract_triple_extraction_fixture_matrix"] == {
         "status": "promote",
         "distinct_predicate_count": 6,
@@ -1647,6 +1649,146 @@ def test_product_trace_verification_route_summary_counts_runtime_routes():
     json.dumps(summary)
 
 
+def test_product_trace_world_model_summary_counts_conflicts_and_trace_gaps():
+    trace = ProductTrace(
+        verification_results=(
+            VerificationResult(
+                status=VerificationStatus.REFUTED,
+                confidence=0.82,
+                metadata={
+                    "world_model": "RuleBasedWorldModelAdapter",
+                    "world_model_reference": {
+                        "reference_id": "orders",
+                        "adapter": "RuleBasedWorldModelAdapter",
+                    },
+                    "world_model_view": {
+                        "base_state_fingerprint": "base",
+                        "predicted_state_fingerprint": "predicted",
+                        "postcondition": {"path": "inventory.sku_123.available"},
+                    },
+                    "world_model_conflict": {
+                        "path": "inventory.sku_123.available",
+                        "expected": 10,
+                        "actual": 7,
+                    },
+                    "prediction_confidence": 0.9,
+                    "prediction_metadata": {
+                        "decision_rule": "rule_transition_applied",
+                        "agreement_rate": 1.0,
+                    },
+                    "decision_rule": "transition_postcondition_failed",
+                },
+            ),
+            VerificationResult(
+                status=VerificationStatus.INSUFFICIENT_EVIDENCE,
+                confidence=0.0,
+                metadata={
+                    "verifier": "world_model_ensemble",
+                    "world_model_reference": {
+                        "reference_id": "orders",
+                        "adapter": "EnsembleWorldModelAdapter",
+                    },
+                    "prediction_metadata": {
+                        "below_min_agreement": True,
+                        "agreement_rate": 0.5,
+                        "decision_rule": "prediction_agreement_below_threshold",
+                    },
+                    "decision_rule": "prediction_agreement_below_threshold",
+                },
+            ),
+            VerificationResult(
+                status=VerificationStatus.SUPPORTED,
+                confidence=0.7,
+                metadata={
+                    "verifier": "world_model_ensemble",
+                    "prediction_metadata": {
+                        "world_model_reference": {
+                            "reference_id": "payments",
+                            "adapter": "EnsembleWorldModelAdapter",
+                        },
+                        "world_model_view": {
+                            "base_state_fingerprint": "base-nested",
+                            "predicted_state_fingerprint": "predicted-nested",
+                            "postcondition": {"path": "payments.invoice_1.status"},
+                        },
+                        "agreement_rate": 0.8,
+                        "decision_rule": "prediction_consensus",
+                    },
+                },
+            ),
+            VerificationResult(status=VerificationStatus.SUPPORTED, confidence=0.8),
+        )
+    )
+
+    summary = trace.world_model_summary()
+    bounded = trace.to_bounded_dict()
+    metrics = product_runtime_metrics(trace)
+    bounded_metrics = product_runtime_metrics(bounded)
+
+    assert summary["total"] == 4
+    assert summary["world_model_total"] == 3
+    assert summary["coverage_rate"] == pytest.approx(3 / 4)
+    assert summary["conflict_count"] == 1
+    assert summary["low_agreement_count"] == 1
+    assert summary["trace_gap_count"] == 1
+    assert summary["traceable"] is False
+    assert summary["counts_by_status"] == {
+        "refuted": 1,
+        "insufficient_evidence": 1,
+        "supported": 1,
+    }
+    assert summary["counts_by_adapter"] == {
+        "RuleBasedWorldModelAdapter": 1,
+        "EnsembleWorldModelAdapter": 2,
+    }
+    assert summary["counts_by_reference_id"] == {"orders": 2, "payments": 1}
+    assert summary["conflict_paths"] == {"inventory.sku_123.available": 1}
+    assert summary["prediction_confidence_mean"] == pytest.approx(0.9)
+    assert summary["agreement_rate_min"] == pytest.approx(0.5)
+    assert bounded["summaries"]["world_model"]["world_model_total"] == 3
+    assert bounded["summaries"]["world_model"]["trace_gap_count"] == 1
+    assert metrics["world_model_source"] == "full_trace"
+    assert metrics["world_model_conflict_count"] == pytest.approx(1.0)
+    assert metrics["world_model_trace_gap_rate"] == pytest.approx(1 / 3)
+    assert metrics["world_model_counts_by_adapter"] == {
+        "RuleBasedWorldModelAdapter": 1,
+        "EnsembleWorldModelAdapter": 2,
+    }
+    assert bounded_metrics["world_model_source"] == "bounded_summary"
+    assert bounded_metrics["world_model_low_agreement_count"] == pytest.approx(1.0)
+    assert bounded_metrics["world_model_traceable"] is False
+    json.dumps(summary)
+    json.dumps(bounded)
+
+
+def test_product_trace_world_model_summary_ignores_generic_prediction_metadata():
+    trace = ProductTrace(
+        verification_results=(
+            VerificationResult(
+                status=VerificationStatus.SUPPORTED,
+                confidence=0.91,
+                metadata={
+                    "verifier": "calibrated_classifier",
+                    "prediction_metadata": {
+                        "decision_rule": "calibrated_softmax",
+                        "below_min_agreement": True,
+                        "agreement_rate": 0.2,
+                    },
+                },
+            ),
+        )
+    )
+
+    summary = trace.world_model_summary()
+
+    assert summary["total"] == 1
+    assert summary["world_model_total"] == 0
+    assert summary["trace_gap_count"] == 0
+    assert summary["low_agreement_count"] == 0
+    assert summary["counts_by_status"] == {}
+    assert summary["traceable"] is False
+
+
 def test_product_trace_verification_route_cost_summary_matches_benchmark_fields():
     trace = ProductTrace(
         verification_results=(
@@ -2262,6 +2404,9 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                     "triple_audit_evidence_blocked_metric_count": 0,
                     "covered_fact_property_evidence_metric_count": 6,
                     "covered_fact_property_evidence_blocked_metric_count": 0,
+                    "world_model_evidence_required": True,
+                    "world_model_evidence_metric_count": 5,
+                    "world_model_evidence_blocked_metric_count": 0,
                     "promotion_contract_coverage_rate_baseline": 1.0,
                     "promotion_contract_coverage_rate_current": 1.0,
                     "promotion_contract_coverage_rate_status": "pass",
@@ -2292,6 +2437,21 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                     "covered_fact_recommended_route_min_false_refuted_rate_baseline": 0.98,
                     "covered_fact_recommended_route_min_false_refuted_rate_current": 0.97,
                     "covered_fact_recommended_route_min_false_refuted_rate_status": "pass",
+                    "world_model_participating_trace_rate_baseline": 1.0,
+                    "world_model_participating_trace_rate_current": 1.0,
+                    "world_model_participating_trace_rate_status": "pass",
+                    "world_model_coverage_rate_baseline": 1.0,
+                    "world_model_coverage_rate_current": 1.0,
+                    "world_model_coverage_rate_status": "pass",
+                    "world_model_conflict_rate_baseline": 0.0,
+                    "world_model_conflict_rate_current": 0.0,
+                    "world_model_conflict_rate_status": "pass",
+                    "world_model_low_agreement_rate_baseline": 0.0,
+                    "world_model_low_agreement_rate_current": 0.0,
+                    "world_model_low_agreement_rate_status": "pass",
+                    "world_model_trace_gap_rate_baseline": 0.0,
+                    "world_model_trace_gap_rate_current": 0.0,
+                    "world_model_trace_gap_rate_status": "pass",
                 },
             },
             "adapter_family_matrix": {
@@ -2793,6 +2953,9 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
         ]
         == 0
     )
+    assert contract.metadata["product_runtime_drift_world_model_evidence_required"] is True
+    assert contract.metadata["product_runtime_drift_world_model_evidence_metric_count"] == 5
+    assert contract.metadata["product_runtime_drift_world_model_evidence_blocked_metric_count"] == 0
     assert contract.metadata["product_runtime_drift_promotion_contract_coverage_rate_current"] == 1.0
     assert contract.metadata["product_runtime_drift_promotion_contract_coverage_rate_status"] == "pass"
     assert (
@@ -2821,6 +2984,8 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
         ]
         == 0.02
     )
+    assert contract.metadata["product_runtime_drift_world_model_trace_gap_rate_status"] == "pass"
+    assert contract.metadata["product_runtime_drift_world_model_conflict_rate_current"] == 0.0
     assert contract.metadata["adapter_family_matrix_report"] == "artifacts/adapter-family-matrix.json"
     assert contract.metadata["adapter_family_required_routes"] == [
         "structured_state",
@@ -3052,6 +3217,11 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
             "decision_status": "promote",
             "verifier_track_status": "promote",
             "abstention_track_status": "promote",
+            "citation_batch_track_status": "promote",
+            "citation_batch_rollup_count": 1,
+            "citation_batch_expected_batch_count": 2,
+            "citation_batch_observed_batch_count": 2,
+            "citation_batch_missing_expected_batch_count": 0,
             "run_names": ["verifier-stability", "abstention-stability"],
         },
         control_defaults={"max_verifier_route_attempts": 3},
@@ -3060,6 +3230,12 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
             "product_runtime_drift_covered_fact_property_evidence_required": True,
             "product_runtime_drift_covered_fact_property_evidence_metric_count": 6,
             "product_runtime_drift_covered_fact_property_evidence_blocked_metric_count": 0,
+            "product_runtime_drift_world_model_evidence_required": True,
+            "product_runtime_drift_world_model_evidence_metric_count": 5,
+            "product_runtime_drift_world_model_evidence_blocked_metric_count": 0,
+            "product_runtime_drift_world_model_trace_gap_rate_baseline": 0.0,
+            "product_runtime_drift_world_model_trace_gap_rate_current": 0.0,
+            "product_runtime_drift_world_model_trace_gap_rate_status": "pass",
             "product_runtime_drift_covered_fact_recommended_route_min_records_baseline": 16,
             "product_runtime_drift_covered_fact_recommended_route_min_records_current": 15,
             "product_runtime_drift_covered_fact_recommended_route_min_records_status": "pass",
@@ -3140,6 +3316,18 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert metadata[
         "promotion_contract_frontier_release_evidence_abstention_track_status"
     ] == "promote"
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_citation_batch_track_status"
+    ] == "promote"
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_citation_batch_expected_batch_count"
+    ] == 2
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_citation_batch_observed_batch_count"
+    ] == 2
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_citation_batch_missing_expected_batch_count"
+    ] == 0
     assert metadata["promotion_contract_runtime"] == {"layer": -2}
     assert metadata["promotion_contract_verifier_route"] == {
         "route": "structured_qa",
@@ -3325,6 +3513,18 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
         "promotion_contract_product_runtime_drift_covered_fact_property_evidence_blocked_metric_count"
     ] == 0
     assert metadata[
+        "promotion_contract_product_runtime_drift_world_model_evidence_required"
+    ] is True
+    assert metadata[
+        "promotion_contract_product_runtime_drift_world_model_evidence_metric_count"
+    ] == 5
+    assert metadata[
+        "promotion_contract_product_runtime_drift_world_model_evidence_blocked_metric_count"
+    ] == 0
+    assert metadata[
+        "promotion_contract_product_runtime_drift_world_model_trace_gap_rate_status"
+    ] == "pass"
+    assert metadata[
         "promotion_contract_product_runtime_drift_covered_fact_recommended_route_min_records_current"
     ] == 15
     assert metadata[
@@ -3342,6 +3542,12 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert runtime_metrics["promotion_contract_summary"]["product_runtime_drift"][
         "covered_fact_property_evidence"
     ]["covered_fact_recommended_route_min_records"]["current"] == pytest.approx(15.0)
+    assert runtime_metrics["promotion_contract_summary"]["product_runtime_drift"][
+        "world_model_evidence_metric_count"
+    ] == pytest.approx(5.0)
+    assert runtime_metrics["promotion_contract_summary"]["product_runtime_drift"][
+        "world_model_evidence"
+    ]["world_model_trace_gap_rate"]["status"] == "pass"
     assert runtime_metrics["promotion_contract_product_trace_replay_available"] is True
     assert runtime_metrics["promotion_contract_product_trace_replay_workflow_report"] == (
         "trace-replay-workflow.json"

@@ -64,6 +64,9 @@ _PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_PREFIXES = (
 _PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS
 )
+_PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_KEYS
+)
 _PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_KEYS
 )
@@ -169,6 +172,9 @@ def _apply_release_policy_profile_to_config(
             "require_product_runtime_drift_evidence_handoff_evidence": (
                 config.require_product_runtime_drift_evidence_handoff_evidence
             ),
+            "require_product_runtime_drift_world_model_evidence": (
+                config.require_product_runtime_drift_world_model_evidence
+            ),
             "require_product_runtime_drift_frontier_release_evidence": (
                 config.require_product_runtime_drift_frontier_release_evidence
             ),
@@ -244,6 +250,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     require_product_runtime_drift_action_gate_evidence: bool = False
     require_product_runtime_drift_trajectory_audit_evidence: bool = False
     require_product_runtime_drift_evidence_handoff_evidence: bool = False
+    require_product_runtime_drift_world_model_evidence: bool = False
     require_product_runtime_drift_frontier_release_evidence: bool = False
     release_efficiency_report_path: Path | None = None
     external_evidence_baseline_comparison_path: Path | None = None
@@ -779,6 +786,9 @@ def run_release_candidate_registry_workflow(
         require_product_runtime_drift_evidence_handoff_evidence=(
             config.require_product_runtime_drift_evidence_handoff_evidence
         ),
+        require_product_runtime_drift_world_model_evidence=(
+            config.require_product_runtime_drift_world_model_evidence
+        ),
         require_product_runtime_drift_frontier_release_evidence=(
             config.require_product_runtime_drift_frontier_release_evidence
         ),
@@ -1092,6 +1102,9 @@ def run_release_candidate_registry_workflow(
             ),
             "require_product_runtime_drift_evidence_handoff_evidence": (
                 config.require_product_runtime_drift_evidence_handoff_evidence
+            ),
+            "require_product_runtime_drift_world_model_evidence": (
+                config.require_product_runtime_drift_world_model_evidence
             ),
             "require_product_runtime_drift_frontier_release_evidence": (
                 config.require_product_runtime_drift_frontier_release_evidence
@@ -2249,6 +2262,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "product_runtime_drift_evidence_handoff_evidence_required": config.get(
             "require_product_runtime_drift_evidence_handoff_evidence"
         ),
+        "product_runtime_drift_world_model_evidence_required": config.get(
+            "require_product_runtime_drift_world_model_evidence"
+        ),
         "product_runtime_drift_frontier_release_evidence_required": config.get(
             "require_product_runtime_drift_frontier_release_evidence"
         ),
@@ -2754,6 +2770,30 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "frontier_release_evidence_abstention_track_status": frontier_release_evidence.get(
             "abstention_track_status"
         ),
+        "frontier_release_evidence_multiple_testing_track_status": frontier_release_evidence.get(
+            "multiple_testing_track_status"
+        ),
+        "frontier_release_evidence_citation_batch_track_status": frontier_release_evidence.get(
+            "citation_batch_track_status"
+        ),
+        "frontier_release_evidence_citation_batch_rollup_count": frontier_release_evidence.get(
+            "citation_batch_rollup_count"
+        ),
+        "frontier_release_evidence_citation_batch_expected_batch_count": (
+            frontier_release_evidence.get("citation_batch_expected_batch_count")
+        ),
+        "frontier_release_evidence_citation_batch_observed_batch_count": (
+            frontier_release_evidence.get("citation_batch_observed_batch_count")
+        ),
+        "frontier_release_evidence_citation_batch_missing_expected_batch_count": (
+            frontier_release_evidence.get("citation_batch_missing_expected_batch_count")
+        ),
+        "frontier_release_evidence_citation_batch_duplicate_batch_count": (
+            frontier_release_evidence.get("citation_batch_duplicate_batch_count")
+        ),
+        "frontier_release_evidence_citation_batch_unexpected_batch_count": (
+            frontier_release_evidence.get("citation_batch_unexpected_batch_count")
+        ),
         "world_model_signal_workflow_report": world_model_signal_workflow.get("report_path"),
         "world_model_signal_workflow_manifest": (
             manifests.get("world_model_signal_workflow_manifest")
@@ -2885,6 +2925,12 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         "product_runtime_drift_evidence_handoff_evidence_blocked_metric_count": summary.get(
             "evidence_handoff_evidence_blocked_metric_count"
         ),
+        "product_runtime_drift_world_model_evidence_metric_count": summary.get(
+            "world_model_evidence_metric_count"
+        ),
+        "product_runtime_drift_world_model_evidence_blocked_metric_count": summary.get(
+            "world_model_evidence_blocked_metric_count"
+        ),
         "product_runtime_drift_frontier_release_evidence_metric_count": summary.get(
             "frontier_release_evidence_metric_count"
         ),
@@ -2914,6 +2960,9 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     for prefix in _PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     for prefix in _PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES:
@@ -3131,6 +3180,9 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         ),
         require_product_runtime_drift_evidence_handoff_evidence=bool(
             args.require_product_runtime_drift_evidence_handoff_evidence
+        ),
+        require_product_runtime_drift_world_model_evidence=bool(
+            args.require_product_runtime_drift_world_model_evidence
         ),
         require_product_runtime_drift_frontier_release_evidence=bool(
             args.require_product_runtime_drift_frontier_release_evidence
@@ -3549,6 +3601,9 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="require the product runtime drift report to include promotion-contract "
                              "evidence handoff coverage, manifest, metric completeness, and promoted-group "
                              "drift metrics")
+    parser.add_argument("--require-product-runtime-drift-world-model-evidence", action="store_true",
+                        help="require the product runtime drift report to include trace-level world-model "
+                             "participation, coverage, conflict, low-agreement, and trace-gap metrics")
     parser.add_argument("--require-product-runtime-drift-frontier-release-evidence", action="store_true",
                         help="require the product runtime drift report to include frontier release "
                              "evidence coverage, artifact presence, promote-rate, and run-count metrics")

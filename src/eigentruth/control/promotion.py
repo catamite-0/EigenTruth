@@ -45,6 +45,9 @@ _PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_PREFIXES = (
 _PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS
 )
+_PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_KEYS
+)
 _PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_KEYS
 )
@@ -93,6 +96,7 @@ _PRODUCT_RUNTIME_DRIFT_GROUP_SUMMARY_KEYS = (
     ("action_gate", "action_gate"),
     ("trajectory_audit", "trajectory_audit"),
     ("evidence_handoff", "evidence_handoff"),
+    ("world_model", "world_model"),
     ("frontier_release_evidence", "frontier_release"),
 )
 
@@ -1034,6 +1038,10 @@ class ProductPromotionContract:
                 "product_runtime_drift_evidence_handoff_evidence_required": config.get(
                     "require_product_runtime_drift_evidence_handoff_evidence"
                 ),
+                "product_runtime_drift_world_model_evidence_required": config.get(
+                    "require_product_runtime_drift_world_model_evidence",
+                    product_runtime_drift_summary.get("world_model_evidence_required"),
+                ),
                 "product_runtime_drift_frontier_release_evidence_required": config.get(
                     "require_product_runtime_drift_frontier_release_evidence"
                 ),
@@ -1496,6 +1504,12 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         "product_runtime_drift_evidence_handoff_evidence_blocked_metric_count": summary.get(
             "evidence_handoff_evidence_blocked_metric_count"
         ),
+        "product_runtime_drift_world_model_evidence_metric_count": summary.get(
+            "world_model_evidence_metric_count"
+        ),
+        "product_runtime_drift_world_model_evidence_blocked_metric_count": summary.get(
+            "world_model_evidence_blocked_metric_count"
+        ),
         "product_runtime_drift_frontier_release_evidence_metric_count": summary.get(
             "frontier_release_evidence_metric_count"
         ),
@@ -1528,6 +1542,9 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     for prefix in _PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     for prefix in _PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES:
@@ -3365,6 +3382,7 @@ def _promotion_contract_product_runtime_drift_metadata(
         "product_runtime_drift_action_gate_evidence_required",
         "product_runtime_drift_trajectory_audit_evidence_required",
         "product_runtime_drift_evidence_handoff_evidence_required",
+        "product_runtime_drift_world_model_evidence_required",
         "product_runtime_drift_frontier_release_evidence_required",
         "product_runtime_drift_compared_metric_count",
         "product_runtime_drift_blocked_metric_count",
@@ -3386,6 +3404,8 @@ def _promotion_contract_product_runtime_drift_metadata(
         "product_runtime_drift_trajectory_audit_evidence_blocked_metric_count",
         "product_runtime_drift_evidence_handoff_evidence_metric_count",
         "product_runtime_drift_evidence_handoff_evidence_blocked_metric_count",
+        "product_runtime_drift_world_model_evidence_metric_count",
+        "product_runtime_drift_world_model_evidence_blocked_metric_count",
         "product_runtime_drift_frontier_release_evidence_metric_count",
         "product_runtime_drift_frontier_release_evidence_blocked_metric_count",
     )
@@ -3404,6 +3424,7 @@ def _promotion_contract_product_runtime_drift_metadata(
         *_PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES,
         *_PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_PREFIXES,
         *_PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES,
+        *_PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_PREFIXES,
         *_PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES,
     )
     for prefix in evidence_prefixes:
@@ -4600,6 +4621,24 @@ def _frontier_release_evidence_metadata(
         "decision_status": report.get("decision_status"),
         "verifier_track_status": report.get("verifier_track_status"),
         "abstention_track_status": report.get("abstention_track_status"),
+        "multiple_testing_track_status": report.get("multiple_testing_track_status"),
+        "citation_batch_track_status": report.get("citation_batch_track_status"),
+        "citation_batch_rollup_count": report.get("citation_batch_rollup_count"),
+        "citation_batch_expected_batch_count": report.get(
+            "citation_batch_expected_batch_count"
+        ),
+        "citation_batch_observed_batch_count": report.get(
+            "citation_batch_observed_batch_count"
+        ),
+        "citation_batch_missing_expected_batch_count": report.get(
+            "citation_batch_missing_expected_batch_count"
+        ),
+        "citation_batch_duplicate_batch_count": report.get(
+            "citation_batch_duplicate_batch_count"
+        ),
+        "citation_batch_unexpected_batch_count": report.get(
+            "citation_batch_unexpected_batch_count"
+        ),
         "run_names": report.get("run_names"),
         "blocking_reasons": _first_present(
             report.get("blocking_reasons"),
@@ -4626,6 +4665,30 @@ def _frontier_release_evidence_flat_metadata(
         ),
         "frontier_release_evidence_abstention_track_status": (
             report.get("abstention_track_status")
+        ),
+        "frontier_release_evidence_multiple_testing_track_status": (
+            report.get("multiple_testing_track_status")
+        ),
+        "frontier_release_evidence_citation_batch_track_status": (
+            report.get("citation_batch_track_status")
+        ),
+        "frontier_release_evidence_citation_batch_rollup_count": (
+            report.get("citation_batch_rollup_count")
+        ),
+        "frontier_release_evidence_citation_batch_expected_batch_count": (
+            report.get("citation_batch_expected_batch_count")
+        ),
+        "frontier_release_evidence_citation_batch_observed_batch_count": (
+            report.get("citation_batch_observed_batch_count")
+        ),
+        "frontier_release_evidence_citation_batch_missing_expected_batch_count": (
+            report.get("citation_batch_missing_expected_batch_count")
+        ),
+        "frontier_release_evidence_citation_batch_duplicate_batch_count": (
+            report.get("citation_batch_duplicate_batch_count")
+        ),
+        "frontier_release_evidence_citation_batch_unexpected_batch_count": (
+            report.get("citation_batch_unexpected_batch_count")
         ),
         "frontier_release_evidence_run_names": report.get("run_names"),
         "frontier_release_evidence_blocking_reasons": report.get("blocking_reasons"),
@@ -4687,6 +4750,64 @@ def _promotion_contract_frontier_release_evidence_metadata(
             _first_present(
                 evidence.get("abstention_track_status"),
                 metadata.get("frontier_release_evidence_abstention_track_status"),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_multiple_testing_track_status": (
+            _first_present(
+                evidence.get("multiple_testing_track_status"),
+                metadata.get("frontier_release_evidence_multiple_testing_track_status"),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_track_status": (
+            _first_present(
+                evidence.get("citation_batch_track_status"),
+                metadata.get("frontier_release_evidence_citation_batch_track_status"),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_rollup_count": (
+            _first_present(
+                evidence.get("citation_batch_rollup_count"),
+                metadata.get("frontier_release_evidence_citation_batch_rollup_count"),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_expected_batch_count": (
+            _first_present(
+                evidence.get("citation_batch_expected_batch_count"),
+                metadata.get(
+                    "frontier_release_evidence_citation_batch_expected_batch_count"
+                ),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_observed_batch_count": (
+            _first_present(
+                evidence.get("citation_batch_observed_batch_count"),
+                metadata.get(
+                    "frontier_release_evidence_citation_batch_observed_batch_count"
+                ),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_missing_expected_batch_count": (
+            _first_present(
+                evidence.get("citation_batch_missing_expected_batch_count"),
+                metadata.get(
+                    "frontier_release_evidence_citation_batch_missing_expected_batch_count"
+                ),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_duplicate_batch_count": (
+            _first_present(
+                evidence.get("citation_batch_duplicate_batch_count"),
+                metadata.get(
+                    "frontier_release_evidence_citation_batch_duplicate_batch_count"
+                ),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_unexpected_batch_count": (
+            _first_present(
+                evidence.get("citation_batch_unexpected_batch_count"),
+                metadata.get(
+                    "frontier_release_evidence_citation_batch_unexpected_batch_count"
+                ),
             )
         ),
         "promotion_contract_frontier_release_evidence_run_names": _first_present(
