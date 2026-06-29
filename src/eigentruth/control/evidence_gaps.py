@@ -335,6 +335,7 @@ def _frontier_release_evidence_blocking_records(
     raw_reasons = list(_string_tuple(decision.get("blocking_reasons", ())))
     if not raw_reasons:
         raw_reasons = list(_nested_frontier_blocking_reasons(payload))
+    abstention_metadata = _frontier_abstention_metadata(payload)
     multiple_testing_metadata = _frontier_multiple_testing_metadata(payload)
     citation_batch_metadata = _frontier_citation_batch_metadata(payload)
     records: list[dict[str, Any]] = []
@@ -396,6 +397,8 @@ def _frontier_release_evidence_blocking_records(
             "status": "blocked",
             "reasons": tuple(reasons),
         }
+        if gate == "abstention_stability" and abstention_metadata:
+            record["metadata"] = abstention_metadata
         if gate == "frontier_multiple_testing" and multiple_testing_metadata:
             record["metadata"] = multiple_testing_metadata
         if gate == "citation_batch_evidence" and citation_batch_metadata:
@@ -433,6 +436,30 @@ def _nested_frontier_blocking_reasons(payload: Mapping[str, Any]) -> tuple[str, 
                 if isinstance(nested, Mapping):
                     reasons.extend(_string_tuple(nested.get("blocking_reasons", ())))
     return tuple(reason for reason in reasons if reason)
+
+
+def _frontier_abstention_metadata(payload: Mapping[str, Any]) -> dict[str, Any]:
+    blocked_runs = []
+    for decision in _mapping_sequence(payload.get("run_decisions", ())):
+        abstention = _mapping(decision.get("abstention_decision"))
+        if abstention.get("status") != "blocked":
+            continue
+        metrics = _mapping(abstention.get("metrics"))
+        blocked_runs.append({
+            "run": _optional_str(decision.get("name")) or _optional_str(abstention.get("name")),
+            "conditional_correctness_lower_bound_mean": metrics.get(
+                "conditional_correctness_lower_bound_mean"
+            ),
+            "empirical_abstention_rate_mean": metrics.get("empirical_abstention_rate_mean"),
+            "release_gate_pass_seed_rate": metrics.get("release_gate_pass_seed_rate"),
+            "stable_recommended_score_name": metrics.get("stable_recommended_score_name"),
+            "supervised_feasibility_target_passed": metrics.get(
+                "supervised_feasibility_target_passed"
+            ),
+        })
+    if not blocked_runs:
+        return {}
+    return {"abstention_blocked_runs": tuple(blocked_runs)}
 
 
 def _frontier_citation_batch_metadata(payload: Mapping[str, Any]) -> dict[str, Any]:
@@ -784,6 +811,7 @@ def _action_template(kind: Mapping[str, str], *, gate: str, reason: str) -> Evid
                 "frontier_release_evidence",
             ),
             suggested_commands=(
+                "benchmarks/plan_frontier_abstention_evidence_reruns.py",
                 "benchmarks/eval_abstention_stability.py",
                 "benchmarks/eval_conformal.py --save-abstention-release-gate ...",
             ),

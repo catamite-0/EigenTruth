@@ -18,6 +18,9 @@ if str(SRC) not in sys.path:
 from benchmarks.plan_citation_batch_evidence_reruns import (  # noqa: E402
     build_citation_batch_evidence_rerun_queue,
 )
+from benchmarks.plan_frontier_abstention_evidence_reruns import (  # noqa: E402
+    build_frontier_abstention_evidence_rerun_queue,
+)
 from benchmarks.plan_frontier_detectability_evidence_reruns import (  # noqa: E402
     build_frontier_detectability_evidence_rerun_queue,
 )
@@ -70,6 +73,16 @@ def build_release_evidence_gap_plan(
     verifier_state_source_path: str | Path | None = None,
     verifier_staged_verification: bool = True,
     abstention_signals: Sequence[str] = (),
+    abstention_rerun_json_path: str | Path | None = None,
+    abstention_rerun_artifact_manifest_path: str | Path | None = None,
+    abstention_rerun_output_dir: str | Path | None = None,
+    abstention_rerun_name: str | None = None,
+    abstention_rerun_version: str | None = None,
+    abstention_score_paths: Sequence[str | Path] = (),
+    abstention_profiles: Sequence[str] = (),
+    abstention_signal_groups: Sequence[str] = (),
+    abstention_seeds: str | None = None,
+    abstention_direction: str | None = None,
     detectability_rerun_json_path: str | Path | None = None,
     detectability_rerun_artifact_manifest_path: str | Path | None = None,
     detectability_rerun_output_dir: str | Path | None = None,
@@ -105,6 +118,12 @@ def build_release_evidence_gap_plan(
         raise ValueError("stability_rerun_name/version require registry_path.")
     if (stability_rerun_name is None) != (stability_rerun_version is None):
         raise ValueError("stability_rerun_name and stability_rerun_version must be provided together.")
+    if abstention_rerun_artifact_manifest_path is not None and abstention_rerun_json_path is None:
+        raise ValueError("abstention_rerun_artifact_manifest_path requires abstention_rerun_json_path.")
+    if (abstention_rerun_name or abstention_rerun_version) and registry_path is None:
+        raise ValueError("abstention_rerun_name/version require registry_path.")
+    if (abstention_rerun_name is None) != (abstention_rerun_version is None):
+        raise ValueError("abstention_rerun_name and abstention_rerun_version must be provided together.")
     if detectability_rerun_artifact_manifest_path is not None and detectability_rerun_json_path is None:
         raise ValueError("detectability_rerun_artifact_manifest_path requires detectability_rerun_json_path.")
     if (detectability_rerun_name or detectability_rerun_version) and registry_path is None:
@@ -152,6 +171,16 @@ def build_release_evidence_gap_plan(
         verifier_state_source_path=verifier_state_source_path,
         verifier_staged_verification=verifier_staged_verification,
         abstention_signals=abstention_signals,
+        abstention_rerun_json_path=abstention_rerun_json_path,
+        abstention_rerun_artifact_manifest_path=abstention_rerun_artifact_manifest_path,
+        abstention_rerun_output_dir=abstention_rerun_output_dir,
+        abstention_rerun_name=abstention_rerun_name,
+        abstention_rerun_version=abstention_rerun_version,
+        abstention_score_paths=abstention_score_paths,
+        abstention_profiles=abstention_profiles,
+        abstention_signal_groups=abstention_signal_groups,
+        abstention_seeds=abstention_seeds,
+        abstention_direction=abstention_direction,
         detectability_rerun_json_path=detectability_rerun_json_path,
         detectability_rerun_artifact_manifest_path=detectability_rerun_artifact_manifest_path,
         detectability_rerun_output_dir=detectability_rerun_output_dir,
@@ -229,6 +258,16 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         verifier_state_source_path=args.verifier_state_source,
         verifier_staged_verification=bool(args.verifier_staged_verification),
         abstention_signals=_parse_csv(args.abstention_signals),
+        abstention_rerun_json_path=args.abstention_rerun_json,
+        abstention_rerun_artifact_manifest_path=args.abstention_rerun_artifact_manifest,
+        abstention_rerun_output_dir=args.abstention_rerun_output_dir,
+        abstention_rerun_name=args.abstention_rerun_name,
+        abstention_rerun_version=args.abstention_rerun_version,
+        abstention_score_paths=tuple(args.abstention_scores or ()),
+        abstention_profiles=_parse_csv(args.abstention_profiles),
+        abstention_signal_groups=_parse_csv(args.abstention_signal_groups),
+        abstention_seeds=args.abstention_seeds,
+        abstention_direction=args.abstention_direction,
         detectability_rerun_json_path=args.detectability_rerun_json,
         detectability_rerun_artifact_manifest_path=args.detectability_rerun_artifact_manifest,
         detectability_rerun_output_dir=args.detectability_rerun_output_dir,
@@ -357,6 +396,36 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument("--abstention-signals", default=None)
     parser.add_argument(
+        "--abstention-rerun-json",
+        default=None,
+        help="optional output JSON path for a derived abstention experiment rerun queue",
+    )
+    parser.add_argument(
+        "--abstention-rerun-artifact-manifest",
+        default=None,
+        help="optional artifact manifest path for the derived abstention queue",
+    )
+    parser.add_argument(
+        "--abstention-rerun-output-dir",
+        default=None,
+        help="optional root directory for derived abstention experiment outputs",
+    )
+    parser.add_argument("--abstention-rerun-name", default=None, help="optional registry name for the queue")
+    parser.add_argument("--abstention-rerun-version", default=None, help="optional registry version for the queue")
+    parser.add_argument("--abstention-scores", action="append", default=[], help="name=score_dump path; repeatable")
+    parser.add_argument("--abstention-profiles", default=None, help="comma-separated abstention experiment profiles")
+    parser.add_argument(
+        "--abstention-signal-groups",
+        default=None,
+        help="comma-separated signal groups or signal+signal",
+    )
+    parser.add_argument(
+        "--abstention-seeds",
+        default=None,
+        help="comma-separated seeds for abstention experiment reruns",
+    )
+    parser.add_argument("--abstention-direction", choices=("higher", "lower"), default=None)
+    parser.add_argument(
         "--detectability-rerun-json",
         default=None,
         help="optional output JSON path for a derived detectability rerun/audit queue",
@@ -418,6 +487,16 @@ def _build_derived_artifacts(
     verifier_state_source_path: str | Path | None,
     verifier_staged_verification: bool,
     abstention_signals: Sequence[str],
+    abstention_rerun_json_path: str | Path | None,
+    abstention_rerun_artifact_manifest_path: str | Path | None,
+    abstention_rerun_output_dir: str | Path | None,
+    abstention_rerun_name: str | None,
+    abstention_rerun_version: str | None,
+    abstention_score_paths: Sequence[str | Path],
+    abstention_profiles: Sequence[str],
+    abstention_signal_groups: Sequence[str],
+    abstention_seeds: str | None,
+    abstention_direction: str | None,
     detectability_rerun_json_path: str | Path | None,
     detectability_rerun_artifact_manifest_path: str | Path | None,
     detectability_rerun_output_dir: str | Path | None,
@@ -517,6 +596,47 @@ def _build_derived_artifacts(
             else str(stability_rerun_artifact_manifest_path),
             "status": stability_payload["status"],
             "blocked_track_count": summary["blocked_track_count"],
+            "command_count": summary["command_count"],
+            "missing_command_count": summary["missing_command_count"],
+        }
+    if abstention_rerun_json_path is not None:
+        abstention_payload = build_frontier_abstention_evidence_rerun_queue(
+            source=source_path,
+            json_path=abstention_rerun_json_path,
+            artifact_manifest_path=abstention_rerun_artifact_manifest_path,
+            registry_path=None
+            if abstention_rerun_name is None or abstention_rerun_version is None
+            else registry_path,
+            name=abstention_rerun_name,
+            version=abstention_rerun_version,
+            output_dir=abstention_rerun_output_dir,
+            score_paths=abstention_score_paths,
+            profiles=abstention_profiles or (
+                "baseline",
+                "alpha_0p05",
+                "alpha_0p2",
+                "selective_accuracy",
+                "retention",
+            ),
+            signal_groups=abstention_signal_groups or (
+                "recommended",
+                "all",
+                "geometry",
+                "uncertainty",
+            ),
+            seeds=abstention_seeds,
+            direction=abstention_direction,
+            python_executable=python_executable,
+        )
+        summary = abstention_payload["summary"]
+        derived["frontier_abstention_evidence_rerun_queue"] = {
+            "path": str(abstention_rerun_json_path),
+            "artifact_manifest": None
+            if abstention_rerun_artifact_manifest_path is None
+            else str(abstention_rerun_artifact_manifest_path),
+            "status": abstention_payload["status"],
+            "blocked_run_count": summary["blocked_run_count"],
+            "entry_count": summary["entry_count"],
             "command_count": summary["command_count"],
             "missing_command_count": summary["missing_command_count"],
         }

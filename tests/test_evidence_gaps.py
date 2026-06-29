@@ -3,6 +3,7 @@
 import json
 
 from benchmarks.plan_citation_batch_evidence_reruns import build_citation_batch_evidence_rerun_queue
+from benchmarks.plan_frontier_abstention_evidence_reruns import build_frontier_abstention_evidence_rerun_queue
 from benchmarks.plan_frontier_detectability_evidence_reruns import build_frontier_detectability_evidence_rerun_queue
 from benchmarks.plan_frontier_stability_evidence_reruns import build_frontier_stability_evidence_rerun_queue
 from benchmarks.plan_release_evidence_gaps import build_release_evidence_gap_plan
@@ -583,6 +584,112 @@ def test_plan_release_evidence_gaps_can_emit_stability_rerun_queue(tmp_path):
     assert queue_record.metadata["command_count"] == 2
 
 
+def test_frontier_abstention_evidence_rerun_queue_builds_profile_matrix(tmp_path):
+    report_path = tmp_path / "abstention-stability.json"
+    source = tmp_path / "frontier-release-evidence.json"
+    queue_path = tmp_path / "abstention-rerun-queue.json"
+    manifest_path = tmp_path / "abstention-rerun-queue-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    report_path.write_text(
+        json.dumps(_abstention_stability_payload(tmp_path / "qwen-scores.manifest.json")),
+        encoding="utf-8",
+    )
+    source.write_text(
+        json.dumps(_frontier_release_abstention_payload(report_path)),
+        encoding="utf-8",
+    )
+
+    payload = build_frontier_abstention_evidence_rerun_queue(
+        source=source,
+        json_path=queue_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="frontier-abstention-reruns",
+        version="0.1",
+        output_dir=tmp_path / "abstention-reruns",
+        profiles=("baseline", "selective_accuracy"),
+        signal_groups=("recommended", "geometry"),
+        seeds="0,1",
+        python_executable="python",
+    )
+
+    saved = json.loads(queue_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    registry = ArtifactRegistry.load_json(registry_path)
+    record = registry.get("report:frontier-abstention-reruns:0.1")
+    commands = [entry["command"] for entry in payload["entries"]]
+    selective = next(entry for entry in payload["entries"] if entry["profile"] == "selective_accuracy")
+    geometry = next(entry for entry in payload["entries"] if entry["signal_group"] == "geometry")
+
+    assert saved["summary"] == payload["summary"]
+    assert payload["workflow"] == "frontier_abstention_evidence_rerun_queue"
+    assert payload["summary"]["blocked_run_count"] == 1
+    assert payload["summary"]["entry_count"] == 4
+    assert payload["summary"]["command_count"] == 4
+    assert all(command[:2] == ("python", "benchmarks/eval_abstention_stability.py") for command in commands)
+    assert commands[0][commands[0].index("--scores") + 1] == f"qwen={tmp_path / 'qwen-scores.manifest.json'}"
+    assert selective["command"][selective["command"].index("--best-by") + 1] == "empirical_selective_accuracy"
+    assert geometry["signals"] == ("maha_last", "truth_proj", "subspace_resid")
+    assert manifest["artifacts"]["frontier_abstention_evidence_rerun_queue"]["exists"] is True
+    assert record.metadata["workflow"] == "frontier_abstention_evidence_rerun_queue"
+    assert record.metadata["blocked_run_count"] == 1
+    assert record.metadata["command_count"] == 4
+
+
+def test_plan_release_evidence_gaps_can_emit_abstention_rerun_queue(tmp_path):
+    report_path = tmp_path / "abstention-stability.json"
+    source = tmp_path / "frontier-release-evidence.json"
+    output = tmp_path / "evidence-gap-plan.json"
+    queue_path = tmp_path / "abstention-rerun-queue.json"
+    manifest_path = tmp_path / "abstention-rerun-queue-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    report_path.write_text(
+        json.dumps(_abstention_stability_payload(tmp_path / "qwen-scores.manifest.json")),
+        encoding="utf-8",
+    )
+    source.write_text(
+        json.dumps(_frontier_release_abstention_payload(report_path)),
+        encoding="utf-8",
+    )
+
+    payload = build_release_evidence_gap_plan(
+        source=source,
+        json_path=output,
+        registry_path=registry_path,
+        name="frontier-gap-plan",
+        version="0.1",
+        abstention_rerun_json_path=queue_path,
+        abstention_rerun_artifact_manifest_path=manifest_path,
+        abstention_rerun_output_dir=tmp_path / "abstention-reruns",
+        abstention_rerun_name="frontier-abstention-reruns",
+        abstention_rerun_version="0.1",
+        abstention_profiles=("baseline", "retention"),
+        abstention_signal_groups=("recommended",),
+        abstention_seeds="0,1",
+        python_executable="python",
+    )
+
+    saved = json.loads(output.read_text(encoding="utf-8"))
+    queue = json.loads(queue_path.read_text(encoding="utf-8"))
+    registry = ArtifactRegistry.load_json(registry_path)
+    gap_record = registry.get("evidence_gap_plan:frontier-gap-plan:0.1")
+    queue_record = registry.get("report:frontier-abstention-reruns:0.1")
+    derived = payload["derived_artifacts"]["frontier_abstention_evidence_rerun_queue"]
+
+    assert saved["derived_artifacts"] == payload["derived_artifacts"]
+    assert derived["path"] == str(queue_path)
+    assert derived["artifact_manifest"] == str(manifest_path)
+    assert derived["status"] == "ready"
+    assert derived["blocked_run_count"] == 1
+    assert derived["entry_count"] == 2
+    assert derived["command_count"] == 2
+    assert queue["entries"][0]["command_status"] == "ready"
+    assert queue["entries"][0]["command_kind"] == "abstention_stability_experiment"
+    assert payload["gaps"][0]["metadata"]["abstention_blocked_runs"][0]["run"] == "qwen"
+    assert gap_record.metadata["gap_count"] == 1
+    assert queue_record.metadata["command_count"] == 2
+
+
 def test_frontier_detectability_evidence_rerun_queue_builds_blind_spot_audit(tmp_path):
     taxonomy_path = tmp_path / "smol-detectability.json"
     source = tmp_path / "frontier-release-evidence.json"
@@ -848,6 +955,105 @@ def _frontier_release_stability_payload():
             "verifier_signal": "truth_proj",
             "abstention_signals": ("maha_last", "subspace_resid"),
         },
+    }
+
+
+def _frontier_release_abstention_payload(report_path):
+    return {
+        "schema_version": 1,
+        "workflow": "frontier_release_evidence_comparison",
+        "status": "complete",
+        "inputs": {
+            "abstention_stability_report": {
+                "path": str(report_path),
+                "workflow": "abstention_stability",
+                "status": "complete",
+            },
+        },
+        "decision": {
+            "status": "blocked",
+            "abstention_track_status": "blocked",
+            "blocking_reasons": (
+                "abstention_stability.qwen.conditional_correctness_lower_bound_mean 0.5 "
+                "is below required minimum 0.8",
+            ),
+        },
+        "run_decisions": (
+            {
+                "name": "qwen",
+                "abstention_decision": {
+                    "status": "blocked",
+                    "name": "qwen",
+                    "metrics": {
+                        "conditional_correctness_lower_bound_mean": 0.5,
+                        "empirical_abstention_rate_mean": 0.18,
+                        "release_gate_pass_seed_rate": 0.0,
+                        "stable_recommended_score_name": "truth_proj",
+                    },
+                    "blocking_reasons": (
+                        "abstention_stability.qwen.conditional_correctness_lower_bound_mean 0.5 "
+                        "is below required minimum 0.8",
+                    ),
+                },
+            },
+        ),
+    }
+
+
+def _abstention_stability_payload(score_path):
+    return {
+        "schema_version": 1,
+        "workflow": "abstention_stability",
+        "status": "complete",
+        "config": {
+            "signals": ("maha_last", "truth_proj", "subspace_resid", "nll_answer"),
+            "directions": {
+                "maha_last": "higher",
+                "truth_proj": "higher",
+                "subspace_resid": "higher",
+                "nll_answer": "higher",
+            },
+            "alpha": 0.1,
+            "best_by": "conditional_correctness_lower_bound",
+            "seeds": (0, 1),
+            "release_gate": {
+                "min_conditional_correctness_lower_bound": 0.8,
+                "max_abstention_rate": 0.5,
+            },
+        },
+        "runs": (
+            {
+                "name": "qwen",
+                "scores_path": str(score_path),
+                "stability": {
+                    "all_release_gates_passed": False,
+                    "stable_recommended_score_name": "truth_proj",
+                    "recommended_score_name_counts": {"truth_proj": 2},
+                    "release_gate_pass_seed_count": 0,
+                    "release_gate_block_seed_count": 2,
+                    "conditional_correctness_lower_bound": {"mean": 0.5},
+                    "empirical_abstention_rate": {"mean": 0.18},
+                },
+                "supervised_feasibility_frontier": {
+                    "target_passed": False,
+                    "best": {
+                        "score_name": "truth_proj",
+                        "conditional_correctness_lower_bound": 0.55,
+                    },
+                },
+            },
+            {
+                "name": "passed",
+                "scores_path": str(score_path),
+                "stability": {
+                    "all_release_gates_passed": True,
+                    "stable_recommended_score_name": "truth_proj",
+                    "recommended_score_name_counts": {"truth_proj": 2},
+                    "release_gate_pass_seed_count": 2,
+                    "release_gate_block_seed_count": 0,
+                },
+            },
+        ),
     }
 
 

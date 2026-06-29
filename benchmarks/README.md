@@ -5068,6 +5068,36 @@ score dumps and config; otherwise pass `--scores`, `--verifier-signal`, and
 `--abstention-signals` explicitly. Queue entries remain `missing_inputs` until
 enough data is present to build the post-hoc stability command.
 
+For releases specifically blocked by abstention participation quality, emit an
+experiment matrix rather than a single stability rerun. The abstention planner
+builds one `eval_abstention_stability.py` command per blocked run, profile, and
+signal group. This is intended to refresh the supervised feasibility frontier
+and compare candidate participation-gate settings before changing runtime
+defaults:
+
+```bash
+python benchmarks/plan_release_evidence_gaps.py \
+  --source artifacts/frontier-release-evidence/report.json \
+  --json artifacts/frontier-release-evidence/evidence-gap-plan.json \
+  --abstention-rerun-json artifacts/frontier-release-evidence/abstention-rerun-queue.json \
+  --abstention-rerun-artifact-manifest artifacts/frontier-release-evidence/abstention-rerun-queue-manifest.json \
+  --abstention-rerun-output-dir artifacts/frontier-abstention-reruns \
+  --abstention-profiles baseline,alpha_0p05,alpha_0p2,selective_accuracy,retention \
+  --abstention-signal-groups recommended,all,geometry,uncertainty \
+  --abstention-seeds 0,1,2,3,4,5,6,7,8,9 \
+  --registry artifacts/release-registry.json \
+  --name frontier-release-evidence-gap-plan \
+  --version 0.1 \
+  --abstention-rerun-name frontier-abstention-reruns \
+  --abstention-rerun-version 0.1
+```
+
+`benchmarks/plan_frontier_abstention_evidence_reruns.py` can also be called
+directly with a frontier release report, evidence-gap plan, or
+`abstention_stability` report. If the original abstention report is reachable,
+it inherits run score dumps, seeds, release thresholds, and recommended signals;
+otherwise pass `--scores`, `--profiles`, and `--signal-groups` explicitly.
+
 For releases blocked by the detectability-taxonomy track, the same planner can
 emit row-level blind-spot audit commands from the comparator's
 `--detectability-taxonomy-report` inputs:
