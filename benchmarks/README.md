@@ -4582,7 +4582,9 @@ rate, and false-accept-rate delta; a threshold of `0.0` for
 false accepts worse.
 `compare_release_candidates.py` reports record `release_policy_profile` and
 `release_policy_profile_applied_defaults` in `config`. `frontier_audit` also
-defaults `--require-product-runtime-drift-promotion-evidence`,
+defaults `--max-recommended-runtime-seconds 1.0`, leaving the older
+`--max-uncached-forward-seconds` cold-start gate opt-in for callers that want it,
+and defaults `--require-product-runtime-drift-promotion-evidence`,
 `--require-product-runtime-drift-pre-generation-evidence`,
 `--require-product-runtime-drift-triple-audit-evidence`,
 `--require-product-runtime-drift-covered-fact-property-evidence`,

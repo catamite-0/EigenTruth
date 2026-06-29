@@ -14012,6 +14012,58 @@ def test_compare_readiness_baselines_applies_performance_gate(tmp_path):
     assert "uncached forward cost seconds above 20.0" in blocked["gate"]["blocking_reasons"]
 
 
+def test_compare_readiness_baselines_can_gate_recommended_runtime_cost(tmp_path):
+    module = importlib.import_module("benchmarks.compare_readiness_baselines")
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "cached",
+        registry_path=registry_path,
+        name="cached-high-quality",
+        version="0.5",
+        model="cached-model",
+        layer=-12,
+        quality_signals={"truth_proj": 0.83},
+        uncached_forward_seconds=90.0,
+        cache_only_seconds=0.20,
+    )
+    _write_readiness_baseline_manifest(
+        tmp_path / "uncached",
+        registry_path=registry_path,
+        name="uncached-low-quality",
+        version="0.5",
+        model="uncached-model",
+        layer=-16,
+        quality_signals={"truth_proj": 0.66},
+        uncached_forward_seconds=15.0,
+        cache_only_seconds=0.10,
+    )
+
+    payload = module.compare_readiness_baselines(
+        registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_recommended_runtime_seconds=1.0,
+    )
+    strict_uncached_payload = module.compare_readiness_baselines(
+        registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_recommended_runtime_seconds=1.0,
+        max_uncached_forward_seconds=20.0,
+    )
+
+    assert payload["decision"]["status"] == "promote"
+    assert payload["decision"]["recommended_record"] == "benchmark_manifest:cached-high-quality:0.5"
+    recommended = payload["leaderboard"][0]
+    assert recommended["recommended_runtime_seconds"] == pytest.approx(0.20)
+    assert recommended["recommended_runtime_cost_source"] == "cache_only_total_seconds"
+    assert recommended["uncached_forward_cost_seconds"] == pytest.approx(90.0)
+    assert strict_uncached_payload["decision"]["status"] == "blocked"
+    assert any(
+        "uncached forward cost seconds above 20.0" in reason
+        for reason in strict_uncached_payload["decision"]["blocking_reasons"]
+    )
+
+
 def test_compare_readiness_baselines_blocks_covariance_quality_drop(tmp_path):
     module = importlib.import_module("benchmarks.compare_readiness_baselines")
 
@@ -18741,6 +18793,7 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     )
     assert profile_config.min_best_quality_auroc == pytest.approx(0.70)
     assert profile_config.max_uncached_forward_seconds == pytest.approx(20.0)
+    assert profile_config.max_recommended_runtime_seconds is None
     assert profile_config.min_decision_accuracy == pytest.approx(0.98)
     assert profile_config.required_route_min_selected == 200
     assert profile_config.required_route_min_covered_fact_properties is None
@@ -18782,6 +18835,8 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
 
     assert frontier_profile_config.release_policy_profile == "frontier_audit"
     assert frontier_profile_config.require_structured_fact_robustness is True
+    assert frontier_profile_config.max_uncached_forward_seconds is None
+    assert frontier_profile_config.max_recommended_runtime_seconds == pytest.approx(1.0)
     assert frontier_profile_config.adapter_family_profile == "strict_audit"
     assert frontier_profile_config.require_state_transition_world_model is True
     assert frontier_profile_config.require_product_runtime_drift_promotion_evidence is True
@@ -18836,6 +18891,12 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     assert frontier_profile_config.release_policy_profile_applied_defaults[
         "require_product_trace_action_execution_gate"
     ] is True
+    assert frontier_profile_config.release_policy_profile_applied_defaults[
+        "max_uncached_forward_seconds"
+    ] is None
+    assert frontier_profile_config.release_policy_profile_applied_defaults[
+        "max_recommended_runtime_seconds"
+    ] == pytest.approx(1.0)
     assert frontier_profile_config.release_policy_profile_applied_defaults[
         "external_evidence_baseline_comparison_key"
     ] == "report:covered-facts-external-evidence-handoff:0.4"

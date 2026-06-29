@@ -76,6 +76,7 @@ def _apply_release_policy_profile_to_config(
             "require_structured_fact_robustness": config.require_structured_fact_robustness,
             "min_best_quality_auroc": config.min_best_quality_auroc,
             "max_uncached_forward_seconds": config.max_uncached_forward_seconds,
+            "max_recommended_runtime_seconds": config.max_recommended_runtime_seconds,
             "min_selected": config.min_selected,
             "min_decision_accuracy": config.min_decision_accuracy,
             "max_false_supported_rate": config.max_false_supported_rate,
@@ -299,6 +300,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     min_best_quality_auroc: float | None = None
     max_uncached_forward_seconds: float | None = None
     max_cache_only_seconds: float | None = None
+    max_recommended_runtime_seconds: float | None = None
     max_covariance_maha_last_auroc_drop: float | None = None
     max_inside_sample_count_ratio: float | None = None
     max_inside_generation_seconds_ratio: float | None = None
@@ -851,6 +853,7 @@ def run_release_candidate_registry_workflow(
         min_best_quality_auroc=config.min_best_quality_auroc,
         max_uncached_forward_seconds=config.max_uncached_forward_seconds,
         max_cache_only_seconds=config.max_cache_only_seconds,
+        max_recommended_runtime_seconds=config.max_recommended_runtime_seconds,
         max_covariance_maha_last_auroc_drop=config.max_covariance_maha_last_auroc_drop,
         max_inside_sample_count_ratio=config.max_inside_sample_count_ratio,
         max_inside_generation_seconds_ratio=config.max_inside_generation_seconds_ratio,
@@ -3103,6 +3106,7 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         min_best_quality_auroc=args.min_best_quality_auroc,
         max_uncached_forward_seconds=args.max_uncached_forward_seconds,
         max_cache_only_seconds=args.max_cache_only_seconds,
+        max_recommended_runtime_seconds=args.max_recommended_runtime_seconds,
         max_covariance_maha_last_auroc_drop=args.max_covariance_maha_last_auroc_drop,
         max_inside_sample_count_ratio=args.max_inside_sample_count_ratio,
         max_inside_generation_seconds_ratio=args.max_inside_generation_seconds_ratio,
@@ -3544,6 +3548,11 @@ def main(argv: Sequence[str] | None = None) -> None:
         value,
         flag="--max-cache-only-seconds",
     ), default=None)
+    parser.add_argument("--max-recommended-runtime-seconds", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--max-recommended-runtime-seconds",
+    ), default=None,
+                        help="maximum selected deployment-path runtime cost from the readiness recommendation")
     parser.add_argument("--max-covariance-maha-last-auroc-drop", type=lambda value: _parse_non_negative_float(
         value,
         flag="--max-covariance-maha-last-auroc-drop",

@@ -51,6 +51,8 @@ RELEASE_POLICY_PROFILES: Mapping[str, Mapping[str, Any]] = {
     "strict_structured_fact": _STRICT_STRUCTURED_FACT_DEFAULTS,
     "frontier_audit": {
         **_STRICT_STRUCTURED_FACT_DEFAULTS,
+        "max_uncached_forward_seconds": None,
+        "max_recommended_runtime_seconds": 1.0,
         "adapter_family_profile": "strict_audit",
         "require_state_transition_world_model": True,
         "require_product_runtime_drift_promotion_evidence": True,

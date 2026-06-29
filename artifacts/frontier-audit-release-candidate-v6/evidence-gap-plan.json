@@ -1,0 +1,23 @@
+{
+  "actions": [],
+  "gaps": [],
+  "metadata": {
+    "source": "frontier_recommended_runtime_gate_v6"
+  },
+  "schema_version": 1,
+  "source_path": "artifacts/frontier-audit-release-candidate-v6/frontier-audit-registry-workflow.json",
+  "source_status": "promote",
+  "source_workflow": "release_candidate_registry_workflow",
+  "status": "ready",
+  "summary": {
+    "action_count": 0,
+    "gap_count": 0,
+    "gates": {},
+    "missing_metric_count": 0,
+    "research_axes": {},
+    "root_causes": {},
+    "source_decision_status": "promote",
+    "top_action_ids": []
+  },
+  "workflow": "evidence_gap_plan"
+}

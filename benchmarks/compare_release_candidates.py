@@ -299,6 +299,7 @@ def compare_release_candidates(
     min_best_quality_auroc: float | None = None,
     max_uncached_forward_seconds: float | None = None,
     max_cache_only_seconds: float | None = None,
+    max_recommended_runtime_seconds: float | None = None,
     max_covariance_maha_last_auroc_drop: float | None = None,
     max_inside_sample_count_ratio: float | None = None,
     max_inside_generation_seconds_ratio: float | None = None,
@@ -382,6 +383,7 @@ def compare_release_candidates(
                 "require_structured_fact_robustness": require_structured_fact_robustness,
                 "min_best_quality_auroc": min_best_quality_auroc,
                 "max_uncached_forward_seconds": max_uncached_forward_seconds,
+                "max_recommended_runtime_seconds": max_recommended_runtime_seconds,
                 "min_selected": min_selected,
                 "min_decision_accuracy": min_decision_accuracy,
                 "max_false_supported_rate": max_false_supported_rate,
@@ -487,6 +489,7 @@ def compare_release_candidates(
     )
     min_best_quality_auroc = release_policy_values["min_best_quality_auroc"]
     max_uncached_forward_seconds = release_policy_values["max_uncached_forward_seconds"]
+    max_recommended_runtime_seconds = release_policy_values["max_recommended_runtime_seconds"]
     min_selected = release_policy_values["min_selected"]
     min_decision_accuracy = release_policy_values["min_decision_accuracy"]
     max_false_supported_rate = release_policy_values["max_false_supported_rate"]
@@ -881,6 +884,7 @@ def compare_release_candidates(
         min_best_quality_auroc=min_best_quality_auroc,
         max_uncached_forward_seconds=max_uncached_forward_seconds,
         max_cache_only_seconds=max_cache_only_seconds,
+        max_recommended_runtime_seconds=max_recommended_runtime_seconds,
         max_covariance_maha_last_auroc_drop=max_covariance_maha_last_auroc_drop,
         max_inside_sample_count_ratio=max_inside_sample_count_ratio,
         max_inside_generation_seconds_ratio=max_inside_generation_seconds_ratio,
@@ -1548,6 +1552,7 @@ def compare_release_candidates(
             "min_best_quality_auroc": min_best_quality_auroc,
             "max_uncached_forward_seconds": max_uncached_forward_seconds,
             "max_cache_only_seconds": max_cache_only_seconds,
+            "max_recommended_runtime_seconds": max_recommended_runtime_seconds,
             "max_covariance_maha_last_auroc_drop": max_covariance_maha_last_auroc_drop,
             "max_inside_sample_count_ratio": max_inside_sample_count_ratio,
             "max_inside_generation_seconds_ratio": max_inside_generation_seconds_ratio,
@@ -1727,6 +1732,10 @@ def _release_candidate(
             "uncached_forward_cost_seconds": readiness_row.get("uncached_forward_cost_seconds"),
             "uncached_forward_cost_source": readiness_row.get("uncached_forward_cost_source"),
             "cache_only_total_seconds": readiness_row.get("cache_only_total_seconds"),
+            "recommended_runtime_seconds": readiness_row.get("recommended_runtime_seconds"),
+            "recommended_runtime_cost_source": readiness_row.get(
+                "recommended_runtime_cost_source"
+            ),
             "inside_sampling_recommended_run": readiness_row.get("inside_sampling_recommended_run"),
             "inside_sampling_total_generated_samples": readiness_row.get(
                 "inside_sampling_total_generated_samples"
@@ -7820,6 +7829,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         min_best_quality_auroc=args.min_best_quality_auroc,
         max_uncached_forward_seconds=args.max_uncached_forward_seconds,
         max_cache_only_seconds=args.max_cache_only_seconds,
+        max_recommended_runtime_seconds=args.max_recommended_runtime_seconds,
         max_covariance_maha_last_auroc_drop=args.max_covariance_maha_last_auroc_drop,
         max_inside_sample_count_ratio=args.max_inside_sample_count_ratio,
         max_inside_generation_seconds_ratio=args.max_inside_generation_seconds_ratio,
@@ -8231,6 +8241,11 @@ def main(argv: Sequence[str] | None = None) -> None:
         value,
         flag="--max-cache-only-seconds",
     ), default=None)
+    parser.add_argument("--max-recommended-runtime-seconds", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--max-recommended-runtime-seconds",
+    ), default=None,
+                        help="maximum selected deployment-path runtime cost from the readiness recommendation")
     parser.add_argument("--max-covariance-maha-last-auroc-drop", type=lambda value: _parse_non_negative_float(
         value,
         flag="--max-covariance-maha-last-auroc-drop",

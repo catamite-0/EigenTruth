@@ -39,6 +39,7 @@ def compare_readiness_baselines(
     min_best_quality_auroc: float | None = None,
     max_uncached_forward_seconds: float | None = None,
     max_cache_only_seconds: float | None = None,
+    max_recommended_runtime_seconds: float | None = None,
     max_covariance_maha_last_auroc_drop: float | None = None,
     max_inside_sample_count_ratio: float | None = None,
     max_inside_generation_seconds_ratio: float | None = None,
@@ -74,6 +75,7 @@ def compare_readiness_baselines(
             min_best_quality_auroc=min_best_quality_auroc,
             max_uncached_forward_seconds=max_uncached_forward_seconds,
             max_cache_only_seconds=max_cache_only_seconds,
+            max_recommended_runtime_seconds=max_recommended_runtime_seconds,
             max_covariance_maha_last_auroc_drop=max_covariance_maha_last_auroc_drop,
             max_inside_sample_count_ratio=max_inside_sample_count_ratio,
             max_inside_generation_seconds_ratio=max_inside_generation_seconds_ratio,
@@ -98,6 +100,7 @@ def compare_readiness_baselines(
             "min_best_quality_auroc": min_best_quality_auroc,
             "max_uncached_forward_seconds": max_uncached_forward_seconds,
             "max_cache_only_seconds": max_cache_only_seconds,
+            "max_recommended_runtime_seconds": max_recommended_runtime_seconds,
             "max_covariance_maha_last_auroc_drop": max_covariance_maha_last_auroc_drop,
             "max_inside_sample_count_ratio": max_inside_sample_count_ratio,
             "max_inside_generation_seconds_ratio": max_inside_generation_seconds_ratio,
@@ -152,6 +155,7 @@ def _readiness_row(
     min_best_quality_auroc: float | None,
     max_uncached_forward_seconds: float | None,
     max_cache_only_seconds: float | None,
+    max_recommended_runtime_seconds: float | None,
     max_covariance_maha_last_auroc_drop: float | None,
     max_inside_sample_count_ratio: float | None,
     max_inside_generation_seconds_ratio: float | None,
@@ -186,6 +190,7 @@ def _readiness_row(
     quality_signals = _quality_signals(recommendation, manifest_metadata)
     uncached_cost = _uncached_forward_cost(recommendation)
     cache_only_seconds = _float_or_none(recommendation.get("cache_only_total_seconds"))
+    recommended_runtime_cost = _recommended_runtime_cost(recommendation)
     covariance_tradeoff = _mapping(recommendation.get("covariance_tradeoff"))
     covariance_gate = covariance_tradeoff_gate(
         runtime_recommendation,
@@ -201,11 +206,13 @@ def _readiness_row(
         best_quality=best_quality,
         uncached_forward_seconds=uncached_cost["seconds"],
         cache_only_seconds=cache_only_seconds,
+        recommended_runtime_seconds=recommended_runtime_cost["seconds"],
         inside_sample_count_ratio=inside_sampling["sample_count_ratio_for_gate"],
         inside_generation_seconds_ratio=inside_sampling["inside_generation_seconds_ratio_for_gate"],
         min_best_quality_auroc=min_best_quality_auroc,
         max_uncached_forward_seconds=max_uncached_forward_seconds,
         max_cache_only_seconds=max_cache_only_seconds,
+        max_recommended_runtime_seconds=max_recommended_runtime_seconds,
         covariance_tradeoff_gate=covariance_gate,
         max_inside_sample_count_ratio=max_inside_sample_count_ratio,
         max_inside_generation_seconds_ratio=max_inside_generation_seconds_ratio,
@@ -251,6 +258,8 @@ def _readiness_row(
         "uncached_forward_cost_seconds": uncached_cost["seconds"],
         "uncached_forward_cost_source": uncached_cost["source"],
         "cache_only_total_seconds": cache_only_seconds,
+        "recommended_runtime_seconds": recommended_runtime_cost["seconds"],
+        "recommended_runtime_cost_source": recommended_runtime_cost["source"],
         "covariance_mode": recommendation.get(
             "covariance_mode",
             manifest_metadata.get("recommended_covariance_mode"),
@@ -531,12 +540,14 @@ def _gate(
     best_quality: Mapping[str, Any] | None,
     uncached_forward_seconds: float | None,
     cache_only_seconds: float | None,
+    recommended_runtime_seconds: float | None,
     covariance_tradeoff_gate: Mapping[str, Any],
     inside_sample_count_ratio: float | None,
     inside_generation_seconds_ratio: float | None,
     min_best_quality_auroc: float | None,
     max_uncached_forward_seconds: float | None,
     max_cache_only_seconds: float | None,
+    max_recommended_runtime_seconds: float | None,
     max_inside_sample_count_ratio: float | None,
     max_inside_generation_seconds_ratio: float | None,
 ) -> dict[str, Any]:
@@ -565,6 +576,11 @@ def _gate(
         cache_only_seconds is None or cache_only_seconds > max_cache_only_seconds
     ):
         failures.append(f"cache-only total seconds above {max_cache_only_seconds}")
+    if max_recommended_runtime_seconds is not None and (
+        recommended_runtime_seconds is None
+        or recommended_runtime_seconds > max_recommended_runtime_seconds
+    ):
+        failures.append(f"recommended runtime seconds above {max_recommended_runtime_seconds}")
     failures.extend(covariance_tradeoff_gate.get("blocking_reasons", ()))
     if max_inside_sample_count_ratio is not None and (
         inside_sample_count_ratio is None or inside_sample_count_ratio > max_inside_sample_count_ratio
@@ -616,6 +632,7 @@ def _decision(
 def _leaderboard_key(row: Mapping[str, Any]) -> tuple[Any, ...]:
     best_quality = _mapping(row.get("best_quality_signal"))
     best_auroc = _float_or_none(best_quality.get("auroc"))
+    recommended_runtime = _float_or_none(row.get("recommended_runtime_seconds"))
     forward = _float_or_none(row.get("uncached_forward_cost_seconds"))
     cache_only = _float_or_none(row.get("cache_only_total_seconds"))
     inside_sample_ratio = _float_or_none(row.get("inside_sampling_sample_count_ratio_for_gate"))
@@ -623,6 +640,7 @@ def _leaderboard_key(row: Mapping[str, Any]) -> tuple[Any, ...]:
     return (
         not _mapping(row.get("gate")).get("passed", False),
         -(best_auroc if best_auroc is not None else -math.inf),
+        recommended_runtime if recommended_runtime is not None else math.inf,
         forward if forward is not None else math.inf,
         cache_only if cache_only is not None else math.inf,
         inside_sample_ratio if inside_sample_ratio is not None else math.inf,
@@ -697,6 +715,25 @@ def _uncached_forward_cost(recommendation: Mapping[str, Any]) -> dict[str, Any]:
             "seconds": total,
             "source": "uncached_total_seconds_fallback",
         }
+    return {
+        "seconds": None,
+        "source": None,
+    }
+
+
+def _recommended_runtime_cost(recommendation: Mapping[str, Any]) -> dict[str, Any]:
+    for field_name in (
+        "cache_only_total_seconds",
+        "cached_total_seconds",
+        "uncached_forced_answer_forward_seconds",
+        "uncached_total_seconds",
+    ):
+        seconds = _float_or_none(recommendation.get(field_name))
+        if seconds is not None:
+            return {
+                "seconds": seconds,
+                "source": field_name,
+            }
     return {
         "seconds": None,
         "source": None,
@@ -875,6 +912,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         min_best_quality_auroc=args.min_best_quality_auroc,
         max_uncached_forward_seconds=args.max_uncached_forward_seconds,
         max_cache_only_seconds=args.max_cache_only_seconds,
+        max_recommended_runtime_seconds=args.max_recommended_runtime_seconds,
         max_covariance_maha_last_auroc_drop=args.max_covariance_maha_last_auroc_drop,
         max_inside_sample_count_ratio=args.max_inside_sample_count_ratio,
         max_inside_generation_seconds_ratio=args.max_inside_generation_seconds_ratio,
@@ -926,6 +964,12 @@ def main(argv: Sequence[str] | None = None) -> None:
         value,
         flag="--max-cache-only-seconds",
     ), default=None)
+    parser.add_argument("--max-recommended-runtime-seconds", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--max-recommended-runtime-seconds",
+    ), default=None,
+                        help="max selected deployment-path runtime cost; prefers cache-only/cached cost when "
+                             "available and falls back to uncached forward cost")
     parser.add_argument("--max-covariance-maha-last-auroc-drop", type=lambda value: _parse_non_negative_float(
         value,
         flag="--max-covariance-maha-last-auroc-drop",
