@@ -28,6 +28,12 @@ from eigentruth.control.actions import (
     TimeoutActionExecutor,
 )
 from eigentruth.control.controller import ControlPolicyConfig, ParticipationGateConfig, RiskController
+from eigentruth.control.evidence_gaps import (
+    EvidenceGap,
+    EvidenceGapAction,
+    EvidenceGapPlan,
+    plan_evidence_gaps_from_release_candidate,
+)
 from eigentruth.control.feedback import (
     FeedbackOutcome,
     ProductFeedbackRecord,
@@ -100,6 +106,9 @@ __all__ = [
     "DefaultCorrectionPolicy",
     "DryRunActionExecutor",
     "EvidenceBundle",
+    "EvidenceGap",
+    "EvidenceGapAction",
+    "EvidenceGapPlan",
     "FeedbackOutcome",
     "FinalAnswer",
     "FinalAnswerStatus",
@@ -150,6 +159,7 @@ __all__ = [
     "product_runtime_budget_policy_from_release_candidate",
     "product_runtime_metrics",
     "product_trace_fingerprint",
+    "plan_evidence_gaps_from_release_candidate",
     "run_verification_loop",
     "select_pre_generation_profile",
     "select_runtime_profile",

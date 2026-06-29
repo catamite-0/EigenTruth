@@ -1,6 +1,6 @@
 # EigenTruth Frontier Research Notes
 
-Date: 2026-06-26
+Date: 2026-06-29
 
 ## Current Frontier Direction
 
@@ -25,6 +25,10 @@ EigenTruth should move from hallucination detection alone toward calibrated part
 - DECK (arXiv:2606.02289) reframes hallucination errors by detectability signature rather than content type, splitting errors along inter-sample consistency and token-level confidence into Drift, Entrenched, Confabulation, and Knotted. This directly fits EigenTruth's score-dump posture: consistency signals, white-box confidence signals, and independent verifier/world-model routes should be evaluated for complementary blind spots, not only aggregate AUROC.
 - Global-Local Uncertainty / GLU (arXiv:2606.09875) argues that token-level local entropy and hidden-state global geometry can be near-orthogonal and recover different failure regimes. This supports keeping score-dump fusion and detectability reports axis-aware, so geometry, confidence, self-consistency, and verifier evidence are not collapsed into one uninterpretable scalar too early.
 - Counterfactual Probing for Hallucination Detection and Mitigation (arXiv:2508.01862) supports adding perturbation sensitivity audits: robust verifiers should change status on entity, temporal, quantitative, or logical counterfactuals instead of staying invariant to false variants.
+- Hallucination Detection and Mitigation in Large Language Models (arXiv:2601.09929) frames reliable systems as a root-cause-aware continuous improvement loop. This matches EigenTruth's release-gate posture: blocked evidence should produce targeted next experiments rather than a generic "add RAG" fix.
+- Tool Receipts, Not Zero-Knowledge Proofs (arXiv:2603.10060) argues that interactive agents need low-latency signed/tool-execution receipts and claim-to-receipt checks. EigenTruth's action-audit/action-execution gates are the local analog; release reports should surface missing receipt-style metrics as first-class gaps.
+- Retromorphic Testing with Hierarchical Verification for RAG (arXiv:2603.27752) treats RAG faithfulness as traceability from answer claims back to context-side evidence spans. This supports keeping claim/span localization, triple/slot evidence, and source-side evidence coverage explicit in ProductTrace and release-drift reports.
+- HIVE (arXiv:2604.26139) shows a newer trajectory-level direction for diffusion LMs: select sparse hidden evidence under a budget and condition a verifier on it. EigenTruth should keep trajectory/pathway evidence as selected, budgeted evidence artifacts before making any default routing claim.
 
 ## Implemented This Continuation
 
@@ -1066,6 +1070,20 @@ Added the first monitor-first tool-selection audit layer:
   structured-fact routes pass with `718`/`2868` selected and `3` covered
   properties each. Remaining blockers are readiness/performance and complete
   product-runtime-drift handoff metrics.
+- `EvidenceGapPlan` now turns that blocked frontier-audit state into a
+  machine-readable next-work plan. `benchmarks/plan_release_evidence_gaps.py`
+  reads a release comparison or registry workflow and emits prioritized gaps
+  without promoting them as evidence. On
+  `artifacts/frontier-audit-release-candidate-v4/frontier-audit-comparison.json`
+  it writes
+  `artifacts/frontier-audit-release-candidate-v4/evidence-gap-plan.json`,
+  identifying `9` gaps, `8` next actions, and `38` missing product-runtime
+  drift metrics. The top actions are stronger readiness evidence, a matching
+  performance baseline, pre-generation probe comparison, counterfactual verifier
+  audit, product-trace action gates, trace-level triple audit, covered-fact
+  property robustness, and promotion-contract runtime evidence. This is the
+  current root-cause-aware research loop: fail closed, then lower blockers into
+  concrete evidence queues.
 
 ## Next Research-to-Code Candidates
 
@@ -1084,10 +1102,7 @@ Added the first monitor-first tool-selection audit layer:
    coverage is not enough (`0/88` mapped).
 3. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
 4. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
-5. Turn the blocked `frontier_audit` materialization into a promotable contract:
-   rebuild readiness/performance evidence with a stronger or cheaper run, run a
-   real learned/OpenIE/LLM-json triple extractor through the matrix handoff,
-   rerun product-trace replay with action-audit/action-execution child gates,
-   rebuild runtime-drift evidence from the promotion-contract coverage fields,
-   and expand or reshape the required retrieval-route evidence so its selected
-   count and covered-fact property metrics meet the frontier profile.
+5. Use `benchmarks/plan_release_evidence_gaps.py` as the default bridge from a
+   blocked `frontier_audit` materialization to executable work. The current v4
+   plan says the next concrete evidence is readiness/performance refresh plus
+   complete runtime-drift handoff metrics, not another broad detector signal.

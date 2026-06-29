@@ -4795,6 +4795,25 @@ manifest gates, release-manifest build verification, and promotion verification.
 The default is `1`, so existing release checks remain serial unless explicitly
 configured.
 
+When a release candidate blocks, build a root-cause-aware next-evidence plan
+instead of manually scanning the comparison JSON:
+
+```bash
+python benchmarks/plan_release_evidence_gaps.py \
+  --source artifacts/frontier-audit-release-candidate-v4/frontier-audit-comparison.json \
+  --json artifacts/frontier-audit-release-candidate-v4/evidence-gap-plan.json \
+  --registry artifacts/release-registry.json \
+  --name frontier-audit-evidence-gap-plan \
+  --version 0.1
+```
+
+The planner accepts either a `compare_release_candidates.py` report or a
+`run_release_candidate_registry_workflow.py` payload. It writes
+`workflow=evidence_gap_plan` with blocker-level gaps, missing metric names,
+root-cause/research-axis tags, and prioritized next actions. The output is a
+planning artifact only; it does not satisfy a release gate or promote verifier
+evidence.
+
 ```bash
 python benchmarks/run_release_candidate_registry_workflow.py \
   --readiness-registry artifacts/registry.json \
