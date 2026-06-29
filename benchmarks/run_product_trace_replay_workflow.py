@@ -137,6 +137,13 @@ class ProductTraceReplayWorkflowConfig:
     max_runtime_drift_product_trace_action_execution_missing_result_rate_increase: float | None = None
     max_runtime_drift_product_trace_action_execution_unexpected_result_rate_increase: float | None = None
     max_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_increase: float | None = None
+    max_runtime_drift_product_trace_trajectory_audit_failed_trace_rate_increase: float | None = None
+    max_runtime_drift_product_trace_trajectory_audit_error_rate_increase: float | None = None
+    max_runtime_drift_product_trace_trajectory_audit_factual_rate_increase: float | None = None
+    max_runtime_drift_product_trace_trajectory_audit_referential_rate_increase: float | None = None
+    max_runtime_drift_product_trace_trajectory_audit_logical_rate_increase: float | None = None
+    max_runtime_drift_product_trace_trajectory_audit_procedural_rate_increase: float | None = None
+    max_runtime_drift_product_trace_trajectory_audit_scope_rate_increase: float | None = None
     min_runtime_drift_current_trace_count: int | None = None
     max_action_audit_error_rate: float | None = None
     max_action_audit_missing_retrieval_rate: float | None = None
@@ -261,6 +268,13 @@ class ProductTraceReplayWorkflowConfig:
                 self.max_runtime_drift_product_trace_action_execution_missing_result_rate_increase,
                 self.max_runtime_drift_product_trace_action_execution_unexpected_result_rate_increase,
                 self.max_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_increase,
+                self.max_runtime_drift_product_trace_trajectory_audit_failed_trace_rate_increase,
+                self.max_runtime_drift_product_trace_trajectory_audit_error_rate_increase,
+                self.max_runtime_drift_product_trace_trajectory_audit_factual_rate_increase,
+                self.max_runtime_drift_product_trace_trajectory_audit_referential_rate_increase,
+                self.max_runtime_drift_product_trace_trajectory_audit_logical_rate_increase,
+                self.max_runtime_drift_product_trace_trajectory_audit_procedural_rate_increase,
+                self.max_runtime_drift_product_trace_trajectory_audit_scope_rate_increase,
                 self.min_runtime_drift_current_trace_count,
             )
         )
@@ -1414,6 +1428,13 @@ def _runtime_drift_configured(config: ProductTraceReplayWorkflowConfig) -> bool:
             config.max_runtime_drift_product_trace_action_execution_missing_result_rate_increase,
             config.max_runtime_drift_product_trace_action_execution_unexpected_result_rate_increase,
             config.max_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_increase,
+            config.max_runtime_drift_product_trace_trajectory_audit_failed_trace_rate_increase,
+            config.max_runtime_drift_product_trace_trajectory_audit_error_rate_increase,
+            config.max_runtime_drift_product_trace_trajectory_audit_factual_rate_increase,
+            config.max_runtime_drift_product_trace_trajectory_audit_referential_rate_increase,
+            config.max_runtime_drift_product_trace_trajectory_audit_logical_rate_increase,
+            config.max_runtime_drift_product_trace_trajectory_audit_procedural_rate_increase,
+            config.max_runtime_drift_product_trace_trajectory_audit_scope_rate_increase,
             config.min_runtime_drift_current_trace_count,
         )
     )
@@ -1584,6 +1605,27 @@ def _runtime_drift_gate_config(config: ProductTraceReplayWorkflowConfig) -> dict
         ),
         "max_product_trace_action_execution_request_id_mismatch_rate_increase": (
             config.max_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_increase
+        ),
+        "max_product_trace_trajectory_audit_failed_trace_rate_increase": (
+            config.max_runtime_drift_product_trace_trajectory_audit_failed_trace_rate_increase
+        ),
+        "max_product_trace_trajectory_audit_error_rate_increase": (
+            config.max_runtime_drift_product_trace_trajectory_audit_error_rate_increase
+        ),
+        "max_product_trace_trajectory_audit_factual_rate_increase": (
+            config.max_runtime_drift_product_trace_trajectory_audit_factual_rate_increase
+        ),
+        "max_product_trace_trajectory_audit_referential_rate_increase": (
+            config.max_runtime_drift_product_trace_trajectory_audit_referential_rate_increase
+        ),
+        "max_product_trace_trajectory_audit_logical_rate_increase": (
+            config.max_runtime_drift_product_trace_trajectory_audit_logical_rate_increase
+        ),
+        "max_product_trace_trajectory_audit_procedural_rate_increase": (
+            config.max_runtime_drift_product_trace_trajectory_audit_procedural_rate_increase
+        ),
+        "max_product_trace_trajectory_audit_scope_rate_increase": (
+            config.max_runtime_drift_product_trace_trajectory_audit_scope_rate_increase
         ),
         "min_current_trace_count": config.min_runtime_drift_current_trace_count,
     }
@@ -1786,6 +1828,7 @@ def _runtime_baseline_summary(runtime_baseline: Mapping[str, Any]) -> dict[str, 
     total_seconds = _mapping(summary.get("total_seconds"))
     action_audit = _mapping(summary.get("action_audit"))
     action_execution = _mapping(summary.get("action_execution"))
+    trajectory_audit = _mapping(summary.get("trajectory_audit"))
     trace_record_cache = _mapping(_nested(runtime_baseline, "config", "trace_record_cache"))
     recommended_policy = _mapping(_nested(runtime_baseline, "config", "recommended_policy"))
     optimization = _mapping(runtime_baseline.get("optimization"))
@@ -1837,6 +1880,14 @@ def _runtime_baseline_summary(runtime_baseline: Mapping[str, Any]) -> dict[str, 
         "action_execution_request_id_mismatch_rate": action_execution.get(
             "request_id_mismatch_rate"
         ),
+        "trajectory_audit_available_trace_count": trajectory_audit.get("available_trace_count"),
+        "trajectory_audit_failed_trace_rate": trajectory_audit.get("failed_trace_rate"),
+        "trajectory_audit_error_rate": trajectory_audit.get("error_rate"),
+        "trajectory_audit_factual_rate": trajectory_audit.get("factual_rate"),
+        "trajectory_audit_referential_rate": trajectory_audit.get("referential_rate"),
+        "trajectory_audit_logical_rate": trajectory_audit.get("logical_rate"),
+        "trajectory_audit_procedural_rate": trajectory_audit.get("procedural_rate"),
+        "trajectory_audit_scope_rate": trajectory_audit.get("scope_rate"),
         "trace_records_cache_path": _nested(runtime_baseline, "paths", "trace_records_cache"),
         "recommended_policy_path": _nested(runtime_baseline, "paths", "recommended_policy"),
         "recommended_policy_written": recommended_policy.get("written"),
@@ -1902,6 +1953,7 @@ def _runtime_drift_summary(runtime_drift: Mapping[str, Any]) -> dict[str, Any]:
     budget_gate = _mapping(runtime_drift.get("runtime_budget_policy_gate"))
     covered_fact_property = _covered_fact_property_metric_summary(runtime_drift)
     product_trace_action_gate = _product_trace_action_gate_metric_summary(runtime_drift)
+    product_trace_trajectory_audit = _product_trace_trajectory_audit_metric_summary(runtime_drift)
     pre_generation_probe_comparison = _pre_generation_probe_comparison_metric_summary(runtime_drift)
     claim_factuality_probe_comparison = _claim_factuality_probe_comparison_metric_summary(runtime_drift)
     counterfactual_verification = _counterfactual_verification_metric_summary(runtime_drift)
@@ -1920,6 +1972,12 @@ def _runtime_drift_summary(runtime_drift: Mapping[str, Any]) -> dict[str, Any]:
         "covered_fact_property_blocked_metric_count": covered_fact_property["blocked_metric_count"],
         "product_trace_action_gate_metric_count": product_trace_action_gate["metric_count"],
         "product_trace_action_gate_blocked_metric_count": product_trace_action_gate["blocked_metric_count"],
+        "product_trace_trajectory_audit_metric_count": product_trace_trajectory_audit[
+            "metric_count"
+        ],
+        "product_trace_trajectory_audit_blocked_metric_count": (
+            product_trace_trajectory_audit["blocked_metric_count"]
+        ),
         "pre_generation_probe_comparison_metric_count": pre_generation_probe_comparison["metric_count"],
         "pre_generation_probe_comparison_blocked_metric_count": (
             pre_generation_probe_comparison["blocked_metric_count"]
@@ -2018,6 +2076,18 @@ def _product_trace_action_gate_metric_summary(runtime_drift: Mapping[str, Any]) 
         _mapping(metric)
         for metric in _sequence(runtime_drift.get("metrics"))
         if str(_mapping(metric).get("metric") or "").startswith("promotion_contract.product_trace_replay.")
+    )
+    return {
+        "metric_count": len(metrics),
+        "blocked_metric_count": sum(1 for metric in metrics if metric.get("status") == "blocked"),
+    }
+
+
+def _product_trace_trajectory_audit_metric_summary(runtime_drift: Mapping[str, Any]) -> dict[str, int]:
+    metrics = tuple(
+        _mapping(metric)
+        for metric in _sequence(runtime_drift.get("metrics"))
+        if str(_mapping(metric).get("metric") or "").startswith("trajectory_audit.")
     )
     return {
         "metric_count": len(metrics),
@@ -2414,6 +2484,16 @@ def _write_artifact_manifest(
                 "runtime_drift",
                 "product_trace_action_gate_blocked_metric_count",
             ),
+            "runtime_drift_product_trace_trajectory_audit_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "product_trace_trajectory_audit_metric_count",
+            ),
+            "runtime_drift_product_trace_trajectory_audit_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "product_trace_trajectory_audit_blocked_metric_count",
+            ),
             "runtime_drift_pre_generation_probe_comparison_metric_count": _nested(
                 report,
                 "runtime_drift",
@@ -2700,6 +2780,16 @@ def _record_registry(
                 report,
                 "runtime_drift",
                 "product_trace_action_gate_blocked_metric_count",
+            ),
+            "runtime_drift_product_trace_trajectory_audit_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "product_trace_trajectory_audit_metric_count",
+            ),
+            "runtime_drift_product_trace_trajectory_audit_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "product_trace_trajectory_audit_blocked_metric_count",
             ),
             "runtime_drift_pre_generation_probe_comparison_metric_count": _nested(
                 report,
@@ -3226,6 +3316,27 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
         max_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_increase=(
             args.max_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_increase
         ),
+        max_runtime_drift_product_trace_trajectory_audit_failed_trace_rate_increase=(
+            args.max_runtime_drift_product_trace_trajectory_audit_failed_trace_rate_increase
+        ),
+        max_runtime_drift_product_trace_trajectory_audit_error_rate_increase=(
+            args.max_runtime_drift_product_trace_trajectory_audit_error_rate_increase
+        ),
+        max_runtime_drift_product_trace_trajectory_audit_factual_rate_increase=(
+            args.max_runtime_drift_product_trace_trajectory_audit_factual_rate_increase
+        ),
+        max_runtime_drift_product_trace_trajectory_audit_referential_rate_increase=(
+            args.max_runtime_drift_product_trace_trajectory_audit_referential_rate_increase
+        ),
+        max_runtime_drift_product_trace_trajectory_audit_logical_rate_increase=(
+            args.max_runtime_drift_product_trace_trajectory_audit_logical_rate_increase
+        ),
+        max_runtime_drift_product_trace_trajectory_audit_procedural_rate_increase=(
+            args.max_runtime_drift_product_trace_trajectory_audit_procedural_rate_increase
+        ),
+        max_runtime_drift_product_trace_trajectory_audit_scope_rate_increase=(
+            args.max_runtime_drift_product_trace_trajectory_audit_scope_rate_increase
+        ),
         min_runtime_drift_current_trace_count=args.min_runtime_drift_current_trace_count,
         max_action_audit_error_rate=args.max_action_audit_error_rate,
         max_action_audit_missing_retrieval_rate=args.max_action_audit_missing_retrieval_rate,
@@ -3508,6 +3619,41 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument(
         "--max-runtime-drift-product-trace-action-execution-request-id-mismatch-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-product-trace-trajectory-audit-failed-trace-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-product-trace-trajectory-audit-error-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-product-trace-trajectory-audit-factual-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-product-trace-trajectory-audit-referential-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-product-trace-trajectory-audit-logical-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-product-trace-trajectory-audit-procedural-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-product-trace-trajectory-audit-scope-rate-increase",
         type=float,
         default=None,
     )

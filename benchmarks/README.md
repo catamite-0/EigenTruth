@@ -4590,6 +4590,7 @@ and defaults `--require-product-runtime-drift-promotion-evidence`,
 `--require-product-runtime-drift-triple-audit-evidence`,
 `--require-product-runtime-drift-covered-fact-property-evidence`,
 `--require-product-runtime-drift-action-gate-evidence`,
+`--require-product-runtime-drift-trajectory-audit-evidence`,
 `--require-product-runtime-drift-evidence-handoff-evidence`,
 `--require-product-trace-action-audit-gate`, and
 `--require-product-trace-action-execution-gate`; it also defaults to the
@@ -4600,8 +4601,8 @@ or `--triple-extraction-fixture-matrix` file inputs suppress the corresponding
 default registry keys. Strict local releases therefore fail closed when runtime
 drift lacks promotion-contract, triple-extraction fixture-matrix,
 trace-level triple-audit, recommended-route covered-fact property/action-gate
-evidence, promotion-contract evidence-handoff coverage/manifest/metric-gap
-evidence, the product-trace replay workflow lacks promoted
+evidence, trajectory-audit evidence, promotion-contract evidence-handoff
+coverage/manifest/metric-gap evidence, the product-trace replay workflow lacks promoted
 action-audit/action-execution child gates, or registered frontier evidence
 handoffs are absent.
 Add `--require-product-runtime-drift-claim-factuality-evidence` when a release
@@ -4794,6 +4795,7 @@ also defaults `adapter_family_profile=strict_audit`,
 `require_product_runtime_drift_triple_audit_evidence=true`,
 `require_product_runtime_drift_covered_fact_property_evidence=true`,
 `require_product_runtime_drift_action_gate_evidence=true`,
+`require_product_runtime_drift_trajectory_audit_evidence=true`,
 `require_product_runtime_drift_evidence_handoff_evidence=true`,
 `require_product_trace_action_audit_gate=true`, and
 `require_product_trace_action_execution_gate=true`, plus the registered
@@ -4804,7 +4806,7 @@ rule-based state-transition world-model evidence, promotion-backed runtime-drift
 evidence, pre-generation runtime-drift evidence, counterfactual verifier-audit
 runtime-drift evidence, trace-level triple-audit
 evidence, recommended-route covered-fact property/action-gate drift evidence,
-registered frontier evidence handoffs, and
+trajectory-audit runtime-drift evidence, registered frontier evidence handoffs, and
 promoted product-trace action-audit/action-execution child gates unless
 explicitly overridden. The workflow records
 `release_policy_profile` and `release_policy_profile_applied_defaults` in the
@@ -5116,7 +5118,9 @@ The current v1.9 contract carries the v6 deployment-path runtime evidence
 handoff audit promotes all six `frontier_audit` evidence groups with `38/38`
 fields present. Refreshed frontier-audit runtime-drift reports now add
 promotion-contract evidence-handoff coverage/manifest/metric-gap/group-status
-as the seventh release-gated evidence group. The main contract manifest
+as the seventh release-gated evidence group. The release-policy wiring also
+expects trajectory-audit runtime-drift evidence as a separate fail-closed group
+when refreshed drift reports are supplied. The main contract manifest
 verifies with `checked=2`; the evidence-handoff manifest verifies with
 `checked=9`.
 

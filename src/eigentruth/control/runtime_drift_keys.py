@@ -64,6 +64,15 @@ PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_KEYS: tuple[str, ...] = (
     "product_trace_action_execution_unexpected_result_rate",
     "product_trace_action_execution_request_id_mismatch_rate",
 )
+PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_KEYS: tuple[str, ...] = (
+    "product_trace_trajectory_audit_failed_trace_rate",
+    "product_trace_trajectory_audit_error_rate",
+    "product_trace_trajectory_audit_factual_rate",
+    "product_trace_trajectory_audit_referential_rate",
+    "product_trace_trajectory_audit_logical_rate",
+    "product_trace_trajectory_audit_procedural_rate",
+    "product_trace_trajectory_audit_scope_rate",
+)
 PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS: tuple[str, ...] = (
     "evidence_handoff_coverage_rate",
     "evidence_handoff_manifest_verified_rate",
@@ -82,6 +91,7 @@ PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS: dict[str, tuple[str, ...]] = {
     "triple_audit": PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_KEYS,
     "covered_fact_property": PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_KEYS,
     "action_gate": PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_KEYS,
+    "trajectory_audit": PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_KEYS,
     "evidence_handoff": PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS,
 }
 
