@@ -5009,6 +5009,36 @@ and command count under `derived_artifacts`. The queue itself remains a separate
 reviewable artifact with command arrays and dry-run variants, so expensive
 frontier reruns stay opt-in.
 
+The same gap-planner bridge can emit a citation/source-family batch rerun queue
+when the frontier release is blocked by missing, duplicate, or unexpected
+citation evidence batches:
+
+```bash
+python benchmarks/plan_release_evidence_gaps.py \
+  --source artifacts/frontier-release-evidence/report.json \
+  --json artifacts/frontier-release-evidence/evidence-gap-plan.json \
+  --citation-batch-rerun-json artifacts/frontier-release-evidence/citation-batch-rerun-queue.json \
+  --citation-batch-rerun-artifact-manifest artifacts/frontier-release-evidence/citation-batch-rerun-queue-manifest.json \
+  --citation-batch-rerun-output-dir artifacts/frontier-citation-batch-reruns \
+  --citation-batch-queue artifacts/truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue/unresolved-evidence-queue.json \
+  --citation-batch-scores artifacts/truthfulqa-frontier-smollm2-l80-score-dump.jsonl \
+  --citation-batch-blind-spots artifacts/truthfulqa-frontier-smollm2-l80-entrenched-blind-spots/rows.jsonl \
+  --citation-batch-source-catalog artifacts/source-family-catalogs/official-catalog.jsonl \
+  --registry artifacts/release-registry.json \
+  --name frontier-release-evidence-gap-plan \
+  --version 0.1 \
+  --citation-batch-rerun-name frontier-citation-batch-reruns \
+  --citation-batch-rerun-version 0.1
+```
+
+`benchmarks/plan_citation_batch_evidence_reruns.py` can also be called directly.
+It accepts a frontier release report, an evidence-gap plan, or a
+`citation_search_batch_evidence_rollup` report. Queue entries are marked
+`ready` only when enough paths are supplied to build a
+`run_source_family_citation_search_workflow.py` or
+`run_external_citation_search_adapter_workflow.py` command; otherwise they remain
+reviewable `missing_inputs` rows.
+
 For frontier release reports blocked by the family-wise multiple-testing gate,
 build a per-cell rerun queue from the comparator or gap-plan output:
 

@@ -2,6 +2,7 @@
 
 import json
 
+from benchmarks.plan_citation_batch_evidence_reruns import build_citation_batch_evidence_rerun_queue
 from benchmarks.plan_release_evidence_gaps import build_release_evidence_gap_plan
 from eigentruth.control import (
     EvidenceGapPlan,
@@ -386,6 +387,108 @@ def test_plan_release_evidence_gaps_can_emit_multiple_testing_rerun_queue(tmp_pa
     assert queue_record.metadata["command_count"] == 1
 
 
+def test_citation_batch_evidence_rerun_queue_builds_source_family_commands(tmp_path):
+    source = tmp_path / "frontier-release-evidence.json"
+    queue_path = tmp_path / "citation-batch-rerun-queue.json"
+    manifest_path = tmp_path / "citation-batch-rerun-queue-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    source.write_text(json.dumps(_frontier_release_citation_batch_payload()), encoding="utf-8")
+
+    payload = build_citation_batch_evidence_rerun_queue(
+        source=source,
+        json_path=queue_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="citation-batch-reruns",
+        version="0.1",
+        output_dir=tmp_path / "reruns",
+        queue_report_path=tmp_path / "unresolved-queue.json",
+        scores_path=tmp_path / "scores.jsonl",
+        blind_spots_path=tmp_path / "blind-spots.jsonl",
+        source_catalog_paths=(tmp_path / "catalog.jsonl",),
+        controlled_sweep_paths=(tmp_path / "controlled-sweep.json",),
+        python_executable="python",
+    )
+
+    saved = json.loads(queue_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    registry = ArtifactRegistry.load_json(registry_path)
+    record = registry.get("report:citation-batch-reruns:0.1")
+    entries = {entry["batch_id"]: entry for entry in payload["entries"]}
+    command = entries["unresolved-evidence-batch-0002"]["command"]
+
+    assert saved["summary"] == payload["summary"]
+    assert payload["workflow"] == "citation_batch_evidence_rerun_queue"
+    assert payload["summary"]["blocked_batch_count"] == 2
+    assert payload["summary"]["missing_expected_batch_count"] == 1
+    assert payload["summary"]["duplicate_batch_count"] == 1
+    assert payload["summary"]["command_count"] == 2
+    assert entries["unresolved-evidence-batch-0002"]["issue_type"] == "missing_expected"
+    assert entries["unresolved-evidence-batch-0002"]["command_status"] == "ready"
+    assert entries["unresolved-evidence-batch-0002"]["command_kind"] == "source_family"
+    assert command[:3] == (
+        "python",
+        "benchmarks/run_source_family_citation_search_workflow.py",
+        "--queue",
+    )
+    assert command[command.index("--batch-id") + 1] == "unresolved-evidence-batch-0002"
+    assert command[command.index("--source-catalog") + 1] == str(tmp_path / "catalog.jsonl")
+    assert command[command.index("--controlled-sweep") + 1] == str(tmp_path / "controlled-sweep.json")
+    assert manifest["artifacts"]["citation_batch_evidence_rerun_queue"]["exists"] is True
+    assert record.metadata["workflow"] == "citation_batch_evidence_rerun_queue"
+    assert record.metadata["blocked_batch_count"] == 2
+
+
+def test_plan_release_evidence_gaps_can_emit_citation_batch_rerun_queue(tmp_path):
+    source = tmp_path / "frontier-release-evidence.json"
+    output = tmp_path / "evidence-gap-plan.json"
+    queue_path = tmp_path / "citation-batch-rerun-queue.json"
+    manifest_path = tmp_path / "citation-batch-rerun-queue-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    source.write_text(json.dumps(_frontier_release_citation_batch_payload()), encoding="utf-8")
+
+    payload = build_release_evidence_gap_plan(
+        source=source,
+        json_path=output,
+        registry_path=registry_path,
+        name="frontier-gap-plan",
+        version="0.1",
+        citation_batch_rerun_json_path=queue_path,
+        citation_batch_rerun_artifact_manifest_path=manifest_path,
+        citation_batch_rerun_output_dir=tmp_path / "citation-reruns",
+        citation_batch_rerun_name="citation-batch-reruns",
+        citation_batch_rerun_version="0.1",
+        citation_batch_queue_report_path=tmp_path / "unresolved-queue.json",
+        citation_batch_scores_path=tmp_path / "scores.jsonl",
+        citation_batch_blind_spots_path=tmp_path / "blind-spots.jsonl",
+        citation_batch_search_command="python adapter.py --input {input} --output {output}",
+        python_executable="python",
+    )
+
+    saved = json.loads(output.read_text(encoding="utf-8"))
+    queue = json.loads(queue_path.read_text(encoding="utf-8"))
+    registry = ArtifactRegistry.load_json(registry_path)
+    gap_record = registry.get("evidence_gap_plan:frontier-gap-plan:0.1")
+    queue_record = registry.get("report:citation-batch-reruns:0.1")
+    derived = payload["derived_artifacts"]["citation_batch_evidence_rerun_queue"]
+    entry = queue["entries"][0]
+
+    assert saved["derived_artifacts"] == payload["derived_artifacts"]
+    assert derived["path"] == str(queue_path)
+    assert derived["artifact_manifest"] == str(manifest_path)
+    assert derived["status"] == "ready"
+    assert derived["blocked_batch_count"] == 2
+    assert derived["command_count"] == 2
+    assert entry["command_status"] == "ready"
+    assert entry["command_kind"] == "external"
+    assert entry["command"][1] == "benchmarks/run_external_citation_search_adapter_workflow.py"
+    assert entry["command"][entry["command"].index("--search-command") + 1] == (
+        "python adapter.py --input {input} --output {output}"
+    )
+    assert gap_record.metadata["gap_count"] == 1
+    assert queue_record.metadata["command_count"] == 2
+
+
 def _blocked_registry_workflow_payload():
     return {
         "workflow": "release_candidate_registry_workflow",
@@ -488,6 +591,44 @@ def _frontier_workflow_payload_for_multiple_testing_queue():
                     "detection": 0.7,
                     "report": "frontier/a-l2/multiple-testing-report.json",
                     "calibration": "frontier/a-l2/multiple-testing-calibration.json",
+                },
+            ),
+        },
+    }
+
+
+def _frontier_release_citation_batch_payload():
+    return {
+        "schema_version": 1,
+        "workflow": "frontier_release_evidence_comparison",
+        "status": "complete",
+        "decision": {
+            "status": "blocked",
+            "citation_batch_track_status": "blocked",
+            "blocking_reasons": (
+                "citation_batch_rollup.citation-rollup.summary.missing_expected_batch_count 1 is non-zero",
+            ),
+        },
+        "evidence_summary": {
+            "citation_batch_rollup_names": ("citation-rollup",),
+            "citation_batch_expected_batch_ids": (
+                "unresolved-evidence-batch-0001",
+                "unresolved-evidence-batch-0002",
+            ),
+            "citation_batch_observed_batch_ids": (
+                "unresolved-evidence-batch-0001",
+                "unresolved-evidence-batch-0001",
+            ),
+            "citation_batch_missing_expected_batches": (
+                {
+                    "rollup": "citation-rollup",
+                    "batch_id": "unresolved-evidence-batch-0002",
+                },
+            ),
+            "citation_batch_duplicate_batches": (
+                {
+                    "rollup": "citation-rollup",
+                    "batch_id": "unresolved-evidence-batch-0001",
                 },
             ),
         },

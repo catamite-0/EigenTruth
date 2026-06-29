@@ -15,6 +15,9 @@ if str(ROOT) not in sys.path:
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from benchmarks.plan_citation_batch_evidence_reruns import (  # noqa: E402
+    build_citation_batch_evidence_rerun_queue,
+)
 from benchmarks.plan_frontier_multiple_testing_reruns import (  # noqa: E402
     build_frontier_multiple_testing_rerun_queue,
 )
@@ -36,6 +39,18 @@ def build_release_evidence_gap_plan(
     multiple_testing_rerun_output_dir: str | Path | None = None,
     multiple_testing_rerun_name: str | None = None,
     multiple_testing_rerun_version: str | None = None,
+    citation_batch_rerun_json_path: str | Path | None = None,
+    citation_batch_rerun_artifact_manifest_path: str | Path | None = None,
+    citation_batch_rerun_output_dir: str | Path | None = None,
+    citation_batch_rerun_name: str | None = None,
+    citation_batch_rerun_version: str | None = None,
+    citation_batch_queue_report_path: str | Path | None = None,
+    citation_batch_scores_path: str | Path | None = None,
+    citation_batch_blind_spots_path: str | Path | None = None,
+    citation_batch_source_catalog_paths: Sequence[str | Path] = (),
+    citation_batch_search_command: str | None = None,
+    citation_batch_controlled_sweep_paths: Sequence[str | Path] = (),
+    citation_batch_query_mode: str = "claim_entity",
     python_executable: str = sys.executable,
 ) -> dict[str, Any]:
     """Load a release report and optionally write/register its evidence-gap plan."""
@@ -47,6 +62,12 @@ def build_release_evidence_gap_plan(
         raise ValueError("multiple_testing_rerun_name/version require registry_path.")
     if (multiple_testing_rerun_name is None) != (multiple_testing_rerun_version is None):
         raise ValueError("multiple_testing_rerun_name and multiple_testing_rerun_version must be provided together.")
+    if citation_batch_rerun_artifact_manifest_path is not None and citation_batch_rerun_json_path is None:
+        raise ValueError("citation_batch_rerun_artifact_manifest_path requires citation_batch_rerun_json_path.")
+    if (citation_batch_rerun_name or citation_batch_rerun_version) and registry_path is None:
+        raise ValueError("citation_batch_rerun_name/version require registry_path.")
+    if (citation_batch_rerun_name is None) != (citation_batch_rerun_version is None):
+        raise ValueError("citation_batch_rerun_name and citation_batch_rerun_version must be provided together.")
     source_path = Path(source)
     payload = _load_json_object(source_path)
     plan = plan_evidence_gaps_from_release_candidate(
@@ -57,14 +78,24 @@ def build_release_evidence_gap_plan(
     output = plan.to_dict()
     derived_artifacts = _build_derived_artifacts(
         source_path=source_path,
-        registry_path=None
-        if multiple_testing_rerun_name is None or multiple_testing_rerun_version is None
-        else registry_path,
+        registry_path=registry_path,
         multiple_testing_rerun_json_path=multiple_testing_rerun_json_path,
         multiple_testing_rerun_artifact_manifest_path=multiple_testing_rerun_artifact_manifest_path,
         multiple_testing_rerun_output_dir=multiple_testing_rerun_output_dir,
         multiple_testing_rerun_name=multiple_testing_rerun_name,
         multiple_testing_rerun_version=multiple_testing_rerun_version,
+        citation_batch_rerun_json_path=citation_batch_rerun_json_path,
+        citation_batch_rerun_artifact_manifest_path=citation_batch_rerun_artifact_manifest_path,
+        citation_batch_rerun_output_dir=citation_batch_rerun_output_dir,
+        citation_batch_rerun_name=citation_batch_rerun_name,
+        citation_batch_rerun_version=citation_batch_rerun_version,
+        citation_batch_queue_report_path=citation_batch_queue_report_path,
+        citation_batch_scores_path=citation_batch_scores_path,
+        citation_batch_blind_spots_path=citation_batch_blind_spots_path,
+        citation_batch_source_catalog_paths=citation_batch_source_catalog_paths,
+        citation_batch_search_command=citation_batch_search_command,
+        citation_batch_controlled_sweep_paths=citation_batch_controlled_sweep_paths,
+        citation_batch_query_mode=citation_batch_query_mode,
         python_executable=python_executable,
     )
     if derived_artifacts:
@@ -105,6 +136,18 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         multiple_testing_rerun_output_dir=args.multiple_testing_rerun_output_dir,
         multiple_testing_rerun_name=args.multiple_testing_rerun_name,
         multiple_testing_rerun_version=args.multiple_testing_rerun_version,
+        citation_batch_rerun_json_path=args.citation_batch_rerun_json,
+        citation_batch_rerun_artifact_manifest_path=args.citation_batch_rerun_artifact_manifest,
+        citation_batch_rerun_output_dir=args.citation_batch_rerun_output_dir,
+        citation_batch_rerun_name=args.citation_batch_rerun_name,
+        citation_batch_rerun_version=args.citation_batch_rerun_version,
+        citation_batch_queue_report_path=args.citation_batch_queue,
+        citation_batch_scores_path=args.citation_batch_scores,
+        citation_batch_blind_spots_path=args.citation_batch_blind_spots,
+        citation_batch_source_catalog_paths=tuple(args.citation_batch_source_catalog or ()),
+        citation_batch_search_command=args.citation_batch_search_command,
+        citation_batch_controlled_sweep_paths=tuple(args.citation_batch_controlled_sweep or ()),
+        citation_batch_query_mode=args.citation_batch_query_mode,
         python_executable=args.python,
     )
     summary = payload["summary"]
@@ -153,6 +196,44 @@ def main(argv: Sequence[str] | None = None) -> None:
         default=None,
         help="optional registry version for the derived multiple-testing rerun queue",
     )
+    parser.add_argument(
+        "--citation-batch-rerun-json",
+        default=None,
+        help="optional output JSON path for a derived citation batch rerun queue",
+    )
+    parser.add_argument(
+        "--citation-batch-rerun-artifact-manifest",
+        default=None,
+        help="optional artifact manifest path for the derived citation batch rerun queue",
+    )
+    parser.add_argument(
+        "--citation-batch-rerun-output-dir",
+        default=None,
+        help="optional root directory for derived citation batch rerun outputs",
+    )
+    parser.add_argument("--citation-batch-rerun-name", default=None, help="optional registry name for the queue")
+    parser.add_argument("--citation-batch-rerun-version", default=None, help="optional registry version for the queue")
+    parser.add_argument("--citation-batch-queue", default=None, help="unresolved evidence queue for generated commands")
+    parser.add_argument("--citation-batch-scores", default=None, help="score dump for generated commands")
+    parser.add_argument("--citation-batch-blind-spots", default=None, help="blind-spot rows for generated commands")
+    parser.add_argument(
+        "--citation-batch-source-catalog",
+        action="append",
+        default=[],
+        help="source-family catalog for generated commands; repeatable",
+    )
+    parser.add_argument(
+        "--citation-batch-search-command",
+        default=None,
+        help="external search command with {input}/{output}",
+    )
+    parser.add_argument(
+        "--citation-batch-controlled-sweep",
+        action="append",
+        default=[],
+        help="controlled sweep report for generated citation commands; repeatable",
+    )
+    parser.add_argument("--citation-batch-query-mode", default="claim_entity")
     parser.add_argument("--python", default=sys.executable, help="Python executable for generated rerun commands")
     run(parser.parse_args(argv))
 
@@ -166,23 +247,36 @@ def _build_derived_artifacts(
     multiple_testing_rerun_output_dir: str | Path | None,
     multiple_testing_rerun_name: str | None,
     multiple_testing_rerun_version: str | None,
+    citation_batch_rerun_json_path: str | Path | None,
+    citation_batch_rerun_artifact_manifest_path: str | Path | None,
+    citation_batch_rerun_output_dir: str | Path | None,
+    citation_batch_rerun_name: str | None,
+    citation_batch_rerun_version: str | None,
+    citation_batch_queue_report_path: str | Path | None,
+    citation_batch_scores_path: str | Path | None,
+    citation_batch_blind_spots_path: str | Path | None,
+    citation_batch_source_catalog_paths: Sequence[str | Path],
+    citation_batch_search_command: str | None,
+    citation_batch_controlled_sweep_paths: Sequence[str | Path],
+    citation_batch_query_mode: str,
     python_executable: str,
 ) -> dict[str, Any]:
-    if multiple_testing_rerun_json_path is None:
-        return {}
-    rerun_payload = build_frontier_multiple_testing_rerun_queue(
-        source=source_path,
-        json_path=multiple_testing_rerun_json_path,
-        artifact_manifest_path=multiple_testing_rerun_artifact_manifest_path,
-        registry_path=registry_path,
-        name=multiple_testing_rerun_name,
-        version=multiple_testing_rerun_version,
-        output_dir=multiple_testing_rerun_output_dir,
-        python_executable=python_executable,
-    )
-    summary = rerun_payload["summary"]
-    return {
-        "frontier_multiple_testing_rerun_queue": {
+    derived: dict[str, Any] = {}
+    if multiple_testing_rerun_json_path is not None:
+        rerun_payload = build_frontier_multiple_testing_rerun_queue(
+            source=source_path,
+            json_path=multiple_testing_rerun_json_path,
+            artifact_manifest_path=multiple_testing_rerun_artifact_manifest_path,
+            registry_path=None
+            if multiple_testing_rerun_name is None or multiple_testing_rerun_version is None
+            else registry_path,
+            name=multiple_testing_rerun_name,
+            version=multiple_testing_rerun_version,
+            output_dir=multiple_testing_rerun_output_dir,
+            python_executable=python_executable,
+        )
+        summary = rerun_payload["summary"]
+        derived["frontier_multiple_testing_rerun_queue"] = {
             "path": str(multiple_testing_rerun_json_path),
             "artifact_manifest": None
             if multiple_testing_rerun_artifact_manifest_path is None
@@ -192,7 +286,38 @@ def _build_derived_artifacts(
             "command_count": summary["command_count"],
             "missing_command_count": summary["missing_command_count"],
         }
-    }
+    if citation_batch_rerun_json_path is not None:
+        citation_payload = build_citation_batch_evidence_rerun_queue(
+            source=source_path,
+            json_path=citation_batch_rerun_json_path,
+            artifact_manifest_path=citation_batch_rerun_artifact_manifest_path,
+            registry_path=None
+            if citation_batch_rerun_name is None or citation_batch_rerun_version is None
+            else registry_path,
+            name=citation_batch_rerun_name,
+            version=citation_batch_rerun_version,
+            output_dir=citation_batch_rerun_output_dir,
+            queue_report_path=citation_batch_queue_report_path,
+            scores_path=citation_batch_scores_path,
+            blind_spots_path=citation_batch_blind_spots_path,
+            source_catalog_paths=citation_batch_source_catalog_paths,
+            search_command=citation_batch_search_command,
+            controlled_sweep_paths=citation_batch_controlled_sweep_paths,
+            query_mode=citation_batch_query_mode,
+            python_executable=python_executable,
+        )
+        summary = citation_payload["summary"]
+        derived["citation_batch_evidence_rerun_queue"] = {
+            "path": str(citation_batch_rerun_json_path),
+            "artifact_manifest": None
+            if citation_batch_rerun_artifact_manifest_path is None
+            else str(citation_batch_rerun_artifact_manifest_path),
+            "status": citation_payload["status"],
+            "blocked_batch_count": summary["blocked_batch_count"],
+            "command_count": summary["command_count"],
+            "missing_command_count": summary["missing_command_count"],
+        }
+    return derived
 
 
 def _load_json_object(path: Path) -> Mapping[str, Any]:
