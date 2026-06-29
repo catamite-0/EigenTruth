@@ -4604,6 +4604,10 @@ evidence, promotion-contract evidence-handoff coverage/manifest/metric-gap
 evidence, the product-trace replay workflow lacks promoted
 action-audit/action-execution child gates, or registered frontier evidence
 handoffs are absent.
+Add `--require-product-runtime-drift-claim-factuality-evidence` when a release
+must additionally prove that claim factuality probe comparison evidence survived
+the product-runtime handoff; it is opt-in so existing `frontier_audit` checks keep
+their current default evidence boundary.
 Add `--performance-baseline-key performance_baseline:<name>:<version>` when the
 final candidate must match a registered performance handoff. The comparison
 verifies that performance baseline manifest, reloads its runtime recommendation,
@@ -4671,6 +4675,10 @@ traffic replay back into the same release gate as model, route, and selector
 evidence. Add `--require-product-runtime-drift-pre-generation-evidence` when the
 release must also require pre-generation probe comparison coverage,
 manifest-verification, model/run breadth, redline pass-rate, AUROC, and
+redline-margin metrics from that drift report. Add
+`--require-product-runtime-drift-claim-factuality-evidence` when the release must
+also require claim factuality probe comparison coverage, manifest-verification,
+model/run breadth, redline pass-rate, AUROC, selective accuracy/coverage, and
 redline-margin metrics from that drift report. Add
 `--require-product-runtime-drift-triple-audit-evidence` when the release must
 also require trace-level triple coverage, audited-claim coverage, audit
@@ -5002,6 +5010,13 @@ compact contract, manifest, and registry metadata retain the comparator report
 path, source type, registry key, decision status, recommended route, route-gate
 status, and text-redline status so runtime traces can show which external
 evidence handoff was release-gated.
+When the release candidate was gated by a claim factuality probe comparison, the
+compact contract, manifest, and registry metadata retain the comparison report,
+manifest, registry record, workflow/status, model/run counts, redline status,
+best run/model/layer, test-label AUROC, selective accuracy/coverage, conformal
+threshold, and redline margin. `ProductRuntimeEvidenceBundle` can lazily verify
+that comparison manifest and attach the local registry record to runtime trace
+metadata without rerunning claim probes.
 When the release candidate was gated by a counterfactual verifier audit, the
 compact contract, manifest, and registry metadata retain the audit report,
 manifest, registry record, workflow, status, record count, pass rate,
@@ -5415,6 +5430,7 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --product-runtime-drift-report artifacts/smollm2_product_runtime_drift_v1_6/product-runtime-drift.json \
   --require-product-runtime-drift-promotion-evidence \
   --require-product-runtime-drift-pre-generation-evidence \
+  --require-product-runtime-drift-claim-factuality-evidence \
   --require-product-runtime-drift-triple-audit-evidence \
   --require-product-runtime-drift-evidence-handoff-evidence \
   --adapter-family-matrix artifacts/smollm2_l20_adapter_family_retrieval_structured_qa/adapter-family-matrix.json \
@@ -7183,7 +7199,9 @@ built. It compares that current baseline against a file path or a registered
 `product_runtime_baseline:*:*` record and can fail closed on latency, route cost,
 retrieval-use, cache-hit-rate, verifier-skip-rate, promotion-contract coverage,
 covered-fact per-property rollup drift, triple-extraction fixture-matrix
-coverage/quality drift, counterfactual verifier-audit coverage, manifest
+coverage/quality drift, claim factuality probe comparison coverage,
+manifest-verification, redline, AUROC, selective-accuracy, and
+selective-coverage drift, counterfactual verifier-audit coverage, manifest
 verification, record count, pass rate, false-invariance rate, flip-success
 drift, trace-level triple/slot-audit coverage, and trace-count drift.
 `build_product_trace_corpus.py` materializes redaction-safe
@@ -7242,6 +7260,16 @@ python benchmarks/compare_product_runtime_baselines.py \
   --max-cache-hit-rate-drop 0.0 \
   --max-verification-skip-rate-drop 0.0 \
   --min-promotion-contract-coverage 1.0 \
+  --min-claim-factuality-probe-comparison-coverage 1.0 \
+  --min-claim-factuality-probe-comparison-manifest-verified-rate 1.0 \
+  --min-claim-factuality-probe-comparison-model-count 2 \
+  --min-claim-factuality-probe-comparison-run-count 2 \
+  --min-claim-factuality-probe-comparison-redline-pass-rate 1.0 \
+  --max-claim-factuality-probe-comparison-best-test-label-auroc-drop 0.02 \
+  --max-claim-factuality-probe-comparison-best-test-selective-accuracy-drop 0.02 \
+  --max-claim-factuality-probe-comparison-best-test-selective-coverage-drop 0.02 \
+  --max-claim-factuality-probe-comparison-best-redline-auroc-drop 0.02 \
+  --max-claim-factuality-probe-comparison-best-redline-margin-drop 0.02 \
   --min-counterfactual-verification-coverage 1.0 \
   --min-counterfactual-verification-manifest-verified-rate 1.0 \
   --min-counterfactual-verification-record-count 10 \
@@ -7329,6 +7357,11 @@ pre-generation probe comparison gates such as
 `--min-runtime-drift-pre-generation-probe-comparison-manifest-verified-rate`,
 `--min-runtime-drift-pre-generation-probe-comparison-redline-pass-rate`, and
 `--max-runtime-drift-pre-generation-probe-comparison-best-*-drop`,
+claim factuality probe comparison gates such as
+`--min-runtime-drift-claim-factuality-probe-comparison-coverage`,
+`--min-runtime-drift-claim-factuality-probe-comparison-manifest-verified-rate`,
+`--min-runtime-drift-claim-factuality-probe-comparison-redline-pass-rate`, and
+`--max-runtime-drift-claim-factuality-probe-comparison-best-*-drop`,
 `--min-runtime-drift-triple-extraction-fixture-matrix-coverage`, the two
 `--max-runtime-drift-triple-extraction-fixture-matrix-mean-*` drop gates, and
 covered-fact property gates such as
@@ -7378,6 +7411,16 @@ python benchmarks/run_product_trace_replay_workflow.py \
   --max-runtime-drift-pre-generation-probe-comparison-best-test-label-auroc-drop 0.02 \
   --max-runtime-drift-pre-generation-probe-comparison-best-redline-auroc-drop 0.02 \
   --max-runtime-drift-pre-generation-probe-comparison-best-redline-margin-drop 0.02 \
+  --min-runtime-drift-claim-factuality-probe-comparison-coverage 1.0 \
+  --min-runtime-drift-claim-factuality-probe-comparison-manifest-verified-rate 1.0 \
+  --min-runtime-drift-claim-factuality-probe-comparison-model-count 2 \
+  --min-runtime-drift-claim-factuality-probe-comparison-run-count 2 \
+  --min-runtime-drift-claim-factuality-probe-comparison-redline-pass-rate 1.0 \
+  --max-runtime-drift-claim-factuality-probe-comparison-best-test-label-auroc-drop 0.02 \
+  --max-runtime-drift-claim-factuality-probe-comparison-best-test-selective-accuracy-drop 0.02 \
+  --max-runtime-drift-claim-factuality-probe-comparison-best-test-selective-coverage-drop 0.02 \
+  --max-runtime-drift-claim-factuality-probe-comparison-best-redline-auroc-drop 0.02 \
+  --max-runtime-drift-claim-factuality-probe-comparison-best-redline-margin-drop 0.02 \
   --min-runtime-drift-covered-fact-property-metric-count 3 \
   --min-runtime-drift-covered-fact-min-records 8 \
   --min-runtime-drift-covered-fact-min-source-documents 100 \

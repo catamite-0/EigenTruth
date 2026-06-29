@@ -18,6 +18,18 @@ PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_KEYS: tuple[str, ...] = (
     "pre_generation_probe_comparison_best_redline_auroc",
     "pre_generation_probe_comparison_best_redline_margin",
 )
+PRODUCT_RUNTIME_DRIFT_CLAIM_FACTUALITY_EVIDENCE_KEYS: tuple[str, ...] = (
+    "claim_factuality_probe_comparison_coverage_rate",
+    "claim_factuality_probe_comparison_manifest_verified_rate",
+    "claim_factuality_probe_comparison_model_count",
+    "claim_factuality_probe_comparison_run_count",
+    "claim_factuality_probe_comparison_redline_pass_rate",
+    "claim_factuality_probe_comparison_best_test_label_auroc",
+    "claim_factuality_probe_comparison_best_test_selective_accuracy",
+    "claim_factuality_probe_comparison_best_test_selective_coverage",
+    "claim_factuality_probe_comparison_best_redline_auroc",
+    "claim_factuality_probe_comparison_best_redline_margin",
+)
 PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_KEYS: tuple[str, ...] = (
     "counterfactual_verification_coverage_rate",
     "counterfactual_verification_manifest_verified_rate",
@@ -65,6 +77,7 @@ PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS: tuple[str, ...] = (
 PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS: dict[str, tuple[str, ...]] = {
     "promotion": PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_KEYS,
     "pre_generation": PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_KEYS,
+    "claim_factuality": PRODUCT_RUNTIME_DRIFT_CLAIM_FACTUALITY_EVIDENCE_KEYS,
     "counterfactual": PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_KEYS,
     "triple_audit": PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_KEYS,
     "covered_fact_property": PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_KEYS,

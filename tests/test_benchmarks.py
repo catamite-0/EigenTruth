@@ -16004,6 +16004,12 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         blocked_metric_count=0,
         pre_generation_evidence=True,
     )
+    claim_factuality_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "claim-factuality-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        claim_factuality_evidence=True,
+    )
     counterfactual_drift_report = _write_product_runtime_drift_report(
         tmp_path / "counterfactual-runtime-drift",
         status="promote",
@@ -16021,6 +16027,13 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         blocked_metric_count=0,
         pre_generation_evidence=True,
         pre_generation_blocked=True,
+    )
+    blocked_claim_factuality_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "blocked-claim-factuality-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        claim_factuality_evidence=True,
+        claim_factuality_blocked=True,
     )
     blocked_counterfactual_drift_report = _write_product_runtime_drift_report(
         tmp_path / "blocked-counterfactual-runtime-drift",
@@ -16145,6 +16158,39 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         min_false_refuted_rate=0.99,
         product_runtime_drift_report_path=blocked_pre_generation_drift_report,
         require_product_runtime_drift_pre_generation_evidence=True,
+    )
+    claim_factuality = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=claim_factuality_drift_report,
+        require_product_runtime_drift_claim_factuality_evidence=True,
+    )
+    missing_claim_factuality = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=missing_evidence_drift_report,
+        require_product_runtime_drift_claim_factuality_evidence=True,
+    )
+    blocked_claim_factuality = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=blocked_claim_factuality_drift_report,
+        require_product_runtime_drift_claim_factuality_evidence=True,
     )
     counterfactual = module.compare_release_candidates(
         readiness_registry_path=registry_path,
@@ -16424,6 +16470,53 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
     assert any(
         "pre-generation evidence blocked 1 metric" in reason
         for reason in blocked_pre_generation["decision"]["blocking_reasons"][0]["reasons"]
+    )
+    assert claim_factuality["decision"]["status"] == "promote"
+    assert claim_factuality["config"][
+        "require_product_runtime_drift_claim_factuality_evidence"
+    ] is True
+    claim_factuality_summary = claim_factuality["release_candidate"][
+        "product_runtime_drift"
+    ]["summary"]
+    assert claim_factuality_summary["claim_factuality_evidence_required"] is True
+    assert claim_factuality_summary["claim_factuality_evidence_metric_count"] == 10
+    assert claim_factuality_summary["claim_factuality_evidence_blocked_metric_count"] == 0
+    assert claim_factuality_summary[
+        "claim_factuality_probe_comparison_best_test_selective_accuracy_current"
+    ] == pytest.approx(0.90)
+    assert claim_factuality_summary[
+        "claim_factuality_probe_comparison_best_redline_margin_status"
+    ] == "pass"
+    assert missing_claim_factuality["decision"]["status"] == "blocked"
+    assert missing_claim_factuality["product_runtime_drift_gate"]["summary"][
+        "claim_factuality_evidence_missing_metrics"
+    ] == (
+        "promotion_contract.claim_factuality_probe_comparison.coverage_rate",
+        "promotion_contract.claim_factuality_probe_comparison.manifest_verified_rate",
+        "promotion_contract.claim_factuality_probe_comparison.model_count.mean",
+        "promotion_contract.claim_factuality_probe_comparison.run_count.mean",
+        "promotion_contract.claim_factuality_probe_comparison.redline_pass_rate",
+        "promotion_contract.claim_factuality_probe_comparison.best_test_label_auroc.mean",
+        "promotion_contract.claim_factuality_probe_comparison.best_test_selective_accuracy.mean",
+        "promotion_contract.claim_factuality_probe_comparison.best_test_selective_coverage.mean",
+        "promotion_contract.claim_factuality_probe_comparison.best_redline_auroc.mean",
+        "promotion_contract.claim_factuality_probe_comparison.best_redline_margin.mean",
+    )
+    assert any(
+        "claim factuality evidence metrics are incomplete" in reason
+        for reason in missing_claim_factuality["decision"]["blocking_reasons"][0][
+            "reasons"
+        ]
+    )
+    assert blocked_claim_factuality["decision"]["status"] == "blocked"
+    assert blocked_claim_factuality["product_runtime_drift_gate"]["summary"][
+        "claim_factuality_evidence_blocked_metric_count"
+    ] == 1
+    assert any(
+        "claim factuality evidence blocked 1 metric" in reason
+        for reason in blocked_claim_factuality["decision"]["blocking_reasons"][0][
+            "reasons"
+        ]
     )
     assert counterfactual["decision"]["status"] == "promote"
     assert counterfactual["config"]["require_product_runtime_drift_counterfactual_evidence"] is True
@@ -23698,6 +23791,8 @@ def _write_product_runtime_drift_report(
     promotion_evidence=False,
     pre_generation_evidence=False,
     pre_generation_blocked=False,
+    claim_factuality_evidence=False,
+    claim_factuality_blocked=False,
     counterfactual_evidence=False,
     counterfactual_blocked=False,
     triple_audit_evidence=False,
@@ -23903,6 +23998,138 @@ def _write_product_runtime_drift_report(
                     "promotion_contract.pre_generation_probe_comparison."
                     "best_redline_margin.mean below gate"
                     if pre_generation_blocked
+                    else None
+                ),
+            },
+        ])
+    if claim_factuality_evidence:
+        claim_status = "blocked" if claim_factuality_blocked else "pass"
+        metrics.extend([
+            {
+                "metric": "promotion_contract.claim_factuality_probe_comparison.coverage_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": (
+                    "promotion_contract.claim_factuality_probe_comparison."
+                    "manifest_verified_rate"
+                ),
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "promotion_contract.claim_factuality_probe_comparison.model_count.mean",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 2.0,
+                "current": 2.0,
+                "absolute_delta": 0.0,
+                "threshold": 2.0,
+                "reason": None,
+            },
+            {
+                "metric": "promotion_contract.claim_factuality_probe_comparison.run_count.mean",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 2.0,
+                "current": 2.0,
+                "absolute_delta": 0.0,
+                "threshold": 2.0,
+                "reason": None,
+            },
+            {
+                "metric": "promotion_contract.claim_factuality_probe_comparison.redline_pass_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": (
+                    "promotion_contract.claim_factuality_probe_comparison."
+                    "best_test_label_auroc.mean"
+                ),
+                "status": "pass",
+                "comparison": "max_drop",
+                "baseline": 0.84,
+                "current": 0.83,
+                "absolute_delta": -0.01,
+                "absolute_drop": 0.01,
+                "threshold": 0.05,
+                "reason": None,
+            },
+            {
+                "metric": (
+                    "promotion_contract.claim_factuality_probe_comparison."
+                    "best_test_selective_accuracy.mean"
+                ),
+                "status": "pass",
+                "comparison": "max_drop",
+                "baseline": 0.91,
+                "current": 0.90,
+                "absolute_delta": -0.01,
+                "absolute_drop": 0.01,
+                "threshold": 0.05,
+                "reason": None,
+            },
+            {
+                "metric": (
+                    "promotion_contract.claim_factuality_probe_comparison."
+                    "best_test_selective_coverage.mean"
+                ),
+                "status": "pass",
+                "comparison": "max_drop",
+                "baseline": 0.78,
+                "current": 0.77,
+                "absolute_delta": -0.01,
+                "absolute_drop": 0.01,
+                "threshold": 0.05,
+                "reason": None,
+            },
+            {
+                "metric": (
+                    "promotion_contract.claim_factuality_probe_comparison."
+                    "best_redline_auroc.mean"
+                ),
+                "status": "pass",
+                "comparison": "max_drop",
+                "baseline": 0.66,
+                "current": 0.65,
+                "absolute_delta": -0.01,
+                "absolute_drop": 0.01,
+                "threshold": 0.05,
+                "reason": None,
+            },
+            {
+                "metric": (
+                    "promotion_contract.claim_factuality_probe_comparison."
+                    "best_redline_margin.mean"
+                ),
+                "status": claim_status,
+                "comparison": "max_drop",
+                "baseline": 0.18,
+                "current": 0.04 if claim_factuality_blocked else 0.18,
+                "absolute_delta": -0.14 if claim_factuality_blocked else 0.0,
+                "absolute_drop": 0.14 if claim_factuality_blocked else 0.0,
+                "threshold": 0.05,
+                "reason": (
+                    "promotion_contract.claim_factuality_probe_comparison."
+                    "best_redline_margin.mean below gate"
+                    if claim_factuality_blocked
                     else None
                 ),
             },
@@ -32084,7 +32311,7 @@ def test_run_product_runtime_baseline_reuses_trace_record_cache(tmp_path, monkey
     assert first["config"]["trace_record_cache"]["cache_hit"] is False
     assert first["config"]["trace_record_cache"]["cache_written"] is True
     assert first["paths"]["trace_records_cache"] == str(cache_path)
-    assert cache_payload["schema_version"] == 14
+    assert cache_payload["schema_version"] == 15
     assert cache_payload["workflow"] == "product_runtime_baseline_trace_records"
     assert cache_payload["summary"]["trace_count"] == 2
     assert cache_payload["policy"]["payload"]["max_total_seconds"] == 0.3
@@ -32715,6 +32942,152 @@ def test_compare_product_runtime_baselines_gates_pre_generation_probe_drift(tmp_
     assert record.metadata["pre_generation_probe_comparison_best_test_label_auroc_current"] == pytest.approx(
         0.72
     )
+
+
+def test_compare_product_runtime_baselines_gates_claim_factuality_probe_drift(tmp_path):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    registry_module = importlib.import_module("eigentruth.registry")
+    baseline_trace = tmp_path / "baseline-trace.json"
+    current_trace = tmp_path / "current-trace.json"
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    drift_report = tmp_path / "drift.json"
+    manifest_path = tmp_path / "drift-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    _write_product_runtime_trace(
+        baseline_trace,
+        request_id="baseline",
+        total_seconds=0.10,
+        route_seconds=0.02,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=1,
+        cache_misses=0,
+        metadata={
+            "claim_factuality_probe_comparison_source": "registry",
+            "claim_factuality_probe_comparison_record": (
+                "report:claim-factuality-probe-comparison:0.1"
+            ),
+            "claim_factuality_probe_comparison_status": "promote",
+            "claim_factuality_probe_comparison_report_status": "ready",
+            "claim_factuality_probe_comparison_manifest_verification": {"passed": True},
+            "claim_factuality_probe_comparison_model_count": 2,
+            "claim_factuality_probe_comparison_run_count": 2,
+            "claim_factuality_probe_comparison_redline_passed": True,
+            "claim_factuality_probe_comparison_redline_run_count": 2,
+            "claim_factuality_probe_comparison_best_run": "qwen05",
+            "claim_factuality_probe_comparison_best_model": "Qwen/Qwen2.5-0.5B",
+            "claim_factuality_probe_comparison_best_record_count": 96,
+            "claim_factuality_probe_comparison_best_layer": -4,
+            "claim_factuality_probe_comparison_best_test_label_auroc": 0.84,
+            "claim_factuality_probe_comparison_best_test_selective_accuracy": 0.91,
+            "claim_factuality_probe_comparison_best_test_selective_coverage": 0.78,
+            "claim_factuality_probe_comparison_best_conformal_threshold": 0.62,
+            "claim_factuality_probe_comparison_best_redline_signal": (
+                "answer_negation_flag"
+            ),
+            "claim_factuality_probe_comparison_best_redline_auroc": 0.66,
+            "claim_factuality_probe_comparison_best_redline_margin": 0.18,
+        },
+    )
+    _write_product_runtime_trace(
+        current_trace,
+        request_id="current",
+        total_seconds=0.10,
+        route_seconds=0.02,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=1,
+        cache_misses=0,
+        metadata={
+            "claim_factuality_probe_comparison_source": "runtime_evidence_bundle",
+            "claim_factuality_probe_comparison_record": (
+                "report:claim-factuality-probe-comparison:0.2"
+            ),
+            "claim_factuality_probe_comparison_status": "promote",
+            "claim_factuality_probe_comparison_report_status": "ready",
+            "claim_factuality_probe_comparison_manifest_verification": {"passed": False},
+            "claim_factuality_probe_comparison_model_count": 1,
+            "claim_factuality_probe_comparison_run_count": 1,
+            "claim_factuality_probe_comparison_redline_passed": False,
+            "claim_factuality_probe_comparison_redline_run_count": 1,
+            "claim_factuality_probe_comparison_best_run": "smollm2",
+            "claim_factuality_probe_comparison_best_model": "HuggingFaceTB/SmolLM2-135M",
+            "claim_factuality_probe_comparison_best_record_count": 70,
+            "claim_factuality_probe_comparison_best_layer": -10,
+            "claim_factuality_probe_comparison_best_test_label_auroc": 0.74,
+            "claim_factuality_probe_comparison_best_test_selective_accuracy": 0.83,
+            "claim_factuality_probe_comparison_best_test_selective_coverage": 0.70,
+            "claim_factuality_probe_comparison_best_conformal_threshold": 0.59,
+            "claim_factuality_probe_comparison_best_redline_signal": "answer_length",
+            "claim_factuality_probe_comparison_best_redline_auroc": 0.56,
+            "claim_factuality_probe_comparison_best_redline_margin": 0.04,
+        },
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=baseline_report,
+        )
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(current_trace,),
+            report_path=current_report,
+        )
+    )
+
+    payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        report_path=drift_report,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="runtime-drift-claim-factuality",
+        version="0.1",
+        min_claim_factuality_probe_comparison_coverage=1.0,
+        min_claim_factuality_probe_comparison_manifest_verified_rate=1.0,
+        min_claim_factuality_probe_comparison_model_count=2,
+        min_claim_factuality_probe_comparison_run_count=2,
+        min_claim_factuality_probe_comparison_redline_pass_rate=1.0,
+        max_claim_factuality_probe_comparison_best_test_label_auroc_drop=0.05,
+        max_claim_factuality_probe_comparison_best_test_selective_accuracy_drop=0.05,
+        max_claim_factuality_probe_comparison_best_test_selective_coverage_drop=0.05,
+        max_claim_factuality_probe_comparison_best_redline_auroc_drop=0.05,
+        max_claim_factuality_probe_comparison_best_redline_margin_drop=0.05,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get("product_runtime_drift_report:runtime-drift-claim-factuality:0.1")
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["blocked_metric_count"] == 9
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.claim_factuality_probe_comparison.coverage_rate",
+    )["status"] == "pass"
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.claim_factuality_probe_comparison.manifest_verified_rate",
+    )["current"] == pytest.approx(0.0)
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.claim_factuality_probe_comparison.best_test_selective_accuracy.mean",
+    )["absolute_drop"] == pytest.approx(0.08)
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.claim_factuality_probe_comparison.best_redline_margin.mean",
+    )["status"] == "blocked"
+    assert manifest["metadata"]["claim_factuality_probe_comparison_blocked_metric_count"] == 9
+    assert manifest["metadata"]["claim_factuality_probe_comparison_model_count_current"] == pytest.approx(1.0)
+    assert manifest["metadata"]["claim_factuality_probe_comparison_best_test_selective_coverage_status"] == (
+        "blocked"
+    )
+    assert record.metadata["claim_factuality_probe_comparison_blocked_metric_count"] == 9
+    assert record.metadata[
+        "claim_factuality_probe_comparison_best_test_label_auroc_current"
+    ] == pytest.approx(0.74)
 
 
 def test_compare_product_runtime_baselines_gates_counterfactual_verification_drift(tmp_path):

@@ -21,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-_TRACE_RECORD_CACHE_SCHEMA_VERSION = 14
+_TRACE_RECORD_CACHE_SCHEMA_VERSION = 15
 _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "promotion_contract_coverage_rate",
     "triple_extraction_fixture_matrix_coverage_rate",
@@ -37,6 +37,18 @@ _PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "pre_generation_probe_comparison_best_test_label_auroc",
     "pre_generation_probe_comparison_best_redline_auroc",
     "pre_generation_probe_comparison_best_redline_margin",
+)
+_PRODUCT_RUNTIME_DRIFT_CLAIM_FACTUALITY_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "claim_factuality_probe_comparison_coverage_rate",
+    "claim_factuality_probe_comparison_manifest_verified_rate",
+    "claim_factuality_probe_comparison_model_count",
+    "claim_factuality_probe_comparison_run_count",
+    "claim_factuality_probe_comparison_redline_pass_rate",
+    "claim_factuality_probe_comparison_best_test_label_auroc",
+    "claim_factuality_probe_comparison_best_test_selective_accuracy",
+    "claim_factuality_probe_comparison_best_test_selective_coverage",
+    "claim_factuality_probe_comparison_best_redline_auroc",
+    "claim_factuality_probe_comparison_best_redline_margin",
 )
 _PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "counterfactual_verification_coverage_rate",
@@ -179,6 +191,32 @@ _PROMOTION_CONTRACT_PRE_GENERATION_PROBE_COMPARISON_FIELDS: tuple[str, ...] = (
     "promotion_contract_pre_generation_probe_comparison_best_redline_signal",
     "promotion_contract_pre_generation_probe_comparison_best_redline_auroc",
     "promotion_contract_pre_generation_probe_comparison_best_redline_margin",
+)
+_PROMOTION_CONTRACT_CLAIM_FACTUALITY_PROBE_COMPARISON_FIELDS: tuple[str, ...] = (
+    "promotion_contract_claim_factuality_probe_comparison_available",
+    "promotion_contract_claim_factuality_probe_comparison_source",
+    "promotion_contract_claim_factuality_probe_comparison_report",
+    "promotion_contract_claim_factuality_probe_comparison_manifest",
+    "promotion_contract_claim_factuality_probe_comparison_registry",
+    "promotion_contract_claim_factuality_probe_comparison_record",
+    "promotion_contract_claim_factuality_probe_comparison_manifest_verified",
+    "promotion_contract_claim_factuality_probe_comparison_status",
+    "promotion_contract_claim_factuality_probe_comparison_report_status",
+    "promotion_contract_claim_factuality_probe_comparison_model_count",
+    "promotion_contract_claim_factuality_probe_comparison_run_count",
+    "promotion_contract_claim_factuality_probe_comparison_redline_passed",
+    "promotion_contract_claim_factuality_probe_comparison_redline_run_count",
+    "promotion_contract_claim_factuality_probe_comparison_best_run",
+    "promotion_contract_claim_factuality_probe_comparison_best_model",
+    "promotion_contract_claim_factuality_probe_comparison_best_record_count",
+    "promotion_contract_claim_factuality_probe_comparison_best_layer",
+    "promotion_contract_claim_factuality_probe_comparison_best_test_label_auroc",
+    "promotion_contract_claim_factuality_probe_comparison_best_test_selective_accuracy",
+    "promotion_contract_claim_factuality_probe_comparison_best_test_selective_coverage",
+    "promotion_contract_claim_factuality_probe_comparison_best_conformal_threshold",
+    "promotion_contract_claim_factuality_probe_comparison_best_redline_signal",
+    "promotion_contract_claim_factuality_probe_comparison_best_redline_auroc",
+    "promotion_contract_claim_factuality_probe_comparison_best_redline_margin",
 )
 _PROMOTION_CONTRACT_COUNTERFACTUAL_VERIFICATION_FIELDS: tuple[str, ...] = (
     "promotion_contract_counterfactual_verification_available",
@@ -965,6 +1003,8 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         compact[field_name] = metrics.get(field_name)
     for field_name in _PROMOTION_CONTRACT_PRE_GENERATION_PROBE_COMPARISON_FIELDS:
         compact[field_name] = metrics.get(field_name)
+    for field_name in _PROMOTION_CONTRACT_CLAIM_FACTUALITY_PROBE_COMPARISON_FIELDS:
+        compact[field_name] = metrics.get(field_name)
     for field_name in _PROMOTION_CONTRACT_COUNTERFACTUAL_VERIFICATION_FIELDS:
         compact[field_name] = metrics.get(field_name)
     for field_name in _PROMOTION_CONTRACT_EVIDENCE_HANDOFF_FIELDS:
@@ -980,6 +1020,10 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
             field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
             compact[field_name] = metrics.get(field_name)
     for prefix in _PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
+            compact[field_name] = metrics.get(field_name)
+    for prefix in _PRODUCT_RUNTIME_DRIFT_CLAIM_FACTUALITY_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
             compact[field_name] = metrics.get(field_name)
@@ -2011,6 +2055,9 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
     pre_generation = _aggregate_promotion_contract_pre_generation_probe_comparison(
         metrics
     )
+    claim_factuality = _aggregate_promotion_contract_claim_factuality_probe_comparison(
+        metrics
+    )
     counterfactual = _aggregate_promotion_contract_counterfactual_verification(metrics)
     evidence_handoff = _aggregate_promotion_contract_evidence_handoff(metrics)
     product_trace_replay = _aggregate_promotion_contract_product_trace_replay(metrics)
@@ -2063,6 +2110,7 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
         },
         "external_evidence_baseline_comparison": external_evidence,
         "pre_generation_probe_comparison": pre_generation,
+        "claim_factuality_probe_comparison": claim_factuality,
         "counterfactual_verification": counterfactual,
         "evidence_handoff": evidence_handoff,
         "triple_extraction_fixture_matrix": {
@@ -2343,6 +2391,124 @@ def _aggregate_promotion_contract_pre_generation_probe_comparison(
         "best_redline_margin": _numeric_summary(
             item.get(
                 "promotion_contract_pre_generation_probe_comparison_best_redline_margin"
+            )
+            for item in metrics
+        ),
+    }
+
+
+def _aggregate_promotion_contract_claim_factuality_probe_comparison(
+    metrics: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    available_count = sum(
+        1
+        for item in metrics
+        if bool(item.get("promotion_contract_claim_factuality_probe_comparison_available"))
+    )
+    manifest_values = [
+        item.get("promotion_contract_claim_factuality_probe_comparison_manifest_verified")
+        for item in metrics
+    ]
+    manifest_observations = sum(value is not None for value in manifest_values)
+    return {
+        "available_trace_count": available_count,
+        "missing_trace_count": len(metrics) - available_count,
+        "coverage_rate": _safe_div(available_count, len(metrics)),
+        "source_counts": _counts(
+            item.get("promotion_contract_claim_factuality_probe_comparison_source")
+            for item in metrics
+        ),
+        "status_counts": _counts(
+            item.get("promotion_contract_claim_factuality_probe_comparison_status")
+            for item in metrics
+        ),
+        "report_status_counts": _counts(
+            item.get("promotion_contract_claim_factuality_probe_comparison_report_status")
+            for item in metrics
+        ),
+        "record_counts": _counts(
+            item.get("promotion_contract_claim_factuality_probe_comparison_record")
+            for item in metrics
+        ),
+        "manifest_verification_observations": manifest_observations,
+        "manifest_verified_count": sum(value is True for value in manifest_values),
+        "manifest_failed_count": sum(value is False for value in manifest_values),
+        "manifest_unknown_count": len(metrics) - manifest_observations,
+        "model_count": _numeric_summary(
+            item.get("promotion_contract_claim_factuality_probe_comparison_model_count")
+            for item in metrics
+        ),
+        "run_count": _numeric_summary(
+            item.get("promotion_contract_claim_factuality_probe_comparison_run_count")
+            for item in metrics
+        ),
+        "redline_passed_counts": _counts(
+            item.get("promotion_contract_claim_factuality_probe_comparison_redline_passed")
+            for item in metrics
+        ),
+        "redline_run_count": _numeric_summary(
+            item.get(
+                "promotion_contract_claim_factuality_probe_comparison_redline_run_count"
+            )
+            for item in metrics
+        ),
+        "best_run_counts": _counts(
+            item.get("promotion_contract_claim_factuality_probe_comparison_best_run")
+            for item in metrics
+        ),
+        "best_model_counts": _counts(
+            item.get("promotion_contract_claim_factuality_probe_comparison_best_model")
+            for item in metrics
+        ),
+        "best_record_count": _numeric_summary(
+            item.get(
+                "promotion_contract_claim_factuality_probe_comparison_best_record_count"
+            )
+            for item in metrics
+        ),
+        "best_layer": _numeric_summary(
+            item.get("promotion_contract_claim_factuality_probe_comparison_best_layer")
+            for item in metrics
+        ),
+        "best_test_label_auroc": _numeric_summary(
+            item.get(
+                "promotion_contract_claim_factuality_probe_comparison_best_test_label_auroc"
+            )
+            for item in metrics
+        ),
+        "best_test_selective_accuracy": _numeric_summary(
+            item.get(
+                "promotion_contract_claim_factuality_probe_comparison_best_test_selective_accuracy"
+            )
+            for item in metrics
+        ),
+        "best_test_selective_coverage": _numeric_summary(
+            item.get(
+                "promotion_contract_claim_factuality_probe_comparison_best_test_selective_coverage"
+            )
+            for item in metrics
+        ),
+        "best_conformal_threshold": _numeric_summary(
+            item.get(
+                "promotion_contract_claim_factuality_probe_comparison_best_conformal_threshold"
+            )
+            for item in metrics
+        ),
+        "best_redline_signal_counts": _counts(
+            item.get(
+                "promotion_contract_claim_factuality_probe_comparison_best_redline_signal"
+            )
+            for item in metrics
+        ),
+        "best_redline_auroc": _numeric_summary(
+            item.get(
+                "promotion_contract_claim_factuality_probe_comparison_best_redline_auroc"
+            )
+            for item in metrics
+        ),
+        "best_redline_margin": _numeric_summary(
+            item.get(
+                "promotion_contract_claim_factuality_probe_comparison_best_redline_margin"
             )
             for item in metrics
         ),
@@ -2701,6 +2867,10 @@ def _aggregate_promotion_contract_product_runtime_drift(
             metrics,
             prefixes=_PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_PREFIXES,
         ),
+        "claim_factuality_evidence": _aggregate_product_runtime_drift_evidence(
+            metrics,
+            prefixes=_PRODUCT_RUNTIME_DRIFT_CLAIM_FACTUALITY_EVIDENCE_PREFIXES,
+        ),
         "counterfactual_evidence": _aggregate_product_runtime_drift_evidence(
             metrics,
             prefixes=_PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_PREFIXES,
@@ -3005,6 +3175,9 @@ def _write_artifact_manifest(
     promotion_contract_pre_generation_metadata = (
         _promotion_contract_pre_generation_probe_comparison_flat_metadata(report)
     )
+    promotion_contract_claim_factuality_metadata = (
+        _promotion_contract_claim_factuality_probe_comparison_flat_metadata(report)
+    )
     promotion_contract_counterfactual_metadata = (
         _promotion_contract_counterfactual_verification_flat_metadata(report)
     )
@@ -3046,6 +3219,7 @@ def _write_artifact_manifest(
             **promotion_contract_trace_replay_metadata,
             **promotion_contract_external_evidence_metadata,
             **promotion_contract_pre_generation_metadata,
+            **promotion_contract_claim_factuality_metadata,
             **promotion_contract_counterfactual_metadata,
             **promotion_contract_evidence_handoff_metadata,
             **dict(config.metadata),
@@ -3081,6 +3255,9 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
     )
     promotion_contract_pre_generation_metadata = (
         _promotion_contract_pre_generation_probe_comparison_flat_metadata(report)
+    )
+    promotion_contract_claim_factuality_metadata = (
+        _promotion_contract_claim_factuality_probe_comparison_flat_metadata(report)
     )
     promotion_contract_counterfactual_metadata = (
         _promotion_contract_counterfactual_verification_flat_metadata(report)
@@ -3128,6 +3305,7 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
             **promotion_contract_trace_replay_metadata,
             **promotion_contract_external_evidence_metadata,
             **promotion_contract_pre_generation_metadata,
+            **promotion_contract_claim_factuality_metadata,
             **promotion_contract_counterfactual_metadata,
             **promotion_contract_evidence_handoff_metadata,
             **dict(config.metadata),
@@ -3292,6 +3470,12 @@ def _promotion_contract_runtime_drift_flat_metadata(
         _product_runtime_drift_evidence_flat_metadata(
             _mapping(drift.get("pre_generation_evidence")),
             prefixes=_PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_PREFIXES,
+        )
+    )
+    metadata.update(
+        _product_runtime_drift_evidence_flat_metadata(
+            _mapping(drift.get("claim_factuality_evidence")),
+            prefixes=_PRODUCT_RUNTIME_DRIFT_CLAIM_FACTUALITY_EVIDENCE_PREFIXES,
         )
     )
     metadata.update(
@@ -3558,6 +3742,120 @@ def _promotion_contract_pre_generation_probe_comparison_flat_metadata(
         ),
         "promotion_contract_pre_generation_probe_comparison_best_redline_margin_mean": _nested(
             pre_generation,
+            "best_redline_margin",
+            "mean",
+        ),
+    }
+
+
+def _promotion_contract_claim_factuality_probe_comparison_flat_metadata(
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    claim_factuality = _mapping(
+        _nested(
+            report,
+            "summary",
+            "promotion_contract",
+            "claim_factuality_probe_comparison",
+        )
+    )
+    if not claim_factuality:
+        return {}
+    return {
+        "promotion_contract_claim_factuality_probe_comparison_available_trace_count": (
+            claim_factuality.get("available_trace_count")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_missing_trace_count": (
+            claim_factuality.get("missing_trace_count")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_coverage_rate": (
+            claim_factuality.get("coverage_rate")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_source_counts": dict(
+            _mapping(claim_factuality.get("source_counts"))
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_status_counts": dict(
+            _mapping(claim_factuality.get("status_counts"))
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_report_status_counts": dict(
+            _mapping(claim_factuality.get("report_status_counts"))
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_record_counts": dict(
+            _mapping(claim_factuality.get("record_counts"))
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_manifest_verified_count": (
+            claim_factuality.get("manifest_verified_count")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_manifest_failed_count": (
+            claim_factuality.get("manifest_failed_count")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_manifest_unknown_count": (
+            claim_factuality.get("manifest_unknown_count")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_model_count_mean": _nested(
+            claim_factuality,
+            "model_count",
+            "mean",
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_run_count_mean": _nested(
+            claim_factuality,
+            "run_count",
+            "mean",
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_redline_passed_counts": dict(
+            _mapping(claim_factuality.get("redline_passed_counts"))
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_redline_run_count_mean": _nested(
+            claim_factuality,
+            "redline_run_count",
+            "mean",
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_run_counts": dict(
+            _mapping(claim_factuality.get("best_run_counts"))
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_model_counts": dict(
+            _mapping(claim_factuality.get("best_model_counts"))
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_record_count_mean": _nested(
+            claim_factuality,
+            "best_record_count",
+            "mean",
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_layer_mean": _nested(
+            claim_factuality,
+            "best_layer",
+            "mean",
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_test_label_auroc_mean": _nested(
+            claim_factuality,
+            "best_test_label_auroc",
+            "mean",
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_test_selective_accuracy_mean": _nested(
+            claim_factuality,
+            "best_test_selective_accuracy",
+            "mean",
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_test_selective_coverage_mean": _nested(
+            claim_factuality,
+            "best_test_selective_coverage",
+            "mean",
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_conformal_threshold_mean": _nested(
+            claim_factuality,
+            "best_conformal_threshold",
+            "mean",
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_redline_signal_counts": dict(
+            _mapping(claim_factuality.get("best_redline_signal_counts"))
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_redline_auroc_mean": _nested(
+            claim_factuality,
+            "best_redline_auroc",
+            "mean",
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_redline_margin_mean": _nested(
+            claim_factuality,
             "best_redline_margin",
             "mean",
         ),

@@ -1807,6 +1807,10 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             "recommended_pre_generation_probe_comparison_report": (
                 "artifacts/pre-generation-probe-comparison/comparison.json"
             ),
+            "claim_factuality_probe_comparison_status": "promote",
+            "recommended_claim_factuality_probe_comparison_report": (
+                "artifacts/claim-factuality-probe-comparison/comparison.json"
+            ),
             "counterfactual_verification_status": "promote",
             "recommended_counterfactual_verification_report": (
                 "artifacts/counterfactual/counterfactual-verification.json"
@@ -1994,6 +1998,35 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                     "redline_best_signal": "answer_token_count",
                     "redline_best_auroc": 0.61,
                     "redline_margin": 0.13,
+                },
+            },
+            "claim_factuality_probe_comparison": {
+                "report_path": "artifacts/claim-factuality-probe-comparison/comparison.json",
+                "manifest_path": (
+                    "artifacts/claim-factuality-probe-comparison/artifact-manifest.json"
+                ),
+                "source": "registry",
+                "registry": "artifacts/release-registry.json",
+                "record_key": "report:claim-factuality-probe-comparison:0.1",
+                "workflow": "claim_factuality_probe_workflow_comparison",
+                "status": "promote",
+                "report_status": "ready",
+                "model_count": 2,
+                "run_count": 2,
+                "redline_passed": True,
+                "redline_run_count": 2,
+                "best_run": {
+                    "name": "qwen05",
+                    "model": "Qwen/Qwen2.5-0.5B-Instruct",
+                    "record_count": 96,
+                    "recommended_layer": -4,
+                    "test_label_auroc": 0.84,
+                    "test_selective_accuracy": 0.91,
+                    "test_selective_coverage": 0.78,
+                    "conformal_threshold": 0.62,
+                    "redline_best_signal": "answer_negation_flag",
+                    "redline_best_auroc": 0.66,
+                    "redline_margin": 0.18,
                 },
             },
             "counterfactual_verification": {
@@ -2496,6 +2529,28 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
         "answer_token_count"
     )
     assert contract.metadata["pre_generation_probe_comparison_best_redline_margin"] == 0.13
+    assert contract.claim_factuality_probe_comparison["record_key"] == (
+        "report:claim-factuality-probe-comparison:0.1"
+    )
+    assert contract.metadata["claim_factuality_probe_comparison_status"] == "promote"
+    assert contract.metadata["recommended_claim_factuality_probe_comparison_report"] == (
+        "artifacts/claim-factuality-probe-comparison/comparison.json"
+    )
+    assert contract.metadata["claim_factuality_probe_comparison_report"] == (
+        "artifacts/claim-factuality-probe-comparison/comparison.json"
+    )
+    assert contract.metadata["claim_factuality_probe_comparison_record"] == (
+        "report:claim-factuality-probe-comparison:0.1"
+    )
+    assert contract.metadata["claim_factuality_probe_comparison_model_count"] == 2
+    assert contract.metadata[
+        "claim_factuality_probe_comparison_best_test_selective_accuracy"
+    ] == 0.91
+    assert contract.metadata["claim_factuality_probe_comparison_best_conformal_threshold"] == 0.62
+    assert contract.metadata["claim_factuality_probe_comparison_best_redline_signal"] == (
+        "answer_negation_flag"
+    )
+    assert contract.metadata["claim_factuality_probe_comparison_best_redline_margin"] == 0.18
     assert contract.counterfactual_verification["record_key"] == (
         "report:counterfactual-verifier-audit:0.1"
     )
@@ -2812,6 +2867,29 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
                 "redline_margin": 0.13,
             },
         },
+        claim_factuality_probe_comparison={
+            "report_path": "claim-factuality-probe-comparison.json",
+            "record_key": "report:claim-factuality-probe-comparison:0.1",
+            "status": "promote",
+            "report_status": "ready",
+            "model_count": 2,
+            "run_count": 2,
+            "redline_passed": True,
+            "redline_run_count": 2,
+            "best_run": {
+                "name": "qwen05",
+                "model": "Qwen/Qwen2.5-0.5B-Instruct",
+                "record_count": 96,
+                "recommended_layer": -4,
+                "test_label_auroc": 0.84,
+                "test_selective_accuracy": 0.91,
+                "test_selective_coverage": 0.78,
+                "conformal_threshold": 0.62,
+                "redline_best_signal": "answer_negation_flag",
+                "redline_best_auroc": 0.66,
+                "redline_margin": 0.18,
+            },
+        },
         counterfactual_verification={
             "report_path": "counterfactual-verification.json",
             "record_key": "report:counterfactual-verifier-audit:0.1",
@@ -2962,6 +3040,25 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert runtime_metrics["promotion_contract_summary"][
         "pre_generation_probe_comparison"
     ]["best_redline_signal"] == "answer_token_count"
+    assert (
+        runtime_metrics["promotion_contract_claim_factuality_probe_comparison_available"]
+        is True
+    )
+    assert runtime_metrics[
+        "promotion_contract_claim_factuality_probe_comparison_record"
+    ] == "report:claim-factuality-probe-comparison:0.1"
+    assert runtime_metrics[
+        "promotion_contract_claim_factuality_probe_comparison_best_test_selective_accuracy"
+    ] == pytest.approx(0.91)
+    assert runtime_metrics[
+        "promotion_contract_claim_factuality_probe_comparison_best_conformal_threshold"
+    ] == pytest.approx(0.62)
+    assert runtime_metrics[
+        "promotion_contract_claim_factuality_probe_comparison_best_redline_margin"
+    ] == pytest.approx(0.18)
+    assert runtime_metrics["promotion_contract_summary"][
+        "claim_factuality_probe_comparison"
+    ]["best_redline_signal"] == "answer_negation_flag"
     assert runtime_metrics["promotion_contract_counterfactual_verification_available"] is True
     assert runtime_metrics[
         "promotion_contract_counterfactual_verification_record"

@@ -90,6 +90,16 @@ class ProductTraceReplayWorkflowConfig:
     max_runtime_drift_pre_generation_probe_comparison_best_test_label_auroc_drop: float | None = None
     max_runtime_drift_pre_generation_probe_comparison_best_redline_auroc_drop: float | None = None
     max_runtime_drift_pre_generation_probe_comparison_best_redline_margin_drop: float | None = None
+    min_runtime_drift_claim_factuality_probe_comparison_coverage: float | None = None
+    min_runtime_drift_claim_factuality_probe_comparison_manifest_verified_rate: float | None = None
+    min_runtime_drift_claim_factuality_probe_comparison_model_count: float | None = None
+    min_runtime_drift_claim_factuality_probe_comparison_run_count: float | None = None
+    min_runtime_drift_claim_factuality_probe_comparison_redline_pass_rate: float | None = None
+    max_runtime_drift_claim_factuality_probe_comparison_best_test_label_auroc_drop: float | None = None
+    max_runtime_drift_claim_factuality_probe_comparison_best_test_selective_accuracy_drop: float | None = None
+    max_runtime_drift_claim_factuality_probe_comparison_best_test_selective_coverage_drop: float | None = None
+    max_runtime_drift_claim_factuality_probe_comparison_best_redline_auroc_drop: float | None = None
+    max_runtime_drift_claim_factuality_probe_comparison_best_redline_margin_drop: float | None = None
     min_runtime_drift_counterfactual_verification_coverage: float | None = None
     min_runtime_drift_counterfactual_verification_manifest_verified_rate: float | None = None
     min_runtime_drift_counterfactual_verification_record_count: float | None = None
@@ -205,6 +215,16 @@ class ProductTraceReplayWorkflowConfig:
                 self.max_runtime_drift_pre_generation_probe_comparison_best_test_label_auroc_drop,
                 self.max_runtime_drift_pre_generation_probe_comparison_best_redline_auroc_drop,
                 self.max_runtime_drift_pre_generation_probe_comparison_best_redline_margin_drop,
+                self.min_runtime_drift_claim_factuality_probe_comparison_coverage,
+                self.min_runtime_drift_claim_factuality_probe_comparison_manifest_verified_rate,
+                self.min_runtime_drift_claim_factuality_probe_comparison_model_count,
+                self.min_runtime_drift_claim_factuality_probe_comparison_run_count,
+                self.min_runtime_drift_claim_factuality_probe_comparison_redline_pass_rate,
+                self.max_runtime_drift_claim_factuality_probe_comparison_best_test_label_auroc_drop,
+                self.max_runtime_drift_claim_factuality_probe_comparison_best_test_selective_accuracy_drop,
+                self.max_runtime_drift_claim_factuality_probe_comparison_best_test_selective_coverage_drop,
+                self.max_runtime_drift_claim_factuality_probe_comparison_best_redline_auroc_drop,
+                self.max_runtime_drift_claim_factuality_probe_comparison_best_redline_margin_drop,
                 self.min_runtime_drift_counterfactual_verification_coverage,
                 self.min_runtime_drift_counterfactual_verification_manifest_verified_rate,
                 self.min_runtime_drift_counterfactual_verification_record_count,
@@ -1348,6 +1368,16 @@ def _runtime_drift_configured(config: ProductTraceReplayWorkflowConfig) -> bool:
             config.max_runtime_drift_pre_generation_probe_comparison_best_test_label_auroc_drop,
             config.max_runtime_drift_pre_generation_probe_comparison_best_redline_auroc_drop,
             config.max_runtime_drift_pre_generation_probe_comparison_best_redline_margin_drop,
+            config.min_runtime_drift_claim_factuality_probe_comparison_coverage,
+            config.min_runtime_drift_claim_factuality_probe_comparison_manifest_verified_rate,
+            config.min_runtime_drift_claim_factuality_probe_comparison_model_count,
+            config.min_runtime_drift_claim_factuality_probe_comparison_run_count,
+            config.min_runtime_drift_claim_factuality_probe_comparison_redline_pass_rate,
+            config.max_runtime_drift_claim_factuality_probe_comparison_best_test_label_auroc_drop,
+            config.max_runtime_drift_claim_factuality_probe_comparison_best_test_selective_accuracy_drop,
+            config.max_runtime_drift_claim_factuality_probe_comparison_best_test_selective_coverage_drop,
+            config.max_runtime_drift_claim_factuality_probe_comparison_best_redline_auroc_drop,
+            config.max_runtime_drift_claim_factuality_probe_comparison_best_redline_margin_drop,
             config.min_runtime_drift_counterfactual_verification_coverage,
             config.min_runtime_drift_counterfactual_verification_manifest_verified_rate,
             config.min_runtime_drift_counterfactual_verification_record_count,
@@ -1423,6 +1453,36 @@ def _runtime_drift_gate_config(config: ProductTraceReplayWorkflowConfig) -> dict
         ),
         "max_pre_generation_probe_comparison_best_redline_margin_drop": (
             config.max_runtime_drift_pre_generation_probe_comparison_best_redline_margin_drop
+        ),
+        "min_claim_factuality_probe_comparison_coverage": (
+            config.min_runtime_drift_claim_factuality_probe_comparison_coverage
+        ),
+        "min_claim_factuality_probe_comparison_manifest_verified_rate": (
+            config.min_runtime_drift_claim_factuality_probe_comparison_manifest_verified_rate
+        ),
+        "min_claim_factuality_probe_comparison_model_count": (
+            config.min_runtime_drift_claim_factuality_probe_comparison_model_count
+        ),
+        "min_claim_factuality_probe_comparison_run_count": (
+            config.min_runtime_drift_claim_factuality_probe_comparison_run_count
+        ),
+        "min_claim_factuality_probe_comparison_redline_pass_rate": (
+            config.min_runtime_drift_claim_factuality_probe_comparison_redline_pass_rate
+        ),
+        "max_claim_factuality_probe_comparison_best_test_label_auroc_drop": (
+            config.max_runtime_drift_claim_factuality_probe_comparison_best_test_label_auroc_drop
+        ),
+        "max_claim_factuality_probe_comparison_best_test_selective_accuracy_drop": (
+            config.max_runtime_drift_claim_factuality_probe_comparison_best_test_selective_accuracy_drop
+        ),
+        "max_claim_factuality_probe_comparison_best_test_selective_coverage_drop": (
+            config.max_runtime_drift_claim_factuality_probe_comparison_best_test_selective_coverage_drop
+        ),
+        "max_claim_factuality_probe_comparison_best_redline_auroc_drop": (
+            config.max_runtime_drift_claim_factuality_probe_comparison_best_redline_auroc_drop
+        ),
+        "max_claim_factuality_probe_comparison_best_redline_margin_drop": (
+            config.max_runtime_drift_claim_factuality_probe_comparison_best_redline_margin_drop
         ),
         "min_counterfactual_verification_coverage": (
             config.min_runtime_drift_counterfactual_verification_coverage
@@ -1843,6 +1903,7 @@ def _runtime_drift_summary(runtime_drift: Mapping[str, Any]) -> dict[str, Any]:
     covered_fact_property = _covered_fact_property_metric_summary(runtime_drift)
     product_trace_action_gate = _product_trace_action_gate_metric_summary(runtime_drift)
     pre_generation_probe_comparison = _pre_generation_probe_comparison_metric_summary(runtime_drift)
+    claim_factuality_probe_comparison = _claim_factuality_probe_comparison_metric_summary(runtime_drift)
     counterfactual_verification = _counterfactual_verification_metric_summary(runtime_drift)
     evidence_handoff = _evidence_handoff_metric_summary(runtime_drift)
     return {
@@ -1862,6 +1923,10 @@ def _runtime_drift_summary(runtime_drift: Mapping[str, Any]) -> dict[str, Any]:
         "pre_generation_probe_comparison_metric_count": pre_generation_probe_comparison["metric_count"],
         "pre_generation_probe_comparison_blocked_metric_count": (
             pre_generation_probe_comparison["blocked_metric_count"]
+        ),
+        "claim_factuality_probe_comparison_metric_count": claim_factuality_probe_comparison["metric_count"],
+        "claim_factuality_probe_comparison_blocked_metric_count": (
+            claim_factuality_probe_comparison["blocked_metric_count"]
         ),
         "counterfactual_verification_metric_count": counterfactual_verification["metric_count"],
         "counterfactual_verification_blocked_metric_count": (
@@ -1898,6 +1963,20 @@ def _pre_generation_probe_comparison_metric_summary(runtime_drift: Mapping[str, 
         for metric in _sequence(runtime_drift.get("metrics"))
         if str(_mapping(metric).get("metric") or "").startswith(
             "promotion_contract.pre_generation_probe_comparison."
+        )
+    )
+    return {
+        "metric_count": len(metrics),
+        "blocked_metric_count": sum(1 for metric in metrics if metric.get("status") == "blocked"),
+    }
+
+
+def _claim_factuality_probe_comparison_metric_summary(runtime_drift: Mapping[str, Any]) -> dict[str, int]:
+    metrics = tuple(
+        _mapping(metric)
+        for metric in _sequence(runtime_drift.get("metrics"))
+        if str(_mapping(metric).get("metric") or "").startswith(
+            "promotion_contract.claim_factuality_probe_comparison."
         )
     )
     return {
@@ -2345,6 +2424,16 @@ def _write_artifact_manifest(
                 "runtime_drift",
                 "pre_generation_probe_comparison_blocked_metric_count",
             ),
+            "runtime_drift_claim_factuality_probe_comparison_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "claim_factuality_probe_comparison_metric_count",
+            ),
+            "runtime_drift_claim_factuality_probe_comparison_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "claim_factuality_probe_comparison_blocked_metric_count",
+            ),
             "runtime_drift_counterfactual_verification_metric_count": _nested(
                 report,
                 "runtime_drift",
@@ -2621,6 +2710,16 @@ def _record_registry(
                 report,
                 "runtime_drift",
                 "pre_generation_probe_comparison_blocked_metric_count",
+            ),
+            "runtime_drift_claim_factuality_probe_comparison_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "claim_factuality_probe_comparison_metric_count",
+            ),
+            "runtime_drift_claim_factuality_probe_comparison_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "claim_factuality_probe_comparison_blocked_metric_count",
             ),
             "runtime_drift_counterfactual_verification_metric_count": _nested(
                 report,
@@ -2996,6 +3095,36 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
         max_runtime_drift_pre_generation_probe_comparison_best_redline_margin_drop=(
             args.max_runtime_drift_pre_generation_probe_comparison_best_redline_margin_drop
         ),
+        min_runtime_drift_claim_factuality_probe_comparison_coverage=(
+            args.min_runtime_drift_claim_factuality_probe_comparison_coverage
+        ),
+        min_runtime_drift_claim_factuality_probe_comparison_manifest_verified_rate=(
+            args.min_runtime_drift_claim_factuality_probe_comparison_manifest_verified_rate
+        ),
+        min_runtime_drift_claim_factuality_probe_comparison_model_count=(
+            args.min_runtime_drift_claim_factuality_probe_comparison_model_count
+        ),
+        min_runtime_drift_claim_factuality_probe_comparison_run_count=(
+            args.min_runtime_drift_claim_factuality_probe_comparison_run_count
+        ),
+        min_runtime_drift_claim_factuality_probe_comparison_redline_pass_rate=(
+            args.min_runtime_drift_claim_factuality_probe_comparison_redline_pass_rate
+        ),
+        max_runtime_drift_claim_factuality_probe_comparison_best_test_label_auroc_drop=(
+            args.max_runtime_drift_claim_factuality_probe_comparison_best_test_label_auroc_drop
+        ),
+        max_runtime_drift_claim_factuality_probe_comparison_best_test_selective_accuracy_drop=(
+            args.max_runtime_drift_claim_factuality_probe_comparison_best_test_selective_accuracy_drop
+        ),
+        max_runtime_drift_claim_factuality_probe_comparison_best_test_selective_coverage_drop=(
+            args.max_runtime_drift_claim_factuality_probe_comparison_best_test_selective_coverage_drop
+        ),
+        max_runtime_drift_claim_factuality_probe_comparison_best_redline_auroc_drop=(
+            args.max_runtime_drift_claim_factuality_probe_comparison_best_redline_auroc_drop
+        ),
+        max_runtime_drift_claim_factuality_probe_comparison_best_redline_margin_drop=(
+            args.max_runtime_drift_claim_factuality_probe_comparison_best_redline_margin_drop
+        ),
         min_runtime_drift_counterfactual_verification_coverage=(
             args.min_runtime_drift_counterfactual_verification_coverage
         ),
@@ -3227,6 +3356,52 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument(
         "--max-runtime-drift-pre-generation-probe-comparison-best-redline-margin-drop",
+        type=float,
+        default=None,
+    )
+    parser.add_argument("--min-runtime-drift-claim-factuality-probe-comparison-coverage", type=float, default=None)
+    parser.add_argument(
+        "--min-runtime-drift-claim-factuality-probe-comparison-manifest-verified-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-runtime-drift-claim-factuality-probe-comparison-model-count",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-runtime-drift-claim-factuality-probe-comparison-run-count",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-runtime-drift-claim-factuality-probe-comparison-redline-pass-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-claim-factuality-probe-comparison-best-test-label-auroc-drop",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-claim-factuality-probe-comparison-best-test-selective-accuracy-drop",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-claim-factuality-probe-comparison-best-test-selective-coverage-drop",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-claim-factuality-probe-comparison-best-redline-auroc-drop",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-claim-factuality-probe-comparison-best-redline-margin-drop",
         type=float,
         default=None,
     )

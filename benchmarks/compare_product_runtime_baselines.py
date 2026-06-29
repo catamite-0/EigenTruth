@@ -74,6 +74,48 @@ _PRE_GENERATION_PROBE_COMPARISON_METADATA_FIELDS: tuple[tuple[str, str], ...] = 
         "pre_generation_probe_comparison_best_redline_margin",
     ),
 )
+_CLAIM_FACTUALITY_PROBE_COMPARISON_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
+    (
+        "promotion_contract.claim_factuality_probe_comparison.coverage_rate",
+        "claim_factuality_probe_comparison_coverage_rate",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.manifest_verified_rate",
+        "claim_factuality_probe_comparison_manifest_verified_rate",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.model_count.mean",
+        "claim_factuality_probe_comparison_model_count",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.run_count.mean",
+        "claim_factuality_probe_comparison_run_count",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.redline_pass_rate",
+        "claim_factuality_probe_comparison_redline_pass_rate",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.best_test_label_auroc.mean",
+        "claim_factuality_probe_comparison_best_test_label_auroc",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.best_test_selective_accuracy.mean",
+        "claim_factuality_probe_comparison_best_test_selective_accuracy",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.best_test_selective_coverage.mean",
+        "claim_factuality_probe_comparison_best_test_selective_coverage",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.best_redline_auroc.mean",
+        "claim_factuality_probe_comparison_best_redline_auroc",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.best_redline_margin.mean",
+        "claim_factuality_probe_comparison_best_redline_margin",
+    ),
+)
 _COUNTERFACTUAL_VERIFICATION_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
     (
         "promotion_contract.counterfactual_verification.coverage_rate",
@@ -313,6 +355,20 @@ def compare_product_runtime_baselines(
     max_pre_generation_probe_comparison_best_test_label_auroc_drop: float | None = None,
     max_pre_generation_probe_comparison_best_redline_auroc_drop: float | None = None,
     max_pre_generation_probe_comparison_best_redline_margin_drop: float | None = None,
+    min_claim_factuality_probe_comparison_coverage: float | None = None,
+    min_claim_factuality_probe_comparison_manifest_verified_rate: float | None = None,
+    min_claim_factuality_probe_comparison_model_count: float | None = None,
+    min_claim_factuality_probe_comparison_run_count: float | None = None,
+    min_claim_factuality_probe_comparison_redline_pass_rate: float | None = None,
+    max_claim_factuality_probe_comparison_best_test_label_auroc_drop: float | None = None,
+    max_claim_factuality_probe_comparison_best_test_selective_accuracy_drop: (
+        float | None
+    ) = None,
+    max_claim_factuality_probe_comparison_best_test_selective_coverage_drop: (
+        float | None
+    ) = None,
+    max_claim_factuality_probe_comparison_best_redline_auroc_drop: float | None = None,
+    max_claim_factuality_probe_comparison_best_redline_margin_drop: float | None = None,
     min_counterfactual_verification_coverage: float | None = None,
     min_counterfactual_verification_manifest_verified_rate: float | None = None,
     min_counterfactual_verification_record_count: float | None = None,
@@ -408,6 +464,48 @@ def compare_product_runtime_baselines(
         ),
         "max_pre_generation_probe_comparison_best_redline_margin_drop": (
             _optional_non_negative_float(max_pre_generation_probe_comparison_best_redline_margin_drop)
+        ),
+        "min_claim_factuality_probe_comparison_coverage": _optional_rate_float(
+            min_claim_factuality_probe_comparison_coverage
+        ),
+        "min_claim_factuality_probe_comparison_manifest_verified_rate": (
+            _optional_rate_float(
+                min_claim_factuality_probe_comparison_manifest_verified_rate
+            )
+        ),
+        "min_claim_factuality_probe_comparison_model_count": (
+            _optional_non_negative_float(min_claim_factuality_probe_comparison_model_count)
+        ),
+        "min_claim_factuality_probe_comparison_run_count": (
+            _optional_non_negative_float(min_claim_factuality_probe_comparison_run_count)
+        ),
+        "min_claim_factuality_probe_comparison_redline_pass_rate": (
+            _optional_rate_float(min_claim_factuality_probe_comparison_redline_pass_rate)
+        ),
+        "max_claim_factuality_probe_comparison_best_test_label_auroc_drop": (
+            _optional_rate_float(
+                max_claim_factuality_probe_comparison_best_test_label_auroc_drop
+            )
+        ),
+        "max_claim_factuality_probe_comparison_best_test_selective_accuracy_drop": (
+            _optional_rate_float(
+                max_claim_factuality_probe_comparison_best_test_selective_accuracy_drop
+            )
+        ),
+        "max_claim_factuality_probe_comparison_best_test_selective_coverage_drop": (
+            _optional_rate_float(
+                max_claim_factuality_probe_comparison_best_test_selective_coverage_drop
+            )
+        ),
+        "max_claim_factuality_probe_comparison_best_redline_auroc_drop": (
+            _optional_rate_float(
+                max_claim_factuality_probe_comparison_best_redline_auroc_drop
+            )
+        ),
+        "max_claim_factuality_probe_comparison_best_redline_margin_drop": (
+            _optional_non_negative_float(
+                max_claim_factuality_probe_comparison_best_redline_margin_drop
+            )
         ),
         "min_counterfactual_verification_coverage": _optional_rate_float(
             min_counterfactual_verification_coverage
@@ -766,6 +864,7 @@ def _comparison_metrics(
     metrics.extend(_covered_fact_property_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_product_trace_action_gate_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_pre_generation_probe_comparison_metrics(baseline_summary, current_summary, gates=gates))
+    metrics.extend(_claim_factuality_probe_comparison_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_counterfactual_verification_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_evidence_handoff_metrics(baseline_summary, current_summary, gates=gates))
     return metrics
@@ -845,6 +944,114 @@ def _pre_generation_probe_comparison_gate_enabled(gates: Mapping[str, Any]) -> b
             "max_pre_generation_probe_comparison_best_test_label_auroc_drop",
             "max_pre_generation_probe_comparison_best_redline_auroc_drop",
             "max_pre_generation_probe_comparison_best_redline_margin_drop",
+        )
+    )
+
+
+def _claim_factuality_probe_comparison_metrics(
+    baseline_summary: Mapping[str, Any],
+    current_summary: Mapping[str, Any],
+    *,
+    gates: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    if not _claim_factuality_probe_comparison_gate_enabled(gates):
+        return []
+    baseline = _mapping(
+        _nested_value(
+            baseline_summary,
+            ("promotion_contract", "claim_factuality_probe_comparison"),
+        )
+    )
+    current = _mapping(
+        _nested_value(
+            current_summary,
+            ("promotion_contract", "claim_factuality_probe_comparison"),
+        )
+    )
+    return [
+        _min_current_metric(
+            "promotion_contract.claim_factuality_probe_comparison.coverage_rate",
+            _finite_float(baseline.get("coverage_rate")),
+            _finite_float(current.get("coverage_rate")),
+            gates.get("min_claim_factuality_probe_comparison_coverage"),
+        ),
+        _min_current_metric(
+            "promotion_contract.claim_factuality_probe_comparison.manifest_verified_rate",
+            _pre_generation_manifest_verified_rate(baseline),
+            _pre_generation_manifest_verified_rate(current),
+            gates.get("min_claim_factuality_probe_comparison_manifest_verified_rate"),
+        ),
+        _min_current_metric(
+            "promotion_contract.claim_factuality_probe_comparison.model_count.mean",
+            _nested_float(baseline, ("model_count", "mean")),
+            _nested_float(current, ("model_count", "mean")),
+            gates.get("min_claim_factuality_probe_comparison_model_count"),
+        ),
+        _min_current_metric(
+            "promotion_contract.claim_factuality_probe_comparison.run_count.mean",
+            _nested_float(baseline, ("run_count", "mean")),
+            _nested_float(current, ("run_count", "mean")),
+            gates.get("min_claim_factuality_probe_comparison_run_count"),
+        ),
+        _min_current_metric(
+            "promotion_contract.claim_factuality_probe_comparison.redline_pass_rate",
+            _pre_generation_redline_pass_rate(baseline),
+            _pre_generation_redline_pass_rate(current),
+            gates.get("min_claim_factuality_probe_comparison_redline_pass_rate"),
+        ),
+        _drop_metric(
+            "promotion_contract.claim_factuality_probe_comparison.best_test_label_auroc.mean",
+            _nested_float(baseline, ("best_test_label_auroc", "mean")),
+            _nested_float(current, ("best_test_label_auroc", "mean")),
+            gates.get(
+                "max_claim_factuality_probe_comparison_best_test_label_auroc_drop"
+            ),
+        ),
+        _drop_metric(
+            "promotion_contract.claim_factuality_probe_comparison.best_test_selective_accuracy.mean",
+            _nested_float(baseline, ("best_test_selective_accuracy", "mean")),
+            _nested_float(current, ("best_test_selective_accuracy", "mean")),
+            gates.get(
+                "max_claim_factuality_probe_comparison_best_test_selective_accuracy_drop"
+            ),
+        ),
+        _drop_metric(
+            "promotion_contract.claim_factuality_probe_comparison.best_test_selective_coverage.mean",
+            _nested_float(baseline, ("best_test_selective_coverage", "mean")),
+            _nested_float(current, ("best_test_selective_coverage", "mean")),
+            gates.get(
+                "max_claim_factuality_probe_comparison_best_test_selective_coverage_drop"
+            ),
+        ),
+        _drop_metric(
+            "promotion_contract.claim_factuality_probe_comparison.best_redline_auroc.mean",
+            _nested_float(baseline, ("best_redline_auroc", "mean")),
+            _nested_float(current, ("best_redline_auroc", "mean")),
+            gates.get("max_claim_factuality_probe_comparison_best_redline_auroc_drop"),
+        ),
+        _drop_metric(
+            "promotion_contract.claim_factuality_probe_comparison.best_redline_margin.mean",
+            _nested_float(baseline, ("best_redline_margin", "mean")),
+            _nested_float(current, ("best_redline_margin", "mean")),
+            gates.get("max_claim_factuality_probe_comparison_best_redline_margin_drop"),
+        ),
+    ]
+
+
+def _claim_factuality_probe_comparison_gate_enabled(gates: Mapping[str, Any]) -> bool:
+    return any(
+        gates.get(key) is not None
+        for key in (
+            "min_claim_factuality_probe_comparison_coverage",
+            "min_claim_factuality_probe_comparison_manifest_verified_rate",
+            "min_claim_factuality_probe_comparison_model_count",
+            "min_claim_factuality_probe_comparison_run_count",
+            "min_claim_factuality_probe_comparison_redline_pass_rate",
+            "max_claim_factuality_probe_comparison_best_test_label_auroc_drop",
+            "max_claim_factuality_probe_comparison_best_test_selective_accuracy_drop",
+            "max_claim_factuality_probe_comparison_best_test_selective_coverage_drop",
+            "max_claim_factuality_probe_comparison_best_redline_auroc_drop",
+            "max_claim_factuality_probe_comparison_best_redline_margin_drop",
         )
     )
 
@@ -1781,6 +1988,7 @@ def _drift_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
         "observed_metric_count": summary.get("observed_metric_count"),
         **_promotion_evidence_metadata(report),
         **_pre_generation_probe_comparison_metadata(report),
+        **_claim_factuality_probe_comparison_metadata(report),
         **_counterfactual_verification_metadata(report),
         **_evidence_handoff_metadata(report),
         **_covered_fact_property_metadata(report),
@@ -1816,6 +2024,25 @@ def _pre_generation_probe_comparison_metadata(report: Mapping[str, Any]) -> dict
         metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
         if metric is not None and metric.get("status") == "blocked":
             metadata["pre_generation_probe_comparison_blocked_metric_count"] += 1
+    return metadata
+
+
+def _claim_factuality_probe_comparison_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    metrics = _metrics_by_name(report.get("metrics"))
+    metadata: dict[str, Any] = {
+        "claim_factuality_probe_comparison_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _CLAIM_FACTUALITY_PROBE_COMPARISON_METADATA_FIELDS:
+        metric = metrics.get(metric_name)
+        metadata[f"{prefix}_baseline"] = _finite_float(
+            None if metric is None else metric.get("baseline")
+        )
+        metadata[f"{prefix}_current"] = _finite_float(
+            None if metric is None else metric.get("current")
+        )
+        metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is not None and metric.get("status") == "blocked":
+            metadata["claim_factuality_probe_comparison_blocked_metric_count"] += 1
     return metadata
 
 
@@ -2082,6 +2309,36 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_pre_generation_probe_comparison_best_redline_margin_drop=(
             args.max_pre_generation_probe_comparison_best_redline_margin_drop
         ),
+        min_claim_factuality_probe_comparison_coverage=(
+            args.min_claim_factuality_probe_comparison_coverage
+        ),
+        min_claim_factuality_probe_comparison_manifest_verified_rate=(
+            args.min_claim_factuality_probe_comparison_manifest_verified_rate
+        ),
+        min_claim_factuality_probe_comparison_model_count=(
+            args.min_claim_factuality_probe_comparison_model_count
+        ),
+        min_claim_factuality_probe_comparison_run_count=(
+            args.min_claim_factuality_probe_comparison_run_count
+        ),
+        min_claim_factuality_probe_comparison_redline_pass_rate=(
+            args.min_claim_factuality_probe_comparison_redline_pass_rate
+        ),
+        max_claim_factuality_probe_comparison_best_test_label_auroc_drop=(
+            args.max_claim_factuality_probe_comparison_best_test_label_auroc_drop
+        ),
+        max_claim_factuality_probe_comparison_best_test_selective_accuracy_drop=(
+            args.max_claim_factuality_probe_comparison_best_test_selective_accuracy_drop
+        ),
+        max_claim_factuality_probe_comparison_best_test_selective_coverage_drop=(
+            args.max_claim_factuality_probe_comparison_best_test_selective_coverage_drop
+        ),
+        max_claim_factuality_probe_comparison_best_redline_auroc_drop=(
+            args.max_claim_factuality_probe_comparison_best_redline_auroc_drop
+        ),
+        max_claim_factuality_probe_comparison_best_redline_margin_drop=(
+            args.max_claim_factuality_probe_comparison_best_redline_margin_drop
+        ),
         min_counterfactual_verification_coverage=(
             args.min_counterfactual_verification_coverage
         ),
@@ -2240,6 +2497,44 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument(
         "--max-pre-generation-probe-comparison-best-redline-margin-drop",
+        type=float,
+        default=None,
+    )
+    parser.add_argument("--min-claim-factuality-probe-comparison-coverage", type=float, default=None)
+    parser.add_argument(
+        "--min-claim-factuality-probe-comparison-manifest-verified-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument("--min-claim-factuality-probe-comparison-model-count", type=float, default=None)
+    parser.add_argument("--min-claim-factuality-probe-comparison-run-count", type=float, default=None)
+    parser.add_argument(
+        "--min-claim-factuality-probe-comparison-redline-pass-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-claim-factuality-probe-comparison-best-test-label-auroc-drop",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-claim-factuality-probe-comparison-best-test-selective-accuracy-drop",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-claim-factuality-probe-comparison-best-test-selective-coverage-drop",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-claim-factuality-probe-comparison-best-redline-auroc-drop",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-claim-factuality-probe-comparison-best-redline-margin-drop",
         type=float,
         default=None,
     )

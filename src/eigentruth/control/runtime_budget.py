@@ -1063,6 +1063,14 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         or _pre_generation_probe_comparison_from_flat_metadata(metadata)
         or _pre_generation_probe_comparison_from_flat_metadata(contract_metadata)
     )
+    nested_claim_factuality = _mapping(
+        metadata.get("promotion_contract_claim_factuality_probe_comparison")
+    )
+    claim_factuality = (
+        nested_claim_factuality
+        or _claim_factuality_probe_comparison_from_flat_metadata(metadata)
+        or _claim_factuality_probe_comparison_from_flat_metadata(contract_metadata)
+    )
     nested_matrix = _mapping(metadata.get("promotion_contract_triple_extraction_fixture_matrix"))
     matrix = nested_matrix or _matrix_from_flat_metadata(metadata) or _matrix_from_flat_metadata(
         contract_metadata
@@ -1155,6 +1163,7 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
     )
     external_evidence_available = bool(external_evidence)
     pre_generation_available = bool(pre_generation)
+    claim_factuality_available = bool(claim_factuality)
     matrix_available = bool(matrix)
     available = bool(
         source is not None
@@ -1163,6 +1172,7 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         or contract_metadata
         or external_evidence_available
         or pre_generation_available
+        or claim_factuality_available
         or matrix_available
         or bool(counterfactual)
         or bool(pathway)
@@ -1173,6 +1183,12 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         _first_present(
             metadata.get("pre_generation_probe_comparison_manifest_verification"),
             contract_metadata.get("pre_generation_probe_comparison_manifest_verification"),
+        )
+    )
+    claim_factuality_manifest_verification = _mapping(
+        _first_present(
+            metadata.get("claim_factuality_probe_comparison_manifest_verification"),
+            contract_metadata.get("claim_factuality_probe_comparison_manifest_verification"),
         )
     )
     counterfactual_manifest_verification = _mapping(
@@ -1188,6 +1204,7 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         )
     )
     pre_generation_best_run = _mapping(pre_generation.get("best_run"))
+    claim_factuality_best_run = _mapping(claim_factuality.get("best_run"))
     counterfactual_available = bool(counterfactual)
     summary = {
         "available": available,
@@ -1557,6 +1574,208 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
                 )
             ),
         },
+        "claim_factuality_probe_comparison": {
+            "available": claim_factuality_available,
+            "source": _optional_string(
+                _first_present(
+                    claim_factuality.get("source"),
+                    metadata.get("claim_factuality_probe_comparison_source"),
+                    contract_metadata.get("claim_factuality_probe_comparison_source"),
+                )
+            ),
+            "report": _optional_string(
+                _first_present(
+                    claim_factuality.get("report_path"),
+                    claim_factuality.get("report"),
+                    metadata.get("claim_factuality_probe_comparison_report"),
+                    contract_metadata.get("claim_factuality_probe_comparison_report"),
+                )
+            ),
+            "manifest": _optional_string(
+                _first_present(
+                    claim_factuality.get("manifest_path"),
+                    claim_factuality.get("manifest"),
+                    metadata.get("claim_factuality_probe_comparison_manifest"),
+                    contract_metadata.get("claim_factuality_probe_comparison_manifest"),
+                )
+            ),
+            "registry": _optional_string(
+                _first_present(
+                    claim_factuality.get("registry"),
+                    metadata.get("claim_factuality_probe_comparison_registry"),
+                    contract_metadata.get("claim_factuality_probe_comparison_registry"),
+                )
+            ),
+            "record": _optional_string(
+                _first_present(
+                    claim_factuality.get("record_key"),
+                    claim_factuality.get("record"),
+                    metadata.get("claim_factuality_probe_comparison_record"),
+                    metadata.get("claim_factuality_probe_comparison_registry_key"),
+                    contract_metadata.get("claim_factuality_probe_comparison_record"),
+                    contract_metadata.get(
+                        "claim_factuality_probe_comparison_registry_key"
+                    ),
+                )
+            ),
+            "manifest_verified": _optional_bool(
+                _first_present(
+                    claim_factuality.get("manifest_verified"),
+                    metadata.get("claim_factuality_probe_comparison_manifest_verified"),
+                    contract_metadata.get(
+                        "claim_factuality_probe_comparison_manifest_verified"
+                    ),
+                    claim_factuality_manifest_verification.get("passed"),
+                )
+            ),
+            "status": _optional_string(
+                _first_present(
+                    metadata.get("claim_factuality_probe_comparison_status"),
+                    contract_metadata.get("claim_factuality_probe_comparison_status"),
+                    claim_factuality.get("status"),
+                )
+            ),
+            "report_status": _optional_string(
+                _first_present(
+                    claim_factuality.get("report_status"),
+                    metadata.get("claim_factuality_probe_comparison_report_status"),
+                    contract_metadata.get(
+                        "claim_factuality_probe_comparison_report_status"
+                    ),
+                )
+            ),
+            "model_count": _finite_float(
+                _first_present(
+                    claim_factuality.get("model_count"),
+                    metadata.get("claim_factuality_probe_comparison_model_count"),
+                    contract_metadata.get("claim_factuality_probe_comparison_model_count"),
+                )
+            ),
+            "run_count": _finite_float(
+                _first_present(
+                    claim_factuality.get("run_count"),
+                    metadata.get("claim_factuality_probe_comparison_run_count"),
+                    contract_metadata.get("claim_factuality_probe_comparison_run_count"),
+                )
+            ),
+            "redline_passed": _optional_bool(
+                _first_present(
+                    claim_factuality.get("redline_passed"),
+                    metadata.get("claim_factuality_probe_comparison_redline_passed"),
+                    contract_metadata.get(
+                        "claim_factuality_probe_comparison_redline_passed"
+                    ),
+                )
+            ),
+            "redline_run_count": _finite_float(
+                _first_present(
+                    claim_factuality.get("redline_run_count"),
+                    metadata.get("claim_factuality_probe_comparison_redline_run_count"),
+                    contract_metadata.get(
+                        "claim_factuality_probe_comparison_redline_run_count"
+                    ),
+                )
+            ),
+            "best_run": _optional_string(
+                _first_present(
+                    claim_factuality_best_run.get("name"),
+                    metadata.get("claim_factuality_probe_comparison_best_run"),
+                    contract_metadata.get("claim_factuality_probe_comparison_best_run"),
+                )
+            ),
+            "best_model": _optional_string(
+                _first_present(
+                    claim_factuality_best_run.get("model"),
+                    metadata.get("claim_factuality_probe_comparison_best_model"),
+                    contract_metadata.get("claim_factuality_probe_comparison_best_model"),
+                )
+            ),
+            "best_record_count": _finite_float(
+                _first_present(
+                    claim_factuality_best_run.get("record_count"),
+                    metadata.get("claim_factuality_probe_comparison_best_record_count"),
+                    contract_metadata.get(
+                        "claim_factuality_probe_comparison_best_record_count"
+                    ),
+                )
+            ),
+            "best_layer": _finite_float(
+                _first_present(
+                    claim_factuality_best_run.get("recommended_layer"),
+                    metadata.get("claim_factuality_probe_comparison_best_layer"),
+                    contract_metadata.get("claim_factuality_probe_comparison_best_layer"),
+                )
+            ),
+            "best_test_label_auroc": _finite_float(
+                _first_present(
+                    claim_factuality_best_run.get("test_label_auroc"),
+                    metadata.get("claim_factuality_probe_comparison_best_test_label_auroc"),
+                    contract_metadata.get(
+                        "claim_factuality_probe_comparison_best_test_label_auroc"
+                    ),
+                )
+            ),
+            "best_test_selective_accuracy": _finite_float(
+                _first_present(
+                    claim_factuality_best_run.get("test_selective_accuracy"),
+                    metadata.get(
+                        "claim_factuality_probe_comparison_best_test_selective_accuracy"
+                    ),
+                    contract_metadata.get(
+                        "claim_factuality_probe_comparison_best_test_selective_accuracy"
+                    ),
+                )
+            ),
+            "best_test_selective_coverage": _finite_float(
+                _first_present(
+                    claim_factuality_best_run.get("test_selective_coverage"),
+                    metadata.get(
+                        "claim_factuality_probe_comparison_best_test_selective_coverage"
+                    ),
+                    contract_metadata.get(
+                        "claim_factuality_probe_comparison_best_test_selective_coverage"
+                    ),
+                )
+            ),
+            "best_conformal_threshold": _finite_float(
+                _first_present(
+                    claim_factuality_best_run.get("conformal_threshold"),
+                    metadata.get(
+                        "claim_factuality_probe_comparison_best_conformal_threshold"
+                    ),
+                    contract_metadata.get(
+                        "claim_factuality_probe_comparison_best_conformal_threshold"
+                    ),
+                )
+            ),
+            "best_redline_signal": _optional_string(
+                _first_present(
+                    claim_factuality_best_run.get("redline_best_signal"),
+                    metadata.get("claim_factuality_probe_comparison_best_redline_signal"),
+                    contract_metadata.get(
+                        "claim_factuality_probe_comparison_best_redline_signal"
+                    ),
+                )
+            ),
+            "best_redline_auroc": _finite_float(
+                _first_present(
+                    claim_factuality_best_run.get("redline_best_auroc"),
+                    metadata.get("claim_factuality_probe_comparison_best_redline_auroc"),
+                    contract_metadata.get(
+                        "claim_factuality_probe_comparison_best_redline_auroc"
+                    ),
+                )
+            ),
+            "best_redline_margin": _finite_float(
+                _first_present(
+                    claim_factuality_best_run.get("redline_margin"),
+                    metadata.get("claim_factuality_probe_comparison_best_redline_margin"),
+                    contract_metadata.get(
+                        "claim_factuality_probe_comparison_best_redline_margin"
+                    ),
+                )
+            ),
+        },
         "triple_extraction_fixture_matrix": {
             "available": matrix_available,
             "source": matrix_source,
@@ -1709,6 +1928,7 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
     )
     pathway_summary = _mapping(summary["pathway_intervention_workflow"])
     pre_generation_summary = _mapping(summary["pre_generation_probe_comparison"])
+    claim_factuality_summary = _mapping(summary["claim_factuality_probe_comparison"])
     counterfactual_summary = _mapping(summary["counterfactual_verification"])
     product_trace_replay_metrics = _promotion_contract_product_trace_replay_metric_values(
         product_trace_replay
@@ -1854,6 +2074,78 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         ),
         "promotion_contract_pre_generation_probe_comparison_best_redline_margin": (
             pre_generation_summary.get("best_redline_margin")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_available": (
+            claim_factuality_available
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_source": (
+            claim_factuality_summary.get("source")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_report": (
+            claim_factuality_summary.get("report")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_manifest": (
+            claim_factuality_summary.get("manifest")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_registry": (
+            claim_factuality_summary.get("registry")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_record": (
+            claim_factuality_summary.get("record")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_manifest_verified": (
+            claim_factuality_summary.get("manifest_verified")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_status": (
+            claim_factuality_summary.get("status")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_report_status": (
+            claim_factuality_summary.get("report_status")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_model_count": (
+            claim_factuality_summary.get("model_count")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_run_count": (
+            claim_factuality_summary.get("run_count")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_redline_passed": (
+            claim_factuality_summary.get("redline_passed")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_redline_run_count": (
+            claim_factuality_summary.get("redline_run_count")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_run": (
+            claim_factuality_summary.get("best_run")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_model": (
+            claim_factuality_summary.get("best_model")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_record_count": (
+            claim_factuality_summary.get("best_record_count")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_layer": (
+            claim_factuality_summary.get("best_layer")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_test_label_auroc": (
+            claim_factuality_summary.get("best_test_label_auroc")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_test_selective_accuracy": (
+            claim_factuality_summary.get("best_test_selective_accuracy")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_test_selective_coverage": (
+            claim_factuality_summary.get("best_test_selective_coverage")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_conformal_threshold": (
+            claim_factuality_summary.get("best_conformal_threshold")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_redline_signal": (
+            claim_factuality_summary.get("best_redline_signal")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_redline_auroc": (
+            claim_factuality_summary.get("best_redline_auroc")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_redline_margin": (
+            claim_factuality_summary.get("best_redline_margin")
         ),
         "promotion_contract_triple_extraction_fixture_matrix_available": matrix_available,
         "promotion_contract_triple_extraction_fixture_matrix_source": matrix_source,
@@ -2929,6 +3221,63 @@ def _pre_generation_probe_comparison_from_flat_metadata(
         "redline_passed": metadata.get("pre_generation_probe_comparison_redline_passed"),
         "redline_run_count": metadata.get(
             "pre_generation_probe_comparison_redline_run_count"
+        ),
+        "best_run": cleaned_best_run or None,
+    }
+    return {key: value for key, value in comparison.items() if value is not None}
+
+
+def _claim_factuality_probe_comparison_from_flat_metadata(
+    metadata: Mapping[str, Any],
+) -> dict[str, Any]:
+    best_run = {
+        "name": metadata.get("claim_factuality_probe_comparison_best_run"),
+        "model": metadata.get("claim_factuality_probe_comparison_best_model"),
+        "record_count": metadata.get(
+            "claim_factuality_probe_comparison_best_record_count"
+        ),
+        "recommended_layer": metadata.get("claim_factuality_probe_comparison_best_layer"),
+        "test_label_auroc": metadata.get(
+            "claim_factuality_probe_comparison_best_test_label_auroc"
+        ),
+        "test_selective_accuracy": metadata.get(
+            "claim_factuality_probe_comparison_best_test_selective_accuracy"
+        ),
+        "test_selective_coverage": metadata.get(
+            "claim_factuality_probe_comparison_best_test_selective_coverage"
+        ),
+        "conformal_threshold": metadata.get(
+            "claim_factuality_probe_comparison_best_conformal_threshold"
+        ),
+        "redline_best_signal": metadata.get(
+            "claim_factuality_probe_comparison_best_redline_signal"
+        ),
+        "redline_best_auroc": metadata.get(
+            "claim_factuality_probe_comparison_best_redline_auroc"
+        ),
+        "redline_margin": metadata.get(
+            "claim_factuality_probe_comparison_best_redline_margin"
+        ),
+    }
+    cleaned_best_run = {key: value for key, value in best_run.items() if value is not None}
+    comparison = {
+        "report_path": metadata.get("claim_factuality_probe_comparison_report"),
+        "manifest_path": metadata.get("claim_factuality_probe_comparison_manifest"),
+        "source": metadata.get("claim_factuality_probe_comparison_source"),
+        "registry": metadata.get("claim_factuality_probe_comparison_registry"),
+        "record_key": _first_present(
+            metadata.get("claim_factuality_probe_comparison_record"),
+            metadata.get("claim_factuality_probe_comparison_registry_key"),
+        ),
+        "status": metadata.get("claim_factuality_probe_comparison_status"),
+        "report_status": metadata.get("claim_factuality_probe_comparison_report_status"),
+        "model_count": metadata.get("claim_factuality_probe_comparison_model_count"),
+        "run_count": metadata.get("claim_factuality_probe_comparison_run_count"),
+        "redline_passed": metadata.get(
+            "claim_factuality_probe_comparison_redline_passed"
+        ),
+        "redline_run_count": metadata.get(
+            "claim_factuality_probe_comparison_redline_run_count"
         ),
         "best_run": cleaned_best_run or None,
     }
