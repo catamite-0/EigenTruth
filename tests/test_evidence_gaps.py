@@ -1,12 +1,16 @@
 """Tests for release-evidence gap planning."""
 
 import json
+from pathlib import Path
 
 from benchmarks.plan_citation_batch_evidence_reruns import build_citation_batch_evidence_rerun_queue
 from benchmarks.plan_frontier_abstention_evidence_reruns import build_frontier_abstention_evidence_rerun_queue
 from benchmarks.plan_frontier_detectability_evidence_reruns import build_frontier_detectability_evidence_rerun_queue
 from benchmarks.plan_frontier_stability_evidence_reruns import build_frontier_stability_evidence_rerun_queue
 from benchmarks.plan_release_evidence_gaps import build_release_evidence_gap_plan
+from benchmarks.rollup_frontier_abstention_evidence_reruns import (
+    rollup_frontier_abstention_evidence_reruns,
+)
 from eigentruth.control import (
     EvidenceGapPlan,
     plan_evidence_gaps_from_release_candidate,
@@ -636,6 +640,106 @@ def test_frontier_abstention_evidence_rerun_queue_builds_profile_matrix(tmp_path
     assert record.metadata["command_count"] == 4
 
 
+def test_frontier_abstention_evidence_rerun_rollup_promotes_best_candidate(tmp_path):
+    report_path = tmp_path / "abstention-stability.json"
+    source = tmp_path / "frontier-release-evidence.json"
+    queue_path = tmp_path / "abstention-rerun-queue.json"
+    rollup_path = tmp_path / "abstention-rerun-rollup.json"
+    manifest_path = tmp_path / "abstention-rerun-rollup-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    report_path.write_text(
+        json.dumps(_abstention_stability_payload(tmp_path / "qwen-scores.manifest.json")),
+        encoding="utf-8",
+    )
+    source.write_text(
+        json.dumps(_frontier_release_abstention_payload(report_path)),
+        encoding="utf-8",
+    )
+    queue = build_frontier_abstention_evidence_rerun_queue(
+        source=source,
+        json_path=queue_path,
+        output_dir=tmp_path / "abstention-reruns",
+        profiles=("baseline", "selective_accuracy"),
+        signal_groups=("recommended",),
+        seeds="0,1",
+        python_executable="python",
+    )
+    for entry in queue["entries"]:
+        output_path = _queue_entry_report_path(entry)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(
+            json.dumps(_abstention_rerun_report(entry)),
+            encoding="utf-8",
+        )
+
+    payload = rollup_frontier_abstention_evidence_reruns(
+        queue_path=queue_path,
+        report_json_path=rollup_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="frontier-abstention-rerun-rollup",
+        version="0.1",
+        require_all_reports=True,
+        metadata={"suite": "unit"},
+    )
+    saved = json.loads(rollup_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = ArtifactRegistry.load_json(registry_path).get(
+        "report:frontier-abstention-rerun-rollup:0.1"
+    )
+
+    assert saved["summary"]["candidate_count"] == payload["summary"]["candidate_count"]
+    assert saved["summary"]["profiles"] == ["baseline", "selective_accuracy"]
+    assert payload["workflow"] == "frontier_abstention_evidence_rerun_rollup"
+    assert payload["status"] == "promote"
+    assert payload["gate"]["promotion_ready"] is True
+    assert payload["summary"]["candidate_count"] == 2
+    assert payload["summary"]["observed_report_count"] == 2
+    assert payload["summary"]["passing_candidate_count"] == 1
+    assert payload["recommended_candidate"]["profile"] == "selective_accuracy"
+    assert payload["recommended_candidate"]["metrics"]["conditional_correctness_lower_bound_mean"] == 0.86
+    assert manifest["artifacts"]["frontier_abstention_evidence_rerun_rollup"]["exists"] is True
+    assert record.metadata["workflow"] == "frontier_abstention_evidence_rerun_rollup"
+    assert record.metadata["promotion_ready"] is True
+    assert record.metadata["best_profile"] == "selective_accuracy"
+    assert record.metadata["suite"] == "unit"
+
+
+def test_frontier_abstention_evidence_rerun_rollup_blocks_missing_required_report(tmp_path):
+    report_path = tmp_path / "abstention-stability.json"
+    source = tmp_path / "frontier-release-evidence.json"
+    queue_path = tmp_path / "abstention-rerun-queue.json"
+    rollup_path = tmp_path / "abstention-rerun-rollup.json"
+    report_path.write_text(
+        json.dumps(_abstention_stability_payload(tmp_path / "qwen-scores.manifest.json")),
+        encoding="utf-8",
+    )
+    source.write_text(
+        json.dumps(_frontier_release_abstention_payload(report_path)),
+        encoding="utf-8",
+    )
+    build_frontier_abstention_evidence_rerun_queue(
+        source=source,
+        json_path=queue_path,
+        output_dir=tmp_path / "abstention-reruns",
+        profiles=("baseline",),
+        signal_groups=("recommended",),
+        python_executable="python",
+    )
+
+    payload = rollup_frontier_abstention_evidence_reruns(
+        queue_path=queue_path,
+        report_json_path=rollup_path,
+        require_all_reports=True,
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["gate"]["passed"] is False
+    assert payload["summary"]["candidate_count"] == 1
+    assert payload["summary"]["missing_report_count"] == 1
+    assert payload["gate"]["blocking_reasons"][0]["gate"] == "report_coverage"
+
+
 def test_plan_release_evidence_gaps_can_emit_abstention_rerun_queue(tmp_path):
     report_path = tmp_path / "abstention-stability.json"
     source = tmp_path / "frontier-release-evidence.json"
@@ -1051,6 +1155,60 @@ def _abstention_stability_payload(score_path):
                     "recommended_score_name_counts": {"truth_proj": 2},
                     "release_gate_pass_seed_count": 2,
                     "release_gate_block_seed_count": 0,
+                },
+            },
+        ),
+    }
+
+
+def _queue_entry_report_path(entry):
+    command = tuple(entry["command"])
+    return Path(command[command.index("--json") + 1])
+
+
+def _abstention_rerun_report(entry):
+    profile = entry["profile"]
+    passed = profile == "selective_accuracy"
+    correctness = 0.86 if passed else 0.72
+    pass_count = 2 if passed else 0
+    return {
+        "schema_version": 1,
+        "workflow": "abstention_stability",
+        "status": "complete",
+        "config": {
+            "signals": tuple(entry["signals"]),
+            "alpha": entry["profile_config"]["alpha"],
+            "best_by": entry["profile_config"]["best_by"],
+            "release_gate": {
+                "min_conditional_correctness_lower_bound": (
+                    entry["profile_config"]["min_conditional_correctness_lower_bound"]
+                ),
+                "max_abstention_rate": entry["profile_config"]["max_abstention_rate"],
+            },
+        },
+        "runs": (
+            {
+                "name": entry["run"],
+                "stability": {
+                    "all_release_gates_passed": passed,
+                    "seed_count": 2,
+                    "stable_recommended_score_name": entry["signals"][0],
+                    "recommended_score_name_counts": {entry["signals"][0]: 2},
+                    "release_gate_pass_seed_count": pass_count,
+                    "release_gate_block_seed_count": 2 - pass_count,
+                    "conditional_correctness_lower_bound": {"mean": correctness},
+                    "empirical_abstention_rate": {"mean": 0.2},
+                    "empirical_selective_accuracy": {"mean": 0.94 if passed else 0.82},
+                    "correct_retention_lower_bound": {"mean": 0.7},
+                },
+                "supervised_feasibility_frontier": {
+                    "target_passed": passed,
+                    "best": {
+                        "score_name": entry["signals"][0],
+                        "conditional_correctness_lower_bound": correctness,
+                        "empirical_abstention_rate": 0.2,
+                        "empirical_selective_accuracy": 0.94 if passed else 0.82,
+                    },
                 },
             },
         ),

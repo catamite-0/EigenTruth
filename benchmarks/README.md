@@ -5098,6 +5098,28 @@ directly with a frontier release report, evidence-gap plan, or
 it inherits run score dumps, seeds, release thresholds, and recommended signals;
 otherwise pass `--scores`, `--profiles`, and `--signal-groups` explicitly.
 
+After running the generated `eval_abstention_stability.py` commands, roll the
+completed reports back into release evidence. By default the rollup can consume
+whatever reports are present; add `--require-all-reports` for a strict
+fail-closed release check:
+
+```bash
+python benchmarks/rollup_frontier_abstention_evidence_reruns.py \
+  --queue artifacts/frontier-release-evidence/abstention-rerun-queue.json \
+  --json artifacts/frontier-release-evidence/abstention-rerun-rollup.json \
+  --artifact-manifest artifacts/frontier-release-evidence/abstention-rerun-rollup-manifest.json \
+  --registry artifacts/release-registry.json \
+  --name frontier-abstention-rerun-rollup \
+  --version 0.1 \
+  --require-all-reports
+```
+
+The rollup reads each queue entry's expected `--json` output path, accepts
+additional completed reports via repeatable `--report`, ranks candidates by
+conservative conditional correctness, seed pass rate, and abstention cost, then
+emits `status=promote` only when a promotion-eligible profile satisfies the
+configured correctness, abstention-rate, and seed-stability thresholds.
+
 For releases blocked by the detectability-taxonomy track, the same planner can
 emit row-level blind-spot audit commands from the comparator's
 `--detectability-taxonomy-report` inputs:
