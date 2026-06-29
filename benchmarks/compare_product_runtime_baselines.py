@@ -100,6 +100,36 @@ _COUNTERFACTUAL_VERIFICATION_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
         "counterfactual_verification_flip_success_count",
     ),
 )
+_EVIDENCE_HANDOFF_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
+    (
+        "promotion_contract.evidence_handoff.coverage_rate",
+        "evidence_handoff_coverage_rate",
+    ),
+    (
+        "promotion_contract.evidence_handoff.manifest_verified_rate",
+        "evidence_handoff_manifest_verified_rate",
+    ),
+    (
+        "promotion_contract.evidence_handoff.present_metric_rate.mean",
+        "evidence_handoff_present_metric_rate",
+    ),
+    (
+        "promotion_contract.evidence_handoff.missing_metric_rate.mean",
+        "evidence_handoff_missing_metric_rate",
+    ),
+    (
+        "promotion_contract.evidence_handoff.missing_metric_count.mean",
+        "evidence_handoff_missing_metric_count",
+    ),
+    (
+        "promotion_contract.evidence_handoff.blocked_group_count.mean",
+        "evidence_handoff_blocked_group_count",
+    ),
+    (
+        "promotion_contract.evidence_handoff.promoted_group_rate.mean",
+        "evidence_handoff_promoted_group_rate",
+    ),
+)
 
 _TRIPLE_COVERAGE_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
     ("triple_coverage.claim_triple_coverage_rate", "triple_claim_coverage_rate"),
@@ -289,6 +319,13 @@ def compare_product_runtime_baselines(
     min_counterfactual_verification_pass_rate: float | None = None,
     max_counterfactual_verification_false_invariance_rate: float | None = None,
     max_counterfactual_verification_flip_success_count_drop: float | None = None,
+    min_evidence_handoff_coverage: float | None = None,
+    min_evidence_handoff_manifest_verified_rate: float | None = None,
+    min_evidence_handoff_present_metric_rate: float | None = None,
+    max_evidence_handoff_missing_metric_rate: float | None = None,
+    max_evidence_handoff_missing_metric_count: float | None = None,
+    max_evidence_handoff_blocked_group_count: float | None = None,
+    min_evidence_handoff_promoted_group_rate: float | None = None,
     min_triple_extraction_fixture_matrix_coverage: float | None = None,
     max_triple_extraction_fixture_matrix_mean_best_f1_drop: float | None = None,
     max_triple_extraction_fixture_matrix_mean_f1_lift_drop: float | None = None,
@@ -389,6 +426,27 @@ def compare_product_runtime_baselines(
         ),
         "max_counterfactual_verification_flip_success_count_drop": _optional_non_negative_float(
             max_counterfactual_verification_flip_success_count_drop
+        ),
+        "min_evidence_handoff_coverage": _optional_rate_float(
+            min_evidence_handoff_coverage
+        ),
+        "min_evidence_handoff_manifest_verified_rate": _optional_rate_float(
+            min_evidence_handoff_manifest_verified_rate
+        ),
+        "min_evidence_handoff_present_metric_rate": _optional_rate_float(
+            min_evidence_handoff_present_metric_rate
+        ),
+        "max_evidence_handoff_missing_metric_rate": _optional_rate_float(
+            max_evidence_handoff_missing_metric_rate
+        ),
+        "max_evidence_handoff_missing_metric_count": _optional_non_negative_float(
+            max_evidence_handoff_missing_metric_count
+        ),
+        "max_evidence_handoff_blocked_group_count": _optional_non_negative_float(
+            max_evidence_handoff_blocked_group_count
+        ),
+        "min_evidence_handoff_promoted_group_rate": _optional_rate_float(
+            min_evidence_handoff_promoted_group_rate
         ),
         "min_triple_extraction_fixture_matrix_coverage": _optional_rate_float(
             min_triple_extraction_fixture_matrix_coverage
@@ -709,6 +767,7 @@ def _comparison_metrics(
     metrics.extend(_product_trace_action_gate_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_pre_generation_probe_comparison_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_counterfactual_verification_metrics(baseline_summary, current_summary, gates=gates))
+    metrics.extend(_evidence_handoff_metrics(baseline_summary, current_summary, gates=gates))
     return metrics
 
 
@@ -866,6 +925,77 @@ def _counterfactual_verification_gate_enabled(gates: Mapping[str, Any]) -> bool:
             "min_counterfactual_verification_pass_rate",
             "max_counterfactual_verification_false_invariance_rate",
             "max_counterfactual_verification_flip_success_count_drop",
+        )
+    )
+
+
+def _evidence_handoff_metrics(
+    baseline_summary: Mapping[str, Any],
+    current_summary: Mapping[str, Any],
+    *,
+    gates: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    if not _evidence_handoff_gate_enabled(gates):
+        return []
+    baseline = _mapping(_nested_value(baseline_summary, ("promotion_contract", "evidence_handoff")))
+    current = _mapping(_nested_value(current_summary, ("promotion_contract", "evidence_handoff")))
+    return [
+        _min_current_metric(
+            "promotion_contract.evidence_handoff.coverage_rate",
+            _finite_float(baseline.get("coverage_rate")),
+            _finite_float(current.get("coverage_rate")),
+            gates.get("min_evidence_handoff_coverage"),
+        ),
+        _min_current_metric(
+            "promotion_contract.evidence_handoff.manifest_verified_rate",
+            _manifest_verified_rate(baseline),
+            _manifest_verified_rate(current),
+            gates.get("min_evidence_handoff_manifest_verified_rate"),
+        ),
+        _min_current_metric(
+            "promotion_contract.evidence_handoff.present_metric_rate.mean",
+            _nested_float(baseline, ("present_metric_rate", "mean")),
+            _nested_float(current, ("present_metric_rate", "mean")),
+            gates.get("min_evidence_handoff_present_metric_rate"),
+        ),
+        _max_current_metric(
+            "promotion_contract.evidence_handoff.missing_metric_rate.mean",
+            _nested_float(baseline, ("missing_metric_rate", "mean")),
+            _nested_float(current, ("missing_metric_rate", "mean")),
+            gates.get("max_evidence_handoff_missing_metric_rate"),
+        ),
+        _max_current_metric(
+            "promotion_contract.evidence_handoff.missing_metric_count.mean",
+            _nested_float(baseline, ("missing_metric_count", "mean")),
+            _nested_float(current, ("missing_metric_count", "mean")),
+            gates.get("max_evidence_handoff_missing_metric_count"),
+        ),
+        _max_current_metric(
+            "promotion_contract.evidence_handoff.blocked_group_count.mean",
+            _nested_float(baseline, ("blocked_group_count", "mean")),
+            _nested_float(current, ("blocked_group_count", "mean")),
+            gates.get("max_evidence_handoff_blocked_group_count"),
+        ),
+        _min_current_metric(
+            "promotion_contract.evidence_handoff.promoted_group_rate.mean",
+            _nested_float(baseline, ("promoted_group_rate", "mean")),
+            _nested_float(current, ("promoted_group_rate", "mean")),
+            gates.get("min_evidence_handoff_promoted_group_rate"),
+        ),
+    ]
+
+
+def _evidence_handoff_gate_enabled(gates: Mapping[str, Any]) -> bool:
+    return any(
+        gates.get(key) is not None
+        for key in (
+            "min_evidence_handoff_coverage",
+            "min_evidence_handoff_manifest_verified_rate",
+            "min_evidence_handoff_present_metric_rate",
+            "max_evidence_handoff_missing_metric_rate",
+            "max_evidence_handoff_missing_metric_count",
+            "max_evidence_handoff_blocked_group_count",
+            "min_evidence_handoff_promoted_group_rate",
         )
     )
 
@@ -1652,6 +1782,7 @@ def _drift_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
         **_promotion_evidence_metadata(report),
         **_pre_generation_probe_comparison_metadata(report),
         **_counterfactual_verification_metadata(report),
+        **_evidence_handoff_metadata(report),
         **_covered_fact_property_metadata(report),
         **_triple_coverage_metadata(report),
         **_product_trace_action_gate_metadata(report),
@@ -1700,6 +1831,21 @@ def _counterfactual_verification_metadata(report: Mapping[str, Any]) -> dict[str
         metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
         if metric is not None and metric.get("status") == "blocked":
             metadata["counterfactual_verification_blocked_metric_count"] += 1
+    return metadata
+
+
+def _evidence_handoff_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    metrics = _metrics_by_name(report.get("metrics"))
+    metadata: dict[str, Any] = {
+        "evidence_handoff_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _EVIDENCE_HANDOFF_METADATA_FIELDS:
+        metric = metrics.get(metric_name)
+        metadata[f"{prefix}_baseline"] = _finite_float(None if metric is None else metric.get("baseline"))
+        metadata[f"{prefix}_current"] = _finite_float(None if metric is None else metric.get("current"))
+        metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is not None and metric.get("status") == "blocked":
+            metadata["evidence_handoff_blocked_metric_count"] += 1
     return metadata
 
 
@@ -1954,6 +2100,25 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_counterfactual_verification_flip_success_count_drop=(
             args.max_counterfactual_verification_flip_success_count_drop
         ),
+        min_evidence_handoff_coverage=args.min_evidence_handoff_coverage,
+        min_evidence_handoff_manifest_verified_rate=(
+            args.min_evidence_handoff_manifest_verified_rate
+        ),
+        min_evidence_handoff_present_metric_rate=(
+            args.min_evidence_handoff_present_metric_rate
+        ),
+        max_evidence_handoff_missing_metric_rate=(
+            args.max_evidence_handoff_missing_metric_rate
+        ),
+        max_evidence_handoff_missing_metric_count=(
+            args.max_evidence_handoff_missing_metric_count
+        ),
+        max_evidence_handoff_blocked_group_count=(
+            args.max_evidence_handoff_blocked_group_count
+        ),
+        min_evidence_handoff_promoted_group_rate=(
+            args.min_evidence_handoff_promoted_group_rate
+        ),
         min_triple_extraction_fixture_matrix_coverage=(
             args.min_triple_extraction_fixture_matrix_coverage
         ),
@@ -2096,6 +2261,17 @@ def main(argv: Sequence[str] | None = None) -> None:
         type=float,
         default=None,
     )
+    parser.add_argument("--min-evidence-handoff-coverage", type=float, default=None)
+    parser.add_argument(
+        "--min-evidence-handoff-manifest-verified-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument("--min-evidence-handoff-present-metric-rate", type=float, default=None)
+    parser.add_argument("--max-evidence-handoff-missing-metric-rate", type=float, default=None)
+    parser.add_argument("--max-evidence-handoff-missing-metric-count", type=float, default=None)
+    parser.add_argument("--max-evidence-handoff-blocked-group-count", type=float, default=None)
+    parser.add_argument("--min-evidence-handoff-promoted-group-rate", type=float, default=None)
     parser.add_argument("--min-triple-extraction-fixture-matrix-coverage", type=float, default=None)
     parser.add_argument("--max-triple-extraction-fixture-matrix-mean-best-f1-drop", type=float, default=None)
     parser.add_argument("--max-triple-extraction-fixture-matrix-mean-f1-lift-drop", type=float, default=None)

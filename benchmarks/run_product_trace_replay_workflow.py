@@ -96,6 +96,13 @@ class ProductTraceReplayWorkflowConfig:
     min_runtime_drift_counterfactual_verification_pass_rate: float | None = None
     max_runtime_drift_counterfactual_verification_false_invariance_rate: float | None = None
     max_runtime_drift_counterfactual_verification_flip_success_count_drop: float | None = None
+    min_runtime_drift_evidence_handoff_coverage: float | None = None
+    min_runtime_drift_evidence_handoff_manifest_verified_rate: float | None = None
+    min_runtime_drift_evidence_handoff_present_metric_rate: float | None = None
+    max_runtime_drift_evidence_handoff_missing_metric_rate: float | None = None
+    max_runtime_drift_evidence_handoff_missing_metric_count: float | None = None
+    max_runtime_drift_evidence_handoff_blocked_group_count: float | None = None
+    min_runtime_drift_evidence_handoff_promoted_group_rate: float | None = None
     min_runtime_drift_triple_extraction_fixture_matrix_coverage: float | None = None
     max_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_drop: float | None = None
     max_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_drop: float | None = None
@@ -204,6 +211,13 @@ class ProductTraceReplayWorkflowConfig:
                 self.min_runtime_drift_counterfactual_verification_pass_rate,
                 self.max_runtime_drift_counterfactual_verification_false_invariance_rate,
                 self.max_runtime_drift_counterfactual_verification_flip_success_count_drop,
+                self.min_runtime_drift_evidence_handoff_coverage,
+                self.min_runtime_drift_evidence_handoff_manifest_verified_rate,
+                self.min_runtime_drift_evidence_handoff_present_metric_rate,
+                self.max_runtime_drift_evidence_handoff_missing_metric_rate,
+                self.max_runtime_drift_evidence_handoff_missing_metric_count,
+                self.max_runtime_drift_evidence_handoff_blocked_group_count,
+                self.min_runtime_drift_evidence_handoff_promoted_group_rate,
                 self.min_runtime_drift_triple_extraction_fixture_matrix_coverage,
                 self.max_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_drop,
                 self.max_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_drop,
@@ -1340,6 +1354,13 @@ def _runtime_drift_configured(config: ProductTraceReplayWorkflowConfig) -> bool:
             config.min_runtime_drift_counterfactual_verification_pass_rate,
             config.max_runtime_drift_counterfactual_verification_false_invariance_rate,
             config.max_runtime_drift_counterfactual_verification_flip_success_count_drop,
+            config.min_runtime_drift_evidence_handoff_coverage,
+            config.min_runtime_drift_evidence_handoff_manifest_verified_rate,
+            config.min_runtime_drift_evidence_handoff_present_metric_rate,
+            config.max_runtime_drift_evidence_handoff_missing_metric_rate,
+            config.max_runtime_drift_evidence_handoff_missing_metric_count,
+            config.max_runtime_drift_evidence_handoff_blocked_group_count,
+            config.min_runtime_drift_evidence_handoff_promoted_group_rate,
             config.min_runtime_drift_triple_extraction_fixture_matrix_coverage,
             config.max_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_drop,
             config.max_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_drop,
@@ -1420,6 +1441,25 @@ def _runtime_drift_gate_config(config: ProductTraceReplayWorkflowConfig) -> dict
         ),
         "max_counterfactual_verification_flip_success_count_drop": (
             config.max_runtime_drift_counterfactual_verification_flip_success_count_drop
+        ),
+        "min_evidence_handoff_coverage": config.min_runtime_drift_evidence_handoff_coverage,
+        "min_evidence_handoff_manifest_verified_rate": (
+            config.min_runtime_drift_evidence_handoff_manifest_verified_rate
+        ),
+        "min_evidence_handoff_present_metric_rate": (
+            config.min_runtime_drift_evidence_handoff_present_metric_rate
+        ),
+        "max_evidence_handoff_missing_metric_rate": (
+            config.max_runtime_drift_evidence_handoff_missing_metric_rate
+        ),
+        "max_evidence_handoff_missing_metric_count": (
+            config.max_runtime_drift_evidence_handoff_missing_metric_count
+        ),
+        "max_evidence_handoff_blocked_group_count": (
+            config.max_runtime_drift_evidence_handoff_blocked_group_count
+        ),
+        "min_evidence_handoff_promoted_group_rate": (
+            config.min_runtime_drift_evidence_handoff_promoted_group_rate
         ),
         "min_triple_extraction_fixture_matrix_coverage": (
             config.min_runtime_drift_triple_extraction_fixture_matrix_coverage
@@ -1804,6 +1844,7 @@ def _runtime_drift_summary(runtime_drift: Mapping[str, Any]) -> dict[str, Any]:
     product_trace_action_gate = _product_trace_action_gate_metric_summary(runtime_drift)
     pre_generation_probe_comparison = _pre_generation_probe_comparison_metric_summary(runtime_drift)
     counterfactual_verification = _counterfactual_verification_metric_summary(runtime_drift)
+    evidence_handoff = _evidence_handoff_metric_summary(runtime_drift)
     return {
         "status": runtime_drift.get("status"),
         "gate_enabled": summary.get("gate_enabled"),
@@ -1826,6 +1867,8 @@ def _runtime_drift_summary(runtime_drift: Mapping[str, Any]) -> dict[str, Any]:
         "counterfactual_verification_blocked_metric_count": (
             counterfactual_verification["blocked_metric_count"]
         ),
+        "evidence_handoff_metric_count": evidence_handoff["metric_count"],
+        "evidence_handoff_blocked_metric_count": evidence_handoff["blocked_metric_count"],
         "baseline_path": _nested(runtime_drift, "baseline", "path"),
         "current_path": _nested(runtime_drift, "current", "path"),
         "report_path": _nested(runtime_drift, "paths", "report"),
@@ -1869,6 +1912,20 @@ def _counterfactual_verification_metric_summary(runtime_drift: Mapping[str, Any]
         for metric in _sequence(runtime_drift.get("metrics"))
         if str(_mapping(metric).get("metric") or "").startswith(
             "promotion_contract.counterfactual_verification."
+        )
+    )
+    return {
+        "metric_count": len(metrics),
+        "blocked_metric_count": sum(1 for metric in metrics if metric.get("status") == "blocked"),
+    }
+
+
+def _evidence_handoff_metric_summary(runtime_drift: Mapping[str, Any]) -> dict[str, int]:
+    metrics = tuple(
+        _mapping(metric)
+        for metric in _sequence(runtime_drift.get("metrics"))
+        if str(_mapping(metric).get("metric") or "").startswith(
+            "promotion_contract.evidence_handoff."
         )
     )
     return {
@@ -2298,6 +2355,16 @@ def _write_artifact_manifest(
                 "runtime_drift",
                 "counterfactual_verification_blocked_metric_count",
             ),
+            "runtime_drift_evidence_handoff_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "evidence_handoff_metric_count",
+            ),
+            "runtime_drift_evidence_handoff_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "evidence_handoff_blocked_metric_count",
+            ),
             "runtime_drift_report": _nested(report, "paths", "runtime_drift_report"),
             "runtime_drift_artifact_manifest": _nested(report, "paths", "runtime_drift_manifest"),
             "compact_json": config.compact_json,
@@ -2564,6 +2631,16 @@ def _record_registry(
                 report,
                 "runtime_drift",
                 "counterfactual_verification_blocked_metric_count",
+            ),
+            "runtime_drift_evidence_handoff_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "evidence_handoff_metric_count",
+            ),
+            "runtime_drift_evidence_handoff_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "evidence_handoff_blocked_metric_count",
             ),
             "runtime_drift_report": _nested(report, "paths", "runtime_drift_report"),
             "runtime_drift_artifact_manifest": _nested(report, "paths", "runtime_drift_manifest"),
@@ -2937,6 +3014,27 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
         max_runtime_drift_counterfactual_verification_flip_success_count_drop=(
             args.max_runtime_drift_counterfactual_verification_flip_success_count_drop
         ),
+        min_runtime_drift_evidence_handoff_coverage=(
+            args.min_runtime_drift_evidence_handoff_coverage
+        ),
+        min_runtime_drift_evidence_handoff_manifest_verified_rate=(
+            args.min_runtime_drift_evidence_handoff_manifest_verified_rate
+        ),
+        min_runtime_drift_evidence_handoff_present_metric_rate=(
+            args.min_runtime_drift_evidence_handoff_present_metric_rate
+        ),
+        max_runtime_drift_evidence_handoff_missing_metric_rate=(
+            args.max_runtime_drift_evidence_handoff_missing_metric_rate
+        ),
+        max_runtime_drift_evidence_handoff_missing_metric_count=(
+            args.max_runtime_drift_evidence_handoff_missing_metric_count
+        ),
+        max_runtime_drift_evidence_handoff_blocked_group_count=(
+            args.max_runtime_drift_evidence_handoff_blocked_group_count
+        ),
+        min_runtime_drift_evidence_handoff_promoted_group_rate=(
+            args.min_runtime_drift_evidence_handoff_promoted_group_rate
+        ),
         min_runtime_drift_triple_extraction_fixture_matrix_coverage=(
             args.min_runtime_drift_triple_extraction_fixture_matrix_coverage
         ),
@@ -3150,6 +3248,17 @@ def main(argv: Sequence[str] | None = None) -> None:
         type=float,
         default=None,
     )
+    parser.add_argument("--min-runtime-drift-evidence-handoff-coverage", type=float, default=None)
+    parser.add_argument(
+        "--min-runtime-drift-evidence-handoff-manifest-verified-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument("--min-runtime-drift-evidence-handoff-present-metric-rate", type=float, default=None)
+    parser.add_argument("--max-runtime-drift-evidence-handoff-missing-metric-rate", type=float, default=None)
+    parser.add_argument("--max-runtime-drift-evidence-handoff-missing-metric-count", type=float, default=None)
+    parser.add_argument("--max-runtime-drift-evidence-handoff-blocked-group-count", type=float, default=None)
+    parser.add_argument("--min-runtime-drift-evidence-handoff-promoted-group-rate", type=float, default=None)
     parser.add_argument("--min-runtime-drift-triple-extraction-fixture-matrix-coverage", type=float, default=None)
     parser.add_argument(
         "--max-runtime-drift-triple-extraction-fixture-matrix-mean-best-f1-drop",

@@ -31942,6 +31942,140 @@ def test_compare_product_runtime_baselines_gates_counterfactual_verification_dri
     )
 
 
+def test_compare_product_runtime_baselines_gates_evidence_handoff_drift(tmp_path):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    registry_module = importlib.import_module("eigentruth.registry")
+    baseline_trace = tmp_path / "baseline-trace.json"
+    current_trace = tmp_path / "current-trace.json"
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    drift_report = tmp_path / "drift.json"
+    manifest_path = tmp_path / "drift-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    group_statuses = {
+        "promotion": "promote",
+        "pre_generation": "promote",
+        "counterfactual": "promote",
+        "action_gate": "promote",
+        "triple_audit": "promote",
+        "covered_fact_property": "promote",
+    }
+    degraded_group_statuses = {
+        **group_statuses,
+        "covered_fact_property": "needs_evidence",
+    }
+    _write_product_runtime_trace(
+        baseline_trace,
+        request_id="baseline",
+        total_seconds=0.10,
+        route_seconds=0.02,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=1,
+        cache_misses=0,
+        metadata=_promotion_evidence_handoff_metadata(
+            manifest_verified=True,
+            present_metric_count=38,
+            missing_metric_count=0,
+            blocked_group_count=0,
+            group_statuses=group_statuses,
+        ),
+    )
+    _write_product_runtime_trace(
+        current_trace,
+        request_id="current",
+        total_seconds=0.10,
+        route_seconds=0.02,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=1,
+        cache_misses=0,
+        metadata=_promotion_evidence_handoff_metadata(
+            manifest_verified=False,
+            present_metric_count=35,
+            missing_metric_count=3,
+            blocked_group_count=1,
+            group_statuses=degraded_group_statuses,
+            status="needs_evidence",
+        ),
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=baseline_report,
+        )
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(current_trace,),
+            report_path=current_report,
+        )
+    )
+
+    payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        report_path=drift_report,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="runtime-drift-evidence-handoff",
+        version="0.1",
+        min_evidence_handoff_coverage=1.0,
+        min_evidence_handoff_manifest_verified_rate=1.0,
+        min_evidence_handoff_present_metric_rate=1.0,
+        max_evidence_handoff_missing_metric_rate=0.0,
+        max_evidence_handoff_missing_metric_count=0,
+        max_evidence_handoff_blocked_group_count=0,
+        min_evidence_handoff_promoted_group_rate=1.0,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get("product_runtime_drift_report:runtime-drift-evidence-handoff:0.1")
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["blocked_metric_count"] == 6
+    assert payload["summary"]["compared_metric_count"] == 24
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.evidence_handoff.coverage_rate",
+    )["status"] == "pass"
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.evidence_handoff.manifest_verified_rate",
+    )["current"] == pytest.approx(0.0)
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.evidence_handoff.present_metric_rate.mean",
+    )["current"] == pytest.approx(35.0 / 38.0)
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.evidence_handoff.missing_metric_rate.mean",
+    )["status"] == "blocked"
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.evidence_handoff.blocked_group_count.mean",
+    )["current"] == pytest.approx(1.0)
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.evidence_handoff.promoted_group_rate.mean",
+    )["current"] == pytest.approx(5.0 / 6.0)
+    assert manifest["metadata"]["evidence_handoff_blocked_metric_count"] == 6
+    assert manifest["metadata"]["evidence_handoff_coverage_rate_status"] == "pass"
+    assert manifest["metadata"]["evidence_handoff_manifest_verified_rate_current"] == (
+        pytest.approx(0.0)
+    )
+    assert manifest["metadata"]["evidence_handoff_missing_metric_count_current"] == (
+        pytest.approx(3.0)
+    )
+    assert manifest["metadata"]["evidence_handoff_promoted_group_rate_status"] == "blocked"
+    assert record.metadata["evidence_handoff_blocked_metric_count"] == 6
+    assert record.metadata["evidence_handoff_present_metric_rate_current"] == pytest.approx(
+        35.0 / 38.0
+    )
+    assert record.metadata["evidence_handoff_blocked_group_count_status"] == "blocked"
+
+
 def test_compare_product_runtime_baselines_gates_covered_fact_property_drift(tmp_path):
     baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
     compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
@@ -32524,6 +32658,35 @@ def _write_product_runtime_trace(
         }),
         encoding="utf-8",
     )
+
+
+def _promotion_evidence_handoff_metadata(
+    *,
+    manifest_verified: bool,
+    present_metric_count: int,
+    missing_metric_count: int,
+    blocked_group_count: int,
+    group_statuses: Mapping[str, str],
+    status: str = "promote",
+) -> dict[str, Any]:
+    expected_metric_count = present_metric_count + missing_metric_count
+    return {
+        "promotion_contract_evidence_handoff_manifest": "artifacts/promotion/evidence-handoff-manifest.json",
+        "promotion_contract_evidence_handoff_contract": "artifacts/promotion/evidence-handoff.json",
+        "promotion_contract_evidence_handoff_audit": "artifacts/promotion/evidence-handoff-audit.json",
+        "promotion_contract_evidence_handoff_manifest_verification": {"passed": manifest_verified},
+        "promotion_contract_evidence_handoff_workflow": "product_promotion_contract",
+        "promotion_contract_evidence_handoff_status": status,
+        "promotion_contract_evidence_handoff_before_missing_metric_count": expected_metric_count,
+        "promotion_contract_evidence_handoff_after_missing_metric_count": missing_metric_count,
+        "promotion_contract_evidence_handoff_resolved_missing_metric_count": present_metric_count,
+        "promotion_contract_evidence_handoff_expected_metric_count": expected_metric_count,
+        "promotion_contract_evidence_handoff_present_metric_count": present_metric_count,
+        "promotion_contract_evidence_handoff_missing_metric_count": missing_metric_count,
+        "promotion_contract_evidence_handoff_blocked_group_count": blocked_group_count,
+        "promotion_contract_evidence_handoff_filled_groups": tuple(group_statuses),
+        "promotion_contract_evidence_handoff_group_statuses": dict(group_statuses),
+    }
 
 
 def _metric_by_name(payload: Mapping[str, Any], name: str) -> dict[str, Any]:
@@ -34176,6 +34339,20 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
         "counterfactual_verification_false_invariance_rate": 0.0,
         "counterfactual_verification_flip_success_count": 12,
     }
+    evidence_handoff_rollup = _promotion_evidence_handoff_metadata(
+        manifest_verified=True,
+        present_metric_count=38,
+        missing_metric_count=0,
+        blocked_group_count=0,
+        group_statuses={
+            "promotion": "promote",
+            "pre_generation": "promote",
+            "counterfactual": "promote",
+            "action_gate": "promote",
+            "triple_audit": "promote",
+            "covered_fact_property": "promote",
+        },
+    )
     trace_payloads = (
         {
             "request_id": "latency-low-supported",
@@ -34195,6 +34372,7 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
                 **product_trace_action_gate_rollup,
                 **pre_generation_probe_comparison_rollup,
                 **counterfactual_verification_rollup,
+                **evidence_handoff_rollup,
             },
             "runtime_trace": {"total_seconds": 0.10, "phases": []},
         },
@@ -34216,6 +34394,7 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
                 **product_trace_action_gate_rollup,
                 **pre_generation_probe_comparison_rollup,
                 **counterfactual_verification_rollup,
+                **evidence_handoff_rollup,
             },
             "runtime_trace": {"total_seconds": 0.20, "phases": []},
         },
@@ -34275,6 +34454,13 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
             min_runtime_drift_counterfactual_verification_pass_rate=1.0,
             max_runtime_drift_counterfactual_verification_false_invariance_rate=0.0,
             max_runtime_drift_counterfactual_verification_flip_success_count_drop=0.0,
+            min_runtime_drift_evidence_handoff_coverage=1.0,
+            min_runtime_drift_evidence_handoff_manifest_verified_rate=1.0,
+            min_runtime_drift_evidence_handoff_present_metric_rate=1.0,
+            max_runtime_drift_evidence_handoff_missing_metric_rate=0.0,
+            max_runtime_drift_evidence_handoff_missing_metric_count=0,
+            max_runtime_drift_evidence_handoff_blocked_group_count=0,
+            min_runtime_drift_evidence_handoff_promoted_group_rate=1.0,
             min_runtime_drift_current_trace_count=2,
             registry_path=registry_path,
             name="trace-replay-with-drift",
@@ -34303,6 +34489,8 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert payload["runtime_drift"]["pre_generation_probe_comparison_blocked_metric_count"] == 0
     assert payload["runtime_drift"]["counterfactual_verification_metric_count"] == 6
     assert payload["runtime_drift"]["counterfactual_verification_blocked_metric_count"] == 0
+    assert payload["runtime_drift"]["evidence_handoff_metric_count"] == 7
+    assert payload["runtime_drift"]["evidence_handoff_blocked_metric_count"] == 0
     assert payload["runtime_drift"]["runtime_budget_policy_path"] == str(drift_policy_path)
     assert payload["paths"]["runtime_drift_manifest"] is not None
     assert payload["config"]["runtime_drift_baseline"] == str(prior_baseline_path)
@@ -34330,6 +34518,12 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert payload["config"]["runtime_drift_gates"][
         "max_counterfactual_verification_false_invariance_rate"
     ] == pytest.approx(0.0)
+    assert payload["config"]["runtime_drift_gates"]["min_evidence_handoff_coverage"] == (
+        pytest.approx(1.0)
+    )
+    assert payload["config"]["runtime_drift_gates"]["max_evidence_handoff_blocked_group_count"] == (
+        pytest.approx(0.0)
+    )
     assert drift_report["config"]["min_promotion_contract_coverage"] == pytest.approx(0.0)
     assert drift_report["config"]["min_promotion_contract_covered_fact_property_metric_count"] == (
         pytest.approx(2.0)
@@ -34353,6 +34547,10 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert drift_report["config"]["max_counterfactual_verification_flip_success_count_drop"] == (
         pytest.approx(0.0)
     )
+    assert drift_report["config"]["min_evidence_handoff_manifest_verified_rate"] == (
+        pytest.approx(1.0)
+    )
+    assert drift_report["config"]["max_evidence_handoff_missing_metric_count"] == pytest.approx(0.0)
     covered_fact_statuses = {
         metric["metric"]: metric["status"]
         for metric in drift_report["metrics"]
@@ -34403,6 +34601,16 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert counterfactual_statuses[
         "promotion_contract.counterfactual_verification.false_invariance_rate.mean"
     ] == "pass"
+    evidence_handoff_statuses = {
+        metric["metric"]: metric["status"]
+        for metric in drift_report["metrics"]
+        if metric["metric"].startswith("promotion_contract.evidence_handoff.")
+    }
+    assert len(evidence_handoff_statuses) == 7
+    assert set(evidence_handoff_statuses.values()) == {"pass"}
+    assert evidence_handoff_statuses[
+        "promotion_contract.evidence_handoff.manifest_verified_rate"
+    ] == "pass"
     assert drift_report["runtime_budget_policy_gate"]["policy_metadata"] == {
         "source": "unit-test-runtime-drift"
     }
@@ -34417,6 +34625,8 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert manifest["metadata"]["runtime_drift_pre_generation_probe_comparison_blocked_metric_count"] == 0
     assert manifest["metadata"]["runtime_drift_counterfactual_verification_metric_count"] == 6
     assert manifest["metadata"]["runtime_drift_counterfactual_verification_blocked_metric_count"] == 0
+    assert manifest["metadata"]["runtime_drift_evidence_handoff_metric_count"] == 7
+    assert manifest["metadata"]["runtime_drift_evidence_handoff_blocked_metric_count"] == 0
     assert record.metadata["runtime_drift_status"] == "promote"
     assert record.metadata["runtime_drift_budget_policy_passed"] is True
     assert record.metadata["runtime_drift_covered_fact_property_metric_count"] == 6
@@ -34426,6 +34636,8 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert record.metadata["runtime_drift_pre_generation_probe_comparison_blocked_metric_count"] == 0
     assert record.metadata["runtime_drift_counterfactual_verification_metric_count"] == 6
     assert record.metadata["runtime_drift_counterfactual_verification_blocked_metric_count"] == 0
+    assert record.metadata["runtime_drift_evidence_handoff_metric_count"] == 7
+    assert record.metadata["runtime_drift_evidence_handoff_blocked_metric_count"] == 0
     assert drift_record.path == payload["paths"]["runtime_drift_report"]
     assert drift_record.metadata["workflow"] == "compare_product_runtime_baselines"
     assert drift_record.metadata["runtime_budget_policy_passed"] is True
@@ -34433,6 +34645,7 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert drift_record.metadata["product_trace_action_gate_blocked_metric_count"] == 0
     assert drift_record.metadata["pre_generation_probe_comparison_blocked_metric_count"] == 0
     assert drift_record.metadata["counterfactual_verification_blocked_metric_count"] == 0
+    assert drift_record.metadata["evidence_handoff_blocked_metric_count"] == 0
 
 
 def test_run_product_trace_replay_workflow_applies_action_audit_gate(tmp_path):
