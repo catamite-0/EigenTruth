@@ -633,6 +633,96 @@ def test_run_pre_generation_probe_workflow_reuses_records_and_writes_manifest(tm
     assert (output_dir / "best-pre-generation-calibration.json").exists()
 
 
+def test_run_claim_factuality_probe_workflow_reuses_records_writes_redline_and_registry(tmp_path):
+    module = importlib.import_module("benchmarks.run_claim_factuality_probe_workflow")
+    from eigentruth.registry import ArtifactRegistry
+
+    records = []
+    for index in range(16):
+        label = 1 if index >= 8 else 0
+        sign = 3.0 if label else -3.0
+        records.append({
+            "id": f"claim-r{index}",
+            "claim_id": f"claim-{index}",
+            "text": "The claim text is fixed.",
+            "claim": "The claim text is fixed.",
+            "answer": "fixed answer",
+            "question": "fixed question",
+            "layer_hidden_states": {
+                "-1": [[0.0, 0.0], [0.0, 0.0]],
+                "-2": [[sign, 0.0], [sign, 0.5]],
+            },
+            "attention_mask": [True, True],
+            "label": label,
+            "risk_target": 0.9 if label else 0.1,
+            "metadata": {
+                "answer": "fixed answer",
+                "claim": "The claim text is fixed.",
+                "dataset": "synthetic",
+                "layers": [-1, -2],
+                "model": "synthetic-claim-factuality-model",
+                "offline": True,
+                "question": "fixed question",
+                "record_grain": "candidate_claim",
+                "source": "synthetic_claim_records",
+            },
+        })
+    records_path = tmp_path / "layered-claim-records.json"
+    output_dir = tmp_path / "claim-workflow"
+    registry_path = tmp_path / "registry.json"
+    records_path.write_text(json.dumps({"records": records}), encoding="utf-8")
+
+    payload = module.run_claim_factuality_probe_workflow(
+        module.ClaimFactualityProbeWorkflowConfig(
+            output_dir=output_dir,
+            records_path=records_path,
+            registry_path=registry_path,
+            register_name="claim-factuality-smoke",
+            sweep_layers=(-1, -2),
+            train_fraction=0.75,
+            seed=2,
+            steps=120,
+            lr=0.08,
+            conformal_alpha=0.2,
+            compact_json=True,
+        )
+    )
+    saved_report = json.loads((output_dir / "claim-factuality-probe-workflow.json").read_text(encoding="utf-8"))
+    manifest = json.loads((output_dir / "artifact-manifest.json").read_text(encoding="utf-8"))
+    registry = ArtifactRegistry.load_json(registry_path)
+    report_record = registry.get("report:claim-factuality-smoke:0.1")
+    manifest_record = registry.get("benchmark_manifest:claim-factuality-smoke:0.1")
+
+    assert payload["workflow"] == "claim_factuality_probe_workflow"
+    assert payload["status"] == "ready"
+    assert payload["effective_model"] == "synthetic-claim-factuality-model"
+    assert payload["records"]["record_count"] == 16
+    assert payload["records"]["metadata_record_grain"] == "candidate_claim"
+    assert payload["execution"]["records_reused"] is True
+    assert payload["truthfulqa"] is None
+    assert payload["probe"]["candidate_count"] == 2
+    assert payload["probe"]["resolved_best_by"] == "label_auroc"
+    assert payload["probe"]["recommended_layer"] == -2
+    assert payload["probe"]["test_label_auroc"] == pytest.approx(1.0)
+    assert payload["redline"]["available"] is True
+    assert payload["redline"]["best_text_auroc"] == pytest.approx(0.5)
+    assert payload["redline"]["probe_vs_text_auroc_margin"] == pytest.approx(0.5)
+    assert payload["redline"]["status"] == "pass"
+    assert payload["artifact_manifest_summary"]["missing_count"] == 0
+    assert payload["registry_record"] == "report:claim-factuality-smoke:0.1"
+    assert payload["registry_manifest_record"] == "benchmark_manifest:claim-factuality-smoke:0.1"
+    assert saved_report["probe"]["recommended_layer"] == -2
+    assert manifest["metadata"]["workflow"] == "claim_factuality_probe_workflow"
+    assert manifest["metadata"]["status"] == "ready"
+    assert manifest["summary"]["missing_count"] == 0
+    assert manifest["artifacts"]["text_baseline_report"]["exists"] is True
+    assert report_record.metadata["recommended_layer"] == -2
+    assert report_record.metadata["redline_margin"] == pytest.approx(0.5)
+    assert manifest_record.metadata["manifest_summary"]["missing_count"] == 0
+    assert (output_dir / "best-claim-factuality-probe.pt").exists()
+    assert (output_dir / "best-claim-factuality-calibration.json").exists()
+
+
 def test_compare_pre_generation_probe_workflows_gates_multimodel_reports(tmp_path):
     module = importlib.import_module("benchmarks.compare_pre_generation_probe_workflows")
 
