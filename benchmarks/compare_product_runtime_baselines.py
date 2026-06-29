@@ -172,6 +172,40 @@ _EVIDENCE_HANDOFF_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
         "evidence_handoff_promoted_group_rate",
     ),
 )
+_FRONTIER_RELEASE_EVIDENCE_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
+    (
+        "promotion_contract.frontier_release_evidence.coverage_rate",
+        "frontier_release_evidence_coverage_rate",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.report_present_rate",
+        "frontier_release_evidence_report_present_rate",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.manifest_present_rate",
+        "frontier_release_evidence_manifest_present_rate",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.status_promote_rate",
+        "frontier_release_evidence_status_promote_rate",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.decision_promote_rate",
+        "frontier_release_evidence_decision_promote_rate",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.verifier_track_promote_rate",
+        "frontier_release_evidence_verifier_track_promote_rate",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.abstention_track_promote_rate",
+        "frontier_release_evidence_abstention_track_promote_rate",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.run_count.mean",
+        "frontier_release_evidence_run_count",
+    ),
+)
 
 _TRIPLE_COVERAGE_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
     ("triple_coverage.claim_triple_coverage_rate", "triple_claim_coverage_rate"),
@@ -428,6 +462,14 @@ def compare_product_runtime_baselines(
     max_evidence_handoff_missing_metric_count: float | None = None,
     max_evidence_handoff_blocked_group_count: float | None = None,
     min_evidence_handoff_promoted_group_rate: float | None = None,
+    min_frontier_release_evidence_coverage: float | None = None,
+    min_frontier_release_evidence_report_present_rate: float | None = None,
+    min_frontier_release_evidence_manifest_present_rate: float | None = None,
+    min_frontier_release_evidence_status_promote_rate: float | None = None,
+    min_frontier_release_evidence_decision_promote_rate: float | None = None,
+    min_frontier_release_evidence_verifier_track_promote_rate: float | None = None,
+    min_frontier_release_evidence_abstention_track_promote_rate: float | None = None,
+    min_frontier_release_evidence_run_count: float | None = None,
     min_triple_extraction_fixture_matrix_coverage: float | None = None,
     max_triple_extraction_fixture_matrix_mean_best_f1_drop: float | None = None,
     max_triple_extraction_fixture_matrix_mean_f1_lift_drop: float | None = None,
@@ -598,6 +640,30 @@ def compare_product_runtime_baselines(
         ),
         "min_evidence_handoff_promoted_group_rate": _optional_rate_float(
             min_evidence_handoff_promoted_group_rate
+        ),
+        "min_frontier_release_evidence_coverage": _optional_rate_float(
+            min_frontier_release_evidence_coverage
+        ),
+        "min_frontier_release_evidence_report_present_rate": _optional_rate_float(
+            min_frontier_release_evidence_report_present_rate
+        ),
+        "min_frontier_release_evidence_manifest_present_rate": _optional_rate_float(
+            min_frontier_release_evidence_manifest_present_rate
+        ),
+        "min_frontier_release_evidence_status_promote_rate": _optional_rate_float(
+            min_frontier_release_evidence_status_promote_rate
+        ),
+        "min_frontier_release_evidence_decision_promote_rate": _optional_rate_float(
+            min_frontier_release_evidence_decision_promote_rate
+        ),
+        "min_frontier_release_evidence_verifier_track_promote_rate": _optional_rate_float(
+            min_frontier_release_evidence_verifier_track_promote_rate
+        ),
+        "min_frontier_release_evidence_abstention_track_promote_rate": _optional_rate_float(
+            min_frontier_release_evidence_abstention_track_promote_rate
+        ),
+        "min_frontier_release_evidence_run_count": _optional_non_negative_float(
+            min_frontier_release_evidence_run_count
         ),
         "min_triple_extraction_fixture_matrix_coverage": _optional_rate_float(
             min_triple_extraction_fixture_matrix_coverage
@@ -942,6 +1008,9 @@ def _comparison_metrics(
     metrics.extend(_claim_factuality_probe_comparison_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_counterfactual_verification_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_evidence_handoff_metrics(baseline_summary, current_summary, gates=gates))
+    metrics.extend(
+        _frontier_release_evidence_metrics(baseline_summary, current_summary, gates=gates)
+    )
     return metrics
 
 
@@ -1278,6 +1347,94 @@ def _evidence_handoff_gate_enabled(gates: Mapping[str, Any]) -> bool:
             "max_evidence_handoff_missing_metric_count",
             "max_evidence_handoff_blocked_group_count",
             "min_evidence_handoff_promoted_group_rate",
+        )
+    )
+
+
+def _frontier_release_evidence_metrics(
+    baseline_summary: Mapping[str, Any],
+    current_summary: Mapping[str, Any],
+    *,
+    gates: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    if not _frontier_release_evidence_gate_enabled(gates):
+        return []
+    baseline = _mapping(
+        _nested_value(
+            baseline_summary,
+            ("promotion_contract", "frontier_release_evidence"),
+        )
+    )
+    current = _mapping(
+        _nested_value(
+            current_summary,
+            ("promotion_contract", "frontier_release_evidence"),
+        )
+    )
+    return [
+        _min_current_metric(
+            "promotion_contract.frontier_release_evidence.coverage_rate",
+            _finite_float(baseline.get("coverage_rate")),
+            _finite_float(current.get("coverage_rate")),
+            gates.get("min_frontier_release_evidence_coverage"),
+        ),
+        _min_current_metric(
+            "promotion_contract.frontier_release_evidence.report_present_rate",
+            _finite_float(baseline.get("report_present_rate")),
+            _finite_float(current.get("report_present_rate")),
+            gates.get("min_frontier_release_evidence_report_present_rate"),
+        ),
+        _min_current_metric(
+            "promotion_contract.frontier_release_evidence.manifest_present_rate",
+            _finite_float(baseline.get("manifest_present_rate")),
+            _finite_float(current.get("manifest_present_rate")),
+            gates.get("min_frontier_release_evidence_manifest_present_rate"),
+        ),
+        _min_current_metric(
+            "promotion_contract.frontier_release_evidence.status_promote_rate",
+            _finite_float(baseline.get("status_promote_rate")),
+            _finite_float(current.get("status_promote_rate")),
+            gates.get("min_frontier_release_evidence_status_promote_rate"),
+        ),
+        _min_current_metric(
+            "promotion_contract.frontier_release_evidence.decision_promote_rate",
+            _finite_float(baseline.get("decision_promote_rate")),
+            _finite_float(current.get("decision_promote_rate")),
+            gates.get("min_frontier_release_evidence_decision_promote_rate"),
+        ),
+        _min_current_metric(
+            "promotion_contract.frontier_release_evidence.verifier_track_promote_rate",
+            _finite_float(baseline.get("verifier_track_promote_rate")),
+            _finite_float(current.get("verifier_track_promote_rate")),
+            gates.get("min_frontier_release_evidence_verifier_track_promote_rate"),
+        ),
+        _min_current_metric(
+            "promotion_contract.frontier_release_evidence.abstention_track_promote_rate",
+            _finite_float(baseline.get("abstention_track_promote_rate")),
+            _finite_float(current.get("abstention_track_promote_rate")),
+            gates.get("min_frontier_release_evidence_abstention_track_promote_rate"),
+        ),
+        _min_current_metric(
+            "promotion_contract.frontier_release_evidence.run_count.mean",
+            _nested_float(baseline, ("run_count", "mean")),
+            _nested_float(current, ("run_count", "mean")),
+            gates.get("min_frontier_release_evidence_run_count"),
+        ),
+    ]
+
+
+def _frontier_release_evidence_gate_enabled(gates: Mapping[str, Any]) -> bool:
+    return any(
+        gates.get(key) is not None
+        for key in (
+            "min_frontier_release_evidence_coverage",
+            "min_frontier_release_evidence_report_present_rate",
+            "min_frontier_release_evidence_manifest_present_rate",
+            "min_frontier_release_evidence_status_promote_rate",
+            "min_frontier_release_evidence_decision_promote_rate",
+            "min_frontier_release_evidence_verifier_track_promote_rate",
+            "min_frontier_release_evidence_abstention_track_promote_rate",
+            "min_frontier_release_evidence_run_count",
         )
     )
 
@@ -2092,6 +2249,7 @@ def _drift_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
         **_claim_factuality_probe_comparison_metadata(report),
         **_counterfactual_verification_metadata(report),
         **_evidence_handoff_metadata(report),
+        **_frontier_release_evidence_metadata(report),
         **_covered_fact_property_metadata(report),
         **_triple_coverage_metadata(report),
         **_product_trace_action_gate_metadata(report),
@@ -2175,6 +2333,25 @@ def _evidence_handoff_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
         metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
         if metric is not None and metric.get("status") == "blocked":
             metadata["evidence_handoff_blocked_metric_count"] += 1
+    return metadata
+
+
+def _frontier_release_evidence_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    metrics = _metrics_by_name(report.get("metrics"))
+    metadata: dict[str, Any] = {
+        "frontier_release_evidence_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _FRONTIER_RELEASE_EVIDENCE_METADATA_FIELDS:
+        metric = metrics.get(metric_name)
+        metadata[f"{prefix}_baseline"] = _finite_float(
+            None if metric is None else metric.get("baseline")
+        )
+        metadata[f"{prefix}_current"] = _finite_float(
+            None if metric is None else metric.get("current")
+        )
+        metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is not None and metric.get("status") == "blocked":
+            metadata["frontier_release_evidence_blocked_metric_count"] += 1
     return metadata
 
 
@@ -2493,6 +2670,30 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         min_evidence_handoff_promoted_group_rate=(
             args.min_evidence_handoff_promoted_group_rate
         ),
+        min_frontier_release_evidence_coverage=(
+            args.min_frontier_release_evidence_coverage
+        ),
+        min_frontier_release_evidence_report_present_rate=(
+            args.min_frontier_release_evidence_report_present_rate
+        ),
+        min_frontier_release_evidence_manifest_present_rate=(
+            args.min_frontier_release_evidence_manifest_present_rate
+        ),
+        min_frontier_release_evidence_status_promote_rate=(
+            args.min_frontier_release_evidence_status_promote_rate
+        ),
+        min_frontier_release_evidence_decision_promote_rate=(
+            args.min_frontier_release_evidence_decision_promote_rate
+        ),
+        min_frontier_release_evidence_verifier_track_promote_rate=(
+            args.min_frontier_release_evidence_verifier_track_promote_rate
+        ),
+        min_frontier_release_evidence_abstention_track_promote_rate=(
+            args.min_frontier_release_evidence_abstention_track_promote_rate
+        ),
+        min_frontier_release_evidence_run_count=(
+            args.min_frontier_release_evidence_run_count
+        ),
         min_triple_extraction_fixture_matrix_coverage=(
             args.min_triple_extraction_fixture_matrix_coverage
         ),
@@ -2705,6 +2906,38 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-evidence-handoff-missing-metric-count", type=float, default=None)
     parser.add_argument("--max-evidence-handoff-blocked-group-count", type=float, default=None)
     parser.add_argument("--min-evidence-handoff-promoted-group-rate", type=float, default=None)
+    parser.add_argument("--min-frontier-release-evidence-coverage", type=float, default=None)
+    parser.add_argument(
+        "--min-frontier-release-evidence-report-present-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-frontier-release-evidence-manifest-present-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-frontier-release-evidence-status-promote-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-frontier-release-evidence-decision-promote-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-frontier-release-evidence-verifier-track-promote-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-frontier-release-evidence-abstention-track-promote-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument("--min-frontier-release-evidence-run-count", type=float, default=None)
     parser.add_argument("--min-triple-extraction-fixture-matrix-coverage", type=float, default=None)
     parser.add_argument("--max-triple-extraction-fixture-matrix-mean-best-f1-drop", type=float, default=None)
     parser.add_argument("--max-triple-extraction-fixture-matrix-mean-f1-lift-drop", type=float, default=None)

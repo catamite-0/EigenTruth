@@ -16073,6 +16073,12 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         blocked_metric_count=0,
         evidence_handoff_evidence=True,
     )
+    frontier_release_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "frontier-release-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        frontier_release_evidence=True,
+    )
     blocked_covered_fact_property_drift_report = _write_product_runtime_drift_report(
         tmp_path / "blocked-covered-fact-property-runtime-drift",
         status="promote",
@@ -16100,6 +16106,13 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         blocked_metric_count=0,
         evidence_handoff_evidence=True,
         evidence_handoff_blocked=True,
+    )
+    blocked_frontier_release_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "blocked-frontier-release-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        frontier_release_evidence=True,
+        frontier_release_blocked=True,
     )
     blocked_drift_report = _write_product_runtime_drift_report(
         tmp_path / "blocked-runtime-drift",
@@ -16423,6 +16436,39 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         product_runtime_drift_report_path=blocked_evidence_handoff_drift_report,
         require_product_runtime_drift_evidence_handoff_evidence=True,
     )
+    frontier_release = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=frontier_release_drift_report,
+        require_product_runtime_drift_frontier_release_evidence=True,
+    )
+    missing_frontier_release = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=missing_evidence_drift_report,
+        require_product_runtime_drift_frontier_release_evidence=True,
+    )
+    blocked_frontier_release = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=blocked_frontier_release_drift_report,
+        require_product_runtime_drift_frontier_release_evidence=True,
+    )
     missing_evidence_handoff_report = module.compare_release_candidates(
         readiness_registry_path=registry_path,
         min_best_quality_auroc=0.70,
@@ -16432,6 +16478,16 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         max_false_supported_rate=0.0,
         min_false_refuted_rate=0.99,
         require_product_runtime_drift_evidence_handoff_evidence=True,
+    )
+    missing_frontier_release_report = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        require_product_runtime_drift_frontier_release_evidence=True,
     )
 
     assert payload["decision"]["status"] == "promote"
@@ -16781,6 +16837,53 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
     ] is True
     assert missing_evidence_handoff_report["product_runtime_drift_gate"]["summary"][
         "evidence_handoff_evidence_metric_count"
+    ] == 0
+    assert frontier_release["decision"]["status"] == "promote"
+    assert frontier_release["config"][
+        "require_product_runtime_drift_frontier_release_evidence"
+    ] is True
+    frontier_release_summary = frontier_release["release_candidate"]["product_runtime_drift"][
+        "summary"
+    ]
+    assert frontier_release_summary["frontier_release_evidence_required"] is True
+    assert frontier_release_summary["frontier_release_evidence_metric_count"] == 8
+    assert frontier_release_summary["frontier_release_evidence_blocked_metric_count"] == 0
+    assert frontier_release_summary[
+        "frontier_release_evidence_coverage_rate_current"
+    ] == pytest.approx(1.0)
+    assert frontier_release_summary[
+        "frontier_release_evidence_decision_promote_rate_status"
+    ] == "pass"
+    assert missing_frontier_release["decision"]["status"] == "blocked"
+    assert missing_frontier_release["product_runtime_drift_gate"]["summary"][
+        "frontier_release_evidence_missing_metrics"
+    ] == (
+        "promotion_contract.frontier_release_evidence.coverage_rate",
+        "promotion_contract.frontier_release_evidence.report_present_rate",
+        "promotion_contract.frontier_release_evidence.manifest_present_rate",
+        "promotion_contract.frontier_release_evidence.status_promote_rate",
+        "promotion_contract.frontier_release_evidence.decision_promote_rate",
+        "promotion_contract.frontier_release_evidence.verifier_track_promote_rate",
+        "promotion_contract.frontier_release_evidence.abstention_track_promote_rate",
+        "promotion_contract.frontier_release_evidence.run_count.mean",
+    )
+    assert any(
+        "frontier release evidence metrics are incomplete" in reason
+        for reason in missing_frontier_release["decision"]["blocking_reasons"][0]["reasons"]
+    )
+    assert blocked_frontier_release["decision"]["status"] == "blocked"
+    assert blocked_frontier_release["product_runtime_drift_gate"]["summary"][
+        "frontier_release_evidence_blocked_metric_count"
+    ] == 1
+    assert any(
+        "frontier release evidence blocked 1 metric" in reason
+        for reason in blocked_frontier_release["decision"]["blocking_reasons"][0]["reasons"]
+    )
+    assert missing_frontier_release_report["product_runtime_drift_gate"]["summary"][
+        "frontier_release_evidence_required"
+    ] is True
+    assert missing_frontier_release_report["product_runtime_drift_gate"]["summary"][
+        "frontier_release_evidence_metric_count"
     ] == 0
     assert missing_covered_fact_property_report["product_runtime_drift_gate"]["summary"][
         "covered_fact_property_evidence_required"
@@ -18345,6 +18448,7 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         action_gate_evidence=True,
         trajectory_audit_evidence=True,
         evidence_handoff_evidence=True,
+        frontier_release_evidence=True,
     )
     external_evidence_report = _write_external_evidence_baseline_comparison_report(
         tmp_path / "frontier-external-evidence-baseline-comparison.json"
@@ -18465,6 +18569,7 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     assert frontier_payload["config"]["require_product_runtime_drift_action_gate_evidence"] is True
     assert frontier_payload["config"]["require_product_runtime_drift_trajectory_audit_evidence"] is True
     assert frontier_payload["config"]["require_product_runtime_drift_evidence_handoff_evidence"] is True
+    assert frontier_payload["config"]["require_product_runtime_drift_frontier_release_evidence"] is True
     assert frontier_payload["config"]["require_product_trace_action_audit_gate"] is True
     assert frontier_payload["config"]["require_product_trace_action_execution_gate"] is True
     assert frontier_payload["config"]["external_evidence_baseline_comparison_key"] == (
@@ -18511,6 +18616,9 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         "require_product_runtime_drift_evidence_handoff_evidence"
     ] is True
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
+        "require_product_runtime_drift_frontier_release_evidence"
+    ] is True
+    assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
         "require_product_trace_action_audit_gate"
     ] is True
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
@@ -18547,6 +18655,9 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     assert frontier_payload["product_runtime_drift_gate"]["summary"][
         "evidence_handoff_evidence_metric_count"
     ] == 7
+    assert frontier_payload["product_runtime_drift_gate"]["summary"][
+        "frontier_release_evidence_metric_count"
+    ] == 8
     assert frontier_payload["adapter_family_matrix_gate"]["state_transition_world_model_adapter"] == (
         "RuleBasedWorldModelAdapter"
     )
@@ -19720,6 +19831,7 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     assert frontier_profile_config.require_product_runtime_drift_action_gate_evidence is True
     assert frontier_profile_config.require_product_runtime_drift_trajectory_audit_evidence is True
     assert frontier_profile_config.require_product_runtime_drift_evidence_handoff_evidence is True
+    assert frontier_profile_config.require_product_runtime_drift_frontier_release_evidence is True
     assert frontier_profile_config.require_product_trace_action_audit_gate is True
     assert frontier_profile_config.require_product_trace_action_execution_gate is True
     assert frontier_profile_config.external_evidence_baseline_comparison_key == (
@@ -19765,6 +19877,9 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     ] is True
     assert frontier_profile_config.release_policy_profile_applied_defaults[
         "require_product_runtime_drift_evidence_handoff_evidence"
+    ] is True
+    assert frontier_profile_config.release_policy_profile_applied_defaults[
+        "require_product_runtime_drift_frontier_release_evidence"
     ] is True
     assert frontier_profile_config.release_policy_profile_applied_defaults[
         "require_product_trace_action_audit_gate"
@@ -23987,6 +24102,8 @@ def _write_product_runtime_drift_report(
     trajectory_audit_blocked=False,
     evidence_handoff_evidence=False,
     evidence_handoff_blocked=False,
+    frontier_release_evidence=False,
+    frontier_release_blocked=False,
 ):
     from eigentruth.registry import build_artifact_manifest
 
@@ -24849,6 +24966,95 @@ def _write_product_runtime_drift_report(
                 "current": 1.0,
                 "absolute_delta": 0.0,
                 "threshold": 1.0,
+                "reason": None,
+            },
+        ])
+    if frontier_release_evidence:
+        decision_status = "blocked" if frontier_release_blocked else "pass"
+        decision_current = 0.0 if frontier_release_blocked else 1.0
+        metrics.extend([
+            {
+                "metric": "promotion_contract.frontier_release_evidence.coverage_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "promotion_contract.frontier_release_evidence.report_present_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "promotion_contract.frontier_release_evidence.manifest_present_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "promotion_contract.frontier_release_evidence.status_promote_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "promotion_contract.frontier_release_evidence.decision_promote_rate",
+                "status": decision_status,
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": decision_current,
+                "absolute_delta": decision_current - 1.0,
+                "threshold": 1.0,
+                "reason": (
+                    "promotion_contract.frontier_release_evidence.decision_promote_rate below gate"
+                    if frontier_release_blocked
+                    else None
+                ),
+            },
+            {
+                "metric": "promotion_contract.frontier_release_evidence.verifier_track_promote_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "promotion_contract.frontier_release_evidence.abstention_track_promote_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "promotion_contract.frontier_release_evidence.run_count.mean",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 2.0,
+                "current": 2.0,
+                "absolute_delta": 0.0,
+                "threshold": 2.0,
                 "reason": None,
             },
         ])
@@ -33791,6 +33997,132 @@ def test_compare_product_runtime_baselines_gates_evidence_handoff_drift(tmp_path
     assert record.metadata["evidence_handoff_blocked_group_count_status"] == "blocked"
 
 
+def test_compare_product_runtime_baselines_gates_frontier_release_evidence_drift(tmp_path):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    registry_module = importlib.import_module("eigentruth.registry")
+    baseline_trace = tmp_path / "baseline-trace.json"
+    current_trace = tmp_path / "current-trace.json"
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    drift_report = tmp_path / "drift.json"
+    manifest_path = tmp_path / "drift-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    _write_product_runtime_trace(
+        baseline_trace,
+        request_id="baseline",
+        total_seconds=0.10,
+        route_seconds=0.02,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=1,
+        cache_misses=0,
+        metadata=_promotion_frontier_release_evidence_metadata(
+            status="promote",
+            decision_status="promote",
+            verifier_track_status="promote",
+            abstention_track_status="promote",
+            run_names=("verifier-stability", "abstention-stability"),
+        ),
+    )
+    _write_product_runtime_trace(
+        current_trace,
+        request_id="current",
+        total_seconds=0.10,
+        route_seconds=0.02,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=1,
+        cache_misses=0,
+        metadata=_promotion_frontier_release_evidence_metadata(
+            status="blocked",
+            decision_status="blocked",
+            verifier_track_status="promote",
+            abstention_track_status="blocked",
+            run_names=("verifier-stability",),
+            manifest_present=False,
+        ),
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=baseline_report,
+        )
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(current_trace,),
+            report_path=current_report,
+        )
+    )
+
+    payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        report_path=drift_report,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="runtime-drift-frontier-release-evidence",
+        version="0.1",
+        min_frontier_release_evidence_coverage=1.0,
+        min_frontier_release_evidence_report_present_rate=1.0,
+        min_frontier_release_evidence_manifest_present_rate=1.0,
+        min_frontier_release_evidence_status_promote_rate=1.0,
+        min_frontier_release_evidence_decision_promote_rate=1.0,
+        min_frontier_release_evidence_verifier_track_promote_rate=1.0,
+        min_frontier_release_evidence_abstention_track_promote_rate=1.0,
+        min_frontier_release_evidence_run_count=2,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get(
+        "product_runtime_drift_report:runtime-drift-frontier-release-evidence:0.1"
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["blocked_metric_count"] == 5
+    assert payload["summary"]["compared_metric_count"] == 25
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.frontier_release_evidence.coverage_rate",
+    )["status"] == "pass"
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.frontier_release_evidence.report_present_rate",
+    )["status"] == "pass"
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.frontier_release_evidence.manifest_present_rate",
+    )["current"] == pytest.approx(0.0)
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.frontier_release_evidence.status_promote_rate",
+    )["status"] == "blocked"
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.frontier_release_evidence.verifier_track_promote_rate",
+    )["status"] == "pass"
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.frontier_release_evidence.run_count.mean",
+    )["current"] == pytest.approx(1.0)
+    assert manifest["metadata"]["frontier_release_evidence_blocked_metric_count"] == 5
+    assert manifest["metadata"]["frontier_release_evidence_coverage_rate_status"] == "pass"
+    assert manifest["metadata"]["frontier_release_evidence_manifest_present_rate_current"] == (
+        pytest.approx(0.0)
+    )
+    assert manifest["metadata"]["frontier_release_evidence_decision_promote_rate_status"] == (
+        "blocked"
+    )
+    assert record.metadata["frontier_release_evidence_blocked_metric_count"] == 5
+    assert record.metadata["frontier_release_evidence_run_count_current"] == pytest.approx(
+        1.0
+    )
+    assert record.metadata["frontier_release_evidence_abstention_track_promote_rate_status"] == (
+        "blocked"
+    )
+
+
 def test_compare_product_runtime_baselines_gates_covered_fact_property_drift(tmp_path):
     baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
     compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
@@ -34401,6 +34733,49 @@ def _promotion_evidence_handoff_metadata(
         "promotion_contract_evidence_handoff_blocked_group_count": blocked_group_count,
         "promotion_contract_evidence_handoff_filled_groups": tuple(group_statuses),
         "promotion_contract_evidence_handoff_group_statuses": dict(group_statuses),
+    }
+
+
+def _promotion_frontier_release_evidence_metadata(
+    *,
+    status: str,
+    decision_status: str,
+    verifier_track_status: str,
+    abstention_track_status: str,
+    run_names: Sequence[str],
+    manifest_present: bool = True,
+) -> dict[str, Any]:
+    return {
+        "promotion_contract_frontier_release_evidence_available": True,
+        "promotion_contract_frontier_release_evidence_status": status,
+        "promotion_contract_frontier_release_evidence_report": (
+            "artifacts/frontier-release-evidence/frontier-release-evidence.json"
+        ),
+        "promotion_contract_frontier_release_evidence_manifest": (
+            "artifacts/frontier-release-evidence/artifact-manifest.json"
+            if manifest_present
+            else None
+        ),
+        "promotion_contract_frontier_release_evidence_source": "registry",
+        "promotion_contract_frontier_release_evidence_registry": (
+            "artifacts/release-registry.json"
+        ),
+        "promotion_contract_frontier_release_evidence_record": (
+            "report:frontier-release-evidence:0.1"
+        ),
+        "promotion_contract_frontier_release_evidence_workflow": (
+            "frontier_release_evidence_comparison"
+        ),
+        "promotion_contract_frontier_release_evidence_report_status": "complete",
+        "promotion_contract_frontier_release_evidence_decision_status": decision_status,
+        "promotion_contract_frontier_release_evidence_verifier_track_status": (
+            verifier_track_status
+        ),
+        "promotion_contract_frontier_release_evidence_abstention_track_status": (
+            abstention_track_status
+        ),
+        "promotion_contract_frontier_release_evidence_run_count": len(run_names),
+        "promotion_contract_frontier_release_evidence_run_names": tuple(run_names),
     }
 
 
