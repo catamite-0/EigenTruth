@@ -5039,6 +5039,35 @@ It accepts a frontier release report, an evidence-gap plan, or a
 `run_external_citation_search_adapter_workflow.py` command; otherwise they remain
 reviewable `missing_inputs` rows.
 
+The gap planner can also emit a verifier/abstention stability rerun queue when
+the frontier release blocks on either stability track:
+
+```bash
+python benchmarks/plan_release_evidence_gaps.py \
+  --source artifacts/frontier-release-evidence/report.json \
+  --json artifacts/frontier-release-evidence/evidence-gap-plan.json \
+  --stability-rerun-json artifacts/frontier-release-evidence/stability-rerun-queue.json \
+  --stability-rerun-artifact-manifest artifacts/frontier-release-evidence/stability-rerun-queue-manifest.json \
+  --stability-rerun-output-dir artifacts/frontier-stability-reruns \
+  --stability-scores qwen05-l80=artifacts/truthfulqa-frontier-qwen-smollm2-l80/qwen05-l80/scores.manifest.json \
+  --stability-scores smollm2-l80=artifacts/truthfulqa-frontier-qwen-smollm2-l80/smollm2-l80/scores.manifest.json \
+  --stability-seeds 0,1,2,3,4,5,6,7,8,9 \
+  --verifier-qa-corpus artifacts/truthfulqa_l80_correct_answer_corpus.json \
+  --registry artifacts/release-registry.json \
+  --name frontier-release-evidence-gap-plan \
+  --version 0.1 \
+  --stability-rerun-name frontier-stability-reruns \
+  --stability-rerun-version 0.1
+```
+
+`benchmarks/plan_frontier_stability_evidence_reruns.py` can also be called
+directly. It accepts a frontier release report, an evidence-gap plan, or an
+existing `verifier_stability` / `abstention_stability` report. When an existing
+stability report is reachable from comparator inputs, the planner inherits its
+score dumps and config; otherwise pass `--scores`, `--verifier-signal`, and
+`--abstention-signals` explicitly. Queue entries remain `missing_inputs` until
+enough data is present to build the post-hoc stability command.
+
 For frontier release reports blocked by the family-wise multiple-testing gate,
 build a per-cell rerun queue from the comparator or gap-plan output:
 

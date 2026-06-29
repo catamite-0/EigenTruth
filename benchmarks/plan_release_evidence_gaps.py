@@ -21,6 +21,9 @@ from benchmarks.plan_citation_batch_evidence_reruns import (  # noqa: E402
 from benchmarks.plan_frontier_multiple_testing_reruns import (  # noqa: E402
     build_frontier_multiple_testing_rerun_queue,
 )
+from benchmarks.plan_frontier_stability_evidence_reruns import (  # noqa: E402
+    build_frontier_stability_evidence_rerun_queue,
+)
 from eigentruth.control import plan_evidence_gaps_from_release_candidate  # noqa: E402
 from eigentruth.json_utils import strict_json_dumps  # noqa: E402
 from eigentruth.registry import ArtifactRegistry  # noqa: E402
@@ -51,6 +54,19 @@ def build_release_evidence_gap_plan(
     citation_batch_search_command: str | None = None,
     citation_batch_controlled_sweep_paths: Sequence[str | Path] = (),
     citation_batch_query_mode: str = "claim_entity",
+    stability_rerun_json_path: str | Path | None = None,
+    stability_rerun_artifact_manifest_path: str | Path | None = None,
+    stability_rerun_output_dir: str | Path | None = None,
+    stability_rerun_name: str | None = None,
+    stability_rerun_version: str | None = None,
+    stability_score_paths: Sequence[str | Path] = (),
+    stability_seeds: str | None = None,
+    verifier_signal: str | None = None,
+    verifier_claims_path: str | Path | None = None,
+    verifier_qa_corpus_path: str | Path | None = None,
+    verifier_state_source_path: str | Path | None = None,
+    verifier_staged_verification: bool = True,
+    abstention_signals: Sequence[str] = (),
     python_executable: str = sys.executable,
 ) -> dict[str, Any]:
     """Load a release report and optionally write/register its evidence-gap plan."""
@@ -68,6 +84,12 @@ def build_release_evidence_gap_plan(
         raise ValueError("citation_batch_rerun_name/version require registry_path.")
     if (citation_batch_rerun_name is None) != (citation_batch_rerun_version is None):
         raise ValueError("citation_batch_rerun_name and citation_batch_rerun_version must be provided together.")
+    if stability_rerun_artifact_manifest_path is not None and stability_rerun_json_path is None:
+        raise ValueError("stability_rerun_artifact_manifest_path requires stability_rerun_json_path.")
+    if (stability_rerun_name or stability_rerun_version) and registry_path is None:
+        raise ValueError("stability_rerun_name/version require registry_path.")
+    if (stability_rerun_name is None) != (stability_rerun_version is None):
+        raise ValueError("stability_rerun_name and stability_rerun_version must be provided together.")
     source_path = Path(source)
     payload = _load_json_object(source_path)
     plan = plan_evidence_gaps_from_release_candidate(
@@ -96,6 +118,19 @@ def build_release_evidence_gap_plan(
         citation_batch_search_command=citation_batch_search_command,
         citation_batch_controlled_sweep_paths=citation_batch_controlled_sweep_paths,
         citation_batch_query_mode=citation_batch_query_mode,
+        stability_rerun_json_path=stability_rerun_json_path,
+        stability_rerun_artifact_manifest_path=stability_rerun_artifact_manifest_path,
+        stability_rerun_output_dir=stability_rerun_output_dir,
+        stability_rerun_name=stability_rerun_name,
+        stability_rerun_version=stability_rerun_version,
+        stability_score_paths=stability_score_paths,
+        stability_seeds=stability_seeds,
+        verifier_signal=verifier_signal,
+        verifier_claims_path=verifier_claims_path,
+        verifier_qa_corpus_path=verifier_qa_corpus_path,
+        verifier_state_source_path=verifier_state_source_path,
+        verifier_staged_verification=verifier_staged_verification,
+        abstention_signals=abstention_signals,
         python_executable=python_executable,
     )
     if derived_artifacts:
@@ -148,6 +183,19 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         citation_batch_search_command=args.citation_batch_search_command,
         citation_batch_controlled_sweep_paths=tuple(args.citation_batch_controlled_sweep or ()),
         citation_batch_query_mode=args.citation_batch_query_mode,
+        stability_rerun_json_path=args.stability_rerun_json,
+        stability_rerun_artifact_manifest_path=args.stability_rerun_artifact_manifest,
+        stability_rerun_output_dir=args.stability_rerun_output_dir,
+        stability_rerun_name=args.stability_rerun_name,
+        stability_rerun_version=args.stability_rerun_version,
+        stability_score_paths=tuple(args.stability_scores or ()),
+        stability_seeds=args.stability_seeds,
+        verifier_signal=args.verifier_signal,
+        verifier_claims_path=args.verifier_claims,
+        verifier_qa_corpus_path=args.verifier_qa_corpus,
+        verifier_state_source_path=args.verifier_state_source,
+        verifier_staged_verification=bool(args.verifier_staged_verification),
+        abstention_signals=_parse_csv(args.abstention_signals),
         python_executable=args.python,
     )
     summary = payload["summary"]
@@ -234,6 +282,35 @@ def main(argv: Sequence[str] | None = None) -> None:
         help="controlled sweep report for generated citation commands; repeatable",
     )
     parser.add_argument("--citation-batch-query-mode", default="claim_entity")
+    parser.add_argument(
+        "--stability-rerun-json",
+        default=None,
+        help="optional output JSON path for a derived verifier/abstention stability rerun queue",
+    )
+    parser.add_argument(
+        "--stability-rerun-artifact-manifest",
+        default=None,
+        help="optional artifact manifest path for the derived stability rerun queue",
+    )
+    parser.add_argument(
+        "--stability-rerun-output-dir",
+        default=None,
+        help="optional root directory for derived stability rerun outputs",
+    )
+    parser.add_argument("--stability-rerun-name", default=None, help="optional registry name for the queue")
+    parser.add_argument("--stability-rerun-version", default=None, help="optional registry version for the queue")
+    parser.add_argument("--stability-scores", action="append", default=[], help="name=score_dump path; repeatable")
+    parser.add_argument("--stability-seeds", default=None, help="comma-separated seeds for stability reruns")
+    parser.add_argument("--verifier-signal", default=None)
+    parser.add_argument("--verifier-claims", default=None)
+    parser.add_argument("--verifier-qa-corpus", default=None)
+    parser.add_argument("--verifier-state-source", default=None)
+    parser.add_argument(
+        "--verifier-staged-verification",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+    )
+    parser.add_argument("--abstention-signals", default=None)
     parser.add_argument("--python", default=sys.executable, help="Python executable for generated rerun commands")
     run(parser.parse_args(argv))
 
@@ -259,6 +336,19 @@ def _build_derived_artifacts(
     citation_batch_search_command: str | None,
     citation_batch_controlled_sweep_paths: Sequence[str | Path],
     citation_batch_query_mode: str,
+    stability_rerun_json_path: str | Path | None,
+    stability_rerun_artifact_manifest_path: str | Path | None,
+    stability_rerun_output_dir: str | Path | None,
+    stability_rerun_name: str | None,
+    stability_rerun_version: str | None,
+    stability_score_paths: Sequence[str | Path],
+    stability_seeds: str | None,
+    verifier_signal: str | None,
+    verifier_claims_path: str | Path | None,
+    verifier_qa_corpus_path: str | Path | None,
+    verifier_state_source_path: str | Path | None,
+    verifier_staged_verification: bool,
+    abstention_signals: Sequence[str],
     python_executable: str,
 ) -> dict[str, Any]:
     derived: dict[str, Any] = {}
@@ -317,6 +407,38 @@ def _build_derived_artifacts(
             "command_count": summary["command_count"],
             "missing_command_count": summary["missing_command_count"],
         }
+    if stability_rerun_json_path is not None:
+        stability_payload = build_frontier_stability_evidence_rerun_queue(
+            source=source_path,
+            json_path=stability_rerun_json_path,
+            artifact_manifest_path=stability_rerun_artifact_manifest_path,
+            registry_path=None
+            if stability_rerun_name is None or stability_rerun_version is None
+            else registry_path,
+            name=stability_rerun_name,
+            version=stability_rerun_version,
+            output_dir=stability_rerun_output_dir,
+            score_paths=stability_score_paths,
+            seeds=stability_seeds,
+            verifier_signal=verifier_signal,
+            verifier_claims_path=verifier_claims_path,
+            verifier_qa_corpus_path=verifier_qa_corpus_path,
+            verifier_state_source_path=verifier_state_source_path,
+            verifier_staged_verification=verifier_staged_verification,
+            abstention_signals=abstention_signals,
+            python_executable=python_executable,
+        )
+        summary = stability_payload["summary"]
+        derived["frontier_stability_evidence_rerun_queue"] = {
+            "path": str(stability_rerun_json_path),
+            "artifact_manifest": None
+            if stability_rerun_artifact_manifest_path is None
+            else str(stability_rerun_artifact_manifest_path),
+            "status": stability_payload["status"],
+            "blocked_track_count": summary["blocked_track_count"],
+            "command_count": summary["command_count"],
+            "missing_command_count": summary["missing_command_count"],
+        }
     return derived
 
 
@@ -338,6 +460,12 @@ def _parse_metadata(items: Sequence[str]) -> dict[str, str]:
             raise ValueError(f"metadata key must be non-empty, got {item!r}")
         metadata[key] = value.strip()
     return metadata
+
+
+def _parse_csv(value: str | None) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    return tuple(part.strip() for part in value.split(",") if part.strip())
 
 
 if __name__ == "__main__":

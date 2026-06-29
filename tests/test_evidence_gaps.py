@@ -3,6 +3,7 @@
 import json
 
 from benchmarks.plan_citation_batch_evidence_reruns import build_citation_batch_evidence_rerun_queue
+from benchmarks.plan_frontier_stability_evidence_reruns import build_frontier_stability_evidence_rerun_queue
 from benchmarks.plan_release_evidence_gaps import build_release_evidence_gap_plan
 from eigentruth.control import (
     EvidenceGapPlan,
@@ -489,6 +490,98 @@ def test_plan_release_evidence_gaps_can_emit_citation_batch_rerun_queue(tmp_path
     assert queue_record.metadata["command_count"] == 2
 
 
+def test_frontier_stability_evidence_rerun_queue_builds_commands(tmp_path):
+    source = tmp_path / "frontier-release-evidence.json"
+    queue_path = tmp_path / "stability-rerun-queue.json"
+    manifest_path = tmp_path / "stability-rerun-queue-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    source.write_text(json.dumps(_frontier_release_stability_payload()), encoding="utf-8")
+
+    payload = build_frontier_stability_evidence_rerun_queue(
+        source=source,
+        json_path=queue_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="frontier-stability-reruns",
+        version="0.1",
+        output_dir=tmp_path / "stability-reruns",
+        score_paths=(
+            f"qwen={tmp_path / 'qwen-scores.manifest.json'}",
+            f"smol={tmp_path / 'smol-scores.manifest.json'}",
+        ),
+        seeds="0,1",
+        verifier_qa_corpus_path=tmp_path / "qa-corpus.json",
+        python_executable="python",
+    )
+
+    saved = json.loads(queue_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    registry = ArtifactRegistry.load_json(registry_path)
+    record = registry.get("report:frontier-stability-reruns:0.1")
+    entries = {entry["track"]: entry for entry in payload["entries"]}
+    verifier_command = entries["verifier_stability"]["command"]
+    abstention_command = entries["abstention_stability"]["command"]
+
+    assert saved["summary"] == payload["summary"]
+    assert payload["workflow"] == "frontier_stability_evidence_rerun_queue"
+    assert payload["summary"]["blocked_track_count"] == 2
+    assert payload["summary"]["command_count"] == 2
+    assert entries["verifier_stability"]["command_status"] == "ready"
+    assert entries["abstention_stability"]["command_status"] == "ready"
+    assert verifier_command[:2] == ("python", "benchmarks/eval_verifier_stability.py")
+    assert verifier_command[verifier_command.index("--signal") + 1] == "truth_proj"
+    assert verifier_command[verifier_command.index("--qa-corpus") + 1] == str(tmp_path / "qa-corpus.json")
+    assert "--staged-verification" in verifier_command
+    assert abstention_command[:2] == ("python", "benchmarks/eval_abstention_stability.py")
+    assert abstention_command[abstention_command.index("--signals") + 1] == "maha_last,subspace_resid"
+    assert abstention_command[abstention_command.index("--seeds") + 1] == "0,1"
+    assert manifest["artifacts"]["frontier_stability_evidence_rerun_queue"]["exists"] is True
+    assert record.metadata["workflow"] == "frontier_stability_evidence_rerun_queue"
+    assert record.metadata["blocked_track_count"] == 2
+
+
+def test_plan_release_evidence_gaps_can_emit_stability_rerun_queue(tmp_path):
+    source = tmp_path / "frontier-release-evidence.json"
+    output = tmp_path / "evidence-gap-plan.json"
+    queue_path = tmp_path / "stability-rerun-queue.json"
+    manifest_path = tmp_path / "stability-rerun-queue-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    source.write_text(json.dumps(_frontier_release_stability_payload()), encoding="utf-8")
+
+    payload = build_release_evidence_gap_plan(
+        source=source,
+        json_path=output,
+        registry_path=registry_path,
+        name="frontier-gap-plan",
+        version="0.1",
+        stability_rerun_json_path=queue_path,
+        stability_rerun_artifact_manifest_path=manifest_path,
+        stability_rerun_output_dir=tmp_path / "stability-reruns",
+        stability_rerun_name="frontier-stability-reruns",
+        stability_rerun_version="0.1",
+        stability_score_paths=(f"qwen={tmp_path / 'qwen-scores.manifest.json'}",),
+        stability_seeds="0,1",
+        python_executable="python",
+    )
+
+    saved = json.loads(output.read_text(encoding="utf-8"))
+    queue = json.loads(queue_path.read_text(encoding="utf-8"))
+    registry = ArtifactRegistry.load_json(registry_path)
+    gap_record = registry.get("evidence_gap_plan:frontier-gap-plan:0.1")
+    queue_record = registry.get("report:frontier-stability-reruns:0.1")
+    derived = payload["derived_artifacts"]["frontier_stability_evidence_rerun_queue"]
+
+    assert saved["derived_artifacts"] == payload["derived_artifacts"]
+    assert derived["path"] == str(queue_path)
+    assert derived["artifact_manifest"] == str(manifest_path)
+    assert derived["status"] == "ready"
+    assert derived["blocked_track_count"] == 2
+    assert derived["command_count"] == 2
+    assert queue["entries"][0]["command_status"] == "ready"
+    assert gap_record.metadata["gap_count"] == 2
+    assert queue_record.metadata["command_count"] == 2
+
+
 def _blocked_registry_workflow_payload():
     return {
         "workflow": "release_candidate_registry_workflow",
@@ -631,5 +724,28 @@ def _frontier_release_citation_batch_payload():
                     "batch_id": "unresolved-evidence-batch-0001",
                 },
             ),
+        },
+    }
+
+
+def _frontier_release_stability_payload():
+    return {
+        "schema_version": 1,
+        "workflow": "frontier_release_evidence_comparison",
+        "status": "complete",
+        "decision": {
+            "status": "blocked",
+            "verifier_track_status": "blocked",
+            "abstention_track_status": "blocked",
+            "blocking_reasons": (
+                "verifier_stability.qwen.verified_detection_mean 0.1 is below required minimum 0.2",
+                "abstention_stability.qwen.conditional_correctness_lower_bound_mean 0.5 is below "
+                "required minimum 0.8",
+            ),
+        },
+        "evidence_summary": {
+            "run_names": ("qwen",),
+            "verifier_signal": "truth_proj",
+            "abstention_signals": ("maha_last", "subspace_resid"),
         },
     }
