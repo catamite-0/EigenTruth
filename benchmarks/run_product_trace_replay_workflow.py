@@ -50,6 +50,7 @@ from eigentruth.registry import (  # noqa: E402
 )
 
 _T = TypeVar("_T")
+_TRACE_SUMMARY_SCHEMA_VERSION = 1
 
 
 @dataclass(frozen=True)
@@ -914,6 +915,7 @@ def _corpus_cache_signature(config: ProductTraceReplayWorkflowConfig) -> str:
 def _corpus_cache_config_payload(config: ProductTraceReplayWorkflowConfig) -> dict[str, Any]:
     child_paths = _corpus_child_paths(config)
     return {
+        "trace_summary_schema_version": _TRACE_SUMMARY_SCHEMA_VERSION,
         "trace_paths": [str(path) for path in config.trace_paths],
         "jsonl_paths": [str(path) for path in config.jsonl_paths],
         "redact_text": config.redact_text,

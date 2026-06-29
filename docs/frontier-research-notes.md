@@ -1127,6 +1127,16 @@ Added the first monitor-first tool-selection audit layer:
   `max_false_supported_rate=0.0`, and `min_false_refuted_rate=1.0`. The handoff
   now has `35/38` metrics present and only trace-level triple audit/slot
   coverage remains blocked.
+- `build_product_trace_corpus.py` now materializes a redaction-safe
+  `summaries.triple_coverage` payload plus a mirrored
+  `metadata.trace_corpus.triple_coverage_summary` for each accepted full
+  ProductTrace. `product_runtime_metrics()` can read either shape, and the
+  ProductTrace corpus/source/runtime-record caches now include summary schema
+  versioning so stale traces do not silently drop trace-level triple audit
+  evidence. This closes the replay-side plumbing for the remaining
+  triple-audit handoff group; it still cannot promote the current SmolLM2
+  handoff until new product traces actually contain `claim_triples` and verifier
+  `audit_report` metadata.
 
 ## Next Research-to-Code Candidates
 

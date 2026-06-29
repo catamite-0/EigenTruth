@@ -30852,7 +30852,7 @@ def test_run_product_runtime_baseline_reuses_trace_record_cache(tmp_path, monkey
     assert first["config"]["trace_record_cache"]["cache_hit"] is False
     assert first["config"]["trace_record_cache"]["cache_written"] is True
     assert first["paths"]["trace_records_cache"] == str(cache_path)
-    assert cache_payload["schema_version"] == 10
+    assert cache_payload["schema_version"] == 11
     assert cache_payload["workflow"] == "product_runtime_baseline_trace_records"
     assert cache_payload["summary"]["trace_count"] == 2
     assert cache_payload["policy"]["payload"]["max_total_seconds"] == 0.3
@@ -33228,6 +33228,102 @@ def test_build_product_trace_corpus_redacts_and_registers_replay_ready_traces(tm
     assert record.metadata["accepted_count"] == 2
     assert record.metadata["rejected_count"] == 1
     assert record.metadata["runtime_pair_index_record_count"] == 2
+
+
+def test_build_product_trace_corpus_materializes_redacted_triple_audit_summary(tmp_path):
+    module = importlib.import_module("benchmarks.build_product_trace_corpus")
+    control_module = importlib.import_module("eigentruth.control")
+    output_dir = tmp_path / "trace-corpus"
+    trace_path = tmp_path / "trace.json"
+    triple = {
+        "subject": "France",
+        "predicate": "capital_of",
+        "object": "Paris",
+        "claim_id": "c1",
+        "source_text": "Paris is the capital of France.",
+    }
+    trace_path.write_text(
+        json.dumps({
+            "request_id": "audit-triple-supported",
+            "risk_decision": {
+                "action": "accept",
+                "risk_level": "low",
+                "confidence": 1.0,
+                "reason": "triple audit passed",
+            },
+            "claims": [
+                {
+                    "claim_id": "c1",
+                    "text": "Paris is the capital of France.",
+                    "metadata": {"claim_triples": [triple]},
+                }
+            ],
+            "verification_results": [
+                {
+                    "status": "supported",
+                    "confidence": 0.95,
+                    "evidence": ["France's capital is Paris."],
+                    "metadata": {
+                        "selected_route": "triple_evidence",
+                        "audit_report": {
+                            "claim_id": "c1",
+                            "triple_count": 1,
+                            "passed_count": 1,
+                            "failed_count": 0,
+                            "covered_slot_count": 3,
+                            "missing_slot_count": 0,
+                            "passed": True,
+                            "audits": [
+                                {
+                                    "triple": triple,
+                                    "passed": True,
+                                    "covered_slots": ["subject", "predicate", "object"],
+                                    "missing_slots": [],
+                                    "slot_coverage": {
+                                        "subject": 1.0,
+                                        "predicate": 1.0,
+                                        "object": 1.0,
+                                    },
+                                }
+                            ],
+                        },
+                    },
+                }
+            ],
+            "metadata": {"runtime_profile": "audit"},
+            "runtime_trace": {"total_seconds": 0.10, "phases": []},
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.build_product_trace_corpus(
+        module.ProductTraceCorpusConfig(
+            trace_paths=(trace_path,),
+            output_dir=output_dir,
+            require_runtime_trace=True,
+        )
+    )
+    saved_trace = json.loads(Path(payload["traces"][0]["path"]).read_text(encoding="utf-8"))
+    summary = saved_trace["summaries"]["triple_coverage"]
+    metrics = control_module.product_runtime_metrics(saved_trace)
+    metadata_only_trace = dict(saved_trace)
+    metadata_only_trace.pop("summaries")
+    metadata_metrics = control_module.product_runtime_metrics(metadata_only_trace)
+
+    assert saved_trace["claims"][0]["text"].startswith("[redacted:sha256=")
+    assert saved_trace["claims"][0]["metadata"]["claim_triples"][0]["source_text"].startswith(
+        "[redacted:sha256="
+    )
+    assert saved_trace["verification_results"][0]["evidence"][0].startswith("[redacted:sha256=")
+    assert summary["audit_available"] is True
+    assert summary["audit_claim_coverage_rate"] == pytest.approx(1.0)
+    assert summary["audit_pass_rate"] == pytest.approx(1.0)
+    assert summary["slot_coverage_rate"] == pytest.approx(1.0)
+    assert saved_trace["metadata"]["trace_corpus"]["summary_schema_version"] == 1
+    assert metrics["triple_coverage_source"] == "bounded_summary"
+    assert metrics["triple_audit_pass_rate"] == pytest.approx(1.0)
+    assert metadata_metrics["triple_coverage_source"] == "metadata_summary"
+    assert metadata_metrics["triple_slot_coverage_rate"] == pytest.approx(1.0)
 
 
 def test_build_product_trace_corpus_streams_jsonl_limit_and_parses_bool_strings(tmp_path):

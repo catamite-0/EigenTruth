@@ -895,11 +895,15 @@ def _triple_coverage_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[st
         if summary:
             source = "bounded_summary"
         else:
-            summary = ProductTrace(
-                claims=tuple(_sequence(payload.get("claims", ()))),
-                verification_results=tuple(_sequence(payload.get("verification_results", ()))),
-            ).triple_coverage_summary()
-            source = "full_trace"
+            summary = _metadata_triple_coverage_summary(payload)
+            if summary:
+                source = "metadata_summary"
+            else:
+                summary = ProductTrace(
+                    claims=tuple(_sequence(payload.get("claims", ()))),
+                    verification_results=tuple(_sequence(payload.get("verification_results", ()))),
+                ).triple_coverage_summary()
+                source = "full_trace"
     return {
         "triple_coverage_summary": summary,
         "triple_coverage_source": source,
@@ -928,6 +932,14 @@ def _triple_coverage_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[st
             summary.get("structured_fact_predicate_counts")
         ),
     }
+
+
+def _metadata_triple_coverage_summary(payload: Mapping[str, Any]) -> dict[str, Any]:
+    metadata = _mapping(payload.get("metadata"))
+    trace_corpus = _mapping(metadata.get("trace_corpus"))
+    return _mapping(trace_corpus.get("triple_coverage_summary")) or _mapping(
+        metadata.get("triple_coverage_summary")
+    )
 
 
 def _final_answer_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:

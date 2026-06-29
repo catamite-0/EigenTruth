@@ -26,8 +26,10 @@ from benchmarks.config_utils import (  # noqa: E402
     planned_artifact_manifest_summary,
     strict_bool,
 )
-from eigentruth.control import RUNTIME_PROFILE_NAMES  # noqa: E402
+from eigentruth.control import RUNTIME_PROFILE_NAMES, ProductTrace  # noqa: E402
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest, fingerprint_path  # noqa: E402
+
+_TRACE_SUMMARY_SCHEMA_VERSION = 1
 
 _TEXT_KEYS = frozenset({
     "answer",
@@ -525,6 +527,7 @@ def _source_cache_signature(config: ProductTraceCorpusConfig) -> str:
 
 def _source_cache_config_payload(config: ProductTraceCorpusConfig) -> dict[str, Any]:
     return {
+        "trace_summary_schema_version": _TRACE_SUMMARY_SCHEMA_VERSION,
         "redact_text": config.redact_text,
         "require_runtime_trace": config.require_runtime_trace,
         "strict": config.strict,
@@ -573,7 +576,28 @@ def _standardized_trace(source: Mapping[str, Any], *, redact_text: bool) -> dict
         "redacted_text": redact_text,
     }
     trace["metadata"] = metadata
-    return trace
+    return _trace_with_replay_summaries(trace)
+
+
+def _trace_with_replay_summaries(trace: Mapping[str, Any]) -> dict[str, Any]:
+    output = dict(trace)
+    summaries = dict(_mapping(output.get("summaries")))
+    triple_coverage = _mapping(summaries.get("triple_coverage"))
+    if not triple_coverage:
+        triple_coverage = ProductTrace(
+            claims=tuple(_sequence(output.get("claims"))),
+            verification_results=tuple(_sequence(output.get("verification_results"))),
+        ).triple_coverage_summary()
+    summaries["triple_coverage"] = _jsonable(triple_coverage)
+    output["summaries"] = summaries
+
+    metadata = dict(_mapping(output.get("metadata")))
+    trace_corpus = dict(_mapping(metadata.get("trace_corpus")))
+    trace_corpus["summary_schema_version"] = _TRACE_SUMMARY_SCHEMA_VERSION
+    trace_corpus["triple_coverage_summary"] = summaries["triple_coverage"]
+    metadata["trace_corpus"] = trace_corpus
+    output["metadata"] = metadata
+    return output
 
 
 def _accepted_record(source: Mapping[str, Any], trace: Mapping[str, Any], *, output_path: Path) -> dict[str, Any]:

@@ -7128,6 +7128,13 @@ covered-fact per-property rollup drift, triple-extraction fixture-matrix
 coverage/quality drift, counterfactual verifier-audit coverage, manifest
 verification, record count, pass rate, false-invariance rate, flip-success
 drift, trace-level triple/slot-audit coverage, and trace-count drift.
+`build_product_trace_corpus.py` materializes redaction-safe
+`summaries.triple_coverage` plus
+`metadata.trace_corpus.triple_coverage_summary` for accepted full ProductTrace
+inputs, so these drift gates can consume triple-audit coverage after text
+redaction. The summary is only evidence when the original trace already carried
+`claim_triples` and verifier `audit_report` metadata; the corpus builder does
+not infer or fabricate audit results from redacted text.
 When a saved `ProductRuntimeBudgetPolicy` is supplied with
 `--runtime-budget-policy` or `--runtime-budget-policy-key`, the current baseline
 summary is also checked against the reusable budget using p95/aggregate metrics. When a
