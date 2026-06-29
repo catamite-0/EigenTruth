@@ -253,6 +253,7 @@ class ProductPromotionContract:
             _mapping(candidate.get("release_efficiency")),
             manifests=manifests,
         )
+        runtime_cost = _mapping(candidate.get("runtime_cost"))
         product_trace_replay_metadata = _product_trace_replay_workflow_metadata(
             product_trace_replay_workflow,
             manifests=manifests,
@@ -909,6 +910,25 @@ class ProductPromotionContract:
                 "runtime_profile_applied_defaults": config.get(
                     "runtime_profile_applied_defaults"
                 ),
+                "max_uncached_forward_seconds": config.get(
+                    "max_uncached_forward_seconds"
+                ),
+                "max_recommended_runtime_seconds": config.get(
+                    "max_recommended_runtime_seconds"
+                ),
+                "recommended_runtime_seconds": runtime_cost.get(
+                    "recommended_runtime_seconds"
+                ),
+                "recommended_runtime_cost_source": runtime_cost.get(
+                    "recommended_runtime_cost_source"
+                ),
+                "uncached_forward_cost_seconds": runtime_cost.get(
+                    "uncached_forward_cost_seconds"
+                ),
+                "uncached_forward_cost_source": runtime_cost.get(
+                    "uncached_forward_cost_source"
+                ),
+                "cache_only_total_seconds": runtime_cost.get("cache_only_total_seconds"),
                 "readiness_manifest": manifests.get("readiness_manifest"),
                 "route_manifest": manifests.get("route_manifest"),
                 "performance_manifest": manifests.get("performance_manifest"),
@@ -2326,12 +2346,42 @@ def product_promotion_contract_metadata(
         "promotion_contract_metadata": dict(contract.metadata),
         **_promotion_contract_product_trace_replay_metadata(contract),
         **_promotion_contract_product_runtime_drift_metadata(contract),
+        **_promotion_contract_runtime_cost_metadata(contract),
         **_promotion_contract_external_evidence_baseline_comparison_metadata(contract),
         **_promotion_contract_pre_generation_probe_comparison_metadata(contract),
         **_promotion_contract_pathway_intervention_metadata(contract),
         **_promotion_contract_counterfactual_verification_metadata(contract),
         **covered_fact_scope,
     }
+
+
+def _promotion_contract_runtime_cost_metadata(
+    contract: ProductPromotionContract,
+) -> dict[str, Any]:
+    metadata = _mapping(contract.metadata)
+    return _drop_none_values({
+        "promotion_contract_max_uncached_forward_seconds": metadata.get(
+            "max_uncached_forward_seconds"
+        ),
+        "promotion_contract_max_recommended_runtime_seconds": metadata.get(
+            "max_recommended_runtime_seconds"
+        ),
+        "promotion_contract_recommended_runtime_seconds": metadata.get(
+            "recommended_runtime_seconds"
+        ),
+        "promotion_contract_recommended_runtime_cost_source": metadata.get(
+            "recommended_runtime_cost_source"
+        ),
+        "promotion_contract_uncached_forward_cost_seconds": metadata.get(
+            "uncached_forward_cost_seconds"
+        ),
+        "promotion_contract_uncached_forward_cost_source": metadata.get(
+            "uncached_forward_cost_source"
+        ),
+        "promotion_contract_cache_only_total_seconds": metadata.get(
+            "cache_only_total_seconds"
+        ),
+    })
 
 
 def _promotion_contract_product_trace_replay_metadata(

@@ -1778,6 +1778,8 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             "min_performance_score_dump_cache_jsonl_view_hit_rate": 0.5,
             "performance_drift_baseline_key": "performance_baseline:runtime-reference:0.8",
             "max_covariance_maha_last_auroc_drop": 0.05,
+            "max_uncached_forward_seconds": None,
+            "max_recommended_runtime_seconds": 1.0,
         },
         "decision": {
             "status": "promote",
@@ -1839,6 +1841,13 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "batch_size": 2,
                 "covariance_mode": "low_rank",
                 "covariance_low_rank": 8,
+            },
+            "runtime_cost": {
+                "recommended_runtime_seconds": 0.20,
+                "recommended_runtime_cost_source": "cache_only_total_seconds",
+                "uncached_forward_cost_seconds": 37.5,
+                "uncached_forward_cost_source": "uncached_forced_answer_forward_seconds",
+                "cache_only_total_seconds": 0.20,
             },
             "quality": {
                 "covariance_tradeoff_gate": {
@@ -2278,6 +2287,17 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.verifier_route["route"] == "structured_state"
     assert contract.verifier_route["covered_fact_properties"] == ["P36", "P37", "P38"]
     assert contract.metadata["runtime_profile"] == "balanced"
+    assert contract.metadata["max_uncached_forward_seconds"] is None
+    assert contract.metadata["max_recommended_runtime_seconds"] == 1.0
+    assert contract.metadata["recommended_runtime_seconds"] == 0.20
+    assert contract.metadata["recommended_runtime_cost_source"] == (
+        "cache_only_total_seconds"
+    )
+    assert contract.metadata["uncached_forward_cost_seconds"] == 37.5
+    assert contract.metadata["uncached_forward_cost_source"] == (
+        "uncached_forced_answer_forward_seconds"
+    )
+    assert contract.metadata["cache_only_total_seconds"] == 0.20
     assert contract.metadata["recommended_performance_baseline_record"] == "performance_baseline:runtime:0.9"
     assert contract.metadata["performance_baseline_record"] == "performance_baseline:runtime:0.9"
     assert contract.metadata["performance_evidence_bundle_status"] == "promote"
@@ -2667,6 +2687,17 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     }
     assert roundtrip == contract
     assert roundtrip.control_policy_config == contract.control_policy_config
+    trace_metadata = product_promotion_contract_metadata(
+        contract,
+        source=str(contract_path),
+        budget_enabled=True,
+    )
+    assert trace_metadata["promotion_contract_recommended_runtime_seconds"] == 0.20
+    assert trace_metadata["promotion_contract_recommended_runtime_cost_source"] == (
+        "cache_only_total_seconds"
+    )
+    assert trace_metadata["promotion_contract_uncached_forward_cost_seconds"] == 37.5
+    assert trace_metadata["promotion_contract_max_recommended_runtime_seconds"] == 1.0
     json.dumps(contract.to_dict())
 
 

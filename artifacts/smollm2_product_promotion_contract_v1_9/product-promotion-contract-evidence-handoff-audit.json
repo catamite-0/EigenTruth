@@ -1,0 +1,578 @@
+{
+  "groups": [
+    {
+      "expected_metric_count": 4,
+      "group": "promotion",
+      "metadata": {},
+      "metrics": [
+        {
+          "evidence_key": "promotion_contract_coverage_rate",
+          "group": "promotion",
+          "metric": "promotion_contract.coverage_rate",
+          "present": true,
+          "source_path": [
+            "workflow"
+          ],
+          "status": "present",
+          "value": 1.0
+        },
+        {
+          "evidence_key": "triple_extraction_fixture_matrix_coverage_rate",
+          "group": "promotion",
+          "metric": "promotion_contract.triple_extraction_fixture_matrix.coverage_rate",
+          "present": true,
+          "source_path": [
+            "triple_extraction_fixture_matrix"
+          ],
+          "status": "present",
+          "value": 1.0
+        },
+        {
+          "evidence_key": "triple_extraction_fixture_matrix_mean_best_f1",
+          "group": "promotion",
+          "metric": "promotion_contract.triple_extraction_fixture_matrix.mean_best_f1.mean",
+          "present": true,
+          "source_path": [
+            "triple_extraction_fixture_matrix",
+            "mean_best_f1"
+          ],
+          "status": "present",
+          "value": 1.0
+        },
+        {
+          "evidence_key": "triple_extraction_fixture_matrix_mean_f1_lift",
+          "group": "promotion",
+          "metric": "promotion_contract.triple_extraction_fixture_matrix.mean_f1_lift.mean",
+          "present": true,
+          "source_path": [
+            "triple_extraction_fixture_matrix",
+            "mean_f1_lift"
+          ],
+          "status": "present",
+          "value": 0.5999999999999999
+        }
+      ],
+      "missing_metric_count": 0,
+      "missing_metrics": [],
+      "present_metric_count": 4,
+      "recommended_action_id": "export_promotion_contract_runtime_evidence",
+      "required": true,
+      "status": "promote"
+    },
+    {
+      "expected_metric_count": 8,
+      "group": "pre_generation",
+      "metadata": {},
+      "metrics": [
+        {
+          "evidence_key": "pre_generation_probe_comparison_coverage_rate",
+          "group": "pre_generation",
+          "metric": "promotion_contract.pre_generation_probe_comparison.coverage_rate",
+          "present": true,
+          "source_path": [
+            "pre_generation_probe_comparison"
+          ],
+          "status": "present",
+          "value": 1.0
+        },
+        {
+          "evidence_key": "pre_generation_probe_comparison_manifest_verified_rate",
+          "group": "pre_generation",
+          "metric": "promotion_contract.pre_generation_probe_comparison.manifest_verified_rate",
+          "present": true,
+          "source_path": [
+            "pre_generation_probe_comparison",
+            "manifest_verified"
+          ],
+          "status": "present",
+          "value": 1.0
+        },
+        {
+          "evidence_key": "pre_generation_probe_comparison_model_count",
+          "group": "pre_generation",
+          "metric": "promotion_contract.pre_generation_probe_comparison.model_count.mean",
+          "present": true,
+          "source_path": [
+            "pre_generation_probe_comparison",
+            "model_count"
+          ],
+          "status": "present",
+          "value": 2.0
+        },
+        {
+          "evidence_key": "pre_generation_probe_comparison_run_count",
+          "group": "pre_generation",
+          "metric": "promotion_contract.pre_generation_probe_comparison.run_count.mean",
+          "present": true,
+          "source_path": [
+            "pre_generation_probe_comparison",
+            "run_count"
+          ],
+          "status": "present",
+          "value": 2
+        },
+        {
+          "evidence_key": "pre_generation_probe_comparison_redline_passed",
+          "group": "pre_generation",
+          "metric": "promotion_contract.pre_generation_probe_comparison.redline_pass_rate",
+          "present": true,
+          "source_path": [
+            "pre_generation_probe_comparison",
+            "redline_passed"
+          ],
+          "status": "present",
+          "value": 1.0
+        },
+        {
+          "evidence_key": "pre_generation_probe_comparison_best_test_label_auroc",
+          "group": "pre_generation",
+          "metric": "promotion_contract.pre_generation_probe_comparison.best_test_label_auroc.mean",
+          "present": true,
+          "source_path": [
+            "pre_generation_probe_comparison",
+            "best_test_label_auroc"
+          ],
+          "status": "present",
+          "value": 0.8346153846153846
+        },
+        {
+          "evidence_key": "pre_generation_probe_comparison_best_redline_auroc",
+          "group": "pre_generation",
+          "metric": "promotion_contract.pre_generation_probe_comparison.best_redline_auroc.mean",
+          "present": true,
+          "source_path": [
+            "pre_generation_probe_comparison",
+            "best_redline_auroc"
+          ],
+          "status": "present",
+          "value": 0.7403846153846154
+        },
+        {
+          "evidence_key": "pre_generation_probe_comparison_best_redline_margin",
+          "group": "pre_generation",
+          "metric": "promotion_contract.pre_generation_probe_comparison.best_redline_margin.mean",
+          "present": true,
+          "source_path": [
+            "pre_generation_probe_comparison",
+            "best_redline_margin"
+          ],
+          "status": "present",
+          "value": 0.09423076923076923
+        }
+      ],
+      "missing_metric_count": 0,
+      "missing_metrics": [],
+      "present_metric_count": 8,
+      "recommended_action_id": "run_pre_generation_probe_comparison",
+      "required": true,
+      "status": "promote"
+    },
+    {
+      "expected_metric_count": 6,
+      "group": "counterfactual",
+      "metadata": {},
+      "metrics": [
+        {
+          "evidence_key": "counterfactual_verification_coverage_rate",
+          "group": "counterfactual",
+          "metric": "promotion_contract.counterfactual_verification.coverage_rate",
+          "present": true,
+          "source_path": [
+            "counterfactual_verification"
+          ],
+          "status": "present",
+          "value": 1.0
+        },
+        {
+          "evidence_key": "counterfactual_verification_manifest_verified_rate",
+          "group": "counterfactual",
+          "metric": "promotion_contract.counterfactual_verification.manifest_verified_rate",
+          "present": true,
+          "source_path": [
+            "counterfactual_verification",
+            "manifest_verified"
+          ],
+          "status": "present",
+          "value": 1.0
+        },
+        {
+          "evidence_key": "counterfactual_verification_record_count",
+          "group": "counterfactual",
+          "metric": "promotion_contract.counterfactual_verification.record_count.mean",
+          "present": true,
+          "source_path": [
+            "counterfactual_verification",
+            "record_count"
+          ],
+          "status": "present",
+          "value": 70.0
+        },
+        {
+          "evidence_key": "counterfactual_verification_pass_rate",
+          "group": "counterfactual",
+          "metric": "promotion_contract.counterfactual_verification.pass_rate.mean",
+          "present": true,
+          "source_path": [
+            "counterfactual_verification",
+            "pass_rate"
+          ],
+          "status": "present",
+          "value": 1.0
+        },
+        {
+          "evidence_key": "counterfactual_verification_false_invariance_rate",
+          "group": "counterfactual",
+          "metric": "promotion_contract.counterfactual_verification.false_invariance_rate.mean",
+          "present": true,
+          "source_path": [
+            "counterfactual_verification",
+            "false_invariance_rate"
+          ],
+          "status": "present",
+          "value": 0.0
+        },
+        {
+          "evidence_key": "counterfactual_verification_flip_success_count",
+          "group": "counterfactual",
+          "metric": "promotion_contract.counterfactual_verification.flip_success_count.mean",
+          "present": true,
+          "source_path": [
+            "counterfactual_verification",
+            "flip_success_count"
+          ],
+          "status": "present",
+          "value": 70.0
+        }
+      ],
+      "missing_metric_count": 0,
+      "missing_metrics": [],
+      "present_metric_count": 6,
+      "recommended_action_id": "run_counterfactual_verifier_audit",
+      "required": true,
+      "status": "promote"
+    },
+    {
+      "expected_metric_count": 4,
+      "group": "triple_audit",
+      "metadata": {},
+      "metrics": [
+        {
+          "evidence_key": "triple_claim_coverage_rate",
+          "group": "triple_audit",
+          "metric": "triple_coverage.claim_triple_coverage_rate",
+          "present": true,
+          "source_path": [
+            "metadata",
+            "triple_claim_coverage_rate"
+          ],
+          "status": "present",
+          "value": 1.0
+        },
+        {
+          "evidence_key": "triple_audit_claim_coverage_rate",
+          "group": "triple_audit",
+          "metric": "triple_coverage.audit_claim_coverage_rate",
+          "present": true,
+          "source_path": [
+            "metadata",
+            "triple_audit_claim_coverage_rate"
+          ],
+          "status": "present",
+          "value": 1.0
+        },
+        {
+          "evidence_key": "triple_audit_pass_rate",
+          "group": "triple_audit",
+          "metric": "triple_coverage.audit_pass_rate",
+          "present": true,
+          "source_path": [
+            "metadata",
+            "triple_audit_pass_rate"
+          ],
+          "status": "present",
+          "value": 1.0
+        },
+        {
+          "evidence_key": "triple_slot_coverage_rate",
+          "group": "triple_audit",
+          "metric": "triple_coverage.slot_coverage_rate",
+          "present": true,
+          "source_path": [
+            "metadata",
+            "triple_slot_coverage_rate"
+          ],
+          "status": "present",
+          "value": 1.0
+        }
+      ],
+      "missing_metric_count": 0,
+      "missing_metrics": [],
+      "present_metric_count": 4,
+      "recommended_action_id": "add_trace_level_triple_audit",
+      "required": true,
+      "status": "promote"
+    },
+    {
+      "expected_metric_count": 6,
+      "group": "covered_fact_property",
+      "metadata": {},
+      "metrics": [
+        {
+          "evidence_key": "covered_fact_recommended_route_property_metric_count",
+          "group": "covered_fact_property",
+          "metric": "promotion_contract.covered_fact_properties.recommended_route_property_metrics.property_metric_count.mean",
+          "present": true,
+          "source_path": [
+            "metadata",
+            "recommended_route_covered_fact_property_metrics",
+            "property_metric_count"
+          ],
+          "status": "present",
+          "value": 9
+        },
+        {
+          "evidence_key": "covered_fact_recommended_route_min_records",
+          "group": "covered_fact_property",
+          "metric": "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_records.mean",
+          "present": true,
+          "source_path": [
+            "metadata",
+            "recommended_route_covered_fact_property_metrics",
+            "min_records"
+          ],
+          "status": "present",
+          "value": 4.0
+        },
+        {
+          "evidence_key": "covered_fact_recommended_route_min_source_documents",
+          "group": "covered_fact_property",
+          "metric": "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_source_documents.mean",
+          "present": true,
+          "source_path": [
+            "metadata",
+            "recommended_route_covered_fact_property_metrics",
+            "min_source_documents"
+          ],
+          "status": "present",
+          "value": 2.0
+        },
+        {
+          "evidence_key": "covered_fact_recommended_route_min_decision_accuracy",
+          "group": "covered_fact_property",
+          "metric": "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_decision_accuracy.mean",
+          "present": true,
+          "source_path": [
+            "metadata",
+            "recommended_route_covered_fact_property_metrics",
+            "min_decision_accuracy"
+          ],
+          "status": "present",
+          "value": 1.0
+        },
+        {
+          "evidence_key": "covered_fact_recommended_route_max_false_supported_rate",
+          "group": "covered_fact_property",
+          "metric": "promotion_contract.covered_fact_properties.recommended_route_property_metrics.max_false_supported_rate.mean",
+          "present": true,
+          "source_path": [
+            "metadata",
+            "recommended_route_covered_fact_property_metrics",
+            "max_false_supported_rate"
+          ],
+          "status": "present",
+          "value": 0.0
+        },
+        {
+          "evidence_key": "covered_fact_recommended_route_min_false_refuted_rate",
+          "group": "covered_fact_property",
+          "metric": "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_false_refuted_rate.mean",
+          "present": true,
+          "source_path": [
+            "metadata",
+            "recommended_route_covered_fact_property_metrics",
+            "min_false_refuted_rate"
+          ],
+          "status": "present",
+          "value": 1.0
+        }
+      ],
+      "missing_metric_count": 0,
+      "missing_metrics": [],
+      "present_metric_count": 6,
+      "recommended_action_id": "refresh_covered_fact_property_routes",
+      "required": true,
+      "status": "promote"
+    },
+    {
+      "expected_metric_count": 10,
+      "group": "action_gate",
+      "metadata": {},
+      "metrics": [
+        {
+          "evidence_key": "product_trace_action_audit_error_rate",
+          "group": "action_gate",
+          "metric": "promotion_contract.product_trace_replay.action_audit_gate.error_rate.mean",
+          "present": true,
+          "source_path": [
+            "metadata",
+            "product_trace_action_audit_error_rate"
+          ],
+          "status": "present",
+          "value": 0.0
+        },
+        {
+          "evidence_key": "product_trace_action_audit_missing_retrieval_action_rate",
+          "group": "action_gate",
+          "metric": "promotion_contract.product_trace_replay.action_audit_gate.missing_retrieval_action_rate.mean",
+          "present": true,
+          "source_path": [
+            "metadata",
+            "product_trace_action_audit_missing_retrieval_action_rate"
+          ],
+          "status": "present",
+          "value": 0.0
+        },
+        {
+          "evidence_key": "product_trace_action_audit_missing_plan_retrieval_query_rate",
+          "group": "action_gate",
+          "metric": "promotion_contract.product_trace_replay.action_audit_gate.missing_plan_retrieval_query_rate.mean",
+          "present": true,
+          "source_path": [
+            "metadata",
+            "product_trace_action_audit_missing_plan_retrieval_query_rate"
+          ],
+          "status": "present",
+          "value": 0.0
+        },
+        {
+          "evidence_key": "product_trace_action_audit_malformed_payload_rate",
+          "group": "action_gate",
+          "metric": "promotion_contract.product_trace_replay.action_audit_gate.malformed_payload_rate.mean",
+          "present": true,
+          "source_path": [
+            "metadata",
+            "product_trace_action_audit_malformed_payload_rate"
+          ],
+          "status": "present",
+          "value": 0.0
+        },
+        {
+          "evidence_key": "product_trace_action_audit_unexpected_action_rate",
+          "group": "action_gate",
+          "metric": "promotion_contract.product_trace_replay.action_audit_gate.unexpected_action_rate.mean",
+          "present": true,
+          "source_path": [
+            "metadata",
+            "product_trace_action_audit_unexpected_action_rate"
+          ],
+          "status": "present",
+          "value": 0.0
+        },
+        {
+          "evidence_key": "product_trace_action_audit_unknown_claim_id_rate",
+          "group": "action_gate",
+          "metric": "promotion_contract.product_trace_replay.action_audit_gate.unknown_claim_id_rate.mean",
+          "present": true,
+          "source_path": [
+            "metadata",
+            "product_trace_action_audit_unknown_claim_id_rate"
+          ],
+          "status": "present",
+          "value": 0.0
+        },
+        {
+          "evidence_key": "product_trace_action_execution_alignment_failed_trace_rate",
+          "group": "action_gate",
+          "metric": "promotion_contract.product_trace_replay.action_execution_gate.alignment_failed_trace_rate.mean",
+          "present": true,
+          "source_path": [
+            "metadata",
+            "product_trace_action_execution_alignment_failed_trace_rate"
+          ],
+          "status": "present",
+          "value": 0.0
+        },
+        {
+          "evidence_key": "product_trace_action_execution_missing_result_rate",
+          "group": "action_gate",
+          "metric": "promotion_contract.product_trace_replay.action_execution_gate.missing_result_rate.mean",
+          "present": true,
+          "source_path": [
+            "metadata",
+            "product_trace_action_execution_missing_result_rate"
+          ],
+          "status": "present",
+          "value": 0.0
+        },
+        {
+          "evidence_key": "product_trace_action_execution_unexpected_result_rate",
+          "group": "action_gate",
+          "metric": "promotion_contract.product_trace_replay.action_execution_gate.unexpected_result_rate.mean",
+          "present": true,
+          "source_path": [
+            "metadata",
+            "product_trace_action_execution_unexpected_result_rate"
+          ],
+          "status": "present",
+          "value": 0.0
+        },
+        {
+          "evidence_key": "product_trace_action_execution_request_id_mismatch_rate",
+          "group": "action_gate",
+          "metric": "promotion_contract.product_trace_replay.action_execution_gate.request_id_mismatch_rate.mean",
+          "present": true,
+          "source_path": [
+            "metadata",
+            "product_trace_action_execution_request_id_mismatch_rate"
+          ],
+          "status": "present",
+          "value": 0.0
+        }
+      ],
+      "missing_metric_count": 0,
+      "missing_metrics": [],
+      "present_metric_count": 10,
+      "recommended_action_id": "rerun_product_trace_action_gates",
+      "required": true,
+      "status": "promote"
+    }
+  ],
+  "metadata": {
+    "release": "smollm2-v1.9",
+    "runtime_baseline": "triple_audit_v1",
+    "source_contract": "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json"
+  },
+  "missing_metrics": [],
+  "model_id": "HuggingFaceTB/SmolLM2-135M-Instruct",
+  "recommended_action_ids": [],
+  "required_groups": [
+    "promotion",
+    "pre_generation",
+    "counterfactual",
+    "triple_audit",
+    "covered_fact_property",
+    "action_gate"
+  ],
+  "schema_version": 1,
+  "source_status": "promote",
+  "source_workflow": "release_candidate_comparison",
+  "status": "promote",
+  "summary": {
+    "blocked_group_count": 0,
+    "expected_metric_count": 38,
+    "group_count": 6,
+    "groups": {
+      "action_gate": "promote",
+      "counterfactual": "promote",
+      "covered_fact_property": "promote",
+      "pre_generation": "promote",
+      "promotion": "promote",
+      "triple_audit": "promote"
+    },
+    "missing_metric_count": 0,
+    "present_metric_count": 38,
+    "recommended_action_ids": [],
+    "required_group_count": 6
+  },
+  "workflow": "product_promotion_evidence_handoff_audit"
+}

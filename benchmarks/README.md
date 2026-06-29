@@ -5035,7 +5035,11 @@ lift summary so triple-evidence routes can be audited from runtime traces.
 Performance-bundle provenance is preserved as well: exported contracts retain
 best quality signal, score-fusion status, and selected-fusion
 status/run/candidate/signal/AUROC/false-alarm/detection/artifact metadata when
-those fields were present in the release candidate.
+those fields were present in the release candidate. Release-candidate runtime
+cost provenance is preserved too: contracts and ProductTrace metadata expose
+`recommended_runtime_seconds`, `recommended_runtime_cost_source`,
+`max_recommended_runtime_seconds`, and uncached forward cost when the source
+candidate includes a recommended deployment path.
 
 ```bash
 python benchmarks/export_product_promotion_contract.py \
@@ -5049,6 +5053,50 @@ python benchmarks/export_product_promotion_contract.py \
   --metadata source_record=benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate:1.6 \
   --compact-json
 ```
+
+Current frontier-audit handoff:
+
+```bash
+python benchmarks/export_product_promotion_contract.py \
+  --source artifacts/frontier-audit-release-candidate-v6/frontier-audit-registry-workflow.json \
+  --output artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json \
+  --artifact-manifest artifacts/smollm2_product_promotion_contract_v1_9/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name smollm2-product-promotion-contract \
+  --version 1.9 \
+  --metadata release=smollm2-v1.9 \
+  --metadata source_record=benchmark_manifest:smollm2-l8-frontier-audit-release-candidate:0.6 \
+  --compact-json
+```
+
+Then enrich the handoff from explicit local child reports and write a manifest
+for the enriched contract/audit:
+
+```bash
+python benchmarks/export_product_promotion_contract_evidence_handoff.py \
+  --contract artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json \
+  --json artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract-evidence-handoff.json \
+  --audit-json artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract-evidence-handoff-audit.json \
+  --pre-generation-probe-comparison artifacts/runtime_evidence/pre-generation-qwen-smollm2-l12-comparison/comparison.json \
+  --triple-extraction-fixture-matrix artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/triple-extraction-fixture-matrix.json \
+  --counterfactual-verification artifacts/smollm2_product_counterfactual_structured_qa_audit_v0/counterfactual-verification-report.json \
+  --product-trace-replay-workflow artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/product-trace-replay-workflow.json \
+  --runtime-baseline artifacts/smollm2_product_trace_triple_audit_runtime_baseline_v1/product-runtime-baseline.json \
+  --covered-fact-property-metrics artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-route/structured-qa-route-summary.json \
+  --artifact-manifest artifacts/smollm2_product_promotion_contract_v1_9/evidence-handoff-artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name smollm2-product-promotion-contract-v1-9-evidence-handoff \
+  --version 0.3 \
+  --metadata release=smollm2-v1.9 \
+  --metadata runtime_baseline=triple_audit_v1
+```
+
+The current v1.9 contract carries the v6 deployment-path runtime evidence
+(`recommended_runtime_seconds=0.191662`,
+`recommended_runtime_cost_source=cache_only_total_seconds`) and the enriched
+handoff audit promotes all six `frontier_audit` evidence groups with `38/38`
+fields present. The main contract manifest verifies with `checked=2`; the
+evidence-handoff manifest verifies with `checked=9`.
 
 Current local smoke release candidate:
 

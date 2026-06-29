@@ -159,6 +159,7 @@ def test_product_promotion_evidence_handoff_cli_helper_writes_and_registers(tmp_
     workflow = tmp_path / "product-trace-workflow.json"
     output = tmp_path / "contract-enriched.json"
     audit = tmp_path / "contract-enriched-audit.json"
+    manifest = tmp_path / "artifact-manifest.json"
     registry_path = tmp_path / "registry.json"
     contract.write_text(
         json.dumps({
@@ -179,6 +180,7 @@ def test_product_promotion_evidence_handoff_cli_helper_writes_and_registers(tmp_
         pre_generation_probe_comparison=pre_generation,
         triple_extraction_fixture_matrix=matrix,
         product_trace_replay_workflow=workflow,
+        artifact_manifest_path=manifest,
         registry_path=registry_path,
         name="contract-enriched",
         version="0.2",
@@ -187,14 +189,26 @@ def test_product_promotion_evidence_handoff_cli_helper_writes_and_registers(tmp_
 
     assert output.exists()
     assert audit.exists()
+    assert manifest.exists()
     assert payload["summary"]["before_missing_metric_count"] == 37
     assert payload["summary"]["after_missing_metric_count"] == 16
+    manifest_payload = json.loads(manifest.read_text(encoding="utf-8"))
+    assert manifest_payload["summary"]["missing_count"] == 0
+    assert set(manifest_payload["artifacts"]) == {
+        "source_contract",
+        "product_promotion_contract_evidence_handoff",
+        "product_promotion_contract_evidence_handoff_audit",
+        "pre_generation_probe_comparison",
+        "triple_extraction_fixture_matrix",
+        "product_trace_replay_workflow",
+    }
     registry = ArtifactRegistry.load_json(registry_path)
     contract_record = registry.get("product_promotion_contract:contract-enriched:0.2")
     audit_record = registry.get(
         "product_promotion_evidence_audit:contract-enriched-audit:0.2"
     )
     assert contract_record.metadata["resolved_missing_metric_count"] == 21
+    assert contract_record.metadata["artifact_manifest"] == str(manifest)
     assert audit_record.metadata["missing_metric_count"] == 16
     assert audit_record.metadata["scope"] == "unit-test"
 

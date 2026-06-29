@@ -66,6 +66,7 @@ def export_product_promotion_contract(
     counterfactual_verification = dict(contract.counterfactual_verification)
     release_efficiency = dict(contract.release_efficiency)
     release_efficiency_metadata = _release_efficiency_flat_metadata(release_efficiency)
+    runtime_cost_metadata = _runtime_cost_flat_metadata(contract.metadata)
     product_runtime_drift_metadata = _product_runtime_drift_flat_metadata(contract.metadata)
     product_trace_replay_workflow_metadata = _product_trace_replay_workflow_flat_metadata(
         trace_replay_workflow,
@@ -113,6 +114,7 @@ def export_product_promotion_contract(
                 "runner": "export_product_promotion_contract",
                 "source": str(source),
                 "compact_json": compact_json,
+                **runtime_cost_metadata,
                 **covered_fact_property_metadata,
                 **product_runtime_drift_metadata,
                 **product_trace_replay_workflow_metadata,
@@ -145,6 +147,7 @@ def export_product_promotion_contract(
                     "max_verifier_route_attempts"
                 ),
                 "recommended_route": contract.metadata.get("recommended_route"),
+                **runtime_cost_metadata,
                 **covered_fact_property_metadata,
                 "recommended_selector_replay_candidate": contract.metadata.get(
                     "recommended_selector_replay_candidate"
@@ -549,6 +552,22 @@ def _release_efficiency_flat_metadata(report: Mapping[str, Any]) -> dict[str, An
         "release_efficiency_trace_record_cache_hit_profile_count": report.get(
             "trace_record_cache_hit_profile_count"
         ),
+    })
+
+
+def _runtime_cost_flat_metadata(metadata: Mapping[str, Any]) -> dict[str, Any]:
+    return _drop_none_values({
+        "max_uncached_forward_seconds": metadata.get("max_uncached_forward_seconds"),
+        "max_recommended_runtime_seconds": metadata.get(
+            "max_recommended_runtime_seconds"
+        ),
+        "recommended_runtime_seconds": metadata.get("recommended_runtime_seconds"),
+        "recommended_runtime_cost_source": metadata.get(
+            "recommended_runtime_cost_source"
+        ),
+        "uncached_forward_cost_seconds": metadata.get("uncached_forward_cost_seconds"),
+        "uncached_forward_cost_source": metadata.get("uncached_forward_cost_source"),
+        "cache_only_total_seconds": metadata.get("cache_only_total_seconds"),
     })
 
 

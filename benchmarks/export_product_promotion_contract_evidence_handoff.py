@@ -15,7 +15,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from eigentruth.control import enrich_product_promotion_contract_evidence  # noqa: E402
 from eigentruth.json_utils import strict_json_dumps  # noqa: E402
-from eigentruth.registry import ArtifactRegistry  # noqa: E402
+from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
 
 
 def export_product_promotion_contract_evidence_handoff(
@@ -29,6 +29,7 @@ def export_product_promotion_contract_evidence_handoff(
     product_trace_replay_workflow: str | Path | None = None,
     runtime_baseline: str | Path | None = None,
     covered_fact_property_metrics: str | Path | None = None,
+    artifact_manifest_path: str | Path | None = None,
     registry_path: str | Path | None = None,
     name: str | None = None,
     version: str | None = None,
@@ -38,6 +39,7 @@ def export_product_promotion_contract_evidence_handoff(
     contract_path = Path(contract)
     output_path = Path(json_path)
     audit_path = Path(audit_json_path)
+    manifest_path = None if artifact_manifest_path is None else Path(artifact_manifest_path)
     if (name or version) and (registry_path is None or name is None or version is None):
         raise ValueError("registry export requires registry_path, name, and version.")
 
@@ -76,6 +78,51 @@ def export_product_promotion_contract_evidence_handoff(
         strict_json_dumps(audit_payload, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+    manifest = None
+    if manifest_path is not None:
+        artifacts: dict[str, Path] = {
+            "source_contract": contract_path,
+            "product_promotion_contract_evidence_handoff": output_path,
+            "product_promotion_contract_evidence_handoff_audit": audit_path,
+        }
+        optional_artifacts = {
+            "pre_generation_probe_comparison": pre_generation_path,
+            "triple_extraction_fixture_matrix": matrix_path,
+            "counterfactual_verification": counterfactual_path,
+            "product_trace_replay_workflow": workflow_path,
+            "runtime_baseline": runtime_path,
+            "covered_fact_property_metrics": covered_fact_path,
+        }
+        artifacts.update({
+            name: path
+            for name, path in optional_artifacts.items()
+            if path is not None
+        })
+        manifest = build_artifact_manifest(
+            artifacts,
+                root=manifest_path.parent,
+                metadata={
+                    "runner": "export_product_promotion_contract_evidence_handoff",
+                    "status": result.after_audit.status,
+                "source_contract": str(contract_path),
+                "before_missing_metric_count": result.summary[
+                    "before_missing_metric_count"
+                ],
+                "after_missing_metric_count": result.summary[
+                    "after_missing_metric_count"
+                ],
+                "resolved_missing_metric_count": result.summary[
+                    "resolved_missing_metric_count"
+                ],
+                "filled_groups": result.filled_groups,
+                **dict(metadata or {}),
+            },
+        )
+        manifest_path.parent.mkdir(parents=True, exist_ok=True)
+        manifest_path.write_text(
+            strict_json_dumps(manifest, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
 
     if registry_path is not None and name is not None and version is not None:
         registry = ArtifactRegistry.load_json(registry_path)
@@ -87,6 +134,7 @@ def export_product_promotion_contract_evidence_handoff(
                 "workflow": "product_promotion_evidence_handoff_export",
                 "source_contract": str(contract_path),
                 "evidence_handoff_audit": str(audit_path),
+                "artifact_manifest": None if manifest_path is None else str(manifest_path),
                 "before_missing_metric_count": result.summary[
                     "before_missing_metric_count"
                 ],
@@ -174,6 +222,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--product-trace-replay-workflow", default=None)
     parser.add_argument("--runtime-baseline", default=None)
     parser.add_argument("--covered-fact-property-metrics", default=None)
+    parser.add_argument("--artifact-manifest", default=None)
     parser.add_argument("--registry", default=None, help="optional ArtifactRegistry JSON")
     parser.add_argument("--name", default=None, help="registry contract name")
     parser.add_argument("--version", default=None, help="registry contract version")
@@ -194,6 +243,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         product_trace_replay_workflow=args.product_trace_replay_workflow,
         runtime_baseline=args.runtime_baseline,
         covered_fact_property_metrics=args.covered_fact_property_metrics,
+        artifact_manifest_path=args.artifact_manifest,
         registry_path=args.registry,
         name=args.name,
         version=args.version,
