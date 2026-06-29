@@ -15,6 +15,9 @@ if str(ROOT) not in sys.path:
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from benchmarks.plan_frontier_multiple_testing_reruns import (  # noqa: E402
+    build_frontier_multiple_testing_rerun_queue,
+)
 from eigentruth.control import plan_evidence_gaps_from_release_candidate  # noqa: E402
 from eigentruth.json_utils import strict_json_dumps  # noqa: E402
 from eigentruth.registry import ArtifactRegistry  # noqa: E402
@@ -28,10 +31,22 @@ def build_release_evidence_gap_plan(
     name: str | None = None,
     version: str | None = None,
     metadata: Mapping[str, Any] | None = None,
+    multiple_testing_rerun_json_path: str | Path | None = None,
+    multiple_testing_rerun_artifact_manifest_path: str | Path | None = None,
+    multiple_testing_rerun_output_dir: str | Path | None = None,
+    multiple_testing_rerun_name: str | None = None,
+    multiple_testing_rerun_version: str | None = None,
+    python_executable: str = sys.executable,
 ) -> dict[str, Any]:
     """Load a release report and optionally write/register its evidence-gap plan."""
     if registry_path is not None and (not name or not version):
         raise ValueError("registry_path requires name and version.")
+    if multiple_testing_rerun_artifact_manifest_path is not None and multiple_testing_rerun_json_path is None:
+        raise ValueError("multiple_testing_rerun_artifact_manifest_path requires multiple_testing_rerun_json_path.")
+    if (multiple_testing_rerun_name or multiple_testing_rerun_version) and registry_path is None:
+        raise ValueError("multiple_testing_rerun_name/version require registry_path.")
+    if (multiple_testing_rerun_name is None) != (multiple_testing_rerun_version is None):
+        raise ValueError("multiple_testing_rerun_name and multiple_testing_rerun_version must be provided together.")
     source_path = Path(source)
     payload = _load_json_object(source_path)
     plan = plan_evidence_gaps_from_release_candidate(
@@ -40,6 +55,20 @@ def build_release_evidence_gap_plan(
         metadata=metadata,
     )
     output = plan.to_dict()
+    derived_artifacts = _build_derived_artifacts(
+        source_path=source_path,
+        registry_path=None
+        if multiple_testing_rerun_name is None or multiple_testing_rerun_version is None
+        else registry_path,
+        multiple_testing_rerun_json_path=multiple_testing_rerun_json_path,
+        multiple_testing_rerun_artifact_manifest_path=multiple_testing_rerun_artifact_manifest_path,
+        multiple_testing_rerun_output_dir=multiple_testing_rerun_output_dir,
+        multiple_testing_rerun_name=multiple_testing_rerun_name,
+        multiple_testing_rerun_version=multiple_testing_rerun_version,
+        python_executable=python_executable,
+    )
+    if derived_artifacts:
+        output = {**output, "derived_artifacts": derived_artifacts}
     if json_path is not None:
         path = Path(json_path)
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -71,6 +100,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         name=args.name,
         version=args.version,
         metadata=_parse_metadata(args.metadata or ()),
+        multiple_testing_rerun_json_path=args.multiple_testing_rerun_json,
+        multiple_testing_rerun_artifact_manifest_path=args.multiple_testing_rerun_artifact_manifest,
+        multiple_testing_rerun_output_dir=args.multiple_testing_rerun_output_dir,
+        multiple_testing_rerun_name=args.multiple_testing_rerun_name,
+        multiple_testing_rerun_version=args.multiple_testing_rerun_version,
+        python_executable=args.python,
     )
     summary = payload["summary"]
     print(
@@ -93,7 +128,71 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--name", default=None, help="registry record name")
     parser.add_argument("--version", default=None, help="registry record version")
     parser.add_argument("--metadata", action="append", default=[], help="KEY=VALUE metadata; repeatable")
+    parser.add_argument(
+        "--multiple-testing-rerun-json",
+        default=None,
+        help="optional output JSON path for a derived frontier multiple-testing rerun queue",
+    )
+    parser.add_argument(
+        "--multiple-testing-rerun-artifact-manifest",
+        default=None,
+        help="optional artifact manifest path for the derived multiple-testing rerun queue",
+    )
+    parser.add_argument(
+        "--multiple-testing-rerun-output-dir",
+        default=None,
+        help="optional root directory for derived per-cell rerun outputs",
+    )
+    parser.add_argument(
+        "--multiple-testing-rerun-name",
+        default=None,
+        help="optional registry name for the derived multiple-testing rerun queue",
+    )
+    parser.add_argument(
+        "--multiple-testing-rerun-version",
+        default=None,
+        help="optional registry version for the derived multiple-testing rerun queue",
+    )
+    parser.add_argument("--python", default=sys.executable, help="Python executable for generated rerun commands")
     run(parser.parse_args(argv))
+
+
+def _build_derived_artifacts(
+    *,
+    source_path: Path,
+    registry_path: str | Path | None,
+    multiple_testing_rerun_json_path: str | Path | None,
+    multiple_testing_rerun_artifact_manifest_path: str | Path | None,
+    multiple_testing_rerun_output_dir: str | Path | None,
+    multiple_testing_rerun_name: str | None,
+    multiple_testing_rerun_version: str | None,
+    python_executable: str,
+) -> dict[str, Any]:
+    if multiple_testing_rerun_json_path is None:
+        return {}
+    rerun_payload = build_frontier_multiple_testing_rerun_queue(
+        source=source_path,
+        json_path=multiple_testing_rerun_json_path,
+        artifact_manifest_path=multiple_testing_rerun_artifact_manifest_path,
+        registry_path=registry_path,
+        name=multiple_testing_rerun_name,
+        version=multiple_testing_rerun_version,
+        output_dir=multiple_testing_rerun_output_dir,
+        python_executable=python_executable,
+    )
+    summary = rerun_payload["summary"]
+    return {
+        "frontier_multiple_testing_rerun_queue": {
+            "path": str(multiple_testing_rerun_json_path),
+            "artifact_manifest": None
+            if multiple_testing_rerun_artifact_manifest_path is None
+            else str(multiple_testing_rerun_artifact_manifest_path),
+            "status": rerun_payload["status"],
+            "blocked_cell_count": summary["blocked_cell_count"],
+            "command_count": summary["command_count"],
+            "missing_command_count": summary["missing_command_count"],
+        }
+    }
 
 
 def _load_json_object(path: Path) -> Mapping[str, Any]:

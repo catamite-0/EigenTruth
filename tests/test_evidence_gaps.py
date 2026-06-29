@@ -295,6 +295,97 @@ def test_plan_release_evidence_gaps_cli_helper_writes_and_registers(tmp_path):
     assert record.metadata["gap_count"] == 4
 
 
+def test_plan_release_evidence_gaps_can_emit_multiple_testing_rerun_queue(tmp_path):
+    source = tmp_path / "frontier-release-evidence.json"
+    output = tmp_path / "evidence-gap-plan.json"
+    queue_path = tmp_path / "multiple-testing-rerun-queue.json"
+    manifest_path = tmp_path / "multiple-testing-rerun-queue-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    workflow_path = tmp_path / "frontier" / "truthfulqa-frontier-workflow.json"
+    workflow_path.parent.mkdir(parents=True, exist_ok=True)
+    workflow_path.write_text(
+        json.dumps(_frontier_workflow_payload_for_multiple_testing_queue()),
+        encoding="utf-8",
+    )
+    source.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "frontier_release_evidence_comparison",
+            "status": "complete",
+            "inputs": {
+                "frontier_workflow_reports": (
+                    {
+                        "path": str(workflow_path),
+                        "workflow": "truthfulqa_frontier_workflow",
+                        "status": "complete",
+                    },
+                ),
+            },
+            "decision": {
+                "status": "blocked",
+                "multiple_testing_track_status": "blocked",
+                "blocking_reasons": (
+                    "truthfulqa_frontier_workflow.synthetic.multiple_testing_gate.all_pass is not true",
+                ),
+            },
+            "evidence_summary": {
+                "multiple_testing_failed_cells": (
+                    {
+                        "run": "truthfulqa-frontier-workflow",
+                        "cell": "a-l2",
+                        "status": "failed",
+                        "false_alarm": 0.03,
+                        "detection": 0.7,
+                        "report": "frontier/a-l2/multiple-testing-report.json",
+                        "calibration": "frontier/a-l2/multiple-testing-calibration.json",
+                    },
+                ),
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    payload = build_release_evidence_gap_plan(
+        source=source,
+        json_path=output,
+        registry_path=registry_path,
+        name="frontier-gap-plan",
+        version="0.1",
+        multiple_testing_rerun_json_path=queue_path,
+        multiple_testing_rerun_artifact_manifest_path=manifest_path,
+        multiple_testing_rerun_output_dir=tmp_path / "reruns",
+        multiple_testing_rerun_name="frontier-multiple-testing-reruns",
+        multiple_testing_rerun_version="0.1",
+        python_executable="python",
+    )
+
+    saved = json.loads(output.read_text(encoding="utf-8"))
+    queue = json.loads(queue_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    registry = ArtifactRegistry.load_json(registry_path)
+    gap_record = registry.get("evidence_gap_plan:frontier-gap-plan:0.1")
+    queue_record = registry.get("report:frontier-multiple-testing-reruns:0.1")
+
+    derived = payload["derived_artifacts"]["frontier_multiple_testing_rerun_queue"]
+    assert saved["derived_artifacts"] == payload["derived_artifacts"]
+    assert derived["path"] == str(queue_path)
+    assert derived["artifact_manifest"] == str(manifest_path)
+    assert derived["status"] == "ready"
+    assert derived["blocked_cell_count"] == 1
+    assert derived["command_count"] == 1
+    assert queue["entries"][0]["command_status"] == "ready"
+    assert queue["entries"][0]["command"][:3] == [
+        "python",
+        "benchmarks/run_truthfulqa_frontier_workflow.py",
+        "--output-dir",
+    ]
+    assert queue["entries"][0]["dry_run_command"][-1] == "--dry-run"
+    assert manifest["artifacts"]["frontier_multiple_testing_rerun_queue"]["exists"] is True
+    assert gap_record.metadata["gap_count"] == 1
+    assert queue_record.metadata["blocked_cell_count"] == 1
+    assert queue_record.metadata["command_count"] == 1
+
+
 def _blocked_registry_workflow_payload():
     return {
         "workflow": "release_candidate_registry_workflow",
@@ -344,5 +435,60 @@ def _blocked_registry_workflow_payload():
                     },
                 ],
             },
+        },
+    }
+
+
+def _frontier_workflow_payload_for_multiple_testing_queue():
+    return {
+        "schema_version": 1,
+        "workflow": "truthfulqa_frontier_workflow",
+        "status": "complete",
+        "config": {
+            "models": ({"name": "a", "model_id": "synthetic-a"},),
+            "scales": (
+                {
+                    "name": "l2",
+                    "limit": 2,
+                    "manifold_questions": 2,
+                    "layer": -1,
+                    "sweep_layers": (-1, -2),
+                },
+            ),
+            "dtype": "float32",
+            "batch_size": 2,
+            "max_batch_tokens": 0,
+            "max_length": 64,
+            "hidden_state_capture": "hooks",
+            "covariance_mode": "diag",
+            "covariance_low_rank": 4,
+            "progress_every": 0,
+            "offline": True,
+            "signals": ("truth_proj", "subspace_resid"),
+            "conformal_signal": "truth_proj",
+            "conformal_repeats": 1,
+            "ensemble_repeats": 1,
+            "artifact_alpha": 0.2,
+            "multiple_testing_signals": ("truth_proj", "subspace_resid"),
+            "multiple_testing_alpha": 0.2,
+            "multiple_testing_method": "bh",
+            "best_alpha": 0.2,
+            "best_by": "auroc",
+            "ensemble_methods": ("max_rank",),
+            "alphas": (0.2,),
+        },
+        "multiple_testing_gate": {
+            "enabled": True,
+            "all_pass": False,
+            "cells": (
+                {
+                    "cell": "a-l2",
+                    "pass": False,
+                    "false_alarm": 0.03,
+                    "detection": 0.7,
+                    "report": "frontier/a-l2/multiple-testing-report.json",
+                    "calibration": "frontier/a-l2/multiple-testing-calibration.json",
+                },
+            ),
         },
     }

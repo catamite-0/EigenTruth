@@ -4986,6 +4986,29 @@ root-cause/research-axis tags, and prioritized next actions. The output is a
 planning artifact only; it does not satisfy a release gate or promote verifier
 evidence.
 
+If the same source includes frontier multiple-testing blocked cells and points
+back to the originating `truthfulqa_frontier_workflow` report, the gap planner
+can also emit the executable per-cell rerun queue in the same pass:
+
+```bash
+python benchmarks/plan_release_evidence_gaps.py \
+  --source artifacts/frontier-release-evidence/report.json \
+  --json artifacts/frontier-release-evidence/evidence-gap-plan.json \
+  --multiple-testing-rerun-json artifacts/frontier-release-evidence/multiple-testing-rerun-queue.json \
+  --multiple-testing-rerun-artifact-manifest artifacts/frontier-release-evidence/multiple-testing-rerun-queue-manifest.json \
+  --multiple-testing-rerun-output-dir artifacts/frontier-multiple-testing-reruns \
+  --registry artifacts/release-registry.json \
+  --name frontier-release-evidence-gap-plan \
+  --version 0.1 \
+  --multiple-testing-rerun-name frontier-multiple-testing-reruns \
+  --multiple-testing-rerun-version 0.1
+```
+
+The saved gap plan records the derived queue path, status, blocked-cell count,
+and command count under `derived_artifacts`. The queue itself remains a separate
+reviewable artifact with command arrays and dry-run variants, so expensive
+frontier reruns stay opt-in.
+
 For frontier release reports blocked by the family-wise multiple-testing gate,
 build a per-cell rerun queue from the comparator or gap-plan output:
 
