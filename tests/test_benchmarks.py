@@ -31140,6 +31140,69 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     ]["covered_fact_property"] == {"block": 1, "promote": 1}
 
 
+def test_run_product_runtime_baseline_aggregates_trajectory_audit(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    registry_module = importlib.import_module("eigentruth.registry")
+    clean_trace = tmp_path / "clean-trace.json"
+    refuted_trace = tmp_path / "refuted-trace.json"
+    report_path = tmp_path / "product-runtime-baseline.json"
+    registry_path = tmp_path / "registry.json"
+    clean_trace.write_text(
+        json.dumps(_product_runtime_trajectory_trace(
+            request_id="clean",
+            verifier_status="supported",
+            answer_text="Paris is the capital of France.",
+        )),
+        encoding="utf-8",
+    )
+    refuted_trace.write_text(
+        json.dumps(_product_runtime_trajectory_trace(
+            request_id="refuted",
+            verifier_status="refuted",
+            answer_text="Paris is the capital of Germany.",
+        )),
+        encoding="utf-8",
+    )
+
+    payload = module.build_product_runtime_baseline(
+        module.ProductRuntimeBaselineConfig(
+            trace_paths=(clean_trace, refuted_trace),
+            report_path=report_path,
+            registry_path=registry_path,
+            name="trajectory-runtime",
+            version="0.1",
+        )
+    )
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "product_runtime_baseline:trajectory-runtime:0.1"
+    )
+    trajectory = payload["summary"]["trajectory_audit"]
+
+    assert trajectory["available_trace_count"] == 2
+    assert trajectory["passed_trace_count"] == 1
+    assert trajectory["failed_trace_count"] == 1
+    assert trajectory["failed_trace_rate"] == pytest.approx(0.5)
+    assert trajectory["error_count"] == pytest.approx(2.0)
+    assert trajectory["error_rate"] == pytest.approx(1.0)
+    assert trajectory["factual_count"] == pytest.approx(1.0)
+    assert trajectory["logical_count"] == pytest.approx(1.0)
+    assert trajectory["factual_rate"] == pytest.approx(0.5)
+    assert trajectory["logical_rate"] == pytest.approx(0.5)
+    assert trajectory["counts_by_code"] == {
+        "accepted_refuted_claim": 1,
+        "decision_conflicts_with_refutation": 1,
+    }
+    assert payload["traces"][0]["metrics"]["trajectory_audit_passed"] is True
+    assert payload["traces"][1]["metrics"]["trajectory_audit_passed"] is False
+    assert payload["traces"][1]["metrics"]["trajectory_audit_factual_count"] == pytest.approx(1.0)
+    assert payload["optimization"]["summary"]["trajectory_audit_error_rate"] == pytest.approx(1.0)
+    assert manifest["metadata"]["trajectory_audit_failed_trace_rate"] == pytest.approx(0.5)
+    assert manifest["metadata"]["trajectory_audit_error_rate"] == pytest.approx(1.0)
+    assert record.metadata["trajectory_audit_factual_rate"] == pytest.approx(0.5)
+    assert record.metadata["trajectory_audit_logical_rate"] == pytest.approx(0.5)
+
+
 def test_run_product_runtime_baseline_reports_optimization_advice(tmp_path):
     module = importlib.import_module("benchmarks.run_product_runtime_baseline")
     control_module = importlib.import_module("eigentruth.control")
@@ -32632,6 +32695,82 @@ def test_compare_product_runtime_baselines_gates_product_trace_action_gate_drift
     )
 
 
+def test_compare_product_runtime_baselines_gates_trajectory_audit_drift(tmp_path):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    registry_module = importlib.import_module("eigentruth.registry")
+    baseline_trace = tmp_path / "baseline-trace.json"
+    current_trace = tmp_path / "current-trace.json"
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    drift_report = tmp_path / "drift.json"
+    manifest_path = tmp_path / "drift-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    baseline_trace.write_text(
+        json.dumps(_product_runtime_trajectory_trace(
+            request_id="baseline",
+            verifier_status="supported",
+            answer_text="Paris is the capital of France.",
+        )),
+        encoding="utf-8",
+    )
+    current_trace.write_text(
+        json.dumps(_product_runtime_trajectory_trace(
+            request_id="current",
+            verifier_status="refuted",
+            answer_text="Paris is the capital of Germany.",
+        )),
+        encoding="utf-8",
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=baseline_report,
+        )
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(current_trace,),
+            report_path=current_report,
+        )
+    )
+
+    payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        report_path=drift_report,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="runtime-drift-trajectory-audit",
+        version="0.1",
+        max_product_trace_trajectory_audit_error_rate_increase=0.1,
+        max_product_trace_trajectory_audit_factual_rate_increase=0.1,
+        max_product_trace_trajectory_audit_logical_rate_increase=0.1,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "product_runtime_drift_report:runtime-drift-trajectory-audit:0.1"
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["blocked_metric_count"] == 3
+    assert _metric_by_name(payload, "trajectory_audit.error_rate")["status"] == "blocked"
+    assert _metric_by_name(payload, "trajectory_audit.error_rate")["current"] == pytest.approx(2.0)
+    assert _metric_by_name(payload, "trajectory_audit.factual_rate")["current"] == pytest.approx(1.0)
+    assert _metric_by_name(payload, "trajectory_audit.logical_rate")["status"] == "blocked"
+    assert _metric_by_name(payload, "trajectory_audit.failed_trace_rate")["status"] == "observed"
+    assert payload["config"]["max_product_trace_trajectory_audit_error_rate_increase"] == (
+        pytest.approx(0.1)
+    )
+    assert manifest["metadata"]["product_trace_trajectory_audit_blocked_metric_count"] == 3
+    assert manifest["metadata"]["product_trace_trajectory_audit_error_rate_current"] == pytest.approx(
+        2.0
+    )
+    assert manifest["metadata"]["product_trace_trajectory_audit_failed_trace_rate_status"] == "observed"
+    assert record.metadata["product_trace_trajectory_audit_blocked_metric_count"] == 3
+    assert record.metadata["product_trace_trajectory_audit_logical_rate_current"] == pytest.approx(1.0)
+
+
 def test_compare_product_runtime_baselines_reports_minimum_trace_gate_reason(tmp_path):
     baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
     compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
@@ -33976,6 +34115,70 @@ def _metric_by_name(payload: Mapping[str, Any], name: str) -> dict[str, Any]:
         if metric["metric"] == name:
             return metric
     raise AssertionError(f"missing metric {name!r}")
+
+
+def _product_runtime_trajectory_trace(
+    *,
+    request_id: str,
+    verifier_status: str,
+    answer_text: str,
+) -> dict[str, Any]:
+    return {
+        "request_id": request_id,
+        "runtime_trace": {"total_seconds": 0.10, "phases": []},
+        "risk_decision": {
+            "action": "accept",
+            "risk_level": "low",
+            "confidence": 0.95,
+            "reason": "ready to answer",
+        },
+        "claims": [
+            {
+                "claim_id": "c1",
+                "text": answer_text,
+                "metadata": {},
+            }
+        ],
+        "verification_results": [
+            {
+                "status": verifier_status,
+                "confidence": 0.99,
+                "metadata": {"claim_id": "c1"},
+            }
+        ],
+        "actions": [
+            {
+                "action": "accept",
+                "reason": "ready to answer",
+                "payload": {"claim_ids": ["c1"]},
+                "request_id": f"{request_id}-action",
+            }
+        ],
+        "action_results": [
+            {
+                "action": "accept",
+                "status": "dry_run",
+                "output": {"would_execute": "accept"},
+                "request_id": f"{request_id}-action",
+            }
+        ],
+        "final_answer": {
+            "status": "answered",
+            "text": answer_text,
+            "answerable": True,
+            "action": "accept",
+            "risk_level": "low",
+            "confidence": 0.95,
+            "reason": "ready to answer",
+            "claim_summary": {
+                "total_claims": 1,
+                "status_counts": {verifier_status: 1},
+            },
+            "evidence": [],
+            "followup": {"requires_followup": False},
+        },
+        "metadata": {"cache": {"verifier": {"hits": 1, "misses": 0}}},
+    }
 
 
 def test_run_product_runtime_baseline_aggregates_verification_stage_savings(tmp_path):

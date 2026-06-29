@@ -841,6 +841,22 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         "action_audit_malformed_payload_count": metrics.get("action_audit_malformed_payload_count"),
         "action_audit_unexpected_action_count": metrics.get("action_audit_unexpected_action_count"),
         "action_audit_unknown_claim_id_count": metrics.get("action_audit_unknown_claim_id_count"),
+        "trajectory_audit_summary": dict(_mapping(metrics.get("trajectory_audit_summary"))),
+        "trajectory_audit_available": bool(metrics.get("trajectory_audit_available")),
+        "trajectory_audit_source": metrics.get("trajectory_audit_source"),
+        "trajectory_audit_passed": metrics.get("trajectory_audit_passed"),
+        "trajectory_audit_issue_count": metrics.get("trajectory_audit_issue_count"),
+        "trajectory_audit_error_count": metrics.get("trajectory_audit_error_count"),
+        "trajectory_audit_warning_count": metrics.get("trajectory_audit_warning_count"),
+        "trajectory_audit_info_count": metrics.get("trajectory_audit_info_count"),
+        "trajectory_audit_types": list(_sequence(metrics.get("trajectory_audit_types"))),
+        "trajectory_audit_counts_by_type": dict(_mapping(metrics.get("trajectory_audit_counts_by_type"))),
+        "trajectory_audit_counts_by_code": dict(_mapping(metrics.get("trajectory_audit_counts_by_code"))),
+        "trajectory_audit_factual_count": metrics.get("trajectory_audit_factual_count"),
+        "trajectory_audit_referential_count": metrics.get("trajectory_audit_referential_count"),
+        "trajectory_audit_logical_count": metrics.get("trajectory_audit_logical_count"),
+        "trajectory_audit_procedural_count": metrics.get("trajectory_audit_procedural_count"),
+        "trajectory_audit_scope_count": metrics.get("trajectory_audit_scope_count"),
         "triple_coverage_summary": dict(_mapping(metrics.get("triple_coverage_summary"))),
         "triple_coverage_source": metrics.get("triple_coverage_source"),
         "triple_claim_count": metrics.get("triple_claim_count"),
@@ -1096,6 +1112,7 @@ def _aggregate_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "verification_plan": _aggregate_verification_plan(metrics),
         "action_execution": _aggregate_action_execution(metrics),
         "action_audit": _aggregate_action_audit(metrics),
+        "trajectory_audit": _aggregate_trajectory_audit(metrics),
         "triple_coverage": _aggregate_triple_coverage(metrics),
         "final_answer": _aggregate_final_answer(metrics),
         "promotion_contract": _aggregate_promotion_contract(metrics),
@@ -1183,6 +1200,18 @@ def _optimization_report(
                 summary,
                 "action_audit",
                 "malformed_payload_rate",
+            ),
+            "trajectory_audit_error_rate": _nested(summary, "trajectory_audit", "error_rate"),
+            "trajectory_audit_failed_trace_rate": _nested(
+                summary,
+                "trajectory_audit",
+                "failed_trace_rate",
+            ),
+            "trajectory_audit_factual_rate": _nested(summary, "trajectory_audit", "factual_rate"),
+            "trajectory_audit_procedural_rate": _nested(
+                summary,
+                "trajectory_audit",
+                "procedural_rate",
             ),
             "slowest_phase": None if not phase_hotspots else phase_hotspots[0]["phase"],
             "slowest_route": None if not route_hotspots else route_hotspots[0]["route"],
@@ -1911,6 +1940,66 @@ def _aggregate_action_audit(metrics: Sequence[Mapping[str, Any]]) -> dict[str, A
         ),
         "per_trace_issue_count": _numeric_summary(
             item.get("action_audit_issue_count") for item in metrics
+        ),
+        "summary_observations": sum(1 for summary in summaries if summary),
+    }
+
+
+def _aggregate_trajectory_audit(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    summaries = [_mapping(item.get("trajectory_audit_summary")) for item in metrics]
+    n_traces = len(metrics)
+    available_count = sum(1 for item in metrics if item.get("trajectory_audit_available") is True)
+    passed_count = sum(1 for item in metrics if item.get("trajectory_audit_passed") is True)
+    failed_count = sum(1 for item in metrics if item.get("trajectory_audit_passed") is False)
+    counts_by_code: dict[str, int] = {}
+    counts_by_severity: dict[str, int] = {}
+    counts_by_type: dict[str, int] = {}
+    for summary in summaries:
+        _merge_counts(counts_by_code, _mapping(summary.get("counts_by_code")))
+        _merge_counts(counts_by_severity, _mapping(summary.get("counts_by_severity")))
+        _merge_counts(counts_by_type, _mapping(summary.get("counts_by_type")))
+    issue_count = _sum_float(metrics, "trajectory_audit_issue_count")
+    error_count = _sum_float(metrics, "trajectory_audit_error_count")
+    warning_count = _sum_float(metrics, "trajectory_audit_warning_count")
+    info_count = _sum_float(metrics, "trajectory_audit_info_count")
+    factual_count = _sum_float(metrics, "trajectory_audit_factual_count") or 0.0
+    referential_count = _sum_float(metrics, "trajectory_audit_referential_count") or 0.0
+    logical_count = _sum_float(metrics, "trajectory_audit_logical_count") or 0.0
+    procedural_count = _sum_float(metrics, "trajectory_audit_procedural_count") or 0.0
+    scope_count = _sum_float(metrics, "trajectory_audit_scope_count") or 0.0
+    return {
+        "source_trace_count": n_traces,
+        "available_trace_count": available_count,
+        "missing_trace_count": n_traces - available_count,
+        "coverage_rate": _safe_div(available_count, n_traces),
+        "passed_trace_count": passed_count,
+        "failed_trace_count": failed_count,
+        "passed_trace_rate": _safe_div(passed_count, available_count),
+        "failed_trace_rate": _safe_div(failed_count, available_count),
+        "source_counts": _counts(item.get("trajectory_audit_source") for item in metrics),
+        "issue_count": issue_count,
+        "error_count": error_count,
+        "warning_count": warning_count,
+        "info_count": info_count,
+        "issue_rate": _safe_div(issue_count, n_traces),
+        "error_rate": _safe_div(error_count, n_traces),
+        "warning_rate": _safe_div(warning_count, n_traces),
+        "info_rate": _safe_div(info_count, n_traces),
+        "factual_count": factual_count,
+        "factual_rate": _safe_div(factual_count, n_traces),
+        "referential_count": referential_count,
+        "referential_rate": _safe_div(referential_count, n_traces),
+        "logical_count": logical_count,
+        "logical_rate": _safe_div(logical_count, n_traces),
+        "procedural_count": procedural_count,
+        "procedural_rate": _safe_div(procedural_count, n_traces),
+        "scope_count": scope_count,
+        "scope_rate": _safe_div(scope_count, n_traces),
+        "counts_by_code": counts_by_code,
+        "counts_by_severity": counts_by_severity,
+        "counts_by_type": counts_by_type,
+        "per_trace_issue_count": _numeric_summary(
+            item.get("trajectory_audit_issue_count") for item in metrics
         ),
         "summary_observations": sum(1 for summary in summaries if summary),
     }
@@ -3165,6 +3254,7 @@ def _write_artifact_manifest(
     *,
     artifacts: Mapping[str, str | Path | None] | None = None,
 ) -> dict[str, Any]:
+    trajectory_audit_metadata = _trajectory_audit_flat_metadata(report)
     promotion_contract_drift_metadata = _promotion_contract_runtime_drift_flat_metadata(report)
     promotion_contract_trace_replay_metadata = _promotion_contract_trace_replay_flat_metadata(
         report
@@ -3215,6 +3305,7 @@ def _write_artifact_manifest(
             "budget_enabled": _mapping(report.get("budget")).get("enabled"),
             "budget_passed": _mapping(report.get("budget")).get("passed"),
             "compact_json": config.compact_json,
+            **trajectory_audit_metadata,
             **promotion_contract_drift_metadata,
             **promotion_contract_trace_replay_metadata,
             **promotion_contract_external_evidence_metadata,
@@ -3246,6 +3337,7 @@ def _artifact_paths(config: ProductRuntimeBaselineConfig) -> dict[str, str | Pat
 def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, Any]) -> None:
     if config.registry_path is None:
         return
+    trajectory_audit_metadata = _trajectory_audit_flat_metadata(report)
     promotion_contract_drift_metadata = _promotion_contract_runtime_drift_flat_metadata(report)
     promotion_contract_trace_replay_metadata = _promotion_contract_trace_replay_flat_metadata(
         report
@@ -3301,6 +3393,7 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
             "budget_passed": _mapping(report.get("budget")).get("passed"),
             "failed_count": _mapping(report.get("budget")).get("failed_count"),
             "compact_json": config.compact_json,
+            **trajectory_audit_metadata,
             **promotion_contract_drift_metadata,
             **promotion_contract_trace_replay_metadata,
             **promotion_contract_external_evidence_metadata,
@@ -3329,6 +3422,42 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
             },
         )
     registry.save_json()
+
+
+def _trajectory_audit_flat_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    trajectory = _mapping(_nested(report, "summary", "trajectory_audit"))
+    if not trajectory:
+        return {}
+    return {
+        "trajectory_audit_available_trace_count": trajectory.get("available_trace_count"),
+        "trajectory_audit_missing_trace_count": trajectory.get("missing_trace_count"),
+        "trajectory_audit_coverage_rate": trajectory.get("coverage_rate"),
+        "trajectory_audit_passed_trace_count": trajectory.get("passed_trace_count"),
+        "trajectory_audit_failed_trace_count": trajectory.get("failed_trace_count"),
+        "trajectory_audit_passed_trace_rate": trajectory.get("passed_trace_rate"),
+        "trajectory_audit_failed_trace_rate": trajectory.get("failed_trace_rate"),
+        "trajectory_audit_issue_count": trajectory.get("issue_count"),
+        "trajectory_audit_error_count": trajectory.get("error_count"),
+        "trajectory_audit_warning_count": trajectory.get("warning_count"),
+        "trajectory_audit_info_count": trajectory.get("info_count"),
+        "trajectory_audit_issue_rate": trajectory.get("issue_rate"),
+        "trajectory_audit_error_rate": trajectory.get("error_rate"),
+        "trajectory_audit_warning_rate": trajectory.get("warning_rate"),
+        "trajectory_audit_info_rate": trajectory.get("info_rate"),
+        "trajectory_audit_factual_count": trajectory.get("factual_count"),
+        "trajectory_audit_referential_count": trajectory.get("referential_count"),
+        "trajectory_audit_logical_count": trajectory.get("logical_count"),
+        "trajectory_audit_procedural_count": trajectory.get("procedural_count"),
+        "trajectory_audit_scope_count": trajectory.get("scope_count"),
+        "trajectory_audit_factual_rate": trajectory.get("factual_rate"),
+        "trajectory_audit_referential_rate": trajectory.get("referential_rate"),
+        "trajectory_audit_logical_rate": trajectory.get("logical_rate"),
+        "trajectory_audit_procedural_rate": trajectory.get("procedural_rate"),
+        "trajectory_audit_scope_rate": trajectory.get("scope_rate"),
+        "trajectory_audit_counts_by_code": dict(_mapping(trajectory.get("counts_by_code"))),
+        "trajectory_audit_counts_by_type": dict(_mapping(trajectory.get("counts_by_type"))),
+        "trajectory_audit_counts_by_severity": dict(_mapping(trajectory.get("counts_by_severity"))),
+    }
 
 
 def _promotion_contract_runtime_drift_flat_metadata(

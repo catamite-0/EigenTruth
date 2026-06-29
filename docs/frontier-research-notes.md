@@ -38,6 +38,7 @@ Added trace-level product trajectory audit:
 - `TrajectoryHallucinationType`, `TrajectoryAuditIssue`, `TrajectoryAuditReport`, and `audit_product_trace_trajectory(...)` implement a dependency-free five-type trace audit over `ProductTrace` payloads.
 - The audit reuses existing action-planning findings, adds action-result alignment failures, and checks verification/decision/final-answer consistency so accepted refutations, unsupported accepted claims, missing action results, request-id mismatches, and final-answer contradictions become structured findings.
 - `ProductTrace.to_bounded_dict()` now carries a compact `summaries.trajectory_audit` block, and `product_runtime_metrics(...)` exposes full-trace or bounded-summary trajectory counts for runtime baselines.
+- Runtime baselines now aggregate trajectory-audit failed-trace/error rates plus factual/referential/logical/procedural/scope counts into reports, manifests, and registry metadata, and `compare_product_runtime_baselines.py` can fail closed on taxonomy-rate drift when explicit gates are configured.
 - This is a monitor-first structural audit, not a learned trajectory detector: it gives agent/tool workflows a stable evidence schema while future internal-representation or learned trace classifiers remain optional adapters.
 
 Added DECK-style detectability taxonomy reports:

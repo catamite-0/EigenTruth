@@ -246,6 +246,15 @@ _PRODUCT_TRACE_ACTION_GATE_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
         "product_trace_action_execution_request_id_mismatch_rate",
     ),
 )
+_PRODUCT_TRACE_TRAJECTORY_AUDIT_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
+    ("trajectory_audit.failed_trace_rate", "product_trace_trajectory_audit_failed_trace_rate"),
+    ("trajectory_audit.error_rate", "product_trace_trajectory_audit_error_rate"),
+    ("trajectory_audit.factual_rate", "product_trace_trajectory_audit_factual_rate"),
+    ("trajectory_audit.referential_rate", "product_trace_trajectory_audit_referential_rate"),
+    ("trajectory_audit.logical_rate", "product_trace_trajectory_audit_logical_rate"),
+    ("trajectory_audit.procedural_rate", "product_trace_trajectory_audit_procedural_rate"),
+    ("trajectory_audit.scope_rate", "product_trace_trajectory_audit_scope_rate"),
+)
 _PRODUCT_TRACE_ACTION_GATE_METRIC_SPECS: tuple[tuple[str, tuple[str, ...], str], ...] = (
     (
         "promotion_contract.product_trace_replay.action_audit_gate.error_rate.mean",
@@ -320,6 +329,43 @@ _PRODUCT_TRACE_ACTION_GATE_METRIC_SPECS: tuple[tuple[str, tuple[str, ...], str],
             "mean",
         ),
         "max_product_trace_action_execution_request_id_mismatch_rate_increase",
+    ),
+)
+_PRODUCT_TRACE_TRAJECTORY_AUDIT_METRIC_SPECS: tuple[tuple[str, tuple[str, ...], str], ...] = (
+    (
+        "trajectory_audit.failed_trace_rate",
+        ("trajectory_audit", "failed_trace_rate"),
+        "max_product_trace_trajectory_audit_failed_trace_rate_increase",
+    ),
+    (
+        "trajectory_audit.error_rate",
+        ("trajectory_audit", "error_rate"),
+        "max_product_trace_trajectory_audit_error_rate_increase",
+    ),
+    (
+        "trajectory_audit.factual_rate",
+        ("trajectory_audit", "factual_rate"),
+        "max_product_trace_trajectory_audit_factual_rate_increase",
+    ),
+    (
+        "trajectory_audit.referential_rate",
+        ("trajectory_audit", "referential_rate"),
+        "max_product_trace_trajectory_audit_referential_rate_increase",
+    ),
+    (
+        "trajectory_audit.logical_rate",
+        ("trajectory_audit", "logical_rate"),
+        "max_product_trace_trajectory_audit_logical_rate_increase",
+    ),
+    (
+        "trajectory_audit.procedural_rate",
+        ("trajectory_audit", "procedural_rate"),
+        "max_product_trace_trajectory_audit_procedural_rate_increase",
+    ),
+    (
+        "trajectory_audit.scope_rate",
+        ("trajectory_audit", "scope_rate"),
+        "max_product_trace_trajectory_audit_scope_rate_increase",
     ),
 )
 
@@ -406,6 +452,13 @@ def compare_product_runtime_baselines(
     max_product_trace_action_execution_missing_result_rate_increase: float | None = None,
     max_product_trace_action_execution_unexpected_result_rate_increase: float | None = None,
     max_product_trace_action_execution_request_id_mismatch_rate_increase: float | None = None,
+    max_product_trace_trajectory_audit_failed_trace_rate_increase: float | None = None,
+    max_product_trace_trajectory_audit_error_rate_increase: float | None = None,
+    max_product_trace_trajectory_audit_factual_rate_increase: float | None = None,
+    max_product_trace_trajectory_audit_referential_rate_increase: float | None = None,
+    max_product_trace_trajectory_audit_logical_rate_increase: float | None = None,
+    max_product_trace_trajectory_audit_procedural_rate_increase: float | None = None,
+    max_product_trace_trajectory_audit_scope_rate_increase: float | None = None,
     min_current_trace_count: int | None = None,
     metadata: Mapping[str, Any] | None = None,
     compact_json: bool = False,
@@ -617,6 +670,27 @@ def compare_product_runtime_baselines(
             _optional_rate_float(
                 max_product_trace_action_execution_request_id_mismatch_rate_increase
             )
+        ),
+        "max_product_trace_trajectory_audit_failed_trace_rate_increase": (
+            _optional_rate_float(max_product_trace_trajectory_audit_failed_trace_rate_increase)
+        ),
+        "max_product_trace_trajectory_audit_error_rate_increase": _optional_rate_float(
+            max_product_trace_trajectory_audit_error_rate_increase
+        ),
+        "max_product_trace_trajectory_audit_factual_rate_increase": _optional_rate_float(
+            max_product_trace_trajectory_audit_factual_rate_increase
+        ),
+        "max_product_trace_trajectory_audit_referential_rate_increase": _optional_rate_float(
+            max_product_trace_trajectory_audit_referential_rate_increase
+        ),
+        "max_product_trace_trajectory_audit_logical_rate_increase": _optional_rate_float(
+            max_product_trace_trajectory_audit_logical_rate_increase
+        ),
+        "max_product_trace_trajectory_audit_procedural_rate_increase": _optional_rate_float(
+            max_product_trace_trajectory_audit_procedural_rate_increase
+        ),
+        "max_product_trace_trajectory_audit_scope_rate_increase": _optional_rate_float(
+            max_product_trace_trajectory_audit_scope_rate_increase
         ),
         "min_current_trace_count": _optional_non_negative_int(min_current_trace_count),
     }
@@ -863,6 +937,7 @@ def _comparison_metrics(
     ]
     metrics.extend(_covered_fact_property_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_product_trace_action_gate_metrics(baseline_summary, current_summary, gates=gates))
+    metrics.extend(_product_trace_trajectory_audit_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_pre_generation_probe_comparison_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_claim_factuality_probe_comparison_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_counterfactual_verification_metrics(baseline_summary, current_summary, gates=gates))
@@ -1353,6 +1428,32 @@ def _product_trace_action_gate_metrics(
 
 def _product_trace_action_gate_gate_enabled(gates: Mapping[str, Any]) -> bool:
     return any(gates.get(gate_key) is not None for _, _, gate_key in _PRODUCT_TRACE_ACTION_GATE_METRIC_SPECS)
+
+
+def _product_trace_trajectory_audit_metrics(
+    baseline_summary: Mapping[str, Any],
+    current_summary: Mapping[str, Any],
+    *,
+    gates: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    if not _product_trace_trajectory_audit_gate_enabled(gates):
+        return []
+    return [
+        _delta_metric(
+            metric_name,
+            _nested_float(baseline_summary, metric_path),
+            _nested_float(current_summary, metric_path),
+            gates.get(gate_key),
+        )
+        for metric_name, metric_path, gate_key in _PRODUCT_TRACE_TRAJECTORY_AUDIT_METRIC_SPECS
+    ]
+
+
+def _product_trace_trajectory_audit_gate_enabled(gates: Mapping[str, Any]) -> bool:
+    return any(
+        gates.get(gate_key) is not None
+        for _, _, gate_key in _PRODUCT_TRACE_TRAJECTORY_AUDIT_METRIC_SPECS
+    )
 
 
 def _runtime_optimization_handoff(report: Mapping[str, Any]) -> dict[str, Any]:
@@ -1994,6 +2095,7 @@ def _drift_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
         **_covered_fact_property_metadata(report),
         **_triple_coverage_metadata(report),
         **_product_trace_action_gate_metadata(report),
+        **_product_trace_trajectory_audit_metadata(report),
     }
 
 
@@ -2118,6 +2220,21 @@ def _product_trace_action_gate_metadata(report: Mapping[str, Any]) -> dict[str, 
         metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
         if metric is not None and metric.get("status") == "blocked":
             metadata["product_trace_action_gate_blocked_metric_count"] += 1
+    return metadata
+
+
+def _product_trace_trajectory_audit_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    metrics = _metrics_by_name(report.get("metrics"))
+    metadata: dict[str, Any] = {
+        "product_trace_trajectory_audit_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _PRODUCT_TRACE_TRAJECTORY_AUDIT_METADATA_FIELDS:
+        metric = metrics.get(metric_name)
+        metadata[f"{prefix}_baseline"] = _finite_float(None if metric is None else metric.get("baseline"))
+        metadata[f"{prefix}_current"] = _finite_float(None if metric is None else metric.get("current"))
+        metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is not None and metric.get("status") == "blocked":
+            metadata["product_trace_trajectory_audit_blocked_metric_count"] += 1
     return metadata
 
 
@@ -2440,6 +2557,27 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_product_trace_action_execution_request_id_mismatch_rate_increase=(
             args.max_product_trace_action_execution_request_id_mismatch_rate_increase
         ),
+        max_product_trace_trajectory_audit_failed_trace_rate_increase=(
+            args.max_product_trace_trajectory_audit_failed_trace_rate_increase
+        ),
+        max_product_trace_trajectory_audit_error_rate_increase=(
+            args.max_product_trace_trajectory_audit_error_rate_increase
+        ),
+        max_product_trace_trajectory_audit_factual_rate_increase=(
+            args.max_product_trace_trajectory_audit_factual_rate_increase
+        ),
+        max_product_trace_trajectory_audit_referential_rate_increase=(
+            args.max_product_trace_trajectory_audit_referential_rate_increase
+        ),
+        max_product_trace_trajectory_audit_logical_rate_increase=(
+            args.max_product_trace_trajectory_audit_logical_rate_increase
+        ),
+        max_product_trace_trajectory_audit_procedural_rate_increase=(
+            args.max_product_trace_trajectory_audit_procedural_rate_increase
+        ),
+        max_product_trace_trajectory_audit_scope_rate_increase=(
+            args.max_product_trace_trajectory_audit_scope_rate_increase
+        ),
         min_current_trace_count=args.min_current_trace_count,
         metadata=_parse_metadata(args.metadata or ()),
         compact_json=bool(args.compact_json),
@@ -2629,6 +2767,41 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument(
         "--max-product-trace-action-execution-request-id-mismatch-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-trajectory-audit-failed-trace-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-trajectory-audit-error-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-trajectory-audit-factual-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-trajectory-audit-referential-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-trajectory-audit-logical-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-trajectory-audit-procedural-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-trajectory-audit-scope-rate-increase",
         type=float,
         default=None,
     )
