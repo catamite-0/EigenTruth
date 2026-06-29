@@ -494,6 +494,24 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
                 "recommended_route": "structured_fact",
                 "route_passed": True,
             },
+            "promotion_contract_frontier_release_evidence": {
+                "status": "promote",
+                "report_path": "frontier-evidence.json",
+                "manifest_path": "frontier-manifest.json",
+                "decision_status": "promote",
+                "verifier_track_status": "promote",
+                "abstention_track_status": "promote",
+                "run_names": ["verifier", "abstention"],
+            },
+            "promotion_contract_frontier_release_evidence_decision_status": "promote",
+            "promotion_contract_frontier_release_evidence_verifier_track_status": "promote",
+            "promotion_contract_frontier_release_evidence_abstention_track_status": (
+                "promote"
+            ),
+            "promotion_contract_frontier_release_evidence_run_names": [
+                "verifier",
+                "abstention",
+            ],
             "external_evidence_baseline_comparison_source": "registry",
             "external_evidence_baseline_comparison_status": "promote",
             "external_evidence_baseline_comparison_decision_status": "promote",
@@ -597,6 +615,12 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
         "_truncated": True,
         "_omitted_keys": 1,
     }
+    assert payload["metadata"]["promotion_contract_frontier_release_evidence"] == {
+        "status": "promote",
+        "report_path": "frontier-evidence.json",
+        "_truncated": True,
+        "_omitted_keys": 5,
+    }
     assert payload["metadata"]["promotion_contract_triple_extraction_fixture_matrix"] == {
         "status": "promote",
         "distinct_predicate_count": 6,
@@ -628,6 +652,17 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
         metrics["promotion_contract_external_evidence_baseline_comparison_available"]
         is True
     )
+    assert metrics["promotion_contract_frontier_release_evidence_available"] is True
+    assert metrics["promotion_contract_frontier_release_evidence_status"] == "promote"
+    assert metrics["promotion_contract_frontier_release_evidence_report"] == (
+        "frontier-evidence.json"
+    )
+    assert metrics["promotion_contract_frontier_release_evidence_decision_status"] == (
+        "promote"
+    )
+    assert metrics[
+        "promotion_contract_frontier_release_evidence_run_count"
+    ] == pytest.approx(2.0)
     assert metrics[
         "promotion_contract_external_evidence_baseline_comparison_source"
     ] == "registry"
@@ -3005,6 +3040,20 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
             "report_path": "release-efficiency.json",
             "recommended_profile": "balanced",
         },
+        frontier_release_evidence={
+            "report_path": "frontier-release-evidence.json",
+            "manifest_path": "frontier-release-evidence-manifest.json",
+            "source": "registry",
+            "registry": "release-registry.json",
+            "record_key": "report:frontier-release-evidence:0.1",
+            "workflow": "frontier_release_evidence_comparison",
+            "status": "promote",
+            "report_status": "complete",
+            "decision_status": "promote",
+            "verifier_track_status": "promote",
+            "abstention_track_status": "promote",
+            "run_names": ["verifier-stability", "abstention-stability"],
+        },
         control_defaults={"max_verifier_route_attempts": 3},
         metadata={
             "selector_replay_status": "promote",
@@ -3067,6 +3116,30 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
         ]
         == "promote"
     )
+    assert metadata["promotion_contract_promotion_summary"]["gate_statuses"][
+        "frontier_release_evidence"
+    ] == "promote"
+    assert metadata["promotion_contract_promotion_summary"]["recommended_records"][
+        "frontier_release_evidence"
+    ] == "frontier-release-evidence.json"
+    assert metadata["promotion_contract_frontier_release_evidence"]["status"] == (
+        "promote"
+    )
+    assert metadata["promotion_contract_frontier_release_evidence_report"] == (
+        "frontier-release-evidence.json"
+    )
+    assert metadata["promotion_contract_frontier_release_evidence_manifest"] == (
+        "frontier-release-evidence-manifest.json"
+    )
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_decision_status"
+    ] == "promote"
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_verifier_track_status"
+    ] == "promote"
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_abstention_track_status"
+    ] == "promote"
     assert metadata["promotion_contract_runtime"] == {"layer": -2}
     assert metadata["promotion_contract_verifier_route"] == {
         "route": "structured_qa",
@@ -3115,6 +3188,19 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert runtime_metrics[
         "promotion_contract_promotion_summary_action_audit_status"
     ] == "promote"
+    assert runtime_metrics["promotion_contract_frontier_release_evidence_available"] is True
+    assert runtime_metrics["promotion_contract_frontier_release_evidence_status"] == (
+        "promote"
+    )
+    assert runtime_metrics["promotion_contract_frontier_release_evidence_report"] == (
+        "frontier-release-evidence.json"
+    )
+    assert runtime_metrics[
+        "promotion_contract_frontier_release_evidence_decision_status"
+    ] == "promote"
+    assert runtime_metrics[
+        "promotion_contract_frontier_release_evidence_run_count"
+    ] == pytest.approx(2.0)
     assert runtime_metrics[
         "promotion_contract_recommended_route_covered_fact_property_metric_count"
     ] == pytest.approx(1.0)

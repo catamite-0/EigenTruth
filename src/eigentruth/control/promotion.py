@@ -118,6 +118,7 @@ class ProductPromotionContract:
     triple_extraction_fixture_matrix: Mapping[str, Any] = field(default_factory=dict)
     counterfactual_verification: Mapping[str, Any] = field(default_factory=dict)
     release_efficiency: Mapping[str, Any] = field(default_factory=dict)
+    frontier_release_evidence: Mapping[str, Any] = field(default_factory=dict)
     metadata: Mapping[str, Any] = field(default_factory=dict)
     schema_version: int = 1
 
@@ -184,6 +185,11 @@ class ProductPromotionContract:
             dict(self.counterfactual_verification),
         )
         object.__setattr__(self, "release_efficiency", dict(self.release_efficiency))
+        object.__setattr__(
+            self,
+            "frontier_release_evidence",
+            dict(self.frontier_release_evidence),
+        )
         object.__setattr__(self, "metadata", dict(self.metadata))
         object.__setattr__(self, "schema_version", int(self.schema_version))
 
@@ -237,6 +243,9 @@ class ProductPromotionContract:
                     payload.get("counterfactual_verification")
                 ),
                 release_efficiency=_mapping(payload.get("release_efficiency")),
+                frontier_release_evidence=_mapping(
+                    payload.get("frontier_release_evidence")
+                ),
                 metadata=_mapping(payload.get("metadata")),
             )
         return cls.from_release_candidate_report(payload, require_promoted=require_promoted)
@@ -323,6 +332,13 @@ class ProductPromotionContract:
         )
         release_efficiency = _release_efficiency_metadata(
             _mapping(candidate.get("release_efficiency")),
+            manifests=manifests,
+        )
+        frontier_release_evidence = _frontier_release_evidence_metadata(
+            _first_mapping(
+                candidate.get("frontier_release_evidence"),
+                comparison.get("frontier_release_evidence_gate"),
+            ),
             manifests=manifests,
         )
         runtime_cost = _mapping(candidate.get("runtime_cost"))
@@ -419,6 +435,7 @@ class ProductPromotionContract:
             triple_extraction_fixture_matrix=triple_extraction_fixture_matrix,
             counterfactual_verification=counterfactual_verification,
             release_efficiency=release_efficiency,
+            frontier_release_evidence=frontier_release_evidence,
             metadata={
                 "release_candidate_status": status,
                 "readiness_status": decision.get("readiness_status"),
@@ -434,6 +451,9 @@ class ProductPromotionContract:
                 ),
                 "frontier_release_evidence_status": decision.get(
                     "frontier_release_evidence_status"
+                ),
+                "recommended_frontier_release_evidence_report": decision.get(
+                    "recommended_frontier_release_evidence_report"
                 ),
                 "uncertainty_escalation_workflow_status": decision.get(
                     "uncertainty_escalation_workflow_status"
@@ -808,6 +828,7 @@ class ProductPromotionContract:
                     claim_factuality_probe_comparison
                 ),
                 **_release_efficiency_flat_metadata(release_efficiency),
+                **_frontier_release_evidence_flat_metadata(frontier_release_evidence),
                 "performance_baseline_record": candidate.get("performance_baseline_record"),
                 "performance_evidence_bundle_status": performance_evidence_bundle.get("status"),
                 "performance_evidence_bundle_release_ready": (
@@ -1128,6 +1149,7 @@ class ProductPromotionContract:
             ),
             "counterfactual_verification": dict(self.counterfactual_verification),
             "release_efficiency": dict(self.release_efficiency),
+            "frontier_release_evidence": dict(self.frontier_release_evidence),
             "metadata": dict(self.metadata),
             "summary": self.to_summary_dict(),
         }
@@ -1219,6 +1241,10 @@ def product_promotion_contract_summary(
             "mechanism_handoff": metadata.get(
                 "recommended_mechanism_handoff_evidence_bundle_report"
             ),
+            "frontier_release_evidence": metadata.get(
+                "recommended_frontier_release_evidence_report"
+            )
+            or contract.frontier_release_evidence.get("report_path"),
         }),
         "control_defaults": dict(contract.control_defaults),
         "control_policy_configured": bool(contract.control_policy_config),
@@ -1271,6 +1297,11 @@ def _promotion_contract_gate_statuses(
     statuses["release_efficiency"] = _optional_str(_first_present(
         statuses.get("release_efficiency"),
         contract.release_efficiency.get("status"),
+    ))
+    statuses["frontier_release_evidence"] = _optional_str(_first_present(
+        statuses.get("frontier_release_evidence"),
+        contract.frontier_release_evidence.get("status"),
+        contract.frontier_release_evidence.get("decision_status"),
     ))
     return statuses
 
@@ -3074,6 +3105,9 @@ def product_promotion_contract_metadata(
             contract.counterfactual_verification
         ),
         "promotion_contract_release_efficiency": dict(contract.release_efficiency),
+        "promotion_contract_frontier_release_evidence": dict(
+            contract.frontier_release_evidence
+        ),
         "promotion_contract_metadata": dict(contract.metadata),
         **_promotion_contract_product_trace_replay_metadata(contract),
         **_promotion_contract_product_runtime_drift_metadata(contract),
@@ -3083,6 +3117,7 @@ def product_promotion_contract_metadata(
         **_promotion_contract_claim_factuality_probe_comparison_metadata(contract),
         **_promotion_contract_pathway_intervention_metadata(contract),
         **_promotion_contract_counterfactual_verification_metadata(contract),
+        **_promotion_contract_frontier_release_evidence_metadata(contract),
         **covered_fact_scope,
     }
 
@@ -4518,6 +4553,131 @@ def _release_efficiency_flat_metadata(report: Mapping[str, Any]) -> dict[str, An
         "release_efficiency_quality_passed": report.get("quality_passed"),
         "release_efficiency_trace_record_cache_hit_profile_count": report.get(
             "trace_record_cache_hit_profile_count"
+        ),
+    })
+
+
+def _frontier_release_evidence_metadata(
+    report: Mapping[str, Any],
+    *,
+    manifests: Mapping[str, Any],
+) -> dict[str, Any]:
+    if not report:
+        return {}
+    gate = _mapping(report.get("gate"))
+    return _drop_none_values({
+        "report_path": report.get("report_path"),
+        "manifest_path": _first_present(
+            report.get("manifest_path"),
+            manifests.get("frontier_release_evidence_manifest"),
+        ),
+        "source": report.get("source"),
+        "registry": report.get("registry"),
+        "record_key": report.get("record_key"),
+        "workflow": report.get("workflow"),
+        "status": _first_present(report.get("status"), gate.get("status")),
+        "report_status": report.get("report_status"),
+        "decision_status": report.get("decision_status"),
+        "verifier_track_status": report.get("verifier_track_status"),
+        "abstention_track_status": report.get("abstention_track_status"),
+        "run_names": report.get("run_names"),
+        "blocking_reasons": _first_present(
+            report.get("blocking_reasons"),
+            gate.get("blocking_reasons"),
+        ),
+    })
+
+
+def _frontier_release_evidence_flat_metadata(
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    return _drop_none_values({
+        "frontier_release_evidence_report": report.get("report_path"),
+        "frontier_release_evidence_manifest": report.get("manifest_path"),
+        "frontier_release_evidence_source": report.get("source"),
+        "frontier_release_evidence_registry": report.get("registry"),
+        "frontier_release_evidence_record": report.get("record_key"),
+        "frontier_release_evidence_status": report.get("status"),
+        "frontier_release_evidence_workflow": report.get("workflow"),
+        "frontier_release_evidence_report_status": report.get("report_status"),
+        "frontier_release_evidence_decision_status": report.get("decision_status"),
+        "frontier_release_evidence_verifier_track_status": (
+            report.get("verifier_track_status")
+        ),
+        "frontier_release_evidence_abstention_track_status": (
+            report.get("abstention_track_status")
+        ),
+        "frontier_release_evidence_run_names": report.get("run_names"),
+        "frontier_release_evidence_blocking_reasons": report.get("blocking_reasons"),
+    })
+
+
+def _promotion_contract_frontier_release_evidence_metadata(
+    contract: ProductPromotionContract,
+) -> dict[str, Any]:
+    metadata = _mapping(contract.metadata)
+    evidence = _mapping(contract.frontier_release_evidence)
+    return _drop_none_values({
+        "promotion_contract_frontier_release_evidence_status": _first_present(
+            metadata.get("frontier_release_evidence_status"),
+            evidence.get("status"),
+            evidence.get("decision_status"),
+        ),
+        "promotion_contract_frontier_release_evidence_report": _first_present(
+            evidence.get("report_path"),
+            metadata.get("frontier_release_evidence_report"),
+            metadata.get("recommended_frontier_release_evidence_report"),
+        ),
+        "promotion_contract_frontier_release_evidence_manifest": _first_present(
+            evidence.get("manifest_path"),
+            metadata.get("frontier_release_evidence_manifest"),
+        ),
+        "promotion_contract_frontier_release_evidence_source": _first_present(
+            evidence.get("source"),
+            metadata.get("frontier_release_evidence_source"),
+        ),
+        "promotion_contract_frontier_release_evidence_registry": _first_present(
+            evidence.get("registry"),
+            metadata.get("frontier_release_evidence_registry"),
+        ),
+        "promotion_contract_frontier_release_evidence_record": _first_present(
+            evidence.get("record_key"),
+            metadata.get("frontier_release_evidence_record"),
+            metadata.get("frontier_release_evidence_registry_key"),
+        ),
+        "promotion_contract_frontier_release_evidence_workflow": _first_present(
+            evidence.get("workflow"),
+            metadata.get("frontier_release_evidence_workflow"),
+        ),
+        "promotion_contract_frontier_release_evidence_report_status": _first_present(
+            evidence.get("report_status"),
+            metadata.get("frontier_release_evidence_report_status"),
+        ),
+        "promotion_contract_frontier_release_evidence_decision_status": _first_present(
+            evidence.get("decision_status"),
+            metadata.get("frontier_release_evidence_decision_status"),
+        ),
+        "promotion_contract_frontier_release_evidence_verifier_track_status": (
+            _first_present(
+                evidence.get("verifier_track_status"),
+                metadata.get("frontier_release_evidence_verifier_track_status"),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_abstention_track_status": (
+            _first_present(
+                evidence.get("abstention_track_status"),
+                metadata.get("frontier_release_evidence_abstention_track_status"),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_run_names": _first_present(
+            evidence.get("run_names"),
+            metadata.get("frontier_release_evidence_run_names"),
+        ),
+        "promotion_contract_frontier_release_evidence_blocking_reasons": (
+            _first_present(
+                evidence.get("blocking_reasons"),
+                metadata.get("frontier_release_evidence_blocking_reasons"),
+            )
         ),
     })
 

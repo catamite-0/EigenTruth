@@ -1158,6 +1158,14 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         metadata,
         contract_metadata=contract_metadata,
     )
+    nested_frontier_release_evidence = _mapping(
+        metadata.get("promotion_contract_frontier_release_evidence")
+    )
+    frontier_release_evidence = {
+        **_frontier_release_evidence_from_flat_metadata(contract_metadata),
+        **_frontier_release_evidence_from_flat_metadata(metadata),
+        **nested_frontier_release_evidence,
+    }
     promotion_summary = _mapping(metadata.get("promotion_contract_promotion_summary"))
     promotion_summary_runtime = _mapping(promotion_summary.get("runtime"))
     promotion_summary_verifier_route = _mapping(
@@ -1225,6 +1233,7 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         or bool(pathway)
         or bool(runtime_drift.get("available"))
         or bool(evidence_handoff.get("available"))
+        or bool(frontier_release_evidence)
     )
     pre_generation_manifest_verification = _mapping(
         _first_present(
@@ -1253,6 +1262,10 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
     pre_generation_best_run = _mapping(pre_generation.get("best_run"))
     claim_factuality_best_run = _mapping(claim_factuality.get("best_run"))
     counterfactual_available = bool(counterfactual)
+    frontier_release_evidence_available = bool(frontier_release_evidence)
+    frontier_release_evidence_run_names = _sequence(
+        frontier_release_evidence.get("run_names")
+    )
     summary = {
         "available": available,
         "source": source,
@@ -1267,6 +1280,49 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         "product_trace_replay": product_trace_replay,
         "product_runtime_drift": runtime_drift,
         "evidence_handoff": evidence_handoff,
+        "frontier_release_evidence": {
+            "available": frontier_release_evidence_available,
+            "source": _optional_string(frontier_release_evidence.get("source")),
+            "report": _optional_string(
+                _first_present(
+                    frontier_release_evidence.get("report_path"),
+                    frontier_release_evidence.get("report"),
+                )
+            ),
+            "manifest": _optional_string(
+                _first_present(
+                    frontier_release_evidence.get("manifest_path"),
+                    frontier_release_evidence.get("manifest"),
+                )
+            ),
+            "registry": _optional_string(frontier_release_evidence.get("registry")),
+            "record": _optional_string(
+                _first_present(
+                    frontier_release_evidence.get("record_key"),
+                    frontier_release_evidence.get("record"),
+                )
+            ),
+            "status": _optional_string(frontier_release_evidence.get("status")),
+            "workflow": _optional_string(frontier_release_evidence.get("workflow")),
+            "report_status": _optional_string(
+                frontier_release_evidence.get("report_status")
+            ),
+            "decision_status": _optional_string(
+                frontier_release_evidence.get("decision_status")
+            ),
+            "verifier_track_status": _optional_string(
+                frontier_release_evidence.get("verifier_track_status")
+            ),
+            "abstention_track_status": _optional_string(
+                frontier_release_evidence.get("abstention_track_status")
+            ),
+            "run_count": float(len(frontier_release_evidence_run_names))
+            if frontier_release_evidence_run_names
+            else None,
+            "run_names": list(frontier_release_evidence_run_names)
+            if frontier_release_evidence_run_names
+            else None,
+        },
         "pathway_intervention_workflow": {
             "available": bool(pathway),
             "source": _optional_string(
@@ -1977,6 +2033,7 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
     pre_generation_summary = _mapping(summary["pre_generation_probe_comparison"])
     claim_factuality_summary = _mapping(summary["claim_factuality_probe_comparison"])
     counterfactual_summary = _mapping(summary["counterfactual_verification"])
+    frontier_release_evidence_summary = _mapping(summary["frontier_release_evidence"])
     product_trace_replay_metrics = _promotion_contract_product_trace_replay_metric_values(
         product_trace_replay
     )
@@ -1990,6 +2047,51 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         "promotion_contract_source_status": source_status,
         "promotion_contract_budget_enabled": budget_enabled,
         "promotion_contract_summary": summary,
+        "promotion_contract_frontier_release_evidence": (
+            frontier_release_evidence or None
+        ),
+        "promotion_contract_frontier_release_evidence_available": (
+            frontier_release_evidence_available
+        ),
+        "promotion_contract_frontier_release_evidence_status": (
+            frontier_release_evidence_summary.get("status")
+        ),
+        "promotion_contract_frontier_release_evidence_report": (
+            frontier_release_evidence_summary.get("report")
+        ),
+        "promotion_contract_frontier_release_evidence_manifest": (
+            frontier_release_evidence_summary.get("manifest")
+        ),
+        "promotion_contract_frontier_release_evidence_source": (
+            frontier_release_evidence_summary.get("source")
+        ),
+        "promotion_contract_frontier_release_evidence_registry": (
+            frontier_release_evidence_summary.get("registry")
+        ),
+        "promotion_contract_frontier_release_evidence_record": (
+            frontier_release_evidence_summary.get("record")
+        ),
+        "promotion_contract_frontier_release_evidence_workflow": (
+            frontier_release_evidence_summary.get("workflow")
+        ),
+        "promotion_contract_frontier_release_evidence_report_status": (
+            frontier_release_evidence_summary.get("report_status")
+        ),
+        "promotion_contract_frontier_release_evidence_decision_status": (
+            frontier_release_evidence_summary.get("decision_status")
+        ),
+        "promotion_contract_frontier_release_evidence_verifier_track_status": (
+            frontier_release_evidence_summary.get("verifier_track_status")
+        ),
+        "promotion_contract_frontier_release_evidence_abstention_track_status": (
+            frontier_release_evidence_summary.get("abstention_track_status")
+        ),
+        "promotion_contract_frontier_release_evidence_run_count": _finite_float(
+            frontier_release_evidence_summary.get("run_count")
+        ),
+        "promotion_contract_frontier_release_evidence_run_names": (
+            frontier_release_evidence_summary.get("run_names")
+        ),
         "promotion_contract_promotion_summary": promotion_summary or None,
         "promotion_contract_promotion_summary_status": _optional_string(
             promotion_summary.get("status")
@@ -3302,6 +3404,33 @@ def _external_evidence_baseline_comparison_from_flat_metadata(
         ),
     }
     return {key: value for key, value in comparison.items() if value is not None}
+
+
+def _frontier_release_evidence_from_flat_metadata(
+    metadata: Mapping[str, Any],
+) -> dict[str, Any]:
+    def value(suffix: str) -> Any:
+        return _first_present(
+            metadata.get(f"frontier_release_evidence_{suffix}"),
+            metadata.get(f"promotion_contract_frontier_release_evidence_{suffix}"),
+        )
+
+    evidence = {
+        "report_path": value("report"),
+        "manifest_path": value("manifest"),
+        "source": value("source"),
+        "registry": value("registry"),
+        "record_key": _first_present(value("record"), value("registry_key")),
+        "status": value("status"),
+        "workflow": value("workflow"),
+        "report_status": value("report_status"),
+        "decision_status": value("decision_status"),
+        "verifier_track_status": value("verifier_track_status"),
+        "abstention_track_status": value("abstention_track_status"),
+        "run_names": value("run_names"),
+        "blocking_reasons": value("blocking_reasons"),
+    }
+    return {key: item for key, item in evidence.items() if item is not None}
 
 
 def _pre_generation_probe_comparison_from_flat_metadata(

@@ -5011,9 +5011,11 @@ control defaults, and runtime budget policy without requiring reviewers to scan
 the full metadata map. The manifest and registry record mirror the headline
 summary fields as `promotion_summary_*` metadata for dashboards and release
 checks. Runtime traces that load the contract carry the same view as
-`promotion_contract_promotion_summary`, and `product_runtime_metrics()` exposes
-headline `promotion_contract_promotion_summary_*` fields for baselines and SLO
-reports.
+`promotion_contract_promotion_summary`; when a frontier release-evidence report
+was supplied to the release candidate, they also carry
+`promotion_contract_frontier_release_evidence` plus headline
+`promotion_contract_frontier_release_evidence_*` metrics. `product_runtime_metrics()`
+exposes both field families for baselines and SLO reports.
 
 When the release candidate was gated by
 a structured-fact route audit, the compact contract, manifest, and registry
