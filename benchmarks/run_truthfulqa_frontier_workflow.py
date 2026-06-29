@@ -153,6 +153,9 @@ class TruthfulQAFrontierWorkflowConfig:
     ensemble_repeats: int = 20
     seed: int = 0
     artifact_alpha: float = 0.10
+    multiple_testing_signals: Sequence[str] = ()
+    multiple_testing_alpha: float | None = None
+    multiple_testing_method: str = "by"
     best_alpha: float = 0.10
     best_by: str = "auroc"
     ensemble_methods: Sequence[str] = DEFAULT_ENSEMBLE_METHODS
@@ -217,12 +220,19 @@ class TruthfulQAFrontierWorkflowConfig:
                 raise ValueError("attn_implementation must be non-empty when set.")
             object.__setattr__(self, "attn_implementation", attn_implementation)
         object.__setattr__(self, "attention_pathway", bool(self.attention_pathway))
+        if self.multiple_testing_alpha is not None:
+            object.__setattr__(self, "multiple_testing_alpha", float(self.multiple_testing_alpha))
         if self.covariance_mode not in {"full", "diag", "low_rank", "shrinkage"}:
             raise ValueError("covariance_mode must be one of: full, diag, low_rank, shrinkage.")
         if self.dump_scores_format not in {"json", "jsonl"}:
             raise ValueError("dump_scores_format must be one of: json, jsonl.")
         if self.best_by not in {"auroc", "detection"}:
             raise ValueError("best_by must be one of: auroc, detection.")
+        if self.multiple_testing_alpha is not None and not 0.0 < self.multiple_testing_alpha < 1.0:
+            raise ValueError("multiple_testing_alpha must be in (0, 1).")
+        multiple_testing_method = str(self.multiple_testing_method).strip().lower().replace("_", "-")
+        if multiple_testing_method not in {"by", "bh", "bonferroni"}:
+            raise ValueError("multiple_testing_method must be one of: by, bh, bonferroni.")
         if self.detectability_consistency_direction not in {"higher", "lower"}:
             raise ValueError("detectability_consistency_direction must be one of: higher, lower.")
         if self.detectability_confidence_direction not in {"higher", "lower"}:
@@ -234,6 +244,11 @@ class TruthfulQAFrontierWorkflowConfig:
         if self.sweep_band_target_layer not in {None, "best", "band_best", "first"}:
             raise ValueError("sweep_band_target_layer must be one of: best, band_best, first.")
         signals = tuple(str(signal).strip() for signal in self.signals if str(signal).strip())
+        multiple_testing_signals = tuple(
+            str(signal).strip()
+            for signal in self.multiple_testing_signals
+            if str(signal).strip()
+        )
         sweep_band_scales = tuple(str(scale).strip() for scale in self.sweep_band_scales if str(scale).strip())
         if self.sweep_layers_from_band_report is not None:
             missing_scales = sorted(set(sweep_band_scales) - {scale.name for scale in scales})
@@ -273,6 +288,8 @@ class TruthfulQAFrontierWorkflowConfig:
         object.__setattr__(self, "models", models)
         object.__setattr__(self, "scales", scales)
         object.__setattr__(self, "signals", signals)
+        object.__setattr__(self, "multiple_testing_signals", multiple_testing_signals)
+        object.__setattr__(self, "multiple_testing_method", multiple_testing_method)
         object.__setattr__(self, "sweep_band_scales", sweep_band_scales)
         object.__setattr__(self, "sweep_band_expand_radius", int(self.sweep_band_expand_radius))
         if self.sweep_band_strategy is not None:
@@ -310,6 +327,14 @@ class TruthfulQAFrontierWorkflowConfig:
     @property
     def artifact_manifest_path(self) -> Path:
         return self.output_dir / "artifact-manifest.json"
+
+    @property
+    def multiple_testing_enabled(self) -> bool:
+        return bool(self.multiple_testing_signals)
+
+    @property
+    def resolved_multiple_testing_alpha(self) -> float:
+        return self.artifact_alpha if self.multiple_testing_alpha is None else self.multiple_testing_alpha
 
 
 def run_truthfulqa_frontier_workflow(config: TruthfulQAFrontierWorkflowConfig) -> dict[str, Any]:
@@ -363,6 +388,7 @@ def run_truthfulqa_frontier_workflow(config: TruthfulQAFrontierWorkflowConfig) -
         "cells": cell_reports,
         "ensemble": _ensemble_summary(ensemble_payload, path=config.ensemble_report_path),
         "detectability_taxonomy": _detectability_summary(detectability_reports),
+        "multiple_testing_gate": _multiple_testing_summary(config, cell_reports),
         "artifact_manifest_summary": manifest_summary,
         "execution": {
             "wall_clock_seconds": time.perf_counter() - started_at,
@@ -424,6 +450,9 @@ def _cell_config(
         repeats=config.conformal_repeats,
         seed=config.seed,
         artifact_alpha=config.artifact_alpha,
+        multiple_testing_signals=config.multiple_testing_signals,
+        multiple_testing_alpha=config.multiple_testing_alpha,
+        multiple_testing_method=config.multiple_testing_method,
         best_by=config.best_by,
         python_executable=config.python_executable,
         dry_run=config.dry_run,
@@ -439,6 +468,11 @@ def _cell_summary(
     evidence = dict(report.get("evidence_bundle") or {})
     calibration = dict(evidence.get("calibration") or {})
     score_dump = dict(evidence.get("score_dump") or {})
+    artifacts = dict(evidence.get("artifacts") or {})
+    multiple_testing = dict(calibration.get("multiple_testing") or {})
+    if multiple_testing:
+        multiple_testing["report"] = artifacts.get("multiple_testing_report")
+        multiple_testing["calibration"] = artifacts.get("multiple_testing_calibration")
     return {
         "name": cell_name,
         "model": {"name": model.name, "model_id": model.model_id},
@@ -463,6 +497,7 @@ def _cell_summary(
             "false_alarm": calibration.get("best_false_alarm"),
             "detection": calibration.get("best_detection"),
         },
+        "multiple_testing": multiple_testing,
     }
 
 
@@ -571,6 +606,47 @@ def _detectability_summary(reports: Sequence[Mapping[str, Any]]) -> dict[str, An
     }
 
 
+def _multiple_testing_summary(
+    config: TruthfulQAFrontierWorkflowConfig,
+    cell_reports: Sequence[Mapping[str, Any]],
+) -> dict[str, Any] | None:
+    if not config.multiple_testing_enabled:
+        return None
+    cells = []
+    pass_count = 0
+    fail_count = 0
+    unknown_count = 0
+    for cell in cell_reports:
+        multiple_testing = _mapping(cell.get("multiple_testing"))
+        passed = multiple_testing.get("pass")
+        if passed is True:
+            pass_count += 1
+        elif passed is False:
+            fail_count += 1
+        else:
+            unknown_count += 1
+        cells.append({
+            "cell": cell.get("name"),
+            "pass": passed,
+            "false_alarm": multiple_testing.get("false_alarm"),
+            "detection": multiple_testing.get("detection"),
+            "report": multiple_testing.get("report"),
+            "calibration": multiple_testing.get("calibration"),
+        })
+    return {
+        "enabled": True,
+        "signals": tuple(config.multiple_testing_signals),
+        "alpha": config.resolved_multiple_testing_alpha,
+        "method": config.multiple_testing_method,
+        "cell_count": len(cells),
+        "pass_count": pass_count,
+        "fail_count": fail_count,
+        "unknown_count": unknown_count,
+        "all_pass": bool(cells) and fail_count == 0 and unknown_count == 0,
+        "cells": tuple(cells),
+    }
+
+
 def _ensemble_summary(payload: Mapping[str, Any] | None, *, path: Path) -> dict[str, Any] | None:
     if payload is None:
         return None
@@ -612,6 +688,17 @@ def _artifact_paths(
             "detectability_taxonomy",
             "path",
         )
+        if config.multiple_testing_enabled:
+            artifacts[f"cells.{name}.multiple_testing_report"] = _nested(
+                cell,
+                "multiple_testing",
+                "report",
+            )
+            artifacts[f"cells.{name}.multiple_testing_calibration"] = _nested(
+                cell,
+                "multiple_testing",
+                "calibration",
+            )
     return artifacts
 
 
@@ -632,6 +719,11 @@ def _write_artifact_manifest(
             "scales": tuple(scale.name for scale in config.scales),
             "signals": tuple(config.signals),
             "ensemble_methods": tuple(config.ensemble_methods),
+            "multiple_testing_enabled": config.multiple_testing_enabled,
+            "multiple_testing_signals": tuple(config.multiple_testing_signals),
+            "multiple_testing_alpha": config.resolved_multiple_testing_alpha,
+            "multiple_testing_method": config.multiple_testing_method,
+            "multiple_testing_all_pass": _nested(report, "multiple_testing_gate", "all_pass"),
             "detectability_consistency_signal": config.detectability_consistency_signal,
             "detectability_confidence_signal": config.detectability_confidence_signal,
             "detectability_consistency_direction": config.detectability_consistency_direction,
@@ -667,6 +759,11 @@ def _record_registry(config: TruthfulQAFrontierWorkflowConfig, report: Mapping[s
             "models": tuple(model.name for model in config.models),
             "scales": tuple(scale.name for scale in config.scales),
             "signals": tuple(config.signals),
+            "multiple_testing_enabled": config.multiple_testing_enabled,
+            "multiple_testing_signals": tuple(config.multiple_testing_signals),
+            "multiple_testing_alpha": config.resolved_multiple_testing_alpha,
+            "multiple_testing_method": config.multiple_testing_method,
+            "multiple_testing_all_pass": _nested(report, "multiple_testing_gate", "all_pass"),
             "detectability_consistency_signal": config.detectability_consistency_signal,
             "detectability_confidence_signal": config.detectability_confidence_signal,
             "sweep_layers_from_band_report": (
@@ -723,6 +820,9 @@ def _config_payload(config: TruthfulQAFrontierWorkflowConfig) -> dict[str, Any]:
         "ensemble_repeats": config.ensemble_repeats,
         "seed": config.seed,
         "artifact_alpha": config.artifact_alpha,
+        "multiple_testing_signals": tuple(config.multiple_testing_signals),
+        "multiple_testing_alpha": config.resolved_multiple_testing_alpha,
+        "multiple_testing_method": config.multiple_testing_method,
         "best_alpha": config.best_alpha,
         "best_by": config.best_by,
         "ensemble_methods": tuple(config.ensemble_methods),
@@ -855,6 +955,11 @@ def _config_from_args(args: argparse.Namespace) -> TruthfulQAFrontierWorkflowCon
         ensemble_repeats=args.ensemble_repeats,
         seed=args.seed,
         artifact_alpha=args.artifact_alpha,
+        multiple_testing_signals=_parse_csv(args.multiple_testing_signals, name="--multiple-testing-signals")
+        if args.multiple_testing_signals
+        else (),
+        multiple_testing_alpha=args.multiple_testing_alpha,
+        multiple_testing_method=args.multiple_testing_method,
         best_alpha=args.best_alpha,
         best_by=args.best_by,
         ensemble_methods=_parse_csv(args.methods, name="--methods"),
@@ -957,6 +1062,26 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--ensemble-repeats", type=int, default=20)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--artifact-alpha", type=float, default=0.10)
+    parser.add_argument(
+        "--multiple-testing-signals",
+        default=None,
+        help=(
+            "optional comma-list forwarded to each calibrated cell for a multi-signal conformal "
+            "gate report/runtime artifact"
+        ),
+    )
+    parser.add_argument(
+        "--multiple-testing-alpha",
+        type=float,
+        default=None,
+        help="optional false-alarm budget for --multiple-testing-signals; defaults to --artifact-alpha",
+    )
+    parser.add_argument(
+        "--multiple-testing-method",
+        choices=("by", "bh", "bonferroni"),
+        default="by",
+        help="multiple-testing correction forwarded to each calibrated cell",
+    )
     parser.add_argument("--best-alpha", type=float, default=0.10)
     parser.add_argument("--best-by", choices=("auroc", "detection"), default="auroc")
     parser.add_argument("--methods", default=",".join(DEFAULT_ENSEMBLE_METHODS))

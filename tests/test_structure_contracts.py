@@ -14,16 +14,25 @@ from eigentruth.control import (
     RiskDecision,
     RiskLevel,
     SQLiteActionExecutionLedger,
+    TrajectoryAuditIssue,
+    TrajectoryAuditReport,
+    TrajectoryHallucinationType,
+    audit_product_trace_trajectory,
 )
 from eigentruth.control.runtime_drift_keys import (
     PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_CLAIM_FACTUALITY_EVIDENCE_KEYS,
     PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_KEYS,
     PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_KEYS,
     PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS,
+    PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS,
     PRODUCT_RUNTIME_DRIFT_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_KEYS,
     PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_KEYS,
     PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_KEYS,
     PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_KEYS,
 )
 from eigentruth.registry import RegistryRecord
 from eigentruth.verify import Claim, ClaimDependency, VerificationResult, VerificationStatus
@@ -49,10 +58,15 @@ def test_runtime_drift_evidence_keys_are_grouped_without_duplicates():
     grouped = (
         PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_KEYS
         + PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_CLAIM_FACTUALITY_EVIDENCE_KEYS
         + PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_KEYS
         + PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_KEYS
         + PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_KEYS
         + PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_KEYS
     )
 
     assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_KEYS == grouped
@@ -62,8 +76,23 @@ def test_runtime_drift_evidence_keys_are_grouped_without_duplicates():
     assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["pre_generation"] == (
         PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_KEYS
     )
+    assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["claim_factuality"] == (
+        PRODUCT_RUNTIME_DRIFT_CLAIM_FACTUALITY_EVIDENCE_KEYS
+    )
     assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["action_gate"] == (
         PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_KEYS
+    )
+    assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["trajectory_audit"] == (
+        PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_KEYS
+    )
+    assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["evidence_handoff"] == (
+        PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS
+    )
+    assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["world_model"] == (
+        PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_KEYS
+    )
+    assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["frontier_release_evidence"] == (
+        PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_KEYS
     )
 
 
@@ -200,6 +229,21 @@ def test_action_result_json_roundtrip():
     assert loaded.action is ControlAction.ABSTAIN
     assert loaded.status is ActionExecutionStatus.DRY_RUN
     assert loaded.output["message"] == "not enough evidence"
+
+
+def test_trajectory_audit_public_api_roundtrip():
+    issue = TrajectoryAuditIssue(
+        code="accepted_refuted_claim",
+        hallucination_type=TrajectoryHallucinationType.FACTUAL,
+        severity="error",
+        message="accepted a refuted claim",
+        claim_ids=("c1",),
+    )
+    report = TrajectoryAuditReport(trace_id="trace-1", issues=(issue,))
+    loaded = TrajectoryAuditReport.from_dict(report.to_dict())
+
+    assert loaded.summary()["counts_by_type"]["factual"] == 1
+    assert callable(audit_product_trace_trajectory)
 
 
 def test_json_action_execution_ledger_roundtrip(tmp_path):

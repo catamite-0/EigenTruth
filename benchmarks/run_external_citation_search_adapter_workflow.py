@@ -37,6 +37,7 @@ from benchmarks.build_citation_search_adapter_handoff import (  # noqa: E402
     run as run_citation_search_handoff,
 )
 from benchmarks.run_citation_search_evidence_workflow import run as run_citation_search_evidence  # noqa: E402
+from benchmarks.sweep_blind_spot_retrieval_queries import DEFAULT_TARGET_ROUTE  # noqa: E402
 from eigentruth.json_utils import strict_json_dumps  # noqa: E402
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
 
@@ -59,6 +60,7 @@ def run_external_citation_search_adapter_workflow(
     registry_path: str | Path | None = None,
     name: str | None = None,
     version: str | None = None,
+    batch_ids: Sequence[str] = (),
     query_mode: str = "question",
     max_requests: int | None = None,
     max_results_per_request: int | None = None,
@@ -66,6 +68,7 @@ def run_external_citation_search_adapter_workflow(
     corpus_name: str = DEFAULT_CORPUS_NAME,
     source_kind: str = DEFAULT_SOURCE_KIND,
     command_timeout_seconds: float | None = None,
+    target_route: str = DEFAULT_TARGET_ROUTE,
     evidence_metadata: Mapping[str, Any] | None = None,
     compact_json: bool = False,
     fail_on_blocked: bool = False,
@@ -89,6 +92,7 @@ def run_external_citation_search_adapter_workflow(
         request_jsonl_path=request_jsonl,
         source_jsonl_path=preflight_dir / "citation-search-source-docs.jsonl",
         artifact_manifest_path=preflight_dir / "artifact-manifest.json",
+        batch_ids=batch_ids,
         query_mode=query_mode,
         max_requests=max_requests,
         max_results_per_request=max_results_per_request,
@@ -117,12 +121,14 @@ def run_external_citation_search_adapter_workflow(
         blind_spots_path=blind_spots_path,
         controlled_sweep_paths=controlled_sweep_paths,
         output_dir=evidence_dir,
+        batch_ids=batch_ids,
         query_mode=query_mode,
         max_requests=max_requests,
         max_results_per_request=max_results_per_request,
         max_alternate_queries=max_alternate_queries,
         corpus_name=corpus_name,
         source_kind=source_kind,
+        target_route=target_route,
         metadata={**dict(evidence_metadata or {}), "source_workflow": WORKFLOW},
         compact_json=compact_json,
     )
@@ -143,6 +149,7 @@ def run_external_citation_search_adapter_workflow(
             "controlled_sweeps": tuple(str(path) for path in controlled_sweep_paths),
         },
         "config": {
+            "batch_ids": tuple(str(item) for item in batch_ids),
             "query_mode": query_mode,
             "max_requests": max_requests,
             "max_results_per_request": max_results_per_request,
@@ -150,6 +157,7 @@ def run_external_citation_search_adapter_workflow(
             "corpus_name": corpus_name,
             "source_kind": source_kind,
             "command_timeout_seconds": command_timeout_seconds,
+            "target_route": target_route,
         },
         "paths": {
             "requests": str(request_jsonl),
@@ -191,6 +199,9 @@ def run_external_citation_search_adapter_workflow(
             "status": payload["status"],
             "gate_passed": gate["passed"],
             "promotion_ready": gate["promotion_ready"],
+            "target_route": target_route,
+            "selected_batch_count": payload["request_summary"].get("selected_batch_count"),
+            "selected_batch_ids": payload["request_summary"].get("selected_batch_ids"),
             "adapter_request_count": payload["request_summary"].get("adapter_request_count"),
             "source_document_count": payload["evidence_summary"].get("source_document_count"),
             "corpus_document_count": payload["evidence_summary"].get("corpus_document_count"),
@@ -209,6 +220,9 @@ def run_external_citation_search_adapter_workflow(
                 "status": payload["status"],
                 "gate_passed": gate["passed"],
                 "promotion_ready": gate["promotion_ready"],
+                "target_route": target_route,
+                "selected_batch_count": payload["request_summary"].get("selected_batch_count"),
+                "selected_batch_ids": payload["request_summary"].get("selected_batch_ids"),
                 "adapter_request_count": payload["request_summary"].get("adapter_request_count"),
                 "source_document_count": payload["evidence_summary"].get("source_document_count"),
                 "corpus_document_count": payload["evidence_summary"].get("corpus_document_count"),
@@ -331,6 +345,12 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--registry", default=None)
     parser.add_argument("--name", default=None)
     parser.add_argument("--version", default=None)
+    parser.add_argument(
+        "--batch-id",
+        action="append",
+        default=[],
+        help="Execution batch id from the unresolved queue to pass into request handoff and evidence gating.",
+    )
     parser.add_argument("--query-mode", choices=QUERY_MODES, default="question")
     parser.add_argument("--max-requests", type=int, default=None)
     parser.add_argument("--max-results-per-request", type=int, default=None)
@@ -338,6 +358,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--corpus-name", default=DEFAULT_CORPUS_NAME)
     parser.add_argument("--source-kind", default=DEFAULT_SOURCE_KIND)
     parser.add_argument("--command-timeout-seconds", type=float, default=None)
+    parser.add_argument("--target-route", default=DEFAULT_TARGET_ROUTE)
     parser.add_argument("--metadata", action="append", default=[])
     parser.add_argument("--compact-json", action="store_true")
     parser.add_argument("--fail-on-blocked", action="store_true")
@@ -356,6 +377,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         registry_path=args.registry,
         name=args.name,
         version=args.version,
+        batch_ids=tuple(args.batch_id or ()),
         query_mode=args.query_mode,
         max_requests=args.max_requests,
         max_results_per_request=args.max_results_per_request,
@@ -363,6 +385,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         corpus_name=args.corpus_name,
         source_kind=args.source_kind,
         command_timeout_seconds=args.command_timeout_seconds,
+        target_route=args.target_route,
         evidence_metadata=_parse_metadata(args.metadata or ()),
         compact_json=bool(args.compact_json),
         fail_on_blocked=bool(args.fail_on_blocked),

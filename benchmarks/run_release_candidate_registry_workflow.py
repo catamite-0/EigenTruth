@@ -58,6 +58,18 @@ _PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES = (
 _PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_KEYS
 )
+_PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_KEYS
+)
+_PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS
+)
+_PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_KEYS
+)
+_PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_KEYS
+)
 
 
 def _apply_release_policy_profile_to_config(
@@ -68,12 +80,15 @@ def _apply_release_policy_profile_to_config(
         disabled_profile_defaults.append("external_evidence_baseline_comparison_key")
     if config.triple_extraction_fixture_matrix_path is not None:
         disabled_profile_defaults.append("triple_extraction_fixture_matrix_key")
+    if config.mechanism_handoff_evidence_bundle_path is not None:
+        disabled_profile_defaults.append("mechanism_handoff_evidence_bundle_key")
     profile, values, applied = apply_release_policy_profile_defaults(
         config.release_policy_profile,
         {
             "require_structured_fact_robustness": config.require_structured_fact_robustness,
             "min_best_quality_auroc": config.min_best_quality_auroc,
             "max_uncached_forward_seconds": config.max_uncached_forward_seconds,
+            "max_recommended_runtime_seconds": config.max_recommended_runtime_seconds,
             "min_selected": config.min_selected,
             "min_decision_accuracy": config.min_decision_accuracy,
             "max_false_supported_rate": config.max_false_supported_rate,
@@ -98,6 +113,36 @@ def _apply_release_policy_profile_to_config(
             "required_route_min_covered_fact_property_false_refuted_rate": (
                 config.required_route_min_covered_fact_property_false_refuted_rate
             ),
+            "structured_fact_robustness_min_selected": (
+                config.structured_fact_robustness_min_selected
+            ),
+            "structured_fact_robustness_min_decision_accuracy": (
+                config.structured_fact_robustness_min_decision_accuracy
+            ),
+            "structured_fact_robustness_max_false_supported_rate": (
+                config.structured_fact_robustness_max_false_supported_rate
+            ),
+            "structured_fact_robustness_min_false_refuted_rate": (
+                config.structured_fact_robustness_min_false_refuted_rate
+            ),
+            "structured_fact_robustness_min_covered_fact_properties": (
+                config.structured_fact_robustness_min_covered_fact_properties
+            ),
+            "structured_fact_robustness_min_covered_fact_property_records": (
+                config.structured_fact_robustness_min_covered_fact_property_records
+            ),
+            "structured_fact_robustness_min_covered_fact_property_source_documents": (
+                config.structured_fact_robustness_min_covered_fact_property_source_documents
+            ),
+            "structured_fact_robustness_min_covered_fact_property_decision_accuracy": (
+                config.structured_fact_robustness_min_covered_fact_property_decision_accuracy
+            ),
+            "structured_fact_robustness_max_covered_fact_property_false_supported_rate": (
+                config.structured_fact_robustness_max_covered_fact_property_false_supported_rate
+            ),
+            "structured_fact_robustness_min_covered_fact_property_false_refuted_rate": (
+                config.structured_fact_robustness_min_covered_fact_property_false_refuted_rate
+            ),
             "adapter_family_profile": config.adapter_family_profile,
             "require_state_transition_world_model": config.require_state_transition_world_model,
             "require_product_runtime_drift_promotion_evidence": (
@@ -105,6 +150,9 @@ def _apply_release_policy_profile_to_config(
             ),
             "require_product_runtime_drift_pre_generation_evidence": (
                 config.require_product_runtime_drift_pre_generation_evidence
+            ),
+            "require_product_runtime_drift_claim_factuality_evidence": (
+                config.require_product_runtime_drift_claim_factuality_evidence
             ),
             "require_product_runtime_drift_counterfactual_evidence": (
                 config.require_product_runtime_drift_counterfactual_evidence
@@ -118,6 +166,18 @@ def _apply_release_policy_profile_to_config(
             "require_product_runtime_drift_action_gate_evidence": (
                 config.require_product_runtime_drift_action_gate_evidence
             ),
+            "require_product_runtime_drift_trajectory_audit_evidence": (
+                config.require_product_runtime_drift_trajectory_audit_evidence
+            ),
+            "require_product_runtime_drift_evidence_handoff_evidence": (
+                config.require_product_runtime_drift_evidence_handoff_evidence
+            ),
+            "require_product_runtime_drift_world_model_evidence": (
+                config.require_product_runtime_drift_world_model_evidence
+            ),
+            "require_product_runtime_drift_frontier_release_evidence": (
+                config.require_product_runtime_drift_frontier_release_evidence
+            ),
             "require_product_trace_action_audit_gate": config.require_product_trace_action_audit_gate,
             "require_product_trace_action_execution_gate": (
                 config.require_product_trace_action_execution_gate
@@ -126,6 +186,9 @@ def _apply_release_policy_profile_to_config(
                 config.external_evidence_baseline_comparison_key
             ),
             "triple_extraction_fixture_matrix_key": config.triple_extraction_fixture_matrix_key,
+            "mechanism_handoff_evidence_bundle_key": (
+                config.mechanism_handoff_evidence_bundle_key
+            ),
             "min_triple_extraction_corpora": config.min_triple_extraction_corpora,
             "min_triple_extraction_distinct_predicates": (
                 config.min_triple_extraction_distinct_predicates
@@ -165,15 +228,30 @@ class ReleaseCandidateRegistryWorkflowConfig:
     require_structured_fact_robustness: bool = False
     structured_fact_canonical_route_key: str | None = None
     structured_fact_paraphrase_route_key: str | None = None
+    structured_fact_robustness_min_selected: int | None = None
+    structured_fact_robustness_min_decision_accuracy: float | None = None
+    structured_fact_robustness_max_false_supported_rate: float | None = None
+    structured_fact_robustness_min_false_refuted_rate: float | None = None
+    structured_fact_robustness_min_covered_fact_properties: int | None = None
+    structured_fact_robustness_min_covered_fact_property_records: int | None = None
+    structured_fact_robustness_min_covered_fact_property_source_documents: int | None = None
+    structured_fact_robustness_min_covered_fact_property_decision_accuracy: float | None = None
+    structured_fact_robustness_max_covered_fact_property_false_supported_rate: float | None = None
+    structured_fact_robustness_min_covered_fact_property_false_refuted_rate: float | None = None
     performance_baseline_key: str | None = None
     selector_replay_report_path: Path | None = None
     product_runtime_drift_report_path: Path | None = None
     require_product_runtime_drift_promotion_evidence: bool = False
     require_product_runtime_drift_pre_generation_evidence: bool = False
+    require_product_runtime_drift_claim_factuality_evidence: bool = False
     require_product_runtime_drift_counterfactual_evidence: bool = False
     require_product_runtime_drift_triple_audit_evidence: bool = False
     require_product_runtime_drift_covered_fact_property_evidence: bool = False
     require_product_runtime_drift_action_gate_evidence: bool = False
+    require_product_runtime_drift_trajectory_audit_evidence: bool = False
+    require_product_runtime_drift_evidence_handoff_evidence: bool = False
+    require_product_runtime_drift_world_model_evidence: bool = False
+    require_product_runtime_drift_frontier_release_evidence: bool = False
     release_efficiency_report_path: Path | None = None
     external_evidence_baseline_comparison_path: Path | None = None
     external_evidence_baseline_comparison_registry_path: Path | None = None
@@ -181,12 +259,18 @@ class ReleaseCandidateRegistryWorkflowConfig:
     pre_generation_probe_comparison_path: Path | None = None
     pre_generation_probe_comparison_registry_path: Path | None = None
     pre_generation_probe_comparison_key: str | None = None
+    claim_factuality_probe_comparison_path: Path | None = None
+    claim_factuality_probe_comparison_registry_path: Path | None = None
+    claim_factuality_probe_comparison_key: str | None = None
     frontier_release_evidence_path: Path | None = None
     frontier_release_evidence_registry_path: Path | None = None
     frontier_release_evidence_key: str | None = None
     world_model_signal_workflow_path: Path | None = None
     world_model_signal_workflow_registry_path: Path | None = None
     world_model_signal_workflow_key: str | None = None
+    mechanism_handoff_evidence_bundle_path: Path | None = None
+    mechanism_handoff_evidence_bundle_registry_path: Path | None = None
+    mechanism_handoff_evidence_bundle_key: str | None = None
     pathway_intervention_workflow_path: Path | None = None
     pathway_intervention_workflow_registry_path: Path | None = None
     pathway_intervention_workflow_key: str | None = None
@@ -251,6 +335,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     min_best_quality_auroc: float | None = None
     max_uncached_forward_seconds: float | None = None
     max_cache_only_seconds: float | None = None
+    max_recommended_runtime_seconds: float | None = None
     max_covariance_maha_last_auroc_drop: float | None = None
     max_inside_sample_count_ratio: float | None = None
     max_inside_generation_seconds_ratio: float | None = None
@@ -363,6 +448,18 @@ class ReleaseCandidateRegistryWorkflowConfig:
                 self,
                 "pre_generation_probe_comparison_registry_path",
                 Path(self.pre_generation_probe_comparison_registry_path),
+            )
+        if self.claim_factuality_probe_comparison_path is not None:
+            object.__setattr__(
+                self,
+                "claim_factuality_probe_comparison_path",
+                Path(self.claim_factuality_probe_comparison_path),
+            )
+        if self.claim_factuality_probe_comparison_registry_path is not None:
+            object.__setattr__(
+                self,
+                "claim_factuality_probe_comparison_registry_path",
+                Path(self.claim_factuality_probe_comparison_registry_path),
             )
         if self.frontier_release_evidence_path is not None:
             object.__setattr__(
@@ -628,6 +725,36 @@ def run_release_candidate_registry_workflow(
         require_structured_fact_robustness=config.require_structured_fact_robustness,
         structured_fact_canonical_route_key=config.structured_fact_canonical_route_key,
         structured_fact_paraphrase_route_key=config.structured_fact_paraphrase_route_key,
+        structured_fact_robustness_min_selected=(
+            config.structured_fact_robustness_min_selected
+        ),
+        structured_fact_robustness_min_decision_accuracy=(
+            config.structured_fact_robustness_min_decision_accuracy
+        ),
+        structured_fact_robustness_max_false_supported_rate=(
+            config.structured_fact_robustness_max_false_supported_rate
+        ),
+        structured_fact_robustness_min_false_refuted_rate=(
+            config.structured_fact_robustness_min_false_refuted_rate
+        ),
+        structured_fact_robustness_min_covered_fact_properties=(
+            config.structured_fact_robustness_min_covered_fact_properties
+        ),
+        structured_fact_robustness_min_covered_fact_property_records=(
+            config.structured_fact_robustness_min_covered_fact_property_records
+        ),
+        structured_fact_robustness_min_covered_fact_property_source_documents=(
+            config.structured_fact_robustness_min_covered_fact_property_source_documents
+        ),
+        structured_fact_robustness_min_covered_fact_property_decision_accuracy=(
+            config.structured_fact_robustness_min_covered_fact_property_decision_accuracy
+        ),
+        structured_fact_robustness_max_covered_fact_property_false_supported_rate=(
+            config.structured_fact_robustness_max_covered_fact_property_false_supported_rate
+        ),
+        structured_fact_robustness_min_covered_fact_property_false_refuted_rate=(
+            config.structured_fact_robustness_min_covered_fact_property_false_refuted_rate
+        ),
         performance_registry_path=config.performance_registry_path,
         performance_baseline_key=config.performance_baseline_key,
         selector_replay_report_path=config.selector_replay_report_path,
@@ -637,6 +764,9 @@ def run_release_candidate_registry_workflow(
         ),
         require_product_runtime_drift_pre_generation_evidence=(
             config.require_product_runtime_drift_pre_generation_evidence
+        ),
+        require_product_runtime_drift_claim_factuality_evidence=(
+            config.require_product_runtime_drift_claim_factuality_evidence
         ),
         require_product_runtime_drift_counterfactual_evidence=(
             config.require_product_runtime_drift_counterfactual_evidence
@@ -649,6 +779,18 @@ def run_release_candidate_registry_workflow(
         ),
         require_product_runtime_drift_action_gate_evidence=(
             config.require_product_runtime_drift_action_gate_evidence
+        ),
+        require_product_runtime_drift_trajectory_audit_evidence=(
+            config.require_product_runtime_drift_trajectory_audit_evidence
+        ),
+        require_product_runtime_drift_evidence_handoff_evidence=(
+            config.require_product_runtime_drift_evidence_handoff_evidence
+        ),
+        require_product_runtime_drift_world_model_evidence=(
+            config.require_product_runtime_drift_world_model_evidence
+        ),
+        require_product_runtime_drift_frontier_release_evidence=(
+            config.require_product_runtime_drift_frontier_release_evidence
         ),
         release_efficiency_report_path=config.release_efficiency_report_path,
         external_evidence_baseline_comparison_path=(
@@ -665,12 +807,26 @@ def run_release_candidate_registry_workflow(
             config.pre_generation_probe_comparison_registry_path
         ),
         pre_generation_probe_comparison_key=config.pre_generation_probe_comparison_key,
+        claim_factuality_probe_comparison_path=(
+            config.claim_factuality_probe_comparison_path
+        ),
+        claim_factuality_probe_comparison_registry_path=(
+            config.claim_factuality_probe_comparison_registry_path
+        ),
+        claim_factuality_probe_comparison_key=(
+            config.claim_factuality_probe_comparison_key
+        ),
         frontier_release_evidence_path=config.frontier_release_evidence_path,
         frontier_release_evidence_registry_path=config.frontier_release_evidence_registry_path,
         frontier_release_evidence_key=config.frontier_release_evidence_key,
         world_model_signal_workflow_path=config.world_model_signal_workflow_path,
         world_model_signal_workflow_registry_path=config.world_model_signal_workflow_registry_path,
         world_model_signal_workflow_key=config.world_model_signal_workflow_key,
+        mechanism_handoff_evidence_bundle_path=config.mechanism_handoff_evidence_bundle_path,
+        mechanism_handoff_evidence_bundle_registry_path=(
+            config.mechanism_handoff_evidence_bundle_registry_path
+        ),
+        mechanism_handoff_evidence_bundle_key=config.mechanism_handoff_evidence_bundle_key,
         pathway_intervention_workflow_path=config.pathway_intervention_workflow_path,
         pathway_intervention_workflow_registry_path=(
             config.pathway_intervention_workflow_registry_path
@@ -768,6 +924,7 @@ def run_release_candidate_registry_workflow(
         min_best_quality_auroc=config.min_best_quality_auroc,
         max_uncached_forward_seconds=config.max_uncached_forward_seconds,
         max_cache_only_seconds=config.max_cache_only_seconds,
+        max_recommended_runtime_seconds=config.max_recommended_runtime_seconds,
         max_covariance_maha_last_auroc_drop=config.max_covariance_maha_last_auroc_drop,
         max_inside_sample_count_ratio=config.max_inside_sample_count_ratio,
         max_inside_generation_seconds_ratio=config.max_inside_generation_seconds_ratio,
@@ -925,6 +1082,9 @@ def run_release_candidate_registry_workflow(
             "require_product_runtime_drift_pre_generation_evidence": (
                 config.require_product_runtime_drift_pre_generation_evidence
             ),
+            "require_product_runtime_drift_claim_factuality_evidence": (
+                config.require_product_runtime_drift_claim_factuality_evidence
+            ),
             "require_product_runtime_drift_counterfactual_evidence": (
                 config.require_product_runtime_drift_counterfactual_evidence
             ),
@@ -936,6 +1096,18 @@ def run_release_candidate_registry_workflow(
             ),
             "require_product_runtime_drift_action_gate_evidence": (
                 config.require_product_runtime_drift_action_gate_evidence
+            ),
+            "require_product_runtime_drift_trajectory_audit_evidence": (
+                config.require_product_runtime_drift_trajectory_audit_evidence
+            ),
+            "require_product_runtime_drift_evidence_handoff_evidence": (
+                config.require_product_runtime_drift_evidence_handoff_evidence
+            ),
+            "require_product_runtime_drift_world_model_evidence": (
+                config.require_product_runtime_drift_world_model_evidence
+            ),
+            "require_product_runtime_drift_frontier_release_evidence": (
+                config.require_product_runtime_drift_frontier_release_evidence
             ),
             "release_efficiency_report": (
                 None
@@ -966,6 +1138,19 @@ def run_release_candidate_registry_workflow(
                 else str(config.pre_generation_probe_comparison_registry_path)
             ),
             "pre_generation_probe_comparison_key": config.pre_generation_probe_comparison_key,
+            "claim_factuality_probe_comparison": (
+                None
+                if config.claim_factuality_probe_comparison_path is None
+                else str(config.claim_factuality_probe_comparison_path)
+            ),
+            "claim_factuality_probe_comparison_registry": (
+                None
+                if config.claim_factuality_probe_comparison_registry_path is None
+                else str(config.claim_factuality_probe_comparison_registry_path)
+            ),
+            "claim_factuality_probe_comparison_key": (
+                config.claim_factuality_probe_comparison_key
+            ),
             "frontier_release_evidence": (
                 None
                 if config.frontier_release_evidence_path is None
@@ -1069,6 +1254,36 @@ def run_release_candidate_registry_workflow(
             "require_structured_fact_robustness": config.require_structured_fact_robustness,
             "structured_fact_canonical_route_key": config.structured_fact_canonical_route_key,
             "structured_fact_paraphrase_route_key": config.structured_fact_paraphrase_route_key,
+            "structured_fact_robustness_min_selected": (
+                config.structured_fact_robustness_min_selected
+            ),
+            "structured_fact_robustness_min_decision_accuracy": (
+                config.structured_fact_robustness_min_decision_accuracy
+            ),
+            "structured_fact_robustness_max_false_supported_rate": (
+                config.structured_fact_robustness_max_false_supported_rate
+            ),
+            "structured_fact_robustness_min_false_refuted_rate": (
+                config.structured_fact_robustness_min_false_refuted_rate
+            ),
+            "structured_fact_robustness_min_covered_fact_properties": (
+                config.structured_fact_robustness_min_covered_fact_properties
+            ),
+            "structured_fact_robustness_min_covered_fact_property_records": (
+                config.structured_fact_robustness_min_covered_fact_property_records
+            ),
+            "structured_fact_robustness_min_covered_fact_property_source_documents": (
+                config.structured_fact_robustness_min_covered_fact_property_source_documents
+            ),
+            "structured_fact_robustness_min_covered_fact_property_decision_accuracy": (
+                config.structured_fact_robustness_min_covered_fact_property_decision_accuracy
+            ),
+            "structured_fact_robustness_max_covered_fact_property_false_supported_rate": (
+                config.structured_fact_robustness_max_covered_fact_property_false_supported_rate
+            ),
+            "structured_fact_robustness_min_covered_fact_property_false_refuted_rate": (
+                config.structured_fact_robustness_min_covered_fact_property_false_refuted_rate
+            ),
             "adapter_family_matrix": (
                 None
                 if config.adapter_family_matrix_path is None
@@ -1423,6 +1638,21 @@ def _comparison_with_registry_config(
             if config.pre_generation_probe_comparison_key is None
             else config.pre_generation_probe_comparison_key
         ),
+        "claim_factuality_probe_comparison": (
+            comparison_config.get("claim_factuality_probe_comparison")
+            if config.claim_factuality_probe_comparison_path is None
+            else str(config.claim_factuality_probe_comparison_path)
+        ),
+        "claim_factuality_probe_comparison_registry": (
+            comparison_config.get("claim_factuality_probe_comparison_registry")
+            if config.claim_factuality_probe_comparison_registry_path is None
+            else str(config.claim_factuality_probe_comparison_registry_path)
+        ),
+        "claim_factuality_probe_comparison_key": (
+            comparison_config.get("claim_factuality_probe_comparison_key")
+            if config.claim_factuality_probe_comparison_key is None
+            else config.claim_factuality_probe_comparison_key
+        ),
     })
     payload["config"] = comparison_config
     return payload
@@ -1456,6 +1686,10 @@ def _write_artifact_manifest(
             "pre_generation_probe_comparison_manifest"
         )
         or _nested(comparison, "pre_generation_probe_comparison_gate", "manifest_path"),
+        "claim_factuality_probe_comparison_manifest": manifests.get(
+            "claim_factuality_probe_comparison_manifest"
+        )
+        or _nested(comparison, "claim_factuality_probe_comparison_gate", "manifest_path"),
         "frontier_release_evidence_manifest": manifests.get("frontier_release_evidence_manifest")
         or _nested(comparison, "frontier_release_evidence_gate", "manifest_path"),
         "world_model_signal_workflow_manifest": manifests.get("world_model_signal_workflow_manifest")
@@ -1625,6 +1859,16 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
             comparison.get("pre_generation_probe_comparison_gate") or {}
         )
     pre_generation_best_run = dict(pre_generation_probe_comparison.get("best_run") or {})
+    claim_factuality_probe_comparison = dict(
+        candidate.get("claim_factuality_probe_comparison") or {}
+    )
+    if not claim_factuality_probe_comparison:
+        claim_factuality_probe_comparison = dict(
+            comparison.get("claim_factuality_probe_comparison_gate") or {}
+        )
+    claim_factuality_best_run = dict(
+        claim_factuality_probe_comparison.get("best_run") or {}
+    )
     product_trace_replay_workflow = dict(candidate.get("product_trace_replay_workflow") or {})
     product_trace_action_audit_gate = dict(
         product_trace_replay_workflow.get("action_audit_gate") or {}
@@ -1653,6 +1897,13 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
     world_model_signal_workflow = dict(candidate.get("world_model_signal_workflow") or {})
     if not world_model_signal_workflow:
         world_model_signal_workflow = dict(comparison.get("world_model_signal_workflow_gate") or {})
+    mechanism_handoff_evidence_bundle = dict(
+        candidate.get("mechanism_handoff_evidence_bundle") or {}
+    )
+    if not mechanism_handoff_evidence_bundle:
+        mechanism_handoff_evidence_bundle = dict(
+            comparison.get("mechanism_handoff_evidence_bundle_gate") or {}
+        )
     pathway_intervention_workflow = dict(candidate.get("pathway_intervention_workflow") or {})
     if not pathway_intervention_workflow:
         pathway_intervention_workflow = dict(
@@ -1674,11 +1925,17 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "release_pre_generation_probe_comparison_status": decision.get(
             "pre_generation_probe_comparison_status"
         ),
+        "release_claim_factuality_probe_comparison_status": decision.get(
+            "claim_factuality_probe_comparison_status"
+        ),
         "release_frontier_release_evidence_status": decision.get(
             "frontier_release_evidence_status"
         ),
         "release_world_model_signal_workflow_status": decision.get(
             "world_model_signal_workflow_status"
+        ),
+        "release_mechanism_handoff_evidence_bundle_status": decision.get(
+            "mechanism_handoff_evidence_bundle_status"
         ),
         "release_pathway_intervention_workflow_status": decision.get(
             "pathway_intervention_workflow_status"
@@ -1721,11 +1978,17 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_pre_generation_probe_comparison_report": decision.get(
             "recommended_pre_generation_probe_comparison_report"
         ),
+        "recommended_claim_factuality_probe_comparison_report": decision.get(
+            "recommended_claim_factuality_probe_comparison_report"
+        ),
         "recommended_frontier_release_evidence_report": decision.get(
             "recommended_frontier_release_evidence_report"
         ),
         "recommended_world_model_signal_workflow_report": decision.get(
             "recommended_world_model_signal_workflow_report"
+        ),
+        "recommended_mechanism_handoff_evidence_bundle_report": decision.get(
+            "recommended_mechanism_handoff_evidence_bundle_report"
         ),
         "recommended_pathway_intervention_workflow_report": decision.get(
             "recommended_pathway_intervention_workflow_report"
@@ -1978,6 +2241,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "product_runtime_drift_pre_generation_evidence_required": config.get(
             "require_product_runtime_drift_pre_generation_evidence"
         ),
+        "product_runtime_drift_claim_factuality_evidence_required": config.get(
+            "require_product_runtime_drift_claim_factuality_evidence"
+        ),
         "product_runtime_drift_counterfactual_evidence_required": config.get(
             "require_product_runtime_drift_counterfactual_evidence"
         ),
@@ -1989,6 +2255,18 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "product_runtime_drift_action_gate_evidence_required": config.get(
             "require_product_runtime_drift_action_gate_evidence"
+        ),
+        "product_runtime_drift_trajectory_audit_evidence_required": config.get(
+            "require_product_runtime_drift_trajectory_audit_evidence"
+        ),
+        "product_runtime_drift_evidence_handoff_evidence_required": config.get(
+            "require_product_runtime_drift_evidence_handoff_evidence"
+        ),
+        "product_runtime_drift_world_model_evidence_required": config.get(
+            "require_product_runtime_drift_world_model_evidence"
+        ),
+        "product_runtime_drift_frontier_release_evidence_required": config.get(
+            "require_product_runtime_drift_frontier_release_evidence"
         ),
         "product_runtime_drift_compared_metric_count": product_runtime_drift_summary.get(
             "compared_metric_count"
@@ -2080,6 +2358,67 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "pre_generation_probe_comparison_best_redline_margin": (
             pre_generation_best_run.get("redline_margin")
+        ),
+        "claim_factuality_probe_comparison_report": (
+            claim_factuality_probe_comparison.get("report_path")
+        ),
+        "claim_factuality_probe_comparison_manifest": (
+            manifests.get("claim_factuality_probe_comparison_manifest")
+            or claim_factuality_probe_comparison.get("manifest_path")
+        ),
+        "claim_factuality_probe_comparison_source": (
+            claim_factuality_probe_comparison.get("source")
+        ),
+        "claim_factuality_probe_comparison_registry": (
+            claim_factuality_probe_comparison.get("registry")
+        ),
+        "claim_factuality_probe_comparison_record": (
+            claim_factuality_probe_comparison.get("record_key")
+        ),
+        "claim_factuality_probe_comparison_model_count": (
+            claim_factuality_probe_comparison.get("model_count")
+        ),
+        "claim_factuality_probe_comparison_run_count": (
+            claim_factuality_probe_comparison.get("run_count")
+        ),
+        "claim_factuality_probe_comparison_redline_passed": (
+            claim_factuality_probe_comparison.get("redline_passed")
+        ),
+        "claim_factuality_probe_comparison_redline_run_count": (
+            claim_factuality_probe_comparison.get("redline_run_count")
+        ),
+        "claim_factuality_probe_comparison_best_run": (
+            claim_factuality_best_run.get("name")
+        ),
+        "claim_factuality_probe_comparison_best_model": (
+            claim_factuality_best_run.get("model")
+        ),
+        "claim_factuality_probe_comparison_best_record_count": (
+            claim_factuality_best_run.get("record_count")
+        ),
+        "claim_factuality_probe_comparison_best_layer": (
+            claim_factuality_best_run.get("recommended_layer")
+        ),
+        "claim_factuality_probe_comparison_best_test_label_auroc": (
+            claim_factuality_best_run.get("test_label_auroc")
+        ),
+        "claim_factuality_probe_comparison_best_test_selective_accuracy": (
+            claim_factuality_best_run.get("test_selective_accuracy")
+        ),
+        "claim_factuality_probe_comparison_best_test_selective_coverage": (
+            claim_factuality_best_run.get("test_selective_coverage")
+        ),
+        "claim_factuality_probe_comparison_best_conformal_threshold": (
+            claim_factuality_best_run.get("conformal_threshold")
+        ),
+        "claim_factuality_probe_comparison_best_redline_signal": (
+            claim_factuality_best_run.get("redline_best_signal")
+        ),
+        "claim_factuality_probe_comparison_best_redline_auroc": (
+            claim_factuality_best_run.get("redline_best_auroc")
+        ),
+        "claim_factuality_probe_comparison_best_redline_margin": (
+            claim_factuality_best_run.get("redline_margin")
         ),
         "product_trace_replay_workflow_report": product_trace_replay_workflow.get("report_path"),
         "product_trace_replay_workflow_source": product_trace_replay_workflow.get("source"),
@@ -2392,6 +2731,16 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
                 "required_route_min_covered_fact_property_decision_accuracy",
                 "required_route_max_covered_fact_property_false_supported_rate",
                 "required_route_min_covered_fact_property_false_refuted_rate",
+                "structured_fact_robustness_min_selected",
+                "structured_fact_robustness_min_decision_accuracy",
+                "structured_fact_robustness_max_false_supported_rate",
+                "structured_fact_robustness_min_false_refuted_rate",
+                "structured_fact_robustness_min_covered_fact_properties",
+                "structured_fact_robustness_min_covered_fact_property_records",
+                "structured_fact_robustness_min_covered_fact_property_source_documents",
+                "structured_fact_robustness_min_covered_fact_property_decision_accuracy",
+                "structured_fact_robustness_max_covered_fact_property_false_supported_rate",
+                "structured_fact_robustness_min_covered_fact_property_false_refuted_rate",
                 "required_route_require_non_oracle_evidence",
                 "required_route_require_retrieval_provenance_filter",
                 "required_route_required_retrieval_source_prefixes",
@@ -2421,6 +2770,30 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "frontier_release_evidence_abstention_track_status": frontier_release_evidence.get(
             "abstention_track_status"
         ),
+        "frontier_release_evidence_multiple_testing_track_status": frontier_release_evidence.get(
+            "multiple_testing_track_status"
+        ),
+        "frontier_release_evidence_citation_batch_track_status": frontier_release_evidence.get(
+            "citation_batch_track_status"
+        ),
+        "frontier_release_evidence_citation_batch_rollup_count": frontier_release_evidence.get(
+            "citation_batch_rollup_count"
+        ),
+        "frontier_release_evidence_citation_batch_expected_batch_count": (
+            frontier_release_evidence.get("citation_batch_expected_batch_count")
+        ),
+        "frontier_release_evidence_citation_batch_observed_batch_count": (
+            frontier_release_evidence.get("citation_batch_observed_batch_count")
+        ),
+        "frontier_release_evidence_citation_batch_missing_expected_batch_count": (
+            frontier_release_evidence.get("citation_batch_missing_expected_batch_count")
+        ),
+        "frontier_release_evidence_citation_batch_duplicate_batch_count": (
+            frontier_release_evidence.get("citation_batch_duplicate_batch_count")
+        ),
+        "frontier_release_evidence_citation_batch_unexpected_batch_count": (
+            frontier_release_evidence.get("citation_batch_unexpected_batch_count")
+        ),
         "world_model_signal_workflow_report": world_model_signal_workflow.get("report_path"),
         "world_model_signal_workflow_manifest": (
             manifests.get("world_model_signal_workflow_manifest")
@@ -2440,6 +2813,34 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "world_model_signal_workflow_calibrated_conflict_signal_count": (
             world_model_signal_workflow.get("calibrated_conflict_signal_count")
+        ),
+        "mechanism_handoff_evidence_bundle_report": (
+            mechanism_handoff_evidence_bundle.get("report_path")
+        ),
+        "mechanism_handoff_evidence_bundle_manifest": (
+            manifests.get("mechanism_handoff_evidence_bundle_manifest")
+            or mechanism_handoff_evidence_bundle.get("manifest_path")
+        ),
+        "mechanism_handoff_evidence_bundle_source": (
+            mechanism_handoff_evidence_bundle.get("source")
+        ),
+        "mechanism_handoff_evidence_bundle_registry": (
+            mechanism_handoff_evidence_bundle.get("registry")
+        ),
+        "mechanism_handoff_evidence_bundle_record": (
+            mechanism_handoff_evidence_bundle.get("record_key")
+        ),
+        "mechanism_handoff_evidence_bundle_handoff_count": (
+            mechanism_handoff_evidence_bundle.get("handoff_count")
+        ),
+        "mechanism_handoff_evidence_bundle_trace_count": (
+            mechanism_handoff_evidence_bundle.get("trace_count")
+        ),
+        "mechanism_handoff_evidence_bundle_target_count": (
+            mechanism_handoff_evidence_bundle.get("target_count")
+        ),
+        "mechanism_handoff_evidence_bundle_source_citation_count": (
+            mechanism_handoff_evidence_bundle.get("source_citation_count")
         ),
         "pathway_intervention_workflow_report": pathway_intervention_workflow.get("report_path"),
         "pathway_intervention_workflow_manifest": (
@@ -2482,6 +2883,12 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         "product_runtime_drift_pre_generation_evidence_blocked_metric_count": summary.get(
             "pre_generation_evidence_blocked_metric_count"
         ),
+        "product_runtime_drift_claim_factuality_evidence_metric_count": summary.get(
+            "claim_factuality_evidence_metric_count"
+        ),
+        "product_runtime_drift_claim_factuality_evidence_blocked_metric_count": summary.get(
+            "claim_factuality_evidence_blocked_metric_count"
+        ),
         "product_runtime_drift_counterfactual_evidence_metric_count": summary.get(
             "counterfactual_evidence_metric_count"
         ),
@@ -2506,6 +2913,30 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         "product_runtime_drift_action_gate_evidence_blocked_metric_count": summary.get(
             "action_gate_evidence_blocked_metric_count"
         ),
+        "product_runtime_drift_trajectory_audit_evidence_metric_count": summary.get(
+            "trajectory_audit_evidence_metric_count"
+        ),
+        "product_runtime_drift_trajectory_audit_evidence_blocked_metric_count": summary.get(
+            "trajectory_audit_evidence_blocked_metric_count"
+        ),
+        "product_runtime_drift_evidence_handoff_evidence_metric_count": summary.get(
+            "evidence_handoff_evidence_metric_count"
+        ),
+        "product_runtime_drift_evidence_handoff_evidence_blocked_metric_count": summary.get(
+            "evidence_handoff_evidence_blocked_metric_count"
+        ),
+        "product_runtime_drift_world_model_evidence_metric_count": summary.get(
+            "world_model_evidence_metric_count"
+        ),
+        "product_runtime_drift_world_model_evidence_blocked_metric_count": summary.get(
+            "world_model_evidence_blocked_metric_count"
+        ),
+        "product_runtime_drift_frontier_release_evidence_metric_count": summary.get(
+            "frontier_release_evidence_metric_count"
+        ),
+        "product_runtime_drift_frontier_release_evidence_blocked_metric_count": summary.get(
+            "frontier_release_evidence_blocked_metric_count"
+        ),
     }
     for prefix in _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
@@ -2523,6 +2954,18 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     for prefix in _PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     return metadata
@@ -2717,6 +3160,9 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         require_product_runtime_drift_pre_generation_evidence=bool(
             args.require_product_runtime_drift_pre_generation_evidence
         ),
+        require_product_runtime_drift_claim_factuality_evidence=bool(
+            args.require_product_runtime_drift_claim_factuality_evidence
+        ),
         require_product_runtime_drift_counterfactual_evidence=bool(
             args.require_product_runtime_drift_counterfactual_evidence
         ),
@@ -2728,6 +3174,18 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         ),
         require_product_runtime_drift_action_gate_evidence=bool(
             args.require_product_runtime_drift_action_gate_evidence
+        ),
+        require_product_runtime_drift_trajectory_audit_evidence=bool(
+            args.require_product_runtime_drift_trajectory_audit_evidence
+        ),
+        require_product_runtime_drift_evidence_handoff_evidence=bool(
+            args.require_product_runtime_drift_evidence_handoff_evidence
+        ),
+        require_product_runtime_drift_world_model_evidence=bool(
+            args.require_product_runtime_drift_world_model_evidence
+        ),
+        require_product_runtime_drift_frontier_release_evidence=bool(
+            args.require_product_runtime_drift_frontier_release_evidence
         ),
         release_efficiency_report_path=(
             None
@@ -2758,6 +3216,17 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
             else Path(args.pre_generation_probe_comparison_registry)
         ),
         pre_generation_probe_comparison_key=args.pre_generation_probe_comparison_key,
+        claim_factuality_probe_comparison_path=(
+            None
+            if args.claim_factuality_probe_comparison is None
+            else Path(args.claim_factuality_probe_comparison)
+        ),
+        claim_factuality_probe_comparison_registry_path=(
+            None
+            if args.claim_factuality_probe_comparison_registry is None
+            else Path(args.claim_factuality_probe_comparison_registry)
+        ),
+        claim_factuality_probe_comparison_key=args.claim_factuality_probe_comparison_key,
         frontier_release_evidence_path=(
             None
             if args.frontier_release_evidence is None
@@ -2780,6 +3249,17 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
             else Path(args.world_model_signal_workflow_registry)
         ),
         world_model_signal_workflow_key=args.world_model_signal_workflow_key,
+        mechanism_handoff_evidence_bundle_path=(
+            None
+            if args.mechanism_handoff_evidence_bundle is None
+            else Path(args.mechanism_handoff_evidence_bundle)
+        ),
+        mechanism_handoff_evidence_bundle_registry_path=(
+            None
+            if args.mechanism_handoff_evidence_bundle_registry is None
+            else Path(args.mechanism_handoff_evidence_bundle_registry)
+        ),
+        mechanism_handoff_evidence_bundle_key=args.mechanism_handoff_evidence_bundle_key,
         pathway_intervention_workflow_path=(
             None
             if args.pathway_intervention_workflow is None
@@ -2928,6 +3408,7 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         min_best_quality_auroc=args.min_best_quality_auroc,
         max_uncached_forward_seconds=args.max_uncached_forward_seconds,
         max_cache_only_seconds=args.max_cache_only_seconds,
+        max_recommended_runtime_seconds=args.max_recommended_runtime_seconds,
         max_covariance_maha_last_auroc_drop=args.max_covariance_maha_last_auroc_drop,
         max_inside_sample_count_ratio=args.max_inside_sample_count_ratio,
         max_inside_generation_seconds_ratio=args.max_inside_generation_seconds_ratio,
@@ -2985,6 +3466,34 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         ),
         required_route_min_covered_fact_property_false_refuted_rate=(
             args.required_route_min_covered_fact_property_false_refuted_rate
+        ),
+        structured_fact_robustness_min_selected=args.structured_fact_robustness_min_selected,
+        structured_fact_robustness_min_decision_accuracy=(
+            args.structured_fact_robustness_min_decision_accuracy
+        ),
+        structured_fact_robustness_max_false_supported_rate=(
+            args.structured_fact_robustness_max_false_supported_rate
+        ),
+        structured_fact_robustness_min_false_refuted_rate=(
+            args.structured_fact_robustness_min_false_refuted_rate
+        ),
+        structured_fact_robustness_min_covered_fact_properties=(
+            args.structured_fact_robustness_min_covered_fact_properties
+        ),
+        structured_fact_robustness_min_covered_fact_property_records=(
+            args.structured_fact_robustness_min_covered_fact_property_records
+        ),
+        structured_fact_robustness_min_covered_fact_property_source_documents=(
+            args.structured_fact_robustness_min_covered_fact_property_source_documents
+        ),
+        structured_fact_robustness_min_covered_fact_property_decision_accuracy=(
+            args.structured_fact_robustness_min_covered_fact_property_decision_accuracy
+        ),
+        structured_fact_robustness_max_covered_fact_property_false_supported_rate=(
+            args.structured_fact_robustness_max_covered_fact_property_false_supported_rate
+        ),
+        structured_fact_robustness_min_covered_fact_property_false_refuted_rate=(
+            args.structured_fact_robustness_min_covered_fact_property_false_refuted_rate
         ),
         required_route_require_non_oracle_evidence=bool(args.required_route_require_non_oracle_evidence),
         required_route_require_retrieval_provenance_filter=bool(
@@ -3070,6 +3579,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--require-product-runtime-drift-pre-generation-evidence", action="store_true",
                         help="require the product runtime drift report to include pre-generation "
                              "probe comparison coverage, redline, and quality metrics")
+    parser.add_argument("--require-product-runtime-drift-claim-factuality-evidence", action="store_true",
+                        help="require the product runtime drift report to include claim factuality "
+                             "probe comparison coverage, conformal/selective, redline, and quality metrics")
     parser.add_argument("--require-product-runtime-drift-counterfactual-evidence", action="store_true",
                         help="require the product runtime drift report to include counterfactual "
                              "verifier-audit coverage, manifest, pass-rate, false-invariance, "
@@ -3082,6 +3594,19 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--require-product-runtime-drift-action-gate-evidence", action="store_true",
                         help="require the product runtime drift report to include product-trace "
                              "action-audit and action-execution drift metrics")
+    parser.add_argument("--require-product-runtime-drift-trajectory-audit-evidence", action="store_true",
+                        help="require the product runtime drift report to include trajectory-audit "
+                             "failed-trace/error and hallucination-taxonomy drift metrics")
+    parser.add_argument("--require-product-runtime-drift-evidence-handoff-evidence", action="store_true",
+                        help="require the product runtime drift report to include promotion-contract "
+                             "evidence handoff coverage, manifest, metric completeness, and promoted-group "
+                             "drift metrics")
+    parser.add_argument("--require-product-runtime-drift-world-model-evidence", action="store_true",
+                        help="require the product runtime drift report to include trace-level world-model "
+                             "participation, coverage, conflict, low-agreement, and trace-gap metrics")
+    parser.add_argument("--require-product-runtime-drift-frontier-release-evidence", action="store_true",
+                        help="require the product runtime drift report to include frontier release "
+                             "evidence coverage, artifact presence, promote-rate, and run-count metrics")
     parser.add_argument("--release-efficiency-report", default=None,
                         help="optional release efficiency report that must promote and verify")
     parser.add_argument("--external-evidence-baseline-comparison", default=None,
@@ -3102,6 +3627,16 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--pre-generation-probe-comparison-key", default=None,
                         help="optional report:<name>:<version> registry key for a pre-generation "
                              "probe workflow comparison")
+    parser.add_argument("--claim-factuality-probe-comparison", default=None,
+                        help="optional compare_claim_factuality_probe_workflows.py report that must "
+                             "pass multi-model, conformal, and text-redline release gates")
+    parser.add_argument("--claim-factuality-probe-comparison-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for "
+                             "--claim-factuality-probe-comparison-key; defaults to "
+                             "--readiness-registry")
+    parser.add_argument("--claim-factuality-probe-comparison-key", default=None,
+                        help="optional report:<name>:<version> registry key for a claim factuality "
+                             "probe workflow comparison")
     parser.add_argument("--frontier-release-evidence", default=None,
                         help="optional frontier release-evidence report that must promote and verify")
     parser.add_argument("--frontier-release-evidence-registry", default=None,
@@ -3117,6 +3652,16 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "defaults to --readiness-registry")
     parser.add_argument("--world-model-signal-workflow-key", default=None,
                         help="optional report:<name>:<version> registry key for a world-model signal workflow")
+    parser.add_argument("--mechanism-handoff-evidence-bundle", default=None,
+                        help="optional mechanism handoff evidence bundle report that must promote "
+                             "and verify")
+    parser.add_argument("--mechanism-handoff-evidence-bundle-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for "
+                             "--mechanism-handoff-evidence-bundle-key; defaults to "
+                             "--readiness-registry")
+    parser.add_argument("--mechanism-handoff-evidence-bundle-key", default=None,
+                        help="optional report:<name>:<version> registry key for a mechanism "
+                             "handoff evidence bundle")
     parser.add_argument("--pathway-intervention-workflow", default=None,
                         help="optional pathway intervention workflow report that must be release-ready "
                              "and manifest-verified")
@@ -3331,6 +3876,11 @@ def main(argv: Sequence[str] | None = None) -> None:
         value,
         flag="--max-cache-only-seconds",
     ), default=None)
+    parser.add_argument("--max-recommended-runtime-seconds", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--max-recommended-runtime-seconds",
+    ), default=None,
+                        help="maximum selected deployment-path runtime cost from the readiness recommendation")
     parser.add_argument("--max-covariance-maha-last-auroc-drop", type=lambda value: _parse_non_negative_float(
         value,
         flag="--max-covariance-maha-last-auroc-drop",
@@ -3600,6 +4150,72 @@ def main(argv: Sequence[str] | None = None) -> None:
             flag="--required-route-min-covered-fact-property-false-refuted-rate",
         )
     ), default=None)
+    parser.add_argument("--structured-fact-robustness-min-selected", type=lambda value: _parse_non_negative_int(
+        value,
+        flag="--structured-fact-robustness-min-selected",
+    ), default=None)
+    parser.add_argument("--structured-fact-robustness-min-decision-accuracy", type=lambda value: (
+        _parse_non_negative_float(
+            value,
+            flag="--structured-fact-robustness-min-decision-accuracy",
+        )
+    ), default=None)
+    parser.add_argument("--structured-fact-robustness-max-false-supported-rate", type=lambda value: (
+        _parse_non_negative_float(
+            value,
+            flag="--structured-fact-robustness-max-false-supported-rate",
+        )
+    ), default=None)
+    parser.add_argument("--structured-fact-robustness-min-false-refuted-rate", type=lambda value: (
+        _parse_non_negative_float(
+            value,
+            flag="--structured-fact-robustness-min-false-refuted-rate",
+        )
+    ), default=None)
+    parser.add_argument("--structured-fact-robustness-min-covered-fact-properties", type=lambda value: (
+        _parse_non_negative_int(
+            value,
+            flag="--structured-fact-robustness-min-covered-fact-properties",
+        )
+    ), default=None)
+    parser.add_argument("--structured-fact-robustness-min-covered-fact-property-records", type=lambda value: (
+        _parse_non_negative_int(
+            value,
+            flag="--structured-fact-robustness-min-covered-fact-property-records",
+        )
+    ), default=None)
+    parser.add_argument(
+        "--structured-fact-robustness-min-covered-fact-property-source-documents",
+        type=lambda value: _parse_non_negative_int(
+            value,
+            flag="--structured-fact-robustness-min-covered-fact-property-source-documents",
+        ),
+        default=None,
+    )
+    parser.add_argument(
+        "--structured-fact-robustness-min-covered-fact-property-decision-accuracy",
+        type=lambda value: _parse_unit_float(
+            value,
+            flag="--structured-fact-robustness-min-covered-fact-property-decision-accuracy",
+        ),
+        default=None,
+    )
+    parser.add_argument(
+        "--structured-fact-robustness-max-covered-fact-property-false-supported-rate",
+        type=lambda value: _parse_unit_float(
+            value,
+            flag="--structured-fact-robustness-max-covered-fact-property-false-supported-rate",
+        ),
+        default=None,
+    )
+    parser.add_argument(
+        "--structured-fact-robustness-min-covered-fact-property-false-refuted-rate",
+        type=lambda value: _parse_unit_float(
+            value,
+            flag="--structured-fact-robustness-min-covered-fact-property-false-refuted-rate",
+        ),
+        default=None,
+    )
     parser.add_argument(
         "--required-route-require-non-oracle-evidence",
         action="store_true",

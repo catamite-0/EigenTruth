@@ -6,6 +6,7 @@ import argparse
 import json
 import math
 import sys
+from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Mapping, MutableMapping, Sequence
 
@@ -345,6 +346,16 @@ def _route_baseline_row(
     covered_fact_property_count = _int_or_none(route_summary.get("property_count"))
     if covered_fact_property_count is None and covered_fact_property_metrics:
         covered_fact_property_count = len(covered_fact_property_metrics)
+    if not covered_fact_property_metrics:
+        derived_property_metrics = _derive_covered_fact_property_metrics_from_artifacts(
+            manifest_path=manifest_path,
+            manifest=manifest,
+            json_cache=json_cache,
+            json_cache_stats=json_cache_stats,
+        )
+        if derived_property_metrics:
+            covered_fact_property_metrics = derived_property_metrics
+            covered_fact_property_count = len(covered_fact_property_metrics)
     route_status = (
         route_decision.get("status")
         or manifest_metadata.get("route_promotion_status")
@@ -720,6 +731,157 @@ def _covered_fact_property_gate_enabled(
             min_covered_fact_property_false_refuted_rate,
         )
     )
+
+
+def _derive_covered_fact_property_metrics_from_artifacts(
+    *,
+    manifest_path: Path,
+    manifest: Mapping[str, Any],
+    json_cache: MutableMapping[str, dict[str, Any]],
+    json_cache_stats: MutableMapping[str, int],
+) -> dict[str, dict[str, Any]]:
+    score_dump_path = _resolve_artifact_path(
+        manifest_path,
+        manifest,
+        artifact_name="covered_fact_score_dump",
+    )
+    verified_records_path = _resolve_artifact_path(
+        manifest_path,
+        manifest,
+        artifact_name="verified_records_jsonl",
+    )
+    if score_dump_path is None or verified_records_path is None:
+        return {}
+    score_dump, score_dump_error = _load_optional_json(
+        score_dump_path,
+        json_cache=json_cache,
+        json_cache_stats=json_cache_stats,
+    )
+    if score_dump_error is not None:
+        return {}
+    statements = _sequence_or_empty(score_dump.get("statements"))
+    labels = _sequence_or_empty(score_dump.get("labels"))
+    if not statements or len(statements) != len(labels):
+        return {}
+    verified_records = _load_jsonl_mappings(verified_records_path)
+    if not verified_records:
+        return {}
+    status_by_index: dict[int, str] = {}
+    for row in verified_records:
+        index = _int_or_none(row.get("record_index"))
+        if index is None:
+            continue
+        status = _verification_status(row)
+        if status is not None:
+            status_by_index[index] = status
+    if not status_by_index:
+        return {}
+
+    buckets: dict[str, dict[str, Any]] = defaultdict(
+        lambda: {
+            "n_records": 0,
+            "n_true": 0,
+            "n_false": 0,
+            "sources": set(),
+            "label_status": Counter(),
+            "property_label": None,
+        }
+    )
+    for index, statement in enumerate(statements):
+        status = status_by_index.get(index)
+        if status is None:
+            continue
+        metadata = _mapping(_mapping(statement).get("metadata"))
+        property_id = str(metadata.get("statement_property") or "").strip()
+        if not property_id:
+            continue
+        label = _int_or_none(labels[index])
+        if label is None:
+            continue
+        is_false = label == 1
+        bucket = buckets[property_id]
+        bucket["n_records"] += 1
+        bucket["n_false" if is_false else "n_true"] += 1
+        bucket["label_status"][(bool(is_false), status)] += 1
+        if bucket["property_label"] is None and metadata.get("statement_property_label") is not None:
+            bucket["property_label"] = str(metadata.get("statement_property_label"))
+        source = metadata.get("source")
+        if source is not None and str(source):
+            bucket["sources"].add(str(source))
+
+    metrics: dict[str, dict[str, Any]] = {}
+    for property_id, bucket in sorted(buckets.items()):
+        n_records = int(bucket["n_records"])
+        n_true = int(bucket["n_true"])
+        n_false = int(bucket["n_false"])
+        if n_records <= 0:
+            continue
+        label_status: Counter[tuple[bool, str]] = bucket["label_status"]
+        true_supported = int(label_status[(False, "supported")])
+        true_refuted = int(label_status[(False, "refuted")])
+        false_supported = int(label_status[(True, "supported")])
+        false_refuted = int(label_status[(True, "refuted")])
+        correct = true_supported + false_refuted
+        metrics[property_id] = {
+            "n_records": n_records,
+            "n_true": n_true,
+            "n_false": n_false,
+            "n_source_documents": len(bucket["sources"]),
+            "decision_accuracy": correct / n_records,
+            "false_supported_rate": _safe_rate(false_supported, n_false),
+            "false_refuted_rate": _safe_rate(false_refuted, n_false),
+            "true_supported_rate": _safe_rate(true_supported, n_true),
+            "true_refuted_rate": _safe_rate(true_refuted, n_true),
+            "statement_property_label": bucket["property_label"],
+            "status_counts": {
+                "true_supported": true_supported,
+                "true_refuted": true_refuted,
+                "false_supported": false_supported,
+                "false_refuted": false_refuted,
+            },
+            "metric_source": "derived_from_covered_fact_score_dump_and_verified_records",
+        }
+    return metrics
+
+
+def _load_jsonl_mappings(path: Path) -> tuple[dict[str, Any], ...]:
+    rows: list[dict[str, Any]] = []
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            for line in handle:
+                stripped = line.strip()
+                if not stripped:
+                    continue
+                payload = json.loads(stripped)
+                if isinstance(payload, Mapping):
+                    rows.append(dict(payload))
+    except (OSError, json.JSONDecodeError):
+        return ()
+    return tuple(rows)
+
+
+def _verification_status(row: Mapping[str, Any]) -> str | None:
+    record = _mapping(row.get("record"))
+    for key in ("final", "fact", "initial"):
+        status = _mapping(record.get(key)).get("status")
+        if status is not None and str(status):
+            return str(status)
+    status = row.get("status")
+    if status is not None and str(status):
+        return str(status)
+    return None
+
+
+def _safe_rate(numerator: int, denominator: int) -> float | None:
+    if denominator <= 0:
+        return None
+    return numerator / denominator
+
+
+def _sequence_or_empty(value: Any) -> tuple[Any, ...]:
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return tuple(value)
+    return ()
 
 
 def _evidence_audit(

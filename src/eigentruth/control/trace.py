@@ -259,10 +259,23 @@ class ProductTrace:
                 risk_decision=prepared.risk_decision,
                 verification_plan=prepared.verification_plan,
             ),
+            "trajectory_audit": _trajectory_audit_summary_from_payload(
+                request_id=self.request_id,
+                claims=prepared.claims,
+                verification_plan=prepared.verification_plan,
+                verification_results=prepared.verification_results,
+                risk_decision=prepared.risk_decision,
+                actions=prepared.actions,
+                action_results=prepared.action_results,
+                final_answer=prepared.final_answer,
+            ),
             "verification_route": _verification_route_summary_from_results(
                 prepared.verification_results,
             ),
             "verification_route_cost": _verification_route_cost_summary_from_results(
+                prepared.verification_results,
+            ),
+            "world_model": _world_model_summary_from_results(
                 prepared.verification_results,
             ),
             "runtime": _runtime_summary_from_payload(prepared.runtime_trace),
@@ -346,6 +359,12 @@ class ProductTrace:
             verification_plan=_verification_plan_to_dict(self.verification_plan),
         )
 
+    def trajectory_audit_summary(self) -> dict[str, Any]:
+        """Summarize trace-level hallucination taxonomy audit results."""
+        from eigentruth.control.trajectory_audit import audit_product_trace_trajectory
+
+        return audit_product_trace_trajectory(self).summary()
+
     def verification_route_summary(self) -> dict[str, Any]:
         """Summarize verifier route choices recorded in result metadata."""
         return _verification_route_summary_from_results(
@@ -355,6 +374,12 @@ class ProductTrace:
     def verification_route_cost_summary(self) -> dict[str, Any]:
         """Summarize verifier route cost metadata from verification results."""
         return _verification_route_cost_summary_from_results(
+            tuple(_verification_result_to_dict(result) for result in self.verification_results)
+        )
+
+    def world_model_summary(self) -> dict[str, Any]:
+        """Summarize world-model evidence, conflicts, and traceability gaps."""
+        return _world_model_summary_from_results(
             tuple(_verification_result_to_dict(result) for result in self.verification_results)
         )
 
@@ -612,6 +637,31 @@ def _action_audit_summary_from_payload(
     return report.summary()
 
 
+def _trajectory_audit_summary_from_payload(
+    *,
+    request_id: str | None,
+    claims: Sequence[Mapping[str, Any]],
+    verification_plan: Mapping[str, Any] | None,
+    verification_results: Sequence[Mapping[str, Any]],
+    risk_decision: Mapping[str, Any] | None,
+    actions: Sequence[Any],
+    action_results: Sequence[Mapping[str, Any]],
+    final_answer: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    from eigentruth.control.trajectory_audit import audit_product_trace_trajectory
+
+    return audit_product_trace_trajectory({
+        "request_id": request_id,
+        "claims": tuple(claims),
+        "verification_plan": verification_plan,
+        "verification_results": tuple(verification_results),
+        "risk_decision": risk_decision,
+        "actions": tuple(actions),
+        "action_results": tuple(action_results),
+        "final_answer": final_answer,
+    }).summary()
+
+
 def _verification_route_summary_from_results(
     results: Sequence[Mapping[str, Any]],
 ) -> dict[str, Any]:
@@ -672,6 +722,156 @@ def _verification_route_cost_summary_from_results(
         for route, route_records in by_route_records.items()
     }
     return summary
+
+
+def _world_model_summary_from_results(
+    results: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    counts_by_status: dict[str, int] = {}
+    counts_by_adapter: dict[str, int] = {}
+    counts_by_reference_id: dict[str, int] = {}
+    counts_by_decision_rule: dict[str, int] = {}
+    conflict_paths: dict[str, int] = {}
+    prediction_confidences: list[float] = []
+    agreement_rates: list[float] = []
+    world_model_total = 0
+    conflict_count = 0
+    low_agreement_count = 0
+    no_rule_matched_count = 0
+    trace_gap_count = 0
+
+    for result in results:
+        metadata = _mapping(result.get("metadata"))
+        if not _is_world_model_result(metadata):
+            continue
+        world_model_total += 1
+        _increment_count(counts_by_status, result.get("status", "unknown"))
+        prediction_metadata = _world_model_prediction_metadata(metadata)
+        _increment_count(counts_by_adapter, _world_model_adapter_name(metadata))
+        reference = _world_model_reference(metadata)
+        view = _world_model_view(metadata)
+        _increment_count(counts_by_reference_id, reference.get("reference_id"))
+        _increment_count(counts_by_decision_rule, _world_model_decision_rule(metadata))
+
+        confidence = _finite_float(metadata.get("prediction_confidence"))
+        if confidence is not None:
+            prediction_confidences.append(confidence)
+        agreement_rate = _finite_float(metadata.get("agreement_rate"))
+        if agreement_rate is None:
+            agreement_rate = _finite_float(prediction_metadata.get("agreement_rate"))
+        if agreement_rate is not None:
+            agreement_rates.append(agreement_rate)
+
+        conflict = _world_model_conflict(metadata)
+        if conflict:
+            conflict_count += 1
+            _increment_count(conflict_paths, conflict.get("path"))
+        if _world_model_low_agreement(metadata):
+            low_agreement_count += 1
+        if metadata.get("no_rule_matched") is True or prediction_metadata.get("no_rule_matched") is True:
+            no_rule_matched_count += 1
+        if not reference or not view:
+            trace_gap_count += 1
+
+    return {
+        "total": len(results),
+        "world_model_total": world_model_total,
+        "coverage_rate": _safe_div(world_model_total, len(results)) or 0.0,
+        "conflict_count": conflict_count,
+        "conflict_rate": _safe_div(conflict_count, world_model_total) or 0.0,
+        "low_agreement_count": low_agreement_count,
+        "low_agreement_rate": _safe_div(low_agreement_count, world_model_total) or 0.0,
+        "no_rule_matched_count": no_rule_matched_count,
+        "trace_gap_count": trace_gap_count,
+        "trace_gap_rate": _safe_div(trace_gap_count, world_model_total) or 0.0,
+        "counts_by_status": counts_by_status,
+        "counts_by_adapter": counts_by_adapter,
+        "counts_by_reference_id": counts_by_reference_id,
+        "counts_by_decision_rule": counts_by_decision_rule,
+        "conflict_paths": conflict_paths,
+        "prediction_confidence_min": min(prediction_confidences) if prediction_confidences else None,
+        "prediction_confidence_mean": _mean_or_none(prediction_confidences),
+        "agreement_rate_min": min(agreement_rates) if agreement_rates else None,
+        "agreement_rate_mean": _mean_or_none(agreement_rates),
+        "traceable": world_model_total > 0 and trace_gap_count == 0,
+    }
+
+
+def _is_world_model_result(metadata: Mapping[str, Any]) -> bool:
+    verifier = metadata.get("verifier")
+    if any(key in metadata for key in _WORLD_MODEL_TRACE_METADATA_KEYS):
+        return True
+    if verifier == "world_model_ensemble":
+        return True
+    prediction_metadata = _world_model_prediction_metadata(metadata)
+    return any(key in prediction_metadata for key in _WORLD_MODEL_TRACE_METADATA_KEYS)
+
+
+_WORLD_MODEL_TRACE_METADATA_KEYS = (
+    "world_model",
+    "world_model_reference",
+    "world_model_view",
+    "world_model_conflict",
+)
+
+
+def _world_model_adapter_name(metadata: Mapping[str, Any]) -> str | None:
+    raw = metadata.get("world_model")
+    if raw is not None:
+        return str(raw)
+    reference = _world_model_reference(metadata)
+    raw = reference.get("adapter")
+    if raw is not None:
+        return str(raw)
+    prediction_metadata = _world_model_prediction_metadata(metadata)
+    raw = prediction_metadata.get("world_model")
+    if raw is not None:
+        return str(raw)
+    if metadata.get("verifier") == "world_model_ensemble":
+        return "EnsembleWorldModelAdapter"
+    return None
+
+
+def _world_model_prediction_metadata(metadata: Mapping[str, Any]) -> Mapping[str, Any]:
+    return _mapping(metadata.get("prediction_metadata"))
+
+
+def _world_model_reference(metadata: Mapping[str, Any]) -> Mapping[str, Any]:
+    reference = _mapping(metadata.get("world_model_reference"))
+    if reference:
+        return reference
+    return _mapping(_world_model_prediction_metadata(metadata).get("world_model_reference"))
+
+
+def _world_model_view(metadata: Mapping[str, Any]) -> Mapping[str, Any]:
+    view = _mapping(metadata.get("world_model_view"))
+    if view:
+        return view
+    return _mapping(_world_model_prediction_metadata(metadata).get("world_model_view"))
+
+
+def _world_model_conflict(metadata: Mapping[str, Any]) -> Mapping[str, Any]:
+    conflict = _mapping(metadata.get("world_model_conflict"))
+    if conflict:
+        return conflict
+    return _mapping(_world_model_prediction_metadata(metadata).get("world_model_conflict"))
+
+
+def _world_model_decision_rule(metadata: Mapping[str, Any]) -> Any:
+    if metadata.get("decision_rule") is not None:
+        return metadata.get("decision_rule")
+    return _world_model_prediction_metadata(metadata).get("decision_rule")
+
+
+def _world_model_low_agreement(metadata: Mapping[str, Any]) -> bool:
+    if metadata.get("below_min_agreement") is True:
+        return True
+    prediction_metadata = _world_model_prediction_metadata(metadata)
+    if prediction_metadata.get("below_min_agreement") is True:
+        return True
+    decision_rule = str(metadata.get("decision_rule", ""))
+    prediction_rule = str(prediction_metadata.get("decision_rule", ""))
+    return "agreement_below_threshold" in decision_rule or "agreement_below_threshold" in prediction_rule
 
 
 def _runtime_summary_from_payload(payload: Mapping[str, Any] | None) -> dict[str, Any]:
@@ -792,6 +992,15 @@ def _verification_plan_summary(plan: Mapping[str, Any] | None) -> dict[str, Any]
             "dependency_count": 0,
             "cost_estimate": None,
             "budget": {},
+            "hidden_evidence": {
+                "available": False,
+                "selected_count": 0,
+                "claim_count": 0,
+                "evidence_ref_count": 0,
+                "score_counts": {},
+                "layer_counts": {},
+                "max_anomaly_score": None,
+            },
         }
     route_counts: dict[str, int] = {}
     for hint in _as_sequence(plan.get("route_hints", ())):
@@ -837,6 +1046,77 @@ def _verification_plan_summary(plan: Mapping[str, Any] | None) -> dict[str, Any]
         "dependency_count": len(_as_sequence(plan.get("dependencies", ()))),
         "cost_estimate": cost_estimate,
         "budget": budget_summary,
+        "hidden_evidence": _verification_plan_hidden_evidence_summary(plan),
+    }
+
+
+def _verification_plan_hidden_evidence_summary(plan: Mapping[str, Any]) -> dict[str, Any]:
+    selected_count = 0
+    claim_ids: list[str] = []
+    evidence_refs: list[str] = []
+    score_counts: dict[str, int] = {}
+    layer_counts: dict[str, int] = {}
+    max_anomaly_score: float | None = None
+    for hint in _as_sequence(plan.get("route_hints", ())):
+        if not isinstance(hint, Mapping):
+            continue
+        metadata = hint.get("metadata", {})
+        if not isinstance(metadata, Mapping):
+            continue
+        hidden = metadata.get("hidden_evidence")
+        if not isinstance(hidden, Mapping):
+            continue
+        claim_id = str(hint.get("claim_id", "")).strip()
+        if claim_id:
+            claim_ids.append(claim_id)
+        items = tuple(item for item in _as_sequence(hidden.get("selected", ())) if isinstance(item, Mapping))
+        count = _non_negative_int(hidden.get("selected_count"))
+        if count is None:
+            count = len(items) or len(_as_sequence(hidden.get("evidence_refs", ())))
+        selected_count += count
+        if items:
+            for item in items:
+                ref = item.get("evidence_ref")
+                if ref is not None and str(ref).strip():
+                    evidence_refs.append(str(ref).strip())
+                score_name = item.get("score_name")
+                if score_name is not None and str(score_name).strip():
+                    text = str(score_name).strip()
+                    score_counts[text] = score_counts.get(text, 0) + 1
+                layer = "primary" if item.get("layer") is None else str(item.get("layer")).strip()
+                if layer:
+                    layer_counts[layer] = layer_counts.get(layer, 0) + 1
+                anomaly = _finite_float(item.get("anomaly_score"))
+                if anomaly is not None:
+                    max_anomaly_score = anomaly if max_anomaly_score is None else max(max_anomaly_score, anomaly)
+        else:
+            for ref in _as_sequence(hidden.get("evidence_refs", ())):
+                text = str(ref).strip()
+                if text:
+                    evidence_refs.append(text)
+            for score_name in _as_sequence(hidden.get("score_names", ())):
+                text = str(score_name).strip()
+                if text:
+                    score_counts[text] = score_counts.get(text, 0) + 1
+            for layer in _as_sequence(hidden.get("layers", ())):
+                text = str(layer).strip()
+                if text:
+                    layer_counts[text] = layer_counts.get(text, 0) + 1
+            hidden_max = _finite_float(hidden.get("max_anomaly_score"))
+            if hidden_max is not None:
+                max_anomaly_score = hidden_max if max_anomaly_score is None else max(max_anomaly_score, hidden_max)
+    unique_refs = tuple(dict.fromkeys(evidence_refs))
+    unique_claim_ids = tuple(dict.fromkeys(claim_ids))
+    return {
+        "available": bool(selected_count or unique_refs),
+        "selected_count": selected_count,
+        "claim_count": len(unique_claim_ids),
+        "claim_ids": unique_claim_ids,
+        "evidence_ref_count": len(unique_refs),
+        "evidence_refs": unique_refs[:12],
+        "score_counts": dict(sorted(score_counts.items())),
+        "layer_counts": dict(sorted(layer_counts.items())),
+        "max_anomaly_score": max_anomaly_score,
     }
 
 
@@ -1077,6 +1357,7 @@ DEFAULT_BOUNDED_TRACE_METADATA_KEYS = (
     "promotion_contract_manifest_verification",
     "promotion_contract_registry",
     "promotion_contract_registry_key",
+    "promotion_contract_promotion_summary",
     "promotion_contract_runtime",
     "promotion_contract_verifier_route",
     "promotion_contract_recommended_route_covered_fact_property_count",
@@ -1093,8 +1374,30 @@ DEFAULT_BOUNDED_TRACE_METADATA_KEYS = (
     "promotion_contract_pathway_intervention_workflow",
     "promotion_contract_feedback_policy_workflow",
     "promotion_contract_external_evidence_baseline_comparison",
+    "promotion_contract_frontier_release_evidence",
     "promotion_contract_triple_extraction_fixture_matrix",
     "promotion_contract_release_efficiency",
+    "promotion_contract_frontier_release_evidence_status",
+    "promotion_contract_frontier_release_evidence_report",
+    "promotion_contract_frontier_release_evidence_manifest",
+    "promotion_contract_frontier_release_evidence_source",
+    "promotion_contract_frontier_release_evidence_registry",
+    "promotion_contract_frontier_release_evidence_record",
+    "promotion_contract_frontier_release_evidence_workflow",
+    "promotion_contract_frontier_release_evidence_report_status",
+    "promotion_contract_frontier_release_evidence_decision_status",
+    "promotion_contract_frontier_release_evidence_verifier_track_status",
+    "promotion_contract_frontier_release_evidence_abstention_track_status",
+    "promotion_contract_frontier_release_evidence_multiple_testing_track_status",
+    "promotion_contract_frontier_release_evidence_citation_batch_track_status",
+    "promotion_contract_frontier_release_evidence_citation_batch_rollup_count",
+    "promotion_contract_frontier_release_evidence_citation_batch_expected_batch_count",
+    "promotion_contract_frontier_release_evidence_citation_batch_observed_batch_count",
+    "promotion_contract_frontier_release_evidence_citation_batch_missing_expected_batch_count",
+    "promotion_contract_frontier_release_evidence_citation_batch_duplicate_batch_count",
+    "promotion_contract_frontier_release_evidence_citation_batch_unexpected_batch_count",
+    "promotion_contract_frontier_release_evidence_run_count",
+    "promotion_contract_frontier_release_evidence_run_names",
     "external_evidence_baseline_comparison_report",
     "external_evidence_baseline_comparison_source",
     "external_evidence_baseline_comparison_registry",

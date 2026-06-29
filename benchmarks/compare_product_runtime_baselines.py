@@ -74,6 +74,48 @@ _PRE_GENERATION_PROBE_COMPARISON_METADATA_FIELDS: tuple[tuple[str, str], ...] = 
         "pre_generation_probe_comparison_best_redline_margin",
     ),
 )
+_CLAIM_FACTUALITY_PROBE_COMPARISON_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
+    (
+        "promotion_contract.claim_factuality_probe_comparison.coverage_rate",
+        "claim_factuality_probe_comparison_coverage_rate",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.manifest_verified_rate",
+        "claim_factuality_probe_comparison_manifest_verified_rate",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.model_count.mean",
+        "claim_factuality_probe_comparison_model_count",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.run_count.mean",
+        "claim_factuality_probe_comparison_run_count",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.redline_pass_rate",
+        "claim_factuality_probe_comparison_redline_pass_rate",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.best_test_label_auroc.mean",
+        "claim_factuality_probe_comparison_best_test_label_auroc",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.best_test_selective_accuracy.mean",
+        "claim_factuality_probe_comparison_best_test_selective_accuracy",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.best_test_selective_coverage.mean",
+        "claim_factuality_probe_comparison_best_test_selective_coverage",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.best_redline_auroc.mean",
+        "claim_factuality_probe_comparison_best_redline_auroc",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.best_redline_margin.mean",
+        "claim_factuality_probe_comparison_best_redline_margin",
+    ),
+)
 _COUNTERFACTUAL_VERIFICATION_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
     (
         "promotion_contract.counterfactual_verification.coverage_rate",
@@ -100,12 +142,111 @@ _COUNTERFACTUAL_VERIFICATION_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
         "counterfactual_verification_flip_success_count",
     ),
 )
+_EVIDENCE_HANDOFF_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
+    (
+        "promotion_contract.evidence_handoff.coverage_rate",
+        "evidence_handoff_coverage_rate",
+    ),
+    (
+        "promotion_contract.evidence_handoff.manifest_verified_rate",
+        "evidence_handoff_manifest_verified_rate",
+    ),
+    (
+        "promotion_contract.evidence_handoff.present_metric_rate.mean",
+        "evidence_handoff_present_metric_rate",
+    ),
+    (
+        "promotion_contract.evidence_handoff.missing_metric_rate.mean",
+        "evidence_handoff_missing_metric_rate",
+    ),
+    (
+        "promotion_contract.evidence_handoff.missing_metric_count.mean",
+        "evidence_handoff_missing_metric_count",
+    ),
+    (
+        "promotion_contract.evidence_handoff.blocked_group_count.mean",
+        "evidence_handoff_blocked_group_count",
+    ),
+    (
+        "promotion_contract.evidence_handoff.promoted_group_rate.mean",
+        "evidence_handoff_promoted_group_rate",
+    ),
+)
+_FRONTIER_RELEASE_EVIDENCE_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
+    (
+        "promotion_contract.frontier_release_evidence.coverage_rate",
+        "frontier_release_evidence_coverage_rate",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.report_present_rate",
+        "frontier_release_evidence_report_present_rate",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.manifest_present_rate",
+        "frontier_release_evidence_manifest_present_rate",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.status_promote_rate",
+        "frontier_release_evidence_status_promote_rate",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.decision_promote_rate",
+        "frontier_release_evidence_decision_promote_rate",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.verifier_track_promote_rate",
+        "frontier_release_evidence_verifier_track_promote_rate",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.abstention_track_promote_rate",
+        "frontier_release_evidence_abstention_track_promote_rate",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.citation_batch_track_promote_rate",
+        "frontier_release_evidence_citation_batch_track_promote_rate",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.run_count.mean",
+        "frontier_release_evidence_run_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.citation_batch_rollup_count.mean",
+        "frontier_release_evidence_citation_batch_rollup_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.citation_batch_expected_batch_count.mean",
+        "frontier_release_evidence_citation_batch_expected_batch_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.citation_batch_observed_batch_count.mean",
+        "frontier_release_evidence_citation_batch_observed_batch_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.citation_batch_missing_expected_batch_count.mean",
+        "frontier_release_evidence_citation_batch_missing_expected_batch_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.citation_batch_duplicate_batch_count.mean",
+        "frontier_release_evidence_citation_batch_duplicate_batch_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.citation_batch_unexpected_batch_count.mean",
+        "frontier_release_evidence_citation_batch_unexpected_batch_count",
+    ),
+)
 
 _TRIPLE_COVERAGE_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
     ("triple_coverage.claim_triple_coverage_rate", "triple_claim_coverage_rate"),
     ("triple_coverage.audit_claim_coverage_rate", "triple_audit_claim_coverage_rate"),
     ("triple_coverage.audit_pass_rate", "triple_audit_pass_rate"),
     ("triple_coverage.slot_coverage_rate", "triple_slot_coverage_rate"),
+)
+_WORLD_MODEL_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
+    ("world_model.participating_trace_rate", "world_model_participating_trace_rate"),
+    ("world_model.coverage_rate", "world_model_coverage_rate"),
+    ("world_model.conflict_rate", "world_model_conflict_rate"),
+    ("world_model.low_agreement_rate", "world_model_low_agreement_rate"),
+    ("world_model.trace_gap_rate", "world_model_trace_gap_rate"),
 )
 _COVERED_FACT_PROPERTY_SCOPES: dict[str, str] = {
     "recommended_route": "recommended_route_property_metrics",
@@ -173,6 +314,15 @@ _PRODUCT_TRACE_ACTION_GATE_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
         "promotion_contract.product_trace_replay.action_execution_gate.request_id_mismatch_rate.mean",
         "product_trace_action_execution_request_id_mismatch_rate",
     ),
+)
+_PRODUCT_TRACE_TRAJECTORY_AUDIT_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
+    ("trajectory_audit.failed_trace_rate", "product_trace_trajectory_audit_failed_trace_rate"),
+    ("trajectory_audit.error_rate", "product_trace_trajectory_audit_error_rate"),
+    ("trajectory_audit.factual_rate", "product_trace_trajectory_audit_factual_rate"),
+    ("trajectory_audit.referential_rate", "product_trace_trajectory_audit_referential_rate"),
+    ("trajectory_audit.logical_rate", "product_trace_trajectory_audit_logical_rate"),
+    ("trajectory_audit.procedural_rate", "product_trace_trajectory_audit_procedural_rate"),
+    ("trajectory_audit.scope_rate", "product_trace_trajectory_audit_scope_rate"),
 )
 _PRODUCT_TRACE_ACTION_GATE_METRIC_SPECS: tuple[tuple[str, tuple[str, ...], str], ...] = (
     (
@@ -250,6 +400,72 @@ _PRODUCT_TRACE_ACTION_GATE_METRIC_SPECS: tuple[tuple[str, tuple[str, ...], str],
         "max_product_trace_action_execution_request_id_mismatch_rate_increase",
     ),
 )
+_PRODUCT_TRACE_TRAJECTORY_AUDIT_METRIC_SPECS: tuple[tuple[str, tuple[str, ...], str], ...] = (
+    (
+        "trajectory_audit.failed_trace_rate",
+        ("trajectory_audit", "failed_trace_rate"),
+        "max_product_trace_trajectory_audit_failed_trace_rate_increase",
+    ),
+    (
+        "trajectory_audit.error_rate",
+        ("trajectory_audit", "error_rate"),
+        "max_product_trace_trajectory_audit_error_rate_increase",
+    ),
+    (
+        "trajectory_audit.factual_rate",
+        ("trajectory_audit", "factual_rate"),
+        "max_product_trace_trajectory_audit_factual_rate_increase",
+    ),
+    (
+        "trajectory_audit.referential_rate",
+        ("trajectory_audit", "referential_rate"),
+        "max_product_trace_trajectory_audit_referential_rate_increase",
+    ),
+    (
+        "trajectory_audit.logical_rate",
+        ("trajectory_audit", "logical_rate"),
+        "max_product_trace_trajectory_audit_logical_rate_increase",
+    ),
+    (
+        "trajectory_audit.procedural_rate",
+        ("trajectory_audit", "procedural_rate"),
+        "max_product_trace_trajectory_audit_procedural_rate_increase",
+    ),
+    (
+        "trajectory_audit.scope_rate",
+        ("trajectory_audit", "scope_rate"),
+        "max_product_trace_trajectory_audit_scope_rate_increase",
+    ),
+)
+_WORLD_MODEL_MIN_METRIC_SPECS: tuple[tuple[str, tuple[str, ...], str], ...] = (
+    (
+        "world_model.participating_trace_rate",
+        ("world_model", "participating_trace_rate"),
+        "min_world_model_participating_trace_rate",
+    ),
+    (
+        "world_model.coverage_rate",
+        ("world_model", "coverage_rate"),
+        "min_world_model_coverage_rate",
+    ),
+)
+_WORLD_MODEL_INCREASE_METRIC_SPECS: tuple[tuple[str, tuple[str, ...], str], ...] = (
+    (
+        "world_model.conflict_rate",
+        ("world_model", "conflict_rate"),
+        "max_world_model_conflict_rate_increase",
+    ),
+    (
+        "world_model.low_agreement_rate",
+        ("world_model", "low_agreement_rate"),
+        "max_world_model_low_agreement_rate_increase",
+    ),
+    (
+        "world_model.trace_gap_rate",
+        ("world_model", "trace_gap_rate"),
+        "max_world_model_trace_gap_rate_increase",
+    ),
+)
 
 
 def compare_product_runtime_baselines(
@@ -283,12 +499,54 @@ def compare_product_runtime_baselines(
     max_pre_generation_probe_comparison_best_test_label_auroc_drop: float | None = None,
     max_pre_generation_probe_comparison_best_redline_auroc_drop: float | None = None,
     max_pre_generation_probe_comparison_best_redline_margin_drop: float | None = None,
+    min_claim_factuality_probe_comparison_coverage: float | None = None,
+    min_claim_factuality_probe_comparison_manifest_verified_rate: float | None = None,
+    min_claim_factuality_probe_comparison_model_count: float | None = None,
+    min_claim_factuality_probe_comparison_run_count: float | None = None,
+    min_claim_factuality_probe_comparison_redline_pass_rate: float | None = None,
+    max_claim_factuality_probe_comparison_best_test_label_auroc_drop: float | None = None,
+    max_claim_factuality_probe_comparison_best_test_selective_accuracy_drop: (
+        float | None
+    ) = None,
+    max_claim_factuality_probe_comparison_best_test_selective_coverage_drop: (
+        float | None
+    ) = None,
+    max_claim_factuality_probe_comparison_best_redline_auroc_drop: float | None = None,
+    max_claim_factuality_probe_comparison_best_redline_margin_drop: float | None = None,
     min_counterfactual_verification_coverage: float | None = None,
     min_counterfactual_verification_manifest_verified_rate: float | None = None,
     min_counterfactual_verification_record_count: float | None = None,
     min_counterfactual_verification_pass_rate: float | None = None,
     max_counterfactual_verification_false_invariance_rate: float | None = None,
     max_counterfactual_verification_flip_success_count_drop: float | None = None,
+    min_evidence_handoff_coverage: float | None = None,
+    min_evidence_handoff_manifest_verified_rate: float | None = None,
+    min_evidence_handoff_present_metric_rate: float | None = None,
+    max_evidence_handoff_missing_metric_rate: float | None = None,
+    max_evidence_handoff_missing_metric_count: float | None = None,
+    max_evidence_handoff_blocked_group_count: float | None = None,
+    min_evidence_handoff_promoted_group_rate: float | None = None,
+    min_frontier_release_evidence_coverage: float | None = None,
+    min_frontier_release_evidence_report_present_rate: float | None = None,
+    min_frontier_release_evidence_manifest_present_rate: float | None = None,
+    min_frontier_release_evidence_status_promote_rate: float | None = None,
+    min_frontier_release_evidence_decision_promote_rate: float | None = None,
+    min_frontier_release_evidence_verifier_track_promote_rate: float | None = None,
+    min_frontier_release_evidence_abstention_track_promote_rate: float | None = None,
+    min_frontier_release_evidence_citation_batch_track_promote_rate: (
+        float | None
+    ) = None,
+    min_frontier_release_evidence_run_count: float | None = None,
+    min_frontier_release_evidence_citation_batch_rollup_count: float | None = None,
+    max_frontier_release_evidence_citation_batch_missing_expected_batch_count: (
+        float | None
+    ) = None,
+    max_frontier_release_evidence_citation_batch_duplicate_batch_count: (
+        float | None
+    ) = None,
+    max_frontier_release_evidence_citation_batch_unexpected_batch_count: (
+        float | None
+    ) = None,
     min_triple_extraction_fixture_matrix_coverage: float | None = None,
     max_triple_extraction_fixture_matrix_mean_best_f1_drop: float | None = None,
     max_triple_extraction_fixture_matrix_mean_f1_lift_drop: float | None = None,
@@ -296,6 +554,11 @@ def compare_product_runtime_baselines(
     min_triple_audit_claim_coverage: float | None = None,
     min_triple_audit_pass_rate: float | None = None,
     min_triple_slot_coverage: float | None = None,
+    min_world_model_participating_trace_rate: float | None = None,
+    min_world_model_coverage_rate: float | None = None,
+    max_world_model_conflict_rate_increase: float | None = None,
+    max_world_model_low_agreement_rate_increase: float | None = None,
+    max_world_model_trace_gap_rate_increase: float | None = None,
     promotion_contract_covered_fact_property_scopes: Sequence[str] | None = None,
     min_promotion_contract_covered_fact_property_metric_count: float | None = None,
     min_promotion_contract_covered_fact_min_records: float | None = None,
@@ -313,6 +576,13 @@ def compare_product_runtime_baselines(
     max_product_trace_action_execution_missing_result_rate_increase: float | None = None,
     max_product_trace_action_execution_unexpected_result_rate_increase: float | None = None,
     max_product_trace_action_execution_request_id_mismatch_rate_increase: float | None = None,
+    max_product_trace_trajectory_audit_failed_trace_rate_increase: float | None = None,
+    max_product_trace_trajectory_audit_error_rate_increase: float | None = None,
+    max_product_trace_trajectory_audit_factual_rate_increase: float | None = None,
+    max_product_trace_trajectory_audit_referential_rate_increase: float | None = None,
+    max_product_trace_trajectory_audit_logical_rate_increase: float | None = None,
+    max_product_trace_trajectory_audit_procedural_rate_increase: float | None = None,
+    max_product_trace_trajectory_audit_scope_rate_increase: float | None = None,
     min_current_trace_count: int | None = None,
     metadata: Mapping[str, Any] | None = None,
     compact_json: bool = False,
@@ -372,6 +642,48 @@ def compare_product_runtime_baselines(
         "max_pre_generation_probe_comparison_best_redline_margin_drop": (
             _optional_non_negative_float(max_pre_generation_probe_comparison_best_redline_margin_drop)
         ),
+        "min_claim_factuality_probe_comparison_coverage": _optional_rate_float(
+            min_claim_factuality_probe_comparison_coverage
+        ),
+        "min_claim_factuality_probe_comparison_manifest_verified_rate": (
+            _optional_rate_float(
+                min_claim_factuality_probe_comparison_manifest_verified_rate
+            )
+        ),
+        "min_claim_factuality_probe_comparison_model_count": (
+            _optional_non_negative_float(min_claim_factuality_probe_comparison_model_count)
+        ),
+        "min_claim_factuality_probe_comparison_run_count": (
+            _optional_non_negative_float(min_claim_factuality_probe_comparison_run_count)
+        ),
+        "min_claim_factuality_probe_comparison_redline_pass_rate": (
+            _optional_rate_float(min_claim_factuality_probe_comparison_redline_pass_rate)
+        ),
+        "max_claim_factuality_probe_comparison_best_test_label_auroc_drop": (
+            _optional_rate_float(
+                max_claim_factuality_probe_comparison_best_test_label_auroc_drop
+            )
+        ),
+        "max_claim_factuality_probe_comparison_best_test_selective_accuracy_drop": (
+            _optional_rate_float(
+                max_claim_factuality_probe_comparison_best_test_selective_accuracy_drop
+            )
+        ),
+        "max_claim_factuality_probe_comparison_best_test_selective_coverage_drop": (
+            _optional_rate_float(
+                max_claim_factuality_probe_comparison_best_test_selective_coverage_drop
+            )
+        ),
+        "max_claim_factuality_probe_comparison_best_redline_auroc_drop": (
+            _optional_rate_float(
+                max_claim_factuality_probe_comparison_best_redline_auroc_drop
+            )
+        ),
+        "max_claim_factuality_probe_comparison_best_redline_margin_drop": (
+            _optional_non_negative_float(
+                max_claim_factuality_probe_comparison_best_redline_margin_drop
+            )
+        ),
         "min_counterfactual_verification_coverage": _optional_rate_float(
             min_counterfactual_verification_coverage
         ),
@@ -390,6 +702,72 @@ def compare_product_runtime_baselines(
         "max_counterfactual_verification_flip_success_count_drop": _optional_non_negative_float(
             max_counterfactual_verification_flip_success_count_drop
         ),
+        "min_evidence_handoff_coverage": _optional_rate_float(
+            min_evidence_handoff_coverage
+        ),
+        "min_evidence_handoff_manifest_verified_rate": _optional_rate_float(
+            min_evidence_handoff_manifest_verified_rate
+        ),
+        "min_evidence_handoff_present_metric_rate": _optional_rate_float(
+            min_evidence_handoff_present_metric_rate
+        ),
+        "max_evidence_handoff_missing_metric_rate": _optional_rate_float(
+            max_evidence_handoff_missing_metric_rate
+        ),
+        "max_evidence_handoff_missing_metric_count": _optional_non_negative_float(
+            max_evidence_handoff_missing_metric_count
+        ),
+        "max_evidence_handoff_blocked_group_count": _optional_non_negative_float(
+            max_evidence_handoff_blocked_group_count
+        ),
+        "min_evidence_handoff_promoted_group_rate": _optional_rate_float(
+            min_evidence_handoff_promoted_group_rate
+        ),
+        "min_frontier_release_evidence_coverage": _optional_rate_float(
+            min_frontier_release_evidence_coverage
+        ),
+        "min_frontier_release_evidence_report_present_rate": _optional_rate_float(
+            min_frontier_release_evidence_report_present_rate
+        ),
+        "min_frontier_release_evidence_manifest_present_rate": _optional_rate_float(
+            min_frontier_release_evidence_manifest_present_rate
+        ),
+        "min_frontier_release_evidence_status_promote_rate": _optional_rate_float(
+            min_frontier_release_evidence_status_promote_rate
+        ),
+        "min_frontier_release_evidence_decision_promote_rate": _optional_rate_float(
+            min_frontier_release_evidence_decision_promote_rate
+        ),
+        "min_frontier_release_evidence_verifier_track_promote_rate": _optional_rate_float(
+            min_frontier_release_evidence_verifier_track_promote_rate
+        ),
+        "min_frontier_release_evidence_abstention_track_promote_rate": _optional_rate_float(
+            min_frontier_release_evidence_abstention_track_promote_rate
+        ),
+        "min_frontier_release_evidence_citation_batch_track_promote_rate": _optional_rate_float(
+            min_frontier_release_evidence_citation_batch_track_promote_rate
+        ),
+        "min_frontier_release_evidence_run_count": _optional_non_negative_float(
+            min_frontier_release_evidence_run_count
+        ),
+        "min_frontier_release_evidence_citation_batch_rollup_count": _optional_non_negative_float(
+            min_frontier_release_evidence_citation_batch_rollup_count
+        ),
+        "max_frontier_release_evidence_citation_batch_missing_expected_batch_count": (
+            _optional_non_negative_float(
+                max_frontier_release_evidence_citation_batch_missing_expected_batch_count
+            )
+        ),
+        "max_frontier_release_evidence_citation_batch_duplicate_batch_count": (
+            _optional_non_negative_float(
+                max_frontier_release_evidence_citation_batch_duplicate_batch_count
+            )
+        ),
+        "max_frontier_release_evidence_citation_batch_unexpected_batch_count": (
+            _optional_non_negative_float(
+                max_frontier_release_evidence_citation_batch_unexpected_batch_count
+            )
+        ),
         "min_triple_extraction_fixture_matrix_coverage": _optional_rate_float(
             min_triple_extraction_fixture_matrix_coverage
         ),
@@ -403,6 +781,19 @@ def compare_product_runtime_baselines(
         "min_triple_audit_claim_coverage": _optional_rate_float(min_triple_audit_claim_coverage),
         "min_triple_audit_pass_rate": _optional_rate_float(min_triple_audit_pass_rate),
         "min_triple_slot_coverage": _optional_rate_float(min_triple_slot_coverage),
+        "min_world_model_participating_trace_rate": _optional_rate_float(
+            min_world_model_participating_trace_rate
+        ),
+        "min_world_model_coverage_rate": _optional_rate_float(min_world_model_coverage_rate),
+        "max_world_model_conflict_rate_increase": _optional_rate_float(
+            max_world_model_conflict_rate_increase
+        ),
+        "max_world_model_low_agreement_rate_increase": _optional_rate_float(
+            max_world_model_low_agreement_rate_increase
+        ),
+        "max_world_model_trace_gap_rate_increase": _optional_rate_float(
+            max_world_model_trace_gap_rate_increase
+        ),
         "promotion_contract_covered_fact_property_scopes": _covered_fact_property_scopes(
             promotion_contract_covered_fact_property_scopes
         ),
@@ -461,6 +852,27 @@ def compare_product_runtime_baselines(
             _optional_rate_float(
                 max_product_trace_action_execution_request_id_mismatch_rate_increase
             )
+        ),
+        "max_product_trace_trajectory_audit_failed_trace_rate_increase": (
+            _optional_rate_float(max_product_trace_trajectory_audit_failed_trace_rate_increase)
+        ),
+        "max_product_trace_trajectory_audit_error_rate_increase": _optional_rate_float(
+            max_product_trace_trajectory_audit_error_rate_increase
+        ),
+        "max_product_trace_trajectory_audit_factual_rate_increase": _optional_rate_float(
+            max_product_trace_trajectory_audit_factual_rate_increase
+        ),
+        "max_product_trace_trajectory_audit_referential_rate_increase": _optional_rate_float(
+            max_product_trace_trajectory_audit_referential_rate_increase
+        ),
+        "max_product_trace_trajectory_audit_logical_rate_increase": _optional_rate_float(
+            max_product_trace_trajectory_audit_logical_rate_increase
+        ),
+        "max_product_trace_trajectory_audit_procedural_rate_increase": _optional_rate_float(
+            max_product_trace_trajectory_audit_procedural_rate_increase
+        ),
+        "max_product_trace_trajectory_audit_scope_rate_increase": _optional_rate_float(
+            max_product_trace_trajectory_audit_scope_rate_increase
         ),
         "min_current_trace_count": _optional_non_negative_int(min_current_trace_count),
     }
@@ -707,8 +1119,15 @@ def _comparison_metrics(
     ]
     metrics.extend(_covered_fact_property_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_product_trace_action_gate_metrics(baseline_summary, current_summary, gates=gates))
+    metrics.extend(_product_trace_trajectory_audit_metrics(baseline_summary, current_summary, gates=gates))
+    metrics.extend(_world_model_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_pre_generation_probe_comparison_metrics(baseline_summary, current_summary, gates=gates))
+    metrics.extend(_claim_factuality_probe_comparison_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_counterfactual_verification_metrics(baseline_summary, current_summary, gates=gates))
+    metrics.extend(_evidence_handoff_metrics(baseline_summary, current_summary, gates=gates))
+    metrics.extend(
+        _frontier_release_evidence_metrics(baseline_summary, current_summary, gates=gates)
+    )
     return metrics
 
 
@@ -790,6 +1209,114 @@ def _pre_generation_probe_comparison_gate_enabled(gates: Mapping[str, Any]) -> b
     )
 
 
+def _claim_factuality_probe_comparison_metrics(
+    baseline_summary: Mapping[str, Any],
+    current_summary: Mapping[str, Any],
+    *,
+    gates: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    if not _claim_factuality_probe_comparison_gate_enabled(gates):
+        return []
+    baseline = _mapping(
+        _nested_value(
+            baseline_summary,
+            ("promotion_contract", "claim_factuality_probe_comparison"),
+        )
+    )
+    current = _mapping(
+        _nested_value(
+            current_summary,
+            ("promotion_contract", "claim_factuality_probe_comparison"),
+        )
+    )
+    return [
+        _min_current_metric(
+            "promotion_contract.claim_factuality_probe_comparison.coverage_rate",
+            _finite_float(baseline.get("coverage_rate")),
+            _finite_float(current.get("coverage_rate")),
+            gates.get("min_claim_factuality_probe_comparison_coverage"),
+        ),
+        _min_current_metric(
+            "promotion_contract.claim_factuality_probe_comparison.manifest_verified_rate",
+            _pre_generation_manifest_verified_rate(baseline),
+            _pre_generation_manifest_verified_rate(current),
+            gates.get("min_claim_factuality_probe_comparison_manifest_verified_rate"),
+        ),
+        _min_current_metric(
+            "promotion_contract.claim_factuality_probe_comparison.model_count.mean",
+            _nested_float(baseline, ("model_count", "mean")),
+            _nested_float(current, ("model_count", "mean")),
+            gates.get("min_claim_factuality_probe_comparison_model_count"),
+        ),
+        _min_current_metric(
+            "promotion_contract.claim_factuality_probe_comparison.run_count.mean",
+            _nested_float(baseline, ("run_count", "mean")),
+            _nested_float(current, ("run_count", "mean")),
+            gates.get("min_claim_factuality_probe_comparison_run_count"),
+        ),
+        _min_current_metric(
+            "promotion_contract.claim_factuality_probe_comparison.redline_pass_rate",
+            _pre_generation_redline_pass_rate(baseline),
+            _pre_generation_redline_pass_rate(current),
+            gates.get("min_claim_factuality_probe_comparison_redline_pass_rate"),
+        ),
+        _drop_metric(
+            "promotion_contract.claim_factuality_probe_comparison.best_test_label_auroc.mean",
+            _nested_float(baseline, ("best_test_label_auroc", "mean")),
+            _nested_float(current, ("best_test_label_auroc", "mean")),
+            gates.get(
+                "max_claim_factuality_probe_comparison_best_test_label_auroc_drop"
+            ),
+        ),
+        _drop_metric(
+            "promotion_contract.claim_factuality_probe_comparison.best_test_selective_accuracy.mean",
+            _nested_float(baseline, ("best_test_selective_accuracy", "mean")),
+            _nested_float(current, ("best_test_selective_accuracy", "mean")),
+            gates.get(
+                "max_claim_factuality_probe_comparison_best_test_selective_accuracy_drop"
+            ),
+        ),
+        _drop_metric(
+            "promotion_contract.claim_factuality_probe_comparison.best_test_selective_coverage.mean",
+            _nested_float(baseline, ("best_test_selective_coverage", "mean")),
+            _nested_float(current, ("best_test_selective_coverage", "mean")),
+            gates.get(
+                "max_claim_factuality_probe_comparison_best_test_selective_coverage_drop"
+            ),
+        ),
+        _drop_metric(
+            "promotion_contract.claim_factuality_probe_comparison.best_redline_auroc.mean",
+            _nested_float(baseline, ("best_redline_auroc", "mean")),
+            _nested_float(current, ("best_redline_auroc", "mean")),
+            gates.get("max_claim_factuality_probe_comparison_best_redline_auroc_drop"),
+        ),
+        _drop_metric(
+            "promotion_contract.claim_factuality_probe_comparison.best_redline_margin.mean",
+            _nested_float(baseline, ("best_redline_margin", "mean")),
+            _nested_float(current, ("best_redline_margin", "mean")),
+            gates.get("max_claim_factuality_probe_comparison_best_redline_margin_drop"),
+        ),
+    ]
+
+
+def _claim_factuality_probe_comparison_gate_enabled(gates: Mapping[str, Any]) -> bool:
+    return any(
+        gates.get(key) is not None
+        for key in (
+            "min_claim_factuality_probe_comparison_coverage",
+            "min_claim_factuality_probe_comparison_manifest_verified_rate",
+            "min_claim_factuality_probe_comparison_model_count",
+            "min_claim_factuality_probe_comparison_run_count",
+            "min_claim_factuality_probe_comparison_redline_pass_rate",
+            "max_claim_factuality_probe_comparison_best_test_label_auroc_drop",
+            "max_claim_factuality_probe_comparison_best_test_selective_accuracy_drop",
+            "max_claim_factuality_probe_comparison_best_test_selective_coverage_drop",
+            "max_claim_factuality_probe_comparison_best_redline_auroc_drop",
+            "max_claim_factuality_probe_comparison_best_redline_margin_drop",
+        )
+    )
+
+
 def _pre_generation_manifest_verified_rate(summary: Mapping[str, Any]) -> float | None:
     verified = _finite_float(summary.get("manifest_verified_count"))
     failed = _finite_float(summary.get("manifest_failed_count"))
@@ -866,6 +1393,226 @@ def _counterfactual_verification_gate_enabled(gates: Mapping[str, Any]) -> bool:
             "min_counterfactual_verification_pass_rate",
             "max_counterfactual_verification_false_invariance_rate",
             "max_counterfactual_verification_flip_success_count_drop",
+        )
+    )
+
+
+def _evidence_handoff_metrics(
+    baseline_summary: Mapping[str, Any],
+    current_summary: Mapping[str, Any],
+    *,
+    gates: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    if not _evidence_handoff_gate_enabled(gates):
+        return []
+    baseline = _mapping(_nested_value(baseline_summary, ("promotion_contract", "evidence_handoff")))
+    current = _mapping(_nested_value(current_summary, ("promotion_contract", "evidence_handoff")))
+    return [
+        _min_current_metric(
+            "promotion_contract.evidence_handoff.coverage_rate",
+            _finite_float(baseline.get("coverage_rate")),
+            _finite_float(current.get("coverage_rate")),
+            gates.get("min_evidence_handoff_coverage"),
+        ),
+        _min_current_metric(
+            "promotion_contract.evidence_handoff.manifest_verified_rate",
+            _manifest_verified_rate(baseline),
+            _manifest_verified_rate(current),
+            gates.get("min_evidence_handoff_manifest_verified_rate"),
+        ),
+        _min_current_metric(
+            "promotion_contract.evidence_handoff.present_metric_rate.mean",
+            _nested_float(baseline, ("present_metric_rate", "mean")),
+            _nested_float(current, ("present_metric_rate", "mean")),
+            gates.get("min_evidence_handoff_present_metric_rate"),
+        ),
+        _max_current_metric(
+            "promotion_contract.evidence_handoff.missing_metric_rate.mean",
+            _nested_float(baseline, ("missing_metric_rate", "mean")),
+            _nested_float(current, ("missing_metric_rate", "mean")),
+            gates.get("max_evidence_handoff_missing_metric_rate"),
+        ),
+        _max_current_metric(
+            "promotion_contract.evidence_handoff.missing_metric_count.mean",
+            _nested_float(baseline, ("missing_metric_count", "mean")),
+            _nested_float(current, ("missing_metric_count", "mean")),
+            gates.get("max_evidence_handoff_missing_metric_count"),
+        ),
+        _max_current_metric(
+            "promotion_contract.evidence_handoff.blocked_group_count.mean",
+            _nested_float(baseline, ("blocked_group_count", "mean")),
+            _nested_float(current, ("blocked_group_count", "mean")),
+            gates.get("max_evidence_handoff_blocked_group_count"),
+        ),
+        _min_current_metric(
+            "promotion_contract.evidence_handoff.promoted_group_rate.mean",
+            _nested_float(baseline, ("promoted_group_rate", "mean")),
+            _nested_float(current, ("promoted_group_rate", "mean")),
+            gates.get("min_evidence_handoff_promoted_group_rate"),
+        ),
+    ]
+
+
+def _evidence_handoff_gate_enabled(gates: Mapping[str, Any]) -> bool:
+    return any(
+        gates.get(key) is not None
+        for key in (
+            "min_evidence_handoff_coverage",
+            "min_evidence_handoff_manifest_verified_rate",
+            "min_evidence_handoff_present_metric_rate",
+            "max_evidence_handoff_missing_metric_rate",
+            "max_evidence_handoff_missing_metric_count",
+            "max_evidence_handoff_blocked_group_count",
+            "min_evidence_handoff_promoted_group_rate",
+        )
+    )
+
+
+def _frontier_release_evidence_metrics(
+    baseline_summary: Mapping[str, Any],
+    current_summary: Mapping[str, Any],
+    *,
+    gates: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    if not _frontier_release_evidence_gate_enabled(gates):
+        return []
+    baseline = _mapping(
+        _nested_value(
+            baseline_summary,
+            ("promotion_contract", "frontier_release_evidence"),
+        )
+    )
+    current = _mapping(
+        _nested_value(
+            current_summary,
+            ("promotion_contract", "frontier_release_evidence"),
+        )
+    )
+    return [
+        _min_current_metric(
+            "promotion_contract.frontier_release_evidence.coverage_rate",
+            _finite_float(baseline.get("coverage_rate")),
+            _finite_float(current.get("coverage_rate")),
+            gates.get("min_frontier_release_evidence_coverage"),
+        ),
+        _min_current_metric(
+            "promotion_contract.frontier_release_evidence.report_present_rate",
+            _finite_float(baseline.get("report_present_rate")),
+            _finite_float(current.get("report_present_rate")),
+            gates.get("min_frontier_release_evidence_report_present_rate"),
+        ),
+        _min_current_metric(
+            "promotion_contract.frontier_release_evidence.manifest_present_rate",
+            _finite_float(baseline.get("manifest_present_rate")),
+            _finite_float(current.get("manifest_present_rate")),
+            gates.get("min_frontier_release_evidence_manifest_present_rate"),
+        ),
+        _min_current_metric(
+            "promotion_contract.frontier_release_evidence.status_promote_rate",
+            _finite_float(baseline.get("status_promote_rate")),
+            _finite_float(current.get("status_promote_rate")),
+            gates.get("min_frontier_release_evidence_status_promote_rate"),
+        ),
+        _min_current_metric(
+            "promotion_contract.frontier_release_evidence.decision_promote_rate",
+            _finite_float(baseline.get("decision_promote_rate")),
+            _finite_float(current.get("decision_promote_rate")),
+            gates.get("min_frontier_release_evidence_decision_promote_rate"),
+        ),
+        _min_current_metric(
+            "promotion_contract.frontier_release_evidence.verifier_track_promote_rate",
+            _finite_float(baseline.get("verifier_track_promote_rate")),
+            _finite_float(current.get("verifier_track_promote_rate")),
+            gates.get("min_frontier_release_evidence_verifier_track_promote_rate"),
+        ),
+        _min_current_metric(
+            "promotion_contract.frontier_release_evidence.abstention_track_promote_rate",
+            _finite_float(baseline.get("abstention_track_promote_rate")),
+            _finite_float(current.get("abstention_track_promote_rate")),
+            gates.get("min_frontier_release_evidence_abstention_track_promote_rate"),
+        ),
+        _min_current_metric(
+            "promotion_contract.frontier_release_evidence.citation_batch_track_promote_rate",
+            _finite_float(baseline.get("citation_batch_track_promote_rate")),
+            _finite_float(current.get("citation_batch_track_promote_rate")),
+            gates.get(
+                "min_frontier_release_evidence_citation_batch_track_promote_rate"
+            ),
+        ),
+        _min_current_metric(
+            "promotion_contract.frontier_release_evidence.run_count.mean",
+            _nested_float(baseline, ("run_count", "mean")),
+            _nested_float(current, ("run_count", "mean")),
+            gates.get("min_frontier_release_evidence_run_count"),
+        ),
+        _min_current_metric(
+            "promotion_contract.frontier_release_evidence.citation_batch_rollup_count.mean",
+            _nested_float(baseline, ("citation_batch_rollup_count", "mean")),
+            _nested_float(current, ("citation_batch_rollup_count", "mean")),
+            gates.get("min_frontier_release_evidence_citation_batch_rollup_count"),
+        ),
+        _max_current_metric(
+            "promotion_contract.frontier_release_evidence.citation_batch_missing_expected_batch_count.mean",
+            _nested_float(
+                baseline,
+                ("citation_batch_missing_expected_batch_count", "mean"),
+            ),
+            _nested_float(
+                current,
+                ("citation_batch_missing_expected_batch_count", "mean"),
+            ),
+            gates.get(
+                "max_frontier_release_evidence_citation_batch_missing_expected_batch_count"
+            ),
+        ),
+        _max_current_metric(
+            "promotion_contract.frontier_release_evidence.citation_batch_duplicate_batch_count.mean",
+            _nested_float(
+                baseline,
+                ("citation_batch_duplicate_batch_count", "mean"),
+            ),
+            _nested_float(
+                current,
+                ("citation_batch_duplicate_batch_count", "mean"),
+            ),
+            gates.get(
+                "max_frontier_release_evidence_citation_batch_duplicate_batch_count"
+            ),
+        ),
+        _max_current_metric(
+            "promotion_contract.frontier_release_evidence.citation_batch_unexpected_batch_count.mean",
+            _nested_float(
+                baseline,
+                ("citation_batch_unexpected_batch_count", "mean"),
+            ),
+            _nested_float(
+                current,
+                ("citation_batch_unexpected_batch_count", "mean"),
+            ),
+            gates.get(
+                "max_frontier_release_evidence_citation_batch_unexpected_batch_count"
+            ),
+        ),
+    ]
+
+
+def _frontier_release_evidence_gate_enabled(gates: Mapping[str, Any]) -> bool:
+    return any(
+        gates.get(key) is not None
+        for key in (
+            "min_frontier_release_evidence_coverage",
+            "min_frontier_release_evidence_report_present_rate",
+            "min_frontier_release_evidence_manifest_present_rate",
+            "min_frontier_release_evidence_status_promote_rate",
+            "min_frontier_release_evidence_decision_promote_rate",
+            "min_frontier_release_evidence_verifier_track_promote_rate",
+            "min_frontier_release_evidence_abstention_track_promote_rate",
+            "min_frontier_release_evidence_citation_batch_track_promote_rate",
+            "min_frontier_release_evidence_run_count",
+            "min_frontier_release_evidence_citation_batch_rollup_count",
+            "max_frontier_release_evidence_citation_batch_missing_expected_batch_count",
+            "max_frontier_release_evidence_citation_batch_duplicate_batch_count",
+            "max_frontier_release_evidence_citation_batch_unexpected_batch_count",
         )
     )
 
@@ -1016,6 +1763,71 @@ def _product_trace_action_gate_metrics(
 
 def _product_trace_action_gate_gate_enabled(gates: Mapping[str, Any]) -> bool:
     return any(gates.get(gate_key) is not None for _, _, gate_key in _PRODUCT_TRACE_ACTION_GATE_METRIC_SPECS)
+
+
+def _product_trace_trajectory_audit_metrics(
+    baseline_summary: Mapping[str, Any],
+    current_summary: Mapping[str, Any],
+    *,
+    gates: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    if not _product_trace_trajectory_audit_gate_enabled(gates):
+        return []
+    return [
+        _delta_metric(
+            metric_name,
+            _nested_float(baseline_summary, metric_path),
+            _nested_float(current_summary, metric_path),
+            gates.get(gate_key),
+        )
+        for metric_name, metric_path, gate_key in _PRODUCT_TRACE_TRAJECTORY_AUDIT_METRIC_SPECS
+    ]
+
+
+def _product_trace_trajectory_audit_gate_enabled(gates: Mapping[str, Any]) -> bool:
+    return any(
+        gates.get(gate_key) is not None
+        for _, _, gate_key in _PRODUCT_TRACE_TRAJECTORY_AUDIT_METRIC_SPECS
+    )
+
+
+def _world_model_metrics(
+    baseline_summary: Mapping[str, Any],
+    current_summary: Mapping[str, Any],
+    *,
+    gates: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    if not _world_model_gate_enabled(gates):
+        return []
+    rows = [
+        _min_current_metric(
+            metric_name,
+            _nested_float(baseline_summary, metric_path),
+            _nested_float(current_summary, metric_path),
+            gates.get(gate_key),
+        )
+        for metric_name, metric_path, gate_key in _WORLD_MODEL_MIN_METRIC_SPECS
+    ]
+    rows.extend(
+        _delta_metric(
+            metric_name,
+            _nested_float(baseline_summary, metric_path),
+            _nested_float(current_summary, metric_path),
+            gates.get(gate_key),
+        )
+        for metric_name, metric_path, gate_key in _WORLD_MODEL_INCREASE_METRIC_SPECS
+    )
+    return rows
+
+
+def _world_model_gate_enabled(gates: Mapping[str, Any]) -> bool:
+    return any(
+        gates.get(gate_key) is not None
+        for _, _, gate_key in (
+            *_WORLD_MODEL_MIN_METRIC_SPECS,
+            *_WORLD_MODEL_INCREASE_METRIC_SPECS,
+        )
+    )
 
 
 def _runtime_optimization_handoff(report: Mapping[str, Any]) -> dict[str, Any]:
@@ -1651,10 +2463,15 @@ def _drift_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
         "observed_metric_count": summary.get("observed_metric_count"),
         **_promotion_evidence_metadata(report),
         **_pre_generation_probe_comparison_metadata(report),
+        **_claim_factuality_probe_comparison_metadata(report),
         **_counterfactual_verification_metadata(report),
+        **_evidence_handoff_metadata(report),
+        **_frontier_release_evidence_metadata(report),
         **_covered_fact_property_metadata(report),
         **_triple_coverage_metadata(report),
+        **_world_model_metadata(report),
         **_product_trace_action_gate_metadata(report),
+        **_product_trace_trajectory_audit_metadata(report),
     }
 
 
@@ -1688,6 +2505,25 @@ def _pre_generation_probe_comparison_metadata(report: Mapping[str, Any]) -> dict
     return metadata
 
 
+def _claim_factuality_probe_comparison_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    metrics = _metrics_by_name(report.get("metrics"))
+    metadata: dict[str, Any] = {
+        "claim_factuality_probe_comparison_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _CLAIM_FACTUALITY_PROBE_COMPARISON_METADATA_FIELDS:
+        metric = metrics.get(metric_name)
+        metadata[f"{prefix}_baseline"] = _finite_float(
+            None if metric is None else metric.get("baseline")
+        )
+        metadata[f"{prefix}_current"] = _finite_float(
+            None if metric is None else metric.get("current")
+        )
+        metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is not None and metric.get("status") == "blocked":
+            metadata["claim_factuality_probe_comparison_blocked_metric_count"] += 1
+    return metadata
+
+
 def _counterfactual_verification_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
     metrics = _metrics_by_name(report.get("metrics"))
     metadata: dict[str, Any] = {
@@ -1700,6 +2536,40 @@ def _counterfactual_verification_metadata(report: Mapping[str, Any]) -> dict[str
         metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
         if metric is not None and metric.get("status") == "blocked":
             metadata["counterfactual_verification_blocked_metric_count"] += 1
+    return metadata
+
+
+def _evidence_handoff_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    metrics = _metrics_by_name(report.get("metrics"))
+    metadata: dict[str, Any] = {
+        "evidence_handoff_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _EVIDENCE_HANDOFF_METADATA_FIELDS:
+        metric = metrics.get(metric_name)
+        metadata[f"{prefix}_baseline"] = _finite_float(None if metric is None else metric.get("baseline"))
+        metadata[f"{prefix}_current"] = _finite_float(None if metric is None else metric.get("current"))
+        metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is not None and metric.get("status") == "blocked":
+            metadata["evidence_handoff_blocked_metric_count"] += 1
+    return metadata
+
+
+def _frontier_release_evidence_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    metrics = _metrics_by_name(report.get("metrics"))
+    metadata: dict[str, Any] = {
+        "frontier_release_evidence_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _FRONTIER_RELEASE_EVIDENCE_METADATA_FIELDS:
+        metric = metrics.get(metric_name)
+        metadata[f"{prefix}_baseline"] = _finite_float(
+            None if metric is None else metric.get("baseline")
+        )
+        metadata[f"{prefix}_current"] = _finite_float(
+            None if metric is None else metric.get("current")
+        )
+        metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is not None and metric.get("status") == "blocked":
+            metadata["frontier_release_evidence_blocked_metric_count"] += 1
     return metadata
 
 
@@ -1733,6 +2603,21 @@ def _triple_coverage_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
     return metadata
 
 
+def _world_model_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    metrics = _metrics_by_name(report.get("metrics"))
+    metadata: dict[str, Any] = {
+        "world_model_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _WORLD_MODEL_METADATA_FIELDS:
+        metric = metrics.get(metric_name)
+        metadata[f"{prefix}_baseline"] = _finite_float(None if metric is None else metric.get("baseline"))
+        metadata[f"{prefix}_current"] = _finite_float(None if metric is None else metric.get("current"))
+        metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is not None and metric.get("status") == "blocked":
+            metadata["world_model_blocked_metric_count"] += 1
+    return metadata
+
+
 def _product_trace_action_gate_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
     metrics = _metrics_by_name(report.get("metrics"))
     metadata: dict[str, Any] = {
@@ -1745,6 +2630,21 @@ def _product_trace_action_gate_metadata(report: Mapping[str, Any]) -> dict[str, 
         metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
         if metric is not None and metric.get("status") == "blocked":
             metadata["product_trace_action_gate_blocked_metric_count"] += 1
+    return metadata
+
+
+def _product_trace_trajectory_audit_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    metrics = _metrics_by_name(report.get("metrics"))
+    metadata: dict[str, Any] = {
+        "product_trace_trajectory_audit_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _PRODUCT_TRACE_TRAJECTORY_AUDIT_METADATA_FIELDS:
+        metric = metrics.get(metric_name)
+        metadata[f"{prefix}_baseline"] = _finite_float(None if metric is None else metric.get("baseline"))
+        metadata[f"{prefix}_current"] = _finite_float(None if metric is None else metric.get("current"))
+        metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is not None and metric.get("status") == "blocked":
+            metadata["product_trace_trajectory_audit_blocked_metric_count"] += 1
     return metadata
 
 
@@ -1936,6 +2836,36 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_pre_generation_probe_comparison_best_redline_margin_drop=(
             args.max_pre_generation_probe_comparison_best_redline_margin_drop
         ),
+        min_claim_factuality_probe_comparison_coverage=(
+            args.min_claim_factuality_probe_comparison_coverage
+        ),
+        min_claim_factuality_probe_comparison_manifest_verified_rate=(
+            args.min_claim_factuality_probe_comparison_manifest_verified_rate
+        ),
+        min_claim_factuality_probe_comparison_model_count=(
+            args.min_claim_factuality_probe_comparison_model_count
+        ),
+        min_claim_factuality_probe_comparison_run_count=(
+            args.min_claim_factuality_probe_comparison_run_count
+        ),
+        min_claim_factuality_probe_comparison_redline_pass_rate=(
+            args.min_claim_factuality_probe_comparison_redline_pass_rate
+        ),
+        max_claim_factuality_probe_comparison_best_test_label_auroc_drop=(
+            args.max_claim_factuality_probe_comparison_best_test_label_auroc_drop
+        ),
+        max_claim_factuality_probe_comparison_best_test_selective_accuracy_drop=(
+            args.max_claim_factuality_probe_comparison_best_test_selective_accuracy_drop
+        ),
+        max_claim_factuality_probe_comparison_best_test_selective_coverage_drop=(
+            args.max_claim_factuality_probe_comparison_best_test_selective_coverage_drop
+        ),
+        max_claim_factuality_probe_comparison_best_redline_auroc_drop=(
+            args.max_claim_factuality_probe_comparison_best_redline_auroc_drop
+        ),
+        max_claim_factuality_probe_comparison_best_redline_margin_drop=(
+            args.max_claim_factuality_probe_comparison_best_redline_margin_drop
+        ),
         min_counterfactual_verification_coverage=(
             args.min_counterfactual_verification_coverage
         ),
@@ -1954,6 +2884,64 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_counterfactual_verification_flip_success_count_drop=(
             args.max_counterfactual_verification_flip_success_count_drop
         ),
+        min_evidence_handoff_coverage=args.min_evidence_handoff_coverage,
+        min_evidence_handoff_manifest_verified_rate=(
+            args.min_evidence_handoff_manifest_verified_rate
+        ),
+        min_evidence_handoff_present_metric_rate=(
+            args.min_evidence_handoff_present_metric_rate
+        ),
+        max_evidence_handoff_missing_metric_rate=(
+            args.max_evidence_handoff_missing_metric_rate
+        ),
+        max_evidence_handoff_missing_metric_count=(
+            args.max_evidence_handoff_missing_metric_count
+        ),
+        max_evidence_handoff_blocked_group_count=(
+            args.max_evidence_handoff_blocked_group_count
+        ),
+        min_evidence_handoff_promoted_group_rate=(
+            args.min_evidence_handoff_promoted_group_rate
+        ),
+        min_frontier_release_evidence_coverage=(
+            args.min_frontier_release_evidence_coverage
+        ),
+        min_frontier_release_evidence_report_present_rate=(
+            args.min_frontier_release_evidence_report_present_rate
+        ),
+        min_frontier_release_evidence_manifest_present_rate=(
+            args.min_frontier_release_evidence_manifest_present_rate
+        ),
+        min_frontier_release_evidence_status_promote_rate=(
+            args.min_frontier_release_evidence_status_promote_rate
+        ),
+        min_frontier_release_evidence_decision_promote_rate=(
+            args.min_frontier_release_evidence_decision_promote_rate
+        ),
+        min_frontier_release_evidence_verifier_track_promote_rate=(
+            args.min_frontier_release_evidence_verifier_track_promote_rate
+        ),
+        min_frontier_release_evidence_abstention_track_promote_rate=(
+            args.min_frontier_release_evidence_abstention_track_promote_rate
+        ),
+        min_frontier_release_evidence_citation_batch_track_promote_rate=(
+            args.min_frontier_release_evidence_citation_batch_track_promote_rate
+        ),
+        min_frontier_release_evidence_run_count=(
+            args.min_frontier_release_evidence_run_count
+        ),
+        min_frontier_release_evidence_citation_batch_rollup_count=(
+            args.min_frontier_release_evidence_citation_batch_rollup_count
+        ),
+        max_frontier_release_evidence_citation_batch_missing_expected_batch_count=(
+            args.max_frontier_release_evidence_citation_batch_missing_expected_batch_count
+        ),
+        max_frontier_release_evidence_citation_batch_duplicate_batch_count=(
+            args.max_frontier_release_evidence_citation_batch_duplicate_batch_count
+        ),
+        max_frontier_release_evidence_citation_batch_unexpected_batch_count=(
+            args.max_frontier_release_evidence_citation_batch_unexpected_batch_count
+        ),
         min_triple_extraction_fixture_matrix_coverage=(
             args.min_triple_extraction_fixture_matrix_coverage
         ),
@@ -1967,6 +2955,19 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         min_triple_audit_claim_coverage=args.min_triple_audit_claim_coverage,
         min_triple_audit_pass_rate=args.min_triple_audit_pass_rate,
         min_triple_slot_coverage=args.min_triple_slot_coverage,
+        min_world_model_participating_trace_rate=(
+            args.min_world_model_participating_trace_rate
+        ),
+        min_world_model_coverage_rate=args.min_world_model_coverage_rate,
+        max_world_model_conflict_rate_increase=(
+            args.max_world_model_conflict_rate_increase
+        ),
+        max_world_model_low_agreement_rate_increase=(
+            args.max_world_model_low_agreement_rate_increase
+        ),
+        max_world_model_trace_gap_rate_increase=(
+            args.max_world_model_trace_gap_rate_increase
+        ),
         promotion_contract_covered_fact_property_scopes=(
             args.promotion_contract_covered_fact_property_scope
         ),
@@ -2017,6 +3018,27 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         ),
         max_product_trace_action_execution_request_id_mismatch_rate_increase=(
             args.max_product_trace_action_execution_request_id_mismatch_rate_increase
+        ),
+        max_product_trace_trajectory_audit_failed_trace_rate_increase=(
+            args.max_product_trace_trajectory_audit_failed_trace_rate_increase
+        ),
+        max_product_trace_trajectory_audit_error_rate_increase=(
+            args.max_product_trace_trajectory_audit_error_rate_increase
+        ),
+        max_product_trace_trajectory_audit_factual_rate_increase=(
+            args.max_product_trace_trajectory_audit_factual_rate_increase
+        ),
+        max_product_trace_trajectory_audit_referential_rate_increase=(
+            args.max_product_trace_trajectory_audit_referential_rate_increase
+        ),
+        max_product_trace_trajectory_audit_logical_rate_increase=(
+            args.max_product_trace_trajectory_audit_logical_rate_increase
+        ),
+        max_product_trace_trajectory_audit_procedural_rate_increase=(
+            args.max_product_trace_trajectory_audit_procedural_rate_increase
+        ),
+        max_product_trace_trajectory_audit_scope_rate_increase=(
+            args.max_product_trace_trajectory_audit_scope_rate_increase
         ),
         min_current_trace_count=args.min_current_trace_count,
         metadata=_parse_metadata(args.metadata or ()),
@@ -2078,6 +3100,44 @@ def main(argv: Sequence[str] | None = None) -> None:
         type=float,
         default=None,
     )
+    parser.add_argument("--min-claim-factuality-probe-comparison-coverage", type=float, default=None)
+    parser.add_argument(
+        "--min-claim-factuality-probe-comparison-manifest-verified-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument("--min-claim-factuality-probe-comparison-model-count", type=float, default=None)
+    parser.add_argument("--min-claim-factuality-probe-comparison-run-count", type=float, default=None)
+    parser.add_argument(
+        "--min-claim-factuality-probe-comparison-redline-pass-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-claim-factuality-probe-comparison-best-test-label-auroc-drop",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-claim-factuality-probe-comparison-best-test-selective-accuracy-drop",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-claim-factuality-probe-comparison-best-test-selective-coverage-drop",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-claim-factuality-probe-comparison-best-redline-auroc-drop",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-claim-factuality-probe-comparison-best-redline-margin-drop",
+        type=float,
+        default=None,
+    )
     parser.add_argument("--min-counterfactual-verification-coverage", type=float, default=None)
     parser.add_argument(
         "--min-counterfactual-verification-manifest-verified-rate",
@@ -2096,6 +3156,74 @@ def main(argv: Sequence[str] | None = None) -> None:
         type=float,
         default=None,
     )
+    parser.add_argument("--min-evidence-handoff-coverage", type=float, default=None)
+    parser.add_argument(
+        "--min-evidence-handoff-manifest-verified-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument("--min-evidence-handoff-present-metric-rate", type=float, default=None)
+    parser.add_argument("--max-evidence-handoff-missing-metric-rate", type=float, default=None)
+    parser.add_argument("--max-evidence-handoff-missing-metric-count", type=float, default=None)
+    parser.add_argument("--max-evidence-handoff-blocked-group-count", type=float, default=None)
+    parser.add_argument("--min-evidence-handoff-promoted-group-rate", type=float, default=None)
+    parser.add_argument("--min-frontier-release-evidence-coverage", type=float, default=None)
+    parser.add_argument(
+        "--min-frontier-release-evidence-report-present-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-frontier-release-evidence-manifest-present-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-frontier-release-evidence-status-promote-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-frontier-release-evidence-decision-promote-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-frontier-release-evidence-verifier-track-promote-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-frontier-release-evidence-abstention-track-promote-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-frontier-release-evidence-citation-batch-track-promote-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument("--min-frontier-release-evidence-run-count", type=float, default=None)
+    parser.add_argument(
+        "--min-frontier-release-evidence-citation-batch-rollup-count",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-frontier-release-evidence-citation-batch-missing-expected-batch-count",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-frontier-release-evidence-citation-batch-duplicate-batch-count",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-frontier-release-evidence-citation-batch-unexpected-batch-count",
+        type=float,
+        default=None,
+    )
     parser.add_argument("--min-triple-extraction-fixture-matrix-coverage", type=float, default=None)
     parser.add_argument("--max-triple-extraction-fixture-matrix-mean-best-f1-drop", type=float, default=None)
     parser.add_argument("--max-triple-extraction-fixture-matrix-mean-f1-lift-drop", type=float, default=None)
@@ -2103,6 +3231,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--min-triple-audit-claim-coverage", type=float, default=None)
     parser.add_argument("--min-triple-audit-pass-rate", type=float, default=None)
     parser.add_argument("--min-triple-slot-coverage", type=float, default=None)
+    parser.add_argument("--min-world-model-participating-trace-rate", type=float, default=None)
+    parser.add_argument("--min-world-model-coverage-rate", type=float, default=None)
+    parser.add_argument("--max-world-model-conflict-rate-increase", type=float, default=None)
+    parser.add_argument("--max-world-model-low-agreement-rate-increase", type=float, default=None)
+    parser.add_argument("--max-world-model-trace-gap-rate-increase", type=float, default=None)
     parser.add_argument(
         "--promotion-contract-covered-fact-property-scope",
         action="append",
@@ -2158,6 +3291,41 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument(
         "--max-product-trace-action-execution-request-id-mismatch-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-trajectory-audit-failed-trace-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-trajectory-audit-error-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-trajectory-audit-factual-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-trajectory-audit-referential-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-trajectory-audit-logical-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-trajectory-audit-procedural-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-trajectory-audit-scope-rate-increase",
         type=float,
         default=None,
     )

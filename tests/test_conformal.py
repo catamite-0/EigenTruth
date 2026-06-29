@@ -4,7 +4,9 @@
 误报率 <= alpha（可交换时），以及平局/小样本的保守处理。
 """
 
+import json
 import math
+from pathlib import Path
 
 import pytest
 import torch
@@ -16,15 +18,20 @@ from eigentruth.eval.conformal import (
     ConformalAbstentionReleaseGateResult,
     ConformalAbstentionReport,
     adaptive_anomaly_scores,
+    alpha_spending_schedule,
     conformal_abstention_comparison_report,
     conformal_abstention_release_gate,
     conformal_abstention_report,
     conformal_pvalues,
     conformal_threshold,
+    directional_conformal_pvalues,
     directional_conformal_threshold,
     directional_conformal_thresholds,
     directional_trigger_rate,
     evaluate_conformal_abstention,
+    multiple_testing_conformal_report,
+    sequential_conformal_monitor,
+    sequential_pvalue_monitor,
 )
 
 
@@ -75,6 +82,181 @@ class TestConformalPvalues:
     def test_empty_calibration_raises(self):
         with pytest.raises(ValueError, match="non-empty"):
             conformal_pvalues(torch.tensor([]), torch.tensor([1.0]))
+
+    def test_directional_pvalues_support_lower_scores(self):
+        calib = torch.tensor([10.0, 11.0, 12.0, 13.0])
+        p = directional_conformal_pvalues(calib, torch.tensor([9.0, 12.0]), "lower")
+
+        assert p.tolist() == pytest.approx([0.2, 0.8])
+
+
+class TestMultipleTestingConformal:
+    def test_by_report_rejects_extreme_directional_signal(self):
+        calibration = {
+            "maha_last": torch.arange(99, dtype=torch.float64),
+            "truth_proj": torch.arange(99, dtype=torch.float64),
+            "first_token_entropy": torch.zeros(99, dtype=torch.float64),
+        }
+        report = multiple_testing_conformal_report(
+            calibration,
+            {
+                "maha_last": 50.0,
+                "truth_proj": -1.0,
+                "first_token_entropy": 0.0,
+            },
+            alpha=0.1,
+            directions={"maha_last": "higher", "truth_proj": "lower"},
+            method="by",
+            metadata={"run_id": "synthetic"},
+        )
+
+        assert report.rejected is True
+        assert report.rejected_count == 1
+        assert report.rejected_signal_names == ("truth_proj",)
+        assert report.min_p_value == pytest.approx(0.01)
+        assert report.metadata["run_id"] == "synthetic"
+        assert report.to_dict()["signals"][0]["name"] == "truth_proj"
+
+    def test_by_is_more_conservative_than_bh_for_dependent_signal_budget(self):
+        calibration = {
+            "maha_last": torch.arange(49, dtype=torch.float64),
+            "truth_proj": torch.arange(49, dtype=torch.float64),
+            "first_token_entropy": torch.zeros(49, dtype=torch.float64),
+        }
+        scores = {
+            "maha_last": 0.0,
+            "truth_proj": -1.0,
+            "first_token_entropy": 0.0,
+        }
+        directions = {"maha_last": "higher", "truth_proj": "lower"}
+
+        bh_report = multiple_testing_conformal_report(
+            calibration,
+            scores,
+            alpha=0.1,
+            directions=directions,
+            method="bh",
+        )
+        by_report = multiple_testing_conformal_report(
+            calibration,
+            scores,
+            alpha=0.1,
+            directions=directions,
+            method="benjamini-yekutieli",
+        )
+
+        assert bh_report.rejected is True
+        assert by_report.rejected is False
+        assert bh_report.min_p_value == by_report.min_p_value == pytest.approx(0.02)
+
+    def test_bonferroni_uses_fixed_per_signal_threshold(self):
+        calibration = {
+            "a": torch.arange(99, dtype=torch.float64),
+            "b": torch.arange(99, dtype=torch.float64),
+        }
+
+        report = multiple_testing_conformal_report(
+            calibration,
+            {"a": 100.0, "b": 0.0},
+            alpha=0.05,
+            method="bonferroni",
+        )
+
+        assert report.rejected_signal_names == ("a",)
+        assert report.signals[0].threshold == pytest.approx(0.025)
+        assert report.correction == pytest.approx(2.0)
+
+    def test_rejects_invalid_inputs(self):
+        calibration = {"a": torch.tensor([1.0, 2.0])}
+
+        with pytest.raises(ValueError, match="exactly"):
+            multiple_testing_conformal_report(calibration, {}, alpha=0.1)
+        with pytest.raises(ValueError, match="method"):
+            multiple_testing_conformal_report(calibration, {"a": 3.0}, alpha=0.1, method="sidak")
+        with pytest.raises(ValueError, match="direction"):
+            multiple_testing_conformal_report(
+                calibration,
+                {"a": 3.0},
+                alpha=0.1,
+                directions={"a": "sideways"},
+            )
+        with pytest.raises(ValueError, match="finite"):
+            multiple_testing_conformal_report(calibration, {"a": float("nan")}, alpha=0.1)
+        with pytest.raises(ValueError, match="non-empty"):
+            multiple_testing_conformal_report({"a": torch.tensor([])}, {"a": 3.0}, alpha=0.1)
+
+    def test_report_to_dict_normalizes_metadata_for_strict_json(self):
+        report = multiple_testing_conformal_report(
+            {"maha": torch.arange(9, dtype=torch.float64)},
+            {"maha": 99.0},
+            alpha=0.2,
+            metadata={
+                "artifact_path": Path("artifacts/demo.json"),
+                "non_finite_debug_value": math.inf,
+            },
+        )
+
+        payload = report.to_dict()
+
+        assert payload["metadata"]["artifact_path"] == "artifacts/demo.json"
+        assert payload["metadata"]["non_finite_debug_value"] == "inf"
+        json.dumps(payload, allow_nan=False)
+
+
+class TestSequentialConformal:
+    def test_alpha_spending_schedule_controls_total_budget(self):
+        harmonic = alpha_spending_schedule(0.1, 4, schedule="harmonic")
+        linear = alpha_spending_schedule(0.1, 4, schedule="linear")
+        geometric = alpha_spending_schedule(0.1, 4, schedule="geometric")
+
+        assert sum(harmonic) == pytest.approx(0.1)
+        assert sum(linear) == pytest.approx(0.1)
+        assert sum(geometric) < 0.1
+        assert harmonic[0] > harmonic[-1]
+        assert linear == pytest.approx((0.025, 0.025, 0.025, 0.025))
+
+    def test_sequential_pvalue_monitor_records_step_budget_and_rejections(self):
+        report = sequential_pvalue_monitor(
+            [0.01, 0.2, 0.02, 0.9],
+            alpha=0.1,
+            schedule="linear",
+            metadata={"session_id": "s1"},
+        )
+
+        assert report.rejected is True
+        assert report.rejected_count == 2
+        assert report.rejected_steps == (1, 3)
+        assert report.alpha_spent_total == pytest.approx(0.1)
+        assert report.remaining_alpha == pytest.approx(0.0)
+        assert report.metadata["session_id"] == "s1"
+        assert report.to_dict()["steps"][0]["alpha_spent"] == pytest.approx(0.025)
+
+    def test_sequential_conformal_monitor_supports_lower_scores(self):
+        calibration = torch.tensor([10.0, 11.0, 12.0, 13.0])
+        report = sequential_conformal_monitor(
+            calibration,
+            [9.0, 12.0],
+            alpha=0.5,
+            direction="lower",
+            schedule="linear",
+        )
+
+        assert report.rejected is True
+        assert report.rejected_steps == (1,)
+        assert report.steps[0].p_value == pytest.approx(0.2)
+        assert report.steps[0].score == pytest.approx(9.0)
+        assert report.steps[0].direction == "lower"
+        assert report.steps[1].rejected is False
+
+    def test_sequential_monitor_rejects_invalid_inputs(self):
+        with pytest.raises(ValueError, match="schedule"):
+            alpha_spending_schedule(0.1, 4, schedule="sidak")
+        with pytest.raises(ValueError, match="horizon"):
+            alpha_spending_schedule(0.1, 0)
+        with pytest.raises(ValueError, match="p-values"):
+            sequential_pvalue_monitor([1.2], alpha=0.1)
+        with pytest.raises(ValueError, match="non-empty"):
+            sequential_pvalue_monitor([], alpha=0.1)
 
 
 class TestConformalThreshold:

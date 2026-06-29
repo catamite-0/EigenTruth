@@ -621,6 +621,23 @@ def test_default_correction_policy_plans_action_payloads():
     assert abstain.payload["blocked_claims"][0]["evidence"] == ("nasa",)
 
 
+def test_default_correction_policy_retrieves_unverified_claims_when_diagnostics_trigger():
+    policy = DefaultCorrectionPolicy()
+    claims = extract_claims("Paris is in France. Berlin is in Germany.")
+    decision = RiskDecision(
+        action=ControlAction.RETRIEVE,
+        risk_level=RiskLevel.MEDIUM,
+        confidence=0.6,
+        reason="calibrated diagnostic threshold exceeded",
+    )
+
+    retrieve = policy.plan(decision, claims=claims, verification_results=())[0]
+
+    assert retrieve.action is ControlAction.RETRIEVE
+    assert [target["claim_id"] for target in retrieve.payload["retrieval_targets"]] == ["c1", "c2"]
+    assert retrieve.payload["claim_status_counts"]["not_applicable"] == 2
+
+
 def test_plan_aware_correction_policy_injects_retrieval_queries():
     base_policy = DefaultCorrectionPolicy()
     policy = PlanAwareCorrectionPolicy(base_policy=base_policy)
@@ -2812,6 +2829,29 @@ def test_rule_based_world_model_adapter_fails_closed_when_no_rule_matches():
         RuleBasedWorldModelAdapter(())
 
 
+def test_world_model_adapters_reject_bool_and_non_finite_confidence_config():
+    base_adapter = InMemoryWorldModelAdapter(verifier=InMemoryVerifier({}))
+
+    with pytest.raises(ValueError, match="confidence"):
+        WorldModelPrediction(state={}, confidence=True)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="confidence"):
+        WorldModelPrediction(state={}, confidence=math.nan)
+    with pytest.raises(ValueError, match="world model rule confidence"):
+        WorldModelRule(name="bad", confidence=True)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="world model rule confidence"):
+        WorldModelRule.from_mapping({"name": "bad", "confidence": True})
+    with pytest.raises(ValueError, match="min_prediction_confidence"):
+        StateTransitionVerifier(
+            world_model=base_adapter,
+            min_prediction_confidence=True,  # type: ignore[arg-type]
+        )
+    with pytest.raises(ValueError, match="min_agreement"):
+        EnsembleWorldModelAdapter(
+            (base_adapter,),
+            min_agreement=True,  # type: ignore[arg-type]
+        )
+
+
 def test_ensemble_world_model_adapter_confirms_consensus_predictions():
     adapter_a = InMemoryWorldModelAdapter(verifier=InMemoryVerifier({}))
     adapter_b = InMemoryWorldModelAdapter(verifier=InMemoryVerifier({}))
@@ -3626,18 +3666,32 @@ def test_control_policy_config_from_dict_parses_boolean_strings():
         "participation_gate_supported_override": "yes",
         "participation_gate_supported_override_min_confidence": 0.9,
     })
+    direct = ControlPolicyConfig(
+        refuted_action="rewrite",
+        unsupported_action="clarify",
+        verification_error_action="retrieve",
+        compound_risk_action="abstain",
+        refuted_risk_level="high",
+        unsupported_risk_level="medium",
+        verification_error_risk_level="unknown",
+        compound_risk_level="high",
+    )
 
     assert disabled.compound_verification_escalates is False
     assert enabled.compound_verification_escalates is True
     assert verification_aware.participation_gate_supported_override is True
     assert verification_aware.to_dict()["participation_gate_supported_override"] is True
     assert verification_aware.participation_gate_supported_override_min_confidence == pytest.approx(0.9)
+    assert direct.to_dict()["refuted_action"] == "rewrite"
+    assert direct.to_dict()["verification_error_risk_level"] == "unknown"
     with pytest.raises(ValueError, match="compound_verification_escalates"):
         ControlPolicyConfig.from_dict({"compound_verification_escalates": "maybe"})
     with pytest.raises(ValueError, match="participation_gate_supported_override"):
         ControlPolicyConfig.from_dict({"participation_gate_supported_override": "maybe"})
     with pytest.raises(ValueError, match="participation_gate_applies_to_actions"):
         ControlPolicyConfig.from_dict({"participation_gate_applies_to_actions": "unknown"})
+    with pytest.raises(ValueError, match="refuted_action"):
+        ControlPolicyConfig(refuted_action="unknown")
 
 
 def test_risk_controller_routes_non_finite_diagnostics_to_unknown():

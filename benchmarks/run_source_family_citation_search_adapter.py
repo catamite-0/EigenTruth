@@ -47,6 +47,7 @@ RESERVED_CATALOG_FIELDS = {
 TEXT_FIELDS = ("text", "content", "document", "body", "snippet", "summary", "abstract")
 TOKEN_RE = re.compile(r"[a-z0-9]+|[\u4e00-\u9fff]+")
 OFFICIAL_FAMILIES = {"official", "official_statistics", "domain_specific"}
+FALLBACK_FAMILIES = {"encyclopedic", "reference"}
 
 
 @dataclass(frozen=True)
@@ -95,6 +96,7 @@ def run_source_family_citation_search_adapter(
     max_results: int = 3,
     max_query_variants: int = 3,
     min_text_overlap: float = 0.05,
+    diversify_source_families: bool = False,
     default_source_family: str = DEFAULT_SOURCE_FAMILY,
     compact_json: bool = True,
     fail_on_empty: bool = False,
@@ -124,6 +126,7 @@ def run_source_family_citation_search_adapter(
             max_results=int(max_results),
             max_query_variants=int(max_query_variants),
             min_text_overlap=float(min_text_overlap),
+            diversify_source_families=bool(diversify_source_families),
         )
         for request in requests
     )
@@ -139,6 +142,7 @@ def run_source_family_citation_search_adapter(
             "max_results": int(max_results),
             "max_query_variants": int(max_query_variants),
             "min_text_overlap": float(min_text_overlap),
+            "diversify_source_families": bool(diversify_source_families),
             "default_source_family": _normalize_family(default_source_family),
         },
         "summary": summary,
@@ -198,6 +202,7 @@ def _rank_request(
     max_results: int,
     max_query_variants: int,
     min_text_overlap: float,
+    diversify_source_families: bool,
 ) -> dict[str, Any]:
     request_id = _clean(request.get("request_id"))
     query_variants = _request_query_variants(request, max_items=max_query_variants)
@@ -227,9 +232,14 @@ def _rank_request(
         _family_priority(item[1].get("source_family"), preferred_families),
         -int(item[1].get("rank", 999999)),
     ), reverse=True)
+    selected = (
+        _select_family_diverse_results(scored, max_results=max_results, preferred_families=preferred_families)
+        if diversify_source_families
+        else tuple(result for _, result in scored[:max_results])
+    )
     results = tuple(
         {**result, "rank": rank}
-        for rank, (_, result) in enumerate(scored[:max_results], start=1)
+        for rank, result in enumerate(selected, start=1)
     )
     return {
         "request_id": request_id,
@@ -243,8 +253,59 @@ def _rank_request(
             "freshness_required": bool(plan.get("freshness_required")),
             "official_source_preferred": bool(plan.get("official_source_preferred")),
             "catalog_document_count": len(catalog),
+            "diversify_source_families": bool(diversify_source_families),
         },
     }
+
+
+def _select_family_diverse_results(
+    scored: Sequence[tuple[float, dict[str, Any]]],
+    *,
+    max_results: int,
+    preferred_families: Sequence[str],
+) -> tuple[dict[str, Any], ...]:
+    if max_results <= 0:
+        return ()
+    selected: list[dict[str, Any]] = []
+    selected_keys: set[int] = set()
+
+    def add_first_for_family(family: str) -> None:
+        if len(selected) >= max_results:
+            return
+        normalized = _normalize_family(family)
+        for index, (_score, result) in enumerate(scored):
+            if index in selected_keys:
+                continue
+            if _normalize_family(result.get("source_family")) != normalized:
+                continue
+            selected.append(result)
+            selected_keys.add(index)
+            return
+
+    family_order = (
+        *tuple(family for family in preferred_families if _normalize_family(family) not in FALLBACK_FAMILIES),
+        *tuple(family for family in preferred_families if _normalize_family(family) in FALLBACK_FAMILIES),
+    )
+    for family in family_order:
+        add_first_for_family(family)
+    for index, (_score, result) in enumerate(scored):
+        if len(selected) >= max_results:
+            break
+        if index in selected_keys:
+            continue
+        family = _normalize_family(result.get("source_family"))
+        if any(_normalize_family(existing.get("source_family")) == family for existing in selected):
+            continue
+        selected.append(result)
+        selected_keys.add(index)
+    for index, (_score, result) in enumerate(scored):
+        if len(selected) >= max_results:
+            break
+        if index in selected_keys:
+            continue
+        selected.append(result)
+        selected_keys.add(index)
+    return tuple(selected[:max_results])
 
 
 def _score_document(
@@ -668,6 +729,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-results", type=int, default=3)
     parser.add_argument("--max-query-variants", type=int, default=3)
     parser.add_argument("--min-text-overlap", type=float, default=0.05)
+    parser.add_argument("--diversify-source-families", action="store_true")
     parser.add_argument("--default-source-family", default=DEFAULT_SOURCE_FAMILY)
     parser.add_argument("--pretty-json", action="store_true")
     parser.add_argument("--fail-on-empty", action="store_true")
@@ -685,6 +747,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         max_results=args.max_results,
         max_query_variants=args.max_query_variants,
         min_text_overlap=args.min_text_overlap,
+        diversify_source_families=bool(args.diversify_source_families),
         default_source_family=args.default_source_family,
         compact_json=not bool(args.pretty_json),
         fail_on_empty=bool(args.fail_on_empty),

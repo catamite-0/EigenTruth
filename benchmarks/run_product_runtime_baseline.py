@@ -21,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-_TRACE_RECORD_CACHE_SCHEMA_VERSION = 10
+_TRACE_RECORD_CACHE_SCHEMA_VERSION = 16
 _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "promotion_contract_coverage_rate",
     "triple_extraction_fixture_matrix_coverage_rate",
@@ -37,6 +37,18 @@ _PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "pre_generation_probe_comparison_best_test_label_auroc",
     "pre_generation_probe_comparison_best_redline_auroc",
     "pre_generation_probe_comparison_best_redline_margin",
+)
+_PRODUCT_RUNTIME_DRIFT_CLAIM_FACTUALITY_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "claim_factuality_probe_comparison_coverage_rate",
+    "claim_factuality_probe_comparison_manifest_verified_rate",
+    "claim_factuality_probe_comparison_model_count",
+    "claim_factuality_probe_comparison_run_count",
+    "claim_factuality_probe_comparison_redline_pass_rate",
+    "claim_factuality_probe_comparison_best_test_label_auroc",
+    "claim_factuality_probe_comparison_best_test_selective_accuracy",
+    "claim_factuality_probe_comparison_best_test_selective_coverage",
+    "claim_factuality_probe_comparison_best_redline_auroc",
+    "claim_factuality_probe_comparison_best_redline_margin",
 )
 _PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "counterfactual_verification_coverage_rate",
@@ -72,6 +84,41 @@ _PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "product_trace_action_execution_unexpected_result_rate",
     "product_trace_action_execution_request_id_mismatch_rate",
 )
+_PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "product_trace_trajectory_audit_failed_trace_rate",
+    "product_trace_trajectory_audit_error_rate",
+    "product_trace_trajectory_audit_factual_rate",
+    "product_trace_trajectory_audit_referential_rate",
+    "product_trace_trajectory_audit_logical_rate",
+    "product_trace_trajectory_audit_procedural_rate",
+    "product_trace_trajectory_audit_scope_rate",
+)
+_PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "evidence_handoff_coverage_rate",
+    "evidence_handoff_manifest_verified_rate",
+    "evidence_handoff_present_metric_rate",
+    "evidence_handoff_missing_metric_rate",
+    "evidence_handoff_missing_metric_count",
+    "evidence_handoff_blocked_group_count",
+    "evidence_handoff_promoted_group_rate",
+)
+_PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "frontier_release_evidence_coverage_rate",
+    "frontier_release_evidence_report_present_rate",
+    "frontier_release_evidence_manifest_present_rate",
+    "frontier_release_evidence_status_promote_rate",
+    "frontier_release_evidence_decision_promote_rate",
+    "frontier_release_evidence_verifier_track_promote_rate",
+    "frontier_release_evidence_abstention_track_promote_rate",
+    "frontier_release_evidence_citation_batch_track_promote_rate",
+    "frontier_release_evidence_run_count",
+    "frontier_release_evidence_citation_batch_rollup_count",
+    "frontier_release_evidence_citation_batch_expected_batch_count",
+    "frontier_release_evidence_citation_batch_observed_batch_count",
+    "frontier_release_evidence_citation_batch_missing_expected_batch_count",
+    "frontier_release_evidence_citation_batch_duplicate_batch_count",
+    "frontier_release_evidence_citation_batch_unexpected_batch_count",
+)
 _PROMOTION_CONTRACT_PRODUCT_RUNTIME_DRIFT_FIELDS: tuple[str, ...] = (
     "promotion_contract_product_runtime_drift_available",
     "promotion_contract_product_runtime_drift_status",
@@ -86,6 +133,9 @@ _PROMOTION_CONTRACT_PRODUCT_RUNTIME_DRIFT_FIELDS: tuple[str, ...] = (
     "promotion_contract_product_runtime_drift_triple_audit_evidence_required",
     "promotion_contract_product_runtime_drift_covered_fact_property_evidence_required",
     "promotion_contract_product_runtime_drift_action_gate_evidence_required",
+    "promotion_contract_product_runtime_drift_trajectory_audit_evidence_required",
+    "promotion_contract_product_runtime_drift_evidence_handoff_evidence_required",
+    "promotion_contract_product_runtime_drift_frontier_release_evidence_required",
     "promotion_contract_product_runtime_drift_compared_metric_count",
     "promotion_contract_product_runtime_drift_blocked_metric_count",
     "promotion_contract_product_runtime_drift_promotion_evidence_metric_count",
@@ -100,6 +150,12 @@ _PROMOTION_CONTRACT_PRODUCT_RUNTIME_DRIFT_FIELDS: tuple[str, ...] = (
     "promotion_contract_product_runtime_drift_covered_fact_property_evidence_blocked_metric_count",
     "promotion_contract_product_runtime_drift_action_gate_evidence_metric_count",
     "promotion_contract_product_runtime_drift_action_gate_evidence_blocked_metric_count",
+    "promotion_contract_product_runtime_drift_trajectory_audit_evidence_metric_count",
+    "promotion_contract_product_runtime_drift_trajectory_audit_evidence_blocked_metric_count",
+    "promotion_contract_product_runtime_drift_evidence_handoff_evidence_metric_count",
+    "promotion_contract_product_runtime_drift_evidence_handoff_evidence_blocked_metric_count",
+    "promotion_contract_product_runtime_drift_frontier_release_evidence_metric_count",
+    "promotion_contract_product_runtime_drift_frontier_release_evidence_blocked_metric_count",
 )
 _PROMOTION_CONTRACT_PRODUCT_TRACE_REPLAY_FIELDS: tuple[str, ...] = (
     "promotion_contract_product_trace_replay_available",
@@ -168,6 +224,32 @@ _PROMOTION_CONTRACT_PRE_GENERATION_PROBE_COMPARISON_FIELDS: tuple[str, ...] = (
     "promotion_contract_pre_generation_probe_comparison_best_redline_auroc",
     "promotion_contract_pre_generation_probe_comparison_best_redline_margin",
 )
+_PROMOTION_CONTRACT_CLAIM_FACTUALITY_PROBE_COMPARISON_FIELDS: tuple[str, ...] = (
+    "promotion_contract_claim_factuality_probe_comparison_available",
+    "promotion_contract_claim_factuality_probe_comparison_source",
+    "promotion_contract_claim_factuality_probe_comparison_report",
+    "promotion_contract_claim_factuality_probe_comparison_manifest",
+    "promotion_contract_claim_factuality_probe_comparison_registry",
+    "promotion_contract_claim_factuality_probe_comparison_record",
+    "promotion_contract_claim_factuality_probe_comparison_manifest_verified",
+    "promotion_contract_claim_factuality_probe_comparison_status",
+    "promotion_contract_claim_factuality_probe_comparison_report_status",
+    "promotion_contract_claim_factuality_probe_comparison_model_count",
+    "promotion_contract_claim_factuality_probe_comparison_run_count",
+    "promotion_contract_claim_factuality_probe_comparison_redline_passed",
+    "promotion_contract_claim_factuality_probe_comparison_redline_run_count",
+    "promotion_contract_claim_factuality_probe_comparison_best_run",
+    "promotion_contract_claim_factuality_probe_comparison_best_model",
+    "promotion_contract_claim_factuality_probe_comparison_best_record_count",
+    "promotion_contract_claim_factuality_probe_comparison_best_layer",
+    "promotion_contract_claim_factuality_probe_comparison_best_test_label_auroc",
+    "promotion_contract_claim_factuality_probe_comparison_best_test_selective_accuracy",
+    "promotion_contract_claim_factuality_probe_comparison_best_test_selective_coverage",
+    "promotion_contract_claim_factuality_probe_comparison_best_conformal_threshold",
+    "promotion_contract_claim_factuality_probe_comparison_best_redline_signal",
+    "promotion_contract_claim_factuality_probe_comparison_best_redline_auroc",
+    "promotion_contract_claim_factuality_probe_comparison_best_redline_margin",
+)
 _PROMOTION_CONTRACT_COUNTERFACTUAL_VERIFICATION_FIELDS: tuple[str, ...] = (
     "promotion_contract_counterfactual_verification_available",
     "promotion_contract_counterfactual_verification_source",
@@ -182,6 +264,53 @@ _PROMOTION_CONTRACT_COUNTERFACTUAL_VERIFICATION_FIELDS: tuple[str, ...] = (
     "promotion_contract_counterfactual_verification_pass_rate",
     "promotion_contract_counterfactual_verification_false_invariance_rate",
     "promotion_contract_counterfactual_verification_flip_success_count",
+)
+_PROMOTION_CONTRACT_EVIDENCE_HANDOFF_FIELDS: tuple[str, ...] = (
+    "promotion_contract_evidence_handoff_available",
+    "promotion_contract_evidence_handoff_manifest",
+    "promotion_contract_evidence_handoff_contract",
+    "promotion_contract_evidence_handoff_audit",
+    "promotion_contract_evidence_handoff_manifest_verified",
+    "promotion_contract_evidence_handoff_workflow",
+    "promotion_contract_evidence_handoff_status",
+    "promotion_contract_evidence_handoff_before_missing_metric_count",
+    "promotion_contract_evidence_handoff_after_missing_metric_count",
+    "promotion_contract_evidence_handoff_resolved_missing_metric_count",
+    "promotion_contract_evidence_handoff_expected_metric_count",
+    "promotion_contract_evidence_handoff_present_metric_count",
+    "promotion_contract_evidence_handoff_missing_metric_count",
+    "promotion_contract_evidence_handoff_blocked_group_count",
+    "promotion_contract_evidence_handoff_present_metric_rate",
+    "promotion_contract_evidence_handoff_missing_metric_rate",
+    "promotion_contract_evidence_handoff_group_count",
+    "promotion_contract_evidence_handoff_promoted_group_count",
+    "promotion_contract_evidence_handoff_promoted_group_rate",
+    "promotion_contract_evidence_handoff_filled_groups",
+    "promotion_contract_evidence_handoff_group_statuses",
+)
+_PROMOTION_CONTRACT_FRONTIER_RELEASE_EVIDENCE_FIELDS: tuple[str, ...] = (
+    "promotion_contract_frontier_release_evidence_available",
+    "promotion_contract_frontier_release_evidence_status",
+    "promotion_contract_frontier_release_evidence_report",
+    "promotion_contract_frontier_release_evidence_manifest",
+    "promotion_contract_frontier_release_evidence_source",
+    "promotion_contract_frontier_release_evidence_registry",
+    "promotion_contract_frontier_release_evidence_record",
+    "promotion_contract_frontier_release_evidence_workflow",
+    "promotion_contract_frontier_release_evidence_report_status",
+    "promotion_contract_frontier_release_evidence_decision_status",
+    "promotion_contract_frontier_release_evidence_verifier_track_status",
+    "promotion_contract_frontier_release_evidence_abstention_track_status",
+    "promotion_contract_frontier_release_evidence_multiple_testing_track_status",
+    "promotion_contract_frontier_release_evidence_citation_batch_track_status",
+    "promotion_contract_frontier_release_evidence_citation_batch_rollup_count",
+    "promotion_contract_frontier_release_evidence_citation_batch_expected_batch_count",
+    "promotion_contract_frontier_release_evidence_citation_batch_observed_batch_count",
+    "promotion_contract_frontier_release_evidence_citation_batch_missing_expected_batch_count",
+    "promotion_contract_frontier_release_evidence_citation_batch_duplicate_batch_count",
+    "promotion_contract_frontier_release_evidence_citation_batch_unexpected_batch_count",
+    "promotion_contract_frontier_release_evidence_run_count",
+    "promotion_contract_frontier_release_evidence_run_names",
 )
 _PROMOTION_CONTRACT_COVERED_FACT_ROLLUP_FIELDS: tuple[str, ...] = (
     "promotion_contract_recommended_route_covered_fact_property_metric_count",
@@ -214,6 +343,7 @@ from eigentruth.control import (  # noqa: E402
     ProductPromotionContract,
     ProductRuntimeBudgetPolicy,
     evaluate_product_runtime_budget,
+    product_promotion_contract_metadata,
     product_runtime_metrics,
 )
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest, fingerprint_path  # noqa: E402
@@ -293,7 +423,15 @@ class ProductRuntimeBaselineConfig:
 def build_product_runtime_baseline(config: ProductRuntimeBaselineConfig) -> dict[str, Any]:
     """Aggregate ProductTrace runtime metrics and optional budget results."""
     policy, policy_source = _load_policy(config)
-    records, summary_records, trace_record_cache = _build_trace_records(config, policy=policy)
+    promotion_metadata = _load_promotion_metadata(
+        config,
+        budget_enabled=policy is not None,
+    )
+    records, summary_records, trace_record_cache = _build_trace_records(
+        config,
+        policy=policy,
+        promotion_metadata=promotion_metadata,
+    )
     trace_record_count = len(summary_records)
     budget_summary = _budget_summary(summary_records, policy=policy)
     summary = _aggregate_records(summary_records)
@@ -359,11 +497,17 @@ def _build_trace_records(
     config: ProductRuntimeBaselineConfig,
     *,
     policy: ProductRuntimeBudgetPolicy | None,
+    promotion_metadata: Mapping[str, Any] | None,
 ) -> tuple[tuple[dict[str, Any], ...], tuple[dict[str, Any], ...], dict[str, Any]]:
     cache_path = config.trace_records_cache_path
     invalidation_reason = None
     if cache_path is not None and cache_path.exists() and not config.refresh_trace_records_cache:
-        cached = _load_trace_records_cache(cache_path, trace_paths=config.trace_paths, policy=policy)
+        cached = _load_trace_records_cache(
+            cache_path,
+            trace_paths=config.trace_paths,
+            policy=policy,
+            promotion_metadata=promotion_metadata,
+        )
         if cached is not None:
             cached_records, payload = cached
             records, summary_records = _emit_trace_records(config, cached_records)
@@ -384,10 +528,16 @@ def _build_trace_records(
     scanned_records = _scan_trace_records(
         config.trace_paths,
         policy=policy,
+        promotion_metadata=promotion_metadata,
         max_workers=config.trace_scan_workers,
     )
     if cache_path is not None:
-        payload = _trace_records_cache_payload(config, scanned_records, policy=policy)
+        payload = _trace_records_cache_payload(
+            config,
+            scanned_records,
+            policy=policy,
+            promotion_metadata=promotion_metadata,
+        )
         _write_report(cache_path, payload, compact=config.compact_json)
     records, summary_records = _emit_trace_records(config, scanned_records)
     return records, summary_records, {
@@ -411,17 +561,28 @@ def _scan_trace_records(
     trace_paths: Sequence[Path],
     *,
     policy: ProductRuntimeBudgetPolicy | None,
+    promotion_metadata: Mapping[str, Any] | None,
     max_workers: int,
 ) -> tuple[dict[str, Any], ...]:
     if max_workers <= 1 or len(trace_paths) <= 1:
         return tuple(
-            _trace_record(path, _load_trace(path), policy=policy)
+            _trace_record(
+                path,
+                _load_trace(path),
+                policy=policy,
+                promotion_metadata=promotion_metadata,
+            )
             for path in trace_paths
         )
     worker_count = _effective_worker_count(max_workers, item_count=len(trace_paths))
 
     def scan(path: Path) -> dict[str, Any]:
-        return _trace_record(path, _load_trace(path), policy=policy)
+        return _trace_record(
+            path,
+            _load_trace(path),
+            policy=policy,
+            promotion_metadata=promotion_metadata,
+        )
 
     with ThreadPoolExecutor(max_workers=worker_count) as executor:
         return tuple(executor.map(scan, trace_paths))
@@ -473,9 +634,19 @@ def _trace_record(
     trace: Mapping[str, Any],
     *,
     policy: ProductRuntimeBudgetPolicy | None,
+    promotion_metadata: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
-    metrics = product_runtime_metrics(trace)
-    budget = None if policy is None else evaluate_product_runtime_budget(trace, policy)
+    trace_payload = _trace_with_promotion_metadata(trace, promotion_metadata)
+    trace_format = _optional_string(trace_payload.get("trace_format")) or "product_trace"
+    if trace_format == "risk_decision_sequence" and not _is_risk_decision_sequence_trace(trace_payload):
+        raise ValueError(f"invalid risk_decision_sequence trace: {path}")
+    if _is_risk_decision_sequence_trace(trace_payload):
+        metrics = _risk_decision_sequence_metrics(trace_payload)
+        budget = None if policy is None else _unsupported_sequence_runtime_budget(policy)
+    else:
+        metrics = dict(product_runtime_metrics(trace_payload))
+        metrics.setdefault("trace_format", trace_format)
+        budget = None if policy is None else evaluate_product_runtime_budget(trace_payload, policy)
     return {
         "path": str(path),
         "request_id": trace.get("request_id"),
@@ -489,6 +660,7 @@ def _trace_context(trace: Mapping[str, Any]) -> dict[str, Any]:
     metadata = _mapping(trace.get("metadata"))
     risk_decision = _mapping(trace.get("risk_decision"))
     return {
+        "trace_format": _optional_string(trace.get("trace_format")) or "product_trace",
         "runtime_profile": _optional_string(metadata.get("runtime_profile")),
         "runtime_profile_source": _optional_string(metadata.get("runtime_profile_source")),
         "pre_generation_profile_requested": _optional_string(
@@ -506,6 +678,7 @@ def _load_trace_records_cache(
     *,
     trace_paths: Sequence[Path],
     policy: ProductRuntimeBudgetPolicy | None,
+    promotion_metadata: Mapping[str, Any] | None = None,
 ) -> tuple[tuple[dict[str, Any], ...], Mapping[str, Any]] | None:
     try:
         payload = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -518,6 +691,10 @@ def _load_trace_records_cache(
     if payload.get("workflow") != "product_runtime_baseline_trace_records":
         return None
     if _mapping(payload.get("policy")).get("signature") != _policy_signature(policy):
+        return None
+    if _mapping(payload.get("promotion_contract_metadata")).get("signature") != _metadata_signature(
+        promotion_metadata
+    ):
         return None
     sources = _sequence(payload.get("sources"))
     records = _sequence(payload.get("records"))
@@ -548,6 +725,7 @@ def _trace_records_cache_payload(
     records: Sequence[Mapping[str, Any]],
     *,
     policy: ProductRuntimeBudgetPolicy | None,
+    promotion_metadata: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
     return {
         "schema_version": _TRACE_RECORD_CACHE_SCHEMA_VERSION,
@@ -569,6 +747,10 @@ def _trace_records_cache_payload(
         "policy": {
             "signature": _policy_signature(policy),
             "payload": None if policy is None else policy.to_dict(),
+        },
+        "promotion_contract_metadata": {
+            "signature": _metadata_signature(promotion_metadata),
+            "payload": dict(promotion_metadata or {}),
         },
         "sources": [
             {
@@ -617,6 +799,117 @@ def _policy_signature(policy: ProductRuntimeBudgetPolicy | None) -> str | None:
     return json.dumps(policy.to_dict(), sort_keys=True, separators=(",", ":"))
 
 
+def _metadata_signature(metadata: Mapping[str, Any] | None) -> str | None:
+    if not metadata:
+        return None
+    return json.dumps(dict(metadata), sort_keys=True, separators=(",", ":"))
+
+
+def _trace_with_promotion_metadata(
+    trace: Mapping[str, Any],
+    promotion_metadata: Mapping[str, Any] | None,
+) -> Mapping[str, Any]:
+    if not promotion_metadata:
+        return trace
+    payload = dict(trace)
+    metadata = dict(_mapping(trace.get("metadata")))
+    metadata.update(dict(promotion_metadata))
+    payload["metadata"] = metadata
+    return payload
+
+
+def _is_risk_decision_sequence_trace(trace: Mapping[str, Any]) -> bool:
+    return (
+        trace.get("trace_format") == "risk_decision_sequence"
+        and _risk_decision_sequence_items(trace.get("risk_decisions")) is not None
+    )
+
+
+def _risk_decision_sequence_items(value: Any) -> tuple[Mapping[str, Any], ...] | None:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes, bytearray)):
+        return None
+    decisions: list[Mapping[str, Any]] = []
+    for item in value:
+        if not isinstance(item, Mapping):
+            return None
+        decisions.append(item)
+    if not decisions:
+        return None
+    return tuple(decisions)
+
+
+def _unsupported_sequence_runtime_budget(policy: ProductRuntimeBudgetPolicy) -> dict[str, Any]:
+    return {
+        "passed": False,
+        "policy": policy.to_dict(),
+        "failures": (
+            {
+                "metric": "unsupported_trace_format",
+                "reason": (
+                    "runtime budget cannot be evaluated for "
+                    "risk_decision_sequence traces"
+                ),
+                "trace_format": "risk_decision_sequence",
+            },
+        ),
+    }
+
+
+def _risk_decision_sequence_metrics(trace: Mapping[str, Any]) -> dict[str, Any]:
+    decisions = _risk_decision_sequence_items(trace.get("risk_decisions"))
+    if decisions is None:
+        raise ValueError("risk_decision_sequence trace must contain non-empty mapping decisions.")
+    action_counts: dict[str, int] = {}
+    risk_level_counts: dict[str, int] = {}
+    gate_status_counts: dict[str, int] = {}
+    multiple_gate_status_counts: dict[str, int] = {}
+    rejected_count = 0
+    multiple_rejected_count = 0
+    clarify_unknown_count = 0
+    for decision in decisions:
+        action = _optional_string(decision.get("action"))
+        risk_level = _optional_string(decision.get("risk_level"))
+        if action is not None:
+            action_counts[action] = action_counts.get(action, 0) + 1
+        if risk_level is not None:
+            risk_level_counts[risk_level] = risk_level_counts.get(risk_level, 0) + 1
+        if action == "clarify" and risk_level == "unknown":
+            clarify_unknown_count += 1
+        gate = _mapping(_mapping(decision.get("diagnostics")).get("sequential_gate"))
+        status = _optional_string(gate.get("status"))
+        if status is not None:
+            gate_status_counts[status] = gate_status_counts.get(status, 0) + 1
+        if gate.get("rejected") is True or status == "rejected":
+            rejected_count += 1
+        multiple_gate = _mapping(_mapping(decision.get("diagnostics")).get("multiple_testing_gate"))
+        multiple_status = _optional_string(multiple_gate.get("status"))
+        if multiple_status is not None:
+            multiple_gate_status_counts[multiple_status] = (
+                multiple_gate_status_counts.get(multiple_status, 0) + 1
+            )
+        if multiple_gate.get("rejected") is True or multiple_status == "rejected":
+            multiple_rejected_count += 1
+    decision_count = len(decisions)
+    return {
+        "trace_format": "risk_decision_sequence",
+        "is_decision_sequence": True,
+        "has_runtime_trace": False,
+        "decision_sequence_length": decision_count,
+        "decision_sequence_action_counts": action_counts,
+        "decision_sequence_risk_level_counts": risk_level_counts,
+        "decision_sequence_gate_status_counts": gate_status_counts,
+        "decision_sequence_rejected_count": rejected_count,
+        "decision_sequence_rejected_rate": _safe_div(rejected_count, decision_count),
+        "decision_sequence_multiple_testing_gate_status_counts": multiple_gate_status_counts,
+        "decision_sequence_multiple_testing_rejected_count": multiple_rejected_count,
+        "decision_sequence_multiple_testing_rejected_rate": _safe_div(
+            multiple_rejected_count,
+            decision_count,
+        ),
+        "decision_sequence_clarify_unknown_count": clarify_unknown_count,
+    }
+
+
 def _fingerprint_matches(expected: Mapping[str, Any], actual: Mapping[str, Any]) -> bool:
     return all(
         expected.get(field_name) == actual.get(field_name)
@@ -626,6 +919,32 @@ def _fingerprint_matches(expected: Mapping[str, Any], actual: Mapping[str, Any])
 
 def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
     compact = {
+        "trace_format": metrics.get("trace_format") or "product_trace",
+        "is_decision_sequence": bool(metrics.get("is_decision_sequence")),
+        "decision_sequence_length": metrics.get("decision_sequence_length"),
+        "decision_sequence_action_counts": dict(
+            _mapping(metrics.get("decision_sequence_action_counts"))
+        ),
+        "decision_sequence_risk_level_counts": dict(
+            _mapping(metrics.get("decision_sequence_risk_level_counts"))
+        ),
+        "decision_sequence_gate_status_counts": dict(
+            _mapping(metrics.get("decision_sequence_gate_status_counts"))
+        ),
+        "decision_sequence_multiple_testing_gate_status_counts": dict(
+            _mapping(metrics.get("decision_sequence_multiple_testing_gate_status_counts"))
+        ),
+        "decision_sequence_rejected_count": metrics.get("decision_sequence_rejected_count"),
+        "decision_sequence_rejected_rate": metrics.get("decision_sequence_rejected_rate"),
+        "decision_sequence_multiple_testing_rejected_count": metrics.get(
+            "decision_sequence_multiple_testing_rejected_count"
+        ),
+        "decision_sequence_multiple_testing_rejected_rate": metrics.get(
+            "decision_sequence_multiple_testing_rejected_rate"
+        ),
+        "decision_sequence_clarify_unknown_count": metrics.get(
+            "decision_sequence_clarify_unknown_count"
+        ),
         "has_runtime_trace": bool(metrics.get("has_runtime_trace")),
         "total_seconds": metrics.get("total_seconds"),
         "accounted_seconds": metrics.get("accounted_seconds"),
@@ -705,6 +1024,22 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         "action_audit_malformed_payload_count": metrics.get("action_audit_malformed_payload_count"),
         "action_audit_unexpected_action_count": metrics.get("action_audit_unexpected_action_count"),
         "action_audit_unknown_claim_id_count": metrics.get("action_audit_unknown_claim_id_count"),
+        "trajectory_audit_summary": dict(_mapping(metrics.get("trajectory_audit_summary"))),
+        "trajectory_audit_available": bool(metrics.get("trajectory_audit_available")),
+        "trajectory_audit_source": metrics.get("trajectory_audit_source"),
+        "trajectory_audit_passed": metrics.get("trajectory_audit_passed"),
+        "trajectory_audit_issue_count": metrics.get("trajectory_audit_issue_count"),
+        "trajectory_audit_error_count": metrics.get("trajectory_audit_error_count"),
+        "trajectory_audit_warning_count": metrics.get("trajectory_audit_warning_count"),
+        "trajectory_audit_info_count": metrics.get("trajectory_audit_info_count"),
+        "trajectory_audit_types": list(_sequence(metrics.get("trajectory_audit_types"))),
+        "trajectory_audit_counts_by_type": dict(_mapping(metrics.get("trajectory_audit_counts_by_type"))),
+        "trajectory_audit_counts_by_code": dict(_mapping(metrics.get("trajectory_audit_counts_by_code"))),
+        "trajectory_audit_factual_count": metrics.get("trajectory_audit_factual_count"),
+        "trajectory_audit_referential_count": metrics.get("trajectory_audit_referential_count"),
+        "trajectory_audit_logical_count": metrics.get("trajectory_audit_logical_count"),
+        "trajectory_audit_procedural_count": metrics.get("trajectory_audit_procedural_count"),
+        "trajectory_audit_scope_count": metrics.get("trajectory_audit_scope_count"),
         "triple_coverage_summary": dict(_mapping(metrics.get("triple_coverage_summary"))),
         "triple_coverage_source": metrics.get("triple_coverage_source"),
         "triple_claim_count": metrics.get("triple_claim_count"),
@@ -727,6 +1062,36 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         "triple_structured_fact_predicate_counts": dict(
             _mapping(metrics.get("triple_structured_fact_predicate_counts"))
         ),
+        "world_model_summary": dict(_mapping(metrics.get("world_model_summary"))),
+        "world_model_source": metrics.get("world_model_source"),
+        "world_model_total": metrics.get("world_model_total"),
+        "world_model_coverage_rate": metrics.get("world_model_coverage_rate"),
+        "world_model_conflict_count": metrics.get("world_model_conflict_count"),
+        "world_model_conflict_rate": metrics.get("world_model_conflict_rate"),
+        "world_model_low_agreement_count": metrics.get("world_model_low_agreement_count"),
+        "world_model_low_agreement_rate": metrics.get("world_model_low_agreement_rate"),
+        "world_model_no_rule_matched_count": metrics.get("world_model_no_rule_matched_count"),
+        "world_model_trace_gap_count": metrics.get("world_model_trace_gap_count"),
+        "world_model_trace_gap_rate": metrics.get("world_model_trace_gap_rate"),
+        "world_model_traceable": metrics.get("world_model_traceable"),
+        "world_model_prediction_confidence_mean": metrics.get(
+            "world_model_prediction_confidence_mean"
+        ),
+        "world_model_prediction_confidence_min": metrics.get(
+            "world_model_prediction_confidence_min"
+        ),
+        "world_model_agreement_rate_mean": metrics.get("world_model_agreement_rate_mean"),
+        "world_model_agreement_rate_min": metrics.get("world_model_agreement_rate_min"),
+        "world_model_counts_by_adapter": dict(
+            _mapping(metrics.get("world_model_counts_by_adapter"))
+        ),
+        "world_model_counts_by_reference_id": dict(
+            _mapping(metrics.get("world_model_counts_by_reference_id"))
+        ),
+        "world_model_counts_by_decision_rule": dict(
+            _mapping(metrics.get("world_model_counts_by_decision_rule"))
+        ),
+        "world_model_conflict_paths": dict(_mapping(metrics.get("world_model_conflict_paths"))),
         "final_answer_summary": dict(_mapping(metrics.get("final_answer_summary"))),
         "final_answer_available": bool(metrics.get("final_answer_available")),
         "final_answer_source": metrics.get("final_answer_source"),
@@ -867,13 +1232,33 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         compact[field_name] = metrics.get(field_name)
     for field_name in _PROMOTION_CONTRACT_PRE_GENERATION_PROBE_COMPARISON_FIELDS:
         compact[field_name] = metrics.get(field_name)
+    for field_name in _PROMOTION_CONTRACT_CLAIM_FACTUALITY_PROBE_COMPARISON_FIELDS:
+        compact[field_name] = metrics.get(field_name)
     for field_name in _PROMOTION_CONTRACT_COUNTERFACTUAL_VERIFICATION_FIELDS:
         compact[field_name] = metrics.get(field_name)
+    for field_name in _PROMOTION_CONTRACT_EVIDENCE_HANDOFF_FIELDS:
+        value = metrics.get(field_name)
+        if field_name == "promotion_contract_evidence_handoff_filled_groups":
+            compact[field_name] = list(_sequence(value))
+        elif field_name == "promotion_contract_evidence_handoff_group_statuses":
+            compact[field_name] = dict(_mapping(value))
+        else:
+            compact[field_name] = value
+    for field_name in _PROMOTION_CONTRACT_FRONTIER_RELEASE_EVIDENCE_FIELDS:
+        value = metrics.get(field_name)
+        if field_name == "promotion_contract_frontier_release_evidence_run_names":
+            compact[field_name] = list(_sequence(value))
+        else:
+            compact[field_name] = value
     for prefix in _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
             compact[field_name] = metrics.get(field_name)
     for prefix in _PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
+            compact[field_name] = metrics.get(field_name)
+    for prefix in _PRODUCT_RUNTIME_DRIFT_CLAIM_FACTUALITY_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
             compact[field_name] = metrics.get(field_name)
@@ -893,6 +1278,18 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         for suffix in ("baseline", "current", "status"):
             field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
             compact[field_name] = metrics.get(field_name)
+    for prefix in _PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
+            compact[field_name] = metrics.get(field_name)
+    for prefix in _PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
+            compact[field_name] = metrics.get(field_name)
+    for prefix in _PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
+            compact[field_name] = metrics.get(field_name)
     return compact
 
 
@@ -901,6 +1298,7 @@ def _aggregate_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     contexts = [_mapping(record.get("context")) for record in records]
     return {
         "n_traces": len(records),
+        "trace_format_counts": _counts(item.get("trace_format") for item in metrics),
         "runtime_trace_count": sum(1 for item in metrics if bool(item.get("has_runtime_trace"))),
         "total_seconds": _numeric_summary(item.get("total_seconds") for item in metrics),
         "accounted_seconds": _numeric_summary(item.get("accounted_seconds") for item in metrics),
@@ -942,8 +1340,11 @@ def _aggregate_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "verification_plan": _aggregate_verification_plan(metrics),
         "action_execution": _aggregate_action_execution(metrics),
         "action_audit": _aggregate_action_audit(metrics),
+        "trajectory_audit": _aggregate_trajectory_audit(metrics),
         "triple_coverage": _aggregate_triple_coverage(metrics),
+        "world_model": _aggregate_world_model(metrics),
         "final_answer": _aggregate_final_answer(metrics),
+        "decision_sequence": _aggregate_decision_sequence(metrics),
         "promotion_contract": _aggregate_promotion_contract(metrics),
         "phases": _aggregate_phases(metrics),
         "routes": _aggregate_routes(metrics),
@@ -955,6 +1356,7 @@ def _aggregate_contexts(contexts: Sequence[Mapping[str, Any]]) -> dict[str, Any]
     staged_values = [context.get("staged_verification_enabled") for context in contexts]
     return {
         "source_trace_count": len(contexts),
+        "trace_format_counts": _counts(context.get("trace_format") for context in contexts),
         "runtime_profile_counts": _counts(context.get("runtime_profile") for context in contexts),
         "runtime_profile_source_counts": _counts(
             context.get("runtime_profile_source") for context in contexts
@@ -1029,6 +1431,18 @@ def _optimization_report(
                 summary,
                 "action_audit",
                 "malformed_payload_rate",
+            ),
+            "trajectory_audit_error_rate": _nested(summary, "trajectory_audit", "error_rate"),
+            "trajectory_audit_failed_trace_rate": _nested(
+                summary,
+                "trajectory_audit",
+                "failed_trace_rate",
+            ),
+            "trajectory_audit_factual_rate": _nested(summary, "trajectory_audit", "factual_rate"),
+            "trajectory_audit_procedural_rate": _nested(
+                summary,
+                "trajectory_audit",
+                "procedural_rate",
             ),
             "slowest_phase": None if not phase_hotspots else phase_hotspots[0]["phase"],
             "slowest_route": None if not route_hotspots else route_hotspots[0]["route"],
@@ -1762,6 +2176,66 @@ def _aggregate_action_audit(metrics: Sequence[Mapping[str, Any]]) -> dict[str, A
     }
 
 
+def _aggregate_trajectory_audit(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    summaries = [_mapping(item.get("trajectory_audit_summary")) for item in metrics]
+    n_traces = len(metrics)
+    available_count = sum(1 for item in metrics if item.get("trajectory_audit_available") is True)
+    passed_count = sum(1 for item in metrics if item.get("trajectory_audit_passed") is True)
+    failed_count = sum(1 for item in metrics if item.get("trajectory_audit_passed") is False)
+    counts_by_code: dict[str, int] = {}
+    counts_by_severity: dict[str, int] = {}
+    counts_by_type: dict[str, int] = {}
+    for summary in summaries:
+        _merge_counts(counts_by_code, _mapping(summary.get("counts_by_code")))
+        _merge_counts(counts_by_severity, _mapping(summary.get("counts_by_severity")))
+        _merge_counts(counts_by_type, _mapping(summary.get("counts_by_type")))
+    issue_count = _sum_float(metrics, "trajectory_audit_issue_count")
+    error_count = _sum_float(metrics, "trajectory_audit_error_count")
+    warning_count = _sum_float(metrics, "trajectory_audit_warning_count")
+    info_count = _sum_float(metrics, "trajectory_audit_info_count")
+    factual_count = _sum_float(metrics, "trajectory_audit_factual_count") or 0.0
+    referential_count = _sum_float(metrics, "trajectory_audit_referential_count") or 0.0
+    logical_count = _sum_float(metrics, "trajectory_audit_logical_count") or 0.0
+    procedural_count = _sum_float(metrics, "trajectory_audit_procedural_count") or 0.0
+    scope_count = _sum_float(metrics, "trajectory_audit_scope_count") or 0.0
+    return {
+        "source_trace_count": n_traces,
+        "available_trace_count": available_count,
+        "missing_trace_count": n_traces - available_count,
+        "coverage_rate": _safe_div(available_count, n_traces),
+        "passed_trace_count": passed_count,
+        "failed_trace_count": failed_count,
+        "passed_trace_rate": _safe_div(passed_count, available_count),
+        "failed_trace_rate": _safe_div(failed_count, available_count),
+        "source_counts": _counts(item.get("trajectory_audit_source") for item in metrics),
+        "issue_count": issue_count,
+        "error_count": error_count,
+        "warning_count": warning_count,
+        "info_count": info_count,
+        "issue_rate": _safe_div(issue_count, n_traces),
+        "error_rate": _safe_div(error_count, n_traces),
+        "warning_rate": _safe_div(warning_count, n_traces),
+        "info_rate": _safe_div(info_count, n_traces),
+        "factual_count": factual_count,
+        "factual_rate": _safe_div(factual_count, n_traces),
+        "referential_count": referential_count,
+        "referential_rate": _safe_div(referential_count, n_traces),
+        "logical_count": logical_count,
+        "logical_rate": _safe_div(logical_count, n_traces),
+        "procedural_count": procedural_count,
+        "procedural_rate": _safe_div(procedural_count, n_traces),
+        "scope_count": scope_count,
+        "scope_rate": _safe_div(scope_count, n_traces),
+        "counts_by_code": counts_by_code,
+        "counts_by_severity": counts_by_severity,
+        "counts_by_type": counts_by_type,
+        "per_trace_issue_count": _numeric_summary(
+            item.get("trajectory_audit_issue_count") for item in metrics
+        ),
+        "summary_observations": sum(1 for summary in summaries if summary),
+    }
+
+
 def _aggregate_triple_coverage(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     summaries = [_mapping(item.get("triple_coverage_summary")) for item in metrics]
     claim_count = _sum_float(summaries, "claim_count")
@@ -1831,6 +2305,95 @@ def _aggregate_triple_coverage(metrics: Sequence[Mapping[str, Any]]) -> dict[str
     }
 
 
+def _aggregate_world_model(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    summaries = [_mapping(item.get("world_model_summary")) for item in metrics]
+    world_model_total = _sum_float(summaries, "world_model_total")
+    conflict_count = _sum_float(summaries, "conflict_count")
+    low_agreement_count = _sum_float(summaries, "low_agreement_count")
+    no_rule_matched_count = _sum_float(summaries, "no_rule_matched_count")
+    trace_gap_count = _sum_float(summaries, "trace_gap_count")
+    counts_by_status: dict[str, int] = {}
+    counts_by_adapter: dict[str, int] = {}
+    counts_by_reference_id: dict[str, int] = {}
+    counts_by_decision_rule: dict[str, int] = {}
+    conflict_paths: dict[str, int] = {}
+    for summary in summaries:
+        _merge_counts(counts_by_status, _mapping(summary.get("counts_by_status")))
+    for item in metrics:
+        _merge_counts(counts_by_adapter, _mapping(item.get("world_model_counts_by_adapter")))
+        _merge_counts(
+            counts_by_reference_id,
+            _mapping(item.get("world_model_counts_by_reference_id")),
+        )
+        _merge_counts(
+            counts_by_decision_rule,
+            _mapping(item.get("world_model_counts_by_decision_rule")),
+        )
+        _merge_counts(conflict_paths, _mapping(item.get("world_model_conflict_paths")))
+    participating_trace_count = sum(
+        1
+        for item in metrics
+        if (_finite_float(item.get("world_model_total")) or 0.0) > 0.0
+    )
+    traceable_trace_count = sum(1 for item in metrics if item.get("world_model_traceable") is True)
+    untraceable_trace_count = sum(
+        1
+        for item in metrics
+        if (_finite_float(item.get("world_model_total")) or 0.0) > 0.0
+        and item.get("world_model_traceable") is False
+    )
+    return {
+        "source_trace_count": len(metrics),
+        "summary_observations": sum(1 for summary in summaries if summary),
+        "source_counts": _counts(item.get("world_model_source") for item in metrics),
+        "participating_trace_count": participating_trace_count,
+        "participating_trace_rate": _safe_div(participating_trace_count, len(metrics)),
+        "world_model_total": world_model_total,
+        "coverage_rate": _safe_div(world_model_total, _sum_float(summaries, "total")),
+        "conflict_count": conflict_count,
+        "conflict_rate": _safe_div(conflict_count, world_model_total),
+        "low_agreement_count": low_agreement_count,
+        "low_agreement_rate": _safe_div(low_agreement_count, world_model_total),
+        "no_rule_matched_count": no_rule_matched_count,
+        "trace_gap_count": trace_gap_count,
+        "trace_gap_rate": _safe_div(trace_gap_count, world_model_total),
+        "traceable_trace_count": traceable_trace_count,
+        "untraceable_trace_count": untraceable_trace_count,
+        "counts_by_status": counts_by_status,
+        "counts_by_adapter": counts_by_adapter,
+        "counts_by_reference_id": counts_by_reference_id,
+        "counts_by_decision_rule": counts_by_decision_rule,
+        "conflict_paths": conflict_paths,
+        "per_trace_result_count": _numeric_summary(
+            item.get("world_model_total") for item in metrics
+        ),
+        "per_trace_coverage_rate": _numeric_summary(
+            item.get("world_model_coverage_rate") for item in metrics
+        ),
+        "per_trace_conflict_rate": _numeric_summary(
+            item.get("world_model_conflict_rate") for item in metrics
+        ),
+        "per_trace_low_agreement_rate": _numeric_summary(
+            item.get("world_model_low_agreement_rate") for item in metrics
+        ),
+        "per_trace_trace_gap_rate": _numeric_summary(
+            item.get("world_model_trace_gap_rate") for item in metrics
+        ),
+        "prediction_confidence_mean": _numeric_summary(
+            item.get("world_model_prediction_confidence_mean") for item in metrics
+        ),
+        "prediction_confidence_min": _numeric_summary(
+            item.get("world_model_prediction_confidence_min") for item in metrics
+        ),
+        "agreement_rate_mean": _numeric_summary(
+            item.get("world_model_agreement_rate_mean") for item in metrics
+        ),
+        "agreement_rate_min": _numeric_summary(
+            item.get("world_model_agreement_rate_min") for item in metrics
+        ),
+    }
+
+
 def _fallback_audit_claim_covered_count(summaries: Sequence[Mapping[str, Any]]) -> float | None:
     total = 0.0
     observed = False
@@ -1871,6 +2434,61 @@ def _aggregate_final_answer(metrics: Sequence[Mapping[str, Any]]) -> dict[str, A
     }
 
 
+def _aggregate_decision_sequence(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    sequence_metrics = [item for item in metrics if bool(item.get("is_decision_sequence"))]
+    decision_count = sum(
+        int(value)
+        for item in sequence_metrics
+        if (value := _finite_float(item.get("decision_sequence_length"))) is not None
+    )
+    rejected_count = sum(
+        int(value)
+        for item in sequence_metrics
+        if (value := _finite_float(item.get("decision_sequence_rejected_count"))) is not None
+    )
+    multiple_rejected_count = sum(
+        int(value)
+        for item in sequence_metrics
+        if (value := _finite_float(item.get("decision_sequence_multiple_testing_rejected_count"))) is not None
+    )
+    clarify_unknown_count = sum(
+        int(value)
+        for item in sequence_metrics
+        if (value := _finite_float(item.get("decision_sequence_clarify_unknown_count"))) is not None
+    )
+    action_counts: dict[str, int] = {}
+    risk_level_counts: dict[str, int] = {}
+    gate_status_counts: dict[str, int] = {}
+    multiple_gate_status_counts: dict[str, int] = {}
+    for item in sequence_metrics:
+        _merge_counts(action_counts, _mapping(item.get("decision_sequence_action_counts")))
+        _merge_counts(risk_level_counts, _mapping(item.get("decision_sequence_risk_level_counts")))
+        _merge_counts(gate_status_counts, _mapping(item.get("decision_sequence_gate_status_counts")))
+        _merge_counts(
+            multiple_gate_status_counts,
+            _mapping(item.get("decision_sequence_multiple_testing_gate_status_counts")),
+        )
+    return {
+        "source_trace_count": len(metrics),
+        "sequence_trace_count": len(sequence_metrics),
+        "coverage_rate": _safe_div(len(sequence_metrics), len(metrics)),
+        "decision_count": decision_count,
+        "decision_count_per_trace": _numeric_summary(
+            item.get("decision_sequence_length") for item in sequence_metrics
+        ),
+        "action_counts": action_counts,
+        "risk_level_counts": risk_level_counts,
+        "sequential_gate_status_counts": gate_status_counts,
+        "sequential_gate_rejected_count": rejected_count,
+        "sequential_gate_rejected_rate": _safe_div(rejected_count, decision_count),
+        "multiple_testing_gate_status_counts": multiple_gate_status_counts,
+        "multiple_testing_gate_rejected_count": multiple_rejected_count,
+        "multiple_testing_gate_rejected_rate": _safe_div(multiple_rejected_count, decision_count),
+        "clarify_unknown_count": clarify_unknown_count,
+        "clarify_unknown_rate": _safe_div(clarify_unknown_count, decision_count),
+    }
+
+
 def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     available_count = sum(1 for item in metrics if bool(item.get("promotion_contract_available")))
     property_count_values = [
@@ -1901,7 +2519,14 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
     pre_generation = _aggregate_promotion_contract_pre_generation_probe_comparison(
         metrics
     )
+    claim_factuality = _aggregate_promotion_contract_claim_factuality_probe_comparison(
+        metrics
+    )
     counterfactual = _aggregate_promotion_contract_counterfactual_verification(metrics)
+    evidence_handoff = _aggregate_promotion_contract_evidence_handoff(metrics)
+    frontier_release_evidence = _aggregate_promotion_contract_frontier_release_evidence(
+        metrics
+    )
     product_trace_replay = _aggregate_promotion_contract_product_trace_replay(metrics)
     product_runtime_drift = _aggregate_promotion_contract_product_runtime_drift(metrics)
     return {
@@ -1952,7 +2577,10 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
         },
         "external_evidence_baseline_comparison": external_evidence,
         "pre_generation_probe_comparison": pre_generation,
+        "claim_factuality_probe_comparison": claim_factuality,
         "counterfactual_verification": counterfactual,
+        "evidence_handoff": evidence_handoff,
+        "frontier_release_evidence": frontier_release_evidence,
         "triple_extraction_fixture_matrix": {
             "available_trace_count": matrix_available_count,
             "missing_trace_count": len(metrics) - matrix_available_count,
@@ -1992,6 +2620,231 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
                 for item in metrics
             ),
         },
+    }
+
+
+def _aggregate_promotion_contract_evidence_handoff(
+    metrics: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    available_count = sum(
+        1
+        for item in metrics
+        if bool(item.get("promotion_contract_evidence_handoff_available"))
+    )
+    manifest_values = [
+        item.get("promotion_contract_evidence_handoff_manifest_verified")
+        for item in metrics
+    ]
+    manifest_observations = sum(value is not None for value in manifest_values)
+    return {
+        "available_trace_count": available_count,
+        "missing_trace_count": len(metrics) - available_count,
+        "coverage_rate": _safe_div(available_count, len(metrics)),
+        "manifest_counts": _counts(
+            item.get("promotion_contract_evidence_handoff_manifest") for item in metrics
+        ),
+        "contract_counts": _counts(
+            item.get("promotion_contract_evidence_handoff_contract") for item in metrics
+        ),
+        "audit_counts": _counts(
+            item.get("promotion_contract_evidence_handoff_audit") for item in metrics
+        ),
+        "status_counts": _counts(
+            item.get("promotion_contract_evidence_handoff_status") for item in metrics
+        ),
+        "workflow_counts": _counts(
+            item.get("promotion_contract_evidence_handoff_workflow") for item in metrics
+        ),
+        "manifest_verification_observations": manifest_observations,
+        "manifest_verified_count": sum(value is True for value in manifest_values),
+        "manifest_failed_count": sum(value is False for value in manifest_values),
+        "manifest_unknown_count": len(metrics) - manifest_observations,
+        "before_missing_metric_count": _numeric_summary(
+            item.get("promotion_contract_evidence_handoff_before_missing_metric_count")
+            for item in metrics
+        ),
+        "after_missing_metric_count": _numeric_summary(
+            item.get("promotion_contract_evidence_handoff_after_missing_metric_count")
+            for item in metrics
+        ),
+        "resolved_missing_metric_count": _numeric_summary(
+            item.get("promotion_contract_evidence_handoff_resolved_missing_metric_count")
+            for item in metrics
+        ),
+        "expected_metric_count": _numeric_summary(
+            item.get("promotion_contract_evidence_handoff_expected_metric_count")
+            for item in metrics
+        ),
+        "present_metric_count": _numeric_summary(
+            item.get("promotion_contract_evidence_handoff_present_metric_count")
+            for item in metrics
+        ),
+        "missing_metric_count": _numeric_summary(
+            item.get("promotion_contract_evidence_handoff_missing_metric_count")
+            for item in metrics
+        ),
+        "blocked_group_count": _numeric_summary(
+            item.get("promotion_contract_evidence_handoff_blocked_group_count")
+            for item in metrics
+        ),
+        "present_metric_rate": _numeric_summary(
+            item.get("promotion_contract_evidence_handoff_present_metric_rate")
+            for item in metrics
+        ),
+        "missing_metric_rate": _numeric_summary(
+            item.get("promotion_contract_evidence_handoff_missing_metric_rate")
+            for item in metrics
+        ),
+        "group_count": _numeric_summary(
+            item.get("promotion_contract_evidence_handoff_group_count") for item in metrics
+        ),
+        "promoted_group_count": _numeric_summary(
+            item.get("promotion_contract_evidence_handoff_promoted_group_count")
+            for item in metrics
+        ),
+        "promoted_group_rate": _numeric_summary(
+            item.get("promotion_contract_evidence_handoff_promoted_group_rate")
+            for item in metrics
+        ),
+        "filled_group_counts": _counts_from_sequence_items(
+            item.get("promotion_contract_evidence_handoff_filled_groups")
+            for item in metrics
+        ),
+        "group_status_counts": _counts_from_group_statuses(
+            item.get("promotion_contract_evidence_handoff_group_statuses")
+            for item in metrics
+        ),
+    }
+
+
+def _aggregate_promotion_contract_frontier_release_evidence(
+    metrics: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    available_count = sum(
+        1
+        for item in metrics
+        if bool(item.get("promotion_contract_frontier_release_evidence_available"))
+    )
+    report_count = sum(
+        1
+        for item in metrics
+        if item.get("promotion_contract_frontier_release_evidence_report") is not None
+    )
+    manifest_count = sum(
+        1
+        for item in metrics
+        if item.get("promotion_contract_frontier_release_evidence_manifest") is not None
+    )
+    status_values = [
+        item.get("promotion_contract_frontier_release_evidence_status")
+        for item in metrics
+    ]
+    decision_status_values = [
+        item.get("promotion_contract_frontier_release_evidence_decision_status")
+        for item in metrics
+    ]
+    verifier_status_values = [
+        item.get("promotion_contract_frontier_release_evidence_verifier_track_status")
+        for item in metrics
+    ]
+    abstention_status_values = [
+        item.get("promotion_contract_frontier_release_evidence_abstention_track_status")
+        for item in metrics
+    ]
+    multiple_testing_status_values = [
+        item.get("promotion_contract_frontier_release_evidence_multiple_testing_track_status")
+        for item in metrics
+    ]
+    citation_batch_status_values = [
+        item.get("promotion_contract_frontier_release_evidence_citation_batch_track_status")
+        for item in metrics
+    ]
+    return {
+        "available_trace_count": available_count,
+        "missing_trace_count": len(metrics) - available_count,
+        "coverage_rate": _safe_div(available_count, len(metrics)),
+        "report_present_rate": _safe_div(report_count, len(metrics)),
+        "manifest_present_rate": _safe_div(manifest_count, len(metrics)),
+        "report_counts": _counts(
+            item.get("promotion_contract_frontier_release_evidence_report")
+            for item in metrics
+        ),
+        "manifest_counts": _counts(
+            item.get("promotion_contract_frontier_release_evidence_manifest")
+            for item in metrics
+        ),
+        "source_counts": _counts(
+            item.get("promotion_contract_frontier_release_evidence_source")
+            for item in metrics
+        ),
+        "registry_counts": _counts(
+            item.get("promotion_contract_frontier_release_evidence_registry")
+            for item in metrics
+        ),
+        "record_counts": _counts(
+            item.get("promotion_contract_frontier_release_evidence_record")
+            for item in metrics
+        ),
+        "workflow_counts": _counts(
+            item.get("promotion_contract_frontier_release_evidence_workflow")
+            for item in metrics
+        ),
+        "status_counts": _counts(status_values),
+        "decision_status_counts": _counts(decision_status_values),
+        "verifier_track_status_counts": _counts(verifier_status_values),
+        "abstention_track_status_counts": _counts(abstention_status_values),
+        "multiple_testing_track_status_counts": _counts(multiple_testing_status_values),
+        "citation_batch_track_status_counts": _counts(citation_batch_status_values),
+        "status_promote_rate": _promote_rate(status_values),
+        "decision_promote_rate": _promote_rate(decision_status_values),
+        "verifier_track_promote_rate": _promote_rate(verifier_status_values),
+        "abstention_track_promote_rate": _promote_rate(abstention_status_values),
+        "multiple_testing_track_promote_rate": _promote_rate(multiple_testing_status_values),
+        "citation_batch_track_promote_rate": _promote_rate(citation_batch_status_values),
+        "run_count": _numeric_summary(
+            item.get("promotion_contract_frontier_release_evidence_run_count")
+            for item in metrics
+        ),
+        "citation_batch_rollup_count": _numeric_summary(
+            item.get(
+                "promotion_contract_frontier_release_evidence_citation_batch_rollup_count"
+            )
+            for item in metrics
+        ),
+        "citation_batch_expected_batch_count": _numeric_summary(
+            item.get(
+                "promotion_contract_frontier_release_evidence_citation_batch_expected_batch_count"
+            )
+            for item in metrics
+        ),
+        "citation_batch_observed_batch_count": _numeric_summary(
+            item.get(
+                "promotion_contract_frontier_release_evidence_citation_batch_observed_batch_count"
+            )
+            for item in metrics
+        ),
+        "citation_batch_missing_expected_batch_count": _numeric_summary(
+            item.get(
+                "promotion_contract_frontier_release_evidence_citation_batch_missing_expected_batch_count"
+            )
+            for item in metrics
+        ),
+        "citation_batch_duplicate_batch_count": _numeric_summary(
+            item.get(
+                "promotion_contract_frontier_release_evidence_citation_batch_duplicate_batch_count"
+            )
+            for item in metrics
+        ),
+        "citation_batch_unexpected_batch_count": _numeric_summary(
+            item.get(
+                "promotion_contract_frontier_release_evidence_citation_batch_unexpected_batch_count"
+            )
+            for item in metrics
+        ),
+        "run_names": _counts_from_sequence_items(
+            item.get("promotion_contract_frontier_release_evidence_run_names")
+            for item in metrics
+        ),
     }
 
 
@@ -2137,6 +2990,124 @@ def _aggregate_promotion_contract_pre_generation_probe_comparison(
         "best_redline_margin": _numeric_summary(
             item.get(
                 "promotion_contract_pre_generation_probe_comparison_best_redline_margin"
+            )
+            for item in metrics
+        ),
+    }
+
+
+def _aggregate_promotion_contract_claim_factuality_probe_comparison(
+    metrics: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    available_count = sum(
+        1
+        for item in metrics
+        if bool(item.get("promotion_contract_claim_factuality_probe_comparison_available"))
+    )
+    manifest_values = [
+        item.get("promotion_contract_claim_factuality_probe_comparison_manifest_verified")
+        for item in metrics
+    ]
+    manifest_observations = sum(value is not None for value in manifest_values)
+    return {
+        "available_trace_count": available_count,
+        "missing_trace_count": len(metrics) - available_count,
+        "coverage_rate": _safe_div(available_count, len(metrics)),
+        "source_counts": _counts(
+            item.get("promotion_contract_claim_factuality_probe_comparison_source")
+            for item in metrics
+        ),
+        "status_counts": _counts(
+            item.get("promotion_contract_claim_factuality_probe_comparison_status")
+            for item in metrics
+        ),
+        "report_status_counts": _counts(
+            item.get("promotion_contract_claim_factuality_probe_comparison_report_status")
+            for item in metrics
+        ),
+        "record_counts": _counts(
+            item.get("promotion_contract_claim_factuality_probe_comparison_record")
+            for item in metrics
+        ),
+        "manifest_verification_observations": manifest_observations,
+        "manifest_verified_count": sum(value is True for value in manifest_values),
+        "manifest_failed_count": sum(value is False for value in manifest_values),
+        "manifest_unknown_count": len(metrics) - manifest_observations,
+        "model_count": _numeric_summary(
+            item.get("promotion_contract_claim_factuality_probe_comparison_model_count")
+            for item in metrics
+        ),
+        "run_count": _numeric_summary(
+            item.get("promotion_contract_claim_factuality_probe_comparison_run_count")
+            for item in metrics
+        ),
+        "redline_passed_counts": _counts(
+            item.get("promotion_contract_claim_factuality_probe_comparison_redline_passed")
+            for item in metrics
+        ),
+        "redline_run_count": _numeric_summary(
+            item.get(
+                "promotion_contract_claim_factuality_probe_comparison_redline_run_count"
+            )
+            for item in metrics
+        ),
+        "best_run_counts": _counts(
+            item.get("promotion_contract_claim_factuality_probe_comparison_best_run")
+            for item in metrics
+        ),
+        "best_model_counts": _counts(
+            item.get("promotion_contract_claim_factuality_probe_comparison_best_model")
+            for item in metrics
+        ),
+        "best_record_count": _numeric_summary(
+            item.get(
+                "promotion_contract_claim_factuality_probe_comparison_best_record_count"
+            )
+            for item in metrics
+        ),
+        "best_layer": _numeric_summary(
+            item.get("promotion_contract_claim_factuality_probe_comparison_best_layer")
+            for item in metrics
+        ),
+        "best_test_label_auroc": _numeric_summary(
+            item.get(
+                "promotion_contract_claim_factuality_probe_comparison_best_test_label_auroc"
+            )
+            for item in metrics
+        ),
+        "best_test_selective_accuracy": _numeric_summary(
+            item.get(
+                "promotion_contract_claim_factuality_probe_comparison_best_test_selective_accuracy"
+            )
+            for item in metrics
+        ),
+        "best_test_selective_coverage": _numeric_summary(
+            item.get(
+                "promotion_contract_claim_factuality_probe_comparison_best_test_selective_coverage"
+            )
+            for item in metrics
+        ),
+        "best_conformal_threshold": _numeric_summary(
+            item.get(
+                "promotion_contract_claim_factuality_probe_comparison_best_conformal_threshold"
+            )
+            for item in metrics
+        ),
+        "best_redline_signal_counts": _counts(
+            item.get(
+                "promotion_contract_claim_factuality_probe_comparison_best_redline_signal"
+            )
+            for item in metrics
+        ),
+        "best_redline_auroc": _numeric_summary(
+            item.get(
+                "promotion_contract_claim_factuality_probe_comparison_best_redline_auroc"
+            )
+            for item in metrics
+        ),
+        "best_redline_margin": _numeric_summary(
+            item.get(
+                "promotion_contract_claim_factuality_probe_comparison_best_redline_margin"
             )
             for item in metrics
         ),
@@ -2397,6 +3368,22 @@ def _aggregate_promotion_contract_product_runtime_drift(
             item.get("promotion_contract_product_runtime_drift_action_gate_evidence_required")
             for item in metrics
         ),
+        "trajectory_audit_evidence_required_counts": _counts(
+            item.get(
+                "promotion_contract_product_runtime_drift_trajectory_audit_evidence_required"
+            )
+            for item in metrics
+        ),
+        "evidence_handoff_evidence_required_counts": _counts(
+            item.get("promotion_contract_product_runtime_drift_evidence_handoff_evidence_required")
+            for item in metrics
+        ),
+        "frontier_release_evidence_required_counts": _counts(
+            item.get(
+                "promotion_contract_product_runtime_drift_frontier_release_evidence_required"
+            )
+            for item in metrics
+        ),
         "compared_metric_count": _numeric_summary(
             item.get("promotion_contract_product_runtime_drift_compared_metric_count")
             for item in metrics
@@ -2471,6 +3458,42 @@ def _aggregate_promotion_contract_product_runtime_drift(
             )
             for item in metrics
         ),
+        "trajectory_audit_evidence_metric_count": _numeric_summary(
+            item.get(
+                "promotion_contract_product_runtime_drift_trajectory_audit_evidence_metric_count"
+            )
+            for item in metrics
+        ),
+        "trajectory_audit_evidence_blocked_metric_count": _numeric_summary(
+            item.get(
+                "promotion_contract_product_runtime_drift_trajectory_audit_evidence_blocked_metric_count"
+            )
+            for item in metrics
+        ),
+        "evidence_handoff_evidence_metric_count": _numeric_summary(
+            item.get(
+                "promotion_contract_product_runtime_drift_evidence_handoff_evidence_metric_count"
+            )
+            for item in metrics
+        ),
+        "evidence_handoff_evidence_blocked_metric_count": _numeric_summary(
+            item.get(
+                "promotion_contract_product_runtime_drift_evidence_handoff_evidence_blocked_metric_count"
+            )
+            for item in metrics
+        ),
+        "frontier_release_evidence_metric_count": _numeric_summary(
+            item.get(
+                "promotion_contract_product_runtime_drift_frontier_release_evidence_metric_count"
+            )
+            for item in metrics
+        ),
+        "frontier_release_evidence_blocked_metric_count": _numeric_summary(
+            item.get(
+                "promotion_contract_product_runtime_drift_frontier_release_evidence_blocked_metric_count"
+            )
+            for item in metrics
+        ),
         "promotion_evidence": _aggregate_product_runtime_drift_evidence(
             metrics,
             prefixes=_PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES,
@@ -2478,6 +3501,10 @@ def _aggregate_promotion_contract_product_runtime_drift(
         "pre_generation_evidence": _aggregate_product_runtime_drift_evidence(
             metrics,
             prefixes=_PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_PREFIXES,
+        ),
+        "claim_factuality_evidence": _aggregate_product_runtime_drift_evidence(
+            metrics,
+            prefixes=_PRODUCT_RUNTIME_DRIFT_CLAIM_FACTUALITY_EVIDENCE_PREFIXES,
         ),
         "counterfactual_evidence": _aggregate_product_runtime_drift_evidence(
             metrics,
@@ -2494,6 +3521,18 @@ def _aggregate_promotion_contract_product_runtime_drift(
         "action_gate_evidence": _aggregate_product_runtime_drift_evidence(
             metrics,
             prefixes=_PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES,
+        ),
+        "trajectory_audit_evidence": _aggregate_product_runtime_drift_evidence(
+            metrics,
+            prefixes=_PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_PREFIXES,
+        ),
+        "evidence_handoff_evidence": _aggregate_product_runtime_drift_evidence(
+            metrics,
+            prefixes=_PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES,
+        ),
+        "frontier_release_evidence": _aggregate_product_runtime_drift_evidence(
+            metrics,
+            prefixes=_PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES,
         ),
     }
 
@@ -2748,12 +3787,28 @@ def _load_policy(config: ProductRuntimeBaselineConfig) -> tuple[ProductRuntimeBu
     return None, None
 
 
+def _load_promotion_metadata(
+    config: ProductRuntimeBaselineConfig,
+    *,
+    budget_enabled: bool,
+) -> dict[str, Any] | None:
+    if config.promotion_contract_path is None:
+        return None
+    contract = ProductPromotionContract.from_json(config.promotion_contract_path)
+    return product_promotion_contract_metadata(
+        contract,
+        source=str(config.promotion_contract_path),
+        budget_enabled=budget_enabled,
+    )
+
+
 def _write_artifact_manifest(
     config: ProductRuntimeBaselineConfig,
     report: Mapping[str, Any],
     *,
     artifacts: Mapping[str, str | Path | None] | None = None,
 ) -> dict[str, Any]:
+    trajectory_audit_metadata = _trajectory_audit_flat_metadata(report)
     promotion_contract_drift_metadata = _promotion_contract_runtime_drift_flat_metadata(report)
     promotion_contract_trace_replay_metadata = _promotion_contract_trace_replay_flat_metadata(
         report
@@ -2764,8 +3819,17 @@ def _write_artifact_manifest(
     promotion_contract_pre_generation_metadata = (
         _promotion_contract_pre_generation_probe_comparison_flat_metadata(report)
     )
+    promotion_contract_claim_factuality_metadata = (
+        _promotion_contract_claim_factuality_probe_comparison_flat_metadata(report)
+    )
     promotion_contract_counterfactual_metadata = (
         _promotion_contract_counterfactual_verification_flat_metadata(report)
+    )
+    promotion_contract_evidence_handoff_metadata = (
+        _promotion_contract_evidence_handoff_flat_metadata(report)
+    )
+    promotion_contract_frontier_release_evidence_metadata = (
+        _promotion_contract_frontier_release_evidence_flat_metadata(report)
     )
     manifest = build_artifact_manifest(
         _artifact_paths(config) if artifacts is None else artifacts,
@@ -2798,11 +3862,15 @@ def _write_artifact_manifest(
             "budget_enabled": _mapping(report.get("budget")).get("enabled"),
             "budget_passed": _mapping(report.get("budget")).get("passed"),
             "compact_json": config.compact_json,
+            **trajectory_audit_metadata,
             **promotion_contract_drift_metadata,
             **promotion_contract_trace_replay_metadata,
             **promotion_contract_external_evidence_metadata,
             **promotion_contract_pre_generation_metadata,
+            **promotion_contract_claim_factuality_metadata,
             **promotion_contract_counterfactual_metadata,
+            **promotion_contract_evidence_handoff_metadata,
+            **promotion_contract_frontier_release_evidence_metadata,
             **dict(config.metadata),
         },
     )
@@ -2827,6 +3895,7 @@ def _artifact_paths(config: ProductRuntimeBaselineConfig) -> dict[str, str | Pat
 def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, Any]) -> None:
     if config.registry_path is None:
         return
+    trajectory_audit_metadata = _trajectory_audit_flat_metadata(report)
     promotion_contract_drift_metadata = _promotion_contract_runtime_drift_flat_metadata(report)
     promotion_contract_trace_replay_metadata = _promotion_contract_trace_replay_flat_metadata(
         report
@@ -2837,8 +3906,17 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
     promotion_contract_pre_generation_metadata = (
         _promotion_contract_pre_generation_probe_comparison_flat_metadata(report)
     )
+    promotion_contract_claim_factuality_metadata = (
+        _promotion_contract_claim_factuality_probe_comparison_flat_metadata(report)
+    )
     promotion_contract_counterfactual_metadata = (
         _promotion_contract_counterfactual_verification_flat_metadata(report)
+    )
+    promotion_contract_evidence_handoff_metadata = (
+        _promotion_contract_evidence_handoff_flat_metadata(report)
+    )
+    promotion_contract_frontier_release_evidence_metadata = (
+        _promotion_contract_frontier_release_evidence_flat_metadata(report)
     )
     registry = ArtifactRegistry.load_json(config.registry_path)
     registry.record_product_runtime_baseline(
@@ -2876,11 +3954,15 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
             "budget_passed": _mapping(report.get("budget")).get("passed"),
             "failed_count": _mapping(report.get("budget")).get("failed_count"),
             "compact_json": config.compact_json,
+            **trajectory_audit_metadata,
             **promotion_contract_drift_metadata,
             **promotion_contract_trace_replay_metadata,
             **promotion_contract_external_evidence_metadata,
             **promotion_contract_pre_generation_metadata,
+            **promotion_contract_claim_factuality_metadata,
             **promotion_contract_counterfactual_metadata,
+            **promotion_contract_evidence_handoff_metadata,
+            **promotion_contract_frontier_release_evidence_metadata,
             **dict(config.metadata),
         },
     )
@@ -2902,6 +3984,42 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
             },
         )
     registry.save_json()
+
+
+def _trajectory_audit_flat_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    trajectory = _mapping(_nested(report, "summary", "trajectory_audit"))
+    if not trajectory:
+        return {}
+    return {
+        "trajectory_audit_available_trace_count": trajectory.get("available_trace_count"),
+        "trajectory_audit_missing_trace_count": trajectory.get("missing_trace_count"),
+        "trajectory_audit_coverage_rate": trajectory.get("coverage_rate"),
+        "trajectory_audit_passed_trace_count": trajectory.get("passed_trace_count"),
+        "trajectory_audit_failed_trace_count": trajectory.get("failed_trace_count"),
+        "trajectory_audit_passed_trace_rate": trajectory.get("passed_trace_rate"),
+        "trajectory_audit_failed_trace_rate": trajectory.get("failed_trace_rate"),
+        "trajectory_audit_issue_count": trajectory.get("issue_count"),
+        "trajectory_audit_error_count": trajectory.get("error_count"),
+        "trajectory_audit_warning_count": trajectory.get("warning_count"),
+        "trajectory_audit_info_count": trajectory.get("info_count"),
+        "trajectory_audit_issue_rate": trajectory.get("issue_rate"),
+        "trajectory_audit_error_rate": trajectory.get("error_rate"),
+        "trajectory_audit_warning_rate": trajectory.get("warning_rate"),
+        "trajectory_audit_info_rate": trajectory.get("info_rate"),
+        "trajectory_audit_factual_count": trajectory.get("factual_count"),
+        "trajectory_audit_referential_count": trajectory.get("referential_count"),
+        "trajectory_audit_logical_count": trajectory.get("logical_count"),
+        "trajectory_audit_procedural_count": trajectory.get("procedural_count"),
+        "trajectory_audit_scope_count": trajectory.get("scope_count"),
+        "trajectory_audit_factual_rate": trajectory.get("factual_rate"),
+        "trajectory_audit_referential_rate": trajectory.get("referential_rate"),
+        "trajectory_audit_logical_rate": trajectory.get("logical_rate"),
+        "trajectory_audit_procedural_rate": trajectory.get("procedural_rate"),
+        "trajectory_audit_scope_rate": trajectory.get("scope_rate"),
+        "trajectory_audit_counts_by_code": dict(_mapping(trajectory.get("counts_by_code"))),
+        "trajectory_audit_counts_by_type": dict(_mapping(trajectory.get("counts_by_type"))),
+        "trajectory_audit_counts_by_severity": dict(_mapping(trajectory.get("counts_by_severity"))),
+    }
 
 
 def _promotion_contract_runtime_drift_flat_metadata(
@@ -2948,6 +4066,15 @@ def _promotion_contract_runtime_drift_flat_metadata(
         ),
         "promotion_contract_product_runtime_drift_action_gate_evidence_required_counts": dict(
             _mapping(drift.get("action_gate_evidence_required_counts"))
+        ),
+        "promotion_contract_product_runtime_drift_trajectory_audit_evidence_required_counts": dict(
+            _mapping(drift.get("trajectory_audit_evidence_required_counts"))
+        ),
+        "promotion_contract_product_runtime_drift_evidence_handoff_evidence_required_counts": dict(
+            _mapping(drift.get("evidence_handoff_evidence_required_counts"))
+        ),
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_required_counts": dict(
+            _mapping(drift.get("frontier_release_evidence_required_counts"))
         ),
         "promotion_contract_product_runtime_drift_compared_metric_count_mean": _nested(
             drift,
@@ -3019,6 +4146,36 @@ def _promotion_contract_runtime_drift_flat_metadata(
             "action_gate_evidence_blocked_metric_count",
             "mean",
         ),
+        "promotion_contract_product_runtime_drift_trajectory_audit_evidence_metric_count_mean": _nested(
+            drift,
+            "trajectory_audit_evidence_metric_count",
+            "mean",
+        ),
+        "promotion_contract_product_runtime_drift_trajectory_audit_evidence_blocked_metric_count_mean": _nested(
+            drift,
+            "trajectory_audit_evidence_blocked_metric_count",
+            "mean",
+        ),
+        "promotion_contract_product_runtime_drift_evidence_handoff_evidence_metric_count_mean": _nested(
+            drift,
+            "evidence_handoff_evidence_metric_count",
+            "mean",
+        ),
+        "promotion_contract_product_runtime_drift_evidence_handoff_evidence_blocked_metric_count_mean": _nested(
+            drift,
+            "evidence_handoff_evidence_blocked_metric_count",
+            "mean",
+        ),
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_metric_count_mean": _nested(
+            drift,
+            "frontier_release_evidence_metric_count",
+            "mean",
+        ),
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_blocked_metric_count_mean": _nested(
+            drift,
+            "frontier_release_evidence_blocked_metric_count",
+            "mean",
+        ),
     }
     metadata.update(
         _product_runtime_drift_evidence_flat_metadata(
@@ -3030,6 +4187,12 @@ def _promotion_contract_runtime_drift_flat_metadata(
         _product_runtime_drift_evidence_flat_metadata(
             _mapping(drift.get("pre_generation_evidence")),
             prefixes=_PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_PREFIXES,
+        )
+    )
+    metadata.update(
+        _product_runtime_drift_evidence_flat_metadata(
+            _mapping(drift.get("claim_factuality_evidence")),
+            prefixes=_PRODUCT_RUNTIME_DRIFT_CLAIM_FACTUALITY_EVIDENCE_PREFIXES,
         )
     )
     metadata.update(
@@ -3054,6 +4217,24 @@ def _promotion_contract_runtime_drift_flat_metadata(
         _product_runtime_drift_evidence_flat_metadata(
             _mapping(drift.get("action_gate_evidence")),
             prefixes=_PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES,
+        )
+    )
+    metadata.update(
+        _product_runtime_drift_evidence_flat_metadata(
+            _mapping(drift.get("trajectory_audit_evidence")),
+            prefixes=_PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_PREFIXES,
+        )
+    )
+    metadata.update(
+        _product_runtime_drift_evidence_flat_metadata(
+            _mapping(drift.get("evidence_handoff_evidence")),
+            prefixes=_PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES,
+        )
+    )
+    metadata.update(
+        _product_runtime_drift_evidence_flat_metadata(
+            _mapping(drift.get("frontier_release_evidence")),
+            prefixes=_PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES,
         )
     )
     return metadata
@@ -3296,6 +4477,120 @@ def _promotion_contract_pre_generation_probe_comparison_flat_metadata(
     }
 
 
+def _promotion_contract_claim_factuality_probe_comparison_flat_metadata(
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    claim_factuality = _mapping(
+        _nested(
+            report,
+            "summary",
+            "promotion_contract",
+            "claim_factuality_probe_comparison",
+        )
+    )
+    if not claim_factuality:
+        return {}
+    return {
+        "promotion_contract_claim_factuality_probe_comparison_available_trace_count": (
+            claim_factuality.get("available_trace_count")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_missing_trace_count": (
+            claim_factuality.get("missing_trace_count")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_coverage_rate": (
+            claim_factuality.get("coverage_rate")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_source_counts": dict(
+            _mapping(claim_factuality.get("source_counts"))
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_status_counts": dict(
+            _mapping(claim_factuality.get("status_counts"))
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_report_status_counts": dict(
+            _mapping(claim_factuality.get("report_status_counts"))
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_record_counts": dict(
+            _mapping(claim_factuality.get("record_counts"))
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_manifest_verified_count": (
+            claim_factuality.get("manifest_verified_count")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_manifest_failed_count": (
+            claim_factuality.get("manifest_failed_count")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_manifest_unknown_count": (
+            claim_factuality.get("manifest_unknown_count")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_model_count_mean": _nested(
+            claim_factuality,
+            "model_count",
+            "mean",
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_run_count_mean": _nested(
+            claim_factuality,
+            "run_count",
+            "mean",
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_redline_passed_counts": dict(
+            _mapping(claim_factuality.get("redline_passed_counts"))
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_redline_run_count_mean": _nested(
+            claim_factuality,
+            "redline_run_count",
+            "mean",
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_run_counts": dict(
+            _mapping(claim_factuality.get("best_run_counts"))
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_model_counts": dict(
+            _mapping(claim_factuality.get("best_model_counts"))
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_record_count_mean": _nested(
+            claim_factuality,
+            "best_record_count",
+            "mean",
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_layer_mean": _nested(
+            claim_factuality,
+            "best_layer",
+            "mean",
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_test_label_auroc_mean": _nested(
+            claim_factuality,
+            "best_test_label_auroc",
+            "mean",
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_test_selective_accuracy_mean": _nested(
+            claim_factuality,
+            "best_test_selective_accuracy",
+            "mean",
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_test_selective_coverage_mean": _nested(
+            claim_factuality,
+            "best_test_selective_coverage",
+            "mean",
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_conformal_threshold_mean": _nested(
+            claim_factuality,
+            "best_conformal_threshold",
+            "mean",
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_redline_signal_counts": dict(
+            _mapping(claim_factuality.get("best_redline_signal_counts"))
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_redline_auroc_mean": _nested(
+            claim_factuality,
+            "best_redline_auroc",
+            "mean",
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_redline_margin_mean": _nested(
+            claim_factuality,
+            "best_redline_margin",
+            "mean",
+        ),
+    }
+
+
 def _promotion_contract_counterfactual_verification_flat_metadata(
     report: Mapping[str, Any],
 ) -> dict[str, Any]:
@@ -3367,6 +4662,247 @@ def _promotion_contract_counterfactual_verification_flat_metadata(
     }
 
 
+def _promotion_contract_evidence_handoff_flat_metadata(
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    handoff = _mapping(
+        _nested(
+            report,
+            "summary",
+            "promotion_contract",
+            "evidence_handoff",
+        )
+    )
+    if not handoff:
+        return {}
+    return {
+        "promotion_contract_evidence_handoff_available_trace_count": handoff.get(
+            "available_trace_count"
+        ),
+        "promotion_contract_evidence_handoff_missing_trace_count": handoff.get(
+            "missing_trace_count"
+        ),
+        "promotion_contract_evidence_handoff_coverage_rate": handoff.get(
+            "coverage_rate"
+        ),
+        "promotion_contract_evidence_handoff_manifest_counts": dict(
+            _mapping(handoff.get("manifest_counts"))
+        ),
+        "promotion_contract_evidence_handoff_contract_counts": dict(
+            _mapping(handoff.get("contract_counts"))
+        ),
+        "promotion_contract_evidence_handoff_audit_counts": dict(
+            _mapping(handoff.get("audit_counts"))
+        ),
+        "promotion_contract_evidence_handoff_status_counts": dict(
+            _mapping(handoff.get("status_counts"))
+        ),
+        "promotion_contract_evidence_handoff_workflow_counts": dict(
+            _mapping(handoff.get("workflow_counts"))
+        ),
+        "promotion_contract_evidence_handoff_manifest_verified_count": handoff.get(
+            "manifest_verified_count"
+        ),
+        "promotion_contract_evidence_handoff_manifest_failed_count": handoff.get(
+            "manifest_failed_count"
+        ),
+        "promotion_contract_evidence_handoff_manifest_unknown_count": handoff.get(
+            "manifest_unknown_count"
+        ),
+        "promotion_contract_evidence_handoff_before_missing_metric_count_mean": _nested(
+            handoff,
+            "before_missing_metric_count",
+            "mean",
+        ),
+        "promotion_contract_evidence_handoff_after_missing_metric_count_mean": _nested(
+            handoff,
+            "after_missing_metric_count",
+            "mean",
+        ),
+        "promotion_contract_evidence_handoff_resolved_missing_metric_count_mean": _nested(
+            handoff,
+            "resolved_missing_metric_count",
+            "mean",
+        ),
+        "promotion_contract_evidence_handoff_expected_metric_count_mean": _nested(
+            handoff,
+            "expected_metric_count",
+            "mean",
+        ),
+        "promotion_contract_evidence_handoff_present_metric_count_mean": _nested(
+            handoff,
+            "present_metric_count",
+            "mean",
+        ),
+        "promotion_contract_evidence_handoff_missing_metric_count_mean": _nested(
+            handoff,
+            "missing_metric_count",
+            "mean",
+        ),
+        "promotion_contract_evidence_handoff_blocked_group_count_mean": _nested(
+            handoff,
+            "blocked_group_count",
+            "mean",
+        ),
+        "promotion_contract_evidence_handoff_present_metric_rate_mean": _nested(
+            handoff,
+            "present_metric_rate",
+            "mean",
+        ),
+        "promotion_contract_evidence_handoff_missing_metric_rate_mean": _nested(
+            handoff,
+            "missing_metric_rate",
+            "mean",
+        ),
+        "promotion_contract_evidence_handoff_group_count_mean": _nested(
+            handoff,
+            "group_count",
+            "mean",
+        ),
+        "promotion_contract_evidence_handoff_promoted_group_count_mean": _nested(
+            handoff,
+            "promoted_group_count",
+            "mean",
+        ),
+        "promotion_contract_evidence_handoff_promoted_group_rate_mean": _nested(
+            handoff,
+            "promoted_group_rate",
+            "mean",
+        ),
+        "promotion_contract_evidence_handoff_filled_group_counts": dict(
+            _mapping(handoff.get("filled_group_counts"))
+        ),
+        "promotion_contract_evidence_handoff_group_status_counts": {
+            str(group): dict(_mapping(counts))
+            for group, counts in _mapping(handoff.get("group_status_counts")).items()
+        },
+    }
+
+
+def _promotion_contract_frontier_release_evidence_flat_metadata(
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    evidence = _mapping(
+        _nested(
+            report,
+            "summary",
+            "promotion_contract",
+            "frontier_release_evidence",
+        )
+    )
+    if not evidence:
+        return {}
+    return {
+        "promotion_contract_frontier_release_evidence_available_trace_count": (
+            evidence.get("available_trace_count")
+        ),
+        "promotion_contract_frontier_release_evidence_missing_trace_count": (
+            evidence.get("missing_trace_count")
+        ),
+        "promotion_contract_frontier_release_evidence_coverage_rate": evidence.get(
+            "coverage_rate"
+        ),
+        "promotion_contract_frontier_release_evidence_report_present_rate": evidence.get(
+            "report_present_rate"
+        ),
+        "promotion_contract_frontier_release_evidence_manifest_present_rate": evidence.get(
+            "manifest_present_rate"
+        ),
+        "promotion_contract_frontier_release_evidence_report_counts": dict(
+            _mapping(evidence.get("report_counts"))
+        ),
+        "promotion_contract_frontier_release_evidence_manifest_counts": dict(
+            _mapping(evidence.get("manifest_counts"))
+        ),
+        "promotion_contract_frontier_release_evidence_source_counts": dict(
+            _mapping(evidence.get("source_counts"))
+        ),
+        "promotion_contract_frontier_release_evidence_registry_counts": dict(
+            _mapping(evidence.get("registry_counts"))
+        ),
+        "promotion_contract_frontier_release_evidence_record_counts": dict(
+            _mapping(evidence.get("record_counts"))
+        ),
+        "promotion_contract_frontier_release_evidence_workflow_counts": dict(
+            _mapping(evidence.get("workflow_counts"))
+        ),
+        "promotion_contract_frontier_release_evidence_status_counts": dict(
+            _mapping(evidence.get("status_counts"))
+        ),
+        "promotion_contract_frontier_release_evidence_decision_status_counts": dict(
+            _mapping(evidence.get("decision_status_counts"))
+        ),
+        "promotion_contract_frontier_release_evidence_verifier_track_status_counts": dict(
+            _mapping(evidence.get("verifier_track_status_counts"))
+        ),
+        "promotion_contract_frontier_release_evidence_abstention_track_status_counts": dict(
+            _mapping(evidence.get("abstention_track_status_counts"))
+        ),
+        "promotion_contract_frontier_release_evidence_multiple_testing_track_status_counts": dict(
+            _mapping(evidence.get("multiple_testing_track_status_counts"))
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_track_status_counts": dict(
+            _mapping(evidence.get("citation_batch_track_status_counts"))
+        ),
+        "promotion_contract_frontier_release_evidence_status_promote_rate": evidence.get(
+            "status_promote_rate"
+        ),
+        "promotion_contract_frontier_release_evidence_decision_promote_rate": evidence.get(
+            "decision_promote_rate"
+        ),
+        "promotion_contract_frontier_release_evidence_verifier_track_promote_rate": evidence.get(
+            "verifier_track_promote_rate"
+        ),
+        "promotion_contract_frontier_release_evidence_abstention_track_promote_rate": evidence.get(
+            "abstention_track_promote_rate"
+        ),
+        "promotion_contract_frontier_release_evidence_multiple_testing_track_promote_rate": (
+            evidence.get("multiple_testing_track_promote_rate")
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_track_promote_rate": (
+            evidence.get("citation_batch_track_promote_rate")
+        ),
+        "promotion_contract_frontier_release_evidence_run_count_mean": _nested(
+            evidence,
+            "run_count",
+            "mean",
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_rollup_count_mean": _nested(
+            evidence,
+            "citation_batch_rollup_count",
+            "mean",
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_expected_batch_count_mean": _nested(
+            evidence,
+            "citation_batch_expected_batch_count",
+            "mean",
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_observed_batch_count_mean": _nested(
+            evidence,
+            "citation_batch_observed_batch_count",
+            "mean",
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_missing_expected_batch_count_mean": _nested(
+            evidence,
+            "citation_batch_missing_expected_batch_count",
+            "mean",
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_duplicate_batch_count_mean": _nested(
+            evidence,
+            "citation_batch_duplicate_batch_count",
+            "mean",
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_unexpected_batch_count_mean": _nested(
+            evidence,
+            "citation_batch_unexpected_batch_count",
+            "mean",
+        ),
+        "promotion_contract_frontier_release_evidence_run_names": dict(
+            _mapping(evidence.get("run_names"))
+        ),
+    }
+
+
 def _product_runtime_drift_evidence_flat_metadata(
     evidence: Mapping[str, Any],
     *,
@@ -3394,7 +4930,16 @@ def _product_runtime_drift_evidence_flat_metadata(
 def _load_trace(path: str | Path) -> dict[str, Any]:
     payload = _load_json(path)
     reject_bounded_product_trace(payload, path=path)
-    if "runtime_trace" not in payload and "verification_results" not in payload:
+    if (
+        payload.get("trace_format") == "risk_decision_sequence"
+        and not _is_risk_decision_sequence_trace(payload)
+    ):
+        raise ValueError(f"invalid risk_decision_sequence trace: {path}")
+    if (
+        not _is_risk_decision_sequence_trace(payload)
+        and "runtime_trace" not in payload
+        and "verification_results" not in payload
+    ):
         raise ValueError(f"ProductTrace JSON is missing runtime/control fields: {path}")
     return payload
 
@@ -3561,6 +5106,19 @@ def _counts_from_mapping_keys(values: Sequence[Any] | Any) -> dict[str, int]:
     return counts
 
 
+def _counts_from_group_statuses(values: Sequence[Any] | Any) -> dict[str, dict[str, int]]:
+    counts: dict[str, dict[str, int]] = {}
+    for value in values:
+        for group, status in _mapping(value).items():
+            group_text = _optional_string(group)
+            status_text = _optional_string(status)
+            if group_text is None or status_text is None:
+                continue
+            group_counts = counts.setdefault(group_text, {})
+            group_counts[status_text] = group_counts.get(status_text, 0) + 1
+    return counts
+
+
 def _safe_artifact_name(value: str) -> str:
     cleaned = "".join(char if char.isalnum() or char in {"-", "_"} else "_" for char in value.strip())
     return cleaned or "trace"
@@ -3589,6 +5147,17 @@ def _counts(values: Sequence[Any] | Any) -> dict[str, int]:
             continue
         counts[text] = counts.get(text, 0) + 1
     return counts
+
+
+def _promote_rate(values: Sequence[Any] | Any) -> float | None:
+    statuses = [
+        text
+        for value in values
+        if (text := _optional_string(value)) is not None
+    ]
+    if not statuses:
+        return None
+    return sum(1 for status in statuses if status == "promote") / len(statuses)
 
 
 def _count_rate(counts: Mapping[str, Any], key: str) -> float | None:

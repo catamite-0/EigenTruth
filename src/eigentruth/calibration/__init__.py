@@ -16,6 +16,15 @@ from eigentruth.calibration.fusion import (
     RankScoreFusionCalibrator,
     ScoreFusionSignal,
 )
+from eigentruth.calibration.multiple_testing import (
+    MultipleTestingConformalArtifact,
+    MultipleTestingConformalCalibrator,
+    MultipleTestingConformalSignal,
+)
+from eigentruth.calibration.sequential import (
+    SequentialConformalArtifact,
+    SequentialConformalCalibrator,
+)
 from eigentruth.calibration.sweeps import (
     DEFAULT_SCORE_DIRECTIONS,
     LayerScoreSweepCalibrator,
@@ -44,9 +53,14 @@ __all__ = [
     "LayerScoreSweepCalibrator",
     "LayerScoreSweepReport",
     "LayerScoreSweepResult",
+    "MultipleTestingConformalArtifact",
+    "MultipleTestingConformalCalibrator",
+    "MultipleTestingConformalSignal",
     "RankScoreFusionArtifact",
     "RankScoreFusionCalibrator",
     "ScoreFusionSignal",
+    "SequentialConformalArtifact",
+    "SequentialConformalCalibrator",
     "SteeringPolicyConfig",
     "SweepScoreResult",
     "TrajectoryFusionDataset",

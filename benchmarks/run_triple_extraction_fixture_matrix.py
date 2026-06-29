@@ -736,7 +736,7 @@ def main() -> None:
     parser.add_argument(
         "--external-predictions",
         action="append",
-        default=(),
+        default=[],
         help="external prediction file in CORPUS:NAME=PATH format; CORPUS may be corpus name or slug",
     )
     parser.add_argument("--compact-json", action="store_true")

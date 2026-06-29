@@ -27,7 +27,27 @@ from eigentruth.control.actions import (
     SQLiteActionExecutionLedger,
     TimeoutActionExecutor,
 )
-from eigentruth.control.controller import ControlPolicyConfig, ParticipationGateConfig, RiskController
+from eigentruth.control.controller import (
+    ControlPolicyConfig,
+    MultipleTestingGateConfig,
+    ParticipationGateConfig,
+    RiskController,
+    SequentialGateConfig,
+)
+from eigentruth.control.evidence_gaps import (
+    EvidenceGap,
+    EvidenceGapAction,
+    EvidenceGapPlan,
+    plan_evidence_gaps_from_release_candidate,
+)
+from eigentruth.control.evidence_handoff import (
+    ProductPromotionEvidenceAudit,
+    ProductPromotionEvidenceExport,
+    ProductPromotionEvidenceGroup,
+    ProductPromotionEvidenceMetric,
+    audit_product_promotion_contract_evidence,
+    enrich_product_promotion_contract_evidence,
+)
 from eigentruth.control.feedback import (
     FeedbackOutcome,
     ProductFeedbackRecord,
@@ -58,6 +78,7 @@ from eigentruth.control.promotion import (
     load_product_promotion_contract,
     load_product_runtime_evidence_bundle,
     product_promotion_contract_metadata,
+    product_promotion_contract_summary,
     product_runtime_budget_policy_from_release_candidate,
 )
 from eigentruth.control.runtime_budget import (
@@ -81,6 +102,12 @@ from eigentruth.control.runtime_profiles import (
 )
 from eigentruth.control.staging import StagedVerificationPolicy, VerificationStageDecision
 from eigentruth.control.trace import ProductTrace, RuntimePhaseTiming, RuntimeTrace, TraceEvent
+from eigentruth.control.trajectory_audit import (
+    TrajectoryAuditIssue,
+    TrajectoryAuditReport,
+    TrajectoryHallucinationType,
+    audit_product_trace_trajectory,
+)
 
 __all__ = [
     "ActionExecutionStatus",
@@ -100,6 +127,9 @@ __all__ = [
     "DefaultCorrectionPolicy",
     "DryRunActionExecutor",
     "EvidenceBundle",
+    "EvidenceGap",
+    "EvidenceGapAction",
+    "EvidenceGapPlan",
     "FeedbackOutcome",
     "FinalAnswer",
     "FinalAnswerStatus",
@@ -108,6 +138,8 @@ __all__ = [
     "PolicyGuardedActionExecutor",
     "PlanAwareCorrectionPolicy",
     "ParticipationGateConfig",
+    "MultipleTestingGateConfig",
+    "SequentialGateConfig",
     "SQLiteActionExecutionLedger",
     "RUNTIME_PROFILE_NAMES",
     "RUNTIME_PROFILES",
@@ -116,6 +148,10 @@ __all__ = [
     "ProductTrace",
     "LoadedProductPromotionContract",
     "ProductPromotionContract",
+    "ProductPromotionEvidenceExport",
+    "ProductPromotionEvidenceAudit",
+    "ProductPromotionEvidenceGroup",
+    "ProductPromotionEvidenceMetric",
     "ProductFeedbackRecord",
     "ProductFeedbackStore",
     "ProductRuntimeEvidenceBundle",
@@ -133,9 +169,15 @@ __all__ = [
     "RiskDecision",
     "RiskLevel",
     "TraceEvent",
+    "TrajectoryAuditIssue",
+    "TrajectoryAuditReport",
+    "TrajectoryHallucinationType",
     "VerificationStageDecision",
     "VerificationLoopResult",
     "audit_action_requests",
+    "audit_product_trace_trajectory",
+    "audit_product_promotion_contract_evidence",
+    "enrich_product_promotion_contract_evidence",
     "evidence_bundle_from_action_results",
     "evaluate_product_runtime_budget",
     "finalize_answer",
@@ -147,9 +189,11 @@ __all__ = [
     "load_product_promotion_contract",
     "load_product_runtime_evidence_bundle",
     "product_promotion_contract_metadata",
+    "product_promotion_contract_summary",
     "product_runtime_budget_policy_from_release_candidate",
     "product_runtime_metrics",
     "product_trace_fingerprint",
+    "plan_evidence_gaps_from_release_candidate",
     "run_verification_loop",
     "select_pre_generation_profile",
     "select_runtime_profile",

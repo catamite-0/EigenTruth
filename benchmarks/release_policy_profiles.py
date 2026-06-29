@@ -19,21 +19,28 @@ _STRICT_STRUCTURED_FACT_DEFAULTS: Mapping[str, Any] = {
     "min_decision_accuracy": 0.99,
     "max_false_supported_rate": 0.0,
     "min_false_refuted_rate": 0.99,
-    "required_route_min_selected": 700,
+    "required_route_min_selected": 200,
     "required_route_min_decision_accuracy": 0.99,
     "required_route_max_false_supported_rate": 0.0,
     "required_route_min_false_refuted_rate": 0.99,
-    "required_route_min_covered_fact_properties": 3,
-    "required_route_min_covered_fact_property_records": 2,
-    "required_route_min_covered_fact_property_source_documents": 1,
-    "required_route_min_covered_fact_property_decision_accuracy": 0.99,
-    "required_route_max_covered_fact_property_false_supported_rate": 0.0,
-    "required_route_min_covered_fact_property_false_refuted_rate": 0.99,
+    "structured_fact_robustness_min_selected": 700,
+    "structured_fact_robustness_min_decision_accuracy": 0.99,
+    "structured_fact_robustness_max_false_supported_rate": 0.0,
+    "structured_fact_robustness_min_false_refuted_rate": 0.99,
+    "structured_fact_robustness_min_covered_fact_properties": 3,
+    "structured_fact_robustness_min_covered_fact_property_records": 2,
+    "structured_fact_robustness_min_covered_fact_property_source_documents": 1,
+    "structured_fact_robustness_min_covered_fact_property_decision_accuracy": 0.99,
+    "structured_fact_robustness_max_covered_fact_property_false_supported_rate": 0.0,
+    "structured_fact_robustness_min_covered_fact_property_false_refuted_rate": 0.99,
 }
 FRONTIER_EXTERNAL_EVIDENCE_BASELINE_COMPARISON_KEY = (
     "report:covered-facts-external-evidence-handoff:0.4"
 )
 FRONTIER_TRIPLE_EXTRACTION_FIXTURE_MATRIX_KEY = "report:triple-extraction-fixture-matrix:0.1"
+FRONTIER_MECHANISM_HANDOFF_EVIDENCE_BUNDLE_KEY = (
+    "report:truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle:0.1"
+)
 
 RELEASE_POLICY_PROFILES: Mapping[str, Mapping[str, Any]] = {
     "research_smoke": {
@@ -44,6 +51,8 @@ RELEASE_POLICY_PROFILES: Mapping[str, Mapping[str, Any]] = {
     "strict_structured_fact": _STRICT_STRUCTURED_FACT_DEFAULTS,
     "frontier_audit": {
         **_STRICT_STRUCTURED_FACT_DEFAULTS,
+        "max_uncached_forward_seconds": None,
+        "max_recommended_runtime_seconds": 1.0,
         "adapter_family_profile": "strict_audit",
         "require_state_transition_world_model": True,
         "require_product_runtime_drift_promotion_evidence": True,
@@ -52,12 +61,17 @@ RELEASE_POLICY_PROFILES: Mapping[str, Mapping[str, Any]] = {
         "require_product_runtime_drift_triple_audit_evidence": True,
         "require_product_runtime_drift_covered_fact_property_evidence": True,
         "require_product_runtime_drift_action_gate_evidence": True,
+        "require_product_runtime_drift_trajectory_audit_evidence": True,
+        "require_product_runtime_drift_evidence_handoff_evidence": True,
+        "require_product_runtime_drift_world_model_evidence": True,
+        "require_product_runtime_drift_frontier_release_evidence": True,
         "require_product_trace_action_audit_gate": True,
         "require_product_trace_action_execution_gate": True,
         "external_evidence_baseline_comparison_key": (
             FRONTIER_EXTERNAL_EVIDENCE_BASELINE_COMPARISON_KEY
         ),
         "triple_extraction_fixture_matrix_key": FRONTIER_TRIPLE_EXTRACTION_FIXTURE_MATRIX_KEY,
+        "mechanism_handoff_evidence_bundle_key": FRONTIER_MECHANISM_HANDOFF_EVIDENCE_BUNDLE_KEY,
         "min_triple_extraction_corpora": 2,
         "min_triple_extraction_distinct_predicates": 6,
         "min_triple_extraction_external_prediction_count": 2,

@@ -3,18 +3,26 @@
 import json
 
 from eigentruth.adapters import InMemoryRetriever, RetrievalActionExecutor
-from eigentruth.calibration import CalibrationArtifact, CalibrationScore
+from eigentruth.calibration import (
+    CalibrationArtifact,
+    CalibrationScore,
+    MultipleTestingConformalCalibrator,
+    SequentialConformalCalibrator,
+)
 from eigentruth.control import (
     ActionExecutionStatus,
     ActionExecutorRegistry,
     ActionResult,
     ControlAction,
+    ControlPolicyConfig,
     EvidenceBundle,
     FinalAnswer,
     FinalAnswerStatus,
+    MultipleTestingGateConfig,
     PlanAwareCorrectionPolicy,
     RiskController,
     RiskLevel,
+    SequentialGateConfig,
     StagedVerificationPolicy,
     evidence_bundle_from_action_results,
     finalize_loop_answer,
@@ -36,6 +44,39 @@ def _artifact() -> CalibrationArtifact:
         model_id="tiny",
         target_layer=-1,
         scores=(CalibrationScore("maha_last", threshold=3.0),),
+        eigentruth_version="0.1.0",
+    )
+
+
+def _non_triggering_artifact() -> CalibrationArtifact:
+    return CalibrationArtifact(
+        model_id="tiny",
+        target_layer=-1,
+        scores=(CalibrationScore("maha_last", threshold=1000.0),),
+        eigentruth_version="0.1.0",
+    )
+
+
+def _multiple_testing_artifact():
+    return MultipleTestingConformalCalibrator(alpha=0.3, method="by").calibrate(
+        model_id="tiny",
+        target_layer=-1,
+        calibration_scores={
+            "support_score": list(range(100, 120)),
+            "maha_last": list(range(20)),
+        },
+        directions={"support_score": "lower", "maha_last": "higher"},
+        eigentruth_version="0.1.0",
+    )
+
+
+def _sequential_artifact():
+    return SequentialConformalCalibrator(alpha=0.5, schedule="linear").calibrate(
+        model_id="tiny",
+        target_layer=-1,
+        signal_name="support_score",
+        calibration_scores=[10.0, 11.0, 12.0, 13.0],
+        direction="lower",
         eigentruth_version="0.1.0",
     )
 
@@ -736,6 +777,129 @@ def test_staged_verification_loop_runs_verifier_for_diagnostic_risk():
     assert result.verification_stage_decision.run_verifier is True
     assert result.verification_stage_decision.reason == "diagnostic risk level is medium"
     assert result.initial_verification_results[0].status is VerificationStatus.SUPPORTED
+
+
+def test_risk_controller_multiple_testing_gate_rejects_accept_path():
+    controller = RiskController(
+        _non_triggering_artifact(),
+        multiple_testing_gate=_multiple_testing_artifact(),
+    )
+
+    decision = controller.decide({"support_score": 0.0, "maha_last": 100.0})
+    gate_trace = decision.diagnostics["multiple_testing_gate"]
+
+    assert decision.action is ControlAction.ABSTAIN
+    assert decision.risk_level is RiskLevel.HIGH
+    assert decision.confidence == 1.0
+    assert "multiple-testing conformal gate rejected" in decision.reason
+    assert gate_trace["status"] == "rejected"
+    assert set(gate_trace["rejected_signal_names"]) == {"support_score", "maha_last"}
+    assert gate_trace["method"] == "by"
+    assert gate_trace["alpha"] == 0.3
+
+
+def test_risk_controller_multiple_testing_gate_fails_closed_on_missing_signal():
+    controller = RiskController(
+        _non_triggering_artifact(),
+        multiple_testing_gate=_multiple_testing_artifact(),
+    )
+
+    decision = controller.decide({"maha_last": 1.0})
+    gate_trace = decision.diagnostics["multiple_testing_gate"]
+
+    assert decision.action is ControlAction.CLARIFY
+    assert decision.risk_level is RiskLevel.UNKNOWN
+    assert gate_trace["status"] == "missing_score"
+    assert gate_trace["missing_scores"] == ("support_score",)
+
+
+def test_multiple_testing_gate_config_roundtrip_and_policy_options():
+    artifact = _multiple_testing_artifact()
+    gate = MultipleTestingGateConfig.from_dict({
+        "artifact": artifact.to_dict(),
+        "metadata": {"route": "frontier"},
+    })
+    policy = ControlPolicyConfig.from_dict({
+        "multiple_testing_gate_action": "retrieve",
+        "multiple_testing_gate_applies_to_actions": "accept,rewrite",
+        "multiple_testing_gate_risk_level": "medium",
+        "multiple_testing_gate_confidence_floor": 0.6,
+    })
+
+    assert gate.to_dict()["metadata"] == {"route": "frontier"}
+    assert gate.signal_names() == ("support_score", "maha_last")
+    assert policy.multiple_testing_gate_action is ControlAction.RETRIEVE
+    assert policy.multiple_testing_gate_applies_to_actions == (
+        ControlAction.ACCEPT,
+        ControlAction.REWRITE,
+    )
+    assert policy.to_dict()["multiple_testing_gate_risk_level"] == "medium"
+
+
+def test_risk_controller_sequence_gate_rejects_accept_path():
+    controller = RiskController(
+        _non_triggering_artifact(),
+        sequential_gate=_sequential_artifact(),
+    )
+
+    decisions = controller.decide_sequence((
+        {"maha_last": 1.0, "support_score": 9.0},
+        {"maha_last": 1.0, "support_score": 12.0},
+    ))
+    first_trace = decisions[0].diagnostics["sequential_gate"]
+    second_trace = decisions[1].diagnostics["sequential_gate"]
+
+    assert decisions[0].action is ControlAction.ABSTAIN
+    assert decisions[0].risk_level is RiskLevel.HIGH
+    assert "sequential conformal gate rejected support_score" in decisions[0].reason
+    assert abs(first_trace["p_value"] - 0.2) < 1e-12
+    assert first_trace["status"] == "rejected"
+    assert first_trace["step"] == 1
+    assert first_trace["report_summary"]["rejected_steps"] == (1,)
+    assert decisions[1].action is ControlAction.ACCEPT
+    assert decisions[1].risk_level is RiskLevel.LOW
+    assert second_trace["status"] == "passed"
+    assert second_trace["step"] == 2
+
+
+def test_risk_controller_sequence_gate_fails_closed_on_missing_signal():
+    controller = RiskController(
+        _non_triggering_artifact(),
+        sequential_gate=_sequential_artifact(),
+    )
+
+    (decision,) = controller.decide_sequence(({"maha_last": 1.0},))
+    gate_trace = decision.diagnostics["sequential_gate"]
+
+    assert decision.action is ControlAction.CLARIFY
+    assert decision.risk_level is RiskLevel.UNKNOWN
+    assert decision.confidence == 1.0
+    assert decision.reason == "missing sequential gate score: support_score"
+    assert gate_trace["status"] == "missing_score"
+    assert gate_trace["signal_name"] == "support_score"
+
+
+def test_sequence_gate_config_roundtrip_and_policy_options():
+    artifact = _sequential_artifact()
+    gate = SequentialGateConfig.from_dict({
+        "artifact": artifact.to_dict(),
+        "metadata": {"route": "session"},
+    })
+    policy = ControlPolicyConfig.from_dict({
+        "sequential_gate_action": "retrieve",
+        "sequential_gate_applies_to_actions": "accept,rewrite",
+        "sequential_gate_risk_level": "medium",
+        "sequential_gate_confidence_floor": 0.65,
+    })
+
+    assert gate.to_dict()["metadata"] == {"route": "session"}
+    assert gate.signal_name == "support_score"
+    assert policy.sequential_gate_action is ControlAction.RETRIEVE
+    assert policy.sequential_gate_applies_to_actions == (
+        ControlAction.ACCEPT,
+        ControlAction.REWRITE,
+    )
+    assert policy.to_dict()["sequential_gate_risk_level"] == "medium"
 
 
 def test_evidence_bundle_from_action_results_preserves_claim_specific_context():

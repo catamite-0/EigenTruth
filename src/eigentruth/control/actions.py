@@ -448,11 +448,7 @@ class DefaultCorrectionPolicy:
         elif action is ControlAction.RETRIEVE:
             payload = {
                 **base_payload,
-                "retrieval_targets": _targets(
-                    claim_groups,
-                    VerificationStatus.INSUFFICIENT_EVIDENCE,
-                    VerificationStatus.ERROR,
-                ),
+                "retrieval_targets": _retrieval_targets(claim_groups),
                 "instruction": "retrieve evidence for unresolved claims before answering",
             }
         elif action is ControlAction.REWRITE:
@@ -1410,6 +1406,22 @@ def _targets(claim_groups: Mapping[str, Any], *statuses: VerificationStatus) -> 
         for status in statuses:
             selected.extend(groups.get(status.value, ()))
     return tuple(dict(item) for item in selected)
+
+
+def _retrieval_targets(claim_groups: Mapping[str, Any]) -> tuple[dict[str, Any], ...]:
+    targets = _targets(
+        claim_groups,
+        VerificationStatus.INSUFFICIENT_EVIDENCE,
+        VerificationStatus.ERROR,
+    )
+    if targets:
+        return targets
+    counts = claim_groups.get("counts", {})
+    total = claim_groups.get("total", 0)
+    not_applicable_count = counts.get(VerificationStatus.NOT_APPLICABLE.value, 0) if isinstance(counts, Mapping) else 0
+    if total and not_applicable_count == total:
+        return _targets(claim_groups, VerificationStatus.NOT_APPLICABLE)
+    return targets
 
 
 def _claim_to_dict(claim: Claim | Mapping[str, Any] | None, *, fallback_id: str) -> dict[str, Any]:

@@ -50,6 +50,7 @@ from eigentruth.registry import (  # noqa: E402
 )
 
 _T = TypeVar("_T")
+_TRACE_SUMMARY_SCHEMA_VERSION = 1
 
 
 @dataclass(frozen=True)
@@ -89,12 +90,29 @@ class ProductTraceReplayWorkflowConfig:
     max_runtime_drift_pre_generation_probe_comparison_best_test_label_auroc_drop: float | None = None
     max_runtime_drift_pre_generation_probe_comparison_best_redline_auroc_drop: float | None = None
     max_runtime_drift_pre_generation_probe_comparison_best_redline_margin_drop: float | None = None
+    min_runtime_drift_claim_factuality_probe_comparison_coverage: float | None = None
+    min_runtime_drift_claim_factuality_probe_comparison_manifest_verified_rate: float | None = None
+    min_runtime_drift_claim_factuality_probe_comparison_model_count: float | None = None
+    min_runtime_drift_claim_factuality_probe_comparison_run_count: float | None = None
+    min_runtime_drift_claim_factuality_probe_comparison_redline_pass_rate: float | None = None
+    max_runtime_drift_claim_factuality_probe_comparison_best_test_label_auroc_drop: float | None = None
+    max_runtime_drift_claim_factuality_probe_comparison_best_test_selective_accuracy_drop: float | None = None
+    max_runtime_drift_claim_factuality_probe_comparison_best_test_selective_coverage_drop: float | None = None
+    max_runtime_drift_claim_factuality_probe_comparison_best_redline_auroc_drop: float | None = None
+    max_runtime_drift_claim_factuality_probe_comparison_best_redline_margin_drop: float | None = None
     min_runtime_drift_counterfactual_verification_coverage: float | None = None
     min_runtime_drift_counterfactual_verification_manifest_verified_rate: float | None = None
     min_runtime_drift_counterfactual_verification_record_count: float | None = None
     min_runtime_drift_counterfactual_verification_pass_rate: float | None = None
     max_runtime_drift_counterfactual_verification_false_invariance_rate: float | None = None
     max_runtime_drift_counterfactual_verification_flip_success_count_drop: float | None = None
+    min_runtime_drift_evidence_handoff_coverage: float | None = None
+    min_runtime_drift_evidence_handoff_manifest_verified_rate: float | None = None
+    min_runtime_drift_evidence_handoff_present_metric_rate: float | None = None
+    max_runtime_drift_evidence_handoff_missing_metric_rate: float | None = None
+    max_runtime_drift_evidence_handoff_missing_metric_count: float | None = None
+    max_runtime_drift_evidence_handoff_blocked_group_count: float | None = None
+    min_runtime_drift_evidence_handoff_promoted_group_rate: float | None = None
     min_runtime_drift_triple_extraction_fixture_matrix_coverage: float | None = None
     max_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_drop: float | None = None
     max_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_drop: float | None = None
@@ -102,6 +120,11 @@ class ProductTraceReplayWorkflowConfig:
     min_runtime_drift_triple_audit_claim_coverage: float | None = None
     min_runtime_drift_triple_audit_pass_rate: float | None = None
     min_runtime_drift_triple_slot_coverage: float | None = None
+    min_runtime_drift_world_model_participating_trace_rate: float | None = None
+    min_runtime_drift_world_model_coverage_rate: float | None = None
+    max_runtime_drift_world_model_conflict_rate_increase: float | None = None
+    max_runtime_drift_world_model_low_agreement_rate_increase: float | None = None
+    max_runtime_drift_world_model_trace_gap_rate_increase: float | None = None
     runtime_drift_covered_fact_property_scopes: Sequence[str] = ()
     min_runtime_drift_covered_fact_property_metric_count: float | None = None
     min_runtime_drift_covered_fact_min_records: float | None = None
@@ -119,6 +142,13 @@ class ProductTraceReplayWorkflowConfig:
     max_runtime_drift_product_trace_action_execution_missing_result_rate_increase: float | None = None
     max_runtime_drift_product_trace_action_execution_unexpected_result_rate_increase: float | None = None
     max_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_increase: float | None = None
+    max_runtime_drift_product_trace_trajectory_audit_failed_trace_rate_increase: float | None = None
+    max_runtime_drift_product_trace_trajectory_audit_error_rate_increase: float | None = None
+    max_runtime_drift_product_trace_trajectory_audit_factual_rate_increase: float | None = None
+    max_runtime_drift_product_trace_trajectory_audit_referential_rate_increase: float | None = None
+    max_runtime_drift_product_trace_trajectory_audit_logical_rate_increase: float | None = None
+    max_runtime_drift_product_trace_trajectory_audit_procedural_rate_increase: float | None = None
+    max_runtime_drift_product_trace_trajectory_audit_scope_rate_increase: float | None = None
     min_runtime_drift_current_trace_count: int | None = None
     max_action_audit_error_rate: float | None = None
     max_action_audit_missing_retrieval_rate: float | None = None
@@ -197,12 +227,29 @@ class ProductTraceReplayWorkflowConfig:
                 self.max_runtime_drift_pre_generation_probe_comparison_best_test_label_auroc_drop,
                 self.max_runtime_drift_pre_generation_probe_comparison_best_redline_auroc_drop,
                 self.max_runtime_drift_pre_generation_probe_comparison_best_redline_margin_drop,
+                self.min_runtime_drift_claim_factuality_probe_comparison_coverage,
+                self.min_runtime_drift_claim_factuality_probe_comparison_manifest_verified_rate,
+                self.min_runtime_drift_claim_factuality_probe_comparison_model_count,
+                self.min_runtime_drift_claim_factuality_probe_comparison_run_count,
+                self.min_runtime_drift_claim_factuality_probe_comparison_redline_pass_rate,
+                self.max_runtime_drift_claim_factuality_probe_comparison_best_test_label_auroc_drop,
+                self.max_runtime_drift_claim_factuality_probe_comparison_best_test_selective_accuracy_drop,
+                self.max_runtime_drift_claim_factuality_probe_comparison_best_test_selective_coverage_drop,
+                self.max_runtime_drift_claim_factuality_probe_comparison_best_redline_auroc_drop,
+                self.max_runtime_drift_claim_factuality_probe_comparison_best_redline_margin_drop,
                 self.min_runtime_drift_counterfactual_verification_coverage,
                 self.min_runtime_drift_counterfactual_verification_manifest_verified_rate,
                 self.min_runtime_drift_counterfactual_verification_record_count,
                 self.min_runtime_drift_counterfactual_verification_pass_rate,
                 self.max_runtime_drift_counterfactual_verification_false_invariance_rate,
                 self.max_runtime_drift_counterfactual_verification_flip_success_count_drop,
+                self.min_runtime_drift_evidence_handoff_coverage,
+                self.min_runtime_drift_evidence_handoff_manifest_verified_rate,
+                self.min_runtime_drift_evidence_handoff_present_metric_rate,
+                self.max_runtime_drift_evidence_handoff_missing_metric_rate,
+                self.max_runtime_drift_evidence_handoff_missing_metric_count,
+                self.max_runtime_drift_evidence_handoff_blocked_group_count,
+                self.min_runtime_drift_evidence_handoff_promoted_group_rate,
                 self.min_runtime_drift_triple_extraction_fixture_matrix_coverage,
                 self.max_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_drop,
                 self.max_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_drop,
@@ -210,6 +257,11 @@ class ProductTraceReplayWorkflowConfig:
                 self.min_runtime_drift_triple_audit_claim_coverage,
                 self.min_runtime_drift_triple_audit_pass_rate,
                 self.min_runtime_drift_triple_slot_coverage,
+                self.min_runtime_drift_world_model_participating_trace_rate,
+                self.min_runtime_drift_world_model_coverage_rate,
+                self.max_runtime_drift_world_model_conflict_rate_increase,
+                self.max_runtime_drift_world_model_low_agreement_rate_increase,
+                self.max_runtime_drift_world_model_trace_gap_rate_increase,
                 self.min_runtime_drift_covered_fact_property_metric_count,
                 self.min_runtime_drift_covered_fact_min_records,
                 self.min_runtime_drift_covered_fact_min_source_documents,
@@ -226,6 +278,13 @@ class ProductTraceReplayWorkflowConfig:
                 self.max_runtime_drift_product_trace_action_execution_missing_result_rate_increase,
                 self.max_runtime_drift_product_trace_action_execution_unexpected_result_rate_increase,
                 self.max_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_increase,
+                self.max_runtime_drift_product_trace_trajectory_audit_failed_trace_rate_increase,
+                self.max_runtime_drift_product_trace_trajectory_audit_error_rate_increase,
+                self.max_runtime_drift_product_trace_trajectory_audit_factual_rate_increase,
+                self.max_runtime_drift_product_trace_trajectory_audit_referential_rate_increase,
+                self.max_runtime_drift_product_trace_trajectory_audit_logical_rate_increase,
+                self.max_runtime_drift_product_trace_trajectory_audit_procedural_rate_increase,
+                self.max_runtime_drift_product_trace_trajectory_audit_scope_rate_increase,
                 self.min_runtime_drift_current_trace_count,
             )
         )
@@ -914,6 +973,7 @@ def _corpus_cache_signature(config: ProductTraceReplayWorkflowConfig) -> str:
 def _corpus_cache_config_payload(config: ProductTraceReplayWorkflowConfig) -> dict[str, Any]:
     child_paths = _corpus_child_paths(config)
     return {
+        "trace_summary_schema_version": _TRACE_SUMMARY_SCHEMA_VERSION,
         "trace_paths": [str(path) for path in config.trace_paths],
         "jsonl_paths": [str(path) for path in config.jsonl_paths],
         "redact_text": config.redact_text,
@@ -1332,12 +1392,29 @@ def _runtime_drift_configured(config: ProductTraceReplayWorkflowConfig) -> bool:
             config.max_runtime_drift_pre_generation_probe_comparison_best_test_label_auroc_drop,
             config.max_runtime_drift_pre_generation_probe_comparison_best_redline_auroc_drop,
             config.max_runtime_drift_pre_generation_probe_comparison_best_redline_margin_drop,
+            config.min_runtime_drift_claim_factuality_probe_comparison_coverage,
+            config.min_runtime_drift_claim_factuality_probe_comparison_manifest_verified_rate,
+            config.min_runtime_drift_claim_factuality_probe_comparison_model_count,
+            config.min_runtime_drift_claim_factuality_probe_comparison_run_count,
+            config.min_runtime_drift_claim_factuality_probe_comparison_redline_pass_rate,
+            config.max_runtime_drift_claim_factuality_probe_comparison_best_test_label_auroc_drop,
+            config.max_runtime_drift_claim_factuality_probe_comparison_best_test_selective_accuracy_drop,
+            config.max_runtime_drift_claim_factuality_probe_comparison_best_test_selective_coverage_drop,
+            config.max_runtime_drift_claim_factuality_probe_comparison_best_redline_auroc_drop,
+            config.max_runtime_drift_claim_factuality_probe_comparison_best_redline_margin_drop,
             config.min_runtime_drift_counterfactual_verification_coverage,
             config.min_runtime_drift_counterfactual_verification_manifest_verified_rate,
             config.min_runtime_drift_counterfactual_verification_record_count,
             config.min_runtime_drift_counterfactual_verification_pass_rate,
             config.max_runtime_drift_counterfactual_verification_false_invariance_rate,
             config.max_runtime_drift_counterfactual_verification_flip_success_count_drop,
+            config.min_runtime_drift_evidence_handoff_coverage,
+            config.min_runtime_drift_evidence_handoff_manifest_verified_rate,
+            config.min_runtime_drift_evidence_handoff_present_metric_rate,
+            config.max_runtime_drift_evidence_handoff_missing_metric_rate,
+            config.max_runtime_drift_evidence_handoff_missing_metric_count,
+            config.max_runtime_drift_evidence_handoff_blocked_group_count,
+            config.min_runtime_drift_evidence_handoff_promoted_group_rate,
             config.min_runtime_drift_triple_extraction_fixture_matrix_coverage,
             config.max_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_drop,
             config.max_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_drop,
@@ -1345,6 +1422,11 @@ def _runtime_drift_configured(config: ProductTraceReplayWorkflowConfig) -> bool:
             config.min_runtime_drift_triple_audit_claim_coverage,
             config.min_runtime_drift_triple_audit_pass_rate,
             config.min_runtime_drift_triple_slot_coverage,
+            config.min_runtime_drift_world_model_participating_trace_rate,
+            config.min_runtime_drift_world_model_coverage_rate,
+            config.max_runtime_drift_world_model_conflict_rate_increase,
+            config.max_runtime_drift_world_model_low_agreement_rate_increase,
+            config.max_runtime_drift_world_model_trace_gap_rate_increase,
             config.min_runtime_drift_covered_fact_property_metric_count,
             config.min_runtime_drift_covered_fact_min_records,
             config.min_runtime_drift_covered_fact_min_source_documents,
@@ -1361,6 +1443,13 @@ def _runtime_drift_configured(config: ProductTraceReplayWorkflowConfig) -> bool:
             config.max_runtime_drift_product_trace_action_execution_missing_result_rate_increase,
             config.max_runtime_drift_product_trace_action_execution_unexpected_result_rate_increase,
             config.max_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_increase,
+            config.max_runtime_drift_product_trace_trajectory_audit_failed_trace_rate_increase,
+            config.max_runtime_drift_product_trace_trajectory_audit_error_rate_increase,
+            config.max_runtime_drift_product_trace_trajectory_audit_factual_rate_increase,
+            config.max_runtime_drift_product_trace_trajectory_audit_referential_rate_increase,
+            config.max_runtime_drift_product_trace_trajectory_audit_logical_rate_increase,
+            config.max_runtime_drift_product_trace_trajectory_audit_procedural_rate_increase,
+            config.max_runtime_drift_product_trace_trajectory_audit_scope_rate_increase,
             config.min_runtime_drift_current_trace_count,
         )
     )
@@ -1401,6 +1490,36 @@ def _runtime_drift_gate_config(config: ProductTraceReplayWorkflowConfig) -> dict
         "max_pre_generation_probe_comparison_best_redline_margin_drop": (
             config.max_runtime_drift_pre_generation_probe_comparison_best_redline_margin_drop
         ),
+        "min_claim_factuality_probe_comparison_coverage": (
+            config.min_runtime_drift_claim_factuality_probe_comparison_coverage
+        ),
+        "min_claim_factuality_probe_comparison_manifest_verified_rate": (
+            config.min_runtime_drift_claim_factuality_probe_comparison_manifest_verified_rate
+        ),
+        "min_claim_factuality_probe_comparison_model_count": (
+            config.min_runtime_drift_claim_factuality_probe_comparison_model_count
+        ),
+        "min_claim_factuality_probe_comparison_run_count": (
+            config.min_runtime_drift_claim_factuality_probe_comparison_run_count
+        ),
+        "min_claim_factuality_probe_comparison_redline_pass_rate": (
+            config.min_runtime_drift_claim_factuality_probe_comparison_redline_pass_rate
+        ),
+        "max_claim_factuality_probe_comparison_best_test_label_auroc_drop": (
+            config.max_runtime_drift_claim_factuality_probe_comparison_best_test_label_auroc_drop
+        ),
+        "max_claim_factuality_probe_comparison_best_test_selective_accuracy_drop": (
+            config.max_runtime_drift_claim_factuality_probe_comparison_best_test_selective_accuracy_drop
+        ),
+        "max_claim_factuality_probe_comparison_best_test_selective_coverage_drop": (
+            config.max_runtime_drift_claim_factuality_probe_comparison_best_test_selective_coverage_drop
+        ),
+        "max_claim_factuality_probe_comparison_best_redline_auroc_drop": (
+            config.max_runtime_drift_claim_factuality_probe_comparison_best_redline_auroc_drop
+        ),
+        "max_claim_factuality_probe_comparison_best_redline_margin_drop": (
+            config.max_runtime_drift_claim_factuality_probe_comparison_best_redline_margin_drop
+        ),
         "min_counterfactual_verification_coverage": (
             config.min_runtime_drift_counterfactual_verification_coverage
         ),
@@ -1419,6 +1538,25 @@ def _runtime_drift_gate_config(config: ProductTraceReplayWorkflowConfig) -> dict
         "max_counterfactual_verification_flip_success_count_drop": (
             config.max_runtime_drift_counterfactual_verification_flip_success_count_drop
         ),
+        "min_evidence_handoff_coverage": config.min_runtime_drift_evidence_handoff_coverage,
+        "min_evidence_handoff_manifest_verified_rate": (
+            config.min_runtime_drift_evidence_handoff_manifest_verified_rate
+        ),
+        "min_evidence_handoff_present_metric_rate": (
+            config.min_runtime_drift_evidence_handoff_present_metric_rate
+        ),
+        "max_evidence_handoff_missing_metric_rate": (
+            config.max_runtime_drift_evidence_handoff_missing_metric_rate
+        ),
+        "max_evidence_handoff_missing_metric_count": (
+            config.max_runtime_drift_evidence_handoff_missing_metric_count
+        ),
+        "max_evidence_handoff_blocked_group_count": (
+            config.max_runtime_drift_evidence_handoff_blocked_group_count
+        ),
+        "min_evidence_handoff_promoted_group_rate": (
+            config.min_runtime_drift_evidence_handoff_promoted_group_rate
+        ),
         "min_triple_extraction_fixture_matrix_coverage": (
             config.min_runtime_drift_triple_extraction_fixture_matrix_coverage
         ),
@@ -1432,6 +1570,19 @@ def _runtime_drift_gate_config(config: ProductTraceReplayWorkflowConfig) -> dict
         "min_triple_audit_claim_coverage": config.min_runtime_drift_triple_audit_claim_coverage,
         "min_triple_audit_pass_rate": config.min_runtime_drift_triple_audit_pass_rate,
         "min_triple_slot_coverage": config.min_runtime_drift_triple_slot_coverage,
+        "min_world_model_participating_trace_rate": (
+            config.min_runtime_drift_world_model_participating_trace_rate
+        ),
+        "min_world_model_coverage_rate": config.min_runtime_drift_world_model_coverage_rate,
+        "max_world_model_conflict_rate_increase": (
+            config.max_runtime_drift_world_model_conflict_rate_increase
+        ),
+        "max_world_model_low_agreement_rate_increase": (
+            config.max_runtime_drift_world_model_low_agreement_rate_increase
+        ),
+        "max_world_model_trace_gap_rate_increase": (
+            config.max_runtime_drift_world_model_trace_gap_rate_increase
+        ),
         "promotion_contract_covered_fact_property_scopes": tuple(
             config.runtime_drift_covered_fact_property_scopes
         ),
@@ -1482,6 +1633,27 @@ def _runtime_drift_gate_config(config: ProductTraceReplayWorkflowConfig) -> dict
         ),
         "max_product_trace_action_execution_request_id_mismatch_rate_increase": (
             config.max_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_increase
+        ),
+        "max_product_trace_trajectory_audit_failed_trace_rate_increase": (
+            config.max_runtime_drift_product_trace_trajectory_audit_failed_trace_rate_increase
+        ),
+        "max_product_trace_trajectory_audit_error_rate_increase": (
+            config.max_runtime_drift_product_trace_trajectory_audit_error_rate_increase
+        ),
+        "max_product_trace_trajectory_audit_factual_rate_increase": (
+            config.max_runtime_drift_product_trace_trajectory_audit_factual_rate_increase
+        ),
+        "max_product_trace_trajectory_audit_referential_rate_increase": (
+            config.max_runtime_drift_product_trace_trajectory_audit_referential_rate_increase
+        ),
+        "max_product_trace_trajectory_audit_logical_rate_increase": (
+            config.max_runtime_drift_product_trace_trajectory_audit_logical_rate_increase
+        ),
+        "max_product_trace_trajectory_audit_procedural_rate_increase": (
+            config.max_runtime_drift_product_trace_trajectory_audit_procedural_rate_increase
+        ),
+        "max_product_trace_trajectory_audit_scope_rate_increase": (
+            config.max_runtime_drift_product_trace_trajectory_audit_scope_rate_increase
         ),
         "min_current_trace_count": config.min_runtime_drift_current_trace_count,
     }
@@ -1684,6 +1856,7 @@ def _runtime_baseline_summary(runtime_baseline: Mapping[str, Any]) -> dict[str, 
     total_seconds = _mapping(summary.get("total_seconds"))
     action_audit = _mapping(summary.get("action_audit"))
     action_execution = _mapping(summary.get("action_execution"))
+    trajectory_audit = _mapping(summary.get("trajectory_audit"))
     trace_record_cache = _mapping(_nested(runtime_baseline, "config", "trace_record_cache"))
     recommended_policy = _mapping(_nested(runtime_baseline, "config", "recommended_policy"))
     optimization = _mapping(runtime_baseline.get("optimization"))
@@ -1735,6 +1908,14 @@ def _runtime_baseline_summary(runtime_baseline: Mapping[str, Any]) -> dict[str, 
         "action_execution_request_id_mismatch_rate": action_execution.get(
             "request_id_mismatch_rate"
         ),
+        "trajectory_audit_available_trace_count": trajectory_audit.get("available_trace_count"),
+        "trajectory_audit_failed_trace_rate": trajectory_audit.get("failed_trace_rate"),
+        "trajectory_audit_error_rate": trajectory_audit.get("error_rate"),
+        "trajectory_audit_factual_rate": trajectory_audit.get("factual_rate"),
+        "trajectory_audit_referential_rate": trajectory_audit.get("referential_rate"),
+        "trajectory_audit_logical_rate": trajectory_audit.get("logical_rate"),
+        "trajectory_audit_procedural_rate": trajectory_audit.get("procedural_rate"),
+        "trajectory_audit_scope_rate": trajectory_audit.get("scope_rate"),
         "trace_records_cache_path": _nested(runtime_baseline, "paths", "trace_records_cache"),
         "recommended_policy_path": _nested(runtime_baseline, "paths", "recommended_policy"),
         "recommended_policy_written": recommended_policy.get("written"),
@@ -1800,8 +1981,12 @@ def _runtime_drift_summary(runtime_drift: Mapping[str, Any]) -> dict[str, Any]:
     budget_gate = _mapping(runtime_drift.get("runtime_budget_policy_gate"))
     covered_fact_property = _covered_fact_property_metric_summary(runtime_drift)
     product_trace_action_gate = _product_trace_action_gate_metric_summary(runtime_drift)
+    product_trace_trajectory_audit = _product_trace_trajectory_audit_metric_summary(runtime_drift)
+    world_model = _world_model_metric_summary(runtime_drift)
     pre_generation_probe_comparison = _pre_generation_probe_comparison_metric_summary(runtime_drift)
+    claim_factuality_probe_comparison = _claim_factuality_probe_comparison_metric_summary(runtime_drift)
     counterfactual_verification = _counterfactual_verification_metric_summary(runtime_drift)
+    evidence_handoff = _evidence_handoff_metric_summary(runtime_drift)
     return {
         "status": runtime_drift.get("status"),
         "gate_enabled": summary.get("gate_enabled"),
@@ -1816,14 +2001,28 @@ def _runtime_drift_summary(runtime_drift: Mapping[str, Any]) -> dict[str, Any]:
         "covered_fact_property_blocked_metric_count": covered_fact_property["blocked_metric_count"],
         "product_trace_action_gate_metric_count": product_trace_action_gate["metric_count"],
         "product_trace_action_gate_blocked_metric_count": product_trace_action_gate["blocked_metric_count"],
+        "product_trace_trajectory_audit_metric_count": product_trace_trajectory_audit[
+            "metric_count"
+        ],
+        "product_trace_trajectory_audit_blocked_metric_count": (
+            product_trace_trajectory_audit["blocked_metric_count"]
+        ),
+        "world_model_metric_count": world_model["metric_count"],
+        "world_model_blocked_metric_count": world_model["blocked_metric_count"],
         "pre_generation_probe_comparison_metric_count": pre_generation_probe_comparison["metric_count"],
         "pre_generation_probe_comparison_blocked_metric_count": (
             pre_generation_probe_comparison["blocked_metric_count"]
+        ),
+        "claim_factuality_probe_comparison_metric_count": claim_factuality_probe_comparison["metric_count"],
+        "claim_factuality_probe_comparison_blocked_metric_count": (
+            claim_factuality_probe_comparison["blocked_metric_count"]
         ),
         "counterfactual_verification_metric_count": counterfactual_verification["metric_count"],
         "counterfactual_verification_blocked_metric_count": (
             counterfactual_verification["blocked_metric_count"]
         ),
+        "evidence_handoff_metric_count": evidence_handoff["metric_count"],
+        "evidence_handoff_blocked_metric_count": evidence_handoff["blocked_metric_count"],
         "baseline_path": _nested(runtime_drift, "baseline", "path"),
         "current_path": _nested(runtime_drift, "current", "path"),
         "report_path": _nested(runtime_drift, "paths", "report"),
@@ -1861,6 +2060,20 @@ def _pre_generation_probe_comparison_metric_summary(runtime_drift: Mapping[str, 
     }
 
 
+def _claim_factuality_probe_comparison_metric_summary(runtime_drift: Mapping[str, Any]) -> dict[str, int]:
+    metrics = tuple(
+        _mapping(metric)
+        for metric in _sequence(runtime_drift.get("metrics"))
+        if str(_mapping(metric).get("metric") or "").startswith(
+            "promotion_contract.claim_factuality_probe_comparison."
+        )
+    )
+    return {
+        "metric_count": len(metrics),
+        "blocked_metric_count": sum(1 for metric in metrics if metric.get("status") == "blocked"),
+    }
+
+
 def _counterfactual_verification_metric_summary(runtime_drift: Mapping[str, Any]) -> dict[str, int]:
     metrics = tuple(
         _mapping(metric)
@@ -1875,11 +2088,49 @@ def _counterfactual_verification_metric_summary(runtime_drift: Mapping[str, Any]
     }
 
 
+def _evidence_handoff_metric_summary(runtime_drift: Mapping[str, Any]) -> dict[str, int]:
+    metrics = tuple(
+        _mapping(metric)
+        for metric in _sequence(runtime_drift.get("metrics"))
+        if str(_mapping(metric).get("metric") or "").startswith(
+            "promotion_contract.evidence_handoff."
+        )
+    )
+    return {
+        "metric_count": len(metrics),
+        "blocked_metric_count": sum(1 for metric in metrics if metric.get("status") == "blocked"),
+    }
+
+
+def _world_model_metric_summary(runtime_drift: Mapping[str, Any]) -> dict[str, int]:
+    metrics = tuple(
+        _mapping(metric)
+        for metric in _sequence(runtime_drift.get("metrics"))
+        if str(_mapping(metric).get("metric") or "").startswith("world_model.")
+    )
+    return {
+        "metric_count": len(metrics),
+        "blocked_metric_count": sum(1 for metric in metrics if metric.get("status") == "blocked"),
+    }
+
+
 def _product_trace_action_gate_metric_summary(runtime_drift: Mapping[str, Any]) -> dict[str, int]:
     metrics = tuple(
         _mapping(metric)
         for metric in _sequence(runtime_drift.get("metrics"))
         if str(_mapping(metric).get("metric") or "").startswith("promotion_contract.product_trace_replay.")
+    )
+    return {
+        "metric_count": len(metrics),
+        "blocked_metric_count": sum(1 for metric in metrics if metric.get("status") == "blocked"),
+    }
+
+
+def _product_trace_trajectory_audit_metric_summary(runtime_drift: Mapping[str, Any]) -> dict[str, int]:
+    metrics = tuple(
+        _mapping(metric)
+        for metric in _sequence(runtime_drift.get("metrics"))
+        if str(_mapping(metric).get("metric") or "").startswith("trajectory_audit.")
     )
     return {
         "metric_count": len(metrics),
@@ -2276,6 +2527,26 @@ def _write_artifact_manifest(
                 "runtime_drift",
                 "product_trace_action_gate_blocked_metric_count",
             ),
+            "runtime_drift_product_trace_trajectory_audit_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "product_trace_trajectory_audit_metric_count",
+            ),
+            "runtime_drift_product_trace_trajectory_audit_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "product_trace_trajectory_audit_blocked_metric_count",
+            ),
+            "runtime_drift_world_model_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "world_model_metric_count",
+            ),
+            "runtime_drift_world_model_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "world_model_blocked_metric_count",
+            ),
             "runtime_drift_pre_generation_probe_comparison_metric_count": _nested(
                 report,
                 "runtime_drift",
@@ -2286,6 +2557,16 @@ def _write_artifact_manifest(
                 "runtime_drift",
                 "pre_generation_probe_comparison_blocked_metric_count",
             ),
+            "runtime_drift_claim_factuality_probe_comparison_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "claim_factuality_probe_comparison_metric_count",
+            ),
+            "runtime_drift_claim_factuality_probe_comparison_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "claim_factuality_probe_comparison_blocked_metric_count",
+            ),
             "runtime_drift_counterfactual_verification_metric_count": _nested(
                 report,
                 "runtime_drift",
@@ -2295,6 +2576,16 @@ def _write_artifact_manifest(
                 report,
                 "runtime_drift",
                 "counterfactual_verification_blocked_metric_count",
+            ),
+            "runtime_drift_evidence_handoff_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "evidence_handoff_metric_count",
+            ),
+            "runtime_drift_evidence_handoff_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "evidence_handoff_blocked_metric_count",
             ),
             "runtime_drift_report": _nested(report, "paths", "runtime_drift_report"),
             "runtime_drift_artifact_manifest": _nested(report, "paths", "runtime_drift_manifest"),
@@ -2543,6 +2834,26 @@ def _record_registry(
                 "runtime_drift",
                 "product_trace_action_gate_blocked_metric_count",
             ),
+            "runtime_drift_product_trace_trajectory_audit_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "product_trace_trajectory_audit_metric_count",
+            ),
+            "runtime_drift_product_trace_trajectory_audit_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "product_trace_trajectory_audit_blocked_metric_count",
+            ),
+            "runtime_drift_world_model_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "world_model_metric_count",
+            ),
+            "runtime_drift_world_model_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "world_model_blocked_metric_count",
+            ),
             "runtime_drift_pre_generation_probe_comparison_metric_count": _nested(
                 report,
                 "runtime_drift",
@@ -2553,6 +2864,16 @@ def _record_registry(
                 "runtime_drift",
                 "pre_generation_probe_comparison_blocked_metric_count",
             ),
+            "runtime_drift_claim_factuality_probe_comparison_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "claim_factuality_probe_comparison_metric_count",
+            ),
+            "runtime_drift_claim_factuality_probe_comparison_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "claim_factuality_probe_comparison_blocked_metric_count",
+            ),
             "runtime_drift_counterfactual_verification_metric_count": _nested(
                 report,
                 "runtime_drift",
@@ -2562,6 +2883,16 @@ def _record_registry(
                 report,
                 "runtime_drift",
                 "counterfactual_verification_blocked_metric_count",
+            ),
+            "runtime_drift_evidence_handoff_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "evidence_handoff_metric_count",
+            ),
+            "runtime_drift_evidence_handoff_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "evidence_handoff_blocked_metric_count",
             ),
             "runtime_drift_report": _nested(report, "paths", "runtime_drift_report"),
             "runtime_drift_artifact_manifest": _nested(report, "paths", "runtime_drift_manifest"),
@@ -2917,6 +3248,36 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
         max_runtime_drift_pre_generation_probe_comparison_best_redline_margin_drop=(
             args.max_runtime_drift_pre_generation_probe_comparison_best_redline_margin_drop
         ),
+        min_runtime_drift_claim_factuality_probe_comparison_coverage=(
+            args.min_runtime_drift_claim_factuality_probe_comparison_coverage
+        ),
+        min_runtime_drift_claim_factuality_probe_comparison_manifest_verified_rate=(
+            args.min_runtime_drift_claim_factuality_probe_comparison_manifest_verified_rate
+        ),
+        min_runtime_drift_claim_factuality_probe_comparison_model_count=(
+            args.min_runtime_drift_claim_factuality_probe_comparison_model_count
+        ),
+        min_runtime_drift_claim_factuality_probe_comparison_run_count=(
+            args.min_runtime_drift_claim_factuality_probe_comparison_run_count
+        ),
+        min_runtime_drift_claim_factuality_probe_comparison_redline_pass_rate=(
+            args.min_runtime_drift_claim_factuality_probe_comparison_redline_pass_rate
+        ),
+        max_runtime_drift_claim_factuality_probe_comparison_best_test_label_auroc_drop=(
+            args.max_runtime_drift_claim_factuality_probe_comparison_best_test_label_auroc_drop
+        ),
+        max_runtime_drift_claim_factuality_probe_comparison_best_test_selective_accuracy_drop=(
+            args.max_runtime_drift_claim_factuality_probe_comparison_best_test_selective_accuracy_drop
+        ),
+        max_runtime_drift_claim_factuality_probe_comparison_best_test_selective_coverage_drop=(
+            args.max_runtime_drift_claim_factuality_probe_comparison_best_test_selective_coverage_drop
+        ),
+        max_runtime_drift_claim_factuality_probe_comparison_best_redline_auroc_drop=(
+            args.max_runtime_drift_claim_factuality_probe_comparison_best_redline_auroc_drop
+        ),
+        max_runtime_drift_claim_factuality_probe_comparison_best_redline_margin_drop=(
+            args.max_runtime_drift_claim_factuality_probe_comparison_best_redline_margin_drop
+        ),
         min_runtime_drift_counterfactual_verification_coverage=(
             args.min_runtime_drift_counterfactual_verification_coverage
         ),
@@ -2935,6 +3296,27 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
         max_runtime_drift_counterfactual_verification_flip_success_count_drop=(
             args.max_runtime_drift_counterfactual_verification_flip_success_count_drop
         ),
+        min_runtime_drift_evidence_handoff_coverage=(
+            args.min_runtime_drift_evidence_handoff_coverage
+        ),
+        min_runtime_drift_evidence_handoff_manifest_verified_rate=(
+            args.min_runtime_drift_evidence_handoff_manifest_verified_rate
+        ),
+        min_runtime_drift_evidence_handoff_present_metric_rate=(
+            args.min_runtime_drift_evidence_handoff_present_metric_rate
+        ),
+        max_runtime_drift_evidence_handoff_missing_metric_rate=(
+            args.max_runtime_drift_evidence_handoff_missing_metric_rate
+        ),
+        max_runtime_drift_evidence_handoff_missing_metric_count=(
+            args.max_runtime_drift_evidence_handoff_missing_metric_count
+        ),
+        max_runtime_drift_evidence_handoff_blocked_group_count=(
+            args.max_runtime_drift_evidence_handoff_blocked_group_count
+        ),
+        min_runtime_drift_evidence_handoff_promoted_group_rate=(
+            args.min_runtime_drift_evidence_handoff_promoted_group_rate
+        ),
         min_runtime_drift_triple_extraction_fixture_matrix_coverage=(
             args.min_runtime_drift_triple_extraction_fixture_matrix_coverage
         ),
@@ -2948,6 +3330,21 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
         min_runtime_drift_triple_audit_claim_coverage=args.min_runtime_drift_triple_audit_claim_coverage,
         min_runtime_drift_triple_audit_pass_rate=args.min_runtime_drift_triple_audit_pass_rate,
         min_runtime_drift_triple_slot_coverage=args.min_runtime_drift_triple_slot_coverage,
+        min_runtime_drift_world_model_participating_trace_rate=(
+            args.min_runtime_drift_world_model_participating_trace_rate
+        ),
+        min_runtime_drift_world_model_coverage_rate=(
+            args.min_runtime_drift_world_model_coverage_rate
+        ),
+        max_runtime_drift_world_model_conflict_rate_increase=(
+            args.max_runtime_drift_world_model_conflict_rate_increase
+        ),
+        max_runtime_drift_world_model_low_agreement_rate_increase=(
+            args.max_runtime_drift_world_model_low_agreement_rate_increase
+        ),
+        max_runtime_drift_world_model_trace_gap_rate_increase=(
+            args.max_runtime_drift_world_model_trace_gap_rate_increase
+        ),
         runtime_drift_covered_fact_property_scopes=tuple(
             args.runtime_drift_covered_fact_property_scope or ()
         ),
@@ -2996,6 +3393,27 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
         ),
         max_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_increase=(
             args.max_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_increase
+        ),
+        max_runtime_drift_product_trace_trajectory_audit_failed_trace_rate_increase=(
+            args.max_runtime_drift_product_trace_trajectory_audit_failed_trace_rate_increase
+        ),
+        max_runtime_drift_product_trace_trajectory_audit_error_rate_increase=(
+            args.max_runtime_drift_product_trace_trajectory_audit_error_rate_increase
+        ),
+        max_runtime_drift_product_trace_trajectory_audit_factual_rate_increase=(
+            args.max_runtime_drift_product_trace_trajectory_audit_factual_rate_increase
+        ),
+        max_runtime_drift_product_trace_trajectory_audit_referential_rate_increase=(
+            args.max_runtime_drift_product_trace_trajectory_audit_referential_rate_increase
+        ),
+        max_runtime_drift_product_trace_trajectory_audit_logical_rate_increase=(
+            args.max_runtime_drift_product_trace_trajectory_audit_logical_rate_increase
+        ),
+        max_runtime_drift_product_trace_trajectory_audit_procedural_rate_increase=(
+            args.max_runtime_drift_product_trace_trajectory_audit_procedural_rate_increase
+        ),
+        max_runtime_drift_product_trace_trajectory_audit_scope_rate_increase=(
+            args.max_runtime_drift_product_trace_trajectory_audit_scope_rate_increase
         ),
         min_runtime_drift_current_trace_count=args.min_runtime_drift_current_trace_count,
         max_action_audit_error_rate=args.max_action_audit_error_rate,
@@ -3130,6 +3548,52 @@ def main(argv: Sequence[str] | None = None) -> None:
         type=float,
         default=None,
     )
+    parser.add_argument("--min-runtime-drift-claim-factuality-probe-comparison-coverage", type=float, default=None)
+    parser.add_argument(
+        "--min-runtime-drift-claim-factuality-probe-comparison-manifest-verified-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-runtime-drift-claim-factuality-probe-comparison-model-count",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-runtime-drift-claim-factuality-probe-comparison-run-count",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-runtime-drift-claim-factuality-probe-comparison-redline-pass-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-claim-factuality-probe-comparison-best-test-label-auroc-drop",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-claim-factuality-probe-comparison-best-test-selective-accuracy-drop",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-claim-factuality-probe-comparison-best-test-selective-coverage-drop",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-claim-factuality-probe-comparison-best-redline-auroc-drop",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-claim-factuality-probe-comparison-best-redline-margin-drop",
+        type=float,
+        default=None,
+    )
     parser.add_argument("--min-runtime-drift-counterfactual-verification-coverage", type=float, default=None)
     parser.add_argument(
         "--min-runtime-drift-counterfactual-verification-manifest-verified-rate",
@@ -3148,6 +3612,17 @@ def main(argv: Sequence[str] | None = None) -> None:
         type=float,
         default=None,
     )
+    parser.add_argument("--min-runtime-drift-evidence-handoff-coverage", type=float, default=None)
+    parser.add_argument(
+        "--min-runtime-drift-evidence-handoff-manifest-verified-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument("--min-runtime-drift-evidence-handoff-present-metric-rate", type=float, default=None)
+    parser.add_argument("--max-runtime-drift-evidence-handoff-missing-metric-rate", type=float, default=None)
+    parser.add_argument("--max-runtime-drift-evidence-handoff-missing-metric-count", type=float, default=None)
+    parser.add_argument("--max-runtime-drift-evidence-handoff-blocked-group-count", type=float, default=None)
+    parser.add_argument("--min-runtime-drift-evidence-handoff-promoted-group-rate", type=float, default=None)
     parser.add_argument("--min-runtime-drift-triple-extraction-fixture-matrix-coverage", type=float, default=None)
     parser.add_argument(
         "--max-runtime-drift-triple-extraction-fixture-matrix-mean-best-f1-drop",
@@ -3163,6 +3638,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--min-runtime-drift-triple-audit-claim-coverage", type=float, default=None)
     parser.add_argument("--min-runtime-drift-triple-audit-pass-rate", type=float, default=None)
     parser.add_argument("--min-runtime-drift-triple-slot-coverage", type=float, default=None)
+    parser.add_argument("--min-runtime-drift-world-model-participating-trace-rate", type=float, default=None)
+    parser.add_argument("--min-runtime-drift-world-model-coverage-rate", type=float, default=None)
+    parser.add_argument("--max-runtime-drift-world-model-conflict-rate-increase", type=float, default=None)
+    parser.add_argument("--max-runtime-drift-world-model-low-agreement-rate-increase", type=float, default=None)
+    parser.add_argument("--max-runtime-drift-world-model-trace-gap-rate-increase", type=float, default=None)
     parser.add_argument(
         "--runtime-drift-covered-fact-property-scope",
         action="append",
@@ -3222,6 +3702,41 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument(
         "--max-runtime-drift-product-trace-action-execution-request-id-mismatch-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-product-trace-trajectory-audit-failed-trace-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-product-trace-trajectory-audit-error-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-product-trace-trajectory-audit-factual-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-product-trace-trajectory-audit-referential-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-product-trace-trajectory-audit-logical-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-product-trace-trajectory-audit-procedural-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-product-trace-trajectory-audit-scope-rate-increase",
         type=float,
         default=None,
     )

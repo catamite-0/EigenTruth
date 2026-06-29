@@ -92,6 +92,48 @@ _PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_FIELDS: tuple[tuple[str, str], ..
         "pre_generation_probe_comparison_best_redline_margin",
     ),
 )
+_PRODUCT_RUNTIME_DRIFT_CLAIM_FACTUALITY_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = (
+    (
+        "promotion_contract.claim_factuality_probe_comparison.coverage_rate",
+        "claim_factuality_probe_comparison_coverage_rate",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.manifest_verified_rate",
+        "claim_factuality_probe_comparison_manifest_verified_rate",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.model_count.mean",
+        "claim_factuality_probe_comparison_model_count",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.run_count.mean",
+        "claim_factuality_probe_comparison_run_count",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.redline_pass_rate",
+        "claim_factuality_probe_comparison_redline_pass_rate",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.best_test_label_auroc.mean",
+        "claim_factuality_probe_comparison_best_test_label_auroc",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.best_test_selective_accuracy.mean",
+        "claim_factuality_probe_comparison_best_test_selective_accuracy",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.best_test_selective_coverage.mean",
+        "claim_factuality_probe_comparison_best_test_selective_coverage",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.best_redline_auroc.mean",
+        "claim_factuality_probe_comparison_best_redline_auroc",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.best_redline_margin.mean",
+        "claim_factuality_probe_comparison_best_redline_margin",
+    ),
+)
 _PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = (
     (
         "promotion_contract.counterfactual_verification.coverage_rate",
@@ -192,6 +234,114 @@ _PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] 
         "product_trace_action_execution_request_id_mismatch_rate",
     ),
 )
+_PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = (
+    ("trajectory_audit.failed_trace_rate", "product_trace_trajectory_audit_failed_trace_rate"),
+    ("trajectory_audit.error_rate", "product_trace_trajectory_audit_error_rate"),
+    ("trajectory_audit.factual_rate", "product_trace_trajectory_audit_factual_rate"),
+    ("trajectory_audit.referential_rate", "product_trace_trajectory_audit_referential_rate"),
+    ("trajectory_audit.logical_rate", "product_trace_trajectory_audit_logical_rate"),
+    ("trajectory_audit.procedural_rate", "product_trace_trajectory_audit_procedural_rate"),
+    ("trajectory_audit.scope_rate", "product_trace_trajectory_audit_scope_rate"),
+)
+_PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = (
+    (
+        "promotion_contract.evidence_handoff.coverage_rate",
+        "evidence_handoff_coverage_rate",
+    ),
+    (
+        "promotion_contract.evidence_handoff.manifest_verified_rate",
+        "evidence_handoff_manifest_verified_rate",
+    ),
+    (
+        "promotion_contract.evidence_handoff.present_metric_rate.mean",
+        "evidence_handoff_present_metric_rate",
+    ),
+    (
+        "promotion_contract.evidence_handoff.missing_metric_rate.mean",
+        "evidence_handoff_missing_metric_rate",
+    ),
+    (
+        "promotion_contract.evidence_handoff.missing_metric_count.mean",
+        "evidence_handoff_missing_metric_count",
+    ),
+    (
+        "promotion_contract.evidence_handoff.blocked_group_count.mean",
+        "evidence_handoff_blocked_group_count",
+    ),
+    (
+        "promotion_contract.evidence_handoff.promoted_group_rate.mean",
+        "evidence_handoff_promoted_group_rate",
+    ),
+)
+_PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = (
+    ("world_model.participating_trace_rate", "world_model_participating_trace_rate"),
+    ("world_model.coverage_rate", "world_model_coverage_rate"),
+    ("world_model.conflict_rate", "world_model_conflict_rate"),
+    ("world_model.low_agreement_rate", "world_model_low_agreement_rate"),
+    ("world_model.trace_gap_rate", "world_model_trace_gap_rate"),
+)
+_PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = (
+    (
+        "promotion_contract.frontier_release_evidence.coverage_rate",
+        "frontier_release_evidence_coverage_rate",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.report_present_rate",
+        "frontier_release_evidence_report_present_rate",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.manifest_present_rate",
+        "frontier_release_evidence_manifest_present_rate",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.status_promote_rate",
+        "frontier_release_evidence_status_promote_rate",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.decision_promote_rate",
+        "frontier_release_evidence_decision_promote_rate",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.verifier_track_promote_rate",
+        "frontier_release_evidence_verifier_track_promote_rate",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.abstention_track_promote_rate",
+        "frontier_release_evidence_abstention_track_promote_rate",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.citation_batch_track_promote_rate",
+        "frontier_release_evidence_citation_batch_track_promote_rate",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.run_count.mean",
+        "frontier_release_evidence_run_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.citation_batch_rollup_count.mean",
+        "frontier_release_evidence_citation_batch_rollup_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.citation_batch_expected_batch_count.mean",
+        "frontier_release_evidence_citation_batch_expected_batch_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.citation_batch_observed_batch_count.mean",
+        "frontier_release_evidence_citation_batch_observed_batch_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.citation_batch_missing_expected_batch_count.mean",
+        "frontier_release_evidence_citation_batch_missing_expected_batch_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.citation_batch_duplicate_batch_count.mean",
+        "frontier_release_evidence_citation_batch_duplicate_batch_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.citation_batch_unexpected_batch_count.mean",
+        "frontier_release_evidence_citation_batch_unexpected_batch_count",
+    ),
+)
 
 
 def compare_release_candidates(
@@ -205,16 +355,31 @@ def compare_release_candidates(
     require_structured_fact_robustness: bool = False,
     structured_fact_canonical_route_key: str | None = None,
     structured_fact_paraphrase_route_key: str | None = None,
+    structured_fact_robustness_min_selected: int | None = None,
+    structured_fact_robustness_min_decision_accuracy: float | None = None,
+    structured_fact_robustness_max_false_supported_rate: float | None = None,
+    structured_fact_robustness_min_false_refuted_rate: float | None = None,
+    structured_fact_robustness_min_covered_fact_properties: int | None = None,
+    structured_fact_robustness_min_covered_fact_property_records: int | None = None,
+    structured_fact_robustness_min_covered_fact_property_source_documents: int | None = None,
+    structured_fact_robustness_min_covered_fact_property_decision_accuracy: float | None = None,
+    structured_fact_robustness_max_covered_fact_property_false_supported_rate: float | None = None,
+    structured_fact_robustness_min_covered_fact_property_false_refuted_rate: float | None = None,
     performance_registry_path: str | Path | None = None,
     performance_baseline_key: str | None = None,
     selector_replay_report_path: str | Path | None = None,
     product_runtime_drift_report_path: str | Path | None = None,
     require_product_runtime_drift_promotion_evidence: bool = False,
     require_product_runtime_drift_pre_generation_evidence: bool = False,
+    require_product_runtime_drift_claim_factuality_evidence: bool = False,
     require_product_runtime_drift_counterfactual_evidence: bool = False,
     require_product_runtime_drift_triple_audit_evidence: bool = False,
     require_product_runtime_drift_covered_fact_property_evidence: bool = False,
     require_product_runtime_drift_action_gate_evidence: bool = False,
+    require_product_runtime_drift_trajectory_audit_evidence: bool = False,
+    require_product_runtime_drift_evidence_handoff_evidence: bool = False,
+    require_product_runtime_drift_world_model_evidence: bool = False,
+    require_product_runtime_drift_frontier_release_evidence: bool = False,
     release_efficiency_report_path: str | Path | None = None,
     external_evidence_baseline_comparison_path: str | Path | None = None,
     external_evidence_baseline_comparison_registry_path: str | Path | None = None,
@@ -222,12 +387,18 @@ def compare_release_candidates(
     pre_generation_probe_comparison_path: str | Path | None = None,
     pre_generation_probe_comparison_registry_path: str | Path | None = None,
     pre_generation_probe_comparison_key: str | None = None,
+    claim_factuality_probe_comparison_path: str | Path | None = None,
+    claim_factuality_probe_comparison_registry_path: str | Path | None = None,
+    claim_factuality_probe_comparison_key: str | None = None,
     frontier_release_evidence_path: str | Path | None = None,
     frontier_release_evidence_registry_path: str | Path | None = None,
     frontier_release_evidence_key: str | None = None,
     world_model_signal_workflow_path: str | Path | None = None,
     world_model_signal_workflow_registry_path: str | Path | None = None,
     world_model_signal_workflow_key: str | None = None,
+    mechanism_handoff_evidence_bundle_path: str | Path | None = None,
+    mechanism_handoff_evidence_bundle_registry_path: str | Path | None = None,
+    mechanism_handoff_evidence_bundle_key: str | None = None,
     pathway_intervention_workflow_path: str | Path | None = None,
     pathway_intervention_workflow_registry_path: str | Path | None = None,
     pathway_intervention_workflow_key: str | None = None,
@@ -286,6 +457,7 @@ def compare_release_candidates(
     min_best_quality_auroc: float | None = None,
     max_uncached_forward_seconds: float | None = None,
     max_cache_only_seconds: float | None = None,
+    max_recommended_runtime_seconds: float | None = None,
     max_covariance_maha_last_auroc_drop: float | None = None,
     max_inside_sample_count_ratio: float | None = None,
     max_inside_generation_seconds_ratio: float | None = None,
@@ -360,6 +532,8 @@ def compare_release_candidates(
         disabled_profile_defaults.append("external_evidence_baseline_comparison_key")
     if triple_extraction_fixture_matrix_path is not None:
         disabled_profile_defaults.append("triple_extraction_fixture_matrix_key")
+    if mechanism_handoff_evidence_bundle_path is not None:
+        disabled_profile_defaults.append("mechanism_handoff_evidence_bundle_key")
     release_policy_profile, release_policy_values, release_policy_applied = (
         apply_release_policy_profile_defaults(
             release_policy_profile,
@@ -367,6 +541,7 @@ def compare_release_candidates(
                 "require_structured_fact_robustness": require_structured_fact_robustness,
                 "min_best_quality_auroc": min_best_quality_auroc,
                 "max_uncached_forward_seconds": max_uncached_forward_seconds,
+                "max_recommended_runtime_seconds": max_recommended_runtime_seconds,
                 "min_selected": min_selected,
                 "min_decision_accuracy": min_decision_accuracy,
                 "max_false_supported_rate": max_false_supported_rate,
@@ -391,6 +566,36 @@ def compare_release_candidates(
                 "required_route_min_covered_fact_property_false_refuted_rate": (
                     required_route_min_covered_fact_property_false_refuted_rate
                 ),
+                "structured_fact_robustness_min_selected": (
+                    structured_fact_robustness_min_selected
+                ),
+                "structured_fact_robustness_min_decision_accuracy": (
+                    structured_fact_robustness_min_decision_accuracy
+                ),
+                "structured_fact_robustness_max_false_supported_rate": (
+                    structured_fact_robustness_max_false_supported_rate
+                ),
+                "structured_fact_robustness_min_false_refuted_rate": (
+                    structured_fact_robustness_min_false_refuted_rate
+                ),
+                "structured_fact_robustness_min_covered_fact_properties": (
+                    structured_fact_robustness_min_covered_fact_properties
+                ),
+                "structured_fact_robustness_min_covered_fact_property_records": (
+                    structured_fact_robustness_min_covered_fact_property_records
+                ),
+                "structured_fact_robustness_min_covered_fact_property_source_documents": (
+                    structured_fact_robustness_min_covered_fact_property_source_documents
+                ),
+                "structured_fact_robustness_min_covered_fact_property_decision_accuracy": (
+                    structured_fact_robustness_min_covered_fact_property_decision_accuracy
+                ),
+                "structured_fact_robustness_max_covered_fact_property_false_supported_rate": (
+                    structured_fact_robustness_max_covered_fact_property_false_supported_rate
+                ),
+                "structured_fact_robustness_min_covered_fact_property_false_refuted_rate": (
+                    structured_fact_robustness_min_covered_fact_property_false_refuted_rate
+                ),
                 "adapter_family_profile": adapter_family_profile,
                 "require_state_transition_world_model": require_state_transition_world_model,
                 "require_product_runtime_drift_promotion_evidence": (
@@ -398,6 +603,9 @@ def compare_release_candidates(
                 ),
                 "require_product_runtime_drift_pre_generation_evidence": (
                     require_product_runtime_drift_pre_generation_evidence
+                ),
+                "require_product_runtime_drift_claim_factuality_evidence": (
+                    require_product_runtime_drift_claim_factuality_evidence
                 ),
                 "require_product_runtime_drift_counterfactual_evidence": (
                     require_product_runtime_drift_counterfactual_evidence
@@ -411,6 +619,18 @@ def compare_release_candidates(
                 "require_product_runtime_drift_action_gate_evidence": (
                     require_product_runtime_drift_action_gate_evidence
                 ),
+                "require_product_runtime_drift_trajectory_audit_evidence": (
+                    require_product_runtime_drift_trajectory_audit_evidence
+                ),
+                "require_product_runtime_drift_evidence_handoff_evidence": (
+                    require_product_runtime_drift_evidence_handoff_evidence
+                ),
+                "require_product_runtime_drift_world_model_evidence": (
+                    require_product_runtime_drift_world_model_evidence
+                ),
+                "require_product_runtime_drift_frontier_release_evidence": (
+                    require_product_runtime_drift_frontier_release_evidence
+                ),
                 "require_product_trace_action_audit_gate": require_product_trace_action_audit_gate,
                 "require_product_trace_action_execution_gate": (
                     require_product_trace_action_execution_gate
@@ -419,6 +639,9 @@ def compare_release_candidates(
                     external_evidence_baseline_comparison_key
                 ),
                 "triple_extraction_fixture_matrix_key": triple_extraction_fixture_matrix_key,
+                "mechanism_handoff_evidence_bundle_key": (
+                    mechanism_handoff_evidence_bundle_key
+                ),
                 "min_triple_extraction_corpora": min_triple_extraction_corpora,
                 "min_triple_extraction_distinct_predicates": min_triple_extraction_distinct_predicates,
                 "min_triple_extraction_external_prediction_count": (
@@ -439,6 +662,7 @@ def compare_release_candidates(
     )
     min_best_quality_auroc = release_policy_values["min_best_quality_auroc"]
     max_uncached_forward_seconds = release_policy_values["max_uncached_forward_seconds"]
+    max_recommended_runtime_seconds = release_policy_values["max_recommended_runtime_seconds"]
     min_selected = release_policy_values["min_selected"]
     min_decision_accuracy = release_policy_values["min_decision_accuracy"]
     max_false_supported_rate = release_policy_values["max_false_supported_rate"]
@@ -463,6 +687,44 @@ def compare_release_candidates(
     required_route_min_covered_fact_property_false_refuted_rate = release_policy_values[
         "required_route_min_covered_fact_property_false_refuted_rate"
     ]
+    structured_fact_robustness_min_selected = release_policy_values[
+        "structured_fact_robustness_min_selected"
+    ]
+    structured_fact_robustness_min_decision_accuracy = release_policy_values[
+        "structured_fact_robustness_min_decision_accuracy"
+    ]
+    structured_fact_robustness_max_false_supported_rate = release_policy_values[
+        "structured_fact_robustness_max_false_supported_rate"
+    ]
+    structured_fact_robustness_min_false_refuted_rate = release_policy_values[
+        "structured_fact_robustness_min_false_refuted_rate"
+    ]
+    structured_fact_robustness_min_covered_fact_properties = release_policy_values[
+        "structured_fact_robustness_min_covered_fact_properties"
+    ]
+    structured_fact_robustness_min_covered_fact_property_records = release_policy_values[
+        "structured_fact_robustness_min_covered_fact_property_records"
+    ]
+    structured_fact_robustness_min_covered_fact_property_source_documents = (
+        release_policy_values[
+            "structured_fact_robustness_min_covered_fact_property_source_documents"
+        ]
+    )
+    structured_fact_robustness_min_covered_fact_property_decision_accuracy = (
+        release_policy_values[
+            "structured_fact_robustness_min_covered_fact_property_decision_accuracy"
+        ]
+    )
+    structured_fact_robustness_max_covered_fact_property_false_supported_rate = (
+        release_policy_values[
+            "structured_fact_robustness_max_covered_fact_property_false_supported_rate"
+        ]
+    )
+    structured_fact_robustness_min_covered_fact_property_false_refuted_rate = (
+        release_policy_values[
+            "structured_fact_robustness_min_covered_fact_property_false_refuted_rate"
+        ]
+    )
     adapter_family_profile = release_policy_values["adapter_family_profile"]
     require_state_transition_world_model = bool(
         release_policy_values["require_state_transition_world_model"]
@@ -472,6 +734,9 @@ def compare_release_candidates(
     )
     require_product_runtime_drift_pre_generation_evidence = bool(
         release_policy_values["require_product_runtime_drift_pre_generation_evidence"]
+    )
+    require_product_runtime_drift_claim_factuality_evidence = bool(
+        release_policy_values.get("require_product_runtime_drift_claim_factuality_evidence", False)
     )
     require_product_runtime_drift_counterfactual_evidence = bool(
         release_policy_values["require_product_runtime_drift_counterfactual_evidence"]
@@ -485,6 +750,21 @@ def compare_release_candidates(
     require_product_runtime_drift_action_gate_evidence = bool(
         release_policy_values["require_product_runtime_drift_action_gate_evidence"]
     )
+    require_product_runtime_drift_trajectory_audit_evidence = bool(
+        release_policy_values.get("require_product_runtime_drift_trajectory_audit_evidence", False)
+    )
+    require_product_runtime_drift_evidence_handoff_evidence = bool(
+        release_policy_values["require_product_runtime_drift_evidence_handoff_evidence"]
+    )
+    require_product_runtime_drift_world_model_evidence = bool(
+        release_policy_values.get("require_product_runtime_drift_world_model_evidence", False)
+    )
+    require_product_runtime_drift_frontier_release_evidence = bool(
+        release_policy_values.get(
+            "require_product_runtime_drift_frontier_release_evidence",
+            False,
+        )
+    )
     require_product_trace_action_audit_gate = bool(
         release_policy_values["require_product_trace_action_audit_gate"]
     )
@@ -496,6 +776,9 @@ def compare_release_candidates(
     )
     triple_extraction_fixture_matrix_key = clean_optional_key(
         release_policy_values["triple_extraction_fixture_matrix_key"]
+    )
+    mechanism_handoff_evidence_bundle_key = clean_optional_key(
+        release_policy_values["mechanism_handoff_evidence_bundle_key"]
     )
     min_triple_extraction_corpora = release_policy_values["min_triple_extraction_corpora"]
     min_triple_extraction_distinct_predicates = release_policy_values[
@@ -525,12 +808,25 @@ def compare_release_candidates(
         or structured_fact_paraphrase_route_key is not None
     ):
         raise ValueError("structured_fact route keys require require_structured_fact_robustness=True.")
+    structured_fact_route_keys: tuple[str, ...] = ()
+    if require_structured_fact_robustness:
+        structured_fact_route_keys = tuple(
+            str(key)
+            for key in (structured_fact_canonical_route_key, structured_fact_paraphrase_route_key)
+            if key is not None
+        )
     required_route_baseline_keys = tuple(str(key) for key in required_route_baseline_keys)
     if require_structured_fact_robustness:
         required_route_baseline_keys = append_unique(
             required_route_baseline_keys,
             (structured_fact_canonical_route_key, structured_fact_paraphrase_route_key),
         )
+    structured_fact_route_key_set = set(structured_fact_route_keys)
+    ordinary_required_route_keys = tuple(
+        key
+        for key in required_route_baseline_keys
+        if key not in structured_fact_route_key_set
+    )
     if performance_baseline_key is None and (
         require_performance_score_dump_cache
         or min_performance_score_dump_cache_jsonl_view_hit_rate is not None
@@ -779,6 +1075,7 @@ def compare_release_candidates(
         min_best_quality_auroc=min_best_quality_auroc,
         max_uncached_forward_seconds=max_uncached_forward_seconds,
         max_cache_only_seconds=max_cache_only_seconds,
+        max_recommended_runtime_seconds=max_recommended_runtime_seconds,
         max_covariance_maha_last_auroc_drop=max_covariance_maha_last_auroc_drop,
         max_inside_sample_count_ratio=max_inside_sample_count_ratio,
         max_inside_generation_seconds_ratio=max_inside_generation_seconds_ratio,
@@ -828,9 +1125,9 @@ def compare_release_candidates(
         json_cache_stats=payload_cache_stats,
     )
     raw_candidate = _release_candidate(readiness, route)
-    required_routes = _required_route_baseline_gate(
+    ordinary_required_routes = _required_route_baseline_gate(
         route_registry_path=route_registry_path,
-        required_route_baseline_keys=required_route_baseline_keys,
+        required_route_baseline_keys=ordinary_required_route_keys,
         recursive=recursive,
         allow_unverified=allow_unverified,
         min_selected=required_route_min_selected,
@@ -868,6 +1165,83 @@ def compare_release_candidates(
         fingerprint_cache=cache,
         json_cache=payload_cache,
         json_cache_stats=payload_cache_stats,
+    )
+    structured_fact_routes = _required_route_baseline_gate(
+        route_registry_path=route_registry_path,
+        required_route_baseline_keys=structured_fact_route_keys,
+        recursive=recursive,
+        allow_unverified=allow_unverified,
+        min_selected=_first_set(
+            structured_fact_robustness_min_selected,
+            required_route_min_selected,
+        ),
+        min_decision_accuracy=_first_set(
+            structured_fact_robustness_min_decision_accuracy,
+            required_route_min_decision_accuracy,
+        ),
+        max_false_supported_rate=_first_set(
+            structured_fact_robustness_max_false_supported_rate,
+            required_route_max_false_supported_rate,
+        ),
+        min_false_refuted_rate=_first_set(
+            structured_fact_robustness_min_false_refuted_rate,
+            required_route_min_false_refuted_rate,
+        ),
+        max_verified_false_alarm=None,
+        min_verified_detection=None,
+        max_mean_duration_seconds=None,
+        max_p99_duration_seconds=None,
+        max_max_duration_seconds=None,
+        max_mean_attempted_route_count=None,
+        max_retrieval_use_rate=None,
+        max_runtime_total_seconds=None,
+        max_retrieval_hit_count=None,
+        min_claims_cache_hit_rate=None,
+        min_verifier_trace_cache_hit_rate=None,
+        min_covered_fact_properties=_first_set(
+            structured_fact_robustness_min_covered_fact_properties,
+            required_route_min_covered_fact_properties,
+        ),
+        min_covered_fact_property_records=_first_set(
+            structured_fact_robustness_min_covered_fact_property_records,
+            required_route_min_covered_fact_property_records,
+        ),
+        min_covered_fact_property_source_documents=_first_set(
+            structured_fact_robustness_min_covered_fact_property_source_documents,
+            required_route_min_covered_fact_property_source_documents,
+        ),
+        min_covered_fact_property_decision_accuracy=_first_set(
+            structured_fact_robustness_min_covered_fact_property_decision_accuracy,
+            required_route_min_covered_fact_property_decision_accuracy,
+        ),
+        max_covered_fact_property_false_supported_rate=_first_set(
+            structured_fact_robustness_max_covered_fact_property_false_supported_rate,
+            required_route_max_covered_fact_property_false_supported_rate,
+        ),
+        min_covered_fact_property_false_refuted_rate=_first_set(
+            structured_fact_robustness_min_covered_fact_property_false_refuted_rate,
+            required_route_min_covered_fact_property_false_refuted_rate,
+        ),
+        require_non_oracle_evidence=False,
+        require_retrieval_provenance_filter=False,
+        required_retrieval_source_prefixes=(),
+        required_retrieval_metadata=None,
+        min_retrieval_filter_score=None,
+        require_retrieval_stress_control=False,
+        retrieval_stress_manifest=None,
+        min_stress_false_supported_rate=None,
+        max_stress_false_refuted_rate=None,
+        fingerprint_cache=cache,
+        json_cache=payload_cache,
+        json_cache_stats=payload_cache_stats,
+    )
+    required_routes = _combine_required_route_baseline_gates(
+        route_registry_path=route_registry_path,
+        required_route_baseline_keys=required_route_baseline_keys,
+        ordinary_gate=ordinary_required_routes,
+        structured_fact_gate=structured_fact_routes,
+        ordinary_required_route_keys=ordinary_required_route_keys,
+        structured_fact_route_keys=structured_fact_route_keys,
     )
     adapter_family = _adapter_family_matrix_gate(
         adapter_family_matrix_path=adapter_family_matrix_path,
@@ -947,12 +1321,25 @@ def compare_release_candidates(
         product_runtime_drift_report_path=product_runtime_drift_report_path,
         require_promotion_evidence=require_product_runtime_drift_promotion_evidence,
         require_pre_generation_evidence=require_product_runtime_drift_pre_generation_evidence,
+        require_claim_factuality_evidence=(
+            require_product_runtime_drift_claim_factuality_evidence
+        ),
         require_counterfactual_evidence=require_product_runtime_drift_counterfactual_evidence,
         require_triple_audit_evidence=require_product_runtime_drift_triple_audit_evidence,
         require_covered_fact_property_evidence=(
             require_product_runtime_drift_covered_fact_property_evidence
         ),
         require_action_gate_evidence=require_product_runtime_drift_action_gate_evidence,
+        require_trajectory_audit_evidence=(
+            require_product_runtime_drift_trajectory_audit_evidence
+        ),
+        require_evidence_handoff_evidence=(
+            require_product_runtime_drift_evidence_handoff_evidence
+        ),
+        require_world_model_evidence=require_product_runtime_drift_world_model_evidence,
+        require_frontier_release_evidence=(
+            require_product_runtime_drift_frontier_release_evidence
+        ),
         recursive=recursive,
         allow_unverified=allow_unverified,
         manifest_fingerprint_workers=manifest_fingerprint_workers,
@@ -996,6 +1383,23 @@ def compare_release_candidates(
         manifest_fingerprint_workers=manifest_fingerprint_workers,
         verification_context=verification_context,
     )
+    claim_factuality_probe_comparison_source = _resolve_claim_factuality_probe_comparison_source(
+        claim_factuality_probe_comparison_path=claim_factuality_probe_comparison_path,
+        claim_factuality_probe_comparison_registry_path=(
+            claim_factuality_probe_comparison_registry_path
+            if claim_factuality_probe_comparison_key is not None
+            else None
+        ),
+        claim_factuality_probe_comparison_key=claim_factuality_probe_comparison_key,
+        default_registry_path=readiness_registry_path,
+    )
+    claim_factuality_probe_comparison = _claim_factuality_probe_comparison_gate(
+        claim_factuality_probe_comparison_source=claim_factuality_probe_comparison_source,
+        recursive=recursive,
+        allow_unverified=allow_unverified,
+        manifest_fingerprint_workers=manifest_fingerprint_workers,
+        verification_context=verification_context,
+    )
     frontier_release_evidence_source = _resolve_frontier_release_evidence_source(
         frontier_release_evidence_path=frontier_release_evidence_path,
         frontier_release_evidence_registry_path=(
@@ -1025,6 +1429,23 @@ def compare_release_candidates(
     )
     world_model_signal_workflow = _world_model_signal_workflow_gate(
         world_model_signal_workflow_source=world_model_signal_workflow_source,
+        recursive=recursive,
+        allow_unverified=allow_unverified,
+        manifest_fingerprint_workers=manifest_fingerprint_workers,
+        verification_context=verification_context,
+    )
+    mechanism_handoff_evidence_bundle_source = _resolve_mechanism_handoff_evidence_bundle_source(
+        mechanism_handoff_evidence_bundle_path=mechanism_handoff_evidence_bundle_path,
+        mechanism_handoff_evidence_bundle_registry_path=(
+            mechanism_handoff_evidence_bundle_registry_path
+            if mechanism_handoff_evidence_bundle_key is not None
+            else None
+        ),
+        mechanism_handoff_evidence_bundle_key=mechanism_handoff_evidence_bundle_key,
+        default_registry_path=readiness_registry_path,
+    )
+    mechanism_handoff_evidence_bundle = _mechanism_handoff_evidence_bundle_gate(
+        mechanism_handoff_evidence_bundle_source=mechanism_handoff_evidence_bundle_source,
         recursive=recursive,
         allow_unverified=allow_unverified,
         manifest_fingerprint_workers=manifest_fingerprint_workers,
@@ -1062,8 +1483,10 @@ def compare_release_candidates(
         release_efficiency,
         external_evidence_baseline_comparison,
         pre_generation_probe_comparison,
+        claim_factuality_probe_comparison,
         frontier_release_evidence,
         world_model_signal_workflow,
+        mechanism_handoff_evidence_bundle,
         pathway_intervention_workflow,
         selfcheck_signal_fusion_workflow,
         uncertainty_escalation_workflow,
@@ -1083,8 +1506,10 @@ def compare_release_candidates(
             release_efficiency,
             external_evidence_baseline_comparison,
             pre_generation_probe_comparison,
+            claim_factuality_probe_comparison,
             frontier_release_evidence,
             world_model_signal_workflow,
+            mechanism_handoff_evidence_bundle,
             pathway_intervention_workflow,
             selfcheck_signal_fusion_workflow,
             uncertainty_escalation_workflow,
@@ -1126,6 +1551,9 @@ def compare_release_candidates(
             "require_product_runtime_drift_pre_generation_evidence": bool(
                 require_product_runtime_drift_pre_generation_evidence
             ),
+            "require_product_runtime_drift_claim_factuality_evidence": bool(
+                require_product_runtime_drift_claim_factuality_evidence
+            ),
             "require_product_runtime_drift_counterfactual_evidence": bool(
                 require_product_runtime_drift_counterfactual_evidence
             ),
@@ -1137,6 +1565,18 @@ def compare_release_candidates(
             ),
             "require_product_runtime_drift_action_gate_evidence": bool(
                 require_product_runtime_drift_action_gate_evidence
+            ),
+            "require_product_runtime_drift_trajectory_audit_evidence": bool(
+                require_product_runtime_drift_trajectory_audit_evidence
+            ),
+            "require_product_runtime_drift_evidence_handoff_evidence": bool(
+                require_product_runtime_drift_evidence_handoff_evidence
+            ),
+            "require_product_runtime_drift_world_model_evidence": bool(
+                require_product_runtime_drift_world_model_evidence
+            ),
+            "require_product_runtime_drift_frontier_release_evidence": bool(
+                require_product_runtime_drift_frontier_release_evidence
             ),
             "require_product_trace_action_audit_gate": bool(
                 require_product_trace_action_audit_gate
@@ -1173,6 +1613,17 @@ def compare_release_candidates(
                 else pre_generation_probe_comparison_source.get("registry")
             ),
             "pre_generation_probe_comparison_key": pre_generation_probe_comparison_key,
+            "claim_factuality_probe_comparison": (
+                None
+                if claim_factuality_probe_comparison_source is None
+                else str(claim_factuality_probe_comparison_source["path"])
+            ),
+            "claim_factuality_probe_comparison_registry": (
+                None
+                if claim_factuality_probe_comparison_source is None
+                else claim_factuality_probe_comparison_source.get("registry")
+            ),
+            "claim_factuality_probe_comparison_key": claim_factuality_probe_comparison_key,
             "frontier_release_evidence": (
                 None
                 if frontier_release_evidence_source is None
@@ -1195,6 +1646,17 @@ def compare_release_candidates(
                 else world_model_signal_workflow_source.get("registry")
             ),
             "world_model_signal_workflow_key": world_model_signal_workflow_key,
+            "mechanism_handoff_evidence_bundle": (
+                None
+                if mechanism_handoff_evidence_bundle_source is None
+                else str(mechanism_handoff_evidence_bundle_source["path"])
+            ),
+            "mechanism_handoff_evidence_bundle_registry": (
+                None
+                if mechanism_handoff_evidence_bundle_source is None
+                else mechanism_handoff_evidence_bundle_source.get("registry")
+            ),
+            "mechanism_handoff_evidence_bundle_key": mechanism_handoff_evidence_bundle_key,
             "pathway_intervention_workflow": (
                 None
                 if pathway_intervention_workflow_source is None
@@ -1339,6 +1801,7 @@ def compare_release_candidates(
             "min_best_quality_auroc": min_best_quality_auroc,
             "max_uncached_forward_seconds": max_uncached_forward_seconds,
             "max_cache_only_seconds": max_cache_only_seconds,
+            "max_recommended_runtime_seconds": max_recommended_runtime_seconds,
             "max_covariance_maha_last_auroc_drop": max_covariance_maha_last_auroc_drop,
             "max_inside_sample_count_ratio": max_inside_sample_count_ratio,
             "max_inside_generation_seconds_ratio": max_inside_generation_seconds_ratio,
@@ -1401,6 +1864,34 @@ def compare_release_candidates(
             "required_route_min_covered_fact_property_false_refuted_rate": (
                 required_route_min_covered_fact_property_false_refuted_rate
             ),
+            "structured_fact_robustness_min_selected": structured_fact_robustness_min_selected,
+            "structured_fact_robustness_min_decision_accuracy": (
+                structured_fact_robustness_min_decision_accuracy
+            ),
+            "structured_fact_robustness_max_false_supported_rate": (
+                structured_fact_robustness_max_false_supported_rate
+            ),
+            "structured_fact_robustness_min_false_refuted_rate": (
+                structured_fact_robustness_min_false_refuted_rate
+            ),
+            "structured_fact_robustness_min_covered_fact_properties": (
+                structured_fact_robustness_min_covered_fact_properties
+            ),
+            "structured_fact_robustness_min_covered_fact_property_records": (
+                structured_fact_robustness_min_covered_fact_property_records
+            ),
+            "structured_fact_robustness_min_covered_fact_property_source_documents": (
+                structured_fact_robustness_min_covered_fact_property_source_documents
+            ),
+            "structured_fact_robustness_min_covered_fact_property_decision_accuracy": (
+                structured_fact_robustness_min_covered_fact_property_decision_accuracy
+            ),
+            "structured_fact_robustness_max_covered_fact_property_false_supported_rate": (
+                structured_fact_robustness_max_covered_fact_property_false_supported_rate
+            ),
+            "structured_fact_robustness_min_covered_fact_property_false_refuted_rate": (
+                structured_fact_robustness_min_covered_fact_property_false_refuted_rate
+            ),
             "required_route_require_non_oracle_evidence": required_route_require_non_oracle_evidence,
             "required_route_require_retrieval_provenance_filter": (
                 required_route_require_retrieval_provenance_filter
@@ -1434,8 +1925,10 @@ def compare_release_candidates(
         "release_efficiency_gate": release_efficiency,
         "external_evidence_baseline_comparison_gate": external_evidence_baseline_comparison,
         "pre_generation_probe_comparison_gate": pre_generation_probe_comparison,
+        "claim_factuality_probe_comparison_gate": claim_factuality_probe_comparison,
         "frontier_release_evidence_gate": frontier_release_evidence,
         "world_model_signal_workflow_gate": world_model_signal_workflow,
+        "mechanism_handoff_evidence_bundle_gate": mechanism_handoff_evidence_bundle,
         "pathway_intervention_workflow_gate": pathway_intervention_workflow,
         "adapter_family_matrix_gate": adapter_family,
         "triple_extraction_fixture_matrix_gate": triple_extraction_fixture_matrix,
@@ -1489,6 +1982,10 @@ def _release_candidate(
             "uncached_forward_cost_seconds": readiness_row.get("uncached_forward_cost_seconds"),
             "uncached_forward_cost_source": readiness_row.get("uncached_forward_cost_source"),
             "cache_only_total_seconds": readiness_row.get("cache_only_total_seconds"),
+            "recommended_runtime_seconds": readiness_row.get("recommended_runtime_seconds"),
+            "recommended_runtime_cost_source": readiness_row.get(
+                "recommended_runtime_cost_source"
+            ),
             "inside_sampling_recommended_run": readiness_row.get("inside_sampling_recommended_run"),
             "inside_sampling_total_generated_samples": readiness_row.get(
                 "inside_sampling_total_generated_samples"
@@ -1585,6 +2082,96 @@ def _covered_fact_property_summary(row: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _first_set(*values: Any) -> Any:
+    for value in values:
+        if value is not None:
+            return value
+    return None
+
+
+def _combine_required_route_baseline_gates(
+    *,
+    route_registry_path: str | Path,
+    required_route_baseline_keys: Sequence[str],
+    ordinary_gate: Mapping[str, Any] | None,
+    structured_fact_gate: Mapping[str, Any] | None,
+    ordinary_required_route_keys: Sequence[str],
+    structured_fact_route_keys: Sequence[str],
+) -> dict[str, Any] | None:
+    gates = tuple(gate for gate in (ordinary_gate, structured_fact_gate) if gate is not None)
+    if not gates:
+        return None
+    if len(gates) == 1:
+        gate = dict(gates[0])
+        gate["required_keys"] = tuple(required_route_baseline_keys)
+        gate["ordinary_required_route_keys"] = tuple(ordinary_required_route_keys)
+        gate["structured_fact_route_keys"] = tuple(structured_fact_route_keys)
+        if structured_fact_gate is not None:
+            gate["structured_fact_robustness_gate"] = structured_fact_gate
+        else:
+            gate["ordinary_required_route_gate"] = ordinary_gate
+        return gate
+
+    rows: list[Mapping[str, Any]] = []
+    failures: list[str] = []
+    for label, gate in (
+        ("ordinary_required_routes", ordinary_gate),
+        ("structured_fact_robustness", structured_fact_gate),
+    ):
+        if gate is None:
+            continue
+        rows.extend(_mapping(row) for row in gate.get("rows", ()))
+        gate_state = _mapping(gate.get("gate"))
+        if gate_state.get("passed") is True:
+            continue
+        reasons = list(gate_state.get("blocking_reasons", ())) or [
+            "route baseline gate did not pass"
+        ]
+        failures.extend(f"{label}: {reason}" for reason in reasons)
+    gate_state = {
+        "passed": not failures,
+        "blocking_reasons": failures,
+    }
+    ordinary_comparison = None if ordinary_gate is None else ordinary_gate.get("comparison")
+    structured_comparison = (
+        None if structured_fact_gate is None else structured_fact_gate.get("comparison")
+    )
+    comparison = {
+        "schema_version": 1,
+        "status": "promote" if gate_state["passed"] else "blocked",
+        "config": {
+            "ordinary_required_route_keys": tuple(ordinary_required_route_keys),
+            "structured_fact_route_keys": tuple(structured_fact_route_keys),
+            "ordinary_required_routes": (
+                None
+                if ordinary_comparison is None
+                else _mapping(ordinary_comparison).get("config")
+            ),
+            "structured_fact_robustness": (
+                None
+                if structured_comparison is None
+                else _mapping(structured_comparison).get("config")
+            ),
+        },
+        "leaderboard": tuple(rows),
+        "ordinary_required_route_comparison": ordinary_comparison,
+        "structured_fact_robustness_comparison": structured_comparison,
+    }
+    return {
+        "schema_version": 1,
+        "status": "promote" if gate_state["passed"] else "blocked",
+        "registry": str(route_registry_path),
+        "required_keys": tuple(required_route_baseline_keys),
+        "ordinary_required_route_keys": tuple(ordinary_required_route_keys),
+        "structured_fact_route_keys": tuple(structured_fact_route_keys),
+        "comparison": comparison,
+        "rows": tuple(rows),
+        "gate": gate_state,
+        "ordinary_required_route_gate": ordinary_gate,
+        "structured_fact_robustness_gate": structured_fact_gate,
+    }
+
+
 def _decision(
     readiness: Mapping[str, Any],
     route: Mapping[str, Any],
@@ -1600,8 +2187,10 @@ def _decision(
     release_efficiency: Mapping[str, Any] | None = None,
     external_evidence_baseline_comparison: Mapping[str, Any] | None = None,
     pre_generation_probe_comparison: Mapping[str, Any] | None = None,
+    claim_factuality_probe_comparison: Mapping[str, Any] | None = None,
     frontier_release_evidence: Mapping[str, Any] | None = None,
     world_model_signal_workflow: Mapping[str, Any] | None = None,
+    mechanism_handoff_evidence_bundle: Mapping[str, Any] | None = None,
     pathway_intervention_workflow: Mapping[str, Any] | None = None,
     selfcheck_signal_fusion_workflow: Mapping[str, Any] | None = None,
     uncertainty_escalation_workflow: Mapping[str, Any] | None = None,
@@ -1677,6 +2266,16 @@ def _decision(
         if pre_generation_probe_comparison is None
         else pre_generation_probe_comparison.get("status")
     )
+    claim_factuality_probe_comparison_gate = _mapping(
+        None
+        if claim_factuality_probe_comparison is None
+        else claim_factuality_probe_comparison.get("gate")
+    )
+    claim_factuality_probe_comparison_status = (
+        None
+        if claim_factuality_probe_comparison is None
+        else claim_factuality_probe_comparison.get("status")
+    )
     frontier_release_evidence_gate = _mapping(
         None if frontier_release_evidence is None else frontier_release_evidence.get("gate")
     )
@@ -1692,6 +2291,16 @@ def _decision(
         None
         if world_model_signal_workflow is None
         else world_model_signal_workflow.get("status")
+    )
+    mechanism_handoff_evidence_bundle_gate = _mapping(
+        None
+        if mechanism_handoff_evidence_bundle is None
+        else mechanism_handoff_evidence_bundle.get("gate")
+    )
+    mechanism_handoff_evidence_bundle_status = (
+        None
+        if mechanism_handoff_evidence_bundle is None
+        else mechanism_handoff_evidence_bundle.get("status")
     )
     pathway_intervention_workflow_gate = _mapping(
         None
@@ -1824,6 +2433,15 @@ def _decision(
             "reasons": list(pre_generation_probe_comparison_gate.get("blocking_reasons", ())),
         })
     if (
+        claim_factuality_probe_comparison is not None
+        and claim_factuality_probe_comparison_gate.get("passed") is not True
+    ):
+        blocking_reasons.append({
+            "gate": "claim_factuality_probe_comparison",
+            "status": claim_factuality_probe_comparison_status,
+            "reasons": list(claim_factuality_probe_comparison_gate.get("blocking_reasons", ())),
+        })
+    if (
         frontier_release_evidence is not None
         and frontier_release_evidence_gate.get("passed") is not True
     ):
@@ -1840,6 +2458,15 @@ def _decision(
             "gate": "world_model_signal_workflow",
             "status": world_model_signal_workflow_status,
             "reasons": list(world_model_signal_workflow_gate.get("blocking_reasons", ())),
+        })
+    if (
+        mechanism_handoff_evidence_bundle is not None
+        and mechanism_handoff_evidence_bundle_gate.get("passed") is not True
+    ):
+        blocking_reasons.append({
+            "gate": "mechanism_handoff_evidence_bundle",
+            "status": mechanism_handoff_evidence_bundle_status,
+            "reasons": list(mechanism_handoff_evidence_bundle_gate.get("blocking_reasons", ())),
         })
     if (
         pathway_intervention_workflow is not None
@@ -1903,8 +2530,10 @@ def _decision(
         "release_efficiency_status": release_efficiency_status,
         "external_evidence_baseline_comparison_status": external_evidence_baseline_comparison_status,
         "pre_generation_probe_comparison_status": pre_generation_probe_comparison_status,
+        "claim_factuality_probe_comparison_status": claim_factuality_probe_comparison_status,
         "frontier_release_evidence_status": frontier_release_evidence_status,
         "world_model_signal_workflow_status": world_model_signal_workflow_status,
+        "mechanism_handoff_evidence_bundle_status": mechanism_handoff_evidence_bundle_status,
         "pathway_intervention_workflow_status": pathway_intervention_workflow_status,
         "selfcheck_signal_fusion_workflow_status": selfcheck_signal_fusion_workflow_status,
         "uncertainty_escalation_workflow_status": uncertainty_escalation_workflow_status,
@@ -1976,6 +2605,14 @@ def _decision(
             )
             else pre_generation_probe_comparison.get("report_path")
         ),
+        "recommended_claim_factuality_probe_comparison_report": (
+            None
+            if (
+                claim_factuality_probe_comparison is None
+                or claim_factuality_probe_comparison_gate.get("passed") is not True
+            )
+            else claim_factuality_probe_comparison.get("report_path")
+        ),
         "recommended_frontier_release_evidence_report": (
             None
             if (
@@ -1991,6 +2628,14 @@ def _decision(
                 or world_model_signal_workflow_gate.get("passed") is not True
             )
             else world_model_signal_workflow.get("report_path")
+        ),
+        "recommended_mechanism_handoff_evidence_bundle_report": (
+            None
+            if (
+                mechanism_handoff_evidence_bundle is None
+                or mechanism_handoff_evidence_bundle_gate.get("passed") is not True
+            )
+            else mechanism_handoff_evidence_bundle.get("report_path")
         ),
         "recommended_pathway_intervention_workflow_report": (
             None
@@ -4684,6 +5329,181 @@ def _resolve_pre_generation_probe_comparison_source(
     }
 
 
+def _claim_factuality_probe_comparison_gate(
+    *,
+    claim_factuality_probe_comparison_source: Mapping[str, Any] | None,
+    recursive: bool,
+    allow_unverified: bool,
+    manifest_fingerprint_workers: int,
+    verification_context: ArtifactVerificationContext,
+) -> dict[str, Any] | None:
+    if claim_factuality_probe_comparison_source is None:
+        return None
+    report_path = Path(claim_factuality_probe_comparison_source["path"])
+    report, report_error = verification_context.load_json_object(report_path)
+    manifest_path = _claim_factuality_probe_comparison_manifest_path(
+        report,
+        report_path=report_path,
+    )
+    verification = _verify_artifact_manifest(
+        manifest_path,
+        recursive=recursive,
+        max_workers=manifest_fingerprint_workers,
+        artifact_name="claim_factuality_probe_comparison_manifest",
+        verification_context=verification_context,
+    )
+    promotion_gate = _mapping(report.get("promotion_gate"))
+    leaderboard = tuple(
+        _mapping(item)
+        for item in report.get("leaderboard") or ()
+        if isinstance(item, Mapping)
+    )
+    best_run = leaderboard[0] if leaderboard else {}
+    gate = _claim_factuality_probe_comparison_report_gate(
+        report=report,
+        report_error=report_error,
+        manifest_path=manifest_path,
+        verification=verification,
+        promotion_gate=promotion_gate,
+        leaderboard=leaderboard,
+        allow_unverified=allow_unverified,
+    )
+    return {
+        "schema_version": 1,
+        "status": "promote" if gate["passed"] else "blocked",
+        "report_path": str(report_path),
+        "manifest_path": None if manifest_path is None else str(manifest_path),
+        "source": claim_factuality_probe_comparison_source.get("source"),
+        "registry": claim_factuality_probe_comparison_source.get("registry"),
+        "record_key": claim_factuality_probe_comparison_source.get("record_key"),
+        "record": claim_factuality_probe_comparison_source.get("record"),
+        "workflow": report.get("workflow"),
+        "report_status": report.get("status"),
+        "run_count": sum(1 for run in report.get("runs") or () if isinstance(run, Mapping)),
+        "model_count": _float_or_none(promotion_gate.get("model_count")),
+        "models": tuple(promotion_gate.get("models") or ()),
+        "redline_passed": promotion_gate.get("redline_passed"),
+        "redline_run_count": _float_or_none(promotion_gate.get("redline_run_count")),
+        "best_run": {
+            "name": best_run.get("name"),
+            "model": best_run.get("effective_model") or best_run.get("model"),
+            "record_count": _float_or_none(best_run.get("record_count")),
+            "recommended_layer": best_run.get("recommended_layer"),
+            "test_label_auroc": _float_or_none(best_run.get("test_label_auroc")),
+            "test_selective_accuracy": _float_or_none(best_run.get("test_selective_accuracy")),
+            "test_selective_coverage": _float_or_none(best_run.get("test_selective_coverage")),
+            "conformal_threshold": _float_or_none(best_run.get("conformal_threshold")),
+            "redline_best_signal": best_run.get("redline_best_signal"),
+            "redline_best_auroc": _float_or_none(best_run.get("redline_best_auroc")),
+            "redline_margin": _float_or_none(best_run.get("redline_margin")),
+        },
+        "blocking_reasons": tuple(gate.get("blocking_reasons", ())),
+        "verification": verification,
+        "gate": gate,
+    }
+
+
+def _claim_factuality_probe_comparison_report_gate(
+    *,
+    report: Mapping[str, Any],
+    report_error: str | None,
+    manifest_path: Path | None,
+    verification: Mapping[str, Any],
+    promotion_gate: Mapping[str, Any],
+    leaderboard: Sequence[Mapping[str, Any]],
+    allow_unverified: bool,
+) -> dict[str, Any]:
+    failures = []
+    if report_error is not None:
+        failures.append(f"claim factuality probe comparison report could not be loaded: {report_error}")
+    if manifest_path is None:
+        failures.append("claim factuality probe comparison artifact manifest is missing")
+    if not bool(verification.get("passed", False)) and not allow_unverified:
+        failures.append("claim factuality probe comparison manifest verification failed")
+    if report.get("workflow") != "claim_factuality_probe_workflow_comparison":
+        failures.append(
+            "claim factuality probe comparison workflow is "
+            f"{report.get('workflow')!r}, expected 'claim_factuality_probe_workflow_comparison'"
+        )
+    if report.get("status") != "ready":
+        failures.append(
+            f"claim factuality probe comparison status is {report.get('status')!r}, expected 'ready'"
+        )
+    if not promotion_gate:
+        failures.append("claim factuality probe comparison promotion_gate is missing")
+    else:
+        gate_failures = tuple(promotion_gate.get("failures", ()))
+        if gate_failures:
+            failures.append(
+                "claim factuality probe comparison promotion gate did not pass"
+                + _format_gate_reasons({"blocking_reasons": gate_failures})
+            )
+        model_count = _float_or_none(promotion_gate.get("model_count"))
+        if model_count is None or model_count < 2:
+            failures.append("claim factuality probe comparison model_count is below 2")
+        redline_run_count = _float_or_none(promotion_gate.get("redline_run_count"))
+        if redline_run_count is None or redline_run_count < 1:
+            failures.append("claim factuality probe comparison redline evidence is missing")
+        if promotion_gate.get("redline_passed") is not True:
+            failures.append("claim factuality probe comparison redline gate did not pass")
+    if not leaderboard:
+        failures.append("claim factuality probe comparison leaderboard is missing")
+    return {
+        "passed": not failures,
+        "blocking_reasons": failures,
+    }
+
+
+def _claim_factuality_probe_comparison_manifest_path(
+    report: Mapping[str, Any],
+    *,
+    report_path: Path,
+) -> Path | None:
+    raw_path = _nested(report, "paths", "artifact_manifest")
+    if raw_path is None:
+        return None
+    return _resolve_path(raw_path, base_path=report_path)
+
+
+def _resolve_claim_factuality_probe_comparison_source(
+    *,
+    claim_factuality_probe_comparison_path: str | Path | None,
+    claim_factuality_probe_comparison_registry_path: str | Path | None,
+    claim_factuality_probe_comparison_key: str | None,
+    default_registry_path: str | Path,
+) -> dict[str, Any] | None:
+    if claim_factuality_probe_comparison_path is not None:
+        if claim_factuality_probe_comparison_key is not None:
+            raise ValueError(
+                "claim_factuality_probe_comparison_path is mutually exclusive with "
+                "claim_factuality_probe_comparison_key."
+            )
+        return {"source": "file", "path": Path(claim_factuality_probe_comparison_path)}
+    if claim_factuality_probe_comparison_key is None:
+        if claim_factuality_probe_comparison_registry_path is not None:
+            raise ValueError(
+                "claim_factuality_probe_comparison_registry_path requires "
+                "claim_factuality_probe_comparison_key."
+            )
+        return None
+    registry_path = Path(
+        default_registry_path
+        if claim_factuality_probe_comparison_registry_path is None
+        else claim_factuality_probe_comparison_registry_path
+    )
+    registry = ArtifactRegistry.load_json(registry_path)
+    record = registry.get(str(claim_factuality_probe_comparison_key))
+    if record.artifact_type != "report":
+        raise ValueError(f"registry record {record.key()!r} is not a report.")
+    return {
+        "source": "registry",
+        "registry": str(registry_path),
+        "record_key": record.key(),
+        "record": record.to_dict(),
+        "path": _resolve_registry_record_path(registry_path, record),
+    }
+
+
 def _frontier_release_evidence_gate(
     *,
     frontier_release_evidence_source: Mapping[str, Any] | None,
@@ -4727,7 +5547,25 @@ def _frontier_release_evidence_gate(
         "decision_status": decision.get("status"),
         "verifier_track_status": decision.get("verifier_track_status"),
         "abstention_track_status": decision.get("abstention_track_status"),
+        "multiple_testing_track_status": decision.get("multiple_testing_track_status"),
+        "citation_batch_track_status": decision.get("citation_batch_track_status"),
         "run_names": tuple(summary.get("run_names", ())),
+        "citation_batch_rollup_count": summary.get("citation_batch_rollup_count"),
+        "citation_batch_expected_batch_count": summary.get(
+            "citation_batch_expected_batch_count"
+        ),
+        "citation_batch_observed_batch_count": summary.get(
+            "citation_batch_observed_batch_count"
+        ),
+        "citation_batch_missing_expected_batch_count": summary.get(
+            "citation_batch_missing_expected_batch_count"
+        ),
+        "citation_batch_duplicate_batch_count": summary.get(
+            "citation_batch_duplicate_batch_count"
+        ),
+        "citation_batch_unexpected_batch_count": summary.get(
+            "citation_batch_unexpected_batch_count"
+        ),
         "blocking_reasons": tuple(decision.get("blocking_reasons", ())),
         "verification": verification,
         "gate": gate,
@@ -4769,6 +5607,18 @@ def _frontier_release_evidence_report_gate(
             failures.append(
                 f"frontier release evidence {track} is {decision.get(track)!r}, expected 'promote'"
             )
+    multiple_testing_track_status = decision.get("multiple_testing_track_status")
+    if multiple_testing_track_status not in {None, "promote", "not_required"}:
+        failures.append(
+            "frontier release evidence multiple_testing_track_status is "
+            f"{multiple_testing_track_status!r}, expected 'promote' or 'not_required'"
+        )
+    citation_batch_track_status = decision.get("citation_batch_track_status")
+    if citation_batch_track_status not in {None, "promote", "not_required"}:
+        failures.append(
+            "frontier release evidence citation_batch_track_status is "
+            f"{citation_batch_track_status!r}, expected 'promote' or 'not_required'"
+        )
     summary = _mapping(report.get("evidence_summary"))
     run_count = _float_or_none(summary.get("run_count"))
     if run_count is None:
@@ -4967,6 +5817,172 @@ def _resolve_world_model_signal_workflow_source(
     )
     registry = ArtifactRegistry.load_json(registry_path)
     record = registry.get(str(world_model_signal_workflow_key))
+    if record.artifact_type != "report":
+        raise ValueError(f"registry record {record.key()!r} is not a report.")
+    return {
+        "source": "registry",
+        "registry": str(registry_path),
+        "record_key": record.key(),
+        "record": record.to_dict(),
+        "path": _resolve_registry_record_path(registry_path, record),
+    }
+
+
+def _mechanism_handoff_evidence_bundle_gate(
+    *,
+    mechanism_handoff_evidence_bundle_source: Mapping[str, Any] | None,
+    recursive: bool,
+    allow_unverified: bool,
+    manifest_fingerprint_workers: int,
+    verification_context: ArtifactVerificationContext,
+) -> dict[str, Any] | None:
+    if mechanism_handoff_evidence_bundle_source is None:
+        return None
+    report_path = Path(mechanism_handoff_evidence_bundle_source["path"])
+    report, report_error = verification_context.load_json_object(report_path)
+    manifest_path = _mechanism_handoff_evidence_bundle_manifest_path(
+        report,
+        report_path=report_path,
+    )
+    verification = _verify_artifact_manifest(
+        manifest_path,
+        recursive=recursive,
+        max_workers=manifest_fingerprint_workers,
+        artifact_name="mechanism_handoff_evidence_bundle_manifest",
+        verification_context=verification_context,
+    )
+    bundle_gate = _mapping(report.get("gate"))
+    summary = _mapping(report.get("summary"))
+    gate = _mechanism_handoff_evidence_bundle_report_gate(
+        report=report,
+        report_error=report_error,
+        manifest_path=manifest_path,
+        verification=verification,
+        bundle_gate=bundle_gate,
+        summary=summary,
+        allow_unverified=allow_unverified,
+    )
+    return {
+        "schema_version": 1,
+        "status": "promote" if gate["passed"] else "blocked",
+        "report_path": str(report_path),
+        "manifest_path": None if manifest_path is None else str(manifest_path),
+        "source": mechanism_handoff_evidence_bundle_source.get("source"),
+        "registry": mechanism_handoff_evidence_bundle_source.get("registry"),
+        "record_key": mechanism_handoff_evidence_bundle_source.get("record_key"),
+        "record": mechanism_handoff_evidence_bundle_source.get("record"),
+        "workflow": report.get("workflow"),
+        "report_status": report.get("status"),
+        "handoff_count": _float_or_none(summary.get("handoff_count")),
+        "trace_count": _float_or_none(summary.get("trace_count")),
+        "target_count": _float_or_none(summary.get("target_count")),
+        "target_coverage_rate": _float_or_none(summary.get("target_coverage_rate")),
+        "source_citation_count": _float_or_none(summary.get("source_citation_count")),
+        "verification_status_counts": dict(
+            _mapping(summary.get("verification_status_counts"))
+        ),
+        "action_counts": dict(_mapping(summary.get("action_counts"))),
+        "source_family_counts": dict(_mapping(summary.get("source_family_counts"))),
+        "blocking_reasons": tuple(bundle_gate.get("blocking_reasons", ())),
+        "verification": verification,
+        "gate": gate,
+    }
+
+
+def _mechanism_handoff_evidence_bundle_report_gate(
+    *,
+    report: Mapping[str, Any],
+    report_error: str | None,
+    manifest_path: Path | None,
+    verification: Mapping[str, Any],
+    bundle_gate: Mapping[str, Any],
+    summary: Mapping[str, Any],
+    allow_unverified: bool,
+) -> dict[str, Any]:
+    failures = []
+    if report_error is not None:
+        failures.append(f"mechanism handoff evidence bundle could not be loaded: {report_error}")
+    if manifest_path is None:
+        failures.append("mechanism handoff evidence bundle artifact manifest is missing")
+    if not bool(verification.get("passed", False)) and not allow_unverified:
+        failures.append("mechanism handoff evidence bundle manifest verification failed")
+    if report.get("workflow") != "mechanism_handoff_evidence_bundle":
+        failures.append(
+            "mechanism handoff evidence bundle workflow is "
+            f"{report.get('workflow')!r}, expected 'mechanism_handoff_evidence_bundle'"
+        )
+    if report.get("status") != "promote":
+        failures.append(
+            f"mechanism handoff evidence bundle status is {report.get('status')!r}, "
+            "expected 'promote'"
+        )
+    if not bundle_gate:
+        failures.append("mechanism handoff evidence bundle gate is missing")
+    elif bundle_gate.get("passed") is not True:
+        failures.append(
+            "mechanism handoff evidence bundle gate did not pass"
+            + _format_gate_reasons(bundle_gate)
+        )
+    handoff_count = _float_or_none(summary.get("handoff_count"))
+    trace_count = _float_or_none(summary.get("trace_count"))
+    source_citation_count = _float_or_none(summary.get("source_citation_count"))
+    if handoff_count is None or handoff_count < 1:
+        failures.append("mechanism handoff evidence bundle handoff_count is below 1")
+    if trace_count is None or trace_count < 1:
+        failures.append("mechanism handoff evidence bundle trace_count is below 1")
+    if source_citation_count is None:
+        failures.append("mechanism handoff evidence bundle source_citation_count is missing")
+    elif trace_count is not None and source_citation_count < trace_count:
+        failures.append(
+            "mechanism handoff evidence bundle source citations do not cover all traces: "
+            f"{source_citation_count} < {trace_count}"
+        )
+    return {
+        "passed": not failures,
+        "blocking_reasons": failures,
+    }
+
+
+def _mechanism_handoff_evidence_bundle_manifest_path(
+    report: Mapping[str, Any],
+    *,
+    report_path: Path,
+) -> Path | None:
+    raw_path = _nested(report, "paths", "artifact_manifest")
+    if raw_path is None:
+        sibling = report_path.parent / "artifact-manifest.json"
+        return sibling if sibling.exists() else None
+    return _resolve_path(raw_path, base_path=report_path)
+
+
+def _resolve_mechanism_handoff_evidence_bundle_source(
+    *,
+    mechanism_handoff_evidence_bundle_path: str | Path | None,
+    mechanism_handoff_evidence_bundle_registry_path: str | Path | None,
+    mechanism_handoff_evidence_bundle_key: str | None,
+    default_registry_path: str | Path,
+) -> dict[str, Any] | None:
+    if mechanism_handoff_evidence_bundle_path is not None:
+        if mechanism_handoff_evidence_bundle_key is not None:
+            raise ValueError(
+                "mechanism_handoff_evidence_bundle_path is mutually exclusive with "
+                "mechanism_handoff_evidence_bundle_key."
+            )
+        return {"source": "file", "path": Path(mechanism_handoff_evidence_bundle_path)}
+    if mechanism_handoff_evidence_bundle_key is None:
+        if mechanism_handoff_evidence_bundle_registry_path is not None:
+            raise ValueError(
+                "mechanism_handoff_evidence_bundle_registry_path requires "
+                "mechanism_handoff_evidence_bundle_key."
+            )
+        return None
+    registry_path = Path(
+        default_registry_path
+        if mechanism_handoff_evidence_bundle_registry_path is None
+        else mechanism_handoff_evidence_bundle_registry_path
+    )
+    registry = ArtifactRegistry.load_json(registry_path)
+    record = registry.get(str(mechanism_handoff_evidence_bundle_key))
     if record.artifact_type != "report":
         raise ValueError(f"registry record {record.key()!r} is not a report.")
     return {
@@ -5229,10 +6245,15 @@ def _product_runtime_drift_gate(
     product_runtime_drift_report_path: str | Path | None,
     require_promotion_evidence: bool,
     require_pre_generation_evidence: bool,
+    require_claim_factuality_evidence: bool,
     require_counterfactual_evidence: bool,
     require_triple_audit_evidence: bool,
     require_covered_fact_property_evidence: bool,
     require_action_gate_evidence: bool,
+    require_trajectory_audit_evidence: bool,
+    require_evidence_handoff_evidence: bool,
+    require_world_model_evidence: bool,
+    require_frontier_release_evidence: bool,
     recursive: bool,
     allow_unverified: bool,
     manifest_fingerprint_workers: int,
@@ -5242,10 +6263,15 @@ def _product_runtime_drift_gate(
         if (
             require_promotion_evidence
             or require_pre_generation_evidence
+            or require_claim_factuality_evidence
             or require_counterfactual_evidence
             or require_triple_audit_evidence
             or require_covered_fact_property_evidence
             or require_action_gate_evidence
+            or require_trajectory_audit_evidence
+            or require_evidence_handoff_evidence
+            or require_world_model_evidence
+            or require_frontier_release_evidence
         ):
             gate = {
                 "passed": False,
@@ -5284,6 +6310,17 @@ def _product_runtime_drift_gate(
                         )
                     ) if require_pre_generation_evidence else (),
                     "pre_generation_evidence_blocked_metric_count": 0,
+                    "claim_factuality_evidence_required": bool(
+                        require_claim_factuality_evidence
+                    ),
+                    "claim_factuality_evidence_metric_count": 0,
+                    "claim_factuality_evidence_missing_metrics": tuple(
+                        metric_name
+                        for metric_name, _prefix in (
+                            _PRODUCT_RUNTIME_DRIFT_CLAIM_FACTUALITY_EVIDENCE_FIELDS
+                        )
+                    ) if require_claim_factuality_evidence else (),
+                    "claim_factuality_evidence_blocked_metric_count": 0,
                     "counterfactual_evidence_required": bool(require_counterfactual_evidence),
                     "counterfactual_evidence_metric_count": 0,
                     "counterfactual_evidence_missing_metrics": tuple(
@@ -5322,6 +6359,48 @@ def _product_runtime_drift_gate(
                         )
                     ) if require_action_gate_evidence else (),
                     "action_gate_evidence_blocked_metric_count": 0,
+                    "trajectory_audit_evidence_required": bool(
+                        require_trajectory_audit_evidence
+                    ),
+                    "trajectory_audit_evidence_metric_count": 0,
+                    "trajectory_audit_evidence_missing_metrics": tuple(
+                        metric_name
+                        for metric_name, _prefix in (
+                            _PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_FIELDS
+                        )
+                    ) if require_trajectory_audit_evidence else (),
+                    "trajectory_audit_evidence_blocked_metric_count": 0,
+                    "evidence_handoff_evidence_required": bool(
+                        require_evidence_handoff_evidence
+                    ),
+                    "evidence_handoff_evidence_metric_count": 0,
+                    "evidence_handoff_evidence_missing_metrics": tuple(
+                        metric_name
+                        for metric_name, _prefix in (
+                            _PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_FIELDS
+                        )
+                    ) if require_evidence_handoff_evidence else (),
+                    "evidence_handoff_evidence_blocked_metric_count": 0,
+                    "world_model_evidence_required": bool(require_world_model_evidence),
+                    "world_model_evidence_metric_count": 0,
+                    "world_model_evidence_missing_metrics": tuple(
+                        metric_name
+                        for metric_name, _prefix in (
+                            _PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_FIELDS
+                        )
+                    ) if require_world_model_evidence else (),
+                    "world_model_evidence_blocked_metric_count": 0,
+                    "frontier_release_evidence_required": bool(
+                        require_frontier_release_evidence
+                    ),
+                    "frontier_release_evidence_metric_count": 0,
+                    "frontier_release_evidence_missing_metrics": tuple(
+                        metric_name
+                        for metric_name, _prefix in (
+                            _PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_FIELDS
+                        )
+                    ) if require_frontier_release_evidence else (),
+                    "frontier_release_evidence_blocked_metric_count": 0,
                 },
                 "metrics": (),
                 "verification": {"passed": False, "reason": "missing product runtime drift report"},
@@ -5347,6 +6426,12 @@ def _product_runtime_drift_gate(
         metrics,
         required=require_pre_generation_evidence,
     )
+    claim_factuality_evidence_summary = (
+        _product_runtime_drift_claim_factuality_evidence_summary(
+            metrics,
+            required=require_claim_factuality_evidence,
+        )
+    )
     counterfactual_evidence_summary = _product_runtime_drift_counterfactual_evidence_summary(
         metrics,
         required=require_counterfactual_evidence,
@@ -5365,6 +6450,28 @@ def _product_runtime_drift_gate(
         metrics,
         required=require_action_gate_evidence,
     )
+    trajectory_audit_evidence_summary = (
+        _product_runtime_drift_trajectory_audit_evidence_summary(
+            metrics,
+            required=require_trajectory_audit_evidence,
+        )
+    )
+    evidence_handoff_evidence_summary = (
+        _product_runtime_drift_evidence_handoff_evidence_summary(
+            metrics,
+            required=require_evidence_handoff_evidence,
+        )
+    )
+    frontier_release_evidence_summary = (
+        _product_runtime_drift_frontier_release_evidence_summary(
+            metrics,
+            required=require_frontier_release_evidence,
+        )
+    )
+    world_model_evidence_summary = _product_runtime_drift_world_model_evidence_summary(
+        metrics,
+        required=require_world_model_evidence,
+    )
     gate = _product_runtime_drift_report_gate(
         report=report,
         report_error=report_error,
@@ -5374,6 +6481,8 @@ def _product_runtime_drift_gate(
         require_promotion_evidence=require_promotion_evidence,
         pre_generation_evidence_summary=pre_generation_evidence_summary,
         require_pre_generation_evidence=require_pre_generation_evidence,
+        claim_factuality_evidence_summary=claim_factuality_evidence_summary,
+        require_claim_factuality_evidence=require_claim_factuality_evidence,
         counterfactual_evidence_summary=counterfactual_evidence_summary,
         require_counterfactual_evidence=require_counterfactual_evidence,
         triple_audit_evidence_summary=triple_audit_evidence_summary,
@@ -5382,6 +6491,14 @@ def _product_runtime_drift_gate(
         require_covered_fact_property_evidence=require_covered_fact_property_evidence,
         action_gate_evidence_summary=action_gate_evidence_summary,
         require_action_gate_evidence=require_action_gate_evidence,
+        trajectory_audit_evidence_summary=trajectory_audit_evidence_summary,
+        require_trajectory_audit_evidence=require_trajectory_audit_evidence,
+        evidence_handoff_evidence_summary=evidence_handoff_evidence_summary,
+        require_evidence_handoff_evidence=require_evidence_handoff_evidence,
+        world_model_evidence_summary=world_model_evidence_summary,
+        require_world_model_evidence=require_world_model_evidence,
+        frontier_release_evidence_summary=frontier_release_evidence_summary,
+        require_frontier_release_evidence=require_frontier_release_evidence,
         allow_unverified=allow_unverified,
     )
     summary = _mapping(report.get("summary"))
@@ -5402,10 +6519,15 @@ def _product_runtime_drift_gate(
             "observed_metric_count": summary.get("observed_metric_count"),
             **promotion_evidence_summary,
             **pre_generation_evidence_summary,
+            **claim_factuality_evidence_summary,
             **counterfactual_evidence_summary,
             **triple_audit_evidence_summary,
             **covered_fact_property_evidence_summary,
             **action_gate_evidence_summary,
+            **trajectory_audit_evidence_summary,
+            **evidence_handoff_evidence_summary,
+            **world_model_evidence_summary,
+            **frontier_release_evidence_summary,
         },
         "metrics": metrics,
         "verification": verification,
@@ -5423,6 +6545,8 @@ def _product_runtime_drift_report_gate(
     require_promotion_evidence: bool,
     pre_generation_evidence_summary: Mapping[str, Any],
     require_pre_generation_evidence: bool,
+    claim_factuality_evidence_summary: Mapping[str, Any],
+    require_claim_factuality_evidence: bool,
     counterfactual_evidence_summary: Mapping[str, Any],
     require_counterfactual_evidence: bool,
     triple_audit_evidence_summary: Mapping[str, Any],
@@ -5431,6 +6555,14 @@ def _product_runtime_drift_report_gate(
     require_covered_fact_property_evidence: bool,
     action_gate_evidence_summary: Mapping[str, Any],
     require_action_gate_evidence: bool,
+    trajectory_audit_evidence_summary: Mapping[str, Any],
+    require_trajectory_audit_evidence: bool,
+    evidence_handoff_evidence_summary: Mapping[str, Any],
+    require_evidence_handoff_evidence: bool,
+    world_model_evidence_summary: Mapping[str, Any],
+    require_world_model_evidence: bool,
+    frontier_release_evidence_summary: Mapping[str, Any],
+    require_frontier_release_evidence: bool,
     allow_unverified: bool,
 ) -> dict[str, Any]:
     failures = []
@@ -5482,6 +6614,27 @@ def _product_runtime_drift_report_gate(
         if blocked_metric_count is not None and blocked_metric_count > 0:
             failures.append(
                 "product runtime drift pre-generation evidence blocked "
+                f"{int(blocked_metric_count)} metric(s)"
+            )
+    if require_claim_factuality_evidence:
+        missing_metrics = tuple(
+            claim_factuality_evidence_summary.get(
+                "claim_factuality_evidence_missing_metrics"
+            ) or ()
+        )
+        if missing_metrics:
+            failures.append(
+                "product runtime drift claim factuality evidence metrics are incomplete: "
+                + ", ".join(str(metric) for metric in missing_metrics)
+            )
+        blocked_metric_count = _float_or_none(
+            claim_factuality_evidence_summary.get(
+                "claim_factuality_evidence_blocked_metric_count"
+            )
+        )
+        if blocked_metric_count is not None and blocked_metric_count > 0:
+            failures.append(
+                "product runtime drift claim factuality evidence blocked "
                 f"{int(blocked_metric_count)} metric(s)"
             )
     if require_counterfactual_evidence:
@@ -5554,6 +6707,86 @@ def _product_runtime_drift_report_gate(
         if blocked_metric_count is not None and blocked_metric_count > 0:
             failures.append(
                 "product runtime drift action-gate evidence blocked "
+                f"{int(blocked_metric_count)} metric(s)"
+            )
+    if require_trajectory_audit_evidence:
+        missing_metrics = tuple(
+            trajectory_audit_evidence_summary.get(
+                "trajectory_audit_evidence_missing_metrics"
+            ) or ()
+        )
+        if missing_metrics:
+            failures.append(
+                "product runtime drift trajectory-audit evidence metrics are incomplete: "
+                + ", ".join(str(metric) for metric in missing_metrics)
+            )
+        blocked_metric_count = _float_or_none(
+            trajectory_audit_evidence_summary.get(
+                "trajectory_audit_evidence_blocked_metric_count"
+            )
+        )
+        if blocked_metric_count is not None and blocked_metric_count > 0:
+            failures.append(
+                "product runtime drift trajectory-audit evidence blocked "
+                f"{int(blocked_metric_count)} metric(s)"
+            )
+    if require_evidence_handoff_evidence:
+        missing_metrics = tuple(
+            evidence_handoff_evidence_summary.get(
+                "evidence_handoff_evidence_missing_metrics"
+            ) or ()
+        )
+        if missing_metrics:
+            failures.append(
+                "product runtime drift evidence-handoff evidence metrics are incomplete: "
+                + ", ".join(str(metric) for metric in missing_metrics)
+            )
+        blocked_metric_count = _float_or_none(
+            evidence_handoff_evidence_summary.get(
+                "evidence_handoff_evidence_blocked_metric_count"
+            )
+        )
+        if blocked_metric_count is not None and blocked_metric_count > 0:
+            failures.append(
+                "product runtime drift evidence-handoff evidence blocked "
+                f"{int(blocked_metric_count)} metric(s)"
+            )
+    if require_world_model_evidence:
+        missing_metrics = tuple(
+            world_model_evidence_summary.get("world_model_evidence_missing_metrics") or ()
+        )
+        if missing_metrics:
+            failures.append(
+                "product runtime drift world-model evidence metrics are incomplete: "
+                + ", ".join(str(metric) for metric in missing_metrics)
+            )
+        blocked_metric_count = _float_or_none(
+            world_model_evidence_summary.get("world_model_evidence_blocked_metric_count")
+        )
+        if blocked_metric_count is not None and blocked_metric_count > 0:
+            failures.append(
+                "product runtime drift world-model evidence blocked "
+                f"{int(blocked_metric_count)} metric(s)"
+            )
+    if require_frontier_release_evidence:
+        missing_metrics = tuple(
+            frontier_release_evidence_summary.get(
+                "frontier_release_evidence_missing_metrics"
+            ) or ()
+        )
+        if missing_metrics:
+            failures.append(
+                "product runtime drift frontier release evidence metrics are incomplete: "
+                + ", ".join(str(metric) for metric in missing_metrics)
+            )
+        blocked_metric_count = _float_or_none(
+            frontier_release_evidence_summary.get(
+                "frontier_release_evidence_blocked_metric_count"
+            )
+        )
+        if blocked_metric_count is not None and blocked_metric_count > 0:
+            failures.append(
+                "product runtime drift frontier release evidence blocked "
                 f"{int(blocked_metric_count)} metric(s)"
             )
     return {
@@ -5659,6 +6892,40 @@ def _product_runtime_drift_pre_generation_evidence_summary(
             summary["pre_generation_evidence_blocked_metric_count"] += 1
     summary["pre_generation_evidence_metric_count"] = metric_count
     summary["pre_generation_evidence_missing_metrics"] = tuple(missing_metrics)
+    return summary
+
+
+def _product_runtime_drift_claim_factuality_evidence_summary(
+    metrics: Sequence[Mapping[str, Any]],
+    *,
+    required: bool = False,
+) -> dict[str, Any]:
+    metrics_by_name = {
+        str(metric["metric"]): metric
+        for metric in metrics
+        if isinstance(metric, Mapping) and isinstance(metric.get("metric"), str)
+    }
+    missing_metrics: list[str] = []
+    metric_count = 0
+    summary: dict[str, Any] = {
+        "claim_factuality_evidence_required": bool(required),
+        "claim_factuality_evidence_metric_count": 0,
+        "claim_factuality_evidence_missing_metrics": (),
+        "claim_factuality_evidence_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _PRODUCT_RUNTIME_DRIFT_CLAIM_FACTUALITY_EVIDENCE_FIELDS:
+        metric = metrics_by_name.get(metric_name)
+        summary[f"{prefix}_baseline"] = None if metric is None else metric.get("baseline")
+        summary[f"{prefix}_current"] = None if metric is None else metric.get("current")
+        summary[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is None or metric.get("current") is None:
+            missing_metrics.append(metric_name)
+            continue
+        metric_count += 1
+        if metric.get("status") == "blocked":
+            summary["claim_factuality_evidence_blocked_metric_count"] += 1
+    summary["claim_factuality_evidence_metric_count"] = metric_count
+    summary["claim_factuality_evidence_missing_metrics"] = tuple(missing_metrics)
     return summary
 
 
@@ -5795,6 +7062,142 @@ def _product_runtime_drift_action_gate_evidence_summary(
             summary["action_gate_evidence_blocked_metric_count"] += 1
     summary["action_gate_evidence_metric_count"] = metric_count
     summary["action_gate_evidence_missing_metrics"] = tuple(missing_metrics)
+    return summary
+
+
+def _product_runtime_drift_trajectory_audit_evidence_summary(
+    metrics: Sequence[Mapping[str, Any]],
+    *,
+    required: bool = False,
+) -> dict[str, Any]:
+    metrics_by_name = {
+        str(metric["metric"]): metric
+        for metric in metrics
+        if isinstance(metric, Mapping) and isinstance(metric.get("metric"), str)
+    }
+    missing_metrics: list[str] = []
+    metric_count = 0
+    summary: dict[str, Any] = {
+        "trajectory_audit_evidence_required": bool(required),
+        "trajectory_audit_evidence_metric_count": 0,
+        "trajectory_audit_evidence_missing_metrics": (),
+        "trajectory_audit_evidence_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_FIELDS:
+        metric = metrics_by_name.get(metric_name)
+        summary[f"{prefix}_baseline"] = None if metric is None else metric.get("baseline")
+        summary[f"{prefix}_current"] = None if metric is None else metric.get("current")
+        summary[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is None or metric.get("current") is None:
+            missing_metrics.append(metric_name)
+            continue
+        metric_count += 1
+        if metric.get("status") == "blocked":
+            summary["trajectory_audit_evidence_blocked_metric_count"] += 1
+    summary["trajectory_audit_evidence_metric_count"] = metric_count
+    summary["trajectory_audit_evidence_missing_metrics"] = tuple(missing_metrics)
+    return summary
+
+
+def _product_runtime_drift_evidence_handoff_evidence_summary(
+    metrics: Sequence[Mapping[str, Any]],
+    *,
+    required: bool = False,
+) -> dict[str, Any]:
+    metrics_by_name = {
+        str(metric["metric"]): metric
+        for metric in metrics
+        if isinstance(metric, Mapping) and isinstance(metric.get("metric"), str)
+    }
+    missing_metrics: list[str] = []
+    metric_count = 0
+    summary: dict[str, Any] = {
+        "evidence_handoff_evidence_required": bool(required),
+        "evidence_handoff_evidence_metric_count": 0,
+        "evidence_handoff_evidence_missing_metrics": (),
+        "evidence_handoff_evidence_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_FIELDS:
+        metric = metrics_by_name.get(metric_name)
+        summary[f"{prefix}_baseline"] = None if metric is None else metric.get("baseline")
+        summary[f"{prefix}_current"] = None if metric is None else metric.get("current")
+        summary[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is None or metric.get("current") is None:
+            missing_metrics.append(metric_name)
+            continue
+        metric_count += 1
+        if metric.get("status") == "blocked":
+            summary["evidence_handoff_evidence_blocked_metric_count"] += 1
+    summary["evidence_handoff_evidence_metric_count"] = metric_count
+    summary["evidence_handoff_evidence_missing_metrics"] = tuple(missing_metrics)
+    return summary
+
+
+def _product_runtime_drift_world_model_evidence_summary(
+    metrics: Sequence[Mapping[str, Any]],
+    *,
+    required: bool = False,
+) -> dict[str, Any]:
+    metrics_by_name = {
+        str(metric["metric"]): metric
+        for metric in metrics
+        if isinstance(metric, Mapping) and isinstance(metric.get("metric"), str)
+    }
+    missing_metrics: list[str] = []
+    metric_count = 0
+    summary: dict[str, Any] = {
+        "world_model_evidence_required": bool(required),
+        "world_model_evidence_metric_count": 0,
+        "world_model_evidence_missing_metrics": (),
+        "world_model_evidence_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_FIELDS:
+        metric = metrics_by_name.get(metric_name)
+        summary[f"{prefix}_baseline"] = None if metric is None else metric.get("baseline")
+        summary[f"{prefix}_current"] = None if metric is None else metric.get("current")
+        summary[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is None or metric.get("current") is None:
+            missing_metrics.append(metric_name)
+            continue
+        metric_count += 1
+        if metric.get("status") == "blocked":
+            summary["world_model_evidence_blocked_metric_count"] += 1
+    summary["world_model_evidence_metric_count"] = metric_count
+    summary["world_model_evidence_missing_metrics"] = tuple(missing_metrics)
+    return summary
+
+
+def _product_runtime_drift_frontier_release_evidence_summary(
+    metrics: Sequence[Mapping[str, Any]],
+    *,
+    required: bool = False,
+) -> dict[str, Any]:
+    metrics_by_name = {
+        str(metric["metric"]): metric
+        for metric in metrics
+        if isinstance(metric, Mapping) and isinstance(metric.get("metric"), str)
+    }
+    missing_metrics: list[str] = []
+    metric_count = 0
+    summary: dict[str, Any] = {
+        "frontier_release_evidence_required": bool(required),
+        "frontier_release_evidence_metric_count": 0,
+        "frontier_release_evidence_missing_metrics": (),
+        "frontier_release_evidence_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_FIELDS:
+        metric = metrics_by_name.get(metric_name)
+        summary[f"{prefix}_baseline"] = None if metric is None else metric.get("baseline")
+        summary[f"{prefix}_current"] = None if metric is None else metric.get("current")
+        summary[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is None or metric.get("current") is None:
+            missing_metrics.append(metric_name)
+            continue
+        metric_count += 1
+        if metric.get("status") == "blocked":
+            summary["frontier_release_evidence_blocked_metric_count"] += 1
+    summary["frontier_release_evidence_metric_count"] = metric_count
+    summary["frontier_release_evidence_missing_metrics"] = tuple(missing_metrics)
     return summary
 
 
@@ -6438,8 +7841,10 @@ def _candidate_with_gates(
     release_efficiency: Mapping[str, Any] | None,
     external_evidence_baseline_comparison: Mapping[str, Any] | None,
     pre_generation_probe_comparison: Mapping[str, Any] | None,
+    claim_factuality_probe_comparison: Mapping[str, Any] | None,
     frontier_release_evidence: Mapping[str, Any] | None,
     world_model_signal_workflow: Mapping[str, Any] | None,
+    mechanism_handoff_evidence_bundle: Mapping[str, Any] | None,
     pathway_intervention_workflow: Mapping[str, Any] | None,
     selfcheck_signal_fusion_workflow: Mapping[str, Any] | None,
     uncertainty_escalation_workflow: Mapping[str, Any] | None,
@@ -6691,6 +8096,28 @@ def _candidate_with_gates(
         manifests["pre_generation_probe_comparison_manifest"] = (
             pre_generation_probe_comparison.get("manifest_path")
         )
+    if claim_factuality_probe_comparison is not None:
+        best_run = _mapping(claim_factuality_probe_comparison.get("best_run"))
+        payload["claim_factuality_probe_comparison"] = {
+            "report_path": claim_factuality_probe_comparison.get("report_path"),
+            "manifest_path": claim_factuality_probe_comparison.get("manifest_path"),
+            "source": claim_factuality_probe_comparison.get("source"),
+            "registry": claim_factuality_probe_comparison.get("registry"),
+            "record_key": claim_factuality_probe_comparison.get("record_key"),
+            "workflow": claim_factuality_probe_comparison.get("workflow"),
+            "status": claim_factuality_probe_comparison.get("report_status"),
+            "model_count": claim_factuality_probe_comparison.get("model_count"),
+            "run_count": claim_factuality_probe_comparison.get("run_count"),
+            "redline_passed": claim_factuality_probe_comparison.get("redline_passed"),
+            "redline_run_count": claim_factuality_probe_comparison.get("redline_run_count"),
+            "best_run": best_run,
+            "blocking_reasons": tuple(
+                claim_factuality_probe_comparison.get("blocking_reasons", ())
+            ),
+        }
+        manifests["claim_factuality_probe_comparison_manifest"] = (
+            claim_factuality_probe_comparison.get("manifest_path")
+        )
     if frontier_release_evidence is not None:
         payload["frontier_release_evidence"] = {
             "report_path": frontier_release_evidence.get("report_path"),
@@ -6703,6 +8130,30 @@ def _candidate_with_gates(
             "decision_status": frontier_release_evidence.get("decision_status"),
             "verifier_track_status": frontier_release_evidence.get("verifier_track_status"),
             "abstention_track_status": frontier_release_evidence.get("abstention_track_status"),
+            "multiple_testing_track_status": frontier_release_evidence.get(
+                "multiple_testing_track_status"
+            ),
+            "citation_batch_track_status": frontier_release_evidence.get(
+                "citation_batch_track_status"
+            ),
+            "citation_batch_rollup_count": frontier_release_evidence.get(
+                "citation_batch_rollup_count"
+            ),
+            "citation_batch_expected_batch_count": frontier_release_evidence.get(
+                "citation_batch_expected_batch_count"
+            ),
+            "citation_batch_observed_batch_count": frontier_release_evidence.get(
+                "citation_batch_observed_batch_count"
+            ),
+            "citation_batch_missing_expected_batch_count": frontier_release_evidence.get(
+                "citation_batch_missing_expected_batch_count"
+            ),
+            "citation_batch_duplicate_batch_count": frontier_release_evidence.get(
+                "citation_batch_duplicate_batch_count"
+            ),
+            "citation_batch_unexpected_batch_count": frontier_release_evidence.get(
+                "citation_batch_unexpected_batch_count"
+            ),
             "run_names": tuple(frontier_release_evidence.get("run_names", ())),
             "blocking_reasons": tuple(frontier_release_evidence.get("blocking_reasons", ())),
         }
@@ -6729,6 +8180,38 @@ def _candidate_with_gates(
         }
         manifests["world_model_signal_workflow_manifest"] = (
             world_model_signal_workflow.get("manifest_path")
+        )
+    if mechanism_handoff_evidence_bundle is not None:
+        payload["mechanism_handoff_evidence_bundle"] = {
+            "report_path": mechanism_handoff_evidence_bundle.get("report_path"),
+            "manifest_path": mechanism_handoff_evidence_bundle.get("manifest_path"),
+            "source": mechanism_handoff_evidence_bundle.get("source"),
+            "registry": mechanism_handoff_evidence_bundle.get("registry"),
+            "record_key": mechanism_handoff_evidence_bundle.get("record_key"),
+            "workflow": mechanism_handoff_evidence_bundle.get("workflow"),
+            "status": mechanism_handoff_evidence_bundle.get("report_status"),
+            "handoff_count": mechanism_handoff_evidence_bundle.get("handoff_count"),
+            "trace_count": mechanism_handoff_evidence_bundle.get("trace_count"),
+            "target_count": mechanism_handoff_evidence_bundle.get("target_count"),
+            "target_coverage_rate": mechanism_handoff_evidence_bundle.get(
+                "target_coverage_rate"
+            ),
+            "source_citation_count": mechanism_handoff_evidence_bundle.get(
+                "source_citation_count"
+            ),
+            "verification_status_counts": dict(
+                mechanism_handoff_evidence_bundle.get("verification_status_counts") or {}
+            ),
+            "action_counts": dict(mechanism_handoff_evidence_bundle.get("action_counts") or {}),
+            "source_family_counts": dict(
+                mechanism_handoff_evidence_bundle.get("source_family_counts") or {}
+            ),
+            "blocking_reasons": tuple(
+                mechanism_handoff_evidence_bundle.get("blocking_reasons", ())
+            ),
+        }
+        manifests["mechanism_handoff_evidence_bundle_manifest"] = (
+            mechanism_handoff_evidence_bundle.get("manifest_path")
         )
     if pathway_intervention_workflow is not None:
         payload["pathway_intervention_workflow"] = {
@@ -7110,6 +8593,34 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         require_structured_fact_robustness=bool(args.require_structured_fact_robustness),
         structured_fact_canonical_route_key=args.structured_fact_canonical_route_key,
         structured_fact_paraphrase_route_key=args.structured_fact_paraphrase_route_key,
+        structured_fact_robustness_min_selected=args.structured_fact_robustness_min_selected,
+        structured_fact_robustness_min_decision_accuracy=(
+            args.structured_fact_robustness_min_decision_accuracy
+        ),
+        structured_fact_robustness_max_false_supported_rate=(
+            args.structured_fact_robustness_max_false_supported_rate
+        ),
+        structured_fact_robustness_min_false_refuted_rate=(
+            args.structured_fact_robustness_min_false_refuted_rate
+        ),
+        structured_fact_robustness_min_covered_fact_properties=(
+            args.structured_fact_robustness_min_covered_fact_properties
+        ),
+        structured_fact_robustness_min_covered_fact_property_records=(
+            args.structured_fact_robustness_min_covered_fact_property_records
+        ),
+        structured_fact_robustness_min_covered_fact_property_source_documents=(
+            args.structured_fact_robustness_min_covered_fact_property_source_documents
+        ),
+        structured_fact_robustness_min_covered_fact_property_decision_accuracy=(
+            args.structured_fact_robustness_min_covered_fact_property_decision_accuracy
+        ),
+        structured_fact_robustness_max_covered_fact_property_false_supported_rate=(
+            args.structured_fact_robustness_max_covered_fact_property_false_supported_rate
+        ),
+        structured_fact_robustness_min_covered_fact_property_false_refuted_rate=(
+            args.structured_fact_robustness_min_covered_fact_property_false_refuted_rate
+        ),
         performance_registry_path=args.performance_registry,
         performance_baseline_key=args.performance_baseline_key,
         selector_replay_report_path=args.selector_replay_report,
@@ -7119,6 +8630,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         ),
         require_product_runtime_drift_pre_generation_evidence=bool(
             args.require_product_runtime_drift_pre_generation_evidence
+        ),
+        require_product_runtime_drift_claim_factuality_evidence=bool(
+            args.require_product_runtime_drift_claim_factuality_evidence
         ),
         require_product_runtime_drift_counterfactual_evidence=bool(
             args.require_product_runtime_drift_counterfactual_evidence
@@ -7132,6 +8646,18 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         require_product_runtime_drift_action_gate_evidence=bool(
             args.require_product_runtime_drift_action_gate_evidence
         ),
+        require_product_runtime_drift_trajectory_audit_evidence=bool(
+            args.require_product_runtime_drift_trajectory_audit_evidence
+        ),
+        require_product_runtime_drift_evidence_handoff_evidence=bool(
+            args.require_product_runtime_drift_evidence_handoff_evidence
+        ),
+        require_product_runtime_drift_world_model_evidence=bool(
+            args.require_product_runtime_drift_world_model_evidence
+        ),
+        require_product_runtime_drift_frontier_release_evidence=bool(
+            args.require_product_runtime_drift_frontier_release_evidence
+        ),
         release_efficiency_report_path=args.release_efficiency_report,
         external_evidence_baseline_comparison_path=args.external_evidence_baseline_comparison,
         external_evidence_baseline_comparison_registry_path=(
@@ -7141,12 +8667,22 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         pre_generation_probe_comparison_path=args.pre_generation_probe_comparison,
         pre_generation_probe_comparison_registry_path=args.pre_generation_probe_comparison_registry,
         pre_generation_probe_comparison_key=args.pre_generation_probe_comparison_key,
+        claim_factuality_probe_comparison_path=args.claim_factuality_probe_comparison,
+        claim_factuality_probe_comparison_registry_path=(
+            args.claim_factuality_probe_comparison_registry
+        ),
+        claim_factuality_probe_comparison_key=args.claim_factuality_probe_comparison_key,
         frontier_release_evidence_path=args.frontier_release_evidence,
         frontier_release_evidence_registry_path=args.frontier_release_evidence_registry,
         frontier_release_evidence_key=args.frontier_release_evidence_key,
         world_model_signal_workflow_path=args.world_model_signal_workflow,
         world_model_signal_workflow_registry_path=args.world_model_signal_workflow_registry,
         world_model_signal_workflow_key=args.world_model_signal_workflow_key,
+        mechanism_handoff_evidence_bundle_path=args.mechanism_handoff_evidence_bundle,
+        mechanism_handoff_evidence_bundle_registry_path=(
+            args.mechanism_handoff_evidence_bundle_registry
+        ),
+        mechanism_handoff_evidence_bundle_key=args.mechanism_handoff_evidence_bundle_key,
         pathway_intervention_workflow_path=args.pathway_intervention_workflow,
         pathway_intervention_workflow_registry_path=args.pathway_intervention_workflow_registry,
         pathway_intervention_workflow_key=args.pathway_intervention_workflow_key,
@@ -7231,6 +8767,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         min_best_quality_auroc=args.min_best_quality_auroc,
         max_uncached_forward_seconds=args.max_uncached_forward_seconds,
         max_cache_only_seconds=args.max_cache_only_seconds,
+        max_recommended_runtime_seconds=args.max_recommended_runtime_seconds,
         max_covariance_maha_last_auroc_drop=args.max_covariance_maha_last_auroc_drop,
         max_inside_sample_count_ratio=args.max_inside_sample_count_ratio,
         max_inside_generation_seconds_ratio=args.max_inside_generation_seconds_ratio,
@@ -7328,6 +8865,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         f"release_efficiency={decision.get('recommended_release_efficiency_profile')} "
         f"external_evidence={decision.get('external_evidence_baseline_comparison_status')} "
         f"pre_generation_probe={decision.get('pre_generation_probe_comparison_status')} "
+        f"claim_factuality_probe={decision.get('claim_factuality_probe_comparison_status')} "
         f"frontier_release_evidence={decision.get('frontier_release_evidence_status')} "
         f"world_model_signal={decision.get('world_model_signal_workflow_status')} "
         f"pathway_intervention={decision.get('pathway_intervention_workflow_status')} "
@@ -7384,6 +8922,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--require-product-runtime-drift-pre-generation-evidence", action="store_true",
                         help="require the product runtime drift report to include pre-generation "
                              "probe comparison coverage, redline, and quality metrics")
+    parser.add_argument("--require-product-runtime-drift-claim-factuality-evidence", action="store_true",
+                        help="require the product runtime drift report to include claim factuality "
+                             "probe comparison coverage, conformal/selective, redline, and quality metrics")
     parser.add_argument("--require-product-runtime-drift-counterfactual-evidence", action="store_true",
                         help="require the product runtime drift report to include counterfactual "
                              "verifier-audit coverage, manifest, pass-rate, false-invariance, "
@@ -7396,6 +8937,19 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--require-product-runtime-drift-action-gate-evidence", action="store_true",
                         help="require the product runtime drift report to include product-trace "
                              "action-audit and action-execution drift metrics")
+    parser.add_argument("--require-product-runtime-drift-trajectory-audit-evidence", action="store_true",
+                        help="require the product runtime drift report to include trajectory-audit "
+                             "failed-trace/error and hallucination-taxonomy drift metrics")
+    parser.add_argument("--require-product-runtime-drift-evidence-handoff-evidence", action="store_true",
+                        help="require the product runtime drift report to include promotion-contract "
+                             "evidence handoff coverage, manifest, metric completeness, and promoted-group "
+                             "drift metrics")
+    parser.add_argument("--require-product-runtime-drift-world-model-evidence", action="store_true",
+                        help="require the product runtime drift report to include trace-level world-model "
+                             "participation, coverage, conflict, low-agreement, and trace-gap metrics")
+    parser.add_argument("--require-product-runtime-drift-frontier-release-evidence", action="store_true",
+                        help="require the product runtime drift report to include frontier release "
+                             "evidence coverage, artifact presence, promote-rate, and run-count metrics")
     parser.add_argument("--release-efficiency-report", default=None,
                         help="optional release efficiency report that must promote and verify")
     parser.add_argument("--external-evidence-baseline-comparison", default=None,
@@ -7416,6 +8970,16 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--pre-generation-probe-comparison-key", default=None,
                         help="optional report:<name>:<version> registry key for a pre-generation "
                              "probe workflow comparison")
+    parser.add_argument("--claim-factuality-probe-comparison", default=None,
+                        help="optional compare_claim_factuality_probe_workflows.py report that must "
+                             "pass multi-model, conformal, and text-redline release gates")
+    parser.add_argument("--claim-factuality-probe-comparison-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for "
+                             "--claim-factuality-probe-comparison-key; defaults to "
+                             "--readiness-registry")
+    parser.add_argument("--claim-factuality-probe-comparison-key", default=None,
+                        help="optional report:<name>:<version> registry key for a claim factuality "
+                             "probe workflow comparison")
     parser.add_argument("--frontier-release-evidence", default=None,
                         help="optional frontier release-evidence report that must promote and verify")
     parser.add_argument("--frontier-release-evidence-registry", default=None,
@@ -7431,6 +8995,16 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "defaults to --readiness-registry")
     parser.add_argument("--world-model-signal-workflow-key", default=None,
                         help="optional report:<name>:<version> registry key for a world-model signal workflow")
+    parser.add_argument("--mechanism-handoff-evidence-bundle", default=None,
+                        help="optional mechanism handoff evidence bundle report that must promote "
+                             "and verify")
+    parser.add_argument("--mechanism-handoff-evidence-bundle-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for "
+                             "--mechanism-handoff-evidence-bundle-key; defaults to "
+                             "--readiness-registry")
+    parser.add_argument("--mechanism-handoff-evidence-bundle-key", default=None,
+                        help="optional report:<name>:<version> registry key for a mechanism "
+                             "handoff evidence bundle")
     parser.add_argument("--pathway-intervention-workflow", default=None,
                         help="optional pathway intervention workflow report that must be release-ready "
                              "and manifest-verified")
@@ -7632,6 +9206,11 @@ def main(argv: Sequence[str] | None = None) -> None:
         value,
         flag="--max-cache-only-seconds",
     ), default=None)
+    parser.add_argument("--max-recommended-runtime-seconds", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--max-recommended-runtime-seconds",
+    ), default=None,
+                        help="maximum selected deployment-path runtime cost from the readiness recommendation")
     parser.add_argument("--max-covariance-maha-last-auroc-drop", type=lambda value: _parse_non_negative_float(
         value,
         flag="--max-covariance-maha-last-auroc-drop",
@@ -7932,6 +9511,72 @@ def main(argv: Sequence[str] | None = None) -> None:
             flag="--required-route-min-covered-fact-property-false-refuted-rate",
         )
     ), default=None)
+    parser.add_argument("--structured-fact-robustness-min-selected", type=lambda value: _parse_non_negative_int(
+        value,
+        flag="--structured-fact-robustness-min-selected",
+    ), default=None)
+    parser.add_argument("--structured-fact-robustness-min-decision-accuracy", type=lambda value: (
+        _parse_non_negative_float(
+            value,
+            flag="--structured-fact-robustness-min-decision-accuracy",
+        )
+    ), default=None)
+    parser.add_argument("--structured-fact-robustness-max-false-supported-rate", type=lambda value: (
+        _parse_non_negative_float(
+            value,
+            flag="--structured-fact-robustness-max-false-supported-rate",
+        )
+    ), default=None)
+    parser.add_argument("--structured-fact-robustness-min-false-refuted-rate", type=lambda value: (
+        _parse_non_negative_float(
+            value,
+            flag="--structured-fact-robustness-min-false-refuted-rate",
+        )
+    ), default=None)
+    parser.add_argument("--structured-fact-robustness-min-covered-fact-properties", type=lambda value: (
+        _parse_non_negative_int(
+            value,
+            flag="--structured-fact-robustness-min-covered-fact-properties",
+        )
+    ), default=None)
+    parser.add_argument("--structured-fact-robustness-min-covered-fact-property-records", type=lambda value: (
+        _parse_non_negative_int(
+            value,
+            flag="--structured-fact-robustness-min-covered-fact-property-records",
+        )
+    ), default=None)
+    parser.add_argument(
+        "--structured-fact-robustness-min-covered-fact-property-source-documents",
+        type=lambda value: _parse_non_negative_int(
+            value,
+            flag="--structured-fact-robustness-min-covered-fact-property-source-documents",
+        ),
+        default=None,
+    )
+    parser.add_argument(
+        "--structured-fact-robustness-min-covered-fact-property-decision-accuracy",
+        type=lambda value: _parse_unit_float(
+            value,
+            flag="--structured-fact-robustness-min-covered-fact-property-decision-accuracy",
+        ),
+        default=None,
+    )
+    parser.add_argument(
+        "--structured-fact-robustness-max-covered-fact-property-false-supported-rate",
+        type=lambda value: _parse_unit_float(
+            value,
+            flag="--structured-fact-robustness-max-covered-fact-property-false-supported-rate",
+        ),
+        default=None,
+    )
+    parser.add_argument(
+        "--structured-fact-robustness-min-covered-fact-property-false-refuted-rate",
+        type=lambda value: _parse_unit_float(
+            value,
+            flag="--structured-fact-robustness-min-covered-fact-property-false-refuted-rate",
+        ),
+        default=None,
+    )
     parser.add_argument(
         "--required-route-require-non-oracle-evidence",
         action="store_true",

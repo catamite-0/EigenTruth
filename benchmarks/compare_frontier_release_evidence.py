@@ -32,6 +32,8 @@ def compare_frontier_release_evidence(
     verifier_stability_report_path: str | Path,
     abstention_stability_report_path: str | Path,
     detectability_taxonomy_report_paths: Sequence[str | Path] = (),
+    frontier_workflow_report_paths: Sequence[str | Path] = (),
+    citation_batch_rollup_report_paths: Sequence[str | Path] = (),
     max_verified_false_alarm_mean: float = DEFAULT_MAX_VERIFIED_FALSE_ALARM_MEAN,
     min_verified_detection_mean: float = DEFAULT_MIN_VERIFIED_DETECTION_MEAN,
     min_verifier_delta_detection_mean: float = DEFAULT_MIN_VERIFIER_DELTA_DETECTION_MEAN,
@@ -49,9 +51,17 @@ def compare_frontier_release_evidence(
     verifier_path = Path(verifier_stability_report_path)
     abstention_path = Path(abstention_stability_report_path)
     detectability_paths = tuple(Path(path) for path in detectability_taxonomy_report_paths)
+    frontier_workflow_paths = tuple(Path(path) for path in frontier_workflow_report_paths)
     verifier = _load_json_object(verifier_path)
     abstention = _load_json_object(abstention_path)
     detectability_reports = tuple((path, _load_json_object(path)) for path in detectability_paths)
+    frontier_workflow_reports = tuple(
+        (path, _load_json_object(path)) for path in frontier_workflow_paths
+    )
+    citation_batch_rollup_paths = tuple(Path(path) for path in citation_batch_rollup_report_paths)
+    citation_batch_rollup_reports = tuple(
+        (path, _load_json_object(path)) for path in citation_batch_rollup_paths
+    )
     config = {
         "max_verified_false_alarm_mean": _unit_float(
             max_verified_false_alarm_mean,
@@ -111,12 +121,37 @@ def compare_frontier_release_evidence(
         )
         for path, report in detectability_reports
     )
+    frontier_workflow_inputs = tuple(
+        _input_summary(
+            report,
+            path=path,
+            expected_workflow="truthfulqa_frontier_workflow",
+        )
+        for path, report in frontier_workflow_reports
+    )
+    citation_batch_rollup_inputs = tuple(
+        _input_summary(
+            report,
+            path=path,
+            expected_workflow="citation_search_batch_evidence_rollup",
+            expected_statuses=("promote",),
+        )
+        for path, report in citation_batch_rollup_reports
+    )
 
     input_blocking_reasons = tuple(verifier_input["blocking_reasons"]) + tuple(
         abstention_input["blocking_reasons"]
     ) + tuple(
         reason
         for item in detectability_inputs
+        for reason in item["blocking_reasons"]
+    ) + tuple(
+        reason
+        for item in frontier_workflow_inputs
+        for reason in item["blocking_reasons"]
+    ) + tuple(
+        reason
+        for item in citation_batch_rollup_inputs
         for reason in item["blocking_reasons"]
     )
     run_decisions = []
@@ -145,8 +180,20 @@ def compare_frontier_release_evidence(
         if detectability_reports
         else "not_required"
     )
+    multiple_testing_decisions = _frontier_workflow_multiple_testing_decisions(
+        frontier_workflow_reports
+    )
+    multiple_testing_track_status = _multiple_testing_track_status(multiple_testing_decisions)
+    citation_batch_decisions = _citation_batch_rollup_decisions(
+        citation_batch_rollup_reports
+    )
+    citation_batch_track_status = _citation_batch_track_status(citation_batch_decisions)
     blocking_reasons = list(input_blocking_reasons)
     for decision in run_decisions:
+        blocking_reasons.extend(decision["blocking_reasons"])
+    for decision in multiple_testing_decisions:
+        blocking_reasons.extend(decision["blocking_reasons"])
+    for decision in citation_batch_decisions:
         blocking_reasons.extend(decision["blocking_reasons"])
     status = (
         "promote"
@@ -154,6 +201,8 @@ def compare_frontier_release_evidence(
         and verifier_track_status == "promote"
         and abstention_track_status == "promote"
         and detectability_track_status in {"promote", "not_required"}
+        and multiple_testing_track_status in {"promote", "not_required"}
+        and citation_batch_track_status in {"promote", "not_required"}
         else "blocked"
     )
     return {
@@ -165,6 +214,8 @@ def compare_frontier_release_evidence(
             "verifier_stability_report": verifier_input,
             "abstention_stability_report": abstention_input,
             "detectability_taxonomy_reports": detectability_inputs,
+            "frontier_workflow_reports": frontier_workflow_inputs,
+            "citation_batch_rollup_reports": citation_batch_rollup_inputs,
         },
         "evidence_summary": {
             "run_count": len(run_decisions),
@@ -172,7 +223,12 @@ def compare_frontier_release_evidence(
             "verifier_track_status": verifier_track_status,
             "abstention_track_status": abstention_track_status,
             "detectability_track_status": detectability_track_status,
+            "multiple_testing_track_status": multiple_testing_track_status,
             "detectability_report_count": len(detectability_reports),
+            "frontier_workflow_report_count": len(frontier_workflow_reports),
+            "citation_batch_rollup_report_count": len(citation_batch_rollup_reports),
+            **_multiple_testing_evidence_summary(multiple_testing_decisions),
+            **_citation_batch_evidence_summary(citation_batch_decisions),
             "verifier_signal": verifier.get("config", {}).get("signal")
             if isinstance(verifier.get("config"), Mapping)
             else None,
@@ -181,11 +237,15 @@ def compare_frontier_release_evidence(
             else [],
         },
         "run_decisions": run_decisions,
+        "multiple_testing_decisions": multiple_testing_decisions,
+        "citation_batch_decisions": citation_batch_decisions,
         "decision": {
             "status": status,
             "verifier_track_status": verifier_track_status,
             "abstention_track_status": abstention_track_status,
             "detectability_track_status": detectability_track_status,
+            "multiple_testing_track_status": multiple_testing_track_status,
+            "citation_batch_track_status": citation_batch_track_status,
             "blocking_reasons": tuple(blocking_reasons),
         },
         "notes": tuple(str(note) for note in notes),
@@ -395,6 +455,465 @@ def _detectability_run_decision(
     return _track_decision("detectability_taxonomy", name, metrics, checks, blocking_reasons)
 
 
+def _frontier_workflow_multiple_testing_decisions(
+    reports: Sequence[tuple[Path, Mapping[str, Any]]],
+) -> tuple[dict[str, Any], ...]:
+    return tuple(
+        _frontier_workflow_multiple_testing_decision(path=path, report=report)
+        for path, report in reports
+    )
+
+
+def _frontier_workflow_multiple_testing_decision(
+    *,
+    path: Path,
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    name = _frontier_workflow_report_name(path, report)
+    gate = _mapping(report.get("multiple_testing_gate"))
+    cell_count = _non_negative_int(gate.get("cell_count"))
+    pass_count = _non_negative_int(gate.get("pass_count"))
+    fail_count = _non_negative_int(gate.get("fail_count"))
+    unknown_count = _non_negative_int(gate.get("unknown_count"))
+    cell_summaries = _multiple_testing_cell_summaries(gate.get("cells", ()))
+    failed_cells = tuple(cell for cell in cell_summaries if cell["status"] == "failed")
+    unknown_cells = tuple(cell for cell in cell_summaries if cell["status"] == "unknown")
+    passed_cells = tuple(cell for cell in cell_summaries if cell["status"] == "passed")
+    missing_artifact_cells = tuple(
+        cell["cell"]
+        for cell in cell_summaries
+        if not cell.get("report") or not cell.get("calibration")
+    )
+    metrics = {
+        "enabled": gate.get("enabled"),
+        "all_pass": gate.get("all_pass"),
+        "signals": tuple(gate.get("signals", ()))
+        if isinstance(gate.get("signals"), Sequence) and not isinstance(gate.get("signals"), (str, bytes))
+        else (),
+        "alpha": _finite_float_or_none(gate.get("alpha")),
+        "method": gate.get("method"),
+        "cell_count": cell_count,
+        "pass_count": pass_count,
+        "fail_count": fail_count,
+        "unknown_count": unknown_count,
+        "failed_cells": failed_cells,
+        "unknown_cells": unknown_cells,
+        "blocked_cells": failed_cells + unknown_cells,
+    }
+    blocking_reasons: list[str] = []
+    if not gate:
+        blocking_reasons.append(
+            f"truthfulqa_frontier_workflow.{name}.multiple_testing_gate missing"
+        )
+    if gate.get("enabled") is not True:
+        blocking_reasons.append(
+            f"truthfulqa_frontier_workflow.{name}.multiple_testing_gate.enabled is not true"
+        )
+    if gate.get("all_pass") is not True:
+        blocking_reasons.append(
+            f"truthfulqa_frontier_workflow.{name}.multiple_testing_gate.all_pass is not true"
+        )
+    if cell_count is None or cell_count < 1:
+        blocking_reasons.append(
+            f"truthfulqa_frontier_workflow.{name}.multiple_testing_gate.cell_count is missing or zero"
+        )
+    elif len(cell_summaries) != cell_count:
+        blocking_reasons.append(
+            f"truthfulqa_frontier_workflow.{name}.multiple_testing_gate.cells length "
+            f"{len(cell_summaries)} does not match cell_count {cell_count}"
+        )
+    if pass_count is None:
+        blocking_reasons.append(
+            f"truthfulqa_frontier_workflow.{name}.multiple_testing_gate.pass_count is missing"
+        )
+    elif cell_count is not None and pass_count != len(passed_cells):
+        blocking_reasons.append(
+            f"truthfulqa_frontier_workflow.{name}.multiple_testing_gate.pass_count "
+            f"{pass_count} does not match passed cell list count {len(passed_cells)}"
+        )
+    if fail_count is None:
+        blocking_reasons.append(
+            f"truthfulqa_frontier_workflow.{name}.multiple_testing_gate.fail_count is missing"
+        )
+    elif fail_count != len(failed_cells):
+        blocking_reasons.append(
+            f"truthfulqa_frontier_workflow.{name}.multiple_testing_gate.fail_count "
+            f"{fail_count} does not match failed cell list count {len(failed_cells)}"
+        )
+    elif fail_count > 0:
+        blocking_reasons.append(
+            f"truthfulqa_frontier_workflow.{name}.multiple_testing_gate.fail_count {fail_count} is non-zero"
+        )
+    if unknown_count is None:
+        blocking_reasons.append(
+            f"truthfulqa_frontier_workflow.{name}.multiple_testing_gate.unknown_count is missing"
+        )
+    elif unknown_count != len(unknown_cells):
+        blocking_reasons.append(
+            f"truthfulqa_frontier_workflow.{name}.multiple_testing_gate.unknown_count "
+            f"{unknown_count} does not match unknown cell list count {len(unknown_cells)}"
+        )
+    elif unknown_count > 0:
+        blocking_reasons.append(
+            f"truthfulqa_frontier_workflow.{name}.multiple_testing_gate.unknown_count {unknown_count} is non-zero"
+        )
+    if (
+        cell_count is not None
+        and pass_count is not None
+        and fail_count is not None
+        and unknown_count is not None
+        and pass_count + fail_count + unknown_count != cell_count
+    ):
+        blocking_reasons.append(
+            f"truthfulqa_frontier_workflow.{name}.multiple_testing_gate pass/fail/unknown "
+            f"counts do not sum to cell_count {cell_count}"
+        )
+    if missing_artifact_cells:
+        blocking_reasons.append(
+            f"truthfulqa_frontier_workflow.{name}.multiple_testing_gate.cells missing "
+            f"report or calibration artifact: {', '.join(missing_artifact_cells)}"
+        )
+    if failed_cells:
+        blocking_reasons.append(
+            f"truthfulqa_frontier_workflow.{name}.multiple_testing_gate.failed_cells: "
+            f"{', '.join(cell['cell'] for cell in failed_cells)}"
+        )
+    if unknown_cells:
+        blocking_reasons.append(
+            f"truthfulqa_frontier_workflow.{name}.multiple_testing_gate.unknown_cells: "
+            f"{', '.join(cell['cell'] for cell in unknown_cells)}"
+        )
+    return _track_decision(
+        "truthfulqa_frontier_workflow.multiple_testing_gate",
+        name,
+        metrics,
+        (),
+        blocking_reasons,
+    )
+
+
+def _multiple_testing_cell_summaries(value: Any) -> tuple[dict[str, Any], ...]:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+        return ()
+    cells: list[dict[str, Any]] = []
+    for index, item in enumerate(value):
+        if not isinstance(item, Mapping):
+            continue
+        cell_name = item.get("cell") or item.get("name") or f"cell_{index}"
+        passed = item.get("pass")
+        if passed is True:
+            status = "passed"
+        elif passed is False:
+            status = "failed"
+        else:
+            status = "unknown"
+        cells.append({
+            "cell": str(cell_name),
+            "status": status,
+            "false_alarm": _finite_float_or_none(item.get("false_alarm")),
+            "detection": _finite_float_or_none(item.get("detection")),
+            "report": item.get("report"),
+            "calibration": item.get("calibration"),
+        })
+    return tuple(cells)
+
+
+def _frontier_workflow_report_name(path: Path, report: Mapping[str, Any]) -> str:
+    for key in ("name", "run_name"):
+        value = report.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    metadata = _mapping(report.get("metadata"))
+    for key in ("name", "run_name"):
+        value = metadata.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return path.stem
+
+
+def _multiple_testing_track_status(decisions: Sequence[Mapping[str, Any]]) -> str:
+    if not decisions:
+        return "not_required"
+    statuses = {str(decision.get("status")) for decision in decisions}
+    return "promote" if statuses == {"promote"} else "blocked"
+
+
+def _multiple_testing_evidence_summary(
+    decisions: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    cell_count = 0
+    pass_count = 0
+    fail_count = 0
+    unknown_count = 0
+    failed_cells: list[dict[str, Any]] = []
+    unknown_cells: list[dict[str, Any]] = []
+    signals: set[str] = set()
+    run_names = []
+    for decision in decisions:
+        run_name = decision.get("name")
+        run_names.append(run_name)
+        metrics = _mapping(decision.get("metrics"))
+        cell_count += _non_negative_int(metrics.get("cell_count")) or 0
+        pass_count += _non_negative_int(metrics.get("pass_count")) or 0
+        fail_count += _non_negative_int(metrics.get("fail_count")) or 0
+        unknown_count += _non_negative_int(metrics.get("unknown_count")) or 0
+        failed_cells.extend(_annotated_multiple_testing_cells(metrics.get("failed_cells"), run_name=run_name))
+        unknown_cells.extend(_annotated_multiple_testing_cells(metrics.get("unknown_cells"), run_name=run_name))
+        for signal in metrics.get("signals", ()):
+            if isinstance(signal, str):
+                signals.add(signal)
+    return {
+        "multiple_testing_frontier_workflow_names": tuple(
+            str(name) for name in run_names if name is not None
+        ),
+        "multiple_testing_signals": tuple(sorted(signals)),
+        "multiple_testing_cell_count": cell_count,
+        "multiple_testing_pass_count": pass_count,
+        "multiple_testing_fail_count": fail_count,
+        "multiple_testing_unknown_count": unknown_count,
+        "multiple_testing_failed_cells": tuple(failed_cells),
+        "multiple_testing_unknown_cells": tuple(unknown_cells),
+        "multiple_testing_blocked_cells": tuple(failed_cells + unknown_cells),
+    }
+
+
+def _annotated_multiple_testing_cells(value: Any, *, run_name: Any) -> tuple[dict[str, Any], ...]:
+    cells = []
+    for item in _mapping_sequence(value):
+        cells.append({
+            "run": None if run_name is None else str(run_name),
+            "cell": str(item.get("cell") or ""),
+            "status": str(item.get("status") or "unknown"),
+            "false_alarm": _finite_float_or_none(item.get("false_alarm")),
+            "detection": _finite_float_or_none(item.get("detection")),
+            "report": item.get("report"),
+            "calibration": item.get("calibration"),
+        })
+    return tuple(cells)
+
+
+def _citation_batch_rollup_decisions(
+    reports: Sequence[tuple[Path, Mapping[str, Any]]],
+) -> tuple[dict[str, Any], ...]:
+    return tuple(
+        _citation_batch_rollup_decision(path=path, report=report)
+        for path, report in reports
+    )
+
+
+def _citation_batch_rollup_decision(
+    *,
+    path: Path,
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    name = _citation_batch_rollup_report_name(path, report)
+    summary = _mapping(report.get("summary"))
+    gate = _mapping(report.get("gate"))
+    paths = _mapping(report.get("paths"))
+    metrics = {
+        "workflow": report.get("workflow"),
+        "status": report.get("status"),
+        "gate_passed": gate.get("passed"),
+        "promotion_ready": gate.get("promotion_ready"),
+        "artifact_manifest": paths.get("artifact_manifest"),
+        "report_count": _non_negative_int(summary.get("report_count")),
+        "expected_batch_count": _non_negative_int(summary.get("expected_batch_count")),
+        "observed_batch_count": _non_negative_int(summary.get("observed_batch_count")),
+        "missing_expected_batch_count": _non_negative_int(
+            summary.get("missing_expected_batch_count")
+        ),
+        "unexpected_batch_count": _non_negative_int(summary.get("unexpected_batch_count")),
+        "duplicate_batch_count": _non_negative_int(summary.get("duplicate_batch_count")),
+        "blocked_report_count": _non_negative_int(summary.get("blocked_report_count")),
+        "unsupported_workflow_count": _non_negative_int(
+            summary.get("unsupported_workflow_count")
+        ),
+        "child_manifest_failed_count": _non_negative_int(
+            summary.get("child_manifest_failed_count")
+        ),
+        "child_manifest_missing_count": _non_negative_int(
+            summary.get("child_manifest_missing_count")
+        ),
+        "adapter_request_count": _non_negative_int(summary.get("adapter_request_count")),
+        "adapter_result_count": _non_negative_int(summary.get("adapter_result_count")),
+        "source_document_count": _non_negative_int(summary.get("source_document_count")),
+        "corpus_document_count": _non_negative_int(summary.get("corpus_document_count")),
+        "expected_batch_ids": _string_tuple(summary.get("expected_batch_ids")),
+        "observed_batch_ids": _string_tuple(summary.get("observed_batch_ids")),
+        "missing_expected_batch_ids": _string_tuple(
+            summary.get("missing_expected_batch_ids")
+        ),
+        "unexpected_batch_ids": _string_tuple(summary.get("unexpected_batch_ids")),
+        "duplicate_batch_ids": _string_tuple(summary.get("duplicate_batch_ids")),
+    }
+    blocking_reasons: list[str] = []
+    if report.get("workflow") != "citation_search_batch_evidence_rollup":
+        blocking_reasons.append(
+            f"citation_batch_rollup.{name}.workflow is "
+            f"{report.get('workflow')!r}, expected 'citation_search_batch_evidence_rollup'"
+        )
+    if report.get("status") != "promote":
+        blocking_reasons.append(
+            f"citation_batch_rollup.{name}.status is {report.get('status')!r}, "
+            "expected 'promote'"
+        )
+    if gate.get("passed") is not True:
+        blocking_reasons.append(
+            f"citation_batch_rollup.{name}.gate.passed is not true"
+        )
+    if gate.get("promotion_ready") is not True:
+        blocking_reasons.append(
+            f"citation_batch_rollup.{name}.gate.promotion_ready is not true"
+        )
+    if not paths.get("artifact_manifest"):
+        blocking_reasons.append(
+            f"citation_batch_rollup.{name}.paths.artifact_manifest is missing"
+        )
+    report_count = metrics["report_count"]
+    if report_count is None or report_count < 1:
+        blocking_reasons.append(
+            f"citation_batch_rollup.{name}.summary.report_count is missing or zero"
+        )
+    for key in (
+        "missing_expected_batch_count",
+        "unexpected_batch_count",
+        "duplicate_batch_count",
+        "blocked_report_count",
+        "unsupported_workflow_count",
+        "child_manifest_failed_count",
+    ):
+        count = metrics[key]
+        if count is None:
+            blocking_reasons.append(
+                f"citation_batch_rollup.{name}.summary.{key} is missing"
+            )
+        elif count > 0:
+            blocking_reasons.append(
+                f"citation_batch_rollup.{name}.summary.{key} {count} is non-zero"
+            )
+    for reason in _citation_batch_rollup_gate_reasons(gate.get("blocking_reasons")):
+        blocking_reasons.append(f"citation_batch_rollup.{name}.{reason}")
+    return _track_decision(
+        "citation_search_batch_evidence_rollup",
+        name,
+        metrics,
+        (),
+        tuple(dict.fromkeys(blocking_reasons)),
+    )
+
+
+def _citation_batch_rollup_report_name(path: Path, report: Mapping[str, Any]) -> str:
+    metadata = _mapping(report.get("metadata"))
+    for payload in (report, metadata):
+        for key in ("name", "run_name"):
+            value = payload.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+    return path.stem
+
+
+def _citation_batch_rollup_gate_reasons(value: Any) -> tuple[str, ...]:
+    reasons: list[str] = []
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+        return ()
+    for item in value:
+        if isinstance(item, Mapping):
+            gate = item.get("gate")
+            reason = item.get("reason")
+            batch_id = item.get("batch_id")
+            path = item.get("path")
+            parts = []
+            if gate:
+                parts.append(f"gate={gate}")
+            if batch_id:
+                parts.append(f"batch_id={batch_id}")
+            if path:
+                parts.append(f"path={path}")
+            if reason:
+                parts.append(str(reason))
+            if parts:
+                reasons.append(" ".join(parts))
+        elif item is not None:
+            reasons.append(str(item))
+    return tuple(reasons)
+
+
+def _citation_batch_track_status(decisions: Sequence[Mapping[str, Any]]) -> str:
+    if not decisions:
+        return "not_required"
+    statuses = {str(decision.get("status")) for decision in decisions}
+    return "promote" if statuses == {"promote"} else "blocked"
+
+
+def _citation_batch_evidence_summary(
+    decisions: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    rollup_names = []
+    blocked_rollups = []
+    expected_batch_ids: set[str] = set()
+    observed_batch_ids: set[str] = set()
+    missing_batch_rows: list[dict[str, str]] = []
+    duplicate_batch_rows: list[dict[str, str]] = []
+    unexpected_batch_rows: list[dict[str, str]] = []
+    totals = {
+        "citation_batch_child_report_count": 0,
+        "citation_batch_expected_batch_count": 0,
+        "citation_batch_observed_batch_count": 0,
+        "citation_batch_missing_expected_batch_count": 0,
+        "citation_batch_unexpected_batch_count": 0,
+        "citation_batch_duplicate_batch_count": 0,
+        "citation_batch_blocked_child_report_count": 0,
+        "citation_batch_child_manifest_failed_count": 0,
+        "citation_batch_adapter_request_count": 0,
+        "citation_batch_adapter_result_count": 0,
+        "citation_batch_source_document_count": 0,
+        "citation_batch_corpus_document_count": 0,
+    }
+    for decision in decisions:
+        name = str(decision.get("name") or "")
+        rollup_names.append(name)
+        if decision.get("status") != "promote":
+            blocked_rollups.append(name)
+        metrics = _mapping(decision.get("metrics"))
+        for key, metric_key in (
+            ("citation_batch_child_report_count", "report_count"),
+            ("citation_batch_expected_batch_count", "expected_batch_count"),
+            ("citation_batch_observed_batch_count", "observed_batch_count"),
+            ("citation_batch_missing_expected_batch_count", "missing_expected_batch_count"),
+            ("citation_batch_unexpected_batch_count", "unexpected_batch_count"),
+            ("citation_batch_duplicate_batch_count", "duplicate_batch_count"),
+            ("citation_batch_blocked_child_report_count", "blocked_report_count"),
+            ("citation_batch_child_manifest_failed_count", "child_manifest_failed_count"),
+            ("citation_batch_adapter_request_count", "adapter_request_count"),
+            ("citation_batch_adapter_result_count", "adapter_result_count"),
+            ("citation_batch_source_document_count", "source_document_count"),
+            ("citation_batch_corpus_document_count", "corpus_document_count"),
+        ):
+            totals[key] += _non_negative_int(metrics.get(metric_key)) or 0
+        expected_batch_ids.update(_string_tuple(metrics.get("expected_batch_ids")))
+        observed_batch_ids.update(_string_tuple(metrics.get("observed_batch_ids")))
+        for batch_id in _string_tuple(metrics.get("missing_expected_batch_ids")):
+            missing_batch_rows.append({"rollup": name, "batch_id": batch_id})
+        for batch_id in _string_tuple(metrics.get("duplicate_batch_ids")):
+            duplicate_batch_rows.append({"rollup": name, "batch_id": batch_id})
+        for batch_id in _string_tuple(metrics.get("unexpected_batch_ids")):
+            unexpected_batch_rows.append({"rollup": name, "batch_id": batch_id})
+    return {
+        "citation_batch_rollup_names": tuple(name for name in rollup_names if name),
+        "citation_batch_blocked_rollups": tuple(name for name in blocked_rollups if name),
+        "citation_batch_rollup_count": len(decisions),
+        "citation_batch_promotion_ready_count": sum(
+            1 for decision in decisions if decision.get("status") == "promote"
+        ),
+        "citation_batch_expected_batch_ids": tuple(sorted(expected_batch_ids)),
+        "citation_batch_observed_batch_ids": tuple(sorted(observed_batch_ids)),
+        "citation_batch_missing_expected_batches": tuple(missing_batch_rows),
+        "citation_batch_duplicate_batches": tuple(duplicate_batch_rows),
+        "citation_batch_unexpected_batches": tuple(unexpected_batch_rows),
+        **totals,
+    }
+
+
 def _track_decision(
     track: str,
     name: str,
@@ -440,6 +959,7 @@ def _input_summary(
     *,
     path: Path,
     expected_workflow: str,
+    expected_statuses: Sequence[str] = ("complete",),
 ) -> dict[str, Any]:
     workflow = payload.get("workflow")
     status = payload.get("status")
@@ -447,8 +967,9 @@ def _input_summary(
     blocking_reasons = []
     if workflow != expected_workflow:
         blocking_reasons.append(f"{path} workflow {workflow!r} is not {expected_workflow!r}")
-    if status != "complete":
-        blocking_reasons.append(f"{path} status {status!r} is not 'complete'")
+    if status not in expected_statuses:
+        expected = ", ".join(repr(item) for item in expected_statuses)
+        blocking_reasons.append(f"{path} status {status!r} is not one of {expected}")
     return {
         "path": str(path),
         "workflow": workflow,
@@ -522,6 +1043,18 @@ def _stat_mean(payload: Mapping[str, Any], name: str) -> float | None:
 
 def _mapping(value: Any) -> dict[str, Any]:
     return dict(value) if isinstance(value, Mapping) else {}
+
+
+def _mapping_sequence(value: Any) -> tuple[Mapping[str, Any], ...]:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+        return ()
+    return tuple(item for item in value if isinstance(item, Mapping))
+
+
+def _string_tuple(value: Any) -> tuple[str, ...]:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+        return ()
+    return tuple(str(item) for item in value if str(item))
 
 
 def _positive_int(value: Any) -> int | None:
@@ -639,6 +1172,14 @@ def _write_artifact_manifest(
         item for item in inputs.get("detectability_taxonomy_reports", ())
         if isinstance(item, Mapping)
     )
+    frontier_workflow_inputs = tuple(
+        item for item in inputs.get("frontier_workflow_reports", ())
+        if isinstance(item, Mapping)
+    )
+    citation_batch_rollup_inputs = tuple(
+        item for item in inputs.get("citation_batch_rollup_reports", ())
+        if isinstance(item, Mapping)
+    )
     artifacts: dict[str, str | Path | None] = {
         "frontier_release_evidence_report": report_path,
         "verifier_stability_report": verifier_input.get("path"),
@@ -649,6 +1190,16 @@ def _write_artifact_manifest(
     for index, detectability_input in enumerate(detectability_inputs):
         artifacts[f"detectability_taxonomy_report_{index}"] = detectability_input.get("path")
         artifacts[f"detectability_taxonomy_manifest_{index}"] = detectability_input.get("artifact_manifest")
+    for index, frontier_workflow_input in enumerate(frontier_workflow_inputs):
+        artifacts[f"frontier_workflow_report_{index}"] = frontier_workflow_input.get("path")
+        artifacts[f"frontier_workflow_manifest_{index}"] = frontier_workflow_input.get(
+            "artifact_manifest"
+        )
+    for index, rollup_input in enumerate(citation_batch_rollup_inputs):
+        artifacts[f"citation_batch_rollup_report_{index}"] = rollup_input.get("path")
+        artifacts[f"citation_batch_rollup_manifest_{index}"] = rollup_input.get(
+            "artifact_manifest"
+        )
     manifest = context.build_artifact_manifest(
         artifacts,
         root=output_path.parent,
@@ -666,6 +1217,16 @@ def _write_artifact_manifest(
             "detectability_track_status": payload.get("decision", {}).get("detectability_track_status")
             if isinstance(payload.get("decision"), Mapping)
             else None,
+            "multiple_testing_track_status": (
+                payload.get("decision", {}).get("multiple_testing_track_status")
+                if isinstance(payload.get("decision"), Mapping)
+                else None
+            ),
+            "citation_batch_track_status": (
+                payload.get("decision", {}).get("citation_batch_track_status")
+                if isinstance(payload.get("decision"), Mapping)
+                else None
+            ),
         },
         max_workers=max_workers,
     )
@@ -715,11 +1276,77 @@ def _record_registry(
         "verifier_track_status": decision.get("verifier_track_status"),
         "abstention_track_status": decision.get("abstention_track_status"),
         "detectability_track_status": decision.get("detectability_track_status"),
+        "multiple_testing_track_status": decision.get("multiple_testing_track_status"),
+        "citation_batch_track_status": decision.get("citation_batch_track_status"),
         "blocking_reasons": tuple(decision.get("blocking_reasons", ())),
         "run_names": tuple(evidence_summary.get("run_names", ())),
         "verifier_signal": evidence_summary.get("verifier_signal"),
         "abstention_signals": tuple(evidence_summary.get("abstention_signals", ())),
         "detectability_report_count": evidence_summary.get("detectability_report_count"),
+        "frontier_workflow_report_count": evidence_summary.get("frontier_workflow_report_count"),
+        "citation_batch_rollup_report_count": evidence_summary.get(
+            "citation_batch_rollup_report_count"
+        ),
+        "citation_batch_rollup_names": tuple(
+            evidence_summary.get("citation_batch_rollup_names", ())
+        ),
+        "citation_batch_rollup_count": evidence_summary.get("citation_batch_rollup_count"),
+        "citation_batch_promotion_ready_count": evidence_summary.get(
+            "citation_batch_promotion_ready_count"
+        ),
+        "citation_batch_expected_batch_count": evidence_summary.get(
+            "citation_batch_expected_batch_count"
+        ),
+        "citation_batch_observed_batch_count": evidence_summary.get(
+            "citation_batch_observed_batch_count"
+        ),
+        "citation_batch_missing_expected_batch_count": evidence_summary.get(
+            "citation_batch_missing_expected_batch_count"
+        ),
+        "citation_batch_duplicate_batch_count": evidence_summary.get(
+            "citation_batch_duplicate_batch_count"
+        ),
+        "citation_batch_unexpected_batch_count": evidence_summary.get(
+            "citation_batch_unexpected_batch_count"
+        ),
+        "citation_batch_blocked_child_report_count": evidence_summary.get(
+            "citation_batch_blocked_child_report_count"
+        ),
+        "citation_batch_child_manifest_failed_count": evidence_summary.get(
+            "citation_batch_child_manifest_failed_count"
+        ),
+        "citation_batch_expected_batch_ids": tuple(
+            evidence_summary.get("citation_batch_expected_batch_ids", ())
+        ),
+        "citation_batch_observed_batch_ids": tuple(
+            evidence_summary.get("citation_batch_observed_batch_ids", ())
+        ),
+        "citation_batch_missing_expected_batches": tuple(
+            evidence_summary.get("citation_batch_missing_expected_batches", ())
+        ),
+        "citation_batch_duplicate_batches": tuple(
+            evidence_summary.get("citation_batch_duplicate_batches", ())
+        ),
+        "citation_batch_unexpected_batches": tuple(
+            evidence_summary.get("citation_batch_unexpected_batches", ())
+        ),
+        "multiple_testing_frontier_workflow_names": tuple(
+            evidence_summary.get("multiple_testing_frontier_workflow_names", ())
+        ),
+        "multiple_testing_cell_count": evidence_summary.get("multiple_testing_cell_count"),
+        "multiple_testing_pass_count": evidence_summary.get("multiple_testing_pass_count"),
+        "multiple_testing_fail_count": evidence_summary.get("multiple_testing_fail_count"),
+        "multiple_testing_unknown_count": evidence_summary.get("multiple_testing_unknown_count"),
+        "multiple_testing_signals": tuple(evidence_summary.get("multiple_testing_signals", ())),
+        "multiple_testing_failed_cells": tuple(
+            evidence_summary.get("multiple_testing_failed_cells", ())
+        ),
+        "multiple_testing_unknown_cells": tuple(
+            evidence_summary.get("multiple_testing_unknown_cells", ())
+        ),
+        "multiple_testing_blocked_cells": tuple(
+            evidence_summary.get("multiple_testing_blocked_cells", ())
+        ),
         "artifact_manifest": None if manifest_path is None else str(manifest_path),
         "manifest_verification_report": None if verification_path is None else str(verification_path),
         "manifest_verified": None if verification is None else bool(verification.get("passed")),
@@ -770,6 +1397,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         verifier_stability_report_path=args.verifier_stability_report,
         abstention_stability_report_path=args.abstention_stability_report,
         detectability_taxonomy_report_paths=tuple(args.detectability_taxonomy_report or ()),
+        frontier_workflow_report_paths=tuple(args.frontier_workflow_report or ()),
+        citation_batch_rollup_report_paths=tuple(args.citation_batch_rollup_report or ()),
         max_verified_false_alarm_mean=args.max_verified_false_alarm_mean,
         min_verified_detection_mean=args.min_verified_detection_mean,
         min_verifier_delta_detection_mean=args.min_verifier_delta_detection_mean,
@@ -882,6 +1511,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--verifier-stability-report", required=True)
     parser.add_argument("--abstention-stability-report", required=True)
     parser.add_argument("--detectability-taxonomy-report", action="append", default=[])
+    parser.add_argument("--frontier-workflow-report", action="append", default=[])
+    parser.add_argument("--citation-batch-rollup-report", action="append", default=[])
     parser.add_argument("--json", required=True)
     parser.add_argument("--artifact-manifest", default=None)
     parser.add_argument("--verification-report", default=None)
