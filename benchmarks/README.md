@@ -6389,7 +6389,11 @@ python benchmarks/select_hidden_evidence.py \
 The report rank-normalizes scores per `source/layer/signal` channel, applies
 `higher` or `lower` anomaly directions, preserves statement metadata when
 available, and writes selected `evidence_ref` values that can be copied into
-`ProductTrace.metadata` or used by later verifier-conditioning experiments.
+`ProductTrace.metadata` or passed to
+`ClaimVerificationPlanner.plan(..., hidden_evidence=report)` so verifier budgets
+prioritize claims selected by hidden-state evidence. Bounded `ProductTrace`
+summaries expose the resulting hidden-evidence claim counts, score families,
+layers, and evidence refs for replay.
 
 ## `eval_detectability_taxonomy.py`
 

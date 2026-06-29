@@ -199,6 +199,37 @@ def test_product_trace_serializes_claim_verification_plan_and_bounded_summary():
     assert budgeted_bounded_metrics["verification_plan_budget_enabled"] is True
     assert budgeted_bounded_metrics["verification_plan_budget_selected_claim_count"] == 1.0
 
+    hidden_plan = ClaimVerificationPlanner().plan(
+        claims,
+        hidden_evidence={
+            "selected": (
+                {
+                    "record_id": "c2",
+                    "record_index": 1,
+                    "score_name": "subspace_resid",
+                    "score": 5.0,
+                    "direction": "higher",
+                    "anomaly_score": 1.0,
+                    "layer": "-8",
+                    "evidence_ref": "sweep:layer:-8:subspace_resid:c2",
+                },
+            ),
+        },
+    )
+    hidden_trace = ProductTrace(
+        request_id="req-plan-hidden-evidence",
+        claims=claims,
+        verification_plan=hidden_plan,
+    )
+    hidden_bounded = hidden_trace.to_bounded_dict()
+
+    assert hidden_bounded["summaries"]["verification_plan"]["hidden_evidence"]["available"] is True
+    assert hidden_bounded["summaries"]["verification_plan"]["hidden_evidence"]["selected_count"] == 1
+    assert hidden_bounded["summaries"]["verification_plan"]["hidden_evidence"]["claim_ids"] == ["c2"]
+    assert hidden_bounded["summaries"]["verification_plan"]["hidden_evidence"]["score_counts"] == {
+        "subspace_resid": 1,
+    }
+
 
 def test_product_trace_summarizes_triple_and_slot_coverage():
     triple = {"subject": "France", "predicate": "capital_of", "object": "Paris"}

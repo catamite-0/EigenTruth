@@ -833,6 +833,15 @@ def _verification_plan_summary(plan: Mapping[str, Any] | None) -> dict[str, Any]
             "dependency_count": 0,
             "cost_estimate": None,
             "budget": {},
+            "hidden_evidence": {
+                "available": False,
+                "selected_count": 0,
+                "claim_count": 0,
+                "evidence_ref_count": 0,
+                "score_counts": {},
+                "layer_counts": {},
+                "max_anomaly_score": None,
+            },
         }
     route_counts: dict[str, int] = {}
     for hint in _as_sequence(plan.get("route_hints", ())):
@@ -878,6 +887,77 @@ def _verification_plan_summary(plan: Mapping[str, Any] | None) -> dict[str, Any]
         "dependency_count": len(_as_sequence(plan.get("dependencies", ()))),
         "cost_estimate": cost_estimate,
         "budget": budget_summary,
+        "hidden_evidence": _verification_plan_hidden_evidence_summary(plan),
+    }
+
+
+def _verification_plan_hidden_evidence_summary(plan: Mapping[str, Any]) -> dict[str, Any]:
+    selected_count = 0
+    claim_ids: list[str] = []
+    evidence_refs: list[str] = []
+    score_counts: dict[str, int] = {}
+    layer_counts: dict[str, int] = {}
+    max_anomaly_score: float | None = None
+    for hint in _as_sequence(plan.get("route_hints", ())):
+        if not isinstance(hint, Mapping):
+            continue
+        metadata = hint.get("metadata", {})
+        if not isinstance(metadata, Mapping):
+            continue
+        hidden = metadata.get("hidden_evidence")
+        if not isinstance(hidden, Mapping):
+            continue
+        claim_id = str(hint.get("claim_id", "")).strip()
+        if claim_id:
+            claim_ids.append(claim_id)
+        items = tuple(item for item in _as_sequence(hidden.get("selected", ())) if isinstance(item, Mapping))
+        count = _non_negative_int(hidden.get("selected_count"))
+        if count is None:
+            count = len(items) or len(_as_sequence(hidden.get("evidence_refs", ())))
+        selected_count += count
+        if items:
+            for item in items:
+                ref = item.get("evidence_ref")
+                if ref is not None and str(ref).strip():
+                    evidence_refs.append(str(ref).strip())
+                score_name = item.get("score_name")
+                if score_name is not None and str(score_name).strip():
+                    text = str(score_name).strip()
+                    score_counts[text] = score_counts.get(text, 0) + 1
+                layer = "primary" if item.get("layer") is None else str(item.get("layer")).strip()
+                if layer:
+                    layer_counts[layer] = layer_counts.get(layer, 0) + 1
+                anomaly = _finite_float(item.get("anomaly_score"))
+                if anomaly is not None:
+                    max_anomaly_score = anomaly if max_anomaly_score is None else max(max_anomaly_score, anomaly)
+        else:
+            for ref in _as_sequence(hidden.get("evidence_refs", ())):
+                text = str(ref).strip()
+                if text:
+                    evidence_refs.append(text)
+            for score_name in _as_sequence(hidden.get("score_names", ())):
+                text = str(score_name).strip()
+                if text:
+                    score_counts[text] = score_counts.get(text, 0) + 1
+            for layer in _as_sequence(hidden.get("layers", ())):
+                text = str(layer).strip()
+                if text:
+                    layer_counts[text] = layer_counts.get(text, 0) + 1
+            hidden_max = _finite_float(hidden.get("max_anomaly_score"))
+            if hidden_max is not None:
+                max_anomaly_score = hidden_max if max_anomaly_score is None else max(max_anomaly_score, hidden_max)
+    unique_refs = tuple(dict.fromkeys(evidence_refs))
+    unique_claim_ids = tuple(dict.fromkeys(claim_ids))
+    return {
+        "available": bool(selected_count or unique_refs),
+        "selected_count": selected_count,
+        "claim_count": len(unique_claim_ids),
+        "claim_ids": unique_claim_ids,
+        "evidence_ref_count": len(unique_refs),
+        "evidence_refs": unique_refs[:12],
+        "score_counts": dict(sorted(score_counts.items())),
+        "layer_counts": dict(sorted(layer_counts.items())),
+        "max_anomaly_score": max_anomaly_score,
     }
 
 

@@ -75,6 +75,7 @@ DEFAULT_VERIFY_CLAIM_METADATA_KEYS = (
     "retrieval_queries",
     "route_hints",
     "routes",
+    "hidden_evidence",
 )
 DEFAULT_RETRIEVAL_FEATURE_FLAGS = (
     "has_number",
@@ -665,8 +666,10 @@ class ClaimVerificationPlanner:
         *,
         context: Mapping[str, Any] | None = None,
         budget_policy: VerificationBudgetPolicy | Mapping[str, Any] | None = None,
+        hidden_evidence: Mapping[str, Any] | Sequence[Mapping[str, Any]] | None = None,
     ) -> ClaimVerificationPlan:
         """Return a verification plan for generated text or existing claims."""
+        del context
         claims = self.extract(claims_or_text) if isinstance(claims_or_text, str) else _coerce_claims(claims_or_text)
         if not claims:
             return ClaimVerificationPlan(
@@ -676,6 +679,7 @@ class ClaimVerificationPlanner:
             )
 
         claim_ids = tuple(_claim_id(claim, index) for index, claim in enumerate(claims))
+        hidden_evidence_by_claim = _hidden_evidence_by_claim(claims, hidden_evidence)
         triggered_features: dict[str, tuple[str, ...]] = {}
         triggered_metadata: dict[str, tuple[str, ...]] = {}
         route_hints: list[VerificationRouteHint] = []
@@ -688,7 +692,10 @@ class ClaimVerificationPlanner:
 
         for index, claim in enumerate(claims):
             claim_id = claim_ids[index]
-            metadata = _claim_metadata(claim)
+            metadata = dict(_claim_metadata(claim))
+            hidden_evidence_summary = hidden_evidence_by_claim.get(claim_id)
+            if hidden_evidence_summary is not None:
+                metadata["hidden_evidence"] = hidden_evidence_summary
             features = _claim_features(metadata)
             matched_features = enabled_feature_names(features, self.verify_claim_feature_flags)
             matched_metadata = tuple(
@@ -702,7 +709,18 @@ class ClaimVerificationPlanner:
                 triggered_claim_ids.append(claim_id)
 
             routes, reasons = self._routes_for_claim(claim, claim_id=claim_id, features=features, metadata=metadata)
-            route_hints.append(VerificationRouteHint(claim_id=claim_id, routes=routes, reasons=reasons))
+            route_metadata = {}
+            if hidden_evidence_summary is not None:
+                reasons = (*reasons, "hidden_evidence:selected")
+                route_metadata["hidden_evidence"] = hidden_evidence_summary
+            route_hints.append(
+                VerificationRouteHint(
+                    claim_id=claim_id,
+                    routes=routes,
+                    reasons=reasons,
+                    metadata=route_metadata,
+                )
+            )
             retrieval_queries.extend(
                 self._retrieval_queries_for_claim(
                     claim,
@@ -1488,6 +1506,153 @@ def _escalation_retrieval_queries(
             }
         )
     return tuple(queries)
+
+
+def _hidden_evidence_by_claim(
+    claims: Sequence[Claim],
+    hidden_evidence: Mapping[str, Any] | Sequence[Mapping[str, Any]] | None,
+) -> dict[str, dict[str, Any]]:
+    selected = _hidden_evidence_selected_items(hidden_evidence)
+    if not selected:
+        return {}
+    claim_ids = tuple(_claim_id(claim, index) for index, claim in enumerate(claims))
+    claim_ids_by_index = {index: claim_id for index, claim_id in enumerate(claim_ids)}
+    selected_by_claim: dict[str, list[dict[str, Any]]] = {}
+    for item in selected:
+        matched_claim_ids = _hidden_evidence_matched_claim_ids(
+            item,
+            claim_ids=claim_ids,
+            claim_ids_by_index=claim_ids_by_index,
+        )
+        for claim_id in matched_claim_ids:
+            selected_by_claim.setdefault(claim_id, []).append(item)
+    return {
+        claim_id: _hidden_evidence_claim_summary(items)
+        for claim_id, items in selected_by_claim.items()
+    }
+
+
+def _hidden_evidence_selected_items(
+    hidden_evidence: Mapping[str, Any] | Sequence[Mapping[str, Any]] | None,
+) -> tuple[dict[str, Any], ...]:
+    if hidden_evidence is None:
+        return ()
+    payload: Any = hidden_evidence
+    if hasattr(payload, "to_dict") and callable(payload.to_dict):
+        payload = payload.to_dict()
+    if isinstance(payload, Mapping):
+        raw_items = payload.get("selected", ())
+    elif isinstance(payload, Sequence) and not isinstance(payload, (str, bytes, bytearray)):
+        raw_items = payload
+    else:
+        raise ValueError("hidden_evidence must be a selection report mapping or sequence of selected items.")
+    items: list[dict[str, Any]] = []
+    for raw_item in _as_sequence(raw_items):
+        item_payload = raw_item.to_dict() if hasattr(raw_item, "to_dict") and callable(raw_item.to_dict) else raw_item
+        if not isinstance(item_payload, Mapping):
+            raise ValueError("hidden evidence selected items must be mappings.")
+        item = dict(to_jsonable(dict(item_payload)))
+        if not item.get("record_id") and item.get("record_index") is None:
+            raise ValueError("hidden evidence selected items must include record_id or record_index.")
+        items.append(item)
+    return tuple(items)
+
+
+def _hidden_evidence_matched_claim_ids(
+    item: Mapping[str, Any],
+    *,
+    claim_ids: Sequence[str],
+    claim_ids_by_index: Mapping[int, str],
+) -> tuple[str, ...]:
+    matched: list[str] = []
+    claim_id_set = set(claim_ids)
+    for value in _hidden_evidence_claim_key_values(item):
+        if value in claim_id_set:
+            _append_unique(matched, value)
+    raw_index = item.get("record_index")
+    if raw_index is not None:
+        try:
+            index = int(raw_index)
+        except (TypeError, ValueError):
+            index = -1
+        claim_id = claim_ids_by_index.get(index)
+        if claim_id is not None:
+            _append_unique(matched, claim_id)
+    return tuple(matched)
+
+
+def _hidden_evidence_claim_key_values(item: Mapping[str, Any]) -> tuple[str, ...]:
+    values: list[str] = []
+    for key in ("record_id", "claim_id", "statement_id", "id", "question_id"):
+        value = item.get(key)
+        if value is not None:
+            text = str(value).strip()
+            if text:
+                values.append(text)
+    metadata = item.get("metadata", {})
+    if isinstance(metadata, Mapping):
+        for key in ("claim_id", "record_id", "statement_id", "id", "question_id"):
+            value = metadata.get(key)
+            if value is not None:
+                text = str(value).strip()
+                if text:
+                    values.append(text)
+    return tuple(dict.fromkeys(values))
+
+
+def _hidden_evidence_claim_summary(items: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    evidence_refs = tuple(
+        str(item.get("evidence_ref"))
+        for item in items
+        if item.get("evidence_ref") is not None and str(item.get("evidence_ref")).strip()
+    )
+    score_names = tuple(dict.fromkeys(
+        str(item.get("score_name"))
+        for item in items
+        if item.get("score_name") is not None and str(item.get("score_name")).strip()
+    ))
+    layers = tuple(dict.fromkeys(
+        "primary" if item.get("layer") is None else str(item.get("layer"))
+        for item in items
+    ))
+    anomaly_scores = tuple(
+        _optional_non_negative_float(item.get("anomaly_score"), name="hidden_evidence.anomaly_score")
+        for item in items
+        if item.get("anomaly_score") is not None
+    )
+    valid_anomaly_scores = tuple(score for score in anomaly_scores if score is not None)
+    return {
+        "selected_count": len(items),
+        "evidence_refs": evidence_refs,
+        "score_names": score_names,
+        "layers": layers,
+        "max_anomaly_score": max(valid_anomaly_scores) if valid_anomaly_scores else None,
+        "selected": tuple(_compact_hidden_evidence_item(item) for item in items),
+    }
+
+
+def _compact_hidden_evidence_item(item: Mapping[str, Any]) -> dict[str, Any]:
+    keys = (
+        "record_id",
+        "record_index",
+        "evidence_ref",
+        "score_name",
+        "score",
+        "direction",
+        "anomaly_score",
+        "rank",
+        "global_rank",
+        "channel_rank",
+        "channel_size",
+        "layer",
+        "source",
+        "metadata",
+    )
+    return {
+        key: to_jsonable(item[key])
+        for key in keys
+        if key in item
+    }
 
 
 def _budget_ordered_claim_ids(

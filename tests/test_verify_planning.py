@@ -107,6 +107,56 @@ def test_claim_verification_planner_preserves_existing_claims_and_bool_semantics
     assert [claim.text for claim in plan.claims] == [claim.text for claim in claims]
 
 
+def test_claim_verification_planner_uses_hidden_evidence_for_triggering_and_budget_priority():
+    claims = (
+        Claim("A low-risk descriptive claim.", claim_id="plain"),
+        Claim("The hidden-state report selected this claim.", claim_id="risky"),
+    )
+    hidden_evidence = {
+        "selected": (
+            {
+                "record_id": "risky",
+                "record_index": 1,
+                "score_name": "subspace_resid",
+                "score": 4.2,
+                "direction": "higher",
+                "anomaly_score": 1.0,
+                "layer": "-8",
+                "evidence_ref": "sweep:layer:-8:subspace_resid:risky",
+                "metadata": {"claim_id": "risky", "text": claims[1].text},
+            },
+        ),
+    }
+    triggered_only = ClaimVerificationPlanner(
+        verify_all_by_default=False,
+        verify_triggered_claims_only=True,
+    ).plan(claims, hidden_evidence=hidden_evidence)
+
+    assert triggered_only.run_verifier is True
+    assert triggered_only.verification_scope == "triggered"
+    assert triggered_only.verify_claim_ids == ("risky",)
+    assert triggered_only.skipped_claim_ids == ("plain",)
+    assert triggered_only.triggered_metadata["risky"] == ("hidden_evidence",)
+    risky_hint = triggered_only.route_hints[1]
+    assert "hidden_evidence:selected" in risky_hint.reasons
+    assert risky_hint.metadata["hidden_evidence"]["selected_count"] == 1
+    assert risky_hint.metadata["hidden_evidence"]["evidence_refs"] == (
+        "sweep:layer:-8:subspace_resid:risky",
+    )
+
+    budgeted = ClaimVerificationPlanner().plan(
+        claims,
+        hidden_evidence=hidden_evidence,
+        budget_policy=VerificationBudgetPolicy(max_verify_claims=1),
+    )
+
+    assert budgeted.verification_scope == "budgeted"
+    assert budgeted.verify_claim_ids == ("risky",)
+    assert budgeted.skipped_claim_ids == ("plain",)
+    assert budgeted.budget["selected_claim_ids"] == ("risky",)
+    json.dumps(budgeted.to_dict())
+
+
 def test_claim_verification_planner_emits_tool_payloads_from_metadata():
     claim = Claim(
         "Inventory should remain available.",

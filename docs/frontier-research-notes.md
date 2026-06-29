@@ -43,7 +43,7 @@ Added HIVE-style budgeted hidden-evidence selection:
 
 - `HiddenEvidenceCandidate`, `HiddenEvidenceSelectionPolicy`, `HiddenEvidenceSelectionReport`, and `select_hidden_evidence_from_score_dump(...)` turn primary and layer-sweep diagnostic score dumps into sparse evidence-selection reports.
 - Each candidate is rank-normalized within its `source/layer/signal` channel, respects `higher` or `lower` anomaly directions, and is budgeted by total items, record, layer, and score family.
-- `benchmarks/select_hidden_evidence.py` writes the JSON report and can register it locally. This keeps HIVE's "select sparse hidden evidence before conditioning a verifier" idea in EigenTruth's reproducible artifact path without adding a verifier dependency or claiming default routing behavior.
+- `benchmarks/select_hidden_evidence.py` writes the JSON report and can register it locally. `ClaimVerificationPlanner.plan(..., hidden_evidence=report)` now maps selected evidence onto matching claim ids or record indexes, promotes those claims under verification budgets, and stores evidence refs in route-hint metadata. `ProductTrace.to_bounded_dict()` exposes the hidden-evidence summary for replay. This keeps HIVE's "select sparse hidden evidence before conditioning a verifier" idea in EigenTruth's reproducible artifact path without adding a verifier dependency or claiming default routing behavior.
 
 Added trace-level product trajectory audit:
 
