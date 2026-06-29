@@ -40,6 +40,7 @@ EigenTruth wraps a decoder-only language model with PyTorch hooks. It can:
 - optionally build a contrastive direction from factual and false examples
 - fit a low-rank `TruthSubspace` and score residual distance from factual states
 - train and save a lightweight pre-generation attention probe from hidden states and soft error-rate targets
+- train and save a lightweight claim-level factuality probe from claim hidden states
 - emit a single-decode `first_token_entropy` uncertainty baseline from top-k logits
 - save versioned `ConceptArtifact` files and attach multiple concept probes at once
 - calibrate diagnostic thresholds from benchmark score dumps and combine them with claim verification
@@ -144,6 +145,26 @@ python benchmarks/eval_conformal.py --scores benchmarks/scores.manifest.json \
 reports, abstention release-gate verdict, sweep report, and saved calibration
 artifacts so local registry/release workflows can verify the calibration chain
 without rerunning the model.
+
+Optional claim-level factuality probe records can be exported from the same
+forced-answer pass and trained post hoc:
+
+```bash
+python benchmarks/eval_truthfulqa.py --model gpt2 --layer -8 \
+  --dump-claim-factuality-probe-records artifacts/gpt2-claim-records.jsonl \
+  --claim-factuality-probe-layers=-12,-8,-4
+python benchmarks/eval_claim_factuality_probe.py \
+  --records artifacts/gpt2-claim-records.jsonl \
+  --sweep-layers auto \
+  --json artifacts/gpt2-claim-factuality-sweep.json \
+  --save-artifact artifacts/gpt2-best-claim-factuality-probe.pt \
+  --save-calibration artifacts/gpt2-best-claim-factuality-calibration.json
+```
+
+This is a reproducible experiment chain for claim-level hidden-state probes. It
+does not by itself promote the probe to release evidence; multi-run calibration,
+redline comparisons, and release gates still need to pass.
+
 Use `--dump-scores-format jsonl` for larger sweeps; it writes a compact manifest
 plus records sidecar that downstream calibration and verifier tools can stream by
 selected columns. New JSONL manifests also store label counts, so metadata
@@ -423,7 +444,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `TemporaryActivationIntervention` / `apply_activation_intervention` / `TemporaryActivationPatch` / `apply_activation_patch` | Provides model-side forced-answer activation ablation and source-token patching over prompt, answer, all, last-token, or first-answer spans. `eval_truthfulqa.py --activation-intervention-layer ...` and `--activation-patch-layer ...` can produce intervention score dumps that are comparable against a baseline dump with `eval_pathway_intervention.py`. |
 | `knockout_attention_pathway` / `attention_pathway_knockout_report` / `pathway_intervention_effect` | Provides dependency-free pathway-intervention analysis helpers: prompt/answer attention-pathway knockout on captured attention tensors plus direction-aware before/after score deltas. These are mechanism-experiment primitives; causal claims still require rerunning the model under the intervention and recording the resulting evidence. |
 | `AttentionSoftTargetProbeArtifact` / `soft_error_rate_targets` | Trains a torch-only pre-generation attention probe over token-level hidden states using empirical sampled-answer error rates as soft targets; artifacts expose risk probabilities, attention weights, JSON-safe metadata, and torch save/load. |
-| `ClaimFactualityProbeArtifact` / `pool_claim_hidden_states` / `claim_factuality_diagnostics` | Trains a torch-only linear factuality-risk probe over pooled claim hidden states, supporting token spans, attention masks, JSON-ready per-claim scores, diagnostics, and torch save/load. It is a probe artifact primitive, not release evidence until calibrated on a benchmark. |
+| `ClaimFactualityProbeArtifact` / `pool_claim_hidden_states` / `claim_factuality_diagnostics` | Trains a torch-only linear factuality-risk probe over pooled claim hidden states, supporting token spans, attention masks, JSON-ready per-claim scores, diagnostics, and torch save/load. `eval_truthfulqa.py --dump-claim-factuality-probe-records` plus `eval_claim_factuality_probe.py` provide local record export, layer sweep, split-conformal calibration, and artifact saving; the result is still experiment evidence, not release evidence until multi-run gates pass. |
 | `poincare_map` | Projects representations into a bounded hyperbolic space for optional HSE ablations. |
 | `hyperbolic_semantic_entropy` | Measures dispersion over a sliding window of projected states; retained as an opt-in ablation signal, not the default runtime path. |
 | `internal_eigenscore` / `spectral_effective_rank` / `cluster_assignment_entropy` / `lexical_semantic_entropy` / `embedding_semantic_entropy` / `semantic_energy_score` / `lexical_semantic_energy` | Computes INSIDE/EigenScore-style spectral diversity, dependency-free semantic-entropy proxies, and confidence-weighted semantic-energy disagreement from sampled hidden-state/text clusters; benchmarks can optionally sample multiple continuations for `inside_eigenscore`, `inside_semantic_entropy`, `inside_embedding_entropy`, and `inside_semantic_energy`. |
@@ -573,6 +594,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `trajectory_convergence_sanity.py` | Runs a deterministic synthetic generation-trajectory sanity check and reports Spearman/AUROC correlation between convergence diagnostics and quality proxies. |
 | `eval_trajectory_truthfulqa.py` | Replays statement-bearing TruthfulQA score dumps through a causal LM, extracts forced-answer hidden-state trajectories over answer-token prediction positions, and reports trajectory/NLL correlation and AUROC against true/false labels; `--offline` runs a deterministic no-download smoke fixture. |
 | `eval_pre_generation_probe.py` | Trains and evaluates a torch-only pre-generation attention risk probe from local JSON/JSONL token hidden-state records with soft error-rate targets, including single- or multi-layer records exported by `eval_truthfulqa.py --dump-pre-generation-probe-records`; can sweep record layers, rank candidates, and optionally save the best `AttentionSoftTargetProbeArtifact` plus split-conformal `CalibrationArtifact`. |
+| `eval_claim_factuality_probe.py` | Trains and evaluates a torch-only claim-level factuality-risk probe from local JSON/JSONL claim hidden-state records, including single- or multi-layer candidate-claim records exported by `eval_truthfulqa.py --dump-claim-factuality-probe-records`; can sweep record layers, rank candidates, and optionally save the best `ClaimFactualityProbeArtifact` plus split-conformal `CalibrationArtifact`. |
 | `eval_pre_generation_text_baselines.py` | Evaluates cheap answer/question text redline baselines directly over pre-generation records, selecting the best direction per feature so probe claims can be checked against length, overlap, negation, and number-count controls. |
 | `compare_trajectory_sweeps.py` | Compares forced-answer trajectory sweep reports across runs and applies a fail-closed evidence gate before trajectory signals can be treated as release evidence. |
 | `concept_registry_smoke.py` | Saves two synthetic `ConceptArtifact` files, registers them locally, attaches both probes to one toy model, and writes a manifest-backed multi-concept diagnostics report. |
@@ -664,7 +686,7 @@ evidence rates and maximum final false-accept / false-accept-delta thresholds.
 | `TemporaryActivationIntervention` / `apply_activation_intervention` / `TemporaryActivationPatch` / `apply_activation_patch` | 提供模型侧 forced-answer activation ablation 和 source-token patching，可作用于 prompt、answer、all、last-token 或 first-answer span；`eval_truthfulqa.py --activation-intervention-layer ...` 和 `--activation-patch-layer ...` 可生成干预 score dump，再用 `eval_pathway_intervention.py` 与 baseline dump 对比。 |
 | `knockout_attention_pathway` / `attention_pathway_knockout_report` / `pathway_intervention_effect` | 提供无新增依赖的 pathway-intervention 分析工具：对已捕获 attention tensor 做 prompt/answer pathway knockout，并按 score direction 记录干预前后分数变化。这是机制实验原语；因果结论仍需要在干预条件下重新运行模型并保存证据。 |
 | `AttentionSoftTargetProbeArtifact` / `soft_error_rate_targets` | 用 empirical sampled-answer error rate 作为 soft target，在 token-level hidden states 上训练 torch-only 生成前 attention probe；artifact 暴露风险概率、attention weights、JSON metadata 和 torch save/load。 |
-| `ClaimFactualityProbeArtifact` / `pool_claim_hidden_states` / `claim_factuality_diagnostics` | 在 pooled claim hidden states 上训练 torch-only 线性 factuality-risk probe，支持 token span、attention mask、逐 claim JSON score、诊断摘要和 torch save/load；这是长文本 claim-level probe 原语，进入 release evidence 前仍需要 benchmark 校准。 |
+| `ClaimFactualityProbeArtifact` / `pool_claim_hidden_states` / `claim_factuality_diagnostics` | 在 pooled claim hidden states 上训练 torch-only 线性 factuality-risk probe，支持 token span、attention mask、逐 claim JSON score、诊断摘要和 torch save/load；`eval_truthfulqa.py --dump-claim-factuality-probe-records` 与 `eval_claim_factuality_probe.py` 已提供本地 record export、layer sweep、split-conformal calibration 和 artifact 保存，但进入 release evidence 前仍需要多轮 gate 通过。 |
 | `poincare_map` | 将表征投影到有界双曲空间，供可选 HSE 消融使用。 |
 | `hyperbolic_semantic_entropy` | 测量投影状态滑动窗口内的离散程度；保留为 opt-in 消融信号，不作为默认 runtime 路径。 |
 | `internal_eigenscore` / `spectral_effective_rank` / `cluster_assignment_entropy` / `lexical_semantic_entropy` / `embedding_semantic_entropy` / `semantic_energy_score` / `lexical_semantic_energy` | 基于隐藏态嵌入与文本簇计算 INSIDE/EigenScore 风格谱分散度、无依赖语义熵代理和置信度加权 semantic-energy 分歧；benchmark 可选多采样续写生成 `inside_eigenscore`、`inside_semantic_entropy`、`inside_embedding_entropy` 和 `inside_semantic_energy`。 |

@@ -447,6 +447,128 @@ def test_eval_pre_generation_probe_layer_sweep_saves_best_artifacts(tmp_path):
     assert calibration.target_layer == -2
 
 
+def test_eval_claim_factuality_probe_trains_and_saves_artifact(tmp_path):
+    module = importlib.import_module("benchmarks.eval_claim_factuality_probe")
+    from eigentruth.calibration import CalibrationArtifact
+    from eigentruth.core import ClaimFactualityProbeArtifact
+
+    records = []
+    for index in range(16):
+        label = 1 if index >= 8 else 0
+        sign = 3.0 if label else -3.0
+        seq_len = 2 + (index % 3)
+        hidden = [[sign, 0.2 * token, 1.0] for token in range(seq_len)]
+        records.append({
+            "id": f"claim-r{index}",
+            "claim_id": f"c{index}",
+            "text": f"claim {index}",
+            "claim_hidden_states": hidden,
+            "attention_mask": [True] * seq_len,
+            "label": label,
+            "risk_target": 0.9 if label else 0.1,
+        })
+    records_path = tmp_path / "claim-factuality-records.json"
+    report_path = tmp_path / "claim-factuality-report.json"
+    artifact_path = tmp_path / "claim-factuality-probe.pt"
+    calibration_path = tmp_path / "claim-factuality-calibration.json"
+    records_path.write_text(json.dumps({"records": records}), encoding="utf-8")
+
+    payload = module.run_claim_factuality_probe_eval(
+        records_path,
+        output_path=report_path,
+        artifact_path=artifact_path,
+        calibration_path=calibration_path,
+        train_fraction=0.75,
+        seed=3,
+        layer_idx=2,
+        conformal_alpha=0.2,
+        steps=160,
+        lr=0.08,
+    )
+    loaded_artifact = ClaimFactualityProbeArtifact.load(artifact_path)
+    calibration_artifact = CalibrationArtifact.load_json(calibration_path)
+    saved_report = json.loads(report_path.read_text(encoding="utf-8"))
+
+    assert payload["workflow"] == "claim_factuality_probe_eval"
+    assert payload["record_count"] == 16
+    assert payload["config"]["layer_idx"] == 2
+    assert payload["conformal"]["available"] is True
+    assert payload["conformal"]["score_name"] == "claim_factuality_risk_probability"
+    assert payload["metrics"]["test"]["label_auroc"] == pytest.approx(1.0)
+    assert payload["metrics"]["test"]["target_mse"] < 0.05
+    assert payload["paths"]["artifact"] == str(artifact_path)
+    assert payload["paths"]["calibration"] == str(calibration_path)
+    assert saved_report["paths"]["report"] == str(report_path)
+    assert saved_report["artifact"]["hidden_dim"] == 3
+    assert saved_report["calibration_artifact"]["scores"][0]["direction"] == "higher"
+    assert loaded_artifact.layer_idx == 2
+    assert calibration_artifact.target_layer == 2
+    assert calibration_artifact.get_score("claim_factuality_risk_probability").conformal_alpha == pytest.approx(0.2)
+
+
+def test_eval_claim_factuality_probe_layer_sweep_saves_best_artifacts(tmp_path):
+    module = importlib.import_module("benchmarks.eval_claim_factuality_probe")
+    from eigentruth.calibration import CalibrationArtifact
+    from eigentruth.core import ClaimFactualityProbeArtifact
+
+    records = []
+    for index in range(16):
+        label = 1 if index >= 8 else 0
+        sign = 3.0 if label else -3.0
+        records.append({
+            "id": f"claim-r{index}",
+            "claim_id": f"c{index}",
+            "layer_hidden_states": {
+                "-1": [[0.0, 0.0], [0.0, 0.0]],
+                "-2": [[sign, 0.0], [sign, 0.5]],
+            },
+            "attention_mask": [True, True],
+            "label": label,
+            "risk_target": 0.9 if label else 0.1,
+            "metadata": {
+                "dataset": "synthetic",
+                "layers": [-1, -2],
+                "model": "synthetic-claim-factuality-model",
+            },
+        })
+    records_path = tmp_path / "layered-claim-records.json"
+    report_path = tmp_path / "claim-sweep-report.json"
+    artifact_path = tmp_path / "best-claim-probe.pt"
+    calibration_path = tmp_path / "best-claim-calibration.json"
+    records_path.write_text(json.dumps({"records": records}), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="multiple layers"):
+        module.load_claim_factuality_probe_records(records_path)
+
+    payload = module.run_claim_factuality_probe_layer_sweep(
+        records_path,
+        sweep_layers=(-1, -2),
+        output_path=report_path,
+        artifact_path=artifact_path,
+        calibration_path=calibration_path,
+        train_fraction=0.75,
+        seed=2,
+        steps=120,
+        lr=0.08,
+        conformal_alpha=0.2,
+    )
+    saved_report = json.loads(report_path.read_text(encoding="utf-8"))
+    artifact = ClaimFactualityProbeArtifact.load(artifact_path)
+    calibration = CalibrationArtifact.load_json(calibration_path)
+
+    assert payload["workflow"] == "claim_factuality_probe_layer_sweep"
+    assert payload["candidate_count"] == 2
+    assert payload["config"]["resolved_best_by"] == "label_auroc"
+    assert payload["recommended"]["layer"] == -2
+    assert payload["recommended"]["rank"] == 1
+    assert payload["recommended"]["selection_raw_value"] == pytest.approx(1.0)
+    assert payload["paths"]["best_artifact"] == str(artifact_path)
+    assert payload["paths"]["best_calibration"] == str(calibration_path)
+    assert saved_report["recommended"]["layer"] == -2
+    assert artifact.layer_idx == -2
+    assert calibration.target_layer == -2
+
+
 def test_run_pre_generation_probe_workflow_reuses_records_and_writes_manifest(tmp_path):
     module = importlib.import_module("benchmarks.run_pre_generation_probe_workflow")
 
@@ -714,6 +836,63 @@ def test_eval_truthfulqa_exports_pre_generation_probe_records(tmp_path):
     assert loaded_l2[0].selected_layer == -2
     assert loaded_l2[0].hidden_states[0, 0].item() == pytest.approx(2.0)
     assert loaded[0].soft_target == pytest.approx(0.5)
+    assert loaded[0].metadata["model"] == "tiny"
+
+
+def test_eval_truthfulqa_exports_claim_factuality_probe_records(tmp_path):
+    truthfulqa = importlib.import_module("benchmarks.eval_truthfulqa")
+    probe = importlib.import_module("benchmarks.eval_claim_factuality_probe")
+
+    statements = [
+        truthfulqa.Statement("What is the capital of France?", "Paris", 0),
+        truthfulqa.Statement("What is the capital of France?", "Berlin", 1),
+    ]
+    reps_batch = [
+        {
+            "ans_hs_by_layer": {
+                -1: torch.tensor([[1.0, 0.0], [1.0, 0.5]]),
+                -2: torch.tensor([[2.0, 0.0], [2.0, 0.5]]),
+            },
+        },
+        {
+            "ans_hs_by_layer": {
+                -1: torch.tensor([[9.0, 9.0], [9.0, 9.5]]),
+                -2: torch.tensor([[8.0, 8.0], [8.0, 8.5]]),
+            },
+        },
+    ]
+
+    records, stats = truthfulqa._claim_factuality_probe_records_from_batch(
+        statements,
+        reps_batch,
+        layers=(-1, -2),
+        start_index=0,
+    )
+    records_path = tmp_path / "claim-factuality-records.jsonl"
+    truthfulqa._write_claim_factuality_probe_records(
+        records_path,
+        {
+            "metadata": {"model": "tiny", "layer": -1},
+            "records": records,
+        },
+    )
+    loaded = probe.load_claim_factuality_probe_records(records_path)
+    loaded_l2 = probe.load_claim_factuality_probe_records(records_path, record_layer=-2)
+
+    assert stats["candidate_count"] == 2
+    assert stats["exported_count"] == 2
+    assert len(records) == 2
+    assert records[0]["label"] == 0
+    assert records[1]["risk_target"] == pytest.approx(1.0)
+    assert records[0]["metadata"]["layers"] == [-1, -2]
+    assert records[0]["layer_hidden_states"]["-2"][0] == [2.0, 0.0]
+    assert len(loaded) == 2
+    assert loaded[0].hidden_states.shape == (2, 2)
+    assert loaded[0].selected_layer == -1
+    assert loaded[0].label == 0
+    assert loaded[1].risk_target == pytest.approx(1.0)
+    assert loaded_l2[0].selected_layer == -2
+    assert loaded_l2[0].hidden_states[0, 0].item() == pytest.approx(2.0)
     assert loaded[0].metadata["model"] == "tiny"
 
 

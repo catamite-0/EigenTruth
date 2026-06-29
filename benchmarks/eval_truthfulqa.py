@@ -417,6 +417,11 @@ def _write_pre_generation_probe_records(path: str | Path, payload: Mapping[str, 
     output_path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _write_claim_factuality_probe_records(path: str | Path, payload: Mapping[str, object]) -> None:
+    """Write claim factuality probe records as JSON or JSONL based on the output suffix."""
+    _write_pre_generation_probe_records(path, payload)
+
+
 def _pre_generation_target_key(stmt: Statement) -> str:
     """Return the prompt-level key used for soft target aggregation."""
     question = stmt.question.strip()
@@ -436,6 +441,19 @@ def _pre_generation_record_id(record_key: str) -> str:
     digest = hashlib.sha256(record_key.encode("utf-8")).hexdigest()[:16]
     prefix = "q" if record_key.startswith("question:") else "c"
     return f"{prefix}-{digest}"
+
+
+def _claim_factuality_record_key(stmt: Statement, *, index: int) -> str:
+    question = stmt.question.strip()
+    answer = stmt.answer.strip()
+    if question or answer:
+        return f"claim:{question}\nanswer:{answer}"
+    return f"claim:{int(index)}"
+
+
+def _claim_factuality_record_id(record_key: str) -> str:
+    digest = hashlib.sha256(record_key.encode("utf-8")).hexdigest()[:16]
+    return f"claim-{digest}"
 
 
 def _pre_generation_soft_targets(statements: Sequence[Statement]) -> dict[str, float]:
@@ -539,6 +557,83 @@ def _pre_generation_probe_records_from_batch(
     return records, stats
 
 
+def _claim_factuality_probe_records_from_batch(
+    statements: Sequence[Statement],
+    reps_batch: Sequence[Optional[Mapping]],
+    *,
+    layers: Sequence[int],
+    start_index: int,
+) -> tuple[list[dict[str, object]], dict[str, int]]:
+    """Build JSON-ready claim-level factuality probe records from one eval batch."""
+    export_layers = _unique_preserve_order(int(layer) for layer in layers)
+    if not export_layers:
+        raise ValueError("claim factuality probe export requires at least one layer.")
+    primary_layer = int(export_layers[0])
+    records: list[dict[str, object]] = []
+    stats = {"candidate_count": 0, "exported_count": 0, "missing_hidden_count": 0}
+    for position, (stmt, reps) in enumerate(zip(statements, reps_batch)):
+        stats["candidate_count"] += 1
+        record_index = int(start_index) + int(position)
+        if reps is None:
+            stats["missing_hidden_count"] += 1
+            continue
+        answer_by_layer = reps.get("ans_hs_by_layer")
+        if not isinstance(answer_by_layer, Mapping):
+            answer_by_layer = {}
+            if primary_layer in export_layers and reps.get("ans_hs") is not None:
+                answer_by_layer = {primary_layer: reps.get("ans_hs")}
+        hidden_by_layer: dict[int, torch.Tensor] = {}
+        missing_layer = False
+        for layer in export_layers:
+            raw_hidden = answer_by_layer.get(int(layer), answer_by_layer.get(str(layer)))
+            if raw_hidden is None:
+                missing_layer = True
+                break
+            hidden = torch.as_tensor(raw_hidden, dtype=torch.float32).detach().cpu()
+            if hidden.ndim != 2 or hidden.shape[0] < 1 or hidden.shape[1] < 1:
+                missing_layer = True
+                break
+            hidden_by_layer[int(layer)] = hidden
+        if missing_layer or primary_layer not in hidden_by_layer:
+            stats["missing_hidden_count"] += 1
+            continue
+        hidden = hidden_by_layer[primary_layer]
+        attention_mask = torch.ones((hidden.shape[0],), dtype=torch.bool)
+        if any(layer_hidden.shape[0] != hidden.shape[0] for layer_hidden in hidden_by_layer.values()):
+            stats["missing_hidden_count"] += 1
+            continue
+        record_key = _claim_factuality_record_key(stmt, index=record_index)
+        metadata = {
+            "source": "eval_truthfulqa_forced_answer_claim_hidden_states",
+            "source_index": record_index,
+            "question": stmt.question,
+            "answer": stmt.answer,
+            "layer": primary_layer,
+            "layers": list(export_layers),
+            "record_grain": "candidate_claim",
+        }
+        claim_text = f"{stmt.question.strip()} {stmt.answer.strip()}".strip()
+        record_id = _claim_factuality_record_id(record_key)
+        row = {
+            "id": record_id,
+            "claim_id": record_id,
+            "text": claim_text,
+            "claim_hidden_states": hidden.tolist(),
+            "attention_mask": [bool(value) for value in attention_mask.tolist()],
+            "label": int(stmt.is_false),
+            "risk_target": float(stmt.is_false),
+            "metadata": metadata,
+        }
+        if len(export_layers) > 1:
+            row["layer_hidden_states"] = {
+                str(layer): hidden_by_layer[int(layer)].tolist()
+                for layer in export_layers
+            }
+        records.append(row)
+        stats["exported_count"] += 1
+    return records, stats
+
+
 def _inside_enabled(args) -> bool:
     return int(getattr(args, "inside_samples", 0)) >= 2
 
@@ -634,6 +729,22 @@ def _resolve_pre_generation_probe_layers(args, n_layers: int) -> list[int]:
             args.layer
             if getattr(args, "pre_generation_probe_layer", None) is None
             else int(args.pre_generation_probe_layer)
+        ]
+    return _unique_preserve_order(
+        resolve_target_layer(layer, n_layers, offline=args.offline)
+        for layer in layers
+    )
+
+
+def _resolve_claim_factuality_probe_layers(args, n_layers: int) -> list[int]:
+    requested = _parse_sweep_layers(getattr(args, "claim_factuality_probe_layers", None))
+    if requested is not None:
+        layers = requested
+    else:
+        layers = [
+            args.layer
+            if getattr(args, "claim_factuality_probe_layer", None) is None
+            else int(args.claim_factuality_probe_layer)
         ]
     return _unique_preserve_order(
         resolve_target_layer(layer, n_layers, offline=args.offline)
@@ -2977,6 +3088,7 @@ def batched_statement_reps(
     prefix_kv_cache: bool = False,
     first_token_top_k: int = FIRST_TOKEN_TOP_K_DEFAULT,
     capture_prompt_hidden_states: bool = False,
+    capture_claim_hidden_states: bool = False,
     capture_attention_pathways: bool = False,
     activation_intervention: Mapping[str, object] | None = None,
     activation_patch: Mapping[str, object] | None = None,
@@ -3040,6 +3152,7 @@ def batched_statement_reps(
                 result_count=len(statements),
                 eigenscore_alpha=eigenscore_alpha,
                 first_token_top_k=first_token_top_k,
+                capture_claim_hidden_states=capture_claim_hidden_states,
             )
 
     n_layers = _model_num_hidden_layers(model)
@@ -3192,6 +3305,12 @@ def batched_statement_reps(
 
         ans_start = seq_len - n_ans
         ans_hs = hidden_by_layer[layers[0]][row, ans_start:seq_len, :].float().cpu()
+        ans_hs_by_layer = None
+        if capture_claim_hidden_states:
+            ans_hs_by_layer = {
+                layer: hidden_by_layer[layer][row, ans_start:seq_len, :].float().cpu()
+                for layer in layers
+            }
         prompt_hs_by_layer = None
         prompt_attention_mask = None
         if capture_prompt_hidden_states and ans_start > 0:
@@ -3259,6 +3378,8 @@ def batched_statement_reps(
         if prompt_hs_by_layer is not None and prompt_attention_mask is not None:
             result["prompt_hs_by_layer"] = prompt_hs_by_layer
             result["prompt_attention_mask"] = prompt_attention_mask
+        if ans_hs_by_layer is not None:
+            result["ans_hs_by_layer"] = ans_hs_by_layer
         results[original_idx] = result
     return results
 
@@ -3272,6 +3393,7 @@ def _batched_statement_reps_with_prefix_kv(
     result_count: int,
     eigenscore_alpha: float,
     first_token_top_k: int,
+    capture_claim_hidden_states: bool = False,
 ) -> list[Optional[dict]]:
     """Score encoded statements by reusing one prefix KV cache per shared prefix."""
     results: list[Optional[dict]] = [None] * int(result_count)
@@ -3327,6 +3449,12 @@ def _batched_statement_reps_with_prefix_kv(
                 for layer in layers
             }
             ans_hs = hidden_by_layer[int(layers[0])][0, :answer_len, :].float().cpu()
+            ans_hs_by_layer = None
+            if capture_claim_hidden_states:
+                ans_hs_by_layer = {
+                    int(layer): hidden_by_layer[int(layer)][0, :answer_len, :].float().cpu()
+                    for layer in layers
+                }
             eigenscore_by_layer = {
                 int(layer): float(internal_eigenscore(
                     hidden_by_layer[int(layer)][0, :answer_len, :].float(),
@@ -3363,7 +3491,7 @@ def _batched_statement_reps_with_prefix_kv(
             first_token_entropy = float(
                 topk_normalized_entropy(prefix_next_logits[0], top_k=first_token_top_k).item()
             )
-            results[original_idx] = {
+            result = {
                 "last": last_by_layer,
                 "ans_hs": ans_hs,
                 "eigenscore_by_layer": eigenscore_by_layer,
@@ -3372,6 +3500,9 @@ def _batched_statement_reps_with_prefix_kv(
                 "first_token_entropy": first_token_entropy,
                 "nll": nll,
             }
+            if ans_hs_by_layer is not None:
+                result["ans_hs_by_layer"] = ans_hs_by_layer
+            results[original_idx] = result
     return results
 
 
@@ -3450,6 +3581,7 @@ def _batched_statement_reps_for_pairs(
     prefix_kv_cache: bool = False,
     first_token_top_k: int = FIRST_TOKEN_TOP_K_DEFAULT,
     capture_prompt_hidden_states: bool = False,
+    capture_claim_hidden_states: bool = False,
     capture_attention_pathways: bool = False,
     activation_intervention: Mapping[str, object] | None = None,
     activation_patch: Mapping[str, object] | None = None,
@@ -3500,6 +3632,7 @@ def _batched_statement_reps_for_pairs(
             prefix_kv_cache=prefix_kv_cache,
             first_token_top_k=first_token_top_k,
             capture_prompt_hidden_states=capture_prompt_hidden_states,
+            capture_claim_hidden_states=capture_claim_hidden_states,
             capture_attention_pathways=capture_attention_pathways,
             activation_intervention=activation_intervention,
             activation_patch=activation_patch,
@@ -4583,6 +4716,9 @@ def run(args) -> dict:
     dump_pre_generation_probe_records = bool(getattr(args, "dump_pre_generation_probe_records", None))
     pre_generation_probe_layers = _resolve_pre_generation_probe_layers(args, n_layers)
     pre_generation_probe_layer = int(pre_generation_probe_layers[0])
+    dump_claim_factuality_probe_records = bool(getattr(args, "dump_claim_factuality_probe_records", None))
+    claim_factuality_probe_layers = _resolve_claim_factuality_probe_layers(args, n_layers)
+    claim_factuality_probe_layer = int(claim_factuality_probe_layers[0])
     # --sweep: 主层在前；--sweep-layers 可限制候选层带，避免大模型全层后处理成本。
     layers = _resolve_sweep_layers(
         args.layer,
@@ -4594,6 +4730,10 @@ def run(args) -> dict:
         for pre_generation_layer in pre_generation_probe_layers:
             if pre_generation_layer not in layers:
                 layers.append(pre_generation_layer)
+    if dump_claim_factuality_probe_records:
+        for claim_factuality_layer in claim_factuality_probe_layers:
+            if claim_factuality_layer not in layers:
+                layers.append(claim_factuality_layer)
     if args.cache_only and stats_meta is not None and eval_meta is not None:
         _validate_cache_only_metadata(
             args=args,
@@ -4745,6 +4885,12 @@ def run(args) -> dict:
         "missing_hidden_count": 0,
     }
     pre_generation_soft_targets = _pre_generation_soft_targets(eval_stmts)
+    claim_factuality_probe_records: list[dict[str, object]] = []
+    claim_factuality_export_stats = {
+        "candidate_count": 0,
+        "exported_count": 0,
+        "missing_hidden_count": 0,
+    }
     inside_triggered_total = 0
     inside_skipped_total = 0
 
@@ -4848,6 +4994,7 @@ def run(args) -> dict:
                     prefix_kv_cache=bool(getattr(args, "prefix_kv_cache", False)),
                     first_token_top_k=int(getattr(args, "first_token_top_k", FIRST_TOKEN_TOP_K_DEFAULT)),
                     capture_prompt_hidden_states=dump_pre_generation_probe_records,
+                    capture_claim_hidden_states=dump_claim_factuality_probe_records,
                     capture_attention_pathways=bool(getattr(args, "attention_pathway", False)),
                     activation_intervention=activation_intervention,
                     activation_patch=activation_patch,
@@ -4872,6 +5019,16 @@ def run(args) -> dict:
             pre_generation_probe_records.extend(exported)
             for key, value in export_stats.items():
                 pre_generation_export_stats[key] = pre_generation_export_stats.get(key, 0) + int(value)
+        if dump_claim_factuality_probe_records:
+            exported, export_stats = _claim_factuality_probe_records_from_batch(
+                batch,
+                reps_batch,
+                layers=claim_factuality_probe_layers,
+                start_index=batch_start_index,
+            )
+            claim_factuality_probe_records.extend(exported)
+            for key, value in export_stats.items():
+                claim_factuality_export_stats[key] = claim_factuality_export_stats.get(key, 0) + int(value)
 
         with _profile_phase(profile, "score_postprocess"):
             batch_records = _score_reps_batch(
@@ -5258,6 +5415,11 @@ def run(args) -> dict:
                    "pre_generation_probe_layer": pre_generation_probe_layer,
                    "pre_generation_probe_layers": list(pre_generation_probe_layers),
                    "pre_generation_record_grain": getattr(args, "pre_generation_record_grain", "question"),
+                   "dump_claim_factuality_probe_records": getattr(
+                       args, "dump_claim_factuality_probe_records", None
+                   ),
+                   "claim_factuality_probe_layer": claim_factuality_probe_layer,
+                   "claim_factuality_probe_layers": list(claim_factuality_probe_layers),
                    "sweep_layers": layers if (args.sweep or args.sweep_layers) else None},
         "auroc": results,
         "selective": selective,
@@ -5301,6 +5463,43 @@ def run(args) -> dict:
         print(
             f"Dumped {len(pre_generation_probe_records)} pre-generation probe record(s) "
             f"to {args.dump_pre_generation_probe_records}"
+        )
+    if dump_claim_factuality_probe_records:
+        if not claim_factuality_probe_records:
+            raise ValueError(
+                "no claim factuality probe records were exported; rerun without --cache-only or refresh "
+                "--eval-reps-cache so answer hidden states are available."
+            )
+        claim_factuality_payload = {
+            "schema_version": 1,
+            "workflow": "truthfulqa_claim_factuality_probe_record_export",
+            "metadata": {
+                "model": args.model,
+                "dataset": "truthfulqa",
+                "offline": bool(args.offline),
+                "layer": int(claim_factuality_probe_layer),
+                "layers": list(claim_factuality_probe_layers),
+                "label": "truthfulqa_candidate_is_false",
+                "source": "eval_truthfulqa_forced_answer_claim_hidden_states",
+                "record_count": len(claim_factuality_probe_records),
+            },
+            "records": claim_factuality_probe_records,
+            "export_stats": claim_factuality_export_stats,
+        }
+        _write_claim_factuality_probe_records(
+            args.dump_claim_factuality_probe_records,
+            claim_factuality_payload,
+        )
+        payload["claim_factuality_probe_records"] = {
+            "path": args.dump_claim_factuality_probe_records,
+            "record_count": len(claim_factuality_probe_records),
+            "layer": int(claim_factuality_probe_layer),
+            "layers": list(claim_factuality_probe_layers),
+            "export_stats": claim_factuality_export_stats,
+        }
+        print(
+            f"Dumped {len(claim_factuality_probe_records)} claim factuality probe record(s) "
+            f"to {args.dump_claim_factuality_probe_records}"
         )
     if _inside_enabled(args):
         sampled_count = int(sum(inside_sampled))
@@ -5598,6 +5797,16 @@ def main():
                         "use --pre-generation-probe-layers=-12,-8,-4 when the list starts with '-'")
     p.add_argument("--pre-generation-record-grain", default="question", choices=PRE_GENERATION_RECORD_GRAINS,
                    help="export one pre-generation probe record per question prompt or per scored candidate")
+    p.add_argument("--dump-claim-factuality-probe-records", default=None,
+                   help="optional JSON/JSONL path to export candidate-claim answer-token hidden-state records for "
+                        "benchmarks/eval_claim_factuality_probe.py; JSONL is recommended for larger runs")
+    p.add_argument("--claim-factuality-probe-layer", type=int, default=None,
+                   help="hidden-state layer to export for --dump-claim-factuality-probe-records; "
+                        "defaults to --layer")
+    p.add_argument("--claim-factuality-probe-layers", default=None,
+                   help="comma-separated hidden-state layers to export in each claim factuality record; "
+                        "the first layer is also written as claim_hidden_states for backward compatibility; "
+                        "use --claim-factuality-probe-layers=-12,-8,-4 when the list starts with '-'")
     p.add_argument("--seed", type=int, default=0)
     args = p.parse_args()
     if args.batch_size < 1:
@@ -5662,6 +5871,8 @@ def main():
         p.error("--dump-pre-generation-probe-records cannot be combined with --prefix-kv-cache")
     if args.pre_generation_probe_layer is not None and args.pre_generation_probe_layers is not None:
         p.error("choose only one of --pre-generation-probe-layer or --pre-generation-probe-layers")
+    if args.claim_factuality_probe_layer is not None and args.claim_factuality_probe_layers is not None:
+        p.error("choose only one of --claim-factuality-probe-layer or --claim-factuality-probe-layers")
     if args.refresh_statement_encoding_cache and not args.statement_encoding_cache:
         p.error("--refresh-statement-encoding-cache requires --statement-encoding-cache")
     if args.refresh_layer_stats_cache and not args.layer_stats_cache:
