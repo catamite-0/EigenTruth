@@ -5145,6 +5145,26 @@ to false `entrenched` rows. If no taxonomy report is available, pass
 `--scores`, `--consistency-signal`, and `--confidence-signal` to emit
 `eval_detectability_taxonomy.py` rerun commands instead.
 
+After the detectability queue has produced child reports, roll them up before
+feeding the evidence back into release review:
+
+```bash
+python benchmarks/rollup_frontier_detectability_evidence_reruns.py \
+  --queue artifacts/frontier-release-evidence/detectability-rerun-queue.json \
+  --json artifacts/frontier-release-evidence/detectability-rerun-rollup.json \
+  --artifact-manifest artifacts/frontier-release-evidence/detectability-rerun-rollup-manifest.json \
+  --registry artifacts/release-registry.json \
+  --name frontier-detectability-rerun-rollup \
+  --version 0.1 \
+  --require-all-reports
+```
+
+Taxonomy rerun children can emit `status=promote` when
+`entrenched_false_rate <= --max-entrenched-false-rate`. Blind-spot analysis
+children instead emit `status=complete` with `audit_ready=true`: they document
+which rows need source-family, retrieval, or world-model evidence expansion, but
+they do not by themselves satisfy the release detectability gate.
+
 For frontier release reports blocked by the family-wise multiple-testing gate,
 build a per-cell rerun queue from the comparator or gap-plan output:
 
