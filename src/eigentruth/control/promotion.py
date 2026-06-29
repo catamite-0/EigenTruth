@@ -1346,29 +1346,40 @@ def _promotion_contract_action_gate_summary(
     metadata: Mapping[str, Any],
 ) -> dict[str, Any]:
     workflow = _mapping(contract.product_trace_replay_workflow)
+    action_audit_gate = _mapping(workflow.get("action_audit_gate"))
+    action_execution_gate = _mapping(workflow.get("action_execution_gate"))
     return _drop_none_values({
-        "action_audit_required": metadata.get("product_trace_action_audit_gate_required"),
+        "action_audit_required": _first_present(
+            workflow.get("require_action_audit_gate"),
+            metadata.get("product_trace_action_audit_gate_required"),
+        ),
         "action_audit_status": _first_present(
             workflow.get("action_audit_gate_status"),
+            action_audit_gate.get("status"),
             metadata.get("product_trace_action_audit_gate_status"),
         ),
         "action_audit_error_rate": _first_present(
             workflow.get("action_audit_error_rate"),
+            action_audit_gate.get("error_rate"),
             metadata.get("product_trace_action_audit_error_rate"),
         ),
-        "action_execution_required": metadata.get(
-            "product_trace_action_execution_gate_required"
+        "action_execution_required": _first_present(
+            workflow.get("require_action_execution_gate"),
+            metadata.get("product_trace_action_execution_gate_required"),
         ),
         "action_execution_status": _first_present(
             workflow.get("action_execution_gate_status"),
+            action_execution_gate.get("status"),
             metadata.get("product_trace_action_execution_gate_status"),
         ),
         "action_execution_missing_result_rate": _first_present(
             workflow.get("action_execution_missing_result_rate"),
+            action_execution_gate.get("missing_result_rate"),
             metadata.get("product_trace_action_execution_missing_result_rate"),
         ),
         "action_execution_request_id_mismatch_rate": _first_present(
             workflow.get("action_execution_request_id_mismatch_rate"),
+            action_execution_gate.get("request_id_mismatch_rate"),
             metadata.get("product_trace_action_execution_request_id_mismatch_rate"),
         ),
     })
@@ -3027,6 +3038,7 @@ def product_promotion_contract_metadata(
         "promotion_contract_model_id": contract.model_id,
         "promotion_contract_source_workflow": contract.source_workflow,
         "promotion_contract_source_status": contract.source_status,
+        "promotion_contract_promotion_summary": contract.to_summary_dict(),
         "promotion_contract_runtime": dict(contract.runtime),
         "promotion_contract_verifier_route": dict(contract.verifier_route),
         "promotion_contract_control_policy_config": dict(contract.control_policy_config),

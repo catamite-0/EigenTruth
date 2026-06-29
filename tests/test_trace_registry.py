@@ -456,6 +456,14 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
         metadata={
             "artifact_source": "artifact.json",
             "promotion_contract_source": "contract.json",
+            "promotion_contract_promotion_summary": {
+                "status": "promote",
+                "blocking_gate_count": 0,
+                "source_status": "promote",
+                "runtime": {"layer": -2, "recommended_runtime_seconds": 0.2},
+                "verifier_route": {"route": "structured_fact"},
+                "action_gates": {"action_audit_status": "promote"},
+            },
             "promotion_contract_verifier_route": {
                 "route": "structured_fact",
                 "covered_fact_property_count": 3,
@@ -557,6 +565,12 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
     assert "large_unselected_metadata" not in payload["metadata"]
     assert payload["metadata"]["artifact_source"] == "artifact.json"
     assert payload["metadata"]["promotion_contract_source"] == "contract.json"
+    assert payload["metadata"]["promotion_contract_promotion_summary"]["status"] == (
+        "promote"
+    )
+    assert payload["metadata"]["promotion_contract_promotion_summary"][
+        "blocking_gate_count"
+    ] == 0
     assert payload["metadata"]["promotion_contract_verifier_route"][
         "covered_fact_property_count"
     ] == 3
@@ -598,6 +612,10 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
     assert metrics["final_answer_evidence_count"] == 4.0
     assert metrics["promotion_contract_available"] is True
     assert metrics["promotion_contract_source"] == "contract.json"
+    assert metrics["promotion_contract_promotion_summary_status"] == "promote"
+    assert metrics["promotion_contract_promotion_summary_blocking_gate_count"] == (
+        pytest.approx(0.0)
+    )
     assert metrics["promotion_contract_recommended_route_covered_fact_property_count"] == 3.0
     assert metrics["promotion_contract_recommended_route_covered_fact_properties"] == [
         "P36",
@@ -3027,6 +3045,28 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert metadata["promotion_contract_source"] == str(contract_path)
     assert metadata["promotion_contract_budget_enabled"] is True
     assert metadata["promotion_contract_model_id"] == "demo-model"
+    assert metadata["promotion_contract_promotion_summary"]["status"] == "promote"
+    assert metadata["promotion_contract_promotion_summary"]["source_status"] == "promote"
+    assert (
+        metadata["promotion_contract_promotion_summary"]["blocking_gate_count"] == 0
+    )
+    assert (
+        metadata["promotion_contract_promotion_summary"][
+            "blocked_evidence_group_count"
+        ]
+        == 0
+    )
+    assert metadata["promotion_contract_promotion_summary"]["runtime"]["layer"] == -2
+    assert (
+        metadata["promotion_contract_promotion_summary"]["verifier_route"]["route"]
+        == "structured_qa"
+    )
+    assert (
+        metadata["promotion_contract_promotion_summary"]["action_gates"][
+            "action_audit_status"
+        ]
+        == "promote"
+    )
     assert metadata["promotion_contract_runtime"] == {"layer": -2}
     assert metadata["promotion_contract_verifier_route"] == {
         "route": "structured_qa",
@@ -3056,6 +3096,25 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
         }
     }
     runtime_metrics = product_runtime_metrics({"metadata": metadata})
+    assert runtime_metrics["promotion_contract_promotion_summary_status"] == "promote"
+    assert runtime_metrics["promotion_contract_promotion_summary_source_status"] == (
+        "promote"
+    )
+    assert runtime_metrics[
+        "promotion_contract_promotion_summary_blocking_gate_count"
+    ] == pytest.approx(0.0)
+    assert runtime_metrics[
+        "promotion_contract_promotion_summary_blocked_evidence_group_count"
+    ] == pytest.approx(0.0)
+    assert runtime_metrics[
+        "promotion_contract_promotion_summary_runtime_layer"
+    ] == pytest.approx(-2.0)
+    assert runtime_metrics["promotion_contract_promotion_summary_route"] == (
+        "structured_qa"
+    )
+    assert runtime_metrics[
+        "promotion_contract_promotion_summary_action_audit_status"
+    ] == "promote"
     assert runtime_metrics[
         "promotion_contract_recommended_route_covered_fact_property_metric_count"
     ] == pytest.approx(1.0)

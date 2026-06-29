@@ -1158,6 +1158,12 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         metadata,
         contract_metadata=contract_metadata,
     )
+    promotion_summary = _mapping(metadata.get("promotion_contract_promotion_summary"))
+    promotion_summary_runtime = _mapping(promotion_summary.get("runtime"))
+    promotion_summary_verifier_route = _mapping(
+        promotion_summary.get("verifier_route")
+    )
+    promotion_summary_action_gates = _mapping(promotion_summary.get("action_gates"))
     manifest_verification = _mapping(
         _first_present(
             metadata.get("triple_extraction_fixture_matrix_manifest_verification"),
@@ -1984,6 +1990,47 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         "promotion_contract_source_status": source_status,
         "promotion_contract_budget_enabled": budget_enabled,
         "promotion_contract_summary": summary,
+        "promotion_contract_promotion_summary": promotion_summary or None,
+        "promotion_contract_promotion_summary_status": _optional_string(
+            promotion_summary.get("status")
+        ),
+        "promotion_contract_promotion_summary_source_status": _optional_string(
+            promotion_summary.get("source_status")
+        ),
+        "promotion_contract_promotion_summary_available_gate_count": _finite_float(
+            promotion_summary.get("available_gate_count")
+        ),
+        "promotion_contract_promotion_summary_promoted_gate_count": _finite_float(
+            promotion_summary.get("promoted_gate_count")
+        ),
+        "promotion_contract_promotion_summary_blocking_gate_count": _finite_float(
+            promotion_summary.get("blocking_gate_count")
+        ),
+        "promotion_contract_promotion_summary_blocked_evidence_group_count": (
+            _finite_float(promotion_summary.get("blocked_evidence_group_count"))
+        ),
+        "promotion_contract_promotion_summary_runtime_layer": _finite_float(
+            promotion_summary_runtime.get("layer")
+        ),
+        "promotion_contract_promotion_summary_recommended_runtime_seconds": (
+            _finite_float(promotion_summary_runtime.get("recommended_runtime_seconds"))
+        ),
+        "promotion_contract_promotion_summary_recommended_runtime_cost_source": (
+            _optional_string(
+                promotion_summary_runtime.get("recommended_runtime_cost_source")
+            )
+        ),
+        "promotion_contract_promotion_summary_route": _optional_string(
+            promotion_summary_verifier_route.get("route")
+        ),
+        "promotion_contract_promotion_summary_action_audit_status": _optional_string(
+            promotion_summary_action_gates.get("action_audit_status")
+        ),
+        "promotion_contract_promotion_summary_action_execution_status": (
+            _optional_string(
+                promotion_summary_action_gates.get("action_execution_status")
+            )
+        ),
         "promotion_contract_recommended_route_covered_fact_property_count": (
             covered_fact_scope.get("recommended_route_count")
         ),

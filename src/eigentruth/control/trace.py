@@ -1198,6 +1198,7 @@ DEFAULT_BOUNDED_TRACE_METADATA_KEYS = (
     "promotion_contract_manifest_verification",
     "promotion_contract_registry",
     "promotion_contract_registry_key",
+    "promotion_contract_promotion_summary",
     "promotion_contract_runtime",
     "promotion_contract_verifier_route",
     "promotion_contract_recommended_route_covered_fact_property_count",
