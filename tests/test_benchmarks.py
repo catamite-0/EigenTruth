@@ -810,6 +810,111 @@ def test_compare_pre_generation_probe_workflows_gates_multimodel_reports(tmp_pat
     assert manifest["metadata"]["status"] == "ready"
 
 
+def test_compare_claim_factuality_probe_workflows_gates_redline_and_registry(tmp_path):
+    module = importlib.import_module("benchmarks.compare_claim_factuality_probe_workflows")
+    from eigentruth.registry import ArtifactRegistry
+
+    report_paths = {}
+    for name, model, auroc, redline_auroc, layer in (
+        ("smollm2", "HuggingFaceTB/SmolLM2-135M-Instruct", 0.76, 0.65, -12),
+        ("qwen05", "Qwen/Qwen2.5-0.5B-Instruct", 0.84, 0.66, -4),
+    ):
+        path = tmp_path / f"{name}-claim-workflow.json"
+        path.write_text(
+            json.dumps({
+                "workflow": "claim_factuality_probe_workflow",
+                "status": "ready",
+                "effective_model": model,
+                "records": {
+                    "metadata_dataset": "truthfulqa",
+                    "metadata_layers": [-12, -8, -4],
+                    "metadata_record_grain": "candidate_claim",
+                    "record_count": 94,
+                },
+                "execution": {"records_reused": True},
+                "artifact_manifest_summary": {"artifact_count": 7, "missing_count": 0},
+                "probe": {
+                    "candidate_count": 3,
+                    "conformal_available": True,
+                    "conformal_threshold": 0.7,
+                    "recommended_layer": layer,
+                    "selection_metric": "label_auroc",
+                    "selection_value": auroc,
+                    "test_label_auroc": auroc,
+                    "test_selective_accuracy": 0.63,
+                    "test_selective_coverage": 0.81,
+                    "test_target_bce": 0.57,
+                },
+                "redline": {
+                    "available": True,
+                    "best_text_auroc": redline_auroc,
+                    "best_text_direction": "higher",
+                    "best_text_signal": "answer_token_count",
+                    "probe_test_label_auroc": auroc,
+                    "probe_vs_text_auroc_margin": auroc - redline_auroc,
+                    "record_count": 94,
+                    "status": "pass",
+                },
+            }),
+            encoding="utf-8",
+        )
+        report_paths[name] = path
+    comparison_path = tmp_path / "claim-comparison.json"
+    blocked_path = tmp_path / "claim-comparison-blocked.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+
+    payload = module.compare_claim_factuality_probe_workflows(
+        module.ClaimFactualityProbeWorkflowComparisonConfig(
+            workflow_reports=report_paths,
+            output_path=comparison_path,
+            artifact_manifest_path=manifest_path,
+            registry_path=registry_path,
+            register_name="claim-factuality-comparison",
+            min_model_count=2,
+            min_record_count=80,
+            min_test_label_auroc=0.7,
+            min_redline_auroc_margin=0.1,
+        )
+    )
+    blocked = module.compare_claim_factuality_probe_workflows(
+        module.ClaimFactualityProbeWorkflowComparisonConfig(
+            workflow_reports=report_paths,
+            output_path=blocked_path,
+            min_model_count=2,
+            min_record_count=80,
+            min_test_label_auroc=0.7,
+            min_redline_auroc_margin=0.2,
+        )
+    )
+    saved = json.loads(comparison_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    registry = ArtifactRegistry.load_json(registry_path)
+    report_record = registry.get("report:claim-factuality-comparison:0.1")
+    manifest_record = registry.get("benchmark_manifest:claim-factuality-comparison:0.1")
+
+    assert payload["workflow"] == "claim_factuality_probe_workflow_comparison"
+    assert payload["status"] == "ready"
+    assert payload["promotion_gate"]["failures"] == []
+    assert payload["promotion_gate"]["model_count"] == 2
+    assert payload["promotion_gate"]["redline_passed"] is True
+    assert payload["promotion_gate"]["redline_run_count"] == 2
+    assert payload["promotion_gate"]["best_run"] == "qwen05"
+    assert payload["leaderboard"][0]["name"] == "qwen05"
+    assert payload["leaderboard"][0]["recommended_layer"] == -4
+    assert payload["leaderboard"][0]["redline_best_auroc"] == pytest.approx(0.66)
+    assert payload["leaderboard"][0]["redline_margin"] == pytest.approx(0.18)
+    assert saved["artifact_manifest_summary"]["missing_count"] == 0
+    assert manifest["metadata"]["workflow"] == "claim_factuality_probe_workflow_comparison"
+    assert manifest["metadata"]["status"] == "ready"
+    assert report_record.metadata["best_run"] == "qwen05"
+    assert report_record.metadata["redline_passed"] is True
+    assert manifest_record.metadata["manifest_summary"]["missing_count"] == 0
+    assert blocked["status"] == "blocked"
+    assert blocked["promotion_gate"]["redline_passed"] is False
+    assert blocked["promotion_gate"]["failures"][0]["gate"] == "min_redline_auroc_margin"
+
+
 def test_eval_pre_generation_text_baselines_reports_best_redline(tmp_path):
     module = importlib.import_module("benchmarks.eval_pre_generation_text_baselines")
 
