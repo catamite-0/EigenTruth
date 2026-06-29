@@ -29019,6 +29019,45 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                 "promotion_contract_source": "contract-a.json",
                 "promotion_contract_source_status": "promote",
                 "promotion_contract_budget_enabled": True,
+                "promotion_contract_evidence_handoff_manifest": (
+                    "artifacts/promotion/evidence-handoff-manifest-a.json"
+                ),
+                "promotion_contract_evidence_handoff_contract": (
+                    "artifacts/promotion/evidence-handoff-a.json"
+                ),
+                "promotion_contract_evidence_handoff_audit": (
+                    "artifacts/promotion/evidence-handoff-audit-a.json"
+                ),
+                "promotion_contract_evidence_handoff_manifest_verification": {
+                    "passed": True,
+                },
+                "promotion_contract_evidence_handoff_workflow": (
+                    "product_promotion_contract"
+                ),
+                "promotion_contract_evidence_handoff_status": "promote",
+                "promotion_contract_evidence_handoff_before_missing_metric_count": 24,
+                "promotion_contract_evidence_handoff_after_missing_metric_count": 0,
+                "promotion_contract_evidence_handoff_resolved_missing_metric_count": 24,
+                "promotion_contract_evidence_handoff_expected_metric_count": 38,
+                "promotion_contract_evidence_handoff_present_metric_count": 38,
+                "promotion_contract_evidence_handoff_missing_metric_count": 0,
+                "promotion_contract_evidence_handoff_blocked_group_count": 0,
+                "promotion_contract_evidence_handoff_filled_groups": [
+                    "promotion",
+                    "pre_generation",
+                    "counterfactual",
+                    "action_gate",
+                    "triple_audit",
+                    "covered_fact_property",
+                ],
+                "promotion_contract_evidence_handoff_group_statuses": {
+                    "promotion": "promote",
+                    "pre_generation": "promote",
+                    "counterfactual": "promote",
+                    "action_gate": "promote",
+                    "triple_audit": "promote",
+                    "covered_fact_property": "promote",
+                },
                 "promotion_contract_product_trace_replay_workflow_status": "promote",
                 "promotion_contract_product_trace_replay_workflow_report": (
                     "artifacts/trace-replay/product-trace-replay-workflow.json"
@@ -29343,6 +29382,37 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                 "pre_generation_probe_comparison_best_redline_signal": "claim_token_count",
                 "pre_generation_probe_comparison_best_redline_auroc": 0.66,
                 "pre_generation_probe_comparison_best_redline_margin": 0.04,
+                "promotion_contract_evidence_handoff": {
+                    "manifest": "artifacts/promotion/evidence-handoff-manifest-b.json",
+                    "contract": "artifacts/promotion/evidence-handoff-b.json",
+                    "audit": "artifacts/promotion/evidence-handoff-audit-b.json",
+                    "manifest_verified": False,
+                    "workflow": "product_promotion_contract",
+                    "status": "needs_evidence",
+                    "before_missing_metric_count": 12,
+                    "after_missing_metric_count": 2,
+                    "resolved_missing_metric_count": 10,
+                    "expected_metric_count": 38,
+                    "present_metric_count": 36,
+                    "missing_metric_count": 2,
+                    "blocked_group_count": 1,
+                    "filled_groups": [
+                        "promotion",
+                        "pre_generation",
+                        "counterfactual",
+                        "action_gate",
+                        "triple_audit",
+                        "covered_fact_property",
+                    ],
+                    "group_statuses": {
+                        "promotion": "promote",
+                        "pre_generation": "promote",
+                        "counterfactual": "promote",
+                        "action_gate": "promote",
+                        "triple_audit": "promote",
+                        "covered_fact_property": "block",
+                    },
+                },
                 "triple_extraction_fixture_matrix_source": "runtime_evidence_bundle",
                 "triple_extraction_fixture_matrix_status": "promote",
                 "triple_extraction_fixture_matrix_manifest_verification": {"passed": True},
@@ -29433,6 +29503,7 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     trace_replay = promotion["product_trace_replay"]
     external_evidence = promotion["external_evidence_baseline_comparison"]
     pre_generation = promotion["pre_generation_probe_comparison"]
+    evidence_handoff = promotion["evidence_handoff"]
     matrix = promotion["triple_extraction_fixture_matrix"]
     assert promotion["available_trace_count"] == 2
     assert promotion["source_counts"] == {"contract-a.json": 1}
@@ -29563,6 +29634,25 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
         "claim_token_count": 1,
     }
     assert pre_generation["best_redline_margin"]["mean"] == pytest.approx(0.085)
+    assert evidence_handoff["available_trace_count"] == 2
+    assert evidence_handoff["coverage_rate"] == pytest.approx(1.0)
+    assert evidence_handoff["status_counts"] == {"needs_evidence": 1, "promote": 1}
+    assert evidence_handoff["workflow_counts"] == {"product_promotion_contract": 2}
+    assert evidence_handoff["manifest_verified_count"] == 1
+    assert evidence_handoff["manifest_failed_count"] == 1
+    assert evidence_handoff["manifest_unknown_count"] == 0
+    assert evidence_handoff["before_missing_metric_count"]["mean"] == pytest.approx(18.0)
+    assert evidence_handoff["after_missing_metric_count"]["mean"] == pytest.approx(1.0)
+    assert evidence_handoff["resolved_missing_metric_count"]["mean"] == pytest.approx(17.0)
+    assert evidence_handoff["present_metric_count"]["mean"] == pytest.approx(37.0)
+    assert evidence_handoff["missing_metric_count"]["mean"] == pytest.approx(1.0)
+    assert evidence_handoff["present_metric_rate"]["mean"] == pytest.approx(37.0 / 38.0)
+    assert evidence_handoff["promoted_group_rate"]["mean"] == pytest.approx(11.0 / 12.0)
+    assert evidence_handoff["filled_group_counts"]["covered_fact_property"] == 2
+    assert evidence_handoff["group_status_counts"]["covered_fact_property"] == {
+        "block": 1,
+        "promote": 1,
+    }
     assert matrix["available_trace_count"] == 2
     assert matrix["source_counts"] == {"registry": 1, "runtime_evidence_bundle": 1}
     assert matrix["status_counts"] == {"promote": 2}
@@ -29639,6 +29729,15 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
         "promotion_contract_pre_generation_probe_comparison_best_redline_margin"
     ] == pytest.approx(0.13)
     assert payload["traces"][0]["metrics"][
+        "promotion_contract_evidence_handoff_manifest_verified"
+    ] is True
+    assert payload["traces"][0]["metrics"][
+        "promotion_contract_evidence_handoff_present_metric_rate"
+    ] == pytest.approx(1.0)
+    assert payload["traces"][0]["metrics"][
+        "promotion_contract_evidence_handoff_group_statuses"
+    ]["promotion"] == "promote"
+    assert payload["traces"][0]["metrics"][
         "promotion_contract_recommended_route_covered_fact_property_count"
     ] == 3.0
     assert payload["traces"][0]["metrics"][
@@ -29699,6 +29798,15 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert payload["traces"][1]["metrics"][
         "promotion_contract_pre_generation_probe_comparison_redline_passed"
     ] is False
+    assert payload["traces"][1]["metrics"][
+        "promotion_contract_evidence_handoff_manifest_verified"
+    ] is False
+    assert payload["traces"][1]["metrics"][
+        "promotion_contract_evidence_handoff_missing_metric_count"
+    ] == pytest.approx(2.0)
+    assert payload["traces"][1]["metrics"][
+        "promotion_contract_evidence_handoff_group_statuses"
+    ]["covered_fact_property"] == "block"
     assert saved["artifact_manifest_summary"] == manifest["summary"]
     assert saved["artifact_manifest_summary"]["artifact_count"] == 3
     assert manifest["metadata"]["runner"] == "run_product_runtime_baseline"
@@ -29796,6 +29904,31 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert manifest["metadata"][
         "promotion_contract_pre_generation_probe_comparison_best_redline_margin_mean"
     ] == pytest.approx(0.085)
+    assert (
+        manifest["metadata"]["promotion_contract_evidence_handoff_available_trace_count"]
+        == 2
+    )
+    assert manifest["metadata"][
+        "promotion_contract_evidence_handoff_coverage_rate"
+    ] == pytest.approx(1.0)
+    assert manifest["metadata"][
+        "promotion_contract_evidence_handoff_status_counts"
+    ] == {"needs_evidence": 1, "promote": 1}
+    assert (
+        manifest["metadata"][
+            "promotion_contract_evidence_handoff_manifest_verified_count"
+        ]
+        == 1
+    )
+    assert manifest["metadata"][
+        "promotion_contract_evidence_handoff_present_metric_rate_mean"
+    ] == pytest.approx(37.0 / 38.0)
+    assert manifest["metadata"][
+        "promotion_contract_evidence_handoff_promoted_group_rate_mean"
+    ] == pytest.approx(11.0 / 12.0)
+    assert manifest["metadata"][
+        "promotion_contract_evidence_handoff_group_status_counts"
+    ]["covered_fact_property"] == {"block": 1, "promote": 1}
     assert "\n  " not in saved_text
     assert "\n  " not in manifest_text
     assert registry_module.load_and_verify_artifact_manifest(
@@ -29856,6 +29989,19 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert record.metadata[
         "promotion_contract_pre_generation_probe_comparison_best_redline_signal_counts"
     ] == {"answer_token_count": 1, "claim_token_count": 1}
+    assert (
+        record.metadata["promotion_contract_evidence_handoff_available_trace_count"]
+        == 2
+    )
+    assert record.metadata[
+        "promotion_contract_evidence_handoff_status_counts"
+    ] == {"needs_evidence": 1, "promote": 1}
+    assert record.metadata[
+        "promotion_contract_evidence_handoff_missing_metric_count_mean"
+    ] == pytest.approx(1.0)
+    assert record.metadata[
+        "promotion_contract_evidence_handoff_group_status_counts"
+    ]["covered_fact_property"] == {"block": 1, "promote": 1}
 
 
 def test_run_product_runtime_baseline_reports_optimization_advice(tmp_path):
@@ -31029,7 +31175,7 @@ def test_run_product_runtime_baseline_reuses_trace_record_cache(tmp_path, monkey
     assert first["config"]["trace_record_cache"]["cache_hit"] is False
     assert first["config"]["trace_record_cache"]["cache_written"] is True
     assert first["paths"]["trace_records_cache"] == str(cache_path)
-    assert cache_payload["schema_version"] == 12
+    assert cache_payload["schema_version"] == 13
     assert cache_payload["workflow"] == "product_runtime_baseline_trace_records"
     assert cache_payload["summary"]["trace_count"] == 2
     assert cache_payload["policy"]["payload"]["max_total_seconds"] == 0.3

@@ -21,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-_TRACE_RECORD_CACHE_SCHEMA_VERSION = 12
+_TRACE_RECORD_CACHE_SCHEMA_VERSION = 13
 _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "promotion_contract_coverage_rate",
     "triple_extraction_fixture_matrix_coverage_rate",
@@ -182,6 +182,29 @@ _PROMOTION_CONTRACT_COUNTERFACTUAL_VERIFICATION_FIELDS: tuple[str, ...] = (
     "promotion_contract_counterfactual_verification_pass_rate",
     "promotion_contract_counterfactual_verification_false_invariance_rate",
     "promotion_contract_counterfactual_verification_flip_success_count",
+)
+_PROMOTION_CONTRACT_EVIDENCE_HANDOFF_FIELDS: tuple[str, ...] = (
+    "promotion_contract_evidence_handoff_available",
+    "promotion_contract_evidence_handoff_manifest",
+    "promotion_contract_evidence_handoff_contract",
+    "promotion_contract_evidence_handoff_audit",
+    "promotion_contract_evidence_handoff_manifest_verified",
+    "promotion_contract_evidence_handoff_workflow",
+    "promotion_contract_evidence_handoff_status",
+    "promotion_contract_evidence_handoff_before_missing_metric_count",
+    "promotion_contract_evidence_handoff_after_missing_metric_count",
+    "promotion_contract_evidence_handoff_resolved_missing_metric_count",
+    "promotion_contract_evidence_handoff_expected_metric_count",
+    "promotion_contract_evidence_handoff_present_metric_count",
+    "promotion_contract_evidence_handoff_missing_metric_count",
+    "promotion_contract_evidence_handoff_blocked_group_count",
+    "promotion_contract_evidence_handoff_present_metric_rate",
+    "promotion_contract_evidence_handoff_missing_metric_rate",
+    "promotion_contract_evidence_handoff_group_count",
+    "promotion_contract_evidence_handoff_promoted_group_count",
+    "promotion_contract_evidence_handoff_promoted_group_rate",
+    "promotion_contract_evidence_handoff_filled_groups",
+    "promotion_contract_evidence_handoff_group_statuses",
 )
 _PROMOTION_CONTRACT_COVERED_FACT_ROLLUP_FIELDS: tuple[str, ...] = (
     "promotion_contract_recommended_route_covered_fact_property_metric_count",
@@ -932,6 +955,14 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         compact[field_name] = metrics.get(field_name)
     for field_name in _PROMOTION_CONTRACT_COUNTERFACTUAL_VERIFICATION_FIELDS:
         compact[field_name] = metrics.get(field_name)
+    for field_name in _PROMOTION_CONTRACT_EVIDENCE_HANDOFF_FIELDS:
+        value = metrics.get(field_name)
+        if field_name == "promotion_contract_evidence_handoff_filled_groups":
+            compact[field_name] = list(_sequence(value))
+        elif field_name == "promotion_contract_evidence_handoff_group_statuses":
+            compact[field_name] = dict(_mapping(value))
+        else:
+            compact[field_name] = value
     for prefix in _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
@@ -1965,6 +1996,7 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
         metrics
     )
     counterfactual = _aggregate_promotion_contract_counterfactual_verification(metrics)
+    evidence_handoff = _aggregate_promotion_contract_evidence_handoff(metrics)
     product_trace_replay = _aggregate_promotion_contract_product_trace_replay(metrics)
     product_runtime_drift = _aggregate_promotion_contract_product_runtime_drift(metrics)
     return {
@@ -2016,6 +2048,7 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
         "external_evidence_baseline_comparison": external_evidence,
         "pre_generation_probe_comparison": pre_generation,
         "counterfactual_verification": counterfactual,
+        "evidence_handoff": evidence_handoff,
         "triple_extraction_fixture_matrix": {
             "available_trace_count": matrix_available_count,
             "missing_trace_count": len(metrics) - matrix_available_count,
@@ -2055,6 +2088,100 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
                 for item in metrics
             ),
         },
+    }
+
+
+def _aggregate_promotion_contract_evidence_handoff(
+    metrics: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    available_count = sum(
+        1
+        for item in metrics
+        if bool(item.get("promotion_contract_evidence_handoff_available"))
+    )
+    manifest_values = [
+        item.get("promotion_contract_evidence_handoff_manifest_verified")
+        for item in metrics
+    ]
+    manifest_observations = sum(value is not None for value in manifest_values)
+    return {
+        "available_trace_count": available_count,
+        "missing_trace_count": len(metrics) - available_count,
+        "coverage_rate": _safe_div(available_count, len(metrics)),
+        "manifest_counts": _counts(
+            item.get("promotion_contract_evidence_handoff_manifest") for item in metrics
+        ),
+        "contract_counts": _counts(
+            item.get("promotion_contract_evidence_handoff_contract") for item in metrics
+        ),
+        "audit_counts": _counts(
+            item.get("promotion_contract_evidence_handoff_audit") for item in metrics
+        ),
+        "status_counts": _counts(
+            item.get("promotion_contract_evidence_handoff_status") for item in metrics
+        ),
+        "workflow_counts": _counts(
+            item.get("promotion_contract_evidence_handoff_workflow") for item in metrics
+        ),
+        "manifest_verification_observations": manifest_observations,
+        "manifest_verified_count": sum(value is True for value in manifest_values),
+        "manifest_failed_count": sum(value is False for value in manifest_values),
+        "manifest_unknown_count": len(metrics) - manifest_observations,
+        "before_missing_metric_count": _numeric_summary(
+            item.get("promotion_contract_evidence_handoff_before_missing_metric_count")
+            for item in metrics
+        ),
+        "after_missing_metric_count": _numeric_summary(
+            item.get("promotion_contract_evidence_handoff_after_missing_metric_count")
+            for item in metrics
+        ),
+        "resolved_missing_metric_count": _numeric_summary(
+            item.get("promotion_contract_evidence_handoff_resolved_missing_metric_count")
+            for item in metrics
+        ),
+        "expected_metric_count": _numeric_summary(
+            item.get("promotion_contract_evidence_handoff_expected_metric_count")
+            for item in metrics
+        ),
+        "present_metric_count": _numeric_summary(
+            item.get("promotion_contract_evidence_handoff_present_metric_count")
+            for item in metrics
+        ),
+        "missing_metric_count": _numeric_summary(
+            item.get("promotion_contract_evidence_handoff_missing_metric_count")
+            for item in metrics
+        ),
+        "blocked_group_count": _numeric_summary(
+            item.get("promotion_contract_evidence_handoff_blocked_group_count")
+            for item in metrics
+        ),
+        "present_metric_rate": _numeric_summary(
+            item.get("promotion_contract_evidence_handoff_present_metric_rate")
+            for item in metrics
+        ),
+        "missing_metric_rate": _numeric_summary(
+            item.get("promotion_contract_evidence_handoff_missing_metric_rate")
+            for item in metrics
+        ),
+        "group_count": _numeric_summary(
+            item.get("promotion_contract_evidence_handoff_group_count") for item in metrics
+        ),
+        "promoted_group_count": _numeric_summary(
+            item.get("promotion_contract_evidence_handoff_promoted_group_count")
+            for item in metrics
+        ),
+        "promoted_group_rate": _numeric_summary(
+            item.get("promotion_contract_evidence_handoff_promoted_group_rate")
+            for item in metrics
+        ),
+        "filled_group_counts": _counts_from_sequence_items(
+            item.get("promotion_contract_evidence_handoff_filled_groups")
+            for item in metrics
+        ),
+        "group_status_counts": _counts_from_group_statuses(
+            item.get("promotion_contract_evidence_handoff_group_statuses")
+            for item in metrics
+        ),
     }
 
 
@@ -2845,6 +2972,9 @@ def _write_artifact_manifest(
     promotion_contract_counterfactual_metadata = (
         _promotion_contract_counterfactual_verification_flat_metadata(report)
     )
+    promotion_contract_evidence_handoff_metadata = (
+        _promotion_contract_evidence_handoff_flat_metadata(report)
+    )
     manifest = build_artifact_manifest(
         _artifact_paths(config) if artifacts is None else artifacts,
         root=config.resolved_artifact_manifest_path.parent,
@@ -2881,6 +3011,7 @@ def _write_artifact_manifest(
             **promotion_contract_external_evidence_metadata,
             **promotion_contract_pre_generation_metadata,
             **promotion_contract_counterfactual_metadata,
+            **promotion_contract_evidence_handoff_metadata,
             **dict(config.metadata),
         },
     )
@@ -2917,6 +3048,9 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
     )
     promotion_contract_counterfactual_metadata = (
         _promotion_contract_counterfactual_verification_flat_metadata(report)
+    )
+    promotion_contract_evidence_handoff_metadata = (
+        _promotion_contract_evidence_handoff_flat_metadata(report)
     )
     registry = ArtifactRegistry.load_json(config.registry_path)
     registry.record_product_runtime_baseline(
@@ -2959,6 +3093,7 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
             **promotion_contract_external_evidence_metadata,
             **promotion_contract_pre_generation_metadata,
             **promotion_contract_counterfactual_metadata,
+            **promotion_contract_evidence_handoff_metadata,
             **dict(config.metadata),
         },
     )
@@ -3445,6 +3580,123 @@ def _promotion_contract_counterfactual_verification_flat_metadata(
     }
 
 
+def _promotion_contract_evidence_handoff_flat_metadata(
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    handoff = _mapping(
+        _nested(
+            report,
+            "summary",
+            "promotion_contract",
+            "evidence_handoff",
+        )
+    )
+    if not handoff:
+        return {}
+    return {
+        "promotion_contract_evidence_handoff_available_trace_count": handoff.get(
+            "available_trace_count"
+        ),
+        "promotion_contract_evidence_handoff_missing_trace_count": handoff.get(
+            "missing_trace_count"
+        ),
+        "promotion_contract_evidence_handoff_coverage_rate": handoff.get(
+            "coverage_rate"
+        ),
+        "promotion_contract_evidence_handoff_manifest_counts": dict(
+            _mapping(handoff.get("manifest_counts"))
+        ),
+        "promotion_contract_evidence_handoff_contract_counts": dict(
+            _mapping(handoff.get("contract_counts"))
+        ),
+        "promotion_contract_evidence_handoff_audit_counts": dict(
+            _mapping(handoff.get("audit_counts"))
+        ),
+        "promotion_contract_evidence_handoff_status_counts": dict(
+            _mapping(handoff.get("status_counts"))
+        ),
+        "promotion_contract_evidence_handoff_workflow_counts": dict(
+            _mapping(handoff.get("workflow_counts"))
+        ),
+        "promotion_contract_evidence_handoff_manifest_verified_count": handoff.get(
+            "manifest_verified_count"
+        ),
+        "promotion_contract_evidence_handoff_manifest_failed_count": handoff.get(
+            "manifest_failed_count"
+        ),
+        "promotion_contract_evidence_handoff_manifest_unknown_count": handoff.get(
+            "manifest_unknown_count"
+        ),
+        "promotion_contract_evidence_handoff_before_missing_metric_count_mean": _nested(
+            handoff,
+            "before_missing_metric_count",
+            "mean",
+        ),
+        "promotion_contract_evidence_handoff_after_missing_metric_count_mean": _nested(
+            handoff,
+            "after_missing_metric_count",
+            "mean",
+        ),
+        "promotion_contract_evidence_handoff_resolved_missing_metric_count_mean": _nested(
+            handoff,
+            "resolved_missing_metric_count",
+            "mean",
+        ),
+        "promotion_contract_evidence_handoff_expected_metric_count_mean": _nested(
+            handoff,
+            "expected_metric_count",
+            "mean",
+        ),
+        "promotion_contract_evidence_handoff_present_metric_count_mean": _nested(
+            handoff,
+            "present_metric_count",
+            "mean",
+        ),
+        "promotion_contract_evidence_handoff_missing_metric_count_mean": _nested(
+            handoff,
+            "missing_metric_count",
+            "mean",
+        ),
+        "promotion_contract_evidence_handoff_blocked_group_count_mean": _nested(
+            handoff,
+            "blocked_group_count",
+            "mean",
+        ),
+        "promotion_contract_evidence_handoff_present_metric_rate_mean": _nested(
+            handoff,
+            "present_metric_rate",
+            "mean",
+        ),
+        "promotion_contract_evidence_handoff_missing_metric_rate_mean": _nested(
+            handoff,
+            "missing_metric_rate",
+            "mean",
+        ),
+        "promotion_contract_evidence_handoff_group_count_mean": _nested(
+            handoff,
+            "group_count",
+            "mean",
+        ),
+        "promotion_contract_evidence_handoff_promoted_group_count_mean": _nested(
+            handoff,
+            "promoted_group_count",
+            "mean",
+        ),
+        "promotion_contract_evidence_handoff_promoted_group_rate_mean": _nested(
+            handoff,
+            "promoted_group_rate",
+            "mean",
+        ),
+        "promotion_contract_evidence_handoff_filled_group_counts": dict(
+            _mapping(handoff.get("filled_group_counts"))
+        ),
+        "promotion_contract_evidence_handoff_group_status_counts": {
+            str(group): dict(_mapping(counts))
+            for group, counts in _mapping(handoff.get("group_status_counts")).items()
+        },
+    }
+
+
 def _product_runtime_drift_evidence_flat_metadata(
     evidence: Mapping[str, Any],
     *,
@@ -3636,6 +3888,19 @@ def _counts_from_mapping_keys(values: Sequence[Any] | Any) -> dict[str, int]:
             if text is None:
                 continue
             counts[text] = counts.get(text, 0) + 1
+    return counts
+
+
+def _counts_from_group_statuses(values: Sequence[Any] | Any) -> dict[str, dict[str, int]]:
+    counts: dict[str, dict[str, int]] = {}
+    for value in values:
+        for group, status in _mapping(value).items():
+            group_text = _optional_string(group)
+            status_text = _optional_string(status)
+            if group_text is None or status_text is None:
+                continue
+            group_counts = counts.setdefault(group_text, {})
+            group_counts[status_text] = group_counts.get(status_text, 0) + 1
     return counts
 
 

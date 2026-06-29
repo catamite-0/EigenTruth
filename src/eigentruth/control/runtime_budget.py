@@ -1102,6 +1102,10 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         metadata,
         contract_metadata=contract_metadata,
     )
+    evidence_handoff = _promotion_contract_evidence_handoff_from_metadata(
+        metadata,
+        contract_metadata=contract_metadata,
+    )
     manifest_verification = _mapping(
         _first_present(
             metadata.get("triple_extraction_fixture_matrix_manifest_verification"),
@@ -1160,6 +1164,7 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         or bool(counterfactual)
         or bool(pathway)
         or bool(runtime_drift.get("available"))
+        or bool(evidence_handoff.get("available"))
     )
     pre_generation_manifest_verification = _mapping(
         _first_present(
@@ -1194,6 +1199,7 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         },
         "product_trace_replay": product_trace_replay,
         "product_runtime_drift": runtime_drift,
+        "evidence_handoff": evidence_handoff,
         "pathway_intervention_workflow": {
             "available": bool(pathway),
             "source": _optional_string(
@@ -1705,6 +1711,9 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         product_trace_replay
     )
     runtime_drift_metrics = _promotion_contract_runtime_drift_metric_values(runtime_drift)
+    evidence_handoff_metrics = _promotion_contract_evidence_handoff_metric_values(
+        evidence_handoff
+    )
     return {
         "promotion_contract_available": available,
         "promotion_contract_source": source,
@@ -1959,6 +1968,179 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         ),
         **product_trace_replay_metrics,
         **runtime_drift_metrics,
+        **evidence_handoff_metrics,
+    }
+
+
+def _promotion_contract_evidence_handoff_from_metadata(
+    metadata: Mapping[str, Any],
+    *,
+    contract_metadata: Mapping[str, Any],
+) -> dict[str, Any]:
+    nested = _mapping(metadata.get("promotion_contract_evidence_handoff"))
+
+    def value(key: str) -> Any:
+        return _first_present(
+            nested.get(key),
+            metadata.get(f"promotion_contract_evidence_handoff_{key}"),
+            contract_metadata.get(f"evidence_handoff_{key}"),
+            contract_metadata.get(key),
+        )
+
+    manifest_summary = _mapping(value("manifest_summary"))
+    manifest_metadata = _mapping(value("manifest_metadata"))
+    manifest_verification = _mapping(value("manifest_verification"))
+    group_statuses = _mapping(
+        _first_present(
+            value("group_statuses"),
+            manifest_summary.get("groups"),
+            manifest_summary.get("group_statuses"),
+        )
+    )
+    filled_groups = list(_string_sequence(value("filled_groups")))
+    expected_metric_count = _finite_float(
+        _first_present(value("expected_metric_count"), manifest_summary.get("expected_metric_count"))
+    )
+    present_metric_count = _finite_float(
+        _first_present(value("present_metric_count"), manifest_summary.get("present_metric_count"))
+    )
+    missing_metric_count = _finite_float(
+        _first_present(value("missing_metric_count"), manifest_summary.get("missing_metric_count"))
+    )
+    blocked_group_count = _finite_float(
+        _first_present(value("blocked_group_count"), manifest_summary.get("blocked_group_count"))
+    )
+    group_count = _finite_float(value("group_count"))
+    if group_count is None and group_statuses:
+        group_count = float(len(group_statuses))
+    promoted_group_count = _finite_float(value("promoted_group_count"))
+    if promoted_group_count is None and group_statuses:
+        promoted_group_count = float(
+            sum(
+                1
+                for status in group_statuses.values()
+                if _optional_string(status) == "promote"
+            )
+        )
+    handoff = {
+        "available": False,
+        "manifest": _optional_string(value("manifest")),
+        "contract": _optional_string(value("contract")),
+        "audit": _optional_string(value("audit")),
+        "manifest_verified": _optional_bool(
+            _first_present(value("manifest_verified"), manifest_verification.get("passed"))
+        ),
+        "manifest_verification": manifest_verification,
+        "manifest_summary": manifest_summary,
+        "manifest_metadata": manifest_metadata,
+        "workflow": _optional_string(value("workflow")),
+        "status": _optional_string(
+            _first_present(value("status"), manifest_metadata.get("status"))
+        ),
+        "before_missing_metric_count": _finite_float(
+            _first_present(
+                value("before_missing_metric_count"),
+                manifest_metadata.get("before_missing_metric_count"),
+            )
+        ),
+        "after_missing_metric_count": _finite_float(
+            _first_present(
+                value("after_missing_metric_count"),
+                manifest_metadata.get("after_missing_metric_count"),
+            )
+        ),
+        "resolved_missing_metric_count": _finite_float(
+            _first_present(
+                value("resolved_missing_metric_count"),
+                manifest_metadata.get("resolved_missing_metric_count"),
+            )
+        ),
+        "expected_metric_count": expected_metric_count,
+        "present_metric_count": present_metric_count,
+        "missing_metric_count": missing_metric_count,
+        "blocked_group_count": blocked_group_count,
+        "filled_groups": filled_groups,
+        "group_statuses": {str(key): value for key, value in group_statuses.items()},
+        "group_count": group_count,
+        "promoted_group_count": promoted_group_count,
+        "present_metric_rate": _ratio_or_none(present_metric_count, expected_metric_count),
+        "missing_metric_rate": _ratio_or_none(missing_metric_count, expected_metric_count),
+        "promoted_group_rate": _ratio_or_none(promoted_group_count, group_count),
+    }
+    handoff["available"] = _promotion_contract_evidence_handoff_available(handoff)
+    return handoff
+
+
+def _promotion_contract_evidence_handoff_available(handoff: Mapping[str, Any]) -> bool:
+    for key, item in handoff.items():
+        if key == "available":
+            continue
+        if isinstance(item, Mapping):
+            if bool(item):
+                return True
+        elif isinstance(item, Sequence) and not isinstance(item, (str, bytes, bytearray)):
+            if bool(item):
+                return True
+        elif item is not None:
+            return True
+    return False
+
+
+def _promotion_contract_evidence_handoff_metric_values(
+    handoff: Mapping[str, Any],
+) -> dict[str, Any]:
+    return {
+        "promotion_contract_evidence_handoff_available": _optional_bool(
+            handoff.get("available")
+        ),
+        "promotion_contract_evidence_handoff_manifest": handoff.get("manifest"),
+        "promotion_contract_evidence_handoff_contract": handoff.get("contract"),
+        "promotion_contract_evidence_handoff_audit": handoff.get("audit"),
+        "promotion_contract_evidence_handoff_manifest_verified": handoff.get(
+            "manifest_verified"
+        ),
+        "promotion_contract_evidence_handoff_workflow": handoff.get("workflow"),
+        "promotion_contract_evidence_handoff_status": handoff.get("status"),
+        "promotion_contract_evidence_handoff_before_missing_metric_count": (
+            handoff.get("before_missing_metric_count")
+        ),
+        "promotion_contract_evidence_handoff_after_missing_metric_count": (
+            handoff.get("after_missing_metric_count")
+        ),
+        "promotion_contract_evidence_handoff_resolved_missing_metric_count": (
+            handoff.get("resolved_missing_metric_count")
+        ),
+        "promotion_contract_evidence_handoff_expected_metric_count": handoff.get(
+            "expected_metric_count"
+        ),
+        "promotion_contract_evidence_handoff_present_metric_count": handoff.get(
+            "present_metric_count"
+        ),
+        "promotion_contract_evidence_handoff_missing_metric_count": handoff.get(
+            "missing_metric_count"
+        ),
+        "promotion_contract_evidence_handoff_blocked_group_count": handoff.get(
+            "blocked_group_count"
+        ),
+        "promotion_contract_evidence_handoff_present_metric_rate": handoff.get(
+            "present_metric_rate"
+        ),
+        "promotion_contract_evidence_handoff_missing_metric_rate": handoff.get(
+            "missing_metric_rate"
+        ),
+        "promotion_contract_evidence_handoff_group_count": handoff.get("group_count"),
+        "promotion_contract_evidence_handoff_promoted_group_count": handoff.get(
+            "promoted_group_count"
+        ),
+        "promotion_contract_evidence_handoff_promoted_group_rate": handoff.get(
+            "promoted_group_rate"
+        ),
+        "promotion_contract_evidence_handoff_filled_groups": list(
+            _sequence(handoff.get("filled_groups"))
+        ),
+        "promotion_contract_evidence_handoff_group_statuses": dict(
+            _mapping(handoff.get("group_statuses"))
+        ),
     }
 
 
@@ -2912,6 +3094,14 @@ def _first_present(*values: Any) -> Any:
         if value is not None:
             return value
     return None
+
+
+def _ratio_or_none(numerator: Any, denominator: Any) -> float | None:
+    numerator_value = _finite_float(numerator)
+    denominator_value = _finite_float(denominator)
+    if numerator_value is None or denominator_value is None or denominator_value == 0.0:
+        return None
+    return numerator_value / denominator_value
 
 
 def _mapping(value: Any) -> dict[str, Any]:

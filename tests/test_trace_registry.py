@@ -4151,6 +4151,33 @@ def test_product_runtime_evidence_bundle_exposes_evidence_handoff_manifest(tmp_p
         "triple_audit": "promote",
     }
     assert metadata["promotion_contract_evidence_handoff_manifest_verification"] is None
+    runtime_metrics = product_runtime_metrics({"metadata": metadata})
+    assert runtime_metrics["promotion_contract_evidence_handoff_available"] is True
+    assert runtime_metrics["promotion_contract_evidence_handoff_manifest"] == str(
+        handoff_manifest_path
+    )
+    assert runtime_metrics["promotion_contract_evidence_handoff_present_metric_count"] == (
+        pytest.approx(38.0)
+    )
+    assert runtime_metrics["promotion_contract_evidence_handoff_missing_metric_count"] == (
+        pytest.approx(0.0)
+    )
+    assert runtime_metrics["promotion_contract_evidence_handoff_present_metric_rate"] == (
+        pytest.approx(1.0)
+    )
+    assert runtime_metrics["promotion_contract_evidence_handoff_group_count"] == (
+        pytest.approx(6.0)
+    )
+    assert runtime_metrics["promotion_contract_evidence_handoff_promoted_group_count"] == (
+        pytest.approx(6.0)
+    )
+    assert runtime_metrics["promotion_contract_evidence_handoff_promoted_group_rate"] == (
+        pytest.approx(1.0)
+    )
+    handoff_summary = runtime_metrics["promotion_contract_summary"]["evidence_handoff"]
+    assert handoff_summary["status"] == "promote"
+    assert handoff_summary["manifest_verified"] is None
+    assert handoff_summary["group_statuses"]["promotion"] == "promote"
 
     verified_metadata = bundle.runtime_metadata(
         budget_enabled=True,
@@ -4168,6 +4195,13 @@ def test_product_runtime_evidence_bundle_exposes_evidence_handoff_manifest(tmp_p
         ]
         == 3
     )
+    verified_metrics = product_runtime_metrics({"metadata": verified_metadata})
+    assert verified_metrics[
+        "promotion_contract_evidence_handoff_manifest_verified"
+    ] is True
+    assert verified_metrics["promotion_contract_summary"]["evidence_handoff"][
+        "manifest_verified"
+    ] is True
 
 
 def test_artifact_registry_records_trace_report_and_action_result(tmp_path):
