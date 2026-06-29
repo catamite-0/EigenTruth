@@ -39,6 +39,12 @@ Added GLU-style global-local uncertainty fusion:
 - `eval_score_ensemble.py` now evaluates `product` geometry fusion by default alongside the existing interaction score, and reports it with `fusion_style=global_local_uncertainty`.
 - This maps the GLU direction into EigenTruth's existing score-dump/conformal artifact path without adding a new mandatory dependency or claiming that entropy alone is sufficient. The intended use is to compare single-pass global geometry plus local token uncertainty against verifier, retrieval, selfcheck, and world-model correction signals before promotion.
 
+Added HIVE-style budgeted hidden-evidence selection:
+
+- `HiddenEvidenceCandidate`, `HiddenEvidenceSelectionPolicy`, `HiddenEvidenceSelectionReport`, and `select_hidden_evidence_from_score_dump(...)` turn primary and layer-sweep diagnostic score dumps into sparse evidence-selection reports.
+- Each candidate is rank-normalized within its `source/layer/signal` channel, respects `higher` or `lower` anomaly directions, and is budgeted by total items, record, layer, and score family.
+- `benchmarks/select_hidden_evidence.py` writes the JSON report and can register it locally. This keeps HIVE's "select sparse hidden evidence before conditioning a verifier" idea in EigenTruth's reproducible artifact path without adding a verifier dependency or claiming default routing behavior.
+
 Added trace-level product trajectory audit:
 
 - `TrajectoryHallucinationType`, `TrajectoryAuditIssue`, `TrajectoryAuditReport`, and `audit_product_trace_trajectory(...)` implement a dependency-free five-type trace audit over `ProductTrace` payloads.

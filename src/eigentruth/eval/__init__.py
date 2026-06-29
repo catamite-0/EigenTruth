@@ -30,6 +30,16 @@ from eigentruth.eval.conformal import (
     evaluate_conformal_abstention,
 )
 from eigentruth.eval.escalation import uncertainty_escalation_report
+from eigentruth.eval.hidden_evidence import (
+    DEFAULT_STATEMENT_METADATA_KEYS,
+    HiddenEvidenceCandidate,
+    HiddenEvidenceSelection,
+    HiddenEvidenceSelectionPolicy,
+    HiddenEvidenceSelectionReport,
+    hidden_evidence_candidates_from_score_dump,
+    select_hidden_evidence,
+    select_hidden_evidence_from_score_dump,
+)
 from eigentruth.eval.intrinsic_dimension import (
     IntrinsicDimensionReport,
     intrinsic_dimension_peak_layer,
@@ -98,6 +108,14 @@ __all__ = [
     "youden_j_threshold",
     "deck_taxonomy_report",
     "uncertainty_escalation_report",
+    "DEFAULT_STATEMENT_METADATA_KEYS",
+    "HiddenEvidenceCandidate",
+    "HiddenEvidenceSelection",
+    "HiddenEvidenceSelectionPolicy",
+    "HiddenEvidenceSelectionReport",
+    "hidden_evidence_candidates_from_score_dump",
+    "select_hidden_evidence",
+    "select_hidden_evidence_from_score_dump",
     "IntrinsicDimensionReport",
     "twonn_intrinsic_dimension",
     "intrinsic_dimension_profile",

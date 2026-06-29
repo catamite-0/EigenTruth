@@ -6363,6 +6363,34 @@ near-random: `answer_token_count` AUROC `0.519` with detection `0.110`,
 under the low-overlap direction. Treat this as a redline baseline for future
 verifier/retrieval/selfcheck signals.
 
+## `select_hidden_evidence.py`
+
+Selects a sparse, budgeted evidence report from primary and `sweep_scores`
+diagnostics. This is the local HIVE-style bridge between hidden-state/trajectory
+signals and downstream verifier or world-model adapters: it records which
+record/layer/signal items should be inspected under a fixed budget, but it does
+not execute a verifier or promote a route by itself.
+
+```bash
+python benchmarks/select_hidden_evidence.py \
+  --scores artifacts/qwen05_truthfulqa_l80_scores.json \
+  --signals truth_proj,subspace_resid,nll_answer \
+  --sweep-signals truth_proj,subspace_resid,resid_update_norm \
+  --direction selfcheck_support_rate=lower \
+  --max-items 64 \
+  --max-per-record 4 \
+  --max-per-layer 8 \
+  --json artifacts/qwen05_hidden_evidence_selection.json \
+  --registry artifacts/registry.json \
+  --register-name qwen05-hidden-evidence-selection \
+  --quiet
+```
+
+The report rank-normalizes scores per `source/layer/signal` channel, applies
+`higher` or `lower` anomaly directions, preserves statement metadata when
+available, and writes selected `evidence_ref` values that can be copied into
+`ProductTrace.metadata` or used by later verifier-conditioning experiments.
+
 ## `eval_detectability_taxonomy.py`
 
 Builds a DECK-style consistency x confidence taxonomy from any two saved
