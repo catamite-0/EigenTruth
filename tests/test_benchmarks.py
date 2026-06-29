@@ -11677,6 +11677,109 @@ def _write_pre_generation_probe_comparison_report(
     return report_path
 
 
+def _write_claim_factuality_probe_comparison_report(
+    output_dir: Path,
+    *,
+    status: str = "ready",
+    redline_passed: bool = True,
+    model_count: int = 2,
+    failures: Sequence[Mapping[str, object]] = (),
+) -> Path:
+    from eigentruth.registry import build_artifact_manifest
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    report_path = output_dir / "claim-factuality-probe-comparison.json"
+    manifest_path = output_dir / "artifact-manifest.json"
+    gate_failures = list(failures)
+    if not redline_passed and not gate_failures:
+        gate_failures.append({"gate": "min_redline_auroc_margin", "run": "qwen05"})
+    leaderboard = [
+        {
+            "rank": 1,
+            "name": "qwen05",
+            "effective_model": "Qwen/Qwen2.5-0.5B-Instruct",
+            "record_count": 96,
+            "recommended_layer": -4,
+            "test_label_auroc": 0.84,
+            "test_selective_accuracy": 0.91,
+            "test_selective_coverage": 0.78,
+            "conformal_threshold": 0.62,
+            "redline_best_signal": "answer_negation_flag",
+            "redline_best_auroc": 0.66,
+            "redline_margin": 0.18,
+        },
+        {
+            "rank": 2,
+            "name": "smollm2",
+            "effective_model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "record_count": 92,
+            "recommended_layer": -12,
+            "test_label_auroc": 0.82,
+            "test_selective_accuracy": 0.89,
+            "test_selective_coverage": 0.76,
+            "conformal_threshold": 0.58,
+            "redline_best_signal": "answer_token_count",
+            "redline_best_auroc": 0.64,
+            "redline_margin": 0.14,
+        },
+    ][:model_count]
+    payload = {
+        "schema_version": 1,
+        "workflow": "claim_factuality_probe_workflow_comparison",
+        "status": status,
+        "config": {
+            "min_model_count": 2,
+            "min_record_count": 80,
+            "min_test_label_auroc": 0.70,
+            "min_redline_auroc_margin": 0.05,
+            "require_ready_status": True,
+            "require_manifest_clean": True,
+            "require_conformal": True,
+            "require_redline": True,
+        },
+        "promotion_gate": {
+            "failures": gate_failures,
+            "ready_run_count": model_count,
+            "model_count": model_count,
+            "models": [row["effective_model"] for row in leaderboard],
+            "redline_run_count": model_count if redline_passed else 0,
+            "redline_passed": redline_passed,
+            "best_run": leaderboard[0]["name"] if leaderboard else None,
+        },
+        "runs": [
+            {
+                "name": row["name"],
+                "status": "ready",
+                "effective_model": row["effective_model"],
+                "record_count": row["record_count"],
+                "test_label_auroc": row["test_label_auroc"],
+                "redline_margin": row["redline_margin"],
+            }
+            for row in leaderboard
+        ],
+        "leaderboard": leaderboard,
+        "paths": {
+            "report": str(report_path),
+            "artifact_manifest": str(manifest_path),
+        },
+    }
+    report_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest = build_artifact_manifest(
+        {"claim_factuality_probe_comparison_report": report_path},
+        root=output_dir,
+        metadata={
+            "runner": "compare_claim_factuality_probe_workflows",
+            "workflow": "claim_factuality_probe_workflow_comparison",
+            "status": status,
+            "model_count": model_count,
+            "redline_passed": redline_passed,
+            "best_run": leaderboard[0]["name"] if leaderboard else None,
+        },
+    )
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return report_path
+
+
 def _write_frontier_release_evidence_report(
     output_dir: Path,
     *,
@@ -15407,6 +15510,109 @@ def test_compare_release_candidates_gates_pre_generation_probe_comparison(tmp_pa
     assert blocked["decision"]["pre_generation_probe_comparison_status"] == "blocked"
     assert blocked["decision"]["blocking_reasons"][0]["gate"] == (
         "pre_generation_probe_comparison"
+    )
+
+
+def test_compare_release_candidates_gates_claim_factuality_probe_comparison(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="claim-factuality-readiness",
+        version="0.1",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="claim-factuality-route",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="claim-factuality-route",
+        path=route_manifest,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+    promoted_report = _write_claim_factuality_probe_comparison_report(
+        tmp_path / "claim-factuality-promote",
+    )
+    blocked_report = _write_claim_factuality_probe_comparison_report(
+        tmp_path / "claim-factuality-blocked",
+        redline_passed=False,
+    )
+    ArtifactRegistry.load_json(registry_path).record_report(
+        name="claim-factuality-probe-comparison",
+        path=promoted_report,
+        version="0.1",
+        metadata={"workflow": "claim_factuality_probe_workflow_comparison", "status": "ready"},
+    ).save_json()
+
+    promoted = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        claim_factuality_probe_comparison_path=promoted_report,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+    promoted_from_key = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        claim_factuality_probe_comparison_key="report:claim-factuality-probe-comparison:0.1",
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+    blocked = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        claim_factuality_probe_comparison_path=blocked_report,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+
+    assert promoted["decision"]["status"] == "promote"
+    assert promoted["decision"]["claim_factuality_probe_comparison_status"] == "promote"
+    assert promoted["decision"]["recommended_claim_factuality_probe_comparison_report"] == str(
+        promoted_report
+    )
+    gate = promoted["claim_factuality_probe_comparison_gate"]
+    assert gate["gate"]["passed"] is True
+    assert gate["redline_passed"] is True
+    assert gate["best_run"]["model"] == "Qwen/Qwen2.5-0.5B-Instruct"
+    assert gate["best_run"]["test_selective_accuracy"] == pytest.approx(0.91)
+    candidate = promoted["release_candidate"]["claim_factuality_probe_comparison"]
+    assert candidate["model_count"] == pytest.approx(2)
+    assert candidate["best_run"]["name"] == "qwen05"
+    assert promoted["release_candidate"]["manifests"][
+        "claim_factuality_probe_comparison_manifest"
+    ].endswith("artifact-manifest.json")
+    key_candidate = promoted_from_key["release_candidate"]["claim_factuality_probe_comparison"]
+    assert key_candidate["source"] == "registry"
+    assert key_candidate["record_key"] == "report:claim-factuality-probe-comparison:0.1"
+    assert blocked["decision"]["status"] == "blocked"
+    assert blocked["decision"]["claim_factuality_probe_comparison_status"] == "blocked"
+    assert blocked["decision"]["blocking_reasons"][0]["gate"] == (
+        "claim_factuality_probe_comparison"
     )
 
 
@@ -20136,6 +20342,9 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     pre_generation_probe_comparison_report = _write_pre_generation_probe_comparison_report(
         tmp_path / "pre-generation-probe-comparison",
     )
+    claim_factuality_probe_comparison_report = _write_claim_factuality_probe_comparison_report(
+        tmp_path / "claim-factuality-probe-comparison",
+    )
     ArtifactRegistry.load_json(baseline_registry_path).record_report(
         name="product-trace-replay-workflow",
         path=product_trace_replay_workflow_report,
@@ -20161,6 +20370,11 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         path=pre_generation_probe_comparison_report,
         version="0.1",
         metadata={"workflow": "pre_generation_probe_workflow_comparison", "status": "ready"},
+    ).record_report(
+        name="claim-factuality-probe-comparison",
+        path=claim_factuality_probe_comparison_report,
+        version="0.1",
+        metadata={"workflow": "claim_factuality_probe_workflow_comparison", "status": "ready"},
     ).save_json()
     adapter_family_matrix_path = _write_adapter_family_matrix(
         tmp_path / "adapter-family-matrix.json",
@@ -20215,6 +20429,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         feedback_policy_workflow_key="report:feedback-policy-workflow:0.1",
         world_model_signal_workflow_key="report:world-model-signal-workflow:0.1",
         pre_generation_probe_comparison_key="report:pre-generation-probe-comparison:0.1",
+        claim_factuality_probe_comparison_key="report:claim-factuality-probe-comparison:0.1",
         feedback_policy_min_matched_feedback_count=20,
         feedback_policy_min_safety_coverage=0.70,
         feedback_policy_max_unknown_safety_issue_rate=0.20,
@@ -20259,6 +20474,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     manifest = json.loads((tmp_path / "release-manifest.json").read_text(encoding="utf-8"))
     assert sorted(manifest["artifacts"]) == [
         "adapter_family_matrix_report",
+        "claim_factuality_probe_comparison_manifest",
         "feedback_policy_workflow_manifest",
         "performance_manifest",
         "pre_generation_probe_comparison_manifest",
@@ -20307,6 +20523,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["release_feedback_policy_workflow_status"] == "promote"
     assert manifest["metadata"]["release_world_model_signal_workflow_status"] == "promote"
     assert manifest["metadata"]["release_pre_generation_probe_comparison_status"] == "promote"
+    assert manifest["metadata"]["release_claim_factuality_probe_comparison_status"] == "promote"
     assert manifest["metadata"]["release_adapter_family_status"] == "promote"
     assert manifest["metadata"]["release_triple_extraction_fixture_matrix_status"] == "promote"
     assert manifest["metadata"]["release_required_route_baseline_status"] == "promote"
@@ -20546,6 +20763,22 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["pre_generation_probe_comparison_redline_passed"] is True
     assert manifest["metadata"]["pre_generation_probe_comparison_best_run"] == "qwen05"
     assert manifest["metadata"]["pre_generation_probe_comparison_best_redline_margin"] == pytest.approx(0.09)
+    assert manifest["metadata"]["claim_factuality_probe_comparison_report"] == str(
+        claim_factuality_probe_comparison_report
+    )
+    assert manifest["metadata"]["claim_factuality_probe_comparison_source"] == "registry"
+    assert manifest["metadata"]["claim_factuality_probe_comparison_record"] == (
+        "report:claim-factuality-probe-comparison:0.1"
+    )
+    assert manifest["metadata"]["claim_factuality_probe_comparison_model_count"] == pytest.approx(2)
+    assert manifest["metadata"]["claim_factuality_probe_comparison_redline_passed"] is True
+    assert manifest["metadata"]["claim_factuality_probe_comparison_best_run"] == "qwen05"
+    assert manifest["metadata"]["claim_factuality_probe_comparison_best_test_selective_accuracy"] == (
+        pytest.approx(0.91)
+    )
+    assert manifest["metadata"]["claim_factuality_probe_comparison_best_redline_margin"] == (
+        pytest.approx(0.18)
+    )
     assert manifest["metadata"]["adapter_family_matrix_report"] == str(adapter_family_matrix_path)
     assert manifest["metadata"]["adapter_family_profile"] == "strict_audit"
     assert manifest["metadata"]["adapter_family_profile_requires_state_transition_world_model"] is True
@@ -20640,6 +20873,9 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert payload["config"]["pre_generation_probe_comparison_key"] == (
         "report:pre-generation-probe-comparison:0.1"
     )
+    assert payload["config"]["claim_factuality_probe_comparison_key"] == (
+        "report:claim-factuality-probe-comparison:0.1"
+    )
     assert payload["config"]["feedback_policy_min_matched_feedback_count"] == 20
     assert payload["config"]["feedback_policy_min_safety_coverage"] == pytest.approx(0.70)
     assert payload["config"]["feedback_policy_max_unknown_safety_issue_rate"] == pytest.approx(0.20)
@@ -20704,6 +20940,12 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     )
     assert payload["release_candidate_comparison"]["config"]["pre_generation_probe_comparison_key"] == (
         "report:pre-generation-probe-comparison:0.1"
+    )
+    assert payload["release_candidate_comparison"]["config"]["claim_factuality_probe_comparison"] == str(
+        claim_factuality_probe_comparison_report
+    )
+    assert payload["release_candidate_comparison"]["config"]["claim_factuality_probe_comparison_key"] == (
+        "report:claim-factuality-probe-comparison:0.1"
     )
     assert payload["release_candidate_comparison"]["config"]["selector_replay_report"] == str(
         selector_replay_report
@@ -20923,6 +21165,22 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["pre_generation_probe_comparison_redline_passed"] is True
     assert record.metadata["pre_generation_probe_comparison_best_run"] == "qwen05"
     assert record.metadata["pre_generation_probe_comparison_best_redline_margin"] == pytest.approx(0.09)
+    assert record.metadata["claim_factuality_probe_comparison_report"] == str(
+        claim_factuality_probe_comparison_report
+    )
+    assert record.metadata["claim_factuality_probe_comparison_source"] == "registry"
+    assert record.metadata["claim_factuality_probe_comparison_record"] == (
+        "report:claim-factuality-probe-comparison:0.1"
+    )
+    assert record.metadata["claim_factuality_probe_comparison_model_count"] == pytest.approx(2)
+    assert record.metadata["claim_factuality_probe_comparison_redline_passed"] is True
+    assert record.metadata["claim_factuality_probe_comparison_best_run"] == "qwen05"
+    assert record.metadata["claim_factuality_probe_comparison_best_test_selective_accuracy"] == (
+        pytest.approx(0.91)
+    )
+    assert record.metadata["claim_factuality_probe_comparison_best_redline_margin"] == (
+        pytest.approx(0.18)
+    )
     assert record.metadata["release_adapter_family_status"] == "promote"
     assert record.metadata["release_required_route_baseline_status"] == "promote"
     assert record.metadata["adapter_family_matrix_report"] == str(adapter_family_matrix_path)

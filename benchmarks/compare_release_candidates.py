@@ -263,6 +263,9 @@ def compare_release_candidates(
     pre_generation_probe_comparison_path: str | Path | None = None,
     pre_generation_probe_comparison_registry_path: str | Path | None = None,
     pre_generation_probe_comparison_key: str | None = None,
+    claim_factuality_probe_comparison_path: str | Path | None = None,
+    claim_factuality_probe_comparison_registry_path: str | Path | None = None,
+    claim_factuality_probe_comparison_key: str | None = None,
     frontier_release_evidence_path: str | Path | None = None,
     frontier_release_evidence_registry_path: str | Path | None = None,
     frontier_release_evidence_key: str | None = None,
@@ -1219,6 +1222,23 @@ def compare_release_candidates(
         manifest_fingerprint_workers=manifest_fingerprint_workers,
         verification_context=verification_context,
     )
+    claim_factuality_probe_comparison_source = _resolve_claim_factuality_probe_comparison_source(
+        claim_factuality_probe_comparison_path=claim_factuality_probe_comparison_path,
+        claim_factuality_probe_comparison_registry_path=(
+            claim_factuality_probe_comparison_registry_path
+            if claim_factuality_probe_comparison_key is not None
+            else None
+        ),
+        claim_factuality_probe_comparison_key=claim_factuality_probe_comparison_key,
+        default_registry_path=readiness_registry_path,
+    )
+    claim_factuality_probe_comparison = _claim_factuality_probe_comparison_gate(
+        claim_factuality_probe_comparison_source=claim_factuality_probe_comparison_source,
+        recursive=recursive,
+        allow_unverified=allow_unverified,
+        manifest_fingerprint_workers=manifest_fingerprint_workers,
+        verification_context=verification_context,
+    )
     frontier_release_evidence_source = _resolve_frontier_release_evidence_source(
         frontier_release_evidence_path=frontier_release_evidence_path,
         frontier_release_evidence_registry_path=(
@@ -1302,6 +1322,7 @@ def compare_release_candidates(
         release_efficiency,
         external_evidence_baseline_comparison,
         pre_generation_probe_comparison,
+        claim_factuality_probe_comparison,
         frontier_release_evidence,
         world_model_signal_workflow,
         mechanism_handoff_evidence_bundle,
@@ -1324,6 +1345,7 @@ def compare_release_candidates(
             release_efficiency,
             external_evidence_baseline_comparison,
             pre_generation_probe_comparison,
+            claim_factuality_probe_comparison,
             frontier_release_evidence,
             world_model_signal_workflow,
             mechanism_handoff_evidence_bundle,
@@ -1418,6 +1440,17 @@ def compare_release_candidates(
                 else pre_generation_probe_comparison_source.get("registry")
             ),
             "pre_generation_probe_comparison_key": pre_generation_probe_comparison_key,
+            "claim_factuality_probe_comparison": (
+                None
+                if claim_factuality_probe_comparison_source is None
+                else str(claim_factuality_probe_comparison_source["path"])
+            ),
+            "claim_factuality_probe_comparison_registry": (
+                None
+                if claim_factuality_probe_comparison_source is None
+                else claim_factuality_probe_comparison_source.get("registry")
+            ),
+            "claim_factuality_probe_comparison_key": claim_factuality_probe_comparison_key,
             "frontier_release_evidence": (
                 None
                 if frontier_release_evidence_source is None
@@ -1719,6 +1752,7 @@ def compare_release_candidates(
         "release_efficiency_gate": release_efficiency,
         "external_evidence_baseline_comparison_gate": external_evidence_baseline_comparison,
         "pre_generation_probe_comparison_gate": pre_generation_probe_comparison,
+        "claim_factuality_probe_comparison_gate": claim_factuality_probe_comparison,
         "frontier_release_evidence_gate": frontier_release_evidence,
         "world_model_signal_workflow_gate": world_model_signal_workflow,
         "mechanism_handoff_evidence_bundle_gate": mechanism_handoff_evidence_bundle,
@@ -1980,6 +2014,7 @@ def _decision(
     release_efficiency: Mapping[str, Any] | None = None,
     external_evidence_baseline_comparison: Mapping[str, Any] | None = None,
     pre_generation_probe_comparison: Mapping[str, Any] | None = None,
+    claim_factuality_probe_comparison: Mapping[str, Any] | None = None,
     frontier_release_evidence: Mapping[str, Any] | None = None,
     world_model_signal_workflow: Mapping[str, Any] | None = None,
     mechanism_handoff_evidence_bundle: Mapping[str, Any] | None = None,
@@ -2057,6 +2092,16 @@ def _decision(
         None
         if pre_generation_probe_comparison is None
         else pre_generation_probe_comparison.get("status")
+    )
+    claim_factuality_probe_comparison_gate = _mapping(
+        None
+        if claim_factuality_probe_comparison is None
+        else claim_factuality_probe_comparison.get("gate")
+    )
+    claim_factuality_probe_comparison_status = (
+        None
+        if claim_factuality_probe_comparison is None
+        else claim_factuality_probe_comparison.get("status")
     )
     frontier_release_evidence_gate = _mapping(
         None if frontier_release_evidence is None else frontier_release_evidence.get("gate")
@@ -2215,6 +2260,15 @@ def _decision(
             "reasons": list(pre_generation_probe_comparison_gate.get("blocking_reasons", ())),
         })
     if (
+        claim_factuality_probe_comparison is not None
+        and claim_factuality_probe_comparison_gate.get("passed") is not True
+    ):
+        blocking_reasons.append({
+            "gate": "claim_factuality_probe_comparison",
+            "status": claim_factuality_probe_comparison_status,
+            "reasons": list(claim_factuality_probe_comparison_gate.get("blocking_reasons", ())),
+        })
+    if (
         frontier_release_evidence is not None
         and frontier_release_evidence_gate.get("passed") is not True
     ):
@@ -2303,6 +2357,7 @@ def _decision(
         "release_efficiency_status": release_efficiency_status,
         "external_evidence_baseline_comparison_status": external_evidence_baseline_comparison_status,
         "pre_generation_probe_comparison_status": pre_generation_probe_comparison_status,
+        "claim_factuality_probe_comparison_status": claim_factuality_probe_comparison_status,
         "frontier_release_evidence_status": frontier_release_evidence_status,
         "world_model_signal_workflow_status": world_model_signal_workflow_status,
         "mechanism_handoff_evidence_bundle_status": mechanism_handoff_evidence_bundle_status,
@@ -2376,6 +2431,14 @@ def _decision(
                 or pre_generation_probe_comparison_gate.get("passed") is not True
             )
             else pre_generation_probe_comparison.get("report_path")
+        ),
+        "recommended_claim_factuality_probe_comparison_report": (
+            None
+            if (
+                claim_factuality_probe_comparison is None
+                or claim_factuality_probe_comparison_gate.get("passed") is not True
+            )
+            else claim_factuality_probe_comparison.get("report_path")
         ),
         "recommended_frontier_release_evidence_report": (
             None
@@ -5093,6 +5156,181 @@ def _resolve_pre_generation_probe_comparison_source(
     }
 
 
+def _claim_factuality_probe_comparison_gate(
+    *,
+    claim_factuality_probe_comparison_source: Mapping[str, Any] | None,
+    recursive: bool,
+    allow_unverified: bool,
+    manifest_fingerprint_workers: int,
+    verification_context: ArtifactVerificationContext,
+) -> dict[str, Any] | None:
+    if claim_factuality_probe_comparison_source is None:
+        return None
+    report_path = Path(claim_factuality_probe_comparison_source["path"])
+    report, report_error = verification_context.load_json_object(report_path)
+    manifest_path = _claim_factuality_probe_comparison_manifest_path(
+        report,
+        report_path=report_path,
+    )
+    verification = _verify_artifact_manifest(
+        manifest_path,
+        recursive=recursive,
+        max_workers=manifest_fingerprint_workers,
+        artifact_name="claim_factuality_probe_comparison_manifest",
+        verification_context=verification_context,
+    )
+    promotion_gate = _mapping(report.get("promotion_gate"))
+    leaderboard = tuple(
+        _mapping(item)
+        for item in report.get("leaderboard") or ()
+        if isinstance(item, Mapping)
+    )
+    best_run = leaderboard[0] if leaderboard else {}
+    gate = _claim_factuality_probe_comparison_report_gate(
+        report=report,
+        report_error=report_error,
+        manifest_path=manifest_path,
+        verification=verification,
+        promotion_gate=promotion_gate,
+        leaderboard=leaderboard,
+        allow_unverified=allow_unverified,
+    )
+    return {
+        "schema_version": 1,
+        "status": "promote" if gate["passed"] else "blocked",
+        "report_path": str(report_path),
+        "manifest_path": None if manifest_path is None else str(manifest_path),
+        "source": claim_factuality_probe_comparison_source.get("source"),
+        "registry": claim_factuality_probe_comparison_source.get("registry"),
+        "record_key": claim_factuality_probe_comparison_source.get("record_key"),
+        "record": claim_factuality_probe_comparison_source.get("record"),
+        "workflow": report.get("workflow"),
+        "report_status": report.get("status"),
+        "run_count": sum(1 for run in report.get("runs") or () if isinstance(run, Mapping)),
+        "model_count": _float_or_none(promotion_gate.get("model_count")),
+        "models": tuple(promotion_gate.get("models") or ()),
+        "redline_passed": promotion_gate.get("redline_passed"),
+        "redline_run_count": _float_or_none(promotion_gate.get("redline_run_count")),
+        "best_run": {
+            "name": best_run.get("name"),
+            "model": best_run.get("effective_model") or best_run.get("model"),
+            "record_count": _float_or_none(best_run.get("record_count")),
+            "recommended_layer": best_run.get("recommended_layer"),
+            "test_label_auroc": _float_or_none(best_run.get("test_label_auroc")),
+            "test_selective_accuracy": _float_or_none(best_run.get("test_selective_accuracy")),
+            "test_selective_coverage": _float_or_none(best_run.get("test_selective_coverage")),
+            "conformal_threshold": _float_or_none(best_run.get("conformal_threshold")),
+            "redline_best_signal": best_run.get("redline_best_signal"),
+            "redline_best_auroc": _float_or_none(best_run.get("redline_best_auroc")),
+            "redline_margin": _float_or_none(best_run.get("redline_margin")),
+        },
+        "blocking_reasons": tuple(gate.get("blocking_reasons", ())),
+        "verification": verification,
+        "gate": gate,
+    }
+
+
+def _claim_factuality_probe_comparison_report_gate(
+    *,
+    report: Mapping[str, Any],
+    report_error: str | None,
+    manifest_path: Path | None,
+    verification: Mapping[str, Any],
+    promotion_gate: Mapping[str, Any],
+    leaderboard: Sequence[Mapping[str, Any]],
+    allow_unverified: bool,
+) -> dict[str, Any]:
+    failures = []
+    if report_error is not None:
+        failures.append(f"claim factuality probe comparison report could not be loaded: {report_error}")
+    if manifest_path is None:
+        failures.append("claim factuality probe comparison artifact manifest is missing")
+    if not bool(verification.get("passed", False)) and not allow_unverified:
+        failures.append("claim factuality probe comparison manifest verification failed")
+    if report.get("workflow") != "claim_factuality_probe_workflow_comparison":
+        failures.append(
+            "claim factuality probe comparison workflow is "
+            f"{report.get('workflow')!r}, expected 'claim_factuality_probe_workflow_comparison'"
+        )
+    if report.get("status") != "ready":
+        failures.append(
+            f"claim factuality probe comparison status is {report.get('status')!r}, expected 'ready'"
+        )
+    if not promotion_gate:
+        failures.append("claim factuality probe comparison promotion_gate is missing")
+    else:
+        gate_failures = tuple(promotion_gate.get("failures", ()))
+        if gate_failures:
+            failures.append(
+                "claim factuality probe comparison promotion gate did not pass"
+                + _format_gate_reasons({"blocking_reasons": gate_failures})
+            )
+        model_count = _float_or_none(promotion_gate.get("model_count"))
+        if model_count is None or model_count < 2:
+            failures.append("claim factuality probe comparison model_count is below 2")
+        redline_run_count = _float_or_none(promotion_gate.get("redline_run_count"))
+        if redline_run_count is None or redline_run_count < 1:
+            failures.append("claim factuality probe comparison redline evidence is missing")
+        if promotion_gate.get("redline_passed") is not True:
+            failures.append("claim factuality probe comparison redline gate did not pass")
+    if not leaderboard:
+        failures.append("claim factuality probe comparison leaderboard is missing")
+    return {
+        "passed": not failures,
+        "blocking_reasons": failures,
+    }
+
+
+def _claim_factuality_probe_comparison_manifest_path(
+    report: Mapping[str, Any],
+    *,
+    report_path: Path,
+) -> Path | None:
+    raw_path = _nested(report, "paths", "artifact_manifest")
+    if raw_path is None:
+        return None
+    return _resolve_path(raw_path, base_path=report_path)
+
+
+def _resolve_claim_factuality_probe_comparison_source(
+    *,
+    claim_factuality_probe_comparison_path: str | Path | None,
+    claim_factuality_probe_comparison_registry_path: str | Path | None,
+    claim_factuality_probe_comparison_key: str | None,
+    default_registry_path: str | Path,
+) -> dict[str, Any] | None:
+    if claim_factuality_probe_comparison_path is not None:
+        if claim_factuality_probe_comparison_key is not None:
+            raise ValueError(
+                "claim_factuality_probe_comparison_path is mutually exclusive with "
+                "claim_factuality_probe_comparison_key."
+            )
+        return {"source": "file", "path": Path(claim_factuality_probe_comparison_path)}
+    if claim_factuality_probe_comparison_key is None:
+        if claim_factuality_probe_comparison_registry_path is not None:
+            raise ValueError(
+                "claim_factuality_probe_comparison_registry_path requires "
+                "claim_factuality_probe_comparison_key."
+            )
+        return None
+    registry_path = Path(
+        default_registry_path
+        if claim_factuality_probe_comparison_registry_path is None
+        else claim_factuality_probe_comparison_registry_path
+    )
+    registry = ArtifactRegistry.load_json(registry_path)
+    record = registry.get(str(claim_factuality_probe_comparison_key))
+    if record.artifact_type != "report":
+        raise ValueError(f"registry record {record.key()!r} is not a report.")
+    return {
+        "source": "registry",
+        "registry": str(registry_path),
+        "record_key": record.key(),
+        "record": record.to_dict(),
+        "path": _resolve_registry_record_path(registry_path, record),
+    }
+
+
 def _frontier_release_evidence_gate(
     *,
     frontier_release_evidence_source: Mapping[str, Any] | None,
@@ -7092,6 +7330,7 @@ def _candidate_with_gates(
     release_efficiency: Mapping[str, Any] | None,
     external_evidence_baseline_comparison: Mapping[str, Any] | None,
     pre_generation_probe_comparison: Mapping[str, Any] | None,
+    claim_factuality_probe_comparison: Mapping[str, Any] | None,
     frontier_release_evidence: Mapping[str, Any] | None,
     world_model_signal_workflow: Mapping[str, Any] | None,
     mechanism_handoff_evidence_bundle: Mapping[str, Any] | None,
@@ -7345,6 +7584,28 @@ def _candidate_with_gates(
         }
         manifests["pre_generation_probe_comparison_manifest"] = (
             pre_generation_probe_comparison.get("manifest_path")
+        )
+    if claim_factuality_probe_comparison is not None:
+        best_run = _mapping(claim_factuality_probe_comparison.get("best_run"))
+        payload["claim_factuality_probe_comparison"] = {
+            "report_path": claim_factuality_probe_comparison.get("report_path"),
+            "manifest_path": claim_factuality_probe_comparison.get("manifest_path"),
+            "source": claim_factuality_probe_comparison.get("source"),
+            "registry": claim_factuality_probe_comparison.get("registry"),
+            "record_key": claim_factuality_probe_comparison.get("record_key"),
+            "workflow": claim_factuality_probe_comparison.get("workflow"),
+            "status": claim_factuality_probe_comparison.get("report_status"),
+            "model_count": claim_factuality_probe_comparison.get("model_count"),
+            "run_count": claim_factuality_probe_comparison.get("run_count"),
+            "redline_passed": claim_factuality_probe_comparison.get("redline_passed"),
+            "redline_run_count": claim_factuality_probe_comparison.get("redline_run_count"),
+            "best_run": best_run,
+            "blocking_reasons": tuple(
+                claim_factuality_probe_comparison.get("blocking_reasons", ())
+            ),
+        }
+        manifests["claim_factuality_probe_comparison_manifest"] = (
+            claim_factuality_probe_comparison.get("manifest_path")
         )
     if frontier_release_evidence is not None:
         payload["frontier_release_evidence"] = {
@@ -7859,6 +8120,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         pre_generation_probe_comparison_path=args.pre_generation_probe_comparison,
         pre_generation_probe_comparison_registry_path=args.pre_generation_probe_comparison_registry,
         pre_generation_probe_comparison_key=args.pre_generation_probe_comparison_key,
+        claim_factuality_probe_comparison_path=args.claim_factuality_probe_comparison,
+        claim_factuality_probe_comparison_registry_path=(
+            args.claim_factuality_probe_comparison_registry
+        ),
+        claim_factuality_probe_comparison_key=args.claim_factuality_probe_comparison_key,
         frontier_release_evidence_path=args.frontier_release_evidence,
         frontier_release_evidence_registry_path=args.frontier_release_evidence_registry,
         frontier_release_evidence_key=args.frontier_release_evidence_key,
@@ -8052,6 +8318,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         f"release_efficiency={decision.get('recommended_release_efficiency_profile')} "
         f"external_evidence={decision.get('external_evidence_baseline_comparison_status')} "
         f"pre_generation_probe={decision.get('pre_generation_probe_comparison_status')} "
+        f"claim_factuality_probe={decision.get('claim_factuality_probe_comparison_status')} "
         f"frontier_release_evidence={decision.get('frontier_release_evidence_status')} "
         f"world_model_signal={decision.get('world_model_signal_workflow_status')} "
         f"pathway_intervention={decision.get('pathway_intervention_workflow_status')} "
@@ -8143,6 +8410,16 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "--pre-generation-probe-comparison-key; defaults to --readiness-registry")
     parser.add_argument("--pre-generation-probe-comparison-key", default=None,
                         help="optional report:<name>:<version> registry key for a pre-generation "
+                             "probe workflow comparison")
+    parser.add_argument("--claim-factuality-probe-comparison", default=None,
+                        help="optional compare_claim_factuality_probe_workflows.py report that must "
+                             "pass multi-model, conformal, and text-redline release gates")
+    parser.add_argument("--claim-factuality-probe-comparison-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for "
+                             "--claim-factuality-probe-comparison-key; defaults to "
+                             "--readiness-registry")
+    parser.add_argument("--claim-factuality-probe-comparison-key", default=None,
+                        help="optional report:<name>:<version> registry key for a claim factuality "
                              "probe workflow comparison")
     parser.add_argument("--frontier-release-evidence", default=None,
                         help="optional frontier release-evidence report that must promote and verify")
