@@ -129,6 +129,29 @@ def test_product_promotion_evidence_handoff_export_fills_explicit_sources():
     assert contract["metadata"]["triple_slot_coverage_rate"] == 1.0
 
 
+def test_product_promotion_evidence_handoff_rolls_up_covered_fact_route_summary():
+    result = enrich_product_promotion_contract_evidence(
+        {
+            "workflow": "product_promotion_contract",
+            "source_status": "promote",
+            "model_id": "tiny",
+        },
+        covered_fact_property_metrics=_covered_fact_route_summary(),
+    )
+    payload = result.to_dict()
+    contract = payload["contract"]
+    groups = {group["group"]: group for group in payload["after_audit"]["groups"]}
+    rollup = contract["metadata"]["recommended_route_covered_fact_property_metrics"]
+
+    assert groups["covered_fact_property"]["status"] == "promote"
+    assert rollup["property_metric_count"] == 2
+    assert rollup["min_records"] == 4
+    assert rollup["min_source_documents"] == 2
+    assert rollup["min_decision_accuracy"] == 1.0
+    assert rollup["max_false_supported_rate"] == 0.0
+    assert rollup["min_false_refuted_rate"] == 1.0
+
+
 def test_product_promotion_evidence_handoff_cli_helper_writes_and_registers(tmp_path):
     contract = tmp_path / "contract.json"
     pre_generation = tmp_path / "pre-generation-comparison.json"
@@ -341,4 +364,33 @@ def _covered_fact_property_rollup():
         "min_decision_accuracy": 1.0,
         "max_false_supported_rate": 0.0,
         "min_false_refuted_rate": 1.0,
+    }
+
+
+def _covered_fact_route_summary():
+    return {
+        "workflow": "source_family_structured_qa_route_workflow",
+        "status": "promote",
+        "fact_group_metrics": {
+            "wikidata:reference:p31": {
+                "n_records": 8,
+                "n_source_documents": 0,
+                "decision_accuracy": 1.0,
+                "false_supported_rate": 0.0,
+                "false_refuted_rate": 1.0,
+            },
+            "worldbank:official_statistics:sp_pop_totl": {
+                "n_records": 4,
+                "n_source_documents": 0,
+                "decision_accuracy": 1.0,
+                "false_supported_rate": 0.0,
+                "false_refuted_rate": 1.0,
+            },
+        },
+        "score_dump_summary": {
+            "by_fact_group": {
+                "wikidata:reference:p31": {"n_source_documents": 4},
+                "worldbank:official_statistics:sp_pop_totl": {"n_source_documents": 2},
+            }
+        },
     }

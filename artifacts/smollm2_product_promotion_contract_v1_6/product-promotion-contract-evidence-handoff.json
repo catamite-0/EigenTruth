@@ -146,6 +146,14 @@
     "recommended_product_runtime_drift_report": "artifacts/smollm2_product_runtime_drift_v1_6/product-runtime-drift.json",
     "recommended_readiness_record": "benchmark_manifest:smollm2-l20-readiness-inside-trigger-budget-derived:0.8",
     "recommended_route": "structured_qa",
+    "recommended_route_covered_fact_property_metrics": {
+      "max_false_supported_rate": 0.0,
+      "min_decision_accuracy": 1.0,
+      "min_false_refuted_rate": 1.0,
+      "min_records": 4.0,
+      "min_source_documents": 2.0,
+      "property_metric_count": 9
+    },
     "recommended_route_record": "benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4",
     "recommended_selector_replay_candidate": "default",
     "required_route_baseline_manifests": [

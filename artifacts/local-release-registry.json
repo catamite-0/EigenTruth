@@ -7228,6 +7228,51 @@
       "name": "smollm2-product-promotion-contract-v1-6-evidence-handoff-audit",
       "path": "artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract-evidence-handoff-audit.json",
       "version": "0.3"
+    },
+    {
+      "artifact_type": "product_promotion_contract",
+      "metadata": {
+        "after_missing_metric_count": 3,
+        "before_missing_metric_count": 37,
+        "counterfactual_audit": "structured_qa_answer_mismatch",
+        "covered_fact_property_evidence": "source_family_structured_qa_route_summary",
+        "evidence_handoff_audit": "artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract-evidence-handoff-audit.json",
+        "filled_groups": [
+          "promotion",
+          "pre_generation",
+          "counterfactual",
+          "action_gate",
+          "triple_audit",
+          "covered_fact_property"
+        ],
+        "resolved_missing_metric_count": 34,
+        "scope": "frontier_runtime_drift",
+        "source_contract": "artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract.json",
+        "workflow": "product_promotion_evidence_handoff_export"
+      },
+      "name": "smollm2-product-promotion-contract-v1-6-evidence-handoff",
+      "path": "artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract-evidence-handoff.json",
+      "version": "0.4"
+    },
+    {
+      "artifact_type": "product_promotion_evidence_audit",
+      "metadata": {
+        "blocked_group_count": 1,
+        "counterfactual_audit": "structured_qa_answer_mismatch",
+        "covered_fact_property_evidence": "source_family_structured_qa_route_summary",
+        "enriched_contract": "artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract-evidence-handoff.json",
+        "missing_metric_count": 3,
+        "recommended_action_ids": [
+          "add_trace_level_triple_audit"
+        ],
+        "scope": "frontier_runtime_drift",
+        "source_contract": "artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract.json",
+        "status": "blocked",
+        "workflow": "product_promotion_evidence_handoff_audit"
+      },
+      "name": "smollm2-product-promotion-contract-v1-6-evidence-handoff-audit",
+      "path": "artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract-evidence-handoff-audit.json",
+      "version": "0.4"
     }
   ],
   "schema_version": 1

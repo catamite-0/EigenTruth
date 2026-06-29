@@ -316,70 +316,87 @@
           "evidence_key": "covered_fact_recommended_route_property_metric_count",
           "group": "covered_fact_property",
           "metric": "promotion_contract.covered_fact_properties.recommended_route_property_metrics.property_metric_count.mean",
-          "present": false,
-          "source_path": [],
-          "status": "missing",
-          "value": null
+          "present": true,
+          "source_path": [
+            "metadata",
+            "recommended_route_covered_fact_property_metrics",
+            "property_metric_count"
+          ],
+          "status": "present",
+          "value": 9
         },
         {
           "evidence_key": "covered_fact_recommended_route_min_records",
           "group": "covered_fact_property",
           "metric": "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_records.mean",
-          "present": false,
-          "source_path": [],
-          "status": "missing",
-          "value": null
+          "present": true,
+          "source_path": [
+            "metadata",
+            "recommended_route_covered_fact_property_metrics",
+            "min_records"
+          ],
+          "status": "present",
+          "value": 4.0
         },
         {
           "evidence_key": "covered_fact_recommended_route_min_source_documents",
           "group": "covered_fact_property",
           "metric": "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_source_documents.mean",
-          "present": false,
-          "source_path": [],
-          "status": "missing",
-          "value": null
+          "present": true,
+          "source_path": [
+            "metadata",
+            "recommended_route_covered_fact_property_metrics",
+            "min_source_documents"
+          ],
+          "status": "present",
+          "value": 2.0
         },
         {
           "evidence_key": "covered_fact_recommended_route_min_decision_accuracy",
           "group": "covered_fact_property",
           "metric": "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_decision_accuracy.mean",
-          "present": false,
-          "source_path": [],
-          "status": "missing",
-          "value": null
+          "present": true,
+          "source_path": [
+            "metadata",
+            "recommended_route_covered_fact_property_metrics",
+            "min_decision_accuracy"
+          ],
+          "status": "present",
+          "value": 1.0
         },
         {
           "evidence_key": "covered_fact_recommended_route_max_false_supported_rate",
           "group": "covered_fact_property",
           "metric": "promotion_contract.covered_fact_properties.recommended_route_property_metrics.max_false_supported_rate.mean",
-          "present": false,
-          "source_path": [],
-          "status": "missing",
-          "value": null
+          "present": true,
+          "source_path": [
+            "metadata",
+            "recommended_route_covered_fact_property_metrics",
+            "max_false_supported_rate"
+          ],
+          "status": "present",
+          "value": 0.0
         },
         {
           "evidence_key": "covered_fact_recommended_route_min_false_refuted_rate",
           "group": "covered_fact_property",
           "metric": "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_false_refuted_rate.mean",
-          "present": false,
-          "source_path": [],
-          "status": "missing",
-          "value": null
+          "present": true,
+          "source_path": [
+            "metadata",
+            "recommended_route_covered_fact_property_metrics",
+            "min_false_refuted_rate"
+          ],
+          "status": "present",
+          "value": 1.0
         }
       ],
-      "missing_metric_count": 6,
-      "missing_metrics": [
-        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.property_metric_count.mean",
-        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_records.mean",
-        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_source_documents.mean",
-        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_decision_accuracy.mean",
-        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.max_false_supported_rate.mean",
-        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_false_refuted_rate.mean"
-      ],
-      "present_metric_count": 0,
+      "missing_metric_count": 0,
+      "missing_metrics": [],
+      "present_metric_count": 6,
       "recommended_action_id": "refresh_covered_fact_property_routes",
       "required": true,
-      "status": "blocked"
+      "status": "promote"
     },
     {
       "expected_metric_count": 10,
@@ -517,24 +534,18 @@
   ],
   "metadata": {
     "counterfactual_audit": "structured_qa_answer_mismatch",
+    "covered_fact_property_evidence": "source_family_structured_qa_route_summary",
     "scope": "frontier_runtime_drift",
     "source_contract": "artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract.json"
   },
   "missing_metrics": [
     "triple_coverage.audit_claim_coverage_rate",
     "triple_coverage.audit_pass_rate",
-    "triple_coverage.slot_coverage_rate",
-    "promotion_contract.covered_fact_properties.recommended_route_property_metrics.property_metric_count.mean",
-    "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_records.mean",
-    "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_source_documents.mean",
-    "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_decision_accuracy.mean",
-    "promotion_contract.covered_fact_properties.recommended_route_property_metrics.max_false_supported_rate.mean",
-    "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_false_refuted_rate.mean"
+    "triple_coverage.slot_coverage_rate"
   ],
   "model_id": "HuggingFaceTB/SmolLM2-135M-Instruct",
   "recommended_action_ids": [
-    "add_trace_level_triple_audit",
-    "refresh_covered_fact_property_routes"
+    "add_trace_level_triple_audit"
   ],
   "required_groups": [
     "promotion",
@@ -549,22 +560,21 @@
   "source_workflow": "release_candidate_comparison",
   "status": "blocked",
   "summary": {
-    "blocked_group_count": 2,
+    "blocked_group_count": 1,
     "expected_metric_count": 38,
     "group_count": 6,
     "groups": {
       "action_gate": "promote",
       "counterfactual": "promote",
-      "covered_fact_property": "blocked",
+      "covered_fact_property": "promote",
       "pre_generation": "promote",
       "promotion": "promote",
       "triple_audit": "blocked"
     },
-    "missing_metric_count": 9,
-    "present_metric_count": 29,
+    "missing_metric_count": 3,
+    "present_metric_count": 35,
     "recommended_action_ids": [
-      "add_trace_level_triple_audit",
-      "refresh_covered_fact_property_routes"
+      "add_trace_level_triple_audit"
     ],
     "required_group_count": 6
   },

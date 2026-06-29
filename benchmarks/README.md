@@ -4861,17 +4861,18 @@ python benchmarks/export_product_promotion_contract_evidence_handoff.py \
   --counterfactual-verification artifacts/smollm2_product_counterfactual_structured_qa_audit_v0/counterfactual-verification-report.json \
   --product-trace-replay-workflow artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/product-trace-replay-workflow.json \
   --runtime-baseline artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/runtime-baseline/product-runtime-baseline.json \
+  --covered-fact-property-metrics artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-route/structured-qa-route-summary.json \
   --registry artifacts/local-release-registry.json \
   --name smollm2-product-promotion-contract-v1-6-evidence-handoff \
-  --version 0.3
+  --version 0.4
 ```
 
 The exporter only copies evidence from supplied reports; it does not invent
-covered-fact property or trace-level triple-audit results. The current v1.6
-handoff export reduces missing metrics from `37/38` to `9/38`: promotion/triple
-matrix, pre-generation comparison, counterfactual verification, and action-gate
-groups are present, while covered-fact property metrics and audit/slot triple
-coverage remain the next evidence-producing work.
+trace-level triple-audit results. The current v1.6 handoff export reduces
+missing metrics from `37/38` to `3/38`: promotion/triple matrix, pre-generation
+comparison, counterfactual verification, covered-fact property, and action-gate
+groups are present, while audit/slot triple coverage remains the next
+evidence-producing work.
 
 ```bash
 python benchmarks/run_release_candidate_registry_workflow.py \

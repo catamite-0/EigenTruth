@@ -1116,6 +1116,17 @@ Added the first monitor-first tool-selection audit layer:
   that report records the counterfactual group as present and reduces remaining
   handoff gaps from `15/38` to `9/38`; only trace-level triple audit/slot
   coverage and covered-fact property metrics remain.
+- `ProductPromotionEvidenceExport` now also accepts source-family route-summary
+  shaped covered-fact metrics. It rolls `fact_group_metrics` into the six
+  handoff fields and merges source-document counts from
+  `score_dump_summary.by_fact_group` when the route summary's per-group source
+  counts are zero. Re-exporting the same v1.6 contract with
+  `artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-route/structured-qa-route-summary.json`
+  promotes the covered-fact property group with `9` fact groups,
+  `min_records=4`, `min_source_documents=2`, `min_decision_accuracy=1.0`,
+  `max_false_supported_rate=0.0`, and `min_false_refuted_rate=1.0`. The handoff
+  now has `35/38` metrics present and only trace-level triple audit/slot
+  coverage remains blocked.
 
 ## Next Research-to-Code Candidates
 

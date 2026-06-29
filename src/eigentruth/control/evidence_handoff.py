@@ -836,19 +836,20 @@ def _covered_fact_property_rollup(
     ):
         return _drop_none_values(metrics)
 
+    property_metrics = _covered_fact_property_metric_items(metrics)
     records: list[float] = []
     source_documents: list[float] = []
     decision_accuracy: list[float] = []
     false_supported: list[float] = []
     false_refuted: list[float] = []
-    for item in metrics.values():
+    for item in property_metrics.values():
         if not isinstance(item, Mapping):
             continue
         record_count = _float_or_none(
-            _first_present(item.get("n_records"), item.get("records"), item.get("selected"))
+            _first_not_none(item.get("n_records"), item.get("records"), item.get("selected"))
         )
         source_count = _float_or_none(
-            _first_present(
+            _first_not_none(
                 item.get("n_source_documents"),
                 item.get("source_documents"),
                 item.get("source_document_count"),
@@ -868,13 +869,59 @@ def _covered_fact_property_rollup(
         if false_refuted_rate is not None:
             false_refuted.append(false_refuted_rate)
     return _drop_none_values({
-        "property_metric_count": len(metrics),
+        "property_metric_count": len(property_metrics),
         "min_records": min(records) if records else None,
         "min_source_documents": min(source_documents) if source_documents else None,
         "min_decision_accuracy": min(decision_accuracy) if decision_accuracy else None,
         "max_false_supported_rate": max(false_supported) if false_supported else None,
         "min_false_refuted_rate": min(false_refuted) if false_refuted else None,
     })
+
+
+def _first_not_none(*values: Any) -> Any:
+    for value in values:
+        if value is not None:
+            return value
+    return None
+
+
+def _covered_fact_property_metric_items(metrics: Mapping[str, Any]) -> Mapping[str, Any]:
+    for key in (
+        "covered_fact_property_metrics",
+        "recommended_route_covered_fact_property_metrics",
+        "fact_group_metrics",
+        "property_metrics",
+    ):
+        nested = _mapping(metrics.get(key))
+        if nested:
+            return _merge_covered_fact_source_counts(
+                nested,
+                _mapping(_nested(metrics, "score_dump_summary", "by_fact_group"))
+                or _mapping(_nested(metrics, "summary", "by_fact_group")),
+            )
+    return metrics
+
+
+def _merge_covered_fact_source_counts(
+    property_metrics: Mapping[str, Any],
+    source_metrics: Mapping[str, Any],
+) -> dict[str, Any]:
+    if not source_metrics:
+        return dict(property_metrics)
+    merged: dict[str, Any] = {}
+    for key, value in property_metrics.items():
+        if not isinstance(value, Mapping):
+            merged[key] = value
+            continue
+        item = dict(value)
+        source_item = _mapping(source_metrics.get(key))
+        source_documents = _float_or_none(source_item.get("n_source_documents"))
+        if source_documents is not None:
+            current = _float_or_none(item.get("n_source_documents"))
+            if current is None or current <= 0:
+                item["n_source_documents"] = source_documents
+        merged[key] = item
+    return merged
 
 
 def _coverage_from_group(payload: Mapping[str, Any], group_name: str) -> tuple[Any, tuple[str, ...]]:
