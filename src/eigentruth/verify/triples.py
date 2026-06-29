@@ -11,7 +11,7 @@ from eigentruth.json_utils import to_jsonable
 from eigentruth.verify.groundedness import EvidenceDocument
 from eigentruth.verify.protocols import Claim, VerificationResult, VerificationStatus
 
-_TOKEN_RE = re.compile(r"[a-z0-9]+|[\u4e00-\u9fff]+")
+_TOKEN_RE = re.compile(r"[A-Za-z0-9]+|[\u4e00-\u9fff]+")
 _CAPITAL_OF_RE = re.compile(
     r"^(?P<object>.+?)\s+(?:is|was)\s+(?:the\s+)?capital\s+of\s+(?P<subject>.+)$",
     re.IGNORECASE,
@@ -69,6 +69,11 @@ _OBSERVATION_RE = re.compile(
     r"^(?P<subject>.+?)\s+(?P<predicate>enrolled|reported|found|showed|reduced|increased)\s+(?P<object>.+)$",
     re.IGNORECASE,
 )
+_EQUATION_RE = re.compile(
+    r"^(?P<subject>[-+]?\d+(?:\.\d+)?(?:\s*[+*/%()-]\s*[-+]?\d+(?:\.\d+)?)+)"
+    r"\s*(?:=|equals|is)\s*(?P<object>[-+]?\d+(?:\.\d+)?)$",
+    re.IGNORECASE,
+)
 _IS_RE = re.compile(
     r"^(?P<subject>.+?)\s+(?:is|are|was|were)\s+(?P<object>.+)$",
     re.IGNORECASE,
@@ -101,6 +106,7 @@ _PREDICATE_ALIASES = {
     "capital_of": ("capital",),
     "official_language_of": ("official", "language"),
     "currency_of": ("currency",),
+    "equals": (),
     "located_in": ("located",),
     "is": (),
 }
@@ -367,6 +373,16 @@ class RuleBasedTripleExtractor:
                 predicate=observation.group("predicate"),
                 object_value=observation.group("object"),
                 source="observation_rule",
+            ),)
+
+        equation = _EQUATION_RE.match(text)
+        if equation is not None:
+            return (_triple(
+                claim,
+                subject=equation.group("subject"),
+                predicate="equals",
+                object_value=equation.group("object"),
+                source="equation_rule",
             ),)
 
         is_match = _IS_RE.match(text)

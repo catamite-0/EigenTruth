@@ -42972,6 +42972,66 @@ def test_product_trace_triple_audit_enrichment_cli_accepts_trace_glob(tmp_path, 
     assert len(list((output_dir / "traces").glob("*.json"))) == 2
 
 
+def test_product_trace_triple_audit_enrichment_marks_refutation_relation(tmp_path):
+    module = importlib.import_module("benchmarks.enrich_product_trace_triple_audit")
+
+    trace_path = tmp_path / "trace.json"
+    corpus_path = tmp_path / "moon-evidence.json"
+    output_dir = tmp_path / "triple-audit"
+    trace_path.write_text(
+        json.dumps({
+            "request_id": "req-refuted",
+            "claims": [
+                {
+                    "claim_id": "moon",
+                    "text": "The moon is made of cheese.",
+                    "metadata": {},
+                }
+            ],
+            "verification_results": [
+                {
+                    "status": "refuted",
+                    "confidence": 0.9,
+                    "metadata": {"claim_id": "moon"},
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
+    corpus_path.write_text(
+        json.dumps({
+            "documents": [
+                {
+                    "text": "NASA says the Moon is not made of cheese.",
+                    "source": "nasa",
+                }
+            ]
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.build_product_trace_triple_audit_enrichment(
+        module.ProductTraceTripleAuditEnrichmentConfig(
+            trace_paths=(trace_path,),
+            evidence_corpus_paths=(corpus_path,),
+            output_dir=output_dir,
+        )
+    )
+    enriched = json.loads(Path(payload["traces"][0]["output_path"]).read_text(encoding="utf-8"))
+    audit_report = enriched["verification_results"][0]["metadata"]["audit_report"]
+
+    assert payload["status"] == "promote"
+    assert audit_report["passed"] is True
+    assert audit_report["verification_status"] == "refuted"
+    assert audit_report["evidence_relation"] == "refutes_claim"
+    assert (
+        enriched["verification_results"][0]["metadata"]["triple_audit_enrichment"][
+            "evidence_relation"
+        ]
+        == "refutes_claim"
+    )
+
+
 def test_product_trace_triple_audit_enrichment_rejects_bounded_trace(tmp_path):
     module = importlib.import_module("benchmarks.enrich_product_trace_triple_audit")
 

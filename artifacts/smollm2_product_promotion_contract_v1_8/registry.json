@@ -1,0 +1,43 @@
+{
+  "records": [
+    {
+      "artifact_type": "product_promotion_contract",
+      "metadata": {
+        "after_missing_metric_count": 0,
+        "before_missing_metric_count": 0,
+        "equation_triple_extractor": true,
+        "evidence_corpus": "nasa_moon_composition",
+        "evidence_handoff_audit": "artifacts/smollm2_product_promotion_contract_v1_8/product-promotion-contract-evidence-handoff-audit.json",
+        "filled_groups": [
+          "triple_audit"
+        ],
+        "resolved_missing_metric_count": 0,
+        "source_contract": "artifacts/smollm2_product_promotion_contract_v1_7/product-promotion-contract-evidence-handoff.json",
+        "triple_audit_enrichment_version": 0.2,
+        "workflow": "product_promotion_evidence_handoff_export"
+      },
+      "name": "smollm2-product-promotion-contract-v1-8-evidence-handoff",
+      "path": "artifacts/smollm2_product_promotion_contract_v1_8/product-promotion-contract-evidence-handoff.json",
+      "version": "0.6"
+    },
+    {
+      "artifact_type": "product_promotion_evidence_audit",
+      "metadata": {
+        "blocked_group_count": 0,
+        "enriched_contract": "artifacts/smollm2_product_promotion_contract_v1_8/product-promotion-contract-evidence-handoff.json",
+        "equation_triple_extractor": true,
+        "evidence_corpus": "nasa_moon_composition",
+        "missing_metric_count": 0,
+        "recommended_action_ids": [],
+        "source_contract": "artifacts/smollm2_product_promotion_contract_v1_7/product-promotion-contract-evidence-handoff.json",
+        "status": "promote",
+        "triple_audit_enrichment_version": 0.2,
+        "workflow": "product_promotion_evidence_handoff_audit"
+      },
+      "name": "smollm2-product-promotion-contract-v1-8-evidence-handoff-audit",
+      "path": "artifacts/smollm2_product_promotion_contract_v1_8/product-promotion-contract-evidence-handoff-audit.json",
+      "version": "0.6"
+    }
+  ],
+  "schema_version": 1
+}

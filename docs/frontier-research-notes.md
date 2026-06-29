@@ -1141,14 +1141,17 @@ Added the first monitor-first tool-selection audit layer:
   bridge for full ProductTrace JSON. It extracts conservative rule-based
   `claim_triples`, retrieves local evidence from trace payloads or JSON/JSONL
   corpora, attaches strict triple-evidence `audit_report` metadata, and writes
-  manifest-backed enriched traces. Running it on the 12 SmolLM2 action-payload
-  compatibility traces with the Wikidata capitals corpus yields
-  `claim_triple_coverage_rate=0.75`, `audit_claim_coverage_rate=0.667`,
-  `audit_pass_rate=1.0`, and `slot_coverage_rate=1.0`; the report remains
-  blocked because refuted moon/cheese claims still lack usable evidence. The
-  v1.7 promotion-contract handoff now has `38/38` fields present, but release
-  gates should still treat audit-claim coverage below `1.0` as fail-closed
-  product evidence.
+  manifest-backed enriched traces. The v0 run on the 12 SmolLM2 action-payload
+  compatibility traces with only the Wikidata capitals corpus produced
+  `audit_claim_coverage_rate=0.667`, which correctly blocked the quality gate.
+  The v1 run adds numeric-equation triples, fixes capitalized token coverage,
+  annotates refuted verifier results with `evidence_relation=refutes_claim`,
+  and uses a tiny NASA-backed Moon composition corpus. The enriched runtime
+  baseline now reports `claim_triple_coverage_rate=1.0`,
+  `audit_claim_coverage_rate=1.0`, `audit_pass_rate=1.0`, and
+  `slot_coverage_rate=1.0`; the v1.8 promotion-contract handoff keeps all
+  `38/38` required fields present and moves the trace-level triple-audit group
+  from evidence-complete to quality-promoted.
 
 ## Next Research-to-Code Candidates
 

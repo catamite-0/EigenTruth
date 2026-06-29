@@ -241,11 +241,15 @@ def _enrich_trace(
                 evidence=evidence,
                 min_slot_coverage=min_slot_coverage,
             ).to_dict()
+            evidence_relation = _evidence_relation(result_payload.get("status"))
+            audit_report["verification_status"] = result_payload.get("status")
+            audit_report["evidence_relation"] = evidence_relation
             result_metadata = dict(_mapping(result_payload.get("metadata")))
             result_metadata["audit_report"] = audit_report
             result_metadata["triple_audit_enrichment"] = {
                 "workflow": WORKFLOW,
                 "status": "audited",
+                "evidence_relation": evidence_relation,
                 **evidence_summary,
             }
             result_payload["metadata"] = result_metadata
@@ -358,6 +362,17 @@ def _result_claim_id(result: Mapping[str, Any]) -> str | None:
         if text:
             return text
     return None
+
+
+def _evidence_relation(status: Any) -> str:
+    normalized = str(status or "").strip().casefold()
+    if normalized == "refuted":
+        return "refutes_claim"
+    if normalized == "supported":
+        return "supports_claim"
+    if normalized:
+        return f"{normalized}_claim"
+    return "audits_claim"
 
 
 def _evidence_for_claim(

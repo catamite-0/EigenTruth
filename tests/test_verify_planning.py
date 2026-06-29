@@ -16,9 +16,11 @@ from eigentruth.verify import (
     VerificationResult,
     VerificationRouteHint,
     VerificationStatus,
+    audit_claim_triples,
     budget_verification_plan,
     escalate_uncertain_verification_plan,
     estimate_verification_plan_cost,
+    extract_claim_triples,
     extract_claims,
 )
 
@@ -189,6 +191,26 @@ def test_claim_extraction_can_attach_rule_based_fact_triples():
     assert claims[0].metadata["claim_triples"][0]["object"] == "Paris"
     assert claims[1].metadata["claim_triples"][0]["subject"] == "AlphaCorp"
     assert claims[1].metadata["claim_triples"][0]["object"] == "10 offices in Europe"
+
+
+def test_claim_triple_extraction_handles_numeric_equations():
+    triples = extract_claim_triples(Claim("2 + 2 = 5.", claim_id="calc"))
+
+    assert len(triples) == 1
+    assert triples[0].subject == "2 + 2"
+    assert triples[0].predicate == "equals"
+    assert triples[0].object == "5"
+    assert triples[0].metadata["source"] == "equation_rule"
+
+
+def test_triple_evidence_audit_tokenizes_capitalized_subjects():
+    report = audit_claim_triples(
+        Claim("The moon is made of cheese.", claim_id="moon"),
+        evidence=("NASA says the Moon is not made of cheese.",),
+    )
+
+    assert report.passed
+    assert report.audits[0].slot_coverage["subject"] == pytest.approx(1.0)
 
 
 def test_claim_verification_planner_can_route_extracted_fact_triples():

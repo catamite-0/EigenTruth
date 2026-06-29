@@ -1,0 +1,19 @@
+{
+  "records": [
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "audit_claim_coverage_rate": 1.0,
+        "audit_pass_rate": 1.0,
+        "slot_coverage_rate": 1.0,
+        "status": "promote",
+        "trace_count": 12,
+        "workflow": "product_trace_triple_audit_enrichment"
+      },
+      "name": "smollm2-product-trace-triple-audit",
+      "path": "artifacts/smollm2_product_trace_triple_audit_enrichment_v1/product-trace-triple-audit-enrichment.json",
+      "version": "0.2"
+    }
+  ],
+  "schema_version": 1
+}

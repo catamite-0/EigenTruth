@@ -1,0 +1,42 @@
+{
+  "config": {
+    "builder": "manual_source_backed_external_corpus",
+    "corpus_name": "nasa_moon_composition",
+    "require_source": true,
+    "source_kind": "nasa_science_article",
+    "trusted_source": [
+      "science.nasa.gov"
+    ]
+  },
+  "corpus_type": "external_evidence_candidate",
+  "description": "Small source-backed corpus for auditing Moon composition refutation claims in product trace fixtures.",
+  "documents": [
+    {
+      "metadata": {
+        "corpus_name": "nasa_moon_composition",
+        "external_source": true,
+        "ingest_ordinal": 1,
+        "license": "NASA content usage guidelines",
+        "provider": "NASA Science",
+        "source_kind": "nasa_science_article",
+        "source_quote": "The Moon is not made of cheese; it\u2019s made of remnants of a baby Earth!",
+        "url": "https://science.nasa.gov/solar-system/moon/10-things-what-we-learn-about-earth-by-studying-the-moon/"
+      },
+      "source": "nasa-science:moon-earth-lessons:moon-not-cheese",
+      "text": "NASA Science states that the Moon is not made of cheese; it is made of remnants of a baby Earth."
+    },
+    {
+      "metadata": {
+        "corpus_name": "nasa_moon_composition",
+        "external_source": true,
+        "ingest_ordinal": 2,
+        "license": "NASA content usage guidelines",
+        "provider": "NASA Science",
+        "source_kind": "nasa_science_article",
+        "url": "https://science.nasa.gov/moon/composition/"
+      },
+      "source": "nasa-science:moon-composition:lunar-regolith-rocks",
+      "text": "NASA Science describes lunar regolith as fractured pieces of lunar rocks from highlands, mare basalts, and deeper materials."
+    }
+  ]
+}

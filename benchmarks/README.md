@@ -7139,22 +7139,25 @@ not infer or fabricate audit results from redacted text.
 Use `enrich_product_trace_triple_audit.py` when you still have full, unredacted
 ProductTrace JSON and a local evidence corpus but the original runtime did not
 record strict triple-audit metadata. The workflow extracts conservative
-`claim_triples`, retrieves local evidence snippets, attaches `audit_report`
-metadata to existing verifier results or explicit `audit_only` results, and
-writes manifest-backed enriched traces for `run_product_runtime_baseline.py`.
-For the current SmolLM2 action-payload compatibility traces, the Wikidata
-capital corpus raises trace-level triple-audit claim coverage to `0.667` while
-keeping the report `blocked` because the moon/cheese refuted claims still lack
-usable evidence:
+`claim_triples`, retrieves local evidence snippets, attaches status-aware
+`audit_report` metadata to existing verifier results or explicit `audit_only`
+results, and writes manifest-backed enriched traces for
+`run_product_runtime_baseline.py`. For the current SmolLM2 action-payload
+compatibility traces, the Wikidata capital corpus plus the NASA-backed Moon
+composition corpus promotes the trace-level triple-audit handoff with
+`claim_triple_coverage_rate=1.0`, `audit_claim_coverage_rate=1.0`,
+`audit_pass_rate=1.0`, and `slot_coverage_rate=1.0`; refuted claims are marked
+with `evidence_relation=refutes_claim` rather than treated as supported:
 
 ```bash
 python benchmarks/enrich_product_trace_triple_audit.py \
   --trace-glob 'artifacts/smollm2_product_trace_action_payload_compat_v0/traces/**/*.json' \
   --evidence-corpus artifacts/wikidata-country-capitals-external-corpus/wikidata-country-capitals-corpus.json \
-  --output-dir artifacts/smollm2_product_trace_triple_audit_enrichment_v0 \
-  --registry artifacts/smollm2_product_trace_triple_audit_enrichment_v0/registry.json \
+  --evidence-corpus artifacts/nasa-moon-composition-external-corpus/moon-composition-corpus.json \
+  --output-dir artifacts/smollm2_product_trace_triple_audit_enrichment_v1 \
+  --registry artifacts/smollm2_product_trace_triple_audit_enrichment_v1/registry.json \
   --name smollm2-product-trace-triple-audit \
-  --version 0.1
+  --version 0.2
 ```
 
 When a saved `ProductRuntimeBudgetPolicy` is supplied with
