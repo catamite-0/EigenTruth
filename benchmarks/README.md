@@ -5068,6 +5068,31 @@ score dumps and config; otherwise pass `--scores`, `--verifier-signal`, and
 `--abstention-signals` explicitly. Queue entries remain `missing_inputs` until
 enough data is present to build the post-hoc stability command.
 
+For releases blocked by the detectability-taxonomy track, the same planner can
+emit row-level blind-spot audit commands from the comparator's
+`--detectability-taxonomy-report` inputs:
+
+```bash
+python benchmarks/plan_release_evidence_gaps.py \
+  --source artifacts/frontier-release-evidence/report.json \
+  --json artifacts/frontier-release-evidence/evidence-gap-plan.json \
+  --detectability-rerun-json artifacts/frontier-release-evidence/detectability-rerun-queue.json \
+  --detectability-rerun-artifact-manifest artifacts/frontier-release-evidence/detectability-rerun-queue-manifest.json \
+  --detectability-rerun-output-dir artifacts/frontier-detectability-reruns \
+  --registry artifacts/release-registry.json \
+  --name frontier-release-evidence-gap-plan \
+  --version 0.1 \
+  --detectability-rerun-name frontier-detectability-reruns \
+  --detectability-rerun-version 0.1
+```
+
+`benchmarks/plan_frontier_detectability_evidence_reruns.py` can also be called
+directly. If a reachable `detectability_taxonomy` report exists, queue entries
+run `analyze_detectability_blind_spots.py` for the configured cell, defaulting
+to false `entrenched` rows. If no taxonomy report is available, pass
+`--scores`, `--consistency-signal`, and `--confidence-signal` to emit
+`eval_detectability_taxonomy.py` rerun commands instead.
+
 For frontier release reports blocked by the family-wise multiple-testing gate,
 build a per-cell rerun queue from the comparator or gap-plan output:
 

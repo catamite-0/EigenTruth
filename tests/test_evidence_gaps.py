@@ -3,6 +3,7 @@
 import json
 
 from benchmarks.plan_citation_batch_evidence_reruns import build_citation_batch_evidence_rerun_queue
+from benchmarks.plan_frontier_detectability_evidence_reruns import build_frontier_detectability_evidence_rerun_queue
 from benchmarks.plan_frontier_stability_evidence_reruns import build_frontier_stability_evidence_rerun_queue
 from benchmarks.plan_release_evidence_gaps import build_release_evidence_gap_plan
 from eigentruth.control import (
@@ -582,6 +583,105 @@ def test_plan_release_evidence_gaps_can_emit_stability_rerun_queue(tmp_path):
     assert queue_record.metadata["command_count"] == 2
 
 
+def test_frontier_detectability_evidence_rerun_queue_builds_blind_spot_audit(tmp_path):
+    taxonomy_path = tmp_path / "smol-detectability.json"
+    source = tmp_path / "frontier-release-evidence.json"
+    queue_path = tmp_path / "detectability-rerun-queue.json"
+    manifest_path = tmp_path / "detectability-rerun-queue-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    taxonomy_path.write_text(
+        json.dumps(_detectability_taxonomy_payload(tmp_path / "smol-scores.manifest.json")),
+        encoding="utf-8",
+    )
+    source.write_text(
+        json.dumps(_frontier_release_detectability_payload(taxonomy_path)),
+        encoding="utf-8",
+    )
+
+    payload = build_frontier_detectability_evidence_rerun_queue(
+        source=source,
+        json_path=queue_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="frontier-detectability-reruns",
+        version="0.1",
+        output_dir=tmp_path / "detectability-reruns",
+        python_executable="python",
+    )
+
+    saved = json.loads(queue_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    registry = ArtifactRegistry.load_json(registry_path)
+    record = registry.get("report:frontier-detectability-reruns:0.1")
+    entry = payload["entries"][0]
+    command = entry["command"]
+
+    assert saved["summary"] == payload["summary"]
+    assert payload["workflow"] == "frontier_detectability_evidence_rerun_queue"
+    assert payload["summary"]["blocked_run_count"] == 1
+    assert payload["summary"]["blind_spot_analysis_count"] == 1
+    assert payload["summary"]["command_count"] == 1
+    assert entry["run"] == "smol"
+    assert entry["command_kind"] == "blind_spot_analysis"
+    assert entry["command_status"] == "ready"
+    assert command[:2] == ("python", "benchmarks/analyze_detectability_blind_spots.py")
+    assert command[command.index("--taxonomy-report") + 1] == str(taxonomy_path)
+    assert command[command.index("--scores") + 1] == str(tmp_path / "smol-scores.manifest.json")
+    assert command[command.index("--cell") + 1] == "entrenched"
+    assert manifest["artifacts"]["frontier_detectability_evidence_rerun_queue"]["exists"] is True
+    assert record.metadata["workflow"] == "frontier_detectability_evidence_rerun_queue"
+    assert record.metadata["blocked_run_count"] == 1
+
+
+def test_plan_release_evidence_gaps_can_emit_detectability_rerun_queue(tmp_path):
+    taxonomy_path = tmp_path / "smol-detectability.json"
+    source = tmp_path / "frontier-release-evidence.json"
+    output = tmp_path / "evidence-gap-plan.json"
+    queue_path = tmp_path / "detectability-rerun-queue.json"
+    manifest_path = tmp_path / "detectability-rerun-queue-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    taxonomy_path.write_text(
+        json.dumps(_detectability_taxonomy_payload(tmp_path / "smol-scores.manifest.json")),
+        encoding="utf-8",
+    )
+    source.write_text(
+        json.dumps(_frontier_release_detectability_payload(taxonomy_path)),
+        encoding="utf-8",
+    )
+
+    payload = build_release_evidence_gap_plan(
+        source=source,
+        json_path=output,
+        registry_path=registry_path,
+        name="frontier-gap-plan",
+        version="0.1",
+        detectability_rerun_json_path=queue_path,
+        detectability_rerun_artifact_manifest_path=manifest_path,
+        detectability_rerun_output_dir=tmp_path / "detectability-reruns",
+        detectability_rerun_name="frontier-detectability-reruns",
+        detectability_rerun_version="0.1",
+        python_executable="python",
+    )
+
+    saved = json.loads(output.read_text(encoding="utf-8"))
+    queue = json.loads(queue_path.read_text(encoding="utf-8"))
+    registry = ArtifactRegistry.load_json(registry_path)
+    gap_record = registry.get("evidence_gap_plan:frontier-gap-plan:0.1")
+    queue_record = registry.get("report:frontier-detectability-reruns:0.1")
+    derived = payload["derived_artifacts"]["frontier_detectability_evidence_rerun_queue"]
+
+    assert saved["derived_artifacts"] == payload["derived_artifacts"]
+    assert derived["path"] == str(queue_path)
+    assert derived["artifact_manifest"] == str(manifest_path)
+    assert derived["status"] == "ready"
+    assert derived["blocked_run_count"] == 1
+    assert derived["command_count"] == 1
+    assert queue["entries"][0]["command_status"] == "ready"
+    assert queue["entries"][0]["command_kind"] == "blind_spot_analysis"
+    assert gap_record.metadata["gap_count"] == 1
+    assert queue_record.metadata["command_count"] == 1
+
+
 def _blocked_registry_workflow_payload():
     return {
         "workflow": "release_candidate_registry_workflow",
@@ -748,4 +848,64 @@ def _frontier_release_stability_payload():
             "verifier_signal": "truth_proj",
             "abstention_signals": ("maha_last", "subspace_resid"),
         },
+    }
+
+
+def _frontier_release_detectability_payload(taxonomy_path):
+    return {
+        "schema_version": 1,
+        "workflow": "frontier_release_evidence_comparison",
+        "status": "complete",
+        "inputs": {
+            "detectability_taxonomy_reports": (
+                {
+                    "path": str(taxonomy_path),
+                    "workflow": "detectability_taxonomy",
+                    "status": "complete",
+                },
+            ),
+        },
+        "decision": {
+            "status": "blocked",
+            "detectability_track_status": "blocked",
+            "blocking_reasons": (
+                "detectability_taxonomy.smol.entrenched_false_rate 0.291 exceeds maximum 0.25",
+            ),
+        },
+        "run_decisions": (
+            {
+                "name": "smol",
+                "detectability_decision": {
+                    "status": "blocked",
+                    "name": "smol",
+                    "blocking_reasons": (
+                        "detectability_taxonomy.smol.entrenched_false_rate 0.291 exceeds maximum 0.25",
+                    ),
+                },
+            },
+        ),
+    }
+
+
+def _detectability_taxonomy_payload(score_path):
+    return {
+        "schema_version": 1,
+        "workflow": "detectability_taxonomy",
+        "status": "complete",
+        "source": {
+            "score_dump_path": str(score_path),
+            "score_dump_summary": {"name": "smol"},
+        },
+        "config": {
+            "consistency_signal": "eigenscore",
+            "confidence_signal": "nll_answer",
+            "consistency_direction": "lower",
+            "confidence_direction": "lower",
+        },
+        "report": {
+            "n_total": 4,
+            "n_false": 2,
+            "blind_spot": {"n_false": 1},
+        },
+        "metadata": {"run_name": "smol"},
     }

@@ -18,6 +18,9 @@ if str(SRC) not in sys.path:
 from benchmarks.plan_citation_batch_evidence_reruns import (  # noqa: E402
     build_citation_batch_evidence_rerun_queue,
 )
+from benchmarks.plan_frontier_detectability_evidence_reruns import (  # noqa: E402
+    build_frontier_detectability_evidence_rerun_queue,
+)
 from benchmarks.plan_frontier_multiple_testing_reruns import (  # noqa: E402
     build_frontier_multiple_testing_rerun_queue,
 )
@@ -67,6 +70,18 @@ def build_release_evidence_gap_plan(
     verifier_state_source_path: str | Path | None = None,
     verifier_staged_verification: bool = True,
     abstention_signals: Sequence[str] = (),
+    detectability_rerun_json_path: str | Path | None = None,
+    detectability_rerun_artifact_manifest_path: str | Path | None = None,
+    detectability_rerun_output_dir: str | Path | None = None,
+    detectability_rerun_name: str | None = None,
+    detectability_rerun_version: str | None = None,
+    detectability_score_paths: Sequence[str | Path] = (),
+    detectability_consistency_signal: str | None = None,
+    detectability_confidence_signal: str | None = None,
+    detectability_consistency_direction: str = "higher",
+    detectability_confidence_direction: str = "higher",
+    detectability_cell: str = "entrenched",
+    detectability_max_records: int = 100,
     python_executable: str = sys.executable,
 ) -> dict[str, Any]:
     """Load a release report and optionally write/register its evidence-gap plan."""
@@ -90,6 +105,12 @@ def build_release_evidence_gap_plan(
         raise ValueError("stability_rerun_name/version require registry_path.")
     if (stability_rerun_name is None) != (stability_rerun_version is None):
         raise ValueError("stability_rerun_name and stability_rerun_version must be provided together.")
+    if detectability_rerun_artifact_manifest_path is not None and detectability_rerun_json_path is None:
+        raise ValueError("detectability_rerun_artifact_manifest_path requires detectability_rerun_json_path.")
+    if (detectability_rerun_name or detectability_rerun_version) and registry_path is None:
+        raise ValueError("detectability_rerun_name/version require registry_path.")
+    if (detectability_rerun_name is None) != (detectability_rerun_version is None):
+        raise ValueError("detectability_rerun_name and detectability_rerun_version must be provided together.")
     source_path = Path(source)
     payload = _load_json_object(source_path)
     plan = plan_evidence_gaps_from_release_candidate(
@@ -131,6 +152,18 @@ def build_release_evidence_gap_plan(
         verifier_state_source_path=verifier_state_source_path,
         verifier_staged_verification=verifier_staged_verification,
         abstention_signals=abstention_signals,
+        detectability_rerun_json_path=detectability_rerun_json_path,
+        detectability_rerun_artifact_manifest_path=detectability_rerun_artifact_manifest_path,
+        detectability_rerun_output_dir=detectability_rerun_output_dir,
+        detectability_rerun_name=detectability_rerun_name,
+        detectability_rerun_version=detectability_rerun_version,
+        detectability_score_paths=detectability_score_paths,
+        detectability_consistency_signal=detectability_consistency_signal,
+        detectability_confidence_signal=detectability_confidence_signal,
+        detectability_consistency_direction=detectability_consistency_direction,
+        detectability_confidence_direction=detectability_confidence_direction,
+        detectability_cell=detectability_cell,
+        detectability_max_records=detectability_max_records,
         python_executable=python_executable,
     )
     if derived_artifacts:
@@ -196,6 +229,18 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         verifier_state_source_path=args.verifier_state_source,
         verifier_staged_verification=bool(args.verifier_staged_verification),
         abstention_signals=_parse_csv(args.abstention_signals),
+        detectability_rerun_json_path=args.detectability_rerun_json,
+        detectability_rerun_artifact_manifest_path=args.detectability_rerun_artifact_manifest,
+        detectability_rerun_output_dir=args.detectability_rerun_output_dir,
+        detectability_rerun_name=args.detectability_rerun_name,
+        detectability_rerun_version=args.detectability_rerun_version,
+        detectability_score_paths=tuple(args.detectability_scores or ()),
+        detectability_consistency_signal=args.detectability_consistency_signal,
+        detectability_confidence_signal=args.detectability_confidence_signal,
+        detectability_consistency_direction=args.detectability_consistency_direction,
+        detectability_confidence_direction=args.detectability_confidence_direction,
+        detectability_cell=args.detectability_cell,
+        detectability_max_records=args.detectability_max_records,
         python_executable=args.python,
     )
     summary = payload["summary"]
@@ -311,6 +356,30 @@ def main(argv: Sequence[str] | None = None) -> None:
         default=True,
     )
     parser.add_argument("--abstention-signals", default=None)
+    parser.add_argument(
+        "--detectability-rerun-json",
+        default=None,
+        help="optional output JSON path for a derived detectability rerun/audit queue",
+    )
+    parser.add_argument(
+        "--detectability-rerun-artifact-manifest",
+        default=None,
+        help="optional artifact manifest path for the derived detectability queue",
+    )
+    parser.add_argument(
+        "--detectability-rerun-output-dir",
+        default=None,
+        help="optional root directory for derived detectability outputs",
+    )
+    parser.add_argument("--detectability-rerun-name", default=None, help="optional registry name for the queue")
+    parser.add_argument("--detectability-rerun-version", default=None, help="optional registry version for the queue")
+    parser.add_argument("--detectability-scores", action="append", default=[], help="name=score_dump path; repeatable")
+    parser.add_argument("--detectability-consistency-signal", default=None)
+    parser.add_argument("--detectability-confidence-signal", default=None)
+    parser.add_argument("--detectability-consistency-direction", choices=("higher", "lower"), default="higher")
+    parser.add_argument("--detectability-confidence-direction", choices=("higher", "lower"), default="higher")
+    parser.add_argument("--detectability-cell", default="entrenched")
+    parser.add_argument("--detectability-max-records", type=int, default=100)
     parser.add_argument("--python", default=sys.executable, help="Python executable for generated rerun commands")
     run(parser.parse_args(argv))
 
@@ -349,6 +418,18 @@ def _build_derived_artifacts(
     verifier_state_source_path: str | Path | None,
     verifier_staged_verification: bool,
     abstention_signals: Sequence[str],
+    detectability_rerun_json_path: str | Path | None,
+    detectability_rerun_artifact_manifest_path: str | Path | None,
+    detectability_rerun_output_dir: str | Path | None,
+    detectability_rerun_name: str | None,
+    detectability_rerun_version: str | None,
+    detectability_score_paths: Sequence[str | Path],
+    detectability_consistency_signal: str | None,
+    detectability_confidence_signal: str | None,
+    detectability_consistency_direction: str,
+    detectability_confidence_direction: str,
+    detectability_cell: str,
+    detectability_max_records: int,
     python_executable: str,
 ) -> dict[str, Any]:
     derived: dict[str, Any] = {}
@@ -436,6 +517,37 @@ def _build_derived_artifacts(
             else str(stability_rerun_artifact_manifest_path),
             "status": stability_payload["status"],
             "blocked_track_count": summary["blocked_track_count"],
+            "command_count": summary["command_count"],
+            "missing_command_count": summary["missing_command_count"],
+        }
+    if detectability_rerun_json_path is not None:
+        detectability_payload = build_frontier_detectability_evidence_rerun_queue(
+            source=source_path,
+            json_path=detectability_rerun_json_path,
+            artifact_manifest_path=detectability_rerun_artifact_manifest_path,
+            registry_path=None
+            if detectability_rerun_name is None or detectability_rerun_version is None
+            else registry_path,
+            name=detectability_rerun_name,
+            version=detectability_rerun_version,
+            output_dir=detectability_rerun_output_dir,
+            score_paths=detectability_score_paths,
+            consistency_signal=detectability_consistency_signal,
+            confidence_signal=detectability_confidence_signal,
+            consistency_direction=detectability_consistency_direction,
+            confidence_direction=detectability_confidence_direction,
+            cell=detectability_cell,
+            max_records=detectability_max_records,
+            python_executable=python_executable,
+        )
+        summary = detectability_payload["summary"]
+        derived["frontier_detectability_evidence_rerun_queue"] = {
+            "path": str(detectability_rerun_json_path),
+            "artifact_manifest": None
+            if detectability_rerun_artifact_manifest_path is None
+            else str(detectability_rerun_artifact_manifest_path),
+            "status": detectability_payload["status"],
+            "blocked_run_count": summary["blocked_run_count"],
             "command_count": summary["command_count"],
             "missing_command_count": summary["missing_command_count"],
         }
