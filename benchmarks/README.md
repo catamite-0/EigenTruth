@@ -4586,9 +4586,11 @@ defaults `--max-recommended-runtime-seconds 1.0`, leaving the older
 `--max-uncached-forward-seconds` cold-start gate opt-in for callers that want it,
 and defaults `--require-product-runtime-drift-promotion-evidence`,
 `--require-product-runtime-drift-pre-generation-evidence`,
+`--require-product-runtime-drift-counterfactual-evidence`,
 `--require-product-runtime-drift-triple-audit-evidence`,
 `--require-product-runtime-drift-covered-fact-property-evidence`,
 `--require-product-runtime-drift-action-gate-evidence`,
+`--require-product-runtime-drift-evidence-handoff-evidence`,
 `--require-product-trace-action-audit-gate`, and
 `--require-product-trace-action-execution-gate`; it also defaults to the
 registered covered-facts external-evidence handoff, registered triple-extraction
@@ -4598,6 +4600,7 @@ or `--triple-extraction-fixture-matrix` file inputs suppress the corresponding
 default registry keys. Strict local releases therefore fail closed when runtime
 drift lacks promotion-contract, triple-extraction fixture-matrix,
 trace-level triple-audit, recommended-route covered-fact property/action-gate
+evidence, promotion-contract evidence-handoff coverage/manifest/metric-gap
 evidence, the product-trace replay workflow lacks promoted
 action-audit/action-execution child gates, or registered frontier evidence
 handoffs are absent.
@@ -4783,6 +4786,7 @@ also defaults `adapter_family_profile=strict_audit`,
 `require_product_runtime_drift_triple_audit_evidence=true`,
 `require_product_runtime_drift_covered_fact_property_evidence=true`,
 `require_product_runtime_drift_action_gate_evidence=true`,
+`require_product_runtime_drift_evidence_handoff_evidence=true`,
 `require_product_trace_action_audit_gate=true`, and
 `require_product_trace_action_execution_gate=true`, plus the registered
 covered-facts external-evidence handoff, registered triple-extraction fixture
@@ -5095,8 +5099,11 @@ The current v1.9 contract carries the v6 deployment-path runtime evidence
 (`recommended_runtime_seconds=0.191662`,
 `recommended_runtime_cost_source=cache_only_total_seconds`) and the enriched
 handoff audit promotes all six `frontier_audit` evidence groups with `38/38`
-fields present. The main contract manifest verifies with `checked=2`; the
-evidence-handoff manifest verifies with `checked=9`.
+fields present. Refreshed frontier-audit runtime-drift reports now add
+promotion-contract evidence-handoff coverage/manifest/metric-gap/group-status
+as the seventh release-gated evidence group. The main contract manifest
+verifies with `checked=2`; the evidence-handoff manifest verifies with
+`checked=9`.
 
 Current local smoke release candidate:
 
@@ -5409,6 +5416,7 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --require-product-runtime-drift-promotion-evidence \
   --require-product-runtime-drift-pre-generation-evidence \
   --require-product-runtime-drift-triple-audit-evidence \
+  --require-product-runtime-drift-evidence-handoff-evidence \
   --adapter-family-matrix artifacts/smollm2_l20_adapter_family_retrieval_structured_qa/adapter-family-matrix.json \
   --required-adapter-route structured_state \
   --required-adapter-route state_transition \

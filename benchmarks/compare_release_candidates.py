@@ -192,6 +192,36 @@ _PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] 
         "product_trace_action_execution_request_id_mismatch_rate",
     ),
 )
+_PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = (
+    (
+        "promotion_contract.evidence_handoff.coverage_rate",
+        "evidence_handoff_coverage_rate",
+    ),
+    (
+        "promotion_contract.evidence_handoff.manifest_verified_rate",
+        "evidence_handoff_manifest_verified_rate",
+    ),
+    (
+        "promotion_contract.evidence_handoff.present_metric_rate.mean",
+        "evidence_handoff_present_metric_rate",
+    ),
+    (
+        "promotion_contract.evidence_handoff.missing_metric_rate.mean",
+        "evidence_handoff_missing_metric_rate",
+    ),
+    (
+        "promotion_contract.evidence_handoff.missing_metric_count.mean",
+        "evidence_handoff_missing_metric_count",
+    ),
+    (
+        "promotion_contract.evidence_handoff.blocked_group_count.mean",
+        "evidence_handoff_blocked_group_count",
+    ),
+    (
+        "promotion_contract.evidence_handoff.promoted_group_rate.mean",
+        "evidence_handoff_promoted_group_rate",
+    ),
+)
 
 
 def compare_release_candidates(
@@ -225,6 +255,7 @@ def compare_release_candidates(
     require_product_runtime_drift_triple_audit_evidence: bool = False,
     require_product_runtime_drift_covered_fact_property_evidence: bool = False,
     require_product_runtime_drift_action_gate_evidence: bool = False,
+    require_product_runtime_drift_evidence_handoff_evidence: bool = False,
     release_efficiency_report_path: str | Path | None = None,
     external_evidence_baseline_comparison_path: str | Path | None = None,
     external_evidence_baseline_comparison_registry_path: str | Path | None = None,
@@ -458,6 +489,9 @@ def compare_release_candidates(
                 "require_product_runtime_drift_action_gate_evidence": (
                     require_product_runtime_drift_action_gate_evidence
                 ),
+                "require_product_runtime_drift_evidence_handoff_evidence": (
+                    require_product_runtime_drift_evidence_handoff_evidence
+                ),
                 "require_product_trace_action_audit_gate": require_product_trace_action_audit_gate,
                 "require_product_trace_action_execution_gate": (
                     require_product_trace_action_execution_gate
@@ -573,6 +607,9 @@ def compare_release_candidates(
     )
     require_product_runtime_drift_action_gate_evidence = bool(
         release_policy_values["require_product_runtime_drift_action_gate_evidence"]
+    )
+    require_product_runtime_drift_evidence_handoff_evidence = bool(
+        release_policy_values["require_product_runtime_drift_evidence_handoff_evidence"]
     )
     require_product_trace_action_audit_gate = bool(
         release_policy_values["require_product_trace_action_audit_gate"]
@@ -1136,6 +1173,9 @@ def compare_release_candidates(
             require_product_runtime_drift_covered_fact_property_evidence
         ),
         require_action_gate_evidence=require_product_runtime_drift_action_gate_evidence,
+        require_evidence_handoff_evidence=(
+            require_product_runtime_drift_evidence_handoff_evidence
+        ),
         recursive=recursive,
         allow_unverified=allow_unverified,
         manifest_fingerprint_workers=manifest_fingerprint_workers,
@@ -1339,6 +1379,9 @@ def compare_release_candidates(
             ),
             "require_product_runtime_drift_action_gate_evidence": bool(
                 require_product_runtime_drift_action_gate_evidence
+            ),
+            "require_product_runtime_drift_evidence_handoff_evidence": bool(
+                require_product_runtime_drift_evidence_handoff_evidence
             ),
             "require_product_trace_action_audit_gate": bool(
                 require_product_trace_action_audit_gate
@@ -5765,6 +5808,7 @@ def _product_runtime_drift_gate(
     require_triple_audit_evidence: bool,
     require_covered_fact_property_evidence: bool,
     require_action_gate_evidence: bool,
+    require_evidence_handoff_evidence: bool,
     recursive: bool,
     allow_unverified: bool,
     manifest_fingerprint_workers: int,
@@ -5778,6 +5822,7 @@ def _product_runtime_drift_gate(
             or require_triple_audit_evidence
             or require_covered_fact_property_evidence
             or require_action_gate_evidence
+            or require_evidence_handoff_evidence
         ):
             gate = {
                 "passed": False,
@@ -5854,6 +5899,17 @@ def _product_runtime_drift_gate(
                         )
                     ) if require_action_gate_evidence else (),
                     "action_gate_evidence_blocked_metric_count": 0,
+                    "evidence_handoff_evidence_required": bool(
+                        require_evidence_handoff_evidence
+                    ),
+                    "evidence_handoff_evidence_metric_count": 0,
+                    "evidence_handoff_evidence_missing_metrics": tuple(
+                        metric_name
+                        for metric_name, _prefix in (
+                            _PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_FIELDS
+                        )
+                    ) if require_evidence_handoff_evidence else (),
+                    "evidence_handoff_evidence_blocked_metric_count": 0,
                 },
                 "metrics": (),
                 "verification": {"passed": False, "reason": "missing product runtime drift report"},
@@ -5897,6 +5953,12 @@ def _product_runtime_drift_gate(
         metrics,
         required=require_action_gate_evidence,
     )
+    evidence_handoff_evidence_summary = (
+        _product_runtime_drift_evidence_handoff_evidence_summary(
+            metrics,
+            required=require_evidence_handoff_evidence,
+        )
+    )
     gate = _product_runtime_drift_report_gate(
         report=report,
         report_error=report_error,
@@ -5914,6 +5976,8 @@ def _product_runtime_drift_gate(
         require_covered_fact_property_evidence=require_covered_fact_property_evidence,
         action_gate_evidence_summary=action_gate_evidence_summary,
         require_action_gate_evidence=require_action_gate_evidence,
+        evidence_handoff_evidence_summary=evidence_handoff_evidence_summary,
+        require_evidence_handoff_evidence=require_evidence_handoff_evidence,
         allow_unverified=allow_unverified,
     )
     summary = _mapping(report.get("summary"))
@@ -5938,6 +6002,7 @@ def _product_runtime_drift_gate(
             **triple_audit_evidence_summary,
             **covered_fact_property_evidence_summary,
             **action_gate_evidence_summary,
+            **evidence_handoff_evidence_summary,
         },
         "metrics": metrics,
         "verification": verification,
@@ -5963,6 +6028,8 @@ def _product_runtime_drift_report_gate(
     require_covered_fact_property_evidence: bool,
     action_gate_evidence_summary: Mapping[str, Any],
     require_action_gate_evidence: bool,
+    evidence_handoff_evidence_summary: Mapping[str, Any],
+    require_evidence_handoff_evidence: bool,
     allow_unverified: bool,
 ) -> dict[str, Any]:
     failures = []
@@ -6086,6 +6153,27 @@ def _product_runtime_drift_report_gate(
         if blocked_metric_count is not None and blocked_metric_count > 0:
             failures.append(
                 "product runtime drift action-gate evidence blocked "
+                f"{int(blocked_metric_count)} metric(s)"
+            )
+    if require_evidence_handoff_evidence:
+        missing_metrics = tuple(
+            evidence_handoff_evidence_summary.get(
+                "evidence_handoff_evidence_missing_metrics"
+            ) or ()
+        )
+        if missing_metrics:
+            failures.append(
+                "product runtime drift evidence-handoff evidence metrics are incomplete: "
+                + ", ".join(str(metric) for metric in missing_metrics)
+            )
+        blocked_metric_count = _float_or_none(
+            evidence_handoff_evidence_summary.get(
+                "evidence_handoff_evidence_blocked_metric_count"
+            )
+        )
+        if blocked_metric_count is not None and blocked_metric_count > 0:
+            failures.append(
+                "product runtime drift evidence-handoff evidence blocked "
                 f"{int(blocked_metric_count)} metric(s)"
             )
     return {
@@ -6327,6 +6415,40 @@ def _product_runtime_drift_action_gate_evidence_summary(
             summary["action_gate_evidence_blocked_metric_count"] += 1
     summary["action_gate_evidence_metric_count"] = metric_count
     summary["action_gate_evidence_missing_metrics"] = tuple(missing_metrics)
+    return summary
+
+
+def _product_runtime_drift_evidence_handoff_evidence_summary(
+    metrics: Sequence[Mapping[str, Any]],
+    *,
+    required: bool = False,
+) -> dict[str, Any]:
+    metrics_by_name = {
+        str(metric["metric"]): metric
+        for metric in metrics
+        if isinstance(metric, Mapping) and isinstance(metric.get("metric"), str)
+    }
+    missing_metrics: list[str] = []
+    metric_count = 0
+    summary: dict[str, Any] = {
+        "evidence_handoff_evidence_required": bool(required),
+        "evidence_handoff_evidence_metric_count": 0,
+        "evidence_handoff_evidence_missing_metrics": (),
+        "evidence_handoff_evidence_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_FIELDS:
+        metric = metrics_by_name.get(metric_name)
+        summary[f"{prefix}_baseline"] = None if metric is None else metric.get("baseline")
+        summary[f"{prefix}_current"] = None if metric is None else metric.get("current")
+        summary[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is None or metric.get("current") is None:
+            missing_metrics.append(metric_name)
+            continue
+        metric_count += 1
+        if metric.get("status") == "blocked":
+            summary["evidence_handoff_evidence_blocked_metric_count"] += 1
+    summary["evidence_handoff_evidence_metric_count"] = metric_count
+    summary["evidence_handoff_evidence_missing_metrics"] = tuple(missing_metrics)
     return summary
 
 
@@ -7725,6 +7847,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         require_product_runtime_drift_action_gate_evidence=bool(
             args.require_product_runtime_drift_action_gate_evidence
         ),
+        require_product_runtime_drift_evidence_handoff_evidence=bool(
+            args.require_product_runtime_drift_evidence_handoff_evidence
+        ),
         release_efficiency_report_path=args.release_efficiency_report,
         external_evidence_baseline_comparison_path=args.external_evidence_baseline_comparison,
         external_evidence_baseline_comparison_registry_path=(
@@ -7995,6 +8120,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--require-product-runtime-drift-action-gate-evidence", action="store_true",
                         help="require the product runtime drift report to include product-trace "
                              "action-audit and action-execution drift metrics")
+    parser.add_argument("--require-product-runtime-drift-evidence-handoff-evidence", action="store_true",
+                        help="require the product runtime drift report to include promotion-contract "
+                             "evidence handoff coverage, manifest, metric completeness, and promoted-group "
+                             "drift metrics")
     parser.add_argument("--release-efficiency-report", default=None,
                         help="optional release efficiency report that must promote and verify")
     parser.add_argument("--external-evidence-baseline-comparison", default=None,

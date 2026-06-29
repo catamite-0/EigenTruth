@@ -15468,6 +15468,12 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         blocked_metric_count=0,
         action_gate_evidence=True,
     )
+    evidence_handoff_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "evidence-handoff-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        evidence_handoff_evidence=True,
+    )
     blocked_covered_fact_property_drift_report = _write_product_runtime_drift_report(
         tmp_path / "blocked-covered-fact-property-runtime-drift",
         status="promote",
@@ -15481,6 +15487,13 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         blocked_metric_count=0,
         action_gate_evidence=True,
         action_gate_blocked=True,
+    )
+    blocked_evidence_handoff_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "blocked-evidence-handoff-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        evidence_handoff_evidence=True,
+        evidence_handoff_blocked=True,
     )
     blocked_drift_report = _write_product_runtime_drift_report(
         tmp_path / "blocked-runtime-drift",
@@ -15705,6 +15718,49 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         product_runtime_drift_report_path=blocked_action_gate_drift_report,
         require_product_runtime_drift_action_gate_evidence=True,
     )
+    evidence_handoff = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=evidence_handoff_drift_report,
+        require_product_runtime_drift_evidence_handoff_evidence=True,
+    )
+    missing_evidence_handoff = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=missing_evidence_drift_report,
+        require_product_runtime_drift_evidence_handoff_evidence=True,
+    )
+    blocked_evidence_handoff = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=blocked_evidence_handoff_drift_report,
+        require_product_runtime_drift_evidence_handoff_evidence=True,
+    )
+    missing_evidence_handoff_report = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        require_product_runtime_drift_evidence_handoff_evidence=True,
+    )
 
     assert payload["decision"]["status"] == "promote"
     assert payload["decision"]["product_runtime_drift_status"] == "promote"
@@ -15925,6 +15981,50 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         "action-gate evidence blocked 1 metric" in reason
         for reason in blocked_action_gate["decision"]["blocking_reasons"][0]["reasons"]
     )
+    assert evidence_handoff["decision"]["status"] == "promote"
+    assert evidence_handoff["config"][
+        "require_product_runtime_drift_evidence_handoff_evidence"
+    ] is True
+    evidence_handoff_summary = evidence_handoff["release_candidate"]["product_runtime_drift"][
+        "summary"
+    ]
+    assert evidence_handoff_summary["evidence_handoff_evidence_required"] is True
+    assert evidence_handoff_summary["evidence_handoff_evidence_metric_count"] == 7
+    assert evidence_handoff_summary["evidence_handoff_evidence_blocked_metric_count"] == 0
+    assert evidence_handoff_summary["evidence_handoff_coverage_rate_current"] == pytest.approx(
+        1.0
+    )
+    assert evidence_handoff_summary["evidence_handoff_manifest_verified_rate_status"] == "pass"
+    assert missing_evidence_handoff["decision"]["status"] == "blocked"
+    assert missing_evidence_handoff["product_runtime_drift_gate"]["summary"][
+        "evidence_handoff_evidence_missing_metrics"
+    ] == (
+        "promotion_contract.evidence_handoff.coverage_rate",
+        "promotion_contract.evidence_handoff.manifest_verified_rate",
+        "promotion_contract.evidence_handoff.present_metric_rate.mean",
+        "promotion_contract.evidence_handoff.missing_metric_rate.mean",
+        "promotion_contract.evidence_handoff.missing_metric_count.mean",
+        "promotion_contract.evidence_handoff.blocked_group_count.mean",
+        "promotion_contract.evidence_handoff.promoted_group_rate.mean",
+    )
+    assert any(
+        "evidence-handoff evidence metrics are incomplete" in reason
+        for reason in missing_evidence_handoff["decision"]["blocking_reasons"][0]["reasons"]
+    )
+    assert blocked_evidence_handoff["decision"]["status"] == "blocked"
+    assert blocked_evidence_handoff["product_runtime_drift_gate"]["summary"][
+        "evidence_handoff_evidence_blocked_metric_count"
+    ] == 1
+    assert any(
+        "evidence-handoff evidence blocked 1 metric" in reason
+        for reason in blocked_evidence_handoff["decision"]["blocking_reasons"][0]["reasons"]
+    )
+    assert missing_evidence_handoff_report["product_runtime_drift_gate"]["summary"][
+        "evidence_handoff_evidence_required"
+    ] is True
+    assert missing_evidence_handoff_report["product_runtime_drift_gate"]["summary"][
+        "evidence_handoff_evidence_metric_count"
+    ] == 0
     assert missing_covered_fact_property_report["product_runtime_drift_gate"]["summary"][
         "covered_fact_property_evidence_required"
     ] is True
@@ -17486,6 +17586,7 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         triple_audit_evidence=True,
         covered_fact_property_evidence=True,
         action_gate_evidence=True,
+        evidence_handoff_evidence=True,
     )
     external_evidence_report = _write_external_evidence_baseline_comparison_report(
         tmp_path / "frontier-external-evidence-baseline-comparison.json"
@@ -17604,6 +17705,7 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     assert frontier_payload["config"]["require_product_runtime_drift_triple_audit_evidence"] is True
     assert frontier_payload["config"]["require_product_runtime_drift_covered_fact_property_evidence"] is True
     assert frontier_payload["config"]["require_product_runtime_drift_action_gate_evidence"] is True
+    assert frontier_payload["config"]["require_product_runtime_drift_evidence_handoff_evidence"] is True
     assert frontier_payload["config"]["require_product_trace_action_audit_gate"] is True
     assert frontier_payload["config"]["require_product_trace_action_execution_gate"] is True
     assert frontier_payload["config"]["external_evidence_baseline_comparison_key"] == (
@@ -17644,6 +17746,9 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         "require_product_runtime_drift_action_gate_evidence"
     ] is True
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
+        "require_product_runtime_drift_evidence_handoff_evidence"
+    ] is True
+    assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
         "require_product_trace_action_audit_gate"
     ] is True
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
@@ -17674,6 +17779,9 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     assert frontier_payload["product_runtime_drift_gate"]["summary"][
         "action_gate_evidence_metric_count"
     ] == 10
+    assert frontier_payload["product_runtime_drift_gate"]["summary"][
+        "evidence_handoff_evidence_metric_count"
+    ] == 7
     assert frontier_payload["adapter_family_matrix_gate"]["state_transition_world_model_adapter"] == (
         "RuleBasedWorldModelAdapter"
     )
@@ -18845,6 +18953,7 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     assert frontier_profile_config.require_product_runtime_drift_triple_audit_evidence is True
     assert frontier_profile_config.require_product_runtime_drift_covered_fact_property_evidence is True
     assert frontier_profile_config.require_product_runtime_drift_action_gate_evidence is True
+    assert frontier_profile_config.require_product_runtime_drift_evidence_handoff_evidence is True
     assert frontier_profile_config.require_product_trace_action_audit_gate is True
     assert frontier_profile_config.require_product_trace_action_execution_gate is True
     assert frontier_profile_config.external_evidence_baseline_comparison_key == (
@@ -18884,6 +18993,9 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     ] is True
     assert frontier_profile_config.release_policy_profile_applied_defaults[
         "require_product_runtime_drift_action_gate_evidence"
+    ] is True
+    assert frontier_profile_config.release_policy_profile_applied_defaults[
+        "require_product_runtime_drift_evidence_handoff_evidence"
     ] is True
     assert frontier_profile_config.release_policy_profile_applied_defaults[
         "require_product_trace_action_audit_gate"
@@ -19606,6 +19718,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         counterfactual_evidence=True,
         triple_audit_evidence=True,
         action_gate_evidence=True,
+        evidence_handoff_evidence=True,
     )
     release_efficiency_report = _write_release_efficiency_report(
         tmp_path / "release-efficiency",
@@ -19723,6 +19836,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         require_product_runtime_drift_counterfactual_evidence=True,
         require_product_runtime_drift_triple_audit_evidence=True,
         require_product_runtime_drift_action_gate_evidence=True,
+        require_product_runtime_drift_evidence_handoff_evidence=True,
         selfcheck_signal_fusion_workflow_key="report:selfcheck-signal-fusion-workflow:0.1",
         feedback_policy_workflow_key="report:feedback-policy-workflow:0.1",
         world_model_signal_workflow_key="report:world-model-signal-workflow:0.1",
@@ -19937,7 +20051,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["product_runtime_drift_counterfactual_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_triple_audit_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_action_gate_evidence_required"] is True
-    assert manifest["metadata"]["product_runtime_drift_compared_metric_count"] == 34
+    assert manifest["metadata"]["product_runtime_drift_evidence_handoff_evidence_required"] is True
+    assert manifest["metadata"]["product_runtime_drift_compared_metric_count"] == 41
     assert manifest["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
     assert manifest["metadata"]["product_runtime_drift_promotion_evidence_metric_count"] == 4
     assert manifest["metadata"]["product_runtime_drift_promotion_evidence_blocked_metric_count"] == 0
@@ -19949,6 +20064,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["product_runtime_drift_triple_audit_evidence_blocked_metric_count"] == 0
     assert manifest["metadata"]["product_runtime_drift_action_gate_evidence_metric_count"] == 10
     assert manifest["metadata"]["product_runtime_drift_action_gate_evidence_blocked_metric_count"] == 0
+    assert manifest["metadata"]["product_runtime_drift_evidence_handoff_evidence_metric_count"] == 7
+    assert manifest["metadata"]["product_runtime_drift_evidence_handoff_evidence_blocked_metric_count"] == 0
     assert manifest["metadata"]["product_runtime_drift_promotion_contract_coverage_rate_current"] == (
         pytest.approx(1.0)
     )
@@ -19974,6 +20091,10 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"][
         "product_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_status"
     ] == "pass"
+    assert manifest["metadata"]["product_runtime_drift_evidence_handoff_manifest_verified_rate_current"] == (
+        pytest.approx(1.0)
+    )
+    assert manifest["metadata"]["product_runtime_drift_evidence_handoff_promoted_group_rate_status"] == "pass"
     assert manifest["metadata"]["release_efficiency_report"] == str(release_efficiency_report)
     assert manifest["metadata"]["release_efficiency_recommended_profile"] == "balanced"
     assert manifest["metadata"]["release_efficiency_score"] == pytest.approx(2.0)
@@ -20316,6 +20437,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["product_runtime_drift_counterfactual_evidence_required"] is True
     assert record.metadata["product_runtime_drift_triple_audit_evidence_required"] is True
     assert record.metadata["product_runtime_drift_action_gate_evidence_required"] is True
+    assert record.metadata["product_runtime_drift_evidence_handoff_evidence_required"] is True
     assert record.metadata["product_runtime_drift_blocked_metric_count"] == 0
     assert record.metadata["product_runtime_drift_promotion_evidence_metric_count"] == 4
     assert record.metadata["product_runtime_drift_promotion_evidence_blocked_metric_count"] == 0
@@ -20327,6 +20449,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["product_runtime_drift_triple_audit_evidence_blocked_metric_count"] == 0
     assert record.metadata["product_runtime_drift_action_gate_evidence_metric_count"] == 10
     assert record.metadata["product_runtime_drift_action_gate_evidence_blocked_metric_count"] == 0
+    assert record.metadata["product_runtime_drift_evidence_handoff_evidence_metric_count"] == 7
+    assert record.metadata["product_runtime_drift_evidence_handoff_evidence_blocked_metric_count"] == 0
     assert record.metadata["product_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_current"] == (
         pytest.approx(0.88)
     )
@@ -20344,6 +20468,10 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata[
         "product_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_status"
     ] == "pass"
+    assert record.metadata["product_runtime_drift_evidence_handoff_manifest_verified_rate_current"] == (
+        pytest.approx(1.0)
+    )
+    assert record.metadata["product_runtime_drift_evidence_handoff_promoted_group_rate_status"] == "pass"
     assert record.metadata["release_efficiency_status"] == "promote"
     assert record.metadata["release_efficiency_report"] == str(release_efficiency_report)
     assert record.metadata["release_efficiency_recommended_profile"] == "balanced"
@@ -21153,6 +21281,7 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                 "require_product_runtime_drift_counterfactual_evidence": True,
                 "require_product_runtime_drift_triple_audit_evidence": True,
                 "require_product_runtime_drift_action_gate_evidence": True,
+                "require_product_runtime_drift_evidence_handoff_evidence": True,
                 "require_product_trace_action_audit_gate": True,
                 "require_product_trace_action_execution_gate": True,
                 "require_structured_fact_robustness": True,
@@ -21289,7 +21418,7 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                 "product_runtime_drift": {
                     "summary": {
                         "gate_enabled": True,
-                        "compared_metric_count": 34,
+                        "compared_metric_count": 41,
                         "blocked_metric_count": 0,
                         "promotion_evidence_metric_count": 4,
                         "promotion_evidence_blocked_metric_count": 0,
@@ -21301,6 +21430,8 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                         "triple_audit_evidence_blocked_metric_count": 0,
                         "action_gate_evidence_metric_count": 10,
                         "action_gate_evidence_blocked_metric_count": 0,
+                        "evidence_handoff_evidence_metric_count": 7,
+                        "evidence_handoff_evidence_blocked_metric_count": 0,
                         "promotion_contract_coverage_rate_current": 1.0,
                         "promotion_contract_coverage_rate_status": "pass",
                         "pre_generation_probe_comparison_coverage_rate_current": 1.0,
@@ -21337,6 +21468,20 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                         "product_trace_action_audit_error_rate_status": "pass",
                         "product_trace_action_execution_request_id_mismatch_rate_current": 0.0,
                         "product_trace_action_execution_request_id_mismatch_rate_status": "pass",
+                        "evidence_handoff_coverage_rate_current": 1.0,
+                        "evidence_handoff_coverage_rate_status": "pass",
+                        "evidence_handoff_manifest_verified_rate_current": 1.0,
+                        "evidence_handoff_manifest_verified_rate_status": "pass",
+                        "evidence_handoff_present_metric_rate_current": 1.0,
+                        "evidence_handoff_present_metric_rate_status": "pass",
+                        "evidence_handoff_missing_metric_rate_current": 0.0,
+                        "evidence_handoff_missing_metric_rate_status": "pass",
+                        "evidence_handoff_missing_metric_count_current": 0.0,
+                        "evidence_handoff_missing_metric_count_status": "pass",
+                        "evidence_handoff_blocked_group_count_current": 0.0,
+                        "evidence_handoff_blocked_group_count_status": "pass",
+                        "evidence_handoff_promoted_group_rate_current": 1.0,
+                        "evidence_handoff_promoted_group_rate_status": "pass",
                     },
                     "current": {
                         "optimization": {
@@ -21877,6 +22022,7 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["metadata"]["product_runtime_drift_counterfactual_evidence_required"] is True
     assert contract["metadata"]["product_runtime_drift_triple_audit_evidence_required"] is True
     assert contract["metadata"]["product_runtime_drift_action_gate_evidence_required"] is True
+    assert contract["metadata"]["product_runtime_drift_evidence_handoff_evidence_required"] is True
     assert contract["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
     assert contract["metadata"]["product_runtime_drift_promotion_evidence_metric_count"] == 4
     assert contract["metadata"]["product_runtime_drift_promotion_evidence_blocked_metric_count"] == 0
@@ -21888,6 +22034,8 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["metadata"]["product_runtime_drift_triple_audit_evidence_blocked_metric_count"] == 0
     assert contract["metadata"]["product_runtime_drift_action_gate_evidence_metric_count"] == 10
     assert contract["metadata"]["product_runtime_drift_action_gate_evidence_blocked_metric_count"] == 0
+    assert contract["metadata"]["product_runtime_drift_evidence_handoff_evidence_metric_count"] == 7
+    assert contract["metadata"]["product_runtime_drift_evidence_handoff_evidence_blocked_metric_count"] == 0
     assert contract["metadata"]["product_runtime_drift_promotion_contract_coverage_rate_current"] == 1.0
     assert contract["metadata"]["product_runtime_drift_promotion_contract_coverage_rate_status"] == "pass"
     assert contract["metadata"]["product_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_current"] == (
@@ -21908,6 +22056,12 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["metadata"][
         "product_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_status"
     ] == "pass"
+    assert contract["metadata"]["product_runtime_drift_evidence_handoff_manifest_verified_rate_current"] == (
+        1.0
+    )
+    assert contract["metadata"]["product_runtime_drift_evidence_handoff_promoted_group_rate_status"] == (
+        "pass"
+    )
     assert contract["metadata"]["max_covariance_maha_last_auroc_drop"] == 0.05
     assert contract["metadata"]["readiness_covariance_selected_mode"] == "low_rank"
     assert contract["metadata"]["performance_covariance_maha_last_delta_vs_baseline"] == -0.02
@@ -21938,11 +22092,13 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert manifest["metadata"]["triple_extraction_fixture_matrix_status"] == "promote"
     assert manifest["metadata"]["product_runtime_drift_triple_audit_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_action_gate_evidence_required"] is True
+    assert manifest["metadata"]["product_runtime_drift_evidence_handoff_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_promotion_evidence_metric_count"] == 4
     assert manifest["metadata"]["product_runtime_drift_pre_generation_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_pre_generation_evidence_metric_count"] == 8
     assert manifest["metadata"]["product_runtime_drift_counterfactual_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_counterfactual_evidence_metric_count"] == 6
+    assert manifest["metadata"]["product_runtime_drift_evidence_handoff_evidence_metric_count"] == 7
     assert manifest["metadata"]["product_runtime_drift_triple_audit_pass_rate_current"] == 1.0
     assert manifest["metadata"]["product_runtime_drift_counterfactual_verification_pass_rate_status"] == (
         "pass"
@@ -21952,6 +22108,7 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     )
     assert manifest["metadata"]["product_runtime_drift_triple_slot_coverage_rate_status"] == "pass"
     assert manifest["metadata"]["product_runtime_drift_product_trace_action_audit_error_rate_current"] == 0.0
+    assert manifest["metadata"]["product_runtime_drift_evidence_handoff_present_metric_rate_current"] == 1.0
     assert manifest["metadata"]["triple_extraction_fixture_matrix_report"] == (
         "artifacts/triple-extraction-fixture-matrix/triple-extraction-fixture-matrix.json"
     )
@@ -22045,11 +22202,13 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     )
     assert record.metadata["product_runtime_drift_triple_audit_evidence_required"] is True
     assert record.metadata["product_runtime_drift_action_gate_evidence_required"] is True
+    assert record.metadata["product_runtime_drift_evidence_handoff_evidence_required"] is True
     assert record.metadata["product_runtime_drift_promotion_evidence_metric_count"] == 4
     assert record.metadata["product_runtime_drift_pre_generation_evidence_required"] is True
     assert record.metadata["product_runtime_drift_pre_generation_evidence_metric_count"] == 8
     assert record.metadata["product_runtime_drift_counterfactual_evidence_required"] is True
     assert record.metadata["product_runtime_drift_counterfactual_evidence_metric_count"] == 6
+    assert record.metadata["product_runtime_drift_evidence_handoff_evidence_metric_count"] == 7
     assert record.metadata[
         "product_runtime_drift_pre_generation_probe_comparison_best_redline_margin_current"
     ] == pytest.approx(0.08)
@@ -22060,6 +22219,9 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert record.metadata["product_runtime_drift_triple_slot_coverage_rate_status"] == "pass"
     assert record.metadata["product_runtime_drift_product_trace_action_audit_error_rate_current"] == (
         pytest.approx(0.0)
+    )
+    assert record.metadata["product_runtime_drift_evidence_handoff_promoted_group_rate_current"] == (
+        pytest.approx(1.0)
     )
     assert record.metadata["selfcheck_signal_fusion_workflow_source"] == "registry"
     assert record.metadata["selfcheck_signal_fusion_workflow_record"] == (
@@ -22912,6 +23074,8 @@ def _write_product_runtime_drift_report(
     covered_fact_property_blocked=False,
     action_gate_evidence=False,
     action_gate_blocked=False,
+    evidence_handoff_evidence=False,
+    evidence_handoff_blocked=False,
 ):
     from eigentruth.registry import build_artifact_manifest
 
@@ -23477,6 +23641,85 @@ def _write_product_runtime_drift_report(
                 "absolute_delta": 0.0,
                 "absolute_increase": 0.0,
                 "threshold": 0.05,
+                "reason": None,
+            },
+        ])
+    if evidence_handoff_evidence:
+        manifest_status = "blocked" if evidence_handoff_blocked else "pass"
+        manifest_current = 0.5 if evidence_handoff_blocked else 1.0
+        metrics.extend([
+            {
+                "metric": "promotion_contract.evidence_handoff.coverage_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "promotion_contract.evidence_handoff.manifest_verified_rate",
+                "status": manifest_status,
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": manifest_current,
+                "absolute_delta": manifest_current - 1.0,
+                "threshold": 1.0,
+                "reason": (
+                    "promotion_contract.evidence_handoff.manifest_verified_rate below gate"
+                    if evidence_handoff_blocked
+                    else None
+                ),
+            },
+            {
+                "metric": "promotion_contract.evidence_handoff.present_metric_rate.mean",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "promotion_contract.evidence_handoff.missing_metric_rate.mean",
+                "status": "pass",
+                "comparison": "max_current",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "threshold": 0.0,
+                "reason": None,
+            },
+            {
+                "metric": "promotion_contract.evidence_handoff.missing_metric_count.mean",
+                "status": "pass",
+                "comparison": "max_current",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "threshold": 0.0,
+                "reason": None,
+            },
+            {
+                "metric": "promotion_contract.evidence_handoff.blocked_group_count.mean",
+                "status": "pass",
+                "comparison": "max_current",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "threshold": 0.0,
+                "reason": None,
+            },
+            {
+                "metric": "promotion_contract.evidence_handoff.promoted_group_rate.mean",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
                 "reason": None,
             },
         ])
@@ -29171,7 +29414,8 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                     "product_runtime_drift_counterfactual_evidence_required": True,
                     "product_runtime_drift_triple_audit_evidence_required": True,
                     "product_runtime_drift_action_gate_evidence_required": True,
-                    "product_runtime_drift_compared_metric_count": 36,
+                    "product_runtime_drift_evidence_handoff_evidence_required": True,
+                    "product_runtime_drift_compared_metric_count": 43,
                     "product_runtime_drift_blocked_metric_count": 0,
                     "product_runtime_drift_promotion_evidence_metric_count": 4,
                     "product_runtime_drift_promotion_evidence_blocked_metric_count": 0,
@@ -29183,6 +29427,8 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                     "product_runtime_drift_triple_audit_evidence_blocked_metric_count": 0,
                     "product_runtime_drift_action_gate_evidence_metric_count": 10,
                     "product_runtime_drift_action_gate_evidence_blocked_metric_count": 0,
+                    "product_runtime_drift_evidence_handoff_evidence_metric_count": 7,
+                    "product_runtime_drift_evidence_handoff_evidence_blocked_metric_count": 0,
                     "product_runtime_drift_promotion_contract_coverage_rate_current": 1.0,
                     "product_runtime_drift_promotion_contract_coverage_rate_status": "pass",
                     "product_runtime_drift_pre_generation_probe_comparison_coverage_rate_current": 1.0,
@@ -29215,6 +29461,20 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                     "product_runtime_drift_product_trace_action_audit_error_rate_status": "pass",
                     "product_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_current": 0.0,
                     "product_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_status": "pass",
+                    "product_runtime_drift_evidence_handoff_coverage_rate_current": 1.0,
+                    "product_runtime_drift_evidence_handoff_coverage_rate_status": "pass",
+                    "product_runtime_drift_evidence_handoff_manifest_verified_rate_current": 1.0,
+                    "product_runtime_drift_evidence_handoff_manifest_verified_rate_status": "pass",
+                    "product_runtime_drift_evidence_handoff_present_metric_rate_current": 1.0,
+                    "product_runtime_drift_evidence_handoff_present_metric_rate_status": "pass",
+                    "product_runtime_drift_evidence_handoff_missing_metric_rate_current": 0.0,
+                    "product_runtime_drift_evidence_handoff_missing_metric_rate_status": "pass",
+                    "product_runtime_drift_evidence_handoff_missing_metric_count_current": 0.0,
+                    "product_runtime_drift_evidence_handoff_missing_metric_count_status": "pass",
+                    "product_runtime_drift_evidence_handoff_blocked_group_count_current": 0.0,
+                    "product_runtime_drift_evidence_handoff_blocked_group_count_status": "pass",
+                    "product_runtime_drift_evidence_handoff_promoted_group_rate_current": 1.0,
+                    "product_runtime_drift_evidence_handoff_promoted_group_rate_status": "pass",
                 },
                 "promotion_contract_external_evidence_baseline_comparison": {
                     "source": "registry",
@@ -29553,13 +29813,15 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert runtime_drift["counterfactual_evidence_required_counts"] == {"True": 1}
     assert runtime_drift["triple_audit_evidence_required_counts"] == {"True": 1}
     assert runtime_drift["action_gate_evidence_required_counts"] == {"True": 1}
-    assert runtime_drift["compared_metric_count"]["mean"] == pytest.approx(36.0)
+    assert runtime_drift["evidence_handoff_evidence_required_counts"] == {"True": 1}
+    assert runtime_drift["compared_metric_count"]["mean"] == pytest.approx(43.0)
     assert runtime_drift["blocked_metric_count"]["mean"] == pytest.approx(0.0)
     assert runtime_drift["promotion_evidence_metric_count"]["mean"] == pytest.approx(4.0)
     assert runtime_drift["pre_generation_evidence_metric_count"]["mean"] == pytest.approx(8.0)
     assert runtime_drift["counterfactual_evidence_metric_count"]["mean"] == pytest.approx(6.0)
     assert runtime_drift["triple_audit_evidence_metric_count"]["mean"] == pytest.approx(4.0)
     assert runtime_drift["action_gate_evidence_metric_count"]["mean"] == pytest.approx(10.0)
+    assert runtime_drift["evidence_handoff_evidence_metric_count"]["mean"] == pytest.approx(7.0)
     assert runtime_drift["promotion_evidence"]["promotion_contract_coverage_rate"][
         "current"
     ]["mean"] == pytest.approx(1.0)
@@ -29589,6 +29851,12 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     ]["mean"] == pytest.approx(0.0)
     assert runtime_drift["action_gate_evidence"][
         "product_trace_action_execution_request_id_mismatch_rate"
+    ]["status_counts"] == {"pass": 1}
+    assert runtime_drift["evidence_handoff_evidence"][
+        "evidence_handoff_manifest_verified_rate"
+    ]["current"]["mean"] == pytest.approx(1.0)
+    assert runtime_drift["evidence_handoff_evidence"][
+        "evidence_handoff_promoted_group_rate"
     ]["status_counts"] == {"pass": 1}
     assert trace_replay["available_trace_count"] == 1
     assert trace_replay["workflow_status_counts"] == {"promote": 1}
@@ -29844,6 +30112,9 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
         "promotion_contract_product_runtime_drift_action_gate_evidence_metric_count_mean"
     ] == pytest.approx(10.0)
     assert manifest["metadata"][
+        "promotion_contract_product_runtime_drift_evidence_handoff_evidence_metric_count_mean"
+    ] == pytest.approx(7.0)
+    assert manifest["metadata"][
         "promotion_contract_product_runtime_drift_promotion_contract_coverage_rate_current_mean"
     ] == pytest.approx(1.0)
     assert manifest["metadata"][
@@ -29857,6 +30128,12 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     ] == pytest.approx(0.0)
     assert manifest["metadata"][
         "promotion_contract_product_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_status_counts"
+    ] == {"pass": 1}
+    assert manifest["metadata"][
+        "promotion_contract_product_runtime_drift_evidence_handoff_manifest_verified_rate_current_mean"
+    ] == pytest.approx(1.0)
+    assert manifest["metadata"][
+        "promotion_contract_product_runtime_drift_evidence_handoff_promoted_group_rate_status_counts"
     ] == {"pass": 1}
     assert (
         manifest["metadata"]["promotion_contract_product_trace_replay_available_trace_count"]
@@ -31175,7 +31452,7 @@ def test_run_product_runtime_baseline_reuses_trace_record_cache(tmp_path, monkey
     assert first["config"]["trace_record_cache"]["cache_hit"] is False
     assert first["config"]["trace_record_cache"]["cache_written"] is True
     assert first["paths"]["trace_records_cache"] == str(cache_path)
-    assert cache_payload["schema_version"] == 13
+    assert cache_payload["schema_version"] == 14
     assert cache_payload["workflow"] == "product_runtime_baseline_trace_records"
     assert cache_payload["summary"]["trace_count"] == 2
     assert cache_payload["policy"]["payload"]["max_total_seconds"] == 0.3

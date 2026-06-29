@@ -36,6 +36,9 @@ _PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES = (
 _PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_KEYS
 )
+_PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS
+)
 
 
 @dataclass(frozen=True)
@@ -898,6 +901,9 @@ class ProductPromotionContract:
                 "product_runtime_drift_action_gate_evidence_required": config.get(
                     "require_product_runtime_drift_action_gate_evidence"
                 ),
+                "product_runtime_drift_evidence_handoff_evidence_required": config.get(
+                    "require_product_runtime_drift_evidence_handoff_evidence"
+                ),
                 "product_runtime_drift_compared_metric_count": (
                     product_runtime_drift_summary.get("compared_metric_count")
                 ),
@@ -1080,6 +1086,12 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         "product_runtime_drift_action_gate_evidence_blocked_metric_count": summary.get(
             "action_gate_evidence_blocked_metric_count"
         ),
+        "product_runtime_drift_evidence_handoff_evidence_metric_count": summary.get(
+            "evidence_handoff_evidence_metric_count"
+        ),
+        "product_runtime_drift_evidence_handoff_evidence_blocked_metric_count": summary.get(
+            "evidence_handoff_evidence_blocked_metric_count"
+        ),
     }
     for prefix in _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
@@ -1097,6 +1109,9 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     for prefix in _PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     return metadata
@@ -2748,6 +2763,7 @@ def _promotion_contract_product_runtime_drift_metadata(
         "product_runtime_drift_triple_audit_evidence_required",
         "product_runtime_drift_covered_fact_property_evidence_required",
         "product_runtime_drift_action_gate_evidence_required",
+        "product_runtime_drift_evidence_handoff_evidence_required",
         "product_runtime_drift_compared_metric_count",
         "product_runtime_drift_blocked_metric_count",
         "product_runtime_drift_promotion_evidence_metric_count",
@@ -2762,6 +2778,8 @@ def _promotion_contract_product_runtime_drift_metadata(
         "product_runtime_drift_covered_fact_property_evidence_blocked_metric_count",
         "product_runtime_drift_action_gate_evidence_metric_count",
         "product_runtime_drift_action_gate_evidence_blocked_metric_count",
+        "product_runtime_drift_evidence_handoff_evidence_metric_count",
+        "product_runtime_drift_evidence_handoff_evidence_blocked_metric_count",
     )
     flattened: dict[str, Any] = {
         f"promotion_contract_{key}": metadata.get(key)
@@ -2775,6 +2793,7 @@ def _promotion_contract_product_runtime_drift_metadata(
         *_PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES,
         *_PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES,
         *_PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES,
+        *_PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES,
     )
     for prefix in evidence_prefixes:
         for suffix in ("baseline", "current", "status"):

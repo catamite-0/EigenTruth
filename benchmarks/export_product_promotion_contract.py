@@ -975,6 +975,15 @@ def _product_runtime_drift_flat_metadata(metadata: Mapping[str, Any]) -> dict[st
         "product_runtime_drift_action_gate_evidence_blocked_metric_count": metadata.get(
             "product_runtime_drift_action_gate_evidence_blocked_metric_count"
         ),
+        "product_runtime_drift_evidence_handoff_evidence_required": metadata.get(
+            "product_runtime_drift_evidence_handoff_evidence_required"
+        ),
+        "product_runtime_drift_evidence_handoff_evidence_metric_count": metadata.get(
+            "product_runtime_drift_evidence_handoff_evidence_metric_count"
+        ),
+        "product_runtime_drift_evidence_handoff_evidence_blocked_metric_count": metadata.get(
+            "product_runtime_drift_evidence_handoff_evidence_blocked_metric_count"
+        ),
     }
     for prefix in _PRODUCT_RUNTIME_DRIFT_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
