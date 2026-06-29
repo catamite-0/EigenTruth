@@ -472,6 +472,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
         metrics.update(_cache_metrics(trace))
         metrics.update(_action_execution_metrics(trace))
         metrics.update(_action_audit_metrics(trace))
+        metrics.update(_trajectory_audit_metrics(trace))
         metrics.update(_route_cost_metrics(trace))
         metrics.update(_verification_stage_metrics(trace))
         metrics.update(_verification_plan_metrics(trace))
@@ -512,6 +513,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
     metrics.update(_cache_metrics(trace))
     metrics.update(_action_execution_metrics(trace))
     metrics.update(_action_audit_metrics(trace))
+    metrics.update(_trajectory_audit_metrics(trace))
     metrics.update(_route_cost_metrics(trace))
     metrics.update(_verification_stage_metrics(trace))
     metrics.update(_verification_plan_metrics(trace))
@@ -634,6 +636,42 @@ def _action_audit_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, 
         ) or 0.0,
         "action_audit_unknown_claim_id_count": _finite_float(counts_by_code.get("unknown_claim_id")) or 0.0,
     }
+
+
+def _trajectory_audit_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:
+    from eigentruth.control.trajectory_audit import TrajectoryHallucinationType, audit_product_trace_trajectory
+
+    if isinstance(trace, ProductTrace):
+        summary = trace.trajectory_audit_summary()
+        source = "full_trace"
+    else:
+        payload = dict(trace)
+        summary = _mapping(_mapping(payload.get("summaries")).get("trajectory_audit"))
+        if summary:
+            source = "bounded_summary"
+        else:
+            summary = audit_product_trace_trajectory(payload).summary()
+            source = "full_trace"
+    counts_by_type = _mapping(summary.get("counts_by_type"))
+    counts_by_code = _mapping(summary.get("counts_by_code"))
+    metrics = {
+        "trajectory_audit_available": bool(summary.get("available")),
+        "trajectory_audit_source": source,
+        "trajectory_audit_summary": summary,
+        "trajectory_audit_passed": _optional_bool(summary.get("passed")),
+        "trajectory_audit_issue_count": _finite_float(summary.get("issue_count")),
+        "trajectory_audit_error_count": _finite_float(summary.get("error_count")),
+        "trajectory_audit_warning_count": _finite_float(summary.get("warning_count")),
+        "trajectory_audit_info_count": _finite_float(summary.get("info_count")),
+        "trajectory_audit_types": tuple(_sequence(summary.get("hallucination_types", ()))),
+        "trajectory_audit_counts_by_type": counts_by_type,
+        "trajectory_audit_counts_by_code": counts_by_code,
+    }
+    for hallucination_type in TrajectoryHallucinationType:
+        metrics[f"trajectory_audit_{hallucination_type.value}_count"] = (
+            _finite_float(counts_by_type.get(hallucination_type.value)) or 0.0
+        )
+    return metrics
 
 
 def _action_execution_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:

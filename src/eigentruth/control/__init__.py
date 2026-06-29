@@ -95,6 +95,12 @@ from eigentruth.control.runtime_profiles import (
 )
 from eigentruth.control.staging import StagedVerificationPolicy, VerificationStageDecision
 from eigentruth.control.trace import ProductTrace, RuntimePhaseTiming, RuntimeTrace, TraceEvent
+from eigentruth.control.trajectory_audit import (
+    TrajectoryAuditIssue,
+    TrajectoryAuditReport,
+    TrajectoryHallucinationType,
+    audit_product_trace_trajectory,
+)
 
 __all__ = [
     "ActionExecutionStatus",
@@ -154,9 +160,13 @@ __all__ = [
     "RiskDecision",
     "RiskLevel",
     "TraceEvent",
+    "TrajectoryAuditIssue",
+    "TrajectoryAuditReport",
+    "TrajectoryHallucinationType",
     "VerificationStageDecision",
     "VerificationLoopResult",
     "audit_action_requests",
+    "audit_product_trace_trajectory",
     "audit_product_promotion_contract_evidence",
     "enrich_product_promotion_contract_evidence",
     "evidence_bundle_from_action_results",

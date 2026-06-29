@@ -259,6 +259,16 @@ class ProductTrace:
                 risk_decision=prepared.risk_decision,
                 verification_plan=prepared.verification_plan,
             ),
+            "trajectory_audit": _trajectory_audit_summary_from_payload(
+                request_id=self.request_id,
+                claims=prepared.claims,
+                verification_plan=prepared.verification_plan,
+                verification_results=prepared.verification_results,
+                risk_decision=prepared.risk_decision,
+                actions=prepared.actions,
+                action_results=prepared.action_results,
+                final_answer=prepared.final_answer,
+            ),
             "verification_route": _verification_route_summary_from_results(
                 prepared.verification_results,
             ),
@@ -345,6 +355,12 @@ class ProductTrace:
             risk_decision=_risk_decision_to_dict(self.risk_decision),
             verification_plan=_verification_plan_to_dict(self.verification_plan),
         )
+
+    def trajectory_audit_summary(self) -> dict[str, Any]:
+        """Summarize trace-level hallucination taxonomy audit results."""
+        from eigentruth.control.trajectory_audit import audit_product_trace_trajectory
+
+        return audit_product_trace_trajectory(self).summary()
 
     def verification_route_summary(self) -> dict[str, Any]:
         """Summarize verifier route choices recorded in result metadata."""
@@ -610,6 +626,31 @@ def _action_audit_summary_from_payload(
         verification_plan=verification_plan,
     )
     return report.summary()
+
+
+def _trajectory_audit_summary_from_payload(
+    *,
+    request_id: str | None,
+    claims: Sequence[Mapping[str, Any]],
+    verification_plan: Mapping[str, Any] | None,
+    verification_results: Sequence[Mapping[str, Any]],
+    risk_decision: Mapping[str, Any] | None,
+    actions: Sequence[Any],
+    action_results: Sequence[Mapping[str, Any]],
+    final_answer: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    from eigentruth.control.trajectory_audit import audit_product_trace_trajectory
+
+    return audit_product_trace_trajectory({
+        "request_id": request_id,
+        "claims": tuple(claims),
+        "verification_plan": verification_plan,
+        "verification_results": tuple(verification_results),
+        "risk_decision": risk_decision,
+        "actions": tuple(actions),
+        "action_results": tuple(action_results),
+        "final_answer": final_answer,
+    }).summary()
 
 
 def _verification_route_summary_from_results(

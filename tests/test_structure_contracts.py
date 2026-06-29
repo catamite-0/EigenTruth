@@ -14,6 +14,10 @@ from eigentruth.control import (
     RiskDecision,
     RiskLevel,
     SQLiteActionExecutionLedger,
+    TrajectoryAuditIssue,
+    TrajectoryAuditReport,
+    TrajectoryHallucinationType,
+    audit_product_trace_trajectory,
 )
 from eigentruth.control.runtime_drift_keys import (
     PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_KEYS,
@@ -210,6 +214,21 @@ def test_action_result_json_roundtrip():
     assert loaded.action is ControlAction.ABSTAIN
     assert loaded.status is ActionExecutionStatus.DRY_RUN
     assert loaded.output["message"] == "not enough evidence"
+
+
+def test_trajectory_audit_public_api_roundtrip():
+    issue = TrajectoryAuditIssue(
+        code="accepted_refuted_claim",
+        hallucination_type=TrajectoryHallucinationType.FACTUAL,
+        severity="error",
+        message="accepted a refuted claim",
+        claim_ids=("c1",),
+    )
+    report = TrajectoryAuditReport(trace_id="trace-1", issues=(issue,))
+    loaded = TrajectoryAuditReport.from_dict(report.to_dict())
+
+    assert loaded.summary()["counts_by_type"]["factual"] == 1
+    assert callable(audit_product_trace_trajectory)
 
 
 def test_json_action_execution_ledger_roundtrip(tmp_path):

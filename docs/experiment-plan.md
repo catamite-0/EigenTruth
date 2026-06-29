@@ -16,6 +16,15 @@ representation-observability toolkit spanning **training and inference**.
 - Priority order = information value ÷ cost. Phase 1 experiments are independent and can
   be reordered freely.
 
+## Current Control-Plane Continuation
+
+### E2-agent-trajectory-audit. ProductTrace trajectory hallucination taxonomy
+- **Question:** Can EigenTruth expose agent/tool-chain hallucination failures before adding a learned agent detector?
+- **Method:** Audit `ProductTrace` structure across claims, verification results, decisions, action requests/results, and final answers, using the five trajectory-level categories: factual, referential, logical, procedural, and scope.
+- **Accept:** Dependency-free public API, bounded trace summary, runtime metrics, and unit tests for accepted refutations, clean supported accepts, and action/result drift.
+- **Deliverable:** `eigentruth.control.trajectory_audit`, `ProductTrace.summaries.trajectory_audit`, and `product_runtime_metrics()` trajectory counters.
+- **Cost:** low. **Status:** implemented as a structural monitor-first audit; learned trajectory classifiers and real tool-selection representation probes remain future adapters.
+
 ## Phase 0 — Finish in-flight work
 
 ### E0. Linear direction vs Mahalanobis + layer sweep (real data)
