@@ -5003,6 +5003,16 @@ write the smaller product handoff artifact consumed by demos and control-plane
 jobs. It converts either a release-candidate comparison or registry-workflow JSON
 into a `ProductPromotionContract`, writes a manifest, and can register a
 `product_promotion_contract:*:*` record. When the release candidate was gated by
+a frontier-audit or strict local-release profile, the exported contract now also
+contains a compact `summary` block. That summary preserves the source status,
+gate statuses, runtime recommendation, verifier-route quality/cost fields,
+action-gate status, grouped runtime-drift evidence counts, recommended records,
+control defaults, and runtime budget policy without requiring reviewers to scan
+the full metadata map. The manifest and registry record mirror the headline
+summary fields as `promotion_summary_*` metadata for dashboards and release
+checks.
+
+When the release candidate was gated by
 a structured-fact route audit, the compact contract, manifest, and registry
 metadata keep the recommended route's covered Wikidata property ids plus
 required-route record-to-property coverage summaries, so deployment-side traces

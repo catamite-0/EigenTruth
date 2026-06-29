@@ -50,6 +50,7 @@ def export_product_promotion_contract(
         contract,
         release_efficiency_report_path=release_efficiency_report,
     )
+    summary = contract.to_summary_dict()
     payload = contract.to_dict()
     control_policy_config = dict(contract.control_policy_config)
     control_defaults = dict(contract.control_defaults)
@@ -66,6 +67,7 @@ def export_product_promotion_contract(
     counterfactual_verification = dict(contract.counterfactual_verification)
     release_efficiency = dict(contract.release_efficiency)
     release_efficiency_metadata = _release_efficiency_flat_metadata(release_efficiency)
+    promotion_summary_metadata = _promotion_summary_flat_metadata(summary)
     runtime_cost_metadata = _runtime_cost_flat_metadata(contract.metadata)
     product_runtime_drift_metadata = _product_runtime_drift_flat_metadata(contract.metadata)
     product_trace_replay_workflow_metadata = _product_trace_replay_workflow_flat_metadata(
@@ -123,6 +125,7 @@ def export_product_promotion_contract(
                 **counterfactual_verification_metadata,
                 **release_efficiency_metadata,
                 **triple_extraction_fixture_matrix_metadata,
+                **promotion_summary_metadata,
                 **export_metadata,
             },
         )
@@ -140,6 +143,7 @@ def export_product_promotion_contract(
                 "artifact_manifest": None if manifest_path is None else str(manifest_path),
                 "source_workflow": contract.source_workflow,
                 "source_status": contract.source_status,
+                **promotion_summary_metadata,
                 "model_id": contract.model_id,
                 "control_policy_config": control_policy_config,
                 "control_defaults": control_defaults,
@@ -461,6 +465,7 @@ def export_product_promotion_contract(
             "triple_extraction_fixture_matrix": triple_extraction_fixture_matrix,
             "release_efficiency": release_efficiency,
             "metadata": dict(contract.metadata),
+            "summary": summary,
         },
         "artifact_manifest_summary": None if manifest is None else manifest.get("summary"),
     }
@@ -551,6 +556,38 @@ def _release_efficiency_flat_metadata(report: Mapping[str, Any]) -> dict[str, An
         "release_efficiency_quality_passed": report.get("quality_passed"),
         "release_efficiency_trace_record_cache_hit_profile_count": report.get(
             "trace_record_cache_hit_profile_count"
+        ),
+    })
+
+
+def _promotion_summary_flat_metadata(summary: Mapping[str, Any]) -> dict[str, Any]:
+    runtime = _mapping(summary.get("runtime"))
+    verifier_route = _mapping(summary.get("verifier_route"))
+    return _drop_none_values({
+        "promotion_summary_status": summary.get("status"),
+        "promotion_summary_source_status": summary.get("source_status"),
+        "promotion_summary_model_id": summary.get("model_id"),
+        "promotion_summary_available_gate_count": summary.get("available_gate_count"),
+        "promotion_summary_promoted_gate_count": summary.get("promoted_gate_count"),
+        "promotion_summary_blocking_gate_count": summary.get("blocking_gate_count"),
+        "promotion_summary_blocked_evidence_group_count": summary.get(
+            "blocked_evidence_group_count"
+        ),
+        "promotion_summary_route": verifier_route.get("route"),
+        "promotion_summary_route_selected": verifier_route.get("selected"),
+        "promotion_summary_route_decision_accuracy": verifier_route.get(
+            "decision_accuracy"
+        ),
+        "promotion_summary_route_false_supported_rate": verifier_route.get(
+            "false_supported_rate"
+        ),
+        "promotion_summary_runtime_layer": runtime.get("layer"),
+        "promotion_summary_runtime_batch_size": runtime.get("batch_size"),
+        "promotion_summary_recommended_runtime_seconds": runtime.get(
+            "recommended_runtime_seconds"
+        ),
+        "promotion_summary_recommended_runtime_cost_source": runtime.get(
+            "recommended_runtime_cost_source"
         ),
     })
 

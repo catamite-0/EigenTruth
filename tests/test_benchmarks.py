@@ -22139,6 +22139,11 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
             },
             "decision": {
                 "status": "promote",
+                "readiness_status": "promote",
+                "route_status": "promote",
+                "performance_status": "promote",
+                "adapter_family_status": "promote",
+                "required_route_baseline_status": "promote",
                 "recommended_route": "structured_qa",
                 "recommended_selector_replay_candidate": "default",
                 "product_runtime_drift_status": "promote",
@@ -22181,6 +22186,13 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
             "release_candidate": {
                 "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
                 "runtime": {"layer": -12, "batch_size": 8},
+                "runtime_cost": {
+                    "recommended_runtime_seconds": 0.2,
+                    "recommended_runtime_cost_source": "cache_only_total_seconds",
+                    "uncached_forward_cost_seconds": 37.5,
+                    "uncached_forward_cost_source": "uncached_forced_answer_forward_seconds",
+                    "cache_only_total_seconds": 0.2,
+                },
                 "quality": {
                     "covariance_tradeoff_gate": {
                         "passed": True,
@@ -22640,6 +22652,19 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
 
     assert payload["status"] == "exported"
     assert contract["workflow"] == "product_promotion_contract"
+    assert payload["contract"]["summary"]["status"] == "promote"
+    assert payload["contract"]["summary"] == contract["summary"]
+    assert contract["summary"]["gate_statuses"]["readiness"] == "promote"
+    assert contract["summary"]["gate_statuses"]["route"] == "promote"
+    assert contract["summary"]["gate_statuses"]["performance"] == "promote"
+    assert contract["summary"]["gate_statuses"]["product_runtime_drift"] == "promote"
+    assert contract["summary"]["blocking_gate_count"] == 0
+    assert contract["summary"]["blocked_evidence_group_count"] == 0
+    assert contract["summary"]["runtime"]["layer"] == -12
+    assert contract["summary"]["runtime"]["recommended_runtime_seconds"] == 0.2
+    assert contract["summary"]["verifier_route"]["route"] == "structured_qa"
+    assert contract["summary"]["evidence_groups"]["pre_generation"]["metric_count"] == 8
+    assert contract["summary"]["action_gates"]["action_audit_status"] == "promote"
     assert contract["runtime_budget_policy"]["max_mean_attempted_route_count"] == 1.1
     assert contract["control_defaults"] == {"max_verifier_route_attempts": 2}
     assert contract["control_policy_config"]["unsupported_action"] == "clarify"
@@ -22949,6 +22974,11 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     )
     assert manifest["summary"]["artifact_count"] == 3
     assert manifest["artifacts"]["release_efficiency_report"]["exists"] is True
+    assert manifest["metadata"]["promotion_summary_status"] == "promote"
+    assert manifest["metadata"]["promotion_summary_blocking_gate_count"] == 0
+    assert manifest["metadata"]["promotion_summary_blocked_evidence_group_count"] == 0
+    assert manifest["metadata"]["promotion_summary_route"] == "structured_qa"
+    assert manifest["metadata"]["promotion_summary_runtime_layer"] == -12
     assert manifest["metadata"]["triple_extraction_fixture_matrix_status"] == "promote"
     assert manifest["metadata"]["product_runtime_drift_triple_audit_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_action_gate_evidence_required"] is True
@@ -23020,6 +23050,13 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     }
     assert record.artifact_type == "product_promotion_contract"
     assert record.metadata["source_status"] == "promote"
+    assert record.metadata["promotion_summary_status"] == "promote"
+    assert record.metadata["promotion_summary_blocking_gate_count"] == 0
+    assert record.metadata["promotion_summary_blocked_evidence_group_count"] == 0
+    assert record.metadata["promotion_summary_route"] == "structured_qa"
+    assert record.metadata["promotion_summary_recommended_runtime_seconds"] == (
+        pytest.approx(0.2)
+    )
     assert record.metadata["control_defaults"] == {"max_verifier_route_attempts": 2}
     assert record.metadata["control_policy_config"]["unsupported_action"] == "clarify"
     assert record.metadata["control_default_max_verifier_route_attempts"] == 2

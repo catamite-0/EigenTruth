@@ -72,6 +72,7 @@ from eigentruth.control.promotion import (
     load_product_promotion_contract,
     load_product_runtime_evidence_bundle,
     product_promotion_contract_metadata,
+    product_promotion_contract_summary,
     product_runtime_budget_policy_from_release_candidate,
 )
 from eigentruth.control.runtime_budget import (
@@ -180,6 +181,7 @@ __all__ = [
     "load_product_promotion_contract",
     "load_product_runtime_evidence_bundle",
     "product_promotion_contract_metadata",
+    "product_promotion_contract_summary",
     "product_runtime_budget_policy_from_release_candidate",
     "product_runtime_metrics",
     "product_trace_fingerprint",

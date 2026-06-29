@@ -46,6 +46,7 @@ EigenTruth wraps a decoder-only language model with PyTorch hooks. It can:
 - calibrate diagnostic thresholds from benchmark score dumps and combine them with claim verification
 - route source-backed deterministic rule candidates through input fill, adapter execution, promotion gates, and trace artifacts
 - select a cheap pre-generation runtime profile from prompt and metadata risk markers, with an optional soft risk probability recorded before generation
+- export compact product promotion summaries from release-candidate evidence for deployment handoff review
 - compile risk decisions into structured action requests and dry-run execution results
 - optionally apply experimental activation steering when a configured threshold is exceeded
 
@@ -63,6 +64,7 @@ EigenTruth 通过 PyTorch hook 包装 decoder-only 语言模型。它可以：
 - 从 benchmark 分数 dump 校准诊断阈值，并与 claim 验证结果组合成风险决策
 - 将 source-backed deterministic rule candidate 串联到 input fill、adapter execution、promotion gate 与 trace artifact
 - 基于 prompt 与 metadata 风险标记，在生成前选择低成本 runtime profile，并可记录生成前 soft risk probability
+- 从 release-candidate evidence 导出紧凑的 product promotion summary，便于部署交接审查
 - 将风险决策编译成结构化 action request 与 dry-run 执行结果
 - 可选地在超过配置阈值时执行实验性激活引导
 

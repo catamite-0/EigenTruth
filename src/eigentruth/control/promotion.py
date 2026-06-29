@@ -46,6 +46,52 @@ _PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS
 )
 
+_PROMOTED_GATE_STATUSES = frozenset({
+    "complete",
+    "ok",
+    "pass",
+    "passed",
+    "promote",
+    "ready",
+    "recommend",
+})
+
+_PROMOTION_CONTRACT_GATE_STATUS_KEYS = (
+    ("readiness", "readiness_status"),
+    ("route", "route_status"),
+    ("performance", "performance_status"),
+    ("required_route_baseline", "required_route_baseline_status"),
+    ("adapter_family", "adapter_family_status"),
+    ("selector_replay", "selector_replay_status"),
+    ("product_trace_replay", "product_trace_replay_workflow_status"),
+    ("product_runtime_drift", "product_runtime_drift_status"),
+    ("external_evidence", "external_evidence_baseline_comparison_status"),
+    ("mechanism_handoff", "mechanism_handoff_evidence_bundle_status"),
+    ("triple_extraction", "triple_extraction_fixture_matrix_status"),
+    ("counterfactual", "counterfactual_verification_status"),
+    ("pre_generation", "pre_generation_probe_comparison_status"),
+    ("claim_factuality", "claim_factuality_probe_comparison_status"),
+    ("selfcheck", "selfcheck_signal_fusion_workflow_status"),
+    ("world_model", "world_model_signal_workflow_status"),
+    ("pathway_intervention", "pathway_intervention_workflow_status"),
+    ("feedback_policy", "feedback_policy_workflow_status"),
+    ("release_efficiency", "release_efficiency_status"),
+    ("frontier_release_evidence", "frontier_release_evidence_status"),
+    ("uncertainty_escalation", "uncertainty_escalation_workflow_status"),
+)
+
+_PRODUCT_RUNTIME_DRIFT_GROUP_SUMMARY_KEYS = (
+    ("promotion", "promotion"),
+    ("pre_generation", "pre_generation"),
+    ("claim_factuality", "claim_factuality"),
+    ("counterfactual", "counterfactual"),
+    ("triple_audit", "triple_audit"),
+    ("covered_fact_property", "covered_fact_property"),
+    ("action_gate", "action_gate"),
+    ("trajectory_audit", "trajectory_audit"),
+    ("evidence_handoff", "evidence_handoff"),
+)
+
 
 @dataclass(frozen=True)
 class ProductPromotionContract:
@@ -374,6 +420,24 @@ class ProductPromotionContract:
             counterfactual_verification=counterfactual_verification,
             release_efficiency=release_efficiency,
             metadata={
+                "release_candidate_status": status,
+                "readiness_status": decision.get("readiness_status"),
+                "route_status": decision.get("route_status"),
+                "performance_status": decision.get("performance_status"),
+                "adapter_family_status": decision.get("adapter_family_status"),
+                "required_route_baseline_status": decision.get(
+                    "required_route_baseline_status"
+                ),
+                "release_efficiency_status": decision.get("release_efficiency_status"),
+                "mechanism_handoff_evidence_bundle_status": decision.get(
+                    "mechanism_handoff_evidence_bundle_status"
+                ),
+                "frontier_release_evidence_status": decision.get(
+                    "frontier_release_evidence_status"
+                ),
+                "uncertainty_escalation_workflow_status": decision.get(
+                    "uncertainty_escalation_workflow_status"
+                ),
                 "recommended_readiness_record": decision.get("recommended_readiness_record"),
                 "recommended_route_record": decision.get("recommended_route_record"),
                 "recommended_performance_baseline_record": decision.get(
@@ -985,7 +1049,6 @@ class ProductPromotionContract:
                 "adapter_family_required_routes": adapter_family.get("required_routes"),
                 "adapter_family_promotion_status": adapter_family.get("promotion_status"),
                 "adapter_family_matrix_manifest": manifests.get("adapter_family_matrix_report"),
-                "required_route_baseline_status": decision.get("required_route_baseline_status"),
                 "required_route_baseline_records": (
                     required_route_baselines.get("records")
                     or decision.get("required_route_baseline_records")
@@ -1066,13 +1129,249 @@ class ProductPromotionContract:
             "counterfactual_verification": dict(self.counterfactual_verification),
             "release_efficiency": dict(self.release_efficiency),
             "metadata": dict(self.metadata),
+            "summary": self.to_summary_dict(),
         }
+
+    def to_summary_dict(self) -> dict[str, Any]:
+        """Return a compact, human-reviewable promotion handoff summary."""
+        return product_promotion_contract_summary(self)
 
     def save_json(self, path: str | Path) -> None:
         """Write the contract payload to JSON."""
         output = Path(path)
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(strict_json_dumps(self.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def product_promotion_contract_summary(
+    contract: ProductPromotionContract | Mapping[str, Any],
+) -> dict[str, Any]:
+    """Return a compact summary of promoted release evidence in a contract.
+
+    The summary is intentionally derived from existing contract fields. It does
+    not promote missing evidence, relax gates, or change control defaults.
+    """
+    if not isinstance(contract, ProductPromotionContract):
+        contract = ProductPromotionContract.from_mapping(contract, require_promoted=False)
+    metadata = _mapping(contract.metadata)
+    gate_statuses = _promotion_contract_gate_statuses(contract)
+    available_gate_statuses = {
+        name: status
+        for name, status in gate_statuses.items()
+        if status is not None
+    }
+    blocking_gate_statuses = {
+        name: status
+        for name, status in available_gate_statuses.items()
+        if str(status).strip().lower() not in _PROMOTED_GATE_STATUSES
+    }
+    evidence_groups = _promotion_contract_evidence_group_summaries(metadata)
+    blocked_evidence_groups = {
+        name: group
+        for name, group in evidence_groups.items()
+        if group.get("blocked_metric_count", 0) not in (None, 0)
+    }
+    runtime = _promotion_contract_runtime_summary(contract, metadata)
+    verifier_route = _promotion_contract_verifier_route_summary(contract)
+    action_gates = _promotion_contract_action_gate_summary(contract, metadata)
+    status = (
+        "promote"
+        if contract.source_status == "promote"
+        and not blocking_gate_statuses
+        and not blocked_evidence_groups
+        else "blocked"
+    )
+    return {
+        "schema_version": 1,
+        "status": status,
+        "source_workflow": contract.source_workflow,
+        "source_status": contract.source_status,
+        "model_id": contract.model_id,
+        "runtime": runtime,
+        "verifier_route": verifier_route,
+        "gate_statuses": gate_statuses,
+        "available_gate_count": len(available_gate_statuses),
+        "promoted_gate_count": sum(
+            1
+            for status_value in available_gate_statuses.values()
+            if str(status_value).strip().lower() in _PROMOTED_GATE_STATUSES
+        ),
+        "blocking_gate_count": len(blocking_gate_statuses),
+        "blocking_gate_statuses": blocking_gate_statuses,
+        "evidence_groups": evidence_groups,
+        "blocked_evidence_group_count": len(blocked_evidence_groups),
+        "blocked_evidence_groups": list(blocked_evidence_groups),
+        "action_gates": action_gates,
+        "recommended_records": _drop_none_values({
+            "readiness": metadata.get("recommended_readiness_record"),
+            "route": metadata.get("recommended_route_record"),
+            "performance": metadata.get("recommended_performance_baseline_record"),
+            "product_runtime_drift": metadata.get("recommended_product_runtime_drift_report"),
+            "external_evidence": metadata.get(
+                "recommended_external_evidence_baseline_comparison_report"
+            ),
+            "counterfactual": metadata.get(
+                "recommended_counterfactual_verification_report"
+            ),
+            "triple_extraction": metadata.get(
+                "recommended_triple_extraction_fixture_matrix_report"
+            ),
+            "mechanism_handoff": metadata.get(
+                "recommended_mechanism_handoff_evidence_bundle_report"
+            ),
+        }),
+        "control_defaults": dict(contract.control_defaults),
+        "control_policy_configured": bool(contract.control_policy_config),
+        "runtime_budget_policy": contract.runtime_budget_policy.to_dict(),
+    }
+
+
+def _promotion_contract_gate_statuses(
+    contract: ProductPromotionContract,
+) -> dict[str, str | None]:
+    metadata = _mapping(contract.metadata)
+    statuses = {
+        "source": contract.source_status,
+    }
+    for name, key in _PROMOTION_CONTRACT_GATE_STATUS_KEYS:
+        statuses[name] = _optional_str(_first_present(
+            metadata.get(key),
+            metadata.get(key.replace("_status", "_promotion_status")),
+        ))
+    statuses["adapter_family"] = _optional_str(_first_present(
+        statuses.get("adapter_family"),
+        metadata.get("adapter_family_promotion_status"),
+    ))
+    statuses["external_evidence"] = _optional_str(_first_present(
+        statuses.get("external_evidence"),
+        contract.external_evidence_baseline_comparison.get("decision_status"),
+        contract.external_evidence_baseline_comparison.get("status"),
+    ))
+    statuses["triple_extraction"] = _optional_str(_first_present(
+        statuses.get("triple_extraction"),
+        contract.triple_extraction_fixture_matrix.get("status"),
+    ))
+    statuses["counterfactual"] = _optional_str(_first_present(
+        statuses.get("counterfactual"),
+        contract.counterfactual_verification.get("status"),
+    ))
+    statuses["pre_generation"] = _optional_str(_first_present(
+        statuses.get("pre_generation"),
+        contract.pre_generation_probe_comparison.get("status"),
+    ))
+    statuses["claim_factuality"] = _optional_str(_first_present(
+        statuses.get("claim_factuality"),
+        contract.claim_factuality_probe_comparison.get("status"),
+        contract.claim_factuality_probe_comparison.get("report_status"),
+    ))
+    statuses["product_trace_replay"] = _optional_str(_first_present(
+        statuses.get("product_trace_replay"),
+        contract.product_trace_replay_workflow.get("report_status"),
+    ))
+    statuses["release_efficiency"] = _optional_str(_first_present(
+        statuses.get("release_efficiency"),
+        contract.release_efficiency.get("status"),
+    ))
+    return statuses
+
+
+def _promotion_contract_evidence_group_summaries(
+    metadata: Mapping[str, Any],
+) -> dict[str, dict[str, Any]]:
+    groups: dict[str, dict[str, Any]] = {}
+    for name, prefix in _PRODUCT_RUNTIME_DRIFT_GROUP_SUMMARY_KEYS:
+        required = metadata.get(f"product_runtime_drift_{prefix}_evidence_required")
+        metric_count = metadata.get(f"product_runtime_drift_{prefix}_evidence_metric_count")
+        blocked_metric_count = metadata.get(
+            f"product_runtime_drift_{prefix}_evidence_blocked_metric_count"
+        )
+        if required is None and metric_count is None and blocked_metric_count is None:
+            continue
+        groups[name] = _drop_none_values({
+            "required": required,
+            "metric_count": metric_count,
+            "blocked_metric_count": blocked_metric_count,
+        })
+    return groups
+
+
+def _promotion_contract_runtime_summary(
+    contract: ProductPromotionContract,
+    metadata: Mapping[str, Any],
+) -> dict[str, Any]:
+    runtime = _mapping(contract.runtime)
+    return _drop_none_values({
+        "layer": runtime.get("layer"),
+        "batch_size": runtime.get("batch_size"),
+        "hidden_state_capture": runtime.get("hidden_state_capture"),
+        "covariance_mode": runtime.get("covariance_mode"),
+        "covariance_low_rank": runtime.get("covariance_low_rank"),
+        "performance_cell": runtime.get("performance_cell"),
+        "max_workers": runtime.get("max_workers"),
+        "max_batch_tokens": runtime.get("max_batch_tokens"),
+        "inside_trigger_budget_policy": runtime.get("inside_trigger_budget_policy"),
+        "recommended_runtime_seconds": metadata.get("recommended_runtime_seconds"),
+        "recommended_runtime_cost_source": metadata.get(
+            "recommended_runtime_cost_source"
+        ),
+        "max_recommended_runtime_seconds": metadata.get("max_recommended_runtime_seconds"),
+        "uncached_forward_cost_seconds": metadata.get("uncached_forward_cost_seconds"),
+        "cache_only_total_seconds": metadata.get("cache_only_total_seconds"),
+    })
+
+
+def _promotion_contract_verifier_route_summary(
+    contract: ProductPromotionContract,
+) -> dict[str, Any]:
+    route = _mapping(contract.verifier_route)
+    return _drop_none_values({
+        "route": route.get("route"),
+        "selected": route.get("selected"),
+        "decision_accuracy": route.get("decision_accuracy"),
+        "verified_detection": route.get("verified_detection"),
+        "verified_false_alarm": route.get("verified_false_alarm"),
+        "false_supported_rate": route.get("false_supported_rate"),
+        "false_refuted_rate": route.get("false_refuted_rate"),
+        "retrieval_use_rate": route.get("retrieval_use_rate"),
+        "mean_attempted_route_count": route.get("mean_attempted_route_count"),
+        "mean_duration_seconds": route.get("mean_duration_seconds"),
+        "p99_duration_seconds": route.get("p99_duration_seconds"),
+        "covered_fact_property_count": route.get("covered_fact_property_count"),
+        "covered_fact_properties": route.get("covered_fact_properties"),
+    })
+
+
+def _promotion_contract_action_gate_summary(
+    contract: ProductPromotionContract,
+    metadata: Mapping[str, Any],
+) -> dict[str, Any]:
+    workflow = _mapping(contract.product_trace_replay_workflow)
+    return _drop_none_values({
+        "action_audit_required": metadata.get("product_trace_action_audit_gate_required"),
+        "action_audit_status": _first_present(
+            workflow.get("action_audit_gate_status"),
+            metadata.get("product_trace_action_audit_gate_status"),
+        ),
+        "action_audit_error_rate": _first_present(
+            workflow.get("action_audit_error_rate"),
+            metadata.get("product_trace_action_audit_error_rate"),
+        ),
+        "action_execution_required": metadata.get(
+            "product_trace_action_execution_gate_required"
+        ),
+        "action_execution_status": _first_present(
+            workflow.get("action_execution_gate_status"),
+            metadata.get("product_trace_action_execution_gate_status"),
+        ),
+        "action_execution_missing_result_rate": _first_present(
+            workflow.get("action_execution_missing_result_rate"),
+            metadata.get("product_trace_action_execution_missing_result_rate"),
+        ),
+        "action_execution_request_id_mismatch_rate": _first_present(
+            workflow.get("action_execution_request_id_mismatch_rate"),
+            metadata.get("product_trace_action_execution_request_id_mismatch_rate"),
+        ),
+    })
 
 
 @dataclass(frozen=True)

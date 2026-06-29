@@ -34,6 +34,7 @@ from eigentruth.control import (
     load_product_promotion_contract,
     load_product_runtime_evidence_bundle,
     product_promotion_contract_metadata,
+    product_promotion_contract_summary,
     product_runtime_budget_policy_from_release_candidate,
     product_runtime_metrics,
     product_trace_fingerprint,
@@ -1814,6 +1815,10 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
         },
         "decision": {
             "status": "promote",
+            "readiness_status": "promote",
+            "route_status": "promote",
+            "performance_status": "promote",
+            "adapter_family_status": "promote",
             "recommended_readiness_record": "benchmark_manifest:readiness:0.8",
             "recommended_route_record": "benchmark_manifest:route:0.8",
             "recommended_performance_baseline_record": "performance_baseline:runtime:0.9",
@@ -1949,6 +1954,21 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "product_runtime_drift_report_path": (
                     "artifacts/runtime-drift/product-runtime-drift.json"
                 ),
+                "require_action_audit_gate": True,
+                "action_audit_gate": {
+                    "status": "promote",
+                    "gate_enabled": True,
+                    "passed": True,
+                    "error_rate": 0.0,
+                },
+                "require_action_execution_gate": True,
+                "action_execution_gate": {
+                    "status": "promote",
+                    "gate_enabled": True,
+                    "passed": True,
+                    "missing_result_rate": 0.0,
+                    "request_id_mismatch_rate": 0.0,
+                },
             },
             "world_model_signal_workflow": {
                 "report_path": "artifacts/world-model-signal/world-model-signal-workflow.json",
@@ -2329,8 +2349,27 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     contract = ProductPromotionContract.from_json(contract_path)
     direct_policy = product_runtime_budget_policy_from_release_candidate(release_report)
     roundtrip = ProductPromotionContract.from_mapping(contract.to_dict())
+    summary = contract.to_summary_dict()
+    direct_summary = product_promotion_contract_summary(contract.to_dict())
 
     assert contract.model_id == "Qwen/Qwen2.5-0.5B-Instruct"
+    assert contract.to_dict()["summary"] == summary
+    assert direct_summary == summary
+    assert summary["status"] == "promote"
+    assert summary["source_status"] == "promote"
+    assert summary["runtime"]["layer"] == -12
+    assert summary["runtime"]["recommended_runtime_seconds"] == 0.20
+    assert summary["verifier_route"]["route"] == "structured_state"
+    assert summary["verifier_route"]["covered_fact_property_count"] == 3
+    assert summary["gate_statuses"]["readiness"] == "promote"
+    assert summary["gate_statuses"]["performance"] == "promote"
+    assert summary["gate_statuses"]["product_runtime_drift"] == "promote"
+    assert summary["gate_statuses"]["adapter_family"] == "promote"
+    assert summary["blocking_gate_count"] == 0
+    assert summary["evidence_groups"]["covered_fact_property"]["metric_count"] == 6
+    assert summary["evidence_groups"]["covered_fact_property"]["blocked_metric_count"] == 0
+    assert summary["action_gates"]["action_audit_status"] == "promote"
+    assert summary["action_gates"]["action_execution_status"] == "promote"
     assert roundtrip.world_model_signal_workflow == contract.world_model_signal_workflow
     assert roundtrip.pathway_intervention_workflow == (
         contract.pathway_intervention_workflow
@@ -2438,7 +2477,7 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.metadata["recommended_product_runtime_drift_report"] == (
         "artifacts/runtime-drift/product-runtime-drift.json"
     )
-    assert contract.product_trace_replay_workflow == {
+    expected_trace_replay_workflow = {
         "report_path": "artifacts/trace-replay-workflow/product-trace-replay-workflow.json",
         "manifest_path": "artifacts/trace-replay-workflow/artifact-manifest.json",
         "source": "registry",
@@ -2448,6 +2487,13 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
         "selector_replay_report_path": "artifacts/selector/runtime-profile-selector-replay.json",
         "product_runtime_drift_report_path": "artifacts/runtime-drift/product-runtime-drift.json",
     }
+    for key, value in expected_trace_replay_workflow.items():
+        assert contract.product_trace_replay_workflow[key] == value
+    assert contract.product_trace_replay_workflow["action_audit_gate"]["status"] == "promote"
+    assert (
+        contract.product_trace_replay_workflow["action_execution_gate"]["status"]
+        == "promote"
+    )
     assert contract.metadata["product_trace_replay_workflow_status"] == "promote"
     assert contract.metadata["product_trace_replay_workflow_report"] == (
         "artifacts/trace-replay-workflow/product-trace-replay-workflow.json"
