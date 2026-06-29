@@ -5,7 +5,13 @@ import json
 from benchmarks.audit_product_promotion_contract_evidence import (
     build_product_promotion_evidence_audit,
 )
-from eigentruth.control import audit_product_promotion_contract_evidence
+from benchmarks.export_product_promotion_contract_evidence_handoff import (
+    export_product_promotion_contract_evidence_handoff,
+)
+from eigentruth.control import (
+    audit_product_promotion_contract_evidence,
+    enrich_product_promotion_contract_evidence,
+)
 from eigentruth.json_utils import strict_json_dumps
 from eigentruth.registry import ArtifactRegistry
 
@@ -85,6 +91,91 @@ def test_product_promotion_evidence_audit_cli_helper_writes_and_registers(tmp_pa
     assert record.metadata["scope"] == "unit-test"
 
 
+def test_product_promotion_evidence_handoff_export_fills_explicit_sources():
+    result = enrich_product_promotion_contract_evidence(
+        {
+            "workflow": "product_promotion_contract",
+            "source_status": "promote",
+            "model_id": "tiny",
+        },
+        pre_generation_probe_comparison=_pre_generation_comparison_report(),
+        triple_extraction_fixture_matrix=_triple_matrix_report(),
+        counterfactual_verification=_counterfactual_report(),
+        product_trace_replay_workflow=_product_trace_replay_workflow(),
+        runtime_baseline=_runtime_baseline_with_triple_audit(),
+        covered_fact_property_metrics=_covered_fact_property_rollup(),
+    )
+    payload = result.to_dict()
+    contract = payload["contract"]
+
+    assert payload["before_audit"]["summary"]["missing_metric_count"] == 37
+    assert payload["after_audit"]["status"] == "promote"
+    assert payload["after_audit"]["summary"]["present_metric_count"] == 38
+    assert payload["summary"]["resolved_missing_metric_count"] == 37
+    assert set(payload["filled_groups"]) == {
+        "promotion",
+        "pre_generation",
+        "counterfactual",
+        "triple_audit",
+        "covered_fact_property",
+        "action_gate",
+    }
+    assert contract["pre_generation_probe_comparison"]["best_redline_margin"] == 0.08
+    assert (
+        contract["metadata"]["pre_generation_probe_comparison_best_redline_auroc"]
+        == 0.74
+    )
+    assert contract["metadata"]["product_trace_action_audit_error_rate"] == 0.0
+    assert contract["metadata"]["triple_slot_coverage_rate"] == 1.0
+
+
+def test_product_promotion_evidence_handoff_cli_helper_writes_and_registers(tmp_path):
+    contract = tmp_path / "contract.json"
+    pre_generation = tmp_path / "pre-generation-comparison.json"
+    matrix = tmp_path / "triple-matrix.json"
+    workflow = tmp_path / "product-trace-workflow.json"
+    output = tmp_path / "contract-enriched.json"
+    audit = tmp_path / "contract-enriched-audit.json"
+    registry_path = tmp_path / "registry.json"
+    contract.write_text(
+        json.dumps({
+            "workflow": "product_promotion_contract",
+            "source_status": "promote",
+            "model_id": "tiny",
+        }),
+        encoding="utf-8",
+    )
+    pre_generation.write_text(json.dumps(_pre_generation_comparison_report()), encoding="utf-8")
+    matrix.write_text(json.dumps(_triple_matrix_report()), encoding="utf-8")
+    workflow.write_text(json.dumps(_product_trace_replay_workflow()), encoding="utf-8")
+
+    payload = export_product_promotion_contract_evidence_handoff(
+        contract=contract,
+        json_path=output,
+        audit_json_path=audit,
+        pre_generation_probe_comparison=pre_generation,
+        triple_extraction_fixture_matrix=matrix,
+        product_trace_replay_workflow=workflow,
+        registry_path=registry_path,
+        name="contract-enriched",
+        version="0.2",
+        metadata={"scope": "unit-test"},
+    )
+
+    assert output.exists()
+    assert audit.exists()
+    assert payload["summary"]["before_missing_metric_count"] == 37
+    assert payload["summary"]["after_missing_metric_count"] == 16
+    registry = ArtifactRegistry.load_json(registry_path)
+    contract_record = registry.get("product_promotion_contract:contract-enriched:0.2")
+    audit_record = registry.get(
+        "product_promotion_evidence_audit:contract-enriched-audit:0.2"
+    )
+    assert contract_record.metadata["resolved_missing_metric_count"] == 21
+    assert audit_record.metadata["missing_metric_count"] == 16
+    assert audit_record.metadata["scope"] == "unit-test"
+
+
 def _complete_contract():
     return {
         "workflow": "product_promotion_contract",
@@ -141,4 +232,113 @@ def _complete_contract():
             "product_trace_action_execution_unexpected_result_rate": 0.0,
             "product_trace_action_execution_request_id_mismatch_rate": 0.0,
         },
+    }
+
+
+def _pre_generation_comparison_report():
+    return {
+        "workflow": "pre_generation_probe_workflow_comparison",
+        "status": "ready",
+        "artifact_manifest_summary": {"missing_count": 0},
+        "paths": {"artifact_manifest": "pre-generation/artifact-manifest.json"},
+        "promotion_gate": {
+            "failures": [],
+            "model_count": 2,
+            "models": ["tiny-a", "tiny-b"],
+            "redline_passed": True,
+            "redline_run_count": 2,
+        },
+        "runs": [{"name": "tiny-a"}, {"name": "tiny-b"}],
+        "leaderboard": [
+            {
+                "name": "tiny-a",
+                "effective_model": "tiny-a",
+                "recommended_layer": -4,
+                "test_label_auroc": 0.82,
+                "redline_best_signal": "answer_negation_flag",
+                "redline_best_auroc": 0.74,
+                "redline_margin": 0.08,
+            }
+        ],
+    }
+
+
+def _triple_matrix_report():
+    return {
+        "workflow": "triple_extraction_fixture_matrix",
+        "status": "promote",
+        "n_corpora": 2,
+        "promoted_corpora": 2,
+        "distinct_predicate_count": 6,
+        "distinct_predicates": ["P36", "P37"],
+        "mean_baseline_f1": 0.45,
+        "mean_best_f1": 0.95,
+        "mean_f1_lift": 0.5,
+    }
+
+
+def _counterfactual_report():
+    return {
+        "workflow": "counterfactual_verification_eval",
+        "artifact_manifest_summary": {"missing_count": 0},
+        "paths": {"artifact_manifest": "counterfactual/artifact-manifest.json"},
+        "report": {
+            "summary": {
+                "record_count": 12,
+                "pass_rate": 1.0,
+                "false_invariance_rate": 0.0,
+                "flip_success_count": 12,
+            }
+        },
+    }
+
+
+def _product_trace_replay_workflow():
+    return {
+        "workflow": "product_trace_replay_workflow",
+        "status": "promote",
+        "artifact_manifest_summary": {"missing_count": 0},
+        "paths": {
+            "artifact_manifest": "trace-workflow/artifact-manifest.json",
+            "selector_replay_report": "trace-workflow/selector-replay.json",
+        },
+        "action_audit_gate": {
+            "error_rate": 0.0,
+            "missing_retrieval_action_rate": 0.0,
+            "missing_plan_retrieval_query_rate": 0.0,
+            "malformed_payload_rate": 0.0,
+            "unexpected_action_rate": 0.0,
+            "unknown_claim_id_rate": 0.0,
+        },
+        "action_execution_gate": {
+            "alignment_failed_trace_rate": 0.0,
+            "missing_result_rate": 0.0,
+            "unexpected_result_rate": 0.0,
+            "request_id_mismatch_rate": 0.0,
+        },
+    }
+
+
+def _runtime_baseline_with_triple_audit():
+    return {
+        "workflow": "product_runtime_baseline",
+        "summary": {
+            "triple_coverage": {
+                "claim_triple_coverage_rate": 1.0,
+                "audit_claim_coverage_rate": 1.0,
+                "audit_pass_rate": 1.0,
+                "slot_coverage_rate": 1.0,
+            }
+        },
+    }
+
+
+def _covered_fact_property_rollup():
+    return {
+        "property_metric_count": 3,
+        "min_records": 9,
+        "min_source_documents": 100,
+        "min_decision_accuracy": 1.0,
+        "max_false_supported_rate": 0.0,
+        "min_false_refuted_rate": 1.0,
     }

@@ -1096,6 +1096,15 @@ Added the first monitor-first tool-selection audit layer:
   and blocks with `37/38` missing metrics. This confirms the current v1.6
   contract is not enough for the v4 frontier runtime-drift gate; the next work
   is to populate those evidence fields, not to relax the gate.
+- `ProductPromotionEvidenceExport` now performs that first conservative
+  population step. `benchmarks/export_product_promotion_contract_evidence_handoff.py`
+  reads explicit local child reports and writes an enriched contract plus a new
+  audit. On the v1.6 SmolLM2 contract, existing pre-generation comparison,
+  triple-extraction matrix, action-gated product-trace replay, and runtime
+  baseline artifacts reduce the missing handoff metrics from `37/38` to
+  `15/38`. The remaining blockers are now narrower and real:
+  counterfactual verifier audit, trace-level triple audit/slot coverage, and
+  covered-fact property metrics.
 
 ## Next Research-to-Code Candidates
 
@@ -1116,7 +1125,8 @@ Added the first monitor-first tool-selection audit layer:
 4. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_matrix_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
 5. Use `benchmarks/plan_release_evidence_gaps.py` as the default bridge from a
    blocked `frontier_audit` materialization to executable work, then use
-   `benchmarks/audit_product_promotion_contract_evidence.py` before rerunning
-   runtime-drift gates. The current v4/v1.6 evidence says the next concrete work
-   is readiness/performance refresh plus complete runtime-drift handoff metrics,
-   not another broad detector signal.
+   `benchmarks/audit_product_promotion_contract_evidence.py` and
+   `benchmarks/export_product_promotion_contract_evidence_handoff.py` before
+   rerunning runtime-drift gates. The current v4/v1.6 evidence says the next
+   concrete work is readiness/performance refresh plus the three remaining
+   runtime-drift handoff evidence producers, not another broad detector signal.

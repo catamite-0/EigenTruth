@@ -4832,6 +4832,30 @@ action-gate metric names used by release drift blockers. Treat it as
 pre-flight evidence hygiene: it explains why a contract will not satisfy a
 runtime-drift gate, but it does not itself satisfy the gate.
 
+After the audit, export an evidence-enriched contract from explicit local child
+reports:
+
+```bash
+python benchmarks/export_product_promotion_contract_evidence_handoff.py \
+  --contract artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract.json \
+  --json artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract-evidence-handoff.json \
+  --audit-json artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract-evidence-handoff-audit.json \
+  --pre-generation-probe-comparison artifacts/runtime_evidence/pre-generation-qwen-smollm2-l12-comparison/comparison.json \
+  --triple-extraction-fixture-matrix artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/triple-extraction-fixture-matrix.json \
+  --product-trace-replay-workflow artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/product-trace-replay-workflow.json \
+  --runtime-baseline artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/runtime-baseline/product-runtime-baseline.json \
+  --registry artifacts/local-release-registry.json \
+  --name smollm2-product-promotion-contract-v1-6-evidence-handoff \
+  --version 0.2
+```
+
+The exporter only copies evidence from supplied reports; it does not invent
+counterfactual, covered-fact property, or trace-level triple-audit results. The
+current v1.6 handoff export reduces missing metrics from `37/38` to `15/38`:
+promotion/triple-matrix, pre-generation comparison, and action-gate groups are
+present, while counterfactual verification, covered-fact property metrics, and
+audit/slot triple coverage remain the next evidence-producing work.
+
 ```bash
 python benchmarks/run_release_candidate_registry_workflow.py \
   --readiness-registry artifacts/registry.json \

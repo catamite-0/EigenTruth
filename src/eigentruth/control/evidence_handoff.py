@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Mapping, Sequence
+from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -175,6 +176,48 @@ class ProductPromotionEvidenceAudit:
         }
 
 
+@dataclass(frozen=True)
+class ProductPromotionEvidenceExport:
+    """Result of enriching a promotion contract with runtime evidence handoff fields."""
+
+    contract: Mapping[str, Any]
+    before_audit: ProductPromotionEvidenceAudit
+    after_audit: ProductPromotionEvidenceAudit
+    filled_groups: tuple[str, ...] = ()
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+    schema_version: int = 1
+
+    @property
+    def summary(self) -> dict[str, Any]:
+        """Return compact before/after evidence counts."""
+        before_summary = self.before_audit.summary
+        after_summary = self.after_audit.summary
+        return {
+            "before_missing_metric_count": before_summary["missing_metric_count"],
+            "after_missing_metric_count": after_summary["missing_metric_count"],
+            "resolved_missing_metric_count": (
+                before_summary["missing_metric_count"]
+                - after_summary["missing_metric_count"]
+            ),
+            "filled_groups": self.filled_groups,
+            "status": self.after_audit.status,
+        }
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable representation."""
+        return {
+            "schema_version": self.schema_version,
+            "workflow": "product_promotion_evidence_handoff_export",
+            "status": self.after_audit.status,
+            "contract": dict(self.contract),
+            "before_audit": self.before_audit.to_dict(),
+            "after_audit": self.after_audit.to_dict(),
+            "filled_groups": self.filled_groups,
+            "summary": self.summary,
+            "metadata": dict(self.metadata),
+        }
+
+
 def audit_product_promotion_contract_evidence(
     contract: Mapping[str, Any] | Any,
     *,
@@ -197,6 +240,117 @@ def audit_product_promotion_contract_evidence(
         required_groups=required,
         groups=groups,
         metadata=dict(metadata or {}),
+    )
+
+
+def enrich_product_promotion_contract_evidence(
+    contract: Mapping[str, Any] | Any,
+    *,
+    pre_generation_probe_comparison: Mapping[str, Any] | None = None,
+    pre_generation_probe_comparison_path: str | None = None,
+    triple_extraction_fixture_matrix: Mapping[str, Any] | None = None,
+    triple_extraction_fixture_matrix_path: str | None = None,
+    counterfactual_verification: Mapping[str, Any] | None = None,
+    counterfactual_verification_path: str | None = None,
+    product_trace_replay_workflow: Mapping[str, Any] | None = None,
+    product_trace_replay_workflow_path: str | None = None,
+    runtime_baseline: Mapping[str, Any] | None = None,
+    runtime_baseline_path: str | None = None,
+    covered_fact_property_metrics: Mapping[str, Any] | None = None,
+    required_groups: Sequence[str] | None = None,
+    metadata: Mapping[str, Any] | None = None,
+) -> ProductPromotionEvidenceExport:
+    """Enrich a promotion contract with auditable runtime-evidence handoff fields.
+
+    Only fields present in the supplied reports are copied into the contract.
+    Missing evidence stays missing, so downstream drift gates can still fail
+    closed on incomplete handoff coverage.
+    """
+    payload = deepcopy(dict(_payload_mapping(contract)))
+    before = audit_product_promotion_contract_evidence(
+        payload,
+        required_groups=required_groups,
+        metadata=metadata,
+    )
+    filled_groups: list[str] = []
+    export_metadata: dict[str, Any] = {"sources": {}, **dict(metadata or {})}
+
+    matrix = _matrix_handoff_from_report(
+        triple_extraction_fixture_matrix,
+        path=triple_extraction_fixture_matrix_path,
+    )
+    if matrix:
+        _merge_nested(payload, "triple_extraction_fixture_matrix", matrix)
+        _merge_metadata(payload, _triple_matrix_flat_metadata(matrix))
+        filled_groups.append("promotion")
+        export_metadata["sources"]["triple_extraction_fixture_matrix"] = (
+            triple_extraction_fixture_matrix_path
+        )
+
+    pre_generation = _pre_generation_handoff_from_report(
+        pre_generation_probe_comparison,
+        path=pre_generation_probe_comparison_path,
+    )
+    if pre_generation:
+        _merge_nested(payload, "pre_generation_probe_comparison", pre_generation)
+        _merge_metadata(payload, _pre_generation_flat_metadata(pre_generation))
+        filled_groups.append("pre_generation")
+        export_metadata["sources"]["pre_generation_probe_comparison"] = (
+            pre_generation_probe_comparison_path
+        )
+
+    counterfactual = _counterfactual_handoff_from_report(
+        counterfactual_verification,
+        path=counterfactual_verification_path,
+    )
+    if counterfactual:
+        _merge_nested(payload, "counterfactual_verification", counterfactual)
+        _merge_metadata(payload, _counterfactual_flat_metadata(counterfactual))
+        filled_groups.append("counterfactual")
+        export_metadata["sources"]["counterfactual_verification"] = (
+            counterfactual_verification_path
+        )
+
+    product_trace = _product_trace_replay_handoff_from_report(
+        product_trace_replay_workflow,
+        path=product_trace_replay_workflow_path,
+    )
+    if product_trace:
+        _merge_nested(payload, "product_trace_replay_workflow", product_trace)
+        _merge_metadata(payload, _action_gate_flat_metadata(product_trace))
+        filled_groups.append("action_gate")
+        export_metadata["sources"]["product_trace_replay_workflow"] = (
+            product_trace_replay_workflow_path
+        )
+
+    triple_audit = _triple_audit_flat_metadata_from_runtime_baseline(runtime_baseline)
+    if triple_audit:
+        _merge_metadata(payload, triple_audit)
+        filled_groups.append("triple_audit")
+        export_metadata["sources"]["runtime_baseline"] = runtime_baseline_path
+
+    covered_fact = _covered_fact_property_rollup(covered_fact_property_metrics)
+    if covered_fact:
+        _merge_metadata(
+            payload,
+            {"recommended_route_covered_fact_property_metrics": covered_fact},
+        )
+        filled_groups.append("covered_fact_property")
+        export_metadata["sources"]["covered_fact_property_metrics"] = "provided"
+
+    filled = tuple(dict.fromkeys(filled_groups))
+    export_metadata["filled_groups"] = filled
+    after = audit_product_promotion_contract_evidence(
+        payload,
+        required_groups=required_groups,
+        metadata=metadata,
+    )
+    return ProductPromotionEvidenceExport(
+        contract=payload,
+        before_audit=before,
+        after_audit=after,
+        filled_groups=filled,
+        metadata=export_metadata,
     )
 
 
@@ -306,6 +460,421 @@ def _nested(mapping: Mapping[str, Any], *path: str) -> Any:
             return None
         current = current.get(key)
     return current
+
+
+def _merge_nested(payload: dict[str, Any], key: str, values: Mapping[str, Any]) -> None:
+    existing = _mapping(payload.get(key))
+    merged = dict(existing)
+    merged.update(_drop_none_values(values))
+    payload[key] = merged
+
+
+def _merge_metadata(payload: dict[str, Any], values: Mapping[str, Any]) -> None:
+    metadata = dict(_metadata(payload))
+    metadata.update(_drop_none_values(values))
+    payload["metadata"] = metadata
+
+
+def _drop_none_values(values: Mapping[str, Any]) -> dict[str, Any]:
+    return {str(key): value for key, value in values.items() if value is not None}
+
+
+def _float_or_none(value: Any) -> float | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return None
+    return numeric if math.isfinite(numeric) else None
+
+
+def _finite_or_original(value: Any) -> Any:
+    numeric = _float_or_none(value)
+    return numeric if numeric is not None else value
+
+
+def _manifest_path_from_report(report: Mapping[str, Any], *, path: str | None) -> str | None:
+    manifest = _nested(report, "paths", "artifact_manifest")
+    if manifest is not None:
+        return str(manifest)
+    if path is None:
+        return None
+    return None
+
+
+def _manifest_verified_from_report(report: Mapping[str, Any]) -> bool | None:
+    summary = _mapping(report.get("artifact_manifest_summary"))
+    missing = _float_or_none(summary.get("missing_count"))
+    if missing is None:
+        return None
+    return missing == 0.0
+
+
+def _pre_generation_handoff_from_report(
+    report: Mapping[str, Any] | None,
+    *,
+    path: str | None,
+) -> dict[str, Any]:
+    if not report:
+        return {}
+    promotion_gate = _mapping(report.get("promotion_gate"))
+    leaderboard = tuple(
+        _mapping(item)
+        for item in report.get("leaderboard") or ()
+        if isinstance(item, Mapping)
+    )
+    best_run = leaderboard[0] if leaderboard else {}
+    run_count = sum(1 for run in report.get("runs") or () if isinstance(run, Mapping))
+    gate_failures = tuple(promotion_gate.get("failures") or ())
+    model_count = _float_or_none(promotion_gate.get("model_count"))
+    status = "promote"
+    if (
+        report.get("workflow") != "pre_generation_probe_workflow_comparison"
+        or report.get("status") != "ready"
+        or gate_failures
+        or model_count is None
+        or model_count < 2
+        or promotion_gate.get("redline_passed") is not True
+        or not leaderboard
+    ):
+        status = "blocked"
+    redline_best_auroc = _float_or_none(best_run.get("redline_best_auroc"))
+    redline_margin = _float_or_none(best_run.get("redline_margin"))
+    test_label_auroc = _float_or_none(best_run.get("test_label_auroc"))
+    return _drop_none_values({
+        "report_path": path,
+        "manifest_path": _manifest_path_from_report(report, path=path),
+        "source": "file" if path is not None else None,
+        "workflow": report.get("workflow"),
+        "report_status": report.get("status"),
+        "status": status,
+        "run_count": run_count,
+        "model_count": model_count,
+        "models": tuple(promotion_gate.get("models") or ()),
+        "redline_passed": promotion_gate.get("redline_passed"),
+        "redline_run_count": _float_or_none(promotion_gate.get("redline_run_count")),
+        "manifest_verified": _manifest_verified_from_report(report),
+        "best_run": {
+            "name": best_run.get("name"),
+            "model": best_run.get("effective_model") or best_run.get("model"),
+            "recommended_layer": best_run.get("recommended_layer"),
+            "test_label_auroc": test_label_auroc,
+            "redline_best_signal": best_run.get("redline_best_signal"),
+            "redline_best_auroc": redline_best_auroc,
+            "redline_margin": redline_margin,
+        },
+        "best_test_label_auroc": test_label_auroc,
+        "best_redline_auroc": redline_best_auroc,
+        "best_redline_margin": redline_margin,
+        "blocking_reasons": gate_failures,
+    })
+
+
+def _pre_generation_flat_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
+    best_run = _mapping(comparison.get("best_run"))
+    return _drop_none_values({
+        "pre_generation_probe_comparison_report": comparison.get("report_path"),
+        "pre_generation_probe_comparison_manifest": comparison.get("manifest_path"),
+        "pre_generation_probe_comparison_source": comparison.get("source"),
+        "pre_generation_probe_comparison_status": comparison.get("status"),
+        "pre_generation_probe_comparison_model_count": comparison.get("model_count"),
+        "pre_generation_probe_comparison_run_count": comparison.get("run_count"),
+        "pre_generation_probe_comparison_redline_passed": comparison.get("redline_passed"),
+        "pre_generation_probe_comparison_redline_run_count": (
+            comparison.get("redline_run_count")
+        ),
+        "pre_generation_probe_comparison_best_run": best_run.get("name"),
+        "pre_generation_probe_comparison_best_model": best_run.get("model"),
+        "pre_generation_probe_comparison_best_layer": best_run.get("recommended_layer"),
+        "pre_generation_probe_comparison_best_test_label_auroc": (
+            best_run.get("test_label_auroc")
+        ),
+        "pre_generation_probe_comparison_best_redline_signal": (
+            best_run.get("redline_best_signal")
+        ),
+        "pre_generation_probe_comparison_best_redline_auroc": (
+            best_run.get("redline_best_auroc")
+        ),
+        "pre_generation_probe_comparison_best_redline_margin": best_run.get("redline_margin"),
+        "pre_generation_probe_comparison_manifest_verified": (
+            comparison.get("manifest_verified")
+        ),
+    })
+
+
+def _matrix_handoff_from_report(
+    report: Mapping[str, Any] | None,
+    *,
+    path: str | None,
+) -> dict[str, Any]:
+    if not report:
+        return {}
+    status = (
+        "promote"
+        if report.get("workflow") == "triple_extraction_fixture_matrix"
+        and report.get("status") == "promote"
+        else "blocked"
+    )
+    return _drop_none_values({
+        "report_path": path,
+        "manifest_path": _manifest_path_from_report(report, path=path),
+        "source": "file" if path is not None else None,
+        "workflow": report.get("workflow"),
+        "report_status": report.get("status"),
+        "status": status,
+        "n_corpora": _finite_or_original(report.get("n_corpora")),
+        "promoted_corpora": _finite_or_original(report.get("promoted_corpora")),
+        "distinct_predicate_count": _finite_or_original(
+            report.get("distinct_predicate_count")
+        ),
+        "distinct_predicates": tuple(report.get("distinct_predicates") or ()),
+        "mean_baseline_f1": _float_or_none(report.get("mean_baseline_f1")),
+        "mean_best_f1": _float_or_none(report.get("mean_best_f1")),
+        "mean_f1_lift": _float_or_none(report.get("mean_f1_lift")),
+        "external_prediction_count": _float_or_none(
+            report.get("external_prediction_count")
+        ),
+        "external_prediction_corpora": tuple(report.get("external_prediction_corpora") or ()),
+        "mean_best_external_f1": _float_or_none(report.get("mean_best_external_f1")),
+    })
+
+
+def _triple_matrix_flat_metadata(matrix: Mapping[str, Any]) -> dict[str, Any]:
+    return _drop_none_values({
+        "triple_extraction_fixture_matrix_report": matrix.get("report_path"),
+        "triple_extraction_fixture_matrix_manifest": matrix.get("manifest_path"),
+        "triple_extraction_fixture_matrix_source": matrix.get("source"),
+        "triple_extraction_fixture_matrix_status": matrix.get("status"),
+        "triple_extraction_fixture_matrix_n_corpora": matrix.get("n_corpora"),
+        "triple_extraction_fixture_matrix_promoted_corpora": matrix.get(
+            "promoted_corpora"
+        ),
+        "triple_extraction_fixture_matrix_distinct_predicate_count": matrix.get(
+            "distinct_predicate_count"
+        ),
+        "triple_extraction_fixture_matrix_distinct_predicates": matrix.get(
+            "distinct_predicates"
+        ),
+        "triple_extraction_fixture_matrix_mean_baseline_f1": matrix.get(
+            "mean_baseline_f1"
+        ),
+        "triple_extraction_fixture_matrix_mean_best_f1": matrix.get("mean_best_f1"),
+        "triple_extraction_fixture_matrix_mean_f1_lift": matrix.get("mean_f1_lift"),
+    })
+
+
+def _counterfactual_handoff_from_report(
+    report: Mapping[str, Any] | None,
+    *,
+    path: str | None,
+) -> dict[str, Any]:
+    if not report:
+        return {}
+    summary = _mapping(_mapping(report.get("report")).get("summary")) or _mapping(
+        report.get("summary")
+    )
+    status = "promote"
+    if report.get("workflow") not in {
+        "counterfactual_verification_eval",
+        "counterfactual_verification_audit",
+    }:
+        status = "blocked"
+    pass_rate = _float_or_none(summary.get("pass_rate"))
+    false_invariance_rate = _float_or_none(summary.get("false_invariance_rate"))
+    if pass_rate is not None and pass_rate < 1.0:
+        status = "blocked"
+    if false_invariance_rate is not None and false_invariance_rate > 0.0:
+        status = "blocked"
+    return _drop_none_values({
+        "report_path": path,
+        "manifest_path": _manifest_path_from_report(report, path=path),
+        "source": "file" if path is not None else None,
+        "workflow": report.get("workflow"),
+        "status": status,
+        "record_count": _float_or_none(summary.get("record_count")),
+        "pass_rate": pass_rate,
+        "false_invariance_rate": false_invariance_rate,
+        "flip_success_count": _float_or_none(summary.get("flip_success_count")),
+        "manifest_verified": _manifest_verified_from_report(report),
+    })
+
+
+def _counterfactual_flat_metadata(audit: Mapping[str, Any]) -> dict[str, Any]:
+    return _drop_none_values({
+        "counterfactual_verification_report": audit.get("report_path"),
+        "counterfactual_verification_manifest": audit.get("manifest_path"),
+        "counterfactual_verification_source": audit.get("source"),
+        "counterfactual_verification_status": audit.get("status"),
+        "counterfactual_verification_workflow": audit.get("workflow"),
+        "counterfactual_verification_record_count": audit.get("record_count"),
+        "counterfactual_verification_pass_rate": audit.get("pass_rate"),
+        "counterfactual_verification_false_invariance_rate": (
+            audit.get("false_invariance_rate")
+        ),
+        "counterfactual_verification_flip_success_count": (
+            audit.get("flip_success_count")
+        ),
+        "counterfactual_verification_manifest_verified": audit.get("manifest_verified"),
+    })
+
+
+def _product_trace_replay_handoff_from_report(
+    report: Mapping[str, Any] | None,
+    *,
+    path: str | None,
+) -> dict[str, Any]:
+    if not report:
+        return {}
+    action_audit = _mapping(report.get("action_audit_gate"))
+    action_execution = _mapping(report.get("action_execution_gate"))
+    if not action_audit:
+        action_audit = _mapping(_nested(report, "runtime_baseline", "summary", "action_audit"))
+    if not action_execution:
+        action_execution = _mapping(
+            _nested(report, "runtime_baseline", "summary", "action_execution")
+        )
+    paths = _mapping(report.get("paths"))
+    return _drop_none_values({
+        "report_path": path or paths.get("report"),
+        "manifest_path": _manifest_path_from_report(report, path=path),
+        "source": "file" if path is not None else None,
+        "workflow": report.get("workflow"),
+        "status": report.get("status"),
+        "report_status": report.get("status"),
+        "selector_replay_report_path": paths.get("selector_replay_report"),
+        "product_runtime_drift_report_path": paths.get("runtime_drift_report"),
+        "action_audit_gate": dict(action_audit),
+        "action_execution_gate": dict(action_execution),
+    })
+
+
+def _action_gate_flat_metadata(workflow: Mapping[str, Any]) -> dict[str, Any]:
+    action_audit = _mapping(workflow.get("action_audit_gate"))
+    action_execution = _mapping(workflow.get("action_execution_gate"))
+    return _drop_none_values({
+        "product_trace_replay_workflow_report": workflow.get("report_path"),
+        "product_trace_replay_workflow_manifest": workflow.get("manifest_path"),
+        "product_trace_replay_workflow_status": workflow.get("status"),
+        "product_trace_replay_workflow_report_status": workflow.get("report_status"),
+        "product_trace_replay_workflow_selector_replay_report": (
+            workflow.get("selector_replay_report_path")
+        ),
+        "product_trace_replay_workflow_runtime_drift_report": (
+            workflow.get("product_runtime_drift_report_path")
+        ),
+        "product_trace_action_audit_error_rate": _float_or_none(
+            action_audit.get("error_rate")
+        ),
+        "product_trace_action_audit_missing_retrieval_action_rate": _float_or_none(
+            action_audit.get("missing_retrieval_action_rate")
+        ),
+        "product_trace_action_audit_missing_plan_retrieval_query_rate": _float_or_none(
+            action_audit.get("missing_plan_retrieval_query_rate")
+        ),
+        "product_trace_action_audit_malformed_payload_rate": _float_or_none(
+            action_audit.get("malformed_payload_rate")
+        ),
+        "product_trace_action_audit_unexpected_action_rate": _float_or_none(
+            action_audit.get("unexpected_action_rate")
+        ),
+        "product_trace_action_audit_unknown_claim_id_rate": _float_or_none(
+            action_audit.get("unknown_claim_id_rate")
+        ),
+        "product_trace_action_execution_alignment_failed_trace_rate": _float_or_none(
+            action_execution.get("alignment_failed_trace_rate")
+        ),
+        "product_trace_action_execution_missing_result_rate": _float_or_none(
+            action_execution.get("missing_result_rate")
+        ),
+        "product_trace_action_execution_unexpected_result_rate": _float_or_none(
+            action_execution.get("unexpected_result_rate")
+        ),
+        "product_trace_action_execution_request_id_mismatch_rate": _float_or_none(
+            action_execution.get("request_id_mismatch_rate")
+        ),
+    })
+
+
+def _triple_audit_flat_metadata_from_runtime_baseline(
+    runtime_baseline: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    if not runtime_baseline:
+        return {}
+    triple_coverage = _mapping(_nested(runtime_baseline, "summary", "triple_coverage"))
+    if not triple_coverage:
+        return {}
+    return _drop_none_values({
+        "triple_claim_coverage_rate": _float_or_none(
+            triple_coverage.get("claim_triple_coverage_rate")
+        ),
+        "triple_audit_claim_coverage_rate": _float_or_none(
+            triple_coverage.get("audit_claim_coverage_rate")
+        ),
+        "triple_audit_pass_rate": _float_or_none(triple_coverage.get("audit_pass_rate")),
+        "triple_slot_coverage_rate": _float_or_none(
+            triple_coverage.get("slot_coverage_rate")
+        ),
+    })
+
+
+def _covered_fact_property_rollup(
+    metrics: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    if not metrics:
+        return {}
+    if any(
+        key in metrics
+        for key in (
+            "property_metric_count",
+            "min_records",
+            "min_source_documents",
+            "min_decision_accuracy",
+            "max_false_supported_rate",
+            "min_false_refuted_rate",
+        )
+    ):
+        return _drop_none_values(metrics)
+
+    records: list[float] = []
+    source_documents: list[float] = []
+    decision_accuracy: list[float] = []
+    false_supported: list[float] = []
+    false_refuted: list[float] = []
+    for item in metrics.values():
+        if not isinstance(item, Mapping):
+            continue
+        record_count = _float_or_none(
+            _first_present(item.get("n_records"), item.get("records"), item.get("selected"))
+        )
+        source_count = _float_or_none(
+            _first_present(
+                item.get("n_source_documents"),
+                item.get("source_documents"),
+                item.get("source_document_count"),
+            )
+        )
+        accuracy = _float_or_none(item.get("decision_accuracy"))
+        false_supported_rate = _float_or_none(item.get("false_supported_rate"))
+        false_refuted_rate = _float_or_none(item.get("false_refuted_rate"))
+        if record_count is not None:
+            records.append(record_count)
+        if source_count is not None:
+            source_documents.append(source_count)
+        if accuracy is not None:
+            decision_accuracy.append(accuracy)
+        if false_supported_rate is not None:
+            false_supported.append(false_supported_rate)
+        if false_refuted_rate is not None:
+            false_refuted.append(false_refuted_rate)
+    return _drop_none_values({
+        "property_metric_count": len(metrics),
+        "min_records": min(records) if records else None,
+        "min_source_documents": min(source_documents) if source_documents else None,
+        "min_decision_accuracy": min(decision_accuracy) if decision_accuracy else None,
+        "max_false_supported_rate": max(false_supported) if false_supported else None,
+        "min_false_refuted_rate": min(false_refuted) if false_refuted else None,
+    })
 
 
 def _coverage_from_group(payload: Mapping[str, Any], group_name: str) -> tuple[Any, tuple[str, ...]]:

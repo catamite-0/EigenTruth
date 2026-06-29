@@ -7130,6 +7130,47 @@
       "name": "smollm2-product-promotion-contract-v1-6-evidence-handoff",
       "path": "artifacts/smollm2_product_promotion_contract_v1_6/evidence-handoff-audit.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "product_promotion_contract",
+      "metadata": {
+        "after_missing_metric_count": 15,
+        "before_missing_metric_count": 37,
+        "evidence_handoff_audit": "artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract-evidence-handoff-audit.json",
+        "filled_groups": [
+          "promotion",
+          "pre_generation",
+          "action_gate",
+          "triple_audit"
+        ],
+        "resolved_missing_metric_count": 22,
+        "scope": "frontier_runtime_drift",
+        "source_contract": "artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract.json",
+        "workflow": "product_promotion_evidence_handoff_export"
+      },
+      "name": "smollm2-product-promotion-contract-v1-6-evidence-handoff",
+      "path": "artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract-evidence-handoff.json",
+      "version": "0.2"
+    },
+    {
+      "artifact_type": "product_promotion_evidence_audit",
+      "metadata": {
+        "blocked_group_count": 3,
+        "enriched_contract": "artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract-evidence-handoff.json",
+        "missing_metric_count": 15,
+        "recommended_action_ids": [
+          "run_counterfactual_verifier_audit",
+          "add_trace_level_triple_audit",
+          "refresh_covered_fact_property_routes"
+        ],
+        "scope": "frontier_runtime_drift",
+        "source_contract": "artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract.json",
+        "status": "blocked",
+        "workflow": "product_promotion_evidence_handoff_audit"
+      },
+      "name": "smollm2-product-promotion-contract-v1-6-evidence-handoff-audit",
+      "path": "artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract-evidence-handoff-audit.json",
+      "version": "0.2"
     }
   ],
   "schema_version": 1
