@@ -21,7 +21,7 @@ import urllib.parse
 import urllib.request
 from collections import Counter
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -103,7 +103,7 @@ def run_crossref_source_family_catalog_adapter(
         raise ValueError(f"no collection tasks found for source_family={source_family!r}.")
 
     fetch = fetch_json or _default_fetch_json(timeout_seconds=timeout_seconds)
-    fetched_at = datetime.now(UTC).isoformat()
+    fetched_at = datetime.now(timezone.utc).isoformat()
     docs_by_key: dict[str, dict[str, Any]] = {}
     errors: list[dict[str, Any]] = []
     query_count = 0

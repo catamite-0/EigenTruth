@@ -23,7 +23,7 @@ import urllib.parse
 import urllib.request
 from collections import Counter
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -122,7 +122,7 @@ def run_seeded_url_source_family_catalog_adapter(
         raise ValueError("no URL seeds matched the selected collection tasks.")
 
     fetch = fetch_text or _default_fetch_text(timeout_seconds=timeout_seconds)
-    fetched_at = datetime.now(UTC).isoformat()
+    fetched_at = datetime.now(timezone.utc).isoformat()
     headers = {"User-Agent": user_agent}
     rows_by_key: dict[str, dict[str, Any]] = {}
     errors: list[dict[str, Any]] = []

@@ -20,7 +20,7 @@ import urllib.parse
 import urllib.request
 from collections import Counter
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -113,7 +113,7 @@ def run_worldbank_source_family_catalog_adapter(
 
     fetch = fetch_json or _default_fetch_json(timeout_seconds=timeout_seconds)
     headers = {"User-Agent": user_agent}
-    fetched_at = datetime.now(UTC).isoformat()
+    fetched_at = datetime.now(timezone.utc).isoformat()
     errors: list[dict[str, Any]] = []
     country_meta_by_iso3: dict[str, Mapping[str, Any]] = {}
     country_page_count = 0
