@@ -41453,6 +41453,7 @@ def test_eval_score_ensemble_reports_geometry_calibrated_fusion(tmp_path):
     assert run["geometry_fusion_results"]["interaction"]["uncertainty_signals"] == ["nll_answer"]
     assert run["geometry_fusion_results"]["interaction"]["auroc"] > 0.95
     assert run["geometry_fusion_results"]["interaction"]["alphas"]["0.2"]["detection"] == pytest.approx(1.0)
+    assert run["geometry_fusion_results"]["product"]["fusion_style"] == "global_local_uncertainty"
     assert run["best_geometry_fusion_at_alpha"]["name"] == "interaction"
 
 
@@ -41506,6 +41507,9 @@ def test_eval_score_ensemble_saves_best_geometry_fusion_artifact(tmp_path):
     assert artifact.score_dump_metadata["summary"]["n_total"] == len(labels)
     assert payload["runs"][0]["best_geometry_fusion_artifact"]["path"] == str(artifact_path)
     assert saved_report["runs"][0]["best_geometry_fusion_artifact"]["fusion_method"] == "interaction"
+    assert saved_report["runs"][0]["best_geometry_fusion_artifact"]["fusion_style"] == (
+        "geometry_uncertainty_interaction"
+    )
 
 
 def test_build_verifier_signal_score_dump_from_verified_records_jsonl(tmp_path):

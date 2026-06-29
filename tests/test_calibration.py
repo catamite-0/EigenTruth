@@ -21,6 +21,7 @@ from eigentruth.eval import (
     AdaptiveScoreTransform,
     combine_geometry_uncertainty_scores,
     geometry_calibrated_anomaly_scores,
+    global_local_uncertainty_scores,
 )
 
 
@@ -240,6 +241,38 @@ def test_geometry_calibrated_anomaly_scores_uses_directional_rank_groups():
 
     assert fused[1] > fused[0]
     assert fused.tolist() == pytest.approx([0.1875, 1.0])
+
+
+def test_global_local_uncertainty_scores_gate_geometry_and_token_uncertainty():
+    calibration_scores = {
+        "hidden_geometry_entropy": [0.0, 1.0, 2.0, 3.0],
+        "first_token_confidence": [10.0, 9.0, 8.0, 7.0],
+    }
+    scores = {
+        "hidden_geometry_entropy": [0.0, 3.5],
+        "first_token_confidence": [10.0, 0.0],
+    }
+
+    fused = global_local_uncertainty_scores(
+        calibration_scores=calibration_scores,
+        scores=scores,
+        global_signals=("hidden_geometry_entropy",),
+        local_signals=("first_token_confidence",),
+        directions={
+            "hidden_geometry_entropy": "higher",
+            "first_token_confidence": "lower",
+        },
+    )
+
+    assert fused.tolist() == pytest.approx([0.0625, 1.0])
+
+    with pytest.raises(ValueError, match="must not overlap"):
+        global_local_uncertainty_scores(
+            calibration_scores=calibration_scores,
+            scores=scores,
+            global_signals=("hidden_geometry_entropy",),
+            local_signals=("hidden_geometry_entropy",),
+        )
 
 
 def test_geometry_score_fusion_artifact_roundtrip_and_flags(tmp_path):

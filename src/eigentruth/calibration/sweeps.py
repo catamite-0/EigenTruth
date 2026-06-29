@@ -47,6 +47,8 @@ DEFAULT_SCORE_DIRECTIONS: dict[str, str] = {
     "inside_embedding_entropy": "higher",
     "inside_semantic_energy": "higher",
     "first_token_entropy": "higher",
+    "global_local_uncertainty": "higher",
+    "glu": "higher",
     "nll_answer": "higher",
     "answer_char_length": "higher",
     "answer_token_count": "higher",

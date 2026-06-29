@@ -38,7 +38,7 @@ from eigentruth.eval.score_fusion import (
 
 ALPHAS = (0.05, 0.10, 0.20)
 METHODS = ("max_rank", "mean_rank")
-GEOMETRY_FUSION_METHODS = ("interaction",)
+GEOMETRY_FUSION_METHODS = ("interaction", "product")
 TOLERANCE = 0.03
 
 
@@ -274,6 +274,7 @@ def _score_geometry_fusion(
         "geometry_method": geometry_method,
         "uncertainty_method": uncertainty_method,
         "fusion_method": fusion_method,
+        "fusion_style": _geometry_fusion_style(fusion_method),
         "direction": "higher",
         "geometry_signals": list(geometry_signals),
         "uncertainty_signals": list(uncertainty_signals),
@@ -283,6 +284,14 @@ def _score_geometry_fusion(
             for alpha in alphas
         },
     }
+
+
+def _geometry_fusion_style(fusion_method: str) -> str:
+    if fusion_method == "product":
+        return "global_local_uncertainty"
+    if fusion_method == "interaction":
+        return "geometry_uncertainty_interaction"
+    return "geometry_uncertainty_fusion"
 
 
 def _best_at_alpha(results: Mapping[str, Mapping[str, Any]], alpha: float) -> dict[str, Any] | None:
@@ -597,6 +606,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         run_payload["best_geometry_fusion_artifact"] = {
             "path": str(artifact_path),
             "fusion_method": artifact.fusion_method,
+            "fusion_style": _geometry_fusion_style(artifact.fusion_method),
             "geometry_method": artifact.geometry_method,
             "uncertainty_method": artifact.uncertainty_method,
             "threshold": artifact.threshold,

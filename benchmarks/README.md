@@ -6281,8 +6281,11 @@ python benchmarks/eval_score_ensemble.py \
   --json artifacts/qwen05_score_ensemble_report.json
 ```
 
-It can also evaluate the newer geometry-calibrated interaction score by
-separating representation-geometry signals from uncertainty/confidence proxies:
+It can also evaluate newer geometry-calibrated scores by separating
+representation-geometry signals from uncertainty/confidence proxies. The
+`product` fusion method is the dependency-free GLU-style global-local
+uncertainty gate: hidden-state geometry must agree with local token or
+semantic uncertainty before the fused score becomes large.
 
 ```bash
 python benchmarks/eval_score_ensemble.py \

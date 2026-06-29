@@ -75,6 +75,7 @@ from eigentruth.eval.score_fusion import (
     combine_rank_anomaly_scores,
     directional_rank_anomaly_scores,
     geometry_calibrated_anomaly_scores,
+    global_local_uncertainty_scores,
     native_anomaly_scores,
 )
 from eigentruth.eval.signal_selection import (
@@ -126,6 +127,7 @@ __all__ = [
     "combine_rank_anomaly_scores",
     "combine_geometry_uncertainty_scores",
     "geometry_calibrated_anomaly_scores",
+    "global_local_uncertainty_scores",
     "DEFAULT_TRACKED_SIGNAL",
     "SignalSelectionDecision",
     "SignalSelectionPolicy",
