@@ -1,0 +1,41 @@
+{
+  "records": [
+    {
+      "artifact_type": "product_promotion_contract",
+      "metadata": {
+        "after_missing_metric_count": 0,
+        "before_missing_metric_count": 3,
+        "evidence_handoff_audit": "artifacts/smollm2_product_promotion_contract_v1_7/product-promotion-contract-evidence-handoff-audit.json",
+        "filled_groups": [
+          "triple_audit"
+        ],
+        "resolved_missing_metric_count": 3,
+        "source_contract": "artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract-evidence-handoff.json",
+        "triple_audit_enrichment_report": "artifacts/smollm2_product_trace_triple_audit_enrichment_v0/product-trace-triple-audit-enrichment.json",
+        "triple_audit_runtime_baseline": "artifacts/smollm2_product_trace_triple_audit_runtime_baseline_v0/product-runtime-baseline.json",
+        "workflow": "product_promotion_evidence_handoff_export"
+      },
+      "name": "smollm2-product-promotion-contract",
+      "path": "artifacts/smollm2_product_promotion_contract_v1_7/product-promotion-contract-evidence-handoff.json",
+      "version": "1.7"
+    },
+    {
+      "artifact_type": "product_promotion_evidence_audit",
+      "metadata": {
+        "blocked_group_count": 0,
+        "enriched_contract": "artifacts/smollm2_product_promotion_contract_v1_7/product-promotion-contract-evidence-handoff.json",
+        "missing_metric_count": 0,
+        "recommended_action_ids": [],
+        "source_contract": "artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract-evidence-handoff.json",
+        "status": "promote",
+        "triple_audit_enrichment_report": "artifacts/smollm2_product_trace_triple_audit_enrichment_v0/product-trace-triple-audit-enrichment.json",
+        "triple_audit_runtime_baseline": "artifacts/smollm2_product_trace_triple_audit_runtime_baseline_v0/product-runtime-baseline.json",
+        "workflow": "product_promotion_evidence_handoff_audit"
+      },
+      "name": "smollm2-product-promotion-contract-audit",
+      "path": "artifacts/smollm2_product_promotion_contract_v1_7/product-promotion-contract-evidence-handoff-audit.json",
+      "version": "1.7"
+    }
+  ],
+  "schema_version": 1
+}

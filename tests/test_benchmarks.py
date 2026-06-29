@@ -42808,3 +42808,187 @@ def test_pathway_intervention_workflow_runs_fake_score_dumps_and_reports(tmp_pat
     assert manifest_verification.passed
     assert registry_record.metadata["workflow"] == "run_pathway_intervention_workflow"
     assert registry_record.metadata["release_ready"] is True
+
+
+def test_product_trace_triple_audit_enrichment_promotes_with_local_evidence(tmp_path):
+    module = importlib.import_module("benchmarks.enrich_product_trace_triple_audit")
+    from eigentruth.control import product_runtime_metrics
+    from eigentruth.registry import ArtifactRegistry, load_and_verify_artifact_manifest
+
+    trace_path = tmp_path / "trace.json"
+    corpus_path = tmp_path / "evidence.json"
+    output_dir = tmp_path / "triple-audit"
+    registry_path = tmp_path / "registry.json"
+    trace_path.write_text(
+        json.dumps({
+            "request_id": "req-supported",
+            "claims": [
+                {
+                    "claim_id": "c1",
+                    "text": "Paris is the capital of France.",
+                    "metadata": {},
+                }
+            ],
+            "verification_results": [],
+        }),
+        encoding="utf-8",
+    )
+    corpus_path.write_text(
+        json.dumps({
+            "documents": [
+                {
+                    "text": "France's capital is Paris.",
+                    "source": "atlas",
+                }
+            ]
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.build_product_trace_triple_audit_enrichment(
+        module.ProductTraceTripleAuditEnrichmentConfig(
+            trace_paths=(trace_path,),
+            evidence_corpus_paths=(corpus_path,),
+            output_dir=output_dir,
+            registry_path=registry_path,
+            name="trace-triple-audit-smoke",
+            version="0.1",
+        )
+    )
+    enriched_path = Path(payload["traces"][0]["output_path"])
+    enriched = json.loads(enriched_path.read_text(encoding="utf-8"))
+    metrics = product_runtime_metrics(enriched)
+    registry_record = ArtifactRegistry.load_json(registry_path).get(
+        "report:trace-triple-audit-smoke:0.1",
+    )
+
+    assert payload["status"] == "promote"
+    assert payload["summary"]["audit_claim_coverage_rate"] == pytest.approx(1.0)
+    assert payload["summary"]["audit_pass_rate"] == pytest.approx(1.0)
+    assert payload["summary"]["slot_coverage_rate"] == pytest.approx(1.0)
+    assert enriched["claims"][0]["metadata"]["claim_triples"][0]["predicate"] == "capital_of"
+    assert enriched["verification_results"][0]["metadata"]["audit_only"] is True
+    assert enriched["verification_results"][0]["metadata"]["audit_report"]["passed"] is True
+    assert enriched["summaries"]["triple_coverage"]["audit_pass_rate"] == pytest.approx(1.0)
+    assert metrics["triple_coverage_source"] == "bounded_summary"
+    assert metrics["triple_audit_claim_coverage_rate"] == pytest.approx(1.0)
+    assert payload["artifact_manifest_summary"]["missing_count"] == 0
+    assert load_and_verify_artifact_manifest(payload["paths"]["artifact_manifest"]).passed
+    assert registry_record.metadata["workflow"] == "product_trace_triple_audit_enrichment"
+    assert registry_record.metadata["audit_pass_rate"] == pytest.approx(1.0)
+
+
+def test_product_trace_triple_audit_enrichment_blocks_without_evidence(tmp_path):
+    module = importlib.import_module("benchmarks.enrich_product_trace_triple_audit")
+
+    trace_path = tmp_path / "trace.json"
+    output_dir = tmp_path / "triple-audit"
+    trace_path.write_text(
+        json.dumps({
+            "request_id": "req-missing-evidence",
+            "claims": [
+                {
+                    "claim_id": "c1",
+                    "text": "Paris is the capital of France.",
+                    "metadata": {},
+                }
+            ],
+            "verification_results": [
+                {
+                    "status": "supported",
+                    "confidence": 0.9,
+                    "metadata": {},
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.build_product_trace_triple_audit_enrichment(
+        module.ProductTraceTripleAuditEnrichmentConfig(
+            trace_paths=(trace_path,),
+            output_dir=output_dir,
+        )
+    )
+    enriched = json.loads(Path(payload["traces"][0]["output_path"]).read_text(encoding="utf-8"))
+
+    assert payload["status"] == "blocked"
+    assert payload["decision"]["blocking_reasons"] == (
+        "audit_claim_coverage_rate_below_1",
+        "audit_pass_rate_below_1",
+        "slot_coverage_rate_below_1",
+    )
+    assert payload["summary"]["claims_with_triples"] == 1
+    assert payload["summary"]["audit_report_count"] == 0
+    assert enriched["claims"][0]["metadata"]["claim_triples"][0]["object"] == "Paris"
+    assert "audit_report" not in enriched["verification_results"][0]["metadata"]
+    assert (
+        enriched["verification_results"][0]["metadata"]["triple_audit_enrichment"]["status"]
+        == "missing_evidence"
+    )
+
+
+def test_product_trace_triple_audit_enrichment_cli_accepts_trace_glob(tmp_path, capsys):
+    module = importlib.import_module("benchmarks.enrich_product_trace_triple_audit")
+
+    traces_dir = tmp_path / "traces"
+    traces_dir.mkdir()
+    for index in range(2):
+        (traces_dir / f"trace-{index}.json").write_text(
+            json.dumps({
+                "request_id": f"req-{index}",
+                "claims": [
+                    {
+                        "claim_id": f"c{index}",
+                        "text": "Paris is the capital of France.",
+                        "metadata": {},
+                    }
+                ],
+                "verification_results": [],
+            }),
+            encoding="utf-8",
+        )
+    corpus_path = tmp_path / "evidence.json"
+    corpus_path.write_text(
+        json.dumps({"documents": [{"text": "France's capital is Paris.", "source": "atlas"}]}),
+        encoding="utf-8",
+    )
+    output_dir = tmp_path / "triple-audit"
+
+    assert module.main([
+        "--trace-glob",
+        str(traces_dir / "*.json"),
+        "--evidence-corpus",
+        str(corpus_path),
+        "--output-dir",
+        str(output_dir),
+        "--compact-json",
+    ]) == 0
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+
+    assert payload["status"] == "promote"
+    assert payload["summary"]["trace_count"] == 2
+    assert len(list((output_dir / "traces").glob("*.json"))) == 2
+
+
+def test_product_trace_triple_audit_enrichment_rejects_bounded_trace(tmp_path):
+    module = importlib.import_module("benchmarks.enrich_product_trace_triple_audit")
+
+    trace_path = tmp_path / "bounded-trace.json"
+    trace_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "trace_format": "bounded_product_trace",
+            "request_id": "req-bounded",
+        }),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="bounded ProductTrace telemetry payloads"):
+        module.build_product_trace_triple_audit_enrichment(
+            module.ProductTraceTripleAuditEnrichmentConfig(
+                trace_paths=(trace_path,),
+                output_dir=tmp_path / "triple-audit",
+            )
+        )

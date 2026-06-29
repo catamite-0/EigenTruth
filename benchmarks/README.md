@@ -7135,6 +7135,28 @@ inputs, so these drift gates can consume triple-audit coverage after text
 redaction. The summary is only evidence when the original trace already carried
 `claim_triples` and verifier `audit_report` metadata; the corpus builder does
 not infer or fabricate audit results from redacted text.
+
+Use `enrich_product_trace_triple_audit.py` when you still have full, unredacted
+ProductTrace JSON and a local evidence corpus but the original runtime did not
+record strict triple-audit metadata. The workflow extracts conservative
+`claim_triples`, retrieves local evidence snippets, attaches `audit_report`
+metadata to existing verifier results or explicit `audit_only` results, and
+writes manifest-backed enriched traces for `run_product_runtime_baseline.py`.
+For the current SmolLM2 action-payload compatibility traces, the Wikidata
+capital corpus raises trace-level triple-audit claim coverage to `0.667` while
+keeping the report `blocked` because the moon/cheese refuted claims still lack
+usable evidence:
+
+```bash
+python benchmarks/enrich_product_trace_triple_audit.py \
+  --trace-glob 'artifacts/smollm2_product_trace_action_payload_compat_v0/traces/**/*.json' \
+  --evidence-corpus artifacts/wikidata-country-capitals-external-corpus/wikidata-country-capitals-corpus.json \
+  --output-dir artifacts/smollm2_product_trace_triple_audit_enrichment_v0 \
+  --registry artifacts/smollm2_product_trace_triple_audit_enrichment_v0/registry.json \
+  --name smollm2-product-trace-triple-audit \
+  --version 0.1
+```
+
 When a saved `ProductRuntimeBudgetPolicy` is supplied with
 `--runtime-budget-policy` or `--runtime-budget-policy-key`, the current baseline
 summary is also checked against the reusable budget using p95/aggregate metrics. When a
