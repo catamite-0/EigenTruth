@@ -275,9 +275,12 @@ The calibrated-control demo now prefers the later
 handoff when it is present. That contract preserves the v6 cache-only runtime
 recommendation (`0.191662s`) and has a sibling
 `evidence-handoff-artifact-manifest.json`; runtime traces record the handoff
-status and all `38/38` promoted frontier-audit evidence fields without rerunning
-release gates, and can include manifest verification with
+status without rerunning release gates, and can include manifest verification with
 `--verify-promotion-contract-evidence-handoff-manifest`.
+Refreshed evidence-handoff audits now require the frontier release-evidence
+verdict as the seventh default `frontier_audit` handoff group, so a complete
+new export carries `46/46` promoted evidence fields when
+`--frontier-release-evidence` is supplied.
 The current registered product runtime profile sweep
 `report:smollm2-product-runtime-profile-sweep:0.1` verifies that `latency`,
 `balanced`, `audit`, and request-level `auto` selection all pass the strict product

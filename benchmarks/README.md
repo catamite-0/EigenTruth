@@ -5130,10 +5130,13 @@ python benchmarks/export_product_promotion_contract_evidence_handoff.py \
 The current v1.9 contract carries the v6 deployment-path runtime evidence
 (`recommended_runtime_seconds=0.191662`,
 `recommended_runtime_cost_source=cache_only_total_seconds`) and the enriched
-handoff audit promotes all six `frontier_audit` evidence groups with `38/38`
-fields present. Refreshed frontier-audit runtime-drift reports now add
-promotion-contract evidence-handoff coverage/manifest/metric-gap/group-status
-as the seventh release-gated evidence group. The release-policy wiring also
+handoff exporter now expects all seven default `frontier_audit` evidence groups
+with `46/46` fields present when `--frontier-release-evidence` is supplied.
+Older generated v1.9 handoff artifacts may still show the previous six-group
+`38/38` export until regenerated. Refreshed frontier-audit runtime-drift reports
+also carry promotion-contract evidence-handoff
+coverage/manifest/metric-gap/group-status as a release-gated evidence group.
+The release-policy wiring also
 expects trajectory-audit runtime-drift evidence as a separate fail-closed group
 when refreshed drift reports are supplied. The main contract manifest
 verifies with `checked=2`; the evidence-handoff manifest verifies with

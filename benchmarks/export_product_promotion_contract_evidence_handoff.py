@@ -27,6 +27,7 @@ def export_product_promotion_contract_evidence_handoff(
     triple_extraction_fixture_matrix: str | Path | None = None,
     counterfactual_verification: str | Path | None = None,
     product_trace_replay_workflow: str | Path | None = None,
+    frontier_release_evidence: str | Path | None = None,
     runtime_baseline: str | Path | None = None,
     covered_fact_property_metrics: str | Path | None = None,
     artifact_manifest_path: str | Path | None = None,
@@ -47,6 +48,7 @@ def export_product_promotion_contract_evidence_handoff(
     matrix_path = _optional_path(triple_extraction_fixture_matrix)
     counterfactual_path = _optional_path(counterfactual_verification)
     workflow_path = _optional_path(product_trace_replay_workflow)
+    frontier_path = _optional_path(frontier_release_evidence)
     runtime_path = _optional_path(runtime_baseline)
     covered_fact_path = _optional_path(covered_fact_property_metrics)
     result = enrich_product_promotion_contract_evidence(
@@ -59,6 +61,8 @@ def export_product_promotion_contract_evidence_handoff(
         counterfactual_verification_path=_path_str(counterfactual_path),
         product_trace_replay_workflow=_load_optional_object(workflow_path),
         product_trace_replay_workflow_path=_path_str(workflow_path),
+        frontier_release_evidence=_load_optional_object(frontier_path),
+        frontier_release_evidence_path=_path_str(frontier_path),
         runtime_baseline=_load_optional_object(runtime_path),
         runtime_baseline_path=_path_str(runtime_path),
         covered_fact_property_metrics=_load_optional_object(covered_fact_path),
@@ -90,30 +94,21 @@ def export_product_promotion_contract_evidence_handoff(
             "triple_extraction_fixture_matrix": matrix_path,
             "counterfactual_verification": counterfactual_path,
             "product_trace_replay_workflow": workflow_path,
+            "frontier_release_evidence": frontier_path,
             "runtime_baseline": runtime_path,
             "covered_fact_property_metrics": covered_fact_path,
         }
-        artifacts.update({
-            name: path
-            for name, path in optional_artifacts.items()
-            if path is not None
-        })
+        artifacts.update({name: path for name, path in optional_artifacts.items() if path is not None})
         manifest = build_artifact_manifest(
             artifacts,
-                root=manifest_path.parent,
-                metadata={
-                    "runner": "export_product_promotion_contract_evidence_handoff",
-                    "status": result.after_audit.status,
+            root=manifest_path.parent,
+            metadata={
+                "runner": "export_product_promotion_contract_evidence_handoff",
+                "status": result.after_audit.status,
                 "source_contract": str(contract_path),
-                "before_missing_metric_count": result.summary[
-                    "before_missing_metric_count"
-                ],
-                "after_missing_metric_count": result.summary[
-                    "after_missing_metric_count"
-                ],
-                "resolved_missing_metric_count": result.summary[
-                    "resolved_missing_metric_count"
-                ],
+                "before_missing_metric_count": result.summary["before_missing_metric_count"],
+                "after_missing_metric_count": result.summary["after_missing_metric_count"],
+                "resolved_missing_metric_count": result.summary["resolved_missing_metric_count"],
                 "filled_groups": result.filled_groups,
                 **dict(metadata or {}),
             },
@@ -135,15 +130,9 @@ def export_product_promotion_contract_evidence_handoff(
                 "source_contract": str(contract_path),
                 "evidence_handoff_audit": str(audit_path),
                 "artifact_manifest": None if manifest_path is None else str(manifest_path),
-                "before_missing_metric_count": result.summary[
-                    "before_missing_metric_count"
-                ],
-                "after_missing_metric_count": result.summary[
-                    "after_missing_metric_count"
-                ],
-                "resolved_missing_metric_count": result.summary[
-                    "resolved_missing_metric_count"
-                ],
+                "before_missing_metric_count": result.summary["before_missing_metric_count"],
+                "after_missing_metric_count": result.summary["after_missing_metric_count"],
+                "resolved_missing_metric_count": result.summary["resolved_missing_metric_count"],
                 "filled_groups": result.filled_groups,
                 **dict(metadata or {}),
             },
@@ -157,12 +146,8 @@ def export_product_promotion_contract_evidence_handoff(
                 "status": audit_payload["status"],
                 "source_contract": str(contract_path),
                 "enriched_contract": str(output_path),
-                "missing_metric_count": audit_payload["summary"][
-                    "missing_metric_count"
-                ],
-                "blocked_group_count": audit_payload["summary"][
-                    "blocked_group_count"
-                ],
+                "missing_metric_count": audit_payload["summary"]["missing_metric_count"],
+                "blocked_group_count": audit_payload["summary"]["blocked_group_count"],
                 "recommended_action_ids": audit_payload["recommended_action_ids"],
                 **dict(metadata or {}),
             },
@@ -209,8 +194,7 @@ def _parse_metadata(values: Sequence[str]) -> dict[str, Any]:
 def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         description=(
-            "Enrich a ProductPromotionContract with runtime evidence handoff "
-            "fields from explicit local reports."
+            "Enrich a ProductPromotionContract with runtime evidence handoff fields from explicit local reports."
         )
     )
     parser.add_argument("--contract", required=True, help="source ProductPromotionContract JSON")
@@ -220,6 +204,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--triple-extraction-fixture-matrix", default=None)
     parser.add_argument("--counterfactual-verification", default=None)
     parser.add_argument("--product-trace-replay-workflow", default=None)
+    parser.add_argument("--frontier-release-evidence", default=None)
     parser.add_argument("--runtime-baseline", default=None)
     parser.add_argument("--covered-fact-property-metrics", default=None)
     parser.add_argument("--artifact-manifest", default=None)
@@ -241,6 +226,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         triple_extraction_fixture_matrix=args.triple_extraction_fixture_matrix,
         counterfactual_verification=args.counterfactual_verification,
         product_trace_replay_workflow=args.product_trace_replay_workflow,
+        frontier_release_evidence=args.frontier_release_evidence,
         runtime_baseline=args.runtime_baseline,
         covered_fact_property_metrics=args.covered_fact_property_metrics,
         artifact_manifest_path=args.artifact_manifest,
