@@ -1,6 +1,18 @@
 {
   "control_defaults": {},
   "control_policy_config": {},
+  "counterfactual_verification": {
+    "false_invariance_rate": 0.0,
+    "flip_success_count": 70.0,
+    "manifest_path": "artifacts/smollm2_product_counterfactual_structured_qa_audit_v0/artifact-manifest.json",
+    "manifest_verified": true,
+    "pass_rate": 1.0,
+    "record_count": 70.0,
+    "report_path": "artifacts/smollm2_product_counterfactual_structured_qa_audit_v0/counterfactual-verification-report.json",
+    "source": "file",
+    "status": "promote",
+    "workflow": "counterfactual_verification_eval"
+  },
   "feedback_policy_workflow": {},
   "metadata": {
     "adapter_family_matrix_manifest": "artifacts/smollm2_l20_adapter_family_retrieval_structured_qa/adapter-family-matrix.json",
@@ -26,6 +38,16 @@
       "retrieval_groundedness",
       "retrieval_structured_qa"
     ],
+    "counterfactual_verification_false_invariance_rate": 0.0,
+    "counterfactual_verification_flip_success_count": 70.0,
+    "counterfactual_verification_manifest": "artifacts/smollm2_product_counterfactual_structured_qa_audit_v0/artifact-manifest.json",
+    "counterfactual_verification_manifest_verified": true,
+    "counterfactual_verification_pass_rate": 1.0,
+    "counterfactual_verification_record_count": 70.0,
+    "counterfactual_verification_report": "artifacts/smollm2_product_counterfactual_structured_qa_audit_v0/counterfactual-verification-report.json",
+    "counterfactual_verification_source": "file",
+    "counterfactual_verification_status": "promote",
+    "counterfactual_verification_workflow": "counterfactual_verification_eval",
     "feedback_policy_workflow_abstain_false_positive_rate": null,
     "feedback_policy_workflow_accepted_but_wrong_rate": null,
     "feedback_policy_workflow_candidate_control_defaults": null,

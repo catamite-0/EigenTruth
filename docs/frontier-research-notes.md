@@ -98,7 +98,7 @@ Added dependency-free counterfactual verifier auditing:
 - `CounterfactualProbe`, `CounterfactualVerificationAuditor`, and `CounterfactualVerificationReport` run paired original/counterfactual claims through any local `Verifier`.
 - `CounterfactualProbeGenerator` and `generate_counterfactual_probes(...)` can derive bounded metadata/entity/quantity/year/negation probes from existing claims so trace-side claim extraction can feed verifier perturbation audits without a model call.
 - The report records expected-status accuracy, flip success, false invariance, unexpected flips, per-probe failure reasons, and probe-type summaries.
-- `benchmarks/eval_counterfactual_verification.py` provides a local JSON/JSONL harness for `in_memory` and `structured_fact` verifier audits, and can write an artifact manifest plus local registry record for release evidence.
+- `benchmarks/eval_counterfactual_verification.py` provides a local JSON/JSONL harness for `in_memory`, `structured_fact`, and `structured_qa` verifier audits, can derive answer-mismatch probes from supported/refuted verified-record pairs, and can write an artifact manifest plus local registry record for release evidence.
 - This does not claim broad hallucination mitigation; it gives structured-fact, retrieval, world-model, or future external verifier routes a reproducible perturbation-sensitivity gate before their outputs are trusted by release workflows.
 
 Added the covered-facts KG correction handoff:
@@ -1099,12 +1099,23 @@ Added the first monitor-first tool-selection audit layer:
 - `ProductPromotionEvidenceExport` now performs that first conservative
   population step. `benchmarks/export_product_promotion_contract_evidence_handoff.py`
   reads explicit local child reports and writes an enriched contract plus a new
-  audit. On the v1.6 SmolLM2 contract, existing pre-generation comparison,
-  triple-extraction matrix, action-gated product-trace replay, and runtime
-  baseline artifacts reduce the missing handoff metrics from `37/38` to
+  audit. The initial v0.2 export for the v1.6 SmolLM2 contract used existing
+  pre-generation comparison, triple-extraction matrix, action-gated
+  product-trace replay, and runtime baseline artifacts, reducing the missing
+  handoff metrics from `37/38` to
   `15/38`. The remaining blockers are now narrower and real:
   counterfactual verifier audit, trace-level triple audit/slot coverage, and
   covered-fact property metrics.
+- `eval_counterfactual_verification.py --verified-records --verifier structured_qa`
+  now closes the counterfactual verifier audit with real covered-facts route
+  evidence rather than an in-memory expected-status smoke. The saved SmolLM2
+  audit at `artifacts/smollm2_product_counterfactual_structured_qa_audit_v0/`
+  builds `70` answer-mismatch probes from source-family structured-QA verified
+  records, passes all probes with `false_invariance_rate=0.0`, and verifies a
+  three-file artifact manifest. Re-exporting the v1.6 promotion contract with
+  that report records the counterfactual group as present and reduces remaining
+  handoff gaps from `15/38` to `9/38`; only trace-level triple audit/slot
+  coverage and covered-fact property metrics remain.
 
 ## Next Research-to-Code Candidates
 

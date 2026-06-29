@@ -7171,6 +7171,63 @@
       "name": "smollm2-product-promotion-contract-v1-6-evidence-handoff-audit",
       "path": "artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract-evidence-handoff-audit.json",
       "version": "0.2"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/smollm2_product_counterfactual_structured_qa_audit_v0/artifact-manifest.json",
+        "false_invariance_rate": 0.0,
+        "pass_rate": 1.0,
+        "record_count": 70,
+        "verifier": "structured_qa",
+        "workflow": "counterfactual_verification_eval"
+      },
+      "name": "smollm2-product-counterfactual-structured-qa-audit",
+      "path": "artifacts/smollm2_product_counterfactual_structured_qa_audit_v0/counterfactual-verification-report.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "product_promotion_contract",
+      "metadata": {
+        "after_missing_metric_count": 9,
+        "before_missing_metric_count": 37,
+        "counterfactual_audit": "structured_qa_answer_mismatch",
+        "evidence_handoff_audit": "artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract-evidence-handoff-audit.json",
+        "filled_groups": [
+          "promotion",
+          "pre_generation",
+          "counterfactual",
+          "action_gate",
+          "triple_audit"
+        ],
+        "resolved_missing_metric_count": 28,
+        "scope": "frontier_runtime_drift",
+        "source_contract": "artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract.json",
+        "workflow": "product_promotion_evidence_handoff_export"
+      },
+      "name": "smollm2-product-promotion-contract-v1-6-evidence-handoff",
+      "path": "artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract-evidence-handoff.json",
+      "version": "0.3"
+    },
+    {
+      "artifact_type": "product_promotion_evidence_audit",
+      "metadata": {
+        "blocked_group_count": 2,
+        "counterfactual_audit": "structured_qa_answer_mismatch",
+        "enriched_contract": "artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract-evidence-handoff.json",
+        "missing_metric_count": 9,
+        "recommended_action_ids": [
+          "add_trace_level_triple_audit",
+          "refresh_covered_fact_property_routes"
+        ],
+        "scope": "frontier_runtime_drift",
+        "source_contract": "artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract.json",
+        "status": "blocked",
+        "workflow": "product_promotion_evidence_handoff_audit"
+      },
+      "name": "smollm2-product-promotion-contract-v1-6-evidence-handoff-audit",
+      "path": "artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract-evidence-handoff-audit.json",
+      "version": "0.3"
     }
   ],
   "schema_version": 1

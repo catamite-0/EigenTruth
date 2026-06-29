@@ -28,6 +28,22 @@ python benchmarks/eval_counterfactual_verification.py \
 
 For small local fixtures, `--verifier in_memory` can derive exact-match statuses
 from each probe's expected status fields, or consume `--in-memory-facts`.
+For covered-fact route evidence, `--verifier structured_qa` can replay
+supported/refuted verified-record pairs against a structured QA corpus and turn
+same-question answer mismatches into counterfactual probes:
+
+```bash
+python benchmarks/eval_counterfactual_verification.py \
+  --verified-records artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-route/verified-records.jsonl \
+  --verifier structured_qa \
+  --fact-corpus artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-workflow/source-family-structured-qa-corpus.json \
+  --json artifacts/smollm2_product_counterfactual_structured_qa_audit_v0/counterfactual-verification-report.json \
+  --artifact-manifest artifacts/smollm2_product_counterfactual_structured_qa_audit_v0/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --register-name smollm2-product-counterfactual-structured-qa-audit \
+  --register-version 0.1
+```
+
 When only extracted claims are available, the benchmark can generate bounded
 counterfactual probes from claim metadata, entity replacements, numbers, years,
 and negation:
@@ -4842,19 +4858,20 @@ python benchmarks/export_product_promotion_contract_evidence_handoff.py \
   --audit-json artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract-evidence-handoff-audit.json \
   --pre-generation-probe-comparison artifacts/runtime_evidence/pre-generation-qwen-smollm2-l12-comparison/comparison.json \
   --triple-extraction-fixture-matrix artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/triple-extraction-fixture-matrix.json \
+  --counterfactual-verification artifacts/smollm2_product_counterfactual_structured_qa_audit_v0/counterfactual-verification-report.json \
   --product-trace-replay-workflow artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/product-trace-replay-workflow.json \
   --runtime-baseline artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/runtime-baseline/product-runtime-baseline.json \
   --registry artifacts/local-release-registry.json \
   --name smollm2-product-promotion-contract-v1-6-evidence-handoff \
-  --version 0.2
+  --version 0.3
 ```
 
 The exporter only copies evidence from supplied reports; it does not invent
-counterfactual, covered-fact property, or trace-level triple-audit results. The
-current v1.6 handoff export reduces missing metrics from `37/38` to `15/38`:
-promotion/triple-matrix, pre-generation comparison, and action-gate groups are
-present, while counterfactual verification, covered-fact property metrics, and
-audit/slot triple coverage remain the next evidence-producing work.
+covered-fact property or trace-level triple-audit results. The current v1.6
+handoff export reduces missing metrics from `37/38` to `9/38`: promotion/triple
+matrix, pre-generation comparison, counterfactual verification, and action-gate
+groups are present, while covered-fact property metrics and audit/slot triple
+coverage remain the next evidence-producing work.
 
 ```bash
 python benchmarks/run_release_candidate_registry_workflow.py \

@@ -176,70 +176,80 @@
           "evidence_key": "counterfactual_verification_coverage_rate",
           "group": "counterfactual",
           "metric": "promotion_contract.counterfactual_verification.coverage_rate",
-          "present": false,
-          "source_path": [],
-          "status": "missing",
-          "value": null
+          "present": true,
+          "source_path": [
+            "counterfactual_verification"
+          ],
+          "status": "present",
+          "value": 1.0
         },
         {
           "evidence_key": "counterfactual_verification_manifest_verified_rate",
           "group": "counterfactual",
           "metric": "promotion_contract.counterfactual_verification.manifest_verified_rate",
-          "present": false,
-          "source_path": [],
-          "status": "missing",
-          "value": null
+          "present": true,
+          "source_path": [
+            "counterfactual_verification",
+            "manifest_verified"
+          ],
+          "status": "present",
+          "value": 1.0
         },
         {
           "evidence_key": "counterfactual_verification_record_count",
           "group": "counterfactual",
           "metric": "promotion_contract.counterfactual_verification.record_count.mean",
-          "present": false,
-          "source_path": [],
-          "status": "missing",
-          "value": null
+          "present": true,
+          "source_path": [
+            "counterfactual_verification",
+            "record_count"
+          ],
+          "status": "present",
+          "value": 70.0
         },
         {
           "evidence_key": "counterfactual_verification_pass_rate",
           "group": "counterfactual",
           "metric": "promotion_contract.counterfactual_verification.pass_rate.mean",
-          "present": false,
-          "source_path": [],
-          "status": "missing",
-          "value": null
+          "present": true,
+          "source_path": [
+            "counterfactual_verification",
+            "pass_rate"
+          ],
+          "status": "present",
+          "value": 1.0
         },
         {
           "evidence_key": "counterfactual_verification_false_invariance_rate",
           "group": "counterfactual",
           "metric": "promotion_contract.counterfactual_verification.false_invariance_rate.mean",
-          "present": false,
-          "source_path": [],
-          "status": "missing",
-          "value": null
+          "present": true,
+          "source_path": [
+            "counterfactual_verification",
+            "false_invariance_rate"
+          ],
+          "status": "present",
+          "value": 0.0
         },
         {
           "evidence_key": "counterfactual_verification_flip_success_count",
           "group": "counterfactual",
           "metric": "promotion_contract.counterfactual_verification.flip_success_count.mean",
-          "present": false,
-          "source_path": [],
-          "status": "missing",
-          "value": null
+          "present": true,
+          "source_path": [
+            "counterfactual_verification",
+            "flip_success_count"
+          ],
+          "status": "present",
+          "value": 70.0
         }
       ],
-      "missing_metric_count": 6,
-      "missing_metrics": [
-        "promotion_contract.counterfactual_verification.coverage_rate",
-        "promotion_contract.counterfactual_verification.manifest_verified_rate",
-        "promotion_contract.counterfactual_verification.record_count.mean",
-        "promotion_contract.counterfactual_verification.pass_rate.mean",
-        "promotion_contract.counterfactual_verification.false_invariance_rate.mean",
-        "promotion_contract.counterfactual_verification.flip_success_count.mean"
-      ],
-      "present_metric_count": 0,
+      "missing_metric_count": 0,
+      "missing_metrics": [],
+      "present_metric_count": 6,
       "recommended_action_id": "run_counterfactual_verifier_audit",
       "required": true,
-      "status": "blocked"
+      "status": "promote"
     },
     {
       "expected_metric_count": 4,
@@ -506,16 +516,11 @@
     }
   ],
   "metadata": {
+    "counterfactual_audit": "structured_qa_answer_mismatch",
     "scope": "frontier_runtime_drift",
     "source_contract": "artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract.json"
   },
   "missing_metrics": [
-    "promotion_contract.counterfactual_verification.coverage_rate",
-    "promotion_contract.counterfactual_verification.manifest_verified_rate",
-    "promotion_contract.counterfactual_verification.record_count.mean",
-    "promotion_contract.counterfactual_verification.pass_rate.mean",
-    "promotion_contract.counterfactual_verification.false_invariance_rate.mean",
-    "promotion_contract.counterfactual_verification.flip_success_count.mean",
     "triple_coverage.audit_claim_coverage_rate",
     "triple_coverage.audit_pass_rate",
     "triple_coverage.slot_coverage_rate",
@@ -528,7 +533,6 @@
   ],
   "model_id": "HuggingFaceTB/SmolLM2-135M-Instruct",
   "recommended_action_ids": [
-    "run_counterfactual_verifier_audit",
     "add_trace_level_triple_audit",
     "refresh_covered_fact_property_routes"
   ],
@@ -545,21 +549,20 @@
   "source_workflow": "release_candidate_comparison",
   "status": "blocked",
   "summary": {
-    "blocked_group_count": 3,
+    "blocked_group_count": 2,
     "expected_metric_count": 38,
     "group_count": 6,
     "groups": {
       "action_gate": "promote",
-      "counterfactual": "blocked",
+      "counterfactual": "promote",
       "covered_fact_property": "blocked",
       "pre_generation": "promote",
       "promotion": "promote",
       "triple_audit": "blocked"
     },
-    "missing_metric_count": 15,
-    "present_metric_count": 23,
+    "missing_metric_count": 9,
+    "present_metric_count": 29,
     "recommended_action_ids": [
-      "run_counterfactual_verifier_audit",
       "add_trace_level_triple_audit",
       "refresh_covered_fact_property_routes"
     ],

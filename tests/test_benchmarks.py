@@ -61,7 +61,7 @@ def test_eval_conformal_run_respects_lower_direction(tmp_path):
 
 def test_eval_counterfactual_verification_reports_false_invariance(tmp_path):
     module = importlib.import_module("benchmarks.eval_counterfactual_verification")
-    from eigentruth.registry import ArtifactRegistry
+    from eigentruth.registry import ArtifactRegistry, load_and_verify_artifact_manifest
 
     records_path = tmp_path / "counterfactual-records.json"
     facts_path = tmp_path / "facts.json"
@@ -112,8 +112,10 @@ def test_eval_counterfactual_verification_reports_false_invariance(tmp_path):
     assert summary["false_invariance_rate"] == pytest.approx(1.0)
     assert payload["report"]["error_examples"][0]["failure_reason"] == "false_invariance"
     assert payload["paths"]["artifact_manifest"] == str(manifest_path)
+    assert payload["artifact_manifest_summary"]["missing_count"] == 0
     assert payload["registry_record"] == "report:counterfactual-smoke:0.1"
     assert manifest["summary"]["missing_count"] == 0
+    assert load_and_verify_artifact_manifest(manifest_path).passed is True
     assert record.metadata["false_invariance_rate"] == pytest.approx(1.0)
 
 
@@ -154,6 +156,76 @@ def test_eval_counterfactual_verification_generates_probes_from_claims(tmp_path)
     assert summary["pass_rate"] == pytest.approx(1.0)
     assert probe_types["entity_swap"]["record_count"] == 1
     assert probe_types["year"]["record_count"] == 1
+    assert report_path.exists()
+
+
+def test_eval_counterfactual_verification_builds_structured_qa_probes_from_verified_records(tmp_path):
+    module = importlib.import_module("benchmarks.eval_counterfactual_verification")
+
+    qa_corpus_path = tmp_path / "qa-corpus.json"
+    verified_records_path = tmp_path / "verified-records.jsonl"
+    report_path = tmp_path / "structured-qa-counterfactual-report.json"
+    qa_corpus_path.write_text(
+        json.dumps({
+            "documents": [
+                {
+                    "question": "What is the capital of France?",
+                    "answer": "Paris",
+                    "source": "fixture:france-capital",
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    rows = [
+        {
+            "record_index": 0,
+            "record": {
+                "claim": {"claim_id": "c1", "text": "What is the capital of France? Paris"},
+                "metadata": {
+                    "statement": {
+                        "question": "What is the capital of France?",
+                        "answer": "Paris",
+                        "text": "What is the capital of France? Paris",
+                    },
+                },
+                "final": {"status": "supported"},
+            },
+        },
+        {
+            "record_index": 1,
+            "record": {
+                "claim": {"claim_id": "c2", "text": "What is the capital of France? Berlin"},
+                "metadata": {
+                    "statement": {
+                        "question": "What is the capital of France?",
+                        "answer": "Berlin",
+                        "text": "What is the capital of France? Berlin",
+                    },
+                },
+                "final": {"status": "refuted"},
+            },
+        },
+    ]
+    verified_records_path.write_text(
+        "\n".join(json.dumps(row) for row in rows) + "\n",
+        encoding="utf-8",
+    )
+
+    payload = module.run_counterfactual_verification_eval(
+        verified_records_path=verified_records_path,
+        verifier_name="structured_qa",
+        fact_corpus_path=qa_corpus_path,
+        output_path=report_path,
+    )
+    summary = payload["report"]["summary"]
+
+    assert payload["verifier"] == "structured_qa"
+    assert payload["verified_records_path"] == str(verified_records_path)
+    assert payload["verified_record_probe_count"] == 1
+    assert summary["record_count"] == 1
+    assert summary["pass_rate"] == pytest.approx(1.0)
+    assert summary["false_invariance_rate"] == pytest.approx(0.0)
     assert report_path.exists()
 
 

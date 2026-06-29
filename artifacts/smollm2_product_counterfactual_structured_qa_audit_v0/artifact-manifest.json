@@ -1,0 +1,43 @@
+{
+  "artifacts": {
+    "counterfactual_verification_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "counterfactual-verification-report.json",
+      "sha256": "17506179be8be65144722a05c110652c680cd13400abd17dbd733d4f0775a399",
+      "size_bytes": 686251
+    },
+    "fact_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-workflow/source-family-structured-qa-corpus.json",
+      "sha256": "be961114e444f652421351d11d57e6a541bf3e64fc6e3e2febf0f76482c21aa9",
+      "size_bytes": 66148
+    },
+    "verified_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-route/verified-records.jsonl",
+      "sha256": "bcea8f3d0e854a39cb7a6f398fa7333964647ccabdc5fe0d544ff3e052ad1182",
+      "size_bytes": 633939
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "false_invariance_rate": 0.0,
+    "pass_rate": 1.0,
+    "record_count": 70,
+    "verifier": "structured_qa",
+    "workflow": "counterfactual_verification_eval"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}
