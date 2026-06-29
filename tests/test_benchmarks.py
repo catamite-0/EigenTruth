@@ -10795,6 +10795,7 @@ def _write_route_baseline_manifest(
     false_refuted_rate: float,
     mean_duration_seconds: float,
     p99_duration_seconds: float,
+    selected: int = 8,
     mean_attempted_route_count: float = 1.0,
     retrieval_use_rate: float = 0.0,
     invalid_metric_counts: dict[str, int] | None = None,
@@ -10819,7 +10820,7 @@ def _write_route_baseline_manifest(
             "promotion_decision": {"status": "promote", "recommended_route": route},
             "by_route": {
                 route: {
-                    "selected": 8,
+                    "selected": selected,
                     "decision_accuracy": decision_accuracy,
                     "false_supported_rate": false_supported_rate,
                     "false_refuted_rate": false_refuted_rate,
@@ -17415,14 +17416,18 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     assert payload["config"]["release_policy_profile_applied_defaults"]["min_decision_accuracy"] == (
         pytest.approx(0.99)
     )
-    assert payload["config"]["release_policy_profile_applied_defaults"]["required_route_min_selected"] == 700
+    assert payload["config"]["release_policy_profile_applied_defaults"]["required_route_min_selected"] == 200
     assert payload["config"]["release_policy_profile_applied_defaults"][
-        "required_route_min_covered_fact_properties"
+        "structured_fact_robustness_min_selected"
+    ] == 700
+    assert payload["config"]["release_policy_profile_applied_defaults"][
+        "structured_fact_robustness_min_covered_fact_properties"
     ] == 3
     assert payload["config"]["release_policy_profile_applied_defaults"][
-        "required_route_min_covered_fact_property_decision_accuracy"
+        "structured_fact_robustness_min_covered_fact_property_decision_accuracy"
     ] == pytest.approx(0.99)
-    assert payload["config"]["required_route_min_covered_fact_properties"] == 3
+    assert payload["config"]["required_route_min_covered_fact_properties"] is None
+    assert payload["config"]["structured_fact_robustness_min_covered_fact_properties"] == 3
     assert payload["config"]["required_route_baseline_keys"] == [
         "benchmark_manifest:structured-fact-canonical-route:0.1",
         "benchmark_manifest:structured-fact-paraphrase-route:0.1",
@@ -17620,6 +17625,114 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
             structured_fact_canonical_route_key="benchmark_manifest:structured-fact-canonical-route:0.1",
             structured_fact_paraphrase_route_key="benchmark_manifest:structured-fact-paraphrase-route:0.1",
         )
+
+
+def test_compare_release_candidates_splits_required_route_and_structured_fact_gates(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="qwen-readiness",
+        version="0.6",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    retrieval_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="smollm2-retrieval",
+        route="retrieval_structured_qa",
+        selected=238,
+        decision_accuracy=0.992,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.04,
+        p99_duration_seconds=0.08,
+        runtime_total_seconds=2.0,
+    )
+    canonical_manifest = _write_covered_fact_route_summary_manifest(
+        tmp_path,
+        name="structured-fact-canonical",
+        route="structured_fact",
+        selected=718,
+        property_metrics=_covered_fact_property_metrics(),
+    )
+    paraphrase_manifest = _write_covered_fact_route_summary_manifest(
+        tmp_path,
+        name="structured-fact-paraphrase",
+        route="structured_fact",
+        selected=2868,
+        property_metrics=_covered_fact_property_metrics(
+            records=(960, 960, 948),
+            source_documents=(120, 120, 119),
+        ),
+    )
+    registry = ArtifactRegistry.load_json(registry_path)
+    registry.record_benchmark_manifest(
+        name="smollm2-retrieval-route",
+        path=retrieval_manifest,
+        version="0.6",
+        metadata={"workflow": "truthfulqa_retrieval_route_workflow"},
+    )
+    registry.record_benchmark_manifest(
+        name="structured-fact-canonical-route",
+        path=canonical_manifest,
+        version="0.1",
+        metadata={"workflow": "wikidata_structured_qa_route_workflow"},
+    )
+    registry.record_benchmark_manifest(
+        name="structured-fact-paraphrase-route",
+        path=paraphrase_manifest,
+        version="0.1",
+        metadata={"workflow": "wikidata_structured_qa_route_workflow"},
+    )
+    registry.save_json()
+
+    payload = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        route_baseline_keys=("benchmark_manifest:structured-fact-canonical-route:0.1",),
+        required_route_baseline_keys=("benchmark_manifest:smollm2-retrieval-route:0.6",),
+        release_policy_profile="strict-structured-fact",
+        structured_fact_canonical_route_key="benchmark_manifest:structured-fact-canonical-route:0.1",
+        structured_fact_paraphrase_route_key="benchmark_manifest:structured-fact-paraphrase-route:0.1",
+    )
+
+    required_gate = payload["required_route_baseline_gate"]
+    required_rows = {row["record_key"]: row for row in required_gate["rows"]}
+
+    assert payload["decision"]["status"] == "promote"
+    assert required_gate["gate"]["passed"] is True
+    assert required_gate["ordinary_required_route_keys"] == (
+        "benchmark_manifest:smollm2-retrieval-route:0.6",
+    )
+    assert required_gate["structured_fact_route_keys"] == (
+        "benchmark_manifest:structured-fact-canonical-route:0.1",
+        "benchmark_manifest:structured-fact-paraphrase-route:0.1",
+    )
+    assert required_gate["ordinary_required_route_gate"]["comparison"]["config"][
+        "min_selected"
+    ] == 200
+    assert required_gate["structured_fact_robustness_gate"]["comparison"]["config"][
+        "min_selected"
+    ] == 700
+    retrieval_row = required_rows["benchmark_manifest:smollm2-retrieval-route:0.6"]
+    assert retrieval_row["selected"] == 238
+    assert retrieval_row["gate"]["passed"] is True
+    assert retrieval_row["covered_fact_property_count"] is None
+    assert "covered-facts property metrics are missing" not in (
+        reason for reason in retrieval_row["gate"].get("blocking_reasons", ())
+    )
+    assert payload["release_candidate"]["required_route_baselines"][
+        "covered_fact_property_counts"
+    ] == {
+        "benchmark_manifest:structured-fact-canonical-route:0.1": 3,
+        "benchmark_manifest:structured-fact-paraphrase-route:0.1": 3,
+    }
 
 
 def test_compare_release_candidates_blocks_mismatched_performance_baseline(tmp_path):
@@ -18557,16 +18670,32 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     assert profile_config.min_best_quality_auroc == pytest.approx(0.70)
     assert profile_config.max_uncached_forward_seconds == pytest.approx(20.0)
     assert profile_config.min_decision_accuracy == pytest.approx(0.98)
-    assert profile_config.required_route_min_selected == 700
-    assert profile_config.required_route_min_covered_fact_properties == 3
-    assert profile_config.required_route_min_covered_fact_property_records == 2
-    assert profile_config.required_route_min_covered_fact_property_source_documents == 1
-    assert profile_config.required_route_min_covered_fact_property_decision_accuracy == pytest.approx(0.99)
-    assert profile_config.required_route_max_covered_fact_property_false_supported_rate == pytest.approx(0.0)
-    assert profile_config.required_route_min_covered_fact_property_false_refuted_rate == pytest.approx(0.99)
+    assert profile_config.required_route_min_selected == 200
+    assert profile_config.required_route_min_covered_fact_properties is None
+    assert profile_config.required_route_min_covered_fact_property_records is None
+    assert profile_config.required_route_min_covered_fact_property_source_documents is None
+    assert profile_config.required_route_min_covered_fact_property_decision_accuracy is None
+    assert profile_config.required_route_max_covered_fact_property_false_supported_rate is None
+    assert profile_config.required_route_min_covered_fact_property_false_refuted_rate is None
+    assert profile_config.structured_fact_robustness_min_selected == 700
+    assert profile_config.structured_fact_robustness_min_covered_fact_properties == 3
+    assert profile_config.structured_fact_robustness_min_covered_fact_property_records == 2
+    assert profile_config.structured_fact_robustness_min_covered_fact_property_source_documents == 1
+    assert profile_config.structured_fact_robustness_min_covered_fact_property_decision_accuracy == pytest.approx(0.99)
+    assert (
+        profile_config.structured_fact_robustness_max_covered_fact_property_false_supported_rate
+        == pytest.approx(0.0)
+    )
+    assert profile_config.structured_fact_robustness_min_covered_fact_property_false_refuted_rate == pytest.approx(0.99)
     assert profile_config.release_policy_profile_applied_defaults["require_structured_fact_robustness"] is True
-    assert profile_config.release_policy_profile_applied_defaults["required_route_min_selected"] == 700
-    assert profile_config.release_policy_profile_applied_defaults["required_route_min_covered_fact_properties"] == 3
+    assert profile_config.release_policy_profile_applied_defaults["required_route_min_selected"] == 200
+    assert profile_config.release_policy_profile_applied_defaults["structured_fact_robustness_min_selected"] == 700
+    assert (
+        profile_config.release_policy_profile_applied_defaults[
+            "structured_fact_robustness_min_covered_fact_properties"
+        ]
+        == 3
+    )
     assert "min_decision_accuracy" not in profile_config.release_policy_profile_applied_defaults
 
     frontier_profile_config = module.ReleaseCandidateRegistryWorkflowConfig(
@@ -19051,11 +19180,15 @@ def test_run_release_candidate_registry_workflow_records_structured_fact_robustn
     assert payload["config"]["release_policy_profile_applied_defaults"]["min_best_quality_auroc"] == (
         pytest.approx(0.70)
     )
-    assert payload["config"]["release_policy_profile_applied_defaults"]["required_route_min_selected"] == 700
+    assert payload["config"]["release_policy_profile_applied_defaults"]["required_route_min_selected"] == 200
     assert payload["config"]["release_policy_profile_applied_defaults"][
-        "required_route_min_covered_fact_properties"
+        "structured_fact_robustness_min_selected"
+    ] == 700
+    assert payload["config"]["release_policy_profile_applied_defaults"][
+        "structured_fact_robustness_min_covered_fact_properties"
     ] == 3
-    assert payload["config"]["required_route_min_covered_fact_property_records"] == 2
+    assert payload["config"]["required_route_min_covered_fact_property_records"] is None
+    assert payload["config"]["structured_fact_robustness_min_covered_fact_property_records"] == 2
     assert payload["config"]["required_route_baseline_keys"] == (
         "benchmark_manifest:structured-fact-canonical-route:0.1",
         "benchmark_manifest:structured-fact-paraphrase-route:0.1",
@@ -19113,14 +19246,23 @@ def test_run_release_candidate_registry_workflow_records_structured_fact_robustn
         "benchmark_manifest:structured-fact-paraphrase-route:0.1": ["P36", "P37", "P38"],
     }
     assert manifest["metadata"]["release_policy_profile"] == "strict_structured_fact"
-    assert manifest["metadata"]["release_policy_profile_applied_defaults"]["required_route_min_selected"] == 700
+    assert manifest["metadata"]["release_policy_profile_applied_defaults"]["required_route_min_selected"] == 200
     assert manifest["metadata"]["release_policy_profile_applied_defaults"][
-        "required_route_min_covered_fact_properties"
+        "structured_fact_robustness_min_selected"
+    ] == 700
+    assert manifest["metadata"]["release_policy_profile_applied_defaults"][
+        "structured_fact_robustness_min_covered_fact_properties"
     ] == 3
-    assert manifest["metadata"]["required_route_budget_policy"]["required_route_min_covered_fact_properties"] == 3
+    assert manifest["metadata"]["required_route_budget_policy"]["required_route_min_covered_fact_properties"] is None
     assert (
         manifest["metadata"]["required_route_budget_policy"][
-            "required_route_min_covered_fact_property_decision_accuracy"
+            "structured_fact_robustness_min_covered_fact_properties"
+        ]
+        == 3
+    )
+    assert (
+        manifest["metadata"]["required_route_budget_policy"][
+            "structured_fact_robustness_min_covered_fact_property_decision_accuracy"
         ]
         == pytest.approx(0.99)
     )
@@ -19154,7 +19296,13 @@ def test_run_release_candidate_registry_workflow_records_structured_fact_robustn
         "benchmark_manifest:structured-fact-paraphrase-route:0.1": ["P36", "P37", "P38"],
     }
     assert record.metadata["release_policy_profile"] == "strict_structured_fact"
-    assert record.metadata["required_route_budget_policy"]["required_route_min_covered_fact_properties"] == 3
+    assert record.metadata["required_route_budget_policy"]["required_route_min_covered_fact_properties"] is None
+    assert (
+        record.metadata["required_route_budget_policy"][
+            "structured_fact_robustness_min_covered_fact_properties"
+        ]
+        == 3
+    )
 
 
 def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tmp_path, monkeypatch):

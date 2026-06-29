@@ -100,6 +100,36 @@ def _apply_release_policy_profile_to_config(
             "required_route_min_covered_fact_property_false_refuted_rate": (
                 config.required_route_min_covered_fact_property_false_refuted_rate
             ),
+            "structured_fact_robustness_min_selected": (
+                config.structured_fact_robustness_min_selected
+            ),
+            "structured_fact_robustness_min_decision_accuracy": (
+                config.structured_fact_robustness_min_decision_accuracy
+            ),
+            "structured_fact_robustness_max_false_supported_rate": (
+                config.structured_fact_robustness_max_false_supported_rate
+            ),
+            "structured_fact_robustness_min_false_refuted_rate": (
+                config.structured_fact_robustness_min_false_refuted_rate
+            ),
+            "structured_fact_robustness_min_covered_fact_properties": (
+                config.structured_fact_robustness_min_covered_fact_properties
+            ),
+            "structured_fact_robustness_min_covered_fact_property_records": (
+                config.structured_fact_robustness_min_covered_fact_property_records
+            ),
+            "structured_fact_robustness_min_covered_fact_property_source_documents": (
+                config.structured_fact_robustness_min_covered_fact_property_source_documents
+            ),
+            "structured_fact_robustness_min_covered_fact_property_decision_accuracy": (
+                config.structured_fact_robustness_min_covered_fact_property_decision_accuracy
+            ),
+            "structured_fact_robustness_max_covered_fact_property_false_supported_rate": (
+                config.structured_fact_robustness_max_covered_fact_property_false_supported_rate
+            ),
+            "structured_fact_robustness_min_covered_fact_property_false_refuted_rate": (
+                config.structured_fact_robustness_min_covered_fact_property_false_refuted_rate
+            ),
             "adapter_family_profile": config.adapter_family_profile,
             "require_state_transition_world_model": config.require_state_transition_world_model,
             "require_product_runtime_drift_promotion_evidence": (
@@ -170,6 +200,16 @@ class ReleaseCandidateRegistryWorkflowConfig:
     require_structured_fact_robustness: bool = False
     structured_fact_canonical_route_key: str | None = None
     structured_fact_paraphrase_route_key: str | None = None
+    structured_fact_robustness_min_selected: int | None = None
+    structured_fact_robustness_min_decision_accuracy: float | None = None
+    structured_fact_robustness_max_false_supported_rate: float | None = None
+    structured_fact_robustness_min_false_refuted_rate: float | None = None
+    structured_fact_robustness_min_covered_fact_properties: int | None = None
+    structured_fact_robustness_min_covered_fact_property_records: int | None = None
+    structured_fact_robustness_min_covered_fact_property_source_documents: int | None = None
+    structured_fact_robustness_min_covered_fact_property_decision_accuracy: float | None = None
+    structured_fact_robustness_max_covered_fact_property_false_supported_rate: float | None = None
+    structured_fact_robustness_min_covered_fact_property_false_refuted_rate: float | None = None
     performance_baseline_key: str | None = None
     selector_replay_report_path: Path | None = None
     product_runtime_drift_report_path: Path | None = None
@@ -636,6 +676,36 @@ def run_release_candidate_registry_workflow(
         require_structured_fact_robustness=config.require_structured_fact_robustness,
         structured_fact_canonical_route_key=config.structured_fact_canonical_route_key,
         structured_fact_paraphrase_route_key=config.structured_fact_paraphrase_route_key,
+        structured_fact_robustness_min_selected=(
+            config.structured_fact_robustness_min_selected
+        ),
+        structured_fact_robustness_min_decision_accuracy=(
+            config.structured_fact_robustness_min_decision_accuracy
+        ),
+        structured_fact_robustness_max_false_supported_rate=(
+            config.structured_fact_robustness_max_false_supported_rate
+        ),
+        structured_fact_robustness_min_false_refuted_rate=(
+            config.structured_fact_robustness_min_false_refuted_rate
+        ),
+        structured_fact_robustness_min_covered_fact_properties=(
+            config.structured_fact_robustness_min_covered_fact_properties
+        ),
+        structured_fact_robustness_min_covered_fact_property_records=(
+            config.structured_fact_robustness_min_covered_fact_property_records
+        ),
+        structured_fact_robustness_min_covered_fact_property_source_documents=(
+            config.structured_fact_robustness_min_covered_fact_property_source_documents
+        ),
+        structured_fact_robustness_min_covered_fact_property_decision_accuracy=(
+            config.structured_fact_robustness_min_covered_fact_property_decision_accuracy
+        ),
+        structured_fact_robustness_max_covered_fact_property_false_supported_rate=(
+            config.structured_fact_robustness_max_covered_fact_property_false_supported_rate
+        ),
+        structured_fact_robustness_min_covered_fact_property_false_refuted_rate=(
+            config.structured_fact_robustness_min_covered_fact_property_false_refuted_rate
+        ),
         performance_registry_path=config.performance_registry_path,
         performance_baseline_key=config.performance_baseline_key,
         selector_replay_report_path=config.selector_replay_report_path,
@@ -1082,6 +1152,36 @@ def run_release_candidate_registry_workflow(
             "require_structured_fact_robustness": config.require_structured_fact_robustness,
             "structured_fact_canonical_route_key": config.structured_fact_canonical_route_key,
             "structured_fact_paraphrase_route_key": config.structured_fact_paraphrase_route_key,
+            "structured_fact_robustness_min_selected": (
+                config.structured_fact_robustness_min_selected
+            ),
+            "structured_fact_robustness_min_decision_accuracy": (
+                config.structured_fact_robustness_min_decision_accuracy
+            ),
+            "structured_fact_robustness_max_false_supported_rate": (
+                config.structured_fact_robustness_max_false_supported_rate
+            ),
+            "structured_fact_robustness_min_false_refuted_rate": (
+                config.structured_fact_robustness_min_false_refuted_rate
+            ),
+            "structured_fact_robustness_min_covered_fact_properties": (
+                config.structured_fact_robustness_min_covered_fact_properties
+            ),
+            "structured_fact_robustness_min_covered_fact_property_records": (
+                config.structured_fact_robustness_min_covered_fact_property_records
+            ),
+            "structured_fact_robustness_min_covered_fact_property_source_documents": (
+                config.structured_fact_robustness_min_covered_fact_property_source_documents
+            ),
+            "structured_fact_robustness_min_covered_fact_property_decision_accuracy": (
+                config.structured_fact_robustness_min_covered_fact_property_decision_accuracy
+            ),
+            "structured_fact_robustness_max_covered_fact_property_false_supported_rate": (
+                config.structured_fact_robustness_max_covered_fact_property_false_supported_rate
+            ),
+            "structured_fact_robustness_min_covered_fact_property_false_refuted_rate": (
+                config.structured_fact_robustness_min_covered_fact_property_false_refuted_rate
+            ),
             "adapter_family_matrix": (
                 None
                 if config.adapter_family_matrix_path is None
@@ -2418,6 +2518,16 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
                 "required_route_min_covered_fact_property_decision_accuracy",
                 "required_route_max_covered_fact_property_false_supported_rate",
                 "required_route_min_covered_fact_property_false_refuted_rate",
+                "structured_fact_robustness_min_selected",
+                "structured_fact_robustness_min_decision_accuracy",
+                "structured_fact_robustness_max_false_supported_rate",
+                "structured_fact_robustness_min_false_refuted_rate",
+                "structured_fact_robustness_min_covered_fact_properties",
+                "structured_fact_robustness_min_covered_fact_property_records",
+                "structured_fact_robustness_min_covered_fact_property_source_documents",
+                "structured_fact_robustness_min_covered_fact_property_decision_accuracy",
+                "structured_fact_robustness_max_covered_fact_property_false_supported_rate",
+                "structured_fact_robustness_min_covered_fact_property_false_refuted_rate",
                 "required_route_require_non_oracle_evidence",
                 "required_route_require_retrieval_provenance_filter",
                 "required_route_required_retrieval_source_prefixes",
@@ -3051,6 +3161,34 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         required_route_min_covered_fact_property_false_refuted_rate=(
             args.required_route_min_covered_fact_property_false_refuted_rate
         ),
+        structured_fact_robustness_min_selected=args.structured_fact_robustness_min_selected,
+        structured_fact_robustness_min_decision_accuracy=(
+            args.structured_fact_robustness_min_decision_accuracy
+        ),
+        structured_fact_robustness_max_false_supported_rate=(
+            args.structured_fact_robustness_max_false_supported_rate
+        ),
+        structured_fact_robustness_min_false_refuted_rate=(
+            args.structured_fact_robustness_min_false_refuted_rate
+        ),
+        structured_fact_robustness_min_covered_fact_properties=(
+            args.structured_fact_robustness_min_covered_fact_properties
+        ),
+        structured_fact_robustness_min_covered_fact_property_records=(
+            args.structured_fact_robustness_min_covered_fact_property_records
+        ),
+        structured_fact_robustness_min_covered_fact_property_source_documents=(
+            args.structured_fact_robustness_min_covered_fact_property_source_documents
+        ),
+        structured_fact_robustness_min_covered_fact_property_decision_accuracy=(
+            args.structured_fact_robustness_min_covered_fact_property_decision_accuracy
+        ),
+        structured_fact_robustness_max_covered_fact_property_false_supported_rate=(
+            args.structured_fact_robustness_max_covered_fact_property_false_supported_rate
+        ),
+        structured_fact_robustness_min_covered_fact_property_false_refuted_rate=(
+            args.structured_fact_robustness_min_covered_fact_property_false_refuted_rate
+        ),
         required_route_require_non_oracle_evidence=bool(args.required_route_require_non_oracle_evidence),
         required_route_require_retrieval_provenance_filter=bool(
             args.required_route_require_retrieval_provenance_filter
@@ -3675,6 +3813,72 @@ def main(argv: Sequence[str] | None = None) -> None:
             flag="--required-route-min-covered-fact-property-false-refuted-rate",
         )
     ), default=None)
+    parser.add_argument("--structured-fact-robustness-min-selected", type=lambda value: _parse_non_negative_int(
+        value,
+        flag="--structured-fact-robustness-min-selected",
+    ), default=None)
+    parser.add_argument("--structured-fact-robustness-min-decision-accuracy", type=lambda value: (
+        _parse_non_negative_float(
+            value,
+            flag="--structured-fact-robustness-min-decision-accuracy",
+        )
+    ), default=None)
+    parser.add_argument("--structured-fact-robustness-max-false-supported-rate", type=lambda value: (
+        _parse_non_negative_float(
+            value,
+            flag="--structured-fact-robustness-max-false-supported-rate",
+        )
+    ), default=None)
+    parser.add_argument("--structured-fact-robustness-min-false-refuted-rate", type=lambda value: (
+        _parse_non_negative_float(
+            value,
+            flag="--structured-fact-robustness-min-false-refuted-rate",
+        )
+    ), default=None)
+    parser.add_argument("--structured-fact-robustness-min-covered-fact-properties", type=lambda value: (
+        _parse_non_negative_int(
+            value,
+            flag="--structured-fact-robustness-min-covered-fact-properties",
+        )
+    ), default=None)
+    parser.add_argument("--structured-fact-robustness-min-covered-fact-property-records", type=lambda value: (
+        _parse_non_negative_int(
+            value,
+            flag="--structured-fact-robustness-min-covered-fact-property-records",
+        )
+    ), default=None)
+    parser.add_argument(
+        "--structured-fact-robustness-min-covered-fact-property-source-documents",
+        type=lambda value: _parse_non_negative_int(
+            value,
+            flag="--structured-fact-robustness-min-covered-fact-property-source-documents",
+        ),
+        default=None,
+    )
+    parser.add_argument(
+        "--structured-fact-robustness-min-covered-fact-property-decision-accuracy",
+        type=lambda value: _parse_unit_float(
+            value,
+            flag="--structured-fact-robustness-min-covered-fact-property-decision-accuracy",
+        ),
+        default=None,
+    )
+    parser.add_argument(
+        "--structured-fact-robustness-max-covered-fact-property-false-supported-rate",
+        type=lambda value: _parse_unit_float(
+            value,
+            flag="--structured-fact-robustness-max-covered-fact-property-false-supported-rate",
+        ),
+        default=None,
+    )
+    parser.add_argument(
+        "--structured-fact-robustness-min-covered-fact-property-false-refuted-rate",
+        type=lambda value: _parse_unit_float(
+            value,
+            flag="--structured-fact-robustness-min-covered-fact-property-false-refuted-rate",
+        ),
+        default=None,
+    )
     parser.add_argument(
         "--required-route-require-non-oracle-evidence",
         action="store_true",

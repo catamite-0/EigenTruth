@@ -4752,9 +4752,12 @@ Use `--release-policy-profile` with the registry workflow to reuse the same
 named defaults while registering the promoted manifest. `strict_structured_fact`
 enables the structured-fact robustness requirement, requires both configured
 canonical/paraphrase route keys, applies the baseline candidate quality gates,
-and adds stricter route/required-route quality thresholds for covered-fact
-release evidence, including fail-closed per-property count and support/refutation
-quality gates over the route summary `property_metrics`. `frontier_audit` adds the same structured-fact defaults and
+and separates ordinary required-route thresholds from the stricter
+structured-fact robustness thresholds. Ordinary required routes keep
+route-quality/provenance/stress gates; canonical/paraphrase `structured_fact`
+routes carry the stricter selected-count and fail-closed per-property
+support/refutation quality gates over route summary `property_metrics`.
+`frontier_audit` adds the same structured-fact defaults and
 also defaults `adapter_family_profile=strict_audit`,
 `require_product_runtime_drift_promotion_evidence=true`,
 `require_product_runtime_drift_pre_generation_evidence=true`,

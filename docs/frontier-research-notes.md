@@ -1055,9 +1055,17 @@ Added the first monitor-first tool-selection audit layer:
   the v1 external-prediction triple matrix. The overall candidate remains
   blocked, but the triple-extraction fixture matrix gate now promotes with the
   required external-prediction count, corpus coverage, and mean external F1
-  present. Remaining blockers are readiness/performance, required
-  retrieval-route selected/property coverage, and complete product-runtime-drift
-  handoff metrics.
+  present. At this point the required route gate still conflated ordinary
+  retrieval-route sample coverage with structured-fact property coverage.
+- `artifacts/frontier-audit-release-candidate-v4/` fixes that gate semantics
+  bug without claiming new model evidence. Ordinary required retrieval routes
+  are now checked against route-quality/provenance/stress thresholds, while the
+  canonical/paraphrase `structured_fact` pair carries the strict `700` selected
+  and covered-fact property requirements. The required-route gate now promotes:
+  the SmolLM2 retrieval route passes with `238` selected, and the two
+  structured-fact routes pass with `718`/`2868` selected and `3` covered
+  properties each. Remaining blockers are readiness/performance and complete
+  product-runtime-drift handoff metrics.
 
 ## Next Research-to-Code Candidates
 
