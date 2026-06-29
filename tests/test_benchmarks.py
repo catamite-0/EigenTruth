@@ -30805,6 +30805,122 @@ def test_run_product_runtime_baseline_parallel_trace_scan_preserves_order(tmp_pa
         )
 
 
+def test_run_product_runtime_baseline_applies_promotion_contract_overlay_to_trace_scan(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    trace_path = tmp_path / "trace.json"
+    contract_path = tmp_path / "product-promotion-contract.json"
+    cache_path = tmp_path / "trace-record-cache.json"
+    report_path = tmp_path / "product-runtime-baseline.json"
+    trace_path.write_text(
+        json.dumps({
+            "request_id": "req-contract",
+            "runtime_trace": {
+                "total_seconds": 0.10,
+                "phases": [{"name": "initial_verification", "seconds": 0.02}],
+            },
+            "verification_results": [],
+            "metadata": {"promotion_contract_source": "stale-contract.json"},
+        }),
+        encoding="utf-8",
+    )
+    module.ProductPromotionContract(
+        model_id="demo-model",
+        runtime={"layer": -2},
+        runtime_budget_policy={"max_total_seconds": 0.30},
+        source_workflow="product_promotion_contract",
+        source_status="promote",
+        pre_generation_probe_comparison={
+            "status": "promote",
+            "manifest_verified": True,
+            "model_count": 2,
+            "run_count": 2,
+            "redline_passed": True,
+            "best_run": {
+                "test_label_auroc": 0.8,
+                "redline_best_auroc": 0.7,
+                "redline_margin": 0.1,
+            },
+        },
+        counterfactual_verification={
+            "status": "promote",
+            "manifest_verified": True,
+            "record_count": 4,
+            "pass_rate": 1.0,
+            "false_invariance_rate": 0.0,
+            "flip_success_count": 4,
+        },
+        triple_extraction_fixture_matrix={
+            "status": "promote",
+            "manifest_verified": True,
+            "n_corpora": 2,
+            "promoted_corpora": 2,
+            "distinct_predicate_count": 6,
+            "mean_best_f1": 1.0,
+            "mean_f1_lift": 0.5,
+        },
+        metadata={
+            "product_runtime_drift_status": "promote",
+            "product_runtime_drift_triple_claim_coverage_rate_current": 1.0,
+            "product_runtime_drift_triple_claim_coverage_rate_status": "pass",
+            "recommended_route_covered_fact_property_metrics": {
+                "property_metric_count": 9,
+                "min_records": 4,
+                "min_source_documents": 2,
+                "min_decision_accuracy": 1.0,
+                "max_false_supported_rate": 0.0,
+                "min_false_refuted_rate": 1.0,
+            },
+        },
+    ).save_json(contract_path)
+
+    payload = module.build_product_runtime_baseline(
+        module.ProductRuntimeBaselineConfig(
+            trace_paths=(trace_path,),
+            report_path=report_path,
+            promotion_contract_path=contract_path,
+            trace_records_cache_path=cache_path,
+        )
+    )
+    cache_payload = json.loads(cache_path.read_text(encoding="utf-8"))
+    config = module.ProductRuntimeBaselineConfig(
+        trace_paths=(trace_path,),
+        report_path=tmp_path / "unused.json",
+        promotion_contract_path=contract_path,
+    )
+    promotion_metadata = module._load_promotion_metadata(config, budget_enabled=True)
+
+    assert payload["status"] == "promote"
+    assert payload["config"]["policy_source"] == str(contract_path)
+    assert payload["traces"][0]["metrics"]["promotion_contract_available"] is True
+    assert payload["traces"][0]["metrics"]["promotion_contract_source"] == str(contract_path)
+    assert payload["traces"][0]["metrics"][
+        "promotion_contract_recommended_route_covered_fact_min_records"
+    ] == pytest.approx(4.0)
+    promotion = payload["summary"]["promotion_contract"]
+    assert promotion["available_trace_count"] == 1
+    assert promotion["source_counts"] == {str(contract_path): 1}
+    assert promotion["pre_generation_probe_comparison"]["manifest_verified_count"] == 1
+    assert promotion["counterfactual_verification"]["manifest_verified_count"] == 1
+    assert promotion["triple_extraction_fixture_matrix"]["manifest_verified_count"] == 1
+    assert promotion["covered_fact_properties"]["recommended_route_property_metrics"][
+        "min_records"
+    ]["mean"] == pytest.approx(4.0)
+    assert promotion["triple_extraction_fixture_matrix"]["mean_best_f1"]["mean"] == pytest.approx(1.0)
+    assert promotion["product_runtime_drift"]["status_counts"] == {"promote": 1}
+    assert cache_payload["promotion_contract_metadata"]["signature"] == module._metadata_signature(
+        promotion_metadata
+    )
+    assert (
+        module._load_trace_records_cache(
+            cache_path,
+            trace_paths=(trace_path,),
+            policy=module.ProductRuntimeBudgetPolicy.from_mapping({"max_total_seconds": 0.30}),
+            promotion_metadata={"promotion_contract_source": "different-contract.json"},
+        )
+        is None
+    )
+
+
 def test_run_product_runtime_baseline_reuses_trace_record_cache(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.run_product_runtime_baseline")
     registry_module = importlib.import_module("eigentruth.registry")
@@ -30852,7 +30968,7 @@ def test_run_product_runtime_baseline_reuses_trace_record_cache(tmp_path, monkey
     assert first["config"]["trace_record_cache"]["cache_hit"] is False
     assert first["config"]["trace_record_cache"]["cache_written"] is True
     assert first["paths"]["trace_records_cache"] == str(cache_path)
-    assert cache_payload["schema_version"] == 11
+    assert cache_payload["schema_version"] == 12
     assert cache_payload["workflow"] == "product_runtime_baseline_trace_records"
     assert cache_payload["summary"]["trace_count"] == 2
     assert cache_payload["policy"]["payload"]["max_total_seconds"] == 0.3

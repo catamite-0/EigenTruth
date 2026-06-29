@@ -1,0 +1,135 @@
+{
+  "actions": [
+    {
+      "action_id": "refresh_readiness_baseline",
+      "action_type": "benchmark",
+      "evidence_routes": [
+        "readiness_baseline",
+        "calibrated_observability"
+      ],
+      "metadata": {},
+      "priority": 100,
+      "rationale": "Frontier gates need stronger model/layer diagnostic quality and runtime-cost readiness evidence before a product contract can be trusted.",
+      "source_gap_ids": [
+        "gap-001-01",
+        "gap-001-02"
+      ],
+      "suggested_commands": [
+        "benchmarks/run_adapter_readiness_registry_workflow.py",
+        "benchmarks/run_calibrated_observability_workflow.py"
+      ],
+      "title": "Refresh stronger adapter readiness evidence"
+    },
+    {
+      "action_id": "refresh_performance_baseline",
+      "action_type": "benchmark",
+      "evidence_routes": [
+        "performance_baseline",
+        "runtime_budget"
+      ],
+      "metadata": {},
+      "priority": 95,
+      "rationale": "The selected runtime must have a matching performance baseline before release comparison can measure cost drift.",
+      "source_gap_ids": [
+        "gap-002-01"
+      ],
+      "suggested_commands": [
+        "benchmarks/run_performance_baseline_workflow.py"
+      ],
+      "title": "Refresh matching performance baseline"
+    }
+  ],
+  "gaps": [
+    {
+      "gap_id": "gap-001-01",
+      "gate": "readiness_baseline",
+      "metadata": {
+        "evidence_kind": "readiness_baseline",
+        "research_axis": "internal_state"
+      },
+      "missing_metrics": [],
+      "reason": "benchmark_manifest:smollm2-l20-readiness-inside-trigger-budget-derived:0.8: best quality AUROC below 0.7",
+      "recommended_action_ids": [
+        "refresh_readiness_baseline"
+      ],
+      "root_cause": "model",
+      "source": {
+        "blocker_index": 1,
+        "decision_status": "blocked",
+        "reason_index": 1
+      },
+      "status": "blocked"
+    },
+    {
+      "gap_id": "gap-001-02",
+      "gate": "readiness_baseline",
+      "metadata": {
+        "evidence_kind": "readiness_baseline",
+        "research_axis": "internal_state"
+      },
+      "missing_metrics": [],
+      "reason": "benchmark_manifest:smollm2-l20-readiness-inside-trigger-budget-derived:0.8: uncached forward cost seconds above 20.0",
+      "recommended_action_ids": [
+        "refresh_readiness_baseline"
+      ],
+      "root_cause": "model",
+      "source": {
+        "blocker_index": 1,
+        "decision_status": "blocked",
+        "reason_index": 2
+      },
+      "status": "blocked"
+    },
+    {
+      "gap_id": "gap-002-01",
+      "gate": "performance_baseline",
+      "metadata": {
+        "evidence_kind": "performance_baseline",
+        "research_axis": "release_gate"
+      },
+      "missing_metrics": [],
+      "reason": "release candidate is unavailable for performance baseline comparison",
+      "recommended_action_ids": [
+        "refresh_performance_baseline"
+      ],
+      "root_cause": "runtime",
+      "source": {
+        "blocker_index": 2,
+        "decision_status": "blocked",
+        "reason_index": 1
+      },
+      "status": "blocked"
+    }
+  ],
+  "metadata": {
+    "source": "frontier_runtime_drift_v1_8"
+  },
+  "schema_version": 1,
+  "source_path": "artifacts/frontier-audit-release-candidate-v5/frontier-audit-registry-workflow.json",
+  "source_status": "blocked",
+  "source_workflow": "release_candidate_registry_workflow",
+  "status": "needs_evidence",
+  "summary": {
+    "action_count": 2,
+    "gap_count": 3,
+    "gates": {
+      "performance_baseline": 1,
+      "readiness_baseline": 2
+    },
+    "missing_metric_count": 0,
+    "research_axes": {
+      "internal_state": 2,
+      "release_gate": 1
+    },
+    "root_causes": {
+      "model": 2,
+      "runtime": 1
+    },
+    "source_decision_status": "blocked",
+    "top_action_ids": [
+      "refresh_readiness_baseline",
+      "refresh_performance_baseline"
+    ]
+  },
+  "workflow": "evidence_gap_plan"
+}

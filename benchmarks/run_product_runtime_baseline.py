@@ -21,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-_TRACE_RECORD_CACHE_SCHEMA_VERSION = 11
+_TRACE_RECORD_CACHE_SCHEMA_VERSION = 12
 _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "promotion_contract_coverage_rate",
     "triple_extraction_fixture_matrix_coverage_rate",
@@ -214,6 +214,7 @@ from eigentruth.control import (  # noqa: E402
     ProductPromotionContract,
     ProductRuntimeBudgetPolicy,
     evaluate_product_runtime_budget,
+    product_promotion_contract_metadata,
     product_runtime_metrics,
 )
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest, fingerprint_path  # noqa: E402
@@ -293,7 +294,15 @@ class ProductRuntimeBaselineConfig:
 def build_product_runtime_baseline(config: ProductRuntimeBaselineConfig) -> dict[str, Any]:
     """Aggregate ProductTrace runtime metrics and optional budget results."""
     policy, policy_source = _load_policy(config)
-    records, summary_records, trace_record_cache = _build_trace_records(config, policy=policy)
+    promotion_metadata = _load_promotion_metadata(
+        config,
+        budget_enabled=policy is not None,
+    )
+    records, summary_records, trace_record_cache = _build_trace_records(
+        config,
+        policy=policy,
+        promotion_metadata=promotion_metadata,
+    )
     trace_record_count = len(summary_records)
     budget_summary = _budget_summary(summary_records, policy=policy)
     summary = _aggregate_records(summary_records)
@@ -359,11 +368,17 @@ def _build_trace_records(
     config: ProductRuntimeBaselineConfig,
     *,
     policy: ProductRuntimeBudgetPolicy | None,
+    promotion_metadata: Mapping[str, Any] | None,
 ) -> tuple[tuple[dict[str, Any], ...], tuple[dict[str, Any], ...], dict[str, Any]]:
     cache_path = config.trace_records_cache_path
     invalidation_reason = None
     if cache_path is not None and cache_path.exists() and not config.refresh_trace_records_cache:
-        cached = _load_trace_records_cache(cache_path, trace_paths=config.trace_paths, policy=policy)
+        cached = _load_trace_records_cache(
+            cache_path,
+            trace_paths=config.trace_paths,
+            policy=policy,
+            promotion_metadata=promotion_metadata,
+        )
         if cached is not None:
             cached_records, payload = cached
             records, summary_records = _emit_trace_records(config, cached_records)
@@ -384,10 +399,16 @@ def _build_trace_records(
     scanned_records = _scan_trace_records(
         config.trace_paths,
         policy=policy,
+        promotion_metadata=promotion_metadata,
         max_workers=config.trace_scan_workers,
     )
     if cache_path is not None:
-        payload = _trace_records_cache_payload(config, scanned_records, policy=policy)
+        payload = _trace_records_cache_payload(
+            config,
+            scanned_records,
+            policy=policy,
+            promotion_metadata=promotion_metadata,
+        )
         _write_report(cache_path, payload, compact=config.compact_json)
     records, summary_records = _emit_trace_records(config, scanned_records)
     return records, summary_records, {
@@ -411,17 +432,28 @@ def _scan_trace_records(
     trace_paths: Sequence[Path],
     *,
     policy: ProductRuntimeBudgetPolicy | None,
+    promotion_metadata: Mapping[str, Any] | None,
     max_workers: int,
 ) -> tuple[dict[str, Any], ...]:
     if max_workers <= 1 or len(trace_paths) <= 1:
         return tuple(
-            _trace_record(path, _load_trace(path), policy=policy)
+            _trace_record(
+                path,
+                _load_trace(path),
+                policy=policy,
+                promotion_metadata=promotion_metadata,
+            )
             for path in trace_paths
         )
     worker_count = _effective_worker_count(max_workers, item_count=len(trace_paths))
 
     def scan(path: Path) -> dict[str, Any]:
-        return _trace_record(path, _load_trace(path), policy=policy)
+        return _trace_record(
+            path,
+            _load_trace(path),
+            policy=policy,
+            promotion_metadata=promotion_metadata,
+        )
 
     with ThreadPoolExecutor(max_workers=worker_count) as executor:
         return tuple(executor.map(scan, trace_paths))
@@ -473,9 +505,11 @@ def _trace_record(
     trace: Mapping[str, Any],
     *,
     policy: ProductRuntimeBudgetPolicy | None,
+    promotion_metadata: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
-    metrics = product_runtime_metrics(trace)
-    budget = None if policy is None else evaluate_product_runtime_budget(trace, policy)
+    trace_payload = _trace_with_promotion_metadata(trace, promotion_metadata)
+    metrics = product_runtime_metrics(trace_payload)
+    budget = None if policy is None else evaluate_product_runtime_budget(trace_payload, policy)
     return {
         "path": str(path),
         "request_id": trace.get("request_id"),
@@ -506,6 +540,7 @@ def _load_trace_records_cache(
     *,
     trace_paths: Sequence[Path],
     policy: ProductRuntimeBudgetPolicy | None,
+    promotion_metadata: Mapping[str, Any] | None = None,
 ) -> tuple[tuple[dict[str, Any], ...], Mapping[str, Any]] | None:
     try:
         payload = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -518,6 +553,10 @@ def _load_trace_records_cache(
     if payload.get("workflow") != "product_runtime_baseline_trace_records":
         return None
     if _mapping(payload.get("policy")).get("signature") != _policy_signature(policy):
+        return None
+    if _mapping(payload.get("promotion_contract_metadata")).get("signature") != _metadata_signature(
+        promotion_metadata
+    ):
         return None
     sources = _sequence(payload.get("sources"))
     records = _sequence(payload.get("records"))
@@ -548,6 +587,7 @@ def _trace_records_cache_payload(
     records: Sequence[Mapping[str, Any]],
     *,
     policy: ProductRuntimeBudgetPolicy | None,
+    promotion_metadata: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
     return {
         "schema_version": _TRACE_RECORD_CACHE_SCHEMA_VERSION,
@@ -569,6 +609,10 @@ def _trace_records_cache_payload(
         "policy": {
             "signature": _policy_signature(policy),
             "payload": None if policy is None else policy.to_dict(),
+        },
+        "promotion_contract_metadata": {
+            "signature": _metadata_signature(promotion_metadata),
+            "payload": dict(promotion_metadata or {}),
         },
         "sources": [
             {
@@ -615,6 +659,25 @@ def _policy_signature(policy: ProductRuntimeBudgetPolicy | None) -> str | None:
     if policy is None:
         return None
     return json.dumps(policy.to_dict(), sort_keys=True, separators=(",", ":"))
+
+
+def _metadata_signature(metadata: Mapping[str, Any] | None) -> str | None:
+    if not metadata:
+        return None
+    return json.dumps(dict(metadata), sort_keys=True, separators=(",", ":"))
+
+
+def _trace_with_promotion_metadata(
+    trace: Mapping[str, Any],
+    promotion_metadata: Mapping[str, Any] | None,
+) -> Mapping[str, Any]:
+    if not promotion_metadata:
+        return trace
+    payload = dict(trace)
+    metadata = dict(_mapping(trace.get("metadata")))
+    metadata.update(dict(promotion_metadata))
+    payload["metadata"] = metadata
+    return payload
 
 
 def _fingerprint_matches(expected: Mapping[str, Any], actual: Mapping[str, Any]) -> bool:
@@ -2746,6 +2809,21 @@ def _load_policy(config: ProductRuntimeBaselineConfig) -> tuple[ProductRuntimeBu
         contract = ProductPromotionContract.from_json(config.promotion_contract_path)
         return contract.runtime_budget_policy, str(config.promotion_contract_path)
     return None, None
+
+
+def _load_promotion_metadata(
+    config: ProductRuntimeBaselineConfig,
+    *,
+    budget_enabled: bool,
+) -> dict[str, Any] | None:
+    if config.promotion_contract_path is None:
+        return None
+    contract = ProductPromotionContract.from_json(config.promotion_contract_path)
+    return product_promotion_contract_metadata(
+        contract,
+        source=str(config.promotion_contract_path),
+        budget_enabled=budget_enabled,
+    )
 
 
 def _write_artifact_manifest(

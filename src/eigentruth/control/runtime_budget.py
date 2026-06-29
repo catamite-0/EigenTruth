@@ -1446,7 +1446,12 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
                 )
             ),
             "manifest_verified": _optional_bool(
-                pre_generation_manifest_verification.get("passed")
+                _first_present(
+                    pre_generation.get("manifest_verified"),
+                    metadata.get("pre_generation_probe_comparison_manifest_verified"),
+                    contract_metadata.get("pre_generation_probe_comparison_manifest_verified"),
+                    pre_generation_manifest_verification.get("passed"),
+                )
             ),
             "status": _optional_string(
                 _first_present(
@@ -1547,7 +1552,14 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
             "available": matrix_available,
             "source": matrix_source,
             "status": matrix_status,
-            "manifest_verified": _optional_bool(manifest_verification.get("passed")),
+            "manifest_verified": _optional_bool(
+                _first_present(
+                    matrix.get("manifest_verified"),
+                    metadata.get("triple_extraction_fixture_matrix_manifest_verified"),
+                    contract_metadata.get("triple_extraction_fixture_matrix_manifest_verified"),
+                    manifest_verification.get("passed"),
+                )
+            ),
             "n_corpora": _finite_float(
                 _first_present(
                     matrix.get("n_corpora"),
@@ -1627,7 +1639,12 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
                 )
             ),
             "manifest_verified": _optional_bool(
-                counterfactual_manifest_verification.get("passed")
+                _first_present(
+                    counterfactual.get("manifest_verified"),
+                    metadata.get("counterfactual_verification_manifest_verified"),
+                    contract_metadata.get("counterfactual_verification_manifest_verified"),
+                    counterfactual_manifest_verification.get("passed"),
+                )
             ),
             "status": _optional_string(
                 _first_present(
@@ -2495,6 +2512,9 @@ def _covered_fact_scope_from_metadata(
 
 
 def _covered_fact_property_metric_rollups(metrics: Mapping[str, Any]) -> dict[str, float | None]:
+    direct_rollups = _direct_covered_fact_property_rollups(metrics)
+    if direct_rollups is not None:
+        return direct_rollups
     leaves = tuple(_iter_covered_fact_property_metric_leaves(metrics))
     return {
         "property_metric_count": float(len(leaves)) if leaves else None,
@@ -2505,6 +2525,26 @@ def _covered_fact_property_metric_rollups(metrics: Mapping[str, Any]) -> dict[st
             item.get("false_supported_rate") for item in leaves
         ),
         "min_false_refuted_rate": _min_finite(item.get("false_refuted_rate") for item in leaves),
+    }
+
+
+def _direct_covered_fact_property_rollups(metrics: Mapping[str, Any]) -> dict[str, float | None] | None:
+    mapping = _mapping(metrics)
+    if not mapping:
+        return None
+    rollup_fields = (
+        "property_metric_count",
+        "min_records",
+        "min_source_documents",
+        "min_decision_accuracy",
+        "max_false_supported_rate",
+        "min_false_refuted_rate",
+    )
+    if not any(field in mapping for field in rollup_fields):
+        return None
+    return {
+        field: _finite_float(mapping.get(field))
+        for field in rollup_fields
     }
 
 
