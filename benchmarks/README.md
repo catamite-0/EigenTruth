@@ -5068,6 +5068,26 @@ score dumps and config; otherwise pass `--scores`, `--verifier-signal`, and
 `--abstention-signals` explicitly. Queue entries remain `missing_inputs` until
 enough data is present to build the post-hoc stability command.
 
+After the generated verifier/abstention stability commands finish, roll the
+completed child reports back into release evidence:
+
+```bash
+python benchmarks/rollup_frontier_stability_evidence_reruns.py \
+  --queue artifacts/frontier-release-evidence/stability-rerun-queue.json \
+  --json artifacts/frontier-release-evidence/stability-rerun-rollup.json \
+  --artifact-manifest artifacts/frontier-release-evidence/stability-rerun-rollup-manifest.json \
+  --registry artifacts/release-registry.json \
+  --name frontier-stability-rerun-rollup \
+  --version 0.1 \
+  --require-all-reports
+```
+
+The rollup reads each ready queue entry's expected `--json` child report,
+accepts additional completed reports via repeatable `--report`, and reapplies
+the release thresholds from `compare_frontier_release_evidence.py`. The output
+promotes only when every queued verifier/abstention stability track has a valid
+child report and every run in those reports satisfies its stability gate.
+
 For releases specifically blocked by abstention participation quality, emit an
 experiment matrix rather than a single stability rerun. The abstention planner
 builds one `eval_abstention_stability.py` command per blocked run, profile, and

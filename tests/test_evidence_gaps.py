@@ -18,6 +18,9 @@ from benchmarks.rollup_frontier_detectability_evidence_reruns import (
 from benchmarks.rollup_frontier_multiple_testing_reruns import (
     rollup_frontier_multiple_testing_reruns,
 )
+from benchmarks.rollup_frontier_stability_evidence_reruns import (
+    rollup_frontier_stability_evidence_reruns,
+)
 from eigentruth.control import (
     EvidenceGapPlan,
     plan_evidence_gaps_from_release_candidate,
@@ -715,6 +718,148 @@ def test_plan_release_evidence_gaps_can_emit_stability_rerun_queue(tmp_path):
     assert queue_record.metadata["command_count"] == 2
 
 
+def test_frontier_stability_evidence_rerun_rollup_promotes_passing_tracks(tmp_path):
+    source = tmp_path / "frontier-release-evidence.json"
+    queue_path = tmp_path / "stability-rerun-queue.json"
+    rollup_path = tmp_path / "stability-rerun-rollup.json"
+    manifest_path = tmp_path / "stability-rerun-rollup-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    source.write_text(json.dumps(_frontier_release_stability_payload()), encoding="utf-8")
+
+    queue = build_frontier_stability_evidence_rerun_queue(
+        source=source,
+        json_path=queue_path,
+        output_dir=tmp_path / "stability-reruns",
+        score_paths=(f"qwen={tmp_path / 'qwen-scores.manifest.json'}",),
+        seeds="0,1",
+        verifier_qa_corpus_path=tmp_path / "qa-corpus.json",
+        python_executable="python",
+    )
+    entries = {entry["track"]: entry for entry in queue["entries"]}
+    verifier_report_path = _stability_queue_entry_report_path(entries["verifier_stability"])
+    abstention_report_path = _stability_queue_entry_report_path(entries["abstention_stability"])
+    verifier_report_path.parent.mkdir(parents=True, exist_ok=True)
+    abstention_report_path.parent.mkdir(parents=True, exist_ok=True)
+    verifier_report_path.write_text(
+        json.dumps(_verifier_stability_child_report(passed=True)),
+        encoding="utf-8",
+    )
+    abstention_report_path.write_text(
+        json.dumps(_abstention_stability_child_report(passed=True)),
+        encoding="utf-8",
+    )
+
+    payload = rollup_frontier_stability_evidence_reruns(
+        queue_path=queue_path,
+        report_json_path=rollup_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="frontier-stability-rerun-rollup",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = ArtifactRegistry.load_json(registry_path).get(
+        "report:frontier-stability-rerun-rollup:0.1"
+    )
+
+    assert payload["workflow"] == "frontier_stability_evidence_rerun_rollup"
+    assert payload["status"] == "promote"
+    assert payload["gate"]["promotion_ready"] is True
+    assert payload["summary"]["candidate_count"] == 2
+    assert payload["summary"]["promotion_ready_count"] == 2
+    assert payload["summary"]["track_statuses"] == {
+        "abstention_stability": "promote",
+        "verifier_stability": "promote",
+    }
+    assert manifest["artifacts"]["frontier_stability_evidence_rerun_rollup"]["exists"] is True
+    assert record.metadata["workflow"] == "frontier_stability_evidence_rerun_rollup"
+    assert record.metadata["promotion_ready"] is True
+    assert record.metadata["verifier_track_status"] == "promote"
+    assert record.metadata["abstention_track_status"] == "promote"
+    assert record.metadata["suite"] == "unit"
+
+
+def test_frontier_stability_evidence_rerun_rollup_blocks_missing_report(tmp_path):
+    queue_path = tmp_path / "stability-rerun-queue.json"
+    rollup_path = tmp_path / "stability-rerun-rollup.json"
+    queue_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "frontier_stability_evidence_rerun_queue",
+            "status": "ready",
+            "entries": (
+                {
+                    "track": "verifier_stability",
+                    "command_status": "ready",
+                    "command": (
+                        "python",
+                        "benchmarks/eval_verifier_stability.py",
+                        "--json",
+                        str(tmp_path / "reruns" / "verifier-stability-report.json"),
+                    ),
+                },
+            ),
+        }),
+        encoding="utf-8",
+    )
+
+    payload = rollup_frontier_stability_evidence_reruns(
+        queue_path=queue_path,
+        report_json_path=rollup_path,
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["gate"]["passed"] is False
+    assert payload["summary"]["missing_report_count"] == 1
+    assert payload["gate"]["blocking_reasons"][0]["gate"] == "report_coverage"
+
+
+def test_frontier_stability_evidence_rerun_rollup_blocks_failed_child_thresholds(tmp_path):
+    queue_path = tmp_path / "stability-rerun-queue.json"
+    rollup_path = tmp_path / "stability-rerun-rollup.json"
+    child_report_path = tmp_path / "reruns" / "verifier-stability-report.json"
+    child_report_path.parent.mkdir(parents=True, exist_ok=True)
+    child_report_path.write_text(
+        json.dumps(_verifier_stability_child_report(passed=False)),
+        encoding="utf-8",
+    )
+    queue_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "frontier_stability_evidence_rerun_queue",
+            "status": "ready",
+            "entries": (
+                {
+                    "track": "verifier_stability",
+                    "command_status": "ready",
+                    "command": (
+                        "python",
+                        "benchmarks/eval_verifier_stability.py",
+                        "--json",
+                        str(child_report_path),
+                    ),
+                },
+            ),
+        }),
+        encoding="utf-8",
+    )
+
+    payload = rollup_frontier_stability_evidence_reruns(
+        queue_path=queue_path,
+        report_json_path=rollup_path,
+    )
+    candidate = payload["candidates"][0]
+
+    assert payload["status"] == "blocked"
+    assert candidate["candidate_status"] == "blocked"
+    assert candidate["run_decisions"][0]["status"] == "blocked"
+    assert any(
+        "verified_detection_mean" in reason
+        for reason in candidate["run_decisions"][0]["blocking_reasons"]
+    )
+
+
 def test_frontier_abstention_evidence_rerun_queue_builds_profile_matrix(tmp_path):
     report_path = tmp_path / "abstention-stability.json"
     source = tmp_path / "frontier-release-evidence.json"
@@ -1332,6 +1477,64 @@ def _frontier_release_stability_payload():
             "verifier_signal": "truth_proj",
             "abstention_signals": ("maha_last", "subspace_resid"),
         },
+    }
+
+
+def _stability_queue_entry_report_path(entry):
+    command = tuple(entry["command"])
+    return Path(command[command.index("--json") + 1])
+
+
+def _verifier_stability_child_report(*, passed):
+    return {
+        "schema_version": 1,
+        "workflow": "verifier_stability",
+        "status": "complete",
+        "runs": (
+            {
+                "name": "qwen",
+                "scores_path": "qwen-scores.manifest.json",
+                "stability": {
+                    "seed_count": 2,
+                    "verified_false_alarm": {"mean": 0.01 if passed else 0.08},
+                    "verified_detection": {"mean": 0.32 if passed else 0.10},
+                    "delta_detection": {"mean": 0.12 if passed else -0.05},
+                    "verified_pass_seed_count": 2 if passed else 0,
+                    "verified_beats_internal_detection_seed_count": 2 if passed else 0,
+                },
+            },
+        ),
+    }
+
+
+def _abstention_stability_child_report(*, passed):
+    return {
+        "schema_version": 1,
+        "workflow": "abstention_stability",
+        "status": "complete",
+        "runs": (
+            {
+                "name": "qwen",
+                "scores_path": "qwen-scores.manifest.json",
+                "stability": {
+                    "seed_count": 2,
+                    "conditional_correctness_lower_bound": {"mean": 0.86 if passed else 0.50},
+                    "empirical_abstention_rate": {"mean": 0.20 if passed else 0.72},
+                    "release_gate_pass_seed_count": 2 if passed else 0,
+                    "release_gate_block_seed_count": 0 if passed else 2,
+                    "stable_recommended_score_name": "truth_proj",
+                    "recommended_score_name_counts": {"truth_proj": 2},
+                },
+                "supervised_feasibility_frontier": {
+                    "target_passed": passed,
+                    "best": {
+                        "score_name": "truth_proj",
+                        "conditional_correctness_lower_bound": 0.90 if passed else 0.50,
+                        "empirical_abstention_rate": 0.20 if passed else 0.72,
+                    },
+                },
+            },
+        ),
     }
 
 
