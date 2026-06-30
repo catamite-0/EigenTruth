@@ -134,6 +134,39 @@ _PRODUCT_RUNTIME_DRIFT_CLAIM_FACTUALITY_EVIDENCE_FIELDS: tuple[tuple[str, str], 
         "claim_factuality_probe_comparison_best_redline_margin",
     ),
 )
+_PRODUCT_RUNTIME_DRIFT_CLAIM_RISK_LOCALIZATION_EVIDENCE_FIELDS: tuple[
+    tuple[str, str],
+    ...
+] = (
+    (
+        "claim_risk_localization.coverage_rate",
+        "claim_risk_localization_coverage_rate",
+    ),
+    (
+        "claim_risk_localization.high_risk_claim_count",
+        "claim_risk_localization_high_risk_claim_count",
+    ),
+    (
+        "claim_risk_localization.medium_or_high_risk_claim_count",
+        "claim_risk_localization_medium_or_high_risk_claim_count",
+    ),
+    (
+        "claim_risk_localization.entity_candidate_observation_count",
+        "claim_risk_localization_entity_candidate_observation_count",
+    ),
+    (
+        "claim_risk_localization.unique_entity_candidate_count",
+        "claim_risk_localization_unique_entity_candidate_count",
+    ),
+    (
+        "claim_risk_localization.high_risk_entity_candidate_count",
+        "claim_risk_localization_high_risk_entity_candidate_count",
+    ),
+    (
+        "claim_risk_localization.medium_or_high_entity_candidate_count",
+        "claim_risk_localization_medium_or_high_entity_candidate_count",
+    ),
+)
 _PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = (
     (
         "promotion_contract.counterfactual_verification.coverage_rate",
@@ -449,6 +482,7 @@ def compare_release_candidates(
     require_product_runtime_drift_promotion_evidence: bool = False,
     require_product_runtime_drift_pre_generation_evidence: bool = False,
     require_product_runtime_drift_claim_factuality_evidence: bool = False,
+    require_product_runtime_drift_claim_risk_localization_evidence: bool = False,
     require_product_runtime_drift_counterfactual_evidence: bool = False,
     require_product_runtime_drift_triple_audit_evidence: bool = False,
     require_product_runtime_drift_covered_fact_property_evidence: bool = False,
@@ -689,6 +723,9 @@ def compare_release_candidates(
                 "require_product_runtime_drift_claim_factuality_evidence": (
                     require_product_runtime_drift_claim_factuality_evidence
                 ),
+                "require_product_runtime_drift_claim_risk_localization_evidence": (
+                    require_product_runtime_drift_claim_risk_localization_evidence
+                ),
                 "require_product_runtime_drift_counterfactual_evidence": (
                     require_product_runtime_drift_counterfactual_evidence
                 ),
@@ -825,6 +862,12 @@ def compare_release_candidates(
     )
     require_product_runtime_drift_claim_factuality_evidence = bool(
         release_policy_values.get("require_product_runtime_drift_claim_factuality_evidence", False)
+    )
+    require_product_runtime_drift_claim_risk_localization_evidence = bool(
+        release_policy_values.get(
+            "require_product_runtime_drift_claim_risk_localization_evidence",
+            False,
+        )
     )
     require_product_runtime_drift_counterfactual_evidence = bool(
         release_policy_values["require_product_runtime_drift_counterfactual_evidence"]
@@ -1424,6 +1467,9 @@ def compare_release_candidates(
         require_claim_factuality_evidence=(
             require_product_runtime_drift_claim_factuality_evidence
         ),
+        require_claim_risk_localization_evidence=(
+            require_product_runtime_drift_claim_risk_localization_evidence
+        ),
         require_counterfactual_evidence=require_product_runtime_drift_counterfactual_evidence,
         require_triple_audit_evidence=require_product_runtime_drift_triple_audit_evidence,
         require_covered_fact_property_evidence=(
@@ -1678,6 +1724,9 @@ def compare_release_candidates(
             ),
             "require_product_runtime_drift_claim_factuality_evidence": bool(
                 require_product_runtime_drift_claim_factuality_evidence
+            ),
+            "require_product_runtime_drift_claim_risk_localization_evidence": bool(
+                require_product_runtime_drift_claim_risk_localization_evidence
             ),
             "require_product_runtime_drift_counterfactual_evidence": bool(
                 require_product_runtime_drift_counterfactual_evidence
@@ -6629,6 +6678,7 @@ def _product_runtime_drift_gate(
     require_promotion_evidence: bool,
     require_pre_generation_evidence: bool,
     require_claim_factuality_evidence: bool,
+    require_claim_risk_localization_evidence: bool,
     require_counterfactual_evidence: bool,
     require_triple_audit_evidence: bool,
     require_covered_fact_property_evidence: bool,
@@ -6649,6 +6699,7 @@ def _product_runtime_drift_gate(
             require_promotion_evidence
             or require_pre_generation_evidence
             or require_claim_factuality_evidence
+            or require_claim_risk_localization_evidence
             or require_counterfactual_evidence
             or require_triple_audit_evidence
             or require_covered_fact_property_evidence
@@ -6708,6 +6759,17 @@ def _product_runtime_drift_gate(
                         )
                     ) if require_claim_factuality_evidence else (),
                     "claim_factuality_evidence_blocked_metric_count": 0,
+                    "claim_risk_localization_evidence_required": bool(
+                        require_claim_risk_localization_evidence
+                    ),
+                    "claim_risk_localization_evidence_metric_count": 0,
+                    "claim_risk_localization_evidence_missing_metrics": tuple(
+                        metric_name
+                        for metric_name, _prefix in (
+                            _PRODUCT_RUNTIME_DRIFT_CLAIM_RISK_LOCALIZATION_EVIDENCE_FIELDS
+                        )
+                    ) if require_claim_risk_localization_evidence else (),
+                    "claim_risk_localization_evidence_blocked_metric_count": 0,
                     "counterfactual_evidence_required": bool(require_counterfactual_evidence),
                     "counterfactual_evidence_metric_count": 0,
                     "counterfactual_evidence_missing_metrics": tuple(
@@ -6841,6 +6903,12 @@ def _product_runtime_drift_gate(
             required=require_claim_factuality_evidence,
         )
     )
+    claim_risk_localization_evidence_summary = (
+        _product_runtime_drift_claim_risk_localization_evidence_summary(
+            metrics,
+            required=require_claim_risk_localization_evidence,
+        )
+    )
     counterfactual_evidence_summary = _product_runtime_drift_counterfactual_evidence_summary(
         metrics,
         required=require_counterfactual_evidence,
@@ -6904,6 +6972,12 @@ def _product_runtime_drift_gate(
         require_pre_generation_evidence=require_pre_generation_evidence,
         claim_factuality_evidence_summary=claim_factuality_evidence_summary,
         require_claim_factuality_evidence=require_claim_factuality_evidence,
+        claim_risk_localization_evidence_summary=(
+            claim_risk_localization_evidence_summary
+        ),
+        require_claim_risk_localization_evidence=(
+            require_claim_risk_localization_evidence
+        ),
         counterfactual_evidence_summary=counterfactual_evidence_summary,
         require_counterfactual_evidence=require_counterfactual_evidence,
         triple_audit_evidence_summary=triple_audit_evidence_summary,
@@ -6949,6 +7023,7 @@ def _product_runtime_drift_gate(
             **promotion_evidence_summary,
             **pre_generation_evidence_summary,
             **claim_factuality_evidence_summary,
+            **claim_risk_localization_evidence_summary,
             **counterfactual_evidence_summary,
             **triple_audit_evidence_summary,
             **covered_fact_property_evidence_summary,
@@ -6978,6 +7053,8 @@ def _product_runtime_drift_report_gate(
     require_pre_generation_evidence: bool,
     claim_factuality_evidence_summary: Mapping[str, Any],
     require_claim_factuality_evidence: bool,
+    claim_risk_localization_evidence_summary: Mapping[str, Any],
+    require_claim_risk_localization_evidence: bool,
     counterfactual_evidence_summary: Mapping[str, Any],
     require_counterfactual_evidence: bool,
     triple_audit_evidence_summary: Mapping[str, Any],
@@ -7070,6 +7147,28 @@ def _product_runtime_drift_report_gate(
         if blocked_metric_count is not None and blocked_metric_count > 0:
             failures.append(
                 "product runtime drift claim factuality evidence blocked "
+                f"{int(blocked_metric_count)} metric(s)"
+            )
+    if require_claim_risk_localization_evidence:
+        missing_metrics = tuple(
+            claim_risk_localization_evidence_summary.get(
+                "claim_risk_localization_evidence_missing_metrics"
+            ) or ()
+        )
+        if missing_metrics:
+            failures.append(
+                "product runtime drift claim-risk localization evidence metrics are "
+                "incomplete: "
+                + ", ".join(str(metric) for metric in missing_metrics)
+            )
+        blocked_metric_count = _float_or_none(
+            claim_risk_localization_evidence_summary.get(
+                "claim_risk_localization_evidence_blocked_metric_count"
+            )
+        )
+        if blocked_metric_count is not None and blocked_metric_count > 0:
+            failures.append(
+                "product runtime drift claim-risk localization evidence blocked "
                 f"{int(blocked_metric_count)} metric(s)"
             )
     if require_counterfactual_evidence:
@@ -7403,6 +7502,42 @@ def _product_runtime_drift_claim_factuality_evidence_summary(
             summary["claim_factuality_evidence_blocked_metric_count"] += 1
     summary["claim_factuality_evidence_metric_count"] = metric_count
     summary["claim_factuality_evidence_missing_metrics"] = tuple(missing_metrics)
+    return summary
+
+
+def _product_runtime_drift_claim_risk_localization_evidence_summary(
+    metrics: Sequence[Mapping[str, Any]],
+    *,
+    required: bool = False,
+) -> dict[str, Any]:
+    metrics_by_name = {
+        str(metric["metric"]): metric
+        for metric in metrics
+        if isinstance(metric, Mapping) and isinstance(metric.get("metric"), str)
+    }
+    missing_metrics: list[str] = []
+    metric_count = 0
+    summary: dict[str, Any] = {
+        "claim_risk_localization_evidence_required": bool(required),
+        "claim_risk_localization_evidence_metric_count": 0,
+        "claim_risk_localization_evidence_missing_metrics": (),
+        "claim_risk_localization_evidence_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in (
+        _PRODUCT_RUNTIME_DRIFT_CLAIM_RISK_LOCALIZATION_EVIDENCE_FIELDS
+    ):
+        metric = metrics_by_name.get(metric_name)
+        summary[f"{prefix}_baseline"] = None if metric is None else metric.get("baseline")
+        summary[f"{prefix}_current"] = None if metric is None else metric.get("current")
+        summary[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is None or metric.get("current") is None:
+            missing_metrics.append(metric_name)
+            continue
+        metric_count += 1
+        if metric.get("status") == "blocked":
+            summary["claim_risk_localization_evidence_blocked_metric_count"] += 1
+    summary["claim_risk_localization_evidence_metric_count"] = metric_count
+    summary["claim_risk_localization_evidence_missing_metrics"] = tuple(missing_metrics)
     return summary
 
 
@@ -9245,6 +9380,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         require_product_runtime_drift_claim_factuality_evidence=bool(
             args.require_product_runtime_drift_claim_factuality_evidence
         ),
+        require_product_runtime_drift_claim_risk_localization_evidence=bool(
+            args.require_product_runtime_drift_claim_risk_localization_evidence
+        ),
         require_product_runtime_drift_counterfactual_evidence=bool(
             args.require_product_runtime_drift_counterfactual_evidence
         ),
@@ -9546,6 +9684,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--require-product-runtime-drift-claim-factuality-evidence", action="store_true",
                         help="require the product runtime drift report to include claim factuality "
                              "probe comparison coverage, conformal/selective, redline, and quality metrics")
+    parser.add_argument("--require-product-runtime-drift-claim-risk-localization-evidence",
+                        action="store_true",
+                        help="require the product runtime drift report to include claim-risk localization "
+                             "coverage, claim counts, and entity-candidate risk drift metrics")
     parser.add_argument("--require-product-runtime-drift-counterfactual-evidence", action="store_true",
                         help="require the product runtime drift report to include counterfactual "
                              "verifier-audit coverage, manifest, pass-rate, false-invariance, "

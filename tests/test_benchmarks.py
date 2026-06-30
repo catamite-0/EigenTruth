@@ -17662,6 +17662,12 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         blocked_metric_count=0,
         claim_factuality_evidence=True,
     )
+    claim_risk_localization_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "claim-risk-localization-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        claim_risk_localization_evidence=True,
+    )
     counterfactual_drift_report = _write_product_runtime_drift_report(
         tmp_path / "counterfactual-runtime-drift",
         status="promote",
@@ -17686,6 +17692,13 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         blocked_metric_count=0,
         claim_factuality_evidence=True,
         claim_factuality_blocked=True,
+    )
+    blocked_claim_risk_localization_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "blocked-claim-risk-localization-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        claim_risk_localization_evidence=True,
+        claim_risk_localization_blocked=True,
     )
     blocked_counterfactual_drift_report = _write_product_runtime_drift_report(
         tmp_path / "blocked-counterfactual-runtime-drift",
@@ -17908,6 +17921,39 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         min_false_refuted_rate=0.99,
         product_runtime_drift_report_path=blocked_claim_factuality_drift_report,
         require_product_runtime_drift_claim_factuality_evidence=True,
+    )
+    claim_risk_localization = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=claim_risk_localization_drift_report,
+        require_product_runtime_drift_claim_risk_localization_evidence=True,
+    )
+    missing_claim_risk_localization = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=missing_evidence_drift_report,
+        require_product_runtime_drift_claim_risk_localization_evidence=True,
+    )
+    blocked_claim_risk_localization = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=blocked_claim_risk_localization_drift_report,
+        require_product_runtime_drift_claim_risk_localization_evidence=True,
     )
     counterfactual = module.compare_release_candidates(
         readiness_registry_path=registry_path,
@@ -18407,6 +18453,52 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
     assert any(
         "claim factuality evidence blocked 1 metric" in reason
         for reason in blocked_claim_factuality["decision"]["blocking_reasons"][0][
+            "reasons"
+        ]
+    )
+    assert claim_risk_localization["decision"]["status"] == "promote"
+    assert claim_risk_localization["config"][
+        "require_product_runtime_drift_claim_risk_localization_evidence"
+    ] is True
+    claim_risk_summary = claim_risk_localization["release_candidate"][
+        "product_runtime_drift"
+    ]["summary"]
+    assert claim_risk_summary["claim_risk_localization_evidence_required"] is True
+    assert claim_risk_summary["claim_risk_localization_evidence_metric_count"] == 7
+    assert claim_risk_summary[
+        "claim_risk_localization_evidence_blocked_metric_count"
+    ] == 0
+    assert claim_risk_summary["claim_risk_localization_coverage_rate_current"] == (
+        pytest.approx(1.0)
+    )
+    assert claim_risk_summary[
+        "claim_risk_localization_high_risk_entity_candidate_count_status"
+    ] == "pass"
+    assert missing_claim_risk_localization["decision"]["status"] == "blocked"
+    assert missing_claim_risk_localization["product_runtime_drift_gate"]["summary"][
+        "claim_risk_localization_evidence_missing_metrics"
+    ] == (
+        "claim_risk_localization.coverage_rate",
+        "claim_risk_localization.high_risk_claim_count",
+        "claim_risk_localization.medium_or_high_risk_claim_count",
+        "claim_risk_localization.entity_candidate_observation_count",
+        "claim_risk_localization.unique_entity_candidate_count",
+        "claim_risk_localization.high_risk_entity_candidate_count",
+        "claim_risk_localization.medium_or_high_entity_candidate_count",
+    )
+    assert any(
+        "claim-risk localization evidence metrics are incomplete" in reason
+        for reason in missing_claim_risk_localization["decision"]["blocking_reasons"][0][
+            "reasons"
+        ]
+    )
+    assert blocked_claim_risk_localization["decision"]["status"] == "blocked"
+    assert blocked_claim_risk_localization["product_runtime_drift_gate"]["summary"][
+        "claim_risk_localization_evidence_blocked_metric_count"
+    ] == 1
+    assert any(
+        "claim-risk localization evidence blocked 1 metric" in reason
+        for reason in blocked_claim_risk_localization["decision"]["blocking_reasons"][0][
             "reasons"
         ]
     )
@@ -20390,6 +20482,7 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         blocked_metric_count=0,
         promotion_evidence=True,
         pre_generation_evidence=True,
+        claim_risk_localization_evidence=True,
         counterfactual_evidence=True,
         triple_audit_evidence=True,
         covered_fact_property_evidence=True,
@@ -20514,6 +20607,12 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     assert frontier_payload["config"]["require_state_transition_world_model"] is True
     assert frontier_payload["config"]["require_product_runtime_drift_promotion_evidence"] is True
     assert frontier_payload["config"]["require_product_runtime_drift_pre_generation_evidence"] is True
+    assert (
+        frontier_payload["config"][
+            "require_product_runtime_drift_claim_risk_localization_evidence"
+        ]
+        is True
+    )
     assert frontier_payload["config"]["require_product_runtime_drift_counterfactual_evidence"] is True
     assert frontier_payload["config"]["require_product_runtime_drift_triple_audit_evidence"] is True
     assert frontier_payload["config"]["require_product_runtime_drift_covered_fact_property_evidence"] is True
@@ -20561,6 +20660,12 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
         "require_product_runtime_drift_pre_generation_evidence"
     ] is True
+    assert (
+        frontier_payload["config"]["release_policy_profile_applied_defaults"][
+            "require_product_runtime_drift_claim_risk_localization_evidence"
+        ]
+        is True
+    )
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
         "require_product_runtime_drift_counterfactual_evidence"
     ] is True
@@ -20620,6 +20725,9 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     ] == pytest.approx(0.90)
     assert frontier_payload["product_runtime_drift_gate"]["summary"]["promotion_evidence_metric_count"] == 4
     assert frontier_payload["product_runtime_drift_gate"]["summary"]["pre_generation_evidence_metric_count"] == 8
+    assert frontier_payload["product_runtime_drift_gate"]["summary"][
+        "claim_risk_localization_evidence_metric_count"
+    ] == 7
     assert frontier_payload["product_runtime_drift_gate"]["summary"]["counterfactual_evidence_metric_count"] == 6
     assert frontier_payload["product_runtime_drift_gate"]["summary"]["triple_audit_evidence_metric_count"] == 4
     assert frontier_payload["product_runtime_drift_gate"]["summary"][
@@ -21813,6 +21921,10 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     assert frontier_profile_config.require_state_transition_world_model is True
     assert frontier_profile_config.require_product_runtime_drift_promotion_evidence is True
     assert frontier_profile_config.require_product_runtime_drift_pre_generation_evidence is True
+    assert (
+        frontier_profile_config.require_product_runtime_drift_claim_risk_localization_evidence
+        is True
+    )
     assert frontier_profile_config.require_product_runtime_drift_counterfactual_evidence is True
     assert frontier_profile_config.require_product_runtime_drift_triple_audit_evidence is True
     assert frontier_profile_config.require_product_runtime_drift_covered_fact_property_evidence is True
@@ -21852,6 +21964,12 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     assert frontier_profile_config.release_policy_profile_applied_defaults[
         "require_product_runtime_drift_pre_generation_evidence"
     ] is True
+    assert (
+        frontier_profile_config.release_policy_profile_applied_defaults[
+            "require_product_runtime_drift_claim_risk_localization_evidence"
+        ]
+        is True
+    )
     assert frontier_profile_config.release_policy_profile_applied_defaults[
         "require_product_runtime_drift_counterfactual_evidence"
     ] is True
@@ -26220,6 +26338,8 @@ def _write_product_runtime_drift_report(
     pre_generation_blocked=False,
     claim_factuality_evidence=False,
     claim_factuality_blocked=False,
+    claim_risk_localization_evidence=False,
+    claim_risk_localization_blocked=False,
     counterfactual_evidence=False,
     counterfactual_blocked=False,
     triple_audit_evidence=False,
@@ -26569,6 +26689,91 @@ def _write_product_runtime_drift_report(
                     if claim_factuality_blocked
                     else None
                 ),
+            },
+        ])
+    if claim_risk_localization_evidence:
+        high_risk_entity_status = "blocked" if claim_risk_localization_blocked else "pass"
+        high_risk_entity_current = 3.0 if claim_risk_localization_blocked else 1.0
+        metrics.extend([
+            {
+                "metric": "claim_risk_localization.coverage_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "claim_risk_localization.high_risk_claim_count",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "claim_risk_localization.medium_or_high_risk_claim_count",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 2.0,
+                "current": 2.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "claim_risk_localization.entity_candidate_observation_count",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 4.0,
+                "current": 4.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "claim_risk_localization.unique_entity_candidate_count",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 3.0,
+                "current": 3.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "claim_risk_localization.high_risk_entity_candidate_count",
+                "status": high_risk_entity_status,
+                "comparison": "max_increase",
+                "baseline": 1.0,
+                "current": high_risk_entity_current,
+                "absolute_delta": high_risk_entity_current - 1.0,
+                "absolute_increase": high_risk_entity_current - 1.0,
+                "threshold": 1.0,
+                "reason": (
+                    "claim_risk_localization.high_risk_entity_candidate_count above gate"
+                    if claim_risk_localization_blocked
+                    else None
+                ),
+            },
+            {
+                "metric": "claim_risk_localization.medium_or_high_entity_candidate_count",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 2.0,
+                "current": 2.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 1.0,
+                "reason": None,
             },
         ])
     if counterfactual_evidence:

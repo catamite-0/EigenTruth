@@ -46,6 +46,9 @@ _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES = (
 _PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_KEYS
 )
+_PRODUCT_RUNTIME_DRIFT_CLAIM_RISK_LOCALIZATION_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_CLAIM_RISK_LOCALIZATION_EVIDENCE_KEYS
+)
 _PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_KEYS
 )
@@ -160,6 +163,9 @@ def _apply_release_policy_profile_to_config(
             "require_product_runtime_drift_claim_factuality_evidence": (
                 config.require_product_runtime_drift_claim_factuality_evidence
             ),
+            "require_product_runtime_drift_claim_risk_localization_evidence": (
+                config.require_product_runtime_drift_claim_risk_localization_evidence
+            ),
             "require_product_runtime_drift_counterfactual_evidence": (
                 config.require_product_runtime_drift_counterfactual_evidence
             ),
@@ -256,6 +262,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     require_product_runtime_drift_promotion_evidence: bool = False
     require_product_runtime_drift_pre_generation_evidence: bool = False
     require_product_runtime_drift_claim_factuality_evidence: bool = False
+    require_product_runtime_drift_claim_risk_localization_evidence: bool = False
     require_product_runtime_drift_counterfactual_evidence: bool = False
     require_product_runtime_drift_triple_audit_evidence: bool = False
     require_product_runtime_drift_covered_fact_property_evidence: bool = False
@@ -797,6 +804,9 @@ def run_release_candidate_registry_workflow(
         require_product_runtime_drift_claim_factuality_evidence=(
             config.require_product_runtime_drift_claim_factuality_evidence
         ),
+        require_product_runtime_drift_claim_risk_localization_evidence=(
+            config.require_product_runtime_drift_claim_risk_localization_evidence
+        ),
         require_product_runtime_drift_counterfactual_evidence=(
             config.require_product_runtime_drift_counterfactual_evidence
         ),
@@ -1124,6 +1134,9 @@ def run_release_candidate_registry_workflow(
             ),
             "require_product_runtime_drift_claim_factuality_evidence": (
                 config.require_product_runtime_drift_claim_factuality_evidence
+            ),
+            "require_product_runtime_drift_claim_risk_localization_evidence": (
+                config.require_product_runtime_drift_claim_risk_localization_evidence
             ),
             "require_product_runtime_drift_counterfactual_evidence": (
                 config.require_product_runtime_drift_counterfactual_evidence
@@ -2327,6 +2340,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "product_runtime_drift_claim_factuality_evidence_required": config.get(
             "require_product_runtime_drift_claim_factuality_evidence"
         ),
+        "product_runtime_drift_claim_risk_localization_evidence_required": config.get(
+            "require_product_runtime_drift_claim_risk_localization_evidence"
+        ),
         "product_runtime_drift_counterfactual_evidence_required": config.get(
             "require_product_runtime_drift_counterfactual_evidence"
         ),
@@ -3043,6 +3059,12 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         "product_runtime_drift_claim_factuality_evidence_blocked_metric_count": summary.get(
             "claim_factuality_evidence_blocked_metric_count"
         ),
+        "product_runtime_drift_claim_risk_localization_evidence_metric_count": (
+            summary.get("claim_risk_localization_evidence_metric_count")
+        ),
+        "product_runtime_drift_claim_risk_localization_evidence_blocked_metric_count": (
+            summary.get("claim_risk_localization_evidence_blocked_metric_count")
+        ),
         "product_runtime_drift_counterfactual_evidence_metric_count": summary.get(
             "counterfactual_evidence_metric_count"
         ),
@@ -3108,6 +3130,9 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     for prefix in _PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_CLAIM_RISK_LOCALIZATION_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     for prefix in _PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_PREFIXES:
@@ -3334,6 +3359,9 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         ),
         require_product_runtime_drift_claim_factuality_evidence=bool(
             args.require_product_runtime_drift_claim_factuality_evidence
+        ),
+        require_product_runtime_drift_claim_risk_localization_evidence=bool(
+            args.require_product_runtime_drift_claim_risk_localization_evidence
         ),
         require_product_runtime_drift_counterfactual_evidence=bool(
             args.require_product_runtime_drift_counterfactual_evidence
@@ -3771,6 +3799,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--require-product-runtime-drift-claim-factuality-evidence", action="store_true",
                         help="require the product runtime drift report to include claim factuality "
                              "probe comparison coverage, conformal/selective, redline, and quality metrics")
+    parser.add_argument("--require-product-runtime-drift-claim-risk-localization-evidence",
+                        action="store_true",
+                        help="require the product runtime drift report to include claim-risk localization "
+                             "coverage, claim counts, and entity-candidate risk drift metrics")
     parser.add_argument("--require-product-runtime-drift-counterfactual-evidence", action="store_true",
                         help="require the product runtime drift report to include counterfactual "
                              "verifier-audit coverage, manifest, pass-rate, false-invariance, "
