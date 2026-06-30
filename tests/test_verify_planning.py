@@ -422,6 +422,70 @@ def test_verification_escalation_policy_selects_uncertain_claims_and_fallback_qu
     json.dumps(escalated.to_dict())
 
 
+def test_verification_escalation_policy_can_trigger_on_entity_sensitive_confidence():
+    plan = ClaimVerificationPlan(
+        run_verifier=True,
+        reason="manual",
+        verification_scope="all",
+        claims=(
+            Claim(
+                "AlphaCorp acquired Beta Labs.",
+                claim_id="c1",
+                metadata={"entity_candidates": ("AlphaCorp", "Beta Labs")},
+            ),
+            Claim("A generic claim without entity metadata.", claim_id="c2"),
+        ),
+        verify_claim_ids=("c1", "c2"),
+        route_hints=(
+            VerificationRouteHint("c1", ("groundedness",), ("cheap:first_pass",)),
+            VerificationRouteHint("c2", ("groundedness",), ("cheap:first_pass",)),
+        ),
+    )
+
+    escalated = escalate_uncertain_verification_plan(
+        plan,
+        (
+            VerificationResult(VerificationStatus.SUPPORTED, confidence=0.70, metadata={"claim_id": "c1"}),
+            VerificationResult(VerificationStatus.SUPPORTED, confidence=0.70, metadata={"claim_id": "c2"}),
+        ),
+        VerificationEscalationPolicy(min_confidence=0.65, entity_confidence_margin=0.10),
+    )
+
+    assert escalated.verify_claim_ids == ("c1",)
+    assert escalated.skipped_claim_ids == ("c2",)
+    assert escalated.route_hints[0].routes == ("retrieval",)
+    escalation = escalated.route_hints[0].metadata["verification_escalation"]
+    assert escalation["uncertainty_reasons"] == (
+        "entity_confidence_below:0.75",
+        "entity_candidates_present",
+    )
+    assert escalation["entity_candidates"] == ("AlphaCorp", "Beta Labs")
+    assert escalation["entity_sensitive"] is True
+    summary = escalated.budget["uncertainty_escalation"]
+    assert summary["entity_sensitive_claim_ids"] == ("c1",)
+    assert summary["entity_sensitive_claim_count"] == 1
+    assert summary["entity_candidate_count"] == 2
+    assert summary["entity_candidates"] == {"c1": ("AlphaCorp", "Beta Labs")}
+    assert summary["uncertain_claim_ids"] == ("c1",)
+    assert summary["uncertainty_reasons"]["c1"] == (
+        "entity_confidence_below:0.75",
+        "entity_candidates_present",
+    )
+
+    disabled = escalate_uncertain_verification_plan(
+        plan,
+        (
+            VerificationResult(VerificationStatus.SUPPORTED, confidence=0.70, metadata={"claim_id": "c1"}),
+            VerificationResult(VerificationStatus.SUPPORTED, confidence=0.70, metadata={"claim_id": "c2"}),
+        ),
+        {"min_confidence": 0.65, "entity_sensitive": "false"},
+    )
+
+    assert disabled.run_verifier is False
+    json.dumps(escalated.to_dict())
+    json.dumps(disabled.to_dict())
+
+
 def test_verification_escalation_policy_applies_claim_and_route_budgets():
     claims = (
         Claim("Claim one.", claim_id="c1"),

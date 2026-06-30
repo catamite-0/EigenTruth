@@ -47,6 +47,41 @@ def test_uncertainty_escalation_report_summarizes_retrieval_and_quality_delta():
     json.dumps(report, allow_nan=False)
 
 
+def test_uncertainty_escalation_report_summarizes_entity_sensitive_escalation():
+    record = _loop_result(
+        final_action="retrieve",
+        total_evidence=0,
+        final_status="insufficient_evidence",
+    )
+    escalation = record["uncertainty_escalation_plan"]
+    escalation["route_hints"][0]["metadata"] = {
+        "verification_escalation": {
+            "entity_candidates": ("AlphaCorp", "Beta Labs"),
+            "entity_sensitive": True,
+        }
+    }
+    escalation["budget"]["uncertainty_escalation"]["uncertainty_reasons"]["c1"] = (
+        "entity_confidence_below:0.75",
+        "entity_candidates_present",
+    )
+    escalation["budget"]["uncertainty_escalation"]["entity_candidates"] = {
+        "c1": ("AlphaCorp", "Beta Labs"),
+    }
+
+    report = uncertainty_escalation_report((record,))
+
+    summary = report["uncertainty_escalation"]
+    assert summary["entity_sensitive_records"] == 1
+    assert summary["entity_sensitive_rate"]["estimate"] == pytest.approx(1.0)
+    assert summary["entity_sensitive_claim_total"] == 1
+    assert summary["entity_candidate_total"] == 2
+    assert summary["uncertainty_reason_counts"] == {
+        "entity_candidates_present": 1,
+        "entity_confidence_below:0.75": 1,
+    }
+    json.dumps(report, allow_nan=False)
+
+
 def test_uncertainty_escalation_report_accepts_to_dict_objects_and_explicit_labels():
     class ResultObject:
         def to_dict(self):

@@ -167,6 +167,9 @@ def _escalation_summary(plans: Sequence[Mapping[str, Any] | None]) -> dict[str, 
     reason_counts: Counter[str] = Counter()
     selected_claim_counts: list[int] = []
     retrieval_query_counts: list[int] = []
+    entity_sensitive_records = 0
+    entity_sensitive_claim_total = 0
+    entity_candidate_total = 0
 
     for plan in plans:
         if plan is None:
@@ -186,6 +189,14 @@ def _escalation_summary(plans: Sequence[Mapping[str, Any] | None]) -> dict[str, 
         reasons = _optional_mapping(escalation_budget.get("uncertainty_reasons")) or {}
         for raw_reason_list in reasons.values():
             reason_counts.update(_string_sequence(raw_reason_list))
+        entity_candidates = _optional_mapping(escalation_budget.get("entity_candidates")) or {}
+        if entity_candidates:
+            entity_sensitive_records += 1
+            entity_sensitive_claim_total += len(entity_candidates)
+            entity_candidate_total += sum(
+                len(_string_sequence(raw_candidates))
+                for raw_candidates in entity_candidates.values()
+            )
 
     return {
         "enabled_records": enabled,
@@ -199,6 +210,10 @@ def _escalation_summary(plans: Sequence[Mapping[str, Any] | None]) -> dict[str, 
         "mean_retrieval_query_count": _mean_or_none(retrieval_query_counts),
         "route_counts": dict(sorted(route_counts.items())),
         "uncertainty_reason_counts": dict(sorted(reason_counts.items())),
+        "entity_sensitive_records": entity_sensitive_records,
+        "entity_sensitive_rate": binomial_confidence_interval(entity_sensitive_records, len(plans)),
+        "entity_sensitive_claim_total": entity_sensitive_claim_total,
+        "entity_candidate_total": entity_candidate_total,
     }
 
 

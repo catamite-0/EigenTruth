@@ -138,6 +138,12 @@ Added dependency-free counterfactual verifier auditing:
 - `ProductTrace.counterfactual_robustness_summary()` and `product_runtime_metrics(...)` now surface trace-level perturbation evidence from verifier-result metadata, so runtime baselines can aggregate counterfactual participation, pass rate, flip success, false invariance, trace gaps, probe types, and failure reasons separately from promotion-contract handoff reports.
 - This does not claim broad hallucination mitigation; it gives structured-fact, retrieval, world-model, or future external verifier routes a reproducible perturbation-sensitivity gate before their outputs are trusted by release workflows.
 
+Added entity-sensitive uncertainty escalation:
+
+- `VerificationEscalationPolicy` now treats extracted `entity_candidates` as a bounded extra uncertainty signal: a supported preliminary result can still trigger second-stage verification when its confidence is below `min_confidence + entity_confidence_margin`.
+- Escalation route metadata and budget summaries preserve entity candidates and entity-trigger reasons, while `uncertainty_escalation_report()` aggregates entity-sensitive record, claim, and candidate totals.
+- This follows the current entity/span-level hallucination direction without adding a learned token detector or changing default verifier execution semantics.
+
 Added the covered-facts KG correction handoff:
 
 - `benchmarks/run_covered_facts_external_evidence_workflow.py` registers saved Wikidata covered-facts route manifests into a local `ArtifactRegistry`, runs `compare_external_evidence_baselines.py` with `require_covered_facts_route=True`, writes the comparison report plus recursive manifest verification, and can register the comparator report as the release-gate handoff.

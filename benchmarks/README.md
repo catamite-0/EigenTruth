@@ -3554,6 +3554,13 @@ optional `diagnostics`. The workflow keeps diagnostics low by default, so
 decision changes mostly reflect the cheap verifier -> retrieval -> final
 verifier path.
 
+When claims carry extractor metadata such as `entity_candidates`,
+`VerificationEscalationPolicy` can also treat entity-bearing medium-confidence
+results as uncertainty-escalation candidates. The report records
+`entity_sensitive_records`, `entity_sensitive_claim_total`, and
+`entity_candidate_total` so entity-level verification pressure can be separated
+from ordinary low-confidence escalation.
+
 The committed fixture in `artifacts/uncertainty-escalation-fixture-workflow/`
 contains four records. All four low-confidence preliminary results trigger
 escalation and retrieve evidence; the two false claims move from `accept` to
