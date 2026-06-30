@@ -1,0 +1,197 @@
+{
+  "artifacts": {
+    "document.001": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../README.md",
+      "sha256": "ee999d9feb2ce7a234140fbb6f53901a64179b9fe4f8618b914e568e02e053c6",
+      "size_bytes": 204412
+    },
+    "document.002": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../benchmarks/README.md",
+      "sha256": "abf3633b9ef9e1108376de292545838800166edba9c80f79b4173853735c2b05",
+      "size_bytes": 467574
+    },
+    "document.003": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../docs/experiment-plan.md",
+      "sha256": "5aa42335ec83482b8190f59bc9cbc0583150a5f63b98cf847eed53f19cdff02f",
+      "size_bytes": 220929
+    },
+    "document.004": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../docs/frontier-research-notes.md",
+      "sha256": "4bfce2ed899341b6efaf5aea82dc705e5f262735b604a9cd966793ea9e15b7bb",
+      "size_bytes": 117099
+    },
+    "frontier_artifact_reference_audit": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-artifact-reference-audit.json",
+      "sha256": "e1f184d41b9e0b1503121fe1e13ccfb2e87ecd3a4e4571cda694cc1c3e5e7261",
+      "size_bytes": 19661
+    },
+    "reference.001": {
+      "exists": true,
+      "file_count": 3,
+      "kind": "directory",
+      "path": "frontier-audit-release-candidate-v6",
+      "sha256": "2e67819c5798aafa3498275d5a72b8bda1e2490c8001e9c536db65cd3b403484",
+      "size_bytes": 3830038
+    },
+    "reference.002": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-audit-release-candidate-v6/artifact-manifest.json",
+      "sha256": "8d508560eb27cbc43f8d8319be3877de8e68edc1f6d1d99bd5e2df53d76e1052",
+      "size_bytes": 48395
+    },
+    "reference.003": {
+      "exists": false,
+      "file_count": null,
+      "kind": "missing",
+      "path": "frontier-audit-release-candidate-v6/evidence-gap-plan.json",
+      "sha256": null,
+      "size_bytes": null
+    },
+    "reference.004": {
+      "exists": false,
+      "file_count": null,
+      "kind": "missing",
+      "path": "frontier-audit-release-candidate-v6/frontier-audit-comparison.json",
+      "sha256": null,
+      "size_bytes": null
+    },
+    "reference.005": {
+      "exists": false,
+      "file_count": null,
+      "kind": "missing",
+      "path": "frontier-audit-release-candidate-v6/frontier-audit-registry-workflow.json",
+      "sha256": null,
+      "size_bytes": null
+    },
+    "reference.006": {
+      "exists": false,
+      "file_count": null,
+      "kind": "missing",
+      "path": "frontier-audit-release-candidate-v6/manifest-verification.json",
+      "sha256": null,
+      "size_bytes": null
+    },
+    "reference.007": {
+      "exists": false,
+      "file_count": null,
+      "kind": "missing",
+      "path": "smollm2_product_promotion_contract_v1_9",
+      "sha256": null,
+      "size_bytes": null
+    },
+    "reference.008": {
+      "exists": false,
+      "file_count": null,
+      "kind": "missing",
+      "path": "smollm2_product_promotion_contract_v1_9/artifact-manifest.json",
+      "sha256": null,
+      "size_bytes": null
+    },
+    "reference.009": {
+      "exists": false,
+      "file_count": null,
+      "kind": "missing",
+      "path": "smollm2_product_promotion_contract_v1_9/evidence-handoff-artifact-manifest.json",
+      "sha256": null,
+      "size_bytes": null
+    },
+    "reference.010": {
+      "exists": false,
+      "file_count": null,
+      "kind": "missing",
+      "path": "smollm2_product_promotion_contract_v1_9/evidence-handoff-manifest-verification.json",
+      "sha256": null,
+      "size_bytes": null
+    },
+    "reference.011": {
+      "exists": false,
+      "file_count": null,
+      "kind": "missing",
+      "path": "smollm2_product_promotion_contract_v1_9/manifest-verification.json",
+      "sha256": null,
+      "size_bytes": null
+    },
+    "reference.012": {
+      "exists": false,
+      "file_count": null,
+      "kind": "missing",
+      "path": "smollm2_product_promotion_contract_v1_9/product-promotion-contract-evidence-handoff-audit.json",
+      "sha256": null,
+      "size_bytes": null
+    },
+    "reference.013": {
+      "exists": false,
+      "file_count": null,
+      "kind": "missing",
+      "path": "smollm2_product_promotion_contract_v1_9/product-promotion-contract-evidence-handoff.json",
+      "sha256": null,
+      "size_bytes": null
+    },
+    "reference.014": {
+      "exists": false,
+      "file_count": null,
+      "kind": "missing",
+      "path": "smollm2_product_promotion_contract_v1_9/product-promotion-contract.json",
+      "sha256": null,
+      "size_bytes": null
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "blocking_reference_count": 13,
+    "directory_count": 1,
+    "document_count": 4,
+    "existing_count": 2,
+    "file_count": 1,
+    "manifest_child_missing_count": 1,
+    "manifest_child_recoverable_from_json_cache_count": 0,
+    "manifest_child_unrecoverable_count": 1,
+    "manifest_error_count": 0,
+    "manifest_failed_count": 1,
+    "manifest_reference_count": 3,
+    "manifest_verified_count": 0,
+    "missing_count": 12,
+    "missing_recoverable_from_json_cache_count": 0,
+    "missing_unrecoverable_count": 12,
+    "recommended_action_count": 5,
+    "recommended_action_ids": [
+      "rebuild_frontier_audit_release_candidate_v6",
+      "export_product_promotion_contract_v1_9",
+      "export_product_promotion_contract_v1_9_evidence_handoff",
+      "verify_frontier_artifact_manifests",
+      "rerun_frontier_artifact_reference_audit"
+    ],
+    "reference_count": 14,
+    "runner": "audit_frontier_artifact_references",
+    "status": "blocked",
+    "status_counts": {
+      "manifest_failed": 1,
+      "missing": 12,
+      "present": 1
+    }
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 19,
+    "directory_count": 1,
+    "file_count": 6,
+    "missing_count": 12
+  }
+}

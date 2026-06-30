@@ -5,7 +5,7 @@ import json
 from benchmarks.audit_frontier_artifact_references import (
     build_frontier_artifact_reference_audit,
 )
-from eigentruth.registry import ArtifactRegistry, build_artifact_manifest
+from eigentruth.registry import ArtifactRegistry, build_artifact_manifest, load_and_verify_artifact_manifest
 
 
 def test_frontier_artifact_reference_audit_reports_missing_refs_and_verified_manifest(tmp_path):
@@ -113,6 +113,7 @@ def test_frontier_artifact_reference_audit_reports_missing_refs_and_verified_man
     assert registry_record.metadata["missing_count"] == 1
     assert report_path.exists()
     assert audit_manifest_path.exists()
+    assert load_and_verify_artifact_manifest(audit_manifest_path).passed is True
 
 
 def test_frontier_artifact_reference_audit_passes_when_filtered_refs_exist(tmp_path):
@@ -295,6 +296,60 @@ def test_frontier_artifact_reference_audit_restores_manifest_child_from_cache(tm
     )
     assert payload["restore_report"]["restored"][0]["artifact_name"] == "child_report"
     assert restored_payload["source_path"] == "artifacts/frontier-child/child-report.json"
+
+
+def test_frontier_artifact_reference_audit_restores_compact_manifest_child_from_cache(tmp_path):
+    artifact_dir = tmp_path / "artifacts" / "frontier-audit-release-candidate-v6"
+    artifact_dir.mkdir(parents=True)
+    child_path = tmp_path / "artifacts" / "frontier-child" / "compact-child-report.json"
+    child_path.parent.mkdir(parents=True)
+    child_payload = {
+        "workflow": "compact_child_report",
+        "status": "promote",
+        "source_path": "artifacts/frontier-child/compact-child-report.json",
+    }
+    compact_child_text = json.dumps(child_payload, sort_keys=True, separators=(",", ":")) + "\n"
+    child_path.write_text(compact_child_text, encoding="utf-8")
+    manifest_path = artifact_dir / "artifact-manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            build_artifact_manifest({"compact_child_report": child_path}, root=artifact_dir),
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    child_path.unlink()
+    json_cache_path = tmp_path / "artifact-json-cache.json"
+    json_cache_path.write_text(
+        json.dumps({
+            f"{child_path}:10:20:30:40:cached": {
+                "error": None,
+                "payload": child_payload,
+            },
+        }),
+        encoding="utf-8",
+    )
+    doc_path = tmp_path / "README.md"
+    doc_path.write_text(
+        "`artifacts/frontier-audit-release-candidate-v6/artifact-manifest.json`\n",
+        encoding="utf-8",
+    )
+
+    payload = build_frontier_artifact_reference_audit(
+        doc_paths=(doc_path,),
+        root=tmp_path,
+        include_regex="frontier-audit-release-candidate-v6",
+        json_cache_paths=(json_cache_path,),
+        restore_json_cache_artifacts=True,
+    )
+
+    assert payload["status"] == "passed"
+    assert payload["summary"]["manifest_verified_count"] == 1
+    assert payload["restore_report"]["restored_count"] == 1
+    assert payload["restore_report"]["restored"][0]["restore_serialization"] == "compact"
+    assert child_path.read_text(encoding="utf-8") == compact_child_text
 
 
 def test_frontier_artifact_reference_audit_skips_manifest_child_digest_mismatch(tmp_path):

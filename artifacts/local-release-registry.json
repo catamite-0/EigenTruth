@@ -5573,6 +5573,46 @@
       "name": "source-family-citation-search-adapter-smoke",
       "path": "artifacts/source-family-citation-search-adapter-smoke/source-family-adapter-report.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-artifact-reference-audit-manifest.json",
+        "blocking_reference_count": 13,
+        "directory_count": 1,
+        "document_count": 4,
+        "existing_count": 2,
+        "file_count": 1,
+        "manifest_child_missing_count": 1,
+        "manifest_child_recoverable_from_json_cache_count": 0,
+        "manifest_child_unrecoverable_count": 1,
+        "manifest_error_count": 0,
+        "manifest_failed_count": 1,
+        "manifest_reference_count": 3,
+        "manifest_verified_count": 0,
+        "missing_count": 12,
+        "missing_recoverable_from_json_cache_count": 0,
+        "missing_unrecoverable_count": 12,
+        "recommended_action_count": 5,
+        "recommended_action_ids": [
+          "rebuild_frontier_audit_release_candidate_v6",
+          "export_product_promotion_contract_v1_9",
+          "export_product_promotion_contract_v1_9_evidence_handoff",
+          "verify_frontier_artifact_manifests",
+          "rerun_frontier_artifact_reference_audit"
+        ],
+        "reference_count": 14,
+        "status": "blocked",
+        "status_counts": {
+          "manifest_failed": 1,
+          "missing": 12,
+          "present": 1
+        },
+        "workflow": "frontier_artifact_reference_audit"
+      },
+      "name": "frontier-artifact-reference-audit",
+      "path": "artifacts/frontier-artifact-reference-audit.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

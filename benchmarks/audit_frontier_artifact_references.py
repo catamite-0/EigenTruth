@@ -228,6 +228,12 @@ def build_frontier_artifact_reference_audit(
 
     output_path = None if json_path is None else Path(json_path)
     manifest_path = None if artifact_manifest_path is None else Path(artifact_manifest_path)
+    if manifest_path is not None:
+        payload["artifact_manifest"] = str(manifest_path)
+    registry_record_key = None
+    if registry_path is not None and output_path is not None and name is not None and version is not None:
+        registry_record_key = f"report:{name}:{version}"
+        payload["registry_record"] = registry_record_key
     if output_path is not None:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         _write_json(output_path, payload)
@@ -240,9 +246,17 @@ def build_frontier_artifact_reference_audit(
             root=root_path,
             payload=payload,
         )
-        payload["artifact_manifest"] = str(manifest_path)
         payload["artifact_manifest_summary"] = manifest.get("summary", {})
         _write_json(output_path, payload)
+        manifest = _write_artifact_manifest(
+            manifest_path=manifest_path,
+            output_path=output_path,
+            documents=documents,
+            references=references,
+            root=root_path,
+            payload=payload,
+        )
+        payload["artifact_manifest_summary"] = manifest.get("summary", {})
     if registry_path is not None and output_path is not None and name is not None and version is not None:
         registry = ArtifactRegistry.load_json(registry_path)
         registry.record_report(
@@ -258,8 +272,6 @@ def build_frontier_artifact_reference_audit(
             },
         )
         registry.save_json(registry_path)
-        payload["registry_record"] = f"report:{name}:{version}"
-        _write_json(output_path, payload)
     return payload
 
 
@@ -513,9 +525,8 @@ def _manifest_missing_json_cache_records(
                 cached_payload["payload"],
                 root=root.resolve(),
             )
-            restored_text = strict_json_dumps(normalized_payload, indent=2, sort_keys=True) + "\n"
-            digest_mismatch = _manifest_digest_mismatch(
-                restored_text,
+            restore_variant, digest_mismatch = _matching_json_restore_variant(
+                normalized_payload,
                 candidate={
                     "expected_sha256": expected_sha256,
                     "expected_size_bytes": expected_size_bytes,
@@ -528,6 +539,8 @@ def _manifest_missing_json_cache_records(
                 continue
             record["recoverable_from_json_cache"] = True
             record["normalized_absolute_path_count"] = normalized_absolute_path_count
+            if restore_variant is not None:
+                record["restore_serialization"] = restore_variant["serialization"]
         records.append(record)
     return tuple(records)
 
@@ -784,9 +797,8 @@ def _restore_recoverable_json_artifacts(
             cached_payload["payload"],
             root=root_path,
         )
-        restored_text = strict_json_dumps(normalized_payload, indent=2, sort_keys=True) + "\n"
-        digest_mismatch = _manifest_digest_mismatch(
-            restored_text,
+        restore_variant, digest_mismatch = _matching_json_restore_variant(
+            normalized_payload,
             candidate=_mapping(candidate.get("metadata")),
         )
         if digest_mismatch is not None:
@@ -800,7 +812,7 @@ def _restore_recoverable_json_artifacts(
             continue
         resolved_output_path.parent.mkdir(parents=True, exist_ok=True)
         resolved_output_path.write_text(
-            restored_text,
+            str(restore_variant["text"]),
             encoding="utf-8",
         )
         restored.append({
@@ -811,6 +823,7 @@ def _restore_recoverable_json_artifacts(
             "payload_keys": tuple(sorted(str(key) for key in normalized_payload.keys())),
             "workflow": normalized_payload.get("workflow"),
             "status": normalized_payload.get("status"),
+            "restore_serialization": restore_variant["serialization"],
             "normalized_absolute_path_count": normalized_absolute_path_count,
             **_mapping(candidate.get("metadata")),
         })
@@ -873,6 +886,46 @@ def _manifest_digest_mismatch(restored_text: str, *, candidate: Mapping[str, Any
         "expected_size_bytes": expected_size_bytes,
         "restored_size_bytes": restored_size_bytes,
     }
+
+
+def _matching_json_restore_variant(
+    payload: Mapping[str, Any],
+    *,
+    candidate: Mapping[str, Any],
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    first_mismatch: dict[str, Any] | None = None
+    for variant in _json_restore_variants(payload):
+        digest_mismatch = _manifest_digest_mismatch(str(variant["text"]), candidate=candidate)
+        if digest_mismatch is None:
+            return variant, None
+        if first_mismatch is None:
+            first_mismatch = {
+                **digest_mismatch,
+                "restored_serialization": variant["serialization"],
+            }
+    return None, first_mismatch
+
+
+def _json_restore_variants(payload: Mapping[str, Any]) -> tuple[dict[str, Any], ...]:
+    variants = (
+        {
+            "serialization": "pretty",
+            "text": strict_json_dumps(payload, indent=2, sort_keys=True) + "\n",
+        },
+        {
+            "serialization": "compact",
+            "text": strict_json_dumps(payload, sort_keys=True, separators=(",", ":")) + "\n",
+        },
+    )
+    deduped: list[dict[str, Any]] = []
+    seen_texts: set[str] = set()
+    for variant in variants:
+        text = str(variant["text"])
+        if text in seen_texts:
+            continue
+        seen_texts.add(text)
+        deduped.append(variant)
+    return tuple(deduped)
 
 
 def _normalize_cached_json_payload(payload: Mapping[str, Any], *, root: Path) -> tuple[dict[str, Any], int]:

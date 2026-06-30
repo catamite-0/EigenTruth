@@ -1,0 +1,156 @@
+{
+  "artifacts": {
+    "input_trace_0000_calculator_refuted-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/audit/calculator_refuted-r0.json",
+      "sha256": "d02087adf9c783935ee18b84ff5c2e002e3514cc1b94fc8ea331650f97df694a",
+      "size_bytes": 39309
+    },
+    "input_trace_0001_diagnostic_refuted-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/audit/diagnostic_refuted-r0.json",
+      "sha256": "68476bb48460b31e3403e4e85fa63ddecba54eb5f36955a08bf52b9e1f54c011",
+      "size_bytes": 40431
+    },
+    "input_trace_0002_low_risk_supported-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/audit/low_risk_supported-r0.json",
+      "sha256": "a48587ddd9e3f0bfa2092a170c9ecded1dbbefaa511e13fa264b1ba30dfd912e",
+      "size_bytes": 36783
+    },
+    "input_trace_0003_calculator_refuted-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/auto/calculator_refuted-r0.json",
+      "sha256": "a7140605552033833a1b25b99d655831aae3ec656c425b6ab0040e3eaa4865cf",
+      "size_bytes": 40576
+    },
+    "input_trace_0004_diagnostic_refuted-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/auto/diagnostic_refuted-r0.json",
+      "sha256": "3ea2e419a99dc7278415f2b4db6971d67be6aaa0aff3f1ee4002fca024352610",
+      "size_bytes": 46218
+    },
+    "input_trace_0005_low_risk_supported-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/auto/low_risk_supported-r0.json",
+      "sha256": "12afd26f4a8c78f8c1b2a9b7b366f976d2971f3f7f6a843823a9a14a6a4ea211",
+      "size_bytes": 34166
+    },
+    "input_trace_0006_calculator_refuted-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/balanced/calculator_refuted-r0.json",
+      "sha256": "58ea3ab78c9d4fb864f9c25fa937bd38b911d2860d494ca401c861fe7c7ee5f6",
+      "size_bytes": 44357
+    },
+    "input_trace_0007_diagnostic_refuted-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/balanced/diagnostic_refuted-r0.json",
+      "sha256": "79a57e1f5281c51a0d01667d10c1a9fca58bab22805b4c333d6df5568961d246",
+      "size_bytes": 45152
+    },
+    "input_trace_0008_low_risk_supported-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/balanced/low_risk_supported-r0.json",
+      "sha256": "db7f5bd3a37850b4a7c2ae89132f7bb541ea00d845535915b8877fb343e22409",
+      "size_bytes": 33267
+    },
+    "input_trace_0009_calculator_refuted-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/latency/calculator_refuted-r0.json",
+      "sha256": "718da025fc751970704ed1417c6772bd40743cb22be1a897a239601739d68ccd",
+      "size_bytes": 44087
+    },
+    "input_trace_0010_diagnostic_refuted-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/latency/diagnostic_refuted-r0.json",
+      "sha256": "ebf167d00f52cbb4f77c7ced44e7276ded6b9f7821b87101d62177db1402b98c",
+      "size_bytes": 34683
+    },
+    "input_trace_0011_low_risk_supported-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/latency/low_risk_supported-r0.json",
+      "sha256": "4be668a2f5610227f6debc4a5dd61e3c5b276c7458d5b2795a8c61168df4e169",
+      "size_bytes": 33046
+    },
+    "product_trace_corpus_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "product-trace-corpus.json",
+      "sha256": "a4fcd00849ec04f6bb96ebbc007b540bb8cb839e1d5b2617fb980345bb4afbdd",
+      "size_bytes": 12811
+    },
+    "product_trace_corpus_traces": {
+      "exists": true,
+      "file_count": 12,
+      "kind": "directory",
+      "path": "traces",
+      "sha256": "fb98ea62e35a38e0aa0fdf312034b464992b75639c5d69d4fb491ce2d14ef870",
+      "size_bytes": 476410
+    },
+    "product_trace_runtime_pair_index": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "runtime-pair-index.json",
+      "sha256": "5916ce7c79a4dbaff0e676c36c188b36ac2185a0da2e50cc03b550c4c7c86bc1",
+      "size_bytes": 3933
+    },
+    "product_trace_source_cache": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-cache.json",
+      "sha256": "64cee898c2b04e636b59fb558b0b8de75ebb29ac241d70f77b6b77b0c8f43846",
+      "size_bytes": 338085
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "accepted_count": 12,
+    "compact_json": false,
+    "redact_text": true,
+    "rejected_count": 0,
+    "runner": "build_product_trace_corpus",
+    "runtime_pair_index_record_count": 12,
+    "runtime_trace_count": 12,
+    "source": "run_product_trace_replay_workflow",
+    "source_cache_hit_count": 0,
+    "source_cache_miss_count": 12,
+    "source_cache_path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/corpus/source-cache.json",
+    "source_cache_source": "source_scan",
+    "source_cache_written": true,
+    "status": "ready"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 16,
+    "directory_count": 1,
+    "file_count": 15,
+    "missing_count": 0
+  }
+}
