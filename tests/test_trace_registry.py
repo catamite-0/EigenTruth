@@ -3218,6 +3218,21 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
             "verifier_track_status": "promote",
             "abstention_track_status": "promote",
             "citation_batch_track_status": "promote",
+            "frontier_rerun_rollup_track_status": "promote",
+            "base_verifier_track_status": "promote",
+            "base_abstention_track_status": "blocked",
+            "base_detectability_track_status": "blocked",
+            "base_multiple_testing_track_status": "promote",
+            "frontier_rerun_rollup_promoted_tracks": [
+                "abstention",
+                "detectability",
+            ],
+            "frontier_rerun_rollup_report_count": 4,
+            "frontier_rerun_rollup_candidate_count": 4,
+            "frontier_rerun_rollup_missing_report_count": 0,
+            "frontier_rerun_rollup_invalid_report_count": 0,
+            "frontier_rerun_rollup_blocked_candidate_count": 0,
+            "frontier_rerun_rollup_promotion_ready_count": 4,
             "citation_batch_rollup_count": 1,
             "citation_batch_expected_batch_count": 2,
             "citation_batch_observed_batch_count": 2,
@@ -3320,6 +3335,24 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
         "promotion_contract_frontier_release_evidence_citation_batch_track_status"
     ] == "promote"
     assert metadata[
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_track_status"
+    ] == "promote"
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_base_abstention_track_status"
+    ] == "blocked"
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_base_detectability_track_status"
+    ] == "blocked"
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_promoted_tracks"
+    ] == ["abstention", "detectability"]
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_report_count"
+    ] == 4
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_missing_report_count"
+    ] == 0
+    assert metadata[
         "promotion_contract_frontier_release_evidence_citation_batch_expected_batch_count"
     ] == 2
     assert metadata[
@@ -3386,6 +3419,21 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert runtime_metrics[
         "promotion_contract_frontier_release_evidence_decision_status"
     ] == "promote"
+    assert runtime_metrics[
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_track_status"
+    ] == "promote"
+    assert runtime_metrics[
+        "promotion_contract_frontier_release_evidence_base_abstention_track_status"
+    ] == "blocked"
+    assert runtime_metrics[
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_promoted_tracks"
+    ] == ["abstention", "detectability"]
+    assert runtime_metrics[
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_report_count"
+    ] == pytest.approx(4.0)
+    assert runtime_metrics[
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count"
+    ] == pytest.approx(4.0)
     assert runtime_metrics[
         "promotion_contract_frontier_release_evidence_run_count"
     ] == pytest.approx(2.0)

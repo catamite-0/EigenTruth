@@ -206,8 +206,36 @@ _FRONTIER_RELEASE_EVIDENCE_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
         "frontier_release_evidence_citation_batch_track_promote_rate",
     ),
     (
+        "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_track_promote_rate",
+        "frontier_release_evidence_frontier_rerun_rollup_track_promote_rate",
+    ),
+    (
         "promotion_contract.frontier_release_evidence.run_count.mean",
         "frontier_release_evidence_run_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_report_count.mean",
+        "frontier_release_evidence_frontier_rerun_rollup_report_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_candidate_count.mean",
+        "frontier_release_evidence_frontier_rerun_rollup_candidate_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_missing_report_count.mean",
+        "frontier_release_evidence_frontier_rerun_rollup_missing_report_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_invalid_report_count.mean",
+        "frontier_release_evidence_frontier_rerun_rollup_invalid_report_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_blocked_candidate_count.mean",
+        "frontier_release_evidence_frontier_rerun_rollup_blocked_candidate_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_promotion_ready_count.mean",
+        "frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count",
     ),
     (
         "promotion_contract.frontier_release_evidence.citation_batch_rollup_count.mean",
@@ -536,7 +564,28 @@ def compare_product_runtime_baselines(
     min_frontier_release_evidence_citation_batch_track_promote_rate: (
         float | None
     ) = None,
+    min_frontier_release_evidence_frontier_rerun_rollup_track_promote_rate: (
+        float | None
+    ) = None,
     min_frontier_release_evidence_run_count: float | None = None,
+    min_frontier_release_evidence_frontier_rerun_rollup_report_count: (
+        float | None
+    ) = None,
+    min_frontier_release_evidence_frontier_rerun_rollup_candidate_count: (
+        float | None
+    ) = None,
+    max_frontier_release_evidence_frontier_rerun_rollup_missing_report_count: (
+        float | None
+    ) = None,
+    max_frontier_release_evidence_frontier_rerun_rollup_invalid_report_count: (
+        float | None
+    ) = None,
+    max_frontier_release_evidence_frontier_rerun_rollup_blocked_candidate_count: (
+        float | None
+    ) = None,
+    min_frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count: (
+        float | None
+    ) = None,
     min_frontier_release_evidence_citation_batch_rollup_count: float | None = None,
     max_frontier_release_evidence_citation_batch_missing_expected_batch_count: (
         float | None
@@ -747,8 +796,41 @@ def compare_product_runtime_baselines(
         "min_frontier_release_evidence_citation_batch_track_promote_rate": _optional_rate_float(
             min_frontier_release_evidence_citation_batch_track_promote_rate
         ),
+        "min_frontier_release_evidence_frontier_rerun_rollup_track_promote_rate": _optional_rate_float(
+            min_frontier_release_evidence_frontier_rerun_rollup_track_promote_rate
+        ),
         "min_frontier_release_evidence_run_count": _optional_non_negative_float(
             min_frontier_release_evidence_run_count
+        ),
+        "min_frontier_release_evidence_frontier_rerun_rollup_report_count": (
+            _optional_non_negative_float(
+                min_frontier_release_evidence_frontier_rerun_rollup_report_count
+            )
+        ),
+        "min_frontier_release_evidence_frontier_rerun_rollup_candidate_count": (
+            _optional_non_negative_float(
+                min_frontier_release_evidence_frontier_rerun_rollup_candidate_count
+            )
+        ),
+        "max_frontier_release_evidence_frontier_rerun_rollup_missing_report_count": (
+            _optional_non_negative_float(
+                max_frontier_release_evidence_frontier_rerun_rollup_missing_report_count
+            )
+        ),
+        "max_frontier_release_evidence_frontier_rerun_rollup_invalid_report_count": (
+            _optional_non_negative_float(
+                max_frontier_release_evidence_frontier_rerun_rollup_invalid_report_count
+            )
+        ),
+        "max_frontier_release_evidence_frontier_rerun_rollup_blocked_candidate_count": (
+            _optional_non_negative_float(
+                max_frontier_release_evidence_frontier_rerun_rollup_blocked_candidate_count
+            )
+        ),
+        "min_frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count": (
+            _optional_non_negative_float(
+                min_frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count
+            )
         ),
         "min_frontier_release_evidence_citation_batch_rollup_count": _optional_non_negative_float(
             min_frontier_release_evidence_citation_batch_rollup_count
@@ -1540,10 +1622,90 @@ def _frontier_release_evidence_metrics(
             ),
         ),
         _min_current_metric(
+            "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_track_promote_rate",
+            _finite_float(baseline.get("frontier_rerun_rollup_track_promote_rate")),
+            _finite_float(current.get("frontier_rerun_rollup_track_promote_rate")),
+            gates.get(
+                "min_frontier_release_evidence_frontier_rerun_rollup_track_promote_rate"
+            ),
+        ),
+        _min_current_metric(
             "promotion_contract.frontier_release_evidence.run_count.mean",
             _nested_float(baseline, ("run_count", "mean")),
             _nested_float(current, ("run_count", "mean")),
             gates.get("min_frontier_release_evidence_run_count"),
+        ),
+        _min_current_metric(
+            "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_report_count.mean",
+            _nested_float(baseline, ("frontier_rerun_rollup_report_count", "mean")),
+            _nested_float(current, ("frontier_rerun_rollup_report_count", "mean")),
+            gates.get(
+                "min_frontier_release_evidence_frontier_rerun_rollup_report_count"
+            ),
+        ),
+        _min_current_metric(
+            "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_candidate_count.mean",
+            _nested_float(baseline, ("frontier_rerun_rollup_candidate_count", "mean")),
+            _nested_float(current, ("frontier_rerun_rollup_candidate_count", "mean")),
+            gates.get(
+                "min_frontier_release_evidence_frontier_rerun_rollup_candidate_count"
+            ),
+        ),
+        _max_current_metric(
+            "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_missing_report_count.mean",
+            _nested_float(
+                baseline,
+                ("frontier_rerun_rollup_missing_report_count", "mean"),
+            ),
+            _nested_float(
+                current,
+                ("frontier_rerun_rollup_missing_report_count", "mean"),
+            ),
+            gates.get(
+                "max_frontier_release_evidence_frontier_rerun_rollup_missing_report_count"
+            ),
+        ),
+        _max_current_metric(
+            "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_invalid_report_count.mean",
+            _nested_float(
+                baseline,
+                ("frontier_rerun_rollup_invalid_report_count", "mean"),
+            ),
+            _nested_float(
+                current,
+                ("frontier_rerun_rollup_invalid_report_count", "mean"),
+            ),
+            gates.get(
+                "max_frontier_release_evidence_frontier_rerun_rollup_invalid_report_count"
+            ),
+        ),
+        _max_current_metric(
+            "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_blocked_candidate_count.mean",
+            _nested_float(
+                baseline,
+                ("frontier_rerun_rollup_blocked_candidate_count", "mean"),
+            ),
+            _nested_float(
+                current,
+                ("frontier_rerun_rollup_blocked_candidate_count", "mean"),
+            ),
+            gates.get(
+                "max_frontier_release_evidence_frontier_rerun_rollup_blocked_candidate_count"
+            ),
+        ),
+        _min_current_metric(
+            "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_promotion_ready_count.mean",
+            _nested_float(
+                baseline,
+                ("frontier_rerun_rollup_promotion_ready_count", "mean"),
+            ),
+            _nested_float(
+                current,
+                ("frontier_rerun_rollup_promotion_ready_count", "mean"),
+            ),
+            gates.get(
+                "min_frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count"
+            ),
         ),
         _min_current_metric(
             "promotion_contract.frontier_release_evidence.citation_batch_rollup_count.mean",
@@ -1608,7 +1770,14 @@ def _frontier_release_evidence_gate_enabled(gates: Mapping[str, Any]) -> bool:
             "min_frontier_release_evidence_verifier_track_promote_rate",
             "min_frontier_release_evidence_abstention_track_promote_rate",
             "min_frontier_release_evidence_citation_batch_track_promote_rate",
+            "min_frontier_release_evidence_frontier_rerun_rollup_track_promote_rate",
             "min_frontier_release_evidence_run_count",
+            "min_frontier_release_evidence_frontier_rerun_rollup_report_count",
+            "min_frontier_release_evidence_frontier_rerun_rollup_candidate_count",
+            "max_frontier_release_evidence_frontier_rerun_rollup_missing_report_count",
+            "max_frontier_release_evidence_frontier_rerun_rollup_invalid_report_count",
+            "max_frontier_release_evidence_frontier_rerun_rollup_blocked_candidate_count",
+            "min_frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count",
             "min_frontier_release_evidence_citation_batch_rollup_count",
             "max_frontier_release_evidence_citation_batch_missing_expected_batch_count",
             "max_frontier_release_evidence_citation_batch_duplicate_batch_count",
@@ -2927,8 +3096,29 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         min_frontier_release_evidence_citation_batch_track_promote_rate=(
             args.min_frontier_release_evidence_citation_batch_track_promote_rate
         ),
+        min_frontier_release_evidence_frontier_rerun_rollup_track_promote_rate=(
+            args.min_frontier_release_evidence_frontier_rerun_rollup_track_promote_rate
+        ),
         min_frontier_release_evidence_run_count=(
             args.min_frontier_release_evidence_run_count
+        ),
+        min_frontier_release_evidence_frontier_rerun_rollup_report_count=(
+            args.min_frontier_release_evidence_frontier_rerun_rollup_report_count
+        ),
+        min_frontier_release_evidence_frontier_rerun_rollup_candidate_count=(
+            args.min_frontier_release_evidence_frontier_rerun_rollup_candidate_count
+        ),
+        max_frontier_release_evidence_frontier_rerun_rollup_missing_report_count=(
+            args.max_frontier_release_evidence_frontier_rerun_rollup_missing_report_count
+        ),
+        max_frontier_release_evidence_frontier_rerun_rollup_invalid_report_count=(
+            args.max_frontier_release_evidence_frontier_rerun_rollup_invalid_report_count
+        ),
+        max_frontier_release_evidence_frontier_rerun_rollup_blocked_candidate_count=(
+            args.max_frontier_release_evidence_frontier_rerun_rollup_blocked_candidate_count
+        ),
+        min_frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count=(
+            args.min_frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count
         ),
         min_frontier_release_evidence_citation_batch_rollup_count=(
             args.min_frontier_release_evidence_citation_batch_rollup_count
@@ -3203,7 +3393,42 @@ def main(argv: Sequence[str] | None = None) -> None:
         type=float,
         default=None,
     )
+    parser.add_argument(
+        "--min-frontier-release-evidence-frontier-rerun-rollup-track-promote-rate",
+        type=float,
+        default=None,
+    )
     parser.add_argument("--min-frontier-release-evidence-run-count", type=float, default=None)
+    parser.add_argument(
+        "--min-frontier-release-evidence-frontier-rerun-rollup-report-count",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-frontier-release-evidence-frontier-rerun-rollup-candidate-count",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-frontier-release-evidence-frontier-rerun-rollup-missing-report-count",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-frontier-release-evidence-frontier-rerun-rollup-invalid-report-count",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-frontier-release-evidence-frontier-rerun-rollup-blocked-candidate-count",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-frontier-release-evidence-frontier-rerun-rollup-promotion-ready-count",
+        type=float,
+        default=None,
+    )
     parser.add_argument(
         "--min-frontier-release-evidence-citation-batch-rollup-count",
         type=float,

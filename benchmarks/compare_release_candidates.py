@@ -314,8 +314,36 @@ _PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_FIELDS: tuple[tuple[str, str], 
         "frontier_release_evidence_citation_batch_track_promote_rate",
     ),
     (
+        "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_track_promote_rate",
+        "frontier_release_evidence_frontier_rerun_rollup_track_promote_rate",
+    ),
+    (
         "promotion_contract.frontier_release_evidence.run_count.mean",
         "frontier_release_evidence_run_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_report_count.mean",
+        "frontier_release_evidence_frontier_rerun_rollup_report_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_candidate_count.mean",
+        "frontier_release_evidence_frontier_rerun_rollup_candidate_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_missing_report_count.mean",
+        "frontier_release_evidence_frontier_rerun_rollup_missing_report_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_invalid_report_count.mean",
+        "frontier_release_evidence_frontier_rerun_rollup_invalid_report_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_blocked_candidate_count.mean",
+        "frontier_release_evidence_frontier_rerun_rollup_blocked_candidate_count",
+    ),
+    (
+        "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_promotion_ready_count.mean",
+        "frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count",
     ),
     (
         "promotion_contract.frontier_release_evidence.citation_batch_rollup_count.mean",
@@ -5549,7 +5577,39 @@ def _frontier_release_evidence_gate(
         "abstention_track_status": decision.get("abstention_track_status"),
         "multiple_testing_track_status": decision.get("multiple_testing_track_status"),
         "citation_batch_track_status": decision.get("citation_batch_track_status"),
+        "frontier_rerun_rollup_track_status": decision.get(
+            "frontier_rerun_rollup_track_status"
+        ),
+        "base_verifier_track_status": decision.get("base_verifier_track_status"),
+        "base_abstention_track_status": decision.get("base_abstention_track_status"),
+        "base_detectability_track_status": decision.get(
+            "base_detectability_track_status"
+        ),
+        "base_multiple_testing_track_status": decision.get(
+            "base_multiple_testing_track_status"
+        ),
+        "frontier_rerun_rollup_promoted_tracks": tuple(
+            decision.get("frontier_rerun_rollup_promoted_tracks", ())
+        ),
         "run_names": tuple(summary.get("run_names", ())),
+        "frontier_rerun_rollup_report_count": summary.get(
+            "frontier_rerun_rollup_report_count"
+        ),
+        "frontier_rerun_rollup_candidate_count": summary.get(
+            "frontier_rerun_rollup_candidate_count"
+        ),
+        "frontier_rerun_rollup_missing_report_count": summary.get(
+            "frontier_rerun_rollup_missing_report_count"
+        ),
+        "frontier_rerun_rollup_invalid_report_count": summary.get(
+            "frontier_rerun_rollup_invalid_report_count"
+        ),
+        "frontier_rerun_rollup_blocked_candidate_count": summary.get(
+            "frontier_rerun_rollup_blocked_candidate_count"
+        ),
+        "frontier_rerun_rollup_promotion_ready_count": summary.get(
+            "frontier_rerun_rollup_promotion_ready_count"
+        ),
         "citation_batch_rollup_count": summary.get("citation_batch_rollup_count"),
         "citation_batch_expected_batch_count": summary.get(
             "citation_batch_expected_batch_count"
@@ -8135,6 +8195,42 @@ def _candidate_with_gates(
             ),
             "citation_batch_track_status": frontier_release_evidence.get(
                 "citation_batch_track_status"
+            ),
+            "frontier_rerun_rollup_track_status": frontier_release_evidence.get(
+                "frontier_rerun_rollup_track_status"
+            ),
+            "base_verifier_track_status": frontier_release_evidence.get(
+                "base_verifier_track_status"
+            ),
+            "base_abstention_track_status": frontier_release_evidence.get(
+                "base_abstention_track_status"
+            ),
+            "base_detectability_track_status": frontier_release_evidence.get(
+                "base_detectability_track_status"
+            ),
+            "base_multiple_testing_track_status": frontier_release_evidence.get(
+                "base_multiple_testing_track_status"
+            ),
+            "frontier_rerun_rollup_promoted_tracks": tuple(
+                frontier_release_evidence.get("frontier_rerun_rollup_promoted_tracks", ())
+            ),
+            "frontier_rerun_rollup_report_count": frontier_release_evidence.get(
+                "frontier_rerun_rollup_report_count"
+            ),
+            "frontier_rerun_rollup_candidate_count": frontier_release_evidence.get(
+                "frontier_rerun_rollup_candidate_count"
+            ),
+            "frontier_rerun_rollup_missing_report_count": frontier_release_evidence.get(
+                "frontier_rerun_rollup_missing_report_count"
+            ),
+            "frontier_rerun_rollup_invalid_report_count": frontier_release_evidence.get(
+                "frontier_rerun_rollup_invalid_report_count"
+            ),
+            "frontier_rerun_rollup_blocked_candidate_count": frontier_release_evidence.get(
+                "frontier_rerun_rollup_blocked_candidate_count"
+            ),
+            "frontier_rerun_rollup_promotion_ready_count": frontier_release_evidence.get(
+                "frontier_rerun_rollup_promotion_ready_count"
             ),
             "citation_batch_rollup_count": frontier_release_evidence.get(
                 "citation_batch_rollup_count"

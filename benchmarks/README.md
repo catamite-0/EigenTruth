@@ -4739,6 +4739,7 @@ and defaults `--require-product-runtime-drift-promotion-evidence`,
 `--require-product-runtime-drift-trajectory-audit-evidence`,
 `--require-product-runtime-drift-evidence-handoff-evidence`,
 `--require-product-runtime-drift-world-model-evidence`,
+`--require-product-runtime-drift-frontier-release-evidence`,
 `--require-product-trace-action-audit-gate`, and
 `--require-product-trace-action-execution-gate`; it also defaults to the
 registered covered-facts external-evidence handoff, registered triple-extraction
@@ -4750,7 +4751,9 @@ drift lacks promotion-contract, triple-extraction fixture-matrix,
 trace-level triple-audit, recommended-route covered-fact property/action-gate
 evidence, trajectory-audit evidence, promotion-contract evidence-handoff
 coverage/manifest/metric-gap evidence, trace-level world-model
-participation/coverage/conflict/low-agreement/trace-gap evidence, the product-trace replay workflow lacks promoted
+participation/coverage/conflict/low-agreement/trace-gap evidence, frontier
+release-evidence status/decision/track rates plus citation-batch and
+rerun-rollup counts, the product-trace replay workflow lacks promoted
 action-audit/action-execution child gates, or registered frontier evidence
 handoffs are absent.
 Add `--require-product-runtime-drift-claim-factuality-evidence` when a release
@@ -4835,6 +4838,10 @@ pass-rate, and slot coverage metrics from that drift report.
 Add `--require-product-runtime-drift-world-model-evidence` when the release
 must also require trace-level world-model participation, coverage, conflict,
 low-agreement, and trace-gap metrics from that drift report.
+Add `--require-product-runtime-drift-frontier-release-evidence` when the release
+must also require frontier release-evidence status/decision/track rates,
+citation-batch rollup counts, and rerun-rollup track/candidate counts from that
+drift report.
 Add `--release-efficiency-report` when the final candidate must also prove that
 the product runtime profile sweep has a promoted efficiency handoff. The gate
 verifies the release-efficiency manifest, requires `workflow=release_efficiency_report`

@@ -18181,7 +18181,7 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         "summary"
     ]
     assert frontier_release_summary["frontier_release_evidence_required"] is True
-    assert frontier_release_summary["frontier_release_evidence_metric_count"] == 15
+    assert frontier_release_summary["frontier_release_evidence_metric_count"] == 22
     assert frontier_release_summary["frontier_release_evidence_blocked_metric_count"] == 0
     assert frontier_release_summary[
         "frontier_release_evidence_coverage_rate_current"
@@ -18201,7 +18201,14 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         "promotion_contract.frontier_release_evidence.verifier_track_promote_rate",
         "promotion_contract.frontier_release_evidence.abstention_track_promote_rate",
         "promotion_contract.frontier_release_evidence.citation_batch_track_promote_rate",
+        "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_track_promote_rate",
         "promotion_contract.frontier_release_evidence.run_count.mean",
+        "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_report_count.mean",
+        "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_candidate_count.mean",
+        "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_missing_report_count.mean",
+        "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_invalid_report_count.mean",
+        "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_blocked_candidate_count.mean",
+        "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_promotion_ready_count.mean",
         "promotion_contract.frontier_release_evidence.citation_batch_rollup_count.mean",
         "promotion_contract.frontier_release_evidence.citation_batch_expected_batch_count.mean",
         "promotion_contract.frontier_release_evidence.citation_batch_observed_batch_count.mean",
@@ -20007,7 +20014,7 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     ] == 5
     assert frontier_payload["product_runtime_drift_gate"]["summary"][
         "frontier_release_evidence_metric_count"
-    ] == 15
+    ] == 22
     assert frontier_payload["adapter_family_matrix_gate"]["state_transition_world_model_adapter"] == (
         "RuleBasedWorldModelAdapter"
     )
@@ -26486,6 +26493,19 @@ def _write_product_runtime_drift_report(
                 "reason": None,
             },
             {
+                "metric": (
+                    "promotion_contract.frontier_release_evidence."
+                    "frontier_rerun_rollup_track_promote_rate"
+                ),
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
                 "metric": "promotion_contract.frontier_release_evidence.run_count.mean",
                 "status": "pass",
                 "comparison": "min_current",
@@ -26493,6 +26513,84 @@ def _write_product_runtime_drift_report(
                 "current": 2.0,
                 "absolute_delta": 0.0,
                 "threshold": 2.0,
+                "reason": None,
+            },
+            {
+                "metric": (
+                    "promotion_contract.frontier_release_evidence."
+                    "frontier_rerun_rollup_report_count.mean"
+                ),
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 4.0,
+                "current": 4.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": (
+                    "promotion_contract.frontier_release_evidence."
+                    "frontier_rerun_rollup_candidate_count.mean"
+                ),
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 4.0,
+                "current": 4.0,
+                "absolute_delta": 0.0,
+                "threshold": 4.0,
+                "reason": None,
+            },
+            {
+                "metric": (
+                    "promotion_contract.frontier_release_evidence."
+                    "frontier_rerun_rollup_missing_report_count.mean"
+                ),
+                "status": "pass",
+                "comparison": "max_current",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "threshold": 0.0,
+                "reason": None,
+            },
+            {
+                "metric": (
+                    "promotion_contract.frontier_release_evidence."
+                    "frontier_rerun_rollup_invalid_report_count.mean"
+                ),
+                "status": "pass",
+                "comparison": "max_current",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "threshold": 0.0,
+                "reason": None,
+            },
+            {
+                "metric": (
+                    "promotion_contract.frontier_release_evidence."
+                    "frontier_rerun_rollup_blocked_candidate_count.mean"
+                ),
+                "status": "pass",
+                "comparison": "max_current",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "threshold": 0.0,
+                "reason": None,
+            },
+            {
+                "metric": (
+                    "promotion_contract.frontier_release_evidence."
+                    "frontier_rerun_rollup_promotion_ready_count.mean"
+                ),
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 4.0,
+                "current": 4.0,
+                "absolute_delta": 0.0,
+                "threshold": 4.0,
                 "reason": None,
             },
             {
@@ -35885,6 +35983,7 @@ def test_compare_product_runtime_baselines_gates_frontier_release_evidence_drift
             verifier_track_status="promote",
             abstention_track_status="promote",
             citation_batch_track_status="promote",
+            frontier_rerun_rollup_track_status="promote",
             run_names=("verifier-stability", "abstention-stability"),
         ),
     )
@@ -35903,6 +36002,14 @@ def test_compare_product_runtime_baselines_gates_frontier_release_evidence_drift
             verifier_track_status="promote",
             abstention_track_status="blocked",
             citation_batch_track_status="blocked",
+            frontier_rerun_rollup_track_status="blocked",
+            frontier_rerun_rollup_report_count=0,
+            frontier_rerun_rollup_candidate_count=4,
+            frontier_rerun_rollup_missing_report_count=1,
+            frontier_rerun_rollup_invalid_report_count=1,
+            frontier_rerun_rollup_blocked_candidate_count=1,
+            frontier_rerun_rollup_promotion_ready_count=0,
+            frontier_rerun_rollup_promoted_tracks=(),
             citation_batch_observed_batch_count=1,
             citation_batch_missing_expected_batch_count=1,
             run_names=("verifier-stability",),
@@ -35938,7 +36045,14 @@ def test_compare_product_runtime_baselines_gates_frontier_release_evidence_drift
         min_frontier_release_evidence_verifier_track_promote_rate=1.0,
         min_frontier_release_evidence_abstention_track_promote_rate=1.0,
         min_frontier_release_evidence_citation_batch_track_promote_rate=1.0,
+        min_frontier_release_evidence_frontier_rerun_rollup_track_promote_rate=1.0,
         min_frontier_release_evidence_run_count=2,
+        min_frontier_release_evidence_frontier_rerun_rollup_report_count=1,
+        min_frontier_release_evidence_frontier_rerun_rollup_candidate_count=4,
+        max_frontier_release_evidence_frontier_rerun_rollup_missing_report_count=0,
+        max_frontier_release_evidence_frontier_rerun_rollup_invalid_report_count=0,
+        max_frontier_release_evidence_frontier_rerun_rollup_blocked_candidate_count=0,
+        min_frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count=4,
         min_frontier_release_evidence_citation_batch_rollup_count=1,
         max_frontier_release_evidence_citation_batch_missing_expected_batch_count=0,
         max_frontier_release_evidence_citation_batch_duplicate_batch_count=0,
@@ -35951,8 +36065,8 @@ def test_compare_product_runtime_baselines_gates_frontier_release_evidence_drift
     )
 
     assert payload["status"] == "blocked"
-    assert payload["summary"]["blocked_metric_count"] == 7
-    assert payload["summary"]["compared_metric_count"] == 30
+    assert payload["summary"]["blocked_metric_count"] == 13
+    assert payload["summary"]["compared_metric_count"] == 37
     assert _metric_by_name(
         payload,
         "promotion_contract.frontier_release_evidence.coverage_rate",
@@ -35979,13 +36093,29 @@ def test_compare_product_runtime_baselines_gates_frontier_release_evidence_drift
     )["status"] == "blocked"
     assert _metric_by_name(
         payload,
+        "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_track_promote_rate",
+    )["status"] == "blocked"
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_candidate_count.mean",
+    )["status"] == "pass"
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_missing_report_count.mean",
+    )["current"] == pytest.approx(1.0)
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_promotion_ready_count.mean",
+    )["status"] == "blocked"
+    assert _metric_by_name(
+        payload,
         "promotion_contract.frontier_release_evidence.citation_batch_missing_expected_batch_count.mean",
     )["current"] == pytest.approx(1.0)
     assert _metric_by_name(
         payload,
         "promotion_contract.frontier_release_evidence.run_count.mean",
     )["current"] == pytest.approx(1.0)
-    assert manifest["metadata"]["frontier_release_evidence_blocked_metric_count"] == 7
+    assert manifest["metadata"]["frontier_release_evidence_blocked_metric_count"] == 13
     assert manifest["metadata"]["frontier_release_evidence_coverage_rate_status"] == "pass"
     assert manifest["metadata"]["frontier_release_evidence_manifest_present_rate_current"] == (
         pytest.approx(0.0)
@@ -35996,7 +36126,13 @@ def test_compare_product_runtime_baselines_gates_frontier_release_evidence_drift
     assert manifest["metadata"][
         "frontier_release_evidence_citation_batch_missing_expected_batch_count_status"
     ] == "blocked"
-    assert record.metadata["frontier_release_evidence_blocked_metric_count"] == 7
+    assert manifest["metadata"][
+        "frontier_release_evidence_frontier_rerun_rollup_track_promote_rate_status"
+    ] == "blocked"
+    assert manifest["metadata"][
+        "frontier_release_evidence_frontier_rerun_rollup_missing_report_count_current"
+    ] == pytest.approx(1.0)
+    assert record.metadata["frontier_release_evidence_blocked_metric_count"] == 13
     assert record.metadata["frontier_release_evidence_run_count_current"] == pytest.approx(
         1.0
     )
@@ -36005,6 +36141,9 @@ def test_compare_product_runtime_baselines_gates_frontier_release_evidence_drift
     )
     assert record.metadata[
         "frontier_release_evidence_citation_batch_track_promote_rate_status"
+    ] == "blocked"
+    assert record.metadata[
+        "frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count_status"
     ] == "blocked"
 
 
@@ -36629,7 +36768,23 @@ def _promotion_frontier_release_evidence_metadata(
     abstention_track_status: str,
     run_names: Sequence[str],
     manifest_present: bool = True,
+    multiple_testing_track_status: str = "promote",
     citation_batch_track_status: str = "promote",
+    frontier_rerun_rollup_track_status: str = "promote",
+    base_verifier_track_status: str | None = None,
+    base_abstention_track_status: str | None = None,
+    base_detectability_track_status: str = "promote",
+    base_multiple_testing_track_status: str = "promote",
+    frontier_rerun_rollup_promoted_tracks: Sequence[str] = (
+        "verifier",
+        "abstention",
+    ),
+    frontier_rerun_rollup_report_count: int = 4,
+    frontier_rerun_rollup_candidate_count: int = 4,
+    frontier_rerun_rollup_missing_report_count: int = 0,
+    frontier_rerun_rollup_invalid_report_count: int = 0,
+    frontier_rerun_rollup_blocked_candidate_count: int = 0,
+    frontier_rerun_rollup_promotion_ready_count: int = 4,
     citation_batch_rollup_count: int = 1,
     citation_batch_expected_batch_count: int = 2,
     citation_batch_observed_batch_count: int = 2,
@@ -36666,8 +36821,47 @@ def _promotion_frontier_release_evidence_metadata(
         "promotion_contract_frontier_release_evidence_abstention_track_status": (
             abstention_track_status
         ),
+        "promotion_contract_frontier_release_evidence_multiple_testing_track_status": (
+            multiple_testing_track_status
+        ),
         "promotion_contract_frontier_release_evidence_citation_batch_track_status": (
             citation_batch_track_status
+        ),
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_track_status": (
+            frontier_rerun_rollup_track_status
+        ),
+        "promotion_contract_frontier_release_evidence_base_verifier_track_status": (
+            base_verifier_track_status or verifier_track_status
+        ),
+        "promotion_contract_frontier_release_evidence_base_abstention_track_status": (
+            base_abstention_track_status or abstention_track_status
+        ),
+        "promotion_contract_frontier_release_evidence_base_detectability_track_status": (
+            base_detectability_track_status
+        ),
+        "promotion_contract_frontier_release_evidence_base_multiple_testing_track_status": (
+            base_multiple_testing_track_status
+        ),
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_promoted_tracks": tuple(
+            frontier_rerun_rollup_promoted_tracks
+        ),
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_report_count": (
+            frontier_rerun_rollup_report_count
+        ),
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_candidate_count": (
+            frontier_rerun_rollup_candidate_count
+        ),
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_missing_report_count": (
+            frontier_rerun_rollup_missing_report_count
+        ),
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_invalid_report_count": (
+            frontier_rerun_rollup_invalid_report_count
+        ),
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_blocked_candidate_count": (
+            frontier_rerun_rollup_blocked_candidate_count
+        ),
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count": (
+            frontier_rerun_rollup_promotion_ready_count
         ),
         "promotion_contract_frontier_release_evidence_citation_batch_rollup_count": (
             citation_batch_rollup_count

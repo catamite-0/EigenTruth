@@ -111,7 +111,14 @@ _PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "frontier_release_evidence_verifier_track_promote_rate",
     "frontier_release_evidence_abstention_track_promote_rate",
     "frontier_release_evidence_citation_batch_track_promote_rate",
+    "frontier_release_evidence_frontier_rerun_rollup_track_promote_rate",
     "frontier_release_evidence_run_count",
+    "frontier_release_evidence_frontier_rerun_rollup_report_count",
+    "frontier_release_evidence_frontier_rerun_rollup_candidate_count",
+    "frontier_release_evidence_frontier_rerun_rollup_missing_report_count",
+    "frontier_release_evidence_frontier_rerun_rollup_invalid_report_count",
+    "frontier_release_evidence_frontier_rerun_rollup_blocked_candidate_count",
+    "frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count",
     "frontier_release_evidence_citation_batch_rollup_count",
     "frontier_release_evidence_citation_batch_expected_batch_count",
     "frontier_release_evidence_citation_batch_observed_batch_count",
@@ -303,6 +310,18 @@ _PROMOTION_CONTRACT_FRONTIER_RELEASE_EVIDENCE_FIELDS: tuple[str, ...] = (
     "promotion_contract_frontier_release_evidence_abstention_track_status",
     "promotion_contract_frontier_release_evidence_multiple_testing_track_status",
     "promotion_contract_frontier_release_evidence_citation_batch_track_status",
+    "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_track_status",
+    "promotion_contract_frontier_release_evidence_base_verifier_track_status",
+    "promotion_contract_frontier_release_evidence_base_abstention_track_status",
+    "promotion_contract_frontier_release_evidence_base_detectability_track_status",
+    "promotion_contract_frontier_release_evidence_base_multiple_testing_track_status",
+    "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_promoted_tracks",
+    "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_report_count",
+    "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_candidate_count",
+    "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_missing_report_count",
+    "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_invalid_report_count",
+    "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_blocked_candidate_count",
+    "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count",
     "promotion_contract_frontier_release_evidence_citation_batch_rollup_count",
     "promotion_contract_frontier_release_evidence_citation_batch_expected_batch_count",
     "promotion_contract_frontier_release_evidence_citation_batch_observed_batch_count",
@@ -2759,6 +2778,32 @@ def _aggregate_promotion_contract_frontier_release_evidence(
         item.get("promotion_contract_frontier_release_evidence_citation_batch_track_status")
         for item in metrics
     ]
+    frontier_rerun_rollup_status_values = [
+        item.get(
+            "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_track_status"
+        )
+        for item in metrics
+    ]
+    base_verifier_status_values = [
+        item.get("promotion_contract_frontier_release_evidence_base_verifier_track_status")
+        for item in metrics
+    ]
+    base_abstention_status_values = [
+        item.get("promotion_contract_frontier_release_evidence_base_abstention_track_status")
+        for item in metrics
+    ]
+    base_detectability_status_values = [
+        item.get(
+            "promotion_contract_frontier_release_evidence_base_detectability_track_status"
+        )
+        for item in metrics
+    ]
+    base_multiple_testing_status_values = [
+        item.get(
+            "promotion_contract_frontier_release_evidence_base_multiple_testing_track_status"
+        )
+        for item in metrics
+    ]
     return {
         "available_trace_count": available_count,
         "missing_trace_count": len(metrics) - available_count,
@@ -2795,14 +2840,68 @@ def _aggregate_promotion_contract_frontier_release_evidence(
         "abstention_track_status_counts": _counts(abstention_status_values),
         "multiple_testing_track_status_counts": _counts(multiple_testing_status_values),
         "citation_batch_track_status_counts": _counts(citation_batch_status_values),
+        "frontier_rerun_rollup_track_status_counts": _counts(
+            frontier_rerun_rollup_status_values
+        ),
+        "base_verifier_track_status_counts": _counts(base_verifier_status_values),
+        "base_abstention_track_status_counts": _counts(base_abstention_status_values),
+        "base_detectability_track_status_counts": _counts(base_detectability_status_values),
+        "base_multiple_testing_track_status_counts": _counts(
+            base_multiple_testing_status_values
+        ),
+        "frontier_rerun_rollup_promoted_tracks": _counts_from_sequence_items(
+            item.get(
+                "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_promoted_tracks"
+            )
+            for item in metrics
+        ),
         "status_promote_rate": _promote_rate(status_values),
         "decision_promote_rate": _promote_rate(decision_status_values),
         "verifier_track_promote_rate": _promote_rate(verifier_status_values),
         "abstention_track_promote_rate": _promote_rate(abstention_status_values),
         "multiple_testing_track_promote_rate": _promote_rate(multiple_testing_status_values),
         "citation_batch_track_promote_rate": _promote_rate(citation_batch_status_values),
+        "frontier_rerun_rollup_track_promote_rate": _promote_rate(
+            frontier_rerun_rollup_status_values
+        ),
         "run_count": _numeric_summary(
             item.get("promotion_contract_frontier_release_evidence_run_count")
+            for item in metrics
+        ),
+        "frontier_rerun_rollup_report_count": _numeric_summary(
+            item.get(
+                "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_report_count"
+            )
+            for item in metrics
+        ),
+        "frontier_rerun_rollup_candidate_count": _numeric_summary(
+            item.get(
+                "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_candidate_count"
+            )
+            for item in metrics
+        ),
+        "frontier_rerun_rollup_missing_report_count": _numeric_summary(
+            item.get(
+                "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_missing_report_count"
+            )
+            for item in metrics
+        ),
+        "frontier_rerun_rollup_invalid_report_count": _numeric_summary(
+            item.get(
+                "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_invalid_report_count"
+            )
+            for item in metrics
+        ),
+        "frontier_rerun_rollup_blocked_candidate_count": _numeric_summary(
+            item.get(
+                "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_blocked_candidate_count"
+            )
+            for item in metrics
+        ),
+        "frontier_rerun_rollup_promotion_ready_count": _numeric_summary(
+            item.get(
+                "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count"
+            )
             for item in metrics
         ),
         "citation_batch_rollup_count": _numeric_summary(
@@ -4844,6 +4943,24 @@ def _promotion_contract_frontier_release_evidence_flat_metadata(
         "promotion_contract_frontier_release_evidence_citation_batch_track_status_counts": dict(
             _mapping(evidence.get("citation_batch_track_status_counts"))
         ),
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_track_status_counts": dict(
+            _mapping(evidence.get("frontier_rerun_rollup_track_status_counts"))
+        ),
+        "promotion_contract_frontier_release_evidence_base_verifier_track_status_counts": dict(
+            _mapping(evidence.get("base_verifier_track_status_counts"))
+        ),
+        "promotion_contract_frontier_release_evidence_base_abstention_track_status_counts": dict(
+            _mapping(evidence.get("base_abstention_track_status_counts"))
+        ),
+        "promotion_contract_frontier_release_evidence_base_detectability_track_status_counts": dict(
+            _mapping(evidence.get("base_detectability_track_status_counts"))
+        ),
+        "promotion_contract_frontier_release_evidence_base_multiple_testing_track_status_counts": dict(
+            _mapping(evidence.get("base_multiple_testing_track_status_counts"))
+        ),
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_promoted_tracks": dict(
+            _mapping(evidence.get("frontier_rerun_rollup_promoted_tracks"))
+        ),
         "promotion_contract_frontier_release_evidence_status_promote_rate": evidence.get(
             "status_promote_rate"
         ),
@@ -4862,9 +4979,42 @@ def _promotion_contract_frontier_release_evidence_flat_metadata(
         "promotion_contract_frontier_release_evidence_citation_batch_track_promote_rate": (
             evidence.get("citation_batch_track_promote_rate")
         ),
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_track_promote_rate": (
+            evidence.get("frontier_rerun_rollup_track_promote_rate")
+        ),
         "promotion_contract_frontier_release_evidence_run_count_mean": _nested(
             evidence,
             "run_count",
+            "mean",
+        ),
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_report_count_mean": _nested(
+            evidence,
+            "frontier_rerun_rollup_report_count",
+            "mean",
+        ),
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_candidate_count_mean": _nested(
+            evidence,
+            "frontier_rerun_rollup_candidate_count",
+            "mean",
+        ),
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_missing_report_count_mean": _nested(
+            evidence,
+            "frontier_rerun_rollup_missing_report_count",
+            "mean",
+        ),
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_invalid_report_count_mean": _nested(
+            evidence,
+            "frontier_rerun_rollup_invalid_report_count",
+            "mean",
+        ),
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_blocked_candidate_count_mean": _nested(
+            evidence,
+            "frontier_rerun_rollup_blocked_candidate_count",
+            "mean",
+        ),
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count_mean": _nested(
+            evidence,
+            "frontier_rerun_rollup_promotion_ready_count",
             "mean",
         ),
         "promotion_contract_frontier_release_evidence_citation_batch_rollup_count_mean": _nested(
