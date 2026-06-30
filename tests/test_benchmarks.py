@@ -43049,6 +43049,8 @@ def test_sweep_blind_spot_retrieval_queries_ranks_query_strategies(tmp_path):
     assert by_key["answer_overlap_1p0"]["blind_spot"]["target_route_refuted_count"] == 0
     assert by_key["question_answer_overlap_0p5"]["blind_spot"]["target_route_refuted_count"] == 2
     assert by_key["question_answer_overlap_0p5"]["gate"]["pass"] is True
+    assert by_key["answer_overlap_1p0"]["gap_analysis"]["gap_buckets"]["no_retrieval_hits"]["count"] == 2
+    assert by_key["question_answer_overlap_0p5"]["gap_analysis"]["gap_buckets"]["false_refuted"]["count"] == 2
     assert saved["summary"]["best_passing_blind_refuted_count"] == 2
     assert manifest["summary"]["missing_count"] == 0
     assert manifest["artifacts"]["blind_spot_query_sweep"]["exists"] is True

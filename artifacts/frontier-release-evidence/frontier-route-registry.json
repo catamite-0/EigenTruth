@@ -1159,6 +1159,24 @@
       "name": "smollm2-l80-frontier-v4-unresolved-seeded-news-source-family-coverage-audit",
       "path": "artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-coverage-audit-v1/source-family-coverage-audit.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-seeded-news-query-sweep-gap-analysis-v1/artifact-manifest.json",
+        "best_blind_refuted_count": 1,
+        "best_passing_blind_refuted_count": null,
+        "best_passing_strategy": null,
+        "best_strategy": "question_overlap_0p65",
+        "blind_spot_count": 89,
+        "model": "smollm2-l80",
+        "source": "frontier-v4",
+        "status": "complete",
+        "workflow": "blind_spot_retrieval_query_sweep"
+      },
+      "name": "smollm2-l80-frontier-v4-unresolved-seeded-news-query-sweep-gap-analysis",
+      "path": "artifacts/frontier-release-evidence/unresolved-seeded-news-query-sweep-gap-analysis-v1/blind-spot-query-sweep-gap-analysis.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

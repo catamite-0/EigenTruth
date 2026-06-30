@@ -1487,7 +1487,11 @@ to relax the detectability release blocker.
 Sweeps local retrieval query fields and overlap thresholds over the same
 blind-spot set. This is useful after a route audit shows a coverage gap: it
 separates query-construction failures from verifier failures while preserving
-the corpus provenance warning.
+the corpus provenance warning. Each strategy now also embeds a compact
+`gap_analysis` payload from `analyze_retrieval_route_gaps.py`, so blocked
+reports distinguish `no_retrieval_hits`, `false_negative`,
+`low_overlap_after_retrieval`, `false_positive`, and successful
+`false_refuted` / `true_supported` buckets without rerunning a separate sidecar.
 
 ```bash
 OUT=artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep

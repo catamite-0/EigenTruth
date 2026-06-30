@@ -23,6 +23,7 @@ if str(ROOT) not in sys.path:
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from benchmarks.analyze_retrieval_route_gaps import analyze_retrieval_route_gaps  # noqa: E402
 from benchmarks.audit_blind_spot_correction_routes import (  # noqa: E402
     DEFAULT_TARGET_ROUTE,
     audit_blind_spot_correction_routes,
@@ -312,6 +313,10 @@ def _evaluate_strategy(
         target_route=target_route,
         max_examples_per_bucket=max_examples_per_bucket,
     )
+    gap_analysis = analyze_retrieval_route_gaps(
+        verified_rows,
+        max_examples_per_bucket=max_examples_per_bucket,
+    )
     blind_summary = dict(blind_audit["summary"])
     verified_false_alarm = _optional_float(_nested(alpha_payload, "verified", "false_alarm"))
     blind_refuted_rate = float(blind_summary["target_route_refuted_rate"])
@@ -334,6 +339,7 @@ def _evaluate_strategy(
         "target_route_summary": route_summary,
         "target_route_quality": route_quality,
         "blind_spot": blind_summary,
+        "gap_analysis": _compact_gap_analysis(gap_analysis),
         "examples": blind_audit.get("examples", {}),
         "gate": {
             "pass": bool(gate_pass),
@@ -361,6 +367,16 @@ def _selected_route_summary(run: Mapping[str, Any], target_route: str) -> dict[s
         "p95_duration_seconds",
     )
     return {key: route.get(key) for key in keys if key in route}
+
+
+def _compact_gap_analysis(report: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "summary": dict(_nested(report, "summary", default={})),
+        "gap_buckets": dict(_nested(report, "gap_buckets", default={})),
+        "top_gap_tokens": tuple(_nested(report, "top_gap_tokens", default=())),
+        "top_hit_sources": tuple(_nested(report, "top_hit_sources", default=())),
+        "hit_property_counts": dict(_nested(report, "hit_property_counts", default={})),
+    }
 
 
 def _selected_route_quality(run: Mapping[str, Any], target_route: str) -> dict[str, Any]:
