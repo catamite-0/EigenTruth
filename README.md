@@ -312,7 +312,9 @@ current docs' active frontier references when checking whether the v1.9/v6
 handoff artifacts are actually present in the checkout. When references are
 missing, the JSON report includes `recommended_actions` for regenerating the v6
 release candidate, exporting the v1.9 product contract, refreshing the enriched
-handoff, verifying manifests, and rerunning the audit:
+handoff, verifying manifests, and rerunning the audit. It also inspects the
+default frontier `artifact-json-cache.json` and reports how many missing JSON
+artifacts are recoverable from cache before rerunning expensive workflows:
 
 ```bash
 python benchmarks/audit_frontier_artifact_references.py \

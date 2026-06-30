@@ -21,6 +21,7 @@ from eigentruth.registry import (  # noqa: E402
     ArtifactRegistry,
     ArtifactVerificationContext,
     build_artifact_manifest,
+    load_json_cache,
 )
 
 DEFAULT_DOC_PATHS = (
@@ -32,6 +33,9 @@ DEFAULT_DOC_PATHS = (
 DEFAULT_INCLUDE_REGEX = (
     "frontier-audit-release-candidate-v6|"
     "smollm2_product_promotion_contract_v1_9"
+)
+DEFAULT_JSON_CACHE_PATHS = (
+    "artifacts/frontier-audit-release-candidate-v6/artifact-json-cache.json",
 )
 ARTIFACT_REFERENCE_RE = re.compile(r"artifacts/[^\s`'\"|)>\\]+")
 FRONTIER_V6_PREFIX = "artifacts/frontier-audit-release-candidate-v6/"
@@ -131,6 +135,7 @@ def build_frontier_artifact_reference_audit(
     verify_manifests: bool = True,
     recursive_manifests: bool = False,
     max_workers: int = 1,
+    json_cache_paths: Sequence[str | Path] = DEFAULT_JSON_CACHE_PATHS,
     json_path: str | Path | None = None,
     artifact_manifest_path: str | Path | None = None,
     registry_path: str | Path | None = None,
@@ -148,6 +153,7 @@ def build_frontier_artifact_reference_audit(
     include_pattern = re.compile(include_regex) if include_regex else None
     exclude_pattern = re.compile(exclude_regex) if exclude_regex else None
     documents = tuple(_resolve_doc_path(path, root=root_path) for path in doc_paths)
+    json_cache_sources = _load_json_cache_sources(json_cache_paths, root=root_path)
     references = _collect_references(
         documents,
         root=root_path,
@@ -156,6 +162,7 @@ def build_frontier_artifact_reference_audit(
         verify_manifests=verify_manifests,
         recursive_manifests=recursive_manifests,
         max_workers=max_workers,
+        json_cache_sources=json_cache_sources,
     )
     blocking_reasons = _blocking_reasons(references)
     if not references:
@@ -178,6 +185,7 @@ def build_frontier_artifact_reference_audit(
             "verify_manifests": verify_manifests,
             "recursive_manifests": recursive_manifests,
             "max_workers": max_workers,
+            "json_cache_paths": tuple(source["path"] for source in json_cache_sources),
         },
         "references": references,
         "blocking_reasons": tuple(blocking_reasons),
@@ -231,6 +239,7 @@ def _collect_references(
     verify_manifests: bool,
     recursive_manifests: bool,
     max_workers: int,
+    json_cache_sources: Sequence[Mapping[str, Any]],
 ) -> tuple[dict[str, Any], ...]:
     refs: dict[str, dict[str, Any]] = {}
     for document in documents:
@@ -267,6 +276,7 @@ def _collect_references(
             verify_manifests=verify_manifests,
             recursive_manifests=recursive_manifests,
             max_workers=max_workers,
+            json_cache_sources=json_cache_sources,
         )
         for reference, raw in sorted(refs.items())
     )
@@ -281,6 +291,7 @@ def _reference_record(
     verify_manifests: bool,
     recursive_manifests: bool,
     max_workers: int,
+    json_cache_sources: Sequence[Mapping[str, Any]],
 ) -> dict[str, Any]:
     actual_path = root / reference
     exists = actual_path.exists()
@@ -309,6 +320,11 @@ def _reference_record(
         status = "manifest_error"
     elif manifest_verification is not None and not manifest_verification["passed"]:
         status = "manifest_failed"
+    json_cache_hits = _json_cache_hits_for_reference(
+        reference,
+        root=root,
+        json_cache_sources=json_cache_sources,
+    )
 
     documents = {
         document: tuple(sorted(lines))
@@ -327,6 +343,9 @@ def _reference_record(
         record["manifest_verification"] = manifest_verification
     if manifest_error is not None:
         record["manifest_error"] = manifest_error
+    if status == "missing" and json_cache_hits:
+        record["recoverable_from_json_cache"] = True
+        record["json_cache_sources"] = json_cache_hits
     return record
 
 
@@ -347,6 +366,11 @@ def _summary(references: Sequence[Mapping[str, Any]], *, document_count: int) ->
         if _mapping(reference.get("manifest_verification")).get("passed") is False
     )
     errored_manifests = tuple(reference for reference in manifest_refs if reference.get("manifest_error"))
+    recoverable_missing = tuple(
+        reference
+        for reference in references
+        if reference["status"] == "missing" and reference.get("recoverable_from_json_cache")
+    )
     return {
         "document_count": document_count,
         "reference_count": len(references),
@@ -360,6 +384,8 @@ def _summary(references: Sequence[Mapping[str, Any]], *, document_count: int) ->
         "manifest_verified_count": len(verified_manifests),
         "manifest_failed_count": len(failed_manifests),
         "manifest_error_count": len(errored_manifests),
+        "missing_recoverable_from_json_cache_count": len(recoverable_missing),
+        "missing_unrecoverable_count": statuses.get("missing", 0) - len(recoverable_missing),
     }
 
 
@@ -384,6 +410,42 @@ def _recommended_actions(references: Sequence[Mapping[str, Any]]) -> tuple[dict[
     if not missing_paths:
         return ()
     actions: list[dict[str, Any]] = []
+    recoverable_paths = tuple(
+        sorted(
+            str(reference["path"])
+            for reference in references
+            if reference["status"] == "missing" and reference.get("recoverable_from_json_cache")
+        )
+    )
+    if recoverable_paths:
+        cache_paths = tuple(
+            sorted({
+                str(source["cache_path"])
+                for reference in references
+                if str(reference["path"]) in recoverable_paths
+                for source in reference.get("json_cache_sources", ())
+            })
+        )
+        actions.append({
+            "action_id": "restore_cached_json_artifacts",
+            "title": "Restore missing JSON artifacts available in local artifact cache",
+            "action_type": "restore_cached_json_artifacts",
+            "priority": 90,
+            "rationale": (
+                "Some missing JSON references have cached payloads in persisted "
+                "artifact JSON caches and can be restored without rerunning model work."
+            ),
+            "affected_paths": recoverable_paths,
+            "suggested_commands": (),
+            "metadata": {
+                "json_cache_paths": cache_paths,
+                "notes": (
+                    "Only restore cached JSON payloads after confirming the cache is "
+                    "from the intended release run; unrecoverable references still need reruns."
+                ),
+            },
+        })
+
     frontier_missing = tuple(path for path in missing_paths if path.startswith(FRONTIER_V6_PREFIX))
     if frontier_missing:
         actions.append({
@@ -522,6 +584,61 @@ def _recommended_actions(references: Sequence[Mapping[str, Any]]) -> tuple[dict[
     return tuple(sorted(actions, key=lambda action: (-int(action["priority"]), str(action["action_id"]))))
 
 
+def _load_json_cache_sources(
+    json_cache_paths: Sequence[str | Path],
+    *,
+    root: Path,
+) -> tuple[dict[str, Any], ...]:
+    sources: list[dict[str, Any]] = []
+    for path in json_cache_paths:
+        cache_path = _resolve_doc_path(path, root=root)
+        if not cache_path.exists():
+            continue
+        cache = load_json_cache(cache_path)
+        if not cache:
+            continue
+        sources.append({
+            "path": _display_path(cache_path, root=root),
+            "absolute_path": str(cache_path),
+            "cache": cache,
+        })
+    return tuple(sources)
+
+
+def _json_cache_hits_for_reference(
+    reference: str,
+    *,
+    root: Path,
+    json_cache_sources: Sequence[Mapping[str, Any]],
+) -> tuple[dict[str, Any], ...]:
+    reference_path = str((root / reference).resolve())
+    reference_suffix = "/" + reference.replace("\\", "/")
+    hits: list[dict[str, Any]] = []
+    for source in json_cache_sources:
+        cache = _mapping(source.get("cache"))
+        for key, entry in cache.items():
+            key_path = _json_cache_key_path(str(key))
+            if key_path != reference_path and not key_path.endswith(reference_suffix):
+                continue
+            entry_mapping = _mapping(entry)
+            payload = _mapping(entry_mapping.get("payload"))
+            error = entry_mapping.get("error")
+            if error is not None or not payload:
+                continue
+            hits.append({
+                "cache_path": str(source["path"]),
+                "entry_key": str(key),
+                "payload_keys": tuple(sorted(str(item) for item in payload.keys())),
+                "workflow": payload.get("workflow"),
+                "status": payload.get("status"),
+            })
+    return tuple(hits)
+
+
+def _json_cache_key_path(key: str) -> str:
+    return key.split(":", 1)[0]
+
+
 def _write_artifact_manifest(
     *,
     manifest_path: Path,
@@ -611,6 +728,13 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--no-verify-manifests", action="store_true", help="skip manifest verification")
     parser.add_argument("--recursive-manifests", action="store_true", help="verify nested manifests")
     parser.add_argument("--max-workers", type=int, default=1, help="bounded manifest fingerprint workers")
+    parser.add_argument(
+        "--json-cache",
+        action="append",
+        default=None,
+        help="artifact JSON cache to inspect for recoverable missing references; repeatable",
+    )
+    parser.add_argument("--no-json-cache", action="store_true", help="do not inspect artifact JSON caches")
     parser.add_argument("--json", default=None, help="optional audit JSON output path")
     parser.add_argument("--artifact-manifest", default=None, help="optional artifact manifest output path")
     parser.add_argument("--registry", default=None, help="optional local ArtifactRegistry JSON path")
@@ -620,6 +744,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--no-fail", action="store_true", help="do not exit non-zero when blocked")
     args = parser.parse_args(argv)
     include_regex = args.include_regex if args.include_regex else None
+    json_cache_paths = () if args.no_json_cache else tuple(args.json_cache or DEFAULT_JSON_CACHE_PATHS)
     payload = build_frontier_artifact_reference_audit(
         doc_paths=tuple(args.doc or DEFAULT_DOC_PATHS),
         root=args.root,
@@ -628,6 +753,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         verify_manifests=not args.no_verify_manifests,
         recursive_manifests=args.recursive_manifests,
         max_workers=args.max_workers,
+        json_cache_paths=json_cache_paths,
         json_path=args.json,
         artifact_manifest_path=args.artifact_manifest,
         registry_path=args.registry,

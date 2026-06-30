@@ -38,6 +38,22 @@ def test_frontier_artifact_reference_audit_reports_missing_refs_and_verified_man
         + "\n",
         encoding="utf-8",
     )
+    cached_contract_path = (
+        tmp_path
+        / "artifacts"
+        / "smollm2_product_promotion_contract_v1_9"
+        / "product-promotion-contract.json"
+    )
+    json_cache_path = tmp_path / "artifact-json-cache.json"
+    json_cache_path.write_text(
+        json.dumps({
+            f"{cached_contract_path}:10:20:30:40:cached": {
+                "error": None,
+                "payload": {"workflow": "product_promotion_contract", "source_status": "promote"},
+            },
+        }),
+        encoding="utf-8",
+    )
     report_path = tmp_path / "audit" / "frontier-artifact-reference-audit.json"
     audit_manifest_path = tmp_path / "audit" / "artifact-manifest.json"
     registry_path = tmp_path / "registry.json"
@@ -46,6 +62,7 @@ def test_frontier_artifact_reference_audit_reports_missing_refs_and_verified_man
         doc_paths=(doc_path,),
         root=tmp_path,
         include_regex="frontier-audit-release-candidate-v6|smollm2_product_promotion_contract_v1_9",
+        json_cache_paths=(json_cache_path,),
         json_path=report_path,
         artifact_manifest_path=audit_manifest_path,
         registry_path=registry_path,
@@ -62,13 +79,20 @@ def test_frontier_artifact_reference_audit_reports_missing_refs_and_verified_man
     assert payload["status"] == "blocked"
     assert payload["summary"]["reference_count"] == 3
     assert payload["summary"]["missing_count"] == 1
+    assert payload["summary"]["missing_recoverable_from_json_cache_count"] == 1
+    assert payload["summary"]["missing_unrecoverable_count"] == 0
     assert payload["summary"]["manifest_verified_count"] == 1
     assert payload["summary"]["recommended_action_ids"] == (
+        "restore_cached_json_artifacts",
         "export_product_promotion_contract_v1_9",
         "rerun_frontier_artifact_reference_audit",
     )
-    assert payload["recommended_actions"][0]["action_id"] == "export_product_promotion_contract_v1_9"
-    assert payload["recommended_actions"][0]["suggested_commands"][0].startswith(
+    assert payload["recommended_actions"][0]["action_id"] == "restore_cached_json_artifacts"
+    assert payload["recommended_actions"][0]["affected_paths"] == (
+        "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json",
+    )
+    assert payload["recommended_actions"][1]["action_id"] == "export_product_promotion_contract_v1_9"
+    assert payload["recommended_actions"][1]["suggested_commands"][0].startswith(
         "python benchmarks/export_product_promotion_contract.py"
     )
     assert references[
@@ -77,6 +101,12 @@ def test_frontier_artifact_reference_audit_reports_missing_refs_and_verified_man
     assert references[
         "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json"
     ]["status"] == "missing"
+    assert references[
+        "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json"
+    ]["recoverable_from_json_cache"] is True
+    assert references[
+        "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json"
+    ]["json_cache_sources"][0]["workflow"] == "product_promotion_contract"
     assert payload["artifact_manifest_summary"]["missing_count"] == 1
     assert payload["registry_record"] == "report:frontier-artifact-reference-audit:0.1"
     assert registry_record.metadata["status"] == "blocked"

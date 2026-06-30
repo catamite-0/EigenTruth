@@ -5659,7 +5659,9 @@ verifies with `checked=2`; the evidence-handoff manifest verifies with
 Before treating the v6/v1.9 handoff as locally reproducible, scan the active
 doc references against the checkout. A blocked report includes
 `recommended_actions` for the v6 release-candidate rerun, v1.9 contract export,
-evidence-handoff export, manifest verification, and final re-audit:
+evidence-handoff export, manifest verification, and final re-audit. By default
+it also inspects the frontier `artifact-json-cache.json` so the summary splits
+missing references into cache-recoverable and unrecoverable counts:
 
 ```bash
 python benchmarks/audit_frontier_artifact_references.py \
@@ -8402,6 +8404,8 @@ whether the docs' active frontier/product handoff references are actually
 materialized in the local checkout; it reports missing artifacts and verifies any
 referenced artifact manifests that exist, then emits ordered
 `recommended_actions` for regenerating and verifying missing handoff artifacts.
+Use repeated `--json-cache` arguments to inspect additional persisted JSON
+artifact caches, or `--no-json-cache` for a pure filesystem-only audit.
 
 Once verification passes, `promote_artifact_manifest.py` can register the
 manifest and verification report in a local `ArtifactRegistry` JSON file:
