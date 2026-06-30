@@ -1745,6 +1745,33 @@ loop precise: the eleven rows can be manually or route-specifically reviewed,
 while the skipped rows point back to subject binding and value extraction
 improvements.
 
+## `promote_alignment_fact_review_corpus.py`
+
+Gates the review-only alignment fact corpus before any structured-fact
+promotion. Without explicit review decisions, it writes a decision template and
+keeps the run at `needs_review`. With approved decisions, it materializes
+source-family style structured source documents that can be passed to
+`build_source_family_qa_corpus.py` and then audited by the covered-facts
+structured QA route. The gate does not promote verifier evidence by itself.
+
+```bash
+OUT=artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-review-promotion-gate-v1
+
+python benchmarks/promote_alignment_fact_review_corpus.py \
+  --review-corpus artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-fact-review-corpus-v1/alignment-fact-review-corpus.json \
+  --output-dir "$OUT" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-seeded-news-alignment-review-promotion-gate \
+  --version 0.1
+```
+
+The registered v4 gate currently has status `needs_review`: it sees all `11`
+review-corpus rows, writes `11` pending decision-template rows, and emits `0`
+approved source documents. This is the intended fail-closed state until a
+review decision JSONL supplies `approved`, `rejected`, or
+`needs_more_evidence` for each `alignment_candidate_id`.
+
 ## `fetch_blind_spot_wikidata_evidence.py`
 
 Fetches CC0 Wikidata source documents for the collection corpus. Request and

@@ -130,6 +130,173 @@ def test_build_source_family_qa_corpus_extracts_only_structured_metadata(tmp_pat
     assert record.metadata["suite"] == "unit"
 
 
+def test_alignment_fact_review_promotion_gate_requires_explicit_review(tmp_path):
+    module = importlib.import_module("benchmarks.promote_alignment_fact_review_corpus")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    review_corpus_path = tmp_path / "alignment-fact-review-corpus.json"
+    output_dir = tmp_path / "promotion-gate"
+    registry_path = tmp_path / "registry.json"
+    manifest_path = output_dir / "artifact-manifest.json"
+    review_corpus_path.write_text(
+        json.dumps(_alignment_review_corpus_fixture()),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        review_corpus_path=review_corpus_path,
+        output_dir=output_dir,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="alignment-review-promotion-gate-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    template_rows = [
+        json.loads(line)
+        for line in (output_dir / "review-decision-template.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:alignment-review-promotion-gate-unit:0.1"
+    )
+
+    assert payload["status"] == "needs_review"
+    assert payload["summary"]["review_document_count"] == 2
+    assert payload["summary"]["pending_review_count"] == 2
+    assert payload["summary"]["approved_source_document_count"] == 0
+    assert len(template_rows) == 2
+    assert template_rows[0]["alignment_candidate_id"] == "fact:tesla"
+    assert template_rows[0]["allowed_decisions"] == [
+        "approved",
+        "needs_more_evidence",
+        "rejected",
+    ]
+    assert payload["approved_source_documents"]["documents"] == []
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "alignment_fact_review_promotion_gate"
+    assert record.metadata["status"] == "needs_review"
+    assert record.metadata["promotes_verifier_evidence"] is False
+    assert record.metadata["suite"] == "unit"
+
+
+def test_alignment_fact_review_promotion_gate_emits_reviewed_source_docs(tmp_path):
+    gate_module = importlib.import_module("benchmarks.promote_alignment_fact_review_corpus")
+    qa_module = importlib.import_module("benchmarks.build_source_family_qa_corpus")
+
+    review_corpus = _alignment_review_corpus_fixture()
+    payload = gate_module.promote_alignment_fact_review_corpus(
+        review_corpus,
+        review_decisions=(
+            {
+                "alignment_candidate_id": "fact:tesla",
+                "decision": "approved",
+                "reviewer": "unit-reviewer",
+                "reviewed_at": "2026-06-30T00:00:00Z",
+            },
+            {
+                "alignment_candidate_id": "fact:openai",
+                "decision": "rejected",
+                "reviewer": "unit-reviewer",
+            },
+        ),
+    )
+    source_docs = payload["approved_source_documents"]["documents"]
+    qa_corpus = qa_module.build_source_family_qa_corpus(source_docs)
+
+    assert payload["status"] == "ready_for_structured_qa"
+    assert payload["summary"]["approved_source_document_count"] == 1
+    assert payload["summary"]["rejected_count"] == 1
+    assert source_docs[0]["provider"] == "wikidata"
+    assert source_docs[0]["metadata"]["value"] == "Martin Eberhard"
+    assert source_docs[0]["metadata"]["alignment_candidate_id"] == "fact:tesla"
+    assert "label" not in source_docs[0]["metadata"]
+    assert "request_id" not in source_docs[0]["metadata"]
+    assert "model_answer" not in source_docs[0]["metadata"]
+    assert qa_corpus["summary"]["n_documents"] == 1
+    assert qa_corpus["documents"][0]["question"] == "What does Wikidata list as the founder for Tesla Motors?"
+    assert qa_corpus["documents"][0]["answer"] == "Martin Eberhard"
+    assert qa_corpus["documents"][0]["metadata"]["alignment_candidate_id"] == "fact:tesla"
+    assert qa_corpus["documents"][0]["metadata"]["reviewer"] == "unit-reviewer"
+
+
+def test_alignment_fact_review_promotion_gate_rejects_reserved_review_metadata():
+    module = importlib.import_module("benchmarks.promote_alignment_fact_review_corpus")
+
+    payload = module.promote_alignment_fact_review_corpus(
+        _alignment_review_corpus_fixture(),
+        review_decisions=(
+            {
+                "alignment_candidate_id": "fact:tesla",
+                "decision": "approved",
+                "reviewer": "unit-reviewer",
+                "label": 0,
+            },
+        ),
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["approved_source_document_count"] == 0
+    assert payload["summary"]["skip_counts"]["reserved_review_metadata"] == 1
+    assert payload["records"][0]["skip_reason"] == "reserved_review_metadata"
+
+
+def _alignment_review_corpus_fixture() -> dict:
+    return {
+        "schema_version": 1,
+        "corpus_type": "alignment_structured_fact_review_corpus",
+        "status": "ready_for_review",
+        "documents": [
+            {
+                "question": "What does the aligned evidence say is the founder for Tesla Motors?",
+                "answer": "Martin Eberhard",
+                "text": "What does the aligned evidence say is the founder for Tesla Motors? Martin Eberhard",
+                "source": "wikidata:Q478214:P112:Q92743",
+                "metadata": {
+                    "alignment_candidate_id": "fact:tesla",
+                    "alignment_review_document_id": "alignment-review:1",
+                    "provider": "source_family_catalog",
+                    "source_family": "reference",
+                    "evidence_source": "wikidata:Q478214:P112:Q92743",
+                    "evidence_span": "According to Wikidata structured data, Tesla Motors has founder Martin Eberhard.",
+                    "property_hint": "founder:P112",
+                    "statement_property": "P112",
+                    "statement_property_label": "founder",
+                    "subject": "Tesla Motors",
+                    "confidence": 0.95,
+                    "review_required": True,
+                    "usage": "alignment_fact_review_only",
+                    "fact_status": "candidate_review_required",
+                    "route_hints": ["structured_qa", "alignment_fact_review"],
+                },
+            },
+            {
+                "question": "What does the aligned evidence say is the founder for OpenAI?",
+                "answer": "Sam Altman",
+                "text": "What does the aligned evidence say is the founder for OpenAI? Sam Altman",
+                "source": "wikidata:Q21708200:P112:Q565549",
+                "metadata": {
+                    "alignment_candidate_id": "fact:openai",
+                    "alignment_review_document_id": "alignment-review:2",
+                    "provider": "source_family_catalog",
+                    "source_family": "reference",
+                    "evidence_source": "wikidata:Q21708200:P112:Q565549",
+                    "evidence_span": "According to Wikidata structured data, OpenAI has founder Sam Altman.",
+                    "property_hint": "founder:P112",
+                    "statement_property": "P112",
+                    "statement_property_label": "founder",
+                    "subject": "OpenAI",
+                    "confidence": 0.94,
+                    "review_required": True,
+                    "usage": "alignment_fact_review_only",
+                    "fact_status": "candidate_review_required",
+                    "route_hints": ["structured_qa", "alignment_fact_review"],
+                },
+            },
+        ],
+    }
+
+
 def test_source_family_structured_qa_route_workflow_audits_covered_facts(tmp_path):
     module = importlib.import_module("benchmarks.run_source_family_structured_qa_route_workflow")
     registry_module = importlib.import_module("eigentruth.registry")

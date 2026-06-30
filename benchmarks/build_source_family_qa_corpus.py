@@ -47,6 +47,8 @@ RESERVED_METADATA_KEYS = {
 }
 
 PROVENANCE_METADATA_KEYS = (
+    "alignment_candidate_id",
+    "alignment_source_document_id",
     "provider",
     "source_family",
     "source_family_confidence",
@@ -65,6 +67,10 @@ PROVENANCE_METADATA_KEYS = (
     "indicator_name",
     "country_name",
     "country_code_iso3",
+    "review_id",
+    "review_status",
+    "reviewed_at",
+    "reviewer",
 )
 
 

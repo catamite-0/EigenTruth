@@ -1,0 +1,42 @@
+{
+  "corpus_type": "alignment_review_approved_source_documents",
+  "description": "Approved alignment fact-review source documents. These are inputs for source-family structured QA corpus construction, not a broad route promotion by themselves.",
+  "documents": [],
+  "label_usage": {
+    "labels_copied_to_document_metadata": false,
+    "labels_used_for_documents": false,
+    "model_answers_copied_to_document_metadata": false,
+    "request_ids_copied_to_document_metadata": false,
+    "target_ids_copied_to_document_metadata": false
+  },
+  "schema_version": 1,
+  "source": {
+    "builder": "alignment_fact_review_promotion_gate",
+    "review_corpus_type": "alignment_structured_fact_review_corpus"
+  },
+  "status": "empty",
+  "summary": {
+    "approved_source_document_count": 0,
+    "by_property": {},
+    "by_provider": {},
+    "by_source_family": {},
+    "needs_more_evidence_count": 0,
+    "pending_review_count": 11,
+    "rejected_count": 0,
+    "review_decision_count": 0,
+    "review_document_count": 11,
+    "skip_counts": {
+      "approved": 0,
+      "duplicate_review_decision": 0,
+      "invalid_review_decision": 0,
+      "missing_candidate_id": 0,
+      "missing_reviewer": 0,
+      "needs_more_evidence": 0,
+      "pending_review": 11,
+      "rejected": 0,
+      "reserved_review_metadata": 0,
+      "unknown_candidate_id": 0,
+      "unsupported_evidence_source": 0
+    }
+  }
+}
