@@ -1682,6 +1682,36 @@ requests. The alignment requests remain `alignment_audit_only`; they are inputs
 for extracting subject/property/value/evidence-span triples, not verifier
 evidence.
 
+## `audit_blind_spot_alignment_requests.py`
+
+Audits `alignment_audit` requests against an external evidence corpus and emits
+review-only subject/property/value/evidence-span candidates. This is the first
+execution step after a query-sweep gap analysis says source acquisition is
+complete but route quality is still blocked. The output remains non-evidence:
+candidate facts are `structured_fact_review_only` until a later structured-fact
+or world-model route validates them.
+
+```bash
+OUT=artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-audit-v1
+
+python benchmarks/audit_blind_spot_alignment_requests.py \
+  --collection-corpus artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-collection-corpus-v1/evidence-collection-corpus.json \
+  --evidence-corpus artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/evidence-gate/citation-search-corpus.json \
+  --output-dir "$OUT" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-seeded-news-alignment-audit \
+  --version 0.1
+```
+
+The registered v4 audit has status `ready_for_fact_review`: all `89` alignment
+requests find candidate source hits, `32/89` requests reach
+`candidate_fact_ready`, and the run emits `96` review-only fact candidates. The
+main remaining blocker is `property_only_alignment` (`46` requests), followed by
+`subject_only_alignment` (`6`) and `subject_property_aligned_no_value` (`4`).
+This says the next lift is subject/entity binding and value extraction from
+broad source documents, not more generic source-family acquisition.
+
 ## `fetch_blind_spot_wikidata_evidence.py`
 
 Fetches CC0 Wikidata source documents for the collection corpus. Request and

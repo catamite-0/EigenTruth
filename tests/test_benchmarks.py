@@ -43511,6 +43511,130 @@ def test_build_blind_spot_evidence_collection_corpus_compiles_requests(tmp_path)
     assert record.metadata["suite"] == "unit"
 
 
+def test_audit_blind_spot_alignment_requests_outputs_fact_candidates(tmp_path):
+    module = importlib.import_module("benchmarks.audit_blind_spot_alignment_requests")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    collection_path = tmp_path / "evidence-collection-corpus.json"
+    evidence_path = tmp_path / "evidence-corpus.json"
+    output_dir = tmp_path / "alignment-audit"
+    manifest_path = output_dir / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    collection_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "blind_spot_evidence_collection_corpus",
+            "status": "ready_for_collection",
+            "summary": {"target_count": 2},
+            "requests": {
+                "alignment_audit": [
+                    {
+                        "request_id": "align:record-1:1",
+                        "target_id": "record-1",
+                        "request_type": "claim_evidence_alignment",
+                        "priority": "high",
+                        "question_type": "quantity",
+                        "question": "What is the population of Alpha?",
+                        "model_answer": "100.",
+                        "entity_candidates": ["Alpha"],
+                        "wikidata_property_hints": ["population:P1082"],
+                        "query_seeds": ["Alpha population"],
+                        "alignment_actions": ["claim_evidence_alignment"],
+                        "dominant_gap_bucket": "no_retrieval_hits",
+                        "query_sweep_best_strategy": "question_overlap_0p65",
+                        "usage": "alignment_audit_only",
+                    },
+                    {
+                        "request_id": "align:record-2:1",
+                        "target_id": "record-2",
+                        "request_type": "claim_evidence_alignment",
+                        "priority": "medium",
+                        "question_type": "definition",
+                        "question": "What is Beta Syndrome?",
+                        "model_answer": "A moon.",
+                        "entity_candidates": ["Beta Syndrome"],
+                        "wikidata_property_hints": ["description", "instance_of:P31"],
+                        "query_seeds": ["Beta Syndrome A moon"],
+                        "alignment_actions": ["claim_evidence_alignment"],
+                        "usage": "alignment_audit_only",
+                    },
+                ],
+            },
+        }),
+        encoding="utf-8",
+    )
+    evidence_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "corpus_type": "external_retrieval",
+            "documents": [
+                {
+                    "source": "worldbank:alpha:2024",
+                    "text": (
+                        "World Bank official statistics data for population country queries: "
+                        "Alpha had Population, total of 123 in 2024."
+                    ),
+                    "metadata": {
+                        "provider": "worldbank",
+                        "source_family": "official_statistics",
+                        "title": "Population, total for Alpha",
+                        "url": "https://example.test/alpha",
+                    },
+                },
+                {
+                    "source": "openalex:general",
+                    "text": (
+                        "OpenAlex scholarly metadata title: General lunar folklore. "
+                        "The paper discusses moons and ambiguous myths."
+                    ),
+                    "metadata": {
+                        "provider": "openalex",
+                        "source_family": "scholarly",
+                        "title": "General lunar folklore",
+                    },
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        collection_corpus_path=collection_path,
+        evidence_corpus_path=evidence_path,
+        output_dir=output_dir,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="alignment-audit-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:alignment-audit-unit:0.1"
+    )
+    candidates = [
+        json.loads(line)
+        for line in (output_dir / "structured-fact-candidates.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    by_request = {item["request_id"]: item for item in payload["audit_records"]}
+
+    assert payload["workflow"] == "blind_spot_alignment_audit"
+    assert payload["status"] == "ready_for_fact_review"
+    assert payload["label_usage"]["candidate_facts_are_verifier_evidence"] is False
+    assert payload["summary"]["alignment_request_count"] == 2
+    assert payload["summary"]["fact_candidate_count"] == 1
+    assert by_request["align:record-1:1"]["alignment_status"] == "candidate_fact_ready"
+    assert by_request["align:record-2:1"]["alignment_status"] != "candidate_fact_ready"
+    assert candidates[0]["subject"] == "Alpha"
+    assert candidates[0]["property_hint"] == "population:P1082"
+    assert candidates[0]["value"] == "123"
+    assert candidates[0]["usage"] == "structured_fact_review_only"
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "blind_spot_alignment_audit"
+    assert record.metadata["fact_candidate_count"] == 1
+    assert record.metadata["suite"] == "unit"
+
+
 def test_fetch_blind_spot_wikidata_evidence_writes_clean_source_docs(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.fetch_blind_spot_wikidata_evidence")
     registry_module = importlib.import_module("eigentruth.registry")

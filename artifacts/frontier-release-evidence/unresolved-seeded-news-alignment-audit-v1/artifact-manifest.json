@@ -1,0 +1,62 @@
+{
+  "artifacts": {
+    "alignment_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "alignment-records.jsonl",
+      "sha256": "e4ad0ef69c0b52bfc960b66b3759dea58134f2f15b7f80d6b6fdeb9b84c5d914",
+      "size_bytes": 437144
+    },
+    "blind_spot_alignment_audit": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "alignment-audit.json",
+      "sha256": "f49103066ed5f88e9c928344be1cdb799a2b22c7c86e5d786f68e54498ee3cd2",
+      "size_bytes": 605646
+    },
+    "blind_spot_evidence_collection_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-seeded-news-alignment-collection-corpus-v1/evidence-collection-corpus.json",
+      "sha256": "335ce97244bd0fd359879ccf7bfa7175ef7b27cdecb2b64144a692b15fb6940a",
+      "size_bytes": 1848815
+    },
+    "evidence_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-seeded-news-source-family-citation-workflow-v1/evidence-gate/citation-search-corpus.json",
+      "sha256": "112cda167ac246f844dbf2f835b76016f5409c61a98f90b2b7245ee78af129d2",
+      "size_bytes": 2099217
+    },
+    "structured_fact_candidates": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "structured-fact-candidates.jsonl",
+      "sha256": "1f2b15f08a43b83022439825f30f612eed06ece686cffe271718e520d40d4aa8",
+      "size_bytes": 61806
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "alignment_request_count": 89,
+    "fact_candidate_count": 96,
+    "model": "smollm2-l80",
+    "source": "frontier-v4",
+    "status": "ready_for_fact_review",
+    "top_alignment_status": "needs_property_or_subject_alignment",
+    "top_gap_reason": "property_only_alignment",
+    "workflow": "blind_spot_alignment_audit"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}
