@@ -35265,7 +35265,7 @@ def test_run_product_runtime_baseline_reuses_trace_record_cache(tmp_path, monkey
     assert first["config"]["trace_record_cache"]["cache_hit"] is False
     assert first["config"]["trace_record_cache"]["cache_written"] is True
     assert first["paths"]["trace_records_cache"] == str(cache_path)
-    assert cache_payload["schema_version"] == 16
+    assert cache_payload["schema_version"] == 17
     assert cache_payload["workflow"] == "product_runtime_baseline_trace_records"
     assert cache_payload["summary"]["trace_count"] == 2
     assert cache_payload["policy"]["payload"]["max_total_seconds"] == 0.3
@@ -35810,6 +35810,145 @@ def test_compare_product_runtime_baselines_gates_world_model_drift(tmp_path):
     assert manifest["metadata"]["world_model_trace_gap_rate_status"] == "blocked"
     assert record.metadata["world_model_blocked_metric_count"] == 3
     assert record.metadata["world_model_low_agreement_rate_current"] == pytest.approx(0.5)
+
+
+def test_compare_product_runtime_baselines_gates_context_sensitivity_drift(tmp_path):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    registry_module = importlib.import_module("eigentruth.registry")
+    baseline_trace = tmp_path / "baseline-trace.json"
+    current_trace = tmp_path / "current-trace.json"
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    drift_report = tmp_path / "drift.json"
+    manifest_path = tmp_path / "drift-manifest.json"
+    registry_path = tmp_path / "registry.json"
+
+    def write_trace(
+        path: Path,
+        *,
+        request_id: str,
+        verification_results: Sequence[Mapping[str, Any]],
+    ) -> None:
+        path.write_text(
+            json.dumps({
+                "request_id": request_id,
+                "runtime_trace": {
+                    "total_seconds": 0.10,
+                    "phases": [{"name": "initial_verification", "seconds": 0.01}],
+                },
+                "verification_results": list(verification_results),
+            }),
+            encoding="utf-8",
+        )
+
+    write_trace(
+        baseline_trace,
+        request_id="baseline",
+        verification_results=(
+            {
+                "status": "supported",
+                "metadata": {
+                    "context_sensitivity": {
+                        "summary": {
+                            "flagged_rate": 0.0,
+                            "max_unsupported_context_shift": 0.0,
+                            "mean_unsupported_context_shift": 0.0,
+                            "max_context_sensitivity_ratio": 1.0,
+                        },
+                        "metadata": {"paired_metadata": {"adapter": "unit-logprob"}},
+                    },
+                },
+            },
+            {"status": "supported", "metadata": {"selected_route": "lexical"}},
+        ),
+    )
+    write_trace(
+        current_trace,
+        request_id="current",
+        verification_results=(
+            {
+                "status": "refuted",
+                "metadata": {
+                    "context_sensitivity": {
+                        "summary": {
+                            "flagged_rate": 0.75,
+                            "max_unsupported_context_shift": 1.5,
+                            "mean_unsupported_context_shift": 0.9,
+                            "max_context_sensitivity_ratio": 3.0,
+                        },
+                        "metadata": {"paired_metadata": {"adapter": "unit-logprob"}},
+                    },
+                },
+            },
+            {
+                "status": "supported",
+                "metadata": {
+                    "verifier": "context_sensitivity_sidecar",
+                    "context_sensitivity_flagged_rate": 0.0,
+                    "context_sensitivity_max_shift": 0.2,
+                    "context_sensitivity_mean_shift": 0.1,
+                    "context_sensitivity_max_ratio": 1.2,
+                },
+            },
+        ),
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=baseline_report,
+        )
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(current_trace,),
+            report_path=current_report,
+        )
+    )
+
+    payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        report_path=drift_report,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="runtime-drift-context-sensitivity",
+        version="0.1",
+        min_context_sensitivity_participating_trace_rate=1.0,
+        min_context_sensitivity_coverage_rate=0.5,
+        max_context_sensitivity_flagged_result_rate_increase=0.0,
+        max_context_sensitivity_trace_gap_rate_increase=0.0,
+        max_context_sensitivity_max_flagged_rate_increase=0.0,
+        max_context_sensitivity_max_ratio_increase=0.0,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "product_runtime_drift_report:runtime-drift-context-sensitivity:0.1"
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["blocked_metric_count"] == 3
+    assert _metric_by_name(payload, "context_sensitivity.participating_trace_rate")[
+        "status"
+    ] == "pass"
+    assert _metric_by_name(payload, "context_sensitivity.coverage_rate")["status"] == "pass"
+    assert _metric_by_name(payload, "context_sensitivity.flagged_result_rate")[
+        "status"
+    ] == "blocked"
+    assert _metric_by_name(payload, "context_sensitivity.trace_gap_rate")["status"] == "pass"
+    assert _metric_by_name(payload, "context_sensitivity.max_flagged_rate")[
+        "current"
+    ] == pytest.approx(0.75)
+    assert _metric_by_name(payload, "context_sensitivity.max_context_sensitivity_ratio")[
+        "absolute_delta"
+    ] == pytest.approx(2.0)
+    assert payload["config"]["max_context_sensitivity_max_ratio_increase"] == pytest.approx(0.0)
+    assert manifest["metadata"]["context_sensitivity_blocked_metric_count"] == 3
+    assert manifest["metadata"]["context_sensitivity_flagged_result_rate_status"] == "blocked"
+    assert record.metadata["context_sensitivity_blocked_metric_count"] == 3
+    assert record.metadata[
+        "context_sensitivity_max_context_sensitivity_ratio_current"
+    ] == pytest.approx(3.0)
 
 
 def test_compare_product_runtime_baselines_reports_minimum_trace_gate_reason(tmp_path):

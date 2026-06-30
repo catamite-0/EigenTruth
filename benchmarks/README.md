@@ -7846,7 +7846,8 @@ Use `compare_product_runtime_baselines.py` after a fresh trace baseline has been
 built. It compares that current baseline against a file path or a registered
 `product_runtime_baseline:*:*` record and can fail closed on latency, route cost,
 retrieval-use, cache-hit-rate, verifier-skip-rate, trace-level world-model
-participation/coverage/conflict/low-agreement/trace-gap drift,
+participation/coverage/conflict/low-agreement/trace-gap drift, trace-level
+context-sensitivity participation/coverage/flagged-rate/ratio drift,
 promotion-contract coverage, covered-fact per-property rollup drift,
 triple-extraction fixture-matrix coverage/quality drift, claim factuality probe
 comparison coverage, manifest-verification, redline, AUROC,
@@ -7930,6 +7931,12 @@ python benchmarks/compare_product_runtime_baselines.py \
   --max-world-model-conflict-rate-increase 0.0 \
   --max-world-model-low-agreement-rate-increase 0.0 \
   --max-world-model-trace-gap-rate-increase 0.0 \
+  --min-context-sensitivity-participating-trace-rate 1.0 \
+  --min-context-sensitivity-coverage-rate 1.0 \
+  --max-context-sensitivity-flagged-result-rate-increase 0.0 \
+  --max-context-sensitivity-trace-gap-rate-increase 0.0 \
+  --max-context-sensitivity-max-flagged-rate-increase 0.0 \
+  --max-context-sensitivity-max-ratio-increase 0.0 \
   --min-promotion-contract-coverage 1.0 \
   --min-claim-factuality-probe-comparison-coverage 1.0 \
   --min-claim-factuality-probe-comparison-manifest-verified-rate 1.0 \
@@ -8026,7 +8033,14 @@ accepts world-model gates such as
 `--min-runtime-drift-world-model-coverage-rate`,
 `--max-runtime-drift-world-model-conflict-rate-increase`,
 `--max-runtime-drift-world-model-low-agreement-rate-increase`, and
-`--max-runtime-drift-world-model-trace-gap-rate-increase`, plus promotion
+`--max-runtime-drift-world-model-trace-gap-rate-increase`, context-sensitivity
+gates such as
+`--min-runtime-drift-context-sensitivity-participating-trace-rate`,
+`--min-runtime-drift-context-sensitivity-coverage-rate`,
+`--max-runtime-drift-context-sensitivity-flagged-result-rate-increase`,
+`--max-runtime-drift-context-sensitivity-trace-gap-rate-increase`,
+`--max-runtime-drift-context-sensitivity-max-flagged-rate-increase`, and
+`--max-runtime-drift-context-sensitivity-max-ratio-increase`, plus promotion
 evidence gates such as
 `--min-runtime-drift-promotion-contract-coverage`,
 pre-generation probe comparison gates such as

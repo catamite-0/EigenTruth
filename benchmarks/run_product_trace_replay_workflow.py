@@ -125,6 +125,12 @@ class ProductTraceReplayWorkflowConfig:
     max_runtime_drift_world_model_conflict_rate_increase: float | None = None
     max_runtime_drift_world_model_low_agreement_rate_increase: float | None = None
     max_runtime_drift_world_model_trace_gap_rate_increase: float | None = None
+    min_runtime_drift_context_sensitivity_participating_trace_rate: float | None = None
+    min_runtime_drift_context_sensitivity_coverage_rate: float | None = None
+    max_runtime_drift_context_sensitivity_flagged_result_rate_increase: float | None = None
+    max_runtime_drift_context_sensitivity_trace_gap_rate_increase: float | None = None
+    max_runtime_drift_context_sensitivity_max_flagged_rate_increase: float | None = None
+    max_runtime_drift_context_sensitivity_max_ratio_increase: float | None = None
     runtime_drift_covered_fact_property_scopes: Sequence[str] = ()
     min_runtime_drift_covered_fact_property_metric_count: float | None = None
     min_runtime_drift_covered_fact_min_records: float | None = None
@@ -262,6 +268,12 @@ class ProductTraceReplayWorkflowConfig:
                 self.max_runtime_drift_world_model_conflict_rate_increase,
                 self.max_runtime_drift_world_model_low_agreement_rate_increase,
                 self.max_runtime_drift_world_model_trace_gap_rate_increase,
+                self.min_runtime_drift_context_sensitivity_participating_trace_rate,
+                self.min_runtime_drift_context_sensitivity_coverage_rate,
+                self.max_runtime_drift_context_sensitivity_flagged_result_rate_increase,
+                self.max_runtime_drift_context_sensitivity_trace_gap_rate_increase,
+                self.max_runtime_drift_context_sensitivity_max_flagged_rate_increase,
+                self.max_runtime_drift_context_sensitivity_max_ratio_increase,
                 self.min_runtime_drift_covered_fact_property_metric_count,
                 self.min_runtime_drift_covered_fact_min_records,
                 self.min_runtime_drift_covered_fact_min_source_documents,
@@ -1583,6 +1595,24 @@ def _runtime_drift_gate_config(config: ProductTraceReplayWorkflowConfig) -> dict
         "max_world_model_trace_gap_rate_increase": (
             config.max_runtime_drift_world_model_trace_gap_rate_increase
         ),
+        "min_context_sensitivity_participating_trace_rate": (
+            config.min_runtime_drift_context_sensitivity_participating_trace_rate
+        ),
+        "min_context_sensitivity_coverage_rate": (
+            config.min_runtime_drift_context_sensitivity_coverage_rate
+        ),
+        "max_context_sensitivity_flagged_result_rate_increase": (
+            config.max_runtime_drift_context_sensitivity_flagged_result_rate_increase
+        ),
+        "max_context_sensitivity_trace_gap_rate_increase": (
+            config.max_runtime_drift_context_sensitivity_trace_gap_rate_increase
+        ),
+        "max_context_sensitivity_max_flagged_rate_increase": (
+            config.max_runtime_drift_context_sensitivity_max_flagged_rate_increase
+        ),
+        "max_context_sensitivity_max_ratio_increase": (
+            config.max_runtime_drift_context_sensitivity_max_ratio_increase
+        ),
         "promotion_contract_covered_fact_property_scopes": tuple(
             config.runtime_drift_covered_fact_property_scopes
         ),
@@ -1987,6 +2017,7 @@ def _runtime_drift_summary(runtime_drift: Mapping[str, Any]) -> dict[str, Any]:
     claim_factuality_probe_comparison = _claim_factuality_probe_comparison_metric_summary(runtime_drift)
     counterfactual_verification = _counterfactual_verification_metric_summary(runtime_drift)
     evidence_handoff = _evidence_handoff_metric_summary(runtime_drift)
+    context_sensitivity = _context_sensitivity_metric_summary(runtime_drift)
     return {
         "status": runtime_drift.get("status"),
         "gate_enabled": summary.get("gate_enabled"),
@@ -2009,6 +2040,10 @@ def _runtime_drift_summary(runtime_drift: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "world_model_metric_count": world_model["metric_count"],
         "world_model_blocked_metric_count": world_model["blocked_metric_count"],
+        "context_sensitivity_metric_count": context_sensitivity["metric_count"],
+        "context_sensitivity_blocked_metric_count": context_sensitivity[
+            "blocked_metric_count"
+        ],
         "pre_generation_probe_comparison_metric_count": pre_generation_probe_comparison["metric_count"],
         "pre_generation_probe_comparison_blocked_metric_count": (
             pre_generation_probe_comparison["blocked_metric_count"]
@@ -2107,6 +2142,18 @@ def _world_model_metric_summary(runtime_drift: Mapping[str, Any]) -> dict[str, i
         _mapping(metric)
         for metric in _sequence(runtime_drift.get("metrics"))
         if str(_mapping(metric).get("metric") or "").startswith("world_model.")
+    )
+    return {
+        "metric_count": len(metrics),
+        "blocked_metric_count": sum(1 for metric in metrics if metric.get("status") == "blocked"),
+    }
+
+
+def _context_sensitivity_metric_summary(runtime_drift: Mapping[str, Any]) -> dict[str, int]:
+    metrics = tuple(
+        _mapping(metric)
+        for metric in _sequence(runtime_drift.get("metrics"))
+        if str(_mapping(metric).get("metric") or "").startswith("context_sensitivity.")
     )
     return {
         "metric_count": len(metrics),
@@ -2547,6 +2594,16 @@ def _write_artifact_manifest(
                 "runtime_drift",
                 "world_model_blocked_metric_count",
             ),
+            "runtime_drift_context_sensitivity_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "context_sensitivity_metric_count",
+            ),
+            "runtime_drift_context_sensitivity_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "context_sensitivity_blocked_metric_count",
+            ),
             "runtime_drift_pre_generation_probe_comparison_metric_count": _nested(
                 report,
                 "runtime_drift",
@@ -2853,6 +2910,16 @@ def _record_registry(
                 report,
                 "runtime_drift",
                 "world_model_blocked_metric_count",
+            ),
+            "runtime_drift_context_sensitivity_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "context_sensitivity_metric_count",
+            ),
+            "runtime_drift_context_sensitivity_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "context_sensitivity_blocked_metric_count",
             ),
             "runtime_drift_pre_generation_probe_comparison_metric_count": _nested(
                 report,
@@ -3345,6 +3412,24 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
         max_runtime_drift_world_model_trace_gap_rate_increase=(
             args.max_runtime_drift_world_model_trace_gap_rate_increase
         ),
+        min_runtime_drift_context_sensitivity_participating_trace_rate=(
+            args.min_runtime_drift_context_sensitivity_participating_trace_rate
+        ),
+        min_runtime_drift_context_sensitivity_coverage_rate=(
+            args.min_runtime_drift_context_sensitivity_coverage_rate
+        ),
+        max_runtime_drift_context_sensitivity_flagged_result_rate_increase=(
+            args.max_runtime_drift_context_sensitivity_flagged_result_rate_increase
+        ),
+        max_runtime_drift_context_sensitivity_trace_gap_rate_increase=(
+            args.max_runtime_drift_context_sensitivity_trace_gap_rate_increase
+        ),
+        max_runtime_drift_context_sensitivity_max_flagged_rate_increase=(
+            args.max_runtime_drift_context_sensitivity_max_flagged_rate_increase
+        ),
+        max_runtime_drift_context_sensitivity_max_ratio_increase=(
+            args.max_runtime_drift_context_sensitivity_max_ratio_increase
+        ),
         runtime_drift_covered_fact_property_scopes=tuple(
             args.runtime_drift_covered_fact_property_scope or ()
         ),
@@ -3643,6 +3728,28 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-runtime-drift-world-model-conflict-rate-increase", type=float, default=None)
     parser.add_argument("--max-runtime-drift-world-model-low-agreement-rate-increase", type=float, default=None)
     parser.add_argument("--max-runtime-drift-world-model-trace-gap-rate-increase", type=float, default=None)
+    parser.add_argument("--min-runtime-drift-context-sensitivity-participating-trace-rate", type=float, default=None)
+    parser.add_argument("--min-runtime-drift-context-sensitivity-coverage-rate", type=float, default=None)
+    parser.add_argument(
+        "--max-runtime-drift-context-sensitivity-flagged-result-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-context-sensitivity-trace-gap-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-context-sensitivity-max-flagged-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-context-sensitivity-max-ratio-increase",
+        type=float,
+        default=None,
+    )
     parser.add_argument(
         "--runtime-drift-covered-fact-property-scope",
         action="append",

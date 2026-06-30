@@ -488,6 +488,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
         metrics.update(_claim_risk_localization_metrics(trace))
         metrics.update(_triple_coverage_metrics(trace))
         metrics.update(_world_model_metrics(trace))
+        metrics.update(_context_sensitivity_metrics(trace))
         metrics.update(_final_answer_metrics(trace))
         metrics.update(_promotion_contract_metrics(trace))
         return metrics
@@ -530,6 +531,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
     metrics.update(_claim_risk_localization_metrics(trace))
     metrics.update(_triple_coverage_metrics(trace))
     metrics.update(_world_model_metrics(trace))
+    metrics.update(_context_sensitivity_metrics(trace))
     metrics.update(_final_answer_metrics(trace))
     metrics.update(_promotion_contract_metrics(trace))
     return metrics
@@ -1045,6 +1047,62 @@ def _metadata_world_model_summary(payload: Mapping[str, Any]) -> dict[str, Any]:
     trace_corpus = _mapping(metadata.get("trace_corpus"))
     return _mapping(trace_corpus.get("world_model_summary")) or _mapping(
         metadata.get("world_model_summary")
+    )
+
+
+def _context_sensitivity_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:
+    if isinstance(trace, ProductTrace):
+        summary = trace.context_sensitivity_summary()
+        source = "full_trace"
+    else:
+        payload = dict(trace)
+        summary = _mapping(_mapping(payload.get("summaries")).get("context_sensitivity"))
+        if summary:
+            source = "bounded_summary"
+        else:
+            summary = _metadata_context_sensitivity_summary(payload)
+            if summary:
+                source = "metadata_summary"
+            else:
+                summary = ProductTrace(
+                    verification_results=tuple(_sequence(payload.get("verification_results", ()))),
+                ).context_sensitivity_summary()
+                source = "full_trace"
+    return {
+        "context_sensitivity_summary": summary,
+        "context_sensitivity_source": source,
+        "context_sensitivity_total": _finite_float(summary.get("context_sensitivity_total")),
+        "context_sensitivity_coverage_rate": _finite_float(summary.get("coverage_rate")),
+        "context_sensitivity_flagged_result_count": _finite_float(
+            summary.get("flagged_result_count")
+        ),
+        "context_sensitivity_flagged_result_rate": _finite_float(
+            summary.get("flagged_result_rate")
+        ),
+        "context_sensitivity_max_flagged_rate": _finite_float(summary.get("max_flagged_rate")),
+        "context_sensitivity_mean_flagged_rate": _finite_float(summary.get("mean_flagged_rate")),
+        "context_sensitivity_max_unsupported_context_shift": _finite_float(
+            summary.get("max_unsupported_context_shift")
+        ),
+        "context_sensitivity_mean_unsupported_context_shift": _finite_float(
+            summary.get("mean_unsupported_context_shift")
+        ),
+        "context_sensitivity_max_context_sensitivity_ratio": _finite_float(
+            summary.get("max_context_sensitivity_ratio")
+        ),
+        "context_sensitivity_trace_gap_count": _finite_float(summary.get("trace_gap_count")),
+        "context_sensitivity_trace_gap_rate": _finite_float(summary.get("trace_gap_rate")),
+        "context_sensitivity_traceable": _optional_bool(summary.get("traceable")),
+        "context_sensitivity_counts_by_source": _int_mapping(summary.get("counts_by_source")),
+        "context_sensitivity_counts_by_status": _int_mapping(summary.get("counts_by_status")),
+    }
+
+
+def _metadata_context_sensitivity_summary(payload: Mapping[str, Any]) -> dict[str, Any]:
+    metadata = _mapping(payload.get("metadata"))
+    trace_corpus = _mapping(metadata.get("trace_corpus"))
+    return _mapping(trace_corpus.get("context_sensitivity_summary")) or _mapping(
+        metadata.get("context_sensitivity_summary")
     )
 
 

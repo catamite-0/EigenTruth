@@ -21,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-_TRACE_RECORD_CACHE_SCHEMA_VERSION = 16
+_TRACE_RECORD_CACHE_SCHEMA_VERSION = 17
 _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "promotion_contract_coverage_rate",
     "triple_extraction_fixture_matrix_coverage_rate",
@@ -1118,6 +1118,46 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
             _mapping(metrics.get("world_model_counts_by_decision_rule"))
         ),
         "world_model_conflict_paths": dict(_mapping(metrics.get("world_model_conflict_paths"))),
+        "context_sensitivity_summary": dict(
+            _mapping(metrics.get("context_sensitivity_summary"))
+        ),
+        "context_sensitivity_source": metrics.get("context_sensitivity_source"),
+        "context_sensitivity_total": metrics.get("context_sensitivity_total"),
+        "context_sensitivity_coverage_rate": metrics.get("context_sensitivity_coverage_rate"),
+        "context_sensitivity_flagged_result_count": metrics.get(
+            "context_sensitivity_flagged_result_count"
+        ),
+        "context_sensitivity_flagged_result_rate": metrics.get(
+            "context_sensitivity_flagged_result_rate"
+        ),
+        "context_sensitivity_max_flagged_rate": metrics.get(
+            "context_sensitivity_max_flagged_rate"
+        ),
+        "context_sensitivity_mean_flagged_rate": metrics.get(
+            "context_sensitivity_mean_flagged_rate"
+        ),
+        "context_sensitivity_max_unsupported_context_shift": metrics.get(
+            "context_sensitivity_max_unsupported_context_shift"
+        ),
+        "context_sensitivity_mean_unsupported_context_shift": metrics.get(
+            "context_sensitivity_mean_unsupported_context_shift"
+        ),
+        "context_sensitivity_max_context_sensitivity_ratio": metrics.get(
+            "context_sensitivity_max_context_sensitivity_ratio"
+        ),
+        "context_sensitivity_trace_gap_count": metrics.get(
+            "context_sensitivity_trace_gap_count"
+        ),
+        "context_sensitivity_trace_gap_rate": metrics.get(
+            "context_sensitivity_trace_gap_rate"
+        ),
+        "context_sensitivity_traceable": metrics.get("context_sensitivity_traceable"),
+        "context_sensitivity_counts_by_source": dict(
+            _mapping(metrics.get("context_sensitivity_counts_by_source"))
+        ),
+        "context_sensitivity_counts_by_status": dict(
+            _mapping(metrics.get("context_sensitivity_counts_by_status"))
+        ),
         "final_answer_summary": dict(_mapping(metrics.get("final_answer_summary"))),
         "final_answer_available": bool(metrics.get("final_answer_available")),
         "final_answer_source": metrics.get("final_answer_source"),
@@ -1371,6 +1411,7 @@ def _aggregate_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "trajectory_audit": _aggregate_trajectory_audit(metrics),
         "triple_coverage": _aggregate_triple_coverage(metrics),
         "world_model": _aggregate_world_model(metrics),
+        "context_sensitivity": _aggregate_context_sensitivity(metrics),
         "final_answer": _aggregate_final_answer(metrics),
         "decision_sequence": _aggregate_decision_sequence(metrics),
         "promotion_contract": _aggregate_promotion_contract(metrics),
@@ -2418,6 +2459,109 @@ def _aggregate_world_model(metrics: Sequence[Mapping[str, Any]]) -> dict[str, An
         ),
         "agreement_rate_min": _numeric_summary(
             item.get("world_model_agreement_rate_min") for item in metrics
+        ),
+    }
+
+
+def _aggregate_context_sensitivity(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    summaries = [_mapping(item.get("context_sensitivity_summary")) for item in metrics]
+    context_sensitivity_total = _sum_float(summaries, "context_sensitivity_total")
+    flagged_result_count = _sum_float(summaries, "flagged_result_count")
+    trace_gap_count = _sum_float(summaries, "trace_gap_count")
+    counts_by_status: dict[str, int] = {}
+    counts_by_source: dict[str, int] = {}
+    for summary in summaries:
+        _merge_counts(counts_by_status, _mapping(summary.get("counts_by_status")))
+    for item in metrics:
+        _merge_counts(
+            counts_by_source,
+            _mapping(item.get("context_sensitivity_counts_by_source")),
+        )
+    participating_trace_count = sum(
+        1
+        for item in metrics
+        if (_finite_float(item.get("context_sensitivity_total")) or 0.0) > 0.0
+    )
+    traceable_trace_count = sum(
+        1 for item in metrics if item.get("context_sensitivity_traceable") is True
+    )
+    untraceable_trace_count = sum(
+        1
+        for item in metrics
+        if (_finite_float(item.get("context_sensitivity_total")) or 0.0) > 0.0
+        and item.get("context_sensitivity_traceable") is False
+    )
+    max_flagged_rates = [
+        value
+        for item in metrics
+        if (value := _finite_float(item.get("context_sensitivity_max_flagged_rate")))
+        is not None
+    ]
+    max_shifts = [
+        value
+        for item in metrics
+        if (
+            value := _finite_float(
+                item.get("context_sensitivity_max_unsupported_context_shift")
+            )
+        )
+        is not None
+    ]
+    max_ratios = [
+        value
+        for item in metrics
+        if (
+            value := _finite_float(
+                item.get("context_sensitivity_max_context_sensitivity_ratio")
+            )
+        )
+        is not None
+    ]
+    return {
+        "source_trace_count": len(metrics),
+        "summary_observations": sum(1 for summary in summaries if summary),
+        "source_counts": _counts(item.get("context_sensitivity_source") for item in metrics),
+        "participating_trace_count": participating_trace_count,
+        "participating_trace_rate": _safe_div(participating_trace_count, len(metrics)),
+        "context_sensitivity_total": context_sensitivity_total,
+        "coverage_rate": _safe_div(context_sensitivity_total, _sum_float(summaries, "total")),
+        "flagged_result_count": flagged_result_count,
+        "flagged_result_rate": _safe_div(flagged_result_count, context_sensitivity_total),
+        "trace_gap_count": trace_gap_count,
+        "trace_gap_rate": _safe_div(trace_gap_count, context_sensitivity_total),
+        "traceable_trace_count": traceable_trace_count,
+        "untraceable_trace_count": untraceable_trace_count,
+        "max_flagged_rate": max(max_flagged_rates) if max_flagged_rates else None,
+        "max_unsupported_context_shift": max(max_shifts) if max_shifts else None,
+        "max_context_sensitivity_ratio": max(max_ratios) if max_ratios else None,
+        "counts_by_status": counts_by_status,
+        "counts_by_source": counts_by_source,
+        "per_trace_result_count": _numeric_summary(
+            item.get("context_sensitivity_total") for item in metrics
+        ),
+        "per_trace_coverage_rate": _numeric_summary(
+            item.get("context_sensitivity_coverage_rate") for item in metrics
+        ),
+        "per_trace_flagged_result_rate": _numeric_summary(
+            item.get("context_sensitivity_flagged_result_rate") for item in metrics
+        ),
+        "per_trace_max_flagged_rate": _numeric_summary(
+            item.get("context_sensitivity_max_flagged_rate") for item in metrics
+        ),
+        "per_trace_mean_flagged_rate": _numeric_summary(
+            item.get("context_sensitivity_mean_flagged_rate") for item in metrics
+        ),
+        "per_trace_max_unsupported_context_shift": _numeric_summary(
+            item.get("context_sensitivity_max_unsupported_context_shift") for item in metrics
+        ),
+        "per_trace_mean_unsupported_context_shift": _numeric_summary(
+            item.get("context_sensitivity_mean_unsupported_context_shift") for item in metrics
+        ),
+        "per_trace_max_context_sensitivity_ratio": _numeric_summary(
+            item.get("context_sensitivity_max_context_sensitivity_ratio") for item in metrics
+        ),
+        "per_trace_trace_gap_rate": _numeric_summary(
+            item.get("context_sensitivity_trace_gap_rate") for item in metrics
         ),
     }
 

@@ -278,6 +278,9 @@ class ProductTrace:
             "world_model": _world_model_summary_from_results(
                 prepared.verification_results,
             ),
+            "context_sensitivity": _context_sensitivity_summary_from_results(
+                prepared.verification_results,
+            ),
             "runtime": _runtime_summary_from_payload(prepared.runtime_trace),
             "cache": _cache_summary_from_metadata(prepared.metadata),
             "verification_stage": _verification_stage_summary_from_payload(
@@ -380,6 +383,12 @@ class ProductTrace:
     def world_model_summary(self) -> dict[str, Any]:
         """Summarize world-model evidence, conflicts, and traceability gaps."""
         return _world_model_summary_from_results(
+            tuple(_verification_result_to_dict(result) for result in self.verification_results)
+        )
+
+    def context_sensitivity_summary(self) -> dict[str, Any]:
+        """Summarize evidence-context sensitivity signals recorded on verifier results."""
+        return _context_sensitivity_summary_from_results(
             tuple(_verification_result_to_dict(result) for result in self.verification_results)
         )
 
@@ -872,6 +881,147 @@ def _world_model_low_agreement(metadata: Mapping[str, Any]) -> bool:
     decision_rule = str(metadata.get("decision_rule", ""))
     prediction_rule = str(prediction_metadata.get("decision_rule", ""))
     return "agreement_below_threshold" in decision_rule or "agreement_below_threshold" in prediction_rule
+
+
+def _context_sensitivity_summary_from_results(
+    results: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    counts_by_status: dict[str, int] = {}
+    counts_by_source: dict[str, int] = {}
+    flagged_rates: list[float] = []
+    max_shifts: list[float] = []
+    mean_shifts: list[float] = []
+    max_ratios: list[float] = []
+    context_sensitivity_total = 0
+    flagged_result_count = 0
+    trace_gap_count = 0
+
+    for result in results:
+        metadata = _mapping(result.get("metadata"))
+        if not _is_context_sensitivity_result(metadata):
+            continue
+        context_sensitivity_total += 1
+        _increment_count(counts_by_status, result.get("status", "unknown"))
+        _increment_count(counts_by_source, _context_sensitivity_source(metadata))
+
+        summary = _context_sensitivity_result_summary(metadata)
+        if not summary:
+            trace_gap_count += 1
+
+        flagged_rate = _finite_float(
+            _first_present(
+                summary.get("flagged_rate"),
+                metadata.get("context_sensitivity_flagged_rate"),
+            )
+        )
+        max_shift = _finite_float(
+            _first_present(
+                summary.get("max_unsupported_context_shift"),
+                summary.get("max_shift"),
+                metadata.get("context_sensitivity_max_shift"),
+            )
+        )
+        mean_shift = _finite_float(
+            _first_present(
+                summary.get("mean_unsupported_context_shift"),
+                summary.get("mean_shift"),
+                metadata.get("context_sensitivity_mean_shift"),
+            )
+        )
+        max_ratio = _finite_float(
+            _first_present(
+                summary.get("max_context_sensitivity_ratio"),
+                summary.get("max_ratio"),
+                metadata.get("context_sensitivity_max_context_sensitivity_ratio"),
+                metadata.get("context_sensitivity_max_ratio"),
+            )
+        )
+
+        if flagged_rate is not None:
+            flagged_rates.append(flagged_rate)
+            if flagged_rate > 0.0:
+                flagged_result_count += 1
+        if max_shift is not None:
+            max_shifts.append(max_shift)
+        if mean_shift is not None:
+            mean_shifts.append(mean_shift)
+        if max_ratio is not None:
+            max_ratios.append(max_ratio)
+
+    return {
+        "total": len(results),
+        "context_sensitivity_total": context_sensitivity_total,
+        "coverage_rate": _safe_div(context_sensitivity_total, len(results)) or 0.0,
+        "flagged_result_count": flagged_result_count,
+        "flagged_result_rate": _safe_div(
+            flagged_result_count,
+            context_sensitivity_total,
+        ) or 0.0,
+        "max_flagged_rate": max(flagged_rates) if flagged_rates else None,
+        "mean_flagged_rate": _mean_or_none(flagged_rates),
+        "max_unsupported_context_shift": max(max_shifts) if max_shifts else None,
+        "mean_unsupported_context_shift": _mean_or_none(mean_shifts),
+        "max_context_sensitivity_ratio": max(max_ratios) if max_ratios else None,
+        "trace_gap_count": trace_gap_count,
+        "trace_gap_rate": _safe_div(trace_gap_count, context_sensitivity_total) or 0.0,
+        "counts_by_status": counts_by_status,
+        "counts_by_source": counts_by_source,
+        "traceable": context_sensitivity_total > 0 and trace_gap_count == 0,
+    }
+
+
+def _is_context_sensitivity_result(metadata: Mapping[str, Any]) -> bool:
+    if any(key in metadata for key in _CONTEXT_SENSITIVITY_TRACE_METADATA_KEYS):
+        return True
+    context_sensitivity = _mapping(metadata.get("context_sensitivity"))
+    return any(key in context_sensitivity for key in ("summary", "token_scores", "tokens"))
+
+
+_CONTEXT_SENSITIVITY_TRACE_METADATA_KEYS = (
+    "context_sensitivity",
+    "context_sensitivity_summary",
+    "context_sensitivity_flagged_rate",
+    "context_sensitivity_max_shift",
+    "context_sensitivity_mean_shift",
+    "context_sensitivity_max_ratio",
+    "context_sensitivity_max_context_sensitivity_ratio",
+)
+
+
+def _context_sensitivity_result_summary(metadata: Mapping[str, Any]) -> Mapping[str, Any]:
+    context_sensitivity = _mapping(metadata.get("context_sensitivity"))
+    summary = _mapping(context_sensitivity.get("summary"))
+    if summary:
+        return summary
+    summary = _mapping(metadata.get("context_sensitivity_summary"))
+    if summary:
+        return summary
+    flat = {
+        "flagged_rate": metadata.get("context_sensitivity_flagged_rate"),
+        "max_unsupported_context_shift": metadata.get("context_sensitivity_max_shift"),
+        "mean_unsupported_context_shift": metadata.get("context_sensitivity_mean_shift"),
+        "max_context_sensitivity_ratio": _first_present(
+            metadata.get("context_sensitivity_max_context_sensitivity_ratio"),
+            metadata.get("context_sensitivity_max_ratio"),
+        ),
+    }
+    return {key: value for key, value in flat.items() if value is not None}
+
+
+def _context_sensitivity_source(metadata: Mapping[str, Any]) -> str | None:
+    context_sensitivity = _mapping(metadata.get("context_sensitivity"))
+    context_metadata = _mapping(context_sensitivity.get("metadata"))
+    paired_metadata = _mapping(context_metadata.get("paired_metadata"))
+    raw = _first_present(
+        context_metadata.get("adapter"),
+        paired_metadata.get("adapter"),
+        metadata.get("context_sensitivity_source"),
+        metadata.get("selected_verifier"),
+        metadata.get("verifier"),
+    )
+    if raw is None:
+        return None
+    return str(raw)
 
 
 def _runtime_summary_from_payload(payload: Mapping[str, Any] | None) -> dict[str, Any]:
@@ -2029,6 +2179,13 @@ def _mapping(value: Any) -> dict[str, Any]:
     if isinstance(value, Mapping):
         return dict(value)
     return {}
+
+
+def _first_present(*values: Any) -> Any:
+    for value in values:
+        if value is not None:
+            return value
+    return None
 
 
 def _triple_payloads(value: Any) -> tuple[Mapping[str, Any], ...]:

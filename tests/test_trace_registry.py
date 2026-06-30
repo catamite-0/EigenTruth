@@ -1827,6 +1827,71 @@ def test_product_trace_world_model_summary_ignores_generic_prediction_metadata()
     assert summary["traceable"] is False
 
 
+def test_product_trace_context_sensitivity_summary_feeds_runtime_metrics():
+    trace = ProductTrace(
+        verification_results=(
+            VerificationResult(
+                status=VerificationStatus.REFUTED,
+                confidence=0.42,
+                metadata={
+                    "context_sensitivity": {
+                        "summary": {
+                            "flagged_rate": 0.5,
+                            "max_unsupported_context_shift": 1.2,
+                            "mean_unsupported_context_shift": 0.6,
+                            "max_context_sensitivity_ratio": 3.0,
+                        },
+                        "metadata": {
+                            "paired_metadata": {"adapter": "unit-logprob"},
+                        },
+                    },
+                },
+            ),
+            VerificationResult(
+                status=VerificationStatus.SUPPORTED,
+                confidence=0.9,
+                metadata={
+                    "verifier": "context_sensitivity_sidecar",
+                    "context_sensitivity_flagged_rate": 0.0,
+                    "context_sensitivity_max_shift": 0.1,
+                    "context_sensitivity_mean_shift": 0.05,
+                    "context_sensitivity_max_ratio": 1.1,
+                },
+            ),
+            VerificationResult(status=VerificationStatus.SUPPORTED, confidence=0.8),
+        )
+    )
+
+    summary = trace.context_sensitivity_summary()
+    bounded = trace.to_bounded_dict()
+    metrics = product_runtime_metrics(trace)
+    bounded_metrics = product_runtime_metrics(bounded)
+
+    assert summary["total"] == 3
+    assert summary["context_sensitivity_total"] == 2
+    assert summary["coverage_rate"] == pytest.approx(2 / 3)
+    assert summary["flagged_result_count"] == 1
+    assert summary["flagged_result_rate"] == pytest.approx(0.5)
+    assert summary["max_flagged_rate"] == pytest.approx(0.5)
+    assert summary["max_unsupported_context_shift"] == pytest.approx(1.2)
+    assert summary["max_context_sensitivity_ratio"] == pytest.approx(3.0)
+    assert summary["counts_by_source"] == {
+        "unit-logprob": 1,
+        "context_sensitivity_sidecar": 1,
+    }
+    assert bounded["summaries"]["context_sensitivity"]["context_sensitivity_total"] == 2
+    assert metrics["context_sensitivity_source"] == "full_trace"
+    assert metrics["context_sensitivity_flagged_result_rate"] == pytest.approx(0.5)
+    assert metrics["context_sensitivity_counts_by_source"] == {
+        "unit-logprob": 1,
+        "context_sensitivity_sidecar": 1,
+    }
+    assert bounded_metrics["context_sensitivity_source"] == "bounded_summary"
+    assert bounded_metrics["context_sensitivity_max_context_sensitivity_ratio"] == pytest.approx(3.0)
+    json.dumps(summary)
+    json.dumps(bounded)
+
+
 def test_product_trace_verification_route_cost_summary_matches_benchmark_fields():
     trace = ProductTrace(
         verification_results=(
