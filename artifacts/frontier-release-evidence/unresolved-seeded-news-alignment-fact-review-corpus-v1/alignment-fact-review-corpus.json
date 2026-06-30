@@ -29,10 +29,62 @@
       "text": "What does the aligned evidence say is the description for English? West Germanic language"
     },
     {
+      "answer": "ethnic group in the United States with Hispanic or Latin American ancestry",
+      "metadata": {
+        "alignment_candidate_id": "fact:786a724716c475ab",
+        "alignment_review_document_id": "alignment-review:2",
+        "confidence": 0.893846,
+        "evidence_source": "wikidata:Q58669:description",
+        "evidence_span": "According to Wikidata entity metadata, Hispanic and Latino Americans is described as ethnic group in the United States with Hispanic or Latin American ancestry.",
+        "fact_status": "candidate_review_required",
+        "property_hint": "description",
+        "provider": "source_family_catalog",
+        "review_required": true,
+        "route_hints": [
+          "structured_qa",
+          "alignment_fact_review"
+        ],
+        "source_family": "reference",
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "subject": "Americans",
+        "usage": "alignment_fact_review_only"
+      },
+      "question": "What does the aligned evidence say is the description for Americans?",
+      "source": "wikidata:Q58669:description",
+      "text": "What does the aligned evidence say is the description for Americans? ethnic group in the United States with Hispanic or Latin American ancestry"
+    },
+    {
+      "answer": "American singer and actor (1935\u20131977)",
+      "metadata": {
+        "alignment_candidate_id": "fact:fd6fb4eb7882c9d6",
+        "alignment_review_document_id": "alignment-review:3",
+        "confidence": 0.99,
+        "evidence_source": "wikidata:Q303:description",
+        "evidence_span": "According to Wikidata entity metadata, Elvis Presley is described as American singer and actor (1935\u20131977).",
+        "fact_status": "candidate_review_required",
+        "property_hint": "description",
+        "provider": "source_family_catalog",
+        "review_required": true,
+        "route_hints": [
+          "structured_qa",
+          "alignment_fact_review"
+        ],
+        "source_family": "reference",
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "subject": "Elvis",
+        "usage": "alignment_fact_review_only"
+      },
+      "question": "What does the aligned evidence say is the description for Elvis?",
+      "source": "wikidata:Q303:description",
+      "text": "What does the aligned evidence say is the description for Elvis? American singer and actor (1935\u20131977)"
+    },
+    {
       "answer": "https://www.redbull.com/it-it/energydrink",
       "metadata": {
-        "alignment_candidate_id": "fact:6295d9c4ede069f0",
-        "alignment_review_document_id": "alignment-review:2",
+        "alignment_candidate_id": "fact:30f3674524bb5a41",
+        "alignment_review_document_id": "alignment-review:4",
         "confidence": 0.99,
         "evidence_source": "wikidata:Q51482:P856:5782e46194d5",
         "evidence_span": "According to Wikidata structured data, Red Bull has official website https://www.redbull.com/it-it/energydrink.",
@@ -57,8 +109,8 @@
     {
       "answer": "American actress (born 1969)",
       "metadata": {
-        "alignment_candidate_id": "fact:8b6441464ba8dfee",
-        "alignment_review_document_id": "alignment-review:3",
+        "alignment_candidate_id": "fact:68c343a15fbd1507",
+        "alignment_review_document_id": "alignment-review:5",
         "confidence": 0.94,
         "evidence_source": "wikidata:Q32522:description",
         "evidence_span": "According to Wikidata entity metadata, Jennifer Aniston is described as American actress (born 1969).",
@@ -83,8 +135,8 @@
     {
       "answer": "France",
       "metadata": {
-        "alignment_candidate_id": "fact:34015beadc9a1c2e",
-        "alignment_review_document_id": "alignment-review:4",
+        "alignment_candidate_id": "fact:ab73969401a0525e",
+        "alignment_review_document_id": "alignment-review:6",
         "confidence": 0.904286,
         "evidence_source": "wikidata:Q150:P17:Q142",
         "evidence_span": "According to Wikidata structured data, French has country France.",
@@ -110,7 +162,7 @@
       "answer": "regional subgenre of hip-hop music that originated in New York City during the 1970s",
       "metadata": {
         "alignment_candidate_id": "fact:8e15f8b2a4226750",
-        "alignment_review_document_id": "alignment-review:5",
+        "alignment_review_document_id": "alignment-review:7",
         "confidence": 0.904286,
         "evidence_source": "wikidata:Q876171:description",
         "evidence_span": "According to Wikidata entity metadata, East Coast hip-hop is described as regional subgenre of hip-hop music that originated in New York City during the 1970s.",
@@ -136,7 +188,7 @@
       "answer": "sovereign state in Northwestern Europe",
       "metadata": {
         "alignment_candidate_id": "fact:6ee8468ce47c1905",
-        "alignment_review_document_id": "alignment-review:6",
+        "alignment_review_document_id": "alignment-review:8",
         "confidence": 0.856667,
         "evidence_source": "wikidata:Q27:description",
         "evidence_span": "According to Wikidata entity metadata, Ireland is described as sovereign state in Northwestern Europe.",
@@ -175,33 +227,33 @@
   },
   "status": "ready_for_review",
   "summary": {
-    "accepted_document_count": 6,
+    "accepted_document_count": 8,
     "by_property_hint": {
       "country:P17": 1,
-      "description": 4,
+      "description": 6,
       "official_website:P856": 1
     },
     "by_provider": {
-      "source_family_catalog": 6
+      "source_family_catalog": 8
     },
     "by_source_family": {
-      "reference": 6
+      "reference": 8
     },
-    "input_candidate_count": 96,
+    "input_candidate_count": 37,
     "skipped": {
-      "answer_value_matches_model_answer": 9,
-      "duplicate_candidate": 21,
-      "generic_value": 12,
+      "answer_value_matches_model_answer": 0,
+      "duplicate_candidate": 4,
+      "generic_value": 0,
       "invalid_row": 0,
       "low_confidence": 0,
       "missing_required_fields": 0,
       "non_review_usage": 0,
-      "property_value_invalid": 0,
-      "subject_not_in_evidence_span": 48,
+      "property_value_invalid": 1,
+      "subject_not_in_evidence_span": 24,
       "value_equals_subject": 0,
       "value_not_in_evidence_span": 0
     },
-    "skipped_count": 90,
-    "unique_candidate_count": 32
+    "skipped_count": 29,
+    "unique_candidate_count": 37
   }
 }

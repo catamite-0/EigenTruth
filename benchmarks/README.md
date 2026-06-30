@@ -1705,12 +1705,13 @@ python benchmarks/audit_blind_spot_alignment_requests.py \
 ```
 
 The registered v4 audit has status `ready_for_fact_review`: all `89` alignment
-requests find candidate source hits, `32/89` requests reach
-`candidate_fact_ready`, and the run emits `96` review-only fact candidates. The
-main remaining blocker is `property_only_alignment` (`46` requests), followed by
-`subject_only_alignment` (`6`) and `subject_property_aligned_no_value` (`4`).
-This says the next lift is subject/entity binding and value extraction from
-broad source documents, not more generic source-family acquisition.
+requests find candidate source hits, `33/89` requests reach
+`candidate_fact_ready`, and the run emits `37` deduplicated review-only fact
+candidates. The main remaining blocker is `property_only_alignment` (`46`
+requests), followed by `subject_only_alignment` (`6`) and
+`subject_property_aligned_no_value` (`3`). This says the next lift is
+subject/entity binding and value extraction from broad source documents, not
+more generic source-family acquisition.
 
 ## `build_alignment_fact_review_corpus.py`
 
@@ -1735,11 +1736,11 @@ python benchmarks/build_alignment_fact_review_corpus.py \
   --version 0.1
 ```
 
-The registered v4 review corpus accepts `6/96` candidates after deduplication
-and quality gates. The dominant skip reasons are subject/evidence-span mismatch
-(`48`), duplicate candidates (`21`), generic extracted values (`12`), and
-answer-value/model-answer matches (`9`). This keeps the next loop precise: the
-six rows can be manually or route-specifically reviewed, while the skipped rows
+The registered v4 review corpus accepts `8/37` candidates after upstream
+deduplication and quality gates. The dominant skip reasons are
+subject/evidence-span mismatch (`24`), duplicate candidates (`4`), and one
+property/value validation failure. This keeps the next loop precise: the eight
+rows can be manually or route-specifically reviewed, while the skipped rows
 point back to subject binding and value extraction improvements.
 
 ## `fetch_blind_spot_wikidata_evidence.py`

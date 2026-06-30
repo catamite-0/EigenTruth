@@ -34,6 +34,7 @@ DEFAULT_MAX_DOCS_PER_REQUEST = 5
 DEFAULT_MIN_ALIGNMENT_SCORE = 0.12
 TOKEN_RE = re.compile(r"[A-Za-z0-9]+|[\u4e00-\u9fff]+")
 NUMBER_RE = re.compile(r"[-+]?\d[\d,]*(?:\.\d+)?(?:\s*(?:million|billion|thousand|%|percent))?", re.I)
+URL_RE = re.compile(r"https?://[^\s)]+")
 CAPITALIZED_SPAN_RE = re.compile(r"\b[A-Z][A-Za-z0-9&.'-]*(?:\s+[A-Z][A-Za-z0-9&.'-]*)*")
 SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+|\n+")
 DESCRIBED_AS_RE = re.compile(r"\b(?:is|are|was|were)\s+described\s+as\s+(?P<value>[^.]+)", re.I)
@@ -48,9 +49,13 @@ GENERIC_VALUE_CANDIDATES = {
     "That",
     "Source",
     "Indicator",
+    "According",
     "OpenAlex",
+    "Official USDA ERS",
+    "Population",
     "World Bank",
 }
+GENERIC_VALUE_CANDIDATES_CASEFOLD = {item.casefold() for item in GENERIC_VALUE_CANDIDATES}
 QUESTION_STOPWORDS = {
     "a",
     "an",
@@ -342,15 +347,25 @@ def _fact_candidates(
     if status != "candidate_fact_ready":
         return ()
     candidates: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, str, str]] = set()
     request_id = str(request.get("request_id", ""))
     subject = _first_nonempty(tuple(str(item) for item in _sequence(request.get("entity_candidates"))))
     for hit in hits:
         property_hint = str(hit.get("matched_property_hint") or "")
         if not subject or not property_hint:
             continue
-        value = _candidate_value(str(hit.get("evidence_span", "")), request=request)
+        value = _candidate_value(str(hit.get("evidence_span", "")), request=request, property_hint=property_hint)
         if not value:
             continue
+        fact_key = (
+            subject.casefold(),
+            property_hint.casefold(),
+            value.casefold(),
+            str(hit.get("source", "")).casefold(),
+        )
+        if fact_key in seen:
+            continue
+        seen.add(fact_key)
         candidate_id = _stable_id(request_id, subject, property_hint, value, str(hit.get("source", "")))
         candidates.append({
             "candidate_id": f"fact:{candidate_id}",
@@ -378,7 +393,13 @@ def _gap_reason(best_hit: Mapping[str, Any] | None, *, request: Mapping[str, Any
         return "no_candidate_evidence"
     entity = bool(best_hit.get("matched_entity"))
     prop = bool(best_hit.get("matched_property_hint"))
-    value = bool(_candidate_value(str(best_hit.get("evidence_span", "")), request=request))
+    value = bool(
+        _candidate_value(
+            str(best_hit.get("evidence_span", "")),
+            request=request,
+            property_hint=str(best_hit.get("matched_property_hint") or ""),
+        )
+    )
     if entity and prop and value:
         return "subject_property_value_aligned"
     if entity and prop:
@@ -535,9 +556,31 @@ def _matched_answer_value(text: str, answer: str) -> bool:
     return bool(answer) and answer.casefold() in text.casefold()
 
 
-def _candidate_value(span: str, *, request: Mapping[str, Any]) -> str | None:
+def _candidate_value(
+    span: str,
+    *,
+    request: Mapping[str, Any],
+    property_hint: str | None = None,
+) -> str | None:
     qtype = str(request.get("question_type", "")).casefold()
-    property_text = " ".join(str(item) for item in _sequence(request.get("wikidata_property_hints"))).casefold()
+    property_text = (
+        property_hint
+        if property_hint
+        else " ".join(str(item) for item in _sequence(request.get("wikidata_property_hints")))
+    ).casefold()
+    property_label, property_id = _property_parts(property_hint or "")
+    if property_id == "P856" or property_label == "official website":
+        url = _extract_url(span)
+        if url:
+            return url
+    if property_label:
+        value = _extract_has_property_value(span, property_label)
+        if value:
+            return value
+    if property_label == "description":
+        value = _extract_description_value(span)
+        if value:
+            return value
     quantity_tokens = ("population", "area", "height", "mass", "point_in_time")
     if qtype == "quantity" or any(token in property_text for token in quantity_tokens):
         match = NUMBER_RE.search(span)
@@ -554,7 +597,7 @@ def _candidate_value(span: str, *, request: Mapping[str, Any]) -> str | None:
     entity_values = {str(item).casefold() for item in _sequence(request.get("entity_candidates"))}
     for match in CAPITALIZED_SPAN_RE.finditer(span):
         candidate = match.group(0).strip()
-        if candidate in GENERIC_VALUE_CANDIDATES:
+        if _is_generic_value(candidate):
             continue
         if candidate.casefold() in entity_values:
             continue
@@ -564,14 +607,51 @@ def _candidate_value(span: str, *, request: Mapping[str, Any]) -> str | None:
 
 def _clean_candidate_value(value: str) -> str:
     value = re.split(r"\b(?:according to|source:|publisher:|doi:|retrieved at)\b", value, maxsplit=1, flags=re.I)[0]
-    value = value.strip(" \t\r\n.,;:!?()[]{}\"'")
+    value = value.strip(" \t\r\n.,;:!?\"'")
     value = re.sub(r"\s+", " ", value)
     words = value.split()
     if len(words) > 12:
         value = " ".join(words[:12])
-    if not value or value in GENERIC_VALUE_CANDIDATES:
+    if not value or _is_generic_value(value):
         return ""
     return value
+
+
+def _property_parts(property_hint: str) -> tuple[str, str | None]:
+    label, sep, property_id = str(property_hint).partition(":")
+    label = label.replace("_", " ").strip().casefold()
+    if sep and property_id.strip():
+        return label, property_id.strip()
+    return label, None
+
+
+def _extract_url(text: str) -> str | None:
+    match = URL_RE.search(text)
+    if match is None:
+        return None
+    return match.group(0).rstrip(".,;")
+
+
+def _extract_has_property_value(text: str, property_label: str) -> str | None:
+    label = property_label.replace("_", " ").strip()
+    if not label:
+        return None
+    pattern = re.compile(rf"\bhas\s+{re.escape(label)}\s+(?P<value>[^.]+)", re.I)
+    match = pattern.search(text)
+    if match is None:
+        return None
+    return _clean_candidate_value(match.group("value"))
+
+
+def _extract_description_value(text: str) -> str | None:
+    match = DESCRIBED_AS_RE.search(text)
+    if match is None:
+        return None
+    return _clean_candidate_value(match.group("value"))
+
+
+def _is_generic_value(value: str) -> bool:
+    return value.strip().casefold() in GENERIC_VALUE_CANDIDATES_CASEFOLD
 
 
 def _query_refinement_suggestions(request: Mapping[str, Any], *, gap_reason: str) -> tuple[str, ...]:

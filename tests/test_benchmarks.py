@@ -43635,6 +43635,105 @@ def test_audit_blind_spot_alignment_requests_outputs_fact_candidates(tmp_path):
     assert record.metadata["suite"] == "unit"
 
 
+def test_audit_blind_spot_alignment_requests_extracts_property_values_and_dedupes(tmp_path):
+    module = importlib.import_module("benchmarks.audit_blind_spot_alignment_requests")
+
+    collection = {
+        "schema_version": 1,
+        "workflow": "blind_spot_evidence_collection_corpus",
+        "status": "ready_for_collection",
+        "summary": {"target_count": 3},
+        "requests": {
+            "alignment_audit": [
+                {
+                    "request_id": "align:red-bull:1",
+                    "target_id": "record-red-bull",
+                    "question_type": "entity",
+                    "question": "What is Red Bull's official website?",
+                    "model_answer": "redbull.example",
+                    "entity_candidates": ["Red Bull"],
+                    "wikidata_property_hints": ["official_website:P856"],
+                    "alignment_actions": ["claim_evidence_alignment"],
+                    "usage": "alignment_audit_only",
+                },
+                {
+                    "request_id": "align:french:1",
+                    "target_id": "record-french",
+                    "question_type": "entity",
+                    "question": "What country is French associated with?",
+                    "model_answer": "Germany",
+                    "entity_candidates": ["French"],
+                    "wikidata_property_hints": ["country:P17"],
+                    "alignment_actions": ["claim_evidence_alignment"],
+                    "usage": "alignment_audit_only",
+                },
+                {
+                    "request_id": "align:jennifer:1",
+                    "target_id": "record-jennifer",
+                    "question_type": "definition",
+                    "question": "What is Jennifer Aniston?",
+                    "model_answer": "a singer",
+                    "entity_candidates": ["Jennifer Aniston"],
+                    "wikidata_property_hints": ["description"],
+                    "alignment_actions": ["claim_evidence_alignment"],
+                    "usage": "alignment_audit_only",
+                },
+            ],
+        },
+    }
+    evidence_documents = [
+        {
+            "source": "wikidata:Q51482:P856",
+            "text": (
+                "According to Wikidata structured data, Red Bull has official website "
+                "https://www.redbull.com/it-it/energydrink."
+            ),
+            "metadata": {"provider": "source_family_catalog", "source_family": "reference"},
+        },
+        {
+            "source": "wikidata:Q51482:P856",
+            "text": (
+                "According to Wikidata structured data, Red Bull has official website "
+                "https://www.redbull.com/it-it/energydrink."
+            ),
+            "metadata": {"provider": "source_family_catalog", "source_family": "reference"},
+        },
+        {
+            "source": "wikidata:Q150:P17:Q142",
+            "text": "According to Wikidata structured data, French has country France.",
+            "metadata": {"provider": "source_family_catalog", "source_family": "reference"},
+        },
+        {
+            "source": "wikidata:Q32522:description",
+            "text": (
+                "According to Wikidata entity metadata, Jennifer Aniston is described "
+                "as American actress (born 1969)."
+            ),
+            "metadata": {"provider": "source_family_catalog", "source_family": "reference"},
+        },
+    ]
+
+    payload = module.audit_blind_spot_alignment_requests(
+        collection_corpus=collection,
+        evidence_documents=evidence_documents,
+    )
+    candidates = payload["fact_candidates"]
+    by_request = {
+        candidate["request_id"]: candidate
+        for candidate in candidates
+    }
+
+    assert payload["summary"]["fact_candidate_count"] == 3
+    assert by_request["align:red-bull:1"]["value"] == "https://www.redbull.com/it-it/energydrink"
+    assert by_request["align:french:1"]["value"] == "France"
+    assert by_request["align:jennifer:1"]["value"] == "American actress (born 1969)"
+    assert [
+        candidate["request_id"]
+        for candidate in candidates
+        if candidate["request_id"] == "align:red-bull:1"
+    ] == ["align:red-bull:1"]
+
+
 def test_build_alignment_fact_review_corpus_filters_candidates(tmp_path):
     module = importlib.import_module("benchmarks.build_alignment_fact_review_corpus")
     registry_module = importlib.import_module("eigentruth.registry")

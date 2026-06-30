@@ -5,43 +5,43 @@
       "file_count": 1,
       "kind": "file",
       "path": "alignment-fact-review-corpus.json",
-      "sha256": "88483fc126ff8c73dce3927e56023460dd744ebd5551fd6275b0beee62257217",
-      "size_bytes": 8664
+      "sha256": "517610513348094bb272acff8eae8dd161cc91b3f843c41a091ad47c43647c42",
+      "size_bytes": 11154
     },
     "alignment_fact_review_records": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "alignment-fact-review-records.jsonl",
-      "sha256": "d628e302036822cb9bbecf0db17e625493484c29beaa9fffd36f49af2e916879",
-      "size_bytes": 58668
+      "sha256": "e0720bf2f5dc01a1d9891f9ee3ff699a4b62a42a6765f533f3a723f65a97d909",
+      "size_bytes": 23046
     },
     "alignment_fact_review_report": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "alignment-fact-review-report.json",
-      "sha256": "5215cd949a7f1a5bc57ca2dfe83b6ac6cd62e62a0647cbf2dbe01291109e513f",
-      "size_bytes": 1913
+      "sha256": "30bf096abe9ad39124403878a33f68dd910acf82d41f769a8d0c56dfb0da36b9",
+      "size_bytes": 1911
     },
     "structured_fact_candidates": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "../unresolved-seeded-news-alignment-audit-v1/structured-fact-candidates.jsonl",
-      "sha256": "1f2b15f08a43b83022439825f30f612eed06ece686cffe271718e520d40d4aa8",
-      "size_bytes": 61806
+      "sha256": "3a7deff26550126bf9f7c32d5200fbcd8c15947591fe3bbf75ce41c9ea222ab9",
+      "size_bytes": 24349
     }
   },
   "digest_algorithm": "sha256",
   "metadata": {
     "corpus_type": "alignment_structured_fact_review_corpus",
-    "document_count": 6,
-    "input_candidate_count": 96,
+    "document_count": 8,
+    "input_candidate_count": 37,
     "model": "smollm2-l80",
     "source": "frontier-v4",
     "status": "ready_for_review",
-    "unique_candidate_count": 32,
+    "unique_candidate_count": 37,
     "workflow": "alignment_fact_review_corpus_builder"
   },
   "schema_version": 1,
