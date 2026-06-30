@@ -42,9 +42,15 @@ EigenTruth should move from hallucination detection alone toward calibrated part
 Added an anytime-valid feedback risk monitor for evidence acquisition:
 
 - `EvidenceAcquisitionAnytimeRiskStep`,
+  `EvidenceAcquisitionAnytimeRiskMonitorState`,
   `EvidenceAcquisitionAnytimeRiskMonitorReport`, and
   `audit_evidence_acquisition_anytime_risk(...)` run a dependency-free mixture
   e-process over accepted post-acquisition errors.
+- `EvidenceAcquisitionAnytimeRiskMonitorState.update(...)` consumes one labeled
+  feedback record at a time and returns the new resumable state plus the
+  per-record step payload; `save_json(...)` / `load_json(...)` make the monitor
+  suitable for product feedback streams without holding the full history in
+  memory.
 - The deployed threshold is fixed; feedback is used only for monitoring, not
   for silent recalibration.
 - The alarm threshold is `1 / monitor_alpha`, and a failed monitor reports the

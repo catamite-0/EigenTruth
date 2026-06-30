@@ -12,6 +12,7 @@ from eigentruth.calibration import (
     CalibrationScore,
     ConformalCalibrator,
     EvidenceAcquisitionAnytimeRiskMonitorReport,
+    EvidenceAcquisitionAnytimeRiskMonitorState,
     EvidenceAcquisitionCalibrationRecord,
     EvidenceAcquisitionCalibrationReport,
     EvidenceAcquisitionConformalCalibrator,
@@ -426,6 +427,56 @@ def test_evidence_acquisition_anytime_risk_monitor_blocks_drifted_feedback_strea
     assert report.e_value >= report.alarm_threshold
     assert "mixture_e_value" in report.blocking_reasons[0]
     assert any(step.alarmed for step in report.steps)
+
+
+def test_evidence_acquisition_anytime_risk_monitor_state_roundtrips_and_matches_batch(tmp_path):
+    records = tuple(
+        EvidenceAcquisitionCalibrationRecord(
+            post_score=0.1,
+            correct=index >= 4,
+            action="answer",
+            record_id=f"r{index}",
+        )
+        for index in range(8)
+    )
+    batch = audit_evidence_acquisition_anytime_risk(
+        records,
+        threshold=0.5,
+        target_error_rate=0.1,
+        monitor_alpha=0.2,
+        score_name="policy_score",
+        bet_fractions=(0.8,),
+    )
+
+    state = EvidenceAcquisitionAnytimeRiskMonitorState(
+        score_name="policy_score",
+        threshold=0.5,
+        target_error_rate=0.1,
+        monitor_alpha=0.2,
+        direction="higher",
+        bet_fractions=(0.8,),
+    )
+    steps = []
+    for record in records[:3]:
+        state, step = state.update(record)
+        steps.append(step)
+    path = tmp_path / "anytime-risk-state.json"
+    state.save_json(path)
+    loaded = EvidenceAcquisitionAnytimeRiskMonitorState.load_json(path)
+    assert loaded.to_dict() == state.to_dict()
+
+    state = loaded
+    for record in records[3:]:
+        state, step = state.update(record)
+        steps.append(step)
+    report = state.to_report(steps)
+
+    assert report.accepted_count == batch.accepted_count
+    assert report.accepted_errors == batch.accepted_errors
+    assert report.component_e_values == pytest.approx(batch.component_e_values)
+    assert report.first_alarm_record_index == batch.first_alarm_record_index
+    assert report.first_alarm_accepted_index == batch.first_alarm_accepted_index
+    assert [step.to_dict() for step in report.steps] == [step.to_dict() for step in batch.steps]
 
 
 def test_evidence_acquisition_anytime_risk_monitor_respects_lower_direction_and_validates_inputs():

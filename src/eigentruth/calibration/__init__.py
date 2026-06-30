@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from eigentruth.calibration.acquisition import (
     EvidenceAcquisitionAnytimeRiskMonitorReport,
+    EvidenceAcquisitionAnytimeRiskMonitorState,
     EvidenceAcquisitionAnytimeRiskStep,
     EvidenceAcquisitionCalibrationRecord,
     EvidenceAcquisitionCalibrationReport,
@@ -64,6 +65,7 @@ __all__ = [
     "DEFAULT_NLL_SIGNAL_NAME",
     "DEFAULT_TRAJECTORY_SIGNAL_NAME",
     "EvidenceAcquisitionAnytimeRiskMonitorReport",
+    "EvidenceAcquisitionAnytimeRiskMonitorState",
     "EvidenceAcquisitionAnytimeRiskStep",
     "EvidenceAcquisitionCalibrationRecord",
     "EvidenceAcquisitionCalibrationReport",

@@ -896,7 +896,9 @@ the accepted-error upper bound exceeds the target error rate. For continuously
 arriving feedback, `audit_evidence_acquisition_anytime_risk` adds a dependency-free
 mixture e-process monitor over accepted-error Bernoulli outcomes; it alarms when
 the mixture e-value crosses `1 / monitor_alpha` without recalibrating on the same
-feedback stream. The trace workflow can emit these monitors directly with
+feedback stream. Library callers can persist
+`EvidenceAcquisitionAnytimeRiskMonitorState` and update it one feedback record at
+a time; the trace workflow can emit full monitor reports directly with
 `--risk-target-error-rate`; `--risk-monitor-mode prefix` preserves the finite
 prefix default, while `--risk-monitor-mode anytime` or `both` adds the anytime
 report. Use `--risk-monitor-json`, `--anytime-risk-monitor-json`,
