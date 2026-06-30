@@ -67,8 +67,24 @@ def test_calibrated_control_demo_default_trace_uses_artifact_diagnostics():
                 == "cache_only_total_seconds"
             )
             assert payload["metadata"]["promotion_contract_evidence_handoff_status"] == "promote"
-            assert payload["metadata"]["promotion_contract_evidence_handoff_present_metric_count"] == 38
+            assert payload["metadata"]["promotion_contract_evidence_handoff_present_metric_count"] == 65
             assert payload["metadata"]["promotion_contract_evidence_handoff_missing_metric_count"] == 0
+            assert payload["metadata"]["promotion_contract_evidence_handoff_blocked_group_count"] == 0
+            assert payload["metadata"]["promotion_contract_evidence_handoff_group_statuses"][
+                "frontier_release_evidence"
+            ] == "promote"
+            assert (
+                payload["metadata"]["promotion_contract_product_runtime_drift_status"]
+                == "promote"
+            )
+            assert (
+                payload["metadata"]["promotion_contract_product_runtime_drift_compared_metric_count"]
+                == 107
+            )
+            assert (
+                payload["metadata"]["promotion_contract_product_runtime_drift_blocked_metric_count"]
+                == 0
+            )
         assert payload["metadata"]["promotion_contract_metadata"]["recommended_selector_replay_candidate"] == "default"
         assert payload["metadata"]["promotion_contract_metadata"]["selector_replay_status"] == "promote"
         assert payload["metadata"]["promotion_contract_metadata"]["product_runtime_drift_status"] == "promote"
@@ -1280,18 +1296,35 @@ def test_calibrated_control_demo_can_use_default_frontier_audit_contract_evidenc
         "evidence-handoff-artifact-manifest.json"
     )
     assert payload["metadata"]["promotion_contract_evidence_handoff_manifest_verification"]["passed"] is True
-    assert payload["metadata"]["promotion_contract_evidence_handoff_manifest_verification"]["checked"] == 9
+    assert payload["metadata"]["promotion_contract_evidence_handoff_manifest_verification"]["checked"] == 11
     assert payload["metadata"]["promotion_contract_evidence_handoff_status"] == "promote"
-    assert payload["metadata"]["promotion_contract_evidence_handoff_present_metric_count"] == 38
+    assert payload["metadata"]["promotion_contract_evidence_handoff_present_metric_count"] == 65
     assert payload["metadata"]["promotion_contract_evidence_handoff_missing_metric_count"] == 0
+    assert payload["metadata"]["promotion_contract_evidence_handoff_blocked_group_count"] == 0
     assert payload["metadata"]["promotion_contract_evidence_handoff_group_statuses"] == {
         "action_gate": "promote",
         "counterfactual": "promote",
         "covered_fact_property": "promote",
+        "frontier_release_evidence": "promote",
         "pre_generation": "promote",
         "promotion": "promote",
         "triple_audit": "promote",
     }
+    assert payload["metadata"]["promotion_contract_frontier_release_evidence"][
+        "decision_status"
+    ] == "promote"
+    assert (
+        payload["metadata"]["promotion_contract_product_runtime_drift_status"]
+        == "promote"
+    )
+    assert (
+        payload["metadata"]["promotion_contract_product_runtime_drift_compared_metric_count"]
+        == 107
+    )
+    assert (
+        payload["metadata"]["promotion_contract_product_runtime_drift_blocked_metric_count"]
+        == 0
+    )
     assert payload["metadata"]["promotion_contract_metadata"]["recommended_performance_baseline_record"] == (
         "performance_baseline:smollm2-l8-read-cache-worker-sweep-score-fusion-performance-baseline:0.2"
     )
@@ -1322,9 +1355,9 @@ def test_calibrated_control_demo_can_use_default_frontier_audit_contract_evidenc
     assert payload["verification_results"][0]["metadata"]["selected_route"] == "structured_qa"
     assert route_summary["mean_attempted_route_count"] == 1.0
     assert runtime_budget["passed"] is True
-    assert runtime_budget["enabled"] is False
-    assert runtime_budget["policy"]["max_mean_attempted_route_count"] is None
-    assert runtime_budget["policy"]["max_retrieval_use_rate"] is None
+    assert runtime_budget["enabled"] is True
+    assert runtime_budget["policy"]["max_mean_attempted_route_count"] == 3.0
+    assert runtime_budget["policy"]["max_retrieval_use_rate"] == 1.0
 
 
 def test_sqlite_state_control_demo_refutes_database_state_claim(tmp_path):
