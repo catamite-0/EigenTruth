@@ -29395,6 +29395,40 @@ def test_performance_baseline_smoke_writes_registered_baseline(tmp_path):
     ] == "promote"
 
 
+def test_product_promotion_contract_smoke_verifies_default_handoff():
+    module = importlib.import_module("benchmarks.product_promotion_contract_smoke")
+
+    payload = module.build_product_promotion_contract_smoke()
+
+    assert payload["status"] == "pass"
+    assert payload["registry_key"] == module.EXPECTED_REGISTRY_KEY
+    assert payload["promotion_summary_status"] == "promote"
+    assert payload["recommended_runtime_seconds"] == pytest.approx(0.191662)
+    assert payload["evidence_handoff_status"] == "promote"
+    assert payload["evidence_handoff_present_metric_count"] >= 65
+    assert payload["evidence_handoff_missing_metric_count"] == 0
+    assert payload["frontier_release_evidence_decision_status"] == "promote"
+    assert payload["product_runtime_drift_status"] == "promote"
+    assert payload["product_runtime_drift_compared_metric_count"] >= 107
+    assert payload["manifest_checked"] >= 2
+    assert payload["evidence_handoff_manifest_checked"] >= 11
+    assert payload["metrics"] == {
+        "promotion_contract_available": True,
+        "promotion_contract_evidence_handoff_available": True,
+        "promotion_contract_frontier_release_evidence_available": True,
+    }
+
+
+def test_product_promotion_contract_smoke_fails_closed_on_missing_registry_record(tmp_path):
+    module = importlib.import_module("benchmarks.product_promotion_contract_smoke")
+    registry_module = importlib.import_module("eigentruth.registry")
+    registry_path = tmp_path / "registry.json"
+    registry_module.ArtifactRegistry.load_json(registry_path).save_json()
+
+    with pytest.raises(AssertionError, match="registry record was not discovered"):
+        module.build_product_promotion_contract_smoke(registry_path=registry_path)
+
+
 def test_product_trace_replay_smoke_writes_workflow_and_rejects_bounded_trace(tmp_path):
     module = importlib.import_module("benchmarks.product_trace_replay_smoke")
     registry_module = importlib.import_module("eigentruth.registry")
