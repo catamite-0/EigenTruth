@@ -29429,6 +29429,44 @@ def test_product_promotion_contract_smoke_fails_closed_on_missing_registry_recor
         module.build_product_promotion_contract_smoke(registry_path=registry_path)
 
 
+def test_frontier_artifact_reference_smoke_verifies_active_docs(tmp_path):
+    module = importlib.import_module("benchmarks.frontier_artifact_reference_smoke")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    payload = module.build_frontier_artifact_reference_smoke(tmp_path)
+    registry = registry_module.ArtifactRegistry.load_json(tmp_path / "registry.json")
+
+    assert payload["status"] == "pass"
+    assert payload["registry_record"] == module.SMOKE_RECORD_KEY
+    assert payload["summary"]["missing_count"] == 0
+    assert payload["summary"]["manifest_verified_count"] >= 3
+    assert payload["summary"]["recommended_action_count"] == 0
+    assert Path(payload["audit_report"]).exists()
+    assert Path(payload["artifact_manifest"]).exists()
+    assert registry.get(module.SMOKE_RECORD_KEY).metadata["status"] == "passed"
+
+
+def test_frontier_artifact_reference_smoke_fails_closed_on_blocked_audit():
+    module = importlib.import_module("benchmarks.frontier_artifact_reference_smoke")
+
+    with pytest.raises(AssertionError, match="did not pass"):
+        module._assert_frontier_reference_audit({
+            "status": "blocked",
+            "summary": {
+                "reference_count": 12,
+                "existing_count": 11,
+                "missing_count": 1,
+                "manifest_verified_count": 3,
+                "manifest_failed_count": 0,
+                "manifest_child_missing_count": 0,
+                "recommended_action_count": 1,
+            },
+            "artifact_manifest_summary": {"missing_count": 0},
+            "recommended_actions": [{"action_id": "repair"}],
+            "blocking_reasons": ("missing artifact reference: artifacts/missing.json",),
+        })
+
+
 def test_product_trace_replay_smoke_writes_workflow_and_rejects_bounded_trace(tmp_path):
     module = importlib.import_module("benchmarks.product_trace_replay_smoke")
     registry_module = importlib.import_module("eigentruth.registry")
