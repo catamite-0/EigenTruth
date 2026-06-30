@@ -119,6 +119,57 @@ def test_eval_counterfactual_verification_reports_false_invariance(tmp_path):
     assert record.metadata["false_invariance_rate"] == pytest.approx(1.0)
 
 
+def test_eval_counterfactual_verification_compact_json_manifest_verifies(tmp_path):
+    module = importlib.import_module("benchmarks.eval_counterfactual_verification")
+    from eigentruth.registry import load_and_verify_artifact_manifest
+
+    records_path = tmp_path / "counterfactual-records.json"
+    facts_path = tmp_path / "facts.json"
+    report_path = tmp_path / "counterfactual-report.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    records_path.write_text(
+        json.dumps({
+            "records": [
+                {
+                    "probe_id": "capital_cf",
+                    "probe_type": "entity_swap",
+                    "original_text": "Paris is the capital of France.",
+                    "counterfactual_text": "Berlin is the capital of France.",
+                    "expected_original_status": "supported",
+                    "expected_counterfactual_status": "refuted",
+                    "expected_flip": True,
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    facts_path.write_text(
+        json.dumps({
+            "Paris is the capital of France.": "supported",
+            "Berlin is the capital of France.": "refuted",
+        }),
+        encoding="utf-8",
+    )
+
+    exit_code = module.main([
+        "--records",
+        str(records_path),
+        "--verifier",
+        "in_memory",
+        "--in-memory-facts",
+        str(facts_path),
+        "--json",
+        str(report_path),
+        "--artifact-manifest",
+        str(manifest_path),
+        "--compact-json",
+    ])
+
+    assert exit_code == 0
+    assert load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert "\n  " not in report_path.read_text(encoding="utf-8")
+
+
 def test_eval_counterfactual_verification_generates_probes_from_claims(tmp_path):
     module = importlib.import_module("benchmarks.eval_counterfactual_verification")
 

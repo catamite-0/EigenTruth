@@ -44,6 +44,23 @@ python benchmarks/eval_counterfactual_verification.py \
   --register-version 0.1
 ```
 
+Some checkouts do not include the historical source-family route artifacts. The
+current frontier checkout can reproduce the same gate shape from the blind-spot
+Wikidata structured-QA route:
+
+```bash
+python benchmarks/eval_counterfactual_verification.py \
+  --verified-records artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-structured-qa-route/verified-records.jsonl \
+  --verifier structured_qa \
+  --fact-corpus artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-structured-qa-route/wikidata-blind-spot-qa-corpus.json \
+  --json artifacts/smollm2_product_counterfactual_blind_spot_wikidata_structured_qa_audit_v1/counterfactual-verification-report.json \
+  --artifact-manifest artifacts/smollm2_product_counterfactual_blind_spot_wikidata_structured_qa_audit_v1/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --register-name smollm2-product-counterfactual-blind-spot-wikidata-structured-qa-audit \
+  --register-version 0.1 \
+  --compact-json
+```
+
 When only extracted claims are available, the benchmark can generate bounded
 counterfactual probes from claim metadata, entity replacements, numbers, years,
 and negation:

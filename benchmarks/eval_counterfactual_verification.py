@@ -138,6 +138,7 @@ def run_counterfactual_verification_eval(
     registry_path: str | Path | None = None,
     register_name: str | None = None,
     register_version: str = "0.1",
+    compact_json: bool = False,
 ) -> dict[str, Any]:
     """Run counterfactual verifier audit and return a JSON-ready payload."""
     probes = _load_or_generate_probes(
@@ -202,7 +203,7 @@ def run_counterfactual_verification_eval(
             raise ValueError("artifact_manifest_path requires output_path.")
         manifest_path = Path(artifact_manifest_path)
         payload["paths"]["artifact_manifest"] = str(manifest_path)
-        _write_json(Path(output_path), payload, compact=False)
+        _write_json(Path(output_path), payload, compact=compact_json)
         artifacts = {
             "counterfactual_verification_report": output_path,
         }
@@ -229,7 +230,7 @@ def run_counterfactual_verification_eval(
             metadata=manifest_metadata,
         )
         payload["artifact_manifest_summary"] = manifest["summary"]
-        _write_json(Path(output_path), payload, compact=False)
+        _write_json(Path(output_path), payload, compact=compact_json)
         manifest = build_artifact_manifest(
             artifacts,
             root=manifest_path.parent,
@@ -237,9 +238,9 @@ def run_counterfactual_verification_eval(
         )
         payload["artifact_manifest_summary"] = manifest["summary"]
         _write_json(manifest_path, manifest, compact=False)
-        _write_json(Path(output_path), payload, compact=False)
+        _write_json(Path(output_path), payload, compact=compact_json)
     elif output_path is not None:
-        _write_json(Path(output_path), payload, compact=False)
+        _write_json(Path(output_path), payload, compact=compact_json)
     if registry_path is not None:
         registry = ArtifactRegistry.load_json(registry_path)
         registry.record_report(
@@ -509,8 +510,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         registry_path=args.registry,
         register_name=args.register_name,
         register_version=args.register_version,
+        compact_json=bool(args.compact_json),
     )
-    _write_json(Path(args.json), payload, compact=bool(args.compact_json))
     summary = payload["report"]["summary"]
     print(
         "counterfactual_verification_eval_ok "
