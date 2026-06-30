@@ -86,6 +86,13 @@ from eigentruth.control.promotion import (
     product_promotion_contract_summary,
     product_runtime_budget_policy_from_release_candidate,
 )
+from eigentruth.control.receipt_audit import (
+    ReceiptClaimReference,
+    ReceiptClaimSupportIssue,
+    ReceiptClaimSupportPolicy,
+    ReceiptClaimSupportReport,
+    audit_receipt_claim_support,
+)
 from eigentruth.control.receipts import (
     ActionReceipt,
     ActionReceiptSigner,
@@ -167,6 +174,10 @@ __all__ = [
     "RUNTIME_PROFILE_NAMES",
     "RUNTIME_PROFILES",
     "ReceiptActionExecutor",
+    "ReceiptClaimReference",
+    "ReceiptClaimSupportIssue",
+    "ReceiptClaimSupportPolicy",
+    "ReceiptClaimSupportReport",
     "StagedVerificationPolicy",
     "TimeoutActionExecutor",
     "ProductTrace",
@@ -201,6 +212,7 @@ __all__ = [
     "audit_action_requests",
     "audit_product_trace_trajectory",
     "audit_product_promotion_contract_evidence",
+    "audit_receipt_claim_support",
     "action_receipt_summary_from_results",
     "action_request_fingerprint",
     "action_result_fingerprint",

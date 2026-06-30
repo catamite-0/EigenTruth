@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any, Iterable, Mapping, Sequence
 
 from eigentruth.control import runtime_drift_keys as _runtime_drift_keys
+from eigentruth.control.receipt_audit import audit_receipt_claim_support
 from eigentruth.control.receipts import action_receipt_summary_from_results
 from eigentruth.control.trace import ProductTrace, RuntimeTrace
 
@@ -488,6 +489,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
         metrics.update(_cache_metrics(trace))
         metrics.update(_action_execution_metrics(trace))
         metrics.update(_action_receipt_metrics(trace))
+        metrics.update(_receipt_claim_support_metrics(trace))
         metrics.update(_action_audit_metrics(trace))
         metrics.update(_trajectory_audit_metrics(trace))
         metrics.update(_route_cost_metrics(trace))
@@ -533,6 +535,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
     metrics.update(_cache_metrics(trace))
     metrics.update(_action_execution_metrics(trace))
     metrics.update(_action_receipt_metrics(trace))
+    metrics.update(_receipt_claim_support_metrics(trace))
     metrics.update(_action_audit_metrics(trace))
     metrics.update(_trajectory_audit_metrics(trace))
     metrics.update(_route_cost_metrics(trace))
@@ -764,6 +767,51 @@ def _action_receipt_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
             summary.get("fingerprint_mismatch_count")
         ) or 0.0,
         "action_receipts_coverage": _finite_float(summary.get("coverage")),
+    }
+
+
+def _receipt_claim_support_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:
+    if isinstance(trace, ProductTrace):
+        summary = trace.receipt_claim_support_summary()
+        source = "full_trace"
+    else:
+        payload = dict(trace)
+        summary = _mapping(_mapping(payload.get("summaries")).get("receipt_claim_support"))
+        if summary:
+            source = "bounded_summary"
+        else:
+            summary = audit_receipt_claim_support(payload).summary()
+            source = "full_trace"
+    return {
+        "receipt_claim_support_available": bool(summary.get("available")),
+        "receipt_claim_support_source": source,
+        "receipt_claim_support_summary": summary,
+        "receipt_claim_support_passed": _optional_bool(summary.get("passed")),
+        "receipt_claim_support_reference_count": _finite_float(summary.get("reference_count")) or 0.0,
+        "receipt_claim_support_referenced_claim_count": (
+            _finite_float(summary.get("referenced_claim_count")) or 0.0
+        ),
+        "receipt_claim_support_referenced_final_answer_evidence_count": (
+            _finite_float(summary.get("referenced_final_answer_evidence_count")) or 0.0
+        ),
+        "receipt_claim_support_unsupported_reference_count": (
+            _finite_float(summary.get("unsupported_reference_count")) or 0.0
+        ),
+        "receipt_claim_support_missing_reference_count": (
+            _finite_float(summary.get("missing_reference_count")) or 0.0
+        ),
+        "receipt_claim_support_unreceipted_reference_count": (
+            _finite_float(summary.get("unreceipted_reference_count")) or 0.0
+        ),
+        "receipt_claim_support_failed_result_reference_count": (
+            _finite_float(summary.get("failed_result_reference_count")) or 0.0
+        ),
+        "receipt_claim_support_fingerprint_mismatch_reference_count": (
+            _finite_float(summary.get("fingerprint_mismatch_reference_count")) or 0.0
+        ),
+        "receipt_claim_support_unsigned_reference_count": (
+            _finite_float(summary.get("unsigned_reference_count")) or 0.0
+        ),
     }
 
 

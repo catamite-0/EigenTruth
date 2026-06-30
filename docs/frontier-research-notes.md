@@ -79,8 +79,15 @@ Added receipt-style action result verification:
   `summaries.action_receipts` report receipt coverage, signed/unsigned counts,
   invalid receipts, and result-fingerprint mismatches without needing the HMAC
   secret. This is the local EigenTruth bridge toward receipt-backed agent
-  verification; it does not yet perform automatic natural-language
-  claim-to-receipt entailment.
+  verification.
+- `ReceiptClaimSupportPolicy`, `ReceiptClaimSupportReport`, and
+  `audit_receipt_claim_support(...)` add the first claim-to-receipt structural
+  audit: when a claim or final-answer evidence item explicitly cites an action
+  request id, result fingerprint, or output fingerprint, the audit requires a
+  matching receipt-backed action result with an accepted status. It is not
+  natural-language entailment; it catches fabricated or stale tool references
+  while leaving unreferenced claims to the normal verifier/retrieval/world-model
+  routes.
 
 Added conformal multiple-testing signal aggregation:
 

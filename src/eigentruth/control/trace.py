@@ -10,6 +10,7 @@ from eigentruth.control.action_audit import audit_action_requests
 from eigentruth.control.actions import ActionRequest, ActionResult
 from eigentruth.control.finalization import FinalAnswer
 from eigentruth.control.policy import ControlAction, RiskDecision
+from eigentruth.control.receipt_audit import audit_receipt_claim_support
 from eigentruth.control.receipts import action_receipt_summary_from_results
 from eigentruth.json_utils import to_jsonable
 from eigentruth.verify.localization import localize_claim_risk_spans
@@ -256,6 +257,11 @@ class ProductTrace:
                 prepared.action_results,
             ),
             "action_receipts": action_receipt_summary_from_results(prepared.action_results),
+            "receipt_claim_support": _receipt_claim_support_summary_from_payload(
+                claims=prepared.claims,
+                action_results=prepared.action_results,
+                final_answer=prepared.final_answer,
+            ),
             "action_audit": _action_audit_summary_from_payload(
                 actions=prepared.actions,
                 risk_decision=prepared.risk_decision,
@@ -364,6 +370,10 @@ class ProductTrace:
         return action_receipt_summary_from_results(
             tuple(_action_result_to_dict(result) for result in self.action_results)
         )
+
+    def receipt_claim_support_summary(self) -> dict[str, Any]:
+        """Summarize explicit claim/final-answer references to action receipts."""
+        return audit_receipt_claim_support(self).summary()
 
     def action_audit_summary(self) -> dict[str, Any]:
         """Summarize planned action/tool-selection audit results."""
@@ -660,6 +670,20 @@ def _action_audit_summary_from_payload(
         decision=risk_decision,
         verification_plan=verification_plan,
     )
+    return report.summary()
+
+
+def _receipt_claim_support_summary_from_payload(
+    *,
+    claims: Sequence[Mapping[str, Any]],
+    action_results: Sequence[Mapping[str, Any]],
+    final_answer: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    report = audit_receipt_claim_support({
+        "claims": tuple(claims),
+        "action_results": tuple(action_results),
+        "final_answer": final_answer,
+    })
     return report.summary()
 
 
