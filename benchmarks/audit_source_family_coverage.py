@@ -78,6 +78,8 @@ def audit_source_family_coverage(
     request_with_target_family = 0
     request_with_official_result = 0
     request_with_fresh_result = 0
+    official_source_preferred_with_official_result = 0
+    freshness_required_with_fresh_result = 0
     official_source_preferred = 0
     freshness_required = 0
 
@@ -125,6 +127,8 @@ def audit_source_family_coverage(
         request_with_fresh_result += int(bool(fresh_hits))
         official_source_preferred += int(official_preferred)
         freshness_required += int(fresh_required)
+        official_source_preferred_with_official_result += int(official_preferred and bool(official_hits))
+        freshness_required_with_fresh_result += int(fresh_required and bool(fresh_hits))
 
         record = {
             "request_id": request_id,
@@ -160,9 +164,11 @@ def audit_source_family_coverage(
         "request_with_target_family_count": request_with_target_family,
         "request_missing_target_family_count": len(plan_rows),
         "official_source_preferred_count": official_source_preferred,
-        "official_source_preferred_with_official_result_count": request_with_official_result,
+        "request_with_official_result_count": request_with_official_result,
+        "official_source_preferred_with_official_result_count": official_source_preferred_with_official_result,
         "freshness_required_count": freshness_required,
-        "freshness_required_with_fresh_result_count": request_with_fresh_result,
+        "request_with_fresh_result_count": request_with_fresh_result,
+        "freshness_required_with_fresh_result_count": freshness_required_with_fresh_result,
         "preferred_source_family_counts": _sorted_counter(preferred_family_counts),
         "target_source_family_counts": _sorted_counter(target_family_counts),
         "covered_target_source_family_counts": _sorted_counter(covered_target_family_counts),

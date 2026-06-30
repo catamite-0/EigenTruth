@@ -13,8 +13,8 @@
           "reference"
         ],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [],
         "official_source_preferred": false,
         "preferred_source_families": [
@@ -28,12 +28,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "covered",
@@ -46,8 +46,8 @@
           "reference"
         ],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [],
         "official_source_preferred": false,
         "preferred_source_families": [
@@ -61,12 +61,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "covered",
@@ -79,8 +79,8 @@
           "reference"
         ],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [],
         "official_source_preferred": false,
         "preferred_source_families": [
@@ -94,12 +94,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "covered",
@@ -112,8 +112,8 @@
           "reference"
         ],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [],
         "official_source_preferred": false,
         "preferred_source_families": [
@@ -127,12 +127,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "covered",
@@ -145,8 +145,8 @@
           "reference"
         ],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [],
         "official_source_preferred": false,
         "preferred_source_families": [
@@ -160,12 +160,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "covered",
@@ -178,8 +178,8 @@
           "reference"
         ],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [],
         "official_source_preferred": false,
         "preferred_source_families": [
@@ -193,12 +193,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "covered",
@@ -211,8 +211,8 @@
           "reference"
         ],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [],
         "official_source_preferred": false,
         "preferred_source_families": [
@@ -226,12 +226,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "covered",
@@ -244,8 +244,8 @@
           "reference"
         ],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [],
         "official_source_preferred": false,
         "preferred_source_families": [
@@ -259,12 +259,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "covered",
@@ -277,8 +277,8 @@
           "reference"
         ],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [],
         "official_source_preferred": false,
         "preferred_source_families": [
@@ -292,12 +292,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "covered",
@@ -310,8 +310,8 @@
           "reference"
         ],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [],
         "official_source_preferred": false,
         "preferred_source_families": [
@@ -325,12 +325,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "covered",
@@ -343,8 +343,8 @@
           "reference"
         ],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [],
         "official_source_preferred": false,
         "preferred_source_families": [
@@ -358,12 +358,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "covered",
@@ -376,8 +376,8 @@
           "reference"
         ],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [],
         "official_source_preferred": false,
         "preferred_source_families": [
@@ -391,12 +391,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "covered",
@@ -409,8 +409,8 @@
           "reference"
         ],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [],
         "official_source_preferred": false,
         "preferred_source_families": [
@@ -424,12 +424,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "covered",
@@ -442,8 +442,8 @@
           "reference"
         ],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [],
         "official_source_preferred": false,
         "preferred_source_families": [
@@ -457,12 +457,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "covered",
@@ -475,8 +475,8 @@
           "reference"
         ],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [],
         "official_source_preferred": false,
         "preferred_source_families": [
@@ -490,12 +490,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "covered",
@@ -508,8 +508,8 @@
           "reference"
         ],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [],
         "official_source_preferred": false,
         "preferred_source_families": [
@@ -523,12 +523,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "covered",
@@ -541,8 +541,8 @@
           "reference"
         ],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [],
         "official_source_preferred": false,
         "preferred_source_families": [
@@ -556,12 +556,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "covered",
@@ -574,8 +574,8 @@
           "reference"
         ],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [],
         "official_source_preferred": false,
         "preferred_source_families": [
@@ -589,12 +589,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "covered",
@@ -607,8 +607,8 @@
           "reference"
         ],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [],
         "official_source_preferred": false,
         "preferred_source_families": [
@@ -622,12 +622,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "covered",
@@ -640,8 +640,8 @@
           "reference"
         ],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [],
         "official_source_preferred": false,
         "preferred_source_families": [
@@ -655,12 +655,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "covered",
@@ -671,12 +671,13 @@
     ],
     "missing_target_family": [
       {
-        "covered_target_source_families": [],
+        "covered_target_source_families": [
+          "official_statistics"
+        ],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [
-          "official_statistics",
           "official",
           "scholarly"
         ],
@@ -694,14 +695,14 @@
         "request_id": "cite-search-8b58995470ea78f9",
         "result_count": 3,
         "result_providers": [
+          "worldbank",
           "source_family_catalog",
-          "source_family_catalog",
-          "source_family_catalog"
+          "worldbank"
         ],
         "result_source_families": [
+          "official_statistics",
           "reference",
-          "reference",
-          "reference"
+          "official_statistics"
         ],
         "status": "needs_source_family_catalog",
         "target_source_families": [
@@ -711,12 +712,13 @@
         ]
       },
       {
-        "covered_target_source_families": [],
+        "covered_target_source_families": [
+          "official_statistics"
+        ],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [
-          "official_statistics",
           "official",
           "scholarly"
         ],
@@ -734,14 +736,14 @@
         "request_id": "cite-search-bbd5cdf975d44a83",
         "result_count": 3,
         "result_providers": [
+          "worldbank",
           "source_family_catalog",
-          "source_family_catalog",
-          "source_family_catalog"
+          "worldbank"
         ],
         "result_source_families": [
+          "official_statistics",
           "reference",
-          "reference",
-          "reference"
+          "official_statistics"
         ],
         "status": "needs_source_family_catalog",
         "target_source_families": [
@@ -751,12 +753,13 @@
         ]
       },
       {
-        "covered_target_source_families": [],
+        "covered_target_source_families": [
+          "official_statistics"
+        ],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [
-          "official_statistics",
           "official",
           "scholarly"
         ],
@@ -774,14 +777,14 @@
         "request_id": "cite-search-af6fc174863183f2",
         "result_count": 3,
         "result_providers": [
+          "worldbank",
           "source_family_catalog",
-          "source_family_catalog",
-          "source_family_catalog"
+          "worldbank"
         ],
         "result_source_families": [
+          "official_statistics",
           "reference",
-          "reference",
-          "reference"
+          "official_statistics"
         ],
         "status": "needs_source_family_catalog",
         "target_source_families": [
@@ -791,12 +794,13 @@
         ]
       },
       {
-        "covered_target_source_families": [],
+        "covered_target_source_families": [
+          "official_statistics"
+        ],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [
-          "official_statistics",
           "official",
           "scholarly"
         ],
@@ -814,14 +818,14 @@
         "request_id": "cite-search-b677934f044dafc7",
         "result_count": 3,
         "result_providers": [
+          "worldbank",
           "source_family_catalog",
-          "source_family_catalog",
-          "source_family_catalog"
+          "worldbank"
         ],
         "result_source_families": [
+          "official_statistics",
           "reference",
-          "reference",
-          "reference"
+          "official_statistics"
         ],
         "status": "needs_source_family_catalog",
         "target_source_families": [
@@ -833,8 +837,8 @@
       {
         "covered_target_source_families": [],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [
           "official",
           "scholarly"
@@ -853,12 +857,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "needs_source_family_catalog",
@@ -870,8 +874,8 @@
       {
         "covered_target_source_families": [],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [
           "official",
           "scholarly"
@@ -890,12 +894,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "needs_source_family_catalog",
@@ -907,8 +911,8 @@
       {
         "covered_target_source_families": [],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [
           "official",
           "scholarly"
@@ -927,12 +931,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "needs_source_family_catalog",
@@ -944,8 +948,8 @@
       {
         "covered_target_source_families": [],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [
           "official",
           "scholarly"
@@ -964,12 +968,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "needs_source_family_catalog",
@@ -981,8 +985,8 @@
       {
         "covered_target_source_families": [],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [
           "official",
           "scholarly"
@@ -1001,12 +1005,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "needs_source_family_catalog",
@@ -1018,8 +1022,8 @@
       {
         "covered_target_source_families": [],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [
           "official",
           "scholarly"
@@ -1038,12 +1042,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "needs_source_family_catalog",
@@ -1055,8 +1059,8 @@
       {
         "covered_target_source_families": [],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [
           "official",
           "scholarly"
@@ -1075,12 +1079,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "needs_source_family_catalog",
@@ -1092,8 +1096,8 @@
       {
         "covered_target_source_families": [],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [
           "official",
           "scholarly"
@@ -1112,12 +1116,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "needs_source_family_catalog",
@@ -1129,8 +1133,8 @@
       {
         "covered_target_source_families": [],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [
           "scholarly"
         ],
@@ -1147,12 +1151,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "needs_source_family_catalog",
@@ -1163,8 +1167,8 @@
       {
         "covered_target_source_families": [],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [
           "scholarly"
         ],
@@ -1181,12 +1185,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "needs_source_family_catalog",
@@ -1197,8 +1201,8 @@
       {
         "covered_target_source_families": [],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [
           "scholarly"
         ],
@@ -1215,12 +1219,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "needs_source_family_catalog",
@@ -1231,8 +1235,8 @@
       {
         "covered_target_source_families": [],
         "freshness_required": false,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [
           "scholarly"
         ],
@@ -1249,12 +1253,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "needs_source_family_catalog",
@@ -1265,8 +1269,8 @@
       {
         "covered_target_source_families": [],
         "freshness_required": true,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [
           "official",
           "news",
@@ -1287,12 +1291,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "needs_source_family_catalog",
@@ -1305,8 +1309,8 @@
       {
         "covered_target_source_families": [],
         "freshness_required": true,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [
           "official",
           "news",
@@ -1327,12 +1331,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "needs_source_family_catalog",
@@ -1345,8 +1349,8 @@
       {
         "covered_target_source_families": [],
         "freshness_required": true,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [
           "official",
           "news",
@@ -1367,12 +1371,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "needs_source_family_catalog",
@@ -1385,8 +1389,8 @@
       {
         "covered_target_source_families": [],
         "freshness_required": true,
-        "has_fresh_result": false,
-        "has_official_result": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
         "missing_target_source_families": [
           "official",
           "news",
@@ -1407,12 +1411,12 @@
         "result_count": 3,
         "result_providers": [
           "source_family_catalog",
-          "source_family_catalog",
+          "worldbank",
           "source_family_catalog"
         ],
         "result_source_families": [
           "reference",
-          "reference",
+          "official_statistics",
           "reference"
         ],
         "status": "needs_source_family_catalog",
@@ -1430,25 +1434,25 @@
   },
   "schema_version": 1,
   "source": {
-    "adapter_results": "artifacts/frontier-release-evidence/unresolved-wikidata-source-family-citation-workflow-v1/source-family-citation-search-results.jsonl",
-    "requests": "artifacts/frontier-release-evidence/unresolved-wikidata-source-family-citation-workflow-v1/source-family-citation-search-requests.jsonl"
+    "adapter_results": "artifacts/frontier-release-evidence/unresolved-worldbank-source-family-citation-workflow-v1/source-family-citation-search-results.jsonl",
+    "requests": "artifacts/frontier-release-evidence/unresolved-worldbank-source-family-citation-workflow-v1/source-family-citation-search-requests.jsonl"
   },
   "status": "needs_catalog_expansion",
   "summary": {
     "acquisition_plan_count": 192,
     "covered_target_source_family_counts": {
+      "official_statistics": 4,
       "reference": 68
     },
     "freshness_required_count": 20,
-    "freshness_required_with_fresh_result_count": 0,
+    "freshness_required_with_fresh_result_count": 16,
     "missing_target_source_family_counts": {
       "news": 20,
       "official": 52,
-      "official_statistics": 4,
       "scholarly": 156
     },
     "official_source_preferred_count": 52,
-    "official_source_preferred_with_official_result_count": 0,
+    "official_source_preferred_with_official_result_count": 48,
     "preferred_source_family_counts": {
       "encyclopedic": 244,
       "news": 20,
@@ -1459,16 +1463,18 @@
     },
     "request_count": 260,
     "request_missing_target_family_count": 192,
-    "request_with_fresh_result_count": 0,
-    "request_with_official_result_count": 0,
+    "request_with_fresh_result_count": 196,
+    "request_with_official_result_count": 196,
     "request_with_results_count": 244,
-    "request_with_target_family_count": 68,
+    "request_with_target_family_count": 72,
     "result_provider_counts": {
-      "source_family_catalog": 720
+      "source_family_catalog": 524,
+      "worldbank": 204
     },
     "result_request_count": 244,
     "result_source_family_counts": {
-      "reference": 720
+      "official_statistics": 204,
+      "reference": 524
     },
     "target_source_family_counts": {
       "news": 20,

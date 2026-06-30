@@ -44852,6 +44852,13 @@ def test_audit_source_family_coverage_emits_acquisition_plan(tmp_path):
                         "text": "Ireland capital reference.",
                         "provider": "wikidata",
                         "source_family": "reference",
+                    },
+                    {
+                        "title": "Irish government",
+                        "text": "Official Irish government reference page.",
+                        "provider": "official_site",
+                        "source_family": "official",
+                        "timestamp": "2026-06-30T00:00:00+00:00",
                     }
                 ],
             }),
@@ -44880,6 +44887,12 @@ def test_audit_source_family_coverage_emits_acquisition_plan(tmp_path):
     assert payload["summary"]["request_count"] == 2
     assert payload["summary"]["request_with_results_count"] == 2
     assert payload["summary"]["request_missing_target_family_count"] == 1
+    assert payload["summary"]["official_source_preferred_count"] == 1
+    assert payload["summary"]["request_with_official_result_count"] == 1
+    assert payload["summary"]["official_source_preferred_with_official_result_count"] == 0
+    assert payload["summary"]["freshness_required_count"] == 1
+    assert payload["summary"]["request_with_fresh_result_count"] == 1
+    assert payload["summary"]["freshness_required_with_fresh_result_count"] == 0
     assert payload["summary"]["missing_target_source_family_counts"] == {
         "official": 1,
         "official_statistics": 1,

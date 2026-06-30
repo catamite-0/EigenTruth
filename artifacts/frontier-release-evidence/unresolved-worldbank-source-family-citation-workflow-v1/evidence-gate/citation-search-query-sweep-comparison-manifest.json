@@ -1,0 +1,45 @@
+{
+  "artifacts": {
+    "controlled_sweep_0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json",
+      "sha256": "55ea8ff6f134ca28d26e42e552f5b2c4a120ed2de678e08c95209e770506c368",
+      "size_bytes": 162471
+    },
+    "external_sweep_0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-query-sweep.json",
+      "sha256": "c46dde2f1518e31774bbdeced776288f18c96fce6ae5ce98c63d4a896bf161cd",
+      "size_bytes": 52251
+    },
+    "query_sweep_comparison": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-query-sweep-comparison.json",
+      "sha256": "de11ed7d23dbd93977cbcb7372648f2adac218d8a88ebc1486e57e0d274fbb0e",
+      "size_bytes": 17429
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "controlled_best_blind_refuted_rate": 1.0,
+    "external_best_blind_refuted_rate": 0.0,
+    "passed": false,
+    "recommended_controlled_strategy": "question_answer_overlap_0p5",
+    "recommended_external_strategy": null,
+    "runner": "compare_blind_spot_query_sweeps",
+    "status": "blocked"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

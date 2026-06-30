@@ -1,0 +1,328 @@
+{
+  "corpus_type": "source_family_structured_qa_external_evidence",
+  "description": "Structured QA corpus derived only from source-family rows with explicit structured metadata. Use as a covered-fact input for QuestionAnswerVerifier; do not treat it as broad open-domain TruthfulQA coverage.",
+  "documents": [
+    {
+      "answer": "42,647,492",
+      "metadata": {
+        "country_code_iso3": "AFG",
+        "country_name": "Afghanistan",
+        "extraction_rule": "worldbank_country_indicator_year_value",
+        "indicator": "SP.POP.TOTL",
+        "indicator_name": "Population, total",
+        "provider": "worldbank",
+        "published_at": "2026-04-08",
+        "raw_value": "42647492",
+        "reference_year": "2024",
+        "retrieved_at": "2026-06-30T16:33:27.138015+00:00",
+        "source": "worldbank:SP.POP.TOTL:AFG:2024",
+        "source_family": "official_statistics",
+        "source_family_confidence": 1.0,
+        "source_index": 0,
+        "title": "World Bank official statistics: Population, total for Afghanistan (2024)",
+        "url": "https://data.worldbank.org/indicator/SP.POP.TOTL?locations=AF"
+      },
+      "question": "What does the World Bank list as Population, total for Afghanistan in 2024?",
+      "source": "worldbank:SP.POP.TOTL:AFG:2024",
+      "text": "What does the World Bank list as Population, total for Afghanistan in 2024? 42,647,492"
+    },
+    {
+      "answer": "2,377,128",
+      "metadata": {
+        "country_code_iso3": "ALB",
+        "country_name": "Albania",
+        "extraction_rule": "worldbank_country_indicator_year_value",
+        "indicator": "SP.POP.TOTL",
+        "indicator_name": "Population, total",
+        "provider": "worldbank",
+        "published_at": "2026-04-08",
+        "raw_value": "2377128",
+        "reference_year": "2024",
+        "retrieved_at": "2026-06-30T16:33:27.138015+00:00",
+        "source": "worldbank:SP.POP.TOTL:ALB:2024",
+        "source_family": "official_statistics",
+        "source_family_confidence": 1.0,
+        "source_index": 2,
+        "title": "World Bank official statistics: Population, total for Albania (2024)",
+        "url": "https://data.worldbank.org/indicator/SP.POP.TOTL?locations=AL"
+      },
+      "question": "What does the World Bank list as Population, total for Albania in 2024?",
+      "source": "worldbank:SP.POP.TOTL:ALB:2024",
+      "text": "What does the World Bank list as Population, total for Albania in 2024? 2,377,128"
+    },
+    {
+      "answer": "100,616",
+      "metadata": {
+        "country_code_iso3": "VCT",
+        "country_name": "St. Vincent and the Grenadines",
+        "extraction_rule": "worldbank_country_indicator_year_value",
+        "indicator": "SP.POP.TOTL",
+        "indicator_name": "Population, total",
+        "provider": "worldbank",
+        "published_at": "2026-04-08",
+        "raw_value": "100616",
+        "reference_year": "2024",
+        "retrieved_at": "2026-06-30T16:33:27.138015+00:00",
+        "source": "worldbank:SP.POP.TOTL:VCT:2024",
+        "source_family": "official_statistics",
+        "source_family_confidence": 0.5,
+        "source_index": 13,
+        "title": "World Bank official statistics: Population, total for St. Vincent and the Grenadines (2024)",
+        "url": "https://data.worldbank.org/indicator/SP.POP.TOTL?locations=VC"
+      },
+      "question": "What does the World Bank list as Population, total for St. Vincent and the Grenadines in 2024?",
+      "source": "worldbank:SP.POP.TOTL:VCT:2024",
+      "text": "What does the World Bank list as Population, total for St. Vincent and the Grenadines in 2024? 100,616"
+    },
+    {
+      "answer": "46,765",
+      "metadata": {
+        "country_code_iso3": "ASM",
+        "country_name": "American Samoa",
+        "extraction_rule": "worldbank_country_indicator_year_value",
+        "indicator": "SP.POP.TOTL",
+        "indicator_name": "Population, total",
+        "provider": "worldbank",
+        "published_at": "2026-04-08",
+        "raw_value": "46765",
+        "reference_year": "2024",
+        "retrieved_at": "2026-06-30T16:33:27.138015+00:00",
+        "source": "worldbank:SP.POP.TOTL:ASM:2024",
+        "source_family": "official_statistics",
+        "source_family_confidence": 0.5,
+        "source_index": 217,
+        "title": "World Bank official statistics: Population, total for American Samoa (2024)",
+        "url": "https://data.worldbank.org/indicator/SP.POP.TOTL?locations=AS"
+      },
+      "question": "What does the World Bank list as Population, total for American Samoa in 2024?",
+      "source": "worldbank:SP.POP.TOTL:ASM:2024",
+      "text": "What does the World Bank list as Population, total for American Samoa in 2024? 46,765"
+    },
+    {
+      "answer": "113,160",
+      "metadata": {
+        "country_code_iso3": "FSM",
+        "country_name": "Micronesia, Fed. Sts.",
+        "extraction_rule": "worldbank_country_indicator_year_value",
+        "indicator": "SP.POP.TOTL",
+        "indicator_name": "Population, total",
+        "provider": "worldbank",
+        "published_at": "2026-04-08",
+        "raw_value": "113160",
+        "reference_year": "2024",
+        "retrieved_at": "2026-06-30T16:33:27.138015+00:00",
+        "source": "worldbank:SP.POP.TOTL:FSM:2024",
+        "source_family": "official_statistics",
+        "source_family_confidence": 0.5,
+        "source_index": 229,
+        "title": "World Bank official statistics: Population, total for Micronesia, Fed. Sts. (2024)",
+        "url": "https://data.worldbank.org/indicator/SP.POP.TOTL?locations=FM"
+      },
+      "question": "What does the World Bank list as Population, total for Micronesia, Fed. Sts. in 2024?",
+      "source": "worldbank:SP.POP.TOTL:FSM:2024",
+      "text": "What does the World Bank list as Population, total for Micronesia, Fed. Sts. in 2024? 113,160"
+    },
+    {
+      "answer": "26,498,823",
+      "metadata": {
+        "country_code_iso3": "PRK",
+        "country_name": "Korea, Dem. People's Rep.",
+        "extraction_rule": "worldbank_country_indicator_year_value",
+        "indicator": "SP.POP.TOTL",
+        "indicator_name": "Population, total",
+        "provider": "worldbank",
+        "published_at": "2026-04-08",
+        "raw_value": "26498823",
+        "reference_year": "2024",
+        "retrieved_at": "2026-06-30T16:33:27.138015+00:00",
+        "source": "worldbank:SP.POP.TOTL:PRK:2024",
+        "source_family": "official_statistics",
+        "source_family_confidence": 0.5,
+        "source_index": 241,
+        "title": "World Bank official statistics: Population, total for Korea, Dem. People's Rep. (2024)",
+        "url": "https://data.worldbank.org/indicator/SP.POP.TOTL?locations=KP"
+      },
+      "question": "What does the World Bank list as Population, total for Korea, Dem. People's Rep. in 2024?",
+      "source": "worldbank:SP.POP.TOTL:PRK:2024",
+      "text": "What does the World Bank list as Population, total for Korea, Dem. People's Rep. in 2024? 26,498,823"
+    },
+    {
+      "answer": "17,993,485",
+      "metadata": {
+        "country_code_iso3": "NLD",
+        "country_name": "Netherlands",
+        "extraction_rule": "worldbank_country_indicator_year_value",
+        "indicator": "SP.POP.TOTL",
+        "indicator_name": "Population, total",
+        "provider": "worldbank",
+        "published_at": "2026-04-08",
+        "raw_value": "17993485",
+        "reference_year": "2024",
+        "retrieved_at": "2026-06-30T16:33:27.138015+00:00",
+        "source": "worldbank:SP.POP.TOTL:NLD:2024",
+        "source_family": "official_statistics",
+        "source_family_confidence": 0.5,
+        "source_index": 265,
+        "title": "World Bank official statistics: Population, total for Netherlands (2024)",
+        "url": "https://data.worldbank.org/indicator/SP.POP.TOTL?locations=NL"
+      },
+      "question": "What does the World Bank list as Population, total for Netherlands in 2024?",
+      "source": "worldbank:SP.POP.TOTL:NLD:2024",
+      "text": "What does the World Bank list as Population, total for Netherlands in 2024? 17,993,485"
+    },
+    {
+      "answer": "5,395,790",
+      "metadata": {
+        "country_code_iso3": "IRL",
+        "country_name": "Ireland",
+        "extraction_rule": "worldbank_country_indicator_year_value",
+        "indicator": "SP.POP.TOTL",
+        "indicator_name": "Population, total",
+        "provider": "worldbank",
+        "published_at": "2026-04-08",
+        "raw_value": "5395790",
+        "reference_year": "2024",
+        "retrieved_at": "2026-06-30T16:33:27.138015+00:00",
+        "source": "worldbank:SP.POP.TOTL:IRL:2024",
+        "source_family": "official_statistics",
+        "source_family_confidence": 0.5,
+        "source_index": 385,
+        "title": "World Bank official statistics: Population, total for Ireland (2024)",
+        "url": "https://data.worldbank.org/indicator/SP.POP.TOTL?locations=IE"
+      },
+      "question": "What does the World Bank list as Population, total for Ireland in 2024?",
+      "source": "worldbank:SP.POP.TOTL:IRL:2024",
+      "text": "What does the World Bank list as Population, total for Ireland in 2024? 5,395,790"
+    },
+    {
+      "answer": "281,807",
+      "metadata": {
+        "country_code_iso3": "PYF",
+        "country_name": "French Polynesia",
+        "extraction_rule": "worldbank_country_indicator_year_value",
+        "indicator": "SP.POP.TOTL",
+        "indicator_name": "Population, total",
+        "provider": "worldbank",
+        "published_at": "2026-04-08",
+        "raw_value": "281807",
+        "reference_year": "2024",
+        "retrieved_at": "2026-06-30T16:33:27.138015+00:00",
+        "source": "worldbank:SP.POP.TOTL:PYF:2024",
+        "source_family": "official_statistics",
+        "source_family_confidence": 0.5,
+        "source_index": 409,
+        "title": "World Bank official statistics: Population, total for French Polynesia (2024)",
+        "url": "https://data.worldbank.org/indicator/SP.POP.TOTL?locations=PF"
+      },
+      "question": "What does the World Bank list as Population, total for French Polynesia in 2024?",
+      "source": "worldbank:SP.POP.TOTL:PYF:2024",
+      "text": "What does the World Bank list as Population, total for French Polynesia in 2024? 281,807"
+    },
+    {
+      "answer": "20,299,123",
+      "metadata": {
+        "country_code_iso3": "TCD",
+        "country_name": "Chad",
+        "extraction_rule": "worldbank_country_indicator_year_value",
+        "indicator": "SP.POP.TOTL",
+        "indicator_name": "Population, total",
+        "provider": "worldbank",
+        "published_at": "2026-04-08",
+        "raw_value": "20299123",
+        "reference_year": "2024",
+        "retrieved_at": "2026-06-30T16:33:27.138015+00:00",
+        "source": "worldbank:SP.POP.TOTL:TCD:2024",
+        "source_family": "official_statistics",
+        "source_family_confidence": 0.5,
+        "source_index": 505,
+        "title": "World Bank official statistics: Population, total for Chad (2024)",
+        "url": "https://data.worldbank.org/indicator/SP.POP.TOTL?locations=TD"
+      },
+      "question": "What does the World Bank list as Population, total for Chad in 2024?",
+      "source": "worldbank:SP.POP.TOTL:TCD:2024",
+      "text": "What does the World Bank list as Population, total for Chad in 2024? 20,299,123"
+    },
+    {
+      "answer": "84,160",
+      "metadata": {
+        "country_code_iso3": "IMN",
+        "country_name": "Isle of Man",
+        "extraction_rule": "worldbank_country_indicator_year_value",
+        "indicator": "SP.POP.TOTL",
+        "indicator_name": "Population, total",
+        "provider": "worldbank",
+        "published_at": "2026-04-08",
+        "raw_value": "84160",
+        "reference_year": "2024",
+        "retrieved_at": "2026-06-30T16:33:27.138015+00:00",
+        "source": "worldbank:SP.POP.TOTL:IMN:2024",
+        "source_family": "official_statistics",
+        "source_family_confidence": 0.5,
+        "source_index": 657,
+        "title": "World Bank official statistics: Population, total for Isle of Man (2024)",
+        "url": "https://data.worldbank.org/indicator/SP.POP.TOTL?locations=IM"
+      },
+      "question": "What does the World Bank list as Population, total for Isle of Man in 2024?",
+      "source": "worldbank:SP.POP.TOTL:IMN:2024",
+      "text": "What does the World Bank list as Population, total for Isle of Man in 2024? 84,160"
+    },
+    {
+      "answer": "93,772",
+      "metadata": {
+        "country_code_iso3": "ATG",
+        "country_name": "Antigua and Barbuda",
+        "extraction_rule": "worldbank_country_indicator_year_value",
+        "indicator": "SP.POP.TOTL",
+        "indicator_name": "Population, total",
+        "provider": "worldbank",
+        "published_at": "2026-04-08",
+        "raw_value": "93772",
+        "reference_year": "2024",
+        "retrieved_at": "2026-06-30T16:33:27.138015+00:00",
+        "source": "worldbank:SP.POP.TOTL:ATG:2024",
+        "source_family": "official_statistics",
+        "source_family_confidence": 0.5,
+        "source_index": 681,
+        "title": "World Bank official statistics: Population, total for Antigua and Barbuda (2024)",
+        "url": "https://data.worldbank.org/indicator/SP.POP.TOTL?locations=AG"
+      },
+      "question": "What does the World Bank list as Population, total for Antigua and Barbuda in 2024?",
+      "source": "worldbank:SP.POP.TOTL:ATG:2024",
+      "text": "What does the World Bank list as Population, total for Antigua and Barbuda in 2024? 93,772"
+    }
+  ],
+  "label_usage": {
+    "claim_ids_copied_to_document_metadata": false,
+    "labels_copied_to_document_metadata": false,
+    "labels_used_for_documents": false,
+    "model_answers_copied_to_document_metadata": false,
+    "score_dump_rows_copied_to_document_metadata": false
+  },
+  "schema_version": 1,
+  "source": {
+    "accepted_providers": [
+      "wikidata",
+      "worldbank"
+    ],
+    "builder": "source_family_structured_qa_corpus_builder",
+    "skip_qid_values": true
+  },
+  "summary": {
+    "by_provider": {
+      "worldbank": 12
+    },
+    "by_source_family": {
+      "official_statistics": 12
+    },
+    "n_candidate_documents": 204,
+    "n_documents": 12,
+    "n_source_documents": 728,
+    "skipped": {
+      "duplicates": 192,
+      "missing_fields": 0,
+      "qid_values": 0,
+      "reserved_metadata": 0,
+      "unsupported_provider": 524
+    }
+  }
+}

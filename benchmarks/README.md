@@ -1946,6 +1946,91 @@ provider hints for OpenAlex/Crossref, official-site search, GDELT/news, and
 World Bank/UN-style statistics collection. This is the concrete next execution
 queue for claim-specific source acquisition.
 
+The v4 official-statistics lane is now filled with the World Bank adapter and
+replayed through the same fail-closed gates:
+
+```bash
+WB=artifacts/frontier-release-evidence/unresolved-worldbank-official-statistics-catalog-v1
+WB_WORKFLOW=artifacts/frontier-release-evidence/unresolved-worldbank-source-family-citation-workflow-v1
+
+python benchmarks/run_worldbank_source_family_catalog_adapter.py \
+  --tasks artifacts/frontier-release-evidence/unresolved-source-family-catalog-collection-plan-v1/source-family-catalog-collection-tasks.jsonl \
+  --output "$WB/worldbank-official-statistics-catalog.jsonl" \
+  --report-json "$WB/worldbank-official-statistics-catalog-report.json" \
+  --artifact-manifest "$WB/artifact-manifest.json" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-worldbank-official-statistics-catalog \
+  --version 0.1 \
+  --metadata source=frontier-v4 \
+  --metadata model=smollm2-l80
+
+python benchmarks/run_source_family_citation_search_workflow.py \
+  --queue artifacts/frontier-release-evidence/unresolved-blind-spot-evidence-queue-v1/unresolved-evidence-queue.json \
+  --source-catalog artifacts/frontier-release-evidence/blind-spot-wikidata-evidence-v1/wikidata-source-docs.jsonl \
+  --source-catalog "$WB/worldbank-official-statistics-catalog.jsonl" \
+  --scores artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json \
+  --blind-spots artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
+  --controlled-sweep artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json \
+  --output-dir "$WB_WORKFLOW" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-worldbank-source-family-citation-workflow \
+  --version 0.1 \
+  --query-mode claim_entity \
+  --adapter-diversify-source-families \
+  --target-route retrieval_groundedness \
+  --metadata source=frontier-v4 \
+  --metadata model=smollm2-l80
+```
+
+The catalog writes `217` country-level `SP.POP.TOTL` documents with `0` errors.
+The combined workflow sees `539` catalog docs, returns `728` adapter results,
+and includes `204` World Bank `official_statistics` result rows. Provenance
+still passes, but route promotion remains blocked: the external query sweep
+still refutes `0/89` blind spots and the controlled-vs-external comparison is
+blocked. The follow-up coverage audit confirms the narrow win: all `4`
+`official_statistics` gaps are covered, while remaining family gaps drop from
+`232` to `228` and replan to `33` tasks (`21` scholarly, `8` official, `4`
+news). The coverage audit now reports both total official/fresh result counts
+and preferred/required satisfied counts separately, so broad World Bank matches
+cannot be mistaken for official-source coverage on unrelated requests.
+
+The same World Bank source-family results can be converted into covered facts:
+
+```bash
+QA=artifacts/frontier-release-evidence/unresolved-worldbank-source-family-structured-qa-corpus-v1
+QA_ROUTE=artifacts/frontier-release-evidence/unresolved-worldbank-source-family-structured-qa-route-v1
+
+python benchmarks/build_source_family_qa_corpus.py \
+  --source "$WB_WORKFLOW/source-family-citation-search-results.jsonl" \
+  --output "$QA/source-family-structured-qa-corpus.json" \
+  --report-json "$QA/source-family-structured-qa-corpus-report.json" \
+  --artifact-manifest "$QA/artifact-manifest.json" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-worldbank-source-family-structured-qa-corpus \
+  --version 0.1 \
+  --metadata source=frontier-v4 \
+  --metadata model=smollm2-l80
+
+python benchmarks/run_source_family_structured_qa_route_workflow.py \
+  --qa-corpus "$QA/source-family-structured-qa-corpus.json" \
+  --output-dir "$QA_ROUTE" \
+  --score-name smollm2-l80-frontier-v4-worldbank-covered-facts \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-worldbank-source-family-structured-qa-route \
+  --version 0.1 \
+  --alpha 0.1 \
+  --metadata source=frontier-v4 \
+  --metadata model=smollm2-l80
+```
+
+The builder reads `728` adapter result documents, finds `204` World Bank
+structured candidates, and deduplicates them to `12` label-free QA facts. The
+covered-facts route promotes on `24` balanced true/mismatch rows with decision
+accuracy `1.0`, true-supported rate `1.0`, false-refuted rate `1.0`, and
+false-supported rate `0.0`. This is exact covered-fact quality for population
+statistics only; broad blind-spot recall still depends on mapping product
+claims to those facts or filling the remaining official/scholarly/news lanes.
+
 ## `build_unresolved_world_model_rule_stubs.py`
 
 Bridges the world-model/calculator branch of the unresolved queue into the
