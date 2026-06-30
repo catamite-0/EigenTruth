@@ -1084,6 +1084,26 @@ def test_counterfactual_probe_generator_builds_metadata_numeric_temporal_and_neg
     assert all(probe.expected_counterfactual_status is VerificationStatus.REFUTED for probe in probes)
 
 
+def test_counterfactual_probe_generator_uses_extracted_entity_candidates():
+    claims = extract_claims("AlphaCorp acquired Beta Labs in Paris.")
+
+    probes = generate_counterfactual_probes(
+        claims,
+        max_probes_per_claim=3,
+        probe_types=("entity_swap",),
+    )
+    texts = {probe.counterfactual.text for probe in probes}
+
+    assert "BetaCorp acquired Beta Labs in Paris." in texts
+    assert "AlphaCorp acquired Gamma Labs in Paris." in texts
+    assert "AlphaCorp acquired Beta Labs in Berlin." in texts
+    assert all(probe.probe_type == "entity_swap" for probe in probes)
+    assert all(
+        probe.counterfactual.metadata["replacement_source_kind"] == "entity_candidate"
+        for probe in probes
+    )
+
+
 def test_structured_fact_verifier_handles_fact_paraphrases_and_object_lists():
     verifier = StructuredFactVerifier.from_corpus({
         "facts": [

@@ -98,6 +98,9 @@ def build_counterfactual_probe_handoff(
         claim_payload = _claim_to_record(claim)
         claims.append(claim_payload)
         probe_types = _probe_types_for_request(request, default_probe_types=default_probe_types)
+        if _requires_external_entity_swap_generation(request):
+            pending.append(_pending_request(request, reason="no_auto_probe_generated"))
+            continue
         generated = generate_counterfactual_probes(
             (claim,),
             max_probes_per_claim=int(max_probes_per_request),
@@ -419,6 +422,12 @@ def _probe_types_for_request(
     if probe_type in PROBE_TYPE_MAP:
         return PROBE_TYPE_MAP[probe_type]
     return tuple(default_probe_types)
+
+
+def _requires_external_entity_swap_generation(request: Mapping[str, Any]) -> bool:
+    if _clean_probe_type(request.get("probe_type")) != "entity_swap":
+        return False
+    return not bool(_counterfactual_replacements(request))
 
 
 def _probe_with_request_metadata(
