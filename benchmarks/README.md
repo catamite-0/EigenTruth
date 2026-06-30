@@ -5185,6 +5185,26 @@ release comparator inputs, queue entries include single-cell
 queue manifest fingerprints both the source report and generated queue so the
 planning step can be reviewed before any expensive rerun starts.
 
+After the child frontier workflow reruns finish, roll the queue back into
+release evidence:
+
+```bash
+python benchmarks/rollup_frontier_multiple_testing_reruns.py \
+  --queue artifacts/frontier-release-evidence/multiple-testing-rerun-queue.json \
+  --json artifacts/frontier-release-evidence/multiple-testing-rerun-rollup.json \
+  --artifact-manifest artifacts/frontier-release-evidence/multiple-testing-rerun-rollup-manifest.json \
+  --registry artifacts/release-registry.json \
+  --name frontier-multiple-testing-rerun-rollup \
+  --version 0.1 \
+  --require-all-reports
+```
+
+The rollup checks each completed child report's top-level
+`multiple_testing_gate.all_pass` summary and the queued cell entry under
+`multiple_testing_gate.cells`. A candidate promotes only when the family-wise
+gate passes, the queued cell passes, and that cell records both report and
+calibration artifact paths.
+
 Before rerunning product-runtime drift gates, audit the deployable promotion
 contract for the exact evidence handoff fields expected by `frontier_audit`:
 

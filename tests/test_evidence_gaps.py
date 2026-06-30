@@ -6,6 +6,7 @@ from pathlib import Path
 from benchmarks.plan_citation_batch_evidence_reruns import build_citation_batch_evidence_rerun_queue
 from benchmarks.plan_frontier_abstention_evidence_reruns import build_frontier_abstention_evidence_rerun_queue
 from benchmarks.plan_frontier_detectability_evidence_reruns import build_frontier_detectability_evidence_rerun_queue
+from benchmarks.plan_frontier_multiple_testing_reruns import build_frontier_multiple_testing_rerun_queue
 from benchmarks.plan_frontier_stability_evidence_reruns import build_frontier_stability_evidence_rerun_queue
 from benchmarks.plan_release_evidence_gaps import build_release_evidence_gap_plan
 from benchmarks.rollup_frontier_abstention_evidence_reruns import (
@@ -13,6 +14,9 @@ from benchmarks.rollup_frontier_abstention_evidence_reruns import (
 )
 from benchmarks.rollup_frontier_detectability_evidence_reruns import (
     rollup_frontier_detectability_evidence_reruns,
+)
+from benchmarks.rollup_frontier_multiple_testing_reruns import (
+    rollup_frontier_multiple_testing_reruns,
 )
 from eigentruth.control import (
     EvidenceGapPlan,
@@ -395,6 +399,126 @@ def test_plan_release_evidence_gaps_can_emit_multiple_testing_rerun_queue(tmp_pa
     assert gap_record.metadata["gap_count"] == 1
     assert queue_record.metadata["blocked_cell_count"] == 1
     assert queue_record.metadata["command_count"] == 1
+
+
+def test_frontier_multiple_testing_rerun_rollup_promotes_passing_cell(tmp_path):
+    source = tmp_path / "frontier-release-evidence.json"
+    queue_path = tmp_path / "multiple-testing-rerun-queue.json"
+    rollup_path = tmp_path / "multiple-testing-rerun-rollup.json"
+    manifest_path = tmp_path / "multiple-testing-rerun-rollup-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    workflow_path = tmp_path / "frontier" / "truthfulqa-frontier-workflow.json"
+    workflow_path.parent.mkdir(parents=True, exist_ok=True)
+    workflow_path.write_text(json.dumps(_frontier_workflow_payload_for_multiple_testing_queue()), encoding="utf-8")
+    source.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "frontier_release_evidence_comparison",
+            "status": "complete",
+            "inputs": {
+                "frontier_workflow_reports": (
+                    {
+                        "path": str(workflow_path),
+                        "workflow": "truthfulqa_frontier_workflow",
+                        "status": "complete",
+                    },
+                ),
+            },
+            "evidence_summary": {
+                "multiple_testing_failed_cells": (
+                    {
+                        "run": "truthfulqa-frontier-workflow",
+                        "cell": "a-l2",
+                        "status": "failed",
+                        "false_alarm": 0.03,
+                        "detection": 0.7,
+                        "report": "frontier/a-l2/multiple-testing-report.json",
+                        "calibration": "frontier/a-l2/multiple-testing-calibration.json",
+                    },
+                ),
+            },
+        }),
+        encoding="utf-8",
+    )
+    queue = build_frontier_multiple_testing_rerun_queue(
+        source=source,
+        json_path=queue_path,
+        output_dir=tmp_path / "reruns",
+        python_executable="python",
+    )
+    entry = queue["entries"][0]
+    child_report_path = _multiple_testing_queue_entry_report_path(entry)
+    child_report_path.parent.mkdir(parents=True, exist_ok=True)
+    child_report_path.write_text(
+        json.dumps(_frontier_workflow_multiple_testing_child_report(cell="a-l2", passed=True)),
+        encoding="utf-8",
+    )
+
+    payload = rollup_frontier_multiple_testing_reruns(
+        queue_path=queue_path,
+        report_json_path=rollup_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="frontier-multiple-testing-rerun-rollup",
+        version="0.1",
+        require_all_reports=True,
+        metadata={"suite": "unit"},
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = ArtifactRegistry.load_json(registry_path).get(
+        "report:frontier-multiple-testing-rerun-rollup:0.1"
+    )
+
+    assert payload["workflow"] == "frontier_multiple_testing_rerun_rollup"
+    assert payload["status"] == "promote"
+    assert payload["gate"]["promotion_ready"] is True
+    assert payload["summary"]["candidate_count"] == 1
+    assert payload["summary"]["promotion_ready_count"] == 1
+    assert payload["recommended_candidate"]["cell"] == "a-l2"
+    assert payload["recommended_candidate"]["metrics"]["cell_status"] == "passed"
+    assert manifest["artifacts"]["frontier_multiple_testing_rerun_rollup"]["exists"] is True
+    assert record.metadata["workflow"] == "frontier_multiple_testing_rerun_rollup"
+    assert record.metadata["promotion_ready"] is True
+    assert record.metadata["best_cell"] == "a-l2"
+    assert record.metadata["suite"] == "unit"
+
+
+def test_frontier_multiple_testing_rerun_rollup_blocks_missing_report_by_default(tmp_path):
+    queue_path = tmp_path / "multiple-testing-rerun-queue.json"
+    rollup_path = tmp_path / "multiple-testing-rerun-rollup.json"
+    queue_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "frontier_multiple_testing_rerun_queue",
+            "status": "ready",
+            "entries": (
+                {
+                    "run": "truthfulqa-frontier-workflow",
+                    "cell": "a-l2",
+                    "status": "failed",
+                    "command_status": "ready",
+                    "command": (
+                        "python",
+                        "benchmarks/run_truthfulqa_frontier_workflow.py",
+                        "--output-dir",
+                        str(tmp_path / "reruns" / "a-l2"),
+                    ),
+                },
+            ),
+        }),
+        encoding="utf-8",
+    )
+
+    payload = rollup_frontier_multiple_testing_reruns(
+        queue_path=queue_path,
+        report_json_path=rollup_path,
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["gate"]["passed"] is False
+    assert payload["gate"]["require_all_reports"] is False
+    assert payload["summary"]["missing_report_count"] == 1
+    assert payload["gate"]["blocking_reasons"][0]["gate"] == "report_coverage"
 
 
 def test_citation_batch_evidence_rerun_queue_builds_source_family_commands(tmp_path):
@@ -1109,6 +1233,41 @@ def _frontier_workflow_payload_for_multiple_testing_queue():
                     "detection": 0.7,
                     "report": "frontier/a-l2/multiple-testing-report.json",
                     "calibration": "frontier/a-l2/multiple-testing-calibration.json",
+                },
+            ),
+        },
+    }
+
+
+def _multiple_testing_queue_entry_report_path(entry):
+    command = tuple(entry["command"])
+    output_dir = Path(command[command.index("--output-dir") + 1])
+    return output_dir / "truthfulqa-frontier-workflow.json"
+
+
+def _frontier_workflow_multiple_testing_child_report(*, cell, passed):
+    return {
+        "schema_version": 1,
+        "workflow": "truthfulqa_frontier_workflow",
+        "status": "complete",
+        "multiple_testing_gate": {
+            "enabled": True,
+            "signals": ("truth_proj", "subspace_resid"),
+            "alpha": 0.2,
+            "method": "bh",
+            "cell_count": 1,
+            "pass_count": 1 if passed else 0,
+            "fail_count": 0 if passed else 1,
+            "unknown_count": 0,
+            "all_pass": passed,
+            "cells": (
+                {
+                    "cell": cell,
+                    "pass": passed,
+                    "false_alarm": 0.02 if passed else 0.08,
+                    "detection": 0.76,
+                    "report": f"{cell}/multiple-testing-report.json",
+                    "calibration": f"{cell}/multiple-testing-calibration.json",
                 },
             ),
         },
