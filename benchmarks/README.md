@@ -8017,6 +8017,32 @@ python benchmarks/enrich_product_trace_runtime_evidence.py \
   --compact-json
 ```
 
+After `enrich_product_trace_triple_audit.py` has added `audit_only` verifier
+results for skipped verification profiles, rerun runtime-evidence enrichment on
+the triple-audited traces. This attaches deterministic
+`TripleAuditWorldModelAdapter` sidecars to the audit reports, so the current
+SmolLM2 trace set can use strict `1.0` participating-trace gates across
+world-model, context-sensitivity, and counterfactual-robustness evidence:
+
+```bash
+python benchmarks/enrich_product_trace_runtime_evidence.py \
+  --trace-glob 'artifacts/smollm2_product_trace_triple_audit_enrichment_v1/traces/*.json' \
+  --output-dir artifacts/smollm2_product_trace_frontier_evidence_enrichment_v1 \
+  --registry artifacts/smollm2_product_trace_frontier_evidence_enrichment_v1/artifact-registry.json \
+  --name smollm2-product-trace-frontier-evidence \
+  --version 0.1 \
+  --min-world-model-participating-trace-rate 1.0 \
+  --min-context-sensitivity-participating-trace-rate 1.0 \
+  --min-counterfactual-robustness-participating-trace-rate 1.0 \
+  --compact-json
+```
+
+The v1.13 runtime-drift replay over those frontier-evidence traces keeps all
+triple-audit, world-model, context-sensitivity, and counterfactual-robustness
+rows passing. The refreshed frontier audit v11 remains fail-closed on
+readiness/performance/frontier-release evidence, but its gap plan drops to
+`9` gaps, `4` actions, and `0` missing metrics.
+
 Replay the enriched traces through `run_product_runtime_baseline.py` with
 `--trace-scan-workers` when the trace set is large enough to benefit from
 bounded parallel scanning, then compare baseline/current with the same

@@ -51621,6 +51621,74 @@ def test_product_trace_runtime_evidence_enrichment_promotes_local_sidecars(tmp_p
     assert registry_record.metadata["counterfactual_robustness_pass_rate"] == pytest.approx(1.0)
 
 
+def test_product_trace_runtime_evidence_enrichment_uses_triple_audit_world_model(tmp_path):
+    module = importlib.import_module("benchmarks.enrich_product_trace_runtime_evidence")
+    from eigentruth.control import product_runtime_metrics
+
+    trace_path = tmp_path / "trace.json"
+    output_dir = tmp_path / "runtime-evidence"
+    trace_path.write_text(
+        json.dumps({
+            "request_id": "req-triple-audit-world-model",
+            "claims": [
+                {
+                    "claim_id": "c1",
+                    "text": "Paris is the capital of France.",
+                    "metadata": {},
+                }
+            ],
+            "verification_results": [
+                {
+                    "status": "not_applicable",
+                    "confidence": 0.0,
+                    "metadata": {
+                        "audit_only": True,
+                        "selected_route": "triple_audit_enrichment",
+                        "selected_verifier": "TripleEvidenceVerifier",
+                        "audit_report": {
+                            "claim_id": "c1",
+                            "passed": True,
+                            "verification_status": "not_applicable",
+                            "evidence_relation": "not_applicable_claim",
+                            "audits": [
+                                {
+                                    "passed": True,
+                                    "metadata": {"best_source": "wikidata:Q142:P36:Q90"},
+                                    "triple": {
+                                        "claim_id": "c1",
+                                        "subject": "France",
+                                        "predicate": "capital_of",
+                                        "object": "Paris",
+                                    },
+                                }
+                            ],
+                        },
+                    },
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.build_product_trace_runtime_evidence_enrichment(
+        module.ProductTraceRuntimeEvidenceEnrichmentConfig(
+            trace_paths=(trace_path,),
+            output_dir=output_dir,
+        )
+    )
+    enriched = json.loads(Path(payload["traces"][0]["output_path"]).read_text(encoding="utf-8"))
+    metadata = enriched["verification_results"][0]["metadata"]
+    metrics = product_runtime_metrics(enriched)
+
+    assert payload["status"] == "promote"
+    assert payload["summary"]["world_model"]["coverage_rate"] == pytest.approx(1.0)
+    assert metadata["world_model"] == "TripleAuditWorldModelAdapter"
+    assert metadata["world_model_reference"]["reference_id"] == "wikidata:Q142:P36:Q90"
+    assert metadata["world_model_view"]["postcondition"]["predicate"] == "capital_of"
+    assert metrics["world_model_coverage_rate"] == pytest.approx(1.0)
+    assert metrics["world_model_counts_by_adapter"] == {"TripleAuditWorldModelAdapter": 1}
+
+
 def test_product_trace_runtime_evidence_enrichment_cli_accepts_trace_glob(tmp_path, capsys):
     module = importlib.import_module("benchmarks.enrich_product_trace_runtime_evidence")
 

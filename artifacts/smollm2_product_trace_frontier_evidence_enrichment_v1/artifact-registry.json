@@ -1,0 +1,19 @@
+{
+  "records": [
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "context_sensitivity_coverage_rate": 1.0,
+        "counterfactual_robustness_pass_rate": 1.0,
+        "status": "promote",
+        "trace_count": 12,
+        "workflow": "product_trace_runtime_evidence_enrichment",
+        "world_model_coverage_rate": 1.0
+      },
+      "name": "smollm2-product-trace-frontier-evidence",
+      "path": "artifacts/smollm2_product_trace_frontier_evidence_enrichment_v1/product-trace-runtime-evidence-enrichment.json",
+      "version": "0.1"
+    }
+  ],
+  "schema_version": 1
+}

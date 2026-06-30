@@ -414,7 +414,77 @@ def _attach_world_model_sidecar(
         metadata.setdefault("agreement_rate", 1.0)
         metadata.setdefault("decision_rule", "local_fact_table_lookup")
         return True
+    if _attach_triple_audit_world_model_sidecar(metadata, claim=claim, result=result):
+        return True
     return False
+
+
+def _attach_triple_audit_world_model_sidecar(
+    metadata: dict[str, Any],
+    *,
+    claim: Mapping[str, Any],
+    result: Mapping[str, Any],
+) -> bool:
+    audit_report = _mapping(metadata.get("audit_report"))
+    audits = tuple(item for item in _sequence(audit_report.get("audits")) if isinstance(item, Mapping))
+    if not audit_report or not audits:
+        return False
+    first_audit = audits[0]
+    triple = _mapping(first_audit.get("triple"))
+    evidence_relation = str(
+        audit_report.get("evidence_relation")
+        or _mapping(metadata.get("triple_audit_enrichment")).get("evidence_relation")
+        or ""
+    )
+    verification_status = _status_name(
+        audit_report.get("verification_status") or result.get("status")
+    )
+    claim_id = str(
+        audit_report.get("claim_id")
+        or first_audit.get("claim_id")
+        or _claim_id(claim)
+        or _fingerprint(_claim_text(claim))
+    )
+    reference_id = str(
+        _mapping(first_audit.get("metadata")).get("best_source")
+        or f"triple_audit:{claim_id}"
+    )
+    subject = str(triple.get("subject") or _claim_text(claim) or claim_id)
+    predicate = str(triple.get("predicate") or "audited_claim")
+    object_value = str(triple.get("object") or "")
+    postcondition = {
+        "path": f"claim_triples.{claim_id}.{predicate}",
+        "subject": subject,
+        "predicate": predicate,
+        "object": object_value,
+        "audit_passed": bool(audit_report.get("passed")),
+        "evidence_relation": evidence_relation,
+        "verification_status": verification_status,
+    }
+    metadata["world_model"] = "TripleAuditWorldModelAdapter"
+    metadata["world_model_reference"] = {
+        "reference_id": reference_id,
+        "adapter": "TripleAuditWorldModelAdapter",
+        "source": WORKFLOW,
+    }
+    metadata["world_model_view"] = {
+        "base_state_fingerprint": _fingerprint(f"triple_audit:{claim_id}:{subject}"),
+        "predicted_state_fingerprint": _fingerprint(
+            f"triple_audit:{claim_id}:{subject}:{predicate}:{object_value}:{verification_status}"
+        ),
+        "postcondition": postcondition,
+    }
+    if verification_status == "refuted" or evidence_relation.startswith("refutes"):
+        metadata["world_model_conflict"] = {
+            "path": postcondition["path"],
+            "expected": "supported",
+            "actual": verification_status,
+            "evidence_relation": evidence_relation,
+        }
+    metadata.setdefault("prediction_confidence", 1.0 if audit_report.get("passed") else 0.0)
+    metadata.setdefault("agreement_rate", 1.0 if audit_report.get("passed") else 0.0)
+    metadata.setdefault("decision_rule", "local_triple_audit_slot_coverage")
+    return True
 
 
 def _attach_context_sensitivity_sidecar(
