@@ -42,6 +42,7 @@ EigenTruth wraps a decoder-only language model with PyTorch hooks. It can:
 - train and save a lightweight pre-generation attention probe from hidden states and soft error-rate targets
 - train and save a lightweight claim-level factuality probe from claim hidden states
 - emit a single-decode `first_token_entropy` uncertainty baseline from top-k logits
+- gate trace-level context-sensitivity drift from paired no-context/context evidence
 - save versioned `ConceptArtifact` files and attach multiple concept probes at once
 - calibrate diagnostic thresholds from benchmark score dumps and combine them with claim verification
 - route source-backed deterministic rule candidates through input fill, adapter execution, promotion gates, and trace artifacts
@@ -60,6 +61,7 @@ EigenTruth 通过 PyTorch hook 包装 decoder-only 语言模型。它可以：
 - 用 hidden states 和 soft error-rate targets 训练并保存轻量生成前 attention probe
 - 用 claim hidden states 训练并保存轻量 claim-level factuality probe
 - 从 top-k logits 输出单次 decode 的 `first_token_entropy` 不确定性基线
+- 基于成对 no-context/context evidence 门控 trace-level context-sensitivity 漂移
 - 保存版本化 `ConceptArtifact`，并同时挂载多个 concept probe
 - 从 benchmark 分数 dump 校准诊断阈值，并与 claim 验证结果组合成风险决策
 - 将 source-backed deterministic rule candidate 串联到 input fill、adapter execution、promotion gate 与 trace artifact
@@ -334,6 +336,10 @@ verdict as the seventh default `frontier_audit` handoff group, including
 multiple-testing, citation-batch, and frontier rerun-rollup provenance, so a
 complete new export carries `65/65` promoted evidence fields when
 `--frontier-release-evidence` is supplied.
+The `frontier_audit` release policy also now requires product-runtime drift
+reports to carry trace-level context-sensitivity participation, coverage,
+flagged-rate, trace-gap, max-flagged-rate, and max-ratio evidence beside the
+world-model drift evidence.
 The current registered product runtime profile sweep
 `report:smollm2-product-runtime-profile-sweep:0.1` verifies that `latency`,
 `balanced`, `audit`, and request-level `auto` selection all pass the strict product

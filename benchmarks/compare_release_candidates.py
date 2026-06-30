@@ -280,6 +280,26 @@ _PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] 
     ("world_model.low_agreement_rate", "world_model_low_agreement_rate"),
     ("world_model.trace_gap_rate", "world_model_trace_gap_rate"),
 )
+_PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_FIELDS: tuple[
+    tuple[str, str],
+    ...
+] = (
+    (
+        "context_sensitivity.participating_trace_rate",
+        "context_sensitivity_participating_trace_rate",
+    ),
+    ("context_sensitivity.coverage_rate", "context_sensitivity_coverage_rate"),
+    (
+        "context_sensitivity.flagged_result_rate",
+        "context_sensitivity_flagged_result_rate",
+    ),
+    ("context_sensitivity.trace_gap_rate", "context_sensitivity_trace_gap_rate"),
+    ("context_sensitivity.max_flagged_rate", "context_sensitivity_max_flagged_rate"),
+    (
+        "context_sensitivity.max_context_sensitivity_ratio",
+        "context_sensitivity_max_context_sensitivity_ratio",
+    ),
+)
 _PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = (
     (
         "promotion_contract.frontier_release_evidence.coverage_rate",
@@ -407,6 +427,7 @@ def compare_release_candidates(
     require_product_runtime_drift_trajectory_audit_evidence: bool = False,
     require_product_runtime_drift_evidence_handoff_evidence: bool = False,
     require_product_runtime_drift_world_model_evidence: bool = False,
+    require_product_runtime_drift_context_sensitivity_evidence: bool = False,
     require_product_runtime_drift_frontier_release_evidence: bool = False,
     release_efficiency_report_path: str | Path | None = None,
     external_evidence_baseline_comparison_path: str | Path | None = None,
@@ -659,6 +680,9 @@ def compare_release_candidates(
                 "require_product_runtime_drift_world_model_evidence": (
                     require_product_runtime_drift_world_model_evidence
                 ),
+                "require_product_runtime_drift_context_sensitivity_evidence": (
+                    require_product_runtime_drift_context_sensitivity_evidence
+                ),
                 "require_product_runtime_drift_frontier_release_evidence": (
                     require_product_runtime_drift_frontier_release_evidence
                 ),
@@ -789,6 +813,12 @@ def compare_release_candidates(
     )
     require_product_runtime_drift_world_model_evidence = bool(
         release_policy_values.get("require_product_runtime_drift_world_model_evidence", False)
+    )
+    require_product_runtime_drift_context_sensitivity_evidence = bool(
+        release_policy_values.get(
+            "require_product_runtime_drift_context_sensitivity_evidence",
+            False,
+        )
     )
     require_product_runtime_drift_frontier_release_evidence = bool(
         release_policy_values.get(
@@ -1368,6 +1398,9 @@ def compare_release_candidates(
             require_product_runtime_drift_evidence_handoff_evidence
         ),
         require_world_model_evidence=require_product_runtime_drift_world_model_evidence,
+        require_context_sensitivity_evidence=(
+            require_product_runtime_drift_context_sensitivity_evidence
+        ),
         require_frontier_release_evidence=(
             require_product_runtime_drift_frontier_release_evidence
         ),
@@ -1624,6 +1657,9 @@ def compare_release_candidates(
             ),
             "require_product_runtime_drift_world_model_evidence": bool(
                 require_product_runtime_drift_world_model_evidence
+            ),
+            "require_product_runtime_drift_context_sensitivity_evidence": bool(
+                require_product_runtime_drift_context_sensitivity_evidence
             ),
             "require_product_runtime_drift_frontier_release_evidence": bool(
                 require_product_runtime_drift_frontier_release_evidence
@@ -6555,6 +6591,7 @@ def _product_runtime_drift_gate(
     require_trajectory_audit_evidence: bool,
     require_evidence_handoff_evidence: bool,
     require_world_model_evidence: bool,
+    require_context_sensitivity_evidence: bool,
     require_frontier_release_evidence: bool,
     recursive: bool,
     allow_unverified: bool,
@@ -6573,6 +6610,7 @@ def _product_runtime_drift_gate(
             or require_trajectory_audit_evidence
             or require_evidence_handoff_evidence
             or require_world_model_evidence
+            or require_context_sensitivity_evidence
             or require_frontier_release_evidence
         ):
             gate = {
@@ -6692,6 +6730,17 @@ def _product_runtime_drift_gate(
                         )
                     ) if require_world_model_evidence else (),
                     "world_model_evidence_blocked_metric_count": 0,
+                    "context_sensitivity_evidence_required": bool(
+                        require_context_sensitivity_evidence
+                    ),
+                    "context_sensitivity_evidence_metric_count": 0,
+                    "context_sensitivity_evidence_missing_metrics": tuple(
+                        metric_name
+                        for metric_name, _prefix in (
+                            _PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_FIELDS
+                        )
+                    ) if require_context_sensitivity_evidence else (),
+                    "context_sensitivity_evidence_blocked_metric_count": 0,
                     "frontier_release_evidence_required": bool(
                         require_frontier_release_evidence
                     ),
@@ -6774,6 +6823,12 @@ def _product_runtime_drift_gate(
         metrics,
         required=require_world_model_evidence,
     )
+    context_sensitivity_evidence_summary = (
+        _product_runtime_drift_context_sensitivity_evidence_summary(
+            metrics,
+            required=require_context_sensitivity_evidence,
+        )
+    )
     gate = _product_runtime_drift_report_gate(
         report=report,
         report_error=report_error,
@@ -6799,6 +6854,8 @@ def _product_runtime_drift_gate(
         require_evidence_handoff_evidence=require_evidence_handoff_evidence,
         world_model_evidence_summary=world_model_evidence_summary,
         require_world_model_evidence=require_world_model_evidence,
+        context_sensitivity_evidence_summary=context_sensitivity_evidence_summary,
+        require_context_sensitivity_evidence=require_context_sensitivity_evidence,
         frontier_release_evidence_summary=frontier_release_evidence_summary,
         require_frontier_release_evidence=require_frontier_release_evidence,
         allow_unverified=allow_unverified,
@@ -6829,6 +6886,7 @@ def _product_runtime_drift_gate(
             **trajectory_audit_evidence_summary,
             **evidence_handoff_evidence_summary,
             **world_model_evidence_summary,
+            **context_sensitivity_evidence_summary,
             **frontier_release_evidence_summary,
         },
         "metrics": metrics,
@@ -6863,6 +6921,8 @@ def _product_runtime_drift_report_gate(
     require_evidence_handoff_evidence: bool,
     world_model_evidence_summary: Mapping[str, Any],
     require_world_model_evidence: bool,
+    context_sensitivity_evidence_summary: Mapping[str, Any],
+    require_context_sensitivity_evidence: bool,
     frontier_release_evidence_summary: Mapping[str, Any],
     require_frontier_release_evidence: bool,
     allow_unverified: bool,
@@ -7068,6 +7128,27 @@ def _product_runtime_drift_report_gate(
         if blocked_metric_count is not None and blocked_metric_count > 0:
             failures.append(
                 "product runtime drift world-model evidence blocked "
+                f"{int(blocked_metric_count)} metric(s)"
+            )
+    if require_context_sensitivity_evidence:
+        missing_metrics = tuple(
+            context_sensitivity_evidence_summary.get(
+                "context_sensitivity_evidence_missing_metrics"
+            ) or ()
+        )
+        if missing_metrics:
+            failures.append(
+                "product runtime drift context-sensitivity evidence metrics are incomplete: "
+                + ", ".join(str(metric) for metric in missing_metrics)
+            )
+        blocked_metric_count = _float_or_none(
+            context_sensitivity_evidence_summary.get(
+                "context_sensitivity_evidence_blocked_metric_count"
+            )
+        )
+        if blocked_metric_count is not None and blocked_metric_count > 0:
+            failures.append(
+                "product runtime drift context-sensitivity evidence blocked "
                 f"{int(blocked_metric_count)} metric(s)"
             )
     if require_frontier_release_evidence:
@@ -7466,6 +7547,40 @@ def _product_runtime_drift_world_model_evidence_summary(
             summary["world_model_evidence_blocked_metric_count"] += 1
     summary["world_model_evidence_metric_count"] = metric_count
     summary["world_model_evidence_missing_metrics"] = tuple(missing_metrics)
+    return summary
+
+
+def _product_runtime_drift_context_sensitivity_evidence_summary(
+    metrics: Sequence[Mapping[str, Any]],
+    *,
+    required: bool = False,
+) -> dict[str, Any]:
+    metrics_by_name = {
+        str(metric["metric"]): metric
+        for metric in metrics
+        if isinstance(metric, Mapping) and isinstance(metric.get("metric"), str)
+    }
+    missing_metrics: list[str] = []
+    metric_count = 0
+    summary: dict[str, Any] = {
+        "context_sensitivity_evidence_required": bool(required),
+        "context_sensitivity_evidence_metric_count": 0,
+        "context_sensitivity_evidence_missing_metrics": (),
+        "context_sensitivity_evidence_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_FIELDS:
+        metric = metrics_by_name.get(metric_name)
+        summary[f"{prefix}_baseline"] = None if metric is None else metric.get("baseline")
+        summary[f"{prefix}_current"] = None if metric is None else metric.get("current")
+        summary[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is None or metric.get("current") is None:
+            missing_metrics.append(metric_name)
+            continue
+        metric_count += 1
+        if metric.get("status") == "blocked":
+            summary["context_sensitivity_evidence_blocked_metric_count"] += 1
+    summary["context_sensitivity_evidence_metric_count"] = metric_count
+    summary["context_sensitivity_evidence_missing_metrics"] = tuple(missing_metrics)
     return summary
 
 
@@ -9023,6 +9138,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         require_product_runtime_drift_world_model_evidence=bool(
             args.require_product_runtime_drift_world_model_evidence
         ),
+        require_product_runtime_drift_context_sensitivity_evidence=bool(
+            args.require_product_runtime_drift_context_sensitivity_evidence
+        ),
         require_product_runtime_drift_frontier_release_evidence=bool(
             args.require_product_runtime_drift_frontier_release_evidence
         ),
@@ -9319,6 +9437,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--require-product-runtime-drift-world-model-evidence", action="store_true",
                         help="require the product runtime drift report to include trace-level world-model "
                              "participation, coverage, conflict, low-agreement, and trace-gap metrics")
+    parser.add_argument("--require-product-runtime-drift-context-sensitivity-evidence", action="store_true",
+                        help="require the product runtime drift report to include trace-level "
+                             "context-sensitivity participation, coverage, flagged, trace-gap, "
+                             "and ratio metrics")
     parser.add_argument("--require-product-runtime-drift-frontier-release-evidence", action="store_true",
                         help="require the product runtime drift report to include frontier release "
                              "evidence coverage, artifact presence, promote-rate, and run-count metrics")

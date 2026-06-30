@@ -21,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-_TRACE_RECORD_CACHE_SCHEMA_VERSION = 17
+_TRACE_RECORD_CACHE_SCHEMA_VERSION = 18
 _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "promotion_contract_coverage_rate",
     "triple_extraction_fixture_matrix_coverage_rate",
@@ -102,6 +102,21 @@ _PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "evidence_handoff_blocked_group_count",
     "evidence_handoff_promoted_group_rate",
 )
+_PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "world_model_participating_trace_rate",
+    "world_model_coverage_rate",
+    "world_model_conflict_rate",
+    "world_model_low_agreement_rate",
+    "world_model_trace_gap_rate",
+)
+_PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "context_sensitivity_participating_trace_rate",
+    "context_sensitivity_coverage_rate",
+    "context_sensitivity_flagged_result_rate",
+    "context_sensitivity_trace_gap_rate",
+    "context_sensitivity_max_flagged_rate",
+    "context_sensitivity_max_context_sensitivity_ratio",
+)
 _PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "frontier_release_evidence_coverage_rate",
     "frontier_release_evidence_report_present_rate",
@@ -142,6 +157,8 @@ _PROMOTION_CONTRACT_PRODUCT_RUNTIME_DRIFT_FIELDS: tuple[str, ...] = (
     "promotion_contract_product_runtime_drift_action_gate_evidence_required",
     "promotion_contract_product_runtime_drift_trajectory_audit_evidence_required",
     "promotion_contract_product_runtime_drift_evidence_handoff_evidence_required",
+    "promotion_contract_product_runtime_drift_world_model_evidence_required",
+    "promotion_contract_product_runtime_drift_context_sensitivity_evidence_required",
     "promotion_contract_product_runtime_drift_frontier_release_evidence_required",
     "promotion_contract_product_runtime_drift_compared_metric_count",
     "promotion_contract_product_runtime_drift_blocked_metric_count",
@@ -161,6 +178,10 @@ _PROMOTION_CONTRACT_PRODUCT_RUNTIME_DRIFT_FIELDS: tuple[str, ...] = (
     "promotion_contract_product_runtime_drift_trajectory_audit_evidence_blocked_metric_count",
     "promotion_contract_product_runtime_drift_evidence_handoff_evidence_metric_count",
     "promotion_contract_product_runtime_drift_evidence_handoff_evidence_blocked_metric_count",
+    "promotion_contract_product_runtime_drift_world_model_evidence_metric_count",
+    "promotion_contract_product_runtime_drift_world_model_evidence_blocked_metric_count",
+    "promotion_contract_product_runtime_drift_context_sensitivity_evidence_metric_count",
+    "promotion_contract_product_runtime_drift_context_sensitivity_evidence_blocked_metric_count",
     "promotion_contract_product_runtime_drift_frontier_release_evidence_metric_count",
     "promotion_contract_product_runtime_drift_frontier_release_evidence_blocked_metric_count",
 )
@@ -1351,6 +1372,14 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
             field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
             compact[field_name] = metrics.get(field_name)
     for prefix in _PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
+            compact[field_name] = metrics.get(field_name)
+    for prefix in _PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
+            compact[field_name] = metrics.get(field_name)
+    for prefix in _PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
             compact[field_name] = metrics.get(field_name)
@@ -3663,6 +3692,16 @@ def _aggregate_promotion_contract_product_runtime_drift(
             item.get("promotion_contract_product_runtime_drift_evidence_handoff_evidence_required")
             for item in metrics
         ),
+        "world_model_evidence_required_counts": _counts(
+            item.get("promotion_contract_product_runtime_drift_world_model_evidence_required")
+            for item in metrics
+        ),
+        "context_sensitivity_evidence_required_counts": _counts(
+            item.get(
+                "promotion_contract_product_runtime_drift_context_sensitivity_evidence_required"
+            )
+            for item in metrics
+        ),
         "frontier_release_evidence_required_counts": _counts(
             item.get(
                 "promotion_contract_product_runtime_drift_frontier_release_evidence_required"
@@ -3767,6 +3806,28 @@ def _aggregate_promotion_contract_product_runtime_drift(
             )
             for item in metrics
         ),
+        "world_model_evidence_metric_count": _numeric_summary(
+            item.get("promotion_contract_product_runtime_drift_world_model_evidence_metric_count")
+            for item in metrics
+        ),
+        "world_model_evidence_blocked_metric_count": _numeric_summary(
+            item.get(
+                "promotion_contract_product_runtime_drift_world_model_evidence_blocked_metric_count"
+            )
+            for item in metrics
+        ),
+        "context_sensitivity_evidence_metric_count": _numeric_summary(
+            item.get(
+                "promotion_contract_product_runtime_drift_context_sensitivity_evidence_metric_count"
+            )
+            for item in metrics
+        ),
+        "context_sensitivity_evidence_blocked_metric_count": _numeric_summary(
+            item.get(
+                "promotion_contract_product_runtime_drift_context_sensitivity_evidence_blocked_metric_count"
+            )
+            for item in metrics
+        ),
         "frontier_release_evidence_metric_count": _numeric_summary(
             item.get(
                 "promotion_contract_product_runtime_drift_frontier_release_evidence_metric_count"
@@ -3814,6 +3875,14 @@ def _aggregate_promotion_contract_product_runtime_drift(
         "evidence_handoff_evidence": _aggregate_product_runtime_drift_evidence(
             metrics,
             prefixes=_PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES,
+        ),
+        "world_model_evidence": _aggregate_product_runtime_drift_evidence(
+            metrics,
+            prefixes=_PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_PREFIXES,
+        ),
+        "context_sensitivity_evidence": _aggregate_product_runtime_drift_evidence(
+            metrics,
+            prefixes=_PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_PREFIXES,
         ),
         "frontier_release_evidence": _aggregate_product_runtime_drift_evidence(
             metrics,
@@ -4366,6 +4435,12 @@ def _promotion_contract_runtime_drift_flat_metadata(
         "promotion_contract_product_runtime_drift_evidence_handoff_evidence_required_counts": dict(
             _mapping(drift.get("evidence_handoff_evidence_required_counts"))
         ),
+        "promotion_contract_product_runtime_drift_world_model_evidence_required_counts": dict(
+            _mapping(drift.get("world_model_evidence_required_counts"))
+        ),
+        "promotion_contract_product_runtime_drift_context_sensitivity_evidence_required_counts": dict(
+            _mapping(drift.get("context_sensitivity_evidence_required_counts"))
+        ),
         "promotion_contract_product_runtime_drift_frontier_release_evidence_required_counts": dict(
             _mapping(drift.get("frontier_release_evidence_required_counts"))
         ),
@@ -4459,6 +4534,26 @@ def _promotion_contract_runtime_drift_flat_metadata(
             "evidence_handoff_evidence_blocked_metric_count",
             "mean",
         ),
+        "promotion_contract_product_runtime_drift_world_model_evidence_metric_count_mean": _nested(
+            drift,
+            "world_model_evidence_metric_count",
+            "mean",
+        ),
+        "promotion_contract_product_runtime_drift_world_model_evidence_blocked_metric_count_mean": _nested(
+            drift,
+            "world_model_evidence_blocked_metric_count",
+            "mean",
+        ),
+        "promotion_contract_product_runtime_drift_context_sensitivity_evidence_metric_count_mean": _nested(
+            drift,
+            "context_sensitivity_evidence_metric_count",
+            "mean",
+        ),
+        "promotion_contract_product_runtime_drift_context_sensitivity_evidence_blocked_metric_count_mean": _nested(
+            drift,
+            "context_sensitivity_evidence_blocked_metric_count",
+            "mean",
+        ),
         "promotion_contract_product_runtime_drift_frontier_release_evidence_metric_count_mean": _nested(
             drift,
             "frontier_release_evidence_metric_count",
@@ -4522,6 +4617,18 @@ def _promotion_contract_runtime_drift_flat_metadata(
         _product_runtime_drift_evidence_flat_metadata(
             _mapping(drift.get("evidence_handoff_evidence")),
             prefixes=_PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES,
+        )
+    )
+    metadata.update(
+        _product_runtime_drift_evidence_flat_metadata(
+            _mapping(drift.get("world_model_evidence")),
+            prefixes=_PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_PREFIXES,
+        )
+    )
+    metadata.update(
+        _product_runtime_drift_evidence_flat_metadata(
+            _mapping(drift.get("context_sensitivity_evidence")),
+            prefixes=_PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_PREFIXES,
         )
     )
     metadata.update(

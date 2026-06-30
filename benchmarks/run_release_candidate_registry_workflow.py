@@ -67,6 +67,9 @@ _PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES = (
 _PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_KEYS
 )
+_PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_KEYS
+)
 _PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_KEYS
 )
@@ -175,6 +178,9 @@ def _apply_release_policy_profile_to_config(
             "require_product_runtime_drift_world_model_evidence": (
                 config.require_product_runtime_drift_world_model_evidence
             ),
+            "require_product_runtime_drift_context_sensitivity_evidence": (
+                config.require_product_runtime_drift_context_sensitivity_evidence
+            ),
             "require_product_runtime_drift_frontier_release_evidence": (
                 config.require_product_runtime_drift_frontier_release_evidence
             ),
@@ -251,6 +257,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     require_product_runtime_drift_trajectory_audit_evidence: bool = False
     require_product_runtime_drift_evidence_handoff_evidence: bool = False
     require_product_runtime_drift_world_model_evidence: bool = False
+    require_product_runtime_drift_context_sensitivity_evidence: bool = False
     require_product_runtime_drift_frontier_release_evidence: bool = False
     release_efficiency_report_path: Path | None = None
     external_evidence_baseline_comparison_path: Path | None = None
@@ -804,6 +811,9 @@ def run_release_candidate_registry_workflow(
         require_product_runtime_drift_world_model_evidence=(
             config.require_product_runtime_drift_world_model_evidence
         ),
+        require_product_runtime_drift_context_sensitivity_evidence=(
+            config.require_product_runtime_drift_context_sensitivity_evidence
+        ),
         require_product_runtime_drift_frontier_release_evidence=(
             config.require_product_runtime_drift_frontier_release_evidence
         ),
@@ -1125,6 +1135,9 @@ def run_release_candidate_registry_workflow(
             ),
             "require_product_runtime_drift_world_model_evidence": (
                 config.require_product_runtime_drift_world_model_evidence
+            ),
+            "require_product_runtime_drift_context_sensitivity_evidence": (
+                config.require_product_runtime_drift_context_sensitivity_evidence
             ),
             "require_product_runtime_drift_frontier_release_evidence": (
                 config.require_product_runtime_drift_frontier_release_evidence
@@ -2322,6 +2335,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "product_runtime_drift_world_model_evidence_required": config.get(
             "require_product_runtime_drift_world_model_evidence"
         ),
+        "product_runtime_drift_context_sensitivity_evidence_required": config.get(
+            "require_product_runtime_drift_context_sensitivity_evidence"
+        ),
         "product_runtime_drift_frontier_release_evidence_required": config.get(
             "require_product_runtime_drift_frontier_release_evidence"
         ),
@@ -3053,6 +3069,12 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         "product_runtime_drift_world_model_evidence_blocked_metric_count": summary.get(
             "world_model_evidence_blocked_metric_count"
         ),
+        "product_runtime_drift_context_sensitivity_evidence_metric_count": summary.get(
+            "context_sensitivity_evidence_metric_count"
+        ),
+        "product_runtime_drift_context_sensitivity_evidence_blocked_metric_count": (
+            summary.get("context_sensitivity_evidence_blocked_metric_count")
+        ),
         "product_runtime_drift_frontier_release_evidence_metric_count": summary.get(
             "frontier_release_evidence_metric_count"
         ),
@@ -3085,6 +3107,9 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     for prefix in _PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     for prefix in _PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES:
@@ -3305,6 +3330,9 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         ),
         require_product_runtime_drift_world_model_evidence=bool(
             args.require_product_runtime_drift_world_model_evidence
+        ),
+        require_product_runtime_drift_context_sensitivity_evidence=bool(
+            args.require_product_runtime_drift_context_sensitivity_evidence
         ),
         require_product_runtime_drift_frontier_release_evidence=bool(
             args.require_product_runtime_drift_frontier_release_evidence
@@ -3737,6 +3765,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--require-product-runtime-drift-world-model-evidence", action="store_true",
                         help="require the product runtime drift report to include trace-level world-model "
                              "participation, coverage, conflict, low-agreement, and trace-gap metrics")
+    parser.add_argument("--require-product-runtime-drift-context-sensitivity-evidence", action="store_true",
+                        help="require the product runtime drift report to include trace-level "
+                             "context-sensitivity participation, coverage, flagged, trace-gap, "
+                             "and ratio metrics")
     parser.add_argument("--require-product-runtime-drift-frontier-release-evidence", action="store_true",
                         help="require the product runtime drift report to include frontier release "
                              "evidence coverage, artifact presence, promote-rate, and run-count metrics")

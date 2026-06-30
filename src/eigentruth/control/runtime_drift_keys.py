@@ -89,6 +89,14 @@ PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_KEYS: tuple[str, ...] = (
     "world_model_low_agreement_rate",
     "world_model_trace_gap_rate",
 )
+PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_KEYS: tuple[str, ...] = (
+    "context_sensitivity_participating_trace_rate",
+    "context_sensitivity_coverage_rate",
+    "context_sensitivity_flagged_result_rate",
+    "context_sensitivity_trace_gap_rate",
+    "context_sensitivity_max_flagged_rate",
+    "context_sensitivity_max_context_sensitivity_ratio",
+)
 PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_KEYS: tuple[str, ...] = (
     "frontier_release_evidence_coverage_rate",
     "frontier_release_evidence_report_present_rate",
@@ -125,6 +133,7 @@ PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS: dict[str, tuple[str, ...]] = {
     "trajectory_audit": PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_KEYS,
     "evidence_handoff": PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS,
     "world_model": PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_KEYS,
+    "context_sensitivity": PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_KEYS,
     "frontier_release_evidence": PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_KEYS,
 }
 

@@ -2533,6 +2533,9 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                     "world_model_evidence_required": True,
                     "world_model_evidence_metric_count": 5,
                     "world_model_evidence_blocked_metric_count": 0,
+                    "context_sensitivity_evidence_required": True,
+                    "context_sensitivity_evidence_metric_count": 6,
+                    "context_sensitivity_evidence_blocked_metric_count": 0,
                     "promotion_contract_coverage_rate_baseline": 1.0,
                     "promotion_contract_coverage_rate_current": 1.0,
                     "promotion_contract_coverage_rate_status": "pass",
@@ -2578,6 +2581,24 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                     "world_model_trace_gap_rate_baseline": 0.0,
                     "world_model_trace_gap_rate_current": 0.0,
                     "world_model_trace_gap_rate_status": "pass",
+                    "context_sensitivity_participating_trace_rate_baseline": 1.0,
+                    "context_sensitivity_participating_trace_rate_current": 1.0,
+                    "context_sensitivity_participating_trace_rate_status": "pass",
+                    "context_sensitivity_coverage_rate_baseline": 1.0,
+                    "context_sensitivity_coverage_rate_current": 1.0,
+                    "context_sensitivity_coverage_rate_status": "pass",
+                    "context_sensitivity_flagged_result_rate_baseline": 0.0,
+                    "context_sensitivity_flagged_result_rate_current": 0.0,
+                    "context_sensitivity_flagged_result_rate_status": "pass",
+                    "context_sensitivity_trace_gap_rate_baseline": 0.0,
+                    "context_sensitivity_trace_gap_rate_current": 0.0,
+                    "context_sensitivity_trace_gap_rate_status": "pass",
+                    "context_sensitivity_max_flagged_rate_baseline": 0.0,
+                    "context_sensitivity_max_flagged_rate_current": 0.0,
+                    "context_sensitivity_max_flagged_rate_status": "pass",
+                    "context_sensitivity_max_context_sensitivity_ratio_baseline": 1.0,
+                    "context_sensitivity_max_context_sensitivity_ratio_current": 1.0,
+                    "context_sensitivity_max_context_sensitivity_ratio_status": "pass",
                 },
             },
             "adapter_family_matrix": {
@@ -3120,6 +3141,14 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.metadata["product_runtime_drift_world_model_evidence_required"] is True
     assert contract.metadata["product_runtime_drift_world_model_evidence_metric_count"] == 5
     assert contract.metadata["product_runtime_drift_world_model_evidence_blocked_metric_count"] == 0
+    assert contract.metadata["product_runtime_drift_context_sensitivity_evidence_required"] is True
+    assert contract.metadata["product_runtime_drift_context_sensitivity_evidence_metric_count"] == 6
+    assert (
+        contract.metadata[
+            "product_runtime_drift_context_sensitivity_evidence_blocked_metric_count"
+        ]
+        == 0
+    )
     assert contract.metadata["product_runtime_drift_promotion_contract_coverage_rate_current"] == 1.0
     assert contract.metadata["product_runtime_drift_promotion_contract_coverage_rate_status"] == "pass"
     assert (
@@ -3150,6 +3179,18 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     )
     assert contract.metadata["product_runtime_drift_world_model_trace_gap_rate_status"] == "pass"
     assert contract.metadata["product_runtime_drift_world_model_conflict_rate_current"] == 0.0
+    assert (
+        contract.metadata[
+            "product_runtime_drift_context_sensitivity_flagged_result_rate_current"
+        ]
+        == 0.0
+    )
+    assert (
+        contract.metadata[
+            "product_runtime_drift_context_sensitivity_max_context_sensitivity_ratio_status"
+        ]
+        == "pass"
+    )
     assert contract.metadata["adapter_family_matrix_report"] == "artifacts/adapter-family-matrix.json"
     assert contract.metadata["adapter_family_required_routes"] == [
         "structured_state",
@@ -3426,6 +3467,15 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
             "product_runtime_drift_world_model_trace_gap_rate_baseline": 0.0,
             "product_runtime_drift_world_model_trace_gap_rate_current": 0.0,
             "product_runtime_drift_world_model_trace_gap_rate_status": "pass",
+            "product_runtime_drift_context_sensitivity_evidence_required": True,
+            "product_runtime_drift_context_sensitivity_evidence_metric_count": 6,
+            "product_runtime_drift_context_sensitivity_evidence_blocked_metric_count": 0,
+            "product_runtime_drift_context_sensitivity_flagged_result_rate_baseline": 0.0,
+            "product_runtime_drift_context_sensitivity_flagged_result_rate_current": 0.0,
+            "product_runtime_drift_context_sensitivity_flagged_result_rate_status": "pass",
+            "product_runtime_drift_context_sensitivity_max_context_sensitivity_ratio_baseline": 1.0,
+            "product_runtime_drift_context_sensitivity_max_context_sensitivity_ratio_current": 1.0,
+            "product_runtime_drift_context_sensitivity_max_context_sensitivity_ratio_status": "pass",
             "product_runtime_drift_covered_fact_recommended_route_min_records_baseline": 16,
             "product_runtime_drift_covered_fact_recommended_route_min_records_current": 15,
             "product_runtime_drift_covered_fact_recommended_route_min_records_status": "pass",
@@ -3748,6 +3798,21 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
         "promotion_contract_product_runtime_drift_world_model_trace_gap_rate_status"
     ] == "pass"
     assert metadata[
+        "promotion_contract_product_runtime_drift_context_sensitivity_evidence_required"
+    ] is True
+    assert metadata[
+        "promotion_contract_product_runtime_drift_context_sensitivity_evidence_metric_count"
+    ] == 6
+    assert metadata[
+        "promotion_contract_product_runtime_drift_context_sensitivity_evidence_blocked_metric_count"
+    ] == 0
+    assert metadata[
+        "promotion_contract_product_runtime_drift_context_sensitivity_flagged_result_rate_current"
+    ] == 0.0
+    assert metadata[
+        "promotion_contract_product_runtime_drift_context_sensitivity_max_context_sensitivity_ratio_status"
+    ] == "pass"
+    assert metadata[
         "promotion_contract_product_runtime_drift_covered_fact_recommended_route_min_records_current"
     ] == 15
     assert metadata[
@@ -3771,6 +3836,12 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert runtime_metrics["promotion_contract_summary"]["product_runtime_drift"][
         "world_model_evidence"
     ]["world_model_trace_gap_rate"]["status"] == "pass"
+    assert runtime_metrics["promotion_contract_summary"]["product_runtime_drift"][
+        "context_sensitivity_evidence_metric_count"
+    ] == pytest.approx(6.0)
+    assert runtime_metrics["promotion_contract_summary"]["product_runtime_drift"][
+        "context_sensitivity_evidence"
+    ]["context_sensitivity_flagged_result_rate"]["current"] == pytest.approx(0.0)
     assert runtime_metrics["promotion_contract_product_trace_replay_available"] is True
     assert runtime_metrics["promotion_contract_product_trace_replay_workflow_report"] == (
         "trace-replay-workflow.json"

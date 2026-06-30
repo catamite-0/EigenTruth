@@ -17731,6 +17731,12 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         blocked_metric_count=0,
         world_model_evidence=True,
     )
+    context_sensitivity_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "context-sensitivity-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        context_sensitivity_evidence=True,
+    )
     frontier_release_drift_report = _write_product_runtime_drift_report(
         tmp_path / "frontier-release-runtime-drift",
         status="promote",
@@ -17771,6 +17777,13 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         blocked_metric_count=0,
         world_model_evidence=True,
         world_model_blocked=True,
+    )
+    blocked_context_sensitivity_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "blocked-context-sensitivity-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        context_sensitivity_evidence=True,
+        context_sensitivity_blocked=True,
     )
     blocked_frontier_release_drift_report = _write_product_runtime_drift_report(
         tmp_path / "blocked-frontier-release-runtime-drift",
@@ -18133,6 +18146,39 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         min_false_refuted_rate=0.99,
         product_runtime_drift_report_path=blocked_world_model_drift_report,
         require_product_runtime_drift_world_model_evidence=True,
+    )
+    context_sensitivity = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=context_sensitivity_drift_report,
+        require_product_runtime_drift_context_sensitivity_evidence=True,
+    )
+    missing_context_sensitivity = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=missing_evidence_drift_report,
+        require_product_runtime_drift_context_sensitivity_evidence=True,
+    )
+    blocked_context_sensitivity = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=blocked_context_sensitivity_drift_report,
+        require_product_runtime_drift_context_sensitivity_evidence=True,
     )
     frontier_release = module.compare_release_candidates(
         readiness_registry_path=registry_path,
@@ -18567,6 +18613,54 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
     assert any(
         "world-model evidence blocked 1 metric" in reason
         for reason in blocked_world_model["decision"]["blocking_reasons"][0]["reasons"]
+    )
+    assert context_sensitivity["decision"]["status"] == "promote"
+    assert (
+        context_sensitivity["config"][
+            "require_product_runtime_drift_context_sensitivity_evidence"
+        ]
+        is True
+    )
+    context_sensitivity_summary = context_sensitivity["release_candidate"][
+        "product_runtime_drift"
+    ]["summary"]
+    assert context_sensitivity_summary["context_sensitivity_evidence_required"] is True
+    assert context_sensitivity_summary["context_sensitivity_evidence_metric_count"] == 6
+    assert (
+        context_sensitivity_summary[
+            "context_sensitivity_evidence_blocked_metric_count"
+        ]
+        == 0
+    )
+    assert context_sensitivity_summary[
+        "context_sensitivity_flagged_result_rate_status"
+    ] == "pass"
+    assert missing_context_sensitivity["decision"]["status"] == "blocked"
+    assert missing_context_sensitivity["product_runtime_drift_gate"]["summary"][
+        "context_sensitivity_evidence_missing_metrics"
+    ] == (
+        "context_sensitivity.participating_trace_rate",
+        "context_sensitivity.coverage_rate",
+        "context_sensitivity.flagged_result_rate",
+        "context_sensitivity.trace_gap_rate",
+        "context_sensitivity.max_flagged_rate",
+        "context_sensitivity.max_context_sensitivity_ratio",
+    )
+    assert any(
+        "context-sensitivity evidence metrics are incomplete" in reason
+        for reason in missing_context_sensitivity["decision"]["blocking_reasons"][0][
+            "reasons"
+        ]
+    )
+    assert blocked_context_sensitivity["decision"]["status"] == "blocked"
+    assert blocked_context_sensitivity["product_runtime_drift_gate"]["summary"][
+        "context_sensitivity_evidence_blocked_metric_count"
+    ] == 1
+    assert any(
+        "context-sensitivity evidence blocked 1 metric" in reason
+        for reason in blocked_context_sensitivity["decision"]["blocking_reasons"][0][
+            "reasons"
+        ]
     )
     assert frontier_release["decision"]["status"] == "promote"
     assert frontier_release["config"][
@@ -20193,6 +20287,7 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         trajectory_audit_evidence=True,
         evidence_handoff_evidence=True,
         world_model_evidence=True,
+        context_sensitivity_evidence=True,
         frontier_release_evidence=True,
     )
     external_evidence_report = _write_external_evidence_baseline_comparison_report(
@@ -20315,6 +20410,12 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     assert frontier_payload["config"]["require_product_runtime_drift_trajectory_audit_evidence"] is True
     assert frontier_payload["config"]["require_product_runtime_drift_evidence_handoff_evidence"] is True
     assert frontier_payload["config"]["require_product_runtime_drift_world_model_evidence"] is True
+    assert (
+        frontier_payload["config"][
+            "require_product_runtime_drift_context_sensitivity_evidence"
+        ]
+        is True
+    )
     assert frontier_payload["config"]["require_product_runtime_drift_frontier_release_evidence"] is True
     assert frontier_payload["config"]["require_product_trace_action_audit_gate"] is True
     assert frontier_payload["config"]["require_product_trace_action_execution_gate"] is True
@@ -20364,6 +20465,12 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
         "require_product_runtime_drift_world_model_evidence"
     ] is True
+    assert (
+        frontier_payload["config"]["release_policy_profile_applied_defaults"][
+            "require_product_runtime_drift_context_sensitivity_evidence"
+        ]
+        is True
+    )
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
         "require_product_runtime_drift_frontier_release_evidence"
     ] is True
@@ -20407,6 +20514,9 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     assert frontier_payload["product_runtime_drift_gate"]["summary"][
         "world_model_evidence_metric_count"
     ] == 5
+    assert frontier_payload["product_runtime_drift_gate"]["summary"][
+        "context_sensitivity_evidence_metric_count"
+    ] == 6
     assert frontier_payload["product_runtime_drift_gate"]["summary"][
         "frontier_release_evidence_metric_count"
     ] == 22
@@ -25991,6 +26101,8 @@ def _write_product_runtime_drift_report(
     evidence_handoff_blocked=False,
     world_model_evidence=False,
     world_model_blocked=False,
+    context_sensitivity_evidence=False,
+    context_sensitivity_blocked=False,
     frontier_release_evidence=False,
     frontier_release_blocked=False,
 ):
@@ -26918,6 +27030,79 @@ def _write_product_runtime_drift_report(
                     if world_model_blocked
                     else None
                 ),
+            },
+        ])
+    if context_sensitivity_evidence:
+        flagged_status = "blocked" if context_sensitivity_blocked else "pass"
+        flagged_current = 0.25 if context_sensitivity_blocked else 0.0
+        metrics.extend([
+            {
+                "metric": "context_sensitivity.participating_trace_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "context_sensitivity.coverage_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "context_sensitivity.flagged_result_rate",
+                "status": flagged_status,
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": flagged_current,
+                "absolute_delta": flagged_current,
+                "absolute_increase": flagged_current,
+                "threshold": 0.0,
+                "reason": (
+                    "context_sensitivity.flagged_result_rate above gate"
+                    if context_sensitivity_blocked
+                    else None
+                ),
+            },
+            {
+                "metric": "context_sensitivity.trace_gap_rate",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 0.0,
+                "reason": None,
+            },
+            {
+                "metric": "context_sensitivity.max_flagged_rate",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 0.0,
+                "reason": None,
+            },
+            {
+                "metric": "context_sensitivity.max_context_sensitivity_ratio",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 0.0,
+                "reason": None,
             },
         ])
     if frontier_release_evidence:
@@ -35265,7 +35450,7 @@ def test_run_product_runtime_baseline_reuses_trace_record_cache(tmp_path, monkey
     assert first["config"]["trace_record_cache"]["cache_hit"] is False
     assert first["config"]["trace_record_cache"]["cache_written"] is True
     assert first["paths"]["trace_records_cache"] == str(cache_path)
-    assert cache_payload["schema_version"] == 17
+    assert cache_payload["schema_version"] == 18
     assert cache_payload["workflow"] == "product_runtime_baseline_trace_records"
     assert cache_payload["summary"]["trace_count"] == 2
     assert cache_payload["policy"]["payload"]["max_total_seconds"] == 0.3

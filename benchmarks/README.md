@@ -4838,10 +4838,11 @@ and defaults `--require-product-runtime-drift-promotion-evidence`,
 `--require-product-runtime-drift-triple-audit-evidence`,
 `--require-product-runtime-drift-covered-fact-property-evidence`,
 `--require-product-runtime-drift-action-gate-evidence`,
-`--require-product-runtime-drift-trajectory-audit-evidence`,
-`--require-product-runtime-drift-evidence-handoff-evidence`,
-`--require-product-runtime-drift-world-model-evidence`,
-`--require-product-runtime-drift-frontier-release-evidence`,
+  `--require-product-runtime-drift-trajectory-audit-evidence`,
+  `--require-product-runtime-drift-evidence-handoff-evidence`,
+  `--require-product-runtime-drift-world-model-evidence`,
+  `--require-product-runtime-drift-context-sensitivity-evidence`,
+  `--require-product-runtime-drift-frontier-release-evidence`,
 `--require-product-trace-action-audit-gate`, and
 `--require-product-trace-action-execution-gate`; it also defaults to the
 registered covered-facts external-evidence handoff, registered triple-extraction
@@ -4853,11 +4854,12 @@ drift lacks promotion-contract, triple-extraction fixture-matrix,
 trace-level triple-audit, recommended-route covered-fact property/action-gate
 evidence, trajectory-audit evidence, promotion-contract evidence-handoff
 coverage/manifest/metric-gap evidence, trace-level world-model
-participation/coverage/conflict/low-agreement/trace-gap evidence, frontier
-release-evidence status/decision/track rates plus citation-batch and
-rerun-rollup counts, the product-trace replay workflow lacks promoted
-action-audit/action-execution child gates, or registered frontier evidence
-handoffs are absent.
+participation/coverage/conflict/low-agreement/trace-gap evidence,
+trace-level context-sensitivity participation/coverage/flagged-rate/trace-gap
+and max-ratio evidence, frontier release-evidence status/decision/track rates
+plus citation-batch and rerun-rollup counts, the product-trace replay workflow
+lacks promoted action-audit/action-execution child gates, or registered
+frontier evidence handoffs are absent.
 Add `--require-product-runtime-drift-claim-factuality-evidence` when a release
 must additionally prove that claim factuality probe comparison evidence survived
 the product-runtime handoff; it is opt-in so existing `frontier_audit` checks keep
@@ -5058,6 +5060,7 @@ also defaults `adapter_family_profile=strict_audit`,
 `require_product_runtime_drift_trajectory_audit_evidence=true`,
 `require_product_runtime_drift_evidence_handoff_evidence=true`,
 `require_product_runtime_drift_world_model_evidence=true`,
+`require_product_runtime_drift_context_sensitivity_evidence=true`,
 `require_product_trace_action_audit_gate=true`, and
 `require_product_trace_action_execution_gate=true`, plus the registered
 covered-facts external-evidence handoff, registered triple-extraction fixture
@@ -5068,7 +5071,8 @@ evidence, pre-generation runtime-drift evidence, counterfactual verifier-audit
 runtime-drift evidence, trace-level triple-audit
 evidence, recommended-route covered-fact property/action-gate drift evidence,
 trajectory-audit runtime-drift evidence, trace-level world-model runtime-drift
-evidence, registered frontier evidence handoffs, and
+evidence, trace-level context-sensitivity runtime-drift evidence, registered
+frontier evidence handoffs, and
 promoted product-trace action-audit/action-execution child gates unless
 explicitly overridden. The workflow records
 `release_policy_profile` and `release_policy_profile_applied_defaults` in the

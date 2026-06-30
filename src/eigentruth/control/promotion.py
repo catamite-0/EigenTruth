@@ -48,6 +48,9 @@ _PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES = (
 _PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_KEYS
 )
+_PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_KEYS
+)
 _PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_KEYS
 )
@@ -98,6 +101,7 @@ _PRODUCT_RUNTIME_DRIFT_GROUP_SUMMARY_KEYS = (
     ("trajectory_audit", "trajectory_audit"),
     ("evidence_handoff", "evidence_handoff"),
     ("world_model", "world_model"),
+    ("context_sensitivity", "context_sensitivity"),
     ("frontier_release_evidence", "frontier_release"),
 )
 
@@ -1103,6 +1107,12 @@ class ProductPromotionContract:
                     "require_product_runtime_drift_world_model_evidence",
                     product_runtime_drift_summary.get("world_model_evidence_required"),
                 ),
+                "product_runtime_drift_context_sensitivity_evidence_required": config.get(
+                    "require_product_runtime_drift_context_sensitivity_evidence",
+                    product_runtime_drift_summary.get(
+                        "context_sensitivity_evidence_required"
+                    ),
+                ),
                 "product_runtime_drift_frontier_release_evidence_required": config.get(
                     "require_product_runtime_drift_frontier_release_evidence"
                 ),
@@ -1572,6 +1582,12 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         "product_runtime_drift_world_model_evidence_blocked_metric_count": summary.get(
             "world_model_evidence_blocked_metric_count"
         ),
+        "product_runtime_drift_context_sensitivity_evidence_metric_count": summary.get(
+            "context_sensitivity_evidence_metric_count"
+        ),
+        "product_runtime_drift_context_sensitivity_evidence_blocked_metric_count": summary.get(
+            "context_sensitivity_evidence_blocked_metric_count"
+        ),
         "product_runtime_drift_frontier_release_evidence_metric_count": summary.get(
             "frontier_release_evidence_metric_count"
         ),
@@ -1607,6 +1623,9 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     for prefix in _PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     for prefix in _PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES:
@@ -3596,6 +3615,7 @@ def _promotion_contract_product_runtime_drift_metadata(
         "product_runtime_drift_trajectory_audit_evidence_required",
         "product_runtime_drift_evidence_handoff_evidence_required",
         "product_runtime_drift_world_model_evidence_required",
+        "product_runtime_drift_context_sensitivity_evidence_required",
         "product_runtime_drift_frontier_release_evidence_required",
         "product_runtime_drift_compared_metric_count",
         "product_runtime_drift_blocked_metric_count",
@@ -3619,6 +3639,8 @@ def _promotion_contract_product_runtime_drift_metadata(
         "product_runtime_drift_evidence_handoff_evidence_blocked_metric_count",
         "product_runtime_drift_world_model_evidence_metric_count",
         "product_runtime_drift_world_model_evidence_blocked_metric_count",
+        "product_runtime_drift_context_sensitivity_evidence_metric_count",
+        "product_runtime_drift_context_sensitivity_evidence_blocked_metric_count",
         "product_runtime_drift_frontier_release_evidence_metric_count",
         "product_runtime_drift_frontier_release_evidence_blocked_metric_count",
     )
@@ -3638,6 +3660,7 @@ def _promotion_contract_product_runtime_drift_metadata(
         *_PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_PREFIXES,
         *_PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES,
         *_PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_PREFIXES,
+        *_PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_PREFIXES,
         *_PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES,
     )
     for prefix in evidence_prefixes:
