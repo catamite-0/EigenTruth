@@ -1638,10 +1638,12 @@ blind-spot mapping to product control trace.
 Builds the next adapter execution queue after explicit question/property
 corrections have been handled. It filters out records already covered by a
 mapped correction gate and emits JSON/JSONL requests for citation/search
-adapters plus deterministic world-model or calculator rule authoring. The
-output is deliberately marked as source-discovery/rule-authoring work, not
-verifier evidence. New queue runs also write `execution-batches.jsonl`, grouped
-by request type with `--max-requests-per-batch`, so citation/search and
+adapters, deterministic world-model or calculator rule authoring, and
+counterfactual probe generation when those requests are present in the
+collection corpus. The output is deliberately marked as
+source-discovery/probe-generation/rule-authoring work, not verifier evidence.
+New queue runs also write `execution-batches.jsonl`, grouped by request type
+with `--max-requests-per-batch`, so citation/search, counterfactual-probe, and
 world-model rule passes can be scheduled without re-reading the full request
 JSONL.
 
@@ -1666,8 +1668,10 @@ has status `ready_for_adapter_execution`: it starts from the `65`
 high-priority collection targets, removes the `1` resolved Tesla/P112 property
 slot, and emits `182` adapter requests over `46` unresolved targets. The queue
 contains `176` external citation/search requests and `6` world-model or
-calculator rule-authoring requests; with the default batch size, a refreshed run
-materializes those requests as `5` execution batches. `20` queued targets have
+calculator rule-authoring requests; refreshed runs include available
+`counterfactual_probe` rows by default and surface their counts in report,
+manifest, and registry metadata. With the default batch size, the registered
+request set materializes as `5` execution batches. `20` queued targets have
 no joined facts and `7` have only generic fact joins. Its manifest verifies
 recursively.
 

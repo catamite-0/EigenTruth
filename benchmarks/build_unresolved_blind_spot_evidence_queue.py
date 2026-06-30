@@ -27,7 +27,11 @@ if str(SRC) not in sys.path:
 from eigentruth.json_utils import strict_json_dumps  # noqa: E402
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
 
-DEFAULT_REQUEST_TYPES = ("external_citation", "world_model_or_calculator_rule")
+DEFAULT_REQUEST_TYPES = (
+    "external_citation",
+    "world_model_or_calculator_rule",
+    "counterfactual_probe",
+)
 DEFAULT_MAX_REQUESTS_PER_BATCH = 50
 REQUEST_TYPE_TO_ADAPTER = {
     "external_citation": "external_citation_search",
@@ -304,6 +308,10 @@ def run(
                 "world_model_or_calculator_rule",
                 0,
             ),
+            "counterfactual_probe_count": report["summary"]["request_type_counts"].get(
+                "counterfactual_probe",
+                0,
+            ),
             **dict(metadata or {}),
         },
     )
@@ -325,6 +333,10 @@ def run(
                 "external_citation_count": report["summary"]["request_type_counts"].get("external_citation", 0),
                 "world_model_rule_count": report["summary"]["request_type_counts"].get(
                     "world_model_or_calculator_rule",
+                    0,
+                ),
+                "counterfactual_probe_count": report["summary"]["request_type_counts"].get(
+                    "counterfactual_probe",
                     0,
                 ),
                 "artifact_manifest": str(manifest_path),
@@ -489,6 +501,11 @@ def _summary(
         for item in request_queue
         if item.get("request_type") == "world_model_or_calculator_rule"
     }
+    targets_with_counterfactual = {
+        str(item.get("target_id"))
+        for item in request_queue
+        if item.get("request_type") == "counterfactual_probe"
+    }
     return {
         "source_collection_target_count": len(source_collection_targets),
         "resolved_by_question_property_count": len(resolved_record_indices),
@@ -503,6 +520,7 @@ def _summary(
         "skipped_target_counts": _sorted_counter(skipped_counts),
         "targets_with_external_citation": len(targets_with_citation),
         "targets_with_world_model_or_calculator_rule": len(targets_with_rules),
+        "targets_with_counterfactual_probe": len(targets_with_counterfactual),
         "top_target": None if not target_queue else {
             "target_id": target_queue[0]["target_id"],
             "record_index": target_queue[0]["record_index"],
@@ -625,6 +643,8 @@ def _priority_score(
         score += 12.0
     if "world_model_rule_authoring" in requestable_routes:
         score += 10.0
+    if "counterfactual_probe_generator" in requestable_routes:
+        score += 8.0
     if question_type in {"causal", "method", "quantity", "temporal"}:
         score += 8.0
     score += min(int(request_count), 5)
@@ -632,7 +652,7 @@ def _priority_score(
 
 
 def _request_type_rank(request_type: str) -> int:
-    order = {name: idx for idx, name in enumerate(DEFAULT_REQUEST_TYPES + ("counterfactual_probe",))}
+    order = {name: idx for idx, name in enumerate(DEFAULT_REQUEST_TYPES)}
     return order.get(request_type, 100)
 
 
@@ -759,7 +779,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         f"batches={summary['batch_count']} "
         f"resolved={summary['resolved_by_question_property_count']} "
         f"citations={summary['request_type_counts'].get('external_citation', 0)} "
-        f"rules={summary['request_type_counts'].get('world_model_or_calculator_rule', 0)}"
+        f"rules={summary['request_type_counts'].get('world_model_or_calculator_rule', 0)} "
+        f"counterfactuals={summary['request_type_counts'].get('counterfactual_probe', 0)}"
     )
 
 

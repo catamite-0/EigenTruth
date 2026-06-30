@@ -41536,7 +41536,12 @@ def test_unresolved_blind_spot_evidence_queue_filters_resolved_property_slot(tmp
             "question_type": "definition",
             "question": "What is Alpha Syndrome?",
             "answer": "A moon.",
-            "recommended_routes": ["structured_fact", "structured_qa", "retrieval_citation"],
+            "recommended_routes": [
+                "structured_fact",
+                "structured_qa",
+                "retrieval_citation",
+                "counterfactual_negation",
+            ],
         },
         {
             "record_index": 3,
@@ -41583,7 +41588,12 @@ def test_unresolved_blind_spot_evidence_queue_filters_resolved_property_slot(tmp
                     "question_type": "definition",
                     "question": "What is Alpha Syndrome?",
                     "model_answer": "A moon.",
-                    "recommended_routes": ["structured_fact", "structured_qa", "retrieval_citation"],
+                    "recommended_routes": [
+                        "structured_fact",
+                        "structured_qa",
+                        "retrieval_citation",
+                        "counterfactual_negation",
+                    ],
                     "entity_candidates": ["Alpha Syndrome"],
                     "query_seeds": ["Alpha Syndrome A moon", "What is Alpha Syndrome"],
                     "wikidata_property_hints": ["description", "instance_of:P31"],
@@ -41635,6 +41645,20 @@ def test_unresolved_blind_spot_evidence_queue_filters_resolved_property_slot(tmp
                         "question": "What is Alpha Syndrome?",
                         "model_answer": "A moon.",
                         "usage": "source_discovery_only",
+                    },
+                ],
+                "counterfactual_probe": [
+                    {
+                        "request_id": "cf:record-2:1",
+                        "target_id": "record-2",
+                        "request_type": "counterfactual_probe",
+                        "priority": "high",
+                        "question_type": "definition",
+                        "probe_type": "negation",
+                        "probe_instruction": "Build a negated variant for Alpha Syndrome.",
+                        "question": "What is Alpha Syndrome?",
+                        "model_answer": "A moon.",
+                        "usage": "probe_generation_only",
                     },
                 ],
                 "world_model_or_calculator_rule": [
@@ -41748,8 +41772,8 @@ def test_unresolved_blind_spot_evidence_queue_filters_resolved_property_slot(tmp
     assert payload["summary"]["source_collection_target_count"] == 3
     assert payload["summary"]["resolved_by_question_property_count"] == 1
     assert payload["summary"]["target_count"] == 2
-    assert payload["summary"]["adapter_request_count"] == 3
-    assert payload["summary"]["batch_count"] == 3
+    assert payload["summary"]["adapter_request_count"] == 4
+    assert payload["summary"]["batch_count"] == 4
     assert payload["summary"]["top_batch"] == {
         "adapter_family": "external_citation_search",
         "batch_id": "unresolved-evidence-batch-0001",
@@ -41758,9 +41782,11 @@ def test_unresolved_blind_spot_evidence_queue_filters_resolved_property_slot(tmp
         "target_count": 1,
     }
     assert payload["summary"]["request_type_counts"] == {
+        "counterfactual_probe": 1,
         "external_citation": 2,
         "world_model_or_calculator_rule": 1,
     }
+    assert payload["summary"]["targets_with_counterfactual_probe"] == 1
     assert payload["summary"]["evidence_status_counts"] == {"generic_fact_only": 1, "no_joined_facts": 1}
     assert {target["record_index"] for target in targets} == {2, 3}
     assert {request["record_index"] for request in requests} == {2, 3}
@@ -41768,19 +41794,24 @@ def test_unresolved_blind_spot_evidence_queue_filters_resolved_property_slot(tmp
         "unresolved-evidence-batch-0001",
         "unresolved-evidence-batch-0002",
         "unresolved-evidence-batch-0003",
+        "unresolved-evidence-batch-0004",
     ]
     assert {batch["request_count"] for batch in batches} == {1}
-    assert batches[-1]["adapter_family"] == "world_model_rule_authoring"
+    assert batches[-1]["adapter_family"] == "counterfactual_probe_generator"
     assert any(request["adapter_family"] == "external_citation_search" for request in requests)
     assert any(request["adapter_family"] == "world_model_rule_authoring" for request in requests)
+    assert any(request["adapter_family"] == "counterfactual_probe_generator" for request in requests)
     assert all(request["not_verifier_evidence"] is True for request in requests)
     assert all("label" not in target for target in targets)
     assert all("label" not in request for request in requests)
     assert payload["label_usage"]["requests_are_verifier_evidence"] is False
     assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["metadata"]["counterfactual_probe_count"] == 1
     assert record.metadata["workflow"] == "unresolved_blind_spot_evidence_queue"
-    assert record.metadata["adapter_request_count"] == 3
-    assert record.metadata["batch_count"] == 3
+    assert record.metadata["adapter_request_count"] == 4
+    assert record.metadata["batch_count"] == 4
+    assert record.metadata["counterfactual_probe_count"] == 1
     assert record.metadata["resolved_by_question_property_count"] == 1
     assert record.metadata["suite"] == "unit"
 

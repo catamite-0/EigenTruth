@@ -465,9 +465,12 @@ For product features:
   high-priority collection corpus through the question/property mapping report,
   removes the `1` resolved Tesla/P112 slot, and emits an adapter-ready queue
   with `46` unresolved targets, `176` citation/search requests, and `6`
-  world-model or calculator-rule authoring requests. The queue is manifest and
-  registry backed, but remains `source_discovery_only` / rule-authoring input
-  until external documents are ingested and provenance-audited.
+  world-model or calculator-rule authoring requests. Refreshed queue builds now
+  also include available `counterfactual_probe` requests by default and expose
+  those counts in the summary, manifest, and registry metadata. The queue is
+  manifest and registry backed, but remains source-discovery, probe-generation,
+  or rule-authoring input until external documents or verifier probes are
+  ingested and provenance-audited.
 - The rule branch of that unresolved queue is now first-class work, not an
   orphan count: `build_unresolved_world_model_rule_stubs.py` emits `6`
   sanitized rule stubs from the queue, records that `model_answer`,
