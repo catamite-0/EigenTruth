@@ -1,0 +1,90 @@
+{
+  "total_seconds": 193.625912,
+  "phases": {
+    "load_data": 6.54726,
+    "load_model": 5.935033,
+    "load_statement_encoding_cache": 0.000996,
+    "build_layer_stats": 4.462122,
+    "save_layer_stats_cache": 0.0037,
+    "init_eval_reps_cache_writer": 0.000371,
+    "load_inside_diagnostics_cache": 4.3e-05,
+    "forced_answer_forward": 14.663112,
+    "write_eval_reps_cache_batch": 0.017035,
+    "score_postprocess": 0.090567,
+    "read_inside_diagnostics_cache": 0.005572,
+    "inside_generation": 161.869024,
+    "write_inside_diagnostics_cache": 0.000931,
+    "save_eval_reps_cache": 0.002185,
+    "save_inside_diagnostics_cache": 0.001012,
+    "reporting": 0.021281,
+    "sweep_reporting": 8e-06
+  },
+  "summary": {
+    "bottleneck": "inside_generation",
+    "top_phases": [
+      {
+        "name": "inside_generation",
+        "seconds": 161.869024,
+        "share": 0.835988
+      },
+      {
+        "name": "forced_answer_forward",
+        "seconds": 14.663112,
+        "share": 0.075729
+      },
+      {
+        "name": "load_data",
+        "seconds": 6.54726,
+        "share": 0.033814
+      },
+      {
+        "name": "load_model",
+        "seconds": 5.935033,
+        "share": 0.030652
+      },
+      {
+        "name": "build_layer_stats",
+        "seconds": 4.462122,
+        "share": 0.023045
+      }
+    ],
+    "groups": {
+      "startup": {
+        "seconds": 12.482293,
+        "share": 0.064466
+      },
+      "tokenization": {
+        "seconds": 0.000996,
+        "share": 5e-06
+      },
+      "model_forward": {
+        "seconds": 180.994258,
+        "share": 0.934763
+      },
+      "cache_io": {
+        "seconds": 0.030849,
+        "share": 0.000159
+      },
+      "postprocess": {
+        "seconds": 0.111856,
+        "share": 0.000578
+      }
+    },
+    "throughput": {
+      "forced_answer_records_per_second": 4.637488,
+      "warmup_records_per_second": 5.378607,
+      "end_to_end_eval_records_per_second": 0.351193
+    },
+    "cache_efficiency": {},
+    "accounted_seconds": 193.620252,
+    "accounted_share": 0.999971,
+    "unaccounted_seconds": 0.00566
+  },
+  "batch_size_fallback": {
+    "enabled": false,
+    "requested_batch_size": 4,
+    "effective_batch_size": 4,
+    "reductions": [],
+    "n_reductions": 0
+  }
+}

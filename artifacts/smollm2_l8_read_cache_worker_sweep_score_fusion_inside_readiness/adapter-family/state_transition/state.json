@@ -1,0 +1,372 @@
+{
+  "fixture_type": "order_reservation_transition_state",
+  "schema_version": 1,
+  "state": {
+    "inventory": {
+      "sku_0001": {
+        "available": 6
+      },
+      "sku_0002": {
+        "available": 8
+      },
+      "sku_0003": {
+        "available": 8
+      },
+      "sku_0004": {
+        "available": 7
+      },
+      "sku_0005": {
+        "available": 7
+      },
+      "sku_0006": {
+        "available": 9
+      },
+      "sku_0007": {
+        "available": 6
+      },
+      "sku_0008": {
+        "available": 8
+      }
+    },
+    "orders": {
+      "ord_0001": {
+        "quantity": 1,
+        "sku": "sku_0001",
+        "status": "pending"
+      },
+      "ord_0002": {
+        "quantity": 2,
+        "sku": "sku_0002",
+        "status": "pending"
+      },
+      "ord_0003": {
+        "quantity": 3,
+        "sku": "sku_0003",
+        "status": "pending"
+      },
+      "ord_0004": {
+        "quantity": 1,
+        "sku": "sku_0004",
+        "status": "pending"
+      },
+      "ord_0005": {
+        "quantity": 2,
+        "sku": "sku_0005",
+        "status": "pending"
+      },
+      "ord_0006": {
+        "quantity": 3,
+        "sku": "sku_0006",
+        "status": "pending"
+      },
+      "ord_0007": {
+        "quantity": 1,
+        "sku": "sku_0007",
+        "status": "pending"
+      },
+      "ord_0008": {
+        "quantity": 2,
+        "sku": "sku_0008",
+        "status": "pending"
+      }
+    }
+  },
+  "summary": {
+    "n_inventory_items": 8,
+    "n_orders": 8,
+    "n_world_model_ensemble_members": 0,
+    "n_world_model_rules": 8,
+    "world_model_ensemble_min_agreement": null,
+    "world_model_ensemble_strategy": null
+  },
+  "world_model_rules": [
+    {
+      "action": {
+        "order_id": "ord_0001",
+        "sku": "sku_0001",
+        "type": "reserve_order"
+      },
+      "confidence": 0.95,
+      "decrement": {
+        "inventory.sku_0001.available": 1
+      },
+      "explanation": "reserve pending order inventory",
+      "metadata": {
+        "member": "single",
+        "order_id": "ord_0001",
+        "quantity": 1,
+        "sku": "sku_0001"
+      },
+      "name": "reserve_ord_0001",
+      "set": {
+        "orders.ord_0001.status": "reserved"
+      },
+      "when": [
+        {
+          "operator": "gte",
+          "path": "inventory.sku_0001.available",
+          "source": "order_reservation_precondition",
+          "value": 1
+        },
+        {
+          "operator": "eq",
+          "path": "orders.ord_0001.status",
+          "source": "order_reservation_precondition",
+          "value": "pending"
+        }
+      ]
+    },
+    {
+      "action": {
+        "order_id": "ord_0002",
+        "sku": "sku_0002",
+        "type": "reserve_order"
+      },
+      "confidence": 0.95,
+      "decrement": {
+        "inventory.sku_0002.available": 2
+      },
+      "explanation": "reserve pending order inventory",
+      "metadata": {
+        "member": "single",
+        "order_id": "ord_0002",
+        "quantity": 2,
+        "sku": "sku_0002"
+      },
+      "name": "reserve_ord_0002",
+      "set": {
+        "orders.ord_0002.status": "reserved"
+      },
+      "when": [
+        {
+          "operator": "gte",
+          "path": "inventory.sku_0002.available",
+          "source": "order_reservation_precondition",
+          "value": 2
+        },
+        {
+          "operator": "eq",
+          "path": "orders.ord_0002.status",
+          "source": "order_reservation_precondition",
+          "value": "pending"
+        }
+      ]
+    },
+    {
+      "action": {
+        "order_id": "ord_0003",
+        "sku": "sku_0003",
+        "type": "reserve_order"
+      },
+      "confidence": 0.95,
+      "decrement": {
+        "inventory.sku_0003.available": 3
+      },
+      "explanation": "reserve pending order inventory",
+      "metadata": {
+        "member": "single",
+        "order_id": "ord_0003",
+        "quantity": 3,
+        "sku": "sku_0003"
+      },
+      "name": "reserve_ord_0003",
+      "set": {
+        "orders.ord_0003.status": "reserved"
+      },
+      "when": [
+        {
+          "operator": "gte",
+          "path": "inventory.sku_0003.available",
+          "source": "order_reservation_precondition",
+          "value": 3
+        },
+        {
+          "operator": "eq",
+          "path": "orders.ord_0003.status",
+          "source": "order_reservation_precondition",
+          "value": "pending"
+        }
+      ]
+    },
+    {
+      "action": {
+        "order_id": "ord_0004",
+        "sku": "sku_0004",
+        "type": "reserve_order"
+      },
+      "confidence": 0.95,
+      "decrement": {
+        "inventory.sku_0004.available": 1
+      },
+      "explanation": "reserve pending order inventory",
+      "metadata": {
+        "member": "single",
+        "order_id": "ord_0004",
+        "quantity": 1,
+        "sku": "sku_0004"
+      },
+      "name": "reserve_ord_0004",
+      "set": {
+        "orders.ord_0004.status": "reserved"
+      },
+      "when": [
+        {
+          "operator": "gte",
+          "path": "inventory.sku_0004.available",
+          "source": "order_reservation_precondition",
+          "value": 1
+        },
+        {
+          "operator": "eq",
+          "path": "orders.ord_0004.status",
+          "source": "order_reservation_precondition",
+          "value": "pending"
+        }
+      ]
+    },
+    {
+      "action": {
+        "order_id": "ord_0005",
+        "sku": "sku_0005",
+        "type": "reserve_order"
+      },
+      "confidence": 0.95,
+      "decrement": {
+        "inventory.sku_0005.available": 2
+      },
+      "explanation": "reserve pending order inventory",
+      "metadata": {
+        "member": "single",
+        "order_id": "ord_0005",
+        "quantity": 2,
+        "sku": "sku_0005"
+      },
+      "name": "reserve_ord_0005",
+      "set": {
+        "orders.ord_0005.status": "reserved"
+      },
+      "when": [
+        {
+          "operator": "gte",
+          "path": "inventory.sku_0005.available",
+          "source": "order_reservation_precondition",
+          "value": 2
+        },
+        {
+          "operator": "eq",
+          "path": "orders.ord_0005.status",
+          "source": "order_reservation_precondition",
+          "value": "pending"
+        }
+      ]
+    },
+    {
+      "action": {
+        "order_id": "ord_0006",
+        "sku": "sku_0006",
+        "type": "reserve_order"
+      },
+      "confidence": 0.95,
+      "decrement": {
+        "inventory.sku_0006.available": 3
+      },
+      "explanation": "reserve pending order inventory",
+      "metadata": {
+        "member": "single",
+        "order_id": "ord_0006",
+        "quantity": 3,
+        "sku": "sku_0006"
+      },
+      "name": "reserve_ord_0006",
+      "set": {
+        "orders.ord_0006.status": "reserved"
+      },
+      "when": [
+        {
+          "operator": "gte",
+          "path": "inventory.sku_0006.available",
+          "source": "order_reservation_precondition",
+          "value": 3
+        },
+        {
+          "operator": "eq",
+          "path": "orders.ord_0006.status",
+          "source": "order_reservation_precondition",
+          "value": "pending"
+        }
+      ]
+    },
+    {
+      "action": {
+        "order_id": "ord_0007",
+        "sku": "sku_0007",
+        "type": "reserve_order"
+      },
+      "confidence": 0.95,
+      "decrement": {
+        "inventory.sku_0007.available": 1
+      },
+      "explanation": "reserve pending order inventory",
+      "metadata": {
+        "member": "single",
+        "order_id": "ord_0007",
+        "quantity": 1,
+        "sku": "sku_0007"
+      },
+      "name": "reserve_ord_0007",
+      "set": {
+        "orders.ord_0007.status": "reserved"
+      },
+      "when": [
+        {
+          "operator": "gte",
+          "path": "inventory.sku_0007.available",
+          "source": "order_reservation_precondition",
+          "value": 1
+        },
+        {
+          "operator": "eq",
+          "path": "orders.ord_0007.status",
+          "source": "order_reservation_precondition",
+          "value": "pending"
+        }
+      ]
+    },
+    {
+      "action": {
+        "order_id": "ord_0008",
+        "sku": "sku_0008",
+        "type": "reserve_order"
+      },
+      "confidence": 0.95,
+      "decrement": {
+        "inventory.sku_0008.available": 2
+      },
+      "explanation": "reserve pending order inventory",
+      "metadata": {
+        "member": "single",
+        "order_id": "ord_0008",
+        "quantity": 2,
+        "sku": "sku_0008"
+      },
+      "name": "reserve_ord_0008",
+      "set": {
+        "orders.ord_0008.status": "reserved"
+      },
+      "when": [
+        {
+          "operator": "gte",
+          "path": "inventory.sku_0008.available",
+          "source": "order_reservation_precondition",
+          "value": 2
+        },
+        {
+          "operator": "eq",
+          "path": "orders.ord_0008.status",
+          "source": "order_reservation_precondition",
+          "value": "pending"
+        }
+      ]
+    }
+  ]
+}

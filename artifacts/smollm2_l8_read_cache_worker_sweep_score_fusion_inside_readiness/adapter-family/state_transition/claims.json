@@ -1,0 +1,408 @@
+{
+  "description": "Synthetic order-reservation claims with explicit state_transition metadata. True labels match the predicted inventory after the action; false labels use an off-by-one postcondition.",
+  "fixture_type": "order_transition_state_claims",
+  "records": [
+    {
+      "claim": "After reserving order ord_0001, inventory for sku_0001 will be 5 units.",
+      "claim_id": "ord_0001_reserve_remaining",
+      "claim_metadata": {
+        "claim_is_false": false,
+        "claimed_remaining": 5,
+        "domain": "order_reservation",
+        "expected_remaining": 5,
+        "initial_available": 6,
+        "order_id": "ord_0001",
+        "quantity": 1,
+        "sku": "sku_0001",
+        "state_transition": {
+          "action": {
+            "order_id": "ord_0001",
+            "sku": "sku_0001",
+            "type": "reserve_order"
+          },
+          "metadata": {
+            "claimed_remaining": 5,
+            "expected_remaining": 5,
+            "initial_available": 6,
+            "order_id": "ord_0001",
+            "quantity": 1,
+            "sku": "sku_0001"
+          },
+          "postcondition": {
+            "operator": "eq",
+            "path": "inventory.sku_0001.available",
+            "source": "order_reservation_transition",
+            "value": 5
+          },
+          "source": "order_transition_fixture"
+        }
+      },
+      "metadata": {
+        "claim_is_false": false,
+        "claimed_remaining": 5,
+        "domain": "order_reservation",
+        "expected_remaining": 5,
+        "index": 0,
+        "initial_available": 6,
+        "order_id": "ord_0001",
+        "quantity": 1,
+        "score_label": 0,
+        "sku": "sku_0001",
+        "synthetic_score": 0.22
+      }
+    },
+    {
+      "claim": "After reserving order ord_0002, inventory for sku_0002 will be 7 units.",
+      "claim_id": "ord_0002_reserve_remaining",
+      "claim_metadata": {
+        "claim_is_false": true,
+        "claimed_remaining": 7,
+        "domain": "order_reservation",
+        "expected_remaining": 6,
+        "initial_available": 8,
+        "order_id": "ord_0002",
+        "quantity": 2,
+        "sku": "sku_0002",
+        "state_transition": {
+          "action": {
+            "order_id": "ord_0002",
+            "sku": "sku_0002",
+            "type": "reserve_order"
+          },
+          "metadata": {
+            "claimed_remaining": 7,
+            "expected_remaining": 6,
+            "initial_available": 8,
+            "order_id": "ord_0002",
+            "quantity": 2,
+            "sku": "sku_0002"
+          },
+          "postcondition": {
+            "operator": "eq",
+            "path": "inventory.sku_0002.available",
+            "source": "order_reservation_transition",
+            "value": 7
+          },
+          "source": "order_transition_fixture"
+        }
+      },
+      "metadata": {
+        "claim_is_false": true,
+        "claimed_remaining": 7,
+        "domain": "order_reservation",
+        "expected_remaining": 6,
+        "index": 1,
+        "initial_available": 8,
+        "order_id": "ord_0002",
+        "quantity": 2,
+        "score_label": 1,
+        "sku": "sku_0002",
+        "synthetic_score": 0.635
+      }
+    },
+    {
+      "claim": "After reserving order ord_0003, inventory for sku_0003 will be 5 units.",
+      "claim_id": "ord_0003_reserve_remaining",
+      "claim_metadata": {
+        "claim_is_false": false,
+        "claimed_remaining": 5,
+        "domain": "order_reservation",
+        "expected_remaining": 5,
+        "initial_available": 8,
+        "order_id": "ord_0003",
+        "quantity": 3,
+        "sku": "sku_0003",
+        "state_transition": {
+          "action": {
+            "order_id": "ord_0003",
+            "sku": "sku_0003",
+            "type": "reserve_order"
+          },
+          "metadata": {
+            "claimed_remaining": 5,
+            "expected_remaining": 5,
+            "initial_available": 8,
+            "order_id": "ord_0003",
+            "quantity": 3,
+            "sku": "sku_0003"
+          },
+          "postcondition": {
+            "operator": "eq",
+            "path": "inventory.sku_0003.available",
+            "source": "order_reservation_transition",
+            "value": 5
+          },
+          "source": "order_transition_fixture"
+        }
+      },
+      "metadata": {
+        "claim_is_false": false,
+        "claimed_remaining": 5,
+        "domain": "order_reservation",
+        "expected_remaining": 5,
+        "index": 2,
+        "initial_available": 8,
+        "order_id": "ord_0003",
+        "quantity": 3,
+        "score_label": 0,
+        "sku": "sku_0003",
+        "synthetic_score": 0.25
+      }
+    },
+    {
+      "claim": "After reserving order ord_0004, inventory for sku_0004 will be 7 units.",
+      "claim_id": "ord_0004_reserve_remaining",
+      "claim_metadata": {
+        "claim_is_false": true,
+        "claimed_remaining": 7,
+        "domain": "order_reservation",
+        "expected_remaining": 6,
+        "initial_available": 7,
+        "order_id": "ord_0004",
+        "quantity": 1,
+        "sku": "sku_0004",
+        "state_transition": {
+          "action": {
+            "order_id": "ord_0004",
+            "sku": "sku_0004",
+            "type": "reserve_order"
+          },
+          "metadata": {
+            "claimed_remaining": 7,
+            "expected_remaining": 6,
+            "initial_available": 7,
+            "order_id": "ord_0004",
+            "quantity": 1,
+            "sku": "sku_0004"
+          },
+          "postcondition": {
+            "operator": "eq",
+            "path": "inventory.sku_0004.available",
+            "source": "order_reservation_transition",
+            "value": 7
+          },
+          "source": "order_transition_fixture"
+        }
+      },
+      "metadata": {
+        "claim_is_false": true,
+        "claimed_remaining": 7,
+        "domain": "order_reservation",
+        "expected_remaining": 6,
+        "index": 3,
+        "initial_available": 7,
+        "order_id": "ord_0004",
+        "quantity": 1,
+        "score_label": 1,
+        "sku": "sku_0004",
+        "synthetic_score": 0.665
+      }
+    },
+    {
+      "claim": "After reserving order ord_0005, inventory for sku_0005 will be 5 units.",
+      "claim_id": "ord_0005_reserve_remaining",
+      "claim_metadata": {
+        "claim_is_false": false,
+        "claimed_remaining": 5,
+        "domain": "order_reservation",
+        "expected_remaining": 5,
+        "initial_available": 7,
+        "order_id": "ord_0005",
+        "quantity": 2,
+        "sku": "sku_0005",
+        "state_transition": {
+          "action": {
+            "order_id": "ord_0005",
+            "sku": "sku_0005",
+            "type": "reserve_order"
+          },
+          "metadata": {
+            "claimed_remaining": 5,
+            "expected_remaining": 5,
+            "initial_available": 7,
+            "order_id": "ord_0005",
+            "quantity": 2,
+            "sku": "sku_0005"
+          },
+          "postcondition": {
+            "operator": "eq",
+            "path": "inventory.sku_0005.available",
+            "source": "order_reservation_transition",
+            "value": 5
+          },
+          "source": "order_transition_fixture"
+        }
+      },
+      "metadata": {
+        "claim_is_false": false,
+        "claimed_remaining": 5,
+        "domain": "order_reservation",
+        "expected_remaining": 5,
+        "index": 4,
+        "initial_available": 7,
+        "order_id": "ord_0005",
+        "quantity": 2,
+        "score_label": 0,
+        "sku": "sku_0005",
+        "synthetic_score": 0.28
+      }
+    },
+    {
+      "claim": "After reserving order ord_0006, inventory for sku_0006 will be 7 units.",
+      "claim_id": "ord_0006_reserve_remaining",
+      "claim_metadata": {
+        "claim_is_false": true,
+        "claimed_remaining": 7,
+        "domain": "order_reservation",
+        "expected_remaining": 6,
+        "initial_available": 9,
+        "order_id": "ord_0006",
+        "quantity": 3,
+        "sku": "sku_0006",
+        "state_transition": {
+          "action": {
+            "order_id": "ord_0006",
+            "sku": "sku_0006",
+            "type": "reserve_order"
+          },
+          "metadata": {
+            "claimed_remaining": 7,
+            "expected_remaining": 6,
+            "initial_available": 9,
+            "order_id": "ord_0006",
+            "quantity": 3,
+            "sku": "sku_0006"
+          },
+          "postcondition": {
+            "operator": "eq",
+            "path": "inventory.sku_0006.available",
+            "source": "order_reservation_transition",
+            "value": 7
+          },
+          "source": "order_transition_fixture"
+        }
+      },
+      "metadata": {
+        "claim_is_false": true,
+        "claimed_remaining": 7,
+        "domain": "order_reservation",
+        "expected_remaining": 6,
+        "index": 5,
+        "initial_available": 9,
+        "order_id": "ord_0006",
+        "quantity": 3,
+        "score_label": 1,
+        "sku": "sku_0006",
+        "synthetic_score": 0.62
+      }
+    },
+    {
+      "claim": "After reserving order ord_0007, inventory for sku_0007 will be 5 units.",
+      "claim_id": "ord_0007_reserve_remaining",
+      "claim_metadata": {
+        "claim_is_false": false,
+        "claimed_remaining": 5,
+        "domain": "order_reservation",
+        "expected_remaining": 5,
+        "initial_available": 6,
+        "order_id": "ord_0007",
+        "quantity": 1,
+        "sku": "sku_0007",
+        "state_transition": {
+          "action": {
+            "order_id": "ord_0007",
+            "sku": "sku_0007",
+            "type": "reserve_order"
+          },
+          "metadata": {
+            "claimed_remaining": 5,
+            "expected_remaining": 5,
+            "initial_available": 6,
+            "order_id": "ord_0007",
+            "quantity": 1,
+            "sku": "sku_0007"
+          },
+          "postcondition": {
+            "operator": "eq",
+            "path": "inventory.sku_0007.available",
+            "source": "order_reservation_transition",
+            "value": 5
+          },
+          "source": "order_transition_fixture"
+        }
+      },
+      "metadata": {
+        "claim_is_false": false,
+        "claimed_remaining": 5,
+        "domain": "order_reservation",
+        "expected_remaining": 5,
+        "index": 6,
+        "initial_available": 6,
+        "order_id": "ord_0007",
+        "quantity": 1,
+        "score_label": 0,
+        "sku": "sku_0007",
+        "synthetic_score": 0.235
+      }
+    },
+    {
+      "claim": "After reserving order ord_0008, inventory for sku_0008 will be 7 units.",
+      "claim_id": "ord_0008_reserve_remaining",
+      "claim_metadata": {
+        "claim_is_false": true,
+        "claimed_remaining": 7,
+        "domain": "order_reservation",
+        "expected_remaining": 6,
+        "initial_available": 8,
+        "order_id": "ord_0008",
+        "quantity": 2,
+        "sku": "sku_0008",
+        "state_transition": {
+          "action": {
+            "order_id": "ord_0008",
+            "sku": "sku_0008",
+            "type": "reserve_order"
+          },
+          "metadata": {
+            "claimed_remaining": 7,
+            "expected_remaining": 6,
+            "initial_available": 8,
+            "order_id": "ord_0008",
+            "quantity": 2,
+            "sku": "sku_0008"
+          },
+          "postcondition": {
+            "operator": "eq",
+            "path": "inventory.sku_0008.available",
+            "source": "order_reservation_transition",
+            "value": 7
+          },
+          "source": "order_transition_fixture"
+        }
+      },
+      "metadata": {
+        "claim_is_false": true,
+        "claimed_remaining": 7,
+        "domain": "order_reservation",
+        "expected_remaining": 6,
+        "index": 7,
+        "initial_available": 8,
+        "order_id": "ord_0008",
+        "quantity": 2,
+        "score_label": 1,
+        "sku": "sku_0008",
+        "synthetic_score": 0.65
+      }
+    }
+  ],
+  "schema_version": 1,
+  "summary": {
+    "n_false": 4,
+    "n_records": 8,
+    "n_true": 4,
+    "n_world_model_ensemble_members": 0,
+    "n_world_model_rules": 8,
+    "world_model_ensemble_min_agreement": null,
+    "world_model_ensemble_strategy": null
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "baseline": "fixed",
+  "runs": {
+    "fixed": {
+      "name": "fixed",
+      "result_path": "artifacts/smollm2_l8_inside_sampling_reference/result-fixed.json",
+      "profile_path": "artifacts/smollm2_l8_inside_sampling_reference/profile-fixed.json",
+      "adaptive": false,
+      "selfcheck_early_stop": false,
+      "mode": "all",
+      "trigger_signal": null,
+      "trigger_threshold": null,
+      "trigger_top_fraction": null,
+      "sampled": 68,
+      "not_sampled": 0,
+      "triggered": 68,
+      "skipped_by_trigger": 0,
+      "total_generated_samples": 204,
+      "mean_samples_per_record": 3.0,
+      "mean_samples_per_sampled_record": 3.0,
+      "stopped_early": 0,
+      "stop_reason_counts": {},
+      "total_seconds": 193.625912,
+      "inside_generation_seconds": 161.869024,
+      "sample_count_ratio_to_baseline": 1.0,
+      "inside_generation_seconds_ratio_to_baseline": 1.0
+    }
+  },
+  "leaderboard": [
+    {
+      "name": "fixed",
+      "result_path": "artifacts/smollm2_l8_inside_sampling_reference/result-fixed.json",
+      "profile_path": "artifacts/smollm2_l8_inside_sampling_reference/profile-fixed.json",
+      "adaptive": false,
+      "selfcheck_early_stop": false,
+      "mode": "all",
+      "trigger_signal": null,
+      "trigger_threshold": null,
+      "trigger_top_fraction": null,
+      "sampled": 68,
+      "not_sampled": 0,
+      "triggered": 68,
+      "skipped_by_trigger": 0,
+      "total_generated_samples": 204,
+      "mean_samples_per_record": 3.0,
+      "mean_samples_per_sampled_record": 3.0,
+      "stopped_early": 0,
+      "stop_reason_counts": {},
+      "total_seconds": 193.625912,
+      "inside_generation_seconds": 161.869024,
+      "sample_count_ratio_to_baseline": 1.0,
+      "inside_generation_seconds_ratio_to_baseline": 1.0
+    }
+  ],
+  "sample_efficiency_gate": {
+    "passed": true,
+    "baseline": "fixed",
+    "checked_runs": [],
+    "failures": [],
+    "max_sample_ratios": {},
+    "max_inside_generation_seconds_ratio": null
+  },
+  "recommendation": {
+    "recommended_run": "fixed",
+    "reason": "lowest_total_generated_samples_then_inside_generation_seconds"
+  }
+}

@@ -2,6 +2,7 @@
 
 import importlib
 import json
+import math
 import os
 import subprocess
 import sys
@@ -49876,6 +49877,34 @@ def test_eval_truthfulqa_sampled_inside_diagnostics_include_embedding_entropy(mo
     assert -1 in diagnostics.eigenscore_by_layer
     assert diagnostics.sample_texts == ("Paris is correct.", "Paris is correct.", "Lyon is correct.")
     assert diagnostics.sample_logprobs == pytest.approx((-0.1, -0.1, -0.1))
+
+
+def test_eval_truthfulqa_inside_diagnostics_sanitizes_nonfinite_sample_logprobs():
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+    response = module.SampledResponseDiagnostics(
+        embeddings_by_layer={
+            -1: torch.tensor([
+                [1.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0],
+                [0.0, 0.0, 1.0],
+            ])
+        },
+        sample_texts=("Paris is correct.", "Lyon is correct.", "Marseille is correct."),
+        sample_logprobs=(-0.1, float("-inf"), float("nan")),
+    )
+
+    diagnostics = module._inside_diagnostics_from_response(
+        response,
+        eigenscore_alpha=1e-3,
+        embedding_similarity_threshold=0.95,
+    )
+
+    assert diagnostics.n_samples == 3
+    assert diagnostics.semantic_energy >= 0.0
+    assert all(math.isfinite(value) for value in diagnostics.sample_logprobs)
+    assert diagnostics.sample_logprobs[0] == pytest.approx(-0.1)
+    assert diagnostics.sample_logprobs[1] < -1.0e8
+    assert diagnostics.sample_logprobs[2] < -1.0e8
 
 
 def test_eval_truthfulqa_sample_logprobs_group_generated_sequences():

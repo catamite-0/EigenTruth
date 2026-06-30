@@ -3957,6 +3957,10 @@ def _inside_diagnostics_from_response(
     stop_reason: str | None = None,
 ) -> SampledInsideDiagnostics:
     n_samples = len(response_diagnostics.sample_texts)
+    sample_logprobs = _sanitize_sample_logprobs(
+        response_diagnostics.sample_logprobs,
+        expected_count=n_samples,
+    )
     return SampledInsideDiagnostics(
         eigenscore_by_layer={
             layer: float(internal_eigenscore(values, alpha=eigenscore_alpha).item())
@@ -3975,16 +3979,39 @@ def _inside_diagnostics_from_response(
         semantic_energy=float(
             lexical_semantic_energy(
                 response_diagnostics.sample_texts,
-                sample_logprobs=response_diagnostics.sample_logprobs or None,
+                sample_logprobs=sample_logprobs or None,
             ).item()
         ),
         sample_texts=tuple(response_diagnostics.sample_texts),
-        sample_logprobs=tuple(response_diagnostics.sample_logprobs),
+        sample_logprobs=sample_logprobs,
         n_samples=n_samples,
         adaptive_rounds=adaptive_rounds,
         stopped_early=stopped_early,
         stop_reason=stop_reason,
     )
+
+
+def _sanitize_sample_logprobs(
+    sample_logprobs: Sequence[float],
+    *,
+    expected_count: int,
+    invalid_floor: float = -1.0e9,
+) -> tuple[float, ...]:
+    """Keep sampled INSIDE diagnostics serializable when generation scores overflow."""
+    if not sample_logprobs:
+        return ()
+    if len(sample_logprobs) != int(expected_count):
+        return ()
+    sanitized: list[float] = []
+    for value in sample_logprobs:
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError):
+            numeric = invalid_floor
+        if not math.isfinite(numeric):
+            numeric = invalid_floor
+        sanitized.append(numeric)
+    return tuple(sanitized)
 
 
 def _merge_response_diagnostics(

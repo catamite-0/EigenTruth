@@ -1,0 +1,265 @@
+{
+  "description": "Synthetic order-fulfillment claims with explicit state_check metadata. True labels are shippable orders; false labels claim shippability when inventory or account state says the order cannot ship.",
+  "fixture_type": "order_fulfillment_state_claims",
+  "records": [
+    {
+      "claim": "Order ord_0001 can ship now.",
+      "claim_id": "ord_0001_can_ship",
+      "claim_metadata": {
+        "account_id": "acct_0001",
+        "domain": "order_fulfillment",
+        "expected_can_ship": true,
+        "failure_reason": null,
+        "order_id": "ord_0001",
+        "quantity": 2,
+        "sku": "sku_0001",
+        "state_check": {
+          "operator": "eq",
+          "path": "orders.ord_0001.can_ship",
+          "source": "order_fulfillment_state",
+          "value": true
+        }
+      },
+      "metadata": {
+        "account_id": "acct_0001",
+        "domain": "order_fulfillment",
+        "expected_can_ship": true,
+        "failure_reason": null,
+        "index": 0,
+        "order_id": "ord_0001",
+        "quantity": 2,
+        "score_label": 0,
+        "sku": "sku_0001",
+        "synthetic_score": 0.22
+      }
+    },
+    {
+      "claim": "Order ord_0002 can ship now.",
+      "claim_id": "ord_0002_can_ship",
+      "claim_metadata": {
+        "account_id": "acct_0002",
+        "domain": "order_fulfillment",
+        "expected_can_ship": false,
+        "failure_reason": "insufficient_inventory",
+        "order_id": "ord_0002",
+        "quantity": 3,
+        "sku": "sku_0002",
+        "state_check": {
+          "operator": "eq",
+          "path": "orders.ord_0002.can_ship",
+          "source": "order_fulfillment_state",
+          "value": true
+        }
+      },
+      "metadata": {
+        "account_id": "acct_0002",
+        "domain": "order_fulfillment",
+        "expected_can_ship": false,
+        "failure_reason": "insufficient_inventory",
+        "index": 1,
+        "order_id": "ord_0002",
+        "quantity": 3,
+        "score_label": 1,
+        "sku": "sku_0002",
+        "synthetic_score": 0.635
+      }
+    },
+    {
+      "claim": "Order ord_0003 can ship now.",
+      "claim_id": "ord_0003_can_ship",
+      "claim_metadata": {
+        "account_id": "acct_0003",
+        "domain": "order_fulfillment",
+        "expected_can_ship": false,
+        "failure_reason": "account_suspended",
+        "order_id": "ord_0003",
+        "quantity": 4,
+        "sku": "sku_0003",
+        "state_check": {
+          "operator": "eq",
+          "path": "orders.ord_0003.can_ship",
+          "source": "order_fulfillment_state",
+          "value": true
+        }
+      },
+      "metadata": {
+        "account_id": "acct_0003",
+        "domain": "order_fulfillment",
+        "expected_can_ship": false,
+        "failure_reason": "account_suspended",
+        "index": 2,
+        "order_id": "ord_0003",
+        "quantity": 4,
+        "score_label": 1,
+        "sku": "sku_0003",
+        "synthetic_score": 0.65
+      }
+    },
+    {
+      "claim": "Order ord_0004 can ship now.",
+      "claim_id": "ord_0004_can_ship",
+      "claim_metadata": {
+        "account_id": "acct_0004",
+        "domain": "order_fulfillment",
+        "expected_can_ship": true,
+        "failure_reason": null,
+        "order_id": "ord_0004",
+        "quantity": 2,
+        "sku": "sku_0004",
+        "state_check": {
+          "operator": "eq",
+          "path": "orders.ord_0004.can_ship",
+          "source": "order_fulfillment_state",
+          "value": true
+        }
+      },
+      "metadata": {
+        "account_id": "acct_0004",
+        "domain": "order_fulfillment",
+        "expected_can_ship": true,
+        "failure_reason": null,
+        "index": 3,
+        "order_id": "ord_0004",
+        "quantity": 2,
+        "score_label": 0,
+        "sku": "sku_0004",
+        "synthetic_score": 0.265
+      }
+    },
+    {
+      "claim": "Order ord_0005 can ship now.",
+      "claim_id": "ord_0005_can_ship",
+      "claim_metadata": {
+        "account_id": "acct_0005",
+        "domain": "order_fulfillment",
+        "expected_can_ship": true,
+        "failure_reason": null,
+        "order_id": "ord_0005",
+        "quantity": 3,
+        "sku": "sku_0005",
+        "state_check": {
+          "operator": "eq",
+          "path": "orders.ord_0005.can_ship",
+          "source": "order_fulfillment_state",
+          "value": true
+        }
+      },
+      "metadata": {
+        "account_id": "acct_0005",
+        "domain": "order_fulfillment",
+        "expected_can_ship": true,
+        "failure_reason": null,
+        "index": 4,
+        "order_id": "ord_0005",
+        "quantity": 3,
+        "score_label": 0,
+        "sku": "sku_0005",
+        "synthetic_score": 0.28
+      }
+    },
+    {
+      "claim": "Order ord_0006 can ship now.",
+      "claim_id": "ord_0006_can_ship",
+      "claim_metadata": {
+        "account_id": "acct_0006",
+        "domain": "order_fulfillment",
+        "expected_can_ship": false,
+        "failure_reason": "insufficient_inventory",
+        "order_id": "ord_0006",
+        "quantity": 4,
+        "sku": "sku_0006",
+        "state_check": {
+          "operator": "eq",
+          "path": "orders.ord_0006.can_ship",
+          "source": "order_fulfillment_state",
+          "value": true
+        }
+      },
+      "metadata": {
+        "account_id": "acct_0006",
+        "domain": "order_fulfillment",
+        "expected_can_ship": false,
+        "failure_reason": "insufficient_inventory",
+        "index": 5,
+        "order_id": "ord_0006",
+        "quantity": 4,
+        "score_label": 1,
+        "sku": "sku_0006",
+        "synthetic_score": 0.62
+      }
+    },
+    {
+      "claim": "Order ord_0007 can ship now.",
+      "claim_id": "ord_0007_can_ship",
+      "claim_metadata": {
+        "account_id": "acct_0007",
+        "domain": "order_fulfillment",
+        "expected_can_ship": false,
+        "failure_reason": "account_suspended",
+        "order_id": "ord_0007",
+        "quantity": 2,
+        "sku": "sku_0007",
+        "state_check": {
+          "operator": "eq",
+          "path": "orders.ord_0007.can_ship",
+          "source": "order_fulfillment_state",
+          "value": true
+        }
+      },
+      "metadata": {
+        "account_id": "acct_0007",
+        "domain": "order_fulfillment",
+        "expected_can_ship": false,
+        "failure_reason": "account_suspended",
+        "index": 6,
+        "order_id": "ord_0007",
+        "quantity": 2,
+        "score_label": 1,
+        "sku": "sku_0007",
+        "synthetic_score": 0.635
+      }
+    },
+    {
+      "claim": "Order ord_0008 can ship now.",
+      "claim_id": "ord_0008_can_ship",
+      "claim_metadata": {
+        "account_id": "acct_0008",
+        "domain": "order_fulfillment",
+        "expected_can_ship": true,
+        "failure_reason": null,
+        "order_id": "ord_0008",
+        "quantity": 3,
+        "sku": "sku_0008",
+        "state_check": {
+          "operator": "eq",
+          "path": "orders.ord_0008.can_ship",
+          "source": "order_fulfillment_state",
+          "value": true
+        }
+      },
+      "metadata": {
+        "account_id": "acct_0008",
+        "domain": "order_fulfillment",
+        "expected_can_ship": true,
+        "failure_reason": null,
+        "index": 7,
+        "order_id": "ord_0008",
+        "quantity": 3,
+        "score_label": 0,
+        "sku": "sku_0008",
+        "synthetic_score": 0.25
+      }
+    }
+  ],
+  "schema_version": 1,
+  "summary": {
+    "n_false": 4,
+    "n_records": 8,
+    "n_true": 4,
+    "reason_counts": {
+      "account_suspended": 2,
+      "insufficient_inventory": 2,
+      "ok": 4
+    }
+  }
+}
