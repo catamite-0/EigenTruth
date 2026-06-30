@@ -1684,6 +1684,17 @@ is therefore: source collection works, lexical retrieval is still the wrong
 coverage lever, and the next pass should turn documented Wikidata claims into
 structured-fact/QA route corpora.
 
+The frontier v4 full-queue fetch lives at
+`artifacts/frontier-release-evidence/blind-spot-wikidata-evidence-v1/`. It
+deduplicates the full collection corpus into `672` Wikidata requests, resolves
+`75` entities, and writes `322` CC0 source documents. The companion external
+retrieval corpus contains all `322` documents with source, timestamp, and URL
+metadata, and the provenance audit passes as `external_candidate`: `0` claim-id
+links, `0` row links, `0` label metadata documents, and exact answer-copy rate
+`0.065`. The audit keeps a warning for copied answer text, so this artifact is
+approved as external source material, not as proof that the route now covers the
+blind spots.
+
 ## `audit_blind_spot_covered_fact_mapping.py`
 
 Joins blind-spot records to target-specific Wikidata source docs and structured
