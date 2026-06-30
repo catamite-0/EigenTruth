@@ -889,6 +889,10 @@ policy score distribution. The corresponding workflow script is
 JSON/JSONL and optional `ProductFeedbackRecord` JSONL labels, emits extracted
 records when requested, writes an `EvidenceAcquisitionCalibrationReport`, saves
 the post-policy `CalibrationArtifact`, and can fingerprint/register the result.
+For held-out or subsequently collected feedback, `audit_evidence_acquisition_risk`
+can replay the deployed threshold over labeled post-policy records and alpha-spend
+finite prefix checks, producing a JSON-ready monitor report that fails closed when
+the accepted-error upper bound exceeds the target error rate.
 When `--save-abstention-comparison` or `--include-abstention-comparison` is set,
 the script emits a `ConformalAbstentionComparisonReport` over `--abstention-signals`
 (or `--signals` when no abstention list is provided). The default ranking metric is

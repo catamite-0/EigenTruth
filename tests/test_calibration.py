@@ -14,6 +14,7 @@ from eigentruth.calibration import (
     EvidenceAcquisitionCalibrationRecord,
     EvidenceAcquisitionCalibrationReport,
     EvidenceAcquisitionConformalCalibrator,
+    EvidenceAcquisitionRiskMonitorReport,
     GeometryScoreFusionArtifact,
     GeometryScoreFusionCalibrator,
     MultipleTestingConformalArtifact,
@@ -23,6 +24,7 @@ from eigentruth.calibration import (
     SequentialConformalArtifact,
     SequentialConformalCalibrator,
     SteeringPolicyConfig,
+    audit_evidence_acquisition_risk,
     evidence_acquisition_record_from_trace,
     evidence_acquisition_records_from_trace_feedback,
 )
@@ -244,6 +246,128 @@ def test_evidence_acquisition_conformal_calibrator_supports_lower_direction():
     assert result.artifact.get_score("support_policy_score").threshold == pytest.approx(0.5)
 
 
+def test_evidence_acquisition_risk_monitor_passes_stable_feedback_stream():
+    records = tuple(
+        EvidenceAcquisitionCalibrationRecord(
+            post_score=0.1 if index != 11 else 0.2,
+            correct=index != 11,
+            action="answer",
+        )
+        for index in range(20)
+    )
+
+    report = audit_evidence_acquisition_risk(
+        records,
+        threshold=0.5,
+        target_error_rate=0.25,
+        monitor_alpha=0.1,
+        score_name="policy_score",
+        checkpoints=(20,),
+        metadata={"suite": "unit"},
+    )
+    roundtrip = EvidenceAcquisitionRiskMonitorReport.from_dict(report.to_dict())
+
+    assert report.passed is True
+    assert report.first_failed_checkpoint is None
+    assert report.blocking_reasons == ()
+    assert report.checks[0].accepted_count == 20
+    assert report.checks[0].accepted_errors == 1
+    assert report.checks[0].accepted_error_upper_bound < 0.25
+    assert report.metadata["suite"] == "unit"
+    assert roundtrip.to_dict() == report.to_dict()
+
+
+def test_evidence_acquisition_risk_monitor_blocks_drifted_feedback_stream():
+    records = tuple(
+        EvidenceAcquisitionCalibrationRecord(
+            post_score=0.1,
+            correct=index >= 4,
+            action="acquire" if index < 4 else "answer",
+        )
+        for index in range(10)
+    )
+
+    report = audit_evidence_acquisition_risk(
+        records,
+        threshold=0.5,
+        target_error_rate=0.25,
+        monitor_alpha=0.1,
+        checkpoints=(10,),
+    )
+
+    assert report.passed is False
+    assert report.first_failed_checkpoint == 10
+    assert "accepted_error_upper_bound" in report.blocking_reasons[0]
+    assert report.checks[0].accepted_errors == 4
+    assert report.checks[0].n_acquired == 4
+
+
+def test_evidence_acquisition_risk_monitor_respects_lower_direction_and_validates_inputs():
+    records = (
+        {"post_score": 0.9, "correct": 1, "action": "answer"},
+        {"post_score": 0.8, "correct": 1, "action": "answer"},
+        {"post_score": 0.7, "correct": 1, "action": "answer"},
+        {"post_score": 0.1, "correct": 0, "action": "abstain"},
+    )
+
+    report = audit_evidence_acquisition_risk(
+        records,
+        threshold=0.5,
+        target_error_rate=0.5,
+        monitor_alpha=0.2,
+        direction="lower",
+        checkpoints=(4,),
+    )
+
+    assert report.passed is True
+    assert report.checks[0].accepted_count == 3
+    assert report.checks[0].accepted_errors == 0
+    assert report.checks[0].n_abstained == 1
+    with pytest.raises(ValueError, match="checkpoints"):
+        audit_evidence_acquisition_risk(
+            records,
+            threshold=0.5,
+            target_error_rate=0.5,
+            checkpoints=(5,),
+        )
+    with pytest.raises(ValueError, match="direction"):
+        audit_evidence_acquisition_risk(
+            records,
+            threshold=0.5,
+            target_error_rate=0.5,
+            direction="sideways",
+        )
+    with pytest.raises(ValueError, match="schedule"):
+        EvidenceAcquisitionRiskMonitorReport.from_dict(
+            {
+                **report.to_dict(),
+                "schedule": "surprise",
+            }
+        )
+
+
+def test_evidence_acquisition_risk_monitor_dict_is_strict_json_ready_for_infinite_threshold():
+    records = (
+        {"post_score": 0.1, "correct": 1, "action": "answer"},
+        {"post_score": 0.2, "correct": 1, "action": "answer"},
+    )
+
+    report = audit_evidence_acquisition_risk(
+        records,
+        threshold=math.inf,
+        target_error_rate=0.5,
+        monitor_alpha=0.2,
+        checkpoints=(2,),
+    )
+    payload = report.to_dict()
+    raw = json.dumps(payload, allow_nan=False)
+    restored = EvidenceAcquisitionRiskMonitorReport.from_dict(json.loads(raw))
+
+    assert payload["threshold"] == "inf"
+    assert payload["checks"][0]["threshold"] == "inf"
+    assert restored.threshold == math.inf
+
+
 def test_evidence_acquisition_conformal_calibrator_rejects_invalid_inputs():
     with pytest.raises(ValueError, match="alpha"):
         EvidenceAcquisitionConformalCalibrator(alpha=1.0)
@@ -366,9 +490,7 @@ def test_evidence_acquisition_records_from_trace_feedback_join_and_calibrate():
     assert result.report.n_acquired == 1
     assert result.report.n_abstained == 1
     assert result.report.naive_pre_report is not None
-    assert result.artifact.get_score("policy_score").threshold == pytest.approx(
-        result.report.post_threshold
-    )
+    assert result.artifact.get_score("policy_score").threshold == pytest.approx(result.report.post_threshold)
 
 
 def test_evidence_acquisition_trace_feedback_join_fails_closed_on_ambiguous_request():

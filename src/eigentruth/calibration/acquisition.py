@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import math
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -12,6 +13,7 @@ from eigentruth import __version__
 from eigentruth.calibration.artifacts import CalibrationArtifact, CalibrationScore, SteeringPolicyConfig
 from eigentruth.eval.conformal import (
     ConformalAbstentionReport,
+    alpha_spending_schedule,
     conformal_abstention_report,
 )
 from eigentruth.json_utils import strict_json_dumps, to_jsonable
@@ -193,12 +195,8 @@ class EvidenceAcquisitionCalibrationReport:
             n_answered=int(data.get("n_answered", 0)),
             n_abstained=int(data.get("n_abstained", 0)),
             acquisition_rate=float(data.get("acquisition_rate", 0.0)),
-            naive_pre_report=(
-                None if naive_payload is None else ConformalAbstentionReport.from_dict(naive_payload)
-            ),
-            post_acquisition_report=ConformalAbstentionReport.from_dict(
-                data["post_acquisition_report"]
-            ),
+            naive_pre_report=(None if naive_payload is None else ConformalAbstentionReport.from_dict(naive_payload)),
+            post_acquisition_report=ConformalAbstentionReport.from_dict(data["post_acquisition_report"]),
             metadata=dict(data.get("metadata", {})),
         )
 
@@ -220,6 +218,317 @@ class EvidenceAcquisitionCalibrationResult:
             "report": self.report.to_dict(),
             "artifact": self.artifact.to_dict(),
         }
+
+
+@dataclass(frozen=True)
+class EvidenceAcquisitionRiskCheck:
+    """One prefix check for post-acquisition calibration risk monitoring."""
+
+    step: int
+    checkpoint: int
+    alpha_spent: float
+    cumulative_alpha_spent: float
+    target_error_rate: float
+    threshold: float
+    direction: str
+    n_records: int
+    accepted_count: int
+    accepted_errors: int
+    accepted_error_rate: float | None
+    accepted_error_upper_bound: float | None
+    exceeded: bool
+    n_acquired: int = 0
+    n_abstained: int = 0
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        step = _positive_int(self.step, name="step")
+        checkpoint = _positive_int(self.checkpoint, name="checkpoint")
+        if checkpoint < step:
+            raise ValueError("checkpoint must be at least step.")
+        alpha_spent = _unit_interval_float(self.alpha_spent, name="alpha_spent")
+        cumulative_alpha_spent = _unit_interval_float(
+            self.cumulative_alpha_spent,
+            name="cumulative_alpha_spent",
+        )
+        if alpha_spent <= 0.0:
+            raise ValueError("alpha_spent must be positive.")
+        if cumulative_alpha_spent < alpha_spent:
+            raise ValueError("cumulative_alpha_spent must be at least alpha_spent.")
+        direction = str(self.direction)
+        if direction not in {"higher", "lower"}:
+            raise ValueError("direction must be 'higher' or 'lower'.")
+        n_records = _non_negative_int(self.n_records, name="n_records")
+        accepted_count = _non_negative_int(self.accepted_count, name="accepted_count")
+        accepted_errors = _non_negative_int(self.accepted_errors, name="accepted_errors")
+        if accepted_errors > accepted_count:
+            raise ValueError("accepted_errors must not exceed accepted_count.")
+        accepted_error_rate = (
+            None
+            if self.accepted_error_rate is None
+            else _unit_interval_float(self.accepted_error_rate, name="accepted_error_rate")
+        )
+        accepted_error_upper_bound = (
+            None
+            if self.accepted_error_upper_bound is None
+            else _unit_interval_float(
+                self.accepted_error_upper_bound,
+                name="accepted_error_upper_bound",
+            )
+        )
+        object.__setattr__(self, "step", step)
+        object.__setattr__(self, "checkpoint", checkpoint)
+        object.__setattr__(self, "alpha_spent", alpha_spent)
+        object.__setattr__(self, "cumulative_alpha_spent", cumulative_alpha_spent)
+        object.__setattr__(
+            self,
+            "target_error_rate",
+            _unit_interval_float(self.target_error_rate, name="target_error_rate"),
+        )
+        object.__setattr__(self, "threshold", _threshold_float(self.threshold, name="threshold"))
+        object.__setattr__(self, "direction", direction)
+        object.__setattr__(self, "n_records", n_records)
+        object.__setattr__(self, "accepted_count", accepted_count)
+        object.__setattr__(self, "accepted_errors", accepted_errors)
+        object.__setattr__(self, "accepted_error_rate", accepted_error_rate)
+        object.__setattr__(self, "accepted_error_upper_bound", accepted_error_upper_bound)
+        object.__setattr__(self, "exceeded", bool(self.exceeded))
+        object.__setattr__(self, "n_acquired", _non_negative_int(self.n_acquired, name="n_acquired"))
+        object.__setattr__(self, "n_abstained", _non_negative_int(self.n_abstained, name="n_abstained"))
+        object.__setattr__(self, "metadata", dict(self.metadata))
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-ready check payload."""
+        return to_jsonable(
+            {
+                "step": self.step,
+                "checkpoint": self.checkpoint,
+                "alpha_spent": self.alpha_spent,
+                "cumulative_alpha_spent": self.cumulative_alpha_spent,
+                "target_error_rate": self.target_error_rate,
+                "threshold": self.threshold,
+                "direction": self.direction,
+                "n_records": self.n_records,
+                "accepted_count": self.accepted_count,
+                "accepted_errors": self.accepted_errors,
+                "accepted_error_rate": self.accepted_error_rate,
+                "accepted_error_upper_bound": self.accepted_error_upper_bound,
+                "exceeded": self.exceeded,
+                "n_acquired": self.n_acquired,
+                "n_abstained": self.n_abstained,
+                "metadata": to_jsonable(dict(self.metadata)),
+            }
+        )
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "EvidenceAcquisitionRiskCheck":
+        """Build a risk check from JSON-like data."""
+        return cls(
+            step=data["step"],
+            checkpoint=data["checkpoint"],
+            alpha_spent=data["alpha_spent"],
+            cumulative_alpha_spent=data["cumulative_alpha_spent"],
+            target_error_rate=data["target_error_rate"],
+            threshold=data["threshold"],
+            direction=str(data.get("direction", "higher")),
+            n_records=data["n_records"],
+            accepted_count=data["accepted_count"],
+            accepted_errors=data["accepted_errors"],
+            accepted_error_rate=data.get("accepted_error_rate"),
+            accepted_error_upper_bound=data.get("accepted_error_upper_bound"),
+            exceeded=data["exceeded"],
+            n_acquired=data.get("n_acquired", 0),
+            n_abstained=data.get("n_abstained", 0),
+            metadata=dict(data.get("metadata", {})),
+        )
+
+
+@dataclass(frozen=True)
+class EvidenceAcquisitionRiskMonitorReport:
+    """Alpha-spending audit of a deployed post-acquisition calibration artifact."""
+
+    score_name: str
+    threshold: float
+    direction: str
+    target_error_rate: float
+    monitor_alpha: float
+    schedule: str
+    n_records: int
+    passed: bool
+    blocking_reasons: tuple[str, ...]
+    checks: tuple[EvidenceAcquisitionRiskCheck, ...]
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        direction = str(self.direction)
+        if direction not in {"higher", "lower"}:
+            raise ValueError("direction must be 'higher' or 'lower'.")
+        checks = tuple(
+            check if isinstance(check, EvidenceAcquisitionRiskCheck) else EvidenceAcquisitionRiskCheck.from_dict(check)
+            for check in self.checks
+        )
+        if not checks:
+            raise ValueError("checks must be non-empty.")
+        object.__setattr__(self, "score_name", str(self.score_name))
+        object.__setattr__(self, "threshold", _threshold_float(self.threshold, name="threshold"))
+        object.__setattr__(self, "direction", direction)
+        object.__setattr__(
+            self,
+            "target_error_rate",
+            _unit_interval_float(self.target_error_rate, name="target_error_rate"),
+        )
+        object.__setattr__(self, "monitor_alpha", _alpha_float(self.monitor_alpha))
+        object.__setattr__(self, "schedule", _alpha_spending_schedule_name(self.schedule))
+        object.__setattr__(self, "n_records", _non_negative_int(self.n_records, name="n_records"))
+        object.__setattr__(self, "passed", bool(self.passed))
+        object.__setattr__(self, "blocking_reasons", tuple(str(reason) for reason in self.blocking_reasons))
+        object.__setattr__(self, "checks", checks)
+        object.__setattr__(self, "metadata", dict(self.metadata))
+
+    @property
+    def first_failed_checkpoint(self) -> int | None:
+        """Return the first checkpoint that exceeded the target, if any."""
+        for check in self.checks:
+            if check.exceeded:
+                return check.checkpoint
+        return None
+
+    @property
+    def max_accepted_error_upper_bound(self) -> float | None:
+        """Return the largest available accepted-error upper bound."""
+        bounds = tuple(
+            check.accepted_error_upper_bound for check in self.checks if check.accepted_error_upper_bound is not None
+        )
+        if not bounds:
+            return None
+        return max(bounds)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-ready monitor report."""
+        return to_jsonable(
+            {
+                "score_name": self.score_name,
+                "threshold": self.threshold,
+                "direction": self.direction,
+                "target_error_rate": self.target_error_rate,
+                "monitor_alpha": self.monitor_alpha,
+                "schedule": self.schedule,
+                "n_records": self.n_records,
+                "passed": self.passed,
+                "blocking_reasons": list(self.blocking_reasons),
+                "first_failed_checkpoint": self.first_failed_checkpoint,
+                "max_accepted_error_upper_bound": self.max_accepted_error_upper_bound,
+                "checks": [check.to_dict() for check in self.checks],
+                "metadata": to_jsonable(dict(self.metadata)),
+            }
+        )
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "EvidenceAcquisitionRiskMonitorReport":
+        """Build a monitor report from JSON-like data."""
+        return cls(
+            score_name=str(data["score_name"]),
+            threshold=data["threshold"],
+            direction=str(data.get("direction", "higher")),
+            target_error_rate=data["target_error_rate"],
+            monitor_alpha=data["monitor_alpha"],
+            schedule=str(data.get("schedule", "harmonic")),
+            n_records=data["n_records"],
+            passed=data["passed"],
+            blocking_reasons=tuple(data.get("blocking_reasons", ())),
+            checks=tuple(EvidenceAcquisitionRiskCheck.from_dict(item) for item in data["checks"]),
+            metadata=dict(data.get("metadata", {})),
+        )
+
+
+def audit_evidence_acquisition_risk(
+    records: Sequence[EvidenceAcquisitionCalibrationRecord | Mapping[str, Any]],
+    *,
+    threshold: float,
+    target_error_rate: float,
+    monitor_alpha: float = 0.05,
+    direction: str = "higher",
+    schedule: str = "harmonic",
+    score_name: str = "post_acquisition_policy_score",
+    checkpoints: Sequence[int] | None = None,
+    metadata: Mapping[str, Any] | None = None,
+) -> EvidenceAcquisitionRiskMonitorReport:
+    """Audit a deployed post-acquisition threshold against labeled feedback.
+
+    The threshold is treated as fixed: this function does not recalibrate on the
+    incoming feedback. Instead it evaluates accepted-error confidence bounds over
+    a finite sequence of prefixes and spends ``monitor_alpha`` across those
+    checks. This is a conservative monitor-first guardrail for deciding whether
+    an existing acquisition calibration needs rework.
+    """
+    rows = _records(records, require_correct=False)
+    threshold_value = _threshold_float(threshold, name="threshold")
+    target = _unit_interval_float(target_error_rate, name="target_error_rate")
+    monitor_alpha_value = _alpha_float(monitor_alpha)
+    if direction not in {"higher", "lower"}:
+        raise ValueError("direction must be 'higher' or 'lower'.")
+    checkpoint_values = _risk_checkpoints(checkpoints, n_records=len(rows))
+    spends = alpha_spending_schedule(monitor_alpha_value, len(checkpoint_values), schedule=schedule)
+    checks: list[EvidenceAcquisitionRiskCheck] = []
+    cumulative = 0.0
+    for step, (checkpoint, alpha_spent) in enumerate(zip(checkpoint_values, spends, strict=True), start=1):
+        cumulative += float(alpha_spent)
+        prefix = rows[:checkpoint]
+        accepted = tuple(row for row in prefix if _accepted_by_threshold(row.post_score, threshold_value, direction))
+        accepted_count = len(accepted)
+        accepted_errors = sum(1 for row in accepted if not row.correct)
+        upper_bound = (
+            None
+            if accepted_count == 0
+            else _binomial_upper_confidence_bound(
+                successes=accepted_errors,
+                total=accepted_count,
+                alpha=float(alpha_spent),
+            )
+        )
+        exceeded = upper_bound is not None and upper_bound > target
+        checks.append(
+            EvidenceAcquisitionRiskCheck(
+                step=step,
+                checkpoint=checkpoint,
+                alpha_spent=float(alpha_spent),
+                cumulative_alpha_spent=cumulative,
+                target_error_rate=target,
+                threshold=threshold_value,
+                direction=direction,
+                n_records=len(prefix),
+                accepted_count=accepted_count,
+                accepted_errors=accepted_errors,
+                accepted_error_rate=None if accepted_count == 0 else accepted_errors / accepted_count,
+                accepted_error_upper_bound=upper_bound,
+                exceeded=exceeded,
+                n_acquired=sum(1 for row in prefix if row.acquired or row.action == "acquire"),
+                n_abstained=sum(1 for row in prefix if row.action == "abstain"),
+            )
+        )
+    blocking_reasons = tuple(
+        f"checkpoint {check.checkpoint} accepted_error_upper_bound "
+        f"{check.accepted_error_upper_bound:.6g} exceeds target_error_rate {target:.6g}"
+        for check in checks
+        if check.exceeded and check.accepted_error_upper_bound is not None
+    )
+    return EvidenceAcquisitionRiskMonitorReport(
+        score_name=str(score_name),
+        threshold=threshold_value,
+        direction=direction,
+        target_error_rate=target,
+        monitor_alpha=monitor_alpha_value,
+        schedule=schedule,
+        n_records=len(rows),
+        passed=not blocking_reasons,
+        blocking_reasons=blocking_reasons,
+        checks=tuple(checks),
+        metadata={
+            "calibration_scope": "post_acquisition_policy",
+            "monitor": "alpha_spent_feedback_prefix_risk",
+            **({} if metadata is None else dict(metadata)),
+        },
+    )
 
 
 def evidence_acquisition_record_from_trace(
@@ -478,6 +787,8 @@ class EvidenceAcquisitionConformalCalibrator:
 
 def _records(
     records: Sequence[EvidenceAcquisitionCalibrationRecord | Mapping[str, Any]],
+    *,
+    require_correct: bool = True,
 ) -> tuple[EvidenceAcquisitionCalibrationRecord, ...]:
     rows = tuple(
         record
@@ -487,7 +798,7 @@ def _records(
     )
     if not rows:
         raise ValueError("records must be non-empty.")
-    if not any(row.correct for row in rows):
+    if require_correct and not any(row.correct for row in rows):
         raise ValueError("records must contain at least one correct response for calibration.")
     return rows
 
@@ -559,6 +870,21 @@ def _non_negative_int(value: Any, *, name: str) -> int:
     return number
 
 
+def _positive_int(value: Any, *, name: str) -> int:
+    if isinstance(value, bool):
+        raise ValueError(f"{name} must be a positive integer.")
+    try:
+        as_float = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a positive integer.") from exc
+    if not math.isfinite(as_float) or not as_float.is_integer():
+        raise ValueError(f"{name} must be a positive integer.")
+    number = int(as_float)
+    if number < 1:
+        raise ValueError(f"{name} must be positive.")
+    return number
+
+
 def _finite_float(value: Any, *, name: str) -> float:
     if isinstance(value, bool):
         raise ValueError(f"{name} must be a finite number.")
@@ -569,6 +895,18 @@ def _finite_float(value: Any, *, name: str) -> float:
     if number != number or number in {float("inf"), float("-inf")}:
         raise ValueError(f"{name} must be a finite number.")
     return number
+
+
+def _threshold_float(value: Any, *, name: str) -> float:
+    if isinstance(value, bool):
+        raise ValueError(f"{name} must be numeric and must not be NaN.")
+    try:
+        threshold = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be numeric and must not be NaN.") from exc
+    if math.isnan(threshold):
+        raise ValueError(f"{name} must be numeric and must not be NaN.")
+    return threshold
 
 
 def _alpha_float(value: Any) -> float:
@@ -583,6 +921,80 @@ def _unit_interval_float(value: Any, *, name: str) -> float:
     if not (0.0 <= number <= 1.0):
         raise ValueError(f"{name} must be in [0, 1].")
     return number
+
+
+def _risk_checkpoints(checkpoints: Sequence[int] | None, *, n_records: int) -> tuple[int, ...]:
+    n = _positive_int(n_records, name="n_records")
+    if checkpoints is None:
+        return tuple(range(1, n + 1))
+    values: list[int] = []
+    for value in checkpoints:
+        checkpoint = _positive_int(value, name="checkpoint")
+        if checkpoint > n:
+            raise ValueError("checkpoints must be within the record count.")
+        values.append(checkpoint)
+    deduped = tuple(sorted(set(values)))
+    if not deduped:
+        raise ValueError("checkpoints must be non-empty.")
+    return deduped
+
+
+def _alpha_spending_schedule_name(value: Any) -> str:
+    schedule = str(value).strip().lower().replace("_", "-")
+    aliases = {
+        "linear": "linear",
+        "equal": "linear",
+        "harmonic": "harmonic",
+        "front-loaded": "harmonic",
+        "geometric": "geometric",
+        "halving": "geometric",
+    }
+    if schedule not in aliases:
+        raise ValueError("schedule must be one of: linear, harmonic, geometric.")
+    return aliases[schedule]
+
+
+def _accepted_by_threshold(score: float, threshold: float, direction: str) -> bool:
+    if direction == "higher":
+        return score <= threshold
+    if direction == "lower":
+        return score >= threshold
+    raise ValueError("direction must be 'higher' or 'lower'.")
+
+
+def _binomial_upper_confidence_bound(*, successes: int, total: int, alpha: float) -> float:
+    """Return a one-sided Clopper-Pearson-style upper bound."""
+    k = _non_negative_int(successes, name="successes")
+    n = _positive_int(total, name="total")
+    if k > n:
+        raise ValueError("successes must not exceed total.")
+    alpha_value = _alpha_float(alpha)
+    if k == n:
+        return 1.0
+    low = 0.0
+    high = 1.0
+    for _ in range(80):
+        mid = (low + high) / 2.0
+        cdf = _binomial_cdf_leq(k, n, mid)
+        if cdf > alpha_value:
+            low = mid
+        else:
+            high = mid
+    return high
+
+
+def _binomial_cdf_leq(k: int, n: int, probability: float) -> float:
+    if probability <= 0.0:
+        return 1.0
+    if probability >= 1.0:
+        return 1.0 if k >= n else 0.0
+    q = 1.0 - probability
+    term = q**n
+    total = term
+    for i in range(1, k + 1):
+        term *= (n - i + 1) / i * probability / q
+        total += term
+    return max(0.0, min(1.0, total))
 
 
 def _score_name(value: Any) -> str:
