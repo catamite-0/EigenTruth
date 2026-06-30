@@ -147,6 +147,62 @@ def test_product_promotion_evidence_handoff_export_fills_explicit_sources():
     assert contract["metadata"]["frontier_release_evidence_citation_batch_rollup_count"] == 0
 
 
+def test_product_promotion_evidence_handoff_accepts_triple_audit_enrichment_report():
+    result = enrich_product_promotion_contract_evidence(
+        {
+            "workflow": "product_promotion_contract",
+            "source_status": "promote",
+            "model_id": "tiny",
+        },
+        triple_audit_enrichment=_triple_audit_enrichment_report(),
+        triple_audit_enrichment_path="triple-audit.json",
+        required_groups=("triple_audit",),
+    )
+    payload = result.to_dict()
+    contract = payload["contract"]
+
+    assert payload["after_audit"]["status"] == "promote"
+    assert payload["filled_groups"] == ("triple_audit",)
+    assert payload["metadata"]["sources"]["triple_audit_enrichment"] == "triple-audit.json"
+    assert contract["metadata"]["triple_claim_coverage_rate"] == 1.0
+    assert contract["metadata"]["triple_audit_claim_coverage_rate"] == 1.0
+    assert contract["metadata"]["triple_audit_pass_rate"] == 1.0
+    assert contract["metadata"]["triple_slot_coverage_rate"] == 1.0
+
+    blocked = enrich_product_promotion_contract_evidence(
+        {
+            "workflow": "product_promotion_contract",
+            "source_status": "promote",
+            "model_id": "tiny",
+        },
+        triple_audit_enrichment={
+            **_triple_audit_enrichment_report(),
+            "status": "blocked",
+        },
+        required_groups=("triple_audit",),
+    )
+    blocked_payload = blocked.to_dict()
+    assert blocked_payload["after_audit"]["status"] == "blocked"
+    assert "triple_audit" not in blocked_payload["filled_groups"]
+
+
+def test_product_promotion_evidence_handoff_accepts_claim_correction_workflow_report():
+    result = enrich_product_promotion_contract_evidence(
+        {
+            "workflow": "product_promotion_contract",
+            "source_status": "promote",
+            "model_id": "tiny",
+        },
+        triple_audit_enrichment=_claim_correction_workflow_report(),
+        required_groups=("triple_audit",),
+    )
+    payload = result.to_dict()
+
+    assert payload["after_audit"]["status"] == "promote"
+    assert payload["filled_groups"] == ("triple_audit",)
+    assert payload["contract"]["metadata"]["triple_audit_pass_rate"] == 1.0
+
+
 def test_product_promotion_evidence_handoff_rolls_up_covered_fact_route_summary():
     result = enrich_product_promotion_contract_evidence(
         {
@@ -176,6 +232,7 @@ def test_product_promotion_evidence_handoff_cli_helper_writes_and_registers(tmp_
     matrix = tmp_path / "triple-matrix.json"
     workflow = tmp_path / "product-trace-workflow.json"
     frontier_evidence = tmp_path / "frontier-release-evidence.json"
+    triple_audit = tmp_path / "triple-audit-enrichment.json"
     output = tmp_path / "contract-enriched.json"
     audit = tmp_path / "contract-enriched-audit.json"
     manifest = tmp_path / "artifact-manifest.json"
@@ -197,6 +254,7 @@ def test_product_promotion_evidence_handoff_cli_helper_writes_and_registers(tmp_
         json.dumps(_frontier_release_evidence_report()),
         encoding="utf-8",
     )
+    triple_audit.write_text(json.dumps(_triple_audit_enrichment_report()), encoding="utf-8")
 
     payload = export_product_promotion_contract_evidence_handoff(
         contract=contract,
@@ -206,6 +264,7 @@ def test_product_promotion_evidence_handoff_cli_helper_writes_and_registers(tmp_
         triple_extraction_fixture_matrix=matrix,
         product_trace_replay_workflow=workflow,
         frontier_release_evidence=frontier_evidence,
+        triple_audit_enrichment=triple_audit,
         artifact_manifest_path=manifest,
         registry_path=registry_path,
         name="contract-enriched",
@@ -217,8 +276,8 @@ def test_product_promotion_evidence_handoff_cli_helper_writes_and_registers(tmp_
     assert audit.exists()
     assert manifest.exists()
     assert payload["summary"]["before_missing_metric_count"] == 64
-    assert payload["summary"]["after_missing_metric_count"] == 16
-    assert payload["summary"]["resolved_missing_metric_count"] == 48
+    assert payload["summary"]["after_missing_metric_count"] == 12
+    assert payload["summary"]["resolved_missing_metric_count"] == 52
     manifest_payload = json.loads(manifest.read_text(encoding="utf-8"))
     assert manifest_payload["summary"]["missing_count"] == 0
     assert set(manifest_payload["artifacts"]) == {
@@ -229,13 +288,14 @@ def test_product_promotion_evidence_handoff_cli_helper_writes_and_registers(tmp_
         "triple_extraction_fixture_matrix",
         "product_trace_replay_workflow",
         "frontier_release_evidence",
+        "triple_audit_enrichment",
     }
     registry = ArtifactRegistry.load_json(registry_path)
     contract_record = registry.get("product_promotion_contract:contract-enriched:0.2")
     audit_record = registry.get("product_promotion_evidence_audit:contract-enriched-audit:0.2")
-    assert contract_record.metadata["resolved_missing_metric_count"] == 48
+    assert contract_record.metadata["resolved_missing_metric_count"] == 52
     assert contract_record.metadata["artifact_manifest"] == str(manifest)
-    assert audit_record.metadata["missing_metric_count"] == 16
+    assert audit_record.metadata["missing_metric_count"] == 12
     assert audit_record.metadata["scope"] == "unit-test"
 
 
@@ -462,6 +522,33 @@ def _runtime_baseline_with_triple_audit():
                 "audit_pass_rate": 1.0,
                 "slot_coverage_rate": 1.0,
             }
+        },
+    }
+
+
+def _triple_audit_enrichment_report():
+    return {
+        "workflow": "product_trace_triple_audit_enrichment",
+        "status": "promote",
+        "summary": {
+            "claim_triple_coverage_rate": 1.0,
+            "audit_claim_coverage_rate": 1.0,
+            "audit_pass_rate": 1.0,
+            "slot_coverage_rate": 1.0,
+        },
+    }
+
+
+def _claim_correction_workflow_report():
+    return {
+        "workflow": "source_family_structured_qa_claim_correction_workflow",
+        "status": "promote",
+        "summary": {
+            "triple_audit_status": "promote",
+            "triple_audit_claim_triple_coverage_rate": 1.0,
+            "triple_audit_audit_claim_coverage_rate": 1.0,
+            "triple_audit_audit_pass_rate": 1.0,
+            "triple_audit_slot_coverage_rate": 1.0,
         },
     }
 

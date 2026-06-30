@@ -1143,6 +1143,13 @@ Added the first monitor-first tool-selection audit layer:
   `15/38`. The remaining blockers are now narrower and real:
   counterfactual verifier audit, trace-level triple audit/slot coverage, and
   covered-fact property metrics.
+- The handoff exporter now also accepts `--triple-audit-enrichment` directly.
+  That input can be a promoted `product_trace_triple_audit_enrichment` report or
+  the top-level `source_family_structured_qa_claim_correction_workflow` report
+  when its optional triple-audit child promoted. Non-promoted reports are ignored
+  for handoff filling, preserving fail-closed release behavior while removing
+  the need to create a runtime-baseline report solely to carry four triple-audit
+  metrics.
 - `eval_counterfactual_verification.py --verified-records --verifier structured_qa`
   now closes the counterfactual verifier audit with real covered-facts route
   evidence rather than an in-memory expected-status smoke. The saved SmolLM2

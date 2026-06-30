@@ -247,6 +247,8 @@ def enrich_product_promotion_contract_evidence(
     product_trace_replay_workflow_path: str | None = None,
     frontier_release_evidence: Mapping[str, Any] | None = None,
     frontier_release_evidence_path: str | None = None,
+    triple_audit_enrichment: Mapping[str, Any] | None = None,
+    triple_audit_enrichment_path: str | None = None,
     runtime_baseline: Mapping[str, Any] | None = None,
     runtime_baseline_path: str | None = None,
     covered_fact_property_metrics: Mapping[str, Any] | None = None,
@@ -319,10 +321,18 @@ def enrich_product_promotion_contract_evidence(
         export_metadata["sources"]["frontier_release_evidence"] = frontier_release_evidence_path
 
     triple_audit = _triple_audit_flat_metadata_from_runtime_baseline(runtime_baseline)
+    triple_audit_source = "runtime_baseline"
+    triple_audit_path = runtime_baseline_path
+    if not triple_audit:
+        triple_audit = _triple_audit_flat_metadata_from_enrichment_report(
+            triple_audit_enrichment
+        )
+        triple_audit_source = "triple_audit_enrichment"
+        triple_audit_path = triple_audit_enrichment_path
     if triple_audit:
         _merge_metadata(payload, triple_audit)
         filled_groups.append("triple_audit")
-        export_metadata["sources"]["runtime_baseline"] = runtime_baseline_path
+        export_metadata["sources"][triple_audit_source] = triple_audit_path
 
     covered_fact = _covered_fact_property_rollup(covered_fact_property_metrics)
     if covered_fact:
@@ -954,6 +964,53 @@ def _triple_audit_flat_metadata_from_runtime_baseline(
             "triple_slot_coverage_rate": _float_or_none(triple_coverage.get("slot_coverage_rate")),
         }
     )
+
+
+def _triple_audit_flat_metadata_from_enrichment_report(
+    report: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    if not report:
+        return {}
+    summary = _mapping(report.get("summary"))
+    if not summary:
+        return {}
+    if report.get("workflow") == "source_family_structured_qa_claim_correction_workflow":
+        if report.get("status") != "promote" or summary.get("triple_audit_status") != "promote":
+            return {}
+        return _drop_none_values(
+            {
+                "triple_claim_coverage_rate": _float_or_none(
+                    summary.get("triple_audit_claim_triple_coverage_rate")
+                ),
+                "triple_audit_claim_coverage_rate": _float_or_none(
+                    summary.get("triple_audit_audit_claim_coverage_rate")
+                ),
+                "triple_audit_pass_rate": _float_or_none(
+                    summary.get("triple_audit_audit_pass_rate")
+                ),
+                "triple_slot_coverage_rate": _float_or_none(
+                    summary.get("triple_audit_slot_coverage_rate")
+                ),
+            }
+        )
+    if report.get("workflow") == "product_trace_triple_audit_enrichment":
+        if report.get("status") != "promote":
+            return {}
+        return _drop_none_values(
+            {
+                "triple_claim_coverage_rate": _float_or_none(
+                    summary.get("claim_triple_coverage_rate")
+                ),
+                "triple_audit_claim_coverage_rate": _float_or_none(
+                    summary.get("audit_claim_coverage_rate")
+                ),
+                "triple_audit_pass_rate": _float_or_none(summary.get("audit_pass_rate")),
+                "triple_slot_coverage_rate": _float_or_none(
+                    summary.get("slot_coverage_rate")
+                ),
+            }
+        )
+    return {}
 
 
 def _covered_fact_property_rollup(

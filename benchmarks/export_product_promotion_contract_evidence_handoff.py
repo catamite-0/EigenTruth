@@ -28,6 +28,7 @@ def export_product_promotion_contract_evidence_handoff(
     counterfactual_verification: str | Path | None = None,
     product_trace_replay_workflow: str | Path | None = None,
     frontier_release_evidence: str | Path | None = None,
+    triple_audit_enrichment: str | Path | None = None,
     runtime_baseline: str | Path | None = None,
     covered_fact_property_metrics: str | Path | None = None,
     artifact_manifest_path: str | Path | None = None,
@@ -49,6 +50,7 @@ def export_product_promotion_contract_evidence_handoff(
     counterfactual_path = _optional_path(counterfactual_verification)
     workflow_path = _optional_path(product_trace_replay_workflow)
     frontier_path = _optional_path(frontier_release_evidence)
+    triple_audit_path = _optional_path(triple_audit_enrichment)
     runtime_path = _optional_path(runtime_baseline)
     covered_fact_path = _optional_path(covered_fact_property_metrics)
     result = enrich_product_promotion_contract_evidence(
@@ -63,6 +65,8 @@ def export_product_promotion_contract_evidence_handoff(
         product_trace_replay_workflow_path=_path_str(workflow_path),
         frontier_release_evidence=_load_optional_object(frontier_path),
         frontier_release_evidence_path=_path_str(frontier_path),
+        triple_audit_enrichment=_load_optional_object(triple_audit_path),
+        triple_audit_enrichment_path=_path_str(triple_audit_path),
         runtime_baseline=_load_optional_object(runtime_path),
         runtime_baseline_path=_path_str(runtime_path),
         covered_fact_property_metrics=_load_optional_object(covered_fact_path),
@@ -95,6 +99,7 @@ def export_product_promotion_contract_evidence_handoff(
             "counterfactual_verification": counterfactual_path,
             "product_trace_replay_workflow": workflow_path,
             "frontier_release_evidence": frontier_path,
+            "triple_audit_enrichment": triple_audit_path,
             "runtime_baseline": runtime_path,
             "covered_fact_property_metrics": covered_fact_path,
         }
@@ -205,6 +210,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--counterfactual-verification", default=None)
     parser.add_argument("--product-trace-replay-workflow", default=None)
     parser.add_argument("--frontier-release-evidence", default=None)
+    parser.add_argument("--triple-audit-enrichment", default=None)
     parser.add_argument("--runtime-baseline", default=None)
     parser.add_argument("--covered-fact-property-metrics", default=None)
     parser.add_argument("--artifact-manifest", default=None)
@@ -227,6 +233,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         counterfactual_verification=args.counterfactual_verification,
         product_trace_replay_workflow=args.product_trace_replay_workflow,
         frontier_release_evidence=args.frontier_release_evidence,
+        triple_audit_enrichment=args.triple_audit_enrichment,
         runtime_baseline=args.runtime_baseline,
         covered_fact_property_metrics=args.covered_fact_property_metrics,
         artifact_manifest_path=args.artifact_manifest,

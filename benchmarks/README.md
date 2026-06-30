@@ -5383,6 +5383,7 @@ python benchmarks/export_product_promotion_contract_evidence_handoff.py \
   --triple-extraction-fixture-matrix artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/triple-extraction-fixture-matrix.json \
   --counterfactual-verification artifacts/smollm2_product_counterfactual_structured_qa_audit_v0/counterfactual-verification-report.json \
   --product-trace-replay-workflow artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/product-trace-replay-workflow.json \
+  --triple-audit-enrichment artifacts/smollm2_product_trace_triple_audit_enrichment_v1/product-trace-triple-audit-enrichment.json \
   --runtime-baseline artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/runtime-baseline/product-runtime-baseline.json \
   --covered-fact-property-metrics artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-route/structured-qa-route-summary.json \
   --registry artifacts/local-release-registry.json \
@@ -5391,7 +5392,11 @@ python benchmarks/export_product_promotion_contract_evidence_handoff.py \
 ```
 
 The exporter only copies evidence from supplied reports; it does not invent
-trace-level triple-audit results. The current v1.6 handoff export reduces
+trace-level triple-audit results. `--triple-audit-enrichment` can point either
+to `enrich_product_trace_triple_audit.py` output or to a promoted
+`run_source_family_structured_qa_claim_correction_workflow.py --enable-triple-audit`
+report; the older `--runtime-baseline` path remains supported for aggregated
+runtime evidence. The current v1.6 handoff export reduces
 missing metrics from `37/38` to `3/38`: promotion/triple matrix, pre-generation
 comparison, counterfactual verification, covered-fact property, and action-gate
 groups are present, while audit/slot triple coverage remains the next
@@ -5624,14 +5629,14 @@ python benchmarks/export_product_promotion_contract_evidence_handoff.py \
   --triple-extraction-fixture-matrix artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/triple-extraction-fixture-matrix.json \
   --counterfactual-verification artifacts/smollm2_product_counterfactual_structured_qa_audit_v0/counterfactual-verification-report.json \
   --product-trace-replay-workflow artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/product-trace-replay-workflow.json \
-  --runtime-baseline artifacts/smollm2_product_trace_triple_audit_runtime_baseline_v1/product-runtime-baseline.json \
+  --triple-audit-enrichment artifacts/smollm2_product_trace_triple_audit_enrichment_v1/product-trace-triple-audit-enrichment.json \
   --covered-fact-property-metrics artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-route/structured-qa-route-summary.json \
   --artifact-manifest artifacts/smollm2_product_promotion_contract_v1_9/evidence-handoff-artifact-manifest.json \
   --registry artifacts/local-release-registry.json \
   --name smollm2-product-promotion-contract-v1-9-evidence-handoff \
   --version 0.3 \
   --metadata release=smollm2-v1.9 \
-  --metadata runtime_baseline=triple_audit_v1
+  --metadata triple_audit_enrichment=triple_audit_v1
 ```
 
 The current v1.9 contract carries the v6 deployment-path runtime evidence
