@@ -159,7 +159,7 @@ Added dependency-free claim-risk localization:
 
 - `ClaimRiskSpan`, `ClaimRiskLocalizationReport`, and `localize_claim_risk_spans(...)` turn existing claim spans, verifier statuses, route hints, entity/surface candidates, and verification-budget drops into a JSON-ready localization report.
 - The report preserves per-claim span offsets when available, risk level, risk score, verifier status, confidence, routes, evidence count, feature flags, entity candidate counts, and reasons such as `verification_status:refuted`, sensitive claim features, or budget-dropped routes.
-- `ProductTrace.to_bounded_dict()` now includes a compact `claim_risk_localization` summary with top risky spans, entity exposure counts, and high-risk entity distributions; `product_runtime_metrics(...)` and `run_product_runtime_baseline.py` preserve those fields for product-level drift and hotspot analysis.
+- `ProductTrace.to_bounded_dict()` now includes a compact `claim_risk_localization` summary with top risky spans, entity exposure counts, and high-risk entity distributions; `product_runtime_metrics(...)` and `run_product_runtime_baseline.py` preserve those fields for product-level drift and hotspot analysis. `compare_product_runtime_baselines.py` and the replay workflow can now fail closed on claim-risk localization coverage drops plus high-risk/entity-exposure count drift when explicit gates are configured.
 - This is the monitor-first bridge toward token/span-level hallucination tooling: it gives product UI and audits a concrete risky text region today, while leaving learned TokenHD-style detectors as a future optional adapter.
 
 ## Implemented This Round

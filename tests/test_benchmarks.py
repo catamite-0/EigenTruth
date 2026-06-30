@@ -36691,6 +36691,107 @@ def test_compare_product_runtime_baselines_gates_counterfactual_robustness_drift
     assert record.metadata["counterfactual_robustness_pass_rate_status"] == "blocked"
 
 
+def test_compare_product_runtime_baselines_gates_claim_risk_localization_drift(tmp_path):
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    registry_module = importlib.import_module("eigentruth.registry")
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    drift_report = tmp_path / "drift.json"
+    manifest_path = tmp_path / "drift-manifest.json"
+    registry_path = tmp_path / "registry.json"
+
+    def write_baseline(path: Path, *, claim_risk: Mapping[str, Any]) -> None:
+        path.write_text(
+            json.dumps({
+                "schema_version": 1,
+                "workflow": "product_runtime_baseline",
+                "status": "observed",
+                "summary": {
+                    "n_traces": 2,
+                    "claim_risk_localization": dict(claim_risk),
+                },
+            }),
+            encoding="utf-8",
+        )
+
+    baseline_claim_risk = {
+        "source_trace_count": 2,
+        "available_trace_count": 2,
+        "coverage_rate": 1.0,
+        "high_risk_claim_count": 1.0,
+        "medium_or_high_risk_claim_count": 1.0,
+        "entity_candidate_observation_count": 2.0,
+        "unique_entity_candidate_count": 2,
+        "high_risk_entity_candidate_count": 1,
+        "medium_or_high_entity_candidate_count": 1,
+    }
+    current_claim_risk = {
+        **baseline_claim_risk,
+        "high_risk_claim_count": 3.0,
+        "medium_or_high_risk_claim_count": 4.0,
+        "entity_candidate_observation_count": 6.0,
+        "unique_entity_candidate_count": 5,
+        "high_risk_entity_candidate_count": 3,
+        "medium_or_high_entity_candidate_count": 4,
+    }
+    write_baseline(baseline_report, claim_risk=baseline_claim_risk)
+    write_baseline(current_report, claim_risk=current_claim_risk)
+
+    payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        report_path=drift_report,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="runtime-drift-claim-risk",
+        version="0.1",
+        min_claim_risk_localization_coverage_rate=1.0,
+        max_claim_risk_localization_high_risk_claim_count_increase=1.0,
+        max_claim_risk_localization_medium_or_high_risk_claim_count_increase=2.0,
+        max_claim_risk_localization_entity_candidate_observation_count_increase=2.0,
+        max_claim_risk_localization_unique_entity_candidate_count_increase=1.0,
+        max_claim_risk_localization_high_risk_entity_candidate_count_increase=1.0,
+        max_claim_risk_localization_medium_or_high_entity_candidate_count_increase=2.0,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "product_runtime_drift_report:runtime-drift-claim-risk:0.1"
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["blocked_metric_count"] == 6
+    assert _metric_by_name(payload, "claim_risk_localization.coverage_rate")["status"] == "pass"
+    assert _metric_by_name(payload, "claim_risk_localization.high_risk_claim_count")[
+        "absolute_delta"
+    ] == pytest.approx(2.0)
+    assert _metric_by_name(payload, "claim_risk_localization.high_risk_claim_count")[
+        "status"
+    ] == "blocked"
+    assert _metric_by_name(
+        payload,
+        "claim_risk_localization.entity_candidate_observation_count",
+    )["status"] == "blocked"
+    assert _metric_by_name(
+        payload,
+        "claim_risk_localization.high_risk_entity_candidate_count",
+    )["current"] == pytest.approx(3.0)
+    assert payload["config"]["max_claim_risk_localization_high_risk_claim_count_increase"] == (
+        pytest.approx(1.0)
+    )
+    assert manifest["metadata"]["claim_risk_localization_blocked_metric_count"] == 6
+    assert (
+        manifest["metadata"]["claim_risk_localization_high_risk_entity_candidate_count_status"]
+        == "blocked"
+    )
+    assert record.metadata["claim_risk_localization_blocked_metric_count"] == 6
+    assert (
+        record.metadata[
+            "claim_risk_localization_medium_or_high_entity_candidate_count_current"
+        ]
+        == pytest.approx(4.0)
+    )
+
+
 def test_compare_product_runtime_baselines_reports_minimum_trace_gate_reason(tmp_path):
     baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
     compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
@@ -40643,6 +40744,161 @@ def test_product_trace_replay_workflow_applies_counterfactual_robustness_runtime
     assert record.metadata["runtime_drift_counterfactual_robustness_blocked_metric_count"] == 0
     assert drift_record.metadata["counterfactual_robustness_blocked_metric_count"] == 0
     assert drift_record.metadata["counterfactual_robustness_pass_rate_status"] == "pass"
+
+
+def test_product_trace_replay_workflow_applies_claim_risk_localization_runtime_drift_gate(
+    tmp_path,
+):
+    module = importlib.import_module("benchmarks.run_product_trace_replay_workflow")
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    tuning_module = importlib.import_module("benchmarks.run_runtime_profile_selector_tuning")
+    registry_module = importlib.import_module("eigentruth.registry")
+    output_dir = tmp_path / "workflow"
+    traces_dir = tmp_path / "input-traces"
+    traces_dir.mkdir()
+    registry_path = tmp_path / "registry.json"
+    prior_baseline_path = tmp_path / "prior-baseline.json"
+
+    base_summary = {
+        "available": True,
+        "span_count": 1,
+        "localized_span_count": 1,
+        "high_risk_claim_count": 1,
+        "medium_or_high_risk_claim_count": 1,
+        "entity_claim_count": 1,
+        "entity_candidate_count": 2,
+        "unique_entity_candidate_count": 2,
+        "high_risk_entity_claim_count": 1,
+        "high_risk_entity_candidate_count": 1,
+        "medium_or_high_entity_candidate_count": 1,
+        "counts_by_entity_candidate": {"AlphaCorp": 1, "Paris": 1},
+        "high_risk_counts_by_entity_candidate": {"AlphaCorp": 1},
+        "medium_or_high_counts_by_entity_candidate": {"AlphaCorp": 1},
+    }
+    current_summary = {
+        **base_summary,
+        "span_count": 3,
+        "high_risk_claim_count": 3,
+        "medium_or_high_risk_claim_count": 3,
+        "entity_candidate_count": 5,
+        "unique_entity_candidate_count": 5,
+        "high_risk_entity_candidate_count": 3,
+        "medium_or_high_entity_candidate_count": 4,
+        "counts_by_entity_candidate": {
+            "AlphaCorp": 1,
+            "Beta Labs": 1,
+            "Paris": 1,
+            "Berlin": 1,
+            "Gamma LLC": 1,
+        },
+        "high_risk_counts_by_entity_candidate": {
+            "AlphaCorp": 1,
+            "Beta Labs": 1,
+            "Gamma LLC": 1,
+        },
+        "medium_or_high_counts_by_entity_candidate": {
+            "AlphaCorp": 1,
+            "Beta Labs": 1,
+            "Berlin": 1,
+            "Gamma LLC": 1,
+        },
+    }
+
+    def trace(path: Path, *, request_id: str, summary: Mapping[str, Any]) -> None:
+        path.write_text(
+            json.dumps({
+                "request_id": request_id,
+                "risk_decision": {
+                    "action": "accept",
+                    "risk_level": "low",
+                    "confidence": 0.95,
+                    "reason": "claim risk localization was summarized",
+                },
+                "claims": [],
+                "runtime_trace": {"total_seconds": 0.10, "phases": []},
+                "summaries": {"claim_risk_localization": dict(summary)},
+                "verification_results": [],
+                "metadata": {"runtime_profile": "latency"},
+            }),
+            encoding="utf-8",
+        )
+
+    baseline_trace = tmp_path / "baseline-trace.json"
+    current_trace = traces_dir / "current-trace.json"
+    trace(baseline_trace, request_id="baseline", summary=base_summary)
+    trace(current_trace, request_id="current", summary=current_summary)
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=prior_baseline_path,
+        )
+    )
+
+    payload = module.run_product_trace_replay_workflow(
+        module.ProductTraceReplayWorkflowConfig(
+            trace_paths=(current_trace,),
+            output_dir=output_dir,
+            candidates=(
+                tuning_module.RuntimeProfileSelectorCandidate(
+                    name="default",
+                    policy={},
+                ),
+            ),
+            runtime_drift_baseline_path=prior_baseline_path,
+            min_runtime_drift_claim_risk_localization_coverage_rate=1.0,
+            max_runtime_drift_claim_risk_localization_high_risk_claim_count_increase=1.0,
+            max_runtime_drift_claim_risk_localization_medium_or_high_risk_claim_count_increase=1.0,
+            max_runtime_drift_claim_risk_localization_entity_candidate_observation_count_increase=1.0,
+            max_runtime_drift_claim_risk_localization_unique_entity_candidate_count_increase=1.0,
+            max_runtime_drift_claim_risk_localization_high_risk_entity_candidate_count_increase=1.0,
+            max_runtime_drift_claim_risk_localization_medium_or_high_entity_candidate_count_increase=1.0,
+            registry_path=registry_path,
+            name="trace-replay-claim-risk-drift",
+            version="0.1",
+            require_runtime_trace=True,
+        )
+    )
+    drift_report = json.loads(
+        Path(payload["paths"]["runtime_drift_report"]).read_text(encoding="utf-8")
+    )
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get("report:trace-replay-claim-risk-drift:0.1")
+    drift_record = registry.get(
+        "product_runtime_drift_report:trace-replay-claim-risk-drift-runtime-drift:0.1"
+    )
+    claim_risk_statuses = {
+        metric["metric"]: metric["status"]
+        for metric in drift_report["metrics"]
+        if metric["metric"].startswith("claim_risk_localization.")
+    }
+
+    assert payload["status"] == "blocked"
+    assert payload["runtime_drift"]["status"] == "blocked"
+    assert payload["runtime_drift"]["claim_risk_localization_metric_count"] == 7
+    assert payload["runtime_drift"]["claim_risk_localization_blocked_metric_count"] == 6
+    assert payload["config"]["runtime_drift_gates"][
+        "max_claim_risk_localization_high_risk_entity_candidate_count_increase"
+    ] == pytest.approx(1.0)
+    assert len(claim_risk_statuses) == 7
+    assert claim_risk_statuses["claim_risk_localization.coverage_rate"] == "pass"
+    assert claim_risk_statuses[
+        "claim_risk_localization.high_risk_entity_candidate_count"
+    ] == "blocked"
+    assert manifest["metadata"]["runtime_drift_claim_risk_localization_metric_count"] == 7
+    assert (
+        manifest["metadata"]["runtime_drift_claim_risk_localization_blocked_metric_count"]
+        == 6
+    )
+    assert record.metadata["runtime_drift_claim_risk_localization_metric_count"] == 7
+    assert record.metadata["runtime_drift_claim_risk_localization_blocked_metric_count"] == 6
+    assert drift_record.metadata["claim_risk_localization_blocked_metric_count"] == 6
+    assert (
+        drift_record.metadata[
+            "claim_risk_localization_high_risk_entity_candidate_count_status"
+        ]
+        == "blocked"
+    )
 
 
 def test_run_product_trace_replay_workflow_applies_action_audit_gate(tmp_path):

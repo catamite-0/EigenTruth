@@ -319,6 +319,36 @@ _COUNTERFACTUAL_ROBUSTNESS_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
         "counterfactual_robustness_trace_gap_rate",
     ),
 )
+_CLAIM_RISK_LOCALIZATION_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
+    (
+        "claim_risk_localization.coverage_rate",
+        "claim_risk_localization_coverage_rate",
+    ),
+    (
+        "claim_risk_localization.high_risk_claim_count",
+        "claim_risk_localization_high_risk_claim_count",
+    ),
+    (
+        "claim_risk_localization.medium_or_high_risk_claim_count",
+        "claim_risk_localization_medium_or_high_risk_claim_count",
+    ),
+    (
+        "claim_risk_localization.entity_candidate_observation_count",
+        "claim_risk_localization_entity_candidate_observation_count",
+    ),
+    (
+        "claim_risk_localization.unique_entity_candidate_count",
+        "claim_risk_localization_unique_entity_candidate_count",
+    ),
+    (
+        "claim_risk_localization.high_risk_entity_candidate_count",
+        "claim_risk_localization_high_risk_entity_candidate_count",
+    ),
+    (
+        "claim_risk_localization.medium_or_high_entity_candidate_count",
+        "claim_risk_localization_medium_or_high_entity_candidate_count",
+    ),
+)
 _COVERED_FACT_PROPERTY_SCOPES: dict[str, str] = {
     "recommended_route": "recommended_route_property_metrics",
     "required_route_baseline": "required_route_baseline_property_metrics",
@@ -614,6 +644,51 @@ _COUNTERFACTUAL_ROBUSTNESS_INCREASE_METRIC_SPECS: tuple[
         "max_counterfactual_robustness_trace_gap_rate_increase",
     ),
 )
+_CLAIM_RISK_LOCALIZATION_MIN_METRIC_SPECS: tuple[
+    tuple[str, tuple[str, ...], str],
+    ...
+] = (
+    (
+        "claim_risk_localization.coverage_rate",
+        ("claim_risk_localization", "coverage_rate"),
+        "min_claim_risk_localization_coverage_rate",
+    ),
+)
+_CLAIM_RISK_LOCALIZATION_INCREASE_METRIC_SPECS: tuple[
+    tuple[str, tuple[str, ...], str],
+    ...
+] = (
+    (
+        "claim_risk_localization.high_risk_claim_count",
+        ("claim_risk_localization", "high_risk_claim_count"),
+        "max_claim_risk_localization_high_risk_claim_count_increase",
+    ),
+    (
+        "claim_risk_localization.medium_or_high_risk_claim_count",
+        ("claim_risk_localization", "medium_or_high_risk_claim_count"),
+        "max_claim_risk_localization_medium_or_high_risk_claim_count_increase",
+    ),
+    (
+        "claim_risk_localization.entity_candidate_observation_count",
+        ("claim_risk_localization", "entity_candidate_observation_count"),
+        "max_claim_risk_localization_entity_candidate_observation_count_increase",
+    ),
+    (
+        "claim_risk_localization.unique_entity_candidate_count",
+        ("claim_risk_localization", "unique_entity_candidate_count"),
+        "max_claim_risk_localization_unique_entity_candidate_count_increase",
+    ),
+    (
+        "claim_risk_localization.high_risk_entity_candidate_count",
+        ("claim_risk_localization", "high_risk_entity_candidate_count"),
+        "max_claim_risk_localization_high_risk_entity_candidate_count_increase",
+    ),
+    (
+        "claim_risk_localization.medium_or_high_entity_candidate_count",
+        ("claim_risk_localization", "medium_or_high_entity_candidate_count"),
+        "max_claim_risk_localization_medium_or_high_entity_candidate_count_increase",
+    ),
+)
 
 
 def compare_product_runtime_baselines(
@@ -740,6 +815,23 @@ def compare_product_runtime_baselines(
     min_counterfactual_robustness_flip_success_rate: float | None = None,
     max_counterfactual_robustness_false_invariance_rate_increase: float | None = None,
     max_counterfactual_robustness_trace_gap_rate_increase: float | None = None,
+    min_claim_risk_localization_coverage_rate: float | None = None,
+    max_claim_risk_localization_high_risk_claim_count_increase: float | None = None,
+    max_claim_risk_localization_medium_or_high_risk_claim_count_increase: (
+        float | None
+    ) = None,
+    max_claim_risk_localization_entity_candidate_observation_count_increase: (
+        float | None
+    ) = None,
+    max_claim_risk_localization_unique_entity_candidate_count_increase: (
+        float | None
+    ) = None,
+    max_claim_risk_localization_high_risk_entity_candidate_count_increase: (
+        float | None
+    ) = None,
+    max_claim_risk_localization_medium_or_high_entity_candidate_count_increase: (
+        float | None
+    ) = None,
     promotion_contract_covered_fact_property_scopes: Sequence[str] | None = None,
     min_promotion_contract_covered_fact_property_metric_count: float | None = None,
     min_promotion_contract_covered_fact_min_records: float | None = None,
@@ -1045,6 +1137,39 @@ def compare_product_runtime_baselines(
         ),
         "max_counterfactual_robustness_trace_gap_rate_increase": _optional_rate_float(
             max_counterfactual_robustness_trace_gap_rate_increase
+        ),
+        "min_claim_risk_localization_coverage_rate": _optional_rate_float(
+            min_claim_risk_localization_coverage_rate
+        ),
+        "max_claim_risk_localization_high_risk_claim_count_increase": (
+            _optional_non_negative_float(
+                max_claim_risk_localization_high_risk_claim_count_increase
+            )
+        ),
+        "max_claim_risk_localization_medium_or_high_risk_claim_count_increase": (
+            _optional_non_negative_float(
+                max_claim_risk_localization_medium_or_high_risk_claim_count_increase
+            )
+        ),
+        "max_claim_risk_localization_entity_candidate_observation_count_increase": (
+            _optional_non_negative_float(
+                max_claim_risk_localization_entity_candidate_observation_count_increase
+            )
+        ),
+        "max_claim_risk_localization_unique_entity_candidate_count_increase": (
+            _optional_non_negative_float(
+                max_claim_risk_localization_unique_entity_candidate_count_increase
+            )
+        ),
+        "max_claim_risk_localization_high_risk_entity_candidate_count_increase": (
+            _optional_non_negative_float(
+                max_claim_risk_localization_high_risk_entity_candidate_count_increase
+            )
+        ),
+        "max_claim_risk_localization_medium_or_high_entity_candidate_count_increase": (
+            _optional_non_negative_float(
+                max_claim_risk_localization_medium_or_high_entity_candidate_count_increase
+            )
         ),
         "promotion_contract_covered_fact_property_scopes": _covered_fact_property_scopes(
             promotion_contract_covered_fact_property_scopes
@@ -1375,6 +1500,7 @@ def _comparison_metrics(
     metrics.extend(_world_model_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_context_sensitivity_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_counterfactual_robustness_metrics(baseline_summary, current_summary, gates=gates))
+    metrics.extend(_claim_risk_localization_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_pre_generation_probe_comparison_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_claim_factuality_probe_comparison_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_counterfactual_verification_metrics(baseline_summary, current_summary, gates=gates))
@@ -2249,6 +2375,45 @@ def _counterfactual_robustness_gate_enabled(gates: Mapping[str, Any]) -> bool:
     )
 
 
+def _claim_risk_localization_metrics(
+    baseline_summary: Mapping[str, Any],
+    current_summary: Mapping[str, Any],
+    *,
+    gates: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    if not _claim_risk_localization_gate_enabled(gates):
+        return []
+    rows = [
+        _min_current_metric(
+            metric_name,
+            _nested_float(baseline_summary, metric_path),
+            _nested_float(current_summary, metric_path),
+            gates.get(gate_key),
+        )
+        for metric_name, metric_path, gate_key in _CLAIM_RISK_LOCALIZATION_MIN_METRIC_SPECS
+    ]
+    rows.extend(
+        _delta_metric(
+            metric_name,
+            _nested_float(baseline_summary, metric_path),
+            _nested_float(current_summary, metric_path),
+            gates.get(gate_key),
+        )
+        for metric_name, metric_path, gate_key in _CLAIM_RISK_LOCALIZATION_INCREASE_METRIC_SPECS
+    )
+    return rows
+
+
+def _claim_risk_localization_gate_enabled(gates: Mapping[str, Any]) -> bool:
+    return any(
+        gates.get(gate_key) is not None
+        for _, _, gate_key in (
+            *_CLAIM_RISK_LOCALIZATION_MIN_METRIC_SPECS,
+            *_CLAIM_RISK_LOCALIZATION_INCREASE_METRIC_SPECS,
+        )
+    )
+
+
 def _runtime_optimization_handoff(report: Mapping[str, Any]) -> dict[str, Any]:
     optimization = _mapping(report.get("optimization"))
     if not optimization:
@@ -2891,6 +3056,7 @@ def _drift_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
         **_world_model_metadata(report),
         **_context_sensitivity_metadata(report),
         **_counterfactual_robustness_metadata(report),
+        **_claim_risk_localization_metadata(report),
         **_product_trace_action_gate_metadata(report),
         **_product_trace_trajectory_audit_metadata(report),
     }
@@ -3074,6 +3240,25 @@ def _counterfactual_robustness_metadata(report: Mapping[str, Any]) -> dict[str, 
         metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
         if metric is not None and metric.get("status") == "blocked":
             metadata["counterfactual_robustness_blocked_metric_count"] += 1
+    return metadata
+
+
+def _claim_risk_localization_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    metrics = _metrics_by_name(report.get("metrics"))
+    metadata: dict[str, Any] = {
+        "claim_risk_localization_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _CLAIM_RISK_LOCALIZATION_METADATA_FIELDS:
+        metric = metrics.get(metric_name)
+        metadata[f"{prefix}_baseline"] = _finite_float(
+            None if metric is None else metric.get("baseline")
+        )
+        metadata[f"{prefix}_current"] = _finite_float(
+            None if metric is None else metric.get("current")
+        )
+        metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is not None and metric.get("status") == "blocked":
+            metadata["claim_risk_localization_blocked_metric_count"] += 1
     return metadata
 
 
@@ -3484,6 +3669,27 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_counterfactual_robustness_trace_gap_rate_increase=(
             args.max_counterfactual_robustness_trace_gap_rate_increase
         ),
+        min_claim_risk_localization_coverage_rate=(
+            args.min_claim_risk_localization_coverage_rate
+        ),
+        max_claim_risk_localization_high_risk_claim_count_increase=(
+            args.max_claim_risk_localization_high_risk_claim_count_increase
+        ),
+        max_claim_risk_localization_medium_or_high_risk_claim_count_increase=(
+            args.max_claim_risk_localization_medium_or_high_risk_claim_count_increase
+        ),
+        max_claim_risk_localization_entity_candidate_observation_count_increase=(
+            args.max_claim_risk_localization_entity_candidate_observation_count_increase
+        ),
+        max_claim_risk_localization_unique_entity_candidate_count_increase=(
+            args.max_claim_risk_localization_unique_entity_candidate_count_increase
+        ),
+        max_claim_risk_localization_high_risk_entity_candidate_count_increase=(
+            args.max_claim_risk_localization_high_risk_entity_candidate_count_increase
+        ),
+        max_claim_risk_localization_medium_or_high_entity_candidate_count_increase=(
+            args.max_claim_risk_localization_medium_or_high_entity_candidate_count_increase
+        ),
         promotion_contract_covered_fact_property_scopes=(
             args.promotion_contract_covered_fact_property_scope
         ),
@@ -3836,6 +4042,37 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument(
         "--max-counterfactual-robustness-trace-gap-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument("--min-claim-risk-localization-coverage-rate", type=float, default=None)
+    parser.add_argument(
+        "--max-claim-risk-localization-high-risk-claim-count-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-claim-risk-localization-medium-or-high-risk-claim-count-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-claim-risk-localization-entity-candidate-observation-count-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-claim-risk-localization-unique-entity-candidate-count-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-claim-risk-localization-high-risk-entity-candidate-count-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-claim-risk-localization-medium-or-high-entity-candidate-count-increase",
         type=float,
         default=None,
     )
