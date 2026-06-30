@@ -714,6 +714,18 @@ def _classify_gap(
     text = f"{gate} {reason}".lower()
     if _is_product_runtime_world_model_evidence(gate, text, missing_metrics):
         return _kind("product_runtime_world_model_evidence", "world_model", "runtime_drift")
+    if _is_product_runtime_context_sensitivity_evidence(gate, text, missing_metrics):
+        return _kind(
+            "product_runtime_context_sensitivity_evidence",
+            "context_sensitivity",
+            "runtime_drift",
+        )
+    if _is_product_runtime_counterfactual_robustness_evidence(gate, text, missing_metrics):
+        return _kind(
+            "product_runtime_counterfactual_robustness_evidence",
+            "counterfactual_robustness",
+            "runtime_drift",
+        )
     if (
         gate == "frontier_rerun_rollup_evidence"
         or "frontier_rerun_rollup" in text
@@ -785,6 +797,62 @@ def _is_product_runtime_world_model_evidence(
     text: str,
     missing_metrics: Sequence[str],
 ) -> bool:
+    return _is_product_runtime_evidence_kind(
+        gate,
+        text,
+        missing_metrics,
+        patterns=(
+            "world-model evidence",
+            "world model evidence",
+            "world_model_evidence",
+            "world_model.",
+        ),
+    )
+
+
+def _is_product_runtime_context_sensitivity_evidence(
+    gate: str,
+    text: str,
+    missing_metrics: Sequence[str],
+) -> bool:
+    return _is_product_runtime_evidence_kind(
+        gate,
+        text,
+        missing_metrics,
+        patterns=(
+            "context-sensitivity evidence",
+            "context sensitivity evidence",
+            "context_sensitivity_evidence",
+            "context_sensitivity.",
+        ),
+    )
+
+
+def _is_product_runtime_counterfactual_robustness_evidence(
+    gate: str,
+    text: str,
+    missing_metrics: Sequence[str],
+) -> bool:
+    return _is_product_runtime_evidence_kind(
+        gate,
+        text,
+        missing_metrics,
+        patterns=(
+            "counterfactual-robustness evidence",
+            "counterfactual robustness evidence",
+            "counterfactual_robustness_evidence",
+            "counterfactual_robustness.",
+        ),
+    )
+
+
+def _is_product_runtime_evidence_kind(
+    gate: str,
+    text: str,
+    missing_metrics: Sequence[str],
+    *,
+    patterns: Sequence[str],
+) -> bool:
     gate_text = gate.lower()
     metric_text = " ".join(str(metric).lower() for metric in missing_metrics)
     runtime_drift_context = (
@@ -795,13 +863,7 @@ def _is_product_runtime_world_model_evidence(
     )
     if not runtime_drift_context:
         return False
-    return (
-        "world-model evidence" in text
-        or "world model evidence" in text
-        or "world_model_evidence" in text
-        or "world_model." in text
-        or "world_model." in metric_text
-    )
+    return any(pattern in text or pattern in metric_text for pattern in patterns)
 
 
 def _kind(evidence_kind: str, root_cause: str, research_axis: str) -> dict[str, str]:
@@ -1018,6 +1080,50 @@ def _action_template(kind: Mapping[str, str], *, gate: str, reason: str) -> Evid
                 "release can trust model-state correction signals."
             ),
             evidence_routes=("product_trace_replay", "product_runtime_drift", "world_model_evidence"),
+            suggested_commands=(
+                "benchmarks/run_product_trace_replay_workflow.py",
+                "benchmarks/run_product_runtime_baseline.py",
+                "benchmarks/compare_product_runtime_baselines.py",
+            ),
+        )
+    if evidence_kind == "product_runtime_context_sensitivity_evidence":
+        return EvidenceGapAction(
+            action_id="rerun_product_trace_context_sensitivity_evidence",
+            title="Replay product traces with context-sensitivity evidence summaries",
+            action_type="workflow",
+            priority=86,
+            rationale=(
+                "Frontier runtime drift gates need trace-level context-sensitivity "
+                "participation, coverage, flagged-result, trace-gap, and ratio evidence "
+                "before the release can trust evidence-conditioned correction signals."
+            ),
+            evidence_routes=(
+                "product_trace_replay",
+                "product_runtime_drift",
+                "context_sensitivity_evidence",
+            ),
+            suggested_commands=(
+                "benchmarks/run_product_trace_replay_workflow.py",
+                "benchmarks/run_product_runtime_baseline.py",
+                "benchmarks/compare_product_runtime_baselines.py",
+            ),
+        )
+    if evidence_kind == "product_runtime_counterfactual_robustness_evidence":
+        return EvidenceGapAction(
+            action_id="rerun_product_trace_counterfactual_robustness_evidence",
+            title="Replay product traces with counterfactual-robustness evidence summaries",
+            action_type="workflow",
+            priority=86,
+            rationale=(
+                "Frontier runtime drift gates need trace-level counterfactual robustness "
+                "participation, coverage, pass, flip-success, false-invariance, and "
+                "trace-gap evidence before verifier behavior is treated as stable."
+            ),
+            evidence_routes=(
+                "product_trace_replay",
+                "product_runtime_drift",
+                "counterfactual_robustness_evidence",
+            ),
             suggested_commands=(
                 "benchmarks/run_product_trace_replay_workflow.py",
                 "benchmarks/run_product_runtime_baseline.py",

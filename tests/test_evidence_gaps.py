@@ -498,6 +498,70 @@ def test_evidence_gap_plan_maps_product_runtime_world_model_blockers():
     assert payload["gaps"][1]["missing_metrics"] == ()
 
 
+def test_evidence_gap_plan_maps_product_runtime_trace_robustness_blockers():
+    plan = plan_evidence_gaps_from_release_candidate({
+        "workflow": "release_candidate_comparison",
+        "decision": {
+            "status": "blocked",
+            "blocking_reasons": [
+                {
+                    "gate": "product_runtime_drift",
+                    "status": "blocked",
+                    "reasons": (
+                        "product runtime drift context-sensitivity evidence metrics are incomplete: "
+                        "context_sensitivity.participating_trace_rate, "
+                        "context_sensitivity.trace_gap_rate",
+                        "product runtime drift counterfactual-robustness evidence metrics are incomplete: "
+                        "counterfactual_robustness.participating_trace_rate, "
+                        "counterfactual_robustness.false_invariance_rate",
+                    ),
+                }
+            ],
+        },
+    })
+
+    payload = plan.to_dict()
+    actions = {action["action_id"]: action for action in payload["actions"]}
+    gaps_by_kind = {
+        gap["metadata"]["evidence_kind"]: gap
+        for gap in payload["gaps"]
+    }
+
+    assert payload["status"] == "needs_evidence"
+    assert payload["summary"]["gap_count"] == 2
+    assert payload["summary"]["action_count"] == 2
+    assert payload["summary"]["missing_metric_count"] == 4
+    assert payload["summary"]["root_causes"] == {
+        "context_sensitivity": 1,
+        "counterfactual_robustness": 1,
+    }
+    assert payload["summary"]["research_axes"] == {"runtime_drift": 2}
+    assert gaps_by_kind[
+        "product_runtime_context_sensitivity_evidence"
+    ]["recommended_action_ids"] == (
+        "rerun_product_trace_context_sensitivity_evidence",
+    )
+    assert gaps_by_kind[
+        "product_runtime_counterfactual_robustness_evidence"
+    ]["recommended_action_ids"] == (
+        "rerun_product_trace_counterfactual_robustness_evidence",
+    )
+    assert actions[
+        "rerun_product_trace_context_sensitivity_evidence"
+    ]["evidence_routes"] == (
+        "product_trace_replay",
+        "product_runtime_drift",
+        "context_sensitivity_evidence",
+    )
+    assert actions[
+        "rerun_product_trace_counterfactual_robustness_evidence"
+    ]["evidence_routes"] == (
+        "product_trace_replay",
+        "product_runtime_drift",
+        "counterfactual_robustness_evidence",
+    )
+
+
 def test_plan_release_evidence_gaps_cli_helper_writes_and_registers(tmp_path):
     source = tmp_path / "release-workflow.json"
     output = tmp_path / "evidence-gap-plan.json"

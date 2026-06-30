@@ -1122,6 +1122,11 @@ Added the first monitor-first tool-selection audit layer:
   property robustness, and promotion-contract runtime evidence. This is the
   current root-cause-aware research loop: fail closed, then lower blockers into
   concrete evidence queues.
+- The gap planner now treats trace-level world-model, context-sensitivity, and
+  counterfactual-robustness runtime-drift blockers as dedicated evidence routes,
+  so release failures can point back to the specific product-trace replay,
+  runtime-baseline, and baseline-comparison commands needed to close verifier
+  stability gaps.
 - `ProductPromotionEvidenceAudit` now audits a deployable promotion contract
   before runtime-drift replay. `benchmarks/audit_product_promotion_contract_evidence.py`
   checks the exact `frontier_audit` evidence groups expected by drift gates:
