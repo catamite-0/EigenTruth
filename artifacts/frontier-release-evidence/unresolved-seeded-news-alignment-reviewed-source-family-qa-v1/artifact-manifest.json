@@ -1,0 +1,45 @@
+{
+  "artifacts": {
+    "source_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-seeded-news-alignment-reviewed-promotion-gate-v1/approved-source-documents.json",
+      "sha256": "07ef05fc3c6054ded447eef65b46bd04e96b3bd0ea3e68e7b8caa5bf44180d53",
+      "size_bytes": 14257
+    },
+    "source_family_structured_qa_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-qa-corpus.json",
+      "sha256": "e4a0b7ecd8094bdf014ebd8bcb74f75893d22389eea46c985914b901599cf896",
+      "size_bytes": 13077
+    },
+    "source_family_structured_qa_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-qa-report.json",
+      "sha256": "b197e74a89b1e56b1c0530aa1f4317fffbb468e58debf2ff807d10679a0895bc",
+      "size_bytes": 1238
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "candidate_document_count": 11,
+    "corpus_type": "source_family_structured_qa_external_evidence",
+    "document_count": 11,
+    "model": "smollm2-l80",
+    "source": "frontier-v4",
+    "status": "ready",
+    "workflow": "source_family_structured_qa_corpus_builder"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

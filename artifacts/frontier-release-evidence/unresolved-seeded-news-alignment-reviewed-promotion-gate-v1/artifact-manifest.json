@@ -1,0 +1,70 @@
+{
+  "artifacts": {
+    "alignment_fact_review_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-seeded-news-alignment-fact-review-corpus-v1/alignment-fact-review-corpus.json",
+      "sha256": "9cfeec6a90be635edfa6417ca8fb5c0eeca370761d8af37eb97c139c544679b9",
+      "size_bytes": 14999
+    },
+    "alignment_fact_review_promotion_gate_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "promotion-gate-report.json",
+      "sha256": "3e9085a3a48d87de9a2a3513d89a42161d6e229938cddecd1ba4bf74d7840369",
+      "size_bytes": 33477
+    },
+    "approved_source_documents": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "approved-source-documents.json",
+      "sha256": "07ef05fc3c6054ded447eef65b46bd04e96b3bd0ea3e68e7b8caa5bf44180d53",
+      "size_bytes": 14257
+    },
+    "promotion_gate_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "promotion-gate-records.jsonl",
+      "sha256": "6fcf98d140a7164741473329e2f532c343a90c9c05e240338122ccfb25c62c2a",
+      "size_bytes": 5246
+    },
+    "review_decision_template": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "review-decision-template.jsonl",
+      "sha256": "9fe33f6767d6351493f7ae5922d831bef79a1d17e65755c0597669d6bf1f78c2",
+      "size_bytes": 7836
+    },
+    "review_decisions": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-seeded-news-alignment-rule-review-v1/review-decisions.jsonl",
+      "sha256": "e8a09f72f516fe24e855d31758e08b84a4379212d73dc0b1cbf8405f14e18824",
+      "size_bytes": 2849
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "approved_source_document_count": 11,
+    "model": "smollm2-l80",
+    "pending_review_count": 0,
+    "promotes_verifier_evidence": false,
+    "review_document_count": 11,
+    "source": "frontier-v4",
+    "status": "ready_for_structured_qa",
+    "workflow": "alignment_fact_review_promotion_gate"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 6,
+    "directory_count": 0,
+    "file_count": 6,
+    "missing_count": 0
+  }
+}

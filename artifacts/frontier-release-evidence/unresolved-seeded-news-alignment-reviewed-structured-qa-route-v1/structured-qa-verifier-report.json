@@ -1,0 +1,501 @@
+{
+  "alphas": [
+    0.1
+  ],
+  "direction": null,
+  "fact_verifier": {
+    "corpus_path": null,
+    "enabled": false,
+    "type": "StructuredFactVerifier"
+  },
+  "policy": {
+    "name": "refute_or_internal_unless_supported",
+    "otherwise": "preserve_internal_trigger",
+    "refuted": "trigger",
+    "supported": "suppress_internal_trigger",
+    "tolerance": 0.03
+  },
+  "qa_verifier": {
+    "corpus_path": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-source-family-qa-v1/source-family-qa-corpus.json",
+    "enabled": true,
+    "type": "QuestionAnswerVerifier"
+  },
+  "repeats": 1,
+  "retrieval_qa_verifier": {
+    "enabled": false,
+    "source": "retrieval_hits",
+    "type": "QuestionAnswerVerifier"
+  },
+  "retriever": {
+    "limit": 5,
+    "min_overlap": 0.2,
+    "type": "InMemoryRetriever"
+  },
+  "runs": [
+    {
+      "alphas": {
+        "0.1": {
+          "alpha": 0.1,
+          "delta": {
+            "detection": 1.0,
+            "false_alarm": 0.0,
+            "rescued_detection_rate": 1.0,
+            "suppressed_false_alarm_rate": 0.0
+          },
+          "internal": {
+            "coverage": 1.0,
+            "detection": 0.0,
+            "false_alarm": 0.0,
+            "pass": false
+          },
+          "repeats": 1,
+          "route_control_impact": {
+            "structured_qa": {
+              "delta": {
+                "detection": 1.0,
+                "false_alarm": 0.0,
+                "rescued_detection_rate": 1.0,
+                "suppressed_false_alarm_rate": 0.0
+              },
+              "internal": {
+                "detection": 0.0,
+                "false_alarm": 0.0
+              },
+              "n_false": 11,
+              "n_selected": 22,
+              "n_true": 11,
+              "verified": {
+                "detection": 1.0,
+                "false_alarm": 0.0
+              }
+            }
+          },
+          "verified": {
+            "coverage": 1.0,
+            "detection": 1.0,
+            "false_alarm": 0.0,
+            "pass": true
+          }
+        }
+      },
+      "cache_stats": {
+        "fact_verifier": {},
+        "groundedness_verifiers": {
+          "hit_rate": null,
+          "hits": 0,
+          "instances": 0,
+          "misses": 0,
+          "requests": 0,
+          "size": 0
+        },
+        "qa_verifier": {
+          "hit_rate": 0.0,
+          "hits": 0,
+          "misses": 22,
+          "requests": 22,
+          "size": 22
+        },
+        "retrieval_qa_verifiers": {
+          "hit_rate": null,
+          "hits": 0,
+          "instances": 0,
+          "misses": 0,
+          "requests": 0,
+          "size": 0
+        },
+        "retrievers": {
+          "hit_rate": null,
+          "hits": 0,
+          "instances": 0,
+          "misses": 0,
+          "requests": 0,
+          "size": 0
+        },
+        "selfcheck_verifiers": {
+          "hit_rate": null,
+          "hits": 0,
+          "instances": 0,
+          "misses": 0,
+          "requests": 0,
+          "size": 0
+        },
+        "state_verifier": {},
+        "total": {
+          "hit_rate": 0.0,
+          "hits": 0,
+          "misses": 22,
+          "requests": 22,
+          "size": 22
+        },
+        "trace_cache": {
+          "enabled": false,
+          "hit": false,
+          "key": null,
+          "path": null,
+          "records": null
+        },
+        "transition_verifier": {},
+        "triple_evidence_verifiers": {
+          "hit_rate": null,
+          "hits": 0,
+          "instances": 0,
+          "misses": 0,
+          "requests": 0,
+          "size": 0
+        }
+      },
+      "config": {
+        "label_semantics": {
+          "0": "known source-family structured QA answer",
+          "1": "answer mismatches known structured QA answer(s) for the same question"
+        },
+        "layer": -1,
+        "model": "source-family-covered-facts",
+        "signal": "truth_proj",
+        "source": {
+          "accepted_providers": [
+            "wikidata",
+            "worldbank"
+          ],
+          "builder": "source_family_structured_qa_corpus_builder",
+          "corpus_type": "source_family_structured_qa_external_evidence"
+        },
+        "statement_style": "qa",
+        "workflow": "source_family_structured_qa_route_workflow"
+      },
+      "direction": "higher",
+      "fact": {
+        "decided_records": 0,
+        "enabled": false
+      },
+      "n_false": 11,
+      "n_total": 22,
+      "n_true": 11,
+      "name": "smollm2-l80-frontier-v4-alignment-reviewed-covered-facts",
+      "qa": {
+        "decided_records": 22,
+        "enabled": true
+      },
+      "retrieval": {
+        "records_with_hits": 0,
+        "retrieval_limit": 5,
+        "total_hits": 0
+      },
+      "retrieval_qa": {
+        "decided_records": 0,
+        "enabled": false
+      },
+      "route_quality": {
+        "structured_qa": {
+          "attempted_route_count_observations": 22,
+          "decision_accuracy": 1.0,
+          "decision_error_rate": 0.0,
+          "duration_observations": 22,
+          "false_refuted_rate": 1.0,
+          "false_supported_rate": 0.0,
+          "insufficient_evidence_rate": 0.0,
+          "label_status_matrix": {
+            "false": {
+              "error": 0,
+              "insufficient_evidence": 0,
+              "not_applicable": 0,
+              "refuted": 11,
+              "supported": 0
+            },
+            "true": {
+              "error": 0,
+              "insufficient_evidence": 0,
+              "not_applicable": 0,
+              "refuted": 0,
+              "supported": 11
+            }
+          },
+          "max_duration_seconds": 0.0001552649773657322,
+          "mean_attempted_route_count": 1.0,
+          "mean_duration_seconds": 0.00010947482554580678,
+          "mean_retrieval_hits": 0.0,
+          "mean_selected_route_duration_seconds": 0.00010947482554580678,
+          "n_decided_supported_or_refuted": 22,
+          "n_false": 11,
+          "n_true": 11,
+          "p95_duration_seconds": 0.00013204895949456839,
+          "p95_selected_route_duration_seconds": 0.00013204895949456839,
+          "p99_duration_seconds": 0.0001505055441521108,
+          "p99_selected_route_duration_seconds": 0.0001505055441521108,
+          "retrieval_hit_count": 0,
+          "retrieval_use_rate": 0.0,
+          "selected": 22,
+          "selected_route_duration_observations": 22,
+          "selection_rate": 1.0,
+          "total_attempted_route_count": 22.0,
+          "total_duration_seconds": 0.002408446162007749,
+          "total_selected_route_duration_seconds": 0.002408446162007749,
+          "true_refuted_rate": 0.0,
+          "true_supported_rate": 1.0,
+          "used_retrieval_count": 0
+        }
+      },
+      "route_summary": {
+        "attempted_counts": {
+          "structured_qa": 22
+        },
+        "by_route": {
+          "structured_qa": {
+            "attempted_route_count_observations": 22,
+            "duration_observations": 22,
+            "labels": {
+              "false": 11,
+              "true": 11
+            },
+            "max_duration_seconds": 0.0001552649773657322,
+            "mean_attempted_route_count": 1.0,
+            "mean_duration_seconds": 0.00010947482554580678,
+            "mean_retrieval_hits": 0.0,
+            "mean_selected_route_duration_seconds": 0.00010947482554580678,
+            "p95_duration_seconds": 0.00013204895949456839,
+            "p95_selected_route_duration_seconds": 0.00013204895949456839,
+            "p99_duration_seconds": 0.0001505055441521108,
+            "p99_selected_route_duration_seconds": 0.0001505055441521108,
+            "rates": {
+              "error": 0.0,
+              "insufficient_evidence": 0.0,
+              "refuted": 0.5,
+              "supported": 0.5
+            },
+            "retrieval_hit_count": 0,
+            "retrieval_use_rate": 0.0,
+            "selected": 22,
+            "selected_route_duration_observations": 22,
+            "statuses": {
+              "error": 0,
+              "insufficient_evidence": 0,
+              "not_applicable": 0,
+              "refuted": 11,
+              "supported": 11
+            },
+            "total_attempted_route_count": 22.0,
+            "total_duration_seconds": 0.002408446162007749,
+            "total_selected_route_duration_seconds": 0.002408446162007749,
+            "used_retrieval": 0,
+            "used_retrieval_count": 0
+          }
+        },
+        "selected_counts": {
+          "structured_qa": 22
+        }
+      },
+      "score_dump": {
+        "exists": true,
+        "kind": "file",
+        "path": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-structured-qa-route-v1/covered-facts-scores.json",
+        "sha256": "9aff9b00ed77acae589a61a28b6a4c103a876ba73688aaeb9759353263e25374",
+        "size_bytes": 34654,
+        "source_format": "json",
+        "summary": {
+          "all_signal_names": [
+            "truth_proj"
+          ],
+          "has_statements": true,
+          "layer": -1,
+          "model": "source-family-covered-facts",
+          "n_false": 11,
+          "n_total": 22,
+          "n_true": 11,
+          "score_count": 1,
+          "score_names": [
+            "truth_proj"
+          ],
+          "statement_count": 22,
+          "sweep_layer_count": 0,
+          "sweep_layers": [],
+          "sweep_score_count": 0,
+          "sweep_score_names": []
+        }
+      },
+      "scores_path": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-structured-qa-route-v1/covered-facts-scores.json",
+      "selfcheck_verifier": {
+        "available_samples": 0,
+        "considered_samples": 0,
+        "decided_records": 0,
+        "early_stop": false,
+        "early_stopped_records": 0,
+        "enabled": false,
+        "executed_records": 0,
+        "max_samples": null,
+        "processed_samples": 0,
+        "processing_rate": null,
+        "records_with_samples": 0,
+        "skipped_samples": 0
+      },
+      "signal": "truth_proj",
+      "staged_verification": {
+        "action_counts": {},
+        "alpha": 0.1,
+        "enabled": false,
+        "policy": null,
+        "reason_counts": {},
+        "risk_level_counts": {},
+        "skip_rate": null,
+        "skipped_records": 0,
+        "threshold": null,
+        "total_records": 22,
+        "triggered_claim_count": 0,
+        "triggered_feature_counts": {},
+        "triggered_metadata_counts": {},
+        "verified_records": 0
+      },
+      "state_verifier": {
+        "decided_records": 0,
+        "enabled": false,
+        "global_checks": 0
+      },
+      "transition_verifier": {
+        "decided_records": 0,
+        "enabled": false,
+        "global_transitions": 0,
+        "min_prediction_confidence": 0.0,
+        "world_model_adapter": "InMemoryWorldModelAdapter",
+        "world_model_member_count": 0,
+        "world_model_min_agreement": null,
+        "world_model_rule_count": 0
+      },
+      "triple_evidence_verifier": {
+        "decided_records": 0,
+        "enabled": false,
+        "min_slot_coverage": 1.0,
+        "records_with_triple_route": 0,
+        "type": "TripleEvidenceVerifier"
+      },
+      "verification_quality": {
+        "decision_accuracy": 1.0,
+        "decision_error_rate": 0.0,
+        "false_refuted_rate": 1.0,
+        "false_supported_rate": 0.0,
+        "insufficient_evidence_rate": 0.0,
+        "label_status_matrix": {
+          "false": {
+            "error": 0,
+            "insufficient_evidence": 0,
+            "not_applicable": 0,
+            "refuted": 11,
+            "supported": 0
+          },
+          "true": {
+            "error": 0,
+            "insufficient_evidence": 0,
+            "not_applicable": 0,
+            "refuted": 0,
+            "supported": 11
+          }
+        },
+        "n_decided_supported_or_refuted": 22,
+        "true_refuted_rate": 0.0,
+        "true_supported_rate": 1.0
+      },
+      "verification_status_counts": {
+        "error": 0,
+        "insufficient_evidence": 0,
+        "not_applicable": 0,
+        "refuted": 11,
+        "supported": 11
+      },
+      "verified_records": {
+        "count": 22,
+        "path": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-structured-qa-route-v1/verified-records.jsonl",
+        "storage": "jsonl_sidecar"
+      }
+    }
+  ],
+  "schema_version": 1,
+  "score_dump_cache": {
+    "cache_entries": 1,
+    "enabled": true,
+    "fingerprint": {
+      "attempts": 1,
+      "hit_rate": 0.0,
+      "hits": 0,
+      "misses": 1,
+      "writes": 1
+    },
+    "jsonl_manifest": {
+      "attempts": 0,
+      "hit_rate": null,
+      "hits": 0,
+      "misses": 0,
+      "writes": 0
+    },
+    "jsonl_summary": {
+      "attempts": 0,
+      "hit_rate": null,
+      "hits": 0,
+      "misses": 0,
+      "writes": 0
+    },
+    "jsonl_view": {
+      "attempts": 0,
+      "hit_rate": null,
+      "hits": 0,
+      "misses": 0,
+      "writes": 0
+    }
+  },
+  "seed": 0,
+  "selfcheck_verifier": {
+    "early_stop": false,
+    "enabled": false,
+    "max_samples": null,
+    "min_overlap": 0.65,
+    "min_samples": 2,
+    "refute_threshold": 0.5,
+    "support_threshold": 0.6,
+    "type": "SelfConsistencyVerifier"
+  },
+  "signal": "truth_proj",
+  "staged_verification": {
+    "alpha": 0.1,
+    "decision_source": "conformal_internal_gate",
+    "enabled": false,
+    "policy": null
+  },
+  "state_verifier": {
+    "enabled": false,
+    "fixture_has_state": false,
+    "global_checks": 0,
+    "state_path": null,
+    "type": "StructuredStateVerifier"
+  },
+  "transition_verifier": {
+    "enabled": false,
+    "fixture_has_state": false,
+    "global_transitions": 0,
+    "min_prediction_confidence": 0.0,
+    "state_path": null,
+    "type": "StateTransitionVerifier",
+    "world_model_adapter": "InMemoryWorldModelAdapter",
+    "world_model_member_count": 0,
+    "world_model_min_agreement": null,
+    "world_model_rule_count": 0
+  },
+  "triple_evidence_verifier": {
+    "enabled": false,
+    "min_slot_coverage": 1.0,
+    "requested": false,
+    "type": "TripleEvidenceVerifier"
+  },
+  "verification_trace_cache": {
+    "enabled": false,
+    "path": null
+  },
+  "verified_records": {
+    "count": 22,
+    "path": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-structured-qa-route-v1/verified-records.jsonl",
+    "run_counts": {
+      "smollm2-l80-frontier-v4-alignment-reviewed-covered-facts": 22
+    },
+    "storage": "jsonl_sidecar"
+  },
+  "verifier": {
+    "min_overlap": 0.65,
+    "type": "GroundednessVerifier"
+  }
+}

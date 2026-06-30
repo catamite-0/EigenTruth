@@ -1265,6 +1265,74 @@
       "name": "smollm2-l80-frontier-v4-unresolved-seeded-news-alignment-review-promotion-gate",
       "path": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-review-promotion-gate-v1/promotion-gate-report.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "approved_count": 11,
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-rule-review-v1/artifact-manifest.json",
+        "model": "smollm2-l80",
+        "needs_more_evidence_count": 0,
+        "review_document_count": 11,
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "frontier-v4",
+        "status": "ready_for_promotion_gate",
+        "workflow": "alignment_fact_rule_review"
+      },
+      "name": "smollm2-l80-frontier-v4-unresolved-seeded-news-alignment-rule-review",
+      "path": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-rule-review-v1/review-report.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "approved_source_document_count": 11,
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-promotion-gate-v1/artifact-manifest.json",
+        "model": "smollm2-l80",
+        "pending_review_count": 0,
+        "promotes_verifier_evidence": false,
+        "review_document_count": 11,
+        "source": "frontier-v4",
+        "status": "ready_for_structured_qa",
+        "workflow": "alignment_fact_review_promotion_gate"
+      },
+      "name": "smollm2-l80-frontier-v4-unresolved-seeded-news-alignment-reviewed-promotion-gate",
+      "path": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-promotion-gate-v1/promotion-gate-report.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-source-family-qa-v1/artifact-manifest.json",
+        "candidate_document_count": 11,
+        "corpus_type": "source_family_structured_qa_external_evidence",
+        "document_count": 11,
+        "model": "smollm2-l80",
+        "source": "frontier-v4",
+        "status": "ready",
+        "workflow": "source_family_structured_qa_corpus_builder"
+      },
+      "name": "smollm2-l80-frontier-v4-unresolved-seeded-news-alignment-reviewed-source-family-qa",
+      "path": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-source-family-qa-v1/source-family-qa-report.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-structured-qa-route-v1/artifact-manifest.json",
+        "fact_group_count": 5,
+        "model": "smollm2-l80",
+        "n_records": 22,
+        "provider_count": 1,
+        "route": "structured_qa",
+        "source": "frontier-v4",
+        "source_family_count": 1,
+        "status": "promote",
+        "workflow": "source_family_structured_qa_route_workflow"
+      },
+      "name": "smollm2-l80-frontier-v4-unresolved-seeded-news-alignment-reviewed-structured-qa-route",
+      "path": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-structured-qa-route-v1/structured-qa-route-summary.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

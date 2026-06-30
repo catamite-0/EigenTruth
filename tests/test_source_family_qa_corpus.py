@@ -241,6 +241,89 @@ def test_alignment_fact_review_promotion_gate_rejects_reserved_review_metadata()
     assert payload["records"][0]["skip_reason"] == "reserved_review_metadata"
 
 
+def test_rule_review_alignment_fact_review_corpus_approves_closed_wikidata_rows(tmp_path):
+    module = importlib.import_module("benchmarks.review_alignment_fact_review_corpus")
+    gate_module = importlib.import_module("benchmarks.promote_alignment_fact_review_corpus")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    review_corpus_path = tmp_path / "alignment-fact-review-corpus.json"
+    output_dir = tmp_path / "rule-review"
+    manifest_path = output_dir / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    review_corpus_path.write_text(json.dumps(_alignment_review_corpus_fixture()), encoding="utf-8")
+
+    payload = module.run(
+        review_corpus_path=review_corpus_path,
+        output_dir=output_dir,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="alignment-rule-review-unit",
+        version="0.1",
+        reviewer="unit-rule-reviewer",
+        reviewed_at="2026-06-30T00:00:00Z",
+        metadata={"suite": "unit"},
+    )
+    decisions = [
+        json.loads(line)
+        for line in (output_dir / "review-decisions.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    gate_payload = gate_module.promote_alignment_fact_review_corpus(
+        _alignment_review_corpus_fixture(),
+        review_decisions=decisions,
+    )
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:alignment-rule-review-unit:0.1"
+    )
+
+    assert payload["status"] == "ready_for_promotion_gate"
+    assert payload["summary"]["approved_count"] == 2
+    assert payload["summary"]["needs_more_evidence_count"] == 0
+    assert payload["summary"]["approved_property_counts"] == {"P112": 2}
+    assert {decision["decision"] for decision in decisions} == {"approved"}
+    assert all(decision["reviewer"] == "unit-rule-reviewer" for decision in decisions)
+    assert gate_payload["status"] == "ready_for_structured_qa"
+    assert gate_payload["summary"]["approved_source_document_count"] == 2
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "alignment_fact_rule_review"
+    assert record.metadata["approved_count"] == 2
+    assert record.metadata["suite"] == "unit"
+
+
+def test_rule_review_alignment_fact_review_corpus_defers_unclosed_rows():
+    module = importlib.import_module("benchmarks.review_alignment_fact_review_corpus")
+    corpus = _alignment_review_corpus_fixture()
+    bad_document = {
+        "question": "What does the aligned evidence say is the author for A Paper?",
+        "answer": "Ada Example",
+        "source": "openalex:W123",
+        "metadata": {
+            "alignment_candidate_id": "fact:openalex",
+            "provider": "source_family_catalog",
+            "source_family": "scholarly",
+            "evidence_source": "openalex:W123",
+            "evidence_span": "OpenAlex metadata title: A Paper.",
+            "property_hint": "author:P50",
+            "statement_property": "P50",
+            "statement_property_label": "author",
+            "subject": "A Paper",
+            "usage": "alignment_fact_review_only",
+        },
+    }
+    corpus["documents"] = [corpus["documents"][0], bad_document]
+
+    payload = module.review_alignment_fact_review_corpus(corpus, reviewer="unit-rule-reviewer")
+    by_id = {record["alignment_candidate_id"]: record for record in payload["records"]}
+
+    assert payload["status"] == "ready_for_promotion_gate"
+    assert payload["summary"]["approved_count"] == 1
+    assert payload["summary"]["needs_more_evidence_count"] == 1
+    assert by_id["fact:tesla"]["decision"] == "approved"
+    assert by_id["fact:openalex"]["decision"] == "needs_more_evidence"
+    assert "wikidata_source" in by_id["fact:openalex"]["reasons"]
+    assert "value_in_evidence" in by_id["fact:openalex"]["reasons"]
+
+
 def _alignment_review_corpus_fixture() -> dict:
     return {
         "schema_version": 1,

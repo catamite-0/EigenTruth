@@ -1,0 +1,293 @@
+{
+  "corpus_type": "source_family_structured_qa_external_evidence",
+  "description": "Structured QA corpus derived only from source-family rows with explicit structured metadata. Use as a covered-fact input for QuestionAnswerVerifier; do not treat it as broad open-domain TruthfulQA coverage.",
+  "documents": [
+    {
+      "answer": "West Germanic language",
+      "metadata": {
+        "alignment_candidate_id": "fact:e34e0641dd9ca8d8",
+        "alignment_source_document_id": "alignment-approved:1",
+        "extraction_rule": "wikidata_subject_property_value",
+        "provider": "wikidata",
+        "review_id": "review:f824d0d0b4337e82",
+        "review_status": "approved",
+        "reviewed_at": "2026-06-30T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q1860:description",
+        "source_family": "reference",
+        "source_index": 0,
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "subject": "English",
+        "title": "Reviewed alignment fact: English description"
+      },
+      "question": "What does Wikidata list as the description for English?",
+      "source": "wikidata:Q1860:description",
+      "text": "What does Wikidata list as the description for English? West Germanic language"
+    },
+    {
+      "answer": "ethnic group in the United States with Hispanic or Latin American ancestry",
+      "metadata": {
+        "alignment_candidate_id": "fact:2856711d0b1d5e20",
+        "alignment_source_document_id": "alignment-approved:2",
+        "extraction_rule": "wikidata_subject_property_value",
+        "provider": "wikidata",
+        "review_id": "review:8e4918253be0ea54",
+        "review_status": "approved",
+        "reviewed_at": "2026-06-30T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q58669:description",
+        "source_family": "reference",
+        "source_index": 1,
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "subject": "Hispanic and Latino Americans",
+        "title": "Reviewed alignment fact: Hispanic and Latino Americans description"
+      },
+      "question": "What does Wikidata list as the description for Hispanic and Latino Americans?",
+      "source": "wikidata:Q58669:description",
+      "text": "What does Wikidata list as the description for Hispanic and Latino Americans? ethnic group in the United States with Hispanic or Latin American ancestry"
+    },
+    {
+      "answer": "American singer and actor (1935\u20131977)",
+      "metadata": {
+        "alignment_candidate_id": "fact:651e67499b5e11e2",
+        "alignment_source_document_id": "alignment-approved:3",
+        "extraction_rule": "wikidata_subject_property_value",
+        "provider": "wikidata",
+        "review_id": "review:61ad9a681c71ef45",
+        "review_status": "approved",
+        "reviewed_at": "2026-06-30T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q303:description",
+        "source_family": "reference",
+        "source_index": 2,
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "subject": "Elvis Presley",
+        "title": "Reviewed alignment fact: Elvis Presley description"
+      },
+      "question": "What does Wikidata list as the description for Elvis Presley?",
+      "source": "wikidata:Q303:description",
+      "text": "What does Wikidata list as the description for Elvis Presley? American singer and actor (1935\u20131977)"
+    },
+    {
+      "answer": "Poverty in Islam",
+      "metadata": {
+        "alignment_candidate_id": "fact:fb7bed121ee133c6",
+        "alignment_source_document_id": "alignment-approved:4",
+        "extraction_rule": "wikidata_subject_property_value",
+        "provider": "wikidata",
+        "review_id": "review:b30d352e34d8b3e7",
+        "review_status": "approved",
+        "reviewed_at": "2026-06-30T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q10294:P527:Q125727758",
+        "source_family": "reference",
+        "source_index": 3,
+        "statement_property": "P527",
+        "statement_property_label": "has part",
+        "subject": "poverty",
+        "title": "Reviewed alignment fact: poverty has part"
+      },
+      "question": "What does Wikidata list as the has part for poverty?",
+      "source": "wikidata:Q10294:P527:Q125727758",
+      "text": "What does Wikidata list as the has part for poverty? Poverty in Islam"
+    },
+    {
+      "answer": "type of technology",
+      "metadata": {
+        "alignment_candidate_id": "fact:0c0c4aa95b3a8fae",
+        "alignment_source_document_id": "alignment-approved:5",
+        "extraction_rule": "wikidata_subject_property_value",
+        "provider": "wikidata",
+        "review_id": "review:ad85a81b56a13367",
+        "review_status": "approved",
+        "reviewed_at": "2026-06-30T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q11660:P31:Q112057532",
+        "source_family": "reference",
+        "source_index": 4,
+        "statement_property": "P31",
+        "statement_property_label": "instance of",
+        "subject": "artificial intelligence",
+        "title": "Reviewed alignment fact: artificial intelligence instance of"
+      },
+      "question": "What does Wikidata list as the instance of for artificial intelligence?",
+      "source": "wikidata:Q11660:P31:Q112057532",
+      "text": "What does Wikidata list as the instance of for artificial intelligence? type of technology"
+    },
+    {
+      "answer": "field that develops and studies software enabling machines to exhibit intelligent behavior",
+      "metadata": {
+        "alignment_candidate_id": "fact:048a582348764d1e",
+        "alignment_source_document_id": "alignment-approved:6",
+        "extraction_rule": "wikidata_subject_property_value",
+        "provider": "wikidata",
+        "review_id": "review:127ba68c0b9c936a",
+        "review_status": "approved",
+        "reviewed_at": "2026-06-30T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q11660:description",
+        "source_family": "reference",
+        "source_index": 5,
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "subject": "artificial intelligence",
+        "title": "Reviewed alignment fact: artificial intelligence description"
+      },
+      "question": "What does Wikidata list as the description for artificial intelligence?",
+      "source": "wikidata:Q11660:description",
+      "text": "What does Wikidata list as the description for artificial intelligence? field that develops and studies software enabling machines to exhibit intelligent behavior"
+    },
+    {
+      "answer": "https://www.redbull.com/it-it/energydrink",
+      "metadata": {
+        "alignment_candidate_id": "fact:30f3674524bb5a41",
+        "alignment_source_document_id": "alignment-approved:7",
+        "extraction_rule": "wikidata_subject_property_value",
+        "provider": "wikidata",
+        "review_id": "review:2d640e955f9c87b0",
+        "review_status": "approved",
+        "reviewed_at": "2026-06-30T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q51482:P856:5782e46194d5",
+        "source_family": "reference",
+        "source_index": 6,
+        "statement_property": "P856",
+        "statement_property_label": "official website",
+        "subject": "Red Bull",
+        "title": "Reviewed alignment fact: Red Bull official website"
+      },
+      "question": "What does Wikidata list as the official website for Red Bull?",
+      "source": "wikidata:Q51482:P856:5782e46194d5",
+      "text": "What does Wikidata list as the official website for Red Bull? https://www.redbull.com/it-it/energydrink"
+    },
+    {
+      "answer": "American actress (born 1969)",
+      "metadata": {
+        "alignment_candidate_id": "fact:68c343a15fbd1507",
+        "alignment_source_document_id": "alignment-approved:8",
+        "extraction_rule": "wikidata_subject_property_value",
+        "provider": "wikidata",
+        "review_id": "review:49d7cb396034b270",
+        "review_status": "approved",
+        "reviewed_at": "2026-06-30T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q32522:description",
+        "source_family": "reference",
+        "source_index": 7,
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "subject": "Jennifer Aniston",
+        "title": "Reviewed alignment fact: Jennifer Aniston description"
+      },
+      "question": "What does Wikidata list as the description for Jennifer Aniston?",
+      "source": "wikidata:Q32522:description",
+      "text": "What does Wikidata list as the description for Jennifer Aniston? American actress (born 1969)"
+    },
+    {
+      "answer": "France",
+      "metadata": {
+        "alignment_candidate_id": "fact:ab73969401a0525e",
+        "alignment_source_document_id": "alignment-approved:9",
+        "extraction_rule": "wikidata_subject_property_value",
+        "provider": "wikidata",
+        "review_id": "review:774e8b5d650dbbaf",
+        "review_status": "approved",
+        "reviewed_at": "2026-06-30T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q150:P17:Q142",
+        "source_family": "reference",
+        "source_index": 8,
+        "statement_property": "P17",
+        "statement_property_label": "country",
+        "subject": "French",
+        "title": "Reviewed alignment fact: French country"
+      },
+      "question": "What does Wikidata list as the country for French?",
+      "source": "wikidata:Q150:P17:Q142",
+      "text": "What does Wikidata list as the country for French? France"
+    },
+    {
+      "answer": "regional subgenre of hip-hop music that originated in New York City during the 1970s",
+      "metadata": {
+        "alignment_candidate_id": "fact:40a36acc3abd6416",
+        "alignment_source_document_id": "alignment-approved:10",
+        "extraction_rule": "wikidata_subject_property_value",
+        "provider": "wikidata",
+        "review_id": "review:e437e0f4048aba3c",
+        "review_status": "approved",
+        "reviewed_at": "2026-06-30T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q876171:description",
+        "source_family": "reference",
+        "source_index": 9,
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "subject": "East Coast hip-hop",
+        "title": "Reviewed alignment fact: East Coast hip-hop description"
+      },
+      "question": "What does Wikidata list as the description for East Coast hip-hop?",
+      "source": "wikidata:Q876171:description",
+      "text": "What does Wikidata list as the description for East Coast hip-hop? regional subgenre of hip-hop music that originated in New York City during the 1970s"
+    },
+    {
+      "answer": "sovereign state in Northwestern Europe",
+      "metadata": {
+        "alignment_candidate_id": "fact:6ee8468ce47c1905",
+        "alignment_source_document_id": "alignment-approved:11",
+        "extraction_rule": "wikidata_subject_property_value",
+        "provider": "wikidata",
+        "review_id": "review:562d4d1e0c39ff9b",
+        "review_status": "approved",
+        "reviewed_at": "2026-06-30T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q27:description",
+        "source_family": "reference",
+        "source_index": 10,
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "subject": "Ireland",
+        "title": "Reviewed alignment fact: Ireland description"
+      },
+      "question": "What does Wikidata list as the description for Ireland?",
+      "source": "wikidata:Q27:description",
+      "text": "What does Wikidata list as the description for Ireland? sovereign state in Northwestern Europe"
+    }
+  ],
+  "label_usage": {
+    "claim_ids_copied_to_document_metadata": false,
+    "labels_copied_to_document_metadata": false,
+    "labels_used_for_documents": false,
+    "model_answers_copied_to_document_metadata": false,
+    "score_dump_rows_copied_to_document_metadata": false
+  },
+  "schema_version": 1,
+  "source": {
+    "accepted_providers": [
+      "wikidata",
+      "worldbank"
+    ],
+    "builder": "source_family_structured_qa_corpus_builder",
+    "skip_qid_values": true
+  },
+  "summary": {
+    "by_provider": {
+      "wikidata": 11
+    },
+    "by_source_family": {
+      "reference": 11
+    },
+    "n_candidate_documents": 11,
+    "n_documents": 11,
+    "n_source_documents": 11,
+    "skipped": {
+      "duplicates": 0,
+      "missing_fields": 0,
+      "qid_values": 0,
+      "reserved_metadata": 0,
+      "unsupported_provider": 0
+    }
+  }
+}

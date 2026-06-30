@@ -1,0 +1,427 @@
+{
+  "config": {
+    "decision_output_schema": "promotion_gate_review_decisions",
+    "reviewed_at": "2026-06-30T00:00:00Z",
+    "reviewer": "rule_based_alignment_fact_reviewer_v1"
+  },
+  "decisions": [
+    {
+      "alignment_candidate_id": "fact:e34e0641dd9ca8d8",
+      "decision": "approved",
+      "notes": "wikidata_subject_property_value_closed",
+      "review_id": "review:f824d0d0b4337e82",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1"
+    },
+    {
+      "alignment_candidate_id": "fact:2856711d0b1d5e20",
+      "decision": "approved",
+      "notes": "wikidata_subject_property_value_closed",
+      "review_id": "review:8e4918253be0ea54",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1"
+    },
+    {
+      "alignment_candidate_id": "fact:651e67499b5e11e2",
+      "decision": "approved",
+      "notes": "wikidata_subject_property_value_closed",
+      "review_id": "review:61ad9a681c71ef45",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1"
+    },
+    {
+      "alignment_candidate_id": "fact:fb7bed121ee133c6",
+      "decision": "approved",
+      "notes": "wikidata_subject_property_value_closed",
+      "review_id": "review:b30d352e34d8b3e7",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1"
+    },
+    {
+      "alignment_candidate_id": "fact:0c0c4aa95b3a8fae",
+      "decision": "approved",
+      "notes": "wikidata_subject_property_value_closed",
+      "review_id": "review:ad85a81b56a13367",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1"
+    },
+    {
+      "alignment_candidate_id": "fact:048a582348764d1e",
+      "decision": "approved",
+      "notes": "wikidata_subject_property_value_closed",
+      "review_id": "review:127ba68c0b9c936a",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1"
+    },
+    {
+      "alignment_candidate_id": "fact:30f3674524bb5a41",
+      "decision": "approved",
+      "notes": "wikidata_subject_property_value_closed",
+      "review_id": "review:2d640e955f9c87b0",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1"
+    },
+    {
+      "alignment_candidate_id": "fact:68c343a15fbd1507",
+      "decision": "approved",
+      "notes": "wikidata_subject_property_value_closed",
+      "review_id": "review:49d7cb396034b270",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1"
+    },
+    {
+      "alignment_candidate_id": "fact:ab73969401a0525e",
+      "decision": "approved",
+      "notes": "wikidata_subject_property_value_closed",
+      "review_id": "review:774e8b5d650dbbaf",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1"
+    },
+    {
+      "alignment_candidate_id": "fact:40a36acc3abd6416",
+      "decision": "approved",
+      "notes": "wikidata_subject_property_value_closed",
+      "review_id": "review:e437e0f4048aba3c",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1"
+    },
+    {
+      "alignment_candidate_id": "fact:6ee8468ce47c1905",
+      "decision": "approved",
+      "notes": "wikidata_subject_property_value_closed",
+      "review_id": "review:562d4d1e0c39ff9b",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1"
+    }
+  ],
+  "label_usage": {
+    "labels_copied_to_decisions": false,
+    "labels_used_for_review": false,
+    "model_answers_copied_to_decisions": false,
+    "request_ids_copied_to_decisions": false,
+    "target_ids_copied_to_decisions": false
+  },
+  "metadata": {
+    "model": "smollm2-l80",
+    "source": "frontier-v4"
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-rule-review-v1/artifact-manifest.json",
+    "review_corpus": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-fact-review-corpus-v1/alignment-fact-review-corpus.json",
+    "review_decisions": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-rule-review-v1/review-decisions.jsonl",
+    "review_records": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-rule-review-v1/review-records.jsonl",
+    "review_report": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-rule-review-v1/review-report.json"
+  },
+  "records": [
+    {
+      "alignment_candidate_id": "fact:e34e0641dd9ca8d8",
+      "checks": {
+        "has_candidate_id": true,
+        "has_subject": true,
+        "has_value": true,
+        "no_reserved_metadata": true,
+        "property_in_evidence": true,
+        "property_matches_source": true,
+        "subject_in_evidence": true,
+        "value_in_evidence": true,
+        "value_is_specific": true,
+        "wikidata_source": true
+      },
+      "decision": "approved",
+      "evidence_source": "wikidata:Q1860:description",
+      "notes": "wikidata_subject_property_value_closed",
+      "property_hint": "description",
+      "reasons": [],
+      "record_index": 1,
+      "review_id": "review:f824d0d0b4337e82",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "subject": "English",
+      "value": "West Germanic language"
+    },
+    {
+      "alignment_candidate_id": "fact:2856711d0b1d5e20",
+      "checks": {
+        "has_candidate_id": true,
+        "has_subject": true,
+        "has_value": true,
+        "no_reserved_metadata": true,
+        "property_in_evidence": true,
+        "property_matches_source": true,
+        "subject_in_evidence": true,
+        "value_in_evidence": true,
+        "value_is_specific": true,
+        "wikidata_source": true
+      },
+      "decision": "approved",
+      "evidence_source": "wikidata:Q58669:description",
+      "notes": "wikidata_subject_property_value_closed",
+      "property_hint": "description",
+      "reasons": [],
+      "record_index": 2,
+      "review_id": "review:8e4918253be0ea54",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "subject": "Hispanic and Latino Americans",
+      "value": "ethnic group in the United States with Hispanic or Latin American ancestry"
+    },
+    {
+      "alignment_candidate_id": "fact:651e67499b5e11e2",
+      "checks": {
+        "has_candidate_id": true,
+        "has_subject": true,
+        "has_value": true,
+        "no_reserved_metadata": true,
+        "property_in_evidence": true,
+        "property_matches_source": true,
+        "subject_in_evidence": true,
+        "value_in_evidence": true,
+        "value_is_specific": true,
+        "wikidata_source": true
+      },
+      "decision": "approved",
+      "evidence_source": "wikidata:Q303:description",
+      "notes": "wikidata_subject_property_value_closed",
+      "property_hint": "description",
+      "reasons": [],
+      "record_index": 3,
+      "review_id": "review:61ad9a681c71ef45",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "subject": "Elvis Presley",
+      "value": "American singer and actor (1935\u20131977)"
+    },
+    {
+      "alignment_candidate_id": "fact:fb7bed121ee133c6",
+      "checks": {
+        "has_candidate_id": true,
+        "has_subject": true,
+        "has_value": true,
+        "no_reserved_metadata": true,
+        "property_in_evidence": true,
+        "property_matches_source": true,
+        "subject_in_evidence": true,
+        "value_in_evidence": true,
+        "value_is_specific": true,
+        "wikidata_source": true
+      },
+      "decision": "approved",
+      "evidence_source": "wikidata:Q10294:P527:Q125727758",
+      "notes": "wikidata_subject_property_value_closed",
+      "property_hint": "has_part:P527",
+      "reasons": [],
+      "record_index": 4,
+      "review_id": "review:b30d352e34d8b3e7",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "subject": "poverty",
+      "value": "Poverty in Islam"
+    },
+    {
+      "alignment_candidate_id": "fact:0c0c4aa95b3a8fae",
+      "checks": {
+        "has_candidate_id": true,
+        "has_subject": true,
+        "has_value": true,
+        "no_reserved_metadata": true,
+        "property_in_evidence": true,
+        "property_matches_source": true,
+        "subject_in_evidence": true,
+        "value_in_evidence": true,
+        "value_is_specific": true,
+        "wikidata_source": true
+      },
+      "decision": "approved",
+      "evidence_source": "wikidata:Q11660:P31:Q112057532",
+      "notes": "wikidata_subject_property_value_closed",
+      "property_hint": "instance_of:P31",
+      "reasons": [],
+      "record_index": 5,
+      "review_id": "review:ad85a81b56a13367",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "subject": "artificial intelligence",
+      "value": "type of technology"
+    },
+    {
+      "alignment_candidate_id": "fact:048a582348764d1e",
+      "checks": {
+        "has_candidate_id": true,
+        "has_subject": true,
+        "has_value": true,
+        "no_reserved_metadata": true,
+        "property_in_evidence": true,
+        "property_matches_source": true,
+        "subject_in_evidence": true,
+        "value_in_evidence": true,
+        "value_is_specific": true,
+        "wikidata_source": true
+      },
+      "decision": "approved",
+      "evidence_source": "wikidata:Q11660:description",
+      "notes": "wikidata_subject_property_value_closed",
+      "property_hint": "description",
+      "reasons": [],
+      "record_index": 6,
+      "review_id": "review:127ba68c0b9c936a",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "subject": "artificial intelligence",
+      "value": "field that develops and studies software enabling machines to exhibit intelligent behavior"
+    },
+    {
+      "alignment_candidate_id": "fact:30f3674524bb5a41",
+      "checks": {
+        "has_candidate_id": true,
+        "has_subject": true,
+        "has_value": true,
+        "no_reserved_metadata": true,
+        "property_in_evidence": true,
+        "property_matches_source": true,
+        "subject_in_evidence": true,
+        "value_in_evidence": true,
+        "value_is_specific": true,
+        "wikidata_source": true
+      },
+      "decision": "approved",
+      "evidence_source": "wikidata:Q51482:P856:5782e46194d5",
+      "notes": "wikidata_subject_property_value_closed",
+      "property_hint": "official_website:P856",
+      "reasons": [],
+      "record_index": 7,
+      "review_id": "review:2d640e955f9c87b0",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "subject": "Red Bull",
+      "value": "https://www.redbull.com/it-it/energydrink"
+    },
+    {
+      "alignment_candidate_id": "fact:68c343a15fbd1507",
+      "checks": {
+        "has_candidate_id": true,
+        "has_subject": true,
+        "has_value": true,
+        "no_reserved_metadata": true,
+        "property_in_evidence": true,
+        "property_matches_source": true,
+        "subject_in_evidence": true,
+        "value_in_evidence": true,
+        "value_is_specific": true,
+        "wikidata_source": true
+      },
+      "decision": "approved",
+      "evidence_source": "wikidata:Q32522:description",
+      "notes": "wikidata_subject_property_value_closed",
+      "property_hint": "description",
+      "reasons": [],
+      "record_index": 8,
+      "review_id": "review:49d7cb396034b270",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "subject": "Jennifer Aniston",
+      "value": "American actress (born 1969)"
+    },
+    {
+      "alignment_candidate_id": "fact:ab73969401a0525e",
+      "checks": {
+        "has_candidate_id": true,
+        "has_subject": true,
+        "has_value": true,
+        "no_reserved_metadata": true,
+        "property_in_evidence": true,
+        "property_matches_source": true,
+        "subject_in_evidence": true,
+        "value_in_evidence": true,
+        "value_is_specific": true,
+        "wikidata_source": true
+      },
+      "decision": "approved",
+      "evidence_source": "wikidata:Q150:P17:Q142",
+      "notes": "wikidata_subject_property_value_closed",
+      "property_hint": "country:P17",
+      "reasons": [],
+      "record_index": 9,
+      "review_id": "review:774e8b5d650dbbaf",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "subject": "French",
+      "value": "France"
+    },
+    {
+      "alignment_candidate_id": "fact:40a36acc3abd6416",
+      "checks": {
+        "has_candidate_id": true,
+        "has_subject": true,
+        "has_value": true,
+        "no_reserved_metadata": true,
+        "property_in_evidence": true,
+        "property_matches_source": true,
+        "subject_in_evidence": true,
+        "value_in_evidence": true,
+        "value_is_specific": true,
+        "wikidata_source": true
+      },
+      "decision": "approved",
+      "evidence_source": "wikidata:Q876171:description",
+      "notes": "wikidata_subject_property_value_closed",
+      "property_hint": "description",
+      "reasons": [],
+      "record_index": 10,
+      "review_id": "review:e437e0f4048aba3c",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "subject": "East Coast hip-hop",
+      "value": "regional subgenre of hip-hop music that originated in New York City during the 1970s"
+    },
+    {
+      "alignment_candidate_id": "fact:6ee8468ce47c1905",
+      "checks": {
+        "has_candidate_id": true,
+        "has_subject": true,
+        "has_value": true,
+        "no_reserved_metadata": true,
+        "property_in_evidence": true,
+        "property_matches_source": true,
+        "subject_in_evidence": true,
+        "value_in_evidence": true,
+        "value_is_specific": true,
+        "wikidata_source": true
+      },
+      "decision": "approved",
+      "evidence_source": "wikidata:Q27:description",
+      "notes": "wikidata_subject_property_value_closed",
+      "property_hint": "description",
+      "reasons": [],
+      "record_index": 11,
+      "review_id": "review:562d4d1e0c39ff9b",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "subject": "Ireland",
+      "value": "sovereign state in Northwestern Europe"
+    }
+  ],
+  "schema_version": 1,
+  "scope": "Rule-based review of alignment fact-review rows. Approval means the row has a closed Wikidata subject/property/value evidence span, not broad open-domain route coverage.",
+  "source": {
+    "review_corpus_status": "ready_for_review",
+    "review_corpus_type": "alignment_structured_fact_review_corpus"
+  },
+  "status": "ready_for_promotion_gate",
+  "summary": {
+    "approved_count": 11,
+    "approved_property_counts": {
+      "P17": 1,
+      "P31": 1,
+      "P527": 1,
+      "P856": 1,
+      "description": 7
+    },
+    "decision_counts": {
+      "approved": 11
+    },
+    "needs_more_evidence_count": 0,
+    "reason_counts": {},
+    "review_document_count": 11
+  },
+  "workflow": "alignment_fact_rule_review"
+}

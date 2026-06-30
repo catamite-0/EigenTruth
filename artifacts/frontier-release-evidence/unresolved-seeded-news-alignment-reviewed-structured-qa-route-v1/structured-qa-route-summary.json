@@ -1,0 +1,447 @@
+{
+  "alpha": 0.1,
+  "covered_fact_score_dump_path": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-structured-qa-route-v1/covered-facts-scores.json",
+  "fact_group_count": 5,
+  "fact_group_metrics": {
+    "wikidata:reference:description": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "fact_group": "wikidata:reference:description",
+      "fact_type": "description",
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 7
+        },
+        "true": {
+          "supported": 7
+        }
+      },
+      "n_decided_supported_or_refuted": 14,
+      "n_false": 7,
+      "n_records": 14,
+      "n_source_documents": 0,
+      "n_true": 7,
+      "provider": "wikidata",
+      "selected_route_counts": {
+        "structured_qa": 14
+      },
+      "source_family": "reference",
+      "status_counts": {
+        "refuted": 7,
+        "supported": 7
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    },
+    "wikidata:reference:p17": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "fact_group": "wikidata:reference:p17",
+      "fact_type": "P17",
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 1
+        },
+        "true": {
+          "supported": 1
+        }
+      },
+      "n_decided_supported_or_refuted": 2,
+      "n_false": 1,
+      "n_records": 2,
+      "n_source_documents": 0,
+      "n_true": 1,
+      "provider": "wikidata",
+      "selected_route_counts": {
+        "structured_qa": 2
+      },
+      "source_family": "reference",
+      "status_counts": {
+        "refuted": 1,
+        "supported": 1
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    },
+    "wikidata:reference:p31": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "fact_group": "wikidata:reference:p31",
+      "fact_type": "P31",
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 1
+        },
+        "true": {
+          "supported": 1
+        }
+      },
+      "n_decided_supported_or_refuted": 2,
+      "n_false": 1,
+      "n_records": 2,
+      "n_source_documents": 0,
+      "n_true": 1,
+      "provider": "wikidata",
+      "selected_route_counts": {
+        "structured_qa": 2
+      },
+      "source_family": "reference",
+      "status_counts": {
+        "refuted": 1,
+        "supported": 1
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    },
+    "wikidata:reference:p527": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "fact_group": "wikidata:reference:p527",
+      "fact_type": "P527",
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 1
+        },
+        "true": {
+          "supported": 1
+        }
+      },
+      "n_decided_supported_or_refuted": 2,
+      "n_false": 1,
+      "n_records": 2,
+      "n_source_documents": 0,
+      "n_true": 1,
+      "provider": "wikidata",
+      "selected_route_counts": {
+        "structured_qa": 2
+      },
+      "source_family": "reference",
+      "status_counts": {
+        "refuted": 1,
+        "supported": 1
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    },
+    "wikidata:reference:p856": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "fact_group": "wikidata:reference:p856",
+      "fact_type": "P856",
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 1
+        },
+        "true": {
+          "supported": 1
+        }
+      },
+      "n_decided_supported_or_refuted": 2,
+      "n_false": 1,
+      "n_records": 2,
+      "n_source_documents": 0,
+      "n_true": 1,
+      "provider": "wikidata",
+      "selected_route_counts": {
+        "structured_qa": 2
+      },
+      "source_family": "reference",
+      "status_counts": {
+        "refuted": 1,
+        "supported": 1
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    }
+  },
+  "metadata": {
+    "model": "smollm2-l80",
+    "source": "frontier-v4"
+  },
+  "next_step": "Use this only as covered-fact route-quality evidence. Map product claims or blind spots into these exact questions before creating a correction handoff.",
+  "provider_count": 1,
+  "provider_metrics": {
+    "wikidata": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 11
+        },
+        "true": {
+          "supported": 11
+        }
+      },
+      "n_decided_supported_or_refuted": 22,
+      "n_false": 11,
+      "n_records": 22,
+      "n_true": 11,
+      "provider": "wikidata",
+      "selected_route_counts": {
+        "structured_qa": 22
+      },
+      "status_counts": {
+        "refuted": 11,
+        "supported": 11
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    }
+  },
+  "qa_corpus_path": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-source-family-qa-v1/source-family-qa-corpus.json",
+  "qa_corpus_summary": {
+    "by_provider": {
+      "wikidata": 11
+    },
+    "by_source_family": {
+      "reference": 11
+    },
+    "n_candidate_documents": 11,
+    "n_documents": 11,
+    "n_source_documents": 11,
+    "skipped": {
+      "duplicates": 0,
+      "missing_fields": 0,
+      "qid_values": 0,
+      "reserved_metadata": 0,
+      "unsupported_provider": 0
+    }
+  },
+  "qa_verifier": {
+    "decided_records": 22,
+    "enabled": true
+  },
+  "route": "structured_qa",
+  "route_metrics": {
+    "attempted_route_count_observations": 22,
+    "decision_accuracy": 1.0,
+    "decision_error_rate": 0.0,
+    "duration_observations": 22,
+    "false_refuted_rate": 1.0,
+    "false_supported_rate": 0.0,
+    "insufficient_evidence_rate": 0.0,
+    "label_status_matrix": {
+      "false": {
+        "error": 0,
+        "insufficient_evidence": 0,
+        "not_applicable": 0,
+        "refuted": 11,
+        "supported": 0
+      },
+      "true": {
+        "error": 0,
+        "insufficient_evidence": 0,
+        "not_applicable": 0,
+        "refuted": 0,
+        "supported": 11
+      }
+    },
+    "max_duration_seconds": 0.0001552649773657322,
+    "mean_attempted_route_count": 1.0,
+    "mean_duration_seconds": 0.00010947482554580678,
+    "mean_retrieval_hits": 0.0,
+    "mean_selected_route_duration_seconds": 0.00010947482554580678,
+    "n_decided_supported_or_refuted": 22,
+    "n_false": 11,
+    "n_true": 11,
+    "p95_duration_seconds": 0.00013204895949456839,
+    "p95_selected_route_duration_seconds": 0.00013204895949456839,
+    "p99_duration_seconds": 0.0001505055441521108,
+    "p99_selected_route_duration_seconds": 0.0001505055441521108,
+    "retrieval_hit_count": 0,
+    "retrieval_use_rate": 0.0,
+    "selected": 22,
+    "selected_route_duration_observations": 22,
+    "selection_rate": 1.0,
+    "total_attempted_route_count": 22.0,
+    "total_duration_seconds": 0.002408446162007749,
+    "total_selected_route_duration_seconds": 0.002408446162007749,
+    "true_refuted_rate": 0.0,
+    "true_supported_rate": 1.0,
+    "used_retrieval_count": 0
+  },
+  "schema_version": 1,
+  "scope": "covered source-family structured QA facts, not open-domain TruthfulQA route coverage",
+  "score_dump_summary": {
+    "by_fact_group": {
+      "wikidata:reference:description": {
+        "fact_group": "wikidata:reference:description",
+        "fact_type": "description",
+        "n_false": 7,
+        "n_records": 14,
+        "n_source_documents": 7,
+        "n_true": 7,
+        "provider": "wikidata",
+        "source_family": "reference"
+      },
+      "wikidata:reference:p17": {
+        "fact_group": "wikidata:reference:p17",
+        "fact_type": "P17",
+        "n_false": 1,
+        "n_records": 2,
+        "n_source_documents": 1,
+        "n_true": 1,
+        "provider": "wikidata",
+        "source_family": "reference"
+      },
+      "wikidata:reference:p31": {
+        "fact_group": "wikidata:reference:p31",
+        "fact_type": "P31",
+        "n_false": 1,
+        "n_records": 2,
+        "n_source_documents": 1,
+        "n_true": 1,
+        "provider": "wikidata",
+        "source_family": "reference"
+      },
+      "wikidata:reference:p527": {
+        "fact_group": "wikidata:reference:p527",
+        "fact_type": "P527",
+        "n_false": 1,
+        "n_records": 2,
+        "n_source_documents": 1,
+        "n_true": 1,
+        "provider": "wikidata",
+        "source_family": "reference"
+      },
+      "wikidata:reference:p856": {
+        "fact_group": "wikidata:reference:p856",
+        "fact_type": "P856",
+        "n_false": 1,
+        "n_records": 2,
+        "n_source_documents": 1,
+        "n_true": 1,
+        "provider": "wikidata",
+        "source_family": "reference"
+      }
+    },
+    "by_provider": {
+      "wikidata": 11
+    },
+    "by_source_family": {
+      "reference": 11
+    },
+    "fact_group_count": 5,
+    "n_false": 11,
+    "n_records": 22,
+    "n_skipped_false_answer": 0,
+    "n_source_documents": 11,
+    "n_true": 11,
+    "provider_count": 1,
+    "source_family_count": 1
+  },
+  "score_name": "smollm2-l80-frontier-v4-alignment-reviewed-covered-facts",
+  "selected_route_counts": {
+    "structured_qa": 22
+  },
+  "signal": "truth_proj",
+  "source_family_count": 1,
+  "source_family_metrics": {
+    "reference": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 11
+        },
+        "true": {
+          "supported": 11
+        }
+      },
+      "n_decided_supported_or_refuted": 22,
+      "n_false": 11,
+      "n_records": 22,
+      "n_true": 11,
+      "selected_route_counts": {
+        "structured_qa": 22
+      },
+      "source_family": "reference",
+      "status_counts": {
+        "refuted": 11,
+        "supported": 11
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    }
+  },
+  "status": "promote",
+  "structured_qa_metrics": {
+    "attempted_route_count_observations": 22,
+    "decision_accuracy": 1.0,
+    "decision_error_rate": 0.0,
+    "duration_observations": 22,
+    "false_refuted_rate": 1.0,
+    "false_supported_rate": 0.0,
+    "insufficient_evidence_rate": 0.0,
+    "label_status_matrix": {
+      "false": {
+        "error": 0,
+        "insufficient_evidence": 0,
+        "not_applicable": 0,
+        "refuted": 11,
+        "supported": 0
+      },
+      "true": {
+        "error": 0,
+        "insufficient_evidence": 0,
+        "not_applicable": 0,
+        "refuted": 0,
+        "supported": 11
+      }
+    },
+    "max_duration_seconds": 0.0001552649773657322,
+    "mean_attempted_route_count": 1.0,
+    "mean_duration_seconds": 0.00010947482554580678,
+    "mean_retrieval_hits": 0.0,
+    "mean_selected_route_duration_seconds": 0.00010947482554580678,
+    "n_decided_supported_or_refuted": 22,
+    "n_false": 11,
+    "n_true": 11,
+    "p95_duration_seconds": 0.00013204895949456839,
+    "p95_selected_route_duration_seconds": 0.00013204895949456839,
+    "p99_duration_seconds": 0.0001505055441521108,
+    "p99_selected_route_duration_seconds": 0.0001505055441521108,
+    "retrieval_hit_count": 0,
+    "retrieval_use_rate": 0.0,
+    "selected": 22,
+    "selected_route_duration_observations": 22,
+    "selection_rate": 1.0,
+    "total_attempted_route_count": 22.0,
+    "total_duration_seconds": 0.002408446162007749,
+    "total_selected_route_duration_seconds": 0.002408446162007749,
+    "true_refuted_rate": 0.0,
+    "true_supported_rate": 1.0,
+    "used_retrieval_count": 0
+  },
+  "verification_status_counts": {
+    "error": 0,
+    "insufficient_evidence": 0,
+    "not_applicable": 0,
+    "refuted": 11,
+    "supported": 11
+  },
+  "verified_records_jsonl_path": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-structured-qa-route-v1/verified-records.jsonl",
+  "verifier_report_path": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-structured-qa-route-v1/structured-qa-verifier-report.json",
+  "workflow": "source_family_structured_qa_route_workflow"
+}

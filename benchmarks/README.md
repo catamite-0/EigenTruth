@@ -1772,6 +1772,61 @@ approved source documents. This is the intended fail-closed state until a
 review decision JSONL supplies `approved`, `rejected`, or
 `needs_more_evidence` for each `alignment_candidate_id`.
 
+## `review_alignment_fact_review_corpus.py`
+
+Runs a deterministic route-specific review over the alignment fact-review
+corpus. The rule reviewer approves only rows whose Wikidata evidence source and
+evidence span close a subject/property/value loop; non-Wikidata or unclosed rows
+remain `needs_more_evidence`. Its decisions are ordinary review-decision JSONL
+for `promote_alignment_fact_review_corpus.py`, so the promotion gate still
+requires explicit reviewer provenance.
+
+```bash
+OUT=artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-rule-review-v1
+
+python benchmarks/review_alignment_fact_review_corpus.py \
+  --review-corpus artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-fact-review-corpus-v1/alignment-fact-review-corpus.json \
+  --output-dir "$OUT" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-seeded-news-alignment-rule-review \
+  --version 0.1 \
+  --reviewed-at 2026-06-30T00:00:00Z
+```
+
+The registered v4 rule review approves all `11/11` review-corpus rows because
+they are closed Wikidata subject/property/value spans. Re-running the promotion
+gate with `--review-decisions` produces `11` approved source docs and status
+`ready_for_structured_qa`; building a source-family QA corpus from those docs
+keeps all `11` facts. The covered-facts structured QA route then promotes on
+`22` balanced true/false records with decision accuracy `1.0`, true-supported
+rate `1.0`, false-refuted rate `1.0`, and false-supported rate `0.0`. This is
+covered-fact evidence for the reviewed rows only, not broad blind-spot recall.
+
+```bash
+REVIEW=artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-rule-review-v1
+GATE=artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-promotion-gate-v1
+QA=artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-source-family-qa-v1
+ROUTE=artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-structured-qa-route-v1
+
+python benchmarks/promote_alignment_fact_review_corpus.py \
+  --review-corpus artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-fact-review-corpus-v1/alignment-fact-review-corpus.json \
+  --review-decisions "$REVIEW/review-decisions.jsonl" \
+  --output-dir "$GATE" \
+  --artifact-manifest "$GATE/artifact-manifest.json"
+
+python benchmarks/build_source_family_qa_corpus.py \
+  --source "$GATE/approved-source-documents.json" \
+  --output "$QA/source-family-qa-corpus.json" \
+  --report-json "$QA/source-family-qa-report.json" \
+  --artifact-manifest "$QA/artifact-manifest.json"
+
+python benchmarks/run_source_family_structured_qa_route_workflow.py \
+  --qa-corpus "$QA/source-family-qa-corpus.json" \
+  --output-dir "$ROUTE" \
+  --score-name smollm2-l80-frontier-v4-alignment-reviewed-covered-facts
+```
+
 ## `fetch_blind_spot_wikidata_evidence.py`
 
 Fetches CC0 Wikidata source documents for the collection corpus. Request and

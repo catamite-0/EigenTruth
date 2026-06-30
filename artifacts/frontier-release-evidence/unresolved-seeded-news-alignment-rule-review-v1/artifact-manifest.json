@@ -1,0 +1,54 @@
+{
+  "artifacts": {
+    "alignment_fact_review_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-seeded-news-alignment-fact-review-corpus-v1/alignment-fact-review-corpus.json",
+      "sha256": "9cfeec6a90be635edfa6417ca8fb5c0eeca370761d8af37eb97c139c544679b9",
+      "size_bytes": 14999
+    },
+    "alignment_fact_rule_review_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "review-report.json",
+      "sha256": "264671294eb81ee78b422f79921c29682b3e4adc32e4534baadbc3a98c71c4ee",
+      "size_bytes": 15435
+    },
+    "review_decisions": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "review-decisions.jsonl",
+      "sha256": "e8a09f72f516fe24e855d31758e08b84a4379212d73dc0b1cbf8405f14e18824",
+      "size_bytes": 2849
+    },
+    "review_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "review-records.jsonl",
+      "sha256": "5ca2de33eda3971d4dfeb24ca45c731d57fa25c95b51714bd7278651a6ea71ba",
+      "size_bytes": 8139
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "approved_count": 11,
+    "model": "smollm2-l80",
+    "needs_more_evidence_count": 0,
+    "review_document_count": 11,
+    "reviewer": "rule_based_alignment_fact_reviewer_v1",
+    "source": "frontier-v4",
+    "status": "ready_for_promotion_gate",
+    "workflow": "alignment_fact_rule_review"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}
