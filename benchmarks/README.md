@@ -1644,6 +1644,15 @@ pass focused on the targets most likely to unlock structured fact or citation
 coverage before rerunning `sweep_blind_spot_retrieval_queries.py` and
 `compare_blind_spot_query_sweeps.py`.
 
+The frontier v4 corpus at
+`artifacts/frontier-release-evidence/blind-spot-evidence-collection-corpus-v1/blind-spot-evidence-collection-corpus.json`
+is the full follow-on queue for the v4 expansion plan. It covers all `89`
+targets and emits `1283` collection requests: `950` Wikidata/entity-property
+requests, `260` citation requests, `47` counterfactual probes, and `26`
+world-model/calculator-rule authoring requests. Its manifest verification
+passes and the registry records it as
+`report:smollm2-l80-blind-spot-evidence-collection-corpus:0.1`.
+
 ## `fetch_blind_spot_wikidata_evidence.py`
 
 Fetches CC0 Wikidata source documents for the collection corpus. Request and

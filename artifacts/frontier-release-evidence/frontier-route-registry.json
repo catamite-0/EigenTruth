@@ -607,6 +607,23 @@
       "name": "smollm2-l80-blind-spot-evidence-expansion",
       "path": "artifacts/frontier-release-evidence/blind-spot-evidence-expansion-v1/evidence-expansion-plan.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/blind-spot-evidence-collection-corpus-v1/artifact-manifest.json",
+        "citation_request_count": 260,
+        "model": "smollm2-l80",
+        "source": "frontier-v4",
+        "status": "ready_for_collection",
+        "target_count": 89,
+        "total_request_count": 1283,
+        "wikidata_request_count": 950,
+        "workflow": "blind_spot_evidence_collection_corpus"
+      },
+      "name": "smollm2-l80-blind-spot-evidence-collection-corpus",
+      "path": "artifacts/frontier-release-evidence/blind-spot-evidence-collection-corpus-v1/blind-spot-evidence-collection-corpus.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1
