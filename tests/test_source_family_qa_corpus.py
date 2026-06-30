@@ -1466,6 +1466,171 @@ def test_source_family_structured_qa_lane_execution_queue_batches_requests(tmp_p
     assert registry_record.metadata["adapter_request_count"] == 5
 
 
+def test_source_family_structured_qa_lane_rerun_queue_builds_batch_commands(tmp_path):
+    module = importlib.import_module("benchmarks.plan_source_family_structured_qa_lane_reruns")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    lane_queue_path = tmp_path / "lane-execution-queue.json"
+    collection_path = tmp_path / "fact-collection-corpus.json"
+    catalog_path = tmp_path / "source-catalog.jsonl"
+    output_path = tmp_path / "lane-reruns.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    rerun_root = tmp_path / "reruns"
+    lane_queue_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "source_family_structured_qa_lane_execution_queue",
+            "status": "ready_for_adapter_execution",
+            "execution_batches": [
+                {
+                    "batch_id": "sfqa-lane-batch-0001",
+                    "next_lane": "answer_collision_audit",
+                    "lane_status": "blocked_needs_disambiguation",
+                    "request_type": "source_family_fact_disambiguation",
+                    "adapter_family": "source_family_fact_disambiguation",
+                    "request_count": 3,
+                    "target_count": 2,
+                    "target_ids": ["record-1", "record-2"],
+                    "source_request_ids": ["disambig:record-1:1", "disambig:record-2:1"],
+                    "not_verifier_evidence": True,
+                },
+                {
+                    "batch_id": "sfqa-lane-batch-0002",
+                    "next_lane": "richer_property_or_indicator_collection",
+                    "lane_status": "needs_property_collection",
+                    "request_type": "world_model_or_calculator_rule",
+                    "adapter_family": "world_model_rule_authoring",
+                    "request_count": 1,
+                    "target_count": 1,
+                    "target_ids": ["record-3"],
+                    "source_request_ids": ["rule:record-3:1"],
+                    "not_verifier_evidence": True,
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    collection_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "source_family_structured_qa_fact_collection_corpus",
+            "status": "ready_for_collection",
+            "requests": {},
+        }),
+        encoding="utf-8",
+    )
+    catalog_path.write_text(
+        json.dumps({
+            "source": "unit:catalog",
+            "source_family": "reference",
+            "text": "Gamma disambiguation and source-family fact metadata.",
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = module.build_source_family_structured_qa_lane_rerun_queue(
+        lane_queue_path=lane_queue_path,
+        collection_corpus_path=collection_path,
+        source_catalog_paths=(catalog_path,),
+        json_path=output_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="source-family-lane-reruns-unit",
+        version="0.1",
+        output_dir=rerun_root,
+        python_executable="python",
+        metadata={"suite": "unit"},
+        compact_json=True,
+    )
+    registry_record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:source-family-lane-reruns-unit:0.1"
+    )
+    saved = json.loads(output_path.read_text(encoding="utf-8"))
+    entries = {entry["batch_id"]: entry for entry in payload["entries"]}
+    source_command = entries["sfqa-lane-batch-0001"]["command"]
+    rule_command = entries["sfqa-lane-batch-0002"]["command"]
+
+    assert saved["summary"] == payload["summary"]
+    assert payload["status"] == "ready"
+    assert payload["summary"]["batch_count"] == 2
+    assert payload["summary"]["ready_command_count"] == 2
+    assert payload["summary"]["source_backed_batch_count"] == 1
+    assert payload["summary"]["rule_only_batch_count"] == 1
+    assert entries["sfqa-lane-batch-0001"]["command_status"] == "ready"
+    assert entries["sfqa-lane-batch-0001"]["command_kind"] == "source_family_lane_batch"
+    assert source_command[:2] == (
+        "python",
+        "benchmarks/run_source_family_structured_qa_lane_batch_workflow.py",
+    )
+    assert source_command[source_command.index("--source-catalog") + 1] == str(catalog_path)
+    assert source_command[source_command.index("--batch-id") + 1] == "sfqa-lane-batch-0001"
+    assert "--compact-json" in source_command
+    assert entries["sfqa-lane-batch-0002"]["command_kind"] == "rule_authoring_lane_batch"
+    assert "--source-catalog" not in rule_command
+    assert rule_command[rule_command.index("--batch-id") + 1] == "sfqa-lane-batch-0002"
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert registry_record is not None
+    assert registry_record.metadata["workflow"] == "source_family_structured_qa_lane_rerun_queue"
+    assert registry_record.metadata["ready_command_count"] == 2
+
+
+def test_source_family_structured_qa_lane_rerun_queue_blocks_missing_catalog(tmp_path):
+    module = importlib.import_module("benchmarks.plan_source_family_structured_qa_lane_reruns")
+
+    lane_queue_path = tmp_path / "lane-execution-queue.json"
+    collection_path = tmp_path / "fact-collection-corpus.json"
+    lane_queue_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "source_family_structured_qa_lane_execution_queue",
+            "status": "ready_for_adapter_execution",
+            "execution_batches": [
+                {
+                    "batch_id": "sfqa-lane-batch-0001",
+                    "next_lane": "citation_retrieval_before_handoff",
+                    "lane_status": "needs_citation",
+                    "request_type": "external_citation",
+                    "adapter_family": "external_citation_search",
+                    "request_count": 1,
+                    "target_count": 1,
+                    "target_ids": ["record-9"],
+                    "source_request_ids": ["cite:record-9:1"],
+                    "not_verifier_evidence": True,
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
+    collection_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "source_family_structured_qa_fact_collection_corpus",
+            "status": "ready_for_collection",
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.build_source_family_structured_qa_lane_rerun_queue(
+        lane_queue_path=lane_queue_path,
+        collection_corpus_path=collection_path,
+        output_dir=tmp_path / "reruns",
+        python_executable="python",
+    )
+    entry = payload["entries"][0]
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["ready_command_count"] == 0
+    assert payload["summary"]["missing_command_count"] == 1
+    assert payload["summary"]["missing_input_role_counts"] == {"source_catalog": 1}
+    assert entry["command_status"] == "missing_inputs"
+    assert entry["missing_inputs"] == (
+        {"role": "source_catalog", "path": "", "reason": "no_source_catalog_configured"},
+    )
+    assert entry["command"][entry["command"].index("--batch-id") + 1] == "sfqa-lane-batch-0001"
+
+
 def test_source_family_structured_qa_lane_batch_workflow_replays_selected_batch(tmp_path):
     module = importlib.import_module("benchmarks.run_source_family_structured_qa_lane_batch_workflow")
     registry_module = importlib.import_module("eigentruth.registry")

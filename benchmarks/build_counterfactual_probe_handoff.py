@@ -35,6 +35,14 @@ RESERVED_REQUEST_FIELDS = {
     "score_label",
     "truth_label",
 }
+RESERVED_HANDOFF_FIELDS = {
+    *RESERVED_REQUEST_FIELDS,
+    "answer",
+    "model_answer",
+    "record_index",
+    "row_index",
+    "target_rank",
+}
 DEFAULT_PROBE_TYPES = ("metadata", "entity_swap", "quantity", "year", "negation")
 PROBE_TYPE_MAP: Mapping[str, tuple[str, ...]] = {
     "entity_swap": ("metadata", "entity_swap"),
@@ -126,6 +134,8 @@ def build_counterfactual_probe_handoff(
         "label_usage": {
             "labels_used_for_probe_generation": False,
             "labels_copied_to_handoff": False,
+            "model_answers_copied_to_handoff": False,
+            "record_indices_copied_to_handoff": False,
             "probe_records_are_verifier_evidence": False,
         },
         "config": {
@@ -352,9 +362,7 @@ def _claim_metadata(request: Mapping[str, Any]) -> dict[str, Any]:
         "source_request_id": request.get("source_request_id") or request.get("request_id"),
         "queue_id": request.get("queue_id"),
         "target_id": request.get("target_id"),
-        "record_index": request.get("record_index"),
         "question": request.get("question"),
-        "model_answer": request.get("model_answer"),
         "question_type": request.get("question_type"),
         "probe_type": request.get("probe_type"),
         "probe_instruction": request.get("probe_instruction") or request.get("query"),
@@ -367,7 +375,7 @@ def _claim_metadata(request: Mapping[str, Any]) -> dict[str, Any]:
     replacements = _counterfactual_replacements(request)
     if replacements:
         metadata["counterfactual_replacements"] = replacements
-    return {key: value for key, value in metadata.items() if value not in (None, "", ())}
+    return _strip_reserved_handoff_fields(metadata)
 
 
 def _counterfactual_replacements(request: Mapping[str, Any]) -> dict[str, str]:
@@ -430,31 +438,29 @@ def _probe_with_request_metadata(
 
 
 def _probe_metadata(request: Mapping[str, Any], *, generated_by: str) -> dict[str, Any]:
-    return {
+    return _strip_reserved_handoff_fields({
         "source": WORKFLOW,
         "generated_by": generated_by,
         "not_verifier_evidence": True,
         "source_request_id": request.get("source_request_id") or request.get("request_id"),
         "queue_id": request.get("queue_id"),
         "target_id": request.get("target_id"),
-        "record_index": request.get("record_index"),
         "probe_instruction": request.get("probe_instruction") or request.get("query"),
-    }
+    })
 
 
 def _pending_request(request: Mapping[str, Any], *, reason: str) -> dict[str, Any]:
-    return {
+    return _strip_reserved_handoff_fields({
         "source_request_id": request.get("source_request_id") or request.get("request_id"),
         "queue_id": request.get("queue_id"),
         "target_id": request.get("target_id"),
-        "record_index": request.get("record_index"),
         "question": request.get("question"),
-        "model_answer": request.get("model_answer"),
+        "claim_text": _original_claim_text(request),
         "probe_type": request.get("probe_type"),
         "probe_instruction": request.get("probe_instruction") or request.get("query"),
         "reason": reason,
         "not_verifier_evidence": True,
-    }
+    })
 
 
 def _claim_to_record(claim: Claim) -> dict[str, Any]:
@@ -462,6 +468,14 @@ def _claim_to_record(claim: Claim) -> dict[str, Any]:
         "claim_id": claim.claim_id,
         "text": claim.text,
         "metadata": dict(claim.metadata),
+    }
+
+
+def _strip_reserved_handoff_fields(row: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        key: value
+        for key, value in row.items()
+        if key not in RESERVED_HANDOFF_FIELDS and value not in (None, "", ())
     }
 
 

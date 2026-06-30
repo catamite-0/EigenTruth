@@ -93,6 +93,9 @@ counterfactual requests and auto-generates `27` probe records
 (`21` entity swaps, `3` quantity probes, and `3` negation probes), leaving `2`
 requests in the pending-generation sidecar. The command is intentionally a
 handoff bridge: it does not verify the probes or claim route-quality evidence.
+It may use a model answer to form the claim text being probed, but written
+claim/probe metadata and pending rows strip reserved label fields,
+`model_answer` / `answer`, and record-index style adapter-linkage fields.
 
 ## `eval_truthfulqa.py`
 
@@ -2856,6 +2859,30 @@ The queue is `ready_for_adapter_execution` with `87` collection targets, `752`
 adapter/rule requests, and `29` lane-aware batches. It intentionally excludes
 the `1` audit-only row and keeps answer/model-answer fields out of adapter
 requests; the first batch is `answer_collision_audit` disambiguation.
+
+Build an executable rerun plan before launching batches. The planner preserves
+rule-only batches as runnable without catalogs and marks source-backed batches
+as `missing_inputs` when catalog or prerequisite paths are absent:
+
+```bash
+RERUNS=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-lane-reruns
+
+python benchmarks/plan_source_family_structured_qa_lane_reruns.py \
+  --lane-queue "$QUEUE/lane-execution-queue.json" \
+  --collection-corpus "$CORPUS/fact-collection-corpus.json" \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog/source-family-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-worldbank-official-statistics-catalog/worldbank-official-statistics-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-crossref-scholarly-catalog/crossref-scholarly-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-official-site-catalog/official-site-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-openalex-scholarly-catalog/openalex-scholarly-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-catalog/seeded-news-catalog.jsonl \
+  --output-dir "$RERUNS/batches" \
+  --json "$RERUNS/lane-rerun-queue.json" \
+  --artifact-manifest "$RERUNS/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_post_correction_lane_execution_queue \
+  --compact-json
+```
 
 Replay the first disambiguation batch through the local source-family catalogs:
 

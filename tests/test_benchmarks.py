@@ -247,6 +247,8 @@ def test_counterfactual_probe_handoff_builds_eval_records_from_collection_corpus
                     {
                         "request_id": "cf:record-1:1",
                         "target_id": "record-1",
+                        "record_index": 1,
+                        "target_rank": 1,
                         "request_type": "counterfactual_probe",
                         "question": "Who founded Alpha Labs?",
                         "model_answer": "Alice.",
@@ -258,6 +260,8 @@ def test_counterfactual_probe_handoff_builds_eval_records_from_collection_corpus
                     {
                         "request_id": "cf:record-2:1",
                         "target_id": "record-2",
+                        "record_index": 2,
+                        "target_rank": 2,
                         "request_type": "counterfactual_probe",
                         "question": "How many moons does Alpha have?",
                         "model_answer": "Alpha has 2 moons.",
@@ -268,6 +272,8 @@ def test_counterfactual_probe_handoff_builds_eval_records_from_collection_corpus
                     {
                         "request_id": "cf:record-3:1",
                         "target_id": "record-3",
+                        "record_index": 3,
+                        "target_rank": 3,
                         "request_type": "counterfactual_probe",
                         "question": "What is Alpha?",
                         "model_answer": "A company.",
@@ -299,6 +305,16 @@ def test_counterfactual_probe_handoff_builds_eval_records_from_collection_corpus
         for line in probes_path.read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
+    claim_rows = [
+        json.loads(line)
+        for line in claims_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    pending_rows = [
+        json.loads(line)
+        for line in pending_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
     eval_report_path = tmp_path / "counterfactual-eval.json"
     eval_payload = eval_module.run_counterfactual_verification_eval(
         probes_path,
@@ -315,11 +331,18 @@ def test_counterfactual_probe_handoff_builds_eval_records_from_collection_corpus
     assert payload["summary"]["probe_record_count"] == 2
     assert payload["summary"]["pending_generation_count"] == 1
     assert payload["summary"]["generated_probe_type_counts"] == {"entity_swap": 1, "quantity": 1}
+    assert payload["label_usage"]["model_answers_copied_to_handoff"] is False
+    assert payload["label_usage"]["record_indices_copied_to_handoff"] is False
     assert report_path.exists()
     assert claims_path.exists()
     assert pending_path.exists()
     assert probe_rows[0]["metadata"]["not_verifier_evidence"] is True
     assert probe_rows[0]["metadata"]["source_request_id"] == "cf:record-1:1"
+    reserved_handoff_fields = {"answer", "model_answer", "record_index", "row_index", "target_rank"}
+    assert all(reserved_handoff_fields.isdisjoint(row["metadata"]) for row in claim_rows)
+    assert all(reserved_handoff_fields.isdisjoint(row["metadata"]) for row in probe_rows)
+    assert all(reserved_handoff_fields.isdisjoint(row) for row in pending_rows)
+    assert pending_rows[0]["claim_text"] == "What is Alpha? A company."
     assert eval_payload["report"]["summary"]["record_count"] == 2
     assert eval_payload["report"]["summary"]["pass_rate"] == pytest.approx(1.0)
     assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
