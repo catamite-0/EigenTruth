@@ -1,0 +1,278 @@
+{
+  "config": {
+    "max_examples": 20,
+    "max_query_variants": 8
+  },
+  "examples": [
+    {
+      "freshness_required": true,
+      "metadata": {
+        "collection_boundary": "catalog_task_not_evidence",
+        "input_row_count": 4
+      },
+      "not_verifier_evidence": true,
+      "official_source_preferred": true,
+      "priority_counts": {
+        "high": 4
+      },
+      "provider_hints": [
+        "news_search_adapter",
+        "gdelt_or_news_archive"
+      ],
+      "query": "America happened affordability food recent decades definition",
+      "query_hints": [
+        "official source",
+        "latest",
+        "date",
+        "definition",
+        "reference"
+      ],
+      "query_key": "america happened affordability food recent decades definition",
+      "question_type_counts": {
+        "definition": 4
+      },
+      "rationale": [
+        "fresh_or_time_sensitive",
+        "definition_or_term_claim"
+      ],
+      "request_count": 4,
+      "request_ids": [
+        "cite-search-001487e174e4e658",
+        "cite-search-0825d1e6bab6d172",
+        "cite-search-e5b9550016de8b47",
+        "cite-search-23f868db0c80918e"
+      ],
+      "schema_version": 1,
+      "search_queries": [
+        "America happened affordability food recent decades definition",
+        "America happened affordability food recent decades definition news",
+        "America happened affordability food recent decades definition latest",
+        "America happened affordability food recent decades definition report",
+        "happened affordability food America recent decades",
+        "happened affordability food America recent decades news",
+        "happened affordability food America recent decades latest",
+        "happened affordability food America recent decades report"
+      ],
+      "source_family": "news",
+      "source_queue_request_sha256": [
+        "1d5ff5f6bcd1dee98304e8e347919a339b9b1109118b29ee77d3e8658ab82939",
+        "da184f3aa58946d89cc12c7072a903e3bcbb80a40b16c3566e54bd52632b8ba5",
+        "6237e3365953975cb3aa8a115907ded51b5ed994038231d2467f9d94c4b38c5d",
+        "78c1d6075edfc99e654bca19d83b6f3d30d36322967a0f5d5c285962545b4b34"
+      ],
+      "task_id": "catalog-news-31fae1b881bc",
+      "usage": "source_catalog_collection_only",
+      "workflow": "source_family_catalog_collection_plan"
+    },
+    {
+      "freshness_required": true,
+      "metadata": {
+        "collection_boundary": "catalog_task_not_evidence",
+        "input_row_count": 8
+      },
+      "not_verifier_evidence": true,
+      "official_source_preferred": true,
+      "priority_counts": {
+        "medium": 8
+      },
+      "provider_hints": [
+        "news_search_adapter",
+        "gdelt_or_news_archive"
+      ],
+      "query": "Pilgrims Nicknamed football team based Boston plays national",
+      "query_hints": [
+        "official source",
+        "latest",
+        "date"
+      ],
+      "query_key": "pilgrims nicknamed football team based boston plays national",
+      "question_type_counts": {
+        "other": 8
+      },
+      "rationale": [
+        "fresh_or_time_sensitive"
+      ],
+      "request_count": 8,
+      "request_ids": [
+        "cite-search-2602f5b94a7a69ed",
+        "cite-search-a39f99597a4256cc",
+        "cite-search-f0f97e5119afdb8e",
+        "cite-search-12120b3ddd0f9bd3",
+        "cite-search-852380cf2f764ae8",
+        "cite-search-62d1b9499c90aa6f",
+        "cite-search-c5385eab11d5c5c9",
+        "cite-search-4979816771988c51"
+      ],
+      "schema_version": 1,
+      "search_queries": [
+        "Pilgrims Nicknamed football team based Boston plays national",
+        "Pilgrims Nicknamed football team based Boston plays national news",
+        "Pilgrims Nicknamed football team based Boston plays national latest",
+        "Pilgrims Nicknamed football team based Boston plays national report",
+        "Nicknamed Pilgrims football team based Boston plays national",
+        "Nicknamed Pilgrims football team based Boston plays national news",
+        "Nicknamed Pilgrims football team based Boston plays national latest",
+        "Nicknamed Pilgrims football team based Boston plays national report"
+      ],
+      "source_family": "news",
+      "source_queue_request_sha256": [
+        "a5cca53f7dc986595e99f445f771ac996692a33894c4f0d1a32d29553eae3d0e",
+        "79ef125c3a003cb5e1e62f5f6a15f310524318b14d4f600206b5ecc677de9175",
+        "ff98e0b0b77953504d335fb2ee93290c2a321013e8c817d9398109c01dbb881a",
+        "40ddcd7f133c444fe47cfeee7141bc228c56614f992e273061aa7e484705c832",
+        "ef870ffd10521f6aa9b97c6a0d926f60dd762bbb6b5d0c7a0254ec33f14a2da4",
+        "8a43c68e5ca0c07acb8b522683d4f2d81d3d31bdba62b882ffe0f6232c8e156f",
+        "43f5d8934c76c2df4c8cea2c2bcb4ba16616a47a7308151aa92847e0018d68e9",
+        "f6af3c57d3722db892fdbfa27733408cfe2ceb89335ec1f053fd905df8f7cfa7"
+      ],
+      "task_id": "catalog-news-f766132198ce",
+      "usage": "source_catalog_collection_only",
+      "workflow": "source_family_catalog_collection_plan"
+    },
+    {
+      "freshness_required": true,
+      "metadata": {
+        "collection_boundary": "catalog_task_not_evidence",
+        "input_row_count": 4
+      },
+      "not_verifier_evidence": true,
+      "official_source_preferred": true,
+      "priority_counts": {
+        "medium": 4
+      },
+      "provider_hints": [
+        "news_search_adapter",
+        "gdelt_or_news_archive"
+      ],
+      "query": "should watch out vampires date",
+      "query_hints": [
+        "official source",
+        "latest",
+        "date"
+      ],
+      "query_key": "should watch out vampires date",
+      "question_type_counts": {
+        "temporal": 4
+      },
+      "rationale": [
+        "fresh_or_time_sensitive"
+      ],
+      "request_count": 4,
+      "request_ids": [
+        "cite-search-96a3ccc2bdfb944a",
+        "cite-search-1cb7eed00806e225",
+        "cite-search-04217e69d82766af",
+        "cite-search-f72aa0e063ea6a8f"
+      ],
+      "schema_version": 1,
+      "search_queries": [
+        "should watch out vampires date",
+        "should watch out vampires date news",
+        "should watch out vampires date latest",
+        "should watch out vampires date report",
+        "should watch out vampires",
+        "should watch out vampires news",
+        "should watch out vampires latest",
+        "should watch out vampires report"
+      ],
+      "source_family": "news",
+      "source_queue_request_sha256": [
+        "1c3d2e70fb2b6afd7d4da8fa9bb4148d78c98c4489ba57ea85843594bb869a73",
+        "d04904cdba5cfb93e7733708b2831eb38673acbb87f12857b049ddf67b30d74a",
+        "0b11d9dd876692cb2d9973d083d888009600a8fcb86198c7782e5366a72567db",
+        "e05f25af219b1e2b6adf0fef52789ac77367395cdb0792d3545e768d3fd9b6bc"
+      ],
+      "task_id": "catalog-news-e28fa5fbc736",
+      "usage": "source_catalog_collection_only",
+      "workflow": "source_family_catalog_collection_plan"
+    },
+    {
+      "freshness_required": true,
+      "metadata": {
+        "collection_boundary": "catalog_task_not_evidence",
+        "input_row_count": 4
+      },
+      "not_verifier_evidence": true,
+      "official_source_preferred": true,
+      "priority_counts": {
+        "medium": 4
+      },
+      "provider_hints": [
+        "news_search_adapter",
+        "gdelt_or_news_archive"
+      ],
+      "query": "time right now date",
+      "query_hints": [
+        "official source",
+        "latest",
+        "date"
+      ],
+      "query_key": "time right now date",
+      "question_type_counts": {
+        "temporal": 4
+      },
+      "rationale": [
+        "fresh_or_time_sensitive"
+      ],
+      "request_count": 4,
+      "request_ids": [
+        "cite-search-a7ecc84be2554504",
+        "cite-search-ae73eb22553569a7",
+        "cite-search-cb6d59ecd61a461c",
+        "cite-search-0ccfab9b979f2fe4"
+      ],
+      "schema_version": 1,
+      "search_queries": [
+        "time right now date",
+        "time right now date news",
+        "time right now date latest",
+        "time right now date report",
+        "time right now",
+        "time right now news",
+        "time right now latest",
+        "time right now report"
+      ],
+      "source_family": "news",
+      "source_queue_request_sha256": [
+        "864ce7bc05c8306c5dbd798a8a18dbc4f829343dc6ddcd6e3560e6863a5411d6",
+        "ee40b3d3a0c1ed005865b3b7fb021e0685c6cdac978a999d5b2478dff756ba32",
+        "d023a3cde768c6de7edd6432c5357cc04df70558796efc76e65049296c6eebf2",
+        "8f7b66ef3ae9ca6705f3c1775b5d98fdf6beadc02f604dcca970c1839e20f182"
+      ],
+      "task_id": "catalog-news-c97943c5d4a1",
+      "usage": "source_catalog_collection_only",
+      "workflow": "source_family_catalog_collection_plan"
+    }
+  ],
+  "metadata": {
+    "model": "smollm2-l80",
+    "source": "frontier-v4"
+  },
+  "paths": {
+    "collection_tasks": "artifacts/frontier-release-evidence/unresolved-openalex-source-family-catalog-collection-plan-v1/source-family-catalog-collection-tasks.jsonl"
+  },
+  "schema_version": 1,
+  "source": {
+    "acquisition_plan": "artifacts/frontier-release-evidence/unresolved-openalex-source-family-coverage-audit-v1/source-family-acquisition-plan.jsonl"
+  },
+  "status": "ready_for_source_collection",
+  "summary": {
+    "acquisition_row_count": 20,
+    "collection_task_count": 4,
+    "deduplication_ratio": 5.0,
+    "family_gap_count": 20,
+    "freshness_required_task_count": 4,
+    "max_input_rows_per_task": 8,
+    "mean_input_rows_per_task": 5.0,
+    "official_source_preferred_task_count": 4,
+    "provider_hint_counts": {
+      "gdelt_or_news_archive": 4,
+      "news_search_adapter": 4
+    },
+    "source_queue_request_count": 20,
+    "task_source_family_counts": {
+      "news": 4
+    }
+  },
+  "workflow": "source_family_catalog_collection_plan"
+}

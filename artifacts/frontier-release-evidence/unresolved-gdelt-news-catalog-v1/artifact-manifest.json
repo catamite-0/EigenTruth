@@ -1,0 +1,46 @@
+{
+  "artifacts": {
+    "collection_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-openalex-source-family-catalog-collection-plan-v1/source-family-catalog-collection-tasks.jsonl",
+      "sha256": "261c8508c1f4065e38b40c2f77dcc46453e32ec3c3250b2274e55f5db4cc4b5d",
+      "size_bytes": 6844
+    },
+    "gdelt_catalog_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "gdelt-news-catalog-report.json",
+      "sha256": "e01de52a7deca852795b1c2f6e89f5371408857fb540ed8a73d105c1eaeddaea",
+      "size_bytes": 3324
+    },
+    "source_family_catalog": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "gdelt-news-catalog.jsonl",
+      "sha256": "0db7b0d20d57b8c57c42aaaa374e6e4ba2b4c9895a7293b3d8f80229df23322b",
+      "size_bytes": 7987
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "error_count": 7,
+    "model": "smollm2-l80",
+    "query_count": 8,
+    "source": "frontier-v4",
+    "source_document_count": 5,
+    "status": "ready",
+    "task_count": 4,
+    "workflow": "gdelt_source_family_catalog_adapter"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "artifacts": {
+    "coverage_audit_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-coverage-audit.json",
+      "sha256": "cbbbdfab51125eb20a6a87f32b720dcc54c6d0ecf5ea9e9f11f59f7c1242b1ad",
+      "size_bytes": 42979
+    },
+    "source_family_acquisition_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-acquisition-plan.jsonl",
+      "sha256": "717279f882f66a7344e2914117112d49f9ad423a40e77213fc5b03c32fdbf436",
+      "size_bytes": 21684
+    },
+    "source_family_adapter_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-openalex-source-family-citation-workflow-v1/source-family-citation-search-results.jsonl",
+      "sha256": "8255018f6aecb5a37bcca1ba11cbd5d93e0dfaf0a986db66cdefe3fff2a7e674",
+      "size_bytes": 3092763
+    },
+    "source_family_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-openalex-source-family-citation-workflow-v1/source-family-citation-search-requests.jsonl",
+      "sha256": "ab3fb8d4b5a8adf0d637a4bd6b17ec6ccc3cf641b5fad9a3048154cdb49e12ae",
+      "size_bytes": 346447
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "acquisition_plan_count": 20,
+    "model": "smollm2-l80",
+    "request_count": 260,
+    "source": "frontier-v4",
+    "status": "needs_catalog_expansion",
+    "workflow": "source_family_coverage_audit"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

@@ -1014,6 +1014,151 @@
       "name": "smollm2-l80-frontier-v4-unresolved-official-site-source-family-catalog-collection-plan",
       "path": "artifacts/frontier-release-evidence/unresolved-official-site-source-family-catalog-collection-plan-v1/source-family-catalog-collection-plan.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-openalex-scholarly-catalog-v1/artifact-manifest.json",
+        "error_count": 0,
+        "model": "smollm2-l80",
+        "query_count": 84,
+        "source": "frontier-v4",
+        "source_document_count": 145,
+        "status": "ready",
+        "task_count": 21,
+        "workflow": "openalex_source_family_catalog_adapter"
+      },
+      "name": "smollm2-l80-frontier-v4-unresolved-openalex-scholarly-catalog",
+      "path": "artifacts/frontier-release-evidence/unresolved-openalex-scholarly-catalog-v1/openalex-scholarly-catalog-report.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "adapter_request_count": 260,
+        "adapter_result_count": 780,
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-openalex-source-family-citation-workflow-v1/artifact-manifest.json",
+        "catalog_source_document_count": 700,
+        "corpus_document_count": 780,
+        "evidence_source_document_count": 780,
+        "gate_passed": false,
+        "model": "smollm2-l80",
+        "promotion_ready": false,
+        "selected_batch_count": 0,
+        "selected_batch_ids": [],
+        "source": "frontier-v4",
+        "status": "blocked",
+        "target_route": "retrieval_groundedness",
+        "workflow": "source_family_citation_search_workflow"
+      },
+      "name": "smollm2-l80-frontier-v4-unresolved-openalex-source-family-citation-workflow",
+      "path": "artifacts/frontier-release-evidence/unresolved-openalex-source-family-citation-workflow-v1/source-family-citation-search-workflow.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "acquisition_plan_count": 20,
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-openalex-source-family-coverage-audit-v1/artifact-manifest.json",
+        "model": "smollm2-l80",
+        "request_count": 260,
+        "request_missing_target_family_count": 20,
+        "source": "frontier-v4",
+        "status": "needs_catalog_expansion",
+        "workflow": "source_family_coverage_audit"
+      },
+      "name": "smollm2-l80-frontier-v4-unresolved-openalex-source-family-coverage-audit",
+      "path": "artifacts/frontier-release-evidence/unresolved-openalex-source-family-coverage-audit-v1/source-family-coverage-audit.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "acquisition_row_count": 20,
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-openalex-source-family-catalog-collection-plan-v1/artifact-manifest.json",
+        "collection_task_count": 4,
+        "family_gap_count": 20,
+        "model": "smollm2-l80",
+        "source": "frontier-v4",
+        "status": "ready_for_source_collection",
+        "workflow": "source_family_catalog_collection_plan"
+      },
+      "name": "smollm2-l80-frontier-v4-unresolved-openalex-source-family-catalog-collection-plan",
+      "path": "artifacts/frontier-release-evidence/unresolved-openalex-source-family-catalog-collection-plan-v1/source-family-catalog-collection-plan.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-gdelt-news-catalog-v1/artifact-manifest.json",
+        "error_count": 7,
+        "model": "smollm2-l80",
+        "query_count": 8,
+        "source": "frontier-v4",
+        "source_document_count": 5,
+        "status": "ready",
+        "task_count": 4,
+        "workflow": "gdelt_source_family_catalog_adapter"
+      },
+      "name": "smollm2-l80-frontier-v4-unresolved-gdelt-news-catalog",
+      "path": "artifacts/frontier-release-evidence/unresolved-gdelt-news-catalog-v1/gdelt-news-catalog-report.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-seeded-news-catalog-v1/artifact-manifest.json",
+        "error_count": 0,
+        "matched_seed_count": 8,
+        "model": "smollm2-l80",
+        "source": "frontier-v4",
+        "source_document_count": 8,
+        "status": "ready",
+        "task_count": 4,
+        "workflow": "seeded_url_source_family_catalog_adapter"
+      },
+      "name": "smollm2-l80-frontier-v4-unresolved-seeded-news-catalog",
+      "path": "artifacts/frontier-release-evidence/unresolved-seeded-news-catalog-v1/seeded-news-catalog-report.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "adapter_request_count": 260,
+        "adapter_result_count": 780,
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/artifact-manifest.json",
+        "catalog_source_document_count": 713,
+        "corpus_document_count": 780,
+        "evidence_source_document_count": 780,
+        "gate_passed": false,
+        "model": "smollm2-l80",
+        "promotion_ready": false,
+        "selected_batch_count": 0,
+        "selected_batch_ids": [],
+        "source": "frontier-v4",
+        "status": "blocked",
+        "target_route": "retrieval_groundedness",
+        "workflow": "source_family_citation_search_workflow"
+      },
+      "name": "smollm2-l80-frontier-v4-unresolved-seeded-news-source-family-citation-workflow",
+      "path": "artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/source-family-citation-search-workflow.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "acquisition_plan_count": 0,
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-coverage-audit-v1/artifact-manifest.json",
+        "model": "smollm2-l80",
+        "request_count": 260,
+        "request_missing_target_family_count": 0,
+        "source": "frontier-v4",
+        "status": "covered",
+        "workflow": "source_family_coverage_audit"
+      },
+      "name": "smollm2-l80-frontier-v4-unresolved-seeded-news-source-family-coverage-audit",
+      "path": "artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-coverage-audit-v1/source-family-coverage-audit.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

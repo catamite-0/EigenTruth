@@ -1,0 +1,91 @@
+{
+  "config": {
+    "api_base_url": "https://api.gdeltproject.org/api/v2/doc/doc",
+    "max_query_variants": 2,
+    "max_records": 5,
+    "max_tasks": null,
+    "min_delay_seconds": 6.0,
+    "mode": "ArtList",
+    "sort": "HybridRel",
+    "source_family": "news",
+    "timeout_seconds": 30.0
+  },
+  "errors": [
+    {
+      "error": "RuntimeError",
+      "message": "GDELT HTTP 429: Please limit requests to one every 5 seconds or contact kalev.leetaru5@gmail.com for larger queries.\n\n",
+      "query": "America happened affordability food recent decades definition",
+      "task_id": "catalog-news-31fae1b881bc"
+    },
+    {
+      "error": "RuntimeError",
+      "message": "GDELT HTTP 429: Please limit requests to one every 5 seconds or contact kalev.leetaru5@gmail.com for larger queries.\n\n",
+      "query": "America happened affordability food recent decades definition news",
+      "task_id": "catalog-news-31fae1b881bc"
+    },
+    {
+      "error": "RuntimeError",
+      "message": "GDELT HTTP 429: Please limit requests to one every 5 seconds or contact kalev.leetaru5@gmail.com for larger queries.\n\n",
+      "query": "Pilgrims Nicknamed football team based Boston plays national",
+      "task_id": "catalog-news-f766132198ce"
+    },
+    {
+      "error": "RuntimeError",
+      "message": "GDELT HTTP 429: Please limit requests to one every 5 seconds or contact kalev.leetaru5@gmail.com for larger queries.\n\n",
+      "query": "Pilgrims Nicknamed football team based Boston plays national news",
+      "task_id": "catalog-news-f766132198ce"
+    },
+    {
+      "error": "RuntimeError",
+      "message": "GDELT HTTP 429: Please limit requests to one every 5 seconds or contact kalev.leetaru5@gmail.com for larger queries.\n\n",
+      "query": "should watch out vampires date",
+      "task_id": "catalog-news-e28fa5fbc736"
+    },
+    {
+      "error": "RuntimeError",
+      "message": "GDELT HTTP 429: Please limit requests to one every 5 seconds or contact kalev.leetaru5@gmail.com for larger queries.\n\n",
+      "query": "should watch out vampires date news",
+      "task_id": "catalog-news-e28fa5fbc736"
+    },
+    {
+      "error": "RuntimeError",
+      "message": "GDELT HTTP 429: Please limit requests to one every 5 seconds or contact kalev.leetaru5@gmail.com for larger queries.\n\n",
+      "query": "time right now date news",
+      "task_id": "catalog-news-c97943c5d4a1"
+    }
+  ],
+  "metadata": {
+    "model": "smollm2-l80",
+    "source": "frontier-v4"
+  },
+  "output_path": "artifacts/frontier-release-evidence/unresolved-gdelt-news-catalog-v1/gdelt-news-catalog.jsonl",
+  "schema_version": 1,
+  "source": {
+    "collection_tasks": "artifacts/frontier-release-evidence/unresolved-openalex-source-family-catalog-collection-plan-v1/source-family-catalog-collection-tasks.jsonl"
+  },
+  "status": "ready",
+  "summary": {
+    "domain_counts": {
+      "baomoi.com": 1,
+      "chip.de": 1,
+      "interfax.ru": 1,
+      "life.ru": 1,
+      "viva.co.id": 1
+    },
+    "error_count": 7,
+    "provider_counts": {
+      "gdelt": 5
+    },
+    "query_count": 8,
+    "skipped_duplicate_count": 0,
+    "source_document_count": 5,
+    "source_family_counts": {
+      "news": 5
+    },
+    "task_count": 4,
+    "task_source_family_counts": {
+      "news": 4
+    }
+  },
+  "workflow": "gdelt_source_family_catalog_adapter"
+}

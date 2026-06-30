@@ -1,0 +1,51 @@
+{
+  "config": {
+    "fetch_pages": false,
+    "max_seed_urls_per_task": null,
+    "max_tasks": null,
+    "max_text_chars": 6000,
+    "min_delay_seconds": 0.0,
+    "provider": "seeded_news",
+    "source_family": "news",
+    "timeout_seconds": 20.0
+  },
+  "errors": [],
+  "metadata": {
+    "model": "smollm2-l80",
+    "source": "frontier-v4"
+  },
+  "output_path": "artifacts/frontier-release-evidence/unresolved-seeded-news-catalog-v1/seeded-news-catalog.jsonl",
+  "schema_version": 1,
+  "source": {
+    "collection_tasks": "artifacts/frontier-release-evidence/unresolved-openalex-source-family-catalog-collection-plan-v1/source-family-catalog-collection-tasks.jsonl",
+    "url_seeds": "artifacts/frontier-release-evidence/unresolved-seeded-news-catalog-v1/seeded-news-url-seeds.jsonl"
+  },
+  "status": "ready",
+  "summary": {
+    "domain_counts": {
+      "apnews.com": 7,
+      "www.cbssports.com": 1
+    },
+    "error_count": 0,
+    "fetch_status_counts": {
+      "seed_fallback": 8
+    },
+    "fetched_page_count": 0,
+    "matched_seed_count": 8,
+    "provider_counts": {
+      "apnews": 7,
+      "cbs_sports": 1
+    },
+    "seed_count": 8,
+    "skipped_duplicate_count": 0,
+    "source_document_count": 8,
+    "source_family_counts": {
+      "news": 8
+    },
+    "task_count": 4,
+    "task_source_family_counts": {
+      "news": 4
+    }
+  },
+  "workflow": "seeded_url_source_family_catalog_adapter"
+}

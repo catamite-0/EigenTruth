@@ -1,0 +1,46 @@
+{
+  "artifacts": {
+    "collection_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-official-site-source-family-catalog-collection-plan-v1/source-family-catalog-collection-tasks.jsonl",
+      "sha256": "75bd9f8cbd5bca211df92966044bf1f5e00fcfaa675949d207646e0d7ee96c4e",
+      "size_bytes": 48088
+    },
+    "openalex_catalog_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "openalex-scholarly-catalog-report.json",
+      "sha256": "f4a80d1c65affd3efc86151f41018294bff31506eb40e4b8dc2a4f77944d15ab",
+      "size_bytes": 1667
+    },
+    "source_family_catalog": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "openalex-scholarly-catalog.jsonl",
+      "sha256": "179c9713826a05aa6a4308f10a7530b1e362da82270f3421e7d4f811558f7a6e",
+      "size_bytes": 578396
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "error_count": 0,
+    "model": "smollm2-l80",
+    "query_count": 84,
+    "source": "frontier-v4",
+    "source_document_count": 145,
+    "status": "ready",
+    "task_count": 21,
+    "workflow": "openalex_source_family_catalog_adapter"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

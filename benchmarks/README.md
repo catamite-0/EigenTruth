@@ -2113,6 +2113,35 @@ freshness-required requests have a fresh result, remaining missing families are
 only `scholarly=156` and `news=20`, and the next collection plan shrinks to
 `25` tasks (`21` scholarly, `4` news).
 
+The follow-up v4 source-family closure runs OpenAlex over those `21` scholarly
+tasks, then records both the live GDELT state and a deterministic seeded-news
+fallback for the final `4` news tasks. OpenAlex writes `145` scholarly docs from
+`84` query variants with `0` request errors. Replaying Wikidata + World Bank +
+official-site + OpenAlex gives `700` catalog docs and `780` adapter results,
+covering all `156/156` scholarly target-family requests while leaving only
+`news=20` missing. The GDELT live run writes `5` news docs but records `7`
+rate-limit errors, so the seeded-news run uses `8` label-free AP/CBS URL seeds
+with `--no-fetch`, writes `8` `source_family=news` fallback docs, and verifies
+its manifest. The final replay with all six catalogs (`713` source docs)
+returns `780` adapter results with result families `news=100`, `official=91`,
+`official_statistics=73`, `reference=236`, and `scholarly=280`. The coverage
+audit is now `covered`: `news=20/20`, `official=52/52`,
+`official_statistics=4/4`, `reference=68/68`, and `scholarly=156/156`, with an
+empty acquisition plan. This closes source acquisition for the v4 unresolved
+lane, but the route gate intentionally remains blocked: provenance passes, the
+best external query strategy refutes only `1/89` blind spots, no external
+strategy passes, and controlled-vs-external comparison is still blocked.
+
+The registered v4 closure artifacts are:
+
+- `artifacts/frontier-release-evidence/unresolved-openalex-scholarly-catalog-v1`
+- `artifacts/frontier-release-evidence/unresolved-openalex-source-family-citation-workflow-v1`
+- `artifacts/frontier-release-evidence/unresolved-openalex-source-family-coverage-audit-v1`
+- `artifacts/frontier-release-evidence/unresolved-gdelt-news-catalog-v1`
+- `artifacts/frontier-release-evidence/unresolved-seeded-news-catalog-v1`
+- `artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1`
+- `artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-coverage-audit-v1`
+
 ## `build_unresolved_world_model_rule_stubs.py`
 
 Bridges the world-model/calculator branch of the unresolved queue into the

@@ -1,0 +1,72 @@
+{
+  "config": {
+    "default_source_family": "reference",
+    "diversify_source_families": true,
+    "max_query_variants": 3,
+    "max_results": 3,
+    "min_text_overlap": 0.05
+  },
+  "input_path": "artifacts/frontier-release-evidence/unresolved-openalex-source-family-citation-workflow-v1/source-family-citation-search-requests.jsonl",
+  "metadata": {
+    "model": "smollm2-l80",
+    "source": "frontier-v4",
+    "source_workflow": "source_family_citation_search_workflow"
+  },
+  "output_path": "artifacts/frontier-release-evidence/unresolved-openalex-source-family-citation-workflow-v1/source-family-citation-search-results.jsonl",
+  "schema_version": 1,
+  "source_catalog_paths": [
+    "artifacts/frontier-release-evidence/blind-spot-wikidata-evidence-v1/wikidata-source-docs.jsonl",
+    "artifacts/frontier-release-evidence/unresolved-worldbank-official-statistics-catalog-v1/worldbank-official-statistics-catalog.jsonl",
+    "artifacts/frontier-release-evidence/unresolved-official-site-catalog-v1/official-site-catalog.jsonl",
+    "artifacts/frontier-release-evidence/unresolved-openalex-scholarly-catalog-v1/openalex-scholarly-catalog.jsonl"
+  ],
+  "summary": {
+    "catalog_provider_counts": {
+      "cdc": 2,
+      "new_england_patriots": 1,
+      "nfl": 1,
+      "nist": 1,
+      "nist_usno": 1,
+      "noaa_nws": 1,
+      "noaa_psl": 1,
+      "openalex": 145,
+      "sante_publique_france": 1,
+      "source_family_catalog": 322,
+      "spacex": 1,
+      "tesla": 1,
+      "un_population_division": 1,
+      "usda_ers": 2,
+      "who": 1,
+      "worldbank": 218
+    },
+    "catalog_source_family_counts": {
+      "official": 16,
+      "official_statistics": 217,
+      "reference": 322,
+      "scholarly": 145
+    },
+    "request_count": 260,
+    "request_error_count": 0,
+    "request_with_results_count": 260,
+    "result_count": 780,
+    "result_provider_counts": {
+      "cdc": 24,
+      "nfl": 8,
+      "nist_usno": 16,
+      "openalex": 320,
+      "source_family_catalog": 240,
+      "un_population_division": 4,
+      "usda_ers": 28,
+      "who": 12,
+      "worldbank": 128
+    },
+    "result_source_family_counts": {
+      "official": 92,
+      "official_statistics": 128,
+      "reference": 240,
+      "scholarly": 320
+    },
+    "source_document_count": 700
+  },
+  "workflow": "source_family_citation_search_adapter"
+}
