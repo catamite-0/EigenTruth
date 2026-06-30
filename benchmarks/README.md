@@ -7993,6 +7993,72 @@ python benchmarks/enrich_product_trace_triple_audit.py \
   --compact-json
 ```
 
+Use `enrich_product_trace_runtime_evidence.py` when existing full traces already
+carry verifier results but lack the bounded summaries needed by the
+world-model, context-sensitivity, and counterfactual-robustness runtime drift
+gates. The workflow attaches local deterministic sidecars from calculator and
+structured-QA metadata, records its limitations in verifier metadata, and does
+not call network retrieval, vector stores, or LLMs. For the current SmolLM2
+action-payload compatibility traces, `8/12` traces contain verifier results;
+the enrichment therefore uses `0.66` participating-trace gates while keeping
+coverage, trace-gap, pass-rate, flip-success, and false-invariance gates
+strict:
+
+```bash
+python benchmarks/enrich_product_trace_runtime_evidence.py \
+  --trace-glob 'artifacts/smollm2_product_trace_action_payload_compat_v0/traces/**/*.json' \
+  --output-dir artifacts/smollm2_product_trace_runtime_evidence_enrichment_v0 \
+  --registry artifacts/smollm2_product_trace_runtime_evidence_enrichment_v0/artifact-registry.json \
+  --name smollm2-product-trace-runtime-evidence \
+  --version 0.1 \
+  --min-world-model-participating-trace-rate 0.66 \
+  --min-context-sensitivity-participating-trace-rate 0.66 \
+  --min-counterfactual-robustness-participating-trace-rate 0.66 \
+  --compact-json
+```
+
+Replay the enriched traces through `run_product_runtime_baseline.py` with
+`--trace-scan-workers` when the trace set is large enough to benefit from
+bounded parallel scanning, then compare baseline/current with the same
+product-runtime drift gates used by the prior release candidate plus the new
+trace-level runtime-evidence gates:
+
+```bash
+TRACE_ARGS=$(find artifacts/smollm2_product_trace_runtime_evidence_enrichment_v0/traces -name '*.json' | sort | sed 's#^#--trace #')
+
+python benchmarks/run_product_runtime_baseline.py $TRACE_ARGS \
+  --json artifacts/smollm2_product_runtime_drift_v1_12_runtime_evidence_enriched/runtime-baseline/product-runtime-baseline.json \
+  --artifact-manifest artifacts/smollm2_product_runtime_drift_v1_12_runtime_evidence_enriched/runtime-baseline/artifact-manifest.json \
+  --promotion-contract artifacts/smollm2_product_promotion_evidence_handoff_v1_6_frontier_v3/product-promotion-contract-evidence-handoff.json \
+  --trace-scan-workers 4 \
+  --compact-json
+
+python benchmarks/compare_product_runtime_baselines.py \
+  --baseline artifacts/smollm2_product_runtime_drift_v1_12_runtime_evidence_enriched/runtime-baseline/product-runtime-baseline.json \
+  --current artifacts/smollm2_product_runtime_drift_v1_12_runtime_evidence_enriched/runtime-current/product-runtime-baseline.json \
+  --json artifacts/smollm2_product_runtime_drift_v1_12_runtime_evidence_enriched/product-runtime-drift.json \
+  --artifact-manifest artifacts/smollm2_product_runtime_drift_v1_12_runtime_evidence_enriched/artifact-manifest.json \
+  --min-current-trace-count 12 \
+  --min-world-model-participating-trace-rate 0.66 \
+  --min-world-model-coverage-rate 1.0 \
+  --max-world-model-conflict-rate-increase 0.0 \
+  --max-world-model-low-agreement-rate-increase 0.0 \
+  --max-world-model-trace-gap-rate-increase 0.0 \
+  --min-context-sensitivity-participating-trace-rate 0.66 \
+  --min-context-sensitivity-coverage-rate 1.0 \
+  --max-context-sensitivity-flagged-result-rate-increase 0.0 \
+  --max-context-sensitivity-trace-gap-rate-increase 0.0 \
+  --max-context-sensitivity-max-flagged-rate-increase 0.0 \
+  --max-context-sensitivity-max-ratio-increase 0.0 \
+  --min-counterfactual-robustness-participating-trace-rate 0.66 \
+  --min-counterfactual-robustness-coverage-rate 1.0 \
+  --min-counterfactual-robustness-pass-rate 1.0 \
+  --min-counterfactual-robustness-flip-success-rate 1.0 \
+  --max-counterfactual-robustness-false-invariance-rate-increase 0.0 \
+  --max-counterfactual-robustness-trace-gap-rate-increase 0.0 \
+  --compact-json
+```
+
 When a saved `ProductRuntimeBudgetPolicy` is supplied with
 `--runtime-budget-policy` or `--runtime-budget-policy-key`, the current baseline
 summary is also checked against the reusable budget using p95/aggregate metrics. When a

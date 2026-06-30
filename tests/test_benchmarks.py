@@ -51515,3 +51515,176 @@ def test_product_trace_triple_audit_enrichment_rejects_bounded_trace(tmp_path):
                 output_dir=tmp_path / "triple-audit",
             )
         )
+
+
+def test_product_trace_runtime_evidence_enrichment_promotes_local_sidecars(tmp_path):
+    module = importlib.import_module("benchmarks.enrich_product_trace_runtime_evidence")
+    from eigentruth.control import product_runtime_metrics
+    from eigentruth.registry import ArtifactRegistry, load_and_verify_artifact_manifest
+
+    trace_path = tmp_path / "trace.json"
+    output_dir = tmp_path / "runtime-evidence"
+    registry_path = tmp_path / "registry.json"
+    trace_path.write_text(
+        json.dumps({
+            "request_id": "req-runtime-evidence",
+            "claims": [
+                {
+                    "claim_id": "calc",
+                    "text": "2 + 2 = 5.",
+                    "metadata": {"has_number": True},
+                },
+                {
+                    "claim_id": "fact",
+                    "text": "Paris is the capital of France.",
+                    "metadata": {},
+                },
+            ],
+            "verification_results": [
+                {
+                    "status": "refuted",
+                    "confidence": 0.99,
+                    "metadata": {
+                        "selected_route": "calculator",
+                        "selected_verifier": "CalculatorVerifier",
+                        "verifier": "calculator",
+                        "expression": "2 + 2",
+                        "expected": 5.0,
+                        "actual": 4.0,
+                    },
+                },
+                {
+                    "status": "supported",
+                    "confidence": 0.98,
+                    "metadata": {
+                        "selected_route": "structured_qa",
+                        "selected_verifier": "InMemoryVerifier",
+                        "key": "paris is the capital of france",
+                    },
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.build_product_trace_runtime_evidence_enrichment(
+        module.ProductTraceRuntimeEvidenceEnrichmentConfig(
+            trace_paths=(trace_path,),
+            output_dir=output_dir,
+            registry_path=registry_path,
+            name="trace-runtime-evidence-smoke",
+            version="0.1",
+        )
+    )
+    enriched_path = Path(payload["traces"][0]["output_path"])
+    enriched = json.loads(enriched_path.read_text(encoding="utf-8"))
+    metrics = product_runtime_metrics(enriched)
+    registry_record = ArtifactRegistry.load_json(registry_path).get(
+        "report:trace-runtime-evidence-smoke:0.1",
+    )
+
+    assert payload["status"] == "promote"
+    assert payload["summary"]["world_model"]["coverage_rate"] == pytest.approx(1.0)
+    assert payload["summary"]["world_model"]["conflict_rate"] == pytest.approx(0.5)
+    assert payload["summary"]["context_sensitivity"]["flagged_result_rate"] == pytest.approx(0.0)
+    assert payload["summary"]["counterfactual_robustness"]["pass_rate"] == pytest.approx(1.0)
+    assert payload["summary"]["counterfactual_robustness"]["false_invariance_rate"] == (
+        pytest.approx(0.0)
+    )
+    assert enriched["summaries"]["world_model"]["trace_gap_rate"] == pytest.approx(0.0)
+    assert enriched["summaries"]["context_sensitivity"]["max_context_sensitivity_ratio"] == (
+        pytest.approx(1.0)
+    )
+    assert enriched["summaries"]["counterfactual_robustness"]["flip_success_rate"] == (
+        pytest.approx(1.0)
+    )
+    assert enriched["summaries"]["counterfactual_robustness"]["counts_by_probe_type"] == {
+        "calculation_expected_value_flip": 1,
+        "local_fact_status_flip": 1,
+    }
+    assert enriched["metadata"]["trace_corpus"]["world_model_summary"]["world_model_total"] == 2
+    assert (
+        enriched["verification_results"][0]["metadata"]["world_model"]
+        == "DeterministicCalculatorWorldModelAdapter"
+    )
+    assert (
+        enriched["verification_results"][1]["metadata"]["counterfactual_probe_type"]
+        == "local_fact_status_flip"
+    )
+    assert metrics["world_model_source"] == "bounded_summary"
+    assert metrics["world_model_conflict_rate"] == pytest.approx(0.5)
+    assert metrics["context_sensitivity_flagged_result_rate"] == pytest.approx(0.0)
+    assert metrics["counterfactual_robustness_flip_success_rate"] == pytest.approx(1.0)
+    assert payload["artifact_manifest_summary"]["missing_count"] == 0
+    assert load_and_verify_artifact_manifest(payload["paths"]["artifact_manifest"]).passed
+    assert registry_record.metadata["workflow"] == "product_trace_runtime_evidence_enrichment"
+    assert registry_record.metadata["counterfactual_robustness_pass_rate"] == pytest.approx(1.0)
+
+
+def test_product_trace_runtime_evidence_enrichment_cli_accepts_trace_glob(tmp_path, capsys):
+    module = importlib.import_module("benchmarks.enrich_product_trace_runtime_evidence")
+
+    traces_dir = tmp_path / "traces"
+    traces_dir.mkdir()
+    for index in range(2):
+        (traces_dir / f"trace-{index}.json").write_text(
+            json.dumps({
+                "request_id": f"req-{index}",
+                "claims": [
+                    {
+                        "claim_id": f"c{index}",
+                        "text": "Paris is the capital of France.",
+                        "metadata": {},
+                    }
+                ],
+                "verification_results": [
+                    {
+                        "status": "supported",
+                        "metadata": {
+                            "selected_route": "structured_qa",
+                            "selected_verifier": "InMemoryVerifier",
+                            "key": "paris is the capital of france",
+                        },
+                    }
+                ],
+            }),
+            encoding="utf-8",
+        )
+    output_dir = tmp_path / "runtime-evidence"
+
+    assert module.main([
+        "--trace-glob",
+        str(traces_dir / "*.json"),
+        "--output-dir",
+        str(output_dir),
+        "--compact-json",
+    ]) == 0
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+
+    assert payload["status"] == "promote"
+    assert payload["summary"]["trace_count"] == 2
+    assert payload["summary"]["world_model"]["participating_trace_rate"] == pytest.approx(1.0)
+    assert len(list((output_dir / "traces").glob("*.json"))) == 2
+
+
+def test_product_trace_runtime_evidence_enrichment_rejects_bounded_trace(tmp_path):
+    module = importlib.import_module("benchmarks.enrich_product_trace_runtime_evidence")
+
+    trace_path = tmp_path / "bounded-trace.json"
+    trace_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "trace_format": "bounded_product_trace",
+            "request_id": "req-bounded",
+        }),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="bounded ProductTrace telemetry payloads"):
+        module.build_product_trace_runtime_evidence_enrichment(
+            module.ProductTraceRuntimeEvidenceEnrichmentConfig(
+                trace_paths=(trace_path,),
+                output_dir=tmp_path / "runtime-evidence",
+            )
+        )

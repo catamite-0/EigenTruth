@@ -7978,6 +7978,18 @@
       "name": "frontier-audit-evidence-gap-plan-v9",
       "path": "artifacts/frontier-audit-release-candidate-v9/evidence-gap-plan.json",
       "version": "0.9"
+    },
+    {
+      "artifact_type": "evidence_gap_plan",
+      "metadata": {
+        "action_count": 5,
+        "gap_count": 10,
+        "source": "artifacts/frontier-audit-release-candidate-v10/frontier-audit-comparison.json",
+        "status": "needs_evidence"
+      },
+      "name": "frontier-audit-evidence-gap-plan",
+      "path": "artifacts/frontier-audit-release-candidate-v10/evidence-gap-plan.json",
+      "version": "0.10"
     }
   ],
   "schema_version": 1
