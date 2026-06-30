@@ -43186,6 +43186,7 @@ def test_plan_blind_spot_evidence_expansion_builds_collection_targets(tmp_path):
 
     blind_spots_path = tmp_path / "blind-spots.json"
     comparison_path = tmp_path / "query-sweep-comparison.json"
+    query_sweep_path = tmp_path / "query-sweep-gap-analysis.json"
     output_path = tmp_path / "evidence-expansion-plan.json"
     manifest_path = tmp_path / "artifact-manifest.json"
     registry_path = tmp_path / "registry.json"
@@ -43236,10 +43237,50 @@ def test_plan_blind_spot_evidence_expansion_builds_collection_targets(tmp_path):
         }),
         encoding="utf-8",
     )
+    query_sweep_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "blind_spot_retrieval_query_sweep",
+            "status": "complete",
+            "summary": {
+                "best_strategy": "question_overlap_0p65",
+                "best_passing_strategy": None,
+                "best_blind_refuted_count": 1,
+                "best_passing_blind_refuted_count": None,
+            },
+            "strategies": [
+                {
+                    "key": "question_overlap_0p65",
+                    "gap_analysis": {
+                        "summary": {
+                            "false_negative_count": 301,
+                            "false_negative_rate": 0.98,
+                            "false_positive_count": 5,
+                            "false_positive_rate": 0.02,
+                            "records_with_retrieval_hits": 45,
+                            "records_with_retrieval_hit_rate": 0.08,
+                            "records_using_retrieval": 45,
+                            "records_using_retrieval_rate": 0.08,
+                        },
+                        "gap_buckets": {
+                            "no_retrieval_hits": {"count": 511},
+                            "false_negative": {"count": 15},
+                            "false_positive": {"count": 5},
+                        },
+                        "top_hit_sources": [
+                            {"value": "openalex:https://openalex.org/W2301599595", "count": 39}
+                        ],
+                    },
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
 
     payload = module.run(
         blind_spots_path=blind_spots_path,
         provenance_comparison_path=comparison_path,
+        query_sweep_path=query_sweep_path,
         output_path=output_path,
         artifact_manifest_path=manifest_path,
         registry_path=registry_path,
@@ -43254,18 +43295,33 @@ def test_plan_blind_spot_evidence_expansion_builds_collection_targets(tmp_path):
 
     assert payload["status"] == "needs_evidence_collection"
     assert payload["source"]["provenance_comparison_status"] == "blocked"
+    assert payload["source"]["query_sweep_path"] == str(query_sweep_path)
+    assert payload["summary"]["query_sweep_guidance"]["best_strategy"] == "question_overlap_0p65"
+    assert payload["summary"]["query_sweep_guidance"]["dominant_gap_bucket"] == "no_retrieval_hits"
     assert payload["summary"]["target_count"] == 3
     assert payload["summary"]["priority_counts"]["high"] == 2
     assert payload["summary"]["recommended_route_counts"]["structured_fact"] >= 2
+    assert payload["summary"]["recommended_route_counts"]["claim_evidence_alignment"] == 3
     assert payload["summary"]["collection_task_counts"]["wikidata_entity_resolution"] == 3
+    assert payload["summary"]["collection_task_counts"]["claim_evidence_alignment_audit"] == 3
     assert "Alpha Syndrome" in by_index[7]["entity_candidates"]
+    assert "claim_evidence_alignment" in by_index[7]["recommended_routes"]
+    assert by_index[7]["query_sweep_gap_guidance"]["recommended_alignment_actions"] == (
+        "claim_evidence_alignment",
+        "query_refinement",
+        "source_document_fact_extraction",
+        "negative_control_alignment_audit",
+    )
     assert "counterfactual_negation" in by_index[8]["recommended_routes"]
     assert "calculator" in by_index[9]["recommended_routes"]
     assert by_index[9]["wikidata_property_hints"][-1] == "point_in_time:P585"
     assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert json.loads(manifest_path.read_text(encoding="utf-8"))["artifacts"]["query_sweep"]["exists"] is True
     assert record.metadata["workflow"] == "blind_spot_evidence_expansion_plan"
     assert record.metadata["status"] == "needs_evidence_collection"
     assert record.metadata["target_count"] == 3
+    assert record.metadata["query_sweep_best_strategy"] == "question_overlap_0p65"
+    assert record.metadata["query_sweep_dominant_gap_bucket"] == "no_retrieval_hits"
     assert record.metadata["suite"] == "unit"
 
 
@@ -43352,10 +43408,25 @@ def test_build_blind_spot_evidence_collection_corpus_compiles_requests(tmp_path)
                     "question_type": "definition",
                     "question": "What is Alpha Syndrome?",
                     "answer": "A moon.",
-                    "recommended_routes": ["structured_fact", "structured_qa", "retrieval_citation"],
+                    "recommended_routes": [
+                        "structured_fact",
+                        "structured_qa",
+                        "retrieval_citation",
+                        "claim_evidence_alignment",
+                        "source_document_fact_extraction",
+                    ],
                     "wikidata_property_hints": ["description", "instance_of:P31", "official_website:P856"],
                     "entity_candidates": ["Alpha Syndrome"],
                     "query_seeds": ["Alpha Syndrome A moon", "What is Alpha Syndrome"],
+                    "query_sweep_gap_guidance": {
+                        "best_strategy": "question_overlap_0p65",
+                        "dominant_gap_bucket": "no_retrieval_hits",
+                        "top_hit_sources": ["openalex:https://openalex.org/W2301599595"],
+                        "recommended_alignment_actions": [
+                            "claim_evidence_alignment",
+                            "source_document_fact_extraction",
+                        ],
+                    },
                 },
                 {
                     "record_index": 8,
@@ -43406,17 +43477,25 @@ def test_build_blind_spot_evidence_collection_corpus_compiles_requests(tmp_path)
     wikidata_requests = request_buckets["wikidata_entity_property"]
     counterfactual_requests = request_buckets["counterfactual_probe"]
     rule_requests = request_buckets["world_model_or_calculator_rule"]
+    alignment_requests = request_buckets["alignment_audit"]
     property_ids = {item["property_id"] for item in wikidata_requests if item["property_id"]}
 
     assert payload["status"] == "ready_for_collection"
     assert payload["summary"]["target_count"] == 3
     assert payload["summary"]["request_counts"]["wikidata_entity_property"] == 7
     assert payload["summary"]["request_counts"]["external_citation"] == 2
+    assert payload["summary"]["request_counts"]["alignment_audit"] == 1
     assert payload["summary"]["source_discovery_document_count"] == 9
     assert {"P31", "P170", "P1082"}.issubset(property_ids)
     assert any(item["probe_type"] == "negation" for item in counterfactual_requests)
     assert any(item["probe_type"] == "quantity" for item in counterfactual_requests)
     assert rule_requests[0]["rule_family"] == "quantity_or_arithmetic"
+    assert alignment_requests[0]["usage"] == "alignment_audit_only"
+    assert alignment_requests[0]["alignment_actions"] == (
+        "claim_evidence_alignment",
+        "source_document_fact_extraction",
+    )
+    assert alignment_requests[0]["query_sweep_best_strategy"] == "question_overlap_0p65"
     assert all("label" not in target for target in payload["targets"])
     assert all(
         "label" not in request
@@ -43428,6 +43507,7 @@ def test_build_blind_spot_evidence_collection_corpus_compiles_requests(tmp_path)
     assert record.metadata["workflow"] == "blind_spot_evidence_collection_corpus"
     assert record.metadata["target_count"] == 3
     assert record.metadata["total_request_count"] == payload["summary"]["total_request_count"]
+    assert record.metadata["alignment_request_count"] == 1
     assert record.metadata["suite"] == "unit"
 
 

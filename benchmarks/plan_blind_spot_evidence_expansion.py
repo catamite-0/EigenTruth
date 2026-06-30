@@ -156,6 +156,7 @@ def build_blind_spot_evidence_expansion_plan(
     *,
     blind_spots_path: str | Path,
     provenance_comparison_path: str | Path | None = None,
+    query_sweep_path: str | Path | None = None,
     max_entity_candidates: int = DEFAULT_MAX_ENTITY_CANDIDATES,
     max_query_seeds: int = DEFAULT_MAX_QUERY_SEEDS,
     metadata: Mapping[str, Any] | None = None,
@@ -168,15 +169,20 @@ def build_blind_spot_evidence_expansion_plan(
     if int(max_query_seeds) <= 0:
         raise ValueError("max_query_seeds must be positive.")
     comparison = None if provenance_comparison_path is None else _load_json_object(provenance_comparison_path)
+    query_sweep = None if query_sweep_path is None else _load_json_object(query_sweep_path)
+    gap_guidance = None if query_sweep is None else _query_sweep_gap_guidance(query_sweep)
     targets = tuple(
         _record_target(
             record,
             max_entity_candidates=int(max_entity_candidates),
             max_query_seeds=int(max_query_seeds),
+            query_sweep_gap_guidance=gap_guidance,
         )
         for record in records
     )
     summary = _summary(targets)
+    if gap_guidance is not None:
+        summary["query_sweep_guidance"] = gap_guidance
     status = _status(summary=summary, comparison=comparison)
     return {
         "schema_version": 1,
@@ -189,6 +195,9 @@ def build_blind_spot_evidence_expansion_plan(
                 None if provenance_comparison_path is None else str(provenance_comparison_path)
             ),
             "provenance_comparison_status": None if comparison is None else comparison.get("status"),
+            "query_sweep_path": None if query_sweep_path is None else str(query_sweep_path),
+            "query_sweep_workflow": None if query_sweep is None else query_sweep.get("workflow"),
+            "query_sweep_status": None if query_sweep is None else query_sweep.get("status"),
         },
         "config": {
             "max_entity_candidates": int(max_entity_candidates),
@@ -206,6 +215,7 @@ def run(
     blind_spots_path: str | Path,
     output_path: str | Path,
     provenance_comparison_path: str | Path | None = None,
+    query_sweep_path: str | Path | None = None,
     max_entity_candidates: int = DEFAULT_MAX_ENTITY_CANDIDATES,
     max_query_seeds: int = DEFAULT_MAX_QUERY_SEEDS,
     artifact_manifest_path: str | Path | None = None,
@@ -221,6 +231,7 @@ def run(
     report = build_blind_spot_evidence_expansion_plan(
         blind_spots_path=blind_spots_path,
         provenance_comparison_path=provenance_comparison_path,
+        query_sweep_path=query_sweep_path,
         max_entity_candidates=max_entity_candidates,
         max_query_seeds=max_query_seeds,
         metadata=metadata,
@@ -235,6 +246,7 @@ def run(
             "blind_spot_evidence_expansion_plan": output,
             "blind_spots": blind_spots_path,
             "provenance_comparison": provenance_comparison_path,
+            "query_sweep": query_sweep_path,
         }
         manifest = build_artifact_manifest(
             artifacts,
@@ -246,6 +258,18 @@ def run(
                 "high_priority_count": report["summary"]["priority_counts"].get("high", 0),
                 "top_question_type": _first_key(report["summary"]["question_type_counts"]),
                 "top_route": _first_key(report["summary"]["recommended_route_counts"]),
+                "query_sweep_best_strategy": _nested_value(
+                    report,
+                    "summary",
+                    "query_sweep_guidance",
+                    "best_strategy",
+                ),
+                "query_sweep_dominant_gap_bucket": _nested_value(
+                    report,
+                    "summary",
+                    "query_sweep_guidance",
+                    "dominant_gap_bucket",
+                ),
             },
         )
         _write_json(manifest_path, manifest, compact=compact_json)
@@ -262,6 +286,18 @@ def run(
                 "high_priority_count": report["summary"]["priority_counts"].get("high", 0),
                 "top_question_type": _first_key(report["summary"]["question_type_counts"]),
                 "top_route": _first_key(report["summary"]["recommended_route_counts"]),
+                "query_sweep_best_strategy": _nested_value(
+                    report,
+                    "summary",
+                    "query_sweep_guidance",
+                    "best_strategy",
+                ),
+                "query_sweep_dominant_gap_bucket": _nested_value(
+                    report,
+                    "summary",
+                    "query_sweep_guidance",
+                    "dominant_gap_bucket",
+                ),
                 "artifact_manifest": None if artifact_manifest_path is None else str(artifact_manifest_path),
                 **dict(metadata or {}),
             },
@@ -274,6 +310,7 @@ def _record_target(
     *,
     max_entity_candidates: int,
     max_query_seeds: int,
+    query_sweep_gap_guidance: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     question = str(record.get("question", "")).strip()
     answer = str(record.get("answer", "")).strip()
@@ -282,6 +319,7 @@ def _record_target(
     features = _mapping(record.get("features"))
     answer_features = _mapping(record.get("answer_features"))
     routes = _routes(question_type, features=features, answer_features=answer_features)
+    routes = _routes_with_gap_guidance(routes, query_sweep_gap_guidance=query_sweep_gap_guidance)
     property_hints = _property_hints(question_type, features=features, answer_features=answer_features)
     entities = _entity_candidates(question, answer, max_items=max_entity_candidates)
     query_seeds = _query_seeds(
@@ -306,6 +344,7 @@ def _record_target(
             property_hints=property_hints,
             entities=entities,
             query_seeds=query_seeds,
+            query_sweep_gap_guidance=query_sweep_gap_guidance,
         ),
         "features": {
             "claim": {key: bool(value) for key, value in features.items()},
@@ -314,6 +353,7 @@ def _record_target(
         "question": question,
         "answer": answer,
         "text": text,
+        "query_sweep_gap_guidance": query_sweep_gap_guidance,
     }
 
 
@@ -392,6 +432,7 @@ def _collection_tasks(
     property_hints: Sequence[str],
     entities: Sequence[str],
     query_seeds: Sequence[str],
+    query_sweep_gap_guidance: Mapping[str, Any] | None = None,
 ) -> tuple[dict[str, Any], ...]:
     tasks = [
         {
@@ -425,6 +466,36 @@ def _collection_tasks(
             "priority": "low" if "calculator" not in routes else "medium",
             "reason": "route non-lookup claims through explicit rule/calculation checks",
         })
+    if query_sweep_gap_guidance:
+        actions = set(str(item) for item in _sequence(query_sweep_gap_guidance.get("recommended_alignment_actions")))
+        if "claim_evidence_alignment" in actions:
+            tasks.append({
+                "task": "claim_evidence_alignment_audit",
+                "priority": "high",
+                "alignment_actions": tuple(sorted(actions)),
+                "dominant_gap_bucket": query_sweep_gap_guidance.get("dominant_gap_bucket"),
+                "reason": "align subject, property, value, and evidence spans before verifier rerun",
+            })
+        if "source_document_fact_extraction" in actions:
+            tasks.append({
+                "task": "source_document_fact_extraction",
+                "priority": "medium",
+                "top_hit_sources": tuple(query_sweep_gap_guidance.get("top_hit_sources", ())),
+                "reason": "convert broad retrieved documents into source-backed structured facts",
+            })
+        if "query_refinement" in actions:
+            tasks.append({
+                "task": "query_refinement",
+                "priority": "medium",
+                "query_seeds": tuple(query_seeds),
+                "reason": "increase claim-specific retrieval before another route-quality sweep",
+            })
+        if "negative_control_alignment_audit" in actions:
+            tasks.append({
+                "task": "negative_control_alignment_audit",
+                "priority": "high",
+                "reason": "inspect true-label support and false-positive behavior before promotion",
+            })
     return tuple(tasks)
 
 
@@ -473,6 +544,8 @@ def _collection_plan(targets: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
                 "record_index": target.get("record_index"),
                 "question_type": target.get("question_type"),
                 "priority": task.get("priority"),
+                "dominant_gap_bucket": task.get("dominant_gap_bucket"),
+                "alignment_actions": tuple(task.get("alignment_actions", ())),
                 "entities": tuple(target.get("entity_candidates", ())),
                 "property_hints": tuple(target.get("wikidata_property_hints", ())),
                 "query_seeds": tuple(target.get("query_seeds", ())),
@@ -576,6 +649,105 @@ def _load_json_object(path: str | Path) -> dict[str, Any]:
     return dict(data)
 
 
+def _query_sweep_gap_guidance(query_sweep: Mapping[str, Any]) -> dict[str, Any]:
+    summary = _mapping(query_sweep.get("summary"))
+    strategies = tuple(
+        dict(item)
+        for item in _sequence(query_sweep.get("strategies"))
+        if isinstance(item, Mapping)
+    )
+    best_strategy = _optional_str(summary.get("best_passing_strategy")) or _optional_str(summary.get("best_strategy"))
+    selected = _strategy_by_key(str(best_strategy or ""), strategies) if best_strategy else {}
+    gap_analysis = _mapping(selected.get("gap_analysis"))
+    gap_summary = _mapping(gap_analysis.get("summary"))
+    gap_bucket_counts = _gap_bucket_counts(gap_analysis)
+    dominant_gap_bucket = _first_key(gap_bucket_counts)
+    false_negative_rate = _optional_float(gap_summary.get("false_negative_rate"))
+    false_positive_count = _optional_int(gap_summary.get("false_positive_count")) or 0
+    retrieval_hit_rate = _optional_float(gap_summary.get("records_with_retrieval_hit_rate"))
+    top_hit_sources = tuple(
+        str(item.get("value"))
+        for item in _sequence(gap_analysis.get("top_hit_sources"))
+        if isinstance(item, Mapping) and item.get("value")
+    )[:5]
+    actions = _alignment_actions(
+        false_negative_rate=false_negative_rate,
+        false_positive_count=false_positive_count,
+        retrieval_hit_rate=retrieval_hit_rate,
+        top_hit_sources=top_hit_sources,
+    )
+    return {
+        "best_strategy": best_strategy,
+        "best_passing_strategy": _optional_str(summary.get("best_passing_strategy")),
+        "best_blind_refuted_count": _optional_int(summary.get("best_blind_refuted_count")),
+        "best_passing_blind_refuted_count": _optional_int(summary.get("best_passing_blind_refuted_count")),
+        "dominant_gap_bucket": dominant_gap_bucket,
+        "gap_bucket_counts": gap_bucket_counts,
+        "false_negative_count": _optional_int(gap_summary.get("false_negative_count")),
+        "false_negative_rate": false_negative_rate,
+        "false_positive_count": false_positive_count,
+        "false_positive_rate": _optional_float(gap_summary.get("false_positive_rate")),
+        "records_with_retrieval_hits": _optional_int(gap_summary.get("records_with_retrieval_hits")),
+        "records_with_retrieval_hit_rate": retrieval_hit_rate,
+        "records_using_retrieval": _optional_int(gap_summary.get("records_using_retrieval")),
+        "records_using_retrieval_rate": _optional_float(gap_summary.get("records_using_retrieval_rate")),
+        "top_hit_sources": top_hit_sources,
+        "recommended_alignment_actions": actions,
+    }
+
+
+def _strategy_by_key(key: str, strategies: Sequence[Mapping[str, Any]]) -> Mapping[str, Any]:
+    for strategy in strategies:
+        if str(strategy.get("key")) == key:
+            return strategy
+    return {}
+
+
+def _gap_bucket_counts(gap_analysis: Mapping[str, Any]) -> dict[str, int]:
+    counts: Counter[str] = Counter()
+    buckets = _mapping(gap_analysis.get("gap_buckets"))
+    for name, bucket in buckets.items():
+        if isinstance(bucket, Mapping):
+            counts[str(name)] = _optional_int(bucket.get("count")) or 0
+    return _sorted_counter(counts)
+
+
+def _alignment_actions(
+    *,
+    false_negative_rate: float | None,
+    false_positive_count: int,
+    retrieval_hit_rate: float | None,
+    top_hit_sources: Sequence[str],
+) -> tuple[str, ...]:
+    actions: list[str] = []
+    if false_negative_rate is not None and false_negative_rate >= 0.5:
+        actions.append("claim_evidence_alignment")
+    if retrieval_hit_rate is not None and retrieval_hit_rate < 0.25:
+        actions.append("query_refinement")
+    if top_hit_sources:
+        actions.append("source_document_fact_extraction")
+    if false_positive_count > 0:
+        actions.append("negative_control_alignment_audit")
+    if not actions:
+        actions.append("route_quality_monitoring")
+    return tuple(dict.fromkeys(actions))
+
+
+def _routes_with_gap_guidance(
+    routes: Sequence[str],
+    *,
+    query_sweep_gap_guidance: Mapping[str, Any] | None,
+) -> tuple[str, ...]:
+    result = list(routes)
+    if query_sweep_gap_guidance:
+        result.extend(
+            str(item)
+            for item in _sequence(query_sweep_gap_guidance.get("recommended_alignment_actions"))
+            if str(item) != "route_quality_monitoring"
+        )
+    return tuple(dict.fromkeys(result))
+
+
 def _write_json(path: str | Path, payload: Mapping[str, Any], *, compact: bool = False) -> None:
     output = Path(path)
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -604,6 +776,34 @@ def _first_key(mapping: Mapping[str, Any]) -> str | None:
     return next(iter(mapping), None)
 
 
+def _nested_value(payload: Mapping[str, Any], *keys: str) -> Any:
+    current: Any = payload
+    for key in keys:
+        if not isinstance(current, Mapping):
+            return None
+        current = current.get(key)
+    return current
+
+
+def _optional_str(value: Any) -> str | None:
+    text = str(value).strip() if value is not None else ""
+    return text or None
+
+
+def _optional_int(value: Any) -> int | None:
+    try:
+        return None if value is None else int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _optional_float(value: Any) -> float | None:
+    try:
+        return None if value is None else float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _parse_metadata(values: Sequence[str]) -> dict[str, str]:
     metadata: dict[str, str] = {}
     for value in values:
@@ -621,6 +821,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--blind-spots", required=True)
     parser.add_argument("--provenance-comparison", default=None)
+    parser.add_argument("--query-sweep", default=None)
     parser.add_argument("--max-entity-candidates", type=int, default=DEFAULT_MAX_ENTITY_CANDIDATES)
     parser.add_argument("--max-query-seeds", type=int, default=DEFAULT_MAX_QUERY_SEEDS)
     parser.add_argument("--json", required=True)
@@ -634,6 +835,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     payload = run(
         blind_spots_path=args.blind_spots,
         provenance_comparison_path=args.provenance_comparison,
+        query_sweep_path=args.query_sweep,
         output_path=args.json,
         max_entity_candidates=args.max_entity_candidates,
         max_query_seeds=args.max_query_seeds,

@@ -1584,7 +1584,10 @@ Turns blocked blind-spot coverage into an external evidence collection plan. It
 does not fetch new data and does not promote a route. Instead, it maps each
 blind spot to likely evidence families: structured-fact properties,
 structured-QA/citation retrieval, counterfactual probes, and world-model or
-calculator checks.
+calculator checks. When `--query-sweep` points at a report with embedded
+`gap_analysis`, the planner also emits gap-informed alignment actions such as
+claim-evidence alignment, source-document fact extraction, query refinement,
+and negative-control audits.
 
 ```bash
 OUT=artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-evidence-expansion-plan
@@ -1592,6 +1595,7 @@ OUT=artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-evidence-expansion-plan
 python benchmarks/plan_blind_spot_evidence_expansion.py \
   --blind-spots artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
   --provenance-comparison artifacts/truthfulqa-frontier-smollm2-l80-query-sweep-provenance-comparison/query-sweep-provenance-comparison.json \
+  --query-sweep artifacts/frontier-release-evidence/unresolved-seeded-news-query-sweep-gap-analysis-v1/blind-spot-query-sweep-gap-analysis.json \
   --json "$OUT/blind-spot-evidence-expansion-plan.json" \
   --artifact-manifest "$OUT/artifact-manifest.json" \
   --registry artifacts/local-release-registry.json \
@@ -1620,12 +1624,24 @@ The planner filters generic single-token entity candidates such as `Son`,
 Wikidata/search tasks receive cleaner entity seeds while retaining useful
 question-keyword phrases.
 
+The gap-informed frontier v4 alignment plan at
+`artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-expansion-plan-v1/evidence-expansion-plan.json`
+consumes the seeded-news query-sweep gap report directly. It keeps status
+`needs_evidence_collection`, covers all `89` blind spots, and records
+`best_strategy=question_overlap_0p65`, `best_passing_strategy=null`,
+`dominant_gap_bucket=no_retrieval_hits`, `301/306` false records still missed,
+and only `45/556` verification records using retrieval. The generated worklist
+therefore adds `claim_evidence_alignment`, `query_refinement`,
+`source_document_fact_extraction`, and `negative_control_alignment_audit` to
+all `89` targets before another verifier sweep.
+
 ## `build_blind_spot_evidence_collection_corpus.py`
 
 Compiles an evidence expansion plan into source-discovery request batches. This
 output is intentionally not verifier evidence: it is the executable queue for
 Wikidata/entity-property lookup, external citation retrieval, counterfactual
-probe generation, and deterministic world-model/calculator rule authoring.
+probe generation, deterministic world-model/calculator rule authoring, and
+gap-informed claim-evidence alignment audits.
 
 ```bash
 OUT=artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-evidence-collection-corpus
@@ -1656,6 +1672,15 @@ requests, `260` citation requests, `47` counterfactual probes, and `26`
 world-model/calculator-rule authoring requests. Its manifest verification
 passes and the registry records it as
 `report:smollm2-l80-blind-spot-evidence-collection-corpus:0.1`.
+
+The corresponding gap-informed alignment corpus at
+`artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-collection-corpus-v1/evidence-collection-corpus.json`
+adds an `alignment_audit` request bucket. It covers all `89` targets and emits
+`1372` total requests: `950` Wikidata/entity-property, `260` citation, `47`
+counterfactual, `26` world-model/calculator, and `89` alignment-audit
+requests. The alignment requests remain `alignment_audit_only`; they are inputs
+for extracting subject/property/value/evidence-span triples, not verifier
+evidence.
 
 ## `fetch_blind_spot_wikidata_evidence.py`
 

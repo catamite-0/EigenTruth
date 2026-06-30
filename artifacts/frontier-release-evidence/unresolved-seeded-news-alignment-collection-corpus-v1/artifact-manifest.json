@@ -1,0 +1,37 @@
+{
+  "artifacts": {
+    "blind_spot_evidence_collection_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "evidence-collection-corpus.json",
+      "sha256": "335ce97244bd0fd359879ccf7bfa7175ef7b27cdecb2b64144a692b15fb6940a",
+      "size_bytes": 1848815
+    },
+    "blind_spot_evidence_expansion_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-seeded-news-alignment-expansion-plan-v1/evidence-expansion-plan.json",
+      "sha256": "cef5ef2536ffc66d3196c6b5f5b65b5bdbc26f874be2856408f254db8d0c1d00",
+      "size_bytes": 1080742
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "alignment_request_count": 89,
+    "citation_request_count": 260,
+    "runner": "build_blind_spot_evidence_collection_corpus",
+    "status": "ready_for_collection",
+    "target_count": 89,
+    "total_request_count": 1372,
+    "wikidata_request_count": 950
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  }
+}

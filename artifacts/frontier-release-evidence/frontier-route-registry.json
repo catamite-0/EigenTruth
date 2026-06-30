@@ -1177,6 +1177,43 @@
       "name": "smollm2-l80-frontier-v4-unresolved-seeded-news-query-sweep-gap-analysis",
       "path": "artifacts/frontier-release-evidence/unresolved-seeded-news-query-sweep-gap-analysis-v1/blind-spot-query-sweep-gap-analysis.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-expansion-plan-v1/artifact-manifest.json",
+        "high_priority_count": 65,
+        "model": "smollm2-l80",
+        "query_sweep_best_strategy": "question_overlap_0p65",
+        "query_sweep_dominant_gap_bucket": "no_retrieval_hits",
+        "source": "frontier-v4",
+        "status": "needs_evidence_collection",
+        "target_count": 89,
+        "top_question_type": "definition",
+        "top_route": "claim_evidence_alignment",
+        "workflow": "blind_spot_evidence_expansion_plan"
+      },
+      "name": "smollm2-l80-frontier-v4-unresolved-seeded-news-alignment-expansion-plan",
+      "path": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-expansion-plan-v1/evidence-expansion-plan.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "alignment_request_count": 89,
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-collection-corpus-v1/artifact-manifest.json",
+        "citation_request_count": 260,
+        "model": "smollm2-l80",
+        "source": "frontier-v4",
+        "status": "ready_for_collection",
+        "target_count": 89,
+        "total_request_count": 1372,
+        "wikidata_request_count": 950,
+        "workflow": "blind_spot_evidence_collection_corpus"
+      },
+      "name": "smollm2-l80-frontier-v4-unresolved-seeded-news-alignment-collection-corpus",
+      "path": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-collection-corpus-v1/evidence-collection-corpus.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1
