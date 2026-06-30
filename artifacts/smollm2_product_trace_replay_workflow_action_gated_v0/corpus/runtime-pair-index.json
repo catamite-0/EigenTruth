@@ -1,0 +1,100 @@
+{
+  "config": {
+    "compact_json": false,
+    "limit": null,
+    "metadata": {
+      "source": "run_product_trace_replay_workflow"
+    },
+    "redact_text": true,
+    "require_runtime_trace": true
+  },
+  "paths": {
+    "corpus_report": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/corpus/product-trace-corpus.json",
+    "traces_dir": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/corpus/traces"
+  },
+  "records": [
+    {
+      "path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/corpus/traces/audit-calculator_refuted-r0.json",
+      "request_key": "calculator_refuted-r0",
+      "runtime_profile": "audit",
+      "total_seconds": 0.000534693943336606
+    },
+    {
+      "path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/corpus/traces/audit-diagnostic_refuted-r0.json",
+      "request_key": "diagnostic_refuted-r0",
+      "runtime_profile": "audit",
+      "total_seconds": 0.0005944980075582862
+    },
+    {
+      "path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/corpus/traces/audit-low_risk_supported-r0.json",
+      "request_key": "low_risk_supported-r0",
+      "runtime_profile": "audit",
+      "total_seconds": 0.0006751170149073005
+    },
+    {
+      "path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/corpus/traces/audit-calculator_refuted-r0-2.json",
+      "request_key": "calculator_refuted-r0",
+      "runtime_profile": "audit",
+      "total_seconds": 0.00048477191012352705
+    },
+    {
+      "path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/corpus/traces/balanced-diagnostic_refuted-r0.json",
+      "request_key": "diagnostic_refuted-r0",
+      "runtime_profile": "balanced",
+      "total_seconds": 0.0005385909462347627
+    },
+    {
+      "path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/corpus/traces/latency-low_risk_supported-r0.json",
+      "request_key": "low_risk_supported-r0",
+      "runtime_profile": "latency",
+      "total_seconds": 0.00023229792714118958
+    },
+    {
+      "path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/corpus/traces/balanced-calculator_refuted-r0.json",
+      "request_key": "calculator_refuted-r0",
+      "runtime_profile": "balanced",
+      "total_seconds": 0.0005407320568338037
+    },
+    {
+      "path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/corpus/traces/balanced-diagnostic_refuted-r0-2.json",
+      "request_key": "diagnostic_refuted-r0",
+      "runtime_profile": "balanced",
+      "total_seconds": 0.0005663760239258409
+    },
+    {
+      "path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/corpus/traces/balanced-low_risk_supported-r0.json",
+      "request_key": "low_risk_supported-r0",
+      "runtime_profile": "balanced",
+      "total_seconds": 0.00024313596077263355
+    },
+    {
+      "path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/corpus/traces/latency-calculator_refuted-r0.json",
+      "request_key": "calculator_refuted-r0",
+      "runtime_profile": "latency",
+      "total_seconds": 0.0009586700471118093
+    },
+    {
+      "path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/corpus/traces/latency-diagnostic_refuted-r0.json",
+      "request_key": "diagnostic_refuted-r0",
+      "runtime_profile": "latency",
+      "total_seconds": 0.00028293405193835497
+    },
+    {
+      "path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/corpus/traces/latency-low_risk_supported-r0-2.json",
+      "request_key": "low_risk_supported-r0",
+      "runtime_profile": "latency",
+      "total_seconds": 0.000547852017916739
+    }
+  ],
+  "schema_version": 1,
+  "summary": {
+    "profile_counts": {
+      "audit": 4,
+      "balanced": 4,
+      "latency": 4
+    },
+    "record_count": 12,
+    "request_key_count": 3
+  },
+  "workflow": "product_trace_runtime_pair_index"
+}

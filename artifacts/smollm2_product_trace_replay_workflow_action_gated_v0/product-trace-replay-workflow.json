@@ -52,7 +52,7 @@
       "invalidation_reason": null,
       "partial_hit": null,
       "path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/corpus-cache.json",
-      "refresh": false,
+      "refresh": true,
       "source": "corpus_build",
       "written": true
     },
@@ -62,7 +62,7 @@
       "invalidation_reason": null,
       "partial_hit": false,
       "path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/corpus/source-cache.json",
-      "refresh": false,
+      "refresh": true,
       "source": "source_scan",
       "written": true
     },
@@ -75,7 +75,7 @@
       "invalidation_reason": null,
       "partial_hit": null,
       "path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/runtime-baseline/trace-record-cache.json",
-      "refresh": false,
+      "refresh": true,
       "source": "trace_scan",
       "written": true
     },
@@ -85,7 +85,7 @@
       "invalidation_reason": null,
       "partial_hit": null,
       "path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/selector-replay/trace-inputs.json",
-      "refresh": false,
+      "refresh": true,
       "source": "trace_scan",
       "written": true
     },
@@ -121,10 +121,10 @@
     "metadata": {},
     "promotion_contract": null,
     "redact_text": true,
-    "refresh_corpus_cache": false,
-    "refresh_corpus_source_cache": false,
-    "refresh_runtime_trace_records_cache": false,
-    "refresh_selector_trace_inputs": false,
+    "refresh_corpus_cache": true,
+    "refresh_corpus_source_cache": true,
+    "refresh_runtime_trace_records_cache": true,
+    "refresh_selector_trace_inputs": true,
     "replay_policy": "artifacts/smollm2_runtime_profile_selector_replay/runtime-profile-selector-replay-policy.json",
     "require_runtime_trace": true,
     "runtime_drift_artifact_manifest": null,
@@ -136,8 +136,28 @@
     "runtime_drift_budget_policy_key": null,
     "runtime_drift_gates": {
       "max_cache_hit_rate_drop": null,
+      "max_claim_factuality_probe_comparison_best_redline_auroc_drop": null,
+      "max_claim_factuality_probe_comparison_best_redline_margin_drop": null,
+      "max_claim_factuality_probe_comparison_best_test_label_auroc_drop": null,
+      "max_claim_factuality_probe_comparison_best_test_selective_accuracy_drop": null,
+      "max_claim_factuality_probe_comparison_best_test_selective_coverage_drop": null,
+      "max_claim_risk_localization_entity_candidate_observation_count_increase": null,
+      "max_claim_risk_localization_high_risk_claim_count_increase": null,
+      "max_claim_risk_localization_high_risk_entity_candidate_count_increase": null,
+      "max_claim_risk_localization_medium_or_high_entity_candidate_count_increase": null,
+      "max_claim_risk_localization_medium_or_high_risk_claim_count_increase": null,
+      "max_claim_risk_localization_unique_entity_candidate_count_increase": null,
+      "max_context_sensitivity_flagged_result_rate_increase": null,
+      "max_context_sensitivity_max_flagged_rate_increase": null,
+      "max_context_sensitivity_max_ratio_increase": null,
+      "max_context_sensitivity_trace_gap_rate_increase": null,
+      "max_counterfactual_robustness_false_invariance_rate_increase": null,
+      "max_counterfactual_robustness_trace_gap_rate_increase": null,
       "max_counterfactual_verification_false_invariance_rate": null,
       "max_counterfactual_verification_flip_success_count_drop": null,
+      "max_evidence_handoff_blocked_group_count": null,
+      "max_evidence_handoff_missing_metric_count": null,
+      "max_evidence_handoff_missing_metric_rate": null,
       "max_mean_attempted_route_count_delta": null,
       "max_mean_route_duration_ratio": null,
       "max_p95_route_duration_ratio": null,
@@ -154,6 +174,13 @@
       "max_product_trace_action_execution_missing_result_rate_increase": null,
       "max_product_trace_action_execution_request_id_mismatch_rate_increase": null,
       "max_product_trace_action_execution_unexpected_result_rate_increase": null,
+      "max_product_trace_trajectory_audit_error_rate_increase": null,
+      "max_product_trace_trajectory_audit_factual_rate_increase": null,
+      "max_product_trace_trajectory_audit_failed_trace_rate_increase": null,
+      "max_product_trace_trajectory_audit_logical_rate_increase": null,
+      "max_product_trace_trajectory_audit_procedural_rate_increase": null,
+      "max_product_trace_trajectory_audit_referential_rate_increase": null,
+      "max_product_trace_trajectory_audit_scope_rate_increase": null,
       "max_promotion_contract_covered_fact_max_false_supported_rate_increase": null,
       "max_promotion_contract_covered_fact_min_decision_accuracy_drop": null,
       "max_promotion_contract_covered_fact_min_false_refuted_rate_drop": null,
@@ -163,11 +190,30 @@
       "max_triple_extraction_fixture_matrix_mean_best_f1_drop": null,
       "max_triple_extraction_fixture_matrix_mean_f1_lift_drop": null,
       "max_verification_skip_rate_drop": null,
+      "max_world_model_conflict_rate_increase": null,
+      "max_world_model_low_agreement_rate_increase": null,
+      "max_world_model_trace_gap_rate_increase": null,
+      "min_claim_factuality_probe_comparison_coverage": null,
+      "min_claim_factuality_probe_comparison_manifest_verified_rate": null,
+      "min_claim_factuality_probe_comparison_model_count": null,
+      "min_claim_factuality_probe_comparison_redline_pass_rate": null,
+      "min_claim_factuality_probe_comparison_run_count": null,
+      "min_claim_risk_localization_coverage_rate": null,
+      "min_context_sensitivity_coverage_rate": null,
+      "min_context_sensitivity_participating_trace_rate": null,
+      "min_counterfactual_robustness_coverage_rate": null,
+      "min_counterfactual_robustness_flip_success_rate": null,
+      "min_counterfactual_robustness_participating_trace_rate": null,
+      "min_counterfactual_robustness_pass_rate": null,
       "min_counterfactual_verification_coverage": null,
       "min_counterfactual_verification_manifest_verified_rate": null,
       "min_counterfactual_verification_pass_rate": null,
       "min_counterfactual_verification_record_count": null,
       "min_current_trace_count": null,
+      "min_evidence_handoff_coverage": null,
+      "min_evidence_handoff_manifest_verified_rate": null,
+      "min_evidence_handoff_present_metric_rate": null,
+      "min_evidence_handoff_promoted_group_rate": null,
       "min_pre_generation_probe_comparison_coverage": null,
       "min_pre_generation_probe_comparison_manifest_verified_rate": null,
       "min_pre_generation_probe_comparison_model_count": null,
@@ -182,13 +228,15 @@
       "min_triple_claim_coverage": null,
       "min_triple_extraction_fixture_matrix_coverage": null,
       "min_triple_slot_coverage": null,
+      "min_world_model_coverage_rate": null,
+      "min_world_model_participating_trace_rate": null,
       "promotion_contract_covered_fact_property_scopes": []
     },
     "runtime_drift_report": null,
     "runtime_policy": null,
     "runtime_recommended_policy": null,
     "runtime_trace_records_cache": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/runtime-baseline/trace-record-cache.json",
-    "runtime_trace_scan_workers": 1,
+    "runtime_trace_scan_workers": 4,
     "selector_trace_inputs": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/selector-replay/trace-inputs.json",
     "strict": false,
     "trace_count": 12
@@ -328,6 +376,10 @@
       "runtime_trace_coverage": 1.0,
       "slowest_phase": "initial_verification",
       "slowest_route": "calculator",
+      "trajectory_audit_error_rate": 0.0,
+      "trajectory_audit_factual_rate": 0.25,
+      "trajectory_audit_failed_trace_rate": 0.0,
+      "trajectory_audit_procedural_rate": 0.0,
       "verification_claim_skip_rate": 0.3125,
       "verification_plan_coverage": 0.0
     },
@@ -440,33 +492,55 @@
     "trace_records_cache_path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/runtime-baseline/trace-record-cache.json",
     "trace_records_cache_source": "trace_scan",
     "trace_records_cache_written": true,
-    "trace_scan_effective_workers": 1,
-    "trace_scan_workers": 1
+    "trace_scan_effective_workers": 4,
+    "trace_scan_workers": 4,
+    "trajectory_audit_available_trace_count": 12,
+    "trajectory_audit_error_rate": 0.0,
+    "trajectory_audit_factual_rate": 0.25,
+    "trajectory_audit_failed_trace_rate": 0.0,
+    "trajectory_audit_logical_rate": 0.0,
+    "trajectory_audit_procedural_rate": 0.0,
+    "trajectory_audit_referential_rate": 0.0,
+    "trajectory_audit_scope_rate": 0.0
   },
   "runtime_drift": {
     "artifact_manifest_path": null,
     "baseline_path": null,
     "blocked_metric_count": 0,
+    "claim_factuality_probe_comparison_blocked_metric_count": 0,
+    "claim_factuality_probe_comparison_metric_count": 0,
+    "claim_risk_localization_blocked_metric_count": 0,
+    "claim_risk_localization_metric_count": 0,
     "compared_metric_count": null,
+    "context_sensitivity_blocked_metric_count": 0,
+    "context_sensitivity_metric_count": 0,
+    "counterfactual_robustness_blocked_metric_count": 0,
+    "counterfactual_robustness_metric_count": 0,
     "counterfactual_verification_blocked_metric_count": 0,
     "counterfactual_verification_metric_count": 0,
     "covered_fact_property_blocked_metric_count": 0,
     "covered_fact_property_metric_count": 0,
     "current_path": null,
     "drift_gate_enabled": false,
+    "evidence_handoff_blocked_metric_count": 0,
+    "evidence_handoff_metric_count": 0,
     "gate_enabled": false,
     "observed_metric_count": null,
     "pre_generation_probe_comparison_blocked_metric_count": 0,
     "pre_generation_probe_comparison_metric_count": 0,
     "product_trace_action_gate_blocked_metric_count": 0,
     "product_trace_action_gate_metric_count": 0,
+    "product_trace_trajectory_audit_blocked_metric_count": 0,
+    "product_trace_trajectory_audit_metric_count": 0,
     "report_path": null,
     "runtime_budget_policy_check_count": null,
     "runtime_budget_policy_failed_count": null,
     "runtime_budget_policy_gate_enabled": false,
     "runtime_budget_policy_passed": null,
     "runtime_budget_policy_path": null,
-    "status": "not_configured"
+    "status": "not_configured",
+    "world_model_blocked_metric_count": 0,
+    "world_model_metric_count": 0
   },
   "schema_version": 1,
   "selector_replay": {
@@ -537,28 +611,28 @@
   },
   "status": "promote",
   "timing": {
-    "phase_total_seconds": 0.247488,
+    "phase_total_seconds": 0.434738,
     "phases": {
       "action_audit_gate": {
-        "seconds": 0.000405
+        "seconds": 0.000476
       },
       "action_execution_gate": {
-        "seconds": 0.000324
+        "seconds": 0.000397
       },
       "corpus": {
-        "seconds": 0.125682
+        "seconds": 0.132783
       },
       "runtime_baseline": {
-        "seconds": 0.088794
+        "seconds": 0.267645
       },
       "runtime_drift": {
-        "seconds": 1.8e-05
+        "seconds": 4e-05
       },
       "selector_replay": {
-        "seconds": 0.032265
+        "seconds": 0.033397
       }
     },
-    "total_seconds": 0.247861
+    "total_seconds": 0.435175
   },
   "workflow": "product_trace_replay_workflow"
 }

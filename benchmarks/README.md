@@ -8051,6 +8051,66 @@ product logs; pass
 replay with `--runtime-pair-index` to avoid rebuilding the paired-runtime index
 from trace files.
 
+Use `build_product_trace_action_payload_compat.py` before strict action-gated
+replays over older ProductTrace files. It copies the source traces to a new
+local input set and only repairs legacy `retrieve` action payloads that lack an
+executable query/target list, deriving deterministic `retrieval_targets` from
+the trace's saved claim IDs. This is a compatibility handoff, not new verifier
+or retrieval evidence:
+
+```bash
+python benchmarks/build_product_trace_action_payload_compat.py \
+  --trace-glob 'artifacts/smollm2_product_runtime_profile_sweep/traces/*/*.json' \
+  --output-dir artifacts/smollm2_product_trace_action_payload_compat_v0 \
+  --registry artifacts/local-release-registry.json \
+  --name smollm2-product-trace-action-payload-compat \
+  --version 0.1 \
+  --metadata source=frontier_action_gate_rebuild
+```
+
+The current SmolLM2 compatibility handoff writes 12 replay traces, modifies the
+single legacy trace with an empty retrieve payload, adds two claim-backed
+retrieval targets, and verifies its manifest. Feed
+`artifacts/smollm2_product_trace_action_payload_compat_v0/traces/**/*.json` to
+`run_product_trace_replay_workflow.py` when enforcing zero-tolerance
+action-audit gates over the historical profile-sweep traces.
+
+The canonical local action-gated replay rebuild is:
+
+```bash
+python benchmarks/run_product_trace_replay_workflow.py \
+  --trace-glob 'artifacts/smollm2_product_trace_action_payload_compat_v0/traces/**/*.json' \
+  --output-dir artifacts/smollm2_product_trace_replay_workflow_action_gated_v0 \
+  --candidate default=artifacts/smollm2_runtime_profile_selector_tuning/policies/default.json \
+  --candidate latency_biased=artifacts/smollm2_runtime_profile_selector_tuning/policies/latency_biased.json \
+  --candidate audit_biased=artifacts/smollm2_runtime_profile_selector_tuning/policies/audit_biased.json \
+  --replay-policy artifacts/smollm2_runtime_profile_selector_replay/runtime-profile-selector-replay-policy.json \
+  --registry artifacts/local-release-registry.json \
+  --name smollm2-product-trace-replay-workflow-action-gated \
+  --version 0.1 \
+  --require-runtime-trace \
+  --verify-manifest \
+  --fingerprint-cache artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/fingerprints.json \
+  --corpus-cache-json artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/corpus-cache.json \
+  --refresh-corpus-cache \
+  --corpus-source-cache-json artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/corpus/source-cache.json \
+  --refresh-corpus-source-cache \
+  --runtime-trace-records-cache-json artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/runtime-baseline/trace-record-cache.json \
+  --refresh-runtime-trace-records-cache \
+  --runtime-trace-scan-workers 4 \
+  --selector-trace-inputs-json artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/selector-replay/trace-inputs.json \
+  --refresh-selector-trace-inputs \
+  --max-action-audit-error-rate 0.0 \
+  --max-action-audit-missing-retrieval-rate 0.0 \
+  --max-action-audit-missing-plan-retrieval-query-rate 0.0 \
+  --max-action-audit-malformed-payload-rate 0.0 \
+  --max-action-audit-unexpected-action-rate 0.0 \
+  --max-action-audit-unknown-claim-id-rate 0.0 \
+  --max-action-execution-missing-result-rate 0.0 \
+  --max-action-execution-unexpected-result-rate 0.0 \
+  --max-action-execution-request-id-mismatch-rate 0.0
+```
+
 Use `run_product_trace_replay_workflow.py` when the raw-trace handoff should be
 one reproducible command. It builds the redacted corpus, runs the product
 runtime baseline over the standardized traces, runs selector replay with the

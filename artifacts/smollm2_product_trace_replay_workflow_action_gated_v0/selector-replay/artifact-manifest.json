@@ -45,111 +45,111 @@
       "file_count": 1,
       "kind": "file",
       "path": "runtime-profile-selector-replay.json",
-      "sha256": "4a63a9d561ee8f2aa97e12a0d5a800ffb5ea0a48c6250498434af4607f6d97a7",
-      "size_bytes": 110578
+      "sha256": "0a242b463f58522983a2451657bc05e0ab45836105a66b94942804b46ae402e6",
+      "size_bytes": 110577
     },
     "trace_0000_audit-calculator_refuted-r0": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "../corpus/traces/audit-calculator_refuted-r0.json",
-      "sha256": "f5c4e2febddc750d3bb31224624e1f432c1ffe9978ca5540dce9848d9c112072",
-      "size_bytes": 39719
+      "sha256": "0a3cdeba8e3a844c1fa2f8aa3eff7b74112a05bb3a2f5101c4e6b13c892c7448",
+      "size_bytes": 41553
     },
     "trace_0001_audit-diagnostic_refuted-r0": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "../corpus/traces/audit-diagnostic_refuted-r0.json",
-      "sha256": "99fec1813e937bef86559dfdcddee5bbd5094294435cdfdfb221bfa10252f1f3",
-      "size_bytes": 40840
+      "sha256": "0cae6a15a6c6d51c094be901a6c64029863416a370beab27803705603acaabd4",
+      "size_bytes": 42674
     },
     "trace_0002_audit-low_risk_supported-r0": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "../corpus/traces/audit-low_risk_supported-r0.json",
-      "sha256": "41f86918466749bbd6ac81886b45fc5f8e109fd3525f7556be31cb91233fdf8c",
-      "size_bytes": 37106
+      "sha256": "3aa33e5775128c92f262bc4646ebc3fdbe50cad2c28e2d4bd8e19d2db853a9ab",
+      "size_bytes": 38940
     },
     "trace_0003_audit-calculator_refuted-r0-2": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "../corpus/traces/audit-calculator_refuted-r0-2.json",
-      "sha256": "58de7c3ddf6bcf86bfa57b2adf9752ff5fec7f3ad17cc091e44d10e043d5eae2",
-      "size_bytes": 40985
+      "sha256": "26abdcc1a95ad28b4eaf1dbb970f6ee9fa2a42d22a42a817ebef823ce88b6115",
+      "size_bytes": 42819
     },
     "trace_0004_balanced-diagnostic_refuted-r0": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "../corpus/traces/balanced-diagnostic_refuted-r0.json",
-      "sha256": "795812d4fb5fb6e841c428d3e9258499a07280f2c15fbc64db13d392289b9073",
-      "size_bytes": 46626
+      "sha256": "648afbcfd234133f82827f433bc40009f861939265dc630cfebd97e465dbd3d8",
+      "size_bytes": 48460
     },
     "trace_0005_latency-low_risk_supported-r0": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "../corpus/traces/latency-low_risk_supported-r0.json",
-      "sha256": "55a6d755be52f355af2c3a9be5ee645d4e1841c045cf2419f3b6a5051cb1453a",
-      "size_bytes": 34462
+      "sha256": "7f988d1b7948626800f8ef8354d65bac4944e8b376c7da76da26c2f17dade3ad",
+      "size_bytes": 36296
     },
     "trace_0006_balanced-calculator_refuted-r0": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "../corpus/traces/balanced-calculator_refuted-r0.json",
-      "sha256": "7cac7a4df463ea2f310322495f59fe773e5c779c08eda97a6b13036f9e604bab",
-      "size_bytes": 44770
+      "sha256": "262844508168b1a53d6694609b178f5457d40d299b3a9ce987717657df336f97",
+      "size_bytes": 46604
     },
     "trace_0007_balanced-diagnostic_refuted-r0-2": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "../corpus/traces/balanced-diagnostic_refuted-r0-2.json",
-      "sha256": "00feb3882734ba4a15ae2f050a6c669ca7882641b5089199b60837a2ad6565da",
-      "size_bytes": 45564
+      "sha256": "da5bfd3f7b732d2492eda67b953f5c44cd739c7917e0234be5a1a303e58ee083",
+      "size_bytes": 47398
     },
     "trace_0008_balanced-low_risk_supported-r0": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "../corpus/traces/balanced-low_risk_supported-r0.json",
-      "sha256": "f773eecd4010d817953e66708234c94dcef9c3f655af5549b5ee80c84bd73d1f",
-      "size_bytes": 33567
+      "sha256": "02e4b6a80e4971608b8cb88cba6095e94df42abe6c974666c85abb0534e679ee",
+      "size_bytes": 35401
     },
     "trace_0009_latency-calculator_refuted-r0": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "../corpus/traces/latency-calculator_refuted-r0.json",
-      "sha256": "f049eef6270343a56da10279f45fcee9bad00796da966f492d6d9e72a87bc26a",
-      "size_bytes": 44499
+      "sha256": "1b2e5604804da11aa152334e9a5a97bccfc82dc29ca564b29e2b222014c53154",
+      "size_bytes": 46333
     },
     "trace_0010_latency-diagnostic_refuted-r0": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "../corpus/traces/latency-diagnostic_refuted-r0.json",
-      "sha256": "f475633fb557a324971e3930febcbf589224f7a4a56aa904a10a4a3ca29bf37d",
-      "size_bytes": 34927
+      "sha256": "44955b3dc384a3662dca1e2d6513b1a8f2fb1b9392536d5703da10393ff01af7",
+      "size_bytes": 37210
     },
     "trace_0011_latency-low_risk_supported-r0-2": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "../corpus/traces/latency-low_risk_supported-r0-2.json",
-      "sha256": "a99487944ff5436d4cf1aaf96e50f3a265081fde48a5830dc34f9b3661deaa11",
-      "size_bytes": 33345
+      "sha256": "0f9dc4af570c7ff35dcd650c4a1650a6c9b0bce2526e78121adf15febb68d528",
+      "size_bytes": 35179
     },
     "trace_inputs": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "trace-inputs.json",
-      "sha256": "f5c60d1ec99a766dc321adc27cace0f452ac5d2a18699ce6b76fa052d5fd66f0",
+      "sha256": "a5221bae9024766e5783c9a3d1c3886432be0a3d2b022fd0590762b7dc4a7468",
       "size_bytes": 28053
     }
   },

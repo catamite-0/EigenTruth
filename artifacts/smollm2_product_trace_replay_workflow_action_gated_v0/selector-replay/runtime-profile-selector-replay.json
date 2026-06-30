@@ -132,7 +132,7 @@
         "sensitive_profile": "audit"
       },
       "policy_path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/selector-replay/policies/default.json",
-      "source": "artifacts/smollm2_runtime_profile_selector_replay/policies/default.json",
+      "source": "artifacts/smollm2_runtime_profile_selector_tuning/policies/default.json",
       "status": "promote",
       "summary": {
         "changed_count": 7,
@@ -904,7 +904,7 @@
         "sensitive_profile": "audit"
       },
       "policy_path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/selector-replay/policies/latency_biased.json",
-      "source": "artifacts/smollm2_runtime_profile_selector_replay/policies/latency_biased.json",
+      "source": "artifacts/smollm2_runtime_profile_selector_tuning/policies/latency_biased.json",
       "status": "promote",
       "summary": {
         "changed_count": 7,
@@ -1704,7 +1704,7 @@
         "sensitive_profile": "audit"
       },
       "policy_path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/selector-replay/policies/audit_biased.json",
-      "source": "artifacts/smollm2_runtime_profile_selector_replay/policies/audit_biased.json",
+      "source": "artifacts/smollm2_runtime_profile_selector_tuning/policies/audit_biased.json",
       "status": "blocked",
       "summary": {
         "changed_count": 7,
@@ -2371,7 +2371,7 @@
       "enabled": true,
       "invalidation_reason": null,
       "path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/selector-replay/trace-inputs.json",
-      "refresh": false,
+      "refresh": true,
       "source": "trace_scan",
       "source_count": 12,
       "trace_count": 12

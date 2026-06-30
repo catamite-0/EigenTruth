@@ -41258,6 +41258,69 @@ def test_run_product_trace_replay_workflow_applies_action_audit_gate(tmp_path):
     )
 
 
+def test_product_trace_action_payload_compat_repairs_legacy_retrieve_targets(tmp_path):
+    module = importlib.import_module("benchmarks.build_product_trace_action_payload_compat")
+    from eigentruth.control.action_audit import audit_action_requests
+    from eigentruth.registry import ArtifactVerificationContext
+
+    input_dir = tmp_path / "input" / "traces" / "latency"
+    input_dir.mkdir(parents=True)
+    trace_path = input_dir / "diagnostic_refuted-r0.json"
+    trace_path.write_text(
+        json.dumps({
+            "request_id": "legacy-retrieve",
+            "risk_decision": {
+                "action": "retrieve",
+                "risk_level": "medium",
+                "confidence": 0.55,
+                "reason": "calibrated diagnostic threshold exceeded",
+            },
+            "claims": [
+                {"claim_id": "c1", "text": "Paris is the capital of France.", "metadata": {}},
+                {"claim_id": "c2", "text": "The moon is made of cheese.", "metadata": {}},
+            ],
+            "actions": [
+                {
+                    "action": "retrieve",
+                    "reason": "calibrated diagnostic threshold exceeded",
+                    "payload": {
+                        "instruction": "retrieve evidence for unresolved claims before answering",
+                        "retrieval_targets": [],
+                    },
+                }
+            ],
+            "metadata": {"runtime_profile": "latency"},
+            "runtime_trace": {"total_seconds": 0.1, "phases": []},
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        trace_globs=(str(tmp_path / "input" / "traces" / "**" / "*.json"),),
+        output_dir=tmp_path / "compat",
+        registry_path=tmp_path / "registry.json",
+    )
+    repaired_path = tmp_path / "compat" / "traces" / "latency" / "diagnostic_refuted-r0.json"
+    repaired = json.loads(repaired_path.read_text(encoding="utf-8"))
+    report = json.loads(Path(payload["paths"]["report"]).read_text(encoding="utf-8"))
+    verification = ArtifactVerificationContext().load_and_verify_artifact_manifest(
+        tmp_path / "compat" / "artifact-manifest.json"
+    )
+    audit = audit_action_requests(repaired["actions"], decision=repaired["risk_decision"])
+
+    assert payload["status"] == "ready"
+    assert payload["summary"]["modified_trace_count"] == 1
+    assert payload["summary"]["repaired_action_count"] == 1
+    assert payload["summary"]["added_retrieval_target_count"] == 2
+    assert report["artifact_manifest_summary"]["artifact_count"] == 2
+    assert verification.passed
+    assert [target["claim_id"] for target in repaired["actions"][0]["payload"]["retrieval_targets"]] == [
+        "c1",
+        "c2",
+    ]
+    assert audit.passed
+
+
 def test_run_product_trace_replay_workflow_applies_action_execution_gate(tmp_path):
     module = importlib.import_module("benchmarks.run_product_trace_replay_workflow")
     tuning_module = importlib.import_module("benchmarks.run_runtime_profile_selector_tuning")

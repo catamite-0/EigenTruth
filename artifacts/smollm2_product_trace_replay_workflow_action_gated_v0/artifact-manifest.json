@@ -21,15 +21,15 @@
       "file_count": 1,
       "kind": "file",
       "path": "corpus-cache.json",
-      "sha256": "5f48098e1e40d734a4e6e38ef63eecaecf8fe5c22237f3ed4dd6d5d867a08711",
-      "size_bytes": 12911
+      "sha256": "079a779418ee53a2099788e02d05791b11ffd0a1f4d89d8b9fdc646927628b51",
+      "size_bytes": 12985
     },
     "corpus_manifest": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "corpus/artifact-manifest.json",
-      "sha256": "57f4f2fde3a290fa751ac13b4971c26bb40254e47fc5081b2ed80699d98c80e8",
+      "sha256": "7e00cb14d79db189a9b2411bea9749cb2d0f73e148011fb5b02661ca028c4e8d",
       "size_bytes": 5926
     },
     "corpus_report": {
@@ -37,8 +37,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "corpus/product-trace-corpus.json",
-      "sha256": "a4fcd00849ec04f6bb96ebbc007b540bb8cb839e1d5b2617fb980345bb4afbdd",
-      "size_bytes": 12811
+      "sha256": "b377ae70358a26fd1714d7ba8e7da78b7a12e27ebd3056a76e75c2f242b7840b",
+      "size_bytes": 12809
     },
     "corpus_runtime_pair_index": {
       "exists": true,
@@ -53,16 +53,16 @@
       "file_count": 1,
       "kind": "file",
       "path": "corpus/source-cache.json",
-      "sha256": "64cee898c2b04e636b59fb558b0b8de75ebb29ac241d70f77b6b77b0c8f43846",
-      "size_bytes": 338085
+      "sha256": "2d438961169da99f67e8469719b0d042d769b064c473bf6a689d67032abc6940",
+      "size_bytes": 354864
     },
     "corpus_traces_dir": {
       "exists": true,
       "file_count": 12,
       "kind": "directory",
       "path": "corpus/traces",
-      "sha256": "fb98ea62e35a38e0aa0fdf312034b464992b75639c5d69d4fb491ce2d14ef870",
-      "size_bytes": 476410
+      "sha256": "e8b7e3d9d5aedccef95ff85c7e12eaef6e196be7f5e0b0fa7cb62e57a7316c59",
+      "size_bytes": 498867
     },
     "input_trace_0000_calculator_refuted-r0": {
       "exists": true,
@@ -149,8 +149,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "../smollm2_product_trace_action_payload_compat_v0/traces/latency/diagnostic_refuted-r0.json",
-      "sha256": "ebf167d00f52cbb4f77c7ced44e7276ded6b9f7821b87101d62177db1402b98c",
-      "size_bytes": 34683
+      "sha256": "d75d27b88f997808f276903f84a342dbaae363841a30557d5b2bfe6255e4267a",
+      "size_bytes": 35033
     },
     "input_trace_0011_low_risk_supported-r0": {
       "exists": true,
@@ -165,8 +165,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "product-trace-replay-workflow.json",
-      "sha256": "ed3b8afa542502d91c99ac9ba7b236bf11e29da1bee738b5a2f16371d63bca0c",
-      "size_bytes": 23660
+      "sha256": "89647cc4442711e6a789bb3fa68170b6a2165abfa53e96c0f78a024febf3d1e0",
+      "size_bytes": 28126
     },
     "replay_policy": {
       "exists": true,
@@ -181,31 +181,31 @@
       "file_count": 1,
       "kind": "file",
       "path": "runtime-baseline/artifact-manifest.json",
-      "sha256": "e28c2285bd10a5572f0ca798413cf86c2cdde6fb1985997b95db653ae78136a3",
-      "size_bytes": 25833
+      "sha256": "2a0991948d23ce3f3b8006db20c59f383fb374320bc7f47bbefb616c953822f7",
+      "size_bytes": 58990
     },
     "runtime_baseline_report": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "runtime-baseline/product-runtime-baseline.json",
-      "sha256": "9164d6ef7f68bb334737eccedf1709cee8cf301e43b1ed1dda2f5f6e8916ad97",
-      "size_bytes": 693525
+      "sha256": "12ad01ea2e82684e435e96053eeb856e7ea7ec0fdc23ca423d8f5638847ecce3",
+      "size_bytes": 1436923
     },
     "runtime_trace_records_cache": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "runtime-baseline/trace-record-cache.json",
-      "sha256": "46cecf6f83c7364f532a34c74d46c0e00c70e72d8e3cb15196abe478f2bf3112",
-      "size_bytes": 617047
+      "sha256": "2b7afe5cfd7a0c0c38a4297978d66b7a6b7e93035d9db9e67c0d1402e31a230d",
+      "size_bytes": 1291426
     },
     "selector_replay_manifest": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "selector-replay/artifact-manifest.json",
-      "sha256": "fa4fa4cb3ff7ca5a97803479d2dc8c43fdff9aa6fd5eff109aa2ed33d596f873",
+      "sha256": "a3c2d1058cc31f326746723f70f532ad380cc9d893231622e0f2354c38815178",
       "size_bytes": 7052
     },
     "selector_replay_report": {
@@ -213,15 +213,15 @@
       "file_count": 1,
       "kind": "file",
       "path": "selector-replay/runtime-profile-selector-replay.json",
-      "sha256": "4a63a9d561ee8f2aa97e12a0d5a800ffb5ea0a48c6250498434af4607f6d97a7",
-      "size_bytes": 110578
+      "sha256": "0a242b463f58522983a2451657bc05e0ab45836105a66b94942804b46ae402e6",
+      "size_bytes": 110577
     },
     "selector_trace_inputs": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "selector-replay/trace-inputs.json",
-      "sha256": "f5c60d1ec99a766dc321adc27cace0f452ac5d2a18699ce6b76fa052d5fd66f0",
+      "sha256": "a5221bae9024766e5783c9a3d1c3886432be0a3d2b022fd0590762b7dc4a7468",
       "size_bytes": 28053
     }
   },
@@ -266,34 +266,48 @@
     "runtime_drift_blocked_metric_count": 0,
     "runtime_drift_budget_policy_gate_enabled": false,
     "runtime_drift_budget_policy_passed": null,
+    "runtime_drift_claim_factuality_probe_comparison_blocked_metric_count": 0,
+    "runtime_drift_claim_factuality_probe_comparison_metric_count": 0,
+    "runtime_drift_claim_risk_localization_blocked_metric_count": 0,
+    "runtime_drift_claim_risk_localization_metric_count": 0,
     "runtime_drift_compared_metric_count": null,
+    "runtime_drift_context_sensitivity_blocked_metric_count": 0,
+    "runtime_drift_context_sensitivity_metric_count": 0,
+    "runtime_drift_counterfactual_robustness_blocked_metric_count": 0,
+    "runtime_drift_counterfactual_robustness_metric_count": 0,
     "runtime_drift_counterfactual_verification_blocked_metric_count": 0,
     "runtime_drift_counterfactual_verification_metric_count": 0,
     "runtime_drift_covered_fact_property_blocked_metric_count": 0,
     "runtime_drift_covered_fact_property_metric_count": 0,
     "runtime_drift_drift_gate_enabled": false,
+    "runtime_drift_evidence_handoff_blocked_metric_count": 0,
+    "runtime_drift_evidence_handoff_metric_count": 0,
     "runtime_drift_gate_enabled": false,
     "runtime_drift_pre_generation_probe_comparison_blocked_metric_count": 0,
     "runtime_drift_pre_generation_probe_comparison_metric_count": 0,
     "runtime_drift_product_trace_action_gate_blocked_metric_count": 0,
     "runtime_drift_product_trace_action_gate_metric_count": 0,
+    "runtime_drift_product_trace_trajectory_audit_blocked_metric_count": 0,
+    "runtime_drift_product_trace_trajectory_audit_metric_count": 0,
     "runtime_drift_report": null,
     "runtime_drift_status": "not_configured",
-    "runtime_trace_scan_effective_workers": 1,
-    "runtime_trace_scan_workers": 1,
+    "runtime_drift_world_model_blocked_metric_count": 0,
+    "runtime_drift_world_model_metric_count": 0,
+    "runtime_trace_scan_effective_workers": 4,
+    "runtime_trace_scan_workers": 4,
     "selector_replay_status": "promote",
     "status": "promote",
-    "workflow_action_audit_gate_seconds": 0.000405,
-    "workflow_action_execution_gate_seconds": 0.000324,
+    "workflow_action_audit_gate_seconds": 0.000476,
+    "workflow_action_execution_gate_seconds": 0.000397,
     "workflow_cache_enabled_count": 4,
     "workflow_cache_hit_count": 0,
     "workflow_cache_hit_rate": 0.0,
-    "workflow_corpus_seconds": 0.125682,
-    "workflow_phase_total_seconds": 0.247488,
-    "workflow_runtime_baseline_seconds": 0.088794,
-    "workflow_runtime_drift_seconds": 1.8e-05,
-    "workflow_selector_replay_seconds": 0.032265,
-    "workflow_total_seconds": 0.247861
+    "workflow_corpus_seconds": 0.132783,
+    "workflow_phase_total_seconds": 0.434738,
+    "workflow_runtime_baseline_seconds": 0.267645,
+    "workflow_runtime_drift_seconds": 4e-05,
+    "workflow_selector_replay_seconds": 0.033397,
+    "workflow_total_seconds": 0.435175
   },
   "schema_version": 1,
   "summary": {

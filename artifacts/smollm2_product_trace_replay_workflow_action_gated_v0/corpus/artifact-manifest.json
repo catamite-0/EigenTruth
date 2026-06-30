@@ -85,8 +85,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/latency/diagnostic_refuted-r0.json",
-      "sha256": "ebf167d00f52cbb4f77c7ced44e7276ded6b9f7821b87101d62177db1402b98c",
-      "size_bytes": 34683
+      "sha256": "d75d27b88f997808f276903f84a342dbaae363841a30557d5b2bfe6255e4267a",
+      "size_bytes": 35033
     },
     "input_trace_0011_low_risk_supported-r0": {
       "exists": true,
@@ -101,16 +101,16 @@
       "file_count": 1,
       "kind": "file",
       "path": "product-trace-corpus.json",
-      "sha256": "a4fcd00849ec04f6bb96ebbc007b540bb8cb839e1d5b2617fb980345bb4afbdd",
-      "size_bytes": 12811
+      "sha256": "b377ae70358a26fd1714d7ba8e7da78b7a12e27ebd3056a76e75c2f242b7840b",
+      "size_bytes": 12809
     },
     "product_trace_corpus_traces": {
       "exists": true,
       "file_count": 12,
       "kind": "directory",
       "path": "traces",
-      "sha256": "fb98ea62e35a38e0aa0fdf312034b464992b75639c5d69d4fb491ce2d14ef870",
-      "size_bytes": 476410
+      "sha256": "e8b7e3d9d5aedccef95ff85c7e12eaef6e196be7f5e0b0fa7cb62e57a7316c59",
+      "size_bytes": 498867
     },
     "product_trace_runtime_pair_index": {
       "exists": true,
@@ -125,8 +125,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "source-cache.json",
-      "sha256": "64cee898c2b04e636b59fb558b0b8de75ebb29ac241d70f77b6b77b0c8f43846",
-      "size_bytes": 338085
+      "sha256": "2d438961169da99f67e8469719b0d042d769b064c473bf6a689d67032abc6940",
+      "size_bytes": 354864
     }
   },
   "digest_algorithm": "sha256",
