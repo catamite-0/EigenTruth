@@ -48836,6 +48836,50 @@ def test_product_trace_triple_audit_enrichment_cli_accepts_trace_glob(tmp_path, 
     assert len(list((output_dir / "traces").glob("*.json"))) == 2
 
 
+def test_product_trace_triple_audit_enrichment_cli_accepts_trace_jsonl(tmp_path, capsys):
+    module = importlib.import_module("benchmarks.enrich_product_trace_triple_audit")
+
+    trace_jsonl_path = tmp_path / "traces.jsonl"
+    trace_jsonl_path.write_text(
+        json.dumps({
+            "request_id": "req-jsonl",
+            "claims": [
+                {
+                    "claim_id": "c1",
+                    "text": "Paris is the capital of France.",
+                    "metadata": {},
+                }
+            ],
+            "verification_results": [],
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    corpus_path = tmp_path / "evidence.json"
+    corpus_path.write_text(
+        json.dumps({"documents": [{"text": "France's capital is Paris.", "source": "atlas"}]}),
+        encoding="utf-8",
+    )
+    output_dir = tmp_path / "triple-audit-jsonl"
+
+    assert module.main([
+        "--trace-jsonl",
+        str(trace_jsonl_path),
+        "--evidence-corpus",
+        str(corpus_path),
+        "--output-dir",
+        str(output_dir),
+        "--compact-json",
+    ]) == 0
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+
+    assert payload["status"] == "promote"
+    assert payload["summary"]["trace_count"] == 1
+    assert payload["traces"][0]["source_format"] == "jsonl"
+    assert payload["traces"][0]["source_line_number"] == 1
+
+
 def test_product_trace_triple_audit_enrichment_marks_refutation_relation(tmp_path):
     module = importlib.import_module("benchmarks.enrich_product_trace_triple_audit")
 

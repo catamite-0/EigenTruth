@@ -1175,10 +1175,15 @@ Added the first monitor-first tool-selection audit layer:
   handoff until new product traces actually contain `claim_triples` and verifier
   `audit_report` metadata.
 - `enrich_product_trace_triple_audit.py` now provides that missing offline
-  bridge for full ProductTrace JSON. It extracts conservative rule-based
-  `claim_triples`, retrieves local evidence from trace payloads or JSON/JSONL
-  corpora, attaches strict triple-evidence `audit_report` metadata, and writes
-  manifest-backed enriched traces. The v0 run on the 12 SmolLM2 action-payload
+  bridge for full ProductTrace JSON or JSONL sidecars. It extracts conservative
+  rule-based `claim_triples` or reuses metadata-supplied triples, retrieves
+  local evidence from trace payloads or JSON/JSONL corpora, attaches strict
+  triple-evidence `audit_report` metadata, and writes manifest-backed enriched
+  traces. Source-family structured-QA correction handoffs now emit
+  model-answer triples plus structured refutation evidence in their ProductTrace
+  JSONL rows, so exact covered-fact correction sidecars can enter this audit
+  path without first splitting traces into individual JSON files or adding an
+  external corpus. The v0 run on the 12 SmolLM2 action-payload
   compatibility traces with only the Wikidata capitals corpus produced
   `audit_claim_coverage_rate=0.667`, which correctly blocked the quality gate.
   The v1 run adds numeric-equation triples, fixes capitalized token coverage,

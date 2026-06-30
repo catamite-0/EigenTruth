@@ -7777,12 +7777,16 @@ redaction. The summary is only evidence when the original trace already carried
 not infer or fabricate audit results from redacted text.
 
 Use `enrich_product_trace_triple_audit.py` when you still have full, unredacted
-ProductTrace JSON and a local evidence corpus but the original runtime did not
-record strict triple-audit metadata. The workflow extracts conservative
-`claim_triples`, retrieves local evidence snippets, attaches status-aware
-`audit_report` metadata to existing verifier results or explicit `audit_only`
-results, and writes manifest-backed enriched traces for
-`run_product_runtime_baseline.py`. For the current SmolLM2 action-payload
+ProductTrace JSON or JSONL sidecars and a local evidence corpus but the original
+runtime did not record strict triple-audit metadata. The workflow extracts
+conservative `claim_triples` or reuses metadata-supplied triples, retrieves
+local evidence snippets, attaches status-aware `audit_report` metadata to
+existing verifier results or explicit `audit_only` results, and writes
+manifest-backed enriched traces for `run_product_runtime_baseline.py`.
+Source-family correction handoffs now place model-answer triples and structured
+refutation evidence into their ProductTrace JSONL rows, so they can be enriched
+directly with `--trace-jsonl` before runtime-baseline replay. For the current
+SmolLM2 action-payload
 compatibility traces, the Wikidata capital corpus plus the NASA-backed Moon
 composition corpus promotes the trace-level triple-audit handoff with
 `claim_triple_coverage_rate=1.0`, `audit_claim_coverage_rate=1.0`,
@@ -7798,6 +7802,18 @@ python benchmarks/enrich_product_trace_triple_audit.py \
   --registry artifacts/smollm2_product_trace_triple_audit_enrichment_v1/registry.json \
   --name smollm2-product-trace-triple-audit \
   --version 0.2
+```
+
+For source-family correction handoff sidecars:
+
+```bash
+python benchmarks/enrich_product_trace_triple_audit.py \
+  --trace-jsonl artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-correction-handoff/product-traces.jsonl \
+  --output-dir artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-correction-triple-audit \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-source-family-structured-qa-correction-triple-audit \
+  --version 0.1 \
+  --compact-json
 ```
 
 When a saved `ProductRuntimeBudgetPolicy` is supplied with

@@ -48,6 +48,7 @@ class ProductTraceTripleAuditEnrichmentConfig:
 
     trace_paths: Sequence[str | Path]
     output_dir: str | Path
+    trace_jsonl_paths: Sequence[str | Path] = ()
     evidence_corpus_paths: Sequence[str | Path] = ()
     report_path: str | Path | None = None
     artifact_manifest_path: str | Path | None = None
@@ -65,8 +66,9 @@ class ProductTraceTripleAuditEnrichmentConfig:
 
     def __post_init__(self) -> None:
         trace_paths = tuple(Path(path) for path in self.trace_paths)
-        if not trace_paths:
-            raise ValueError("at least one ProductTrace path is required.")
+        trace_jsonl_paths = tuple(Path(path) for path in self.trace_jsonl_paths)
+        if not trace_paths and not trace_jsonl_paths:
+            raise ValueError("at least one ProductTrace JSON or JSONL path is required.")
         evidence_corpus_paths = tuple(Path(path) for path in self.evidence_corpus_paths)
         output_dir = Path(self.output_dir)
         report_path = (
@@ -88,6 +90,7 @@ class ProductTraceTripleAuditEnrichmentConfig:
         object.__setattr__(self, "artifact_manifest_path", artifact_manifest_path)
         if self.registry_path is not None:
             object.__setattr__(self, "registry_path", Path(self.registry_path))
+        object.__setattr__(self, "trace_jsonl_paths", trace_jsonl_paths)
         object.__setattr__(
             self,
             "retrieval_limit",
@@ -136,17 +139,20 @@ def build_product_trace_triple_audit_enrichment(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     records: list[dict[str, Any]] = []
-    for index, trace_path in enumerate(config.trace_paths, start=1):
-        trace = _load_trace(trace_path)
-        reject_bounded_product_trace(trace, path=trace_path)
+    for index, trace_input in enumerate(_iter_trace_inputs(config), start=1):
+        trace = trace_input.payload
+        reject_bounded_product_trace(trace, path=trace_input.source_path)
         enriched, record = _enrich_trace(
             trace,
-            source_path=Path(trace_path),
-            output_path=_trace_output_path(output_dir, Path(trace_path), index=index),
+            source_path=trace_input.source_path,
+            output_path=_trace_output_path(output_dir, trace_input.source_path, index=index),
             retriever=retriever,
             retrieval_limit=config.retrieval_limit,
             min_slot_coverage=config.min_slot_coverage,
         )
+        record["source_format"] = trace_input.source_format
+        if trace_input.line_number is not None:
+            record["source_line_number"] = trace_input.line_number
         _write_json(record["output_path"], enriched, compact=config.compact_json)
         records.append(record)
 
@@ -167,6 +173,7 @@ def build_product_trace_triple_audit_enrichment(
             "artifact_manifest": str(config.artifact_manifest_path),
             "output_dir": str(config.output_dir),
             "traces": tuple(str(path) for path in config.trace_paths),
+            "trace_jsonl": tuple(str(path) for path in config.trace_jsonl_paths),
             "evidence_corpora": tuple(str(path) for path in config.evidence_corpus_paths),
         },
         "config": {
@@ -627,6 +634,10 @@ def _artifact_paths(
         "triple_audit_enrichment_report": config.report_path,
         "enriched_trace_dir": Path(config.output_dir) / "traces",
     }
+    for index, path in enumerate(config.trace_paths, start=1):
+        artifacts[f"source_trace_{index}"] = path
+    for index, path in enumerate(config.trace_jsonl_paths, start=1):
+        artifacts[f"source_trace_jsonl_{index}"] = path
     for index, record in enumerate(records, start=1):
         artifacts[f"enriched_trace_{index}"] = str(record.get("output_path"))
     for index, path in enumerate(config.evidence_corpus_paths, start=1):
@@ -634,11 +645,58 @@ def _artifact_paths(
     return artifacts
 
 
+@dataclass(frozen=True)
+class _TraceInput:
+    source_path: Path
+    payload: dict[str, Any]
+    source_format: str
+    line_number: int | None = None
+
+
+def _iter_trace_inputs(config: ProductTraceTripleAuditEnrichmentConfig) -> tuple[_TraceInput, ...]:
+    inputs: list[_TraceInput] = []
+    for path in config.trace_paths:
+        inputs.append(
+            _TraceInput(
+                source_path=Path(path),
+                payload=_load_trace(path),
+                source_format="json",
+            )
+        )
+    for path in config.trace_jsonl_paths:
+        inputs.extend(_load_trace_jsonl(path))
+    return tuple(inputs)
+
+
 def _load_trace(path: str | Path) -> dict[str, Any]:
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     if not isinstance(payload, Mapping):
         raise ValueError(f"ProductTrace JSON must be an object: {path}")
     return dict(payload)
+
+
+def _load_trace_jsonl(path: str | Path) -> tuple[_TraceInput, ...]:
+    source_path = Path(path)
+    inputs: list[_TraceInput] = []
+    for line_number, line in enumerate(source_path.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip():
+            continue
+        payload = json.loads(line)
+        if not isinstance(payload, Mapping):
+            raise ValueError(
+                f"ProductTrace JSONL rows must be objects: {source_path}:{line_number}"
+            )
+        inputs.append(
+            _TraceInput(
+                source_path=source_path,
+                payload=dict(payload),
+                source_format="jsonl",
+                line_number=line_number,
+            )
+        )
+    if not inputs:
+        raise ValueError(f"ProductTrace JSONL did not contain any trace objects: {source_path}")
+    return tuple(inputs)
 
 
 def _write_json(path: str | Path, payload: Any, *, compact: bool) -> None:
@@ -725,10 +783,14 @@ def _rate(value: Any, *, name: str) -> float:
 
 
 def _config_from_args(args: argparse.Namespace) -> ProductTraceTripleAuditEnrichmentConfig:
-    trace_paths = _trace_paths_from_args(args.trace or (), args.trace_glob or ())
+    trace_paths = _paths_from_args(args.trace or (), args.trace_glob or ())
+    trace_jsonl_paths = _paths_from_args(args.trace_jsonl or (), args.trace_jsonl_glob or ())
+    if not trace_paths and not trace_jsonl_paths:
+        raise ValueError("at least one --trace, --trace-glob, --trace-jsonl, or --trace-jsonl-glob match is required.")
     return ProductTraceTripleAuditEnrichmentConfig(
         trace_paths=trace_paths,
         output_dir=args.output_dir,
+        trace_jsonl_paths=trace_jsonl_paths,
         evidence_corpus_paths=tuple(args.evidence_corpus or ()),
         report_path=args.report,
         artifact_manifest_path=args.artifact_manifest,
@@ -746,7 +808,7 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceTripleAuditEnrich
     )
 
 
-def _trace_paths_from_args(values: Sequence[str], globs: Sequence[str]) -> tuple[Path, ...]:
+def _paths_from_args(values: Sequence[str], globs: Sequence[str]) -> tuple[Path, ...]:
     paths = [Path(value) for value in values]
     for pattern in globs:
         paths.extend(Path(match) for match in sorted(glob.glob(pattern, recursive=True)))
@@ -758,8 +820,6 @@ def _trace_paths_from_args(values: Sequence[str], globs: Sequence[str]) -> tuple
             continue
         seen.add(key)
         unique.append(path)
-    if not unique:
-        raise ValueError("at least one --trace or --trace-glob match is required.")
     return tuple(unique)
 
 
@@ -767,6 +827,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Enrich ProductTrace JSON with triple-audit metadata")
     parser.add_argument("--trace", action="append", default=[], help="full ProductTrace JSON path; repeatable")
     parser.add_argument("--trace-glob", action="append", default=[], help="glob for full ProductTrace JSON files")
+    parser.add_argument("--trace-jsonl", action="append", default=[], help="ProductTrace JSONL path; repeatable")
+    parser.add_argument(
+        "--trace-jsonl-glob",
+        action="append",
+        default=[],
+        help="glob for ProductTrace JSONL files",
+    )
     parser.add_argument("--output-dir", required=True, help="directory for enriched traces and default report paths")
     parser.add_argument(
         "--evidence-corpus",

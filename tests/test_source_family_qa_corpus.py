@@ -573,6 +573,7 @@ def test_source_family_structured_qa_correction_handoff_requires_promoted_route(
 
 def test_source_family_structured_qa_claim_correction_workflow_runs_full_loop(tmp_path):
     module = importlib.import_module("benchmarks.run_source_family_structured_qa_claim_correction_workflow")
+    triple_audit_module = importlib.import_module("benchmarks.enrich_product_trace_triple_audit")
     registry_module = importlib.import_module("eigentruth.registry")
 
     claims_path = tmp_path / "claims.json"
@@ -662,12 +663,35 @@ def test_source_family_structured_qa_claim_correction_workflow_runs_full_loop(tm
     assert payload["summary"]["correction_candidate_count"] == 1
     assert payload["summary"]["trace_count"] == 1
     assert payload["label_usage"]["weak_matches_promoted"] is False
+    assert trace_rows[0]["claims"][0]["metadata"]["claim_triples"][0]["object"] == "Elon Musk"
+    assert (
+        trace_rows[0]["verification_results"][0]["metadata"]["evidence_documents"][0]["metadata"][
+            "evidence_relation"
+        ]
+        == "refutes_model_answer"
+    )
     assert trace_rows[0]["risk_decision"]["action"] == "abstain"
     assert registry_module.load_and_verify_artifact_manifest(output_dir / "artifact-manifest.json").passed is True
     assert registry_record is not None
     assert registry_record.metadata["workflow"] == "source_family_structured_qa_claim_correction_workflow"
     assert registry_record.metadata["trace_count"] == 1
     assert registry_record.metadata["suite"] == "unit"
+
+    triple_audit = triple_audit_module.build_product_trace_triple_audit_enrichment(
+        triple_audit_module.ProductTraceTripleAuditEnrichmentConfig(
+            trace_paths=(),
+            trace_jsonl_paths=(output_dir / "correction-handoff" / "product-traces.jsonl",),
+            output_dir=tmp_path / "triple-audit",
+            compact_json=True,
+        )
+    )
+
+    assert triple_audit["status"] == "promote"
+    assert triple_audit["summary"]["audit_claim_coverage_rate"] == pytest.approx(1.0)
+    assert triple_audit["summary"]["audit_pass_rate"] == pytest.approx(1.0)
+    assert triple_audit["summary"]["slot_coverage_rate"] == pytest.approx(1.0)
+    assert triple_audit["traces"][0]["source_format"] == "jsonl"
+    assert triple_audit["traces"][0]["source_line_number"] == 1
 
 
 def test_source_family_structured_qa_fact_expansion_plans_mapping_gaps(tmp_path):

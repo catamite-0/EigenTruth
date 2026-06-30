@@ -372,17 +372,23 @@ def _trace_for_record(
 ) -> dict[str, Any]:
     record_index = int(record.get("record_index", -1))
     request_id = f"source-family-structured-qa-record-{record_index}"
+    claim_id = f"{request_id}:model-answer"
+    claim_triples = _claim_triples_for_record(record, claim_id=claim_id)
+    claim_metadata = {
+        "question": record.get("question"),
+        "answer": record.get("answer"),
+        "source_record_index": record_index,
+        "route_hints": ("structured_qa", route_name),
+        "requires_verification": True,
+        "source_family_structured_qa_gate": True,
+    }
+    if claim_triples:
+        claim_metadata["claim_triples"] = claim_triples
+        claim_metadata["requires_triple_audit"] = True
     claim = Claim(
         text=f"{record.get('question', '')} {record.get('answer', '')}".strip(),
-        claim_id=f"{request_id}:model-answer",
-        metadata={
-            "question": record.get("question"),
-            "answer": record.get("answer"),
-            "source_record_index": record_index,
-            "route_hints": ("structured_qa", route_name),
-            "requires_verification": True,
-            "source_family_structured_qa_gate": True,
-        },
+        claim_id=claim_id,
+        metadata=claim_metadata,
     )
     verifier = QuestionAnswerVerifier.from_corpus(corpus)
     raw_result = verifier.verify(claim)
@@ -485,8 +491,115 @@ def _annotated_result(
             "mapped_provider_counts": _sorted_counter(provider_counts),
             "mapped_source_family_counts": _sorted_counter(family_counts),
             "mapped_fact_type_counts": _sorted_counter(fact_type_counts),
+            "evidence_documents": _refutation_evidence_documents(record),
         },
     )
+
+
+def _claim_triples_for_record(
+    record: Mapping[str, Any],
+    *,
+    claim_id: str,
+) -> tuple[dict[str, Any], ...]:
+    """Build conservative claim triples from mapped facts and the model answer."""
+    model_answer = str(record.get("answer") or "").strip()
+    if not model_answer:
+        return ()
+    triples: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for fact in _sequence(record.get("mapped_facts")):
+        if not isinstance(fact, Mapping):
+            continue
+        subject = _fact_subject(fact)
+        predicate = _fact_predicate(fact)
+        if not subject or not predicate:
+            continue
+        key = (subject, predicate, model_answer)
+        if key in seen:
+            continue
+        seen.add(key)
+        triples.append({
+            "subject": subject,
+            "predicate": predicate,
+            "object": model_answer,
+            "claim_id": claim_id,
+            "source_text": f"{record.get('question', '')} {model_answer}".strip(),
+            "confidence": 0.9,
+            "metadata": {
+                "source": "source_family_structured_qa_claim_mapping",
+                "role": "model_answer_claim",
+                "mapping_decision": record.get("mapping_decision"),
+            },
+        })
+    return tuple(triples)
+
+
+def _refutation_evidence_documents(record: Mapping[str, Any]) -> tuple[dict[str, Any], ...]:
+    """Return structured evidence snippets suitable for trace-level triple audit."""
+    model_answer = str(record.get("answer") or "").strip()
+    if not model_answer:
+        return ()
+    documents: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    for fact in _sequence(record.get("mapped_facts")):
+        if not isinstance(fact, Mapping):
+            continue
+        subject = _fact_subject(fact)
+        predicate = _fact_predicate(fact)
+        correct_answer = str(fact.get("answer") or "").strip()
+        if not subject or not predicate or not correct_answer:
+            continue
+        text = f"{subject} {predicate} is {correct_answer}, not {model_answer}."
+        source = str(fact.get("source") or "source_family_structured_qa")
+        key = (source, text)
+        if key in seen:
+            continue
+        seen.add(key)
+        metadata = _fact_metadata(fact)
+        documents.append({
+            "text": text,
+            "source": source,
+            "metadata": {
+                "workflow": WORKFLOW,
+                "evidence_relation": "refutes_model_answer",
+                "source_fact_question": fact.get("question"),
+                "correct_answer": correct_answer,
+                "model_answer": model_answer,
+                "provider": fact.get("provider") or metadata.get("provider"),
+                "source_family": fact.get("source_family") or metadata.get("source_family"),
+                "statement_property": metadata.get("statement_property") or fact.get("fact_type"),
+            },
+        })
+    return tuple(documents)
+
+
+def _fact_subject(fact: Mapping[str, Any]) -> str:
+    metadata = _fact_metadata(fact)
+    for value in (
+        fact.get("subject"),
+        metadata.get("subject"),
+        metadata.get("country_name"),
+        metadata.get("indicator_name"),
+    ):
+        text = str(value or "").strip()
+        if text:
+            return text
+    return ""
+
+
+def _fact_predicate(fact: Mapping[str, Any]) -> str:
+    metadata = _fact_metadata(fact)
+    for value in (
+        metadata.get("statement_property_label"),
+        fact.get("fact_type"),
+        metadata.get("statement_property"),
+        metadata.get("indicator_name"),
+        metadata.get("indicator"),
+    ):
+        text = str(value or "").strip()
+        if text:
+            return text
+    return ""
 
 
 def _risk_decision(result: VerificationResult, *, route_name: str) -> RiskDecision:
