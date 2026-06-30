@@ -5544,7 +5544,7 @@ The current v1.9 contract carries the v6 deployment-path runtime evidence
 (`recommended_runtime_seconds=0.191662`,
 `recommended_runtime_cost_source=cache_only_total_seconds`) and the enriched
 handoff exporter now expects all seven default `frontier_audit` evidence groups
-with `46/46` fields present when `--frontier-release-evidence` is supplied.
+with `65/65` fields present when `--frontier-release-evidence` is supplied.
 Older generated v1.9 handoff artifacts may still show the previous six-group
 `38/38` export until regenerated. Refreshed frontier-audit runtime-drift reports
 also carry promotion-contract evidence-handoff

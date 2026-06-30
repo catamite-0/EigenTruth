@@ -2776,6 +2776,42 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "frontier_release_evidence_citation_batch_track_status": frontier_release_evidence.get(
             "citation_batch_track_status"
         ),
+        "frontier_release_evidence_frontier_rerun_rollup_track_status": (
+            frontier_release_evidence.get("frontier_rerun_rollup_track_status")
+        ),
+        "frontier_release_evidence_base_verifier_track_status": (
+            frontier_release_evidence.get("base_verifier_track_status")
+        ),
+        "frontier_release_evidence_base_abstention_track_status": (
+            frontier_release_evidence.get("base_abstention_track_status")
+        ),
+        "frontier_release_evidence_base_detectability_track_status": (
+            frontier_release_evidence.get("base_detectability_track_status")
+        ),
+        "frontier_release_evidence_base_multiple_testing_track_status": (
+            frontier_release_evidence.get("base_multiple_testing_track_status")
+        ),
+        "frontier_release_evidence_frontier_rerun_rollup_promoted_tracks": (
+            frontier_release_evidence.get("frontier_rerun_rollup_promoted_tracks")
+        ),
+        "frontier_release_evidence_frontier_rerun_rollup_report_count": (
+            frontier_release_evidence.get("frontier_rerun_rollup_report_count")
+        ),
+        "frontier_release_evidence_frontier_rerun_rollup_candidate_count": (
+            frontier_release_evidence.get("frontier_rerun_rollup_candidate_count")
+        ),
+        "frontier_release_evidence_frontier_rerun_rollup_missing_report_count": (
+            frontier_release_evidence.get("frontier_rerun_rollup_missing_report_count")
+        ),
+        "frontier_release_evidence_frontier_rerun_rollup_invalid_report_count": (
+            frontier_release_evidence.get("frontier_rerun_rollup_invalid_report_count")
+        ),
+        "frontier_release_evidence_frontier_rerun_rollup_blocked_candidate_count": (
+            frontier_release_evidence.get("frontier_rerun_rollup_blocked_candidate_count")
+        ),
+        "frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count": (
+            frontier_release_evidence.get("frontier_rerun_rollup_promotion_ready_count")
+        ),
         "frontier_release_evidence_citation_batch_rollup_count": frontier_release_evidence.get(
             "citation_batch_rollup_count"
         ),

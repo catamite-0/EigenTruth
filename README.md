@@ -306,8 +306,9 @@ recommendation (`0.191662s`) and has a sibling
 status without rerunning release gates, and can include manifest verification with
 `--verify-promotion-contract-evidence-handoff-manifest`.
 Refreshed evidence-handoff audits now require the frontier release-evidence
-verdict as the seventh default `frontier_audit` handoff group, so a complete
-new export carries `47/47` promoted evidence fields when
+verdict as the seventh default `frontier_audit` handoff group, including
+multiple-testing, citation-batch, and frontier rerun-rollup provenance, so a
+complete new export carries `65/65` promoted evidence fields when
 `--frontier-release-evidence` is supplied.
 The current registered product runtime profile sweep
 `report:smollm2-product-runtime-profile-sweep:0.1` verifies that `latency`,

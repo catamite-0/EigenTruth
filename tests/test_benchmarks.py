@@ -12977,6 +12977,14 @@ def _write_frontier_release_evidence_report(
         "status": status,
         "verifier_track_status": verifier_track_status,
         "abstention_track_status": abstention_track_status,
+        "frontier_rerun_rollup_track_status": "not_required",
+        "base_verifier_track_status": verifier_track_status,
+        "base_abstention_track_status": abstention_track_status,
+        "base_detectability_track_status": "not_required",
+        "base_multiple_testing_track_status": (
+            multiple_testing_track_status or "not_required"
+        ),
+        "frontier_rerun_rollup_promoted_tracks": (),
         "blocking_reasons": blocking_reasons,
     }
     if multiple_testing_track_status is not None:
@@ -13009,6 +13017,12 @@ def _write_frontier_release_evidence_report(
             "citation_batch_missing_expected_batch_count": 0
             if citation_batch_track_status == "promote"
             else 1 if citation_batch_track_status is not None else 0,
+            "frontier_rerun_rollup_report_count": 0,
+            "frontier_rerun_rollup_candidate_count": 0,
+            "frontier_rerun_rollup_missing_report_count": 0,
+            "frontier_rerun_rollup_invalid_report_count": 0,
+            "frontier_rerun_rollup_blocked_candidate_count": 0,
+            "frontier_rerun_rollup_promotion_ready_count": 0,
         },
     }
     report_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -23048,6 +23062,19 @@ def test_run_release_candidate_registry_workflow_records_blocked_frontier_eviden
         manifest["metadata"]["frontier_release_evidence_citation_batch_track_status"]
         == "blocked"
     )
+    assert (
+        manifest["metadata"]["frontier_release_evidence_frontier_rerun_rollup_track_status"]
+        == "not_required"
+    )
+    assert (
+        manifest["metadata"]["frontier_release_evidence_base_abstention_track_status"]
+        == "blocked"
+    )
+    assert manifest["metadata"]["frontier_release_evidence_frontier_rerun_rollup_report_count"] == 0
+    assert (
+        manifest["metadata"]["frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count"]
+        == 0
+    )
     assert manifest["metadata"]["frontier_release_evidence_citation_batch_rollup_count"] == 1
     assert manifest["metadata"]["frontier_release_evidence_citation_batch_expected_batch_count"] == 2
     assert manifest["metadata"]["frontier_release_evidence_citation_batch_observed_batch_count"] == 1
@@ -23061,6 +23088,16 @@ def test_run_release_candidate_registry_workflow_records_blocked_frontier_eviden
         "frontier-blocked/artifact-manifest.json"
     )
     assert record.metadata["frontier_release_evidence_citation_batch_track_status"] == "blocked"
+    assert (
+        record.metadata["frontier_release_evidence_frontier_rerun_rollup_track_status"]
+        == "not_required"
+    )
+    assert record.metadata["frontier_release_evidence_base_abstention_track_status"] == "blocked"
+    assert record.metadata["frontier_release_evidence_frontier_rerun_rollup_report_count"] == 0
+    assert (
+        record.metadata["frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count"]
+        == 0
+    )
     assert record.metadata["frontier_release_evidence_citation_batch_rollup_count"] == 1
     assert record.metadata["frontier_release_evidence_citation_batch_expected_batch_count"] == 2
     assert record.metadata["frontier_release_evidence_citation_batch_observed_batch_count"] == 1
