@@ -2611,6 +2611,9 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                     "context_sensitivity_evidence_required": True,
                     "context_sensitivity_evidence_metric_count": 6,
                     "context_sensitivity_evidence_blocked_metric_count": 0,
+                    "counterfactual_robustness_evidence_required": True,
+                    "counterfactual_robustness_evidence_metric_count": 6,
+                    "counterfactual_robustness_evidence_blocked_metric_count": 0,
                     "promotion_contract_coverage_rate_baseline": 1.0,
                     "promotion_contract_coverage_rate_current": 1.0,
                     "promotion_contract_coverage_rate_status": "pass",
@@ -2674,6 +2677,24 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                     "context_sensitivity_max_context_sensitivity_ratio_baseline": 1.0,
                     "context_sensitivity_max_context_sensitivity_ratio_current": 1.0,
                     "context_sensitivity_max_context_sensitivity_ratio_status": "pass",
+                    "counterfactual_robustness_participating_trace_rate_baseline": 1.0,
+                    "counterfactual_robustness_participating_trace_rate_current": 1.0,
+                    "counterfactual_robustness_participating_trace_rate_status": "pass",
+                    "counterfactual_robustness_coverage_rate_baseline": 1.0,
+                    "counterfactual_robustness_coverage_rate_current": 1.0,
+                    "counterfactual_robustness_coverage_rate_status": "pass",
+                    "counterfactual_robustness_pass_rate_baseline": 1.0,
+                    "counterfactual_robustness_pass_rate_current": 1.0,
+                    "counterfactual_robustness_pass_rate_status": "pass",
+                    "counterfactual_robustness_flip_success_rate_baseline": 1.0,
+                    "counterfactual_robustness_flip_success_rate_current": 1.0,
+                    "counterfactual_robustness_flip_success_rate_status": "pass",
+                    "counterfactual_robustness_false_invariance_rate_baseline": 0.0,
+                    "counterfactual_robustness_false_invariance_rate_current": 0.0,
+                    "counterfactual_robustness_false_invariance_rate_status": "pass",
+                    "counterfactual_robustness_trace_gap_rate_baseline": 0.0,
+                    "counterfactual_robustness_trace_gap_rate_current": 0.0,
+                    "counterfactual_robustness_trace_gap_rate_status": "pass",
                 },
             },
             "adapter_family_matrix": {
@@ -3224,6 +3245,24 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
         ]
         == 0
     )
+    assert (
+        contract.metadata[
+            "product_runtime_drift_counterfactual_robustness_evidence_required"
+        ]
+        is True
+    )
+    assert (
+        contract.metadata[
+            "product_runtime_drift_counterfactual_robustness_evidence_metric_count"
+        ]
+        == 6
+    )
+    assert (
+        contract.metadata[
+            "product_runtime_drift_counterfactual_robustness_evidence_blocked_metric_count"
+        ]
+        == 0
+    )
     assert contract.metadata["product_runtime_drift_promotion_contract_coverage_rate_current"] == 1.0
     assert contract.metadata["product_runtime_drift_promotion_contract_coverage_rate_status"] == "pass"
     assert (
@@ -3263,6 +3302,18 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert (
         contract.metadata[
             "product_runtime_drift_context_sensitivity_max_context_sensitivity_ratio_status"
+        ]
+        == "pass"
+    )
+    assert (
+        contract.metadata[
+            "product_runtime_drift_counterfactual_robustness_pass_rate_current"
+        ]
+        == 1.0
+    )
+    assert (
+        contract.metadata[
+            "product_runtime_drift_counterfactual_robustness_false_invariance_rate_status"
         ]
         == "pass"
     )
@@ -3551,6 +3602,15 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
             "product_runtime_drift_context_sensitivity_max_context_sensitivity_ratio_baseline": 1.0,
             "product_runtime_drift_context_sensitivity_max_context_sensitivity_ratio_current": 1.0,
             "product_runtime_drift_context_sensitivity_max_context_sensitivity_ratio_status": "pass",
+            "product_runtime_drift_counterfactual_robustness_evidence_required": True,
+            "product_runtime_drift_counterfactual_robustness_evidence_metric_count": 6,
+            "product_runtime_drift_counterfactual_robustness_evidence_blocked_metric_count": 0,
+            "product_runtime_drift_counterfactual_robustness_pass_rate_baseline": 1.0,
+            "product_runtime_drift_counterfactual_robustness_pass_rate_current": 1.0,
+            "product_runtime_drift_counterfactual_robustness_pass_rate_status": "pass",
+            "product_runtime_drift_counterfactual_robustness_false_invariance_rate_baseline": 0.0,
+            "product_runtime_drift_counterfactual_robustness_false_invariance_rate_current": 0.0,
+            "product_runtime_drift_counterfactual_robustness_false_invariance_rate_status": "pass",
             "product_runtime_drift_covered_fact_recommended_route_min_records_baseline": 16,
             "product_runtime_drift_covered_fact_recommended_route_min_records_current": 15,
             "product_runtime_drift_covered_fact_recommended_route_min_records_status": "pass",
@@ -3888,6 +3948,21 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
         "promotion_contract_product_runtime_drift_context_sensitivity_max_context_sensitivity_ratio_status"
     ] == "pass"
     assert metadata[
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_evidence_required"
+    ] is True
+    assert metadata[
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_evidence_metric_count"
+    ] == 6
+    assert metadata[
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_evidence_blocked_metric_count"
+    ] == 0
+    assert metadata[
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_pass_rate_current"
+    ] == 1.0
+    assert metadata[
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_false_invariance_rate_status"
+    ] == "pass"
+    assert metadata[
         "promotion_contract_product_runtime_drift_covered_fact_recommended_route_min_records_current"
     ] == 15
     assert metadata[
@@ -3917,6 +3992,12 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert runtime_metrics["promotion_contract_summary"]["product_runtime_drift"][
         "context_sensitivity_evidence"
     ]["context_sensitivity_flagged_result_rate"]["current"] == pytest.approx(0.0)
+    assert runtime_metrics["promotion_contract_summary"]["product_runtime_drift"][
+        "counterfactual_robustness_evidence_metric_count"
+    ] == pytest.approx(6.0)
+    assert runtime_metrics["promotion_contract_summary"]["product_runtime_drift"][
+        "counterfactual_robustness_evidence"
+    ]["counterfactual_robustness_pass_rate"]["current"] == pytest.approx(1.0)
     assert runtime_metrics["promotion_contract_product_trace_replay_available"] is True
     assert runtime_metrics["promotion_contract_product_trace_replay_workflow_report"] == (
         "trace-replay-workflow.json"

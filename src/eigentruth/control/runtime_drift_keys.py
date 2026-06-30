@@ -97,6 +97,14 @@ PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_KEYS: tuple[str, ...] = (
     "context_sensitivity_max_flagged_rate",
     "context_sensitivity_max_context_sensitivity_ratio",
 )
+PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_ROBUSTNESS_EVIDENCE_KEYS: tuple[str, ...] = (
+    "counterfactual_robustness_participating_trace_rate",
+    "counterfactual_robustness_coverage_rate",
+    "counterfactual_robustness_pass_rate",
+    "counterfactual_robustness_flip_success_rate",
+    "counterfactual_robustness_false_invariance_rate",
+    "counterfactual_robustness_trace_gap_rate",
+)
 PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_KEYS: tuple[str, ...] = (
     "frontier_release_evidence_coverage_rate",
     "frontier_release_evidence_report_present_rate",
@@ -134,6 +142,9 @@ PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS: dict[str, tuple[str, ...]] = {
     "evidence_handoff": PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS,
     "world_model": PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_KEYS,
     "context_sensitivity": PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_KEYS,
+    "counterfactual_robustness": (
+        PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_ROBUSTNESS_EVIDENCE_KEYS
+    ),
     "frontier_release_evidence": PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_KEYS,
 }
 

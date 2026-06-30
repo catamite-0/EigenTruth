@@ -39,6 +39,9 @@ _PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_PREFIXES = (
 _PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_KEYS
 )
+_PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_ROBUSTNESS_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_ROBUSTNESS_EVIDENCE_KEYS
+)
 _PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_KEYS
 )
@@ -3261,6 +3264,11 @@ def _promotion_contract_runtime_drift_from_metadata(
         contract_metadata=contract_metadata,
         prefixes=_PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_PREFIXES,
     )
+    counterfactual_robustness_evidence = _promotion_contract_runtime_drift_evidence(
+        metadata,
+        contract_metadata=contract_metadata,
+        prefixes=_PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_ROBUSTNESS_EVIDENCE_PREFIXES,
+    )
     frontier_release_evidence = _promotion_contract_runtime_drift_evidence(
         metadata,
         contract_metadata=contract_metadata,
@@ -3303,6 +3311,9 @@ def _promotion_contract_runtime_drift_from_metadata(
         ),
         "context_sensitivity_evidence_required": _optional_bool(
             value("product_runtime_drift_context_sensitivity_evidence_required")
+        ),
+        "counterfactual_robustness_evidence_required": _optional_bool(
+            value("product_runtime_drift_counterfactual_robustness_evidence_required")
         ),
         "frontier_release_evidence_required": _optional_bool(
             value("product_runtime_drift_frontier_release_evidence_required")
@@ -3373,6 +3384,14 @@ def _promotion_contract_runtime_drift_from_metadata(
                 "product_runtime_drift_context_sensitivity_evidence_blocked_metric_count"
             )
         ),
+        "counterfactual_robustness_evidence_metric_count": _finite_float(
+            value("product_runtime_drift_counterfactual_robustness_evidence_metric_count")
+        ),
+        "counterfactual_robustness_evidence_blocked_metric_count": _finite_float(
+            value(
+                "product_runtime_drift_counterfactual_robustness_evidence_blocked_metric_count"
+            )
+        ),
         "frontier_release_evidence_metric_count": _finite_float(
             value("product_runtime_drift_frontier_release_evidence_metric_count")
         ),
@@ -3389,6 +3408,7 @@ def _promotion_contract_runtime_drift_from_metadata(
         "evidence_handoff_evidence": evidence_handoff_evidence,
         "world_model_evidence": world_model_evidence,
         "context_sensitivity_evidence": context_sensitivity_evidence,
+        "counterfactual_robustness_evidence": counterfactual_robustness_evidence,
         "frontier_release_evidence": frontier_release_evidence,
     }
     drift["available"] = any(
@@ -3407,6 +3427,7 @@ def _promotion_contract_runtime_drift_from_metadata(
             "evidence_handoff_evidence",
             "world_model_evidence",
             "context_sensitivity_evidence",
+            "counterfactual_robustness_evidence",
             "frontier_release_evidence",
         }
     ) or _runtime_drift_evidence_available(
@@ -3420,6 +3441,7 @@ def _promotion_contract_runtime_drift_from_metadata(
         evidence_handoff_evidence,
         world_model_evidence,
         context_sensitivity_evidence,
+        counterfactual_robustness_evidence,
         frontier_release_evidence,
     )
     return drift
@@ -3515,6 +3537,9 @@ def _promotion_contract_runtime_drift_metric_values(runtime_drift: Mapping[str, 
         "promotion_contract_product_runtime_drift_context_sensitivity_evidence_required": (
             runtime_drift.get("context_sensitivity_evidence_required")
         ),
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_evidence_required": (
+            runtime_drift.get("counterfactual_robustness_evidence_required")
+        ),
         "promotion_contract_product_runtime_drift_frontier_release_evidence_required": (
             runtime_drift.get("frontier_release_evidence_required")
         ),
@@ -3584,6 +3609,12 @@ def _promotion_contract_runtime_drift_metric_values(runtime_drift: Mapping[str, 
         "promotion_contract_product_runtime_drift_context_sensitivity_evidence_blocked_metric_count": (
             runtime_drift.get("context_sensitivity_evidence_blocked_metric_count")
         ),
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_evidence_metric_count": (
+            runtime_drift.get("counterfactual_robustness_evidence_metric_count")
+        ),
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_evidence_blocked_metric_count": (
+            runtime_drift.get("counterfactual_robustness_evidence_blocked_metric_count")
+        ),
         "promotion_contract_product_runtime_drift_frontier_release_evidence_metric_count": (
             runtime_drift.get("frontier_release_evidence_metric_count")
         ),
@@ -3638,6 +3669,13 @@ def _promotion_contract_runtime_drift_metric_values(runtime_drift: Mapping[str, 
             ] = _mapping(values).get(suffix)
     for prefix, values in _mapping(
         runtime_drift.get("context_sensitivity_evidence")
+    ).items():
+        for suffix in ("baseline", "current", "status"):
+            metrics[
+                f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
+            ] = _mapping(values).get(suffix)
+    for prefix, values in _mapping(
+        runtime_drift.get("counterfactual_robustness_evidence")
     ).items():
         for suffix in ("baseline", "current", "status"):
             metrics[

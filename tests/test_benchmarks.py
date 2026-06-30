@@ -17737,6 +17737,12 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         blocked_metric_count=0,
         context_sensitivity_evidence=True,
     )
+    counterfactual_robustness_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "counterfactual-robustness-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        counterfactual_robustness_evidence=True,
+    )
     frontier_release_drift_report = _write_product_runtime_drift_report(
         tmp_path / "frontier-release-runtime-drift",
         status="promote",
@@ -17784,6 +17790,13 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         blocked_metric_count=0,
         context_sensitivity_evidence=True,
         context_sensitivity_blocked=True,
+    )
+    blocked_counterfactual_robustness_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "blocked-counterfactual-robustness-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        counterfactual_robustness_evidence=True,
+        counterfactual_robustness_blocked=True,
     )
     blocked_frontier_release_drift_report = _write_product_runtime_drift_report(
         tmp_path / "blocked-frontier-release-runtime-drift",
@@ -18158,6 +18171,17 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         product_runtime_drift_report_path=context_sensitivity_drift_report,
         require_product_runtime_drift_context_sensitivity_evidence=True,
     )
+    counterfactual_robustness = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=counterfactual_robustness_drift_report,
+        require_product_runtime_drift_counterfactual_robustness_evidence=True,
+    )
     missing_context_sensitivity = module.compare_release_candidates(
         readiness_registry_path=registry_path,
         min_best_quality_auroc=0.70,
@@ -18169,6 +18193,17 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         product_runtime_drift_report_path=missing_evidence_drift_report,
         require_product_runtime_drift_context_sensitivity_evidence=True,
     )
+    missing_counterfactual_robustness = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=missing_evidence_drift_report,
+        require_product_runtime_drift_counterfactual_robustness_evidence=True,
+    )
     blocked_context_sensitivity = module.compare_release_candidates(
         readiness_registry_path=registry_path,
         min_best_quality_auroc=0.70,
@@ -18179,6 +18214,17 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         min_false_refuted_rate=0.99,
         product_runtime_drift_report_path=blocked_context_sensitivity_drift_report,
         require_product_runtime_drift_context_sensitivity_evidence=True,
+    )
+    blocked_counterfactual_robustness = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=blocked_counterfactual_robustness_drift_report,
+        require_product_runtime_drift_counterfactual_robustness_evidence=True,
     )
     frontier_release = module.compare_release_candidates(
         readiness_registry_path=registry_path,
@@ -18661,6 +18707,70 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         for reason in blocked_context_sensitivity["decision"]["blocking_reasons"][0][
             "reasons"
         ]
+    )
+    assert counterfactual_robustness["decision"]["status"] == "promote"
+    assert (
+        counterfactual_robustness["config"][
+            "require_product_runtime_drift_counterfactual_robustness_evidence"
+        ]
+        is True
+    )
+    counterfactual_robustness_summary = counterfactual_robustness[
+        "release_candidate"
+    ]["product_runtime_drift"]["summary"]
+    assert (
+        counterfactual_robustness_summary[
+            "counterfactual_robustness_evidence_required"
+        ]
+        is True
+    )
+    assert (
+        counterfactual_robustness_summary[
+            "counterfactual_robustness_evidence_metric_count"
+        ]
+        == 6
+    )
+    assert (
+        counterfactual_robustness_summary[
+            "counterfactual_robustness_evidence_blocked_metric_count"
+        ]
+        == 0
+    )
+    assert counterfactual_robustness_summary[
+        "counterfactual_robustness_pass_rate_current"
+    ] == pytest.approx(1.0)
+    assert (
+        counterfactual_robustness_summary[
+            "counterfactual_robustness_false_invariance_rate_status"
+        ]
+        == "pass"
+    )
+    assert missing_counterfactual_robustness["decision"]["status"] == "blocked"
+    assert missing_counterfactual_robustness["product_runtime_drift_gate"]["summary"][
+        "counterfactual_robustness_evidence_missing_metrics"
+    ] == (
+        "counterfactual_robustness.participating_trace_rate",
+        "counterfactual_robustness.coverage_rate",
+        "counterfactual_robustness.pass_rate",
+        "counterfactual_robustness.flip_success_rate",
+        "counterfactual_robustness.false_invariance_rate",
+        "counterfactual_robustness.trace_gap_rate",
+    )
+    assert any(
+        "counterfactual-robustness evidence metrics are incomplete" in reason
+        for reason in missing_counterfactual_robustness["decision"][
+            "blocking_reasons"
+        ][0]["reasons"]
+    )
+    assert blocked_counterfactual_robustness["decision"]["status"] == "blocked"
+    assert blocked_counterfactual_robustness["product_runtime_drift_gate"]["summary"][
+        "counterfactual_robustness_evidence_blocked_metric_count"
+    ] == 2
+    assert any(
+        "counterfactual-robustness evidence blocked 2 metric" in reason
+        for reason in blocked_counterfactual_robustness["decision"][
+            "blocking_reasons"
+        ][0]["reasons"]
     )
     assert frontier_release["decision"]["status"] == "promote"
     assert frontier_release["config"][
@@ -20288,6 +20398,7 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         evidence_handoff_evidence=True,
         world_model_evidence=True,
         context_sensitivity_evidence=True,
+        counterfactual_robustness_evidence=True,
         frontier_release_evidence=True,
     )
     external_evidence_report = _write_external_evidence_baseline_comparison_report(
@@ -20416,6 +20527,12 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         ]
         is True
     )
+    assert (
+        frontier_payload["config"][
+            "require_product_runtime_drift_counterfactual_robustness_evidence"
+        ]
+        is True
+    )
     assert frontier_payload["config"]["require_product_runtime_drift_frontier_release_evidence"] is True
     assert frontier_payload["config"]["require_product_trace_action_audit_gate"] is True
     assert frontier_payload["config"]["require_product_trace_action_execution_gate"] is True
@@ -20471,6 +20588,12 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         ]
         is True
     )
+    assert (
+        frontier_payload["config"]["release_policy_profile_applied_defaults"][
+            "require_product_runtime_drift_counterfactual_robustness_evidence"
+        ]
+        is True
+    )
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
         "require_product_runtime_drift_frontier_release_evidence"
     ] is True
@@ -20516,6 +20639,9 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     ] == 5
     assert frontier_payload["product_runtime_drift_gate"]["summary"][
         "context_sensitivity_evidence_metric_count"
+    ] == 6
+    assert frontier_payload["product_runtime_drift_gate"]["summary"][
+        "counterfactual_robustness_evidence_metric_count"
     ] == 6
     assert frontier_payload["product_runtime_drift_gate"]["summary"][
         "frontier_release_evidence_metric_count"
@@ -21693,6 +21819,10 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     assert frontier_profile_config.require_product_runtime_drift_action_gate_evidence is True
     assert frontier_profile_config.require_product_runtime_drift_trajectory_audit_evidence is True
     assert frontier_profile_config.require_product_runtime_drift_evidence_handoff_evidence is True
+    assert (
+        frontier_profile_config.require_product_runtime_drift_counterfactual_robustness_evidence
+        is True
+    )
     assert frontier_profile_config.require_product_runtime_drift_frontier_release_evidence is True
     assert frontier_profile_config.require_product_trace_action_audit_gate is True
     assert frontier_profile_config.require_product_trace_action_execution_gate is True
@@ -21739,6 +21869,9 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     ] is True
     assert frontier_profile_config.release_policy_profile_applied_defaults[
         "require_product_runtime_drift_evidence_handoff_evidence"
+    ] is True
+    assert frontier_profile_config.release_policy_profile_applied_defaults[
+        "require_product_runtime_drift_counterfactual_robustness_evidence"
     ] is True
     assert frontier_profile_config.release_policy_profile_applied_defaults[
         "require_product_runtime_drift_frontier_release_evidence"
@@ -26103,6 +26236,8 @@ def _write_product_runtime_drift_report(
     world_model_blocked=False,
     context_sensitivity_evidence=False,
     context_sensitivity_blocked=False,
+    counterfactual_robustness_evidence=False,
+    counterfactual_robustness_blocked=False,
     frontier_release_evidence=False,
     frontier_release_blocked=False,
 ):
@@ -27099,6 +27234,83 @@ def _write_product_runtime_drift_report(
                 "comparison": "max_increase",
                 "baseline": 1.0,
                 "current": 1.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 0.0,
+                "reason": None,
+            },
+        ])
+    if counterfactual_robustness_evidence:
+        robustness_pass_status = "blocked" if counterfactual_robustness_blocked else "pass"
+        false_invariance_status = "blocked" if counterfactual_robustness_blocked else "pass"
+        pass_rate_current = 0.70 if counterfactual_robustness_blocked else 1.0
+        false_invariance_current = 0.20 if counterfactual_robustness_blocked else 0.0
+        metrics.extend([
+            {
+                "metric": "counterfactual_robustness.participating_trace_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "counterfactual_robustness.coverage_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "counterfactual_robustness.pass_rate",
+                "status": robustness_pass_status,
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": pass_rate_current,
+                "absolute_delta": pass_rate_current - 1.0,
+                "threshold": 0.95,
+                "reason": (
+                    "counterfactual_robustness.pass_rate below gate"
+                    if counterfactual_robustness_blocked
+                    else None
+                ),
+            },
+            {
+                "metric": "counterfactual_robustness.flip_success_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 0.95,
+                "reason": None,
+            },
+            {
+                "metric": "counterfactual_robustness.false_invariance_rate",
+                "status": false_invariance_status,
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": false_invariance_current,
+                "absolute_delta": false_invariance_current,
+                "absolute_increase": false_invariance_current,
+                "threshold": 0.05,
+                "reason": (
+                    "counterfactual_robustness.false_invariance_rate above gate"
+                    if counterfactual_robustness_blocked
+                    else None
+                ),
+            },
+            {
+                "metric": "counterfactual_robustness.trace_gap_rate",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": 0.0,
                 "absolute_delta": 0.0,
                 "absolute_increase": 0.0,
                 "threshold": 0.0,
@@ -35534,7 +35746,7 @@ def test_run_product_runtime_baseline_reuses_trace_record_cache(tmp_path, monkey
     assert first["config"]["trace_record_cache"]["cache_hit"] is False
     assert first["config"]["trace_record_cache"]["cache_written"] is True
     assert first["paths"]["trace_records_cache"] == str(cache_path)
-    assert cache_payload["schema_version"] == 18
+    assert cache_payload["schema_version"] == 19
     assert cache_payload["workflow"] == "product_runtime_baseline_trace_records"
     assert cache_payload["summary"]["trace_count"] == 2
     assert cache_payload["policy"]["payload"]["max_total_seconds"] == 0.3
@@ -36218,6 +36430,146 @@ def test_compare_product_runtime_baselines_gates_context_sensitivity_drift(tmp_p
     assert record.metadata[
         "context_sensitivity_max_context_sensitivity_ratio_current"
     ] == pytest.approx(3.0)
+
+
+def test_compare_product_runtime_baselines_gates_counterfactual_robustness_drift(tmp_path):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    registry_module = importlib.import_module("eigentruth.registry")
+    baseline_trace = tmp_path / "baseline-trace.json"
+    current_trace = tmp_path / "current-trace.json"
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    drift_report = tmp_path / "drift.json"
+    manifest_path = tmp_path / "drift-manifest.json"
+    registry_path = tmp_path / "registry.json"
+
+    def write_trace(
+        path: Path,
+        *,
+        request_id: str,
+        summary: Mapping[str, Any],
+    ) -> None:
+        path.write_text(
+            json.dumps({
+                "request_id": request_id,
+                "runtime_trace": {
+                    "total_seconds": 0.10,
+                    "phases": [{"name": "initial_verification", "seconds": 0.01}],
+                },
+                "summaries": {"counterfactual_robustness": dict(summary)},
+                "verification_results": [],
+            }),
+            encoding="utf-8",
+        )
+
+    base_summary = {
+        "total": 4,
+        "counterfactual_result_total": 4,
+        "counterfactual_probe_total": 4,
+        "coverage_rate": 1.0,
+        "passed_count": 4,
+        "failed_count": 0,
+        "pass_rate": 1.0,
+        "expected_flip_count": 4,
+        "flip_success_count": 4,
+        "flip_success_rate": 1.0,
+        "false_invariance_count": 0,
+        "false_invariance_rate": 0.0,
+        "expected_stable_count": 0,
+        "unexpected_flip_count": 0,
+        "unexpected_flip_rate": 0.0,
+        "trace_gap_count": 0,
+        "trace_gap_rate": 0.0,
+        "traceable": True,
+    }
+    current_summary = {
+        **base_summary,
+        "passed_count": 3,
+        "failed_count": 1,
+        "pass_rate": 0.75,
+        "flip_success_count": 3,
+        "flip_success_rate": 0.75,
+        "false_invariance_count": 1,
+        "false_invariance_rate": 0.25,
+    }
+    write_trace(baseline_trace, request_id="baseline", summary=base_summary)
+    write_trace(current_trace, request_id="current", summary=current_summary)
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=baseline_report,
+        )
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(current_trace,),
+            report_path=current_report,
+        )
+    )
+
+    payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        report_path=drift_report,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="runtime-drift-counterfactual-robustness",
+        version="0.1",
+        min_counterfactual_robustness_participating_trace_rate=1.0,
+        min_counterfactual_robustness_coverage_rate=1.0,
+        min_counterfactual_robustness_pass_rate=0.90,
+        min_counterfactual_robustness_flip_success_rate=0.70,
+        max_counterfactual_robustness_false_invariance_rate_increase=0.05,
+        max_counterfactual_robustness_trace_gap_rate_increase=0.0,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "product_runtime_drift_report:runtime-drift-counterfactual-robustness:0.1"
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["blocked_metric_count"] == 2
+    assert _metric_by_name(payload, "counterfactual_robustness.participating_trace_rate")[
+        "status"
+    ] == "pass"
+    assert _metric_by_name(payload, "counterfactual_robustness.coverage_rate")[
+        "status"
+    ] == "pass"
+    assert _metric_by_name(payload, "counterfactual_robustness.pass_rate")[
+        "status"
+    ] == "blocked"
+    assert _metric_by_name(payload, "counterfactual_robustness.flip_success_rate")[
+        "status"
+    ] == "pass"
+    assert _metric_by_name(payload, "counterfactual_robustness.false_invariance_rate")[
+        "absolute_delta"
+    ] == pytest.approx(0.25)
+    assert _metric_by_name(payload, "counterfactual_robustness.false_invariance_rate")[
+        "status"
+    ] == "blocked"
+    assert _metric_by_name(payload, "counterfactual_robustness.trace_gap_rate")[
+        "status"
+    ] == "pass"
+    assert payload["config"]["min_counterfactual_robustness_pass_rate"] == pytest.approx(
+        0.90
+    )
+    assert (
+        payload["config"][
+            "max_counterfactual_robustness_false_invariance_rate_increase"
+        ]
+        == pytest.approx(0.05)
+    )
+    assert manifest["metadata"]["counterfactual_robustness_blocked_metric_count"] == 2
+    assert manifest["metadata"]["counterfactual_robustness_pass_rate_current"] == (
+        pytest.approx(0.75)
+    )
+    assert (
+        manifest["metadata"]["counterfactual_robustness_false_invariance_rate_status"]
+        == "blocked"
+    )
+    assert record.metadata["counterfactual_robustness_blocked_metric_count"] == 2
+    assert record.metadata["counterfactual_robustness_pass_rate_status"] == "blocked"
 
 
 def test_compare_product_runtime_baselines_reports_minimum_trace_gate_reason(tmp_path):
@@ -40044,6 +40396,134 @@ def test_product_trace_replay_workflow_applies_world_model_runtime_drift_gate(tm
     assert record.metadata["runtime_drift_world_model_blocked_metric_count"] == 0
     assert drift_record.metadata["world_model_blocked_metric_count"] == 0
     assert drift_record.metadata["world_model_conflict_rate_status"] == "pass"
+
+
+def test_product_trace_replay_workflow_applies_counterfactual_robustness_runtime_drift_gate(
+    tmp_path,
+):
+    module = importlib.import_module("benchmarks.run_product_trace_replay_workflow")
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    tuning_module = importlib.import_module("benchmarks.run_runtime_profile_selector_tuning")
+    registry_module = importlib.import_module("eigentruth.registry")
+    output_dir = tmp_path / "workflow"
+    traces_dir = tmp_path / "input-traces"
+    traces_dir.mkdir()
+    registry_path = tmp_path / "registry.json"
+    prior_baseline_path = tmp_path / "prior-baseline.json"
+
+    summary = {
+        "total": 4,
+        "counterfactual_result_total": 4,
+        "counterfactual_probe_total": 4,
+        "coverage_rate": 1.0,
+        "passed_count": 4,
+        "failed_count": 0,
+        "pass_rate": 1.0,
+        "expected_flip_count": 4,
+        "flip_success_count": 4,
+        "flip_success_rate": 1.0,
+        "false_invariance_count": 0,
+        "false_invariance_rate": 0.0,
+        "expected_stable_count": 0,
+        "unexpected_flip_count": 0,
+        "unexpected_flip_rate": 0.0,
+        "trace_gap_count": 0,
+        "trace_gap_rate": 0.0,
+        "traceable": True,
+    }
+
+    def trace(path: Path, *, request_id: str) -> None:
+        path.write_text(
+            json.dumps({
+                "request_id": request_id,
+                "risk_decision": {
+                    "action": "accept",
+                    "risk_level": "low",
+                    "confidence": 0.95,
+                    "reason": "counterfactual robustness checks passed",
+                },
+                "claims": [{
+                    "claim_id": "c1",
+                    "text": "A product claim remains stable under irrelevant edits.",
+                    "metadata": {},
+                }],
+                "runtime_trace": {"total_seconds": 0.10, "phases": []},
+                "summaries": {"counterfactual_robustness": summary},
+                "verification_results": [],
+                "metadata": {"runtime_profile": "latency"},
+            }),
+            encoding="utf-8",
+        )
+
+    baseline_trace = tmp_path / "baseline-trace.json"
+    current_trace = traces_dir / "current-trace.json"
+    trace(baseline_trace, request_id="baseline")
+    trace(current_trace, request_id="current")
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=prior_baseline_path,
+        )
+    )
+
+    payload = module.run_product_trace_replay_workflow(
+        module.ProductTraceReplayWorkflowConfig(
+            trace_paths=(current_trace,),
+            output_dir=output_dir,
+            candidates=(
+                tuning_module.RuntimeProfileSelectorCandidate(
+                    name="default",
+                    policy={},
+                ),
+            ),
+            runtime_drift_baseline_path=prior_baseline_path,
+            min_runtime_drift_counterfactual_robustness_participating_trace_rate=1.0,
+            min_runtime_drift_counterfactual_robustness_coverage_rate=1.0,
+            min_runtime_drift_counterfactual_robustness_pass_rate=1.0,
+            min_runtime_drift_counterfactual_robustness_flip_success_rate=1.0,
+            max_runtime_drift_counterfactual_robustness_false_invariance_rate_increase=0.0,
+            max_runtime_drift_counterfactual_robustness_trace_gap_rate_increase=0.0,
+            registry_path=registry_path,
+            name="trace-replay-counterfactual-robustness-drift",
+            version="0.1",
+            require_runtime_trace=True,
+        )
+    )
+    drift_report = json.loads(
+        Path(payload["paths"]["runtime_drift_report"]).read_text(encoding="utf-8")
+    )
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get("report:trace-replay-counterfactual-robustness-drift:0.1")
+    drift_record = registry.get(
+        "product_runtime_drift_report:trace-replay-counterfactual-robustness-drift-runtime-drift:0.1"
+    )
+    robustness_statuses = {
+        metric["metric"]: metric["status"]
+        for metric in drift_report["metrics"]
+        if metric["metric"].startswith("counterfactual_robustness.")
+    }
+
+    assert payload["runtime_drift"]["status"] == "promote"
+    assert payload["runtime_drift"]["counterfactual_robustness_metric_count"] == 6
+    assert payload["runtime_drift"]["counterfactual_robustness_blocked_metric_count"] == 0
+    assert payload["config"]["runtime_drift_gates"][
+        "min_counterfactual_robustness_pass_rate"
+    ] == pytest.approx(1.0)
+    assert payload["config"]["runtime_drift_gates"][
+        "max_counterfactual_robustness_false_invariance_rate_increase"
+    ] == pytest.approx(0.0)
+    assert len(robustness_statuses) == 6
+    assert set(robustness_statuses.values()) == {"pass"}
+    assert manifest["metadata"]["runtime_drift_counterfactual_robustness_metric_count"] == 6
+    assert (
+        manifest["metadata"]["runtime_drift_counterfactual_robustness_blocked_metric_count"]
+        == 0
+    )
+    assert record.metadata["runtime_drift_counterfactual_robustness_metric_count"] == 6
+    assert record.metadata["runtime_drift_counterfactual_robustness_blocked_metric_count"] == 0
+    assert drift_record.metadata["counterfactual_robustness_blocked_metric_count"] == 0
+    assert drift_record.metadata["counterfactual_robustness_pass_rate_status"] == "pass"
 
 
 def test_run_product_trace_replay_workflow_applies_action_audit_gate(tmp_path):
