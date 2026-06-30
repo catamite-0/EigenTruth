@@ -35,6 +35,7 @@ def export_product_promotion_contract_evidence_handoff(
     registry_path: str | Path | None = None,
     name: str | None = None,
     version: str | None = None,
+    required_groups: Sequence[str] | None = None,
     metadata: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Write an enriched contract and its evidence-handoff audit."""
@@ -74,6 +75,7 @@ def export_product_promotion_contract_evidence_handoff(
             "source_contract": str(contract_path),
             **dict(metadata or {}),
         },
+        required_groups=required_groups,
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     audit_path.parent.mkdir(parents=True, exist_ok=True)
@@ -115,6 +117,7 @@ def export_product_promotion_contract_evidence_handoff(
                 "after_missing_metric_count": result.summary["after_missing_metric_count"],
                 "resolved_missing_metric_count": result.summary["resolved_missing_metric_count"],
                 "filled_groups": result.filled_groups,
+                "required_groups": result.after_audit.required_groups,
                 **dict(metadata or {}),
             },
         )
@@ -139,6 +142,7 @@ def export_product_promotion_contract_evidence_handoff(
                 "after_missing_metric_count": result.summary["after_missing_metric_count"],
                 "resolved_missing_metric_count": result.summary["resolved_missing_metric_count"],
                 "filled_groups": result.filled_groups,
+                "required_groups": result.after_audit.required_groups,
                 **dict(metadata or {}),
             },
         )
@@ -154,6 +158,7 @@ def export_product_promotion_contract_evidence_handoff(
                 "missing_metric_count": audit_payload["summary"]["missing_metric_count"],
                 "blocked_group_count": audit_payload["summary"]["blocked_group_count"],
                 "recommended_action_ids": audit_payload["recommended_action_ids"],
+                "required_groups": result.after_audit.required_groups,
                 **dict(metadata or {}),
             },
         )
@@ -196,6 +201,13 @@ def _parse_metadata(values: Sequence[str]) -> dict[str, Any]:
     return metadata
 
 
+def _parse_required_groups(value: str | None) -> tuple[str, ...] | None:
+    if value is None:
+        return None
+    groups = tuple(item.strip() for item in value.split(",") if item.strip())
+    return groups or None
+
+
 def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         description=(
@@ -217,6 +229,14 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--registry", default=None, help="optional ArtifactRegistry JSON")
     parser.add_argument("--name", default=None, help="registry contract name")
     parser.add_argument("--version", default=None, help="registry contract version")
+    parser.add_argument(
+        "--required-groups",
+        default=None,
+        help=(
+            "comma-list of required handoff evidence groups; defaults to the "
+            "core promotion-contract handoff groups"
+        ),
+    )
     parser.add_argument(
         "--metadata",
         action="append",
@@ -240,6 +260,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         registry_path=args.registry,
         name=args.name,
         version=args.version,
+        required_groups=_parse_required_groups(args.required_groups),
         metadata=_parse_metadata(args.metadata or ()),
     )
     print(

@@ -8,6 +8,9 @@ from benchmarks.audit_product_promotion_contract_evidence import (
 from benchmarks.export_product_promotion_contract_evidence_handoff import (
     export_product_promotion_contract_evidence_handoff,
 )
+from benchmarks.export_product_promotion_contract_evidence_handoff import (
+    main as export_product_promotion_contract_evidence_handoff_main,
+)
 from eigentruth.control import (
     audit_product_promotion_contract_evidence,
     enrich_product_promotion_contract_evidence,
@@ -426,6 +429,103 @@ def test_product_promotion_evidence_handoff_cli_helper_writes_and_registers(tmp_
     assert contract_record.metadata["artifact_manifest"] == str(manifest)
     assert audit_record.metadata["missing_metric_count"] == 12
     assert audit_record.metadata["scope"] == "unit-test"
+
+
+def test_product_promotion_evidence_handoff_export_accepts_required_runtime_groups(
+    tmp_path,
+):
+    contract = tmp_path / "contract.json"
+    output = tmp_path / "contract-enriched.json"
+    audit = tmp_path / "contract-enriched-audit.json"
+    manifest = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    contract.write_text(
+        json.dumps(_complete_contract_with_optional_runtime_groups()),
+        encoding="utf-8",
+    )
+
+    payload = export_product_promotion_contract_evidence_handoff(
+        contract=contract,
+        json_path=output,
+        audit_json_path=audit,
+        artifact_manifest_path=manifest,
+        registry_path=registry_path,
+        name="strict-contract-enriched",
+        version="0.3",
+        required_groups=(
+            "claim_risk_localization",
+            "trajectory_audit",
+            "world_model",
+        ),
+    )
+    audit_payload = json.loads(audit.read_text(encoding="utf-8"))
+    manifest_payload = json.loads(manifest.read_text(encoding="utf-8"))
+    registry = ArtifactRegistry.load_json(registry_path)
+    contract_record = registry.get(
+        "product_promotion_contract:strict-contract-enriched:0.3"
+    )
+    audit_record = registry.get(
+        "product_promotion_evidence_audit:strict-contract-enriched-audit:0.3"
+    )
+
+    assert payload["status"] == "promote"
+    assert payload["after_audit"]["required_groups"] == (
+        "claim_risk_localization",
+        "trajectory_audit",
+        "world_model",
+    )
+    assert payload["summary"]["after_missing_metric_count"] == 0
+    assert audit_payload["summary"]["groups"]["claim_risk_localization"] == "promote"
+    assert audit_payload["summary"]["groups"]["trajectory_audit"] == "promote"
+    assert audit_payload["summary"]["groups"]["world_model"] == "promote"
+    assert manifest_payload["metadata"]["required_groups"] == [
+        "claim_risk_localization",
+        "trajectory_audit",
+        "world_model",
+    ]
+    assert contract_record.metadata["required_groups"] == [
+        "claim_risk_localization",
+        "trajectory_audit",
+        "world_model",
+    ]
+    assert audit_record.metadata["required_groups"] == [
+        "claim_risk_localization",
+        "trajectory_audit",
+        "world_model",
+    ]
+
+
+def test_product_promotion_evidence_handoff_cli_parses_required_groups(tmp_path):
+    contract = tmp_path / "contract.json"
+    output = tmp_path / "contract-enriched.json"
+    audit = tmp_path / "contract-enriched-audit.json"
+    contract.write_text(
+        json.dumps(_complete_contract_with_optional_runtime_groups()),
+        encoding="utf-8",
+    )
+
+    export_product_promotion_contract_evidence_handoff_main(
+        [
+            "--contract",
+            str(contract),
+            "--json",
+            str(output),
+            "--audit-json",
+            str(audit),
+            "--required-groups",
+            "claim_risk_localization,trajectory_audit,world_model",
+        ]
+    )
+    audit_payload = json.loads(audit.read_text(encoding="utf-8"))
+
+    assert output.exists()
+    assert audit_payload["status"] == "promote"
+    assert audit_payload["required_groups"] == [
+        "claim_risk_localization",
+        "trajectory_audit",
+        "world_model",
+    ]
+    assert audit_payload["summary"]["missing_metric_count"] == 0
 
 
 def _complete_contract():
