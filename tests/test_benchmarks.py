@@ -35745,6 +35745,7 @@ def test_evidence_acquisition_trace_calibration_workflow_writes_artifacts(tmp_pa
     report_path = tmp_path / "evidence-acquisition-calibration.json"
     artifact_path = tmp_path / "evidence-acquisition-artifact.json"
     records_path = tmp_path / "evidence-acquisition-records.jsonl"
+    risk_monitor_path = tmp_path / "evidence-acquisition-risk-monitor.json"
     manifest_path = tmp_path / "evidence-acquisition-manifest.json"
     registry_path = tmp_path / "registry.json"
 
@@ -35755,6 +35756,7 @@ def test_evidence_acquisition_trace_calibration_workflow_writes_artifacts(tmp_pa
             report_path=report_path,
             artifact_path=artifact_path,
             records_jsonl_path=records_path,
+            risk_monitor_path=risk_monitor_path,
             artifact_manifest_path=manifest_path,
             registry_path=registry_path,
             name="evidence-acquisition-calibration",
@@ -35763,6 +35765,9 @@ def test_evidence_acquisition_trace_calibration_workflow_writes_artifacts(tmp_pa
             target_layer=-1,
             score_name="policy_score",
             alpha=0.5,
+            risk_target_error_rate=0.5,
+            risk_monitor_alpha=0.5,
+            risk_monitor_checkpoints=(3,),
             metadata={"suite": "unit"},
         )
     )
@@ -35771,19 +35776,30 @@ def test_evidence_acquisition_trace_calibration_workflow_writes_artifacts(tmp_pa
     registry = registry_module.ArtifactRegistry.load_json(registry_path)
     report_record = registry.get("calibration_report:evidence-acquisition-calibration:0.1")
     artifact_record = registry.get("calibration_artifact:evidence-acquisition-calibration:0.1")
+    monitor_record = registry.get("report:evidence-acquisition-calibration:0.1")
     record_rows = [json.loads(line) for line in records_path.read_text(encoding="utf-8").splitlines()]
+    risk_monitor = json.loads(risk_monitor_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
     assert report["status"] == "passed"
     assert report["summary"]["n_records"] == 3
     assert report["summary"]["n_acquired"] == 1
     assert report["summary"]["n_abstained"] == 1
+    assert report["summary"]["risk_monitor_passed"] is True
+    assert report["paths"]["risk_monitor_report"] == str(risk_monitor_path)
+    assert report["risk_monitor_report"]["threshold"] == pytest.approx(report["summary"]["post_threshold"])
     assert report["calibration_report"]["naive_pre_report"] is not None
     assert artifact.get_score("policy_score").threshold == pytest.approx(report["summary"]["post_threshold"])
+    assert risk_monitor["passed"] is True
+    assert risk_monitor["checks"][0]["checkpoint"] == 3
     assert len(record_rows) == 3
     assert record_rows[1]["metadata"]["feedback_outcome"] == "incorrect"
     assert report_record.metadata["workflow"] == "evidence_acquisition_trace_calibration"
     assert report_record.metadata["suite"] == "unit"
     assert artifact_record.metadata["post_threshold"] == pytest.approx(report["summary"]["post_threshold"])
+    assert monitor_record.metadata["report_kind"] == "evidence_acquisition_risk_monitor"
+    assert monitor_record.metadata["risk_monitor_passed"] is True
+    assert "evidence_acquisition_risk_monitor_report" in manifest["artifacts"]
     assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
 
 
@@ -35826,6 +35842,61 @@ def test_evidence_acquisition_trace_calibration_workflow_reads_jsonl_labels(tmp_
     assert report["summary"]["n_records"] == 2
     assert report["summary"]["n_acquired"] == 1
     assert report["config"]["trace_jsonl_paths"] == (str(trace_jsonl),)
+
+
+def test_evidence_acquisition_trace_calibration_workflow_blocks_on_risk_monitor(tmp_path):
+    module = importlib.import_module("benchmarks.calibrate_evidence_acquisition_from_traces")
+
+    trace_jsonl = tmp_path / "drifted-traces.jsonl"
+    traces = (
+        {
+            "request_id": "req-correct-1",
+            "risk_decision": {"action": "accept", "diagnostics": {"policy_score": 0.2}},
+            "metadata": {"correct": True, "evidence_acquisition": {"decision": {"action": "answer"}}},
+        },
+        {
+            "request_id": "req-correct-2",
+            "risk_decision": {"action": "accept", "diagnostics": {"policy_score": 0.3}},
+            "metadata": {"correct": True, "evidence_acquisition": {"decision": {"action": "answer"}}},
+        },
+        {
+            "request_id": "req-incorrect-1",
+            "risk_decision": {"action": "accept", "diagnostics": {"policy_score": 0.1}},
+            "metadata": {"correct": False, "evidence_acquisition": {"decision": {"action": "answer"}}},
+        },
+        {
+            "request_id": "req-incorrect-2",
+            "risk_decision": {"action": "accept", "diagnostics": {"policy_score": 0.15}},
+            "metadata": {"correct": False, "evidence_acquisition": {"decision": {"action": "answer"}}},
+        },
+    )
+    trace_jsonl.write_text(
+        "\n".join(json.dumps(trace) for trace in traces) + "\n",
+        encoding="utf-8",
+    )
+    risk_monitor_path = tmp_path / "risk-monitor.json"
+
+    report = module.build_evidence_acquisition_trace_calibration(
+        module.EvidenceAcquisitionTraceCalibrationConfig(
+            trace_jsonl_paths=(trace_jsonl,),
+            report_path=tmp_path / "blocked-calibration.json",
+            risk_monitor_path=risk_monitor_path,
+            model_id="trace-policy",
+            score_name="policy_score",
+            alpha=0.5,
+            risk_target_error_rate=0.1,
+            risk_monitor_alpha=0.5,
+            risk_monitor_checkpoints=(4,),
+        )
+    )
+    monitor = json.loads(risk_monitor_path.read_text(encoding="utf-8"))
+
+    assert report["status"] == "blocked"
+    assert report["summary"]["risk_monitor_passed"] is False
+    assert report["summary"]["risk_first_failed_checkpoint"] == 4
+    assert report["risk_monitor_report"]["blocking_reasons"]
+    assert monitor["passed"] is False
+    assert monitor["checks"][0]["accepted_errors"] == 2
 
 
 def test_feedback_policy_recommendation_uses_feedback_report_and_registers(tmp_path):

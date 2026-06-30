@@ -25,6 +25,7 @@ if str(REPO_ROOT) not in sys.path:
 from benchmarks.config_utils import planned_artifact_manifest_summary, strict_bool  # noqa: E402
 from eigentruth.calibration import (  # noqa: E402
     EvidenceAcquisitionConformalCalibrator,
+    audit_evidence_acquisition_risk,
     evidence_acquisition_records_from_trace_feedback,
     evidence_acquisition_records_from_traces,
 )
@@ -43,6 +44,7 @@ class EvidenceAcquisitionTraceCalibrationConfig:
     report_path: str | Path = "artifacts/evidence-acquisition-trace-calibration/report.json"
     artifact_path: str | Path | None = None
     records_jsonl_path: str | Path | None = None
+    risk_monitor_path: str | Path | None = None
     artifact_manifest_path: str | Path | None = None
     registry_path: str | Path | None = None
     name: str | None = None
@@ -55,6 +57,10 @@ class EvidenceAcquisitionTraceCalibrationConfig:
     pre_score_name: str | None = None
     direction: str = "higher"
     alpha: float = 0.1
+    risk_target_error_rate: float | None = None
+    risk_monitor_alpha: float = 0.05
+    risk_monitor_schedule: str = "harmonic"
+    risk_monitor_checkpoints: Sequence[int] = ()
     allow_unmatched_feedback: bool = False
     metadata: Mapping[str, Any] = field(default_factory=dict)
     compact_json: bool = False
@@ -70,6 +76,20 @@ class EvidenceAcquisitionTraceCalibrationConfig:
         alpha = _finite_float(self.alpha, name="alpha")
         if not (0.0 < alpha < 1.0):
             raise ValueError("alpha must be in (0, 1).")
+        risk_monitor_alpha = _finite_float(self.risk_monitor_alpha, name="risk_monitor_alpha")
+        if not (0.0 < risk_monitor_alpha < 1.0):
+            raise ValueError("risk_monitor_alpha must be in (0, 1).")
+        risk_target_error_rate = (
+            None
+            if self.risk_target_error_rate is None
+            else _unit_interval_float(self.risk_target_error_rate, name="risk_target_error_rate")
+        )
+        risk_monitor_schedule = str(self.risk_monitor_schedule).strip().lower().replace("_", "-")
+        if risk_monitor_schedule not in {"linear", "harmonic", "geometric"}:
+            raise ValueError("risk_monitor_schedule must be one of: linear, harmonic, geometric.")
+        risk_monitor_checkpoints = tuple(
+            _positive_int(checkpoint, name="risk_monitor_checkpoint") for checkpoint in self.risk_monitor_checkpoints
+        )
         direction = str(self.direction).strip().lower()
         if direction not in {"higher", "lower"}:
             raise ValueError("direction must be 'higher' or 'lower'.")
@@ -84,6 +104,8 @@ class EvidenceAcquisitionTraceCalibrationConfig:
             object.__setattr__(self, "artifact_path", Path(self.artifact_path))
         if self.records_jsonl_path is not None:
             object.__setattr__(self, "records_jsonl_path", Path(self.records_jsonl_path))
+        if self.risk_monitor_path is not None:
+            object.__setattr__(self, "risk_monitor_path", Path(self.risk_monitor_path))
         if self.artifact_manifest_path is not None:
             object.__setattr__(self, "artifact_manifest_path", Path(self.artifact_manifest_path))
         if self.registry_path is not None:
@@ -93,6 +115,10 @@ class EvidenceAcquisitionTraceCalibrationConfig:
         object.__setattr__(self, "score_name", score_name)
         object.__setattr__(self, "direction", direction)
         object.__setattr__(self, "alpha", alpha)
+        object.__setattr__(self, "risk_target_error_rate", risk_target_error_rate)
+        object.__setattr__(self, "risk_monitor_alpha", risk_monitor_alpha)
+        object.__setattr__(self, "risk_monitor_schedule", risk_monitor_schedule)
+        object.__setattr__(self, "risk_monitor_checkpoints", risk_monitor_checkpoints)
         object.__setattr__(
             self,
             "allow_unmatched_feedback",
@@ -107,6 +133,15 @@ class EvidenceAcquisitionTraceCalibrationConfig:
         if self.artifact_path is not None:
             return Path(self.artifact_path)
         return Path(self.report_path).with_name("evidence-acquisition-calibration-artifact.json")
+
+    @property
+    def resolved_risk_monitor_path(self) -> Path | None:
+        """Return the optional post-acquisition feedback risk monitor path."""
+        if self.risk_target_error_rate is None:
+            return None
+        if self.risk_monitor_path is not None:
+            return Path(self.risk_monitor_path)
+        return Path(self.report_path).with_name("evidence-acquisition-risk-monitor.json")
 
     @property
     def resolved_artifact_manifest_path(self) -> Path:
@@ -165,17 +200,45 @@ def build_evidence_acquisition_trace_calibration(
     if config.records_jsonl_path is not None:
         _write_records_jsonl(config.records_jsonl_path, records)
 
+    risk_monitor = None
+    risk_monitor_path = config.resolved_risk_monitor_path
+    if config.risk_target_error_rate is not None:
+        assert risk_monitor_path is not None
+        risk_monitor = audit_evidence_acquisition_risk(
+            records,
+            threshold=result.report.post_threshold,
+            target_error_rate=config.risk_target_error_rate,
+            monitor_alpha=config.risk_monitor_alpha,
+            direction=config.direction,
+            schedule=config.risk_monitor_schedule,
+            score_name=config.score_name,
+            checkpoints=None if not config.risk_monitor_checkpoints else config.risk_monitor_checkpoints,
+            metadata={
+                "workflow": "evidence_acquisition_trace_calibration",
+                "calibration_report": str(config.report_path),
+                "calibration_artifact": str(config.resolved_artifact_path),
+                **dict(config.metadata),
+            },
+        )
+        _write_json(risk_monitor_path, risk_monitor.to_dict(), compact=config.compact_json)
+
+    summary = _summary(result.report.to_dict())
+    if risk_monitor is not None:
+        summary.update(_risk_monitor_summary(risk_monitor.to_dict()))
+
     report_payload = {
         "schema_version": 1,
         "workflow": "evidence_acquisition_trace_calibration",
-        "status": "passed",
-        "summary": _summary(result.report.to_dict()),
+        "status": "passed" if risk_monitor is None or risk_monitor.passed else "blocked",
+        "summary": summary,
         "config": _config_payload(config),
         "calibration_report": result.report.to_dict(),
+        "risk_monitor_report": None if risk_monitor is None else risk_monitor.to_dict(),
         "paths": {
             "report": str(config.report_path),
             "calibration_artifact": str(config.resolved_artifact_path),
             "records_jsonl": None if config.records_jsonl_path is None else str(config.records_jsonl_path),
+            "risk_monitor_report": None if risk_monitor_path is None else str(risk_monitor_path),
             "artifact_manifest": str(config.resolved_artifact_manifest_path),
         },
         "artifact_manifest_summary": _artifact_manifest_summary(config),
@@ -262,6 +325,9 @@ def _write_artifact_manifest(
             "n_records": _nested(report, "summary", "n_records"),
             "n_acquired": _nested(report, "summary", "n_acquired"),
             "post_threshold": _nested(report, "summary", "post_threshold"),
+            "risk_monitor_passed": _nested(report, "summary", "risk_monitor_passed"),
+            "risk_target_error_rate": _nested(report, "summary", "risk_target_error_rate"),
+            "risk_first_failed_checkpoint": _nested(report, "summary", "risk_first_failed_checkpoint"),
             **dict(config.metadata),
         },
     )
@@ -279,6 +345,9 @@ def _artifact_paths(config: EvidenceAcquisitionTraceCalibrationConfig) -> dict[s
     }
     if config.records_jsonl_path is not None:
         artifacts["evidence_acquisition_calibration_records"] = Path(config.records_jsonl_path)
+    risk_monitor_path = config.resolved_risk_monitor_path
+    if risk_monitor_path is not None:
+        artifacts["evidence_acquisition_risk_monitor_report"] = risk_monitor_path
     return artifacts
 
 
@@ -289,6 +358,7 @@ def _artifact_manifest_summary(config: EvidenceAcquisitionTraceCalibrationConfig
             config.report_path,
             config.resolved_artifact_path,
             *(() if config.records_jsonl_path is None else (config.records_jsonl_path,)),
+            *(() if config.resolved_risk_monitor_path is None else (config.resolved_risk_monitor_path,)),
         ),
     )
 
@@ -310,7 +380,13 @@ def _record_registry(
         "post_threshold": _nested(report, "summary", "post_threshold"),
         "naive_pre_threshold": _nested(report, "summary", "naive_pre_threshold"),
         "selective_accuracy_delta": _nested(report, "summary", "selective_accuracy_delta"),
+        "risk_monitor_passed": _nested(report, "summary", "risk_monitor_passed"),
+        "risk_target_error_rate": _nested(report, "summary", "risk_target_error_rate"),
+        "risk_first_failed_checkpoint": _nested(report, "summary", "risk_first_failed_checkpoint"),
         "calibration_artifact": str(config.resolved_artifact_path),
+        "risk_monitor_report": None
+        if config.resolved_risk_monitor_path is None
+        else str(config.resolved_risk_monitor_path),
         "artifact_manifest": str(config.resolved_artifact_manifest_path),
         **dict(config.metadata),
     }
@@ -325,7 +401,18 @@ def _record_registry(
         version=config.version,
         path=config.resolved_artifact_path,
         metadata=metadata,
-    ).save_json()
+    )
+    if config.resolved_risk_monitor_path is not None:
+        registry.record_report(
+            name=config.name,
+            version=config.version,
+            path=config.resolved_risk_monitor_path,
+            metadata={
+                **metadata,
+                "report_kind": "evidence_acquisition_risk_monitor",
+            },
+        )
+    registry.save_json()
 
 
 def _summary(report: Mapping[str, Any]) -> dict[str, Any]:
@@ -352,6 +439,18 @@ def _summary(report: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _risk_monitor_summary(report: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "risk_monitor_passed": report.get("passed"),
+        "risk_target_error_rate": report.get("target_error_rate"),
+        "risk_monitor_alpha": report.get("monitor_alpha"),
+        "risk_monitor_schedule": report.get("schedule"),
+        "risk_first_failed_checkpoint": report.get("first_failed_checkpoint"),
+        "risk_max_accepted_error_upper_bound": report.get("max_accepted_error_upper_bound"),
+        "risk_blocking_reason_count": len(report.get("blocking_reasons", ())),
+    }
+
+
 def _config_payload(config: EvidenceAcquisitionTraceCalibrationConfig) -> dict[str, Any]:
     return {
         "trace_paths": tuple(str(path) for path in config.trace_paths),
@@ -365,6 +464,13 @@ def _config_payload(config: EvidenceAcquisitionTraceCalibrationConfig) -> dict[s
         "pre_score_name": config.pre_score_name,
         "direction": config.direction,
         "alpha": config.alpha,
+        "risk_monitor_path": None
+        if config.resolved_risk_monitor_path is None
+        else str(config.resolved_risk_monitor_path),
+        "risk_target_error_rate": config.risk_target_error_rate,
+        "risk_monitor_alpha": config.risk_monitor_alpha,
+        "risk_monitor_schedule": config.risk_monitor_schedule,
+        "risk_monitor_checkpoints": config.risk_monitor_checkpoints,
         "allow_unmatched_feedback": config.allow_unmatched_feedback,
     }
 
@@ -396,6 +502,7 @@ def _config_from_args(args: argparse.Namespace) -> EvidenceAcquisitionTraceCalib
         report_path=Path(args.json),
         artifact_path=None if args.artifact_json is None else Path(args.artifact_json),
         records_jsonl_path=None if args.records_jsonl is None else Path(args.records_jsonl),
+        risk_monitor_path=None if args.risk_monitor_json is None else Path(args.risk_monitor_json),
         artifact_manifest_path=None if args.artifact_manifest is None else Path(args.artifact_manifest),
         registry_path=None if args.registry is None else Path(args.registry),
         name=args.name,
@@ -408,6 +515,10 @@ def _config_from_args(args: argparse.Namespace) -> EvidenceAcquisitionTraceCalib
         pre_score_name=args.pre_score_name,
         direction=args.direction,
         alpha=args.alpha,
+        risk_target_error_rate=args.risk_target_error_rate,
+        risk_monitor_alpha=args.risk_monitor_alpha,
+        risk_monitor_schedule=args.risk_monitor_schedule,
+        risk_monitor_checkpoints=tuple(args.risk_monitor_checkpoint),
         allow_unmatched_feedback=bool(args.allow_unmatched_feedback),
         metadata=_metadata_from_args(args.metadata),
         compact_json=bool(args.compact_json),
@@ -422,7 +533,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "evidence_acquisition_trace_calibration="
         f"{report['status']} records={report['summary']['n_records']} "
         f"acquired={report['summary']['n_acquired']} "
-        f"post_threshold={report['summary']['post_threshold']}"
+        f"post_threshold={report['summary']['post_threshold']} "
+        f"risk_monitor_passed={report['summary'].get('risk_monitor_passed')}"
     )
     return report
 
@@ -440,6 +552,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--json", required=True, help="output calibration report JSON path")
     parser.add_argument("--artifact-json", default=None, help="output CalibrationArtifact JSON path")
     parser.add_argument("--records-jsonl", default=None, help="optional extracted calibration records JSONL path")
+    parser.add_argument("--risk-monitor-json", default=None, help="optional feedback risk monitor report JSON path")
     parser.add_argument("--artifact-manifest", default=None, help="optional artifact manifest path")
     parser.add_argument("--registry", default=None, help="optional ArtifactRegistry JSON path")
     parser.add_argument("--name", default=None, help="registry record name")
@@ -452,6 +565,25 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--pre-score-name", default=None)
     parser.add_argument("--direction", choices=("higher", "lower"), default="higher")
     parser.add_argument("--alpha", type=float, default=0.1)
+    parser.add_argument(
+        "--risk-target-error-rate",
+        type=float,
+        default=None,
+        help="enable fixed-threshold feedback risk monitoring with this target accepted-error rate",
+    )
+    parser.add_argument("--risk-monitor-alpha", type=float, default=0.05)
+    parser.add_argument(
+        "--risk-monitor-schedule",
+        choices=("linear", "harmonic", "geometric"),
+        default="harmonic",
+    )
+    parser.add_argument(
+        "--risk-monitor-checkpoint",
+        action="append",
+        type=int,
+        default=[],
+        help="prefix checkpoint for feedback risk monitoring; repeatable; defaults to every prefix",
+    )
     parser.add_argument("--allow-unmatched-feedback", action="store_true")
     parser.add_argument(
         "--metadata",
@@ -481,6 +613,28 @@ def _finite_float(value: Any, *, name: str) -> float:
         raise ValueError(f"{name} must be finite.") from exc
     if not math.isfinite(number):
         raise ValueError(f"{name} must be finite.")
+    return number
+
+
+def _unit_interval_float(value: Any, *, name: str) -> float:
+    number = _finite_float(value, name=name)
+    if not (0.0 <= number <= 1.0):
+        raise ValueError(f"{name} must be in [0, 1].")
+    return number
+
+
+def _positive_int(value: Any, *, name: str) -> int:
+    if isinstance(value, bool):
+        raise ValueError(f"{name} must be a positive integer, not bool.")
+    try:
+        as_float = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a positive integer.") from exc
+    if not math.isfinite(as_float) or not as_float.is_integer():
+        raise ValueError(f"{name} must be a positive integer.")
+    number = int(as_float)
+    if number < 1:
+        raise ValueError(f"{name} must be positive.")
     return number
 
 
