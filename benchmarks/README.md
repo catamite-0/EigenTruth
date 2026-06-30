@@ -6344,7 +6344,9 @@ and `artifacts/smollm2_product_runtime_drift_v1_14_frontier_budget_target/`,
 whose drift report promotes with `107` compared metrics and `0` blockers.
 The handoff exporter now prefers complete `product_trace_triple_audit_enrichment`
 coverage when an older runtime baseline only carries partial triple-audit
-metadata, so the handoff audit promotes with `65/65` present metrics.
+metadata. That v13/v1.6 handoff promoted under the earlier `65/65`
+frontier boundary; refreshed frontier-audit handoffs now require `77/77`
+receipt-aware metrics.
 
 Active v1.9 product contract export:
 
@@ -6371,10 +6373,13 @@ python benchmarks/export_product_promotion_contract.py \
 
 The direct export intentionally keeps source release metadata compact, so run an
 explicit child-report handoff before using the contract as a runtime evidence
-bundle. The enriched contract is registered as
-`product_promotion_contract:smollm2-product-promotion-contract-v1-9-evidence-handoff:0.4`,
-and `evidence-handoff-audit-enriched.json` independently promotes with `65/65`
-present metrics and zero blocked groups.
+bundle. The checked-in enriched contract is registered as
+`product_promotion_contract:smollm2-product-promotion-contract-v1-9-evidence-handoff:0.4`
+and independently promotes with the earlier `65/65` boundary. New refreshed
+handoffs require `77/77` present metrics: use a product-trace replay workflow
+or runtime-baseline input that carries `action_receipts` and
+`receipt_claim_support` summaries, otherwise the audit fails closed on the two
+receipt evidence groups.
 
 ```bash
 PRODUCT_V19_DIR=artifacts/smollm2_product_promotion_contract_v1_9

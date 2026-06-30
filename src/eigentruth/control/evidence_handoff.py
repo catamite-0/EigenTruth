@@ -21,6 +21,8 @@ _ALL_GROUPS = (
     "triple_audit",
     "covered_fact_property",
     "action_gate",
+    "action_receipts",
+    "receipt_claim_support",
     "frontier_release_evidence",
 )
 
@@ -45,6 +47,8 @@ _ACTION_IDS = {
     "triple_audit": "add_trace_level_triple_audit",
     "covered_fact_property": "refresh_covered_fact_property_routes",
     "action_gate": "rerun_product_trace_action_gates",
+    "action_receipts": "rerun_product_trace_action_receipts_evidence",
+    "receipt_claim_support": "rerun_product_trace_receipt_claim_support_evidence",
     "trajectory_audit": "rerun_product_trace_trajectory_audit_evidence",
     "evidence_handoff": "refresh_product_promotion_evidence_handoff",
     "world_model": "rerun_product_trace_world_model_evidence",
@@ -330,6 +334,10 @@ def enrich_product_promotion_contract_evidence(
         _merge_nested(payload, "product_trace_replay_workflow", product_trace)
         _merge_metadata(payload, _action_gate_flat_metadata(product_trace))
         filled_groups.append("action_gate")
+        if _mapping(product_trace.get("action_receipts")):
+            filled_groups.append("action_receipts")
+        if _mapping(product_trace.get("receipt_claim_support")):
+            filled_groups.append("receipt_claim_support")
         export_metadata["sources"]["product_trace_replay_workflow"] = product_trace_replay_workflow_path
 
     frontier_evidence = _frontier_release_evidence_handoff_from_report(
@@ -832,10 +840,18 @@ def _product_trace_replay_handoff_from_report(
         return {}
     action_audit = _mapping(report.get("action_audit_gate"))
     action_execution = _mapping(report.get("action_execution_gate"))
+    action_receipts = _mapping(report.get("action_receipts"))
+    receipt_claim_support = _mapping(report.get("receipt_claim_support"))
     if not action_audit:
         action_audit = _mapping(_nested(report, "runtime_baseline", "summary", "action_audit"))
     if not action_execution:
         action_execution = _mapping(_nested(report, "runtime_baseline", "summary", "action_execution"))
+    if not action_receipts:
+        action_receipts = _mapping(_nested(report, "runtime_baseline", "summary", "action_receipts"))
+    if not receipt_claim_support:
+        receipt_claim_support = _mapping(
+            _nested(report, "runtime_baseline", "summary", "receipt_claim_support")
+        )
     paths = _mapping(report.get("paths"))
     return _drop_none_values(
         {
@@ -849,6 +865,8 @@ def _product_trace_replay_handoff_from_report(
             "product_runtime_drift_report_path": paths.get("runtime_drift_report"),
             "action_audit_gate": dict(action_audit),
             "action_execution_gate": dict(action_execution),
+            "action_receipts": dict(action_receipts),
+            "receipt_claim_support": dict(receipt_claim_support),
         }
     )
 
@@ -856,6 +874,8 @@ def _product_trace_replay_handoff_from_report(
 def _action_gate_flat_metadata(workflow: Mapping[str, Any]) -> dict[str, Any]:
     action_audit = _mapping(workflow.get("action_audit_gate"))
     action_execution = _mapping(workflow.get("action_execution_gate"))
+    action_receipts = _mapping(workflow.get("action_receipts"))
+    receipt_claim_support = _mapping(workflow.get("receipt_claim_support"))
     return _drop_none_values(
         {
             "product_trace_replay_workflow_report": workflow.get("report_path"),
@@ -891,6 +911,42 @@ def _action_gate_flat_metadata(workflow: Mapping[str, Any]) -> dict[str, Any]:
             ),
             "product_trace_action_execution_request_id_mismatch_rate": _float_or_none(
                 action_execution.get("request_id_mismatch_rate")
+            ),
+            "product_trace_action_receipts_coverage_rate": _float_or_none(
+                action_receipts.get("coverage_rate")
+            ),
+            "product_trace_action_receipts_missing_receipt_rate": _float_or_none(
+                action_receipts.get("missing_receipt_rate")
+            ),
+            "product_trace_action_receipts_invalid_receipt_rate": _float_or_none(
+                action_receipts.get("invalid_receipt_rate")
+            ),
+            "product_trace_action_receipts_fingerprint_mismatch_rate": _float_or_none(
+                action_receipts.get("fingerprint_mismatch_rate")
+            ),
+            "product_trace_action_receipts_unsigned_receipt_rate": _float_or_none(
+                action_receipts.get("unsigned_receipt_rate")
+            ),
+            "product_trace_receipt_claim_support_reference_support_rate": _float_or_none(
+                receipt_claim_support.get("reference_support_rate")
+            ),
+            "product_trace_receipt_claim_support_unsupported_reference_rate": _float_or_none(
+                receipt_claim_support.get("unsupported_reference_rate")
+            ),
+            "product_trace_receipt_claim_support_missing_reference_rate": _float_or_none(
+                receipt_claim_support.get("missing_reference_rate")
+            ),
+            "product_trace_receipt_claim_support_unreceipted_reference_rate": _float_or_none(
+                receipt_claim_support.get("unreceipted_reference_rate")
+            ),
+            "product_trace_receipt_claim_support_failed_result_reference_rate": _float_or_none(
+                receipt_claim_support.get("failed_result_reference_rate")
+            ),
+            "product_trace_receipt_claim_support_fingerprint_mismatch_reference_rate": _float_or_none(
+                receipt_claim_support.get("fingerprint_mismatch_reference_rate")
+            ),
+            "product_trace_receipt_claim_support_unsigned_reference_rate": _float_or_none(
+                receipt_claim_support.get("unsigned_reference_rate")
             ),
         }
     )
@@ -1741,6 +1797,57 @@ _TRAJECTORY_AUDIT_EVIDENCE_FIELDS = (
     ("trajectory_audit.scope_rate", "product_trace_trajectory_audit_scope_rate"),
 )
 
+_ACTION_RECEIPTS_EVIDENCE_FIELDS = (
+    ("action_receipts.coverage_rate", "product_trace_action_receipts_coverage_rate"),
+    (
+        "action_receipts.missing_receipt_rate",
+        "product_trace_action_receipts_missing_receipt_rate",
+    ),
+    (
+        "action_receipts.invalid_receipt_rate",
+        "product_trace_action_receipts_invalid_receipt_rate",
+    ),
+    (
+        "action_receipts.fingerprint_mismatch_rate",
+        "product_trace_action_receipts_fingerprint_mismatch_rate",
+    ),
+    (
+        "action_receipts.unsigned_receipt_rate",
+        "product_trace_action_receipts_unsigned_receipt_rate",
+    ),
+)
+
+_RECEIPT_CLAIM_SUPPORT_EVIDENCE_FIELDS = (
+    (
+        "receipt_claim_support.reference_support_rate",
+        "product_trace_receipt_claim_support_reference_support_rate",
+    ),
+    (
+        "receipt_claim_support.unsupported_reference_rate",
+        "product_trace_receipt_claim_support_unsupported_reference_rate",
+    ),
+    (
+        "receipt_claim_support.missing_reference_rate",
+        "product_trace_receipt_claim_support_missing_reference_rate",
+    ),
+    (
+        "receipt_claim_support.unreceipted_reference_rate",
+        "product_trace_receipt_claim_support_unreceipted_reference_rate",
+    ),
+    (
+        "receipt_claim_support.failed_result_reference_rate",
+        "product_trace_receipt_claim_support_failed_result_reference_rate",
+    ),
+    (
+        "receipt_claim_support.fingerprint_mismatch_reference_rate",
+        "product_trace_receipt_claim_support_fingerprint_mismatch_reference_rate",
+    ),
+    (
+        "receipt_claim_support.unsigned_reference_rate",
+        "product_trace_receipt_claim_support_unsigned_reference_rate",
+    ),
+)
+
 _EVIDENCE_HANDOFF_EVIDENCE_FIELDS = (
     ("promotion_contract.evidence_handoff.coverage_rate", "evidence_handoff_coverage_rate"),
     (
@@ -1900,6 +2007,18 @@ _GROUP_BUILDERS = {
             "action_execution_gate.request_id_mismatch_rate.mean",
             "product_trace_action_execution_request_id_mismatch_rate",
         ),
+    ),
+    "action_receipts": _runtime_evidence_group_builders(
+        "action_receipts",
+        _ACTION_RECEIPTS_EVIDENCE_FIELDS,
+        nested_group="action_receipts",
+        nested_prefix="product_trace_action_receipts",
+    ),
+    "receipt_claim_support": _runtime_evidence_group_builders(
+        "receipt_claim_support",
+        _RECEIPT_CLAIM_SUPPORT_EVIDENCE_FIELDS,
+        nested_group="receipt_claim_support",
+        nested_prefix="product_trace_receipt_claim_support",
     ),
     "trajectory_audit": _runtime_evidence_group_builders(
         "trajectory_audit",

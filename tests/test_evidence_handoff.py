@@ -31,12 +31,16 @@ def test_promotion_contract_evidence_audit_blocks_missing_frontier_groups():
 
     assert payload["status"] == "blocked"
     assert payload["source_workflow"] == "product_promotion_contract"
-    assert payload["summary"]["expected_metric_count"] == 65
+    assert payload["summary"]["expected_metric_count"] == 77
     assert payload["summary"]["present_metric_count"] == 1
-    assert payload["summary"]["missing_metric_count"] == 64
+    assert payload["summary"]["missing_metric_count"] == 76
     assert payload["summary"]["groups"]["promotion"] == "blocked"
     assert "run_pre_generation_probe_comparison" in payload["recommended_action_ids"]
     assert "run_frontier_release_evidence_comparison" in payload["recommended_action_ids"]
+    assert "rerun_product_trace_action_receipts_evidence" in payload["recommended_action_ids"]
+    assert "rerun_product_trace_receipt_claim_support_evidence" in (
+        payload["recommended_action_ids"]
+    )
     assert "promotion_contract.pre_generation_probe_comparison.coverage_rate" in (payload["missing_metrics"])
     assert "promotion_contract.frontier_release_evidence.decision_status" in (payload["missing_metrics"])
     assert "promotion_contract.frontier_release_evidence.multiple_testing_track_status" in (
@@ -48,6 +52,8 @@ def test_promotion_contract_evidence_audit_blocks_missing_frontier_groups():
     assert "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_track_status" in (
         payload["missing_metrics"]
     )
+    assert "action_receipts.coverage_rate" in payload["missing_metrics"]
+    assert "receipt_claim_support.reference_support_rate" in payload["missing_metrics"]
     strict_json_dumps(payload, sort_keys=True)
 
 
@@ -56,8 +62,8 @@ def test_promotion_contract_evidence_audit_passes_complete_synthetic_contract():
     payload = audit.to_dict()
 
     assert payload["status"] == "promote"
-    assert payload["summary"]["expected_metric_count"] == 65
-    assert payload["summary"]["present_metric_count"] == 65
+    assert payload["summary"]["expected_metric_count"] == 77
+    assert payload["summary"]["present_metric_count"] == 77
     assert payload["summary"]["missing_metric_count"] == 0
     assert payload["recommended_action_ids"] == ()
 
@@ -101,7 +107,7 @@ def test_promotion_contract_evidence_audit_can_require_optional_runtime_groups()
         "evidence_handoff",
         "world_model",
     )
-    assert payload["summary"]["expected_metric_count"] == 91
+    assert payload["summary"]["expected_metric_count"] == 103
     assert payload["summary"]["missing_metric_count"] == 26
     assert payload["summary"]["groups"]["claim_risk_localization"] == "blocked"
     assert payload["summary"]["groups"]["trajectory_audit"] == "blocked"
@@ -137,7 +143,7 @@ def test_promotion_contract_evidence_audit_passes_optional_runtime_groups():
     payload = audit.to_dict()
 
     assert payload["status"] == "promote"
-    assert payload["summary"]["expected_metric_count"] == 113
+    assert payload["summary"]["expected_metric_count"] == 125
     assert payload["summary"]["missing_metric_count"] == 0
     assert payload["recommended_action_ids"] == ()
     assert payload["summary"]["groups"]["claim_factuality"] == "promote"
@@ -228,10 +234,10 @@ def test_product_promotion_evidence_handoff_export_fills_explicit_sources():
     payload = result.to_dict()
     contract = payload["contract"]
 
-    assert payload["before_audit"]["summary"]["missing_metric_count"] == 64
+    assert payload["before_audit"]["summary"]["missing_metric_count"] == 76
     assert payload["after_audit"]["status"] == "promote"
-    assert payload["after_audit"]["summary"]["present_metric_count"] == 65
-    assert payload["summary"]["resolved_missing_metric_count"] == 64
+    assert payload["after_audit"]["summary"]["present_metric_count"] == 77
+    assert payload["summary"]["resolved_missing_metric_count"] == 76
     assert set(payload["filled_groups"]) == {
         "promotion",
         "pre_generation",
@@ -239,6 +245,8 @@ def test_product_promotion_evidence_handoff_export_fills_explicit_sources():
         "triple_audit",
         "covered_fact_property",
         "action_gate",
+        "action_receipts",
+        "receipt_claim_support",
         "frontier_release_evidence",
     }
     assert contract["pre_generation_probe_comparison"]["best_redline_margin"] == 0.08
@@ -447,9 +455,9 @@ def test_product_promotion_evidence_handoff_cli_helper_writes_and_registers(tmp_
     assert output.exists()
     assert audit.exists()
     assert manifest.exists()
-    assert payload["summary"]["before_missing_metric_count"] == 64
+    assert payload["summary"]["before_missing_metric_count"] == 76
     assert payload["summary"]["after_missing_metric_count"] == 12
-    assert payload["summary"]["resolved_missing_metric_count"] == 52
+    assert payload["summary"]["resolved_missing_metric_count"] == 64
     output_payload = json.loads(output.read_text(encoding="utf-8"))
     assert output_payload["metadata"]["evidence_handoff_manifest"] == str(manifest)
     assert output_payload["metadata"]["evidence_handoff_contract"] == str(output)
@@ -472,7 +480,7 @@ def test_product_promotion_evidence_handoff_cli_helper_writes_and_registers(tmp_
     registry = ArtifactRegistry.load_json(registry_path)
     contract_record = registry.get("product_promotion_contract:contract-enriched:0.2")
     audit_record = registry.get("product_promotion_evidence_audit:contract-enriched-audit:0.2")
-    assert contract_record.metadata["resolved_missing_metric_count"] == 52
+    assert contract_record.metadata["resolved_missing_metric_count"] == 64
     assert contract_record.metadata["artifact_manifest"] == str(manifest)
     assert audit_record.metadata["missing_metric_count"] == 12
     assert audit_record.metadata["scope"] == "unit-test"
@@ -637,6 +645,22 @@ def _complete_contract():
             "citation_batch_duplicate_batch_count": 0,
             "citation_batch_unexpected_batch_count": 0,
             "run_names": ("verifier-stability", "abstention-stability"),
+        },
+        "action_receipts": {
+            "coverage_rate": 1.0,
+            "missing_receipt_rate": 0.0,
+            "invalid_receipt_rate": 0.0,
+            "fingerprint_mismatch_rate": 0.0,
+            "unsigned_receipt_rate": 0.0,
+        },
+        "receipt_claim_support": {
+            "reference_support_rate": 1.0,
+            "unsupported_reference_rate": 0.0,
+            "missing_reference_rate": 0.0,
+            "unreceipted_reference_rate": 0.0,
+            "failed_result_reference_rate": 0.0,
+            "fingerprint_mismatch_reference_rate": 0.0,
+            "unsigned_reference_rate": 0.0,
         },
         "metadata": {
             "triple_claim_coverage_rate": 1.0,
@@ -814,6 +838,26 @@ def _product_trace_replay_workflow():
             "missing_result_rate": 0.0,
             "unexpected_result_rate": 0.0,
             "request_id_mismatch_rate": 0.0,
+        },
+        "runtime_baseline": {
+            "summary": {
+                "action_receipts": {
+                    "coverage_rate": 1.0,
+                    "missing_receipt_rate": 0.0,
+                    "invalid_receipt_rate": 0.0,
+                    "fingerprint_mismatch_rate": 0.0,
+                    "unsigned_receipt_rate": 0.0,
+                },
+                "receipt_claim_support": {
+                    "reference_support_rate": 1.0,
+                    "unsupported_reference_rate": 0.0,
+                    "missing_reference_rate": 0.0,
+                    "unreceipted_reference_rate": 0.0,
+                    "failed_result_reference_rate": 0.0,
+                    "fingerprint_mismatch_reference_rate": 0.0,
+                    "unsigned_reference_rate": 0.0,
+                },
+            }
         },
     }
 
