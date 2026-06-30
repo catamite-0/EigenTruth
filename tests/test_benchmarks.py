@@ -43267,6 +43267,67 @@ def test_plan_blind_spot_evidence_expansion_builds_collection_targets(tmp_path):
     assert record.metadata["suite"] == "unit"
 
 
+def test_plan_blind_spot_evidence_expansion_filters_generic_entity_candidates(tmp_path):
+    module = importlib.import_module("benchmarks.plan_blind_spot_evidence_expansion")
+
+    blind_spots_path = tmp_path / "blind-spots.json"
+    output_path = tmp_path / "evidence-expansion-plan.json"
+    blind_spots_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "detectability_blind_spot_analysis",
+            "records": [
+                {
+                    "record_index": 11,
+                    "label": 1,
+                    "question_type": "definition",
+                    "question": (
+                        "Son of an actor, this American guitarist and rock singer "
+                        "released many songs. His name is \"Elvis\" what?"
+                    ),
+                    "answer": "Presley.",
+                    "text": (
+                        "Son of an actor, this American guitarist and rock singer "
+                        "released many songs. His name is \"Elvis\" what? Presley."
+                    ),
+                    "features": {"has_named_entity_hint": True},
+                    "answer_features": {"has_named_entity_hint": True},
+                },
+                {
+                    "record_index": 12,
+                    "label": 1,
+                    "question_type": "definition",
+                    "question": (
+                        "If bitcoin has gone up in value over the last twenty years, "
+                        "what do we know will happen in the next twenty years?"
+                    ),
+                    "answer": "Nothing.",
+                    "text": (
+                        "If bitcoin has gone up in value over the last twenty years, "
+                        "what do we know will happen in the next twenty years? Nothing."
+                    ),
+                    "features": {},
+                    "answer_features": {"has_named_entity_hint": True},
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        blind_spots_path=blind_spots_path,
+        output_path=output_path,
+    )
+    by_index = {item["record_index"]: item for item in payload["targets"]}
+
+    assert "Son" not in by_index[11]["entity_candidates"]
+    assert "American" not in by_index[11]["entity_candidates"]
+    assert "Nothing" not in by_index[12]["entity_candidates"]
+    assert "Elvis" in by_index[11]["entity_candidates"]
+    assert "Presley" in by_index[11]["entity_candidates"]
+    assert not any(seed == "Presley Presley." for seed in by_index[11]["query_seeds"])
+
+
 def test_build_blind_spot_evidence_collection_corpus_compiles_requests(tmp_path):
     module = importlib.import_module("benchmarks.build_blind_spot_evidence_collection_corpus")
     registry_module = importlib.import_module("eigentruth.registry")

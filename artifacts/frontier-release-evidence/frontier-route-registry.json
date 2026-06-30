@@ -590,6 +590,23 @@
       "name": "wikidata-country-core-facts-structured-fact-paraphrase-route-verification",
       "path": "artifacts/frontier-release-evidence/wikidata-structured-fact-paraphrase-manifest-verification.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/blind-spot-evidence-expansion-v1/artifact-manifest.json",
+        "high_priority_count": 65,
+        "model": "smollm2-l80",
+        "source": "frontier-v4",
+        "status": "needs_evidence_collection",
+        "target_count": 89,
+        "top_question_type": "definition",
+        "top_route": "structured_fact",
+        "workflow": "blind_spot_evidence_expansion_plan"
+      },
+      "name": "smollm2-l80-blind-spot-evidence-expansion",
+      "path": "artifacts/frontier-release-evidence/blind-spot-evidence-expansion-v1/evidence-expansion-plan.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

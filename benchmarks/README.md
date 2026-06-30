@@ -1604,6 +1604,18 @@ world-model/calculator tasks for `21`. This is the concrete worklist for
 expanding external/structured coverage after the provenance comparison blocked
 controlled-only query evidence.
 
+The frontier v4 release evidence also includes a refreshed SmolLM2 expansion
+artifact at
+`artifacts/frontier-release-evidence/blind-spot-evidence-expansion-v1/evidence-expansion-plan.json`.
+It is generated from the detectability rerun queue's `89` entrenched false
+records and records the same next-step profile: `65` high-priority targets,
+`80` structured-fact routes, `65` structured-QA routes, `63` citation-retrieval
+routes, `41` counterfactual probe tasks, and `21` world-model/calculator tasks.
+The planner filters generic single-token entity candidates such as `Son`,
+`American`, and `Nothing` before writing collection targets, so downstream
+Wikidata/search tasks receive cleaner entity seeds while retaining useful
+question-keyword phrases.
+
 ## `build_blind_spot_evidence_collection_corpus.py`
 
 Compiles an evidence expansion plan into source-discovery request batches. This

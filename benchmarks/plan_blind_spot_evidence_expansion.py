@@ -90,6 +90,42 @@ STOPWORDS = {
     "you",
     "your",
 }
+GENERIC_ENTITY_CANDIDATES = {
+    "america",
+    "american",
+    "answer",
+    "anything",
+    "country",
+    "everyone",
+    "everything",
+    "he",
+    "her",
+    "him",
+    "his",
+    "human",
+    "it",
+    "name",
+    "nobody",
+    "no one",
+    "nothing",
+    "one",
+    "people",
+    "person",
+    "she",
+    "someone",
+    "something",
+    "son",
+    "that",
+    "the answer",
+    "the country",
+    "the person",
+    "the team",
+    "these",
+    "they",
+    "this",
+    "we",
+    "you",
+}
 PROPERTY_HINTS = {
     "definition": ("description", "instance_of:P31", "subclass_of:P279", "official_website:P856"),
     "person": ("creator:P170", "author:P50", "founded_by:P112", "occupation:P106", "country:P27"),
@@ -341,8 +377,10 @@ def _query_seeds(
         question,
         f"{_keyword_phrase(question)} {answer}".strip(),
     ]
+    answer_candidate = _clean_candidate(answer).casefold()
     for entity in entities:
-        seeds.append(f"{entity} {answer}".strip())
+        if entity.casefold() != answer_candidate:
+            seeds.append(f"{entity} {answer}".strip())
         seeds.append(f"{question_type} {entity}".strip())
     return tuple(item for item in dict.fromkeys(_clean_query(seed) for seed in seeds) if item)[:max_items]
 
@@ -511,7 +549,11 @@ def _clean_query(value: str) -> str:
 def _valid_candidate(value: str) -> bool:
     if not value:
         return False
-    if value.casefold() in STOPWORDS:
+    normalized = value.casefold()
+    if normalized in STOPWORDS or normalized in GENERIC_ENTITY_CANDIDATES:
+        return False
+    tokens = tuple(TOKEN_RE.findall(value))
+    if len(tokens) == 1 and tokens[0].casefold() in GENERIC_ENTITY_CANDIDATES:
         return False
     return bool(re.search(r"[A-Za-z0-9]", value))
 
