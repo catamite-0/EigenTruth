@@ -5411,17 +5411,22 @@ python benchmarks/export_product_promotion_contract_evidence_handoff.py \
   --triple-audit-enrichment artifacts/smollm2_product_trace_triple_audit_enrichment_v1/product-trace-triple-audit-enrichment.json \
   --runtime-baseline artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/runtime-baseline/product-runtime-baseline.json \
   --covered-fact-property-metrics artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-route/structured-qa-route-summary.json \
-  --required-groups claim_risk_localization,trajectory_audit,world_model \
+  --frontier-release-evidence artifacts/frontier-release-evidence/frontier-release-evidence-refreshed.json \
+  --required-groups promotion,pre_generation,counterfactual,triple_audit,covered_fact_property,action_gate,frontier_release_evidence \
   --registry artifacts/local-release-registry.json \
   --name smollm2-product-promotion-contract-v1-6-evidence-handoff \
   --version 0.4
 ```
 
 The exporter only copies evidence from supplied reports; it does not invent
-trace-level triple-audit results. `--required-groups` applies the same strict
-handoff group set to both the enriched contract audit and the manifest/registry
-metadata, so a stricter frontier pass can preserve exactly which optional
-runtime-drift groups were required. `--triple-audit-enrichment` can point either
+trace-level triple-audit results. `--frontier-release-evidence` should point to
+the refreshed frontier release-evidence verdict when the handoff is being used
+for current `frontier_audit` drift evidence. `--required-groups` applies the
+same strict handoff group set to both the enriched contract audit and the
+manifest/registry metadata, so a stricter frontier pass can preserve exactly
+which runtime-drift groups were required; include optional groups such as
+`claim_risk_localization`, `trajectory_audit`, or `world_model` only when the
+corresponding product-runtime evidence has been materialized. `--triple-audit-enrichment` can point either
 to `enrich_product_trace_triple_audit.py` output or to a promoted
 `run_source_family_structured_qa_claim_correction_workflow.py --enable-triple-audit`
 report; the older `--runtime-baseline` path remains supported for aggregated

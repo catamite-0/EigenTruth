@@ -5,16 +5,16 @@
       "file_count": 1,
       "kind": "file",
       "path": "../README.md",
-      "sha256": "ee999d9feb2ce7a234140fbb6f53901a64179b9fe4f8618b914e568e02e053c6",
-      "size_bytes": 204412
+      "sha256": "8eda30943637b6fc01e5abea1f11e536834ebe48d1a30e5f7c3dc70f6e6db98f",
+      "size_bytes": 209860
     },
     "document.002": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "../benchmarks/README.md",
-      "sha256": "abf3633b9ef9e1108376de292545838800166edba9c80f79b4173853735c2b05",
-      "size_bytes": 467574
+      "sha256": "fb07e59853e2c2c74c6eb25dd9b02598610cc31190a5d14ce97cdc66bdd25a15",
+      "size_bytes": 473300
     },
     "document.003": {
       "exists": true,
@@ -29,16 +29,16 @@
       "file_count": 1,
       "kind": "file",
       "path": "../docs/frontier-research-notes.md",
-      "sha256": "4bfce2ed899341b6efaf5aea82dc705e5f262735b604a9cd966793ea9e15b7bb",
-      "size_bytes": 117099
+      "sha256": "115754c043d4e34d4ac5c58f8ee507b9be71b166956f861e0fac6325280791c7",
+      "size_bytes": 119212
     },
     "frontier_artifact_reference_audit": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "frontier-artifact-reference-audit.json",
-      "sha256": "e1f184d41b9e0b1503121fe1e13ccfb2e87ecd3a4e4571cda694cc1c3e5e7261",
-      "size_bytes": 19661
+      "sha256": "1c380174a442dd262e79eb95ed21ba4c7047c416208dc936cfaf6453b4db79ed",
+      "size_bytes": 20144
     },
     "reference.001": {
       "exists": true,

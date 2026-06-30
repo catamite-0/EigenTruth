@@ -116,6 +116,63 @@ def test_frontier_artifact_reference_audit_reports_missing_refs_and_verified_man
     assert load_and_verify_artifact_manifest(audit_manifest_path).passed is True
 
 
+def test_frontier_artifact_reference_audit_handoff_command_uses_current_frontier_groups(tmp_path):
+    contract_path = (
+        tmp_path
+        / "artifacts"
+        / "smollm2_product_promotion_contract_v1_9"
+        / "product-promotion-contract.json"
+    )
+    contract_path.parent.mkdir(parents=True)
+    contract_path.write_text(
+        json.dumps({"workflow": "product_promotion_contract", "source_status": "promote"}),
+        encoding="utf-8",
+    )
+    doc_path = tmp_path / "README.md"
+    doc_path.write_text(
+        "\n".join((
+            "`artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract-evidence-handoff.json`",
+            "`artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract-evidence-handoff-audit.json`",
+            "`artifacts/smollm2_product_promotion_contract_v1_9/evidence-handoff-artifact-manifest.json`",
+        ))
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = build_frontier_artifact_reference_audit(
+        doc_paths=(doc_path,),
+        root=tmp_path,
+        include_regex="smollm2_product_promotion_contract_v1_9",
+    )
+    handoff_action = next(
+        action
+        for action in payload["recommended_actions"]
+        if action["action_id"] == "export_product_promotion_contract_v1_9_evidence_handoff"
+    )
+    command = handoff_action["suggested_commands"][0]
+
+    assert (
+        "--frontier-release-evidence "
+        "artifacts/frontier-release-evidence/frontier-release-evidence-refreshed.json"
+    ) in command
+    assert (
+        "--required-groups "
+        "promotion,pre_generation,counterfactual,triple_audit,covered_fact_property,action_gate,frontier_release_evidence"
+    ) in command
+    assert handoff_action["metadata"]["frontier_release_evidence"] == (
+        "artifacts/frontier-release-evidence/frontier-release-evidence-refreshed.json"
+    )
+    assert handoff_action["metadata"]["required_groups"] == (
+        "promotion",
+        "pre_generation",
+        "counterfactual",
+        "triple_audit",
+        "covered_fact_property",
+        "action_gate",
+        "frontier_release_evidence",
+    )
+
+
 def test_frontier_artifact_reference_audit_passes_when_filtered_refs_exist(tmp_path):
     artifact_dir = tmp_path / "artifacts" / "frontier-audit-release-candidate-v6"
     artifact_dir.mkdir(parents=True)

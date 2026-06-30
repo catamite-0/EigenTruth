@@ -70,6 +70,21 @@ COVERED_FACT_PROPERTY_METRICS_PATH = (
     "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-route/"
     "structured-qa-route-summary.json"
 )
+FRONTIER_RELEASE_EVIDENCE_PATH = (
+    "artifacts/frontier-release-evidence/frontier-release-evidence-refreshed.json"
+)
+FRONTIER_AUDIT_HANDOFF_REQUIRED_GROUPS = (
+    "promotion",
+    "pre_generation",
+    "counterfactual",
+    "triple_audit",
+    "covered_fact_property",
+    "action_gate",
+    "frontier_release_evidence",
+)
+FRONTIER_AUDIT_HANDOFF_REQUIRED_GROUPS_ARG = ",".join(
+    FRONTIER_AUDIT_HANDOFF_REQUIRED_GROUPS
+)
 FRONTIER_ARTIFACT_REFERENCE_AUDIT_COMMAND = (
     "python benchmarks/audit_frontier_artifact_references.py "
     "--json artifacts/frontier-artifact-reference-audit.json "
@@ -122,6 +137,10 @@ EXPORT_PRODUCT_V19_HANDOFF_COMMAND = " ".join((
     TRIPLE_AUDIT_ENRICHMENT_PATH,
     "--covered-fact-property-metrics",
     COVERED_FACT_PROPERTY_METRICS_PATH,
+    "--frontier-release-evidence",
+    FRONTIER_RELEASE_EVIDENCE_PATH,
+    "--required-groups",
+    FRONTIER_AUDIT_HANDOFF_REQUIRED_GROUPS_ARG,
     "--artifact-manifest",
     PRODUCT_V19_HANDOFF_MANIFEST_PATH,
     "--registry",
@@ -701,6 +720,8 @@ def _recommended_actions(references: Sequence[Mapping[str, Any]]) -> tuple[dict[
             "metadata": {
                 "depends_on_action_ids": ("export_product_promotion_contract_v1_9",),
                 "contract": PRODUCT_V19_CONTRACT_PATH,
+                "frontier_release_evidence": FRONTIER_RELEASE_EVIDENCE_PATH,
+                "required_groups": FRONTIER_AUDIT_HANDOFF_REQUIRED_GROUPS,
             },
         })
 

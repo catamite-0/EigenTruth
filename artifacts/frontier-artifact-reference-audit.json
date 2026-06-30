@@ -35,7 +35,7 @@
     ],
     "max_workers": 1,
     "recursive_manifests": false,
-    "restore_json_cache_artifacts": true,
+    "restore_json_cache_artifacts": false,
     "root": "/home/z/projects/active/EigenTruth",
     "verify_manifests": true
   },
@@ -93,12 +93,22 @@
         "contract": "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json",
         "depends_on_action_ids": [
           "export_product_promotion_contract_v1_9"
+        ],
+        "frontier_release_evidence": "artifacts/frontier-release-evidence/frontier-release-evidence-refreshed.json",
+        "required_groups": [
+          "promotion",
+          "pre_generation",
+          "counterfactual",
+          "triple_audit",
+          "covered_fact_property",
+          "action_gate",
+          "frontier_release_evidence"
         ]
       },
       "priority": 70,
       "rationale": "The active docs reference enriched v1.9 evidence-handoff reports, but the handoff JSON, audit, or handoff manifest is missing locally.",
       "suggested_commands": [
-        "python benchmarks/export_product_promotion_contract_evidence_handoff.py --contract artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json --json artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract-evidence-handoff.json --audit-json artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract-evidence-handoff-audit.json --pre-generation-probe-comparison artifacts/runtime_evidence/pre-generation-qwen-smollm2-l12-comparison/comparison.json --triple-extraction-fixture-matrix artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/triple-extraction-fixture-matrix.json --counterfactual-verification artifacts/smollm2_product_counterfactual_structured_qa_audit_v0/counterfactual-verification-report.json --product-trace-replay-workflow artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/product-trace-replay-workflow.json --triple-audit-enrichment artifacts/smollm2_product_trace_triple_audit_enrichment_v1/product-trace-triple-audit-enrichment.json --covered-fact-property-metrics artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-route/structured-qa-route-summary.json --artifact-manifest artifacts/smollm2_product_promotion_contract_v1_9/evidence-handoff-artifact-manifest.json --registry artifacts/local-release-registry.json --name smollm2-product-promotion-contract-v1-9-evidence-handoff --version 0.3 --metadata release=smollm2-v1.9 --metadata triple_audit_enrichment=triple_audit_v1"
+        "python benchmarks/export_product_promotion_contract_evidence_handoff.py --contract artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json --json artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract-evidence-handoff.json --audit-json artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract-evidence-handoff-audit.json --pre-generation-probe-comparison artifacts/runtime_evidence/pre-generation-qwen-smollm2-l12-comparison/comparison.json --triple-extraction-fixture-matrix artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/triple-extraction-fixture-matrix.json --counterfactual-verification artifacts/smollm2_product_counterfactual_structured_qa_audit_v0/counterfactual-verification-report.json --product-trace-replay-workflow artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/product-trace-replay-workflow.json --triple-audit-enrichment artifacts/smollm2_product_trace_triple_audit_enrichment_v1/product-trace-triple-audit-enrichment.json --covered-fact-property-metrics artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-route/structured-qa-route-summary.json --frontier-release-evidence artifacts/frontier-release-evidence/frontier-release-evidence-refreshed.json --required-groups promotion,pre_generation,counterfactual,triple_audit,covered_fact_property,action_gate,frontier_release_evidence --artifact-manifest artifacts/smollm2_product_promotion_contract_v1_9/evidence-handoff-artifact-manifest.json --registry artifacts/local-release-registry.json --name smollm2-product-promotion-contract-v1-9-evidence-handoff --version 0.3 --metadata release=smollm2-v1.9 --metadata triple_audit_enrichment=triple_audit_v1"
       ],
       "title": "Export enriched v1.9 product evidence handoff"
     },
@@ -268,7 +278,7 @@
     {
       "documents": {
         "benchmarks/README.md": [
-          5612
+          5644
         ],
         "docs/experiment-plan.md": [
           420,
@@ -281,7 +291,7 @@
       "line_numbers": [
         420,
         421,
-        5612
+        5644
       ],
       "path": "artifacts/frontier-audit-release-candidate-v6/frontier-audit-registry-workflow.json",
       "status": "missing"
@@ -319,7 +329,7 @@
     {
       "documents": {
         "benchmarks/README.md": [
-          5614
+          5646
         ],
         "docs/experiment-plan.md": [
           421
@@ -330,7 +340,7 @@
       "kind": "missing",
       "line_numbers": [
         421,
-        5614
+        5646
       ],
       "path": "artifacts/smollm2_product_promotion_contract_v1_9/artifact-manifest.json",
       "status": "missing"
@@ -338,7 +348,7 @@
     {
       "documents": {
         "benchmarks/README.md": [
-          5637
+          5669
         ],
         "docs/experiment-plan.md": [
           421
@@ -349,7 +359,7 @@
       "kind": "missing",
       "line_numbers": [
         421,
-        5637
+        5669
       ],
       "path": "artifacts/smollm2_product_promotion_contract_v1_9/evidence-handoff-artifact-manifest.json",
       "status": "missing"
@@ -387,7 +397,7 @@
     {
       "documents": {
         "benchmarks/README.md": [
-          5630
+          5662
         ],
         "docs/experiment-plan.md": [
           421
@@ -398,7 +408,7 @@
       "kind": "missing",
       "line_numbers": [
         421,
-        5630
+        5662
       ],
       "path": "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract-evidence-handoff-audit.json",
       "status": "missing"
@@ -406,7 +416,7 @@
     {
       "documents": {
         "benchmarks/README.md": [
-          5629
+          5661
         ],
         "docs/experiment-plan.md": [
           421
@@ -417,7 +427,7 @@
       "kind": "missing",
       "line_numbers": [
         421,
-        5629
+        5661
       ],
       "path": "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract-evidence-handoff.json",
       "status": "missing"
@@ -425,11 +435,11 @@
     {
       "documents": {
         "README.md": [
-          302
+          304
         ],
         "benchmarks/README.md": [
-          5613,
-          5628
+          5645,
+          5660
         ],
         "docs/experiment-plan.md": [
           421
@@ -439,22 +449,16 @@
       "is_manifest": false,
       "kind": "missing",
       "line_numbers": [
-        302,
+        304,
         421,
-        5613,
-        5628
+        5645,
+        5660
       ],
       "path": "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json",
       "status": "missing"
     }
   ],
   "registry_record": "report:frontier-artifact-reference-audit:0.1",
-  "restore_report": {
-    "restored": [],
-    "restored_count": 0,
-    "skipped": [],
-    "skipped_count": 0
-  },
   "schema_version": 1,
   "status": "blocked",
   "summary": {
