@@ -8,7 +8,15 @@ import math
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+from eigentruth.eval.context_sensitivity import score_context_sensitivity
 from eigentruth.eval.score_dump import ScoreDump, load_score_dump, write_score_dump_jsonl
+
+CONTEXT_SENSITIVITY_SIGNALS = (
+    "context_sensitivity_flagged_rate",
+    "context_sensitivity_max_shift",
+    "context_sensitivity_mean_shift",
+    "context_sensitivity_max_ratio",
+)
 
 DEFAULT_VERIFIER_SIGNALS = (
     "verifier_not_supported",
@@ -26,6 +34,7 @@ DEFAULT_VERIFIER_SIGNALS = (
     "world_model_conflict",
     "world_model_conflict_delta",
     "world_model_trace_gap",
+    *CONTEXT_SENSITIVITY_SIGNALS,
 )
 
 
@@ -163,6 +172,7 @@ def verifier_signal_features(sidecar_record: Mapping[str, Any]) -> dict[str, flo
     refute_rate = _unit_interval(selfcheck_metadata.get("refute_rate", 0.0), name="selfcheck.refute_rate")
     selfcheck_executed = bool(selfcheck_payload)
     world_model_features = _world_model_signal_features(record, final)
+    context_sensitivity_features = _context_sensitivity_signal_features(sidecar_record, record, final)
     return {
         "verifier_not_supported": 0.0 if final_status == "supported" else 1.0,
         "verifier_refuted": 1.0 if final_status == "refuted" else 0.0,
@@ -174,6 +184,7 @@ def verifier_signal_features(sidecar_record: Mapping[str, Any]) -> dict[str, flo
         "selfcheck_disagreement": max(0.0, 1.0 - max(support_rate, refute_rate)) if selfcheck_executed else 0.0,
         "selfcheck_insufficient": 1.0 if selfcheck_status == "insufficient_evidence" else 0.0,
         **world_model_features,
+        **context_sensitivity_features,
     }
 
 
@@ -199,6 +210,18 @@ def verifier_signal_definitions() -> dict[str, str]:
         "world_model_trace_gap": (
             "1 when a state-transition verifier record lacks top-level or prediction_metadata "
             "world_model_reference/world_model_view metadata."
+        ),
+        "context_sensitivity_flagged_rate": (
+            "fraction of evidence-context-sensitive tokens flagged by paired logprob scoring, else 0."
+        ),
+        "context_sensitivity_max_shift": (
+            "maximum positive no-context minus evidence-context token logprob shift, else 0."
+        ),
+        "context_sensitivity_mean_shift": (
+            "mean positive no-context minus evidence-context token logprob shift, else 0."
+        ),
+        "context_sensitivity_max_ratio": (
+            "maximum evidence/no-context logprob ratio where values above 1 mean evidence lowered likelihood, else 0."
         ),
     }
 
@@ -344,6 +367,148 @@ def _empty_world_model_features() -> dict[str, float]:
         "world_model_conflict_delta": 0.0,
         "world_model_trace_gap": 0.0,
     }
+
+
+def _context_sensitivity_signal_features(
+    sidecar_record: Mapping[str, Any],
+    record: Mapping[str, Any],
+    final: Mapping[str, Any],
+) -> dict[str, float]:
+    for payload in _context_sensitivity_payload_candidates(sidecar_record, record, final):
+        summary = _context_sensitivity_summary(payload)
+        if summary:
+            return _context_sensitivity_features_from_summary(summary)
+    return _empty_context_sensitivity_features()
+
+
+def _empty_context_sensitivity_features() -> dict[str, float]:
+    return {
+        "context_sensitivity_flagged_rate": 0.0,
+        "context_sensitivity_max_shift": 0.0,
+        "context_sensitivity_mean_shift": 0.0,
+        "context_sensitivity_max_ratio": 0.0,
+    }
+
+
+def _context_sensitivity_features_from_summary(summary: Mapping[str, Any]) -> dict[str, float]:
+    return {
+        "context_sensitivity_flagged_rate": _unit_interval(
+            summary.get("flagged_rate", 0.0),
+            name="context_sensitivity.summary.flagged_rate",
+        ),
+        "context_sensitivity_max_shift": max(
+            0.0,
+            _finite_float(
+                summary.get("max_unsupported_context_shift", 0.0),
+                name="context_sensitivity.summary.max_unsupported_context_shift",
+            ),
+        ),
+        "context_sensitivity_mean_shift": max(
+            0.0,
+            _finite_float(
+                summary.get("mean_unsupported_context_shift", 0.0),
+                name="context_sensitivity.summary.mean_unsupported_context_shift",
+            ),
+        ),
+        "context_sensitivity_max_ratio": max(
+            0.0,
+            _finite_float(
+                summary.get("max_context_sensitivity_ratio", 0.0),
+                name="context_sensitivity.summary.max_context_sensitivity_ratio",
+            ),
+        ),
+    }
+
+
+def _context_sensitivity_payload_candidates(
+    sidecar_record: Mapping[str, Any],
+    record: Mapping[str, Any],
+    final: Mapping[str, Any],
+) -> tuple[Any, ...]:
+    transition = _mapping(record.get("transition"))
+    candidates = [
+        sidecar_record.get("context_sensitivity"),
+        sidecar_record.get("context_sensitivity_report"),
+        record.get("context_sensitivity"),
+        record.get("context_sensitivity_report"),
+        _mapping(final.get("metadata")).get("context_sensitivity"),
+        _mapping(final.get("metadata")).get("context_sensitivity_report"),
+        _mapping(transition.get("metadata")).get("context_sensitivity"),
+        _mapping(transition.get("metadata")).get("context_sensitivity_report"),
+    ]
+    return tuple(candidate for candidate in candidates if candidate is not None)
+
+
+def _context_sensitivity_summary(payload: Any) -> Mapping[str, Any]:
+    if isinstance(payload, Mapping):
+        summary = _mapping(payload.get("summary"))
+        if summary:
+            return summary
+        tokens = _first_sequence(
+            payload.get("tokens"),
+            payload.get("context_sensitivity_tokens"),
+            payload.get("paired_token_logprobs"),
+        )
+        if tokens is not None:
+            return score_context_sensitivity(tokens).summary
+        token_scores = _sequence_or_none(payload.get("token_scores"))
+        if token_scores is not None:
+            return _context_sensitivity_summary_from_token_scores(token_scores)
+        return {}
+    tokens = _sequence_or_none(payload)
+    if tokens is None:
+        return {}
+    return score_context_sensitivity(tokens).summary
+
+
+def _context_sensitivity_summary_from_token_scores(token_scores: Sequence[Any]) -> dict[str, float]:
+    count = 0
+    flagged_count = 0
+    shifts: list[float] = []
+    ratios: list[float] = []
+    for raw in token_scores:
+        if not isinstance(raw, Mapping):
+            raise ValueError("context_sensitivity.token_scores entries must be JSON objects.")
+        count += 1
+        flagged_count += 1 if bool(raw.get("flagged", False)) else 0
+        shifts.append(
+            max(
+                0.0,
+                _finite_float(
+                    raw.get("unsupported_context_shift", 0.0),
+                    name="context_sensitivity.token_scores.unsupported_context_shift",
+                ),
+            )
+        )
+        ratios.append(
+            max(
+                0.0,
+                _finite_float(
+                    raw.get("context_sensitivity_ratio", 0.0),
+                    name="context_sensitivity.token_scores.context_sensitivity_ratio",
+                ),
+            )
+        )
+    return {
+        "flagged_rate": (flagged_count / count) if count else 0.0,
+        "max_unsupported_context_shift": max(shifts) if shifts else 0.0,
+        "mean_unsupported_context_shift": (sum(shifts) / len(shifts)) if shifts else 0.0,
+        "max_context_sensitivity_ratio": max(ratios) if ratios else 0.0,
+    }
+
+
+def _first_sequence(*values: Any) -> Sequence[Any] | None:
+    for value in values:
+        sequence = _sequence_or_none(value)
+        if sequence is not None:
+            return sequence
+    return None
+
+
+def _sequence_or_none(value: Any) -> Sequence[Any] | None:
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return value
+    return None
 
 
 def _world_model_trace_features(

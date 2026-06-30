@@ -45141,6 +45141,14 @@ def test_build_verifier_signal_score_dump_from_verified_records_jsonl(tmp_path):
             "record_index": 1,
             "label": 1,
             "score": 0.9,
+            "context_sensitivity": {
+                "summary": {
+                    "flagged_rate": 0.75,
+                    "max_unsupported_context_shift": 0.8,
+                    "mean_unsupported_context_shift": 0.4,
+                    "max_context_sensitivity_ratio": 3.0,
+                }
+            },
             "record": {
                 "final": {"status": "refuted", "confidence": 0.8},
                 "retrieval_hits": [],
@@ -45181,7 +45189,18 @@ def test_build_verifier_signal_score_dump_from_verified_records_jsonl(tmp_path):
             "label": 1,
             "score": 0.8,
             "record": {
-                "final": {"status": "insufficient_evidence", "confidence": 0.4},
+                "final": {
+                    "status": "insufficient_evidence",
+                    "confidence": 0.4,
+                    "metadata": {
+                        "context_sensitivity": {
+                            "tokens": [
+                                {"token": " Gamma", "baseline_logprob": -1.0, "context_logprob": -1.5},
+                                {"token": " supported", "baseline_logprob": -1.0, "context_logprob": -0.5},
+                            ]
+                        }
+                    },
+                },
                 "retrieval_hits": [],
                 "transition": {
                     "status": "insufficient_evidence",
@@ -45223,7 +45242,9 @@ def test_build_verifier_signal_score_dump_from_verified_records_jsonl(tmp_path):
             verifier_signals=(
                 "verifier_refuted,verifier_uncertainty,selfcheck_refute_rate,selfcheck_disagreement,"
                 "world_model_disagreement,world_model_agreement_gap,world_model_low_agreement,"
-                "world_model_conflict,world_model_conflict_delta,world_model_trace_gap"
+                "world_model_conflict,world_model_conflict_delta,world_model_trace_gap,"
+                "context_sensitivity_flagged_rate,context_sensitivity_max_shift,"
+                "context_sensitivity_mean_shift,context_sensitivity_max_ratio"
             ),
             output=str(output_path),
             output_format="jsonl",
@@ -45247,6 +45268,10 @@ def test_build_verifier_signal_score_dump_from_verified_records_jsonl(tmp_path):
     assert enhanced.scores["world_model_conflict"] == pytest.approx((0.0, 1.0, 0.0))
     assert enhanced.scores["world_model_conflict_delta"] == pytest.approx((0.0, 3.0, 0.0))
     assert enhanced.scores["world_model_trace_gap"] == pytest.approx((0.0, 0.0, 0.0))
+    assert enhanced.scores["context_sensitivity_flagged_rate"] == pytest.approx((0.0, 0.75, 0.5))
+    assert enhanced.scores["context_sensitivity_max_shift"] == pytest.approx((0.0, 0.8, 0.5))
+    assert enhanced.scores["context_sensitivity_mean_shift"] == pytest.approx((0.0, 0.4, 0.25))
+    assert enhanced.scores["context_sensitivity_max_ratio"] == pytest.approx((0.0, 3.0, 1.5))
     assert enhanced.config["verifier_signal_score_dump"]["run_name"] == "synthetic"
     assert enhanced.extras["verifier_signal_metadata"]["signals"] == [
         "verifier_refuted",
@@ -45259,6 +45284,10 @@ def test_build_verifier_signal_score_dump_from_verified_records_jsonl(tmp_path):
         "world_model_conflict",
         "world_model_conflict_delta",
         "world_model_trace_gap",
+        "context_sensitivity_flagged_rate",
+        "context_sensitivity_max_shift",
+        "context_sensitivity_mean_shift",
+        "context_sensitivity_max_ratio",
     ]
     assert DEFAULT_SCORE_DIRECTIONS["world_model_disagreement"] == "higher"
     assert DEFAULT_SCORE_DIRECTIONS["world_model_agreement_gap"] == "higher"
@@ -45266,6 +45295,10 @@ def test_build_verifier_signal_score_dump_from_verified_records_jsonl(tmp_path):
     assert DEFAULT_SCORE_DIRECTIONS["world_model_conflict"] == "higher"
     assert DEFAULT_SCORE_DIRECTIONS["world_model_conflict_delta"] == "higher"
     assert DEFAULT_SCORE_DIRECTIONS["world_model_trace_gap"] == "higher"
+    assert DEFAULT_SCORE_DIRECTIONS["context_sensitivity_flagged_rate"] == "higher"
+    assert DEFAULT_SCORE_DIRECTIONS["context_sensitivity_max_shift"] == "higher"
+    assert DEFAULT_SCORE_DIRECTIONS["context_sensitivity_mean_shift"] == "higher"
+    assert DEFAULT_SCORE_DIRECTIONS["context_sensitivity_max_ratio"] == "higher"
 
 
 def test_verifier_signal_features_extract_direct_world_model_ensemble_metadata():

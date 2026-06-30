@@ -6884,6 +6884,12 @@ metadata includes explicit postcondition conflicts, it also emits
 `world_model_conflict`, `world_model_conflict_delta`, and the audit-oriented
 `world_model_trace_gap`, so simulator/model disagreement and expected-vs-actual
 world conflicts can be swept or fused under the same conformal calibration path.
+If the verified-record sidecar includes a `context_sensitivity` report or raw
+paired token log-probability rows under `context_sensitivity.tokens`, the
+converter additionally emits `context_sensitivity_flagged_rate`,
+`context_sensitivity_max_shift`, `context_sensitivity_mean_shift`, and
+`context_sensitivity_max_ratio` so evidence-context likelihood disagreements
+can be calibrated alongside geometry and verifier outcomes.
 
 Simple text baselines can also be appended to statement-bearing dumps as
 redline controls. This is a post-hoc check for whether a proposed detector is

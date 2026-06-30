@@ -76,6 +76,10 @@ DEFAULT_SCORE_DIRECTIONS: dict[str, str] = {
     "world_model_conflict": "higher",
     "world_model_conflict_delta": "higher",
     "world_model_trace_gap": "higher",
+    "context_sensitivity_flagged_rate": "higher",
+    "context_sensitivity_max_shift": "higher",
+    "context_sensitivity_mean_shift": "higher",
+    "context_sensitivity_max_ratio": "higher",
 }
 
 
