@@ -125,6 +125,12 @@ def test_localize_claim_risk_spans_exposes_entity_surface_summary():
     assert "claim_feature:has_named_entity_hint" in span.reasons
     assert summary["entity_claim_count"] == 1
     assert summary["entity_candidate_count"] >= 3
+    assert summary["unique_entity_candidate_count"] >= 3
+    assert summary["counts_by_entity_candidate"]["AlphaCorp"] == 1
+    assert summary["counts_by_entity_candidate"]["Beta Labs"] == 1
+    assert summary["high_risk_counts_by_entity_candidate"]["AlphaCorp"] == 1
+    assert summary["medium_or_high_counts_by_entity_candidate"]["Beta Labs"] == 1
+    assert summary["high_risk_entity_candidate_count"] >= 3
     assert summary["high_risk_entity_claim_ids"] == ("c1",)
     assert summary["counts_by_feature"]["has_named_entity_hint"] == 1
 
@@ -157,16 +163,26 @@ def test_product_trace_exposes_claim_risk_localization_summary_and_metrics():
     assert summary["counts_by_risk_level"]["high"] == 1
     assert summary["entity_claim_count"] == 1
     assert summary["counts_by_feature"]["has_named_entity_hint"] == 1
+    assert summary["counts_by_entity_candidate"]["Paris"] == 1
+    assert summary["counts_by_entity_candidate"]["France"] == 1
+    assert summary["medium_or_high_counts_by_entity_candidate"] == {}
     assert bounded["summaries"]["claim_risk_localization"]["high_risk_claim_count"] == 1
     assert bounded["summaries"]["claim_risk_localization"]["top_risk_spans"][0]["claim_id"] == "c2"
+    assert bounded["summaries"]["claim_risk_localization"]["counts_by_entity_candidate"][
+        "Paris"
+    ] == 1
     assert metrics["claim_risk_localization_available"] is True
     assert metrics["claim_risk_high_count"] == 1.0
     assert metrics["claim_risk_medium_or_high_count"] == 1.0
     assert metrics["claim_risk_entity_claim_count"] == 1.0
     assert metrics["claim_risk_entity_candidate_count"] >= 1.0
+    assert metrics["claim_risk_unique_entity_candidate_count"] >= 2.0
+    assert metrics["claim_risk_counts_by_entity_candidate"]["Paris"] == 1
+    assert metrics["claim_risk_high_counts_by_entity_candidate"] == {}
     assert bounded_metrics["claim_risk_localization_source"] == "bounded_summary"
     assert bounded_metrics["claim_risk_high_count"] == 1.0
     assert bounded_metrics["claim_risk_entity_claim_count"] == 1.0
+    assert bounded_metrics["claim_risk_counts_by_entity_candidate"]["Paris"] == 1
 
 
 def test_claim_risk_span_validation():

@@ -943,7 +943,25 @@ def _claim_risk_localization_metrics(trace: ProductTrace | Mapping[str, Any]) ->
         "claim_risk_medium_or_high_count": _finite_float(summary.get("medium_or_high_risk_claim_count")),
         "claim_risk_entity_claim_count": _finite_float(summary.get("entity_claim_count")),
         "claim_risk_entity_candidate_count": _finite_float(summary.get("entity_candidate_count")),
+        "claim_risk_unique_entity_candidate_count": _finite_float(
+            summary.get("unique_entity_candidate_count")
+        ),
         "claim_risk_high_entity_claim_count": _finite_float(summary.get("high_risk_entity_claim_count")),
+        "claim_risk_high_entity_candidate_count": _finite_float(
+            summary.get("high_risk_entity_candidate_count")
+        ),
+        "claim_risk_medium_or_high_entity_candidate_count": _finite_float(
+            summary.get("medium_or_high_entity_candidate_count")
+        ),
+        "claim_risk_counts_by_entity_candidate": _int_mapping(
+            summary.get("counts_by_entity_candidate")
+        ),
+        "claim_risk_high_counts_by_entity_candidate": _int_mapping(
+            summary.get("high_risk_counts_by_entity_candidate")
+        ),
+        "claim_risk_medium_or_high_counts_by_entity_candidate": _int_mapping(
+            summary.get("medium_or_high_counts_by_entity_candidate")
+        ),
         "claim_risk_low_count": _finite_float(counts_by_risk_level.get("low")),
         "claim_risk_medium_count": _finite_float(counts_by_risk_level.get("medium")),
         "claim_risk_max_score": _finite_float(summary.get("max_risk_score")),

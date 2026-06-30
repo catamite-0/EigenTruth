@@ -1049,6 +1049,40 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         "verification_plan_state_check_count": metrics.get("verification_plan_state_check_count"),
         "verification_plan_world_model_check_count": metrics.get("verification_plan_world_model_check_count"),
         "verification_plan_dependency_count": metrics.get("verification_plan_dependency_count"),
+        "claim_risk_localization_summary": dict(
+            _mapping(metrics.get("claim_risk_localization_summary"))
+        ),
+        "claim_risk_localization_available": bool(
+            metrics.get("claim_risk_localization_available")
+        ),
+        "claim_risk_localization_source": metrics.get("claim_risk_localization_source"),
+        "claim_risk_span_count": metrics.get("claim_risk_span_count"),
+        "claim_risk_localized_span_count": metrics.get("claim_risk_localized_span_count"),
+        "claim_risk_high_count": metrics.get("claim_risk_high_count"),
+        "claim_risk_medium_or_high_count": metrics.get("claim_risk_medium_or_high_count"),
+        "claim_risk_entity_claim_count": metrics.get("claim_risk_entity_claim_count"),
+        "claim_risk_entity_candidate_count": metrics.get("claim_risk_entity_candidate_count"),
+        "claim_risk_unique_entity_candidate_count": metrics.get(
+            "claim_risk_unique_entity_candidate_count"
+        ),
+        "claim_risk_high_entity_claim_count": metrics.get(
+            "claim_risk_high_entity_claim_count"
+        ),
+        "claim_risk_high_entity_candidate_count": metrics.get(
+            "claim_risk_high_entity_candidate_count"
+        ),
+        "claim_risk_medium_or_high_entity_candidate_count": metrics.get(
+            "claim_risk_medium_or_high_entity_candidate_count"
+        ),
+        "claim_risk_counts_by_entity_candidate": dict(
+            _mapping(metrics.get("claim_risk_counts_by_entity_candidate"))
+        ),
+        "claim_risk_high_counts_by_entity_candidate": dict(
+            _mapping(metrics.get("claim_risk_high_counts_by_entity_candidate"))
+        ),
+        "claim_risk_medium_or_high_counts_by_entity_candidate": dict(
+            _mapping(metrics.get("claim_risk_medium_or_high_counts_by_entity_candidate"))
+        ),
         "action_execution_summary": dict(_mapping(metrics.get("action_execution_summary"))),
         "action_execution_available": bool(metrics.get("action_execution_available")),
         "action_execution_source": metrics.get("action_execution_source"),
@@ -1534,6 +1568,7 @@ def _aggregate_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "action_execution": _aggregate_action_execution(metrics),
         "action_audit": _aggregate_action_audit(metrics),
         "trajectory_audit": _aggregate_trajectory_audit(metrics),
+        "claim_risk_localization": _aggregate_claim_risk_localization(metrics),
         "triple_coverage": _aggregate_triple_coverage(metrics),
         "world_model": _aggregate_world_model(metrics),
         "context_sensitivity": _aggregate_context_sensitivity(metrics),
@@ -2428,6 +2463,75 @@ def _aggregate_trajectory_audit(metrics: Sequence[Mapping[str, Any]]) -> dict[st
             item.get("trajectory_audit_issue_count") for item in metrics
         ),
         "summary_observations": sum(1 for summary in summaries if summary),
+    }
+
+
+def _aggregate_claim_risk_localization(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    summaries = [_mapping(item.get("claim_risk_localization_summary")) for item in metrics]
+    counts_by_risk_level: dict[str, int] = {}
+    counts_by_entity_candidate: dict[str, int] = {}
+    high_risk_counts_by_entity_candidate: dict[str, int] = {}
+    medium_or_high_counts_by_entity_candidate: dict[str, int] = {}
+    for summary in summaries:
+        _merge_counts(counts_by_risk_level, _mapping(summary.get("counts_by_risk_level")))
+    for item in metrics:
+        _merge_counts(
+            counts_by_entity_candidate,
+            _mapping(item.get("claim_risk_counts_by_entity_candidate")),
+        )
+        _merge_counts(
+            high_risk_counts_by_entity_candidate,
+            _mapping(item.get("claim_risk_high_counts_by_entity_candidate")),
+        )
+        _merge_counts(
+            medium_or_high_counts_by_entity_candidate,
+            _mapping(item.get("claim_risk_medium_or_high_counts_by_entity_candidate")),
+        )
+    available_trace_count = sum(
+        1 for item in metrics if item.get("claim_risk_localization_available") is True
+    )
+    return {
+        "source_trace_count": len(metrics),
+        "available_trace_count": available_trace_count,
+        "coverage_rate": _safe_div(available_trace_count, len(metrics)),
+        "source_counts": _counts(item.get("claim_risk_localization_source") for item in metrics),
+        "summary_observations": sum(1 for summary in summaries if summary),
+        "span_count": _sum_float(metrics, "claim_risk_span_count"),
+        "localized_span_count": _sum_float(metrics, "claim_risk_localized_span_count"),
+        "high_risk_claim_count": _sum_float(metrics, "claim_risk_high_count"),
+        "medium_or_high_risk_claim_count": _sum_float(
+            metrics,
+            "claim_risk_medium_or_high_count",
+        ),
+        "entity_claim_count": _sum_float(metrics, "claim_risk_entity_claim_count"),
+        "entity_candidate_observation_count": _sum_float(
+            metrics,
+            "claim_risk_entity_candidate_count",
+        ),
+        "unique_entity_candidate_count": len(counts_by_entity_candidate),
+        "high_risk_entity_claim_count": _sum_float(
+            metrics,
+            "claim_risk_high_entity_claim_count",
+        ),
+        "high_risk_entity_candidate_count": len(high_risk_counts_by_entity_candidate),
+        "medium_or_high_entity_candidate_count": len(
+            medium_or_high_counts_by_entity_candidate
+        ),
+        "counts_by_risk_level": counts_by_risk_level,
+        "counts_by_entity_candidate": counts_by_entity_candidate,
+        "high_risk_counts_by_entity_candidate": high_risk_counts_by_entity_candidate,
+        "medium_or_high_counts_by_entity_candidate": (
+            medium_or_high_counts_by_entity_candidate
+        ),
+        "per_trace_span_count": _numeric_summary(
+            item.get("claim_risk_span_count") for item in metrics
+        ),
+        "per_trace_entity_candidate_count": _numeric_summary(
+            item.get("claim_risk_entity_candidate_count") for item in metrics
+        ),
+        "per_trace_high_risk_entity_candidate_count": _numeric_summary(
+            item.get("claim_risk_high_entity_candidate_count") for item in metrics
+        ),
     }
 
 

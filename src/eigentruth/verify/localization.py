@@ -103,6 +103,9 @@ class ClaimRiskLocalizationReport:
         localized_count = 0
         max_risk_score = 0.0
         entity_candidate_count = 0
+        counts_by_entity_candidate: dict[str, int] = {}
+        high_risk_counts_by_entity_candidate: dict[str, int] = {}
+        medium_or_high_counts_by_entity_candidate: dict[str, int] = {}
         entity_claim_ids: list[str] = []
         high_risk_entity_claim_ids: list[str] = []
         high_risk_claim_ids: list[str] = []
@@ -121,6 +124,16 @@ class ClaimRiskLocalizationReport:
             if entity_candidates:
                 entity_candidate_count += len(entity_candidates)
                 entity_claim_ids.append(span.claim_id)
+                for entity in entity_candidates:
+                    counts_by_entity_candidate[entity] = counts_by_entity_candidate.get(entity, 0) + 1
+                    if span.risk_level == "high":
+                        high_risk_counts_by_entity_candidate[entity] = (
+                            high_risk_counts_by_entity_candidate.get(entity, 0) + 1
+                        )
+                    if RISK_LEVEL_ORDER[span.risk_level] >= RISK_LEVEL_ORDER["medium"]:
+                        medium_or_high_counts_by_entity_candidate[entity] = (
+                            medium_or_high_counts_by_entity_candidate.get(entity, 0) + 1
+                        )
                 if span.risk_level == "high":
                     high_risk_entity_claim_ids.append(span.claim_id)
             if span.span is not None:
@@ -140,6 +153,18 @@ class ClaimRiskLocalizationReport:
             "counts_by_feature": dict(sorted(counts_by_feature.items())),
             "entity_claim_count": len(entity_claim_ids),
             "entity_candidate_count": entity_candidate_count,
+            "unique_entity_candidate_count": len(counts_by_entity_candidate),
+            "high_risk_entity_candidate_count": len(high_risk_counts_by_entity_candidate),
+            "medium_or_high_entity_candidate_count": len(
+                medium_or_high_counts_by_entity_candidate
+            ),
+            "counts_by_entity_candidate": dict(sorted(counts_by_entity_candidate.items())),
+            "high_risk_counts_by_entity_candidate": dict(
+                sorted(high_risk_counts_by_entity_candidate.items())
+            ),
+            "medium_or_high_counts_by_entity_candidate": dict(
+                sorted(medium_or_high_counts_by_entity_candidate.items())
+            ),
             "high_risk_entity_claim_count": len(high_risk_entity_claim_ids),
             "entity_claim_ids": tuple(entity_claim_ids),
             "high_risk_entity_claim_ids": tuple(high_risk_entity_claim_ids),

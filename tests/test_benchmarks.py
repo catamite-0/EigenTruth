@@ -34491,6 +34491,93 @@ def test_run_product_runtime_baseline_aggregates_trajectory_audit(tmp_path):
     assert record.metadata["trajectory_audit_logical_rate"] == pytest.approx(0.5)
 
 
+def test_run_product_runtime_baseline_aggregates_claim_risk_entities(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    trace_a = tmp_path / "claim-risk-trace-a.json"
+    trace_b = tmp_path / "claim-risk-trace-b.json"
+    report_path = tmp_path / "product-runtime-baseline.json"
+    registry_path = tmp_path / "registry.json"
+    trace_a.write_text(
+        json.dumps({
+            "request_id": "risk-a",
+            "claims": [
+                {
+                    "claim_id": "c1",
+                    "text": "AlphaCorp acquired Beta Labs.",
+                    "span": [0, 29],
+                    "metadata": {
+                        "entity_candidates": ["AlphaCorp", "Beta Labs"],
+                        "features": {"has_named_entity_hint": True},
+                    },
+                }
+            ],
+            "verification_results": [
+                {
+                    "status": "refuted",
+                    "confidence": 0.86,
+                    "metadata": {"claim_id": "c1"},
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
+    trace_b.write_text(
+        json.dumps({
+            "request_id": "risk-b",
+            "claims": [
+                {
+                    "claim_id": "c1",
+                    "text": "AlphaCorp is headquartered in Paris.",
+                    "span": [0, 35],
+                    "metadata": {
+                        "entity_candidates": ["AlphaCorp", "Paris"],
+                        "features": {"has_named_entity_hint": True},
+                    },
+                }
+            ],
+            "verification_results": [
+                {
+                    "status": "supported",
+                    "confidence": 0.91,
+                    "metadata": {"claim_id": "c1"},
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.build_product_runtime_baseline(
+        module.ProductRuntimeBaselineConfig(
+            trace_paths=(trace_a, trace_b),
+            report_path=report_path,
+            registry_path=registry_path,
+            name="claim-risk-runtime",
+            version="0.1",
+        )
+    )
+
+    claim_risk = payload["summary"]["claim_risk_localization"]
+
+    assert claim_risk["available_trace_count"] == 2
+    assert claim_risk["span_count"] == pytest.approx(2.0)
+    assert claim_risk["entity_candidate_observation_count"] == pytest.approx(4.0)
+    assert claim_risk["unique_entity_candidate_count"] == 3
+    assert claim_risk["high_risk_entity_candidate_count"] == 2
+    assert claim_risk["counts_by_entity_candidate"] == {
+        "AlphaCorp": 2,
+        "Beta Labs": 1,
+        "Paris": 1,
+    }
+    assert claim_risk["high_risk_counts_by_entity_candidate"] == {
+        "AlphaCorp": 1,
+        "Beta Labs": 1,
+    }
+    assert payload["traces"][0]["metrics"]["claim_risk_counts_by_entity_candidate"] == {
+        "AlphaCorp": 1,
+        "Beta Labs": 1,
+    }
+
+
 def test_run_product_runtime_baseline_aggregates_counterfactual_robustness(tmp_path):
     module = importlib.import_module("benchmarks.run_product_runtime_baseline")
     trace_a = tmp_path / "counterfactual-trace-a.json"
