@@ -29429,6 +29429,52 @@ def test_product_promotion_contract_smoke_fails_closed_on_missing_registry_recor
         module.build_product_promotion_contract_smoke(registry_path=registry_path)
 
 
+def test_frontier_release_evidence_smoke_verifies_promoted_contract_report():
+    module = importlib.import_module("benchmarks.frontier_release_evidence_smoke")
+
+    payload = module.build_frontier_release_evidence_smoke()
+
+    assert payload["status"] == "pass"
+    assert payload["decision_status"] == "promote"
+    assert payload["track_statuses"]["verifier_track_status"] == "promote"
+    assert payload["track_statuses"]["abstention_track_status"] == "promote"
+    assert payload["track_statuses"]["detectability_track_status"] == "promote"
+    assert payload["track_statuses"]["multiple_testing_track_status"] == "promote"
+    assert payload["track_statuses"]["frontier_rerun_rollup_track_status"] == "promote"
+    assert set(payload["frontier_rerun_rollup_promoted_tracks"]) >= {
+        "detectability",
+        "multiple_testing",
+    }
+    assert payload["run_count"] >= 2
+    assert payload["manifest_checked"] >= 4
+    assert payload["report"].endswith("frontier-release-evidence-budget-target-sweep-v4.json")
+
+
+def test_frontier_release_evidence_smoke_fails_closed_on_blocked_report(tmp_path):
+    module = importlib.import_module("benchmarks.frontier_release_evidence_smoke")
+    report_path = tmp_path / "frontier-release-evidence.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+
+    with pytest.raises(AssertionError, match="did not promote"):
+        module._assert_frontier_report(
+            {
+                "workflow": "frontier_release_evidence_comparison",
+                "status": "complete",
+                "decision": {
+                    "status": "blocked",
+                    "blocking_reasons": ("abstention blocked",),
+                },
+                "run_decisions": [{}, {}],
+                "paths": {
+                    "frontier_release_evidence_report": str(report_path),
+                    "artifact_manifest": str(manifest_path),
+                },
+            },
+            expected_report_path=report_path,
+            expected_manifest_path=manifest_path,
+        )
+
+
 def test_frontier_artifact_reference_smoke_verifies_active_docs(tmp_path):
     module = importlib.import_module("benchmarks.frontier_artifact_reference_smoke")
     registry_module = importlib.import_module("eigentruth.registry")

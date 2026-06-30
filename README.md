@@ -604,6 +604,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `run_triple_extraction_fixture_matrix.py` | Runs generated triple-extraction fixture workflows across multiple structured-fact corpora, including optional per-corpus external prediction files, requiring cross-corpus promotion, predicate diversity, and optional adversarial subgroup gates before extractor templates are treated as release evidence. |
 | `triple_extraction_smoke.py` | Runs the bundled labeled triple-extraction fixture through rule-based, regex-with-fallback, and composite extractors, gating that configurable templates improve exact F1 without adding learned extractor dependencies. |
 | `product_promotion_contract_smoke.py` | Verifies the current default v1.9 product promotion contract, sibling manifests, enriched `65/65` evidence handoff, frontier release evidence, runtime-drift metadata, and registry record without loading a model. |
+| `frontier_release_evidence_smoke.py` | Verifies the active product contract's promoted frontier release-evidence report, rerun-promoted detectability/multiple-testing tracks, and release-evidence manifest without loading a model. |
 | `frontier_artifact_reference_smoke.py` | Runs the active frontier artifact-reference audit over repository docs, verifying referenced v6/v1.9 artifacts and manifests are present and require no repair actions without touching the real release registry. |
 | `eval_verifier_ensemble.py` | Benchmarks calibrated internal diagnostics combined with retrieval/verifier suppression/refutation policies, optional staged verifier gating, optional triple-evidence route audits, route-level cost metrics, and optional JSONL sidecar records for per-claim verifier outputs. |
 | `run_uncertainty_escalation_workflow.py` | Runs local claim/evidence fixtures through `run_verification_loop(..., escalation_policy=...)`, writes a `VerificationLoopResult` JSONL sidecar, emits the matching escalation report, and can fingerprint/register the evidence without loading a model. |
@@ -970,6 +971,7 @@ evidence rates and maximum final false-accept / false-accept-delta thresholds.
 | `compare_trajectory_sweeps.py` | 对多个 forced-answer trajectory sweep report 做对比，并在 trajectory 信号进入 release evidence 前应用 fail-closed gate。 |
 | `concept_registry_smoke.py` | 保存两个 synthetic `ConceptArtifact`，登记到本地 registry，把两个 probe 同时挂到一个 toy model，并写出带 manifest 的多 concept 诊断报告。 |
 | `product_promotion_contract_smoke.py` | 无需加载模型，校验当前默认 v1.9 product promotion contract、相邻 manifest、`65/65` enriched evidence handoff、frontier release evidence、runtime-drift metadata 和 registry record。 |
+| `frontier_release_evidence_smoke.py` | 无需加载模型，校验 active product contract 指向的 promoted frontier release-evidence report、rerun-promoted detectability/multiple-testing tracks 和 release-evidence manifest。 |
 | `frontier_artifact_reference_smoke.py` | 在仓库文档上运行 active frontier artifact-reference audit，确认被引用的 v6/v1.9 artifact 与 manifest 都存在且无需 repair action，同时不写真实 release registry。 |
 | `refresh_verifier_route_artifacts.py` | 从已保存 score dump、claims 和本地 verifier corpus 重新生成新 schema verifier-route report，不重跑模型 forward。 |
 | `compare_verifier_routes.py` | 将已保存 verifier-ensemble report 聚合为成本感知 route 排行榜、Pareto frontier 候选、分 route promotion decision、分 route 控制收益指标和可选 tail/cache/staged-verification route 质量门槛。 |
@@ -1096,7 +1098,7 @@ For local development, the Makefile auto-detects `.venv/bin/python` when present
 ```bash
 make check-fast    # lint + unit tests + dependency consistency
 make check         # check-fast plus deterministic smoke workflows
-make perf-check     # deterministic profile/cache/worker/registry/product-contract/frontier-reference/ProductTrace smokes; no model load
+make perf-check     # deterministic profile/cache/worker/registry/product-contract/frontier-evidence/ProductTrace smokes; no model load
 make release-check  # also builds the package
 ```
 

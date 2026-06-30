@@ -9437,6 +9437,7 @@ python benchmarks/run_registry_baseline_workflow.py \
 `benchmarks/registry_baseline_smoke.py`, plus
 `benchmarks/performance_baseline_smoke.py`,
 `benchmarks/product_promotion_contract_smoke.py`,
+`benchmarks/frontier_release_evidence_smoke.py`,
 `benchmarks/frontier_artifact_reference_smoke.py`,
 `benchmarks/product_trace_replay_smoke.py`, and
 `benchmarks/release_candidate_registry_smoke.py`. These use fixed synthetic profile
@@ -9444,10 +9445,11 @@ payloads plus the checked-in v1.9 product handoff and active frontier doc
 references to verify that direct gates, cache-profile gates, worker-count sweep
 decisions, INSIDE sampling sample-efficiency gates, registry-backed baselines,
 the default promotion contract/evidence-handoff path, active frontier artifact
-references, ProductTrace replay, and release gates pass acceptable candidates,
-reject bounded telemetry payloads where full traces are required, and catch
-expected regressions. They are stable enough for default local/CI checks because
-they do not load a model or measure machine speed. Use real `eval_truthfulqa.py --profile-json`
+references, promoted frontier release-evidence report tracks, ProductTrace
+replay, and release gates pass acceptable candidates, reject bounded telemetry
+payloads where full traces are required, and catch expected regressions. They are
+stable enough for default local/CI checks because they do not load a model or
+measure machine speed. Use real `eval_truthfulqa.py --profile-json`
 artifacts, `run_cache_profile_triplet.py`, or `run_inside_sampling_profile.py`
 before making actual runtime or sampling-cost claims.
 
