@@ -189,6 +189,11 @@ def test_frontier_artifact_reference_audit_v6_rebuild_action_has_commands(tmp_pa
         root=tmp_path,
         include_regex="frontier-audit-release-candidate-v6",
     )
+    source_action = next(
+        action
+        for action in payload["recommended_actions"]
+        if action["action_id"] == "rebuild_frontier_mechanism_handoff_sources"
+    )
     rebuild_action = next(
         action
         for action in payload["recommended_actions"]
@@ -196,6 +201,22 @@ def test_frontier_artifact_reference_audit_v6_rebuild_action_has_commands(tmp_pa
     )
     bundle_command, release_command = rebuild_action["suggested_commands"]
 
+    assert source_action["suggested_commands"][0].startswith(
+        "python benchmarks/build_world_model_rule_candidate_handoff.py"
+    )
+    assert (
+        "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-"
+        "mechanism-candidate-handoff/world-model-rule-candidate-handoff.json"
+    ) in source_action["affected_paths"]
+    assert source_action["metadata"]["missing_prerequisite_paths"] == (
+        "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-"
+        "mechanism-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+        "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-"
+        "mechanism-africa-poverty-promotion-gate/"
+        "world-model-rule-candidate-promotion-gate.json",
+        "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-"
+        "mechanism-remaining-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+    )
     assert bundle_command.startswith("python benchmarks/build_mechanism_handoff_evidence_bundle.py")
     assert "truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle" in bundle_command
     assert release_command.startswith("python benchmarks/run_release_candidate_registry_workflow.py")
@@ -215,6 +236,9 @@ def test_frontier_artifact_reference_audit_v6_rebuild_action_has_commands(tmp_pa
     )
     assert rebuild_action["metadata"]["frontier_release_evidence"] == (
         "artifacts/frontier-release-evidence/frontier-release-evidence-refreshed.json"
+    )
+    assert rebuild_action["metadata"]["depends_on_action_ids"] == (
+        "rebuild_frontier_mechanism_handoff_sources",
     )
 
 

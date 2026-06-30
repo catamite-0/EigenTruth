@@ -37,8 +37,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "frontier-artifact-reference-audit.json",
-      "sha256": "92526938b13d6f85d68496fee545cabf8a8cb0166cb2126c4f3126e24cb67959",
-      "size_bytes": 24264
+      "sha256": "0835ff7a78159626f4b47ba8a4a62440e016f3d7b7e814980ecc662a6e8bacda",
+      "size_bytes": 28651
     },
     "reference.001": {
       "exists": true,
@@ -170,8 +170,9 @@
     "missing_count": 12,
     "missing_recoverable_from_json_cache_count": 0,
     "missing_unrecoverable_count": 12,
-    "recommended_action_count": 5,
+    "recommended_action_count": 6,
     "recommended_action_ids": [
+      "rebuild_frontier_mechanism_handoff_sources",
       "rebuild_frontier_audit_release_candidate_v6",
       "export_product_promotion_contract_v1_9",
       "export_product_promotion_contract_v1_9_evidence_handoff",

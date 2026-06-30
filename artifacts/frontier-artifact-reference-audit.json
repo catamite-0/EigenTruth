@@ -42,6 +42,36 @@
   "metadata": {},
   "recommended_actions": [
     {
+      "action_id": "rebuild_frontier_mechanism_handoff_sources",
+      "action_type": "rebuild_world_model_rule_candidate_handoffs",
+      "affected_paths": [
+        "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff/world-model-rule-candidate-handoff.json",
+        "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff/world-model-rule-candidate-handoff.json",
+        "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff/world-model-rule-candidate-handoff.json"
+      ],
+      "metadata": {
+        "missing_prerequisite_paths": [
+          "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+          "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+          "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-promotion-gate/world-model-rule-candidate-promotion-gate.json"
+        ],
+        "notes": "The handoff commands consume promoted world-model rule-candidate promotion-gate reports. If the listed promotion gates are also missing, rerun the mechanism binding-fill, authoring-adapter, and promotion-gate chain before building the handoff bundle.",
+        "required_promotion_gate_paths": [
+          "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+          "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+          "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-promotion-gate/world-model-rule-candidate-promotion-gate.json"
+        ]
+      },
+      "priority": 105,
+      "rationale": "The frontier-audit v6 release candidate consumes a mechanism handoff evidence bundle, but the source world-model rule-candidate handoff reports are missing locally.",
+      "suggested_commands": [
+        "python benchmarks/build_world_model_rule_candidate_handoff.py --promotion-gate artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-promotion-gate/world-model-rule-candidate-promotion-gate.json --output-dir artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff --registry artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff/registry.json --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff --version 0.1 --metadata source=frontier_mechanism_handoff_rebuild",
+        "python benchmarks/build_world_model_rule_candidate_handoff.py --promotion-gate artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-promotion-gate/world-model-rule-candidate-promotion-gate.json --output-dir artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff --registry artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff/registry.json --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff --version 0.1 --metadata source=frontier_mechanism_handoff_rebuild",
+        "python benchmarks/build_world_model_rule_candidate_handoff.py --promotion-gate artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-promotion-gate/world-model-rule-candidate-promotion-gate.json --output-dir artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff --registry artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff/registry.json --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff --version 0.1 --metadata source=frontier_mechanism_handoff_rebuild"
+      ],
+      "title": "Regenerate frontier mechanism handoff source reports"
+    },
+    {
       "action_id": "rebuild_frontier_audit_release_candidate_v6",
       "action_type": "rerun_release_candidate_workflow",
       "affected_paths": [
@@ -51,12 +81,12 @@
         "artifacts/frontier-audit-release-candidate-v6/manifest-verification.json"
       ],
       "metadata": {
+        "depends_on_action_ids": [
+          "rebuild_frontier_mechanism_handoff_sources"
+        ],
         "frontier_release_evidence": "artifacts/frontier-release-evidence/frontier-release-evidence-refreshed.json",
         "mechanism_handoff_evidence_bundle": "artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle/mechanism-handoff-evidence-bundle.json",
         "notes": "Rerun the release-candidate registry workflow that produced the frontier-audit v6 candidate before exporting v1.9 product handoff artifacts.",
-        "prerequisite_action_ids": [
-          "refresh_frontier_mechanism_handoff_bundle"
-        ],
         "release_policy_profile": "frontier_audit",
         "required_output": "artifacts/frontier-audit-release-candidate-v6/frontier-audit-registry-workflow.json",
         "route_registry": "artifacts/frontier-release-evidence/frontier-route-registry.json"
@@ -486,8 +516,9 @@
     "missing_count": 12,
     "missing_recoverable_from_json_cache_count": 0,
     "missing_unrecoverable_count": 12,
-    "recommended_action_count": 5,
+    "recommended_action_count": 6,
     "recommended_action_ids": [
+      "rebuild_frontier_mechanism_handoff_sources",
       "rebuild_frontier_audit_release_candidate_v6",
       "export_product_promotion_contract_v1_9",
       "export_product_promotion_contract_v1_9_evidence_handoff",

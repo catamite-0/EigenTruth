@@ -80,6 +80,58 @@ FRONTIER_MECHANISM_HANDOFF_BUNDLE_PREFIX = (
 FRONTIER_MECHANISM_HANDOFF_BUNDLE_PATH = (
     f"{FRONTIER_MECHANISM_HANDOFF_BUNDLE_PREFIX}/mechanism-handoff-evidence-bundle.json"
 )
+FRONTIER_MECHANISM_HANDOFF_SOURCE_SPECS = (
+    {
+        "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff",
+        "version": "0.1",
+        "output_dir": (
+            "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-"
+            "mechanism-candidate-handoff"
+        ),
+        "promotion_gate": (
+            "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-"
+            "mechanism-promotion-gate/world-model-rule-candidate-promotion-gate.json"
+        ),
+    },
+    {
+        "name": (
+            "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-"
+            "africa-poverty-candidate-handoff"
+        ),
+        "version": "0.1",
+        "output_dir": (
+            "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-"
+            "mechanism-africa-poverty-candidate-handoff"
+        ),
+        "promotion_gate": (
+            "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-"
+            "mechanism-africa-poverty-promotion-gate/"
+            "world-model-rule-candidate-promotion-gate.json"
+        ),
+    },
+    {
+        "name": (
+            "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-"
+            "remaining-candidate-handoff"
+        ),
+        "version": "0.1",
+        "output_dir": (
+            "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-"
+            "mechanism-remaining-candidate-handoff"
+        ),
+        "promotion_gate": (
+            "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-"
+            "mechanism-remaining-promotion-gate/world-model-rule-candidate-promotion-gate.json"
+        ),
+    },
+)
+FRONTIER_MECHANISM_HANDOFF_REPORT_PATHS = tuple(
+    f"{spec['output_dir']}/world-model-rule-candidate-handoff.json"
+    for spec in FRONTIER_MECHANISM_HANDOFF_SOURCE_SPECS
+)
+FRONTIER_MECHANISM_PROMOTION_GATE_PATHS = tuple(
+    str(spec["promotion_gate"]) for spec in FRONTIER_MECHANISM_HANDOFF_SOURCE_SPECS
+)
 FRONTIER_AUDIT_HANDOFF_REQUIRED_GROUPS = (
     "promotion",
     "pre_generation",
@@ -137,6 +189,25 @@ BUILD_FRONTIER_MECHANISM_HANDOFF_BUNDLE_COMMAND = " ".join((
     "--min-refuted-count",
     "2",
 ))
+BUILD_FRONTIER_MECHANISM_HANDOFF_SOURCE_COMMANDS = tuple(
+    " ".join((
+        "python",
+        "benchmarks/build_world_model_rule_candidate_handoff.py",
+        "--promotion-gate",
+        str(spec["promotion_gate"]),
+        "--output-dir",
+        str(spec["output_dir"]),
+        "--registry",
+        f"{spec['output_dir']}/registry.json",
+        "--name",
+        str(spec["name"]),
+        "--version",
+        str(spec["version"]),
+        "--metadata",
+        "source=frontier_mechanism_handoff_rebuild",
+    ))
+    for spec in FRONTIER_MECHANISM_HANDOFF_SOURCE_SPECS
+)
 REBUILD_FRONTIER_AUDIT_RELEASE_CANDIDATE_V6_COMMAND = " ".join((
     "python",
     "benchmarks/run_release_candidate_registry_workflow.py",
@@ -309,7 +380,7 @@ def build_frontier_artifact_reference_audit(
     blocking_reasons = _blocking_reasons(references)
     if not references:
         blocking_reasons.append("no artifact references matched the configured include/exclude filters")
-    recommended_actions = _recommended_actions(references)
+    recommended_actions = _recommended_actions(references, root=root_path)
     summary = _summary(references, document_count=len(documents))
     summary["recommended_action_count"] = len(recommended_actions)
     summary["recommended_action_ids"] = tuple(action["action_id"] for action in recommended_actions)
@@ -669,7 +740,11 @@ def _expected_manifest_failure_value(
     return None
 
 
-def _recommended_actions(references: Sequence[Mapping[str, Any]]) -> tuple[dict[str, Any], ...]:
+def _recommended_actions(
+    references: Sequence[Mapping[str, Any]],
+    *,
+    root: Path,
+) -> tuple[dict[str, Any], ...]:
     missing_paths = tuple(
         sorted(str(reference["path"]) for reference in references if reference["status"] == "missing")
     )
@@ -730,6 +805,40 @@ def _recommended_actions(references: Sequence[Mapping[str, Any]]) -> tuple[dict[
 
     frontier_missing = tuple(path for path in missing_paths if path.startswith(FRONTIER_V6_PREFIX))
     if frontier_missing:
+        missing_mechanism_handoff_sources = tuple(
+            path
+            for path in FRONTIER_MECHANISM_HANDOFF_REPORT_PATHS
+            if not (root / path).exists()
+        )
+        missing_mechanism_promotion_gates = tuple(
+            path
+            for path in FRONTIER_MECHANISM_PROMOTION_GATE_PATHS
+            if not (root / path).exists()
+        )
+        if missing_mechanism_handoff_sources:
+            actions.append({
+                "action_id": "rebuild_frontier_mechanism_handoff_sources",
+                "title": "Regenerate frontier mechanism handoff source reports",
+                "action_type": "rebuild_world_model_rule_candidate_handoffs",
+                "priority": 105,
+                "rationale": (
+                    "The frontier-audit v6 release candidate consumes a mechanism "
+                    "handoff evidence bundle, but the source world-model rule-candidate "
+                    "handoff reports are missing locally."
+                ),
+                "affected_paths": missing_mechanism_handoff_sources,
+                "suggested_commands": BUILD_FRONTIER_MECHANISM_HANDOFF_SOURCE_COMMANDS,
+                "metadata": {
+                    "required_promotion_gate_paths": FRONTIER_MECHANISM_PROMOTION_GATE_PATHS,
+                    "missing_prerequisite_paths": missing_mechanism_promotion_gates,
+                    "notes": (
+                        "The handoff commands consume promoted world-model rule-candidate "
+                        "promotion-gate reports. If the listed promotion gates are also "
+                        "missing, rerun the mechanism binding-fill, authoring-adapter, "
+                        "and promotion-gate chain before building the handoff bundle."
+                    ),
+                },
+            })
         actions.append({
             "action_id": "rebuild_frontier_audit_release_candidate_v6",
             "title": "Regenerate frontier audit release-candidate v6 artifacts",
@@ -753,7 +862,11 @@ def _recommended_actions(references: Sequence[Mapping[str, Any]]) -> tuple[dict[
                 "route_registry": FRONTIER_ROUTE_REGISTRY_PATH,
                 "frontier_release_evidence": FRONTIER_RELEASE_EVIDENCE_PATH,
                 "mechanism_handoff_evidence_bundle": FRONTIER_MECHANISM_HANDOFF_BUNDLE_PATH,
-                "prerequisite_action_ids": ("refresh_frontier_mechanism_handoff_bundle",),
+                "depends_on_action_ids": (
+                    ("rebuild_frontier_mechanism_handoff_sources",)
+                    if missing_mechanism_handoff_sources
+                    else ()
+                ),
                 "notes": (
                     "Rerun the release-candidate registry workflow that produced the "
                     "frontier-audit v6 candidate before exporting v1.9 product handoff artifacts."
