@@ -2011,6 +2011,18 @@ def _frontier_release_evidence_metrics(
             _nested_float(current, ("citation_batch_rollup_count", "mean")),
             gates.get("min_frontier_release_evidence_citation_batch_rollup_count"),
         ),
+        _min_current_metric(
+            "promotion_contract.frontier_release_evidence.citation_batch_expected_batch_count.mean",
+            _nested_float(baseline, ("citation_batch_expected_batch_count", "mean")),
+            _nested_float(current, ("citation_batch_expected_batch_count", "mean")),
+            None,
+        ),
+        _min_current_metric(
+            "promotion_contract.frontier_release_evidence.citation_batch_observed_batch_count.mean",
+            _nested_float(baseline, ("citation_batch_observed_batch_count", "mean")),
+            _nested_float(current, ("citation_batch_observed_batch_count", "mean")),
+            None,
+        ),
         _max_current_metric(
             "promotion_contract.frontier_release_evidence.citation_batch_missing_expected_batch_count.mean",
             _nested_float(

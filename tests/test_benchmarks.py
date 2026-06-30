@@ -37912,7 +37912,7 @@ def test_compare_product_runtime_baselines_gates_frontier_release_evidence_drift
 
     assert payload["status"] == "blocked"
     assert payload["summary"]["blocked_metric_count"] == 13
-    assert payload["summary"]["compared_metric_count"] == 37
+    assert payload["summary"]["compared_metric_count"] == 39
     assert _metric_by_name(
         payload,
         "promotion_contract.frontier_release_evidence.coverage_rate",
@@ -37959,6 +37959,14 @@ def test_compare_product_runtime_baselines_gates_frontier_release_evidence_drift
     )["current"] == pytest.approx(1.0)
     assert _metric_by_name(
         payload,
+        "promotion_contract.frontier_release_evidence.citation_batch_expected_batch_count.mean",
+    )["status"] == "observed"
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.frontier_release_evidence.citation_batch_observed_batch_count.mean",
+    )["current"] == pytest.approx(1.0)
+    assert _metric_by_name(
+        payload,
         "promotion_contract.frontier_release_evidence.run_count.mean",
     )["current"] == pytest.approx(1.0)
     assert manifest["metadata"]["frontier_release_evidence_blocked_metric_count"] == 13
@@ -37978,6 +37986,12 @@ def test_compare_product_runtime_baselines_gates_frontier_release_evidence_drift
     assert manifest["metadata"][
         "frontier_release_evidence_frontier_rerun_rollup_missing_report_count_current"
     ] == pytest.approx(1.0)
+    assert manifest["metadata"][
+        "frontier_release_evidence_citation_batch_expected_batch_count_current"
+    ] == pytest.approx(2.0)
+    assert manifest["metadata"][
+        "frontier_release_evidence_citation_batch_observed_batch_count_status"
+    ] == "observed"
     assert record.metadata["frontier_release_evidence_blocked_metric_count"] == 13
     assert record.metadata["frontier_release_evidence_run_count_current"] == pytest.approx(
         1.0
@@ -37991,6 +38005,9 @@ def test_compare_product_runtime_baselines_gates_frontier_release_evidence_drift
     assert record.metadata[
         "frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count_status"
     ] == "blocked"
+    assert record.metadata[
+        "frontier_release_evidence_citation_batch_observed_batch_count_current"
+    ] == pytest.approx(1.0)
 
 
 def test_compare_product_runtime_baselines_gates_covered_fact_property_drift(tmp_path):

@@ -5450,6 +5450,23 @@ comparison, counterfactual verification, covered-fact property, and action-gate
 groups are present, while audit/slot triple coverage remains the next
 evidence-producing work.
 
+For the current checkout's frontier audit replay, the self-contained evidence
+handoff is `artifacts/smollm2_product_promotion_evidence_handoff_v1_6_frontier_v2/`.
+It uses the available blind-spot Wikidata structured-QA route summary for
+covered-fact property metrics and deliberately leaves missing child reports
+missing instead of substituting stale paths. Its audit has `56/65` metrics
+present and `9` missing metrics across counterfactual verifier audit and
+trace-level triple audit. The companion
+`artifacts/smollm2_product_runtime_drift_v1_10_trace_evidence/` report carries
+`101` comparable metrics, including claim-risk localization, covered-fact
+property, trajectory-audit, evidence-handoff, action-gate, and frontier
+citation expected/observed batch-count rows. Replaying `frontier_audit` as
+`artifacts/frontier-audit-release-candidate-v8/` keeps the release blocked but
+reduces the evidence-gap plan to `20` missing metrics and `9` actions. This is
+trace-evidence materialization only; it does not promote the upstream frontier
+release evidence or fill missing counterfactual/world-model/context/triple-audit
+quality rows.
+
 ```bash
 python benchmarks/run_release_candidate_registry_workflow.py \
   --readiness-registry artifacts/registry.json \
