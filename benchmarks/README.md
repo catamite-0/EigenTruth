@@ -6298,7 +6298,23 @@ python benchmarks/export_product_promotion_contract.py \
   --compact-json
 ```
 
-Current frontier-audit handoff guard:
+Current frontier-audit handoff status:
+
+The latest local strict frontier-audit replay is promoted:
+`artifacts/frontier-audit-release-candidate-v13/frontier-audit-registry-workflow.json`
+registers
+`benchmark_manifest:smollm2-l8-frontier-audit-release-candidate:0.13`
+after recursive manifest verification. The promoted chain uses
+`artifacts/frontier-release-evidence/frontier-release-evidence-budget-target-sweep-v4.json`
+for frontier evidence, the refreshed v1.6 handoff at
+`artifacts/smollm2_product_promotion_evidence_handoff_v1_6_frontier_v4/`,
+and `artifacts/smollm2_product_runtime_drift_v1_14_frontier_budget_target/`,
+whose drift report promotes with `107` compared metrics and `0` blockers.
+The handoff exporter now prefers complete `product_trace_triple_audit_enrichment`
+coverage when an older runtime baseline only carries partial triple-audit
+metadata, so the handoff audit promotes with `65/65` present metrics.
+
+Historical v6 frontier-audit handoff guard:
 
 The local frontier-audit v6 replay is currently a fail-closed release candidate:
 the mechanism handoff bundle promotes, but the overall release comparison remains

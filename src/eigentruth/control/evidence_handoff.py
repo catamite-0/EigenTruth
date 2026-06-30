@@ -342,15 +342,18 @@ def enrich_product_promotion_contract_evidence(
         filled_groups.append("frontier_release_evidence")
         export_metadata["sources"]["frontier_release_evidence"] = frontier_release_evidence_path
 
-    triple_audit = _triple_audit_flat_metadata_from_runtime_baseline(runtime_baseline)
-    triple_audit_source = "runtime_baseline"
-    triple_audit_metadata_source = "runtime_baseline"
-    triple_audit_path = runtime_baseline_path
-    triple_audit_report: Mapping[str, Any] | None = runtime_baseline
-    if not triple_audit:
-        triple_audit = _triple_audit_flat_metadata_from_enrichment_report(
-            triple_audit_enrichment
-        )
+    runtime_triple_audit = _triple_audit_flat_metadata_from_runtime_baseline(runtime_baseline)
+    enrichment_triple_audit = _triple_audit_flat_metadata_from_enrichment_report(
+        triple_audit_enrichment
+    )
+    if _complete_triple_audit_metadata(runtime_triple_audit) or not enrichment_triple_audit:
+        triple_audit = runtime_triple_audit
+        triple_audit_source = "runtime_baseline"
+        triple_audit_metadata_source = "runtime_baseline"
+        triple_audit_path = runtime_baseline_path
+        triple_audit_report: Mapping[str, Any] | None = runtime_baseline
+    else:
+        triple_audit = enrichment_triple_audit
         triple_audit_source = "triple_audit_enrichment"
         triple_audit_metadata_source = (
             _triple_audit_evidence_source_from_enrichment_report(triple_audit_enrichment)
@@ -1080,6 +1083,18 @@ def _triple_audit_flat_metadata_from_runtime_baseline(
             "triple_audit_pass_rate": _float_or_none(triple_coverage.get("audit_pass_rate")),
             "triple_slot_coverage_rate": _float_or_none(triple_coverage.get("slot_coverage_rate")),
         }
+    )
+
+
+def _complete_triple_audit_metadata(metadata: Mapping[str, Any]) -> bool:
+    return all(
+        key in metadata
+        for key in (
+            "triple_claim_coverage_rate",
+            "triple_audit_claim_coverage_rate",
+            "triple_audit_pass_rate",
+            "triple_slot_coverage_rate",
+        )
     )
 
 
