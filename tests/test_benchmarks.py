@@ -41413,6 +41413,60 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
             "covered_fact_property": "promote",
         },
     )
+    from eigentruth.control import (
+        ActionExecutionStatus,
+        ActionReceiptSigner,
+        ActionRequest,
+        ActionResult,
+        ControlAction,
+        attach_action_receipt,
+    )
+
+    def receipt_claim_support_fields(request_id: str, text: str) -> dict[str, Any]:
+        action_request = ActionRequest(
+            action=ControlAction.EXECUTE_TOOL,
+            reason="support trace claim",
+            payload={"tool": "support_claim", "input": {"request_id": request_id}},
+            request_id=f"{request_id}-tool",
+        )
+        action_result = ActionResult(
+            action=ControlAction.EXECUTE_TOOL,
+            status=ActionExecutionStatus.SUCCEEDED,
+            output={"supported": True, "request_id": request_id},
+            request_id=action_request.request_id,
+        )
+        signer = ActionReceiptSigner("unit-test-secret")
+        action_result = attach_action_receipt(
+            action_result,
+            signer.issue(action_result, request=action_request),
+        )
+        return {
+            "claims": [
+                {
+                    "claim_id": "c1",
+                    "text": text,
+                    "metadata": {"tool_request_id": action_request.request_id},
+                }
+            ],
+            "actions": [action_request.to_dict()],
+            "action_results": [action_result.to_dict()],
+            "final_answer": {
+                "status": "answered",
+                "text": text,
+                "answerable": True,
+                "action": "accept",
+                "risk_level": "low",
+                "confidence": 0.95,
+                "reason": "receipt-backed fixture",
+                "evidence": [
+                    {
+                        "text": text,
+                        "request_id": action_request.request_id,
+                    }
+                ],
+            },
+        }
+
     trace_payloads = (
         {
             "request_id": "latency-low-supported",
@@ -41422,7 +41476,10 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
                 "confidence": 1.0,
                 "reason": "supported",
             },
-            "claims": [{"claim_id": "c1", "text": "Private low-risk fact.", "metadata": {}}],
+            **receipt_claim_support_fields(
+                "latency-low-supported",
+                "Private low-risk fact.",
+            ),
             "metadata": {
                 "runtime_profile": "latency",
                 "promotion_contract_recommended_route_covered_fact_property_metrics": (
@@ -41444,7 +41501,10 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
                 "confidence": 0.7,
                 "reason": "unsupported",
             },
-            "claims": [{"claim_id": "c1", "text": "Private unsupported fact.", "metadata": {}}],
+            **receipt_claim_support_fields(
+                "balanced-medium-retrieve",
+                "Private unsupported fact.",
+            ),
             "metadata": {
                 "runtime_profile": "balanced",
                 "promotion_contract_recommended_route_covered_fact_property_metrics": (
@@ -41500,6 +41560,10 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
             max_runtime_drift_covered_fact_min_false_refuted_rate_drop=0.0,
             max_runtime_drift_product_trace_action_audit_error_rate_increase=0.0,
             max_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_increase=0.0,
+            min_runtime_drift_product_trace_receipt_claim_support_reference_support_rate=1.0,
+            max_runtime_drift_product_trace_receipt_claim_support_unsupported_reference_rate_increase=0.0,
+            max_runtime_drift_product_trace_receipt_claim_support_unreceipted_reference_rate_increase=0.0,
+            max_runtime_drift_product_trace_receipt_claim_support_fingerprint_mismatch_reference_rate_increase=0.0,
             max_runtime_drift_product_trace_trajectory_audit_failed_trace_rate_increase=0.0,
             max_runtime_drift_product_trace_trajectory_audit_error_rate_increase=0.0,
             max_runtime_drift_product_trace_trajectory_audit_factual_rate_increase=0.0,
@@ -41552,6 +41616,10 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert payload["runtime_drift"]["covered_fact_property_blocked_metric_count"] == 0
     assert payload["runtime_drift"]["product_trace_action_gate_metric_count"] == 10
     assert payload["runtime_drift"]["product_trace_action_gate_blocked_metric_count"] == 0
+    assert payload["runtime_drift"]["product_trace_receipt_claim_support_metric_count"] == 7
+    assert payload["runtime_drift"][
+        "product_trace_receipt_claim_support_blocked_metric_count"
+    ] == 0
     assert payload["runtime_drift"]["product_trace_trajectory_audit_metric_count"] == 7
     assert payload["runtime_drift"]["product_trace_trajectory_audit_blocked_metric_count"] == 0
     assert payload["runtime_drift"]["pre_generation_probe_comparison_metric_count"] == 8
@@ -41574,6 +41642,12 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     ] == pytest.approx(0.0)
     assert payload["config"]["runtime_drift_gates"][
         "max_product_trace_action_execution_request_id_mismatch_rate_increase"
+    ] == pytest.approx(0.0)
+    assert payload["config"]["runtime_drift_gates"][
+        "min_product_trace_receipt_claim_support_reference_support_rate"
+    ] == pytest.approx(1.0)
+    assert payload["config"]["runtime_drift_gates"][
+        "max_product_trace_receipt_claim_support_unsupported_reference_rate_increase"
     ] == pytest.approx(0.0)
     assert payload["config"]["runtime_drift_gates"][
         "max_product_trace_trajectory_audit_error_rate_increase"
@@ -41606,6 +41680,12 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert drift_report["config"]["max_product_trace_action_audit_error_rate_increase"] == pytest.approx(0.0)
     assert drift_report["config"][
         "max_product_trace_action_execution_request_id_mismatch_rate_increase"
+    ] == pytest.approx(0.0)
+    assert drift_report["config"][
+        "min_product_trace_receipt_claim_support_reference_support_rate"
+    ] == pytest.approx(1.0)
+    assert drift_report["config"][
+        "max_product_trace_receipt_claim_support_unsupported_reference_rate_increase"
     ] == pytest.approx(0.0)
     assert drift_report["config"][
         "max_product_trace_trajectory_audit_error_rate_increase"
@@ -41656,6 +41736,19 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert action_gate_statuses[
         "promotion_contract.product_trace_replay.action_execution_gate.request_id_mismatch_rate.mean"
     ] == "pass"
+    receipt_claim_support_statuses = {
+        metric["metric"]: metric["status"]
+        for metric in drift_report["metrics"]
+        if metric["metric"].startswith("receipt_claim_support.")
+    }
+    assert len(receipt_claim_support_statuses) == 7
+    assert set(receipt_claim_support_statuses.values()) <= {"observed", "pass"}
+    assert receipt_claim_support_statuses[
+        "receipt_claim_support.reference_support_rate"
+    ] == "pass"
+    assert receipt_claim_support_statuses[
+        "receipt_claim_support.unsupported_reference_rate"
+    ] == "pass"
     trajectory_audit_statuses = {
         metric["metric"]: metric["status"]
         for metric in drift_report["metrics"]
@@ -41704,6 +41797,12 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert manifest["metadata"]["runtime_drift_covered_fact_property_blocked_metric_count"] == 0
     assert manifest["metadata"]["runtime_drift_product_trace_action_gate_metric_count"] == 10
     assert manifest["metadata"]["runtime_drift_product_trace_action_gate_blocked_metric_count"] == 0
+    assert manifest["metadata"][
+        "runtime_drift_product_trace_receipt_claim_support_metric_count"
+    ] == 7
+    assert manifest["metadata"][
+        "runtime_drift_product_trace_receipt_claim_support_blocked_metric_count"
+    ] == 0
     assert manifest["metadata"]["runtime_drift_product_trace_trajectory_audit_metric_count"] == 7
     assert manifest["metadata"]["runtime_drift_product_trace_trajectory_audit_blocked_metric_count"] == 0
     assert manifest["metadata"]["runtime_drift_pre_generation_probe_comparison_metric_count"] == 8
@@ -41717,6 +41816,10 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert record.metadata["runtime_drift_covered_fact_property_metric_count"] == 6
     assert record.metadata["runtime_drift_product_trace_action_gate_metric_count"] == 10
     assert record.metadata["runtime_drift_product_trace_action_gate_blocked_metric_count"] == 0
+    assert record.metadata["runtime_drift_product_trace_receipt_claim_support_metric_count"] == 7
+    assert record.metadata[
+        "runtime_drift_product_trace_receipt_claim_support_blocked_metric_count"
+    ] == 0
     assert record.metadata["runtime_drift_product_trace_trajectory_audit_metric_count"] == 7
     assert record.metadata["runtime_drift_product_trace_trajectory_audit_blocked_metric_count"] == 0
     assert record.metadata["runtime_drift_pre_generation_probe_comparison_metric_count"] == 8
@@ -41730,6 +41833,7 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert drift_record.metadata["runtime_budget_policy_passed"] is True
     assert drift_record.metadata["covered_fact_property_blocked_metric_count"] == 0
     assert drift_record.metadata["product_trace_action_gate_blocked_metric_count"] == 0
+    assert drift_record.metadata["product_trace_receipt_claim_support_blocked_metric_count"] == 0
     assert drift_record.metadata["product_trace_trajectory_audit_blocked_metric_count"] == 0
     assert drift_record.metadata["pre_generation_probe_comparison_blocked_metric_count"] == 0
     assert drift_record.metadata["counterfactual_verification_blocked_metric_count"] == 0

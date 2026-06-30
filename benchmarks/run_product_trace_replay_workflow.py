@@ -171,6 +171,27 @@ class ProductTraceReplayWorkflowConfig:
     max_runtime_drift_product_trace_action_execution_missing_result_rate_increase: float | None = None
     max_runtime_drift_product_trace_action_execution_unexpected_result_rate_increase: float | None = None
     max_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_increase: float | None = None
+    min_runtime_drift_product_trace_receipt_claim_support_reference_support_rate: (
+        float | None
+    ) = None
+    max_runtime_drift_product_trace_receipt_claim_support_unsupported_reference_rate_increase: (
+        float | None
+    ) = None
+    max_runtime_drift_product_trace_receipt_claim_support_missing_reference_rate_increase: (
+        float | None
+    ) = None
+    max_runtime_drift_product_trace_receipt_claim_support_unreceipted_reference_rate_increase: (
+        float | None
+    ) = None
+    max_runtime_drift_product_trace_receipt_claim_support_failed_result_reference_rate_increase: (
+        float | None
+    ) = None
+    max_runtime_drift_product_trace_receipt_claim_support_fingerprint_mismatch_reference_rate_increase: (
+        float | None
+    ) = None
+    max_runtime_drift_product_trace_receipt_claim_support_unsigned_reference_rate_increase: (
+        float | None
+    ) = None
     max_runtime_drift_product_trace_trajectory_audit_failed_trace_rate_increase: float | None = None
     max_runtime_drift_product_trace_trajectory_audit_error_rate_increase: float | None = None
     max_runtime_drift_product_trace_trajectory_audit_factual_rate_increase: float | None = None
@@ -326,6 +347,13 @@ class ProductTraceReplayWorkflowConfig:
                 self.max_runtime_drift_product_trace_action_execution_missing_result_rate_increase,
                 self.max_runtime_drift_product_trace_action_execution_unexpected_result_rate_increase,
                 self.max_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_increase,
+                self.min_runtime_drift_product_trace_receipt_claim_support_reference_support_rate,
+                self.max_runtime_drift_product_trace_receipt_claim_support_unsupported_reference_rate_increase,
+                self.max_runtime_drift_product_trace_receipt_claim_support_missing_reference_rate_increase,
+                self.max_runtime_drift_product_trace_receipt_claim_support_unreceipted_reference_rate_increase,
+                self.max_runtime_drift_product_trace_receipt_claim_support_failed_result_reference_rate_increase,
+                self.max_runtime_drift_product_trace_receipt_claim_support_fingerprint_mismatch_reference_rate_increase,
+                self.max_runtime_drift_product_trace_receipt_claim_support_unsigned_reference_rate_increase,
                 self.max_runtime_drift_product_trace_trajectory_audit_failed_trace_rate_increase,
                 self.max_runtime_drift_product_trace_trajectory_audit_error_rate_increase,
                 self.max_runtime_drift_product_trace_trajectory_audit_factual_rate_increase,
@@ -1510,6 +1538,13 @@ def _runtime_drift_configured(config: ProductTraceReplayWorkflowConfig) -> bool:
             config.max_runtime_drift_product_trace_action_execution_missing_result_rate_increase,
             config.max_runtime_drift_product_trace_action_execution_unexpected_result_rate_increase,
             config.max_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_increase,
+            config.min_runtime_drift_product_trace_receipt_claim_support_reference_support_rate,
+            config.max_runtime_drift_product_trace_receipt_claim_support_unsupported_reference_rate_increase,
+            config.max_runtime_drift_product_trace_receipt_claim_support_missing_reference_rate_increase,
+            config.max_runtime_drift_product_trace_receipt_claim_support_unreceipted_reference_rate_increase,
+            config.max_runtime_drift_product_trace_receipt_claim_support_failed_result_reference_rate_increase,
+            config.max_runtime_drift_product_trace_receipt_claim_support_fingerprint_mismatch_reference_rate_increase,
+            config.max_runtime_drift_product_trace_receipt_claim_support_unsigned_reference_rate_increase,
             config.max_runtime_drift_product_trace_trajectory_audit_failed_trace_rate_increase,
             config.max_runtime_drift_product_trace_trajectory_audit_error_rate_increase,
             config.max_runtime_drift_product_trace_trajectory_audit_factual_rate_increase,
@@ -1757,6 +1792,27 @@ def _runtime_drift_gate_config(config: ProductTraceReplayWorkflowConfig) -> dict
         ),
         "max_product_trace_action_execution_request_id_mismatch_rate_increase": (
             config.max_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_increase
+        ),
+        "min_product_trace_receipt_claim_support_reference_support_rate": (
+            config.min_runtime_drift_product_trace_receipt_claim_support_reference_support_rate
+        ),
+        "max_product_trace_receipt_claim_support_unsupported_reference_rate_increase": (
+            config.max_runtime_drift_product_trace_receipt_claim_support_unsupported_reference_rate_increase
+        ),
+        "max_product_trace_receipt_claim_support_missing_reference_rate_increase": (
+            config.max_runtime_drift_product_trace_receipt_claim_support_missing_reference_rate_increase
+        ),
+        "max_product_trace_receipt_claim_support_unreceipted_reference_rate_increase": (
+            config.max_runtime_drift_product_trace_receipt_claim_support_unreceipted_reference_rate_increase
+        ),
+        "max_product_trace_receipt_claim_support_failed_result_reference_rate_increase": (
+            config.max_runtime_drift_product_trace_receipt_claim_support_failed_result_reference_rate_increase
+        ),
+        "max_product_trace_receipt_claim_support_fingerprint_mismatch_reference_rate_increase": (
+            config.max_runtime_drift_product_trace_receipt_claim_support_fingerprint_mismatch_reference_rate_increase
+        ),
+        "max_product_trace_receipt_claim_support_unsigned_reference_rate_increase": (
+            config.max_runtime_drift_product_trace_receipt_claim_support_unsigned_reference_rate_increase
         ),
         "max_product_trace_trajectory_audit_failed_trace_rate_increase": (
             config.max_runtime_drift_product_trace_trajectory_audit_failed_trace_rate_increase
@@ -2105,6 +2161,9 @@ def _runtime_drift_summary(runtime_drift: Mapping[str, Any]) -> dict[str, Any]:
     budget_gate = _mapping(runtime_drift.get("runtime_budget_policy_gate"))
     covered_fact_property = _covered_fact_property_metric_summary(runtime_drift)
     product_trace_action_gate = _product_trace_action_gate_metric_summary(runtime_drift)
+    product_trace_receipt_claim_support = (
+        _product_trace_receipt_claim_support_metric_summary(runtime_drift)
+    )
     product_trace_trajectory_audit = _product_trace_trajectory_audit_metric_summary(runtime_drift)
     world_model = _world_model_metric_summary(runtime_drift)
     pre_generation_probe_comparison = _pre_generation_probe_comparison_metric_summary(runtime_drift)
@@ -2128,6 +2187,12 @@ def _runtime_drift_summary(runtime_drift: Mapping[str, Any]) -> dict[str, Any]:
         "covered_fact_property_blocked_metric_count": covered_fact_property["blocked_metric_count"],
         "product_trace_action_gate_metric_count": product_trace_action_gate["metric_count"],
         "product_trace_action_gate_blocked_metric_count": product_trace_action_gate["blocked_metric_count"],
+        "product_trace_receipt_claim_support_metric_count": product_trace_receipt_claim_support[
+            "metric_count"
+        ],
+        "product_trace_receipt_claim_support_blocked_metric_count": (
+            product_trace_receipt_claim_support["blocked_metric_count"]
+        ),
         "product_trace_trajectory_audit_metric_count": product_trace_trajectory_audit[
             "metric_count"
         ],
@@ -2300,6 +2365,20 @@ def _product_trace_action_gate_metric_summary(runtime_drift: Mapping[str, Any]) 
         _mapping(metric)
         for metric in _sequence(runtime_drift.get("metrics"))
         if str(_mapping(metric).get("metric") or "").startswith("promotion_contract.product_trace_replay.")
+    )
+    return {
+        "metric_count": len(metrics),
+        "blocked_metric_count": sum(1 for metric in metrics if metric.get("status") == "blocked"),
+    }
+
+
+def _product_trace_receipt_claim_support_metric_summary(
+    runtime_drift: Mapping[str, Any],
+) -> dict[str, int]:
+    metrics = tuple(
+        _mapping(metric)
+        for metric in _sequence(runtime_drift.get("metrics"))
+        if str(_mapping(metric).get("metric") or "").startswith("receipt_claim_support.")
     )
     return {
         "metric_count": len(metrics),
@@ -2708,6 +2787,16 @@ def _write_artifact_manifest(
                 "runtime_drift",
                 "product_trace_action_gate_blocked_metric_count",
             ),
+            "runtime_drift_product_trace_receipt_claim_support_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "product_trace_receipt_claim_support_metric_count",
+            ),
+            "runtime_drift_product_trace_receipt_claim_support_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "product_trace_receipt_claim_support_blocked_metric_count",
+            ),
             "runtime_drift_product_trace_trajectory_audit_metric_count": _nested(
                 report,
                 "runtime_drift",
@@ -3044,6 +3133,16 @@ def _record_registry(
                 report,
                 "runtime_drift",
                 "product_trace_action_gate_blocked_metric_count",
+            ),
+            "runtime_drift_product_trace_receipt_claim_support_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "product_trace_receipt_claim_support_metric_count",
+            ),
+            "runtime_drift_product_trace_receipt_claim_support_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "product_trace_receipt_claim_support_blocked_metric_count",
             ),
             "runtime_drift_product_trace_trajectory_audit_metric_count": _nested(
                 report,
@@ -3692,6 +3791,27 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
         max_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_increase=(
             args.max_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_increase
         ),
+        min_runtime_drift_product_trace_receipt_claim_support_reference_support_rate=(
+            args.min_runtime_drift_product_trace_receipt_claim_support_reference_support_rate
+        ),
+        max_runtime_drift_product_trace_receipt_claim_support_unsupported_reference_rate_increase=(
+            args.max_runtime_drift_product_trace_receipt_claim_support_unsupported_reference_rate_increase
+        ),
+        max_runtime_drift_product_trace_receipt_claim_support_missing_reference_rate_increase=(
+            args.max_runtime_drift_product_trace_receipt_claim_support_missing_reference_rate_increase
+        ),
+        max_runtime_drift_product_trace_receipt_claim_support_unreceipted_reference_rate_increase=(
+            args.max_runtime_drift_product_trace_receipt_claim_support_unreceipted_reference_rate_increase
+        ),
+        max_runtime_drift_product_trace_receipt_claim_support_failed_result_reference_rate_increase=(
+            args.max_runtime_drift_product_trace_receipt_claim_support_failed_result_reference_rate_increase
+        ),
+        max_runtime_drift_product_trace_receipt_claim_support_fingerprint_mismatch_reference_rate_increase=(
+            args.max_runtime_drift_product_trace_receipt_claim_support_fingerprint_mismatch_reference_rate_increase
+        ),
+        max_runtime_drift_product_trace_receipt_claim_support_unsigned_reference_rate_increase=(
+            args.max_runtime_drift_product_trace_receipt_claim_support_unsigned_reference_rate_increase
+        ),
         max_runtime_drift_product_trace_trajectory_audit_failed_trace_rate_increase=(
             args.max_runtime_drift_product_trace_trajectory_audit_failed_trace_rate_increase
         ),
@@ -4087,6 +4207,41 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument(
         "--max-runtime-drift-product-trace-action-execution-request-id-mismatch-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-runtime-drift-product-trace-receipt-claim-support-reference-support-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-product-trace-receipt-claim-support-unsupported-reference-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-product-trace-receipt-claim-support-missing-reference-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-product-trace-receipt-claim-support-unreceipted-reference-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-product-trace-receipt-claim-support-failed-result-reference-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-product-trace-receipt-claim-support-fingerprint-mismatch-reference-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-product-trace-receipt-claim-support-unsigned-reference-rate-increase",
         type=float,
         default=None,
     )
