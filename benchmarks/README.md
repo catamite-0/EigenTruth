@@ -4703,6 +4703,10 @@ or promotion workflows; it reloads the already registered manifests through
 `compare_readiness_baselines.py` and `compare_route_baselines.py`, then emits the
 deployable runtime flags, verifier route, quality summary, runtime cost, and
 route cost in one report.
+Optional context-sensitivity evidence can be supplied with
+`--context-sensitivity-workflow` or `--context-sensitivity-workflow-key`; the
+gate verifies the workflow manifest and requires paired logprob, enriched
+sidecar, and enhanced score-dump evidence.
 
 ```bash
 python benchmarks/compare_release_candidates.py \
@@ -4716,6 +4720,7 @@ python benchmarks/compare_release_candidates.py \
   --feedback-policy-min-matched-feedback-count 20 \
   --feedback-policy-min-safety-coverage 0.70 \
   --feedback-policy-max-unknown-safety-issue-rate 0.20 \
+  --context-sensitivity-workflow-key report:<context-sensitivity-workflow-name>:<version> \
   --uncertainty-escalation-workflow-key report:<uncertainty-escalation-workflow-name>:<version> \
   --min-uncertainty-escalation-records 4 \
   --min-uncertainty-escalation-trigger-rate 0.50 \
@@ -5424,6 +5429,7 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --feedback-policy-min-matched-feedback-count 20 \
   --feedback-policy-min-safety-coverage 0.70 \
   --feedback-policy-max-unknown-safety-issue-rate 0.20 \
+  --context-sensitivity-workflow-key report:<context-sensitivity-workflow-name>:<version> \
   --release-efficiency-report artifacts/product-runtime-profile-sweep/release-efficiency-report.json \
   --external-evidence-baseline-comparison artifacts/external-evidence-baseline-comparison.json \
   --adapter-family-matrix artifacts/adapter_family_matrix/adapter-family-matrix.json \
@@ -6905,6 +6911,12 @@ python benchmarks/run_context_sensitivity_workflow.py \
   --registry-name qwen-l80-context-sensitivity \
   --registry-version 0.1
 ```
+
+Registered context-sensitivity workflow reports can be promoted into the release
+candidate gate with `--context-sensitivity-workflow-key` or supplied directly
+with `--context-sensitivity-workflow`. The gate verifies the workflow manifest
+and fails closed when paired-logprob, enriched-sidecar, or enhanced score-dump
+evidence is missing; it does not require a non-zero flagged rate.
 
 When verified records include state-transition prediction metadata or direct
 world-model ensemble agreement metadata, the same converter also emits

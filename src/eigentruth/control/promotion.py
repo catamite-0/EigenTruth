@@ -79,6 +79,7 @@ _PROMOTION_CONTRACT_GATE_STATUS_KEYS = (
     ("claim_factuality", "claim_factuality_probe_comparison_status"),
     ("selfcheck", "selfcheck_signal_fusion_workflow_status"),
     ("world_model", "world_model_signal_workflow_status"),
+    ("context_sensitivity", "context_sensitivity_workflow_status"),
     ("pathway_intervention", "pathway_intervention_workflow_status"),
     ("feedback_policy", "feedback_policy_workflow_status"),
     ("release_efficiency", "release_efficiency_status"),
@@ -118,6 +119,7 @@ class ProductPromotionContract:
     product_trace_replay_workflow: Mapping[str, Any] = field(default_factory=dict)
     selfcheck_signal_fusion_workflow: Mapping[str, Any] = field(default_factory=dict)
     world_model_signal_workflow: Mapping[str, Any] = field(default_factory=dict)
+    context_sensitivity_workflow: Mapping[str, Any] = field(default_factory=dict)
     pathway_intervention_workflow: Mapping[str, Any] = field(default_factory=dict)
     feedback_policy_workflow: Mapping[str, Any] = field(default_factory=dict)
     external_evidence_baseline_comparison: Mapping[str, Any] = field(default_factory=dict)
@@ -156,6 +158,11 @@ class ProductPromotionContract:
             self,
             "world_model_signal_workflow",
             dict(self.world_model_signal_workflow),
+        )
+        object.__setattr__(
+            self,
+            "context_sensitivity_workflow",
+            dict(self.context_sensitivity_workflow),
         )
         object.__setattr__(
             self,
@@ -231,6 +238,9 @@ class ProductPromotionContract:
                 world_model_signal_workflow=_mapping(
                     payload.get("world_model_signal_workflow")
                 ),
+                context_sensitivity_workflow=_mapping(
+                    payload.get("context_sensitivity_workflow")
+                ),
                 pathway_intervention_workflow=_mapping(
                     payload.get("pathway_intervention_workflow")
                 ),
@@ -298,6 +308,10 @@ class ProductPromotionContract:
             candidate.get("selfcheck_signal_fusion_workflow")
         )
         world_model_signal_workflow = _mapping(candidate.get("world_model_signal_workflow"))
+        context_sensitivity_workflow = _first_mapping(
+            candidate.get("context_sensitivity_workflow"),
+            comparison.get("context_sensitivity_workflow_gate"),
+        )
         pathway_intervention_workflow = _mapping(
             candidate.get("pathway_intervention_workflow")
         )
@@ -427,6 +441,10 @@ class ProductPromotionContract:
             ),
             world_model_signal_workflow=_world_model_signal_workflow_metadata(
                 world_model_signal_workflow,
+                manifests=manifests,
+            ),
+            context_sensitivity_workflow=_context_sensitivity_workflow_metadata(
+                context_sensitivity_workflow,
                 manifests=manifests,
             ),
             pathway_intervention_workflow=_pathway_intervention_workflow_metadata(
@@ -604,6 +622,12 @@ class ProductPromotionContract:
                 "recommended_world_model_signal_workflow_report": decision.get(
                     "recommended_world_model_signal_workflow_report"
                 ),
+                "context_sensitivity_workflow_status": decision.get(
+                    "context_sensitivity_workflow_status"
+                ),
+                "recommended_context_sensitivity_workflow_report": decision.get(
+                    "recommended_context_sensitivity_workflow_report"
+                ),
                 "pathway_intervention_workflow_status": decision.get(
                     "pathway_intervention_workflow_status"
                 ),
@@ -672,6 +696,43 @@ class ProductPromotionContract:
                 ),
                 "world_model_signal_workflow_calibrated_conflict_signal_count": (
                     world_model_signal_workflow.get("calibrated_conflict_signal_count")
+                ),
+                "context_sensitivity_workflow_report": (
+                    context_sensitivity_workflow.get("report_path")
+                ),
+                "context_sensitivity_workflow_manifest": (
+                    context_sensitivity_workflow.get("manifest_path")
+                    or manifests.get("context_sensitivity_workflow_manifest")
+                ),
+                "context_sensitivity_workflow_source": (
+                    context_sensitivity_workflow.get("source")
+                ),
+                "context_sensitivity_workflow_registry": (
+                    context_sensitivity_workflow.get("registry")
+                ),
+                "context_sensitivity_workflow_record": (
+                    context_sensitivity_workflow.get("record_key")
+                ),
+                "context_sensitivity_workflow_paired_logprob_record_count": (
+                    context_sensitivity_workflow.get("paired_logprob_record_count")
+                ),
+                "context_sensitivity_workflow_enriched_record_count": (
+                    context_sensitivity_workflow.get("enriched_record_count")
+                ),
+                "context_sensitivity_workflow_enhanced_score_signal_count": (
+                    context_sensitivity_workflow.get("enhanced_score_signal_count")
+                ),
+                "context_sensitivity_workflow_max_flagged_rate": (
+                    context_sensitivity_workflow.get("max_flagged_rate")
+                ),
+                "context_sensitivity_workflow_mean_flagged_rate": (
+                    context_sensitivity_workflow.get("mean_flagged_rate")
+                ),
+                "context_sensitivity_workflow_max_context_sensitivity_ratio": (
+                    context_sensitivity_workflow.get("max_context_sensitivity_ratio")
+                ),
+                "context_sensitivity_workflow_manifest_verified": (
+                    context_sensitivity_workflow.get("manifest_verified")
                 ),
                 "pathway_intervention_workflow_report": (
                     pathway_intervention_workflow.get("report_path")
@@ -1148,6 +1209,7 @@ class ProductPromotionContract:
             "product_trace_replay_workflow": dict(self.product_trace_replay_workflow),
             "selfcheck_signal_fusion_workflow": dict(self.selfcheck_signal_fusion_workflow),
             "world_model_signal_workflow": dict(self.world_model_signal_workflow),
+            "context_sensitivity_workflow": dict(self.context_sensitivity_workflow),
             "pathway_intervention_workflow": dict(self.pathway_intervention_workflow),
             "feedback_policy_workflow": dict(self.feedback_policy_workflow),
             "external_evidence_baseline_comparison": dict(
@@ -1724,6 +1786,20 @@ class ProductRuntimeEvidenceBundle:
         compare=False,
         repr=False,
     )
+    _context_sensitivity_workflow_manifest_verification: (
+        ArtifactManifestVerification | None
+    ) = field(
+        default=None,
+        init=False,
+        compare=False,
+        repr=False,
+    )
+    _context_sensitivity_workflow_registry_record: RegistryRecord | None = field(
+        default=None,
+        init=False,
+        compare=False,
+        repr=False,
+    )
     _pathway_intervention_workflow_manifest_verification: (
         ArtifactManifestVerification | None
     ) = field(
@@ -2246,6 +2322,133 @@ class ProductRuntimeEvidenceBundle:
             ),
             "world_model_signal_workflow_calibrated_conflict_signal_count": (
                 workflow.get("calibrated_conflict_signal_count")
+            ),
+        }
+
+    @property
+    def context_sensitivity_workflow(self) -> Mapping[str, Any]:
+        """Return the context-sensitivity workflow contract, if present."""
+        return self.contract.context_sensitivity_workflow
+
+    @property
+    def context_sensitivity_workflow_report_path(self) -> Path | None:
+        """Return the context-sensitivity workflow report path."""
+        return _resolve_contract_metadata_path(
+            self.context_sensitivity_workflow.get("report_path"),
+            contract_path=self.contract_path,
+        )
+
+    @property
+    def context_sensitivity_workflow_manifest_path(self) -> Path | None:
+        """Return the context-sensitivity workflow manifest path."""
+        return _resolve_contract_metadata_path(
+            self.context_sensitivity_workflow.get("manifest_path"),
+            contract_path=self.contract_path,
+        )
+
+    @property
+    def context_sensitivity_workflow_registry_path(self) -> Path | None:
+        """Return the context-sensitivity workflow registry path."""
+        return _resolve_contract_metadata_path(
+            self.context_sensitivity_workflow.get("registry"),
+            contract_path=self.contract_path,
+        )
+
+    def verify_context_sensitivity_workflow_manifest(
+        self,
+    ) -> ArtifactManifestVerification | None:
+        """Lazily verify the optional context-sensitivity workflow manifest."""
+        manifest_path = self.context_sensitivity_workflow_manifest_path
+        if manifest_path is None:
+            return None
+        if self._context_sensitivity_workflow_manifest_verification is None:
+            object.__setattr__(
+                self,
+                "_context_sensitivity_workflow_manifest_verification",
+                load_and_verify_artifact_manifest(
+                    manifest_path,
+                    recursive=self.manifest_recursive,
+                ),
+            )
+        return self._context_sensitivity_workflow_manifest_verification
+
+    def context_sensitivity_workflow_registry_record(self) -> RegistryRecord | None:
+        """Lazily resolve the optional context-sensitivity workflow registry record."""
+        registry_path = self.context_sensitivity_workflow_registry_path
+        record_key = self.context_sensitivity_workflow.get("record_key")
+        if registry_path is None or record_key is None:
+            return None
+        if self._context_sensitivity_workflow_registry_record is None:
+            registry = ArtifactRegistry.load_json(registry_path)
+            object.__setattr__(
+                self,
+                "_context_sensitivity_workflow_registry_record",
+                registry.get(str(record_key)),
+            )
+        return self._context_sensitivity_workflow_registry_record
+
+    def context_sensitivity_evidence_metadata(
+        self,
+        *,
+        verify_manifest: bool = False,
+        include_registry_record: bool = False,
+    ) -> dict[str, Any]:
+        """Return JSON-ready context-sensitivity provenance metadata."""
+        workflow = self.context_sensitivity_workflow
+        report_path = self.context_sensitivity_workflow_report_path
+        manifest_path = self.context_sensitivity_workflow_manifest_path
+        registry_path = self.context_sensitivity_workflow_registry_path
+        manifest_verification = (
+            self.verify_context_sensitivity_workflow_manifest()
+            if verify_manifest
+            else None
+        )
+        record_key = workflow.get("record_key")
+        registry_record = (
+            self.context_sensitivity_workflow_registry_record()
+            if include_registry_record
+            else None
+        )
+        return {
+            "context_sensitivity_workflow_report": (
+                None if report_path is None else str(report_path)
+            ),
+            "context_sensitivity_workflow_manifest": (
+                None if manifest_path is None else str(manifest_path)
+            ),
+            "context_sensitivity_workflow_manifest_verification": (
+                None if manifest_verification is None else manifest_verification.to_dict()
+            ),
+            "context_sensitivity_workflow_registry": (
+                None if registry_path is None else str(registry_path)
+            ),
+            "context_sensitivity_workflow_registry_key": (
+                None if record_key is None else str(record_key)
+            ),
+            "context_sensitivity_workflow_registry_record": (
+                None if registry_record is None else registry_record.to_dict()
+            ),
+            "context_sensitivity_workflow_status": workflow.get("status"),
+            "context_sensitivity_workflow_paired_logprob_record_count": workflow.get(
+                "paired_logprob_record_count"
+            ),
+            "context_sensitivity_workflow_enriched_record_count": workflow.get(
+                "enriched_record_count"
+            ),
+            "context_sensitivity_workflow_enhanced_score_signal_count": workflow.get(
+                "enhanced_score_signal_count"
+            ),
+            "context_sensitivity_workflow_max_flagged_rate": workflow.get(
+                "max_flagged_rate"
+            ),
+            "context_sensitivity_workflow_mean_flagged_rate": workflow.get(
+                "mean_flagged_rate"
+            ),
+            "context_sensitivity_workflow_max_context_sensitivity_ratio": workflow.get(
+                "max_context_sensitivity_ratio"
+            ),
+            "context_sensitivity_workflow_manifest_verified": workflow.get(
+                "manifest_verified"
             ),
         }
 
@@ -2988,6 +3191,8 @@ class ProductRuntimeEvidenceBundle:
         include_selfcheck_signal_fusion_record: bool = False,
         verify_world_model_signal_workflow_manifest: bool = False,
         include_world_model_signal_workflow_record: bool = False,
+        verify_context_sensitivity_workflow_manifest: bool = False,
+        include_context_sensitivity_workflow_record: bool = False,
         verify_pathway_intervention_workflow_manifest: bool = False,
         include_pathway_intervention_workflow_record: bool = False,
         include_external_evidence_baseline_comparison_record: bool = False,
@@ -3017,6 +3222,10 @@ class ProductRuntimeEvidenceBundle:
             **self.world_model_signal_evidence_metadata(
                 verify_manifest=verify_world_model_signal_workflow_manifest,
                 include_registry_record=include_world_model_signal_workflow_record,
+            ),
+            **self.context_sensitivity_evidence_metadata(
+                verify_manifest=verify_context_sensitivity_workflow_manifest,
+                include_registry_record=include_context_sensitivity_workflow_record,
             ),
             **self.pathway_intervention_evidence_metadata(
                 verify_manifest=verify_pathway_intervention_workflow_manifest,
@@ -3116,6 +3325,9 @@ def product_promotion_contract_metadata(
         "promotion_contract_world_model_signal_workflow": dict(
             contract.world_model_signal_workflow
         ),
+        "promotion_contract_context_sensitivity_workflow": dict(
+            contract.context_sensitivity_workflow
+        ),
         "promotion_contract_pathway_intervention_workflow": dict(
             contract.pathway_intervention_workflow
         ),
@@ -3148,6 +3360,7 @@ def product_promotion_contract_metadata(
         **_promotion_contract_external_evidence_baseline_comparison_metadata(contract),
         **_promotion_contract_pre_generation_probe_comparison_metadata(contract),
         **_promotion_contract_claim_factuality_probe_comparison_metadata(contract),
+        **_promotion_contract_context_sensitivity_metadata(contract),
         **_promotion_contract_pathway_intervention_metadata(contract),
         **_promotion_contract_counterfactual_verification_metadata(contract),
         **_promotion_contract_frontier_release_evidence_metadata(contract),
@@ -3500,6 +3713,83 @@ def _promotion_contract_external_evidence_baseline_comparison_metadata(
                 metadata.get(
                     "external_evidence_baseline_comparison_text_redline_run_count"
                 ),
+            )
+        ),
+    })
+
+
+def _promotion_contract_context_sensitivity_metadata(
+    contract: ProductPromotionContract,
+) -> dict[str, Any]:
+    metadata = _mapping(contract.metadata)
+    workflow = _mapping(contract.context_sensitivity_workflow)
+    return _drop_none_values({
+        "promotion_contract_context_sensitivity_workflow_status": _first_present(
+            metadata.get("context_sensitivity_workflow_status"),
+            workflow.get("status"),
+        ),
+        "promotion_contract_context_sensitivity_workflow_report": _first_present(
+            workflow.get("report_path"),
+            metadata.get("context_sensitivity_workflow_report"),
+        ),
+        "promotion_contract_context_sensitivity_workflow_manifest": _first_present(
+            workflow.get("manifest_path"),
+            metadata.get("context_sensitivity_workflow_manifest"),
+        ),
+        "promotion_contract_context_sensitivity_workflow_source": _first_present(
+            workflow.get("source"),
+            metadata.get("context_sensitivity_workflow_source"),
+        ),
+        "promotion_contract_context_sensitivity_workflow_registry": _first_present(
+            workflow.get("registry"),
+            metadata.get("context_sensitivity_workflow_registry"),
+        ),
+        "promotion_contract_context_sensitivity_workflow_record": _first_present(
+            workflow.get("record_key"),
+            metadata.get("context_sensitivity_workflow_record"),
+        ),
+        "promotion_contract_context_sensitivity_workflow_paired_logprob_record_count": (
+            _first_present(
+                workflow.get("paired_logprob_record_count"),
+                metadata.get("context_sensitivity_workflow_paired_logprob_record_count"),
+            )
+        ),
+        "promotion_contract_context_sensitivity_workflow_enriched_record_count": (
+            _first_present(
+                workflow.get("enriched_record_count"),
+                metadata.get("context_sensitivity_workflow_enriched_record_count"),
+            )
+        ),
+        "promotion_contract_context_sensitivity_workflow_enhanced_score_signal_count": (
+            _first_present(
+                workflow.get("enhanced_score_signal_count"),
+                metadata.get("context_sensitivity_workflow_enhanced_score_signal_count"),
+            )
+        ),
+        "promotion_contract_context_sensitivity_workflow_max_flagged_rate": (
+            _first_present(
+                workflow.get("max_flagged_rate"),
+                metadata.get("context_sensitivity_workflow_max_flagged_rate"),
+            )
+        ),
+        "promotion_contract_context_sensitivity_workflow_mean_flagged_rate": (
+            _first_present(
+                workflow.get("mean_flagged_rate"),
+                metadata.get("context_sensitivity_workflow_mean_flagged_rate"),
+            )
+        ),
+        "promotion_contract_context_sensitivity_workflow_max_context_sensitivity_ratio": (
+            _first_present(
+                workflow.get("max_context_sensitivity_ratio"),
+                metadata.get(
+                    "context_sensitivity_workflow_max_context_sensitivity_ratio"
+                ),
+            )
+        ),
+        "promotion_contract_context_sensitivity_workflow_manifest_verified": (
+            _first_present(
+                workflow.get("manifest_verified"),
+                metadata.get("context_sensitivity_workflow_manifest_verified"),
             )
         ),
     })
@@ -4129,6 +4419,35 @@ def _world_model_signal_workflow_metadata(
         "calibrated_conflict_signal_count": workflow.get(
             "calibrated_conflict_signal_count"
         ),
+        "blocking_reasons": workflow.get("blocking_reasons"),
+    }
+
+
+def _context_sensitivity_workflow_metadata(
+    workflow: Mapping[str, Any],
+    *,
+    manifests: Mapping[str, Any],
+) -> dict[str, Any]:
+    if not workflow:
+        return {}
+    return {
+        "report_path": workflow.get("report_path"),
+        "manifest_path": (
+            workflow.get("manifest_path")
+            or manifests.get("context_sensitivity_workflow_manifest")
+        ),
+        "source": workflow.get("source"),
+        "registry": workflow.get("registry"),
+        "record_key": workflow.get("record_key"),
+        "workflow": workflow.get("workflow"),
+        "status": workflow.get("status"),
+        "paired_logprob_record_count": workflow.get("paired_logprob_record_count"),
+        "enriched_record_count": workflow.get("enriched_record_count"),
+        "enhanced_score_signal_count": workflow.get("enhanced_score_signal_count"),
+        "max_flagged_rate": workflow.get("max_flagged_rate"),
+        "mean_flagged_rate": workflow.get("mean_flagged_rate"),
+        "max_context_sensitivity_ratio": workflow.get("max_context_sensitivity_ratio"),
+        "manifest_verified": workflow.get("manifest_verified"),
         "blocking_reasons": workflow.get("blocking_reasons"),
     }
 

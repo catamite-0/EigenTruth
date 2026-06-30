@@ -13266,6 +13266,147 @@ def _write_world_model_signal_workflow_report(
     return report_path
 
 
+def _write_context_sensitivity_workflow_report(
+    output_dir: Path,
+    *,
+    paired_logprob_record_count: int = 6,
+    enriched_record_count: int = 6,
+    enhanced_score_signal_count: int = 4,
+    max_flagged_rate: float = 0.25,
+    max_context_sensitivity_ratio: float = 1.35,
+    manifest_verified: bool = True,
+) -> Path:
+    from eigentruth.registry import build_artifact_manifest
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    report_path = output_dir / "context-sensitivity-workflow.json"
+    manifest_path = output_dir / "artifact-manifest.json"
+    paired_logprobs_path = output_dir / "paired-context-logprobs.jsonl"
+    enriched_records_path = output_dir / "verified-records-context.jsonl"
+    enhanced_scores_path = output_dir / "context-sensitivity-enhanced-scores.manifest.json"
+    paired_report_path = output_dir / "paired-context-logprobs-report.json"
+    enrichment_report_path = output_dir / "context-sensitivity-sidecar-report.json"
+    enhanced_report_path = output_dir / "context-sensitivity-enhanced-score-report.json"
+    signal_names = [
+        "context_sensitivity_flagged_rate",
+        "context_sensitivity_max_shift",
+        "context_sensitivity_mean_shift",
+        "context_sensitivity_max_ratio",
+    ][:enhanced_score_signal_count]
+    paired_logprobs_path.write_text(
+        "".join(
+            json.dumps({"record_index": idx, "token_count": 3}) + "\n"
+            for idx in range(paired_logprob_record_count)
+        ),
+        encoding="utf-8",
+    )
+    enriched_records_path.write_text(
+        "".join(
+            json.dumps({
+                "record_index": idx,
+                "label": idx % 2,
+                "record": {
+                    "context_sensitivity": {
+                        "summary": {
+                            "flagged_rate": max_flagged_rate,
+                            "max_context_sensitivity_ratio": max_context_sensitivity_ratio,
+                        }
+                    }
+                },
+            }) + "\n"
+            for idx in range(enriched_record_count)
+        ),
+        encoding="utf-8",
+    )
+    enhanced_scores_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "labels": [0, 1] * max(1, enriched_record_count // 2),
+            "scores": {
+                signal: [0.0 for _ in range(max(1, enriched_record_count))]
+                for signal in signal_names
+            },
+        }, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    paired_report_path.write_text(
+        json.dumps({"paired_logprob_record_count": paired_logprob_record_count}) + "\n",
+        encoding="utf-8",
+    )
+    enrichment_report_path.write_text(
+        json.dumps({
+            "enriched_record_count": enriched_record_count,
+            "summary": {
+                "max_flagged_rate": max_flagged_rate,
+                "mean_flagged_rate": max_flagged_rate / 2.0,
+                "max_context_sensitivity_ratio": max_context_sensitivity_ratio,
+            },
+        }) + "\n",
+        encoding="utf-8",
+    )
+    enhanced_report_path.write_text(
+        json.dumps({"signals": signal_names, "summary": {signal: {} for signal in signal_names}}) + "\n",
+        encoding="utf-8",
+    )
+    payload = {
+        "schema_version": 1,
+        "workflow": "context_sensitivity_workflow",
+        "paths": {
+            "paired_logprobs": str(paired_logprobs_path),
+            "paired_logprobs_report": str(paired_report_path),
+            "enriched_records": str(enriched_records_path),
+            "enrichment_report": str(enrichment_report_path),
+            "enhanced_score_dump": str(enhanced_scores_path),
+            "enhanced_score_report": str(enhanced_report_path),
+            "artifact_manifest": str(manifest_path),
+        },
+        "paired_summary": {
+            "paired_logprob_record_count": paired_logprob_record_count,
+            "missing_evidence_count": 0,
+        },
+        "enriched_record_count": enriched_record_count,
+        "enrichment_summary": {
+            "max_flagged_rate": max_flagged_rate,
+            "mean_flagged_rate": max_flagged_rate / 2.0,
+            "max_context_sensitivity_ratio": max_context_sensitivity_ratio,
+        },
+        "enhanced_score_summary": {signal: {} for signal in signal_names},
+        "signal_summary": {
+            signal: {
+                "min": 0.0,
+                "max": max_flagged_rate,
+                "mean": max_flagged_rate / 2.0,
+                "positive_count": 1 if max_flagged_rate > 0 else 0,
+            }
+            for signal in signal_names
+        },
+        "manifest_verification": {"passed": manifest_verified},
+    }
+    report_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest = build_artifact_manifest(
+        {
+            "context_sensitivity_workflow": report_path,
+            "paired_logprobs": paired_logprobs_path,
+            "paired_logprobs_report": paired_report_path,
+            "enriched_records": enriched_records_path,
+            "enrichment_report": enrichment_report_path,
+            "enhanced_score_dump": enhanced_scores_path,
+            "enhanced_score_report": enhanced_report_path,
+        },
+        root=output_dir,
+        metadata={
+            "runner": "run_context_sensitivity_workflow",
+            "workflow": "context_sensitivity_workflow",
+            "paired_logprob_record_count": paired_logprob_record_count,
+            "enriched_record_count": enriched_record_count,
+            "max_flagged_rate": max_flagged_rate,
+            "max_context_sensitivity_ratio": max_context_sensitivity_ratio,
+        },
+    )
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return report_path
+
+
 def _write_mechanism_handoff_evidence_bundle_report(
     output_dir: Path,
     *,
@@ -16821,6 +16962,105 @@ def test_compare_release_candidates_gates_pathway_intervention_workflow(tmp_path
     assert candidate["pathway_intervention_workflow"]["activation_ablation_gate_status"] == "promote"
     assert "pathway_intervention_workflow_manifest" in candidate["manifests"]
     assert promoted_from_key["pathway_intervention_workflow_gate"]["source"] == "registry"
+    assert promoted_from_key["decision"]["status"] == "promote"
+
+
+def test_compare_release_candidates_gates_context_sensitivity_workflow(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="context-readiness",
+        version="0.1",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="context-route",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="context-route",
+        path=route_manifest,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+    blocked_workflow_path = _write_context_sensitivity_workflow_report(
+        tmp_path / "context-sensitivity-blocked",
+        paired_logprob_record_count=0,
+    )
+    promoted_workflow_path = _write_context_sensitivity_workflow_report(
+        tmp_path / "context-sensitivity-promote",
+        paired_logprob_record_count=6,
+        enriched_record_count=6,
+        max_flagged_rate=0.25,
+        max_context_sensitivity_ratio=1.35,
+    )
+    ArtifactRegistry.load_json(registry_path).record_report(
+        name="context-sensitivity-workflow",
+        path=promoted_workflow_path,
+        version="0.1",
+        metadata={"workflow": "context_sensitivity_workflow"},
+    ).save_json()
+
+    blocked = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        context_sensitivity_workflow_path=blocked_workflow_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+    promoted = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        context_sensitivity_workflow_path=promoted_workflow_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+    promoted_from_key = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        context_sensitivity_workflow_key="report:context-sensitivity-workflow:0.1",
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+
+    assert blocked["decision"]["status"] == "blocked"
+    assert blocked["decision"]["context_sensitivity_workflow_status"] == "blocked"
+    assert blocked["decision"]["blocking_reasons"][0]["gate"] == "context_sensitivity_workflow"
+    assert blocked["context_sensitivity_workflow_gate"]["gate"]["passed"] is False
+    assert promoted["decision"]["status"] == "promote"
+    assert promoted["decision"]["context_sensitivity_workflow_status"] == "promote"
+    assert promoted["decision"]["recommended_context_sensitivity_workflow_report"] == str(
+        promoted_workflow_path
+    )
+    candidate = promoted["release_candidate"]
+    assert candidate["context_sensitivity_workflow"]["paired_logprob_record_count"] == pytest.approx(6)
+    assert candidate["context_sensitivity_workflow"]["enriched_record_count"] == pytest.approx(6)
+    assert candidate["context_sensitivity_workflow"]["max_flagged_rate"] == pytest.approx(0.25)
+    assert "context_sensitivity_workflow_manifest" in candidate["manifests"]
+    assert promoted_from_key["context_sensitivity_workflow_gate"]["source"] == "registry"
     assert promoted_from_key["decision"]["status"] == "promote"
 
 
@@ -23329,6 +23569,104 @@ def test_run_release_candidate_registry_workflow_blocks_failed_selfcheck_signal_
     assert record.metadata["release_selfcheck_signal_fusion_workflow_status"] == "blocked"
     assert record.metadata["selfcheck_signal_fusion_workflow_report"] == str(blocked_selfcheck_path)
     assert record.metadata["selfcheck_signal_fusion_workflow_sample_quality_status"] == "fail"
+
+
+def test_run_release_candidate_registry_workflow_records_context_sensitivity(tmp_path):
+    module = importlib.import_module("benchmarks.run_release_candidate_registry_workflow")
+    from eigentruth.registry import ArtifactRegistry
+
+    baseline_registry_path = tmp_path / "baseline-registry.json"
+    release_registry_path = tmp_path / "release-registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=baseline_registry_path,
+        name="context-release-readiness",
+        version="0.1",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="context-release-route",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    context_workflow_path = _write_context_sensitivity_workflow_report(
+        tmp_path / "context-sensitivity-workflow",
+        paired_logprob_record_count=8,
+        enriched_record_count=8,
+        max_flagged_rate=0.125,
+        max_context_sensitivity_ratio=1.20,
+    )
+    ArtifactRegistry.load_json(baseline_registry_path).record_benchmark_manifest(
+        name="context-release-route",
+        path=route_manifest,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).record_report(
+        name="context-sensitivity-workflow",
+        path=context_workflow_path,
+        version="0.1",
+        metadata={"workflow": "context_sensitivity_workflow"},
+    ).save_json()
+
+    workflow_config = module.ReleaseCandidateRegistryWorkflowConfig(
+        readiness_registry_path=baseline_registry_path,
+        release_registry_path=release_registry_path,
+        name="context-gated-release",
+        version="0.1",
+        context_sensitivity_workflow_key="report:context-sensitivity-workflow:0.1",
+        release_report_path=tmp_path / "release-comparison.json",
+        artifact_manifest_path=tmp_path / "release-manifest.json",
+        verification_report_path=tmp_path / "release-verification.json",
+        workflow_report_path=tmp_path / "release-workflow.json",
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+    payload = module.run_release_candidate_registry_workflow(workflow_config)
+
+    assert payload["decision"]["status"] == "promote"
+    comparison = payload["release_candidate_comparison"]
+    assert comparison["decision"]["context_sensitivity_workflow_status"] == "promote"
+    assert comparison["context_sensitivity_workflow_gate"]["source"] == "registry"
+    manifest = json.loads((tmp_path / "release-manifest.json").read_text(encoding="utf-8"))
+    assert manifest["artifacts"]["context_sensitivity_workflow_manifest"]["path"].endswith(
+        "context-sensitivity-workflow/artifact-manifest.json"
+    )
+    assert manifest["metadata"]["release_context_sensitivity_workflow_status"] == "promote"
+    assert manifest["metadata"]["recommended_context_sensitivity_workflow_report"] == str(
+        context_workflow_path
+    )
+    assert manifest["metadata"]["context_sensitivity_workflow_report"] == str(
+        context_workflow_path
+    )
+    assert manifest["metadata"]["context_sensitivity_workflow_source"] == "registry"
+    assert manifest["metadata"]["context_sensitivity_workflow_paired_logprob_record_count"] == (
+        pytest.approx(8)
+    )
+    assert manifest["metadata"]["context_sensitivity_workflow_max_flagged_rate"] == (
+        pytest.approx(0.125)
+    )
+    registry = ArtifactRegistry.load_json(release_registry_path)
+    record = registry.get("benchmark_manifest:context-gated-release:0.1")
+    assert record.metadata["release_context_sensitivity_workflow_status"] == "promote"
+    assert record.metadata["context_sensitivity_workflow_record"] == (
+        "report:context-sensitivity-workflow:0.1"
+    )
+    assert record.metadata["context_sensitivity_workflow_max_context_sensitivity_ratio"] == (
+        pytest.approx(1.20)
+    )
 
 
 def test_manifest_fingerprint_worker_sweep_recommends_worker_and_registers(tmp_path):

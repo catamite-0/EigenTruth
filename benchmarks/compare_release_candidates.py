@@ -424,6 +424,9 @@ def compare_release_candidates(
     world_model_signal_workflow_path: str | Path | None = None,
     world_model_signal_workflow_registry_path: str | Path | None = None,
     world_model_signal_workflow_key: str | None = None,
+    context_sensitivity_workflow_path: str | Path | None = None,
+    context_sensitivity_workflow_registry_path: str | Path | None = None,
+    context_sensitivity_workflow_key: str | None = None,
     mechanism_handoff_evidence_bundle_path: str | Path | None = None,
     mechanism_handoff_evidence_bundle_registry_path: str | Path | None = None,
     mechanism_handoff_evidence_bundle_key: str | None = None,
@@ -1462,6 +1465,23 @@ def compare_release_candidates(
         manifest_fingerprint_workers=manifest_fingerprint_workers,
         verification_context=verification_context,
     )
+    context_sensitivity_workflow_source = _resolve_context_sensitivity_workflow_source(
+        context_sensitivity_workflow_path=context_sensitivity_workflow_path,
+        context_sensitivity_workflow_registry_path=(
+            context_sensitivity_workflow_registry_path
+            if context_sensitivity_workflow_key is not None
+            else None
+        ),
+        context_sensitivity_workflow_key=context_sensitivity_workflow_key,
+        default_registry_path=readiness_registry_path,
+    )
+    context_sensitivity_workflow = _context_sensitivity_workflow_gate(
+        context_sensitivity_workflow_source=context_sensitivity_workflow_source,
+        recursive=recursive,
+        allow_unverified=allow_unverified,
+        manifest_fingerprint_workers=manifest_fingerprint_workers,
+        verification_context=verification_context,
+    )
     mechanism_handoff_evidence_bundle_source = _resolve_mechanism_handoff_evidence_bundle_source(
         mechanism_handoff_evidence_bundle_path=mechanism_handoff_evidence_bundle_path,
         mechanism_handoff_evidence_bundle_registry_path=(
@@ -1514,6 +1534,7 @@ def compare_release_candidates(
         claim_factuality_probe_comparison,
         frontier_release_evidence,
         world_model_signal_workflow,
+        context_sensitivity_workflow,
         mechanism_handoff_evidence_bundle,
         pathway_intervention_workflow,
         selfcheck_signal_fusion_workflow,
@@ -1537,6 +1558,7 @@ def compare_release_candidates(
             claim_factuality_probe_comparison,
             frontier_release_evidence,
             world_model_signal_workflow,
+            context_sensitivity_workflow,
             mechanism_handoff_evidence_bundle,
             pathway_intervention_workflow,
             selfcheck_signal_fusion_workflow,
@@ -1674,6 +1696,17 @@ def compare_release_candidates(
                 else world_model_signal_workflow_source.get("registry")
             ),
             "world_model_signal_workflow_key": world_model_signal_workflow_key,
+            "context_sensitivity_workflow": (
+                None
+                if context_sensitivity_workflow_source is None
+                else str(context_sensitivity_workflow_source["path"])
+            ),
+            "context_sensitivity_workflow_registry": (
+                None
+                if context_sensitivity_workflow_source is None
+                else context_sensitivity_workflow_source.get("registry")
+            ),
+            "context_sensitivity_workflow_key": context_sensitivity_workflow_key,
             "mechanism_handoff_evidence_bundle": (
                 None
                 if mechanism_handoff_evidence_bundle_source is None
@@ -1956,6 +1989,7 @@ def compare_release_candidates(
         "claim_factuality_probe_comparison_gate": claim_factuality_probe_comparison,
         "frontier_release_evidence_gate": frontier_release_evidence,
         "world_model_signal_workflow_gate": world_model_signal_workflow,
+        "context_sensitivity_workflow_gate": context_sensitivity_workflow,
         "mechanism_handoff_evidence_bundle_gate": mechanism_handoff_evidence_bundle,
         "pathway_intervention_workflow_gate": pathway_intervention_workflow,
         "adapter_family_matrix_gate": adapter_family,
@@ -2218,6 +2252,7 @@ def _decision(
     claim_factuality_probe_comparison: Mapping[str, Any] | None = None,
     frontier_release_evidence: Mapping[str, Any] | None = None,
     world_model_signal_workflow: Mapping[str, Any] | None = None,
+    context_sensitivity_workflow: Mapping[str, Any] | None = None,
     mechanism_handoff_evidence_bundle: Mapping[str, Any] | None = None,
     pathway_intervention_workflow: Mapping[str, Any] | None = None,
     selfcheck_signal_fusion_workflow: Mapping[str, Any] | None = None,
@@ -2319,6 +2354,16 @@ def _decision(
         None
         if world_model_signal_workflow is None
         else world_model_signal_workflow.get("status")
+    )
+    context_sensitivity_workflow_gate = _mapping(
+        None
+        if context_sensitivity_workflow is None
+        else context_sensitivity_workflow.get("gate")
+    )
+    context_sensitivity_workflow_status = (
+        None
+        if context_sensitivity_workflow is None
+        else context_sensitivity_workflow.get("status")
     )
     mechanism_handoff_evidence_bundle_gate = _mapping(
         None
@@ -2488,6 +2533,15 @@ def _decision(
             "reasons": list(world_model_signal_workflow_gate.get("blocking_reasons", ())),
         })
     if (
+        context_sensitivity_workflow is not None
+        and context_sensitivity_workflow_gate.get("passed") is not True
+    ):
+        blocking_reasons.append({
+            "gate": "context_sensitivity_workflow",
+            "status": context_sensitivity_workflow_status,
+            "reasons": list(context_sensitivity_workflow_gate.get("blocking_reasons", ())),
+        })
+    if (
         mechanism_handoff_evidence_bundle is not None
         and mechanism_handoff_evidence_bundle_gate.get("passed") is not True
     ):
@@ -2561,6 +2615,7 @@ def _decision(
         "claim_factuality_probe_comparison_status": claim_factuality_probe_comparison_status,
         "frontier_release_evidence_status": frontier_release_evidence_status,
         "world_model_signal_workflow_status": world_model_signal_workflow_status,
+        "context_sensitivity_workflow_status": context_sensitivity_workflow_status,
         "mechanism_handoff_evidence_bundle_status": mechanism_handoff_evidence_bundle_status,
         "pathway_intervention_workflow_status": pathway_intervention_workflow_status,
         "selfcheck_signal_fusion_workflow_status": selfcheck_signal_fusion_workflow_status,
@@ -2656,6 +2711,14 @@ def _decision(
                 or world_model_signal_workflow_gate.get("passed") is not True
             )
             else world_model_signal_workflow.get("report_path")
+        ),
+        "recommended_context_sensitivity_workflow_report": (
+            None
+            if (
+                context_sensitivity_workflow is None
+                or context_sensitivity_workflow_gate.get("passed") is not True
+            )
+            else context_sensitivity_workflow.get("report_path")
         ),
         "recommended_mechanism_handoff_evidence_bundle_report": (
             None
@@ -5888,6 +5951,185 @@ def _resolve_world_model_signal_workflow_source(
     }
 
 
+def _context_sensitivity_workflow_gate(
+    *,
+    context_sensitivity_workflow_source: Mapping[str, Any] | None,
+    recursive: bool,
+    allow_unverified: bool,
+    manifest_fingerprint_workers: int,
+    verification_context: ArtifactVerificationContext,
+) -> dict[str, Any] | None:
+    if context_sensitivity_workflow_source is None:
+        return None
+    report_path = Path(context_sensitivity_workflow_source["path"])
+    report, report_error = verification_context.load_json_object(report_path)
+    manifest_path = _context_sensitivity_workflow_manifest_path(
+        report,
+        report_path=report_path,
+    )
+    verification = _verify_artifact_manifest(
+        manifest_path,
+        recursive=recursive,
+        max_workers=manifest_fingerprint_workers,
+        artifact_name="context_sensitivity_workflow_manifest",
+        verification_context=verification_context,
+    )
+    summary = _context_sensitivity_workflow_summary(report)
+    gate = _context_sensitivity_workflow_report_gate(
+        report=report,
+        report_error=report_error,
+        manifest_path=manifest_path,
+        verification=verification,
+        summary=summary,
+        allow_unverified=allow_unverified,
+    )
+    return {
+        "schema_version": 1,
+        "status": "promote" if gate["passed"] else "blocked",
+        "report_path": str(report_path),
+        "manifest_path": None if manifest_path is None else str(manifest_path),
+        "source": context_sensitivity_workflow_source.get("source"),
+        "registry": context_sensitivity_workflow_source.get("registry"),
+        "record_key": context_sensitivity_workflow_source.get("record_key"),
+        "record": context_sensitivity_workflow_source.get("record"),
+        "workflow": report.get("workflow"),
+        "paired_logprob_record_count": summary.get("paired_logprob_record_count"),
+        "enriched_record_count": summary.get("enriched_record_count"),
+        "enhanced_score_signal_count": summary.get("enhanced_score_signal_count"),
+        "max_flagged_rate": summary.get("max_flagged_rate"),
+        "mean_flagged_rate": summary.get("mean_flagged_rate"),
+        "max_context_sensitivity_ratio": summary.get("max_context_sensitivity_ratio"),
+        "manifest_verified": summary.get("manifest_verified"),
+        "blocking_reasons": tuple(gate.get("blocking_reasons", ())),
+        "verification": verification,
+        "gate": gate,
+    }
+
+
+def _context_sensitivity_workflow_report_gate(
+    *,
+    report: Mapping[str, Any],
+    report_error: str | None,
+    manifest_path: Path | None,
+    verification: Mapping[str, Any],
+    summary: Mapping[str, Any],
+    allow_unverified: bool,
+) -> dict[str, Any]:
+    failures = []
+    if report_error is not None:
+        failures.append(f"context-sensitivity workflow report could not be loaded: {report_error}")
+    if manifest_path is None:
+        failures.append("context-sensitivity workflow artifact manifest is missing")
+    if not bool(verification.get("passed", False)) and not allow_unverified:
+        failures.append("context-sensitivity workflow manifest verification failed")
+    if report.get("workflow") != "context_sensitivity_workflow":
+        failures.append(
+            "context-sensitivity workflow is "
+            f"{report.get('workflow')!r}, expected 'context_sensitivity_workflow'"
+        )
+    embedded_manifest_verified = summary.get("manifest_verified")
+    if embedded_manifest_verified is False and not allow_unverified:
+        failures.append("context-sensitivity workflow embedded manifest verification failed")
+    paired_count = _float_or_none(summary.get("paired_logprob_record_count"))
+    if paired_count is None:
+        failures.append("context-sensitivity workflow paired_logprob_record_count is missing")
+    elif paired_count < 1:
+        failures.append("context-sensitivity workflow paired_logprob_record_count is zero")
+    enriched_count = _float_or_none(summary.get("enriched_record_count"))
+    if enriched_count is None:
+        failures.append("context-sensitivity workflow enriched_record_count is missing")
+    elif enriched_count < 1:
+        failures.append("context-sensitivity workflow enriched_record_count is zero")
+    signal_count = _float_or_none(summary.get("enhanced_score_signal_count"))
+    if signal_count is None:
+        failures.append("context-sensitivity workflow enhanced score signal count is missing")
+    elif signal_count < 1:
+        failures.append("context-sensitivity workflow enhanced score signal count is zero")
+    return {
+        "passed": not failures,
+        "blocking_reasons": failures,
+    }
+
+
+def _context_sensitivity_workflow_summary(report: Mapping[str, Any]) -> dict[str, Any]:
+    paired_summary = _mapping(report.get("paired_summary"))
+    enrichment_summary = _mapping(report.get("enrichment_summary"))
+    enhanced_summary = _mapping(report.get("enhanced_score_summary"))
+    signal_summary = _mapping(report.get("signal_summary"))
+    manifest_verification = _mapping(report.get("manifest_verification"))
+    return {
+        "paired_logprob_record_count": _float_or_none(
+            paired_summary.get("paired_logprob_record_count")
+        ),
+        "enriched_record_count": _float_or_none(report.get("enriched_record_count")),
+        "enhanced_score_signal_count": len(signal_summary) or len(enhanced_summary),
+        "max_flagged_rate": _float_or_none(enrichment_summary.get("max_flagged_rate")),
+        "mean_flagged_rate": _float_or_none(enrichment_summary.get("mean_flagged_rate")),
+        "max_context_sensitivity_ratio": _float_or_none(
+            enrichment_summary.get("max_context_sensitivity_ratio")
+        ),
+        "manifest_verified": (
+            None
+            if "passed" not in manifest_verification
+            else bool(manifest_verification.get("passed"))
+        ),
+    }
+
+
+def _context_sensitivity_workflow_manifest_path(
+    report: Mapping[str, Any],
+    *,
+    report_path: Path,
+) -> Path | None:
+    raw_path = _first_present(
+        report.get("artifact_manifest_path"),
+        _nested(report, "paths", "artifact_manifest"),
+    )
+    if raw_path is None:
+        sibling = report_path.parent / "artifact-manifest.json"
+        return sibling if sibling.exists() else None
+    return _resolve_path(raw_path, base_path=report_path)
+
+
+def _resolve_context_sensitivity_workflow_source(
+    *,
+    context_sensitivity_workflow_path: str | Path | None,
+    context_sensitivity_workflow_registry_path: str | Path | None,
+    context_sensitivity_workflow_key: str | None,
+    default_registry_path: str | Path,
+) -> dict[str, Any] | None:
+    if context_sensitivity_workflow_path is not None:
+        if context_sensitivity_workflow_key is not None:
+            raise ValueError(
+                "context_sensitivity_workflow_path is mutually exclusive with "
+                "context_sensitivity_workflow_key."
+            )
+        return {"source": "file", "path": Path(context_sensitivity_workflow_path)}
+    if context_sensitivity_workflow_key is None:
+        if context_sensitivity_workflow_registry_path is not None:
+            raise ValueError(
+                "context_sensitivity_workflow_registry_path requires "
+                "context_sensitivity_workflow_key."
+            )
+        return None
+    registry_path = Path(
+        default_registry_path
+        if context_sensitivity_workflow_registry_path is None
+        else context_sensitivity_workflow_registry_path
+    )
+    registry = ArtifactRegistry.load_json(registry_path)
+    record = registry.get(str(context_sensitivity_workflow_key))
+    if record.artifact_type != "report":
+        raise ValueError(f"registry record {record.key()!r} is not a report.")
+    return {
+        "source": "registry",
+        "registry": str(registry_path),
+        "record_key": record.key(),
+        "record": record.to_dict(),
+        "path": _resolve_registry_record_path(registry_path, record),
+    }
+
+
 def _mechanism_handoff_evidence_bundle_gate(
     *,
     mechanism_handoff_evidence_bundle_source: Mapping[str, Any] | None,
@@ -7904,6 +8146,7 @@ def _candidate_with_gates(
     claim_factuality_probe_comparison: Mapping[str, Any] | None,
     frontier_release_evidence: Mapping[str, Any] | None,
     world_model_signal_workflow: Mapping[str, Any] | None,
+    context_sensitivity_workflow: Mapping[str, Any] | None,
     mechanism_handoff_evidence_bundle: Mapping[str, Any] | None,
     pathway_intervention_workflow: Mapping[str, Any] | None,
     selfcheck_signal_fusion_workflow: Mapping[str, Any] | None,
@@ -8276,6 +8519,35 @@ def _candidate_with_gates(
         }
         manifests["world_model_signal_workflow_manifest"] = (
             world_model_signal_workflow.get("manifest_path")
+        )
+    if context_sensitivity_workflow is not None:
+        payload["context_sensitivity_workflow"] = {
+            "report_path": context_sensitivity_workflow.get("report_path"),
+            "manifest_path": context_sensitivity_workflow.get("manifest_path"),
+            "source": context_sensitivity_workflow.get("source"),
+            "registry": context_sensitivity_workflow.get("registry"),
+            "record_key": context_sensitivity_workflow.get("record_key"),
+            "workflow": context_sensitivity_workflow.get("workflow"),
+            "paired_logprob_record_count": context_sensitivity_workflow.get(
+                "paired_logprob_record_count"
+            ),
+            "enriched_record_count": context_sensitivity_workflow.get(
+                "enriched_record_count"
+            ),
+            "enhanced_score_signal_count": context_sensitivity_workflow.get(
+                "enhanced_score_signal_count"
+            ),
+            "max_flagged_rate": context_sensitivity_workflow.get("max_flagged_rate"),
+            "max_context_sensitivity_ratio": context_sensitivity_workflow.get(
+                "max_context_sensitivity_ratio"
+            ),
+            "manifest_verified": context_sensitivity_workflow.get("manifest_verified"),
+            "blocking_reasons": tuple(
+                context_sensitivity_workflow.get("blocking_reasons", ())
+            ),
+        }
+        manifests["context_sensitivity_workflow_manifest"] = (
+            context_sensitivity_workflow.get("manifest_path")
         )
     if mechanism_handoff_evidence_bundle is not None:
         payload["mechanism_handoff_evidence_bundle"] = {
@@ -8774,6 +9046,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         world_model_signal_workflow_path=args.world_model_signal_workflow,
         world_model_signal_workflow_registry_path=args.world_model_signal_workflow_registry,
         world_model_signal_workflow_key=args.world_model_signal_workflow_key,
+        context_sensitivity_workflow_path=args.context_sensitivity_workflow,
+        context_sensitivity_workflow_registry_path=args.context_sensitivity_workflow_registry,
+        context_sensitivity_workflow_key=args.context_sensitivity_workflow_key,
         mechanism_handoff_evidence_bundle_path=args.mechanism_handoff_evidence_bundle,
         mechanism_handoff_evidence_bundle_registry_path=(
             args.mechanism_handoff_evidence_bundle_registry
@@ -8964,6 +9239,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         f"claim_factuality_probe={decision.get('claim_factuality_probe_comparison_status')} "
         f"frontier_release_evidence={decision.get('frontier_release_evidence_status')} "
         f"world_model_signal={decision.get('world_model_signal_workflow_status')} "
+        f"context_sensitivity={decision.get('context_sensitivity_workflow_status')} "
         f"pathway_intervention={decision.get('pathway_intervention_workflow_status')} "
         f"selfcheck_signal_fusion={decision.get('selfcheck_signal_fusion_workflow_status')} "
         f"uncertainty_escalation={decision.get('uncertainty_escalation_workflow_status')} "
@@ -9091,6 +9367,14 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "defaults to --readiness-registry")
     parser.add_argument("--world-model-signal-workflow-key", default=None,
                         help="optional report:<name>:<version> registry key for a world-model signal workflow")
+    parser.add_argument("--context-sensitivity-workflow", default=None,
+                        help="optional context-sensitivity workflow report that must verify and contain "
+                             "paired/enriched/enhanced score evidence")
+    parser.add_argument("--context-sensitivity-workflow-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for --context-sensitivity-workflow-key; "
+                             "defaults to --readiness-registry")
+    parser.add_argument("--context-sensitivity-workflow-key", default=None,
+                        help="optional report:<name>:<version> registry key for a context-sensitivity workflow")
     parser.add_argument("--mechanism-handoff-evidence-bundle", default=None,
                         help="optional mechanism handoff evidence bundle report that must promote "
                              "and verify")

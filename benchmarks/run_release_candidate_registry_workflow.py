@@ -268,6 +268,9 @@ class ReleaseCandidateRegistryWorkflowConfig:
     world_model_signal_workflow_path: Path | None = None
     world_model_signal_workflow_registry_path: Path | None = None
     world_model_signal_workflow_key: str | None = None
+    context_sensitivity_workflow_path: Path | None = None
+    context_sensitivity_workflow_registry_path: Path | None = None
+    context_sensitivity_workflow_key: str | None = None
     mechanism_handoff_evidence_bundle_path: Path | None = None
     mechanism_handoff_evidence_bundle_registry_path: Path | None = None
     mechanism_handoff_evidence_bundle_key: str | None = None
@@ -484,6 +487,18 @@ class ReleaseCandidateRegistryWorkflowConfig:
                 self,
                 "world_model_signal_workflow_registry_path",
                 Path(self.world_model_signal_workflow_registry_path),
+            )
+        if self.context_sensitivity_workflow_path is not None:
+            object.__setattr__(
+                self,
+                "context_sensitivity_workflow_path",
+                Path(self.context_sensitivity_workflow_path),
+            )
+        if self.context_sensitivity_workflow_registry_path is not None:
+            object.__setattr__(
+                self,
+                "context_sensitivity_workflow_registry_path",
+                Path(self.context_sensitivity_workflow_registry_path),
             )
         if self.pathway_intervention_workflow_path is not None:
             object.__setattr__(
@@ -822,6 +837,11 @@ def run_release_candidate_registry_workflow(
         world_model_signal_workflow_path=config.world_model_signal_workflow_path,
         world_model_signal_workflow_registry_path=config.world_model_signal_workflow_registry_path,
         world_model_signal_workflow_key=config.world_model_signal_workflow_key,
+        context_sensitivity_workflow_path=config.context_sensitivity_workflow_path,
+        context_sensitivity_workflow_registry_path=(
+            config.context_sensitivity_workflow_registry_path
+        ),
+        context_sensitivity_workflow_key=config.context_sensitivity_workflow_key,
         mechanism_handoff_evidence_bundle_path=config.mechanism_handoff_evidence_bundle_path,
         mechanism_handoff_evidence_bundle_registry_path=(
             config.mechanism_handoff_evidence_bundle_registry_path
@@ -1173,6 +1193,17 @@ def run_release_candidate_registry_workflow(
                 else str(config.world_model_signal_workflow_registry_path)
             ),
             "world_model_signal_workflow_key": config.world_model_signal_workflow_key,
+            "context_sensitivity_workflow": (
+                None
+                if config.context_sensitivity_workflow_path is None
+                else str(config.context_sensitivity_workflow_path)
+            ),
+            "context_sensitivity_workflow_registry": (
+                None
+                if config.context_sensitivity_workflow_registry_path is None
+                else str(config.context_sensitivity_workflow_registry_path)
+            ),
+            "context_sensitivity_workflow_key": config.context_sensitivity_workflow_key,
             "pathway_intervention_workflow": (
                 None
                 if config.pathway_intervention_workflow_path is None
@@ -1529,6 +1560,17 @@ def _comparison_with_registry_config(
             else str(config.world_model_signal_workflow_registry_path)
         ),
         "world_model_signal_workflow_key": config.world_model_signal_workflow_key,
+        "context_sensitivity_workflow": (
+            comparison_config.get("context_sensitivity_workflow")
+            if config.context_sensitivity_workflow_path is None
+            else str(config.context_sensitivity_workflow_path)
+        ),
+        "context_sensitivity_workflow_registry": (
+            comparison_config.get("context_sensitivity_workflow_registry")
+            if config.context_sensitivity_workflow_registry_path is None
+            else str(config.context_sensitivity_workflow_registry_path)
+        ),
+        "context_sensitivity_workflow_key": config.context_sensitivity_workflow_key,
         "pathway_intervention_workflow": (
             comparison_config.get("pathway_intervention_workflow")
             if config.pathway_intervention_workflow_path is None
@@ -1694,6 +1736,10 @@ def _write_artifact_manifest(
         or _nested(comparison, "frontier_release_evidence_gate", "manifest_path"),
         "world_model_signal_workflow_manifest": manifests.get("world_model_signal_workflow_manifest")
         or _nested(comparison, "world_model_signal_workflow_gate", "manifest_path"),
+        "context_sensitivity_workflow_manifest": manifests.get(
+            "context_sensitivity_workflow_manifest"
+        )
+        or _nested(comparison, "context_sensitivity_workflow_gate", "manifest_path"),
         "pathway_intervention_workflow_manifest": manifests.get(
             "pathway_intervention_workflow_manifest"
         )
@@ -1897,6 +1943,11 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
     world_model_signal_workflow = dict(candidate.get("world_model_signal_workflow") or {})
     if not world_model_signal_workflow:
         world_model_signal_workflow = dict(comparison.get("world_model_signal_workflow_gate") or {})
+    context_sensitivity_workflow = dict(candidate.get("context_sensitivity_workflow") or {})
+    if not context_sensitivity_workflow:
+        context_sensitivity_workflow = dict(
+            comparison.get("context_sensitivity_workflow_gate") or {}
+        )
     mechanism_handoff_evidence_bundle = dict(
         candidate.get("mechanism_handoff_evidence_bundle") or {}
     )
@@ -1933,6 +1984,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "release_world_model_signal_workflow_status": decision.get(
             "world_model_signal_workflow_status"
+        ),
+        "release_context_sensitivity_workflow_status": decision.get(
+            "context_sensitivity_workflow_status"
         ),
         "release_mechanism_handoff_evidence_bundle_status": decision.get(
             "mechanism_handoff_evidence_bundle_status"
@@ -1986,6 +2040,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "recommended_world_model_signal_workflow_report": decision.get(
             "recommended_world_model_signal_workflow_report"
+        ),
+        "recommended_context_sensitivity_workflow_report": decision.get(
+            "recommended_context_sensitivity_workflow_report"
         ),
         "recommended_mechanism_handoff_evidence_bundle_report": decision.get(
             "recommended_mechanism_handoff_evidence_bundle_report"
@@ -2850,6 +2907,35 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "world_model_signal_workflow_calibrated_conflict_signal_count": (
             world_model_signal_workflow.get("calibrated_conflict_signal_count")
         ),
+        "context_sensitivity_workflow_report": context_sensitivity_workflow.get("report_path"),
+        "context_sensitivity_workflow_manifest": (
+            manifests.get("context_sensitivity_workflow_manifest")
+            or context_sensitivity_workflow.get("manifest_path")
+        ),
+        "context_sensitivity_workflow_source": context_sensitivity_workflow.get("source"),
+        "context_sensitivity_workflow_registry": context_sensitivity_workflow.get("registry"),
+        "context_sensitivity_workflow_record": context_sensitivity_workflow.get("record_key"),
+        "context_sensitivity_workflow_paired_logprob_record_count": (
+            context_sensitivity_workflow.get("paired_logprob_record_count")
+        ),
+        "context_sensitivity_workflow_enriched_record_count": (
+            context_sensitivity_workflow.get("enriched_record_count")
+        ),
+        "context_sensitivity_workflow_enhanced_score_signal_count": (
+            context_sensitivity_workflow.get("enhanced_score_signal_count")
+        ),
+        "context_sensitivity_workflow_max_flagged_rate": (
+            context_sensitivity_workflow.get("max_flagged_rate")
+        ),
+        "context_sensitivity_workflow_mean_flagged_rate": (
+            context_sensitivity_workflow.get("mean_flagged_rate")
+        ),
+        "context_sensitivity_workflow_max_context_sensitivity_ratio": (
+            context_sensitivity_workflow.get("max_context_sensitivity_ratio")
+        ),
+        "context_sensitivity_workflow_manifest_verified": (
+            context_sensitivity_workflow.get("manifest_verified")
+        ),
         "mechanism_handoff_evidence_bundle_report": (
             mechanism_handoff_evidence_bundle.get("report_path")
         ),
@@ -3285,6 +3371,17 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
             else Path(args.world_model_signal_workflow_registry)
         ),
         world_model_signal_workflow_key=args.world_model_signal_workflow_key,
+        context_sensitivity_workflow_path=(
+            None
+            if args.context_sensitivity_workflow is None
+            else Path(args.context_sensitivity_workflow)
+        ),
+        context_sensitivity_workflow_registry_path=(
+            None
+            if args.context_sensitivity_workflow_registry is None
+            else Path(args.context_sensitivity_workflow_registry)
+        ),
+        context_sensitivity_workflow_key=args.context_sensitivity_workflow_key,
         mechanism_handoff_evidence_bundle_path=(
             None
             if args.mechanism_handoff_evidence_bundle is None
@@ -3688,6 +3785,14 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "defaults to --readiness-registry")
     parser.add_argument("--world-model-signal-workflow-key", default=None,
                         help="optional report:<name>:<version> registry key for a world-model signal workflow")
+    parser.add_argument("--context-sensitivity-workflow", default=None,
+                        help="optional context-sensitivity workflow report that must verify and contain "
+                             "paired/enriched/enhanced score evidence")
+    parser.add_argument("--context-sensitivity-workflow-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for --context-sensitivity-workflow-key; "
+                             "defaults to --readiness-registry")
+    parser.add_argument("--context-sensitivity-workflow-key", default=None,
+                        help="optional report:<name>:<version> registry key for a context-sensitivity workflow")
     parser.add_argument("--mechanism-handoff-evidence-bundle", default=None,
                         help="optional mechanism handoff evidence bundle report that must promote "
                              "and verify")

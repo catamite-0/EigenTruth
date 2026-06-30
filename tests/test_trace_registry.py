@@ -2064,6 +2064,10 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             "recommended_world_model_signal_workflow_report": (
                 "artifacts/world-model-signal/world-model-signal-workflow.json"
             ),
+            "context_sensitivity_workflow_status": "promote",
+            "recommended_context_sensitivity_workflow_report": (
+                "artifacts/context-sensitivity/context-sensitivity-workflow.json"
+            ),
             "pathway_intervention_workflow_status": "promote",
             "recommended_pathway_intervention_workflow_report": (
                 "artifacts/pathway-intervention/pathway-intervention-workflow.json"
@@ -2215,6 +2219,25 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "trace_gap_max": 0.0,
                 "conflict_positive_count": 4,
                 "calibrated_conflict_signal_count": 1,
+                "blocking_reasons": [],
+            },
+            "context_sensitivity_workflow": {
+                "report_path": (
+                    "artifacts/context-sensitivity/context-sensitivity-workflow.json"
+                ),
+                "manifest_path": "artifacts/context-sensitivity/artifact-manifest.json",
+                "source": "registry",
+                "registry": "artifacts/release-registry.json",
+                "record_key": "report:context-sensitivity-workflow:0.1",
+                "workflow": "context_sensitivity_workflow",
+                "status": "promote",
+                "paired_logprob_record_count": 6,
+                "enriched_record_count": 6,
+                "enhanced_score_signal_count": 4,
+                "max_flagged_rate": 0.25,
+                "mean_flagged_rate": 0.125,
+                "max_context_sensitivity_ratio": 1.35,
+                "manifest_verified": True,
                 "blocking_reasons": [],
             },
             "pathway_intervention_workflow": {
@@ -2552,6 +2575,9 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "world_model_signal_workflow_manifest": (
                     "artifacts/world-model-signal/artifact-manifest.json"
                 ),
+                "context_sensitivity_workflow_manifest": (
+                    "artifacts/context-sensitivity/artifact-manifest.json"
+                ),
                 "pathway_intervention_workflow_manifest": (
                     "artifacts/pathway-intervention/artifact-manifest.json"
                 ),
@@ -2616,12 +2642,16 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert summary["gate_statuses"]["performance"] == "promote"
     assert summary["gate_statuses"]["product_runtime_drift"] == "promote"
     assert summary["gate_statuses"]["adapter_family"] == "promote"
+    assert summary["gate_statuses"]["context_sensitivity"] == "promote"
     assert summary["blocking_gate_count"] == 0
     assert summary["evidence_groups"]["covered_fact_property"]["metric_count"] == 6
     assert summary["evidence_groups"]["covered_fact_property"]["blocked_metric_count"] == 0
     assert summary["action_gates"]["action_audit_status"] == "promote"
     assert summary["action_gates"]["action_execution_status"] == "promote"
     assert roundtrip.world_model_signal_workflow == contract.world_model_signal_workflow
+    assert roundtrip.context_sensitivity_workflow == (
+        contract.context_sensitivity_workflow
+    )
     assert roundtrip.pathway_intervention_workflow == (
         contract.pathway_intervention_workflow
     )
@@ -2784,6 +2814,37 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.metadata["world_model_signal_workflow_trace_gap_max"] == 0.0
     assert contract.metadata["world_model_signal_workflow_conflict_positive_count"] == 4
     assert contract.metadata["world_model_signal_workflow_calibrated_conflict_signal_count"] == 1
+    assert contract.context_sensitivity_workflow == {
+        "report_path": "artifacts/context-sensitivity/context-sensitivity-workflow.json",
+        "manifest_path": "artifacts/context-sensitivity/artifact-manifest.json",
+        "source": "registry",
+        "registry": "artifacts/release-registry.json",
+        "record_key": "report:context-sensitivity-workflow:0.1",
+        "workflow": "context_sensitivity_workflow",
+        "status": "promote",
+        "paired_logprob_record_count": 6,
+        "enriched_record_count": 6,
+        "enhanced_score_signal_count": 4,
+        "max_flagged_rate": 0.25,
+        "mean_flagged_rate": 0.125,
+        "max_context_sensitivity_ratio": 1.35,
+        "manifest_verified": True,
+        "blocking_reasons": [],
+    }
+    assert contract.metadata["context_sensitivity_workflow_status"] == "promote"
+    assert contract.metadata["recommended_context_sensitivity_workflow_report"] == (
+        "artifacts/context-sensitivity/context-sensitivity-workflow.json"
+    )
+    assert contract.metadata["context_sensitivity_workflow_paired_logprob_record_count"] == 6
+    assert contract.metadata["context_sensitivity_workflow_enriched_record_count"] == 6
+    assert contract.metadata["context_sensitivity_workflow_enhanced_score_signal_count"] == 4
+    assert contract.metadata["context_sensitivity_workflow_max_flagged_rate"] == 0.25
+    assert contract.metadata["context_sensitivity_workflow_mean_flagged_rate"] == 0.125
+    assert (
+        contract.metadata["context_sensitivity_workflow_max_context_sensitivity_ratio"]
+        == 1.35
+    )
+    assert contract.metadata["context_sensitivity_workflow_manifest_verified"] is True
     assert contract.pathway_intervention_workflow == {
         "report_path": "artifacts/pathway-intervention/pathway-intervention-workflow.json",
         "manifest_path": "artifacts/pathway-intervention/artifact-manifest.json",
@@ -3145,6 +3206,17 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
             "record_key": "report:world-model-signal-workflow:0.1",
             "release_gate_status": "promote",
             "trace_gap_max": 0.0,
+        },
+        context_sensitivity_workflow={
+            "report_path": "context-sensitivity-workflow.json",
+            "record_key": "report:context-sensitivity-workflow:0.1",
+            "status": "promote",
+            "paired_logprob_record_count": 6,
+            "enriched_record_count": 6,
+            "enhanced_score_signal_count": 4,
+            "max_flagged_rate": 0.25,
+            "mean_flagged_rate": 0.125,
+            "max_context_sensitivity_ratio": 1.35,
         },
         pathway_intervention_workflow={
             "report_path": "pathway-intervention-workflow.json",
@@ -3781,6 +3853,37 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
         "release_gate_status": "promote",
         "trace_gap_max": 0.0,
     }
+    assert metadata["promotion_contract_context_sensitivity_workflow"] == {
+        "report_path": "context-sensitivity-workflow.json",
+        "record_key": "report:context-sensitivity-workflow:0.1",
+        "status": "promote",
+        "paired_logprob_record_count": 6,
+        "enriched_record_count": 6,
+        "enhanced_score_signal_count": 4,
+        "max_flagged_rate": 0.25,
+        "mean_flagged_rate": 0.125,
+        "max_context_sensitivity_ratio": 1.35,
+    }
+    assert (
+        metadata["promotion_contract_context_sensitivity_workflow_report"]
+        == "context-sensitivity-workflow.json"
+    )
+    assert (
+        metadata[
+            "promotion_contract_context_sensitivity_workflow_paired_logprob_record_count"
+        ]
+        == 6
+    )
+    assert (
+        metadata["promotion_contract_context_sensitivity_workflow_max_flagged_rate"]
+        == 0.25
+    )
+    assert (
+        metadata[
+            "promotion_contract_context_sensitivity_workflow_max_context_sensitivity_ratio"
+        ]
+        == 1.35
+    )
     assert metadata["promotion_contract_pathway_intervention_workflow"] == {
         "report_path": "pathway-intervention-workflow.json",
         "manifest_path": "pathway-artifact-manifest.json",
@@ -3909,6 +4012,11 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
     world_model_report_path = world_model_dir / "workflow.json"
     world_model_manifest_path = world_model_dir / "artifact-manifest.json"
     world_model_registry_path = world_model_dir / "registry.json"
+    context_sensitivity_dir = tmp_path / "context-sensitivity"
+    context_sensitivity_dir.mkdir()
+    context_sensitivity_report_path = context_sensitivity_dir / "workflow.json"
+    context_sensitivity_manifest_path = context_sensitivity_dir / "artifact-manifest.json"
+    context_sensitivity_registry_path = context_sensitivity_dir / "registry.json"
     pathway_dir = tmp_path / "pathway-intervention"
     pathway_dir.mkdir()
     pathway_report_path = pathway_dir / "workflow.json"
@@ -3990,6 +4098,48 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
         path=world_model_report_path,
         version="0.1",
         metadata={"artifact_manifest": str(world_model_manifest_path)},
+    ).save_json()
+    context_sensitivity_report_path.write_text(
+        json.dumps({
+            "workflow": "context_sensitivity_workflow",
+            "paired_logprobs": {"record_count": 6},
+            "enrichment": {"record_count": 6},
+            "enhanced_score_dump": {
+                "score_dump_summary": {
+                    "score_names": [
+                        "context_sensitivity_flagged_rate",
+                        "context_sensitivity_max_shift",
+                        "context_sensitivity_mean_shift",
+                        "context_sensitivity_max_ratio",
+                    ]
+                }
+            },
+            "signal_summary": {
+                "context_sensitivity_flagged_rate": {
+                    "max": 0.25,
+                    "mean": 0.125,
+                },
+                "context_sensitivity_max_ratio": {"max": 1.35},
+            },
+            "manifest_verification": {"passed": True},
+        }),
+        encoding="utf-8",
+    )
+    context_sensitivity_manifest_path.write_text(
+        json.dumps(
+            build_artifact_manifest(
+                {"context_sensitivity_workflow": context_sensitivity_report_path},
+                root=context_sensitivity_dir,
+                metadata={"workflow": "context_sensitivity_workflow"},
+            )
+        ),
+        encoding="utf-8",
+    )
+    ArtifactRegistry.load_json(context_sensitivity_registry_path).record_report(
+        name="context-sensitivity-workflow",
+        path=context_sensitivity_report_path,
+        version="0.1",
+        metadata={"artifact_manifest": str(context_sensitivity_manifest_path)},
     ).save_json()
     pathway_report_path.write_text(
         json.dumps({
@@ -4175,6 +4325,20 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
             "conflict_positive_count": 4,
             "calibrated_conflict_signal_count": 1,
         },
+        context_sensitivity_workflow={
+            "report_path": "context-sensitivity/workflow.json",
+            "manifest_path": "context-sensitivity/artifact-manifest.json",
+            "registry": "context-sensitivity/registry.json",
+            "record_key": "report:context-sensitivity-workflow:0.1",
+            "status": "promote",
+            "paired_logprob_record_count": 6,
+            "enriched_record_count": 6,
+            "enhanced_score_signal_count": 4,
+            "max_flagged_rate": 0.25,
+            "mean_flagged_rate": 0.125,
+            "max_context_sensitivity_ratio": 1.35,
+            "manifest_verified": True,
+        },
         pathway_intervention_workflow={
             "report_path": "pathway-intervention/workflow.json",
             "manifest_path": "pathway-intervention/artifact-manifest.json",
@@ -4341,6 +4505,41 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
     assert metadata_without_verification["world_model_signal_workflow_release_gate_status"] == "promote"
     assert metadata_without_verification["world_model_signal_workflow_trace_gap_max"] == 0.0
     assert metadata_without_verification["world_model_signal_workflow_conflict_positive_count"] == 4
+    assert metadata_without_verification["context_sensitivity_workflow_report"] == str(
+        context_sensitivity_report_path
+    )
+    assert metadata_without_verification["context_sensitivity_workflow_manifest"] == str(
+        context_sensitivity_manifest_path
+    )
+    assert (
+        metadata_without_verification[
+            "context_sensitivity_workflow_manifest_verification"
+        ]
+        is None
+    )
+    assert metadata_without_verification["context_sensitivity_workflow_registry"] == str(
+        context_sensitivity_registry_path
+    )
+    assert (
+        metadata_without_verification["context_sensitivity_workflow_registry_key"]
+        == "report:context-sensitivity-workflow:0.1"
+    )
+    assert (
+        metadata_without_verification["context_sensitivity_workflow_registry_record"]
+        is None
+    )
+    assert metadata_without_verification["context_sensitivity_workflow_status"] == (
+        "promote"
+    )
+    assert (
+        metadata_without_verification[
+            "context_sensitivity_workflow_paired_logprob_record_count"
+        ]
+        == 6
+    )
+    assert metadata_without_verification["context_sensitivity_workflow_max_flagged_rate"] == (
+        pytest.approx(0.25)
+    )
     assert metadata_without_verification["pathway_intervention_workflow_report"] == str(
         pathway_report_path
     )
@@ -4548,6 +4747,33 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
     assert metadata_with_world_model_verification[
         "world_model_signal_workflow_registry_record"
     ]["metadata"] == {"artifact_manifest": str(world_model_manifest_path)}
+
+    metadata_with_context_sensitivity_verification = bundle.runtime_metadata(
+        budget_enabled=True,
+        verify_context_sensitivity_workflow_manifest=True,
+        include_context_sensitivity_workflow_record=True,
+    )
+    assert (
+        metadata_with_context_sensitivity_verification[
+            "context_sensitivity_workflow_manifest_verification"
+        ]["passed"]
+        is True
+    )
+    assert (
+        metadata_with_context_sensitivity_verification[
+            "context_sensitivity_workflow_manifest_verification"
+        ]["checked"]
+        == 1
+    )
+    assert (
+        metadata_with_context_sensitivity_verification[
+            "context_sensitivity_workflow_registry_key"
+        ]
+        == "report:context-sensitivity-workflow:0.1"
+    )
+    assert metadata_with_context_sensitivity_verification[
+        "context_sensitivity_workflow_registry_record"
+    ]["metadata"] == {"artifact_manifest": str(context_sensitivity_manifest_path)}
 
     metadata_with_pathway_verification = bundle.runtime_metadata(
         budget_enabled=True,
