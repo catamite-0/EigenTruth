@@ -5656,6 +5656,18 @@ expects trajectory-audit runtime-drift evidence as a separate fail-closed group
 when refreshed drift reports are supplied. The main contract manifest
 verifies with `checked=2`; the evidence-handoff manifest verifies with
 `checked=9`.
+Before treating the v6/v1.9 handoff as locally reproducible, scan the active
+doc references against the checkout:
+
+```bash
+python benchmarks/audit_frontier_artifact_references.py \
+  --json artifacts/frontier-artifact-reference-audit.json \
+  --artifact-manifest artifacts/frontier-artifact-reference-audit-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-artifact-reference-audit \
+  --version 0.1 \
+  --no-fail
+```
 
 Current local smoke release candidate:
 
@@ -8383,6 +8395,10 @@ python benchmarks/verify_artifact_manifest.py \
 artifacts during direct manifest verification. Keep the default `1` for strictly
 serial timing comparisons; use the worker-sweep report to choose a local value
 for large release manifests.
+Use `audit_frontier_artifact_references.py` one level higher when the question is
+whether the docs' active frontier/product handoff references are actually
+materialized in the local checkout; it reports missing artifacts and verifies any
+referenced artifact manifests that exist.
 
 Once verification passes, `promote_artifact_manifest.py` can register the
 manifest and verification report in a local `ArtifactRegistry` JSON file:

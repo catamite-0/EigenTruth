@@ -81,6 +81,9 @@ DEFAULT_QWEN_ARTIFACT_PATH = (
 DEFAULT_PROMOTION_CONTRACT_FILENAMES = (
     "smollm2_product_promotion_contract_v1_9/product-promotion-contract.json",
     "smollm2_product_promotion_contract_v1_8/product-promotion-contract.json",
+    "smollm2_product_promotion_contract_v1_6/product-promotion-contract.json",
+    "smollm2_product_promotion_contract_v1_5/product-promotion-contract.json",
+    "smollm2_l8_selected_fusion_product_promotion_contract_v0_3/product-promotion-contract.json",
 )
 DEFAULT_PROMOTION_CONTRACT_PATHS = tuple(
     Path(__file__).resolve().parents[1]
