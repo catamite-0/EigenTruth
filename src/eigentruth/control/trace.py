@@ -10,6 +10,7 @@ from eigentruth.control.action_audit import audit_action_requests
 from eigentruth.control.actions import ActionRequest, ActionResult
 from eigentruth.control.finalization import FinalAnswer
 from eigentruth.control.policy import ControlAction, RiskDecision
+from eigentruth.control.receipts import action_receipt_summary_from_results
 from eigentruth.json_utils import to_jsonable
 from eigentruth.verify.localization import localize_claim_risk_spans
 from eigentruth.verify.planning import ClaimVerificationPlan, estimate_verification_plan_cost
@@ -254,6 +255,7 @@ class ProductTrace:
                 prepared.actions,
                 prepared.action_results,
             ),
+            "action_receipts": action_receipt_summary_from_results(prepared.action_results),
             "action_audit": _action_audit_summary_from_payload(
                 actions=prepared.actions,
                 risk_decision=prepared.risk_decision,
@@ -355,6 +357,12 @@ class ProductTrace:
         return _action_execution_summary_from_payload(
             tuple(_action_to_dict(action) for action in self.actions),
             tuple(_action_result_to_dict(result) for result in self.action_results),
+        )
+
+    def action_receipt_summary(self) -> dict[str, Any]:
+        """Summarize receipt coverage for action results."""
+        return action_receipt_summary_from_results(
+            tuple(_action_result_to_dict(result) for result in self.action_results)
         )
 
     def action_audit_summary(self) -> dict[str, Any]:

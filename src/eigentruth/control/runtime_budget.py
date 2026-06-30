@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any, Iterable, Mapping, Sequence
 
 from eigentruth.control import runtime_drift_keys as _runtime_drift_keys
+from eigentruth.control.receipts import action_receipt_summary_from_results
 from eigentruth.control.trace import ProductTrace, RuntimeTrace
 
 _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES = (
@@ -486,6 +487,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
         }
         metrics.update(_cache_metrics(trace))
         metrics.update(_action_execution_metrics(trace))
+        metrics.update(_action_receipt_metrics(trace))
         metrics.update(_action_audit_metrics(trace))
         metrics.update(_trajectory_audit_metrics(trace))
         metrics.update(_route_cost_metrics(trace))
@@ -530,6 +532,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
     }
     metrics.update(_cache_metrics(trace))
     metrics.update(_action_execution_metrics(trace))
+    metrics.update(_action_receipt_metrics(trace))
     metrics.update(_action_audit_metrics(trace))
     metrics.update(_trajectory_audit_metrics(trace))
     metrics.update(_route_cost_metrics(trace))
@@ -728,6 +731,39 @@ def _action_execution_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[s
             summary.get("request_id_mismatch_count")
         ) or 0.0,
         "action_execution_alignment_available": bool(alignment.get("available")),
+    }
+
+
+def _action_receipt_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:
+    if isinstance(trace, ProductTrace):
+        summary = trace.action_receipt_summary()
+        source = "full_trace"
+    else:
+        payload = dict(trace)
+        summary = _mapping(_mapping(payload.get("summaries")).get("action_receipts"))
+        if summary:
+            source = "bounded_summary"
+        else:
+            summary = action_receipt_summary_from_results(tuple(_sequence(payload.get("action_results", ()))))
+            source = "full_trace"
+    return {
+        "action_receipts_available": bool(summary.get("available")),
+        "action_receipts_source": source,
+        "action_receipts_summary": summary,
+        "action_receipts_passed": _optional_bool(summary.get("passed")),
+        "action_receipts_result_count": _finite_float(summary.get("result_count")) or 0.0,
+        "action_receipts_receipt_count": _finite_float(summary.get("receipt_count")) or 0.0,
+        "action_receipts_missing_receipt_count": _finite_float(summary.get("missing_receipt_count")) or 0.0,
+        "action_receipts_signed_receipt_count": _finite_float(summary.get("signed_receipt_count")) or 0.0,
+        "action_receipts_unsigned_receipt_count": _finite_float(summary.get("unsigned_receipt_count")) or 0.0,
+        "action_receipts_invalid_receipt_count": _finite_float(summary.get("invalid_receipt_count")) or 0.0,
+        "action_receipts_fingerprint_match_count": _finite_float(
+            summary.get("fingerprint_match_count")
+        ) or 0.0,
+        "action_receipts_fingerprint_mismatch_count": _finite_float(
+            summary.get("fingerprint_mismatch_count")
+        ) or 0.0,
+        "action_receipts_coverage": _finite_float(summary.get("coverage")),
     }
 
 

@@ -37,6 +37,27 @@ EigenTruth should move from hallucination detection alone toward calibrated part
 
 ## Implemented This Continuation
 
+Added receipt-style action result verification:
+
+- `ActionReceipt` serializes the action, status, request id, output fingerprint,
+  result fingerprint, optional request fingerprint, issuer, key id, and signing
+  metadata for one executed action result.
+- `ActionReceiptSigner` issues and verifies local HMAC-SHA256 receipts without
+  adding a mandatory dependency or requiring a network service.
+- `ReceiptActionExecutor` can wrap an existing executor and attach
+  `metadata.action_receipt` to every returned `ActionResult`, including
+  fail-closed wrapper failures.
+- `verify_action_receipt(...)`, `action_result_fingerprint(...)`, and
+  `action_request_fingerprint(...)` expose the low-level primitives needed to
+  compare model-visible tool claims against actual execution outputs in later
+  agent audits.
+- `ProductTrace.action_receipt_summary()` and bounded
+  `summaries.action_receipts` report receipt coverage, signed/unsigned counts,
+  invalid receipts, and result-fingerprint mismatches without needing the HMAC
+  secret. This is the local EigenTruth bridge toward receipt-backed agent
+  verification; it does not yet perform automatic natural-language
+  claim-to-receipt entailment.
+
 Added conformal multiple-testing signal aggregation:
 
 - `directional_conformal_pvalues(...)` extends the existing conformal p-value primitive to mixed-direction native scores, so lower-is-anomalous signals such as reliability/projection scores can be calibrated without sign mistakes.
