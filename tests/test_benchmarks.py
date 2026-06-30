@@ -45421,6 +45421,116 @@ def test_context_sensitivity_sidecar_enrichment_feeds_verifier_signal_score_dump
     assert enhanced.scores["context_sensitivity_max_ratio"] == pytest.approx((0.5, 3.0))
 
 
+def test_context_sensitivity_logprob_pair_builder_prepares_verified_sidecar_records(tmp_path):
+    pair_builder = importlib.import_module("benchmarks.build_context_sensitivity_logprob_pairs")
+    enricher = importlib.import_module("benchmarks.enrich_context_sensitivity_sidecar")
+
+    class FakeScorer:
+        def score(self, prompt, completion):
+            has_evidence = prompt.startswith("Evidence:")
+            words = completion.split()
+            return tuple(
+                pair_builder.TokenLogprob(
+                    token=f" {word}",
+                    token_id=index + 1,
+                    logprob=-2.0 if has_evidence else -1.0,
+                )
+                for index, word in enumerate(words)
+            )
+
+    verified_records_path = tmp_path / "verified-records.jsonl"
+    paired_path = tmp_path / "paired-logprobs.jsonl"
+    enriched_path = tmp_path / "verified-records-context.jsonl"
+    verified_records = [
+        {
+            "schema_version": 1,
+            "workflow": "verifier_ensemble_verified_record",
+            "run": "synthetic",
+            "record_index": 0,
+            "record": {
+                "claim": {"claim_id": "c1", "text": "Paris is the capital"},
+                "retrieval_hits": [{"id": "doc-1", "content": "Berlin is the capital in this fixture."}],
+            },
+        },
+        {
+            "schema_version": 1,
+            "workflow": "verifier_ensemble_verified_record",
+            "run": "synthetic",
+            "record_index": 1,
+            "record": {
+                "claim": {"claim_id": "c2", "text": "No evidence claim"},
+                "retrieval_hits": [],
+            },
+        },
+    ]
+    verified_records_path.write_text(
+        "".join(json.dumps(record, sort_keys=True) + "\n" for record in verified_records),
+        encoding="utf-8",
+    )
+
+    report = pair_builder.build_report(
+        records_path=verified_records_path,
+        output=paired_path,
+        scorer=FakeScorer(),
+        model_id="fake-causal-lm",
+        run_name="synthetic",
+    )
+    enrichment_report = enricher.build_report(
+        verified_records_jsonl=verified_records_path,
+        paired_logprobs=paired_path,
+        output=enriched_path,
+        run_name="synthetic",
+        ratio_threshold=1.5,
+        shift_threshold=0.5,
+    )
+    paired_records = [
+        json.loads(line)
+        for line in paired_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    enriched_records = [
+        json.loads(line)
+        for line in enriched_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+    assert report["paired_logprob_record_count"] == 2
+    assert report["missing_evidence_count"] == 1
+    assert paired_records[0]["workflow"] == "context_sensitivity_paired_logprobs"
+    assert paired_records[0]["claim_id"] == "c1"
+    assert paired_records[0]["metadata"]["evidence_count"] == 1
+    assert paired_records[0]["tokens"][0]["baseline_logprob"] == pytest.approx(-1.0)
+    assert paired_records[0]["tokens"][0]["context_logprob"] == pytest.approx(-2.0)
+    assert paired_records[1]["metadata"]["missing_evidence"] is True
+    assert paired_records[1]["tokens"][0]["baseline_logprob"] == pytest.approx(-1.0)
+    assert paired_records[1]["tokens"][0]["context_logprob"] == pytest.approx(-1.0)
+    assert enrichment_report["enriched_record_count"] == 2
+    assert enriched_records[0]["context_sensitivity"]["summary"]["flagged_rate"] == pytest.approx(1.0)
+    assert enriched_records[1]["context_sensitivity"]["summary"]["flagged_rate"] == pytest.approx(0.0)
+
+
+def test_context_sensitivity_logprob_pair_builder_rejects_token_mismatch():
+    pair_builder = importlib.import_module("benchmarks.build_context_sensitivity_logprob_pairs")
+
+    class MismatchScorer:
+        def score(self, prompt, completion):
+            if prompt.startswith("Evidence:"):
+                return (pair_builder.TokenLogprob(token=" B", token_id=2, logprob=-1.0),)
+            return (pair_builder.TokenLogprob(token=" A", token_id=1, logprob=-1.0),)
+
+    prepared = pair_builder.PreparedLogprobRecord(
+        run="synthetic",
+        record_index=0,
+        completion="A",
+        baseline_prompt="Claim: ",
+        context_prompt="Evidence:\nB\n\nClaim: ",
+        evidence_texts=("B",),
+    )
+
+    with pytest.raises(ValueError, match="token_id mismatch"):
+        pair_builder.build_paired_logprob_records((prepared,), MismatchScorer(), model_id="fake")
+
+
 def test_verifier_signal_features_extract_direct_world_model_ensemble_metadata():
     module = importlib.import_module("benchmarks.build_verifier_signal_score_dump")
 

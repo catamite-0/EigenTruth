@@ -6867,6 +6867,13 @@ python benchmarks/eval_verifier_ensemble.py \
   --verified-records-jsonl artifacts/verifier-signals/verified-records.jsonl \
   --json artifacts/verifier-signals/verifier-ensemble-report.json
 
+python benchmarks/build_context_sensitivity_logprob_pairs.py \
+  --records artifacts/verifier-signals/verified-records.jsonl \
+  --model-id Qwen/Qwen2.5-0.5B \
+  --run-name qwen-l80 \
+  --output artifacts/verifier-signals/paired-context-logprobs.jsonl \
+  --json artifacts/verifier-signals/paired-context-logprobs-report.json
+
 python benchmarks/enrich_context_sensitivity_sidecar.py \
   --verified-records-jsonl artifacts/verifier-signals/verified-records.jsonl \
   --paired-logprobs artifacts/verifier-signals/paired-context-logprobs.jsonl \
@@ -6891,10 +6898,13 @@ metadata includes explicit postcondition conflicts, it also emits
 `world_model_conflict`, `world_model_conflict_delta`, and the audit-oriented
 `world_model_trace_gap`, so simulator/model disagreement and expected-vs-actual
 world conflicts can be swept or fused under the same conformal calibration path.
-When an external model adapter has already computed paired no-context and
-evidence-context token log-probabilities, `enrich_context_sensitivity_sidecar.py`
-adds per-record `ContextSensitivityReport` payloads without depending on that
-model runtime. The score-dump converter then emits
+When `transformers` is installed via the optional HF extra,
+`build_context_sensitivity_logprob_pairs.py` can compute paired no-context and
+evidence-context token log-probabilities directly from the verified-record
+sidecar. Teams with their own model serving stack can instead emit the same
+paired-logprob JSONL schema. `enrich_context_sensitivity_sidecar.py` then adds
+per-record `ContextSensitivityReport` payloads without depending on that model
+runtime. The score-dump converter emits
 `context_sensitivity_flagged_rate`, `context_sensitivity_max_shift`,
 `context_sensitivity_mean_shift`, and `context_sensitivity_max_ratio` so
 evidence-context likelihood disagreements can be calibrated alongside geometry
