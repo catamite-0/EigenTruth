@@ -43635,6 +43635,149 @@ def test_audit_blind_spot_alignment_requests_outputs_fact_candidates(tmp_path):
     assert record.metadata["suite"] == "unit"
 
 
+def test_build_alignment_fact_review_corpus_filters_candidates(tmp_path):
+    module = importlib.import_module("benchmarks.build_alignment_fact_review_corpus")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    candidates_path = tmp_path / "structured-fact-candidates.jsonl"
+    corpus_path = tmp_path / "alignment-fact-review-corpus.json"
+    report_path = tmp_path / "alignment-fact-review-report.json"
+    records_path = tmp_path / "alignment-fact-review-records.jsonl"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    candidates = [
+        {
+            "candidate_id": "fact:alpha-population",
+            "request_id": "align:record-1:1",
+            "target_id": "record-1",
+            "subject": "Alpha",
+            "property_hint": "population:P1082",
+            "value": "123",
+            "model_answer": "100",
+            "question": "What is the population of Alpha?",
+            "evidence_span": "Alpha had Population, total of 123 in 2024.",
+            "evidence_source": "worldbank:alpha:2024",
+            "source_family": "official_statistics",
+            "provider": "worldbank",
+            "confidence": 0.91,
+            "usage": "structured_fact_review_only",
+        },
+        {
+            "candidate_id": "fact:alpha-population",
+            "request_id": "align:record-1:1",
+            "target_id": "record-1",
+            "subject": "Alpha",
+            "property_hint": "population:P1082",
+            "value": "123",
+            "model_answer": "100",
+            "question": "What is the population of Alpha?",
+            "evidence_span": "Alpha had Population, total of 123 in 2024.",
+            "evidence_source": "worldbank:alpha:2024",
+            "source_family": "official_statistics",
+            "provider": "worldbank",
+            "confidence": 0.91,
+            "usage": "structured_fact_review_only",
+        },
+        {
+            "candidate_id": "fact:answer-echo",
+            "request_id": "align:record-2:1",
+            "target_id": "record-2",
+            "subject": "Elvis",
+            "property_hint": "description",
+            "value": "Presley",
+            "model_answer": "Presley",
+            "question": "His name is Elvis what?",
+            "evidence_span": "Elvis Presley is described as American singer and actor.",
+            "evidence_source": "wikidata:Q303:description",
+            "source_family": "reference",
+            "provider": "source_family_catalog",
+            "confidence": 0.99,
+            "usage": "structured_fact_review_only",
+        },
+        {
+            "candidate_id": "fact:missing-evidence",
+            "request_id": "align:record-3:1",
+            "target_id": "record-3",
+            "subject": "Gamma",
+            "property_hint": "instance_of:P31",
+            "value": "fictional town",
+            "model_answer": "planet",
+            "question": "What is Gamma?",
+            "evidence_span": "",
+            "evidence_source": "wikidata:Q999:P31",
+            "source_family": "reference",
+            "provider": "source_family_catalog",
+            "confidence": 0.77,
+            "usage": "structured_fact_review_only",
+        },
+        {
+            "candidate_id": "fact:non-review",
+            "subject": "Delta",
+            "property_hint": "country:P17",
+            "value": "Canada",
+            "model_answer": "France",
+            "evidence_span": "Delta is in Canada.",
+            "evidence_source": "wikidata:Q1:P17",
+            "usage": "verifier_evidence",
+        },
+    ]
+    candidates_path.write_text(
+        "\n".join(json.dumps(item) for item in candidates) + "\n",
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        candidates_path=candidates_path,
+        output_path=corpus_path,
+        report_json_path=report_path,
+        records_jsonl_path=records_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="alignment-fact-review-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:alignment-fact-review-unit:0.1"
+    )
+    saved = json.loads(corpus_path.read_text(encoding="utf-8"))
+    records = [
+        json.loads(line)
+        for line in records_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    metadata = saved["documents"][0]["metadata"]
+
+    assert payload["report"]["workflow"] == "alignment_fact_review_corpus_builder"
+    assert saved["status"] == "ready_for_review"
+    assert saved["corpus_type"] == "alignment_structured_fact_review_corpus"
+    assert saved["summary"]["input_candidate_count"] == 5
+    assert saved["summary"]["unique_candidate_count"] == 4
+    assert saved["summary"]["accepted_document_count"] == 1
+    assert saved["summary"]["skipped"]["duplicate_candidate"] == 1
+    assert saved["summary"]["skipped"]["answer_value_matches_model_answer"] == 1
+    assert saved["summary"]["skipped"]["missing_required_fields"] == 1
+    assert saved["summary"]["skipped"]["non_review_usage"] == 1
+    assert saved["label_usage"]["candidate_facts_are_verifier_evidence"] is False
+    assert saved["documents"][0]["question"] == (
+        "What does the aligned evidence say is the population for Alpha?"
+    )
+    assert saved["documents"][0]["answer"] == "123"
+    assert metadata["statement_property"] == "P1082"
+    assert metadata["statement_property_label"] == "population"
+    assert metadata["review_required"] is True
+    assert metadata["route_hints"] == ["structured_qa", "alignment_fact_review"]
+    assert "model_answer" not in metadata
+    assert "request_id" not in metadata
+    assert "target_id" not in metadata
+    assert "label" not in metadata
+    assert [item["decision"] for item in records].count("accepted") == 1
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "alignment_fact_review_corpus_builder"
+    assert record.metadata["document_count"] == 1
+    assert record.metadata["suite"] == "unit"
+
+
 def test_fetch_blind_spot_wikidata_evidence_writes_clean_source_docs(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.fetch_blind_spot_wikidata_evidence")
     registry_module = importlib.import_module("eigentruth.registry")

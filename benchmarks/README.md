@@ -1712,6 +1712,36 @@ main remaining blocker is `property_only_alignment` (`46` requests), followed by
 This says the next lift is subject/entity binding and value extraction from
 broad source documents, not more generic source-family acquisition.
 
+## `build_alignment_fact_review_corpus.py`
+
+Deduplicates `structured_fact_review_only` candidates from the alignment audit,
+applies fail-closed subject/value/property checks, and emits a review-only
+structured QA corpus. The output is deliberately scoped as a fact-review input:
+it strips request ids, target ids, labels, and model answers from corpus
+metadata, records accepted/skipped decisions in a sidecar JSONL, and does not
+promote a verifier route.
+
+```bash
+OUT=artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-fact-review-corpus-v1
+
+python benchmarks/build_alignment_fact_review_corpus.py \
+  --candidates artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-audit-v1/structured-fact-candidates.jsonl \
+  --output "$OUT/alignment-fact-review-corpus.json" \
+  --report-json "$OUT/alignment-fact-review-report.json" \
+  --records-jsonl "$OUT/alignment-fact-review-records.jsonl" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-seeded-news-alignment-fact-review-corpus \
+  --version 0.1
+```
+
+The registered v4 review corpus accepts `6/96` candidates after deduplication
+and quality gates. The dominant skip reasons are subject/evidence-span mismatch
+(`48`), duplicate candidates (`21`), generic extracted values (`12`), and
+answer-value/model-answer matches (`9`). This keeps the next loop precise: the
+six rows can be manually or route-specifically reviewed, while the skipped rows
+point back to subject binding and value extraction improvements.
+
 ## `fetch_blind_spot_wikidata_evidence.py`
 
 Fetches CC0 Wikidata source documents for the collection corpus. Request and

@@ -1231,6 +1231,23 @@
       "name": "smollm2-l80-frontier-v4-unresolved-seeded-news-alignment-audit",
       "path": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-audit-v1/alignment-audit.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-fact-review-corpus-v1/artifact-manifest.json",
+        "corpus_type": "alignment_structured_fact_review_corpus",
+        "document_count": 6,
+        "input_candidate_count": 96,
+        "model": "smollm2-l80",
+        "source": "frontier-v4",
+        "status": "ready_for_review",
+        "unique_candidate_count": 32,
+        "workflow": "alignment_fact_review_corpus_builder"
+      },
+      "name": "smollm2-l80-frontier-v4-unresolved-seeded-news-alignment-fact-review-corpus",
+      "path": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-fact-review-corpus-v1/alignment-fact-review-report.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

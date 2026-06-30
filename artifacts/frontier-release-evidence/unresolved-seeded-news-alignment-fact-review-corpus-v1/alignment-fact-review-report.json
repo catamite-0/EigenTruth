@@ -1,0 +1,52 @@
+{
+  "config": {
+    "min_confidence": 0.0
+  },
+  "metadata": {
+    "model": "smollm2-l80",
+    "source": "frontier-v4"
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-fact-review-corpus-v1/artifact-manifest.json",
+    "records_jsonl": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-fact-review-corpus-v1/alignment-fact-review-records.jsonl",
+    "report": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-fact-review-corpus-v1/alignment-fact-review-report.json",
+    "review_corpus": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-fact-review-corpus-v1/alignment-fact-review-corpus.json"
+  },
+  "schema_version": 1,
+  "scope": "Converts alignment-audit structured_fact_review_only candidates into review-gated QA rows. It does not promote verifier evidence.",
+  "source": {
+    "structured_fact_candidates": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-audit-v1/structured-fact-candidates.jsonl"
+  },
+  "status": "ready_for_review",
+  "summary": {
+    "accepted_document_count": 6,
+    "by_property_hint": {
+      "country:P17": 1,
+      "description": 4,
+      "official_website:P856": 1
+    },
+    "by_provider": {
+      "source_family_catalog": 6
+    },
+    "by_source_family": {
+      "reference": 6
+    },
+    "input_candidate_count": 96,
+    "skipped": {
+      "answer_value_matches_model_answer": 9,
+      "duplicate_candidate": 21,
+      "generic_value": 12,
+      "invalid_row": 0,
+      "low_confidence": 0,
+      "missing_required_fields": 0,
+      "non_review_usage": 0,
+      "property_value_invalid": 0,
+      "subject_not_in_evidence_span": 48,
+      "value_equals_subject": 0,
+      "value_not_in_evidence_span": 0
+    },
+    "skipped_count": 90,
+    "unique_candidate_count": 32
+  },
+  "workflow": "alignment_fact_review_corpus_builder"
+}
