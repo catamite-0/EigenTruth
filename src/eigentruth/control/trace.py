@@ -281,6 +281,9 @@ class ProductTrace:
             "context_sensitivity": _context_sensitivity_summary_from_results(
                 prepared.verification_results,
             ),
+            "counterfactual_robustness": _counterfactual_robustness_summary_from_results(
+                prepared.verification_results,
+            ),
             "runtime": _runtime_summary_from_payload(prepared.runtime_trace),
             "cache": _cache_summary_from_metadata(prepared.metadata),
             "verification_stage": _verification_stage_summary_from_payload(
@@ -389,6 +392,12 @@ class ProductTrace:
     def context_sensitivity_summary(self) -> dict[str, Any]:
         """Summarize evidence-context sensitivity signals recorded on verifier results."""
         return _context_sensitivity_summary_from_results(
+            tuple(_verification_result_to_dict(result) for result in self.verification_results)
+        )
+
+    def counterfactual_robustness_summary(self) -> dict[str, Any]:
+        """Summarize counterfactual perturbation audit signals on verifier results."""
+        return _counterfactual_robustness_summary_from_results(
             tuple(_verification_result_to_dict(result) for result in self.verification_results)
         )
 
@@ -1022,6 +1031,230 @@ def _context_sensitivity_source(metadata: Mapping[str, Any]) -> str | None:
     if raw is None:
         return None
     return str(raw)
+
+
+def _counterfactual_robustness_summary_from_results(
+    results: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    counts_by_status: dict[str, int] = {}
+    counts_by_source: dict[str, int] = {}
+    counts_by_probe_type: dict[str, int] = {}
+    counts_by_failure_reason: dict[str, int] = {}
+    counterfactual_result_total = 0
+    counterfactual_probe_total = 0.0
+    passed_count = 0.0
+    failed_count = 0.0
+    expected_flip_count = 0.0
+    flip_success_count = 0.0
+    false_invariance_count = 0.0
+    expected_stable_count = 0.0
+    stable_success_count = 0.0
+    unexpected_flip_count = 0.0
+    trace_gap_count = 0
+
+    for result in results:
+        metadata = _mapping(result.get("metadata"))
+        if not _is_counterfactual_robustness_result(metadata):
+            continue
+        counterfactual_result_total += 1
+        _increment_count(counts_by_status, result.get("status", "unknown"))
+        _increment_count(counts_by_source, _counterfactual_source(metadata))
+        summary = _counterfactual_result_summary(metadata)
+        if not summary:
+            trace_gap_count += 1
+            summary = _counterfactual_flat_summary(metadata)
+            if not summary:
+                continue
+
+        record_count = _first_non_negative_float(
+            summary.get("record_count"),
+            summary.get("probe_count"),
+            summary.get("counterfactual_probe_count"),
+        )
+        if record_count is None:
+            record_count = 1.0
+        counterfactual_probe_total += record_count
+        passed_count += _first_non_negative_float(
+            summary.get("passed_count"),
+            summary.get("pass_count"),
+        ) or _count_from_rate(summary.get("pass_rate"), record_count)
+        failed_count += _first_non_negative_float(
+            summary.get("failed_count"),
+            summary.get("failure_count"),
+        ) or _count_from_rate(summary.get("failure_rate"), record_count)
+        expected_flip = _first_non_negative_float(
+            summary.get("expected_flip_count"),
+            summary.get("flip_expected_count"),
+        )
+        flip_success = _first_non_negative_float(
+            summary.get("flip_success_count"),
+            summary.get("status_changed_count"),
+        )
+        false_invariance = _first_non_negative_float(summary.get("false_invariance_count"))
+        if false_invariance is None:
+            false_invariance = _count_from_rate(summary.get("false_invariance_rate"), expected_flip)
+        if expected_flip is None and flip_success is not None and false_invariance is not None:
+            expected_flip = flip_success + false_invariance
+        expected_flip_count += expected_flip or 0.0
+        flip_success_count += flip_success or 0.0
+        false_invariance_count += false_invariance or 0.0
+        expected_stable = _first_non_negative_float(summary.get("expected_stable_count"))
+        stable_success = _first_non_negative_float(summary.get("stable_success_count"))
+        unexpected_flip = _first_non_negative_float(summary.get("unexpected_flip_count"))
+        if unexpected_flip is None:
+            unexpected_flip = _count_from_rate(summary.get("unexpected_flip_rate"), expected_stable)
+        if expected_stable is None and stable_success is not None and unexpected_flip is not None:
+            expected_stable = stable_success + unexpected_flip
+        expected_stable_count += expected_stable or 0.0
+        stable_success_count += stable_success or 0.0
+        unexpected_flip_count += unexpected_flip or 0.0
+        _merge_counts(counts_by_probe_type, _mapping(summary.get("by_probe_type")))
+        _merge_counts(counts_by_failure_reason, _mapping(summary.get("failure_reasons")))
+        _merge_counts(counts_by_failure_reason, _mapping(summary.get("counts_by_failure_reason")))
+        failure_reason = metadata.get("counterfactual_failure_reason")
+        if failure_reason is not None:
+            _increment_count(counts_by_failure_reason, failure_reason)
+        probe_type = metadata.get("counterfactual_probe_type")
+        if probe_type is not None:
+            _increment_count(counts_by_probe_type, probe_type)
+
+    if failed_count == 0.0 and counterfactual_probe_total:
+        failed_count = max(counterfactual_probe_total - passed_count, 0.0)
+    return {
+        "total": len(results),
+        "counterfactual_result_total": counterfactual_result_total,
+        "counterfactual_probe_total": counterfactual_probe_total,
+        "coverage_rate": _safe_div(counterfactual_result_total, len(results)) or 0.0,
+        "pass_rate": _safe_div(passed_count, counterfactual_probe_total) or 0.0,
+        "passed_count": passed_count,
+        "failed_count": failed_count,
+        "expected_flip_count": expected_flip_count,
+        "flip_success_count": flip_success_count,
+        "flip_success_rate": _safe_div(flip_success_count, expected_flip_count) or 0.0,
+        "false_invariance_count": false_invariance_count,
+        "false_invariance_rate": _safe_div(
+            false_invariance_count,
+            expected_flip_count,
+        ) or 0.0,
+        "expected_stable_count": expected_stable_count,
+        "stable_success_count": stable_success_count,
+        "stable_success_rate": _safe_div(stable_success_count, expected_stable_count) or 0.0,
+        "unexpected_flip_count": unexpected_flip_count,
+        "unexpected_flip_rate": _safe_div(
+            unexpected_flip_count,
+            expected_stable_count,
+        ) or 0.0,
+        "trace_gap_count": trace_gap_count,
+        "trace_gap_rate": _safe_div(trace_gap_count, counterfactual_result_total) or 0.0,
+        "counts_by_status": counts_by_status,
+        "counts_by_source": counts_by_source,
+        "counts_by_probe_type": counts_by_probe_type,
+        "counts_by_failure_reason": counts_by_failure_reason,
+        "traceable": counterfactual_result_total > 0 and trace_gap_count == 0,
+    }
+
+
+def _is_counterfactual_robustness_result(metadata: Mapping[str, Any]) -> bool:
+    if any(key in metadata for key in _COUNTERFACTUAL_ROBUSTNESS_TRACE_METADATA_KEYS):
+        return True
+    counterfactual = _mapping(metadata.get("counterfactual_verification"))
+    if counterfactual.get("workflow") == "counterfactual_verification_audit":
+        return True
+    if counterfactual.get("summary") is not None:
+        return True
+    return False
+
+
+_COUNTERFACTUAL_ROBUSTNESS_TRACE_METADATA_KEYS = (
+    "counterfactual_verification",
+    "counterfactual_verification_summary",
+    "counterfactual_probe",
+    "counterfactual_probe_type",
+    "counterfactual_status_changed",
+    "counterfactual_passed",
+    "counterfactual_false_invariance",
+    "counterfactual_failure_reason",
+)
+
+
+def _counterfactual_result_summary(metadata: Mapping[str, Any]) -> Mapping[str, Any]:
+    counterfactual = _mapping(metadata.get("counterfactual_verification"))
+    summary = _mapping(counterfactual.get("summary"))
+    if summary:
+        return summary
+    summary = _mapping(metadata.get("counterfactual_verification_summary"))
+    if summary:
+        return summary
+    if counterfactual.get("workflow") == "counterfactual_verification_audit":
+        return _mapping(counterfactual)
+    return _counterfactual_flat_summary(metadata)
+
+
+def _counterfactual_flat_summary(metadata: Mapping[str, Any]) -> dict[str, Any]:
+    status_changed = _optional_bool(metadata.get("counterfactual_status_changed"))
+    expected_flip = _optional_bool(metadata.get("counterfactual_expected_flip"))
+    passed = _optional_bool(metadata.get("counterfactual_passed"))
+    false_invariance = _optional_bool(metadata.get("counterfactual_false_invariance"))
+    unexpected_flip = _optional_bool(metadata.get("counterfactual_unexpected_flip"))
+    if not any(
+        value is not None
+        for value in (status_changed, expected_flip, passed, false_invariance, unexpected_flip)
+    ):
+        return {}
+    expected_flip = True if expected_flip is None else expected_flip
+    false_invariance = (
+        expected_flip and status_changed is False
+        if false_invariance is None and status_changed is not None
+        else false_invariance
+    )
+    unexpected_flip = (
+        (not expected_flip) and status_changed is True
+        if unexpected_flip is None and status_changed is not None
+        else unexpected_flip
+    )
+    if passed is None and status_changed is not None:
+        passed = status_changed is True if expected_flip else status_changed is False
+    return {
+        "record_count": 1,
+        "passed_count": 1 if passed else 0,
+        "failed_count": 0 if passed else 1,
+        "expected_flip_count": 1 if expected_flip else 0,
+        "flip_success_count": 1 if expected_flip and status_changed else 0,
+        "false_invariance_count": 1 if false_invariance else 0,
+        "expected_stable_count": 0 if expected_flip else 1,
+        "stable_success_count": 1 if (not expected_flip) and status_changed is False else 0,
+        "unexpected_flip_count": 1 if unexpected_flip else 0,
+    }
+
+
+def _counterfactual_source(metadata: Mapping[str, Any]) -> str | None:
+    counterfactual = _mapping(metadata.get("counterfactual_verification"))
+    counterfactual_metadata = _mapping(counterfactual.get("metadata"))
+    raw = _first_present(
+        counterfactual_metadata.get("adapter"),
+        counterfactual_metadata.get("verifier"),
+        metadata.get("counterfactual_source"),
+        metadata.get("selected_verifier"),
+        metadata.get("verifier"),
+    )
+    if raw is None:
+        return None
+    return str(raw)
+
+
+def _first_non_negative_float(*values: Any) -> float | None:
+    for value in values:
+        numeric = _finite_float(value)
+        if numeric is not None and numeric >= 0.0:
+            return numeric
+    return None
+
+
+def _count_from_rate(rate: Any, denominator: float | None) -> float:
+    numeric_rate = _finite_float(rate)
+    if numeric_rate is None or denominator is None:
+        return 0.0
+    return max(numeric_rate, 0.0) * max(float(denominator), 0.0)
 
 
 def _runtime_summary_from_payload(payload: Mapping[str, Any] | None) -> dict[str, Any]:
@@ -2238,6 +2471,17 @@ def _increment_count(counts: dict[str, int], value: Any) -> None:
     if not text:
         return
     counts[text] = counts.get(text, 0) + 1
+
+
+def _merge_counts(target: dict[str, int], source: Mapping[str, Any]) -> None:
+    for raw_key, raw_value in source.items():
+        key = str(raw_key).strip()
+        if not key:
+            continue
+        count = _non_negative_int(raw_value)
+        if count is None:
+            continue
+        target[key] = target.get(key, 0) + count
 
 
 def _truthy_flag(value: Any) -> bool:

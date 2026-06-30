@@ -1892,6 +1892,81 @@ def test_product_trace_context_sensitivity_summary_feeds_runtime_metrics():
     json.dumps(bounded)
 
 
+def test_product_trace_counterfactual_robustness_summary_feeds_runtime_metrics():
+    trace = ProductTrace(
+        verification_results=(
+            VerificationResult(
+                status=VerificationStatus.REFUTED,
+                confidence=0.77,
+                metadata={
+                    "verifier": "structured_qa",
+                    "counterfactual_verification": {
+                        "workflow": "counterfactual_verification_audit",
+                        "summary": {
+                            "record_count": 3,
+                            "passed_count": 2,
+                            "failed_count": 1,
+                            "expected_flip_count": 3,
+                            "flip_success_count": 2,
+                            "false_invariance_count": 1,
+                            "by_probe_type": {"entity_swap": 2, "quantity": 1},
+                            "counts_by_failure_reason": {"status_did_not_flip": 1},
+                        },
+                        "metadata": {"adapter": "structured-qa-counterfactual"},
+                    },
+                },
+            ),
+            VerificationResult(
+                status=VerificationStatus.SUPPORTED,
+                confidence=0.91,
+                metadata={
+                    "selected_verifier": "structured_fact",
+                    "counterfactual_probe_type": "year",
+                    "counterfactual_expected_flip": True,
+                    "counterfactual_status_changed": False,
+                    "counterfactual_passed": False,
+                    "counterfactual_failure_reason": "status_did_not_flip",
+                },
+            ),
+            VerificationResult(status=VerificationStatus.SUPPORTED, confidence=0.8),
+        )
+    )
+
+    summary = trace.counterfactual_robustness_summary()
+    bounded = trace.to_bounded_dict()
+    metrics = product_runtime_metrics(trace)
+    bounded_metrics = product_runtime_metrics(bounded)
+
+    assert summary["total"] == 3
+    assert summary["counterfactual_result_total"] == 2
+    assert summary["counterfactual_probe_total"] == pytest.approx(4.0)
+    assert summary["coverage_rate"] == pytest.approx(2 / 3)
+    assert summary["pass_rate"] == pytest.approx(0.5)
+    assert summary["false_invariance_count"] == pytest.approx(2.0)
+    assert summary["false_invariance_rate"] == pytest.approx(0.5)
+    assert summary["flip_success_rate"] == pytest.approx(0.5)
+    assert summary["counts_by_source"] == {
+        "structured-qa-counterfactual": 1,
+        "structured_fact": 1,
+    }
+    assert summary["counts_by_probe_type"] == {"entity_swap": 2, "quantity": 1, "year": 1}
+    assert summary["counts_by_failure_reason"] == {"status_did_not_flip": 2}
+    assert bounded["summaries"]["counterfactual_robustness"]["counterfactual_result_total"] == 2
+    assert metrics["counterfactual_robustness_source"] == "full_trace"
+    assert metrics["counterfactual_robustness_pass_rate"] == pytest.approx(0.5)
+    assert metrics["counterfactual_robustness_counts_by_probe_type"] == {
+        "entity_swap": 2,
+        "quantity": 1,
+        "year": 1,
+    }
+    assert bounded_metrics["counterfactual_robustness_source"] == "bounded_summary"
+    assert bounded_metrics["counterfactual_robustness_false_invariance_rate"] == (
+        pytest.approx(0.5)
+    )
+    json.dumps(summary)
+    json.dumps(bounded)
+
+
 def test_product_trace_verification_route_cost_summary_matches_benchmark_fields():
     trace = ProductTrace(
         verification_results=(

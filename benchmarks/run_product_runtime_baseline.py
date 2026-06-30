@@ -1179,6 +1179,70 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         "context_sensitivity_counts_by_status": dict(
             _mapping(metrics.get("context_sensitivity_counts_by_status"))
         ),
+        "counterfactual_robustness_summary": dict(
+            _mapping(metrics.get("counterfactual_robustness_summary"))
+        ),
+        "counterfactual_robustness_source": metrics.get("counterfactual_robustness_source"),
+        "counterfactual_robustness_result_total": metrics.get(
+            "counterfactual_robustness_result_total"
+        ),
+        "counterfactual_robustness_probe_total": metrics.get(
+            "counterfactual_robustness_probe_total"
+        ),
+        "counterfactual_robustness_coverage_rate": metrics.get(
+            "counterfactual_robustness_coverage_rate"
+        ),
+        "counterfactual_robustness_pass_rate": metrics.get(
+            "counterfactual_robustness_pass_rate"
+        ),
+        "counterfactual_robustness_passed_count": metrics.get(
+            "counterfactual_robustness_passed_count"
+        ),
+        "counterfactual_robustness_failed_count": metrics.get(
+            "counterfactual_robustness_failed_count"
+        ),
+        "counterfactual_robustness_expected_flip_count": metrics.get(
+            "counterfactual_robustness_expected_flip_count"
+        ),
+        "counterfactual_robustness_flip_success_count": metrics.get(
+            "counterfactual_robustness_flip_success_count"
+        ),
+        "counterfactual_robustness_flip_success_rate": metrics.get(
+            "counterfactual_robustness_flip_success_rate"
+        ),
+        "counterfactual_robustness_false_invariance_count": metrics.get(
+            "counterfactual_robustness_false_invariance_count"
+        ),
+        "counterfactual_robustness_false_invariance_rate": metrics.get(
+            "counterfactual_robustness_false_invariance_rate"
+        ),
+        "counterfactual_robustness_unexpected_flip_count": metrics.get(
+            "counterfactual_robustness_unexpected_flip_count"
+        ),
+        "counterfactual_robustness_unexpected_flip_rate": metrics.get(
+            "counterfactual_robustness_unexpected_flip_rate"
+        ),
+        "counterfactual_robustness_trace_gap_count": metrics.get(
+            "counterfactual_robustness_trace_gap_count"
+        ),
+        "counterfactual_robustness_trace_gap_rate": metrics.get(
+            "counterfactual_robustness_trace_gap_rate"
+        ),
+        "counterfactual_robustness_traceable": metrics.get(
+            "counterfactual_robustness_traceable"
+        ),
+        "counterfactual_robustness_counts_by_source": dict(
+            _mapping(metrics.get("counterfactual_robustness_counts_by_source"))
+        ),
+        "counterfactual_robustness_counts_by_status": dict(
+            _mapping(metrics.get("counterfactual_robustness_counts_by_status"))
+        ),
+        "counterfactual_robustness_counts_by_probe_type": dict(
+            _mapping(metrics.get("counterfactual_robustness_counts_by_probe_type"))
+        ),
+        "counterfactual_robustness_counts_by_failure_reason": dict(
+            _mapping(metrics.get("counterfactual_robustness_counts_by_failure_reason"))
+        ),
         "final_answer_summary": dict(_mapping(metrics.get("final_answer_summary"))),
         "final_answer_available": bool(metrics.get("final_answer_available")),
         "final_answer_source": metrics.get("final_answer_source"),
@@ -1441,6 +1505,7 @@ def _aggregate_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "triple_coverage": _aggregate_triple_coverage(metrics),
         "world_model": _aggregate_world_model(metrics),
         "context_sensitivity": _aggregate_context_sensitivity(metrics),
+        "counterfactual_robustness": _aggregate_counterfactual_robustness(metrics),
         "final_answer": _aggregate_final_answer(metrics),
         "decision_sequence": _aggregate_decision_sequence(metrics),
         "promotion_contract": _aggregate_promotion_contract(metrics),
@@ -2591,6 +2656,104 @@ def _aggregate_context_sensitivity(metrics: Sequence[Mapping[str, Any]]) -> dict
         ),
         "per_trace_trace_gap_rate": _numeric_summary(
             item.get("context_sensitivity_trace_gap_rate") for item in metrics
+        ),
+    }
+
+
+def _aggregate_counterfactual_robustness(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    summaries = [_mapping(item.get("counterfactual_robustness_summary")) for item in metrics]
+    counterfactual_result_total = _sum_float(summaries, "counterfactual_result_total")
+    counterfactual_probe_total = _sum_float(summaries, "counterfactual_probe_total")
+    passed_count = _sum_float(summaries, "passed_count")
+    failed_count = _sum_float(summaries, "failed_count")
+    expected_flip_count = _sum_float(summaries, "expected_flip_count")
+    flip_success_count = _sum_float(summaries, "flip_success_count")
+    false_invariance_count = _sum_float(summaries, "false_invariance_count")
+    unexpected_flip_count = _sum_float(summaries, "unexpected_flip_count")
+    trace_gap_count = _sum_float(summaries, "trace_gap_count")
+    counts_by_status: dict[str, int] = {}
+    counts_by_source: dict[str, int] = {}
+    counts_by_probe_type: dict[str, int] = {}
+    counts_by_failure_reason: dict[str, int] = {}
+    for summary in summaries:
+        _merge_counts(counts_by_status, _mapping(summary.get("counts_by_status")))
+    for item in metrics:
+        _merge_counts(
+            counts_by_source,
+            _mapping(item.get("counterfactual_robustness_counts_by_source")),
+        )
+        _merge_counts(
+            counts_by_probe_type,
+            _mapping(item.get("counterfactual_robustness_counts_by_probe_type")),
+        )
+        _merge_counts(
+            counts_by_failure_reason,
+            _mapping(item.get("counterfactual_robustness_counts_by_failure_reason")),
+        )
+    participating_trace_count = sum(
+        1
+        for item in metrics
+        if (_finite_float(item.get("counterfactual_robustness_result_total")) or 0.0) > 0.0
+    )
+    traceable_trace_count = sum(
+        1 for item in metrics if item.get("counterfactual_robustness_traceable") is True
+    )
+    untraceable_trace_count = sum(
+        1
+        for item in metrics
+        if (_finite_float(item.get("counterfactual_robustness_result_total")) or 0.0) > 0.0
+        and item.get("counterfactual_robustness_traceable") is False
+    )
+    return {
+        "source_trace_count": len(metrics),
+        "summary_observations": sum(1 for summary in summaries if summary),
+        "source_counts": _counts(item.get("counterfactual_robustness_source") for item in metrics),
+        "participating_trace_count": participating_trace_count,
+        "participating_trace_rate": _safe_div(participating_trace_count, len(metrics)),
+        "counterfactual_result_total": counterfactual_result_total,
+        "counterfactual_probe_total": counterfactual_probe_total,
+        "coverage_rate": _safe_div(counterfactual_result_total, _sum_float(summaries, "total")),
+        "passed_count": passed_count,
+        "failed_count": failed_count,
+        "pass_rate": _safe_div(passed_count, counterfactual_probe_total),
+        "expected_flip_count": expected_flip_count,
+        "flip_success_count": flip_success_count,
+        "flip_success_rate": _safe_div(flip_success_count, expected_flip_count),
+        "false_invariance_count": false_invariance_count,
+        "false_invariance_rate": _safe_div(false_invariance_count, expected_flip_count),
+        "unexpected_flip_count": unexpected_flip_count,
+        "unexpected_flip_rate": _safe_div(
+            unexpected_flip_count,
+            _sum_float(summaries, "expected_stable_count"),
+        ),
+        "trace_gap_count": trace_gap_count,
+        "trace_gap_rate": _safe_div(trace_gap_count, counterfactual_result_total),
+        "traceable_trace_count": traceable_trace_count,
+        "untraceable_trace_count": untraceable_trace_count,
+        "counts_by_status": counts_by_status,
+        "counts_by_source": counts_by_source,
+        "counts_by_probe_type": counts_by_probe_type,
+        "counts_by_failure_reason": counts_by_failure_reason,
+        "per_trace_result_count": _numeric_summary(
+            item.get("counterfactual_robustness_result_total") for item in metrics
+        ),
+        "per_trace_probe_count": _numeric_summary(
+            item.get("counterfactual_robustness_probe_total") for item in metrics
+        ),
+        "per_trace_coverage_rate": _numeric_summary(
+            item.get("counterfactual_robustness_coverage_rate") for item in metrics
+        ),
+        "per_trace_pass_rate": _numeric_summary(
+            item.get("counterfactual_robustness_pass_rate") for item in metrics
+        ),
+        "per_trace_flip_success_rate": _numeric_summary(
+            item.get("counterfactual_robustness_flip_success_rate") for item in metrics
+        ),
+        "per_trace_false_invariance_rate": _numeric_summary(
+            item.get("counterfactual_robustness_false_invariance_rate") for item in metrics
+        ),
+        "per_trace_trace_gap_rate": _numeric_summary(
+            item.get("counterfactual_robustness_trace_gap_rate") for item in metrics
         ),
     }
 

@@ -34279,6 +34279,90 @@ def test_run_product_runtime_baseline_aggregates_trajectory_audit(tmp_path):
     assert record.metadata["trajectory_audit_logical_rate"] == pytest.approx(0.5)
 
 
+def test_run_product_runtime_baseline_aggregates_counterfactual_robustness(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    trace_a = tmp_path / "counterfactual-trace-a.json"
+    trace_b = tmp_path / "counterfactual-trace-b.json"
+    report_path = tmp_path / "product-runtime-baseline.json"
+    registry_path = tmp_path / "registry.json"
+    trace_a.write_text(
+        json.dumps({
+            "request_id": "cf-a",
+            "verification_results": [
+                {
+                    "status": "refuted",
+                    "metadata": {
+                        "counterfactual_verification": {
+                            "workflow": "counterfactual_verification_audit",
+                            "summary": {
+                                "record_count": 2,
+                                "passed_count": 1,
+                                "failed_count": 1,
+                                "expected_flip_count": 2,
+                                "flip_success_count": 1,
+                                "false_invariance_count": 1,
+                                "by_probe_type": {"entity_swap": 2},
+                                "counts_by_failure_reason": {"status_did_not_flip": 1},
+                            },
+                            "metadata": {"adapter": "structured-qa-counterfactual"},
+                        }
+                    },
+                },
+                {"status": "supported", "metadata": {}},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    trace_b.write_text(
+        json.dumps({
+            "request_id": "cf-b",
+            "verification_results": [
+                {
+                    "status": "supported",
+                    "metadata": {
+                        "selected_verifier": "structured_fact",
+                        "counterfactual_probe_type": "year",
+                        "counterfactual_expected_flip": True,
+                        "counterfactual_status_changed": False,
+                        "counterfactual_passed": False,
+                        "counterfactual_failure_reason": "status_did_not_flip",
+                    },
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.build_product_runtime_baseline(
+        module.ProductRuntimeBaselineConfig(
+            trace_paths=(trace_a, trace_b),
+            report_path=report_path,
+            registry_path=registry_path,
+            name="counterfactual-runtime",
+            version="0.1",
+        )
+    )
+
+    counterfactual = payload["summary"]["counterfactual_robustness"]
+
+    assert counterfactual["source_trace_count"] == 2
+    assert counterfactual["participating_trace_count"] == 2
+    assert counterfactual["participating_trace_rate"] == pytest.approx(1.0)
+    assert counterfactual["counterfactual_result_total"] == pytest.approx(2.0)
+    assert counterfactual["counterfactual_probe_total"] == pytest.approx(3.0)
+    assert counterfactual["coverage_rate"] == pytest.approx(2 / 3)
+    assert counterfactual["pass_rate"] == pytest.approx(1 / 3)
+    assert counterfactual["false_invariance_count"] == pytest.approx(2.0)
+    assert counterfactual["false_invariance_rate"] == pytest.approx(2 / 3)
+    assert counterfactual["flip_success_rate"] == pytest.approx(1 / 3)
+    assert counterfactual["counts_by_source"] == {
+        "structured-qa-counterfactual": 1,
+        "structured_fact": 1,
+    }
+    assert counterfactual["counts_by_probe_type"] == {"entity_swap": 2, "year": 1}
+    assert counterfactual["counts_by_failure_reason"] == {"status_did_not_flip": 2}
+
+
 def test_run_product_runtime_baseline_reports_optimization_advice(tmp_path):
     module = importlib.import_module("benchmarks.run_product_runtime_baseline")
     control_module = importlib.import_module("eigentruth.control")

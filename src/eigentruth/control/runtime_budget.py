@@ -492,6 +492,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
         metrics.update(_triple_coverage_metrics(trace))
         metrics.update(_world_model_metrics(trace))
         metrics.update(_context_sensitivity_metrics(trace))
+        metrics.update(_counterfactual_robustness_metrics(trace))
         metrics.update(_final_answer_metrics(trace))
         metrics.update(_promotion_contract_metrics(trace))
         return metrics
@@ -535,6 +536,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
     metrics.update(_triple_coverage_metrics(trace))
     metrics.update(_world_model_metrics(trace))
     metrics.update(_context_sensitivity_metrics(trace))
+    metrics.update(_counterfactual_robustness_metrics(trace))
     metrics.update(_final_answer_metrics(trace))
     metrics.update(_promotion_contract_metrics(trace))
     return metrics
@@ -1106,6 +1108,84 @@ def _metadata_context_sensitivity_summary(payload: Mapping[str, Any]) -> dict[st
     trace_corpus = _mapping(metadata.get("trace_corpus"))
     return _mapping(trace_corpus.get("context_sensitivity_summary")) or _mapping(
         metadata.get("context_sensitivity_summary")
+    )
+
+
+def _counterfactual_robustness_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:
+    if isinstance(trace, ProductTrace):
+        summary = trace.counterfactual_robustness_summary()
+        source = "full_trace"
+    else:
+        payload = dict(trace)
+        summary = _mapping(_mapping(payload.get("summaries")).get("counterfactual_robustness"))
+        if summary:
+            source = "bounded_summary"
+        else:
+            summary = _metadata_counterfactual_robustness_summary(payload)
+            if summary:
+                source = "metadata_summary"
+            else:
+                summary = ProductTrace(
+                    verification_results=tuple(_sequence(payload.get("verification_results", ())))
+                ).counterfactual_robustness_summary()
+                source = "full_trace"
+    return {
+        "counterfactual_robustness_summary": summary,
+        "counterfactual_robustness_source": source,
+        "counterfactual_robustness_result_total": _finite_float(
+            summary.get("counterfactual_result_total")
+        ),
+        "counterfactual_robustness_probe_total": _finite_float(
+            summary.get("counterfactual_probe_total")
+        ),
+        "counterfactual_robustness_coverage_rate": _finite_float(summary.get("coverage_rate")),
+        "counterfactual_robustness_pass_rate": _finite_float(summary.get("pass_rate")),
+        "counterfactual_robustness_passed_count": _finite_float(summary.get("passed_count")),
+        "counterfactual_robustness_failed_count": _finite_float(summary.get("failed_count")),
+        "counterfactual_robustness_expected_flip_count": _finite_float(
+            summary.get("expected_flip_count")
+        ),
+        "counterfactual_robustness_flip_success_count": _finite_float(
+            summary.get("flip_success_count")
+        ),
+        "counterfactual_robustness_flip_success_rate": _finite_float(
+            summary.get("flip_success_rate")
+        ),
+        "counterfactual_robustness_false_invariance_count": _finite_float(
+            summary.get("false_invariance_count")
+        ),
+        "counterfactual_robustness_false_invariance_rate": _finite_float(
+            summary.get("false_invariance_rate")
+        ),
+        "counterfactual_robustness_unexpected_flip_count": _finite_float(
+            summary.get("unexpected_flip_count")
+        ),
+        "counterfactual_robustness_unexpected_flip_rate": _finite_float(
+            summary.get("unexpected_flip_rate")
+        ),
+        "counterfactual_robustness_trace_gap_count": _finite_float(summary.get("trace_gap_count")),
+        "counterfactual_robustness_trace_gap_rate": _finite_float(summary.get("trace_gap_rate")),
+        "counterfactual_robustness_traceable": _optional_bool(summary.get("traceable")),
+        "counterfactual_robustness_counts_by_source": _int_mapping(
+            summary.get("counts_by_source")
+        ),
+        "counterfactual_robustness_counts_by_status": _int_mapping(
+            summary.get("counts_by_status")
+        ),
+        "counterfactual_robustness_counts_by_probe_type": _int_mapping(
+            summary.get("counts_by_probe_type")
+        ),
+        "counterfactual_robustness_counts_by_failure_reason": _int_mapping(
+            summary.get("counts_by_failure_reason")
+        ),
+    }
+
+
+def _metadata_counterfactual_robustness_summary(payload: Mapping[str, Any]) -> dict[str, Any]:
+    metadata = _mapping(payload.get("metadata"))
+    trace_corpus = _mapping(metadata.get("trace_corpus"))
+    return _mapping(trace_corpus.get("counterfactual_robustness_summary")) or _mapping(
+        metadata.get("counterfactual_robustness_summary")
     )
 
 

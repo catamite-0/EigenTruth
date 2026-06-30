@@ -135,6 +135,7 @@ Added dependency-free counterfactual verifier auditing:
 - `CounterfactualProbeGenerator` and `generate_counterfactual_probes(...)` can derive bounded metadata/entity/quantity/year/negation probes from existing claims so trace-side claim extraction can feed verifier perturbation audits without a model call.
 - The report records expected-status accuracy, flip success, false invariance, unexpected flips, per-probe failure reasons, and probe-type summaries.
 - `benchmarks/eval_counterfactual_verification.py` provides a local JSON/JSONL harness for `in_memory`, `structured_fact`, and `structured_qa` verifier audits, can derive answer-mismatch probes from supported/refuted verified-record pairs, and can write an artifact manifest plus local registry record for release evidence.
+- `ProductTrace.counterfactual_robustness_summary()` and `product_runtime_metrics(...)` now surface trace-level perturbation evidence from verifier-result metadata, so runtime baselines can aggregate counterfactual participation, pass rate, flip success, false invariance, trace gaps, probe types, and failure reasons separately from promotion-contract handoff reports.
 - This does not claim broad hallucination mitigation; it gives structured-fact, retrieval, world-model, or future external verifier routes a reproducible perturbation-sensitivity gate before their outputs are trusted by release workflows.
 
 Added the covered-facts KG correction handoff:
