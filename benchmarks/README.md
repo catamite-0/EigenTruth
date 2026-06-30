@@ -6890,6 +6890,22 @@ python benchmarks/build_verifier_signal_score_dump.py \
   --output-format jsonl
 ```
 
+The context-sensitivity subchain can also run as a single local workflow with
+manifest verification and optional registry metadata:
+
+```bash
+python benchmarks/run_context_sensitivity_workflow.py \
+  --scores artifacts/qwen05_truthfulqa_l80_scores_with_statements.json \
+  --verified-records-jsonl artifacts/verifier-signals/verified-records.jsonl \
+  --model-id Qwen/Qwen2.5-0.5B \
+  --run-name qwen-l80 \
+  --keep-signals truth_proj,maha_last,subspace_resid,eigenscore,nll_answer \
+  --output-dir artifacts/verifier-signals/context-sensitivity-workflow \
+  --registry-path artifacts/verifier-signals/registry.json \
+  --registry-name qwen-l80-context-sensitivity \
+  --registry-version 0.1
+```
+
 When verified records include state-transition prediction metadata or direct
 world-model ensemble agreement metadata, the same converter also emits
 world-model uncertainty columns such as `world_model_disagreement`,

@@ -45531,6 +45531,216 @@ def test_context_sensitivity_logprob_pair_builder_rejects_token_mismatch():
         pair_builder.build_paired_logprob_records((prepared,), MismatchScorer(), model_id="fake")
 
 
+def test_context_sensitivity_workflow_builds_manifest_registry_and_score_dump(tmp_path):
+    module = importlib.import_module("benchmarks.run_context_sensitivity_workflow")
+    pair_builder = importlib.import_module("benchmarks.build_context_sensitivity_logprob_pairs")
+    from eigentruth.eval.score_dump import load_score_dump
+    from eigentruth.registry import ArtifactRegistry
+
+    class FakeScorer:
+        def score(self, prompt, completion):
+            has_evidence = prompt.startswith("Evidence:")
+            return tuple(
+                pair_builder.TokenLogprob(
+                    token=f" {word}",
+                    token_id=index + 1,
+                    logprob=-2.0 if has_evidence else -1.0,
+                )
+                for index, word in enumerate(completion.split())
+            )
+
+    scores_path = tmp_path / "scores.json"
+    verified_records_path = tmp_path / "verified-records.jsonl"
+    output_dir = tmp_path / "context-workflow"
+    registry_path = tmp_path / "registry.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -2},
+            "labels": [0, 1],
+            "scores": {"truth_proj": [0.1, 0.9]},
+            "statements": [{"text": "supported"}, {"text": "refuted"}],
+        }),
+        encoding="utf-8",
+    )
+    records = [
+        {
+            "schema_version": 1,
+            "workflow": "verifier_ensemble_verified_record",
+            "record_index": 0,
+            "label": 0,
+            "score": 0.1,
+            "record": {
+                "claim": {"claim_id": "c0", "text": "Supported fact"},
+                "retrieval_hits": [{"text": "Contradicting fixture evidence."}],
+            },
+        },
+        {
+            "schema_version": 1,
+            "workflow": "verifier_ensemble_verified_record",
+            "record_index": 1,
+            "label": 1,
+            "score": 0.9,
+            "record": {
+                "claim": {"claim_id": "c1", "text": "Missing evidence fact"},
+                "retrieval_hits": [],
+            },
+        },
+    ]
+    verified_records_path.write_text(
+        "".join(json.dumps(record, sort_keys=True) + "\n" for record in records),
+        encoding="utf-8",
+    )
+
+    payload = module.run_context_sensitivity_workflow(
+        module.ContextSensitivityWorkflowConfig(
+            scores_path=scores_path,
+            verified_records_jsonl=verified_records_path,
+            output_dir=output_dir,
+            run_name="synthetic",
+            model_id="fake-causal-lm",
+            keep_signals=("truth_proj",),
+            ratio_threshold=1.5,
+            shift_threshold=0.5,
+            registry_path=registry_path,
+            registry_name="context-sensitivity-unit",
+            registry_version="test",
+            compact_json=True,
+        ),
+        scorer=FakeScorer(),
+    )
+    enhanced = load_score_dump(
+        output_dir / "context-sensitivity-enhanced-scores.manifest.json",
+        required_scores=("context_sensitivity_flagged_rate",),
+    )
+    registry_record = ArtifactRegistry.load_json(registry_path).get("report:context-sensitivity-unit:test")
+
+    assert payload["workflow"] == "context_sensitivity_workflow"
+    assert payload["manifest_verification"]["passed"] is True
+    assert payload["normalized_verified_records"] is True
+    assert payload["paired_summary"]["paired_logprob_record_count"] == 2
+    assert payload["paired_summary"]["missing_evidence_count"] == 1
+    assert payload["enriched_record_count"] == 2
+    assert payload["registry_record_key"] == "report:context-sensitivity-unit:test"
+    assert payload["signal_summary"]["context_sensitivity_flagged_rate"]["positive_count"] == 1
+    assert enhanced.scores["truth_proj"] == pytest.approx((0.1, 0.9))
+    assert enhanced.scores["context_sensitivity_flagged_rate"] == pytest.approx((1.0, 0.0))
+    assert registry_record.path == str(output_dir / "context-sensitivity-workflow.json")
+    assert registry_record.metadata["manifest_verified"] is True
+    assert registry_record.metadata["max_flagged_rate"] == pytest.approx(1.0)
+
+
+def test_context_sensitivity_workflow_limit_builds_aligned_inputs(tmp_path):
+    module = importlib.import_module("benchmarks.run_context_sensitivity_workflow")
+    pair_builder = importlib.import_module("benchmarks.build_context_sensitivity_logprob_pairs")
+    from eigentruth.eval.score_dump import load_score_dump
+    from eigentruth.registry import load_and_verify_artifact_manifest
+
+    class FakeScorer:
+        def score(self, prompt, completion):
+            has_evidence = prompt.startswith("Evidence:")
+            return tuple(
+                pair_builder.TokenLogprob(
+                    token=f" {word}",
+                    token_id=index + 1,
+                    logprob=-2.0 if has_evidence else -1.0,
+                )
+                for index, word in enumerate(completion.split())
+            )
+
+    scores_path = tmp_path / "scores.json"
+    verified_records_path = tmp_path / "verified-records.jsonl"
+    output_dir = tmp_path / "limited-context-workflow"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": 2},
+            "labels": [0, 1, 0],
+            "scores": {"truth_proj": [0.1, 0.9, 0.2], "maha_last": [0.0, 1.0, 0.3]},
+            "statements": [{"text": "first"}, {"text": "second"}, {"text": "third"}],
+            "sweep_scores": {"2": {"truth_proj": [0.1, 0.9, 0.2]}},
+        }),
+        encoding="utf-8",
+    )
+    records = [
+        {
+            "schema_version": 1,
+            "workflow": "verifier_ensemble_verified_record",
+            "run": "other",
+            "record_index": 0,
+            "label": 0,
+            "record": {"claim": {"text": "Other run"}, "retrieval_hits": []},
+        },
+        {
+            "schema_version": 1,
+            "workflow": "verifier_ensemble_verified_record",
+            "record_index": 0,
+            "label": 0,
+            "record": {
+                "claim": {"text": "First limited fact"},
+                "retrieval_hits": [{"content": "Evidence that should lower likelihood in the fake scorer."}],
+            },
+        },
+        {
+            "schema_version": 1,
+            "workflow": "verifier_ensemble_verified_record",
+            "record_index": 1,
+            "label": 1,
+            "record": {"claim": {"text": "Second limited fact"}, "retrieval_hits": []},
+        },
+        {
+            "schema_version": 1,
+            "workflow": "verifier_ensemble_verified_record",
+            "record_index": 2,
+            "label": 0,
+            "record": {
+                "claim": {"text": "Third fact"},
+                "retrieval_hits": [{"content": "This row is outside the limit."}],
+            },
+        },
+    ]
+    verified_records_path.write_text(
+        "".join(json.dumps(record, sort_keys=True) + "\n" for record in records),
+        encoding="utf-8",
+    )
+
+    payload = module.run_context_sensitivity_workflow(
+        module.ContextSensitivityWorkflowConfig(
+            scores_path=scores_path,
+            verified_records_jsonl=verified_records_path,
+            output_dir=output_dir,
+            run_name="synthetic",
+            model_id="fake-causal-lm",
+            keep_signals=("truth_proj", "maha_last"),
+            limit=2,
+            ratio_threshold=1.5,
+            shift_threshold=0.5,
+            compact_json=True,
+        ),
+        scorer=FakeScorer(),
+    )
+    limited_scores = load_score_dump(output_dir / "limited-scores.json")
+    enhanced = load_score_dump(
+        output_dir / "context-sensitivity-enhanced-scores.manifest.json",
+        required_scores=("context_sensitivity_flagged_rate",),
+    )
+    limited_records = [
+        json.loads(line)
+        for line in (output_dir / "limited-verified-records.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+    assert payload["limited_input"] is True
+    assert payload["manifest_verification"]["passed"] is True
+    assert load_and_verify_artifact_manifest(output_dir / "artifact-manifest.json").passed is True
+    assert limited_scores.labels == (0, 1)
+    assert limited_scores.scores["truth_proj"] == pytest.approx((0.1, 0.9))
+    assert limited_scores.sweep_scores["2"]["truth_proj"] == pytest.approx((0.1, 0.9))
+    assert [record["record_index"] for record in limited_records] == [0, 1]
+    assert [record["run"] for record in limited_records] == ["synthetic", "synthetic"]
+    assert enhanced.n_total == 2
+    assert enhanced.scores["maha_last"] == pytest.approx((0.0, 1.0))
+    assert enhanced.scores["context_sensitivity_flagged_rate"] == pytest.approx((1.0, 0.0))
+
+
 def test_verifier_signal_features_extract_direct_world_model_ensemble_metadata():
     module = importlib.import_module("benchmarks.build_verifier_signal_score_dump")
 
