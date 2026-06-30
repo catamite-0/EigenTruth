@@ -81,6 +81,13 @@ def _parse_int_csv(value: str | None, *, name: str) -> tuple[int, ...]:
     return values
 
 
+def _parse_float_csv(value: str | None, *, name: str) -> tuple[float, ...]:
+    values = tuple(float(part) for part in _parse_csv(value, name=name))
+    if len(set(values)) != len(values):
+        raise ValueError(f"{name} must not contain duplicate values.")
+    return values
+
+
 def _float_stats(values: Sequence[float | None]) -> dict[str, Any]:
     finite_values = [float(value) for value in values if value is not None]
     if not finite_values:
@@ -195,13 +202,34 @@ def _rank_abstention_reports(
     *,
     alpha: float,
     best_by: str,
+    prefer_release_gate_passing: bool = False,
+    min_conditional_correctness_lower_bound: float | None = None,
+    max_abstention_rate: float | None = None,
 ) -> ConformalAbstentionComparisonReport:
     if best_by not in ABSTENTION_COMPARISON_METRICS:
         raise ValueError(f"best_by must be one of {ABSTENTION_COMPARISON_METRICS}.")
+    if prefer_release_gate_passing and (
+        min_conditional_correctness_lower_bound is None or max_abstention_rate is None
+    ):
+        raise ValueError("release gate thresholds are required when gate-aware ranking is enabled.")
 
-    def sort_key(report: ConformalAbstentionReport) -> tuple[float, float, float, float, float, str]:
+    def release_gate_rank(report: ConformalAbstentionReport) -> int:
+        if not prefer_release_gate_passing:
+            return 0
+        assert min_conditional_correctness_lower_bound is not None
+        assert max_abstention_rate is not None
+        if (
+            report.conditional_correctness_lower_bound
+            >= min_conditional_correctness_lower_bound
+            and report.empirical_abstention_rate <= max_abstention_rate
+        ):
+            return 0
+        return 1
+
+    def sort_key(report: ConformalAbstentionReport) -> tuple[int, float, float, float, float, float, str]:
         score_name = "" if report.score_name is None else report.score_name
         return (
+            release_gate_rank(report),
             -_sortable_value(_candidate_metric(report, best_by)),
             -_sortable_value(_candidate_metric(report, "conditional_correctness_lower_bound")),
             -_sortable_value(_candidate_metric(report, "empirical_selective_accuracy")),
@@ -272,6 +300,33 @@ def _validate_fusion_config(
             )
 
 
+def _resolve_budget_target_rates(
+    *,
+    enforce_abstention_budget: bool,
+    abstention_budget_target_rate: float | None,
+    abstention_budget_target_rates: Sequence[float],
+    max_abstention_rate: float,
+) -> tuple[float | None, ...]:
+    if abstention_budget_target_rate is not None and abstention_budget_target_rates:
+        raise ValueError(
+            "use either abstention_budget_target_rate or abstention_budget_target_rates, not both."
+        )
+    if abstention_budget_target_rates and not enforce_abstention_budget:
+        raise ValueError("abstention_budget_target_rates requires enforce_abstention_budget.")
+    for rate in abstention_budget_target_rates:
+        if not (0.0 <= float(rate) <= 1.0):
+            raise ValueError("abstention_budget_target_rates values must be in [0, 1].")
+    if not enforce_abstention_budget:
+        return (None,)
+    if abstention_budget_target_rates:
+        return tuple(float(rate) for rate in abstention_budget_target_rates)
+    return (
+        float(max_abstention_rate)
+        if abstention_budget_target_rate is None
+        else float(abstention_budget_target_rate),
+    )
+
+
 def _abstention_budget_threshold(
     scores: Sequence[float],
     *,
@@ -320,6 +375,18 @@ def _abstention_threshold(
     if direction == "higher":
         return max(conformal_threshold, budget_threshold)
     return min(conformal_threshold, budget_threshold)
+
+
+def _budget_score_name(
+    score_name: str,
+    budget_max_abstention_rate: float | None,
+    *,
+    include_budget_suffix: bool,
+) -> str:
+    if not include_budget_suffix:
+        return score_name
+    label = "conformal" if budget_max_abstention_rate is None else f"{budget_max_abstention_rate:g}"
+    return f"{score_name}@budget={label}"
 
 
 def _fusion_name(prefix: str, method: str, signals: Sequence[str]) -> str:
@@ -473,7 +540,11 @@ def _seed_abstention_comparison(
     geometry_method: str = "mean_rank",
     uncertainty_method: str = "mean_rank",
     geometry_fusion_methods: Sequence[str] = (),
-    budget_max_abstention_rate: float | None = None,
+    budget_max_abstention_rates: Sequence[float | None] = (None,),
+    include_budget_suffix: bool = False,
+    prefer_release_gate_passing: bool = False,
+    min_conditional_correctness_lower_bound: float | None = None,
+    max_abstention_rate: float | None = None,
     seed: int,
     alpha: float,
     best_by: str,
@@ -483,27 +554,32 @@ def _seed_abstention_comparison(
         index for index in calibration_indices if int(labels[index]) == 0
     )
     reports: list[ConformalAbstentionReport] = []
-    for signal in signals:
-        signal_scores = scores[signal]
-        direction = directions[signal]
-        threshold = _abstention_threshold(
-            signal_scores,
-            conformal_calibration_indices=correct_calibration_indices,
-            budget_reference_indices=calibration_indices,
-            alpha=alpha,
-            direction=direction,
-            budget_max_abstention_rate=budget_max_abstention_rate,
-        )
-        reports.append(
-            evaluate_conformal_abstention(
-                _subset(signal_scores, evaluation_indices),
-                _correctness(labels, evaluation_indices),
-                threshold=threshold,
+    for budget_max_abstention_rate in budget_max_abstention_rates:
+        for signal in signals:
+            signal_scores = scores[signal]
+            direction = directions[signal]
+            threshold = _abstention_threshold(
+                signal_scores,
+                conformal_calibration_indices=correct_calibration_indices,
+                budget_reference_indices=calibration_indices,
                 alpha=alpha,
                 direction=direction,
-                score_name=signal,
+                budget_max_abstention_rate=budget_max_abstention_rate,
             )
-        )
+            reports.append(
+                evaluate_conformal_abstention(
+                    _subset(signal_scores, evaluation_indices),
+                    _correctness(labels, evaluation_indices),
+                    threshold=threshold,
+                    alpha=alpha,
+                    direction=direction,
+                    score_name=_budget_score_name(
+                        signal,
+                        budget_max_abstention_rate,
+                        include_budget_suffix=include_budget_suffix,
+                    ),
+                )
+            )
     fused_candidates = (
         *_rank_fusion_candidate_scores(
             scores,
@@ -523,20 +599,32 @@ def _seed_abstention_comparison(
             calibration_indices=correct_calibration_indices,
         ),
     )
-    for score_name, fused_scores in fused_candidates:
-        reports.append(
-            _evaluate_fused_candidate(
-                fused_scores,
-                labels=labels,
-                conformal_calibration_indices=correct_calibration_indices,
-                budget_reference_indices=calibration_indices,
-                evaluation_indices=evaluation_indices,
-                alpha=alpha,
-                score_name=score_name,
-                budget_max_abstention_rate=budget_max_abstention_rate,
+    for budget_max_abstention_rate in budget_max_abstention_rates:
+        for score_name, fused_scores in fused_candidates:
+            reports.append(
+                _evaluate_fused_candidate(
+                    fused_scores,
+                    labels=labels,
+                    conformal_calibration_indices=correct_calibration_indices,
+                    budget_reference_indices=calibration_indices,
+                    evaluation_indices=evaluation_indices,
+                    alpha=alpha,
+                    score_name=_budget_score_name(
+                        score_name,
+                        budget_max_abstention_rate,
+                        include_budget_suffix=include_budget_suffix,
+                    ),
+                    budget_max_abstention_rate=budget_max_abstention_rate,
+                )
             )
-        )
-    return _rank_abstention_reports(reports, alpha=alpha, best_by=best_by)
+    return _rank_abstention_reports(
+        reports,
+        alpha=alpha,
+        best_by=best_by,
+        prefer_release_gate_passing=prefer_release_gate_passing,
+        min_conditional_correctness_lower_bound=min_conditional_correctness_lower_bound,
+        max_abstention_rate=max_abstention_rate,
+    )
 
 
 def _candidate_summary(candidate: Mapping[str, Any] | None) -> dict[str, Any] | None:
@@ -806,6 +894,8 @@ def build_abstention_stability_report(
     geometry_fusion_methods: Sequence[str] = (),
     enforce_abstention_budget: bool = False,
     abstention_budget_target_rate: float | None = None,
+    abstention_budget_target_rates: Sequence[float] = (),
+    prefer_release_gate_passing: bool = False,
     alpha: float = 0.10,
     best_by: str = "conditional_correctness_lower_bound",
     direction_override: str | None = None,
@@ -866,13 +956,13 @@ def build_abstention_stability_report(
     }
     seed_reports = []
     seed_run_map: dict[str, list[dict[str, Any]]] = {name: [] for name, _ in score_dumps}
-    budget_max_abstention_rate = None
-    if enforce_abstention_budget:
-        budget_max_abstention_rate = (
-            float(max_abstention_rate)
-            if abstention_budget_target_rate is None
-            else float(abstention_budget_target_rate)
-        )
+    budget_max_abstention_rates = _resolve_budget_target_rates(
+        enforce_abstention_budget=enforce_abstention_budget,
+        abstention_budget_target_rate=abstention_budget_target_rate,
+        abstention_budget_target_rates=abstention_budget_target_rates,
+        max_abstention_rate=float(max_abstention_rate),
+    )
+    include_budget_suffix = len(budget_max_abstention_rates) > 1
     for seed in seeds:
         compact_runs = []
         for name, _ in score_dumps:
@@ -889,7 +979,13 @@ def build_abstention_stability_report(
                 geometry_method=geometry_method,
                 uncertainty_method=uncertainty_method,
                 geometry_fusion_methods=geometry_fusion_methods,
-                budget_max_abstention_rate=budget_max_abstention_rate,
+                budget_max_abstention_rates=budget_max_abstention_rates,
+                include_budget_suffix=include_budget_suffix,
+                prefer_release_gate_passing=prefer_release_gate_passing,
+                min_conditional_correctness_lower_bound=(
+                    min_conditional_correctness_lower_bound
+                ),
+                max_abstention_rate=max_abstention_rate,
                 seed=int(seed),
                 alpha=float(alpha),
                 best_by=best_by,
@@ -972,7 +1068,16 @@ def build_abstention_stability_report(
                     else "conformal"
                 ),
                 "enforce_abstention_budget": bool(enforce_abstention_budget),
-                "abstention_budget_target_rate": budget_max_abstention_rate,
+                "abstention_budget_target_rate": (
+                    budget_max_abstention_rates[0]
+                    if len(budget_max_abstention_rates) == 1
+                    else None
+                ),
+                "abstention_budget_target_rates": [
+                    None if rate is None else float(rate)
+                    for rate in budget_max_abstention_rates
+                ],
+                "prefer_release_gate_passing": bool(prefer_release_gate_passing),
                 "budget_reference": (
                     "seed_calibration_split_unlabeled_scores"
                     if enforce_abstention_budget
@@ -1143,6 +1248,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         args.geometry_fusion_methods,
         name="geometry_fusion_methods",
     )
+    abstention_budget_target_rates = (
+        ()
+        if args.abstention_budget_target_rates is None
+        else _parse_float_csv(
+            args.abstention_budget_target_rates,
+            name="abstention_budget_target_rates",
+        )
+    )
     seeds = _parse_int_csv(args.seeds, name="seeds")
     output_path = Path(args.json)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1163,6 +1276,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             if args.abstention_budget_target_rate is None
             else float(args.abstention_budget_target_rate)
         ),
+        abstention_budget_target_rates=abstention_budget_target_rates,
+        prefer_release_gate_passing=bool(args.prefer_release_gate_passing),
         alpha=float(args.alpha),
         best_by=str(args.best_by),
         direction_override=args.direction,
@@ -1266,6 +1381,22 @@ def main(argv: Sequence[str] | None = None) -> None:
         help=(
             "optional calibration-split abstention target used by "
             "--enforce-abstention-budget; defaults to --max-abstention-rate"
+        ),
+    )
+    parser.add_argument(
+        "--abstention-budget-target-rates",
+        default=None,
+        help=(
+            "optional comma-separated calibration-split abstention targets; "
+            "each target becomes a distinct candidate suffix when budget enforcement is enabled"
+        ),
+    )
+    parser.add_argument(
+        "--prefer-release-gate-passing",
+        action="store_true",
+        help=(
+            "rank candidates that satisfy the configured abstention release gate ahead of "
+            "higher-scoring but gate-failing candidates"
         ),
     )
     parser.add_argument("--best-by", choices=ABSTENTION_COMPARISON_METRICS,

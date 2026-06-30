@@ -4786,6 +4786,104 @@ def test_eval_abstention_stability_rank_calibrates_fusion_candidates(tmp_path):
     assert fused_frontier and fused_frontier[0]["target_passed"] is True
 
 
+def test_eval_abstention_stability_can_rank_gate_passing_candidates_first():
+    module = importlib.import_module("benchmarks.eval_abstention_stability")
+
+    blocked = module.ConformalAbstentionReport(
+        threshold=0.9,
+        alpha=0.2,
+        retained_count=4,
+        correct_retained_count=4,
+        abstained_count=6,
+        empirical_base_accuracy=0.5,
+        empirical_participation_rate=0.4,
+        empirical_abstention_rate=0.6,
+        empirical_selective_accuracy=1.0,
+        correct_retention_rate=1.0,
+        correct_retention_lower_bound=0.9,
+        participation_upper_bound=0.4,
+        conditional_correctness_lower_bound=0.95,
+        score_name="blocked_high_correctness",
+    )
+    passing = module.ConformalAbstentionReport(
+        threshold=0.7,
+        alpha=0.2,
+        retained_count=6,
+        correct_retained_count=5,
+        abstained_count=4,
+        empirical_base_accuracy=0.5,
+        empirical_participation_rate=0.6,
+        empirical_abstention_rate=0.4,
+        empirical_selective_accuracy=5 / 6,
+        correct_retention_rate=1.0,
+        correct_retention_lower_bound=0.8,
+        participation_upper_bound=0.6,
+        conditional_correctness_lower_bound=0.85,
+        score_name="passing_lower_correctness",
+    )
+
+    default = module._rank_abstention_reports(
+        (blocked, passing),
+        alpha=0.2,
+        best_by="conditional_correctness_lower_bound",
+    )
+    gate_aware = module._rank_abstention_reports(
+        (blocked, passing),
+        alpha=0.2,
+        best_by="conditional_correctness_lower_bound",
+        prefer_release_gate_passing=True,
+        min_conditional_correctness_lower_bound=0.8,
+        max_abstention_rate=0.5,
+    )
+
+    assert default.recommended.score_name == "blocked_high_correctness"
+    assert gate_aware.recommended.score_name == "passing_lower_correctness"
+
+
+def test_eval_abstention_stability_budget_target_sweep_names_candidates(tmp_path):
+    module = importlib.import_module("benchmarks.eval_abstention_stability")
+    from eigentruth.eval.score_dump import ScoreDump, write_score_dump_jsonl
+
+    scores_path = tmp_path / "scores.manifest.json"
+    labels = [0] * 20 + [1] * 12
+    dump = ScoreDump.from_mapping({
+        "config": {"model": "synthetic", "layer": -1},
+        "labels": labels,
+        "scores": {
+            "geometry": [index / 1000.0 for index in range(20)]
+            + [0.95 if index < 6 else 0.05 for index in range(12)],
+            "uncertainty": [index / 1000.0 for index in range(20)]
+            + [0.05 if index < 6 else 0.95 for index in range(12)],
+        },
+    })
+    write_score_dump_jsonl(dump, scores_path)
+
+    payload = module.build_abstention_stability_report(
+        (("synthetic", scores_path),),
+        signals=("geometry", "uncertainty"),
+        seeds=(0,),
+        geometry_signals=("geometry",),
+        uncertainty_signals=("uncertainty",),
+        geometry_fusion_methods=("noisy_or",),
+        enforce_abstention_budget=True,
+        abstention_budget_target_rates=(0.45, 0.5),
+        prefer_release_gate_passing=True,
+        alpha=0.5,
+        min_conditional_correctness_lower_bound=0.2,
+        max_abstention_rate=0.9,
+    )
+    candidates = payload["runs"][0]["seed_runs"][0]["candidates"]
+
+    assert payload["config"]["threshold_policy"]["abstention_budget_target_rate"] is None
+    assert payload["config"]["threshold_policy"]["abstention_budget_target_rates"] == [
+        0.45,
+        0.5,
+    ]
+    assert payload["config"]["threshold_policy"]["prefer_release_gate_passing"] is True
+    assert any("@budget=0.45" in candidate["score_name"] for candidate in candidates)
+    assert any("@budget=0.5" in candidate["score_name"] for candidate in candidates)
+
+
 def test_eval_abstention_stability_rejects_duplicate_score_names(tmp_path):
     module = importlib.import_module("benchmarks.eval_abstention_stability")
     scores_path = tmp_path / "scores.json"

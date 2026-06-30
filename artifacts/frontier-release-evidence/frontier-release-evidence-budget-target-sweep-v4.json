@@ -1,0 +1,609 @@
+{
+  "artifact_manifest_summary": {
+    "artifact_count": 13,
+    "directory_count": 0,
+    "file_count": 13,
+    "missing_count": 0
+  },
+  "citation_batch_decisions": [],
+  "config": {
+    "max_abstention_rate_mean": 0.5,
+    "max_detectability_entrenched_false_rate": 0.25,
+    "max_verified_false_alarm_mean": 0.02,
+    "min_abstention_conditional_correctness_lower_bound_mean": 0.8,
+    "min_abstention_pass_seed_rate": 1.0,
+    "min_verified_detection_mean": 0.2,
+    "min_verifier_beats_internal_seed_rate": 1.0,
+    "min_verifier_delta_detection_mean": 0.0,
+    "min_verifier_pass_seed_rate": 1.0
+  },
+  "decision": {
+    "abstention_track_status": "promote",
+    "base_abstention_track_status": "promote",
+    "base_detectability_track_status": "blocked",
+    "base_multiple_testing_track_status": "blocked",
+    "base_verifier_track_status": "promote",
+    "blocking_reasons": [],
+    "citation_batch_track_status": "not_required",
+    "detectability_track_status": "promote",
+    "frontier_rerun_rollup_promoted_tracks": [
+      "detectability",
+      "multiple_testing"
+    ],
+    "frontier_rerun_rollup_track_status": "promote",
+    "multiple_testing_track_status": "promote",
+    "status": "promote",
+    "verifier_track_status": "promote"
+  },
+  "evidence_summary": {
+    "abstention_signals": [
+      "truth_proj",
+      "subspace_resid",
+      "eigenscore",
+      "verifier_refuted",
+      "verifier_refute_confidence",
+      "verifier_not_supported",
+      "verifier_uncertainty"
+    ],
+    "abstention_track_status": "promote",
+    "base_abstention_track_status": "promote",
+    "base_detectability_track_status": "blocked",
+    "base_multiple_testing_track_status": "blocked",
+    "base_verifier_track_status": "promote",
+    "citation_batch_adapter_request_count": 0,
+    "citation_batch_adapter_result_count": 0,
+    "citation_batch_blocked_child_report_count": 0,
+    "citation_batch_blocked_rollups": [],
+    "citation_batch_child_manifest_failed_count": 0,
+    "citation_batch_child_report_count": 0,
+    "citation_batch_corpus_document_count": 0,
+    "citation_batch_duplicate_batch_count": 0,
+    "citation_batch_duplicate_batches": [],
+    "citation_batch_expected_batch_count": 0,
+    "citation_batch_expected_batch_ids": [],
+    "citation_batch_missing_expected_batch_count": 0,
+    "citation_batch_missing_expected_batches": [],
+    "citation_batch_observed_batch_count": 0,
+    "citation_batch_observed_batch_ids": [],
+    "citation_batch_promotion_ready_count": 0,
+    "citation_batch_rollup_count": 0,
+    "citation_batch_rollup_names": [],
+    "citation_batch_rollup_report_count": 0,
+    "citation_batch_source_document_count": 0,
+    "citation_batch_unexpected_batch_count": 0,
+    "citation_batch_unexpected_batches": [],
+    "detectability_report_count": 2,
+    "detectability_track_status": "promote",
+    "frontier_rerun_rollup_blocked_candidate_count": 1,
+    "frontier_rerun_rollup_blocked_names": [],
+    "frontier_rerun_rollup_candidate_count": 5,
+    "frontier_rerun_rollup_invalid_report_count": 0,
+    "frontier_rerun_rollup_missing_report_count": 0,
+    "frontier_rerun_rollup_names": [
+      "frontier-rerun-rollup",
+      "frontier-detectability-rerun-rollup"
+    ],
+    "frontier_rerun_rollup_observed_report_count": 5,
+    "frontier_rerun_rollup_promoted_tracks": [
+      "detectability",
+      "multiple_testing"
+    ],
+    "frontier_rerun_rollup_promotion_ready_count": 3,
+    "frontier_rerun_rollup_report_count": 2,
+    "frontier_rerun_rollup_tracks": [
+      "detectability",
+      "multiple_testing"
+    ],
+    "frontier_rerun_rollup_workflows": [
+      "frontier_detectability_evidence_rerun_rollup",
+      "frontier_multiple_testing_rerun_rollup"
+    ],
+    "frontier_workflow_report_count": 1,
+    "multiple_testing_blocked_cells": [],
+    "multiple_testing_cell_count": 0,
+    "multiple_testing_fail_count": 0,
+    "multiple_testing_failed_cells": [],
+    "multiple_testing_frontier_workflow_names": [
+      "truthfulqa-frontier-workflow"
+    ],
+    "multiple_testing_pass_count": 0,
+    "multiple_testing_signals": [],
+    "multiple_testing_track_status": "promote",
+    "multiple_testing_unknown_cells": [],
+    "multiple_testing_unknown_count": 0,
+    "run_count": 2,
+    "run_names": [
+      "qwen05-l80",
+      "smollm2-l80"
+    ],
+    "verifier_signal": "truth_proj",
+    "verifier_track_status": "promote"
+  },
+  "frontier_rerun_rollup_decisions": [
+    {
+      "blocking_reasons": [],
+      "checks": [],
+      "metrics": {
+        "artifact_manifest": "artifacts/frontier-multiple-testing-rerun-rollup-v1/artifact-manifest.json",
+        "audit_ready": null,
+        "audit_ready_count": null,
+        "blocked_candidate_count": 0,
+        "candidate_count": 2,
+        "cells": [
+          "qwen05-l80",
+          "smollm2-l80"
+        ],
+        "gate_passed": true,
+        "invalid_report_count": 0,
+        "missing_report_count": 0,
+        "observed_report_count": 2,
+        "passing_candidate_count": null,
+        "promotion_ready": true,
+        "promotion_ready_count": 2,
+        "runs": [
+          "truthfulqa-frontier-workflow"
+        ],
+        "status": "promote",
+        "track": "multiple_testing",
+        "track_statuses": {},
+        "tracks": [],
+        "workflow": "frontier_multiple_testing_rerun_rollup"
+      },
+      "name": "frontier-rerun-rollup",
+      "status": "promote",
+      "track": "frontier_rerun_rollup"
+    },
+    {
+      "blocking_reasons": [],
+      "checks": [],
+      "metrics": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/detectability-taxonomy-rerun-rollup-v2/artifact-manifest.json",
+        "audit_ready": true,
+        "audit_ready_count": 1,
+        "blocked_candidate_count": 1,
+        "candidate_count": 3,
+        "cells": [],
+        "gate_passed": true,
+        "invalid_report_count": 0,
+        "missing_report_count": 0,
+        "observed_report_count": 3,
+        "passing_candidate_count": null,
+        "promotion_ready": true,
+        "promotion_ready_count": 1,
+        "runs": [
+          "smollm2-l80",
+          "smollm2-l80",
+          "smollm2-l80"
+        ],
+        "status": "promote",
+        "track": "detectability",
+        "track_statuses": {},
+        "tracks": [],
+        "workflow": "frontier_detectability_evidence_rerun_rollup"
+      },
+      "name": "frontier-detectability-rerun-rollup",
+      "status": "promote",
+      "track": "frontier_rerun_rollup"
+    }
+  ],
+  "inputs": {
+    "abstention_stability_report": {
+      "artifact_manifest": "artifacts/frontier-release-evidence/verifier-fusion-abstention-stability-v2/local-retrieval-fusion-abstention-stability-alpha-0p2-budget-target-sweep-manifest.json",
+      "artifact_manifest_summary": {
+        "artifact_count": 5,
+        "directory_count": 0,
+        "file_count": 5,
+        "missing_count": 0
+      },
+      "blocking_reasons": [],
+      "path": "artifacts/frontier-release-evidence/verifier-fusion-abstention-stability-v2/local-retrieval-fusion-abstention-stability-alpha-0p2-budget-target-sweep.json",
+      "status": "complete",
+      "workflow": "abstention_stability"
+    },
+    "citation_batch_rollup_reports": [],
+    "detectability_taxonomy_reports": [
+      {
+        "artifact_manifest": null,
+        "artifact_manifest_summary": {},
+        "blocking_reasons": [],
+        "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/qwen05-l80/detectability-taxonomy-report.json",
+        "status": "complete",
+        "workflow": "detectability_taxonomy"
+      },
+      {
+        "artifact_manifest": null,
+        "artifact_manifest_summary": {},
+        "blocking_reasons": [],
+        "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/detectability-taxonomy-report.json",
+        "status": "complete",
+        "workflow": "detectability_taxonomy"
+      }
+    ],
+    "frontier_rerun_rollup_reports": [
+      {
+        "artifact_manifest": "artifacts/frontier-multiple-testing-rerun-rollup-v1/artifact-manifest.json",
+        "artifact_manifest_summary": {},
+        "blocking_reasons": [],
+        "path": "artifacts/frontier-multiple-testing-rerun-rollup-v1/frontier-rerun-rollup.json",
+        "status": "promote",
+        "track": "multiple_testing",
+        "workflow": "frontier_multiple_testing_rerun_rollup"
+      },
+      {
+        "artifact_manifest": "artifacts/frontier-release-evidence/detectability-taxonomy-rerun-rollup-v2/artifact-manifest.json",
+        "artifact_manifest_summary": {},
+        "blocking_reasons": [],
+        "path": "artifacts/frontier-release-evidence/detectability-taxonomy-rerun-rollup-v2/frontier-detectability-rerun-rollup.json",
+        "status": "promote",
+        "track": "detectability",
+        "workflow": "frontier_detectability_evidence_rerun_rollup"
+      }
+    ],
+    "frontier_workflow_reports": [
+      {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/artifact-manifest.json",
+        "artifact_manifest_summary": {
+          "artifact_count": 10,
+          "directory_count": 0,
+          "file_count": 10,
+          "missing_count": 0
+        },
+        "blocking_reasons": [],
+        "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/truthfulqa-frontier-workflow.json",
+        "status": "complete",
+        "workflow": "truthfulqa_frontier_workflow"
+      }
+    ],
+    "verifier_stability_report": {
+      "artifact_manifest": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-verifier-stability/artifact-manifest.json",
+      "artifact_manifest_summary": {
+        "artifact_count": 6,
+        "directory_count": 0,
+        "file_count": 6,
+        "missing_count": 0
+      },
+      "blocking_reasons": [],
+      "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-verifier-stability/verifier-stability-report.json",
+      "status": "complete",
+      "workflow": "verifier_stability"
+    }
+  },
+  "manifest_verification": {
+    "checked": 13,
+    "failure_count": 0,
+    "passed": true,
+    "path": "artifacts/frontier-release-evidence/manifest-verification-budget-target-sweep-v4.json",
+    "recursive": true
+  },
+  "multiple_testing_decisions": [
+    {
+      "blocking_reasons": [
+        "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate missing",
+        "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.enabled is not true",
+        "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.all_pass is not true",
+        "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.cell_count is missing or zero",
+        "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.pass_count is missing",
+        "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.fail_count is missing",
+        "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.unknown_count is missing"
+      ],
+      "checks": [],
+      "metrics": {
+        "all_pass": null,
+        "alpha": null,
+        "blocked_cells": [],
+        "cell_count": null,
+        "enabled": null,
+        "fail_count": null,
+        "failed_cells": [],
+        "method": null,
+        "pass_count": null,
+        "signals": [],
+        "unknown_cells": [],
+        "unknown_count": null
+      },
+      "name": "truthfulqa-frontier-workflow",
+      "status": "blocked",
+      "track": "truthfulqa_frontier_workflow.multiple_testing_gate"
+    }
+  ],
+  "notes": [
+    "Uses local-retrieval verifier + geometry noisy_or fusion with explicit abstention budget target sweep and gate-aware candidate ranking; candidate names retain the selected budget target."
+  ],
+  "paths": {
+    "artifact_manifest": "artifacts/frontier-release-evidence/artifact-manifest-budget-target-sweep-v4.json",
+    "frontier_release_evidence_report": "artifacts/frontier-release-evidence/frontier-release-evidence-budget-target-sweep-v4.json",
+    "manifest_verification": "artifacts/frontier-release-evidence/manifest-verification-budget-target-sweep-v4.json"
+  },
+  "run_decisions": [
+    {
+      "abstention_decision": {
+        "blocking_reasons": [],
+        "checks": [
+          {
+            "name": "abstention_stability.qwen05-l80.conditional_correctness_lower_bound_mean",
+            "operator": ">=",
+            "passed": true,
+            "reason": null,
+            "threshold": 0.8,
+            "value": 0.8553478510557646
+          },
+          {
+            "name": "abstention_stability.qwen05-l80.empirical_abstention_rate_mean",
+            "operator": "<=",
+            "passed": true,
+            "reason": null,
+            "threshold": 0.5,
+            "value": 0.49244604316546764
+          },
+          {
+            "name": "abstention_stability.qwen05-l80.release_gate_pass_seed_rate",
+            "operator": ">=",
+            "passed": true,
+            "reason": null,
+            "threshold": 1.0,
+            "value": 1.0
+          }
+        ],
+        "metrics": {
+          "conditional_correctness_lower_bound_mean": 0.8553478510557646,
+          "empirical_abstention_rate_mean": 0.49244604316546764,
+          "recommended_score_name_counts": {
+            "geometry_uncertainty_fusion:noisy_or[geometry=mean_rank:truth_proj+subspace_resid+eigenscore;uncertainty=mean_rank:verifier_refuted+verifier_refute_confidence+verifier_not_supported]@budget=0.45": 1,
+            "geometry_uncertainty_fusion:noisy_or[geometry=mean_rank:truth_proj+subspace_resid+eigenscore;uncertainty=mean_rank:verifier_refuted+verifier_refute_confidence+verifier_not_supported]@budget=0.47": 1,
+            "geometry_uncertainty_fusion:noisy_or[geometry=mean_rank:truth_proj+subspace_resid+eigenscore;uncertainty=mean_rank:verifier_refuted+verifier_refute_confidence+verifier_not_supported]@budget=0.48": 2,
+            "geometry_uncertainty_fusion:noisy_or[geometry=mean_rank:truth_proj+subspace_resid+eigenscore;uncertainty=mean_rank:verifier_refuted+verifier_refute_confidence+verifier_not_supported]@budget=0.49": 1,
+            "geometry_uncertainty_fusion:noisy_or[geometry=mean_rank:truth_proj+subspace_resid+eigenscore;uncertainty=mean_rank:verifier_refuted+verifier_refute_confidence+verifier_not_supported]@budget=0.5": 2,
+            "geometry_uncertainty_fusion:noisy_or[geometry=mean_rank:truth_proj+subspace_resid+eigenscore;uncertainty=mean_rank:verifier_refuted+verifier_refute_confidence+verifier_not_supported]@budget=0.51": 1,
+            "geometry_uncertainty_fusion:noisy_or[geometry=mean_rank:truth_proj+subspace_resid+eigenscore;uncertainty=mean_rank:verifier_refuted+verifier_refute_confidence+verifier_not_supported]@budget=0.52": 1,
+            "geometry_uncertainty_fusion:noisy_or[geometry=mean_rank:truth_proj+subspace_resid+eigenscore;uncertainty=mean_rank:verifier_refuted+verifier_refute_confidence+verifier_not_supported]@budget=0.54": 1
+          },
+          "release_gate_block_seed_count": 0,
+          "release_gate_pass_seed_count": 10,
+          "release_gate_pass_seed_rate": 1.0,
+          "stable_recommended_score_name": null,
+          "supervised_feasibility_conditional_correctness_lower_bound": 0.8710677005240686,
+          "supervised_feasibility_empirical_abstention_rate": 0.5,
+          "supervised_feasibility_empirical_selective_accuracy": 0.8776978417266187,
+          "supervised_feasibility_score_name": "geometry_uncertainty_fusion:noisy_or[geometry=mean_rank:truth_proj+subspace_resid+eigenscore;uncertainty=mean_rank:verifier_refuted+verifier_refute_confidence+verifier_not_supported]",
+          "supervised_feasibility_target_passed": true
+        },
+        "name": "qwen05-l80",
+        "status": "promote",
+        "track": "abstention_stability"
+      },
+      "blocking_reasons": [],
+      "detectability_decision": {
+        "blocking_reasons": [],
+        "checks": [
+          {
+            "name": "detectability_taxonomy.qwen05-l80.entrenched_false_rate",
+            "operator": "<=",
+            "passed": true,
+            "reason": null,
+            "threshold": 0.25,
+            "value": 0.0
+          }
+        ],
+        "metrics": {
+          "blind_spot_false_count": 0,
+          "confidence_signal": "nll_answer",
+          "consistency_signal": "eigenscore",
+          "entrenched_false_count": 0,
+          "entrenched_false_rate": 0.0,
+          "n_false": 306,
+          "n_total": 556
+        },
+        "name": "qwen05-l80",
+        "status": "promote",
+        "track": "detectability_taxonomy"
+      },
+      "name": "qwen05-l80",
+      "status": "promote",
+      "verifier_decision": {
+        "blocking_reasons": [],
+        "checks": [
+          {
+            "name": "verifier_stability.qwen05-l80.verified_false_alarm_mean",
+            "operator": "<=",
+            "passed": true,
+            "reason": null,
+            "threshold": 0.02,
+            "value": 0.00608
+          },
+          {
+            "name": "verifier_stability.qwen05-l80.verified_detection_mean",
+            "operator": ">=",
+            "passed": true,
+            "reason": null,
+            "threshold": 0.2,
+            "value": 0.3051143790849673
+          },
+          {
+            "name": "verifier_stability.qwen05-l80.delta_detection_mean",
+            "operator": ">=",
+            "passed": true,
+            "reason": null,
+            "threshold": 0.0,
+            "value": 0.02787581699346401
+          },
+          {
+            "name": "verifier_stability.qwen05-l80.verified_pass_seed_rate",
+            "operator": ">=",
+            "passed": true,
+            "reason": null,
+            "threshold": 1.0,
+            "value": 1.0
+          },
+          {
+            "name": "verifier_stability.qwen05-l80.verified_beats_internal_detection_seed_rate",
+            "operator": ">=",
+            "passed": true,
+            "reason": null,
+            "threshold": 1.0,
+            "value": 1.0
+          }
+        ],
+        "metrics": {
+          "delta_detection_mean": 0.02787581699346401,
+          "verified_beats_internal_detection_seed_count": 10,
+          "verified_beats_internal_detection_seed_rate": 1.0,
+          "verified_detection_mean": 0.3051143790849673,
+          "verified_false_alarm_mean": 0.00608,
+          "verified_pass_seed_count": 10,
+          "verified_pass_seed_rate": 1.0
+        },
+        "name": "qwen05-l80",
+        "status": "promote",
+        "track": "verifier_stability"
+      }
+    },
+    {
+      "abstention_decision": {
+        "blocking_reasons": [],
+        "checks": [
+          {
+            "name": "abstention_stability.smollm2-l80.conditional_correctness_lower_bound_mean",
+            "operator": ">=",
+            "passed": true,
+            "reason": null,
+            "threshold": 0.8,
+            "value": 0.8547168999399226
+          },
+          {
+            "name": "abstention_stability.smollm2-l80.empirical_abstention_rate_mean",
+            "operator": "<=",
+            "passed": true,
+            "reason": null,
+            "threshold": 0.5,
+            "value": 0.4971223021582734
+          },
+          {
+            "name": "abstention_stability.smollm2-l80.release_gate_pass_seed_rate",
+            "operator": ">=",
+            "passed": true,
+            "reason": null,
+            "threshold": 1.0,
+            "value": 1.0
+          }
+        ],
+        "metrics": {
+          "conditional_correctness_lower_bound_mean": 0.8547168999399226,
+          "empirical_abstention_rate_mean": 0.4971223021582734,
+          "recommended_score_name_counts": {
+            "geometry_uncertainty_fusion:noisy_or[geometry=mean_rank:truth_proj+subspace_resid+eigenscore;uncertainty=mean_rank:verifier_refuted+verifier_refute_confidence+verifier_not_supported]@budget=0.43": 1,
+            "geometry_uncertainty_fusion:noisy_or[geometry=mean_rank:truth_proj+subspace_resid+eigenscore;uncertainty=mean_rank:verifier_refuted+verifier_refute_confidence+verifier_not_supported]@budget=0.45": 1,
+            "geometry_uncertainty_fusion:noisy_or[geometry=mean_rank:truth_proj+subspace_resid+eigenscore;uncertainty=mean_rank:verifier_refuted+verifier_refute_confidence+verifier_not_supported]@budget=0.46": 1,
+            "geometry_uncertainty_fusion:noisy_or[geometry=mean_rank:truth_proj+subspace_resid+eigenscore;uncertainty=mean_rank:verifier_refuted+verifier_refute_confidence+verifier_not_supported]@budget=0.48": 2,
+            "geometry_uncertainty_fusion:noisy_or[geometry=mean_rank:truth_proj+subspace_resid+eigenscore;uncertainty=mean_rank:verifier_refuted+verifier_refute_confidence+verifier_not_supported]@budget=0.5": 1,
+            "geometry_uncertainty_fusion:noisy_or[geometry=mean_rank:truth_proj+subspace_resid+eigenscore;uncertainty=mean_rank:verifier_refuted+verifier_refute_confidence+verifier_not_supported]@budget=0.51": 2,
+            "geometry_uncertainty_fusion:noisy_or[geometry=mean_rank:truth_proj+subspace_resid+eigenscore;uncertainty=mean_rank:verifier_refuted+verifier_refute_confidence+verifier_not_supported]@budget=0.52": 2
+          },
+          "release_gate_block_seed_count": 0,
+          "release_gate_pass_seed_count": 10,
+          "release_gate_pass_seed_rate": 1.0,
+          "stable_recommended_score_name": null,
+          "supervised_feasibility_conditional_correctness_lower_bound": 0.867497750931757,
+          "supervised_feasibility_empirical_abstention_rate": 0.5,
+          "supervised_feasibility_empirical_selective_accuracy": 0.8741007194244604,
+          "supervised_feasibility_score_name": "geometry_uncertainty_fusion:noisy_or[geometry=mean_rank:truth_proj+subspace_resid+eigenscore;uncertainty=mean_rank:verifier_refuted+verifier_refute_confidence+verifier_not_supported]",
+          "supervised_feasibility_target_passed": true
+        },
+        "name": "smollm2-l80",
+        "status": "promote",
+        "track": "abstention_stability"
+      },
+      "blocking_reasons": [
+        "detectability_taxonomy.smollm2-l80.entrenched_false_rate 0.29085 exceeds maximum 0.25"
+      ],
+      "detectability_decision": {
+        "blocking_reasons": [
+          "detectability_taxonomy.smollm2-l80.entrenched_false_rate 0.29085 exceeds maximum 0.25"
+        ],
+        "checks": [
+          {
+            "name": "detectability_taxonomy.smollm2-l80.entrenched_false_rate",
+            "operator": "<=",
+            "passed": false,
+            "reason": "detectability_taxonomy.smollm2-l80.entrenched_false_rate 0.29085 exceeds maximum 0.25",
+            "threshold": 0.25,
+            "value": 0.2908496732026144
+          }
+        ],
+        "metrics": {
+          "blind_spot_false_count": 89,
+          "confidence_signal": "nll_answer",
+          "consistency_signal": "eigenscore",
+          "entrenched_false_count": 89,
+          "entrenched_false_rate": 0.2908496732026144,
+          "n_false": 306,
+          "n_total": 556
+        },
+        "name": "smollm2-l80",
+        "status": "blocked",
+        "track": "detectability_taxonomy"
+      },
+      "name": "smollm2-l80",
+      "status": "blocked",
+      "verifier_decision": {
+        "blocking_reasons": [],
+        "checks": [
+          {
+            "name": "verifier_stability.smollm2-l80.verified_false_alarm_mean",
+            "operator": "<=",
+            "passed": true,
+            "reason": null,
+            "threshold": 0.02,
+            "value": 0.010239999999999999
+          },
+          {
+            "name": "verifier_stability.smollm2-l80.verified_detection_mean",
+            "operator": ">=",
+            "passed": true,
+            "reason": null,
+            "threshold": 0.2,
+            "value": 0.24387254901960786
+          },
+          {
+            "name": "verifier_stability.smollm2-l80.delta_detection_mean",
+            "operator": ">=",
+            "passed": true,
+            "reason": null,
+            "threshold": 0.0,
+            "value": 0.005375816993464089
+          },
+          {
+            "name": "verifier_stability.smollm2-l80.verified_pass_seed_rate",
+            "operator": ">=",
+            "passed": true,
+            "reason": null,
+            "threshold": 1.0,
+            "value": 1.0
+          },
+          {
+            "name": "verifier_stability.smollm2-l80.verified_beats_internal_detection_seed_rate",
+            "operator": ">=",
+            "passed": true,
+            "reason": null,
+            "threshold": 1.0,
+            "value": 1.0
+          }
+        ],
+        "metrics": {
+          "delta_detection_mean": 0.005375816993464089,
+          "verified_beats_internal_detection_seed_count": 10,
+          "verified_beats_internal_detection_seed_rate": 1.0,
+          "verified_detection_mean": 0.24387254901960786,
+          "verified_false_alarm_mean": 0.010239999999999999,
+          "verified_pass_seed_count": 10,
+          "verified_pass_seed_rate": 1.0
+        },
+        "name": "smollm2-l80",
+        "status": "promote",
+        "track": "verifier_stability"
+      }
+    }
+  ],
+  "schema_version": 1,
+  "status": "complete",
+  "workflow": "frontier_release_evidence_comparison"
+}

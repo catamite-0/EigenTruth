@@ -1297,6 +1297,39 @@ stabilizes on `geometry_uncertainty_fusion:noisy_or` and clears mean
 conditional-correctness/abstention gates, but remains blocked by strict 10/10
 seed pass-rate: qwen05-l80 passes 7/10 seeds and smollm2-l80 passes 5/10.
 
+When fixed budget targets are unstable, pass
+`--abstention-budget-target-rates` to evaluate an explicit profile sweep. Each
+budget target becomes a separate candidate name, for example
+`...@budget=0.49`. Add `--prefer-release-gate-passing` when the benchmark should
+rank candidates that satisfy the configured correctness and abstention release
+gate ahead of higher-correctness candidates that exceed the abstention budget:
+
+```bash
+python benchmarks/eval_abstention_stability.py \
+  --scores qwen05-l80=artifacts/truthfulqa-l80-local-retrieval-verifier-signal-fusion/qwen-l80-enhanced-scores.manifest.json \
+  --scores smollm2-l80=artifacts/truthfulqa-l80-local-retrieval-verifier-signal-fusion/smollm2-l80-enhanced-scores.manifest.json \
+  --signals truth_proj,subspace_resid,eigenscore,verifier_refuted,verifier_refute_confidence,verifier_not_supported,verifier_uncertainty \
+  --geometry-signals truth_proj,subspace_resid,eigenscore \
+  --uncertainty-signals verifier_refuted,verifier_refute_confidence,verifier_not_supported \
+  --geometry-method mean_rank \
+  --uncertainty-method mean_rank \
+  --geometry-fusion-methods interaction,product,weighted_mean,noisy_or \
+  --alpha 0.2 \
+  --enforce-abstention-budget \
+  --abstention-budget-target-rates 0.43,0.45,0.46,0.47,0.48,0.49,0.5,0.51,0.52,0.54 \
+  --prefer-release-gate-passing \
+  --seeds 0,1,2,3,4,5,6,7,8,9 \
+  --json artifacts/frontier-release-evidence/verifier-fusion-abstention-stability-v2/local-retrieval-fusion-abstention-stability-alpha-0p2-budget-target-sweep.json
+```
+
+The budget-target sweep release artifact
+`frontier-release-evidence-budget-target-sweep-v4` promotes all frontier tracks:
+both qwen05-l80 and smollm2-l80 pass 10/10 abstention seeds with the same
+geometry/verifier `noisy_or` fusion family. The selected budget target varies by
+seed and remains visible in each recommended candidate name, so this evidence
+should be treated as an explicit profile-sweep policy rather than a hidden fixed
+threshold.
+
 ## `compare_frontier_release_evidence.py`
 
 Combines frontier stability reports into one fail-closed release verdict without
