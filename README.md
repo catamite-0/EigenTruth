@@ -301,18 +301,16 @@ traces and a promoted runtime-drift report comparing the trace replay baseline
 against the promoted `auto` profile baseline; all 9 drift metrics pass with zero
 blocked metrics.
 The calibrated-control demo uses the latest available local promoted product
-contract, such as v1.6, for development smoke runs. A v1.9 frontier-audit
-contract is intentionally not exported from the current local v6 replay because
-that release candidate is blocked; `export_product_promotion_contract.py`
-fail-closes until the source release candidate promotes. Runtime traces can
-still record promotion-contract evidence-handoff status without rerunning
-release gates, and can include manifest verification with
-`--verify-promotion-contract-evidence-handoff-manifest` when a promoted contract
-exists.
-A local v1.6-based frontier handoff smoke now carries the same
-`evidence_handoff_*` metadata through product-runtime aggregation and the v7
-frontier audit, reducing the current gap plan while preserving the blocked
-release boundary.
+contract. The active frontier-audit product handoff is now
+`artifacts/smollm2_product_promotion_contract_v1_9/`, exported from promoted
+release candidate v13
+(`benchmark_manifest:smollm2-l8-frontier-audit-release-candidate:0.13`). The raw
+contract preserves the selected cache-only runtime recommendation
+(`recommended_runtime_seconds=0.191662`), and the enriched handoff contract
+records explicit child-report evidence with `evidence_handoff_status=promote`.
+Its independent audit promotes with `65/65` present metrics and zero blocked
+groups. v1.6 remains useful for older development smoke runs, but v1.9 is the
+current local frontier-audit handoff.
 Use `benchmarks/audit_frontier_artifact_references.py` to fail-closed on the
 current docs' active frontier references when checking whether the v6 release
 candidate artifacts are actually present in the checkout. When references are
