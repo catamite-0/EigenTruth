@@ -1873,6 +1873,38 @@ The source-family plan flags `52` official-preferred requests, `20`
 freshness-required requests, and `4` official-statistics-preferred requests; it
 does not contain source documents until a real adapter returns results.
 
+The v4 unresolved citation lane has also been replayed through the local
+source-family workflow with the cached Wikidata source docs:
+
+```bash
+OUT=artifacts/frontier-release-evidence/unresolved-wikidata-source-family-citation-workflow-v1
+
+python benchmarks/run_source_family_citation_search_workflow.py \
+  --queue artifacts/frontier-release-evidence/unresolved-blind-spot-evidence-queue-v1/unresolved-evidence-queue.json \
+  --source-catalog artifacts/frontier-release-evidence/blind-spot-wikidata-evidence-v1/wikidata-source-docs.jsonl \
+  --scores artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json \
+  --blind-spots artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
+  --controlled-sweep artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json \
+  --output-dir "$OUT" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-wikidata-source-family-citation-workflow \
+  --version 0.1 \
+  --query-mode claim_entity \
+  --adapter-diversify-source-families \
+  --target-route retrieval_groundedness \
+  --metadata source=frontier-v4 \
+  --metadata model=smollm2-l80
+```
+
+This produces `720` Wikidata-backed adapter result documents for `244/260`
+requests and passes the provenance gate as `external_candidate`: `0` claim-id
+links, `0` row links, `0` label metadata documents, and exact answer-copy rate
+`0.111`. It still blocks route promotion because the best external query sweep
+refutes `0/89` entrenched blind spots, no external strategy passes, and the
+controlled-to-external comparison keeps a `1.0` generalization gap. Treat this
+as negative evidence for broad lexical citation retrieval over the current
+Wikidata catalog, not as a failed pipeline run.
+
 ## `build_unresolved_world_model_rule_stubs.py`
 
 Bridges the world-model/calculator branch of the unresolved queue into the

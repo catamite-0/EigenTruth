@@ -781,6 +781,29 @@
       "name": "smollm2-l80-frontier-v4-unresolved-world-model-rule-input-collection-plan",
       "path": "artifacts/frontier-release-evidence/unresolved-world-model-rule-input-collection-plan-v1/rule-input-collection-plan.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "adapter_request_count": 260,
+        "adapter_result_count": 720,
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-wikidata-source-family-citation-workflow-v1/artifact-manifest.json",
+        "catalog_source_document_count": 322,
+        "corpus_document_count": 720,
+        "evidence_source_document_count": 720,
+        "gate_passed": false,
+        "model": "smollm2-l80",
+        "promotion_ready": false,
+        "selected_batch_count": 0,
+        "selected_batch_ids": [],
+        "source": "frontier-v4",
+        "status": "blocked",
+        "target_route": "retrieval_groundedness",
+        "workflow": "source_family_citation_search_workflow"
+      },
+      "name": "smollm2-l80-frontier-v4-unresolved-wikidata-source-family-citation-workflow",
+      "path": "artifacts/frontier-release-evidence/unresolved-wikidata-source-family-citation-workflow-v1/source-family-citation-search-workflow.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

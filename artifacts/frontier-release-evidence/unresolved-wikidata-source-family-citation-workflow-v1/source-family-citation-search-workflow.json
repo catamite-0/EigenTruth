@@ -1,0 +1,164 @@
+{
+  "adapter_summary": {
+    "catalog_provider_counts": {
+      "source_family_catalog": 322
+    },
+    "catalog_source_family_counts": {
+      "reference": 322
+    },
+    "request_count": 260,
+    "request_error_count": 0,
+    "request_with_results_count": 244,
+    "result_count": 720,
+    "result_provider_counts": {
+      "source_family_catalog": 720
+    },
+    "result_source_family_counts": {
+      "reference": 720
+    },
+    "source_document_count": 322
+  },
+  "config": {
+    "adapter_diversify_source_families": true,
+    "adapter_max_query_variants": 3,
+    "adapter_max_results": 3,
+    "adapter_min_text_overlap": 0.05,
+    "alpha": 0.1,
+    "batch_ids": [],
+    "corpus_name": "unresolved_blind_spot_citation_search",
+    "default_source_family": "reference",
+    "max_alternate_queries": 3,
+    "max_claim_id_link_rate": 0.0,
+    "max_controlled_verified_false_alarm": 0.05,
+    "max_exact_answer_copy_rate": 0.8,
+    "max_external_verified_false_alarm": 0.05,
+    "max_label_metadata_rate": 0.0,
+    "max_requests": null,
+    "max_results_per_request": null,
+    "max_verified_false_alarm": 0.05,
+    "min_blind_refuted_rate": 0.5,
+    "min_controlled_blind_refuted_rate": 0.5,
+    "min_external_blind_refuted_rate": 0.5,
+    "query_fields": [
+      "question",
+      "question_answer"
+    ],
+    "query_mode": "claim_entity",
+    "repeats": 1,
+    "retrieval_limit": 3,
+    "retriever_min_overlaps": [
+      0.95,
+      0.8,
+      0.65,
+      0.5
+    ],
+    "seed": 0,
+    "signal": "truth_proj",
+    "source_kind": "external_citation_search_result",
+    "target_route": "retrieval_groundedness",
+    "verifier_min_overlap": 0.65
+  },
+  "evidence_summary": {
+    "adapter_request_count": 260,
+    "comparison_passed": false,
+    "comparison_status": "blocked",
+    "corpus_document_count": 720,
+    "evidence_class": "external_candidate",
+    "provenance_passed": true,
+    "provenance_status": "pass",
+    "query_sweep_best_passing_blind_refuted_count": null,
+    "query_sweep_best_passing_strategy": null,
+    "query_sweep_best_strategy": "question_overlap_0p95",
+    "recommended_external_strategy": null,
+    "selected_batch_count": 0,
+    "selected_batch_ids": [],
+    "selected_batch_source_request_count": 0,
+    "source_document_count": 720
+  },
+  "gate": {
+    "blocking_reasons": [
+      {
+        "gate": "query_sweep",
+        "reason": "No blind-spot query strategy passed the configured gates."
+      },
+      {
+        "gate": "query_sweep_comparison",
+        "reason": "Controlled-vs-external comparison status is blocked."
+      }
+    ],
+    "passed": false,
+    "promotion_ready": false
+  },
+  "metadata": {
+    "model": "smollm2-l80",
+    "source": "frontier-v4"
+  },
+  "paths": {
+    "adapter_manifest": "artifacts/frontier-release-evidence/unresolved-wikidata-source-family-citation-workflow-v1/source-family-citation-search-adapter-manifest.json",
+    "adapter_report": "artifacts/frontier-release-evidence/unresolved-wikidata-source-family-citation-workflow-v1/source-family-citation-search-adapter-report.json",
+    "adapter_results": "artifacts/frontier-release-evidence/unresolved-wikidata-source-family-citation-workflow-v1/source-family-citation-search-results.jsonl",
+    "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-wikidata-source-family-citation-workflow-v1/artifact-manifest.json",
+    "evidence_manifest": "artifacts/frontier-release-evidence/unresolved-wikidata-source-family-citation-workflow-v1/evidence-gate/artifact-manifest.json",
+    "evidence_workflow": "artifacts/frontier-release-evidence/unresolved-wikidata-source-family-citation-workflow-v1/evidence-gate/citation-search-evidence-workflow.json",
+    "request_handoff": "artifacts/frontier-release-evidence/unresolved-wikidata-source-family-citation-workflow-v1/request-handoff/citation-search-request-handoff.json",
+    "request_handoff_manifest": "artifacts/frontier-release-evidence/unresolved-wikidata-source-family-citation-workflow-v1/request-handoff/artifact-manifest.json",
+    "requests": "artifacts/frontier-release-evidence/unresolved-wikidata-source-family-citation-workflow-v1/source-family-citation-search-requests.jsonl",
+    "workflow_report": "artifacts/frontier-release-evidence/unresolved-wikidata-source-family-citation-workflow-v1/source-family-citation-search-workflow.json"
+  },
+  "request_summary": {
+    "adapter_request_count": 260,
+    "corpus_document_count": 0,
+    "freshness_required_count": 20,
+    "official_source_preferred_count": 52,
+    "priority_counts": {
+      "high": 176,
+      "low": 24,
+      "medium": 60
+    },
+    "question_type_counts": {
+      "causal": 8,
+      "definition": 156,
+      "location": 20,
+      "method": 28,
+      "other": 40,
+      "temporal": 8
+    },
+    "result_summary": {
+      "input_result_count": 0,
+      "matched_request_count": 0,
+      "result_documents_by_request": {},
+      "skipped_empty_result_count": 0,
+      "unknown_request_result_count": 0
+    },
+    "selected_batch_count": 0,
+    "selected_batch_ids": [],
+    "selected_batch_source_request_count": 0,
+    "source_document_count": 0,
+    "source_family_counts": {
+      "encyclopedic": 244,
+      "news": 20,
+      "official": 52,
+      "official_statistics": 4,
+      "reference": 260,
+      "scholarly": 156
+    },
+    "source_provider_counts": {},
+    "source_queue_adapter_request_count": 332,
+    "source_queue_batch_count": 8,
+    "source_queue_target_count": 88
+  },
+  "schema_version": 1,
+  "source": {
+    "blind_spots": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json",
+    "controlled_sweeps": [
+      "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json"
+    ],
+    "queue_report": "artifacts/frontier-release-evidence/unresolved-blind-spot-evidence-queue-v1/unresolved-evidence-queue.json",
+    "scores": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json",
+    "source_catalogs": [
+      "artifacts/frontier-release-evidence/blind-spot-wikidata-evidence-v1/wikidata-source-docs.jsonl"
+    ]
+  },
+  "status": "blocked",
+  "workflow": "source_family_citation_search_workflow"
+}
