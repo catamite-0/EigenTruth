@@ -2706,7 +2706,9 @@ source-family structured-QA route summary and QA corpus already exist. It runs
 claim mapping, gap triage, and correction handoff, writes child manifests plus a
 top-level workflow manifest, and leaves weak or no-fact rows in triage. It does
 not collect new evidence, lower mapping thresholds, or treat adapter results as
-verifier evidence.
+verifier evidence. Add `--enable-triple-audit` when the correction handoff
+should immediately feed the trace-level triple-audit enrichment gate; if that
+optional child gate runs and fails to promote, the workflow fails closed.
 
 ```bash
 WORKFLOW=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-claim-correction-workflow
@@ -2721,6 +2723,7 @@ python benchmarks/run_source_family_structured_qa_claim_correction_workflow.py \
   --version 0.1 \
   --metadata suite=truthfulqa_frontier_smollm2_l80 \
   --metadata evidence=source_family_structured_qa_fact_collection_workflow \
+  --enable-triple-audit \
   --compact-json
 ```
 

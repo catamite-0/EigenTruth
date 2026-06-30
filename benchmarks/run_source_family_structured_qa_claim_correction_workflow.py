@@ -5,6 +5,7 @@ This workflow is a thin orchestrator over three existing gates:
 1. map product or blind-spot claims to exact source-family structured QA facts,
 2. triage mapped and unmapped rows into next-action lanes,
 3. emit a ProductTrace-visible correction handoff for mapped candidates only.
+4. optionally enrich those correction traces with trace-level triple audits.
 
 It does not collect new evidence, does not lower mapping thresholds, and does
 not promote weak matches. The correction handoff still fails closed unless the
@@ -27,6 +28,7 @@ if str(SRC) not in sys.path:
 
 import benchmarks.audit_source_family_structured_qa_claim_mapping as claim_mapping_workflow  # noqa: E402
 import benchmarks.build_source_family_structured_qa_correction_handoff as correction_handoff_workflow  # noqa: E402
+import benchmarks.enrich_product_trace_triple_audit as triple_audit_workflow  # noqa: E402
 import benchmarks.triage_source_family_structured_qa_gaps as gap_triage_workflow  # noqa: E402
 from eigentruth.json_utils import strict_json_dumps  # noqa: E402
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
@@ -54,6 +56,14 @@ def run_source_family_structured_qa_claim_correction_workflow(
     weak_overlap_threshold: float = claim_mapping_workflow.DEFAULT_WEAK_OVERLAP_THRESHOLD,
     route_name: str = correction_handoff_workflow.DEFAULT_ROUTE_NAME,
     verifier_name: str = correction_handoff_workflow.DEFAULT_VERIFIER_NAME,
+    enable_triple_audit: bool = False,
+    triple_audit_output_dir: str | Path | None = None,
+    triple_audit_report_path: str | Path | None = None,
+    triple_audit_artifact_manifest_path: str | Path | None = None,
+    triple_audit_min_slot_coverage: float = 1.0,
+    triple_audit_min_audit_claim_coverage: float = 1.0,
+    triple_audit_min_audit_pass_rate: float = 1.0,
+    triple_audit_min_slot_coverage_rate: float = 1.0,
     metadata: Mapping[str, Any] | None = None,
     compact_json: bool = False,
 ) -> dict[str, Any]:
@@ -71,6 +81,7 @@ def run_source_family_structured_qa_claim_correction_workflow(
     mapping_dir = output / "claim-mapping"
     triage_dir = output / "gap-triage"
     handoff_dir = output / "correction-handoff"
+    triple_audit_dir = Path(triple_audit_output_dir or output / "triple-audit")
     report_path = Path(workflow_report_path or output / "claim-correction-workflow.json")
     manifest_path = Path(artifact_manifest_path or output / "artifact-manifest.json")
 
@@ -84,6 +95,14 @@ def run_source_family_structured_qa_claim_correction_workflow(
     handoff_trace_path = handoff_dir / "product-traces.jsonl"
     handoff_actions_path = handoff_dir / "action-results.jsonl"
     handoff_manifest_path = handoff_dir / "artifact-manifest.json"
+    triple_audit_path = Path(
+        triple_audit_report_path
+        or triple_audit_dir / "product-trace-triple-audit-enrichment.json"
+    )
+    triple_audit_manifest_path = Path(
+        triple_audit_artifact_manifest_path
+        or triple_audit_dir / "product-trace-triple-audit-artifact-manifest.json"
+    )
 
     mapping = claim_mapping_workflow.run(
         claims_path=claims_path,
@@ -124,11 +143,42 @@ def run_source_family_structured_qa_claim_correction_workflow(
         compact_json=compact_json,
     )
     handoff_report = dict(handoff["report"])
-    summary = _summary(mapping=mapping, triage=triage, handoff_report=handoff_report)
+    triple_audit_report: dict[str, Any] | None = None
+    if enable_triple_audit and handoff_report.get("status") == "promote":
+        triple_audit_report = triple_audit_workflow.build_product_trace_triple_audit_enrichment(
+            triple_audit_workflow.ProductTraceTripleAuditEnrichmentConfig(
+                trace_paths=(),
+                trace_jsonl_paths=(handoff_trace_path,),
+                output_dir=triple_audit_dir,
+                report_path=triple_audit_path,
+                artifact_manifest_path=triple_audit_manifest_path,
+                min_slot_coverage=triple_audit_min_slot_coverage,
+                min_audit_claim_coverage=triple_audit_min_audit_claim_coverage,
+                min_audit_pass_rate=triple_audit_min_audit_pass_rate,
+                min_slot_coverage_rate=triple_audit_min_slot_coverage_rate,
+                compact_json=compact_json,
+                metadata=metadata_payload,
+            )
+        )
+
+    summary = _summary(
+        mapping=mapping,
+        triage=triage,
+        handoff_report=handoff_report,
+        triple_audit_report=triple_audit_report,
+        enable_triple_audit=enable_triple_audit,
+    )
+    status = _status(
+        summary=summary,
+        handoff_report=handoff_report,
+        triage=triage,
+        triple_audit_report=triple_audit_report,
+        enable_triple_audit=enable_triple_audit,
+    )
     payload: dict[str, Any] = {
         "schema_version": 1,
         "workflow": WORKFLOW,
-        "status": _status(summary=summary, handoff_report=handoff_report, triage=triage),
+        "status": status,
         "scope": (
             "Thin source-family structured QA claim-correction workflow. It "
             "maps claims to promoted covered facts, triages remaining gaps, and "
@@ -155,6 +205,15 @@ def run_source_family_structured_qa_claim_correction_workflow(
             "weak_overlap_threshold": float(weak_overlap_threshold),
             "route_name": route_name,
             "verifier_name": verifier_name,
+            "enable_triple_audit": bool(enable_triple_audit),
+            "triple_audit_min_slot_coverage": float(triple_audit_min_slot_coverage),
+            "triple_audit_min_audit_claim_coverage": float(
+                triple_audit_min_audit_claim_coverage
+            ),
+            "triple_audit_min_audit_pass_rate": float(triple_audit_min_audit_pass_rate),
+            "triple_audit_min_slot_coverage_rate": float(
+                triple_audit_min_slot_coverage_rate
+            ),
         },
         "label_usage": {
             "labels_used_for_mapping": False,
@@ -175,14 +234,26 @@ def run_source_family_structured_qa_claim_correction_workflow(
             "correction_qa_corpus": str(handoff_qa_path),
             "product_traces": str(handoff_trace_path),
             "action_results": str(handoff_actions_path),
+            "triple_audit": str(triple_audit_path) if enable_triple_audit else None,
+            "triple_audit_manifest": str(triple_audit_manifest_path)
+            if enable_triple_audit
+            else None,
+            "triple_audit_traces_dir": str(triple_audit_dir / "traces")
+            if enable_triple_audit
+            else None,
         },
         "summary": summary,
         "child_statuses": {
             "claim_mapping": mapping.get("status"),
             "gap_triage": triage.get("status"),
             "correction_handoff": handoff_report.get("status"),
+            "triple_audit": summary["triple_audit_status"],
         },
-        "next_step": _next_step(summary=summary, status=handoff_report.get("status")),
+        "next_step": _next_step(
+            summary=summary,
+            workflow_status=status,
+            handoff_status=handoff_report.get("status"),
+        ),
         "metadata": dict(metadata or {}),
     }
     _write_json(report_path, payload, compact=compact_json)
@@ -209,6 +280,8 @@ def run_source_family_structured_qa_claim_correction_workflow(
                 "handoff_ready_count": summary["handoff_ready_count"],
                 "correction_candidate_count": summary["correction_candidate_count"],
                 "trace_count": summary["trace_count"],
+                "triple_audit_status": summary["triple_audit_status"],
+                "triple_audit_audit_pass_rate": summary["triple_audit_audit_pass_rate"],
                 "artifact_manifest": str(manifest_path),
                 "manifest_artifact_count": len(manifest["artifacts"]),
                 **dict(metadata or {}),
@@ -237,6 +310,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         weak_overlap_threshold=args.weak_overlap_threshold,
         route_name=args.route_name,
         verifier_name=args.verifier_name,
+        enable_triple_audit=bool(args.enable_triple_audit),
+        triple_audit_output_dir=args.triple_audit_output_dir,
+        triple_audit_report_path=args.triple_audit_report,
+        triple_audit_artifact_manifest_path=args.triple_audit_artifact_manifest,
+        triple_audit_min_slot_coverage=args.triple_audit_min_slot_coverage,
+        triple_audit_min_audit_claim_coverage=args.triple_audit_min_audit_claim_coverage,
+        triple_audit_min_audit_pass_rate=args.triple_audit_min_audit_pass_rate,
+        triple_audit_min_slot_coverage_rate=args.triple_audit_min_slot_coverage_rate,
         metadata=_parse_metadata(args.metadata or ()),
         compact_json=bool(args.compact_json),
     )
@@ -247,6 +328,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         f"claims={summary['target_count']} "
         f"mapped={summary['mapped_qa_fact_candidate_count']} "
         f"traces={summary['trace_count']} "
+        f"triple_audit={summary['triple_audit_status']} "
         f"blocked={summary['blocked_target_count']}"
     )
     return payload
@@ -288,6 +370,14 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument("--route-name", default=correction_handoff_workflow.DEFAULT_ROUTE_NAME)
     parser.add_argument("--verifier-name", default=correction_handoff_workflow.DEFAULT_VERIFIER_NAME)
+    parser.add_argument("--enable-triple-audit", action="store_true")
+    parser.add_argument("--triple-audit-output-dir", default=None)
+    parser.add_argument("--triple-audit-report", default=None)
+    parser.add_argument("--triple-audit-artifact-manifest", default=None)
+    parser.add_argument("--triple-audit-min-slot-coverage", type=float, default=1.0)
+    parser.add_argument("--triple-audit-min-audit-claim-coverage", type=float, default=1.0)
+    parser.add_argument("--triple-audit-min-audit-pass-rate", type=float, default=1.0)
+    parser.add_argument("--triple-audit-min-slot-coverage-rate", type=float, default=1.0)
     parser.add_argument("--metadata", action="append", default=[])
     parser.add_argument("--compact-json", action="store_true")
     run(parser.parse_args(argv))
@@ -298,10 +388,13 @@ def _summary(
     mapping: Mapping[str, Any],
     triage: Mapping[str, Any],
     handoff_report: Mapping[str, Any],
+    triple_audit_report: Mapping[str, Any] | None,
+    enable_triple_audit: bool,
 ) -> dict[str, Any]:
     mapping_summary = _mapping(mapping.get("summary"))
     triage_summary = _mapping(triage.get("summary"))
     handoff_summary = _mapping(handoff_report.get("summary"))
+    triple_summary = _mapping(_mapping(triple_audit_report).get("summary"))
     return {
         "target_count": _int(mapping_summary.get("target_count")),
         "covered_fact_match_count": _int(mapping_summary.get("covered_fact_match_count")),
@@ -319,6 +412,22 @@ def _summary(
         "mapping_status": mapping.get("status"),
         "triage_status": triage.get("status"),
         "correction_handoff_status": handoff_report.get("status"),
+        "triple_audit_status": _triple_audit_status(
+            enable_triple_audit=enable_triple_audit,
+            handoff_status=handoff_report.get("status"),
+            triple_audit_report=triple_audit_report,
+        ),
+        "triple_audit_trace_count": _int(triple_summary.get("trace_count")),
+        "triple_audit_claim_triple_coverage_rate": _float_or_none(
+            triple_summary.get("claim_triple_coverage_rate")
+        ),
+        "triple_audit_audit_claim_coverage_rate": _float_or_none(
+            triple_summary.get("audit_claim_coverage_rate")
+        ),
+        "triple_audit_audit_pass_rate": _float_or_none(triple_summary.get("audit_pass_rate")),
+        "triple_audit_slot_coverage_rate": _float_or_none(
+            triple_summary.get("slot_coverage_rate")
+        ),
     }
 
 
@@ -327,7 +436,12 @@ def _status(
     summary: Mapping[str, Any],
     handoff_report: Mapping[str, Any],
     triage: Mapping[str, Any],
+    triple_audit_report: Mapping[str, Any] | None,
+    enable_triple_audit: bool,
 ) -> str:
+    if enable_triple_audit and handoff_report.get("status") == "promote":
+        if _mapping(triple_audit_report).get("status") != "promote":
+            return "blocked"
     if handoff_report.get("status") == "promote":
         return "promote"
     if _mapping(handoff_report.get("source")).get("route_summary_promoted") is not True:
@@ -340,11 +454,21 @@ def _status(
     return "blocked"
 
 
-def _next_step(*, summary: Mapping[str, Any], status: Any) -> str:
-    if status == "promote":
+def _next_step(
+    *,
+    summary: Mapping[str, Any],
+    workflow_status: Any,
+    handoff_status: Any,
+) -> str:
+    if workflow_status == "promote":
         return (
             "Use the correction handoff traces as target-specific ProductTrace "
             "evidence; do not treat the QA corpus as broad retrieval coverage."
+        )
+    if handoff_status == "promote" and summary.get("triple_audit_status") == "blocked":
+        return (
+            "Inspect the triple-audit report before using correction handoff traces; "
+            "the optional audit gate did not promote."
         )
     if _int(summary.get("needs_collection_count")) > 0:
         return (
@@ -391,6 +515,16 @@ def _write_manifest(
         artifacts["fact_collection_corpus"] = Path(fact_collection_corpus_path)
     if fact_collection_workflow_path is not None:
         artifacts["fact_collection_workflow"] = Path(fact_collection_workflow_path)
+    for artifact_name, path_key in (
+        ("triple_audit", "triple_audit"),
+        ("triple_audit_manifest", "triple_audit_manifest"),
+        ("triple_audit_traces_dir", "triple_audit_traces_dir"),
+    ):
+        raw_path = paths.get(path_key)
+        if raw_path:
+            path = Path(str(raw_path))
+            if path.exists():
+                artifacts[artifact_name] = path
     manifest = build_artifact_manifest(
         artifacts,
         root=manifest_path.parent,
@@ -404,6 +538,12 @@ def _write_manifest(
                 _mapping(payload.get("summary")).get("correction_candidate_count")
             ),
             "trace_count": _int(_mapping(payload.get("summary")).get("trace_count")),
+            "triple_audit_status": _mapping(payload.get("summary")).get(
+                "triple_audit_status"
+            ),
+            "triple_audit_audit_pass_rate": _mapping(payload.get("summary")).get(
+                "triple_audit_audit_pass_rate"
+            ),
             **dict(_mapping(payload.get("metadata"))),
         },
     )
@@ -438,11 +578,33 @@ def _mapping(value: Any) -> dict[str, Any]:
     return dict(value) if isinstance(value, Mapping) else {}
 
 
+def _triple_audit_status(
+    *,
+    enable_triple_audit: bool,
+    handoff_status: Any,
+    triple_audit_report: Mapping[str, Any] | None,
+) -> str:
+    if not enable_triple_audit:
+        return "not_run"
+    if handoff_status != "promote":
+        return "skipped"
+    return str(_mapping(triple_audit_report).get("status") or "blocked")
+
+
 def _int(value: Any) -> int:
     try:
         return int(value)
     except (TypeError, ValueError):
         return 0
+
+
+def _float_or_none(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 if __name__ == "__main__":

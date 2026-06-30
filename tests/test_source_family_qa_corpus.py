@@ -1,5 +1,6 @@
 import importlib
 import json
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -573,7 +574,6 @@ def test_source_family_structured_qa_correction_handoff_requires_promoted_route(
 
 def test_source_family_structured_qa_claim_correction_workflow_runs_full_loop(tmp_path):
     module = importlib.import_module("benchmarks.run_source_family_structured_qa_claim_correction_workflow")
-    triple_audit_module = importlib.import_module("benchmarks.enrich_product_trace_triple_audit")
     registry_module = importlib.import_module("eigentruth.registry")
 
     claims_path = tmp_path / "claims.json"
@@ -635,6 +635,7 @@ def test_source_family_structured_qa_claim_correction_workflow_runs_full_loop(tm
         registry_path=registry_path,
         name="source-family-claim-correction-workflow-unit",
         version="0.1",
+        enable_triple_audit=True,
         metadata={"suite": "unit"},
         compact_json=True,
     )
@@ -657,11 +658,18 @@ def test_source_family_structured_qa_claim_correction_workflow_runs_full_loop(tm
         "claim_mapping": "observed",
         "gap_triage": "handoff_ready",
         "correction_handoff": "promote",
+        "triple_audit": "promote",
     }
     assert payload["summary"]["mapped_qa_fact_candidate_count"] == 1
     assert payload["summary"]["handoff_ready_count"] == 1
     assert payload["summary"]["correction_candidate_count"] == 1
     assert payload["summary"]["trace_count"] == 1
+    assert payload["summary"]["triple_audit_trace_count"] == 1
+    assert payload["summary"]["triple_audit_audit_claim_coverage_rate"] == pytest.approx(1.0)
+    assert payload["summary"]["triple_audit_audit_pass_rate"] == pytest.approx(1.0)
+    assert payload["summary"]["triple_audit_slot_coverage_rate"] == pytest.approx(1.0)
+    assert Path(payload["paths"]["triple_audit"]).exists()
+    assert Path(payload["paths"]["triple_audit_manifest"]).exists()
     assert payload["label_usage"]["weak_matches_promoted"] is False
     assert trace_rows[0]["claims"][0]["metadata"]["claim_triples"][0]["object"] == "Elon Musk"
     assert (
@@ -675,17 +683,11 @@ def test_source_family_structured_qa_claim_correction_workflow_runs_full_loop(tm
     assert registry_record is not None
     assert registry_record.metadata["workflow"] == "source_family_structured_qa_claim_correction_workflow"
     assert registry_record.metadata["trace_count"] == 1
+    assert registry_record.metadata["triple_audit_status"] == "promote"
+    assert registry_record.metadata["triple_audit_audit_pass_rate"] == pytest.approx(1.0)
     assert registry_record.metadata["suite"] == "unit"
 
-    triple_audit = triple_audit_module.build_product_trace_triple_audit_enrichment(
-        triple_audit_module.ProductTraceTripleAuditEnrichmentConfig(
-            trace_paths=(),
-            trace_jsonl_paths=(output_dir / "correction-handoff" / "product-traces.jsonl",),
-            output_dir=tmp_path / "triple-audit",
-            compact_json=True,
-        )
-    )
-
+    triple_audit = json.loads(Path(payload["paths"]["triple_audit"]).read_text(encoding="utf-8"))
     assert triple_audit["status"] == "promote"
     assert triple_audit["summary"]["audit_claim_coverage_rate"] == pytest.approx(1.0)
     assert triple_audit["summary"]["audit_pass_rate"] == pytest.approx(1.0)

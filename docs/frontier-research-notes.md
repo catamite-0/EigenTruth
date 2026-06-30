@@ -1183,7 +1183,11 @@ Added the first monitor-first tool-selection audit layer:
   model-answer triples plus structured refutation evidence in their ProductTrace
   JSONL rows, so exact covered-fact correction sidecars can enter this audit
   path without first splitting traces into individual JSON files or adding an
-  external corpus. The v0 run on the 12 SmolLM2 action-payload
+  external corpus. `run_source_family_structured_qa_claim_correction_workflow.py`
+  can now run that enrichment as an optional fourth child gate directly from the
+  correction handoff JSONL, keeping the exact-correction lane manifest-backed
+  and fail-closed when triple-audit quality does not promote. The v0 run on the
+  12 SmolLM2 action-payload
   compatibility traces with only the Wikidata capitals corpus produced
   `audit_claim_coverage_rate=0.667`, which correctly blocked the quality gate.
   The v1 run adds numeric-equation triples, fixes capitalized token coverage,
