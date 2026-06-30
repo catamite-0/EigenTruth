@@ -1144,6 +1144,12 @@ def _counterfactual_robustness_metrics(trace: ProductTrace | Mapping[str, Any]) 
         "counterfactual_robustness_probe_total": _finite_float(
             summary.get("counterfactual_probe_total")
         ),
+        "counterfactual_robustness_entity_probe_count": _finite_float(
+            summary.get("entity_probe_count")
+        ),
+        "counterfactual_robustness_entity_candidate_count": _finite_float(
+            summary.get("entity_candidate_count")
+        ),
         "counterfactual_robustness_coverage_rate": _finite_float(summary.get("coverage_rate")),
         "counterfactual_robustness_pass_rate": _finite_float(summary.get("pass_rate")),
         "counterfactual_robustness_passed_count": _finite_float(summary.get("passed_count")),
@@ -1183,6 +1189,15 @@ def _counterfactual_robustness_metrics(trace: ProductTrace | Mapping[str, Any]) 
         ),
         "counterfactual_robustness_counts_by_failure_reason": _int_mapping(
             summary.get("counts_by_failure_reason")
+        ),
+        "counterfactual_robustness_counts_by_entity_candidate": _int_mapping(
+            summary.get("counts_by_entity_candidate")
+        ),
+        "counterfactual_robustness_false_invariance_by_entity_candidate": _int_mapping(
+            summary.get("false_invariance_by_entity_candidate")
+        ),
+        "counterfactual_robustness_counts_by_entity_source_kind": _int_mapping(
+            summary.get("counts_by_entity_source_kind")
         ),
     }
 

@@ -1200,6 +1200,12 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         "counterfactual_robustness_probe_total": metrics.get(
             "counterfactual_robustness_probe_total"
         ),
+        "counterfactual_robustness_entity_probe_count": metrics.get(
+            "counterfactual_robustness_entity_probe_count"
+        ),
+        "counterfactual_robustness_entity_candidate_count": metrics.get(
+            "counterfactual_robustness_entity_candidate_count"
+        ),
         "counterfactual_robustness_coverage_rate": metrics.get(
             "counterfactual_robustness_coverage_rate"
         ),
@@ -1253,6 +1259,17 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "counterfactual_robustness_counts_by_failure_reason": dict(
             _mapping(metrics.get("counterfactual_robustness_counts_by_failure_reason"))
+        ),
+        "counterfactual_robustness_counts_by_entity_candidate": dict(
+            _mapping(metrics.get("counterfactual_robustness_counts_by_entity_candidate"))
+        ),
+        "counterfactual_robustness_false_invariance_by_entity_candidate": dict(
+            _mapping(metrics.get(
+                "counterfactual_robustness_false_invariance_by_entity_candidate"
+            ))
+        ),
+        "counterfactual_robustness_counts_by_entity_source_kind": dict(
+            _mapping(metrics.get("counterfactual_robustness_counts_by_entity_source_kind"))
         ),
         "final_answer_summary": dict(_mapping(metrics.get("final_answer_summary"))),
         "final_answer_available": bool(metrics.get("final_answer_available")),
@@ -2679,6 +2696,8 @@ def _aggregate_counterfactual_robustness(metrics: Sequence[Mapping[str, Any]]) -
     summaries = [_mapping(item.get("counterfactual_robustness_summary")) for item in metrics]
     counterfactual_result_total = _sum_float(summaries, "counterfactual_result_total")
     counterfactual_probe_total = _sum_float(summaries, "counterfactual_probe_total")
+    entity_probe_count = _sum_float(summaries, "entity_probe_count")
+    entity_candidate_observation_count = _sum_float(summaries, "entity_candidate_count")
     passed_count = _sum_float(summaries, "passed_count")
     failed_count = _sum_float(summaries, "failed_count")
     expected_flip_count = _sum_float(summaries, "expected_flip_count")
@@ -2690,6 +2709,9 @@ def _aggregate_counterfactual_robustness(metrics: Sequence[Mapping[str, Any]]) -
     counts_by_source: dict[str, int] = {}
     counts_by_probe_type: dict[str, int] = {}
     counts_by_failure_reason: dict[str, int] = {}
+    counts_by_entity_candidate: dict[str, int] = {}
+    false_invariance_by_entity_candidate: dict[str, int] = {}
+    counts_by_entity_source_kind: dict[str, int] = {}
     for summary in summaries:
         _merge_counts(counts_by_status, _mapping(summary.get("counts_by_status")))
     for item in metrics:
@@ -2704,6 +2726,20 @@ def _aggregate_counterfactual_robustness(metrics: Sequence[Mapping[str, Any]]) -
         _merge_counts(
             counts_by_failure_reason,
             _mapping(item.get("counterfactual_robustness_counts_by_failure_reason")),
+        )
+        _merge_counts(
+            counts_by_entity_candidate,
+            _mapping(item.get("counterfactual_robustness_counts_by_entity_candidate")),
+        )
+        _merge_counts(
+            false_invariance_by_entity_candidate,
+            _mapping(item.get(
+                "counterfactual_robustness_false_invariance_by_entity_candidate"
+            )),
+        )
+        _merge_counts(
+            counts_by_entity_source_kind,
+            _mapping(item.get("counterfactual_robustness_counts_by_entity_source_kind")),
         )
     participating_trace_count = sum(
         1
@@ -2727,6 +2763,9 @@ def _aggregate_counterfactual_robustness(metrics: Sequence[Mapping[str, Any]]) -
         "participating_trace_rate": _safe_div(participating_trace_count, len(metrics)),
         "counterfactual_result_total": counterfactual_result_total,
         "counterfactual_probe_total": counterfactual_probe_total,
+        "entity_probe_count": entity_probe_count,
+        "entity_candidate_observation_count": entity_candidate_observation_count,
+        "unique_entity_candidate_count": len(counts_by_entity_candidate),
         "coverage_rate": _safe_div(counterfactual_result_total, _sum_float(summaries, "total")),
         "passed_count": passed_count,
         "failed_count": failed_count,
@@ -2749,11 +2788,21 @@ def _aggregate_counterfactual_robustness(metrics: Sequence[Mapping[str, Any]]) -
         "counts_by_source": counts_by_source,
         "counts_by_probe_type": counts_by_probe_type,
         "counts_by_failure_reason": counts_by_failure_reason,
+        "counts_by_entity_candidate": counts_by_entity_candidate,
+        "false_invariance_by_entity_candidate": false_invariance_by_entity_candidate,
+        "counts_by_entity_source_kind": counts_by_entity_source_kind,
         "per_trace_result_count": _numeric_summary(
             item.get("counterfactual_robustness_result_total") for item in metrics
         ),
         "per_trace_probe_count": _numeric_summary(
             item.get("counterfactual_robustness_probe_total") for item in metrics
+        ),
+        "per_trace_entity_probe_count": _numeric_summary(
+            item.get("counterfactual_robustness_entity_probe_count") for item in metrics
+        ),
+        "per_trace_entity_candidate_count": _numeric_summary(
+            item.get("counterfactual_robustness_entity_candidate_count")
+            for item in metrics
         ),
         "per_trace_coverage_rate": _numeric_summary(
             item.get("counterfactual_robustness_coverage_rate") for item in metrics

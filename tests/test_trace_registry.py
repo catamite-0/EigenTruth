@@ -1909,7 +1909,25 @@ def test_product_trace_counterfactual_robustness_summary_feeds_runtime_metrics()
                             "expected_flip_count": 3,
                             "flip_success_count": 2,
                             "false_invariance_count": 1,
-                            "by_probe_type": {"entity_swap": 2, "quantity": 1},
+                            "entity_probe_count": 2,
+                            "entity_candidate_count": 2,
+                            "by_probe_type": {
+                                "entity_swap": {"record_count": 2},
+                                "quantity": {"record_count": 1},
+                            },
+                            "by_entity_candidate": {
+                                "AlphaCorp": {
+                                    "record_count": 1,
+                                    "false_invariance_count": 1,
+                                    "source_kinds": {"entity_candidate": 1},
+                                },
+                                "Beta Labs": {
+                                    "record_count": 1,
+                                    "false_invariance_count": 0,
+                                    "source_kinds": {"entity_candidate": 1},
+                                },
+                            },
+                            "counts_by_entity_source_kind": {"entity_candidate": 2},
                             "counts_by_failure_reason": {"status_did_not_flip": 1},
                         },
                         "metadata": {"adapter": "structured-qa-counterfactual"},
@@ -1942,6 +1960,8 @@ def test_product_trace_counterfactual_robustness_summary_feeds_runtime_metrics()
     assert summary["counterfactual_probe_total"] == pytest.approx(4.0)
     assert summary["coverage_rate"] == pytest.approx(2 / 3)
     assert summary["pass_rate"] == pytest.approx(0.5)
+    assert summary["entity_probe_count"] == pytest.approx(2.0)
+    assert summary["entity_candidate_count"] == 2
     assert summary["false_invariance_count"] == pytest.approx(2.0)
     assert summary["false_invariance_rate"] == pytest.approx(0.5)
     assert summary["flip_success_rate"] == pytest.approx(0.5)
@@ -1951,18 +1971,42 @@ def test_product_trace_counterfactual_robustness_summary_feeds_runtime_metrics()
     }
     assert summary["counts_by_probe_type"] == {"entity_swap": 2, "quantity": 1, "year": 1}
     assert summary["counts_by_failure_reason"] == {"status_did_not_flip": 2}
+    assert summary["counts_by_entity_candidate"] == {"AlphaCorp": 1, "Beta Labs": 1}
+    assert summary["false_invariance_by_entity_candidate"] == {"AlphaCorp": 1, "Beta Labs": 0}
+    assert summary["counts_by_entity_source_kind"] == {"entity_candidate": 2}
     assert bounded["summaries"]["counterfactual_robustness"]["counterfactual_result_total"] == 2
+    assert bounded["summaries"]["counterfactual_robustness"]["counts_by_entity_candidate"] == {
+        "AlphaCorp": 1,
+        "Beta Labs": 1,
+    }
     assert metrics["counterfactual_robustness_source"] == "full_trace"
     assert metrics["counterfactual_robustness_pass_rate"] == pytest.approx(0.5)
+    assert metrics["counterfactual_robustness_entity_probe_count"] == pytest.approx(2.0)
+    assert metrics["counterfactual_robustness_entity_candidate_count"] == pytest.approx(2.0)
     assert metrics["counterfactual_robustness_counts_by_probe_type"] == {
         "entity_swap": 2,
         "quantity": 1,
         "year": 1,
     }
+    assert metrics["counterfactual_robustness_counts_by_entity_candidate"] == {
+        "AlphaCorp": 1,
+        "Beta Labs": 1,
+    }
+    assert metrics["counterfactual_robustness_false_invariance_by_entity_candidate"] == {
+        "AlphaCorp": 1,
+        "Beta Labs": 0,
+    }
+    assert metrics["counterfactual_robustness_counts_by_entity_source_kind"] == {
+        "entity_candidate": 2
+    }
     assert bounded_metrics["counterfactual_robustness_source"] == "bounded_summary"
     assert bounded_metrics["counterfactual_robustness_false_invariance_rate"] == (
         pytest.approx(0.5)
     )
+    assert bounded_metrics["counterfactual_robustness_counts_by_entity_candidate"] == {
+        "AlphaCorp": 1,
+        "Beta Labs": 1,
+    }
     json.dumps(summary)
     json.dumps(bounded)
 

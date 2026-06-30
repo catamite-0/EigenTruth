@@ -34513,7 +34513,24 @@ def test_run_product_runtime_baseline_aggregates_counterfactual_robustness(tmp_p
                                 "expected_flip_count": 2,
                                 "flip_success_count": 1,
                                 "false_invariance_count": 1,
-                                "by_probe_type": {"entity_swap": 2},
+                                "entity_probe_count": 2,
+                                "entity_candidate_count": 2,
+                                "by_probe_type": {
+                                    "entity_swap": {"record_count": 2},
+                                },
+                                "by_entity_candidate": {
+                                    "AlphaCorp": {
+                                        "record_count": 1,
+                                        "false_invariance_count": 1,
+                                        "source_kinds": {"entity_candidate": 1},
+                                    },
+                                    "Beta Labs": {
+                                        "record_count": 1,
+                                        "false_invariance_count": 0,
+                                        "source_kinds": {"entity_candidate": 1},
+                                    },
+                                },
+                                "counts_by_entity_source_kind": {"entity_candidate": 2},
                                 "counts_by_failure_reason": {"status_did_not_flip": 1},
                             },
                             "metadata": {"adapter": "structured-qa-counterfactual"},
@@ -34562,6 +34579,9 @@ def test_run_product_runtime_baseline_aggregates_counterfactual_robustness(tmp_p
     assert counterfactual["participating_trace_rate"] == pytest.approx(1.0)
     assert counterfactual["counterfactual_result_total"] == pytest.approx(2.0)
     assert counterfactual["counterfactual_probe_total"] == pytest.approx(3.0)
+    assert counterfactual["entity_probe_count"] == pytest.approx(2.0)
+    assert counterfactual["entity_candidate_observation_count"] == pytest.approx(2.0)
+    assert counterfactual["unique_entity_candidate_count"] == 2
     assert counterfactual["coverage_rate"] == pytest.approx(2 / 3)
     assert counterfactual["pass_rate"] == pytest.approx(1 / 3)
     assert counterfactual["false_invariance_count"] == pytest.approx(2.0)
@@ -34573,6 +34593,18 @@ def test_run_product_runtime_baseline_aggregates_counterfactual_robustness(tmp_p
     }
     assert counterfactual["counts_by_probe_type"] == {"entity_swap": 2, "year": 1}
     assert counterfactual["counts_by_failure_reason"] == {"status_did_not_flip": 2}
+    assert counterfactual["counts_by_entity_candidate"] == {"AlphaCorp": 1, "Beta Labs": 1}
+    assert counterfactual["false_invariance_by_entity_candidate"] == {
+        "AlphaCorp": 1,
+        "Beta Labs": 0,
+    }
+    assert counterfactual["counts_by_entity_source_kind"] == {"entity_candidate": 2}
+    assert payload["traces"][0]["metrics"][
+        "counterfactual_robustness_counts_by_entity_candidate"
+    ] == {
+        "AlphaCorp": 1,
+        "Beta Labs": 1,
+    }
 
 
 def test_run_product_runtime_baseline_reports_optimization_advice(tmp_path):

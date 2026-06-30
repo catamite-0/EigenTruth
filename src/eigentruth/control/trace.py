@@ -1040,8 +1040,12 @@ def _counterfactual_robustness_summary_from_results(
     counts_by_source: dict[str, int] = {}
     counts_by_probe_type: dict[str, int] = {}
     counts_by_failure_reason: dict[str, int] = {}
+    counts_by_entity_candidate: dict[str, int] = {}
+    false_invariance_by_entity_candidate: dict[str, int] = {}
+    counts_by_entity_source_kind: dict[str, int] = {}
     counterfactual_result_total = 0
     counterfactual_probe_total = 0.0
+    entity_probe_count = 0.0
     passed_count = 0.0
     failed_count = 0.0
     expected_flip_count = 0.0
@@ -1108,9 +1112,29 @@ def _counterfactual_robustness_summary_from_results(
         expected_stable_count += expected_stable or 0.0
         stable_success_count += stable_success or 0.0
         unexpected_flip_count += unexpected_flip or 0.0
-        _merge_counts(counts_by_probe_type, _mapping(summary.get("by_probe_type")))
+        entity_probe = _first_non_negative_float(summary.get("entity_probe_count"))
+        if entity_probe is None:
+            entity_probe = _counterfactual_entity_probe_count(summary.get("by_entity_candidate"))
+        entity_probe_count += entity_probe or 0.0
+        _merge_counterfactual_group_counts(
+            counts_by_probe_type,
+            summary.get("by_probe_type"),
+            count_key="record_count",
+        )
         _merge_counts(counts_by_failure_reason, _mapping(summary.get("failure_reasons")))
         _merge_counts(counts_by_failure_reason, _mapping(summary.get("counts_by_failure_reason")))
+        entity_source_kind_counts = _mapping(summary.get("counts_by_entity_source_kind"))
+        _merge_counts(
+            counts_by_entity_source_kind,
+            entity_source_kind_counts,
+        )
+        _merge_counterfactual_entity_candidate_counts(
+            counts_by_entity_candidate,
+            false_invariance_by_entity_candidate,
+            counts_by_entity_source_kind,
+            summary.get("by_entity_candidate"),
+            merge_source_kinds=not bool(entity_source_kind_counts),
+        )
         failure_reason = metadata.get("counterfactual_failure_reason")
         if failure_reason is not None:
             _increment_count(counts_by_failure_reason, failure_reason)
@@ -1124,6 +1148,8 @@ def _counterfactual_robustness_summary_from_results(
         "total": len(results),
         "counterfactual_result_total": counterfactual_result_total,
         "counterfactual_probe_total": counterfactual_probe_total,
+        "entity_probe_count": entity_probe_count,
+        "entity_candidate_count": len(counts_by_entity_candidate),
         "coverage_rate": _safe_div(counterfactual_result_total, len(results)) or 0.0,
         "pass_rate": _safe_div(passed_count, counterfactual_probe_total) or 0.0,
         "passed_count": passed_count,
@@ -1150,6 +1176,9 @@ def _counterfactual_robustness_summary_from_results(
         "counts_by_source": counts_by_source,
         "counts_by_probe_type": counts_by_probe_type,
         "counts_by_failure_reason": counts_by_failure_reason,
+        "counts_by_entity_candidate": counts_by_entity_candidate,
+        "false_invariance_by_entity_candidate": false_invariance_by_entity_candidate,
+        "counts_by_entity_source_kind": counts_by_entity_source_kind,
         "traceable": counterfactual_result_total > 0 and trace_gap_count == 0,
     }
 
@@ -1240,6 +1269,76 @@ def _counterfactual_source(metadata: Mapping[str, Any]) -> str | None:
     if raw is None:
         return None
     return str(raw)
+
+
+def _merge_counterfactual_group_counts(
+    target: dict[str, int],
+    groups: Any,
+    *,
+    count_key: str,
+) -> None:
+    for raw_key, raw_value in _mapping(groups).items():
+        key = str(raw_key).strip()
+        if not key:
+            continue
+        if isinstance(raw_value, Mapping):
+            count = _non_negative_int(raw_value.get(count_key))
+        else:
+            count = _non_negative_int(raw_value)
+        if count is None:
+            continue
+        target[key] = target.get(key, 0) + count
+
+
+def _merge_counterfactual_entity_candidate_counts(
+    counts_by_entity_candidate: dict[str, int],
+    false_invariance_by_entity_candidate: dict[str, int],
+    counts_by_entity_source_kind: dict[str, int],
+    groups: Any,
+    *,
+    merge_source_kinds: bool = True,
+) -> None:
+    for raw_entity, raw_value in _mapping(groups).items():
+        entity = str(raw_entity).strip()
+        if not entity:
+            continue
+        if isinstance(raw_value, Mapping):
+            record_count = _non_negative_int(raw_value.get("record_count"))
+            false_invariance_count = _non_negative_int(
+                raw_value.get("false_invariance_count")
+            )
+            if merge_source_kinds:
+                _merge_counts(
+                    counts_by_entity_source_kind,
+                    _mapping(raw_value.get("source_kinds")),
+                )
+        else:
+            record_count = _non_negative_int(raw_value)
+            false_invariance_count = None
+        if record_count is not None:
+            counts_by_entity_candidate[entity] = (
+                counts_by_entity_candidate.get(entity, 0) + record_count
+            )
+        if false_invariance_count is not None:
+            false_invariance_by_entity_candidate[entity] = (
+                false_invariance_by_entity_candidate.get(entity, 0)
+                + false_invariance_count
+            )
+
+
+def _counterfactual_entity_probe_count(groups: Any) -> float | None:
+    total = 0
+    observed = False
+    for raw_value in _mapping(groups).values():
+        if isinstance(raw_value, Mapping):
+            count = _non_negative_int(raw_value.get("record_count"))
+        else:
+            count = _non_negative_int(raw_value)
+        if count is None:
+            continue
+        observed = True
+        total += count
+    return float(total) if observed else None
 
 
 def _first_non_negative_float(*values: Any) -> float | None:
