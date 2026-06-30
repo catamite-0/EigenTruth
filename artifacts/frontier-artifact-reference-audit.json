@@ -1,26 +1,12 @@
 {
   "artifact_manifest": "artifacts/frontier-artifact-reference-audit-manifest.json",
   "artifact_manifest_summary": {
-    "artifact_count": 19,
+    "artifact_count": 11,
     "directory_count": 1,
-    "file_count": 6,
-    "missing_count": 12
+    "file_count": 10,
+    "missing_count": 0
   },
-  "blocking_reasons": [
-    "artifact manifest verification failed: artifacts/frontier-audit-release-candidate-v6/artifact-manifest.json",
-    "missing artifact reference: artifacts/frontier-audit-release-candidate-v6/evidence-gap-plan.json",
-    "missing artifact reference: artifacts/frontier-audit-release-candidate-v6/frontier-audit-comparison.json",
-    "missing artifact reference: artifacts/frontier-audit-release-candidate-v6/frontier-audit-registry-workflow.json",
-    "missing artifact reference: artifacts/frontier-audit-release-candidate-v6/manifest-verification.json",
-    "missing artifact reference: artifacts/smollm2_product_promotion_contract_v1_9/",
-    "missing artifact reference: artifacts/smollm2_product_promotion_contract_v1_9/artifact-manifest.json",
-    "missing artifact reference: artifacts/smollm2_product_promotion_contract_v1_9/evidence-handoff-artifact-manifest.json",
-    "missing artifact reference: artifacts/smollm2_product_promotion_contract_v1_9/evidence-handoff-manifest-verification.json",
-    "missing artifact reference: artifacts/smollm2_product_promotion_contract_v1_9/manifest-verification.json",
-    "missing artifact reference: artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract-evidence-handoff-audit.json",
-    "missing artifact reference: artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract-evidence-handoff.json",
-    "missing artifact reference: artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json"
-  ],
+  "blocking_reasons": [],
   "config": {
     "documents": [
       "README.md",
@@ -40,167 +26,7 @@
     "verify_manifests": true
   },
   "metadata": {},
-  "recommended_actions": [
-    {
-      "action_id": "rebuild_frontier_mechanism_handoff_sources",
-      "action_type": "rebuild_world_model_rule_candidate_handoffs",
-      "affected_paths": [
-        "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff/world-model-rule-candidate-handoff.json",
-        "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff/world-model-rule-candidate-handoff.json",
-        "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff/world-model-rule-candidate-handoff.json"
-      ],
-      "metadata": {
-        "missing_prerequisite_paths": [
-          "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-promotion-gate/world-model-rule-candidate-promotion-gate.json",
-          "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-promotion-gate/world-model-rule-candidate-promotion-gate.json",
-          "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-promotion-gate/world-model-rule-candidate-promotion-gate.json"
-        ],
-        "notes": "The handoff commands consume promoted world-model rule-candidate promotion-gate reports. If the listed promotion gates are also missing, rerun the mechanism binding-fill, authoring-adapter, and promotion-gate chain before building the handoff bundle.",
-        "required_promotion_gate_paths": [
-          "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-promotion-gate/world-model-rule-candidate-promotion-gate.json",
-          "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-promotion-gate/world-model-rule-candidate-promotion-gate.json",
-          "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-promotion-gate/world-model-rule-candidate-promotion-gate.json"
-        ]
-      },
-      "priority": 105,
-      "rationale": "The frontier-audit v6 release candidate consumes a mechanism handoff evidence bundle, but the source world-model rule-candidate handoff reports are missing locally.",
-      "suggested_commands": [
-        "python benchmarks/build_world_model_rule_candidate_handoff.py --promotion-gate artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-promotion-gate/world-model-rule-candidate-promotion-gate.json --output-dir artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff --registry artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff/registry.json --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff --version 0.1 --metadata source=frontier_mechanism_handoff_rebuild",
-        "python benchmarks/build_world_model_rule_candidate_handoff.py --promotion-gate artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-promotion-gate/world-model-rule-candidate-promotion-gate.json --output-dir artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff --registry artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff/registry.json --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff --version 0.1 --metadata source=frontier_mechanism_handoff_rebuild",
-        "python benchmarks/build_world_model_rule_candidate_handoff.py --promotion-gate artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-promotion-gate/world-model-rule-candidate-promotion-gate.json --output-dir artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff --registry artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff/registry.json --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff --version 0.1 --metadata source=frontier_mechanism_handoff_rebuild"
-      ],
-      "title": "Regenerate frontier mechanism handoff source reports"
-    },
-    {
-      "action_id": "rebuild_frontier_audit_release_candidate_v6",
-      "action_type": "rerun_release_candidate_workflow",
-      "affected_paths": [
-        "artifacts/frontier-audit-release-candidate-v6/evidence-gap-plan.json",
-        "artifacts/frontier-audit-release-candidate-v6/frontier-audit-comparison.json",
-        "artifacts/frontier-audit-release-candidate-v6/frontier-audit-registry-workflow.json",
-        "artifacts/frontier-audit-release-candidate-v6/manifest-verification.json"
-      ],
-      "metadata": {
-        "depends_on_action_ids": [
-          "rebuild_frontier_mechanism_handoff_sources"
-        ],
-        "frontier_release_evidence": "artifacts/frontier-release-evidence/frontier-release-evidence-refreshed.json",
-        "mechanism_handoff_evidence_bundle": "artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle/mechanism-handoff-evidence-bundle.json",
-        "notes": "Rerun the release-candidate registry workflow that produced the frontier-audit v6 candidate before exporting v1.9 product handoff artifacts.",
-        "release_policy_profile": "frontier_audit",
-        "required_output": "artifacts/frontier-audit-release-candidate-v6/frontier-audit-registry-workflow.json",
-        "route_registry": "artifacts/frontier-release-evidence/frontier-route-registry.json"
-      },
-      "priority": 100,
-      "rationale": "The active docs reference the v6 frontier-audit release candidate, but one or more source reports/manifests are missing locally.",
-      "suggested_commands": [
-        "python benchmarks/build_mechanism_handoff_evidence_bundle.py --handoff artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff/world-model-rule-candidate-handoff.json --handoff artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff/world-model-rule-candidate-handoff.json --handoff artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff/world-model-rule-candidate-handoff.json --output-dir artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle --registry artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle/registry.json --name truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle --version 0.1 --expected-target-count 9 --min-trace-count 9 --min-supported-count 7 --min-refuted-count 2",
-        "python benchmarks/run_release_candidate_registry_workflow.py --readiness-registry artifacts/local-readiness-registry.json --route-registry artifacts/frontier-release-evidence/frontier-route-registry.json --performance-registry artifacts/local-readiness-registry.json --release-registry artifacts/local-release-registry.json --name smollm2-l8-frontier-audit-release-candidate --version 0.6 --release-policy-profile frontier_audit --readiness-baseline-key benchmark_manifest:smollm2-l8-read-cache-worker-sweep-score-fusion-readiness:0.2 --route-baseline-key benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4 --required-route-baseline-key benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.6 --structured-fact-canonical-route-key benchmark_manifest:wikidata-country-core-facts-structured-fact-canonical-route:0.1 --structured-fact-paraphrase-route-key benchmark_manifest:wikidata-country-core-facts-structured-fact-paraphrase-route:0.1 --performance-baseline-key performance_baseline:smollm2-l8-read-cache-worker-sweep-score-fusion-performance-baseline:0.2 --product-trace-replay-workflow artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/product-trace-replay-workflow.json --selector-replay-report artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/selector-replay/runtime-profile-selector-replay.json --product-runtime-drift-report artifacts/smollm2_product_runtime_drift_v1_8/product-runtime-drift.json --adapter-family-matrix artifacts/frontier-audit-strict-adapter-family-matrix-v0/adapter-family-matrix.json --triple-extraction-fixture-matrix artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/triple-extraction-fixture-matrix.json --external-evidence-baseline-comparison artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-covered-facts-handoff/external-evidence-baseline-comparison.json --mechanism-handoff-evidence-bundle artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle/mechanism-handoff-evidence-bundle.json --frontier-release-evidence artifacts/frontier-release-evidence/frontier-release-evidence-refreshed.json --json artifacts/frontier-audit-release-candidate-v6/frontier-audit-registry-workflow.json --release-report-json artifacts/frontier-audit-release-candidate-v6/frontier-audit-comparison.json --artifact-manifest artifacts/frontier-audit-release-candidate-v6/artifact-manifest.json --verification-report artifacts/frontier-audit-release-candidate-v6/manifest-verification.json --fingerprint-cache artifacts/frontier-audit-release-candidate-v6/fingerprints.json --artifact-json-cache artifacts/frontier-audit-release-candidate-v6/artifact-json-cache.json --manifest-fingerprint-workers 2"
-      ],
-      "title": "Regenerate frontier audit release-candidate v6 artifacts"
-    },
-    {
-      "action_id": "export_product_promotion_contract_v1_9",
-      "action_type": "export_product_promotion_contract",
-      "affected_paths": [
-        "artifacts/smollm2_product_promotion_contract_v1_9/",
-        "artifacts/smollm2_product_promotion_contract_v1_9/artifact-manifest.json",
-        "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json"
-      ],
-      "metadata": {
-        "depends_on_action_ids": [
-          "rebuild_frontier_audit_release_candidate_v6"
-        ],
-        "source": "artifacts/frontier-audit-release-candidate-v6/frontier-audit-registry-workflow.json"
-      },
-      "priority": 80,
-      "rationale": "The demo prefers the v1.9 handoff when present, but the local product contract or its manifest is missing.",
-      "suggested_commands": [
-        "python benchmarks/export_product_promotion_contract.py --source artifacts/frontier-audit-release-candidate-v6/frontier-audit-registry-workflow.json --output artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json --artifact-manifest artifacts/smollm2_product_promotion_contract_v1_9/artifact-manifest.json --registry artifacts/local-release-registry.json --name smollm2-product-promotion-contract --version 1.9 --metadata release=smollm2-v1.9 --metadata source_record=benchmark_manifest:smollm2-l8-frontier-audit-release-candidate:0.6 --compact-json"
-      ],
-      "title": "Export product promotion contract v1.9 from frontier v6"
-    },
-    {
-      "action_id": "export_product_promotion_contract_v1_9_evidence_handoff",
-      "action_type": "export_product_promotion_contract_evidence_handoff",
-      "affected_paths": [
-        "artifacts/smollm2_product_promotion_contract_v1_9/evidence-handoff-artifact-manifest.json",
-        "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract-evidence-handoff-audit.json",
-        "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract-evidence-handoff.json"
-      ],
-      "metadata": {
-        "contract": "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json",
-        "depends_on_action_ids": [
-          "export_product_promotion_contract_v1_9"
-        ],
-        "frontier_release_evidence": "artifacts/frontier-release-evidence/frontier-release-evidence-refreshed.json",
-        "required_groups": [
-          "promotion",
-          "pre_generation",
-          "counterfactual",
-          "triple_audit",
-          "covered_fact_property",
-          "action_gate",
-          "frontier_release_evidence"
-        ]
-      },
-      "priority": 70,
-      "rationale": "The active docs reference enriched v1.9 evidence-handoff reports, but the handoff JSON, audit, or handoff manifest is missing locally.",
-      "suggested_commands": [
-        "python benchmarks/export_product_promotion_contract_evidence_handoff.py --contract artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json --json artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract-evidence-handoff.json --audit-json artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract-evidence-handoff-audit.json --pre-generation-probe-comparison artifacts/runtime_evidence/pre-generation-qwen-smollm2-l12-comparison/comparison.json --triple-extraction-fixture-matrix artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/triple-extraction-fixture-matrix.json --counterfactual-verification artifacts/smollm2_product_counterfactual_structured_qa_audit_v0/counterfactual-verification-report.json --product-trace-replay-workflow artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/product-trace-replay-workflow.json --triple-audit-enrichment artifacts/smollm2_product_trace_triple_audit_enrichment_v1/product-trace-triple-audit-enrichment.json --covered-fact-property-metrics artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-route/structured-qa-route-summary.json --frontier-release-evidence artifacts/frontier-release-evidence/frontier-release-evidence-refreshed.json --required-groups promotion,pre_generation,counterfactual,triple_audit,covered_fact_property,action_gate,frontier_release_evidence --artifact-manifest artifacts/smollm2_product_promotion_contract_v1_9/evidence-handoff-artifact-manifest.json --registry artifacts/local-release-registry.json --name smollm2-product-promotion-contract-v1-9-evidence-handoff --version 0.3 --metadata release=smollm2-v1.9 --metadata triple_audit_enrichment=triple_audit_v1"
-      ],
-      "title": "Export enriched v1.9 product evidence handoff"
-    },
-    {
-      "action_id": "verify_frontier_artifact_manifests",
-      "action_type": "verify_artifact_manifests",
-      "affected_paths": [
-        "artifacts/frontier-audit-release-candidate-v6/manifest-verification.json",
-        "artifacts/smollm2_product_promotion_contract_v1_9/evidence-handoff-manifest-verification.json",
-        "artifacts/smollm2_product_promotion_contract_v1_9/manifest-verification.json"
-      ],
-      "metadata": {
-        "depends_on_action_ids": [
-          "rebuild_frontier_audit_release_candidate_v6",
-          "export_product_promotion_contract_v1_9",
-          "export_product_promotion_contract_v1_9_evidence_handoff"
-        ]
-      },
-      "priority": 50,
-      "rationale": "The active docs reference saved manifest-verification reports that should be refreshed after the source manifests are regenerated.",
-      "suggested_commands": [
-        "python benchmarks/verify_artifact_manifest.py --manifest artifacts/frontier-audit-release-candidate-v6/artifact-manifest.json --recursive --json artifacts/frontier-audit-release-candidate-v6/manifest-verification.json",
-        "python benchmarks/verify_artifact_manifest.py --manifest artifacts/smollm2_product_promotion_contract_v1_9/artifact-manifest.json --json artifacts/smollm2_product_promotion_contract_v1_9/manifest-verification.json",
-        "python benchmarks/verify_artifact_manifest.py --manifest artifacts/smollm2_product_promotion_contract_v1_9/evidence-handoff-artifact-manifest.json --json artifacts/smollm2_product_promotion_contract_v1_9/evidence-handoff-manifest-verification.json"
-      ],
-      "title": "Verify regenerated frontier artifact manifests"
-    },
-    {
-      "action_id": "rerun_frontier_artifact_reference_audit",
-      "action_type": "audit_frontier_artifact_references",
-      "affected_paths": [
-        "artifacts/frontier-audit-release-candidate-v6/evidence-gap-plan.json",
-        "artifacts/frontier-audit-release-candidate-v6/frontier-audit-comparison.json",
-        "artifacts/frontier-audit-release-candidate-v6/frontier-audit-registry-workflow.json",
-        "artifacts/frontier-audit-release-candidate-v6/manifest-verification.json",
-        "artifacts/smollm2_product_promotion_contract_v1_9/",
-        "artifacts/smollm2_product_promotion_contract_v1_9/artifact-manifest.json",
-        "artifacts/smollm2_product_promotion_contract_v1_9/evidence-handoff-artifact-manifest.json",
-        "artifacts/smollm2_product_promotion_contract_v1_9/evidence-handoff-manifest-verification.json",
-        "artifacts/smollm2_product_promotion_contract_v1_9/manifest-verification.json",
-        "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract-evidence-handoff-audit.json",
-        "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract-evidence-handoff.json",
-        "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json"
-      ],
-      "metadata": {},
-      "priority": 10,
-      "rationale": "Recheck doc references after regenerating missing frontier artifacts.",
-      "suggested_commands": [
-        "python benchmarks/audit_frontier_artifact_references.py --json artifacts/frontier-artifact-reference-audit.json --artifact-manifest artifacts/frontier-artifact-reference-audit-manifest.json --registry artifacts/local-release-registry.json --name frontier-artifact-reference-audit --version 0.1 --no-fail"
-      ],
-      "title": "Rerun the frontier artifact reference audit"
-    }
-  ],
+  "recommended_actions": [],
   "references": [
     {
       "documents": {
@@ -229,60 +55,15 @@
       "line_numbers": [
         420
       ],
-      "manifest_missing_json_cache_sources": [
-        {
-          "expected_sha256": "23d2589768213a49eaa25a06d93501d41a69d1cd968229eef21c5079298098a9",
-          "expected_size_bytes": 274643,
-          "manifest_relative_path": "frontier-audit-comparison.json",
-          "name": "release_candidate_report",
-          "path": "artifacts/frontier-audit-release-candidate-v6/frontier-audit-comparison.json"
-        }
-      ],
       "manifest_verification": {
-        "checked": 16,
-        "failures": [
-          {
-            "actual": false,
-            "expected": true,
-            "field": "exists",
-            "name": "release_candidate_report",
-            "path": "frontier-audit-comparison.json"
-          },
-          {
-            "actual": "missing",
-            "expected": "file",
-            "field": "kind",
-            "name": "release_candidate_report",
-            "path": "frontier-audit-comparison.json"
-          },
-          {
-            "actual": null,
-            "expected": "23d2589768213a49eaa25a06d93501d41a69d1cd968229eef21c5079298098a9",
-            "field": "sha256",
-            "name": "release_candidate_report",
-            "path": "frontier-audit-comparison.json"
-          },
-          {
-            "actual": null,
-            "expected": 274643,
-            "field": "size_bytes",
-            "name": "release_candidate_report",
-            "path": "frontier-audit-comparison.json"
-          },
-          {
-            "actual": null,
-            "expected": 1,
-            "field": "file_count",
-            "name": "release_candidate_report",
-            "path": "frontier-audit-comparison.json"
-          }
-        ],
+        "checked": 3,
+        "failures": [],
         "manifest_path": "/home/z/projects/active/EigenTruth/artifacts/frontier-audit-release-candidate-v6/artifact-manifest.json",
         "nested": [],
-        "passed": false
+        "passed": true
       },
       "path": "artifacts/frontier-audit-release-candidate-v6/artifact-manifest.json",
-      "status": "manifest_failed"
+      "status": "present"
     },
     {
       "documents": {
@@ -290,14 +71,14 @@
           420
         ]
       },
-      "exists": false,
+      "exists": true,
       "is_manifest": false,
-      "kind": "missing",
+      "kind": "file",
       "line_numbers": [
         420
       ],
       "path": "artifacts/frontier-audit-release-candidate-v6/evidence-gap-plan.json",
-      "status": "missing"
+      "status": "present"
     },
     {
       "documents": {
@@ -305,35 +86,33 @@
           420
         ]
       },
-      "exists": false,
+      "exists": true,
       "is_manifest": false,
-      "kind": "missing",
+      "kind": "file",
       "line_numbers": [
         420
       ],
       "path": "artifacts/frontier-audit-release-candidate-v6/frontier-audit-comparison.json",
-      "status": "missing"
+      "status": "present"
     },
     {
       "documents": {
         "benchmarks/README.md": [
-          5644
+          5668
         ],
         "docs/experiment-plan.md": [
-          420,
-          421
+          420
         ]
       },
-      "exists": false,
+      "exists": true,
       "is_manifest": false,
-      "kind": "missing",
+      "kind": "file",
       "line_numbers": [
         420,
-        421,
-        5644
+        5668
       ],
       "path": "artifacts/frontier-audit-release-candidate-v6/frontier-audit-registry-workflow.json",
-      "status": "missing"
+      "status": "present"
     },
     {
       "documents": {
@@ -341,195 +120,40 @@
           420
         ]
       },
-      "exists": false,
+      "exists": true,
       "is_manifest": false,
-      "kind": "missing",
+      "kind": "file",
       "line_numbers": [
         420
       ],
       "path": "artifacts/frontier-audit-release-candidate-v6/manifest-verification.json",
-      "status": "missing"
-    },
-    {
-      "documents": {
-        "docs/experiment-plan.md": [
-          421
-        ]
-      },
-      "exists": false,
-      "is_manifest": false,
-      "kind": "missing",
-      "line_numbers": [
-        421
-      ],
-      "path": "artifacts/smollm2_product_promotion_contract_v1_9/",
-      "status": "missing"
-    },
-    {
-      "documents": {
-        "benchmarks/README.md": [
-          5646
-        ],
-        "docs/experiment-plan.md": [
-          421
-        ]
-      },
-      "exists": false,
-      "is_manifest": true,
-      "kind": "missing",
-      "line_numbers": [
-        421,
-        5646
-      ],
-      "path": "artifacts/smollm2_product_promotion_contract_v1_9/artifact-manifest.json",
-      "status": "missing"
-    },
-    {
-      "documents": {
-        "benchmarks/README.md": [
-          5669
-        ],
-        "docs/experiment-plan.md": [
-          421
-        ]
-      },
-      "exists": false,
-      "is_manifest": true,
-      "kind": "missing",
-      "line_numbers": [
-        421,
-        5669
-      ],
-      "path": "artifacts/smollm2_product_promotion_contract_v1_9/evidence-handoff-artifact-manifest.json",
-      "status": "missing"
-    },
-    {
-      "documents": {
-        "docs/experiment-plan.md": [
-          421
-        ]
-      },
-      "exists": false,
-      "is_manifest": false,
-      "kind": "missing",
-      "line_numbers": [
-        421
-      ],
-      "path": "artifacts/smollm2_product_promotion_contract_v1_9/evidence-handoff-manifest-verification.json",
-      "status": "missing"
-    },
-    {
-      "documents": {
-        "docs/experiment-plan.md": [
-          421
-        ]
-      },
-      "exists": false,
-      "is_manifest": false,
-      "kind": "missing",
-      "line_numbers": [
-        421
-      ],
-      "path": "artifacts/smollm2_product_promotion_contract_v1_9/manifest-verification.json",
-      "status": "missing"
-    },
-    {
-      "documents": {
-        "benchmarks/README.md": [
-          5662
-        ],
-        "docs/experiment-plan.md": [
-          421
-        ]
-      },
-      "exists": false,
-      "is_manifest": false,
-      "kind": "missing",
-      "line_numbers": [
-        421,
-        5662
-      ],
-      "path": "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract-evidence-handoff-audit.json",
-      "status": "missing"
-    },
-    {
-      "documents": {
-        "benchmarks/README.md": [
-          5661
-        ],
-        "docs/experiment-plan.md": [
-          421
-        ]
-      },
-      "exists": false,
-      "is_manifest": false,
-      "kind": "missing",
-      "line_numbers": [
-        421,
-        5661
-      ],
-      "path": "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract-evidence-handoff.json",
-      "status": "missing"
-    },
-    {
-      "documents": {
-        "README.md": [
-          304
-        ],
-        "benchmarks/README.md": [
-          5645,
-          5660
-        ],
-        "docs/experiment-plan.md": [
-          421
-        ]
-      },
-      "exists": false,
-      "is_manifest": false,
-      "kind": "missing",
-      "line_numbers": [
-        304,
-        421,
-        5645,
-        5660
-      ],
-      "path": "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json",
-      "status": "missing"
+      "status": "present"
     }
   ],
   "registry_record": "report:frontier-artifact-reference-audit:0.1",
   "schema_version": 1,
-  "status": "blocked",
+  "status": "passed",
   "summary": {
-    "blocking_reference_count": 13,
+    "blocking_reference_count": 0,
     "directory_count": 1,
     "document_count": 4,
-    "existing_count": 2,
-    "file_count": 1,
-    "manifest_child_missing_count": 1,
+    "existing_count": 6,
+    "file_count": 5,
+    "manifest_child_missing_count": 0,
     "manifest_child_recoverable_from_json_cache_count": 0,
-    "manifest_child_unrecoverable_count": 1,
+    "manifest_child_unrecoverable_count": 0,
     "manifest_error_count": 0,
-    "manifest_failed_count": 1,
-    "manifest_reference_count": 3,
-    "manifest_verified_count": 0,
-    "missing_count": 12,
+    "manifest_failed_count": 0,
+    "manifest_reference_count": 1,
+    "manifest_verified_count": 1,
+    "missing_count": 0,
     "missing_recoverable_from_json_cache_count": 0,
-    "missing_unrecoverable_count": 12,
-    "recommended_action_count": 6,
-    "recommended_action_ids": [
-      "rebuild_frontier_mechanism_handoff_sources",
-      "rebuild_frontier_audit_release_candidate_v6",
-      "export_product_promotion_contract_v1_9",
-      "export_product_promotion_contract_v1_9_evidence_handoff",
-      "verify_frontier_artifact_manifests",
-      "rerun_frontier_artifact_reference_audit"
-    ],
-    "reference_count": 14,
+    "missing_unrecoverable_count": 0,
+    "recommended_action_count": 0,
+    "recommended_action_ids": [],
+    "reference_count": 6,
     "status_counts": {
-      "manifest_failed": 1,
-      "missing": 12,
-      "present": 1
+      "present": 6
     }
   },
   "workflow": "frontier_artifact_reference_audit"

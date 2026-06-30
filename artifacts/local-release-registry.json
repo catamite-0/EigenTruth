@@ -5788,37 +5788,364 @@
     {
       "artifact_type": "report",
       "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-binding-fill/artifact-manifest.json",
+        "cell_id": "diamond",
+        "evidence": "source_backed_diamond_mechanism_promotion",
+        "filled_input_count": 1,
+        "source": "frontier_mechanism_handoff_rebuild",
+        "status": "filled",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "unfilled_task_count": 0,
+        "workflow": "world_model_rule_input_mechanism_binding_fill"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-binding-fill",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-binding-fill/rule-input-mechanism-binding-fill.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-adapter/artifact-manifest.json",
+        "cell_id": "diamond",
+        "evidence": "source_backed_diamond_mechanism_promotion",
+        "executed_count": 1,
+        "input_request_count": 0,
+        "needs_input_count": 0,
+        "source": "frontier_mechanism_handoff_rebuild",
+        "status": "observed",
+        "stub_count": 1,
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "world_model_rule_authoring_adapter"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-adapter",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-adapter/world-model-rule-authoring-adapter.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-promotion-gate/artifact-manifest.json",
+        "blocked_count": 0,
+        "cell_id": "diamond",
+        "evidence": "source_backed_diamond_mechanism_promotion",
+        "pending_count": 0,
+        "promoted_count": 1,
+        "source": "frontier_mechanism_handoff_rebuild",
+        "status": "promote",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "world_model_rule_candidate_promotion_gate"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-promotion-gate",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff/artifact-manifest.json",
+        "blocked_candidate_count": 0,
+        "cell_id": "diamond",
+        "evidence": "source_backed_diamond_mechanism_promotion",
+        "source": "frontier_mechanism_handoff_rebuild",
+        "status": "promote",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "trace_count": 1,
+        "workflow": "world_model_rule_candidate_handoff"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff/world-model-rule-candidate-handoff.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "product_trace",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff/artifact-manifest.json",
+        "cell_id": "diamond",
+        "evidence": "source_backed_diamond_mechanism_promotion",
+        "source": "frontier_mechanism_handoff_rebuild",
+        "status": "promote",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "trace_count": 1,
+        "workflow": "world_model_rule_candidate_handoff"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff/product-traces.jsonl",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "action_result",
+      "metadata": {
+        "action_result_count": 1,
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff/artifact-manifest.json",
+        "cell_id": "diamond",
+        "evidence": "source_backed_diamond_mechanism_promotion",
+        "source": "frontier_mechanism_handoff_rebuild",
+        "status": "promote",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "world_model_rule_candidate_handoff"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff/action-results.jsonl",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-binding-fill/artifact-manifest.json",
+        "cell_id": "africa_poverty",
+        "evidence": "source_backed_worldbank_africa_poverty_mechanism",
+        "filled_input_count": 4,
+        "source": "frontier_mechanism_handoff_rebuild",
+        "status": "filled",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "unfilled_task_count": 0,
+        "workflow": "world_model_rule_input_mechanism_binding_fill"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-binding-fill",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-binding-fill/rule-input-mechanism-binding-fill.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-adapter/artifact-manifest.json",
+        "cell_id": "africa_poverty",
+        "evidence": "source_backed_worldbank_africa_poverty_mechanism",
+        "executed_count": 4,
+        "input_request_count": 0,
+        "needs_input_count": 0,
+        "source": "frontier_mechanism_handoff_rebuild",
+        "status": "observed",
+        "stub_count": 4,
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "world_model_rule_authoring_adapter"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-adapter",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-adapter/world-model-rule-authoring-adapter.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-promotion-gate/artifact-manifest.json",
+        "blocked_count": 0,
+        "cell_id": "africa_poverty",
+        "evidence": "source_backed_worldbank_africa_poverty_mechanism",
+        "pending_count": 0,
+        "promoted_count": 4,
+        "source": "frontier_mechanism_handoff_rebuild",
+        "status": "promote",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "world_model_rule_candidate_promotion_gate"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-promotion-gate",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff/artifact-manifest.json",
+        "blocked_candidate_count": 0,
+        "cell_id": "africa_poverty",
+        "evidence": "source_backed_worldbank_africa_poverty_mechanism",
+        "source": "frontier_mechanism_handoff_rebuild",
+        "status": "promote",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "trace_count": 4,
+        "workflow": "world_model_rule_candidate_handoff"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff/world-model-rule-candidate-handoff.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "product_trace",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff/artifact-manifest.json",
+        "cell_id": "africa_poverty",
+        "evidence": "source_backed_worldbank_africa_poverty_mechanism",
+        "source": "frontier_mechanism_handoff_rebuild",
+        "status": "promote",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "trace_count": 4,
+        "workflow": "world_model_rule_candidate_handoff"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff/product-traces.jsonl",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "action_result",
+      "metadata": {
+        "action_result_count": 4,
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff/artifact-manifest.json",
+        "cell_id": "africa_poverty",
+        "evidence": "source_backed_worldbank_africa_poverty_mechanism",
+        "source": "frontier_mechanism_handoff_rebuild",
+        "status": "promote",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "world_model_rule_candidate_handoff"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff/action-results.jsonl",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-binding-fill/artifact-manifest.json",
+        "cell_id": "remaining",
+        "evidence": "source_backed_remaining_mechanism_promotion",
+        "filled_input_count": 4,
+        "source": "frontier_mechanism_handoff_rebuild",
+        "status": "filled",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "unfilled_task_count": 0,
+        "workflow": "world_model_rule_input_mechanism_binding_fill"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-binding-fill",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-binding-fill/rule-input-mechanism-binding-fill.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-adapter/artifact-manifest.json",
+        "cell_id": "remaining",
+        "evidence": "source_backed_remaining_mechanism_promotion",
+        "executed_count": 4,
+        "input_request_count": 0,
+        "needs_input_count": 0,
+        "source": "frontier_mechanism_handoff_rebuild",
+        "status": "observed",
+        "stub_count": 4,
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "world_model_rule_authoring_adapter"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-adapter",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-adapter/world-model-rule-authoring-adapter.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-promotion-gate/artifact-manifest.json",
+        "blocked_count": 0,
+        "cell_id": "remaining",
+        "evidence": "source_backed_remaining_mechanism_promotion",
+        "pending_count": 0,
+        "promoted_count": 4,
+        "source": "frontier_mechanism_handoff_rebuild",
+        "status": "promote",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "world_model_rule_candidate_promotion_gate"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-promotion-gate",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff/artifact-manifest.json",
+        "blocked_candidate_count": 0,
+        "cell_id": "remaining",
+        "evidence": "source_backed_remaining_mechanism_promotion",
+        "source": "frontier_mechanism_handoff_rebuild",
+        "status": "promote",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "trace_count": 4,
+        "workflow": "world_model_rule_candidate_handoff"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff/world-model-rule-candidate-handoff.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "product_trace",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff/artifact-manifest.json",
+        "cell_id": "remaining",
+        "evidence": "source_backed_remaining_mechanism_promotion",
+        "source": "frontier_mechanism_handoff_rebuild",
+        "status": "promote",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "trace_count": 4,
+        "workflow": "world_model_rule_candidate_handoff"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff/product-traces.jsonl",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "action_result",
+      "metadata": {
+        "action_result_count": 4,
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff/artifact-manifest.json",
+        "cell_id": "remaining",
+        "evidence": "source_backed_remaining_mechanism_promotion",
+        "source": "frontier_mechanism_handoff_rebuild",
+        "status": "promote",
+        "suite": "truthfulqa_frontier_smollm2_l80",
+        "workflow": "world_model_rule_candidate_handoff"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff/action-results.jsonl",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-source-workflow/artifact-manifest.json",
+        "promoted_count": 9,
+        "source": "frontier_mechanism_handoff_rebuild",
+        "status": "promote",
+        "target_count": 9,
+        "trace_count": 9,
+        "workflow": "frontier_mechanism_handoff_source_workflow"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-mechanism-handoff-source-workflow",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-source-workflow/frontier-mechanism-handoff-source-workflow.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "evidence_gap_plan",
+      "metadata": {
+        "action_count": 13,
+        "gap_count": 14,
+        "source": "artifacts/frontier-audit-release-candidate-v6/frontier-audit-comparison.json",
+        "status": "needs_evidence"
+      },
+      "name": "frontier-audit-release-candidate-v6-evidence-gap-plan",
+      "path": "artifacts/frontier-audit-release-candidate-v6/evidence-gap-plan.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
         "artifact_manifest": "artifacts/frontier-artifact-reference-audit-manifest.json",
-        "blocking_reference_count": 13,
+        "blocking_reference_count": 0,
         "directory_count": 1,
         "document_count": 4,
-        "existing_count": 2,
-        "file_count": 1,
-        "manifest_child_missing_count": 1,
+        "existing_count": 6,
+        "file_count": 5,
+        "manifest_child_missing_count": 0,
         "manifest_child_recoverable_from_json_cache_count": 0,
-        "manifest_child_unrecoverable_count": 1,
+        "manifest_child_unrecoverable_count": 0,
         "manifest_error_count": 0,
-        "manifest_failed_count": 1,
-        "manifest_reference_count": 3,
-        "manifest_verified_count": 0,
-        "missing_count": 12,
+        "manifest_failed_count": 0,
+        "manifest_reference_count": 1,
+        "manifest_verified_count": 1,
+        "missing_count": 0,
         "missing_recoverable_from_json_cache_count": 0,
-        "missing_unrecoverable_count": 12,
-        "recommended_action_count": 6,
-        "recommended_action_ids": [
-          "rebuild_frontier_mechanism_handoff_sources",
-          "rebuild_frontier_audit_release_candidate_v6",
-          "export_product_promotion_contract_v1_9",
-          "export_product_promotion_contract_v1_9_evidence_handoff",
-          "verify_frontier_artifact_manifests",
-          "rerun_frontier_artifact_reference_audit"
-        ],
-        "reference_count": 14,
-        "status": "blocked",
+        "missing_unrecoverable_count": 0,
+        "recommended_action_count": 0,
+        "recommended_action_ids": [],
+        "reference_count": 6,
+        "status": "passed",
         "status_counts": {
-          "manifest_failed": 1,
-          "missing": 12,
-          "present": 1
+          "present": 6
         },
         "workflow": "frontier_artifact_reference_audit"
       },

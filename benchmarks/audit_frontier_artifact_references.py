@@ -132,6 +132,9 @@ FRONTIER_MECHANISM_HANDOFF_REPORT_PATHS = tuple(
 FRONTIER_MECHANISM_PROMOTION_GATE_PATHS = tuple(
     str(spec["promotion_gate"]) for spec in FRONTIER_MECHANISM_HANDOFF_SOURCE_SPECS
 )
+FRONTIER_MECHANISM_REBUILD_WORKFLOW_DIR = (
+    "artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-source-workflow"
+)
 FRONTIER_AUDIT_HANDOFF_REQUIRED_GROUPS = (
     "promotion",
     "pre_generation",
@@ -208,6 +211,20 @@ BUILD_FRONTIER_MECHANISM_HANDOFF_SOURCE_COMMANDS = tuple(
     ))
     for spec in FRONTIER_MECHANISM_HANDOFF_SOURCE_SPECS
 )
+RUN_FRONTIER_MECHANISM_HANDOFF_SOURCE_WORKFLOW_COMMAND = " ".join((
+    "python",
+    "benchmarks/run_frontier_mechanism_handoff_source_workflow.py",
+    "--output-root",
+    "artifacts",
+    "--registry",
+    "artifacts/local-release-registry.json",
+    "--name",
+    "truthfulqa-frontier-smollm2-l80-mechanism-handoff-source-workflow",
+    "--version",
+    "0.1",
+    "--metadata",
+    "source=frontier_mechanism_handoff_rebuild",
+))
 REBUILD_FRONTIER_AUDIT_RELEASE_CANDIDATE_V6_COMMAND = " ".join((
     "python",
     "benchmarks/run_release_candidate_registry_workflow.py",
@@ -816,26 +833,35 @@ def _recommended_actions(
             if not (root / path).exists()
         )
         if missing_mechanism_handoff_sources:
+            affected_mechanism_paths = tuple(
+                sorted(set(missing_mechanism_handoff_sources) | set(missing_mechanism_promotion_gates))
+            )
             actions.append({
                 "action_id": "rebuild_frontier_mechanism_handoff_sources",
                 "title": "Regenerate frontier mechanism handoff source reports",
-                "action_type": "rebuild_world_model_rule_candidate_handoffs",
+                "action_type": "run_frontier_mechanism_handoff_source_workflow",
                 "priority": 105,
                 "rationale": (
                     "The frontier-audit v6 release candidate consumes a mechanism "
                     "handoff evidence bundle, but the source world-model rule-candidate "
                     "handoff reports are missing locally."
                 ),
-                "affected_paths": missing_mechanism_handoff_sources,
-                "suggested_commands": BUILD_FRONTIER_MECHANISM_HANDOFF_SOURCE_COMMANDS,
+                "affected_paths": affected_mechanism_paths,
+                "suggested_commands": (RUN_FRONTIER_MECHANISM_HANDOFF_SOURCE_WORKFLOW_COMMAND,),
                 "metadata": {
                     "required_promotion_gate_paths": FRONTIER_MECHANISM_PROMOTION_GATE_PATHS,
                     "missing_prerequisite_paths": missing_mechanism_promotion_gates,
+                    "fallback_handoff_commands": BUILD_FRONTIER_MECHANISM_HANDOFF_SOURCE_COMMANDS,
+                    "workflow_report": (
+                        f"{FRONTIER_MECHANISM_REBUILD_WORKFLOW_DIR}/"
+                        "frontier-mechanism-handoff-source-workflow.json"
+                    ),
                     "notes": (
-                        "The handoff commands consume promoted world-model rule-candidate "
-                        "promotion-gate reports. If the listed promotion gates are also "
-                        "missing, rerun the mechanism binding-fill, authoring-adapter, "
-                        "and promotion-gate chain before building the handoff bundle."
+                        "The workflow materializes explicit source-backed mechanism "
+                        "input contracts, then runs binding-fill, authoring-adapter, "
+                        "promotion-gate, and ProductTrace handoff for the three "
+                        "frontier mechanism cells. The fallback commands only rebuild "
+                        "handoffs when promotion gates already exist."
                     ),
                 },
             })

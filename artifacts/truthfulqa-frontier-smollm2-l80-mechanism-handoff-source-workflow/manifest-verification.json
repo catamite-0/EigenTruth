@@ -1,0 +1,7 @@
+{
+  "checked": 10,
+  "failures": [],
+  "manifest_path": "artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-source-workflow/artifact-manifest.json",
+  "nested": [],
+  "passed": true
+}

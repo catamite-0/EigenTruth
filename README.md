@@ -300,21 +300,20 @@ Version 1.6 also requires promoted selector replay over 12 redacted product
 traces and a promoted runtime-drift report comparing the trace replay baseline
 against the promoted `auto` profile baseline; all 9 drift metrics pass with zero
 blocked metrics.
-The calibrated-control demo now prefers the later
-`artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json`
-handoff when it is present, then falls back to the latest available local
-promoted contract such as v1.6 for development smoke runs. That contract
-preserves the v6 cache-only runtime
-recommendation (`0.191662s`) and has a sibling
-`evidence-handoff-artifact-manifest.json`; runtime traces record the handoff
-status without rerunning release gates, and can include manifest verification with
-`--verify-promotion-contract-evidence-handoff-manifest`.
+The calibrated-control demo uses the latest available local promoted product
+contract, such as v1.6, for development smoke runs. A v1.9 frontier-audit
+contract is intentionally not exported from the current local v6 replay because
+that release candidate is blocked; `export_product_promotion_contract.py`
+fail-closes until the source release candidate promotes. Runtime traces can
+still record promotion-contract evidence-handoff status without rerunning
+release gates, and can include manifest verification with
+`--verify-promotion-contract-evidence-handoff-manifest` when a promoted contract
+exists.
 Use `benchmarks/audit_frontier_artifact_references.py` to fail-closed on the
-current docs' active frontier references when checking whether the v1.9/v6
-handoff artifacts are actually present in the checkout. When references are
+current docs' active frontier references when checking whether the v6 release
+candidate artifacts are actually present in the checkout. When references are
 missing, the JSON report includes `recommended_actions` for regenerating the v6
-release candidate, exporting the v1.9 product contract, refreshing the enriched
-handoff, verifying manifests, and rerunning the audit. It also inspects the
+release candidate, verifying manifests, and rerunning the audit. It also inspects the
 default frontier `artifact-json-cache.json` and reports how many missing JSON
 artifacts are recoverable from cache before rerunning expensive workflows; add
 `--restore-json-cache-artifacts` to write those cache-backed missing JSON files

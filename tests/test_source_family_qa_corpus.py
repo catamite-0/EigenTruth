@@ -3238,6 +3238,48 @@ def test_world_model_rule_mechanism_binding_fill_handles_mixed_statuses():
     }
 
 
+def test_frontier_mechanism_handoff_source_workflow_rebuilds_cells(tmp_path):
+    module = importlib.import_module("benchmarks.run_frontier_mechanism_handoff_source_workflow")
+
+    payload = module.run(
+        output_root=tmp_path / "artifacts",
+        registry_path=tmp_path / "registry.json",
+        metadata={"suite": "unit"},
+    )
+
+    assert payload["status"] == "promote"
+    assert payload["summary"]["target_count"] == 9
+    assert payload["summary"]["filled_input_count"] == 9
+    assert payload["summary"]["promoted_count"] == 9
+    assert payload["summary"]["trace_count"] == 9
+    assert payload["summary"]["supported_count"] == 7
+    assert payload["summary"]["refuted_count"] == 2
+    assert payload["summary"]["manifest_verification_passed"] is True
+    assert payload["manifest_verification"]["passed"] is True
+    assert {cell["cell_id"] for cell in payload["cells"]} == {
+        "africa_poverty",
+        "diamond",
+        "remaining",
+    }
+    for cell in payload["cells"]:
+        assert cell["status"] == "promote"
+        assert Path(cell["paths"]["promotion_gate"]).exists()
+        assert Path(cell["paths"]["handoff_report"]).exists()
+        assert all(
+            verification["passed"] is True
+            for verification in cell["manifest_verifications"].values()
+        )
+
+    source_text = (
+        tmp_path
+        / "artifacts"
+        / "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-binding-fill"
+        / "source-backed-mechanism-rule-input-tasks.jsonl"
+    ).read_text(encoding="utf-8")
+    assert "model_answer" not in source_text
+    assert "labels" not in source_text
+
+
 def test_world_model_rule_mechanism_consistency_executes_and_promotes_candidate(tmp_path):
     adapter_module = importlib.import_module("benchmarks.run_world_model_rule_authoring_adapter")
     promotion_module = importlib.import_module("benchmarks.promote_world_model_rule_candidates")

@@ -1,0 +1,70 @@
+{
+  "artifacts": {
+    "mechanism_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-backed-mechanism-bindings.jsonl",
+      "sha256": "53a6db521ed79638178bcb3520c78d9c139cb797878632f0c78aec44818909d7",
+      "size_bytes": 4199
+    },
+    "rule_input_mechanism_binding_fill": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "rule-input-mechanism-binding-fill.json",
+      "sha256": "58f76a8ee5402a3eff3e89a7e9ebf3f529e96b84e01dc3f79315f2fdd8c0cab5",
+      "size_bytes": 9009
+    },
+    "rule_input_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-backed-mechanism-rule-input-tasks.jsonl",
+      "sha256": "75191b95e66321164931190937592883c1695dc4aa10f627d57c2a6709411f90",
+      "size_bytes": 1542
+    },
+    "rule_inputs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "rule-inputs.jsonl",
+      "sha256": "d482707ed79bedae2be724620dbb7c6835a3502173fb6650911833cc1d5fbaaa",
+      "size_bytes": 5235
+    },
+    "skipped_mechanism_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "skipped-mechanism-bindings.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "unfilled_rule_input_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "unfilled-rule-input-tasks.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "cell_id": "remaining",
+    "evidence": "source_backed_remaining_mechanism_promotion",
+    "filled_input_count": 4,
+    "source": "frontier_mechanism_handoff_rebuild",
+    "status": "filled",
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "unfilled_task_count": 0,
+    "workflow": "world_model_rule_input_mechanism_binding_fill"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 6,
+    "directory_count": 0,
+    "file_count": 6,
+    "missing_count": 0
+  }
+}

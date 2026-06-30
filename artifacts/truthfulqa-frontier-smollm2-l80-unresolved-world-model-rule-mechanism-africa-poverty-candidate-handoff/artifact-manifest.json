@@ -1,0 +1,55 @@
+{
+  "artifacts": {
+    "action_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "action-results.jsonl",
+      "sha256": "8b51fd7e332653d88faaae7ef0f25cb19019a08ecd96e6da17b32d423c6ddef2",
+      "size_bytes": 3784
+    },
+    "product_traces": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "product-traces.jsonl",
+      "sha256": "93691211d4315aa778c34acedb8fd4cc4a0d7adc9d7c37b4892d0c7df550b815",
+      "size_bytes": 81032
+    },
+    "promotion_gate": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+      "sha256": "bf07d87e43b937c43c7dd7ffe63ef48f806f1d38e68683de141475f01ac3142d",
+      "size_bytes": 10147
+    },
+    "world_model_rule_candidate_handoff": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-candidate-handoff.json",
+      "sha256": "5900ab6f553337f8fa89ca4161fa129c77495969adc98c73a2f2639aa5b785de",
+      "size_bytes": 4213
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "action_result_count": 4,
+    "blocked_candidate_count": 0,
+    "cell_id": "africa_poverty",
+    "evidence": "source_backed_worldbank_africa_poverty_mechanism",
+    "source": "frontier_mechanism_handoff_rebuild",
+    "status": "promote",
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "trace_count": 4,
+    "workflow": "world_model_rule_candidate_handoff"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

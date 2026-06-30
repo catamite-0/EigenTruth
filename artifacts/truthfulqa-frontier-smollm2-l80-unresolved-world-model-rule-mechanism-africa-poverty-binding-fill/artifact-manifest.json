@@ -1,0 +1,70 @@
+{
+  "artifacts": {
+    "mechanism_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-backed-mechanism-bindings.jsonl",
+      "sha256": "489cba9630337e5c13005b99d75e9b051201931ec8981b87bd0de043c6413984",
+      "size_bytes": 4576
+    },
+    "rule_input_mechanism_binding_fill": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "rule-input-mechanism-binding-fill.json",
+      "sha256": "c5ee4f89ea5adb27e9bc83370ed30038d6b526c7fbd31a5c1bcc5365589fcea9",
+      "size_bytes": 9349
+    },
+    "rule_input_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-backed-mechanism-rule-input-tasks.jsonl",
+      "sha256": "6eebe70410f89749a875b257e02a84102a7102b88fee813d3d4599602e6f81cc",
+      "size_bytes": 1536
+    },
+    "rule_inputs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "rule-inputs.jsonl",
+      "sha256": "021505dadec041c32b585e574d3f264d40822237163e378cc5b6891f8d6863d3",
+      "size_bytes": 5584
+    },
+    "skipped_mechanism_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "skipped-mechanism-bindings.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "unfilled_rule_input_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "unfilled-rule-input-tasks.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "cell_id": "africa_poverty",
+    "evidence": "source_backed_worldbank_africa_poverty_mechanism",
+    "filled_input_count": 4,
+    "source": "frontier_mechanism_handoff_rebuild",
+    "status": "filled",
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "unfilled_task_count": 0,
+    "workflow": "world_model_rule_input_mechanism_binding_fill"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 6,
+    "directory_count": 0,
+    "file_count": 6,
+    "missing_count": 0
+  }
+}

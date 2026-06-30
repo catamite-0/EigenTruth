@@ -1,0 +1,177 @@
+{
+  "config": {
+    "expected_target_count": 9,
+    "min_refuted_count": 2,
+    "min_source_citation_count": 9,
+    "min_supported_count": 7,
+    "min_trace_count": 9,
+    "require_action_execution_alignment": true
+  },
+  "gate": {
+    "blocking_reasons": [],
+    "passed": true,
+    "policy": {
+      "expected_target_count": 9,
+      "min_refuted_count": 2,
+      "min_source_citation_count": 9,
+      "min_supported_count": 7,
+      "min_trace_count": 9,
+      "require_action_execution_alignment": true
+    },
+    "status": "promote"
+  },
+  "handoffs": [
+    {
+      "action_counts": {
+        "accept": 1
+      },
+      "action_execution_alignment_passed": true,
+      "blocked_candidate_count": 0,
+      "index": 1,
+      "manifest_path": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff/artifact-manifest.json",
+      "report_path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff/world-model-rule-candidate-handoff.json",
+      "rule_family_counts": {
+        "causal_or_procedural": 1
+      },
+      "source_citation_count": 1,
+      "source_family_counts": {
+        "gemological_reference": 1
+      },
+      "status": "promote",
+      "target_ids": [
+        "record-10"
+      ],
+      "trace_count": 1,
+      "verification_status_counts": {
+        "supported": 1
+      },
+      "workflow": "world_model_rule_candidate_handoff"
+    },
+    {
+      "action_counts": {
+        "accept": 4
+      },
+      "action_execution_alignment_passed": true,
+      "blocked_candidate_count": 0,
+      "index": 2,
+      "manifest_path": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff/artifact-manifest.json",
+      "report_path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff/world-model-rule-candidate-handoff.json",
+      "rule_family_counts": {
+        "causal_or_procedural": 4
+      },
+      "source_citation_count": 4,
+      "source_family_counts": {
+        "official_statistics": 4
+      },
+      "status": "promote",
+      "target_ids": [
+        "record-133",
+        "record-165",
+        "record-274",
+        "record-299"
+      ],
+      "trace_count": 4,
+      "verification_status_counts": {
+        "supported": 4
+      },
+      "workflow": "world_model_rule_candidate_handoff"
+    },
+    {
+      "action_counts": {
+        "abstain": 2,
+        "accept": 2
+      },
+      "action_execution_alignment_passed": true,
+      "blocked_candidate_count": 0,
+      "index": 3,
+      "manifest_path": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff/artifact-manifest.json",
+      "report_path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff/world-model-rule-candidate-handoff.json",
+      "rule_family_counts": {
+        "causal_or_procedural": 4
+      },
+      "source_citation_count": 4,
+      "source_family_counts": {
+        "biography": 2,
+        "official_science": 2
+      },
+      "status": "promote",
+      "target_ids": [
+        "record-134",
+        "record-212",
+        "record-224",
+        "record-27"
+      ],
+      "trace_count": 4,
+      "verification_status_counts": {
+        "refuted": 2,
+        "supported": 2
+      },
+      "workflow": "world_model_rule_candidate_handoff"
+    }
+  ],
+  "metadata": {},
+  "paths": {
+    "action_results": [
+      "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff/action-results.jsonl",
+      "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff/action-results.jsonl",
+      "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff/action-results.jsonl"
+    ],
+    "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle/artifact-manifest.json",
+    "handoff_manifests": [
+      "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff/artifact-manifest.json",
+      "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff/artifact-manifest.json",
+      "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff/artifact-manifest.json"
+    ],
+    "handoff_reports": [
+      "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff/world-model-rule-candidate-handoff.json",
+      "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff/world-model-rule-candidate-handoff.json",
+      "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff/world-model-rule-candidate-handoff.json"
+    ],
+    "product_traces": [
+      "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff/product-traces.jsonl",
+      "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff/product-traces.jsonl",
+      "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff/product-traces.jsonl"
+    ],
+    "report": "artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle/mechanism-handoff-evidence-bundle.json"
+  },
+  "schema_version": 1,
+  "scope": "Release-gate bundle for target-specific mechanism world-model rule candidate handoffs. This is not an open-domain verifier claim.",
+  "status": "promote",
+  "summary": {
+    "action_counts": {
+      "abstain": 2,
+      "accept": 7
+    },
+    "blocked_candidate_count": 0,
+    "handoff_count": 3,
+    "rule_family_counts": {
+      "causal_or_procedural": 9
+    },
+    "source_citation_count": 9,
+    "source_family_counts": {
+      "biography": 2,
+      "gemological_reference": 1,
+      "official_science": 2,
+      "official_statistics": 4
+    },
+    "target_count": 9,
+    "target_coverage_rate": 1.0,
+    "target_ids": [
+      "record-10",
+      "record-133",
+      "record-134",
+      "record-165",
+      "record-212",
+      "record-224",
+      "record-27",
+      "record-274",
+      "record-299"
+    ],
+    "trace_count": 9,
+    "verification_status_counts": {
+      "refuted": 2,
+      "supported": 7
+    }
+  },
+  "workflow": "mechanism_handoff_evidence_bundle"
+}

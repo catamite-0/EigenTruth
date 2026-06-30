@@ -5,24 +5,24 @@
       "file_count": 1,
       "kind": "file",
       "path": "../README.md",
-      "sha256": "8eda30943637b6fc01e5abea1f11e536834ebe48d1a30e5f7c3dc70f6e6db98f",
-      "size_bytes": 209860
+      "sha256": "d70a8d4b46e35c64ebed6c92c38ccd7f9ca30c9620e41d4ccc8130bffb892929",
+      "size_bytes": 209816
     },
     "document.002": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "../benchmarks/README.md",
-      "sha256": "fb07e59853e2c2c74c6eb25dd9b02598610cc31190a5d14ce97cdc66bdd25a15",
-      "size_bytes": 473300
+      "sha256": "a9fa9b5250ce9a2af23544c7569c8315a7f8b38ecdc1b9c2dba60135e2d6e83d",
+      "size_bytes": 474079
     },
     "document.003": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "../docs/experiment-plan.md",
-      "sha256": "5aa42335ec83482b8190f59bc9cbc0583150a5f63b98cf847eed53f19cdff02f",
-      "size_bytes": 220929
+      "sha256": "59527b806f1344c36b59ce633f58a84ed5864de19c3e6422c60db02b5544da4c",
+      "size_bytes": 219748
     },
     "document.004": {
       "exists": true,
@@ -37,162 +37,89 @@
       "file_count": 1,
       "kind": "file",
       "path": "frontier-artifact-reference-audit.json",
-      "sha256": "0835ff7a78159626f4b47ba8a4a62440e016f3d7b7e814980ecc662a6e8bacda",
-      "size_bytes": 28651
+      "sha256": "4624b6456f4adc4a3c59164deeeb2ef484397738c8e6aa04e57e8ff1da470b27",
+      "size_bytes": 4096
     },
     "reference.001": {
       "exists": true,
-      "file_count": 3,
+      "file_count": 7,
       "kind": "directory",
       "path": "frontier-audit-release-candidate-v6",
-      "sha256": "2e67819c5798aafa3498275d5a72b8bda1e2490c8001e9c536db65cd3b403484",
-      "size_bytes": 3830038
+      "sha256": "591682e213cd20cedfa5fd3167536b18d9ab8978df5c548b76a1b29ac4fe59b2",
+      "size_bytes": 4733672
     },
     "reference.002": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "frontier-audit-release-candidate-v6/artifact-manifest.json",
-      "sha256": "8d508560eb27cbc43f8d8319be3877de8e68edc1f6d1d99bd5e2df53d76e1052",
-      "size_bytes": 48395
+      "sha256": "4def17918a35db8996e4857dae6ea7fa0db84cda83dadde7efd7d255702edba1",
+      "size_bytes": 62113
     },
     "reference.003": {
-      "exists": false,
-      "file_count": null,
-      "kind": "missing",
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
       "path": "frontier-audit-release-candidate-v6/evidence-gap-plan.json",
-      "sha256": null,
-      "size_bytes": null
+      "sha256": "13a7e03f6def2d87e47773b7c112120dad065cf6fdea2b13d0fa858de19010f6",
+      "size_bytes": 27345
     },
     "reference.004": {
-      "exists": false,
-      "file_count": null,
-      "kind": "missing",
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
       "path": "frontier-audit-release-candidate-v6/frontier-audit-comparison.json",
-      "sha256": null,
-      "size_bytes": null
+      "sha256": "f2d6b837008d9fd0a2bd536316a0661f8eb6db444f891ea52cfeb7019f1e3364",
+      "size_bytes": 380063
     },
     "reference.005": {
-      "exists": false,
-      "file_count": null,
-      "kind": "missing",
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
       "path": "frontier-audit-release-candidate-v6/frontier-audit-registry-workflow.json",
-      "sha256": null,
-      "size_bytes": null
+      "sha256": "4dd3c11ad8eb2e4c9eedc927f34c8f0ea81546850169af346205887e61b2de11",
+      "size_bytes": 412500
     },
     "reference.006": {
-      "exists": false,
-      "file_count": null,
-      "kind": "missing",
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
       "path": "frontier-audit-release-candidate-v6/manifest-verification.json",
-      "sha256": null,
-      "size_bytes": null
-    },
-    "reference.007": {
-      "exists": false,
-      "file_count": null,
-      "kind": "missing",
-      "path": "smollm2_product_promotion_contract_v1_9",
-      "sha256": null,
-      "size_bytes": null
-    },
-    "reference.008": {
-      "exists": false,
-      "file_count": null,
-      "kind": "missing",
-      "path": "smollm2_product_promotion_contract_v1_9/artifact-manifest.json",
-      "sha256": null,
-      "size_bytes": null
-    },
-    "reference.009": {
-      "exists": false,
-      "file_count": null,
-      "kind": "missing",
-      "path": "smollm2_product_promotion_contract_v1_9/evidence-handoff-artifact-manifest.json",
-      "sha256": null,
-      "size_bytes": null
-    },
-    "reference.010": {
-      "exists": false,
-      "file_count": null,
-      "kind": "missing",
-      "path": "smollm2_product_promotion_contract_v1_9/evidence-handoff-manifest-verification.json",
-      "sha256": null,
-      "size_bytes": null
-    },
-    "reference.011": {
-      "exists": false,
-      "file_count": null,
-      "kind": "missing",
-      "path": "smollm2_product_promotion_contract_v1_9/manifest-verification.json",
-      "sha256": null,
-      "size_bytes": null
-    },
-    "reference.012": {
-      "exists": false,
-      "file_count": null,
-      "kind": "missing",
-      "path": "smollm2_product_promotion_contract_v1_9/product-promotion-contract-evidence-handoff-audit.json",
-      "sha256": null,
-      "size_bytes": null
-    },
-    "reference.013": {
-      "exists": false,
-      "file_count": null,
-      "kind": "missing",
-      "path": "smollm2_product_promotion_contract_v1_9/product-promotion-contract-evidence-handoff.json",
-      "sha256": null,
-      "size_bytes": null
-    },
-    "reference.014": {
-      "exists": false,
-      "file_count": null,
-      "kind": "missing",
-      "path": "smollm2_product_promotion_contract_v1_9/product-promotion-contract.json",
-      "sha256": null,
-      "size_bytes": null
+      "sha256": "c18eb3a645449806ec2e8127c85cab78a6ac98efd20420af1cee1b8bc43c52de",
+      "size_bytes": 162
     }
   },
   "digest_algorithm": "sha256",
   "metadata": {
-    "blocking_reference_count": 13,
+    "blocking_reference_count": 0,
     "directory_count": 1,
     "document_count": 4,
-    "existing_count": 2,
-    "file_count": 1,
-    "manifest_child_missing_count": 1,
+    "existing_count": 6,
+    "file_count": 5,
+    "manifest_child_missing_count": 0,
     "manifest_child_recoverable_from_json_cache_count": 0,
-    "manifest_child_unrecoverable_count": 1,
+    "manifest_child_unrecoverable_count": 0,
     "manifest_error_count": 0,
-    "manifest_failed_count": 1,
-    "manifest_reference_count": 3,
-    "manifest_verified_count": 0,
-    "missing_count": 12,
+    "manifest_failed_count": 0,
+    "manifest_reference_count": 1,
+    "manifest_verified_count": 1,
+    "missing_count": 0,
     "missing_recoverable_from_json_cache_count": 0,
-    "missing_unrecoverable_count": 12,
-    "recommended_action_count": 6,
-    "recommended_action_ids": [
-      "rebuild_frontier_mechanism_handoff_sources",
-      "rebuild_frontier_audit_release_candidate_v6",
-      "export_product_promotion_contract_v1_9",
-      "export_product_promotion_contract_v1_9_evidence_handoff",
-      "verify_frontier_artifact_manifests",
-      "rerun_frontier_artifact_reference_audit"
-    ],
-    "reference_count": 14,
+    "missing_unrecoverable_count": 0,
+    "recommended_action_count": 0,
+    "recommended_action_ids": [],
+    "reference_count": 6,
     "runner": "audit_frontier_artifact_references",
-    "status": "blocked",
+    "status": "passed",
     "status_counts": {
-      "manifest_failed": 1,
-      "missing": 12,
-      "present": 1
+      "present": 6
     }
   },
   "schema_version": 1,
   "summary": {
-    "artifact_count": 19,
+    "artifact_count": 11,
     "directory_count": 1,
-    "file_count": 6,
-    "missing_count": 12
+    "file_count": 10,
+    "missing_count": 0
   }
 }

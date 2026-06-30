@@ -3256,6 +3256,20 @@ missing source citations, unreviewed bindings, and missing or invalid
 supported mechanism that fills, executes, and promotes, plus an invalid binding
 that blocks.
 
+For local rebuilds of the frontier audit mechanism lane, the canonical shortcut
+is the source workflow below. It materializes the three source-backed mechanism
+input groups, then runs `binding-fill -> adapter -> promotion-gate ->
+ProductTrace handoff` for all nine causal/procedural rows:
+
+```bash
+python benchmarks/run_frontier_mechanism_handoff_source_workflow.py \
+  --output-root artifacts \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-mechanism-handoff-source-workflow \
+  --version 0.1 \
+  --metadata source=frontier_mechanism_handoff_rebuild
+```
+
 The registered `record-10` diamond mechanism chain is
 `filled -> observed -> promote -> handoff`: the fill script consumes a
 source-backed WTAMU/GIA mechanism binding, the adapter observes one supported
@@ -5637,13 +5651,23 @@ python benchmarks/export_product_promotion_contract.py \
   --compact-json
 ```
 
-Current frontier-audit handoff:
+Current frontier-audit handoff guard:
+
+The local frontier-audit v6 replay is currently a fail-closed release candidate:
+the mechanism handoff bundle promotes, but the overall release comparison remains
+blocked by upstream frontier evidence/runtime-drift manifest and metric gaps.
+Because of that, `export_product_promotion_contract.py` intentionally refuses to
+export the v1.9 product contract with `ValueError: release candidate report did
+not promote.` Keep the export template below for the next promoted replay, but
+do not treat it as an active local artifact until v6 promotes.
 
 ```bash
+PRODUCT_V19_DIR=<promoted-v1.9-product-contract-output-dir>
+
 python benchmarks/export_product_promotion_contract.py \
   --source artifacts/frontier-audit-release-candidate-v6/frontier-audit-registry-workflow.json \
-  --output artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json \
-  --artifact-manifest artifacts/smollm2_product_promotion_contract_v1_9/artifact-manifest.json \
+  --output "$PRODUCT_V19_DIR/product-promotion-contract.json" \
+  --artifact-manifest "$PRODUCT_V19_DIR/artifact-manifest.json" \
   --registry artifacts/local-release-registry.json \
   --name smollm2-product-promotion-contract \
   --version 1.9 \
@@ -5656,17 +5680,19 @@ Then enrich the handoff from explicit local child reports and write a manifest
 for the enriched contract/audit:
 
 ```bash
+PRODUCT_V19_DIR=<promoted-v1.9-product-contract-output-dir>
+
 python benchmarks/export_product_promotion_contract_evidence_handoff.py \
-  --contract artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json \
-  --json artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract-evidence-handoff.json \
-  --audit-json artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract-evidence-handoff-audit.json \
+  --contract "$PRODUCT_V19_DIR/product-promotion-contract.json" \
+  --json "$PRODUCT_V19_DIR/product-promotion-contract-evidence-handoff.json" \
+  --audit-json "$PRODUCT_V19_DIR/product-promotion-contract-evidence-handoff-audit.json" \
   --pre-generation-probe-comparison artifacts/runtime_evidence/pre-generation-qwen-smollm2-l12-comparison/comparison.json \
   --triple-extraction-fixture-matrix artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/triple-extraction-fixture-matrix.json \
   --counterfactual-verification artifacts/smollm2_product_counterfactual_structured_qa_audit_v0/counterfactual-verification-report.json \
   --product-trace-replay-workflow artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/product-trace-replay-workflow.json \
   --triple-audit-enrichment artifacts/smollm2_product_trace_triple_audit_enrichment_v1/product-trace-triple-audit-enrichment.json \
   --covered-fact-property-metrics artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-route/structured-qa-route-summary.json \
-  --artifact-manifest artifacts/smollm2_product_promotion_contract_v1_9/evidence-handoff-artifact-manifest.json \
+  --artifact-manifest "$PRODUCT_V19_DIR/evidence-handoff-artifact-manifest.json" \
   --registry artifacts/local-release-registry.json \
   --name smollm2-product-promotion-contract-v1-9-evidence-handoff \
   --version 0.3 \
@@ -5674,24 +5700,19 @@ python benchmarks/export_product_promotion_contract_evidence_handoff.py \
   --metadata triple_audit_enrichment=triple_audit_v1
 ```
 
-The current v1.9 contract carries the v6 deployment-path runtime evidence
-(`recommended_runtime_seconds=0.191662`,
-`recommended_runtime_cost_source=cache_only_total_seconds`) and the enriched
-handoff exporter now expects all seven default `frontier_audit` evidence groups
-with `65/65` fields present when `--frontier-release-evidence` is supplied.
-Older generated v1.9 handoff artifacts may still show the previous six-group
-`38/38` export until regenerated. Refreshed frontier-audit runtime-drift reports
-also carry promotion-contract evidence-handoff
+When a future v6 replay promotes, the v1.9 contract should carry the
+deployment-path runtime evidence (`recommended_runtime_seconds`,
+`recommended_runtime_cost_source`) and the enriched handoff exporter should
+expect all default `frontier_audit` evidence groups when
+`--frontier-release-evidence` is supplied. Refreshed frontier-audit
+runtime-drift reports also carry promotion-contract evidence-handoff
 coverage/manifest/metric-gap/group-status as a release-gated evidence group.
-The release-policy wiring also
-expects trajectory-audit runtime-drift evidence as a separate fail-closed group
-when refreshed drift reports are supplied. The main contract manifest
-verifies with `checked=2`; the evidence-handoff manifest verifies with
-`checked=9`.
-Before treating the v6/v1.9 handoff as locally reproducible, scan the active
-doc references against the checkout. A blocked report includes
-`recommended_actions` for the v6 release-candidate rerun, v1.9 contract export,
-evidence-handoff export, manifest verification, and final re-audit. By default
+The release-policy wiring also expects trajectory-audit runtime-drift evidence
+as a separate fail-closed group when refreshed drift reports are supplied.
+Before treating the v6 handoff as locally reproducible, scan the active doc
+references against the checkout. A blocked report includes `recommended_actions`
+for the v6 release-candidate rerun, manifest verification, and final re-audit.
+By default
 it also inspects the frontier `artifact-json-cache.json` so the summary splits
 missing references into cache-recoverable and unrecoverable counts. Add
 `--restore-json-cache-artifacts` to restore only those cache-backed missing JSON

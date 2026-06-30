@@ -202,11 +202,15 @@ def test_frontier_artifact_reference_audit_v6_rebuild_action_has_commands(tmp_pa
     bundle_command, release_command = rebuild_action["suggested_commands"]
 
     assert source_action["suggested_commands"][0].startswith(
-        "python benchmarks/build_world_model_rule_candidate_handoff.py"
+        "python benchmarks/run_frontier_mechanism_handoff_source_workflow.py"
     )
     assert (
         "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-"
         "mechanism-candidate-handoff/world-model-rule-candidate-handoff.json"
+    ) in source_action["affected_paths"]
+    assert (
+        "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-"
+        "mechanism-promotion-gate/world-model-rule-candidate-promotion-gate.json"
     ) in source_action["affected_paths"]
     assert source_action["metadata"]["missing_prerequisite_paths"] == (
         "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-"
@@ -216,6 +220,9 @@ def test_frontier_artifact_reference_audit_v6_rebuild_action_has_commands(tmp_pa
         "world-model-rule-candidate-promotion-gate.json",
         "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-"
         "mechanism-remaining-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+    )
+    assert source_action["metadata"]["fallback_handoff_commands"][0].startswith(
+        "python benchmarks/build_world_model_rule_candidate_handoff.py"
     )
     assert bundle_command.startswith("python benchmarks/build_mechanism_handoff_evidence_bundle.py")
     assert "truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle" in bundle_command
