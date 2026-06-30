@@ -1,0 +1,129 @@
+{
+  "actions": [
+    {
+      "action_id": "improve_abstention_participation_gate",
+      "action_type": "experiment",
+      "evidence_routes": [
+        "abstention_stability",
+        "participation_gate",
+        "frontier_release_evidence"
+      ],
+      "metadata": {},
+      "priority": 89,
+      "rationale": "The frontier release is blocked because retained-answer quality or abstention cost is not stable enough across held-out splits; compare candidate participation signals before changing runtime defaults.",
+      "source_gap_ids": [
+        "gap-001-01",
+        "gap-001-02"
+      ],
+      "suggested_commands": [
+        "benchmarks/plan_frontier_abstention_evidence_reruns.py",
+        "benchmarks/eval_abstention_stability.py",
+        "benchmarks/eval_conformal.py --save-abstention-release-gate ..."
+      ],
+      "title": "Improve abstention participation-gate stability"
+    }
+  ],
+  "gaps": [
+    {
+      "gap_id": "gap-001-01",
+      "gate": "abstention_stability",
+      "metadata": {
+        "abstention_blocked_runs": [
+          {
+            "conditional_correctness_lower_bound_mean": 0.839901243645186,
+            "empirical_abstention_rate_mean": 0.48201438848920863,
+            "release_gate_pass_seed_rate": 0.7,
+            "run": "qwen05-l80",
+            "stable_recommended_score_name": "geometry_uncertainty_fusion:noisy_or[geometry=mean_rank:truth_proj+subspace_resid+eigenscore;uncertainty=mean_rank:verifier_refuted+verifier_refute_confidence+verifier_not_supported]",
+            "supervised_feasibility_target_passed": true
+          },
+          {
+            "conditional_correctness_lower_bound_mean": 0.8372126302611946,
+            "empirical_abstention_rate_mean": 0.48525179856115114,
+            "release_gate_pass_seed_rate": 0.5,
+            "run": "smollm2-l80",
+            "stable_recommended_score_name": "geometry_uncertainty_fusion:noisy_or[geometry=mean_rank:truth_proj+subspace_resid+eigenscore;uncertainty=mean_rank:verifier_refuted+verifier_refute_confidence+verifier_not_supported]",
+            "supervised_feasibility_target_passed": true
+          }
+        ],
+        "evidence_kind": "abstention_stability",
+        "research_axis": "participation_calibration"
+      },
+      "missing_metrics": [],
+      "reason": "abstention_stability.qwen05-l80.release_gate_pass_seed_rate 0.7 is below required minimum 1",
+      "recommended_action_ids": [
+        "improve_abstention_participation_gate"
+      ],
+      "root_cause": "model",
+      "source": {
+        "blocker_index": 1,
+        "decision_status": "blocked",
+        "reason_index": 1
+      },
+      "status": "blocked"
+    },
+    {
+      "gap_id": "gap-001-02",
+      "gate": "abstention_stability",
+      "metadata": {
+        "abstention_blocked_runs": [
+          {
+            "conditional_correctness_lower_bound_mean": 0.839901243645186,
+            "empirical_abstention_rate_mean": 0.48201438848920863,
+            "release_gate_pass_seed_rate": 0.7,
+            "run": "qwen05-l80",
+            "stable_recommended_score_name": "geometry_uncertainty_fusion:noisy_or[geometry=mean_rank:truth_proj+subspace_resid+eigenscore;uncertainty=mean_rank:verifier_refuted+verifier_refute_confidence+verifier_not_supported]",
+            "supervised_feasibility_target_passed": true
+          },
+          {
+            "conditional_correctness_lower_bound_mean": 0.8372126302611946,
+            "empirical_abstention_rate_mean": 0.48525179856115114,
+            "release_gate_pass_seed_rate": 0.5,
+            "run": "smollm2-l80",
+            "stable_recommended_score_name": "geometry_uncertainty_fusion:noisy_or[geometry=mean_rank:truth_proj+subspace_resid+eigenscore;uncertainty=mean_rank:verifier_refuted+verifier_refute_confidence+verifier_not_supported]",
+            "supervised_feasibility_target_passed": true
+          }
+        ],
+        "evidence_kind": "abstention_stability",
+        "research_axis": "participation_calibration"
+      },
+      "missing_metrics": [],
+      "reason": "abstention_stability.smollm2-l80.release_gate_pass_seed_rate 0.5 is below required minimum 1",
+      "recommended_action_ids": [
+        "improve_abstention_participation_gate"
+      ],
+      "root_cause": "model",
+      "source": {
+        "blocker_index": 1,
+        "decision_status": "blocked",
+        "reason_index": 2
+      },
+      "status": "blocked"
+    }
+  ],
+  "metadata": {},
+  "schema_version": 1,
+  "source_path": "artifacts/frontier-release-evidence/frontier-release-evidence-verifier-fusion-abstention-v3.json",
+  "source_status": "blocked",
+  "source_workflow": "frontier_release_evidence_comparison",
+  "status": "needs_evidence",
+  "summary": {
+    "action_count": 1,
+    "gap_count": 2,
+    "gates": {
+      "abstention_stability": 2
+    },
+    "missing_metric_count": 0,
+    "research_axes": {
+      "participation_calibration": 2
+    },
+    "root_causes": {
+      "model": 2
+    },
+    "source_decision_status": "blocked",
+    "top_action_ids": [
+      "improve_abstention_participation_gate"
+    ]
+  },
+  "workflow": "evidence_gap_plan"
+}

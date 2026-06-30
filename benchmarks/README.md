@@ -1262,6 +1262,41 @@ budget. This is an upper-bound diagnostic only (`promotion_eligible=false`), not
 a runtime calibration artifact. JSONL inputs load only the requested abstention
 candidate columns.
 
+For verifier-enhanced score dumps, the same replay can evaluate calibrated
+fusion candidates without writing fused columns back into the dump. Rank fusion
+uses the current seed's correct calibration split as the normal reference;
+geometry/uncertainty fusion first rank-calibrates each group, then combines the
+two group scores:
+
+```bash
+python benchmarks/eval_abstention_stability.py \
+  --scores qwen05-l80=artifacts/truthfulqa-l80-local-retrieval-verifier-signal-fusion/qwen-l80-enhanced-scores.manifest.json \
+  --scores smollm2-l80=artifacts/truthfulqa-l80-local-retrieval-verifier-signal-fusion/smollm2-l80-enhanced-scores.manifest.json \
+  --signals truth_proj,subspace_resid,eigenscore,verifier_refuted,verifier_refute_confidence,verifier_not_supported,verifier_uncertainty \
+  --rank-fusion-signals truth_proj,subspace_resid,eigenscore,verifier_refuted,verifier_refute_confidence,verifier_not_supported,verifier_uncertainty \
+  --rank-fusion-methods max_rank,mean_rank,noisy_or_rank \
+  --geometry-signals truth_proj,subspace_resid,eigenscore \
+  --uncertainty-signals verifier_refuted,verifier_refute_confidence,verifier_not_supported \
+  --geometry-method mean_rank \
+  --uncertainty-method mean_rank \
+  --geometry-fusion-methods interaction,product,weighted_mean,noisy_or \
+  --alpha 0.2 \
+  --enforce-abstention-budget \
+  --abstention-budget-target-rate 0.48 \
+  --seeds 0,1,2,3,4,5,6,7,8,9 \
+  --json artifacts/frontier-release-evidence/verifier-fusion-abstention-stability-v1/local-retrieval-fusion-abstention-stability-alpha-0p2-budgeted-target-0p48.json
+```
+
+`--enforce-abstention-budget` keeps the conformal threshold but also applies a
+seed-calibration split score quantile so the candidate targets a bounded total
+abstention rate before held-out evaluation. The release gate is still evaluated
+against `--max-abstention-rate`; `--abstention-budget-target-rate` is an
+optional safety margin for the threshold policy. The current local-retrieval
+fusion artifact (`frontier-release-evidence-verifier-fusion-abstention-v3`)
+stabilizes on `geometry_uncertainty_fusion:noisy_or` and clears mean
+conditional-correctness/abstention gates, but remains blocked by strict 10/10
+seed pass-rate: qwen05-l80 passes 7/10 seeds and smollm2-l80 passes 5/10.
+
 ## `compare_frontier_release_evidence.py`
 
 Combines frontier stability reports into one fail-closed release verdict without

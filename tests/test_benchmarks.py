@@ -4738,6 +4738,54 @@ def test_eval_abstention_stability_reports_supervised_feasibility_upper_bound(tm
     assert "below required minimum" in frontier["best"]["blocking_reasons"][0]
 
 
+def test_eval_abstention_stability_rank_calibrates_fusion_candidates(tmp_path):
+    module = importlib.import_module("benchmarks.eval_abstention_stability")
+    from eigentruth.eval.score_dump import ScoreDump, write_score_dump_jsonl
+
+    scores_path = tmp_path / "scores.manifest.json"
+    labels = [0] * 20 + [1] * 12
+    dump = ScoreDump.from_mapping({
+        "config": {"model": "synthetic", "layer": -1},
+        "labels": labels,
+        "scores": {
+            "geometry": [index / 1000.0 for index in range(20)]
+            + [0.95 if index < 6 else 0.05 for index in range(12)],
+            "uncertainty": [index / 1000.0 for index in range(20)]
+            + [0.05 if index < 6 else 0.95 for index in range(12)],
+        },
+    })
+    write_score_dump_jsonl(dump, scores_path)
+
+    payload = module.build_abstention_stability_report(
+        (("synthetic", scores_path),),
+        signals=("geometry", "uncertainty"),
+        seeds=(0, 1, 2),
+        rank_fusion_signals=("geometry", "uncertainty"),
+        rank_fusion_methods=("noisy_or_rank",),
+        geometry_signals=("geometry",),
+        uncertainty_signals=("uncertainty",),
+        geometry_fusion_methods=("noisy_or",),
+        alpha=0.5,
+        min_conditional_correctness_lower_bound=0.2,
+        max_abstention_rate=0.9,
+    )
+    run = payload["runs"][0]
+    recommended = run["stability"]["stable_recommended_score_name"]
+
+    assert payload["config"]["fusion"]["rank"]["methods"] == ["noisy_or_rank"]
+    assert payload["config"]["fusion"]["geometry_uncertainty"]["fusion_methods"] == [
+        "noisy_or"
+    ]
+    assert recommended.startswith("geometry_uncertainty_fusion:noisy_or")
+    assert run["stability"]["release_gate_pass_seed_count"] == 3
+    fused_frontier = [
+        entry
+        for entry in run["supervised_feasibility_frontier"]["signals"]
+        if entry["score_name"].startswith("geometry_uncertainty_fusion:noisy_or")
+    ]
+    assert fused_frontier and fused_frontier[0]["target_passed"] is True
+
+
 def test_eval_abstention_stability_rejects_duplicate_score_names(tmp_path):
     module = importlib.import_module("benchmarks.eval_abstention_stability")
     scores_path = tmp_path / "scores.json"

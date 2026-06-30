@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import random
 import statistics
 import sys
@@ -37,6 +38,13 @@ from eigentruth.eval.score_dump import (  # noqa: E402
     score_dump_cache_summary,
     score_dump_file_metadata,
 )
+from eigentruth.eval.score_fusion import (  # noqa: E402
+    GEOMETRY_UNCERTAINTY_FUSION_METHODS,
+    RANK_SCORE_FUSION_METHODS,
+    combine_geometry_uncertainty_scores,
+    combine_rank_anomaly_scores,
+    directional_rank_anomaly_scores,
+)
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
 
 
@@ -58,6 +66,12 @@ def _parse_csv(value: str | None, *, name: str) -> tuple[str, ...]:
     if not parts:
         raise ValueError(f"{name} must contain at least one value.")
     return parts
+
+
+def _parse_optional_csv(value: str | None, *, name: str) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    return _parse_csv(value, name=name)
 
 
 def _parse_int_csv(value: str | None, *, name: str) -> tuple[int, ...]:
@@ -214,28 +228,271 @@ def _rank_abstention_reports(
     )
 
 
+def _validate_unique_values(values: Sequence[str], *, name: str) -> None:
+    if len(set(values)) != len(values):
+        raise ValueError(f"{name} must contain unique values.")
+
+
+def _validate_fusion_config(
+    *,
+    rank_fusion_signals: Sequence[str],
+    rank_fusion_methods: Sequence[str],
+    geometry_signals: Sequence[str],
+    uncertainty_signals: Sequence[str],
+    geometry_method: str,
+    uncertainty_method: str,
+    geometry_fusion_methods: Sequence[str],
+) -> None:
+    _validate_unique_values(rank_fusion_signals, name="rank_fusion_signals")
+    _validate_unique_values(geometry_signals, name="geometry_signals")
+    _validate_unique_values(uncertainty_signals, name="uncertainty_signals")
+    if rank_fusion_signals and not rank_fusion_methods:
+        raise ValueError("rank_fusion_methods must be set when rank_fusion_signals are set.")
+    if rank_fusion_methods and not rank_fusion_signals:
+        raise ValueError("rank_fusion_signals must be set when rank_fusion_methods are set.")
+    for method in rank_fusion_methods:
+        if method not in RANK_SCORE_FUSION_METHODS:
+            raise ValueError(f"rank_fusion_methods must be one of {RANK_SCORE_FUSION_METHODS}.")
+    if bool(geometry_signals) != bool(uncertainty_signals):
+        raise ValueError("geometry_signals and uncertainty_signals must be set together.")
+    if geometry_fusion_methods and (not geometry_signals or not uncertainty_signals):
+        raise ValueError(
+            "geometry_signals and uncertainty_signals are required when geometry_fusion_methods are set."
+        )
+    if (geometry_signals or uncertainty_signals) and not geometry_fusion_methods:
+        raise ValueError("geometry_fusion_methods must be set for geometry/uncertainty fusion.")
+    if geometry_method not in RANK_SCORE_FUSION_METHODS:
+        raise ValueError(f"geometry_method must be one of {RANK_SCORE_FUSION_METHODS}.")
+    if uncertainty_method not in RANK_SCORE_FUSION_METHODS:
+        raise ValueError(f"uncertainty_method must be one of {RANK_SCORE_FUSION_METHODS}.")
+    for method in geometry_fusion_methods:
+        if method not in GEOMETRY_UNCERTAINTY_FUSION_METHODS:
+            raise ValueError(
+                f"geometry_fusion_methods must be one of {GEOMETRY_UNCERTAINTY_FUSION_METHODS}."
+            )
+
+
+def _abstention_budget_threshold(
+    scores: Sequence[float],
+    *,
+    max_abstention_rate: float,
+    direction: str,
+) -> float:
+    if direction not in {"higher", "lower"}:
+        raise ValueError("direction must be 'higher' or 'lower'.")
+    values = sorted(float(score) for score in scores)
+    if not values:
+        raise ValueError("budget reference scores must be non-empty.")
+    budget = float(max_abstention_rate)
+    if not (0.0 <= budget <= 1.0):
+        raise ValueError("max_abstention_rate must be in [0, 1].")
+    n = len(values)
+    if direction == "higher":
+        retained_count = math.ceil((1.0 - budget) * n)
+        index = min(max(retained_count - 1, 0), n - 1)
+        return values[index]
+    allowed_abstentions = math.floor(budget * n)
+    index = min(max(allowed_abstentions, 0), n - 1)
+    return values[index]
+
+
+def _abstention_threshold(
+    scores: Sequence[float],
+    *,
+    conformal_calibration_indices: Sequence[int],
+    budget_reference_indices: Sequence[int],
+    alpha: float,
+    direction: str,
+    budget_max_abstention_rate: float | None,
+) -> float:
+    conformal_threshold = directional_conformal_threshold(
+        _subset(scores, conformal_calibration_indices),
+        alpha,
+        direction,
+    )
+    if budget_max_abstention_rate is None:
+        return conformal_threshold
+    budget_threshold = _abstention_budget_threshold(
+        _subset(scores, budget_reference_indices),
+        max_abstention_rate=budget_max_abstention_rate,
+        direction=direction,
+    )
+    if direction == "higher":
+        return max(conformal_threshold, budget_threshold)
+    return min(conformal_threshold, budget_threshold)
+
+
+def _fusion_name(prefix: str, method: str, signals: Sequence[str]) -> str:
+    return f"{prefix}:{method}[{'+'.join(signals)}]"
+
+
+def _geometry_fusion_name(
+    *,
+    geometry_method: str,
+    uncertainty_method: str,
+    fusion_method: str,
+    geometry_signals: Sequence[str],
+    uncertainty_signals: Sequence[str],
+) -> str:
+    geometry = "+".join(geometry_signals)
+    uncertainty = "+".join(uncertainty_signals)
+    return (
+        "geometry_uncertainty_fusion:"
+        f"{fusion_method}[geometry={geometry_method}:{geometry};"
+        f"uncertainty={uncertainty_method}:{uncertainty}]"
+    )
+
+
+def _rank_anomaly_scores_for_signals(
+    scores: Mapping[str, Sequence[float]],
+    *,
+    signals: Sequence[str],
+    directions: Mapping[str, str],
+    calibration_indices: Sequence[int],
+) -> tuple[Any, ...]:
+    return tuple(
+        directional_rank_anomaly_scores(
+            _subset(scores[signal], calibration_indices),
+            scores[signal],
+            direction=directions[signal],
+        )
+        for signal in signals
+    )
+
+
+def _rank_fusion_candidate_scores(
+    scores: Mapping[str, Sequence[float]],
+    *,
+    rank_fusion_signals: Sequence[str],
+    rank_fusion_methods: Sequence[str],
+    directions: Mapping[str, str],
+    calibration_indices: Sequence[int],
+) -> tuple[tuple[str, Any], ...]:
+    if not rank_fusion_signals or not rank_fusion_methods:
+        return ()
+    rank_scores = _rank_anomaly_scores_for_signals(
+        scores,
+        signals=rank_fusion_signals,
+        directions=directions,
+        calibration_indices=calibration_indices,
+    )
+    return tuple(
+        (
+            _fusion_name("rank_fusion", method, rank_fusion_signals),
+            combine_rank_anomaly_scores(rank_scores, method),
+        )
+        for method in rank_fusion_methods
+    )
+
+
+def _geometry_uncertainty_candidate_scores(
+    scores: Mapping[str, Sequence[float]],
+    *,
+    geometry_signals: Sequence[str],
+    uncertainty_signals: Sequence[str],
+    geometry_method: str,
+    uncertainty_method: str,
+    geometry_fusion_methods: Sequence[str],
+    directions: Mapping[str, str],
+    calibration_indices: Sequence[int],
+) -> tuple[tuple[str, Any], ...]:
+    if not geometry_signals or not uncertainty_signals or not geometry_fusion_methods:
+        return ()
+    geometry_rank_scores = _rank_anomaly_scores_for_signals(
+        scores,
+        signals=geometry_signals,
+        directions=directions,
+        calibration_indices=calibration_indices,
+    )
+    uncertainty_rank_scores = _rank_anomaly_scores_for_signals(
+        scores,
+        signals=uncertainty_signals,
+        directions=directions,
+        calibration_indices=calibration_indices,
+    )
+    geometry_scores = combine_rank_anomaly_scores(geometry_rank_scores, geometry_method)
+    uncertainty_scores = combine_rank_anomaly_scores(uncertainty_rank_scores, uncertainty_method)
+    return tuple(
+        (
+            _geometry_fusion_name(
+                geometry_method=geometry_method,
+                uncertainty_method=uncertainty_method,
+                fusion_method=fusion_method,
+                geometry_signals=geometry_signals,
+                uncertainty_signals=uncertainty_signals,
+            ),
+            combine_geometry_uncertainty_scores(
+                geometry_scores,
+                uncertainty_scores,
+                method=fusion_method,
+            ),
+        )
+        for fusion_method in geometry_fusion_methods
+    )
+
+
+def _evaluate_fused_candidate(
+    fused_scores: Sequence[float],
+    *,
+    labels: Sequence[int],
+    conformal_calibration_indices: Sequence[int],
+    budget_reference_indices: Sequence[int],
+    evaluation_indices: Sequence[int],
+    alpha: float,
+    score_name: str,
+    budget_max_abstention_rate: float | None,
+) -> ConformalAbstentionReport:
+    threshold = _abstention_threshold(
+        fused_scores,
+        conformal_calibration_indices=conformal_calibration_indices,
+        budget_reference_indices=budget_reference_indices,
+        alpha=alpha,
+        direction="higher",
+        budget_max_abstention_rate=budget_max_abstention_rate,
+    )
+    return evaluate_conformal_abstention(
+        _subset(fused_scores, evaluation_indices),
+        _correctness(labels, evaluation_indices),
+        threshold=threshold,
+        alpha=alpha,
+        direction="higher",
+        score_name=score_name,
+    )
+
+
 def _seed_abstention_comparison(
     labels: Sequence[int],
     scores: Mapping[str, Sequence[float]],
     *,
     signals: Sequence[str],
     directions: Mapping[str, str],
+    rank_fusion_signals: Sequence[str] = (),
+    rank_fusion_methods: Sequence[str] = (),
+    geometry_signals: Sequence[str] = (),
+    uncertainty_signals: Sequence[str] = (),
+    geometry_method: str = "mean_rank",
+    uncertainty_method: str = "mean_rank",
+    geometry_fusion_methods: Sequence[str] = (),
+    budget_max_abstention_rate: float | None = None,
     seed: int,
     alpha: float,
     best_by: str,
 ) -> ConformalAbstentionComparisonReport:
     calibration_indices, evaluation_indices = _split_indices(labels, seed=seed)
+    correct_calibration_indices = tuple(
+        index for index in calibration_indices if int(labels[index]) == 0
+    )
     reports: list[ConformalAbstentionReport] = []
     for signal in signals:
         signal_scores = scores[signal]
         direction = directions[signal]
-        correct_calibration_indices = tuple(
-            index for index in calibration_indices if int(labels[index]) == 0
-        )
-        threshold = directional_conformal_threshold(
-            _subset(signal_scores, correct_calibration_indices),
-            alpha,
-            direction,
+        threshold = _abstention_threshold(
+            signal_scores,
+            conformal_calibration_indices=correct_calibration_indices,
+            budget_reference_indices=calibration_indices,
+            alpha=alpha,
+            direction=direction,
+            budget_max_abstention_rate=budget_max_abstention_rate,
         )
         reports.append(
             evaluate_conformal_abstention(
@@ -245,6 +502,38 @@ def _seed_abstention_comparison(
                 alpha=alpha,
                 direction=direction,
                 score_name=signal,
+            )
+        )
+    fused_candidates = (
+        *_rank_fusion_candidate_scores(
+            scores,
+            rank_fusion_signals=rank_fusion_signals,
+            rank_fusion_methods=rank_fusion_methods,
+            directions=directions,
+            calibration_indices=correct_calibration_indices,
+        ),
+        *_geometry_uncertainty_candidate_scores(
+            scores,
+            geometry_signals=geometry_signals,
+            uncertainty_signals=uncertainty_signals,
+            geometry_method=geometry_method,
+            uncertainty_method=uncertainty_method,
+            geometry_fusion_methods=geometry_fusion_methods,
+            directions=directions,
+            calibration_indices=correct_calibration_indices,
+        ),
+    )
+    for score_name, fused_scores in fused_candidates:
+        reports.append(
+            _evaluate_fused_candidate(
+                fused_scores,
+                labels=labels,
+                conformal_calibration_indices=correct_calibration_indices,
+                budget_reference_indices=calibration_indices,
+                evaluation_indices=evaluation_indices,
+                alpha=alpha,
+                score_name=score_name,
+                budget_max_abstention_rate=budget_max_abstention_rate,
             )
         )
     return _rank_abstention_reports(reports, alpha=alpha, best_by=best_by)
@@ -335,24 +624,56 @@ def _supervised_feasibility_frontier(
     *,
     signals: Sequence[str],
     directions: Mapping[str, str],
+    rank_fusion_signals: Sequence[str] = (),
+    rank_fusion_methods: Sequence[str] = (),
+    geometry_signals: Sequence[str] = (),
+    uncertainty_signals: Sequence[str] = (),
+    geometry_method: str = "mean_rank",
+    uncertainty_method: str = "mean_rank",
+    geometry_fusion_methods: Sequence[str] = (),
     alpha: float,
     min_conditional_correctness_lower_bound: float,
     max_abstention_rate: float,
 ) -> dict[str, Any]:
     signal_reports = []
-    for signal in signals:
+    signal_candidates: list[tuple[str, Sequence[float], str]] = [
+        (signal, scores[signal], directions[signal]) for signal in signals
+    ]
+    true_indices = tuple(index for index, label in enumerate(labels) if int(label) == 0)
+    for score_name, fused_scores in (
+        *_rank_fusion_candidate_scores(
+            scores,
+            rank_fusion_signals=rank_fusion_signals,
+            rank_fusion_methods=rank_fusion_methods,
+            directions=directions,
+            calibration_indices=true_indices,
+        ),
+        *_geometry_uncertainty_candidate_scores(
+            scores,
+            geometry_signals=geometry_signals,
+            uncertainty_signals=uncertainty_signals,
+            geometry_method=geometry_method,
+            uncertainty_method=uncertainty_method,
+            geometry_fusion_methods=geometry_fusion_methods,
+            directions=directions,
+            calibration_indices=true_indices,
+        ),
+    ):
+        signal_candidates.append((score_name, fused_scores, "higher"))
+
+    for signal, signal_scores, direction in signal_candidates:
         report = _best_supervised_threshold_report(
             labels,
-            scores[signal],
+            signal_scores,
             signal=signal,
-            direction=directions[signal],
+            direction=direction,
             alpha=alpha,
             max_abstention_rate=max_abstention_rate,
         )
         if report is None:
             signal_reports.append({
                 "score_name": signal,
-                "direction": directions[signal],
+                "direction": direction,
                 "target_passed": False,
                 "blocking_reasons": ("no threshold satisfied the abstention budget",),
             })
@@ -476,6 +797,15 @@ def build_abstention_stability_report(
     *,
     signals: Sequence[str],
     seeds: Sequence[int],
+    rank_fusion_signals: Sequence[str] = (),
+    rank_fusion_methods: Sequence[str] = (),
+    geometry_signals: Sequence[str] = (),
+    uncertainty_signals: Sequence[str] = (),
+    geometry_method: str = "mean_rank",
+    uncertainty_method: str = "mean_rank",
+    geometry_fusion_methods: Sequence[str] = (),
+    enforce_abstention_budget: bool = False,
+    abstention_budget_target_rate: float | None = None,
     alpha: float = 0.10,
     best_by: str = "conditional_correctness_lower_bound",
     direction_override: str | None = None,
@@ -491,12 +821,33 @@ def build_abstention_stability_report(
         raise ValueError("at least one seed is required.")
     if not (0.0 < float(alpha) < 1.0):
         raise ValueError("alpha must be in (0, 1).")
+    if not (0.0 <= float(max_abstention_rate) <= 1.0):
+        raise ValueError("max_abstention_rate must be in [0, 1].")
+    if abstention_budget_target_rate is not None and not (
+        0.0 <= float(abstention_budget_target_rate) <= 1.0
+    ):
+        raise ValueError("abstention_budget_target_rate must be in [0, 1].")
     if best_by not in ABSTENTION_COMPARISON_METRICS:
         raise ValueError(f"best_by must be one of {ABSTENTION_COMPARISON_METRICS}.")
     if direction_override is not None and direction_override not in {"higher", "lower"}:
         raise ValueError("direction_override must be 'higher', 'lower', or None.")
+    _validate_fusion_config(
+        rank_fusion_signals=rank_fusion_signals,
+        rank_fusion_methods=rank_fusion_methods,
+        geometry_signals=geometry_signals,
+        uncertainty_signals=uncertainty_signals,
+        geometry_method=geometry_method,
+        uncertainty_method=uncertainty_method,
+        geometry_fusion_methods=geometry_fusion_methods,
+    )
     _validate_unique_score_dump_names(score_dumps)
 
+    required_signals = tuple(dict.fromkeys((
+        *signals,
+        *rank_fusion_signals,
+        *geometry_signals,
+        *uncertainty_signals,
+    )))
     score_dump_cache: dict[str, Any] = {}
     source_metadata_by_name = {}
     column_view_by_name = {}
@@ -506,13 +857,22 @@ def build_abstention_stability_report(
         source_metadata_by_name[name] = metadata
         column_view_by_name[name] = load_score_dump_columns(
             path,
-            signals,
+            required_signals,
             cache=score_dump_cache,
         )
 
-    directions = {signal: _direction_for(signal, direction_override) for signal in signals}
+    directions = {
+        signal: _direction_for(signal, direction_override) for signal in required_signals
+    }
     seed_reports = []
     seed_run_map: dict[str, list[dict[str, Any]]] = {name: [] for name, _ in score_dumps}
+    budget_max_abstention_rate = None
+    if enforce_abstention_budget:
+        budget_max_abstention_rate = (
+            float(max_abstention_rate)
+            if abstention_budget_target_rate is None
+            else float(abstention_budget_target_rate)
+        )
     for seed in seeds:
         compact_runs = []
         for name, _ in score_dumps:
@@ -522,6 +882,14 @@ def build_abstention_stability_report(
                 columns.scores,
                 signals=signals,
                 directions=directions,
+                rank_fusion_signals=rank_fusion_signals,
+                rank_fusion_methods=rank_fusion_methods,
+                geometry_signals=geometry_signals,
+                uncertainty_signals=uncertainty_signals,
+                geometry_method=geometry_method,
+                uncertainty_method=uncertainty_method,
+                geometry_fusion_methods=geometry_fusion_methods,
+                budget_max_abstention_rate=budget_max_abstention_rate,
                 seed=int(seed),
                 alpha=float(alpha),
                 best_by=best_by,
@@ -562,6 +930,13 @@ def build_abstention_stability_report(
                 columns.scores,
                 signals=signals,
                 directions=directions,
+                rank_fusion_signals=rank_fusion_signals,
+                rank_fusion_methods=rank_fusion_methods,
+                geometry_signals=geometry_signals,
+                uncertainty_signals=uncertainty_signals,
+                geometry_method=geometry_method,
+                uncertainty_method=uncertainty_method,
+                geometry_fusion_methods=geometry_fusion_methods,
                 alpha=float(alpha),
                 min_conditional_correctness_lower_bound=(
                     min_conditional_correctness_lower_bound
@@ -577,6 +952,33 @@ def build_abstention_stability_report(
         "config": {
             "signals": list(signals),
             "directions": dict(directions),
+            "fusion": {
+                "rank": {
+                    "signals": list(rank_fusion_signals),
+                    "methods": list(rank_fusion_methods),
+                },
+                "geometry_uncertainty": {
+                    "geometry_signals": list(geometry_signals),
+                    "uncertainty_signals": list(uncertainty_signals),
+                    "geometry_method": geometry_method,
+                    "uncertainty_method": uncertainty_method,
+                    "fusion_methods": list(geometry_fusion_methods),
+                },
+            },
+            "threshold_policy": {
+                "mode": (
+                    "conformal_with_abstention_budget"
+                    if enforce_abstention_budget
+                    else "conformal"
+                ),
+                "enforce_abstention_budget": bool(enforce_abstention_budget),
+                "abstention_budget_target_rate": budget_max_abstention_rate,
+                "budget_reference": (
+                    "seed_calibration_split_unlabeled_scores"
+                    if enforce_abstention_budget
+                    else None
+                ),
+            },
             "alpha": float(alpha),
             "best_by": best_by,
             "seeds": [int(seed) for seed in seeds],
@@ -632,6 +1034,8 @@ def _write_manifest(
             "seeds": tuple(payload.get("config", {}).get("seeds", ())),
             "alpha": payload.get("config", {}).get("alpha"),
             "best_by": payload.get("config", {}).get("best_by"),
+            "fusion": payload.get("config", {}).get("fusion"),
+            "threshold_policy": payload.get("config", {}).get("threshold_policy"),
         },
     )
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -706,6 +1110,8 @@ def _record_registry(
             "status": payload.get("status"),
             "artifact_manifest": None if manifest_path is None else str(manifest_path),
             "signals": tuple(payload.get("config", {}).get("signals", ())),
+            "fusion": payload.get("config", {}).get("fusion"),
+            "threshold_policy": payload.get("config", {}).get("threshold_policy"),
             "alpha": payload.get("config", {}).get("alpha"),
             "best_by": payload.get("config", {}).get("best_by"),
             "seeds": tuple(payload.get("config", {}).get("seeds", ())),
@@ -720,6 +1126,23 @@ def _record_registry(
 def run(args: argparse.Namespace) -> dict[str, Any]:
     score_dumps = [_parse_named_path(value) for value in args.scores]
     signals = _parse_csv(args.signals, name="signals")
+    rank_fusion_signals = _parse_optional_csv(
+        args.rank_fusion_signals,
+        name="rank_fusion_signals",
+    )
+    rank_fusion_methods = _parse_optional_csv(
+        args.rank_fusion_methods,
+        name="rank_fusion_methods",
+    )
+    geometry_signals = _parse_optional_csv(args.geometry_signals, name="geometry_signals")
+    uncertainty_signals = _parse_optional_csv(
+        args.uncertainty_signals,
+        name="uncertainty_signals",
+    )
+    geometry_fusion_methods = _parse_optional_csv(
+        args.geometry_fusion_methods,
+        name="geometry_fusion_methods",
+    )
     seeds = _parse_int_csv(args.seeds, name="seeds")
     output_path = Path(args.json)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -727,6 +1150,19 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         score_dumps,
         signals=signals,
         seeds=seeds,
+        rank_fusion_signals=rank_fusion_signals,
+        rank_fusion_methods=rank_fusion_methods,
+        geometry_signals=geometry_signals,
+        uncertainty_signals=uncertainty_signals,
+        geometry_method=str(args.geometry_method),
+        uncertainty_method=str(args.uncertainty_method),
+        geometry_fusion_methods=geometry_fusion_methods,
+        enforce_abstention_budget=bool(args.enforce_abstention_budget),
+        abstention_budget_target_rate=(
+            None
+            if args.abstention_budget_target_rate is None
+            else float(args.abstention_budget_target_rate)
+        ),
         alpha=float(args.alpha),
         best_by=str(args.best_by),
         direction_override=args.direction,
@@ -776,7 +1212,62 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument("--scores", action="append", required=True, help="name=score_dump path; repeatable")
     parser.add_argument("--signals", required=True, help="comma-separated abstention candidate signals")
+    parser.add_argument(
+        "--rank-fusion-signals",
+        default=None,
+        help="optional comma-separated signals to rank-calibrate and fuse as abstention candidates",
+    )
+    parser.add_argument(
+        "--rank-fusion-methods",
+        default=None,
+        help=f"comma-separated rank fusion methods; choices: {','.join(RANK_SCORE_FUSION_METHODS)}",
+    )
+    parser.add_argument(
+        "--geometry-signals",
+        default=None,
+        help="optional comma-separated representation/geometry signals for geometry-uncertainty fusion",
+    )
+    parser.add_argument(
+        "--uncertainty-signals",
+        default=None,
+        help="optional comma-separated verifier/uncertainty signals for geometry-uncertainty fusion",
+    )
+    parser.add_argument(
+        "--geometry-method",
+        choices=RANK_SCORE_FUSION_METHODS,
+        default="mean_rank",
+    )
+    parser.add_argument(
+        "--uncertainty-method",
+        choices=RANK_SCORE_FUSION_METHODS,
+        default="mean_rank",
+    )
+    parser.add_argument(
+        "--geometry-fusion-methods",
+        default=None,
+        help=(
+            "comma-separated geometry/uncertainty fusion methods; choices: "
+            f"{','.join(GEOMETRY_UNCERTAINTY_FUSION_METHODS)}"
+        ),
+    )
     parser.add_argument("--alpha", type=float, default=0.10)
+    parser.add_argument(
+        "--enforce-abstention-budget",
+        action="store_true",
+        help=(
+            "raise/lower candidate thresholds with the seeded calibration split score "
+            "distribution so total abstention stays within --max-abstention-rate"
+        ),
+    )
+    parser.add_argument(
+        "--abstention-budget-target-rate",
+        type=float,
+        default=None,
+        help=(
+            "optional calibration-split abstention target used by "
+            "--enforce-abstention-budget; defaults to --max-abstention-rate"
+        ),
+    )
     parser.add_argument("--best-by", choices=ABSTENTION_COMPARISON_METRICS,
                         default="conditional_correctness_lower_bound")
     parser.add_argument("--direction", choices=("higher", "lower"), default=None,
