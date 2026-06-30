@@ -1,0 +1,88 @@
+{
+  "config": {
+    "fetch_pages": true,
+    "max_seed_urls_per_task": null,
+    "max_tasks": null,
+    "max_text_chars": 6000,
+    "min_delay_seconds": 0.25,
+    "source_family": "official",
+    "timeout_seconds": 30.0
+  },
+  "errors": [
+    {
+      "error": "RuntimeError",
+      "message": "official site HTTP 403: <HTML><HEAD>\n<TITLE>Access Denied</TITLE>\n</HEAD><BODY>\n<H1>Access Denied</H1>\n \nYou don't have permission to access \"http&#58;&#47;&#47;www&#46;tesla&#46;com&#47;elon&#45;musk\" on this server.<P>\nReference&#32;&#35;18&#46;aff7d517&#46;1782838029&#46;66cea8\n<P>https&#58;&#47;&#47;errors&#46;edgesuit",
+      "task_id": "catalog-official-0c9343c74804",
+      "url": "https://www.tesla.com/elon-musk"
+    },
+    {
+      "error": "URLError",
+      "message": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1000)>",
+      "task_id": "catalog-official-18ef5a975745",
+      "url": "https://www.time.gov/"
+    }
+  ],
+  "metadata": {
+    "model": "smollm2-l80",
+    "source": "frontier-v4"
+  },
+  "output_path": "artifacts/frontier-release-evidence/unresolved-official-site-catalog-v1/official-site-catalog.jsonl",
+  "schema_version": 1,
+  "source": {
+    "collection_tasks": "artifacts/frontier-release-evidence/unresolved-worldbank-source-family-catalog-collection-plan-v1/source-family-catalog-collection-tasks.jsonl",
+    "url_seeds": "artifacts/frontier-release-evidence/unresolved-official-site-catalog-v1/official-site-url-seeds.jsonl"
+  },
+  "status": "ready",
+  "summary": {
+    "domain_counts": {
+      "data.who.int": 1,
+      "data.worldbank.org": 1,
+      "ir.spacex.com": 1,
+      "population.un.org": 1,
+      "www.cdc.gov": 2,
+      "www.ers.usda.gov": 2,
+      "www.nfl.com": 1,
+      "www.nist.gov": 1,
+      "www.patriots.com": 1,
+      "www.psl.noaa.gov": 1,
+      "www.santepubliquefrance.fr": 1,
+      "www.tesla.com": 1,
+      "www.time.gov": 1,
+      "www.weather.gov": 1
+    },
+    "error_count": 2,
+    "fetch_status_counts": {
+      "fetched": 14,
+      "seed_fallback": 2
+    },
+    "fetched_page_count": 14,
+    "matched_seed_count": 16,
+    "provider_counts": {
+      "cdc": 2,
+      "new_england_patriots": 1,
+      "nfl": 1,
+      "nist": 1,
+      "nist_usno": 1,
+      "noaa_nws": 1,
+      "noaa_psl": 1,
+      "sante_publique_france": 1,
+      "spacex": 1,
+      "tesla": 1,
+      "un_population_division": 1,
+      "usda_ers": 2,
+      "who": 1,
+      "worldbank": 1
+    },
+    "seed_count": 16,
+    "skipped_duplicate_count": 0,
+    "source_document_count": 16,
+    "source_family_counts": {
+      "official": 16
+    },
+    "task_count": 8,
+    "task_source_family_counts": {
+      "official": 8
+    }
+  },
+  "workflow": "official_site_source_family_catalog_adapter"
+}

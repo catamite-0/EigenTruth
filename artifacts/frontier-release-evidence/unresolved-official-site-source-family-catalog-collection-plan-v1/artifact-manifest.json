@@ -1,0 +1,45 @@
+{
+  "artifacts": {
+    "collection_plan_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-catalog-collection-plan.json",
+      "sha256": "0961b4f022b2ea661fa039f14dbf8360093740b06b700491c5cc71fe24928b53",
+      "size_bytes": 50584
+    },
+    "source_family_acquisition_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-official-site-source-family-coverage-audit-v1/source-family-acquisition-plan.jsonl",
+      "sha256": "440b8a7e3c26963f2f65efa24c1a4e93bca5617698abb15901ede17785c42c72",
+      "size_bytes": 179512
+    },
+    "source_family_collection_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-catalog-collection-tasks.jsonl",
+      "sha256": "75bd9f8cbd5bca211df92966044bf1f5e00fcfaa675949d207646e0d7ee96c4e",
+      "size_bytes": 48088
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "acquisition_row_count": 172,
+    "collection_task_count": 25,
+    "family_gap_count": 176,
+    "model": "smollm2-l80",
+    "source": "frontier-v4",
+    "status": "ready_for_source_collection",
+    "workflow": "source_family_catalog_collection_plan"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

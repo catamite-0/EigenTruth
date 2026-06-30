@@ -2031,6 +2031,88 @@ false-supported rate `0.0`. This is exact covered-fact quality for population
 statistics only; broad blind-spot recall still depends on mapping product
 claims to those facts or filling the remaining official/scholarly/news lanes.
 
+The v4 official-site lane fills the remaining `official` collection tasks with
+label-free URL seeds and replays the same fail-closed source-family workflow:
+
+```bash
+OFFICIAL=artifacts/frontier-release-evidence/unresolved-official-site-catalog-v1
+OFFICIAL_WORKFLOW=artifacts/frontier-release-evidence/unresolved-official-site-source-family-citation-workflow-v1
+OFFICIAL_COVERAGE=artifacts/frontier-release-evidence/unresolved-official-site-source-family-coverage-audit-v1
+OFFICIAL_PLAN=artifacts/frontier-release-evidence/unresolved-official-site-source-family-catalog-collection-plan-v1
+
+python benchmarks/run_official_site_source_family_catalog_adapter.py \
+  --tasks artifacts/frontier-release-evidence/unresolved-worldbank-source-family-catalog-collection-plan-v1/source-family-catalog-collection-tasks.jsonl \
+  --seeds "$OFFICIAL/official-site-url-seeds.jsonl" \
+  --output "$OFFICIAL/official-site-catalog.jsonl" \
+  --report-json "$OFFICIAL/official-site-catalog-report.json" \
+  --artifact-manifest "$OFFICIAL/artifact-manifest.json" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-official-site-catalog \
+  --version 0.1 \
+  --max-text-chars 6000 \
+  --timeout-seconds 30 \
+  --min-delay-seconds 0.25 \
+  --metadata source=frontier-v4 \
+  --metadata model=smollm2-l80
+
+python benchmarks/run_source_family_citation_search_workflow.py \
+  --queue artifacts/frontier-release-evidence/unresolved-blind-spot-evidence-queue-v1/unresolved-evidence-queue.json \
+  --source-catalog artifacts/frontier-release-evidence/blind-spot-wikidata-evidence-v1/wikidata-source-docs.jsonl \
+  --source-catalog artifacts/frontier-release-evidence/unresolved-worldbank-official-statistics-catalog-v1/worldbank-official-statistics-catalog.jsonl \
+  --source-catalog "$OFFICIAL/official-site-catalog.jsonl" \
+  --scores artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json \
+  --blind-spots artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
+  --controlled-sweep artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json \
+  --output-dir "$OFFICIAL_WORKFLOW" \
+  --workflow-report "$OFFICIAL_WORKFLOW/source-family-citation-search-workflow.json" \
+  --artifact-manifest "$OFFICIAL_WORKFLOW/artifact-manifest.json" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-official-site-source-family-citation-workflow \
+  --version 0.1 \
+  --query-mode claim_entity \
+  --adapter-diversify-source-families \
+  --target-route retrieval_groundedness \
+  --metadata source=frontier-v4 \
+  --metadata model=smollm2-l80
+
+python benchmarks/audit_source_family_coverage.py \
+  --requests "$OFFICIAL_WORKFLOW/source-family-citation-search-requests.jsonl" \
+  --adapter-results "$OFFICIAL_WORKFLOW/source-family-citation-search-results.jsonl" \
+  --json "$OFFICIAL_COVERAGE/source-family-coverage-audit.json" \
+  --acquisition-plan-jsonl "$OFFICIAL_COVERAGE/source-family-acquisition-plan.jsonl" \
+  --artifact-manifest "$OFFICIAL_COVERAGE/artifact-manifest.json" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-official-site-source-family-coverage-audit \
+  --version 0.1 \
+  --metadata source=frontier-v4 \
+  --metadata model=smollm2-l80
+
+python benchmarks/plan_source_family_catalog_collection.py \
+  --acquisition-plan "$OFFICIAL_COVERAGE/source-family-acquisition-plan.jsonl" \
+  --tasks-jsonl "$OFFICIAL_PLAN/source-family-catalog-collection-tasks.jsonl" \
+  --report-json "$OFFICIAL_PLAN/source-family-catalog-collection-plan.json" \
+  --artifact-manifest "$OFFICIAL_PLAN/artifact-manifest.json" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-official-site-source-family-catalog-collection-plan \
+  --version 0.1 \
+  --metadata source=frontier-v4 \
+  --metadata model=smollm2-l80
+```
+
+The official adapter consumes `16` URL seeds across USDA ERS, Tesla, SpaceX,
+WHO, Sante publique France, Patriots/NFL, UN, World Bank, NOAA/NWS, CDC, NIST,
+and time.gov. It writes `16` official catalog docs, fetches `14` pages, and
+keeps `2` seed-fallback rows for blocked/failed official pages. Replaying
+Wikidata + World Bank + official-site catalogs produces `555` catalog docs and
+`732` adapter results, including `204` `official` and `196`
+`official_statistics` rows. Provenance still passes, but route promotion remains
+blocked because the external query sweep refutes `0/89` blind spots. The
+coverage audit records the source-acquisition win: all `52/52`
+official-preferred requests now have an official result, all `20/20`
+freshness-required requests have a fresh result, remaining missing families are
+only `scholarly=156` and `news=20`, and the next collection plan shrinks to
+`25` tasks (`21` scholarly, `4` news).
+
 ## `build_unresolved_world_model_rule_stubs.py`
 
 Bridges the world-model/calculator branch of the unresolved queue into the

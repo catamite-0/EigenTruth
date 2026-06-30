@@ -1,0 +1,68 @@
+{
+  "config": {
+    "default_source_family": "reference",
+    "diversify_source_families": true,
+    "max_query_variants": 3,
+    "max_results": 3,
+    "min_text_overlap": 0.05
+  },
+  "input_path": "artifacts/frontier-release-evidence/unresolved-official-site-source-family-citation-workflow-v1/source-family-citation-search-requests.jsonl",
+  "metadata": {
+    "model": "smollm2-l80",
+    "source": "frontier-v4",
+    "source_workflow": "source_family_citation_search_workflow"
+  },
+  "output_path": "artifacts/frontier-release-evidence/unresolved-official-site-source-family-citation-workflow-v1/source-family-citation-search-results.jsonl",
+  "schema_version": 1,
+  "source_catalog_paths": [
+    "artifacts/frontier-release-evidence/blind-spot-wikidata-evidence-v1/wikidata-source-docs.jsonl",
+    "artifacts/frontier-release-evidence/unresolved-worldbank-official-statistics-catalog-v1/worldbank-official-statistics-catalog.jsonl",
+    "artifacts/frontier-release-evidence/unresolved-official-site-catalog-v1/official-site-catalog.jsonl"
+  ],
+  "summary": {
+    "catalog_provider_counts": {
+      "cdc": 2,
+      "new_england_patriots": 1,
+      "nfl": 1,
+      "nist": 1,
+      "nist_usno": 1,
+      "noaa_nws": 1,
+      "noaa_psl": 1,
+      "sante_publique_france": 1,
+      "source_family_catalog": 322,
+      "spacex": 1,
+      "tesla": 1,
+      "un_population_division": 1,
+      "usda_ers": 2,
+      "who": 1,
+      "worldbank": 218
+    },
+    "catalog_source_family_counts": {
+      "official": 16,
+      "official_statistics": 217,
+      "reference": 322
+    },
+    "request_count": 260,
+    "request_error_count": 0,
+    "request_with_results_count": 244,
+    "result_count": 732,
+    "result_provider_counts": {
+      "cdc": 32,
+      "nfl": 8,
+      "nist": 4,
+      "nist_usno": 32,
+      "source_family_catalog": 332,
+      "un_population_division": 16,
+      "usda_ers": 92,
+      "who": 20,
+      "worldbank": 196
+    },
+    "result_source_family_counts": {
+      "official": 204,
+      "official_statistics": 196,
+      "reference": 332
+    },
+    "source_document_count": 555
+  },
+  "workflow": "source_family_citation_search_adapter"
+}
