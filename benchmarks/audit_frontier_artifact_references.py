@@ -654,18 +654,23 @@ def _restore_recoverable_json_artifacts(
                 "reason": "cached_payload_not_found",
             })
             continue
+        normalized_payload, normalized_absolute_path_count = _normalize_cached_json_payload(
+            cached_payload["payload"],
+            root=root_path,
+        )
         resolved_output_path.parent.mkdir(parents=True, exist_ok=True)
         resolved_output_path.write_text(
-            strict_json_dumps(cached_payload["payload"], indent=2, sort_keys=True) + "\n",
+            strict_json_dumps(normalized_payload, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
         restored.append({
             "path": reference_path,
             "cache_path": cached_payload["cache_path"],
             "entry_key": cached_payload["entry_key"],
-            "payload_keys": tuple(sorted(str(key) for key in cached_payload["payload"].keys())),
-            "workflow": cached_payload["payload"].get("workflow"),
-            "status": cached_payload["payload"].get("status"),
+            "payload_keys": tuple(sorted(str(key) for key in normalized_payload.keys())),
+            "workflow": normalized_payload.get("workflow"),
+            "status": normalized_payload.get("status"),
+            "normalized_absolute_path_count": normalized_absolute_path_count,
         })
     return {
         "restored_count": len(restored),
@@ -673,6 +678,41 @@ def _restore_recoverable_json_artifacts(
         "restored": tuple(restored),
         "skipped": tuple(skipped),
     }
+
+
+def _normalize_cached_json_payload(payload: Mapping[str, Any], *, root: Path) -> tuple[dict[str, Any], int]:
+    normalized_count = 0
+
+    def normalize_value(value: Any) -> Any:
+        nonlocal normalized_count
+        if isinstance(value, Mapping):
+            return {
+                normalize_value(key): normalize_value(item)
+                for key, item in value.items()
+            }
+        if isinstance(value, list):
+            return [normalize_value(item) for item in value]
+        if isinstance(value, tuple):
+            return tuple(normalize_value(item) for item in value)
+        if isinstance(value, str):
+            normalized = _normalize_root_absolute_path(value, root=root)
+            if normalized != value:
+                normalized_count += 1
+            return normalized
+        return value
+
+    normalized = normalize_value(payload)
+    return dict(_mapping(normalized)), normalized_count
+
+
+def _normalize_root_absolute_path(value: str, *, root: Path) -> str:
+    candidate = Path(value)
+    if not candidate.is_absolute():
+        return value
+    try:
+        return str(candidate.resolve().relative_to(root))
+    except ValueError:
+        return value
 
 
 def _load_json_cache_sources(

@@ -155,6 +155,13 @@ def test_frontier_artifact_reference_audit_restores_cached_json_payload(tmp_path
                     "workflow": "product_promotion_contract",
                     "source_status": "promote",
                     "model_id": "fixture-model",
+                    "source_path": str(contract_path),
+                    "nested": {
+                        "paths": (
+                            str(contract_path),
+                            str(tmp_path.parent / "outside.json"),
+                        ),
+                    },
                 },
             },
         }),
@@ -182,8 +189,16 @@ def test_frontier_artifact_reference_audit_restores_cached_json_payload(tmp_path
     assert payload["restore_report"]["restored"][0]["path"] == (
         "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json"
     )
+    assert payload["restore_report"]["restored"][0]["normalized_absolute_path_count"] == 2
     assert restored_payload["workflow"] == "product_promotion_contract"
     assert restored_payload["model_id"] == "fixture-model"
+    assert restored_payload["source_path"] == (
+        "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json"
+    )
+    assert restored_payload["nested"]["paths"] == [
+        "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json",
+        str(tmp_path.parent / "outside.json"),
+    ]
 
 
 def test_frontier_artifact_reference_audit_restore_skips_paths_outside_root(tmp_path):

@@ -5663,7 +5663,9 @@ evidence-handoff export, manifest verification, and final re-audit. By default
 it also inspects the frontier `artifact-json-cache.json` so the summary splits
 missing references into cache-recoverable and unrecoverable counts. Add
 `--restore-json-cache-artifacts` to restore only those cache-backed missing JSON
-files and re-run the audit before writing the final report:
+files and re-run the audit before writing the final report. Restore mode
+normalizes repo-local absolute paths in cached JSON payloads to repo-relative
+paths before writing files:
 
 ```bash
 python benchmarks/audit_frontier_artifact_references.py \
@@ -8409,7 +8411,8 @@ referenced artifact manifests that exist, then emits ordered
 Use repeated `--json-cache` arguments to inspect additional persisted JSON
 artifact caches, or `--no-json-cache` for a pure filesystem-only audit. The
 restore mode never rewrites existing files; it only writes references that were
-missing and had a valid cached JSON payload.
+missing and had a valid cached JSON payload, with repo-local absolute paths
+normalized for portability.
 
 Once verification passes, `promote_artifact_manifest.py` can register the
 manifest and verification report in a local `ArtifactRegistry` JSON file:

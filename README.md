@@ -316,7 +316,9 @@ handoff, verifying manifests, and rerunning the audit. It also inspects the
 default frontier `artifact-json-cache.json` and reports how many missing JSON
 artifacts are recoverable from cache before rerunning expensive workflows; add
 `--restore-json-cache-artifacts` to write those cache-backed missing JSON files
-locally and immediately re-run the audit:
+locally and immediately re-run the audit. Restored JSON payloads normalize
+repo-local absolute paths to repo-relative paths so cached artifacts remain
+portable:
 
 ```bash
 python benchmarks/audit_frontier_artifact_references.py \
