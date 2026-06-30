@@ -21109,6 +21109,226 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         )
 
 
+def test_compare_release_candidates_can_require_receipt_runtime_drift_evidence(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="qwen-readiness",
+        version="0.6",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="structured",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="structured-route",
+        path=route_manifest,
+        version="0.6",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+    action_receipts_report = _write_product_runtime_drift_report(
+        tmp_path / "action-receipts-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        action_receipts_evidence=True,
+    )
+    blocked_action_receipts_report = _write_product_runtime_drift_report(
+        tmp_path / "blocked-action-receipts-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        action_receipts_evidence=True,
+        action_receipts_blocked=True,
+    )
+    receipt_claim_support_report = _write_product_runtime_drift_report(
+        tmp_path / "receipt-claim-support-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        receipt_claim_support_evidence=True,
+    )
+    blocked_receipt_claim_support_report = _write_product_runtime_drift_report(
+        tmp_path / "blocked-receipt-claim-support-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        receipt_claim_support_evidence=True,
+        receipt_claim_support_blocked=True,
+    )
+    missing_evidence_report = _write_product_runtime_drift_report(
+        tmp_path / "missing-receipt-evidence-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+    )
+
+    action_receipts = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=action_receipts_report,
+        require_product_runtime_drift_action_receipts_evidence=True,
+    )
+    missing_action_receipts = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=missing_evidence_report,
+        require_product_runtime_drift_action_receipts_evidence=True,
+    )
+    blocked_action_receipts = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=blocked_action_receipts_report,
+        require_product_runtime_drift_action_receipts_evidence=True,
+    )
+    receipt_claim_support = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=receipt_claim_support_report,
+        require_product_runtime_drift_receipt_claim_support_evidence=True,
+    )
+    missing_receipt_claim_support = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=missing_evidence_report,
+        require_product_runtime_drift_receipt_claim_support_evidence=True,
+    )
+    blocked_receipt_claim_support = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=blocked_receipt_claim_support_report,
+        require_product_runtime_drift_receipt_claim_support_evidence=True,
+    )
+
+    assert action_receipts["decision"]["status"] == "promote"
+    assert action_receipts["config"][
+        "require_product_runtime_drift_action_receipts_evidence"
+    ] is True
+    action_summary = action_receipts["release_candidate"]["product_runtime_drift"][
+        "summary"
+    ]
+    assert action_summary["action_receipts_evidence_required"] is True
+    assert action_summary["action_receipts_evidence_metric_count"] == 5
+    assert action_summary["action_receipts_evidence_blocked_metric_count"] == 0
+    assert action_summary["product_trace_action_receipts_coverage_rate_current"] == (
+        pytest.approx(1.0)
+    )
+    assert action_summary["product_trace_action_receipts_unsigned_receipt_rate_status"] == (
+        "pass"
+    )
+    assert missing_action_receipts["decision"]["status"] == "blocked"
+    assert missing_action_receipts["product_runtime_drift_gate"]["summary"][
+        "action_receipts_evidence_missing_metrics"
+    ] == (
+        "action_receipts.coverage_rate",
+        "action_receipts.missing_receipt_rate",
+        "action_receipts.invalid_receipt_rate",
+        "action_receipts.fingerprint_mismatch_rate",
+        "action_receipts.unsigned_receipt_rate",
+    )
+    assert any(
+        "action-receipts evidence metrics are incomplete" in reason
+        for reason in missing_action_receipts["decision"]["blocking_reasons"][0][
+            "reasons"
+        ]
+    )
+    assert blocked_action_receipts["decision"]["status"] == "blocked"
+    assert blocked_action_receipts["product_runtime_drift_gate"]["summary"][
+        "action_receipts_evidence_blocked_metric_count"
+    ] == 1
+    assert any(
+        "action-receipts evidence blocked 1 metric" in reason
+        for reason in blocked_action_receipts["decision"]["blocking_reasons"][0][
+            "reasons"
+        ]
+    )
+
+    assert receipt_claim_support["decision"]["status"] == "promote"
+    assert receipt_claim_support["config"][
+        "require_product_runtime_drift_receipt_claim_support_evidence"
+    ] is True
+    support_summary = receipt_claim_support["release_candidate"]["product_runtime_drift"][
+        "summary"
+    ]
+    assert support_summary["receipt_claim_support_evidence_required"] is True
+    assert support_summary["receipt_claim_support_evidence_metric_count"] == 7
+    assert support_summary["receipt_claim_support_evidence_blocked_metric_count"] == 0
+    assert support_summary[
+        "product_trace_receipt_claim_support_reference_support_rate_current"
+    ] == pytest.approx(1.0)
+    assert support_summary[
+        "product_trace_receipt_claim_support_unsigned_reference_rate_status"
+    ] == "pass"
+    assert missing_receipt_claim_support["decision"]["status"] == "blocked"
+    assert missing_receipt_claim_support["product_runtime_drift_gate"]["summary"][
+        "receipt_claim_support_evidence_missing_metrics"
+    ] == (
+        "receipt_claim_support.reference_support_rate",
+        "receipt_claim_support.unsupported_reference_rate",
+        "receipt_claim_support.missing_reference_rate",
+        "receipt_claim_support.unreceipted_reference_rate",
+        "receipt_claim_support.failed_result_reference_rate",
+        "receipt_claim_support.fingerprint_mismatch_reference_rate",
+        "receipt_claim_support.unsigned_reference_rate",
+    )
+    assert any(
+        "receipt claim-support evidence metrics are incomplete" in reason
+        for reason in missing_receipt_claim_support["decision"]["blocking_reasons"][0][
+            "reasons"
+        ]
+    )
+    assert blocked_receipt_claim_support["decision"]["status"] == "blocked"
+    assert blocked_receipt_claim_support["product_runtime_drift_gate"]["summary"][
+        "receipt_claim_support_evidence_blocked_metric_count"
+    ] == 1
+    assert any(
+        "receipt claim-support evidence blocked 1 metric" in reason
+        for reason in blocked_receipt_claim_support["decision"]["blocking_reasons"][0][
+            "reasons"
+        ]
+    )
+
+
 def test_compare_release_candidates_splits_required_route_and_structured_fact_gates(tmp_path):
     module = importlib.import_module("benchmarks.compare_release_candidates")
     from eigentruth.registry import ArtifactRegistry
@@ -22993,6 +23213,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         counterfactual_evidence=True,
         triple_audit_evidence=True,
         action_gate_evidence=True,
+        action_receipts_evidence=True,
+        receipt_claim_support_evidence=True,
         trajectory_audit_evidence=True,
         evidence_handoff_evidence=True,
     )
@@ -23120,6 +23342,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         require_product_runtime_drift_counterfactual_evidence=True,
         require_product_runtime_drift_triple_audit_evidence=True,
         require_product_runtime_drift_action_gate_evidence=True,
+        require_product_runtime_drift_action_receipts_evidence=True,
+        require_product_runtime_drift_receipt_claim_support_evidence=True,
         require_product_runtime_drift_trajectory_audit_evidence=True,
         require_product_runtime_drift_evidence_handoff_evidence=True,
         selfcheck_signal_fusion_workflow_key="report:selfcheck-signal-fusion-workflow:0.1",
@@ -23339,9 +23563,11 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["product_runtime_drift_counterfactual_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_triple_audit_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_action_gate_evidence_required"] is True
+    assert manifest["metadata"]["product_runtime_drift_action_receipts_evidence_required"] is True
+    assert manifest["metadata"]["product_runtime_drift_receipt_claim_support_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_trajectory_audit_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_evidence_handoff_evidence_required"] is True
-    assert manifest["metadata"]["product_runtime_drift_compared_metric_count"] == 48
+    assert manifest["metadata"]["product_runtime_drift_compared_metric_count"] == 60
     assert manifest["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
     assert manifest["metadata"]["product_runtime_drift_promotion_evidence_metric_count"] == 4
     assert manifest["metadata"]["product_runtime_drift_promotion_evidence_blocked_metric_count"] == 0
@@ -23353,6 +23579,13 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["product_runtime_drift_triple_audit_evidence_blocked_metric_count"] == 0
     assert manifest["metadata"]["product_runtime_drift_action_gate_evidence_metric_count"] == 10
     assert manifest["metadata"]["product_runtime_drift_action_gate_evidence_blocked_metric_count"] == 0
+    assert manifest["metadata"]["product_runtime_drift_action_receipts_evidence_metric_count"] == 5
+    assert manifest["metadata"]["product_runtime_drift_action_receipts_evidence_blocked_metric_count"] == 0
+    assert manifest["metadata"]["product_runtime_drift_receipt_claim_support_evidence_metric_count"] == 7
+    assert (
+        manifest["metadata"]["product_runtime_drift_receipt_claim_support_evidence_blocked_metric_count"]
+        == 0
+    )
     assert manifest["metadata"]["product_runtime_drift_trajectory_audit_evidence_metric_count"] == 7
     assert (
         manifest["metadata"]["product_runtime_drift_trajectory_audit_evidence_blocked_metric_count"]
@@ -23390,6 +23623,12 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     )
     assert manifest["metadata"][
         "product_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_status"
+    ] == "pass"
+    assert manifest["metadata"]["product_runtime_drift_product_trace_action_receipts_coverage_rate_current"] == (
+        pytest.approx(1.0)
+    )
+    assert manifest["metadata"][
+        "product_runtime_drift_product_trace_receipt_claim_support_reference_support_rate_status"
     ] == "pass"
     assert manifest["metadata"]["product_runtime_drift_evidence_handoff_manifest_verified_rate_current"] == (
         pytest.approx(1.0)
@@ -24766,6 +25005,8 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                 "require_product_runtime_drift_counterfactual_evidence": True,
                 "require_product_runtime_drift_triple_audit_evidence": True,
                 "require_product_runtime_drift_action_gate_evidence": True,
+                "require_product_runtime_drift_action_receipts_evidence": True,
+                "require_product_runtime_drift_receipt_claim_support_evidence": True,
                 "require_product_runtime_drift_trajectory_audit_evidence": True,
                 "require_product_runtime_drift_evidence_handoff_evidence": True,
                 "require_product_trace_action_audit_gate": True,
@@ -24928,6 +25169,10 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                         "triple_audit_evidence_blocked_metric_count": 0,
                         "action_gate_evidence_metric_count": 10,
                         "action_gate_evidence_blocked_metric_count": 0,
+                        "action_receipts_evidence_metric_count": 5,
+                        "action_receipts_evidence_blocked_metric_count": 0,
+                        "receipt_claim_support_evidence_metric_count": 7,
+                        "receipt_claim_support_evidence_blocked_metric_count": 0,
                         "trajectory_audit_evidence_metric_count": 7,
                         "trajectory_audit_evidence_blocked_metric_count": 0,
                         "evidence_handoff_evidence_metric_count": 7,
@@ -24968,6 +25213,14 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                         "product_trace_action_audit_error_rate_status": "pass",
                         "product_trace_action_execution_request_id_mismatch_rate_current": 0.0,
                         "product_trace_action_execution_request_id_mismatch_rate_status": "pass",
+                        "product_trace_action_receipts_coverage_rate_current": 1.0,
+                        "product_trace_action_receipts_coverage_rate_status": "pass",
+                        "product_trace_action_receipts_unsigned_receipt_rate_current": 0.0,
+                        "product_trace_action_receipts_unsigned_receipt_rate_status": "pass",
+                        "product_trace_receipt_claim_support_reference_support_rate_current": 1.0,
+                        "product_trace_receipt_claim_support_reference_support_rate_status": "pass",
+                        "product_trace_receipt_claim_support_unsigned_reference_rate_current": 0.0,
+                        "product_trace_receipt_claim_support_unsigned_reference_rate_status": "pass",
                         "product_trace_trajectory_audit_error_rate_current": 0.0,
                         "product_trace_trajectory_audit_error_rate_status": "pass",
                         "product_trace_trajectory_audit_scope_rate_current": 0.0,
@@ -25539,6 +25792,8 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["metadata"]["product_runtime_drift_counterfactual_evidence_required"] is True
     assert contract["metadata"]["product_runtime_drift_triple_audit_evidence_required"] is True
     assert contract["metadata"]["product_runtime_drift_action_gate_evidence_required"] is True
+    assert contract["metadata"]["product_runtime_drift_action_receipts_evidence_required"] is True
+    assert contract["metadata"]["product_runtime_drift_receipt_claim_support_evidence_required"] is True
     assert contract["metadata"]["product_runtime_drift_trajectory_audit_evidence_required"] is True
     assert contract["metadata"]["product_runtime_drift_evidence_handoff_evidence_required"] is True
     assert contract["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
@@ -25552,6 +25807,12 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["metadata"]["product_runtime_drift_triple_audit_evidence_blocked_metric_count"] == 0
     assert contract["metadata"]["product_runtime_drift_action_gate_evidence_metric_count"] == 10
     assert contract["metadata"]["product_runtime_drift_action_gate_evidence_blocked_metric_count"] == 0
+    assert contract["metadata"]["product_runtime_drift_action_receipts_evidence_metric_count"] == 5
+    assert contract["metadata"]["product_runtime_drift_action_receipts_evidence_blocked_metric_count"] == 0
+    assert contract["metadata"]["product_runtime_drift_receipt_claim_support_evidence_metric_count"] == 7
+    assert contract["metadata"][
+        "product_runtime_drift_receipt_claim_support_evidence_blocked_metric_count"
+    ] == 0
     assert contract["metadata"]["product_runtime_drift_trajectory_audit_evidence_metric_count"] == 7
     assert contract["metadata"]["product_runtime_drift_trajectory_audit_evidence_blocked_metric_count"] == 0
     assert contract["metadata"]["product_runtime_drift_evidence_handoff_evidence_metric_count"] == 7
@@ -25575,6 +25836,18 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["metadata"]["product_runtime_drift_product_trace_action_audit_error_rate_current"] == 0.0
     assert contract["metadata"][
         "product_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_status"
+    ] == "pass"
+    assert contract["metadata"]["product_runtime_drift_product_trace_action_receipts_coverage_rate_current"] == (
+        1.0
+    )
+    assert contract["metadata"][
+        "product_runtime_drift_product_trace_action_receipts_unsigned_receipt_rate_status"
+    ] == "pass"
+    assert contract["metadata"][
+        "product_runtime_drift_product_trace_receipt_claim_support_reference_support_rate_current"
+    ] == 1.0
+    assert contract["metadata"][
+        "product_runtime_drift_product_trace_receipt_claim_support_unsigned_reference_rate_status"
     ] == "pass"
     assert contract["metadata"]["product_runtime_drift_product_trace_trajectory_audit_error_rate_current"] == (
         0.0
@@ -25630,6 +25903,8 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert manifest["metadata"]["product_runtime_drift_pre_generation_evidence_metric_count"] == 8
     assert manifest["metadata"]["product_runtime_drift_counterfactual_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_counterfactual_evidence_metric_count"] == 6
+    assert manifest["metadata"]["product_runtime_drift_action_receipts_evidence_metric_count"] == 5
+    assert manifest["metadata"]["product_runtime_drift_receipt_claim_support_evidence_metric_count"] == 7
     assert manifest["metadata"]["product_runtime_drift_trajectory_audit_evidence_metric_count"] == 7
     assert manifest["metadata"]["product_runtime_drift_evidence_handoff_evidence_metric_count"] == 7
     assert manifest["metadata"]["product_runtime_drift_triple_audit_pass_rate_current"] == 1.0
@@ -25641,6 +25916,10 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     )
     assert manifest["metadata"]["product_runtime_drift_triple_slot_coverage_rate_status"] == "pass"
     assert manifest["metadata"]["product_runtime_drift_product_trace_action_audit_error_rate_current"] == 0.0
+    assert manifest["metadata"]["product_runtime_drift_product_trace_action_receipts_coverage_rate_current"] == 1.0
+    assert manifest["metadata"][
+        "product_runtime_drift_product_trace_receipt_claim_support_reference_support_rate_status"
+    ] == "pass"
     assert manifest["metadata"]["product_runtime_drift_product_trace_trajectory_audit_scope_rate_status"] == (
         "pass"
     )
@@ -25745,6 +26024,8 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     )
     assert record.metadata["product_runtime_drift_triple_audit_evidence_required"] is True
     assert record.metadata["product_runtime_drift_action_gate_evidence_required"] is True
+    assert record.metadata["product_runtime_drift_action_receipts_evidence_required"] is True
+    assert record.metadata["product_runtime_drift_receipt_claim_support_evidence_required"] is True
     assert record.metadata["product_runtime_drift_trajectory_audit_evidence_required"] is True
     assert record.metadata["product_runtime_drift_evidence_handoff_evidence_required"] is True
     assert record.metadata["product_runtime_drift_promotion_evidence_metric_count"] == 4
@@ -25752,6 +26033,8 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert record.metadata["product_runtime_drift_pre_generation_evidence_metric_count"] == 8
     assert record.metadata["product_runtime_drift_counterfactual_evidence_required"] is True
     assert record.metadata["product_runtime_drift_counterfactual_evidence_metric_count"] == 6
+    assert record.metadata["product_runtime_drift_action_receipts_evidence_metric_count"] == 5
+    assert record.metadata["product_runtime_drift_receipt_claim_support_evidence_metric_count"] == 7
     assert record.metadata["product_runtime_drift_trajectory_audit_evidence_metric_count"] == 7
     assert record.metadata["product_runtime_drift_evidence_handoff_evidence_metric_count"] == 7
     assert record.metadata[
@@ -25765,6 +26048,12 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert record.metadata["product_runtime_drift_product_trace_action_audit_error_rate_current"] == (
         pytest.approx(0.0)
     )
+    assert record.metadata["product_runtime_drift_product_trace_action_receipts_coverage_rate_status"] == (
+        "pass"
+    )
+    assert record.metadata[
+        "product_runtime_drift_product_trace_receipt_claim_support_reference_support_rate_current"
+    ] == pytest.approx(1.0)
     assert record.metadata["product_runtime_drift_product_trace_trajectory_audit_error_rate_current"] == (
         pytest.approx(0.0)
     )
@@ -26626,6 +26915,10 @@ def _write_product_runtime_drift_report(
     covered_fact_property_blocked=False,
     action_gate_evidence=False,
     action_gate_blocked=False,
+    action_receipts_evidence=False,
+    action_receipts_blocked=False,
+    receipt_claim_support_evidence=False,
+    receipt_claim_support_blocked=False,
     trajectory_audit_evidence=False,
     trajectory_audit_blocked=False,
     evidence_handoff_evidence=False,
@@ -27413,6 +27706,154 @@ def _write_product_runtime_drift_report(
                     "promotion_contract.product_trace_replay.action_execution_gate."
                     "request_id_mismatch_rate.mean"
                 ),
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 0.05,
+                "reason": None,
+            },
+        ])
+    if action_receipts_evidence:
+        coverage_status = "blocked" if action_receipts_blocked else "pass"
+        coverage_current = 0.75 if action_receipts_blocked else 1.0
+        metrics.extend([
+            {
+                "metric": "action_receipts.coverage_rate",
+                "status": coverage_status,
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": coverage_current,
+                "absolute_delta": coverage_current - 1.0,
+                "threshold": 0.95,
+                "reason": (
+                    "action_receipts.coverage_rate below gate"
+                    if action_receipts_blocked
+                    else None
+                ),
+            },
+            {
+                "metric": "action_receipts.missing_receipt_rate",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 0.05,
+                "reason": None,
+            },
+            {
+                "metric": "action_receipts.invalid_receipt_rate",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 0.05,
+                "reason": None,
+            },
+            {
+                "metric": "action_receipts.fingerprint_mismatch_rate",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 0.05,
+                "reason": None,
+            },
+            {
+                "metric": "action_receipts.unsigned_receipt_rate",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 0.05,
+                "reason": None,
+            },
+        ])
+    if receipt_claim_support_evidence:
+        support_status = "blocked" if receipt_claim_support_blocked else "pass"
+        support_current = 0.70 if receipt_claim_support_blocked else 1.0
+        metrics.extend([
+            {
+                "metric": "receipt_claim_support.reference_support_rate",
+                "status": support_status,
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": support_current,
+                "absolute_delta": support_current - 1.0,
+                "threshold": 0.95,
+                "reason": (
+                    "receipt_claim_support.reference_support_rate below gate"
+                    if receipt_claim_support_blocked
+                    else None
+                ),
+            },
+            {
+                "metric": "receipt_claim_support.unsupported_reference_rate",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 0.05,
+                "reason": None,
+            },
+            {
+                "metric": "receipt_claim_support.missing_reference_rate",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 0.05,
+                "reason": None,
+            },
+            {
+                "metric": "receipt_claim_support.unreceipted_reference_rate",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 0.05,
+                "reason": None,
+            },
+            {
+                "metric": "receipt_claim_support.failed_result_reference_rate",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 0.05,
+                "reason": None,
+            },
+            {
+                "metric": "receipt_claim_support.fingerprint_mismatch_reference_rate",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 0.05,
+                "reason": None,
+            },
+            {
+                "metric": "receipt_claim_support.unsigned_reference_rate",
                 "status": "pass",
                 "comparison": "max_increase",
                 "baseline": 0.0,
@@ -33916,6 +34357,8 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                     "product_runtime_drift_counterfactual_evidence_required": True,
                     "product_runtime_drift_triple_audit_evidence_required": True,
                     "product_runtime_drift_action_gate_evidence_required": True,
+                    "product_runtime_drift_action_receipts_evidence_required": True,
+                    "product_runtime_drift_receipt_claim_support_evidence_required": True,
                     "product_runtime_drift_trajectory_audit_evidence_required": True,
                     "product_runtime_drift_evidence_handoff_evidence_required": True,
                     "product_runtime_drift_compared_metric_count": 50,
@@ -33930,6 +34373,10 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                     "product_runtime_drift_triple_audit_evidence_blocked_metric_count": 0,
                     "product_runtime_drift_action_gate_evidence_metric_count": 10,
                     "product_runtime_drift_action_gate_evidence_blocked_metric_count": 0,
+                    "product_runtime_drift_action_receipts_evidence_metric_count": 5,
+                    "product_runtime_drift_action_receipts_evidence_blocked_metric_count": 0,
+                    "product_runtime_drift_receipt_claim_support_evidence_metric_count": 7,
+                    "product_runtime_drift_receipt_claim_support_evidence_blocked_metric_count": 0,
                     "product_runtime_drift_trajectory_audit_evidence_metric_count": 7,
                     "product_runtime_drift_trajectory_audit_evidence_blocked_metric_count": 0,
                     "product_runtime_drift_evidence_handoff_evidence_metric_count": 7,
@@ -33966,6 +34413,14 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                     "product_runtime_drift_product_trace_action_audit_error_rate_status": "pass",
                     "product_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_current": 0.0,
                     "product_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_status": "pass",
+                    "product_runtime_drift_product_trace_action_receipts_coverage_rate_current": 1.0,
+                    "product_runtime_drift_product_trace_action_receipts_coverage_rate_status": "pass",
+                    "product_runtime_drift_product_trace_action_receipts_unsigned_receipt_rate_current": 0.0,
+                    "product_runtime_drift_product_trace_action_receipts_unsigned_receipt_rate_status": "pass",
+                    "product_runtime_drift_product_trace_receipt_claim_support_reference_support_rate_current": 1.0,
+                    "product_runtime_drift_product_trace_receipt_claim_support_reference_support_rate_status": "pass",
+                    "product_runtime_drift_product_trace_receipt_claim_support_unsigned_reference_rate_current": 0.0,
+                    "product_runtime_drift_product_trace_receipt_claim_support_unsigned_reference_rate_status": "pass",
                     "product_runtime_drift_product_trace_trajectory_audit_error_rate_current": 0.0,
                     "product_runtime_drift_product_trace_trajectory_audit_error_rate_status": "pass",
                     "product_runtime_drift_product_trace_trajectory_audit_scope_rate_current": 0.0,
@@ -34354,6 +34809,8 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert runtime_drift["counterfactual_evidence_required_counts"] == {"True": 1}
     assert runtime_drift["triple_audit_evidence_required_counts"] == {"True": 1}
     assert runtime_drift["action_gate_evidence_required_counts"] == {"True": 1}
+    assert runtime_drift["action_receipts_evidence_required_counts"] == {"True": 1}
+    assert runtime_drift["receipt_claim_support_evidence_required_counts"] == {"True": 1}
     assert runtime_drift["trajectory_audit_evidence_required_counts"] == {"True": 1}
     assert runtime_drift["evidence_handoff_evidence_required_counts"] == {"True": 1}
     assert runtime_drift["compared_metric_count"]["mean"] == pytest.approx(50.0)
@@ -34363,6 +34820,8 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert runtime_drift["counterfactual_evidence_metric_count"]["mean"] == pytest.approx(6.0)
     assert runtime_drift["triple_audit_evidence_metric_count"]["mean"] == pytest.approx(4.0)
     assert runtime_drift["action_gate_evidence_metric_count"]["mean"] == pytest.approx(10.0)
+    assert runtime_drift["action_receipts_evidence_metric_count"]["mean"] == pytest.approx(5.0)
+    assert runtime_drift["receipt_claim_support_evidence_metric_count"]["mean"] == pytest.approx(7.0)
     assert runtime_drift["trajectory_audit_evidence_metric_count"]["mean"] == pytest.approx(7.0)
     assert runtime_drift["evidence_handoff_evidence_metric_count"]["mean"] == pytest.approx(7.0)
     assert runtime_drift["promotion_evidence"]["promotion_contract_coverage_rate"][
@@ -34394,6 +34853,18 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     ]["mean"] == pytest.approx(0.0)
     assert runtime_drift["action_gate_evidence"][
         "product_trace_action_execution_request_id_mismatch_rate"
+    ]["status_counts"] == {"pass": 1}
+    assert runtime_drift["action_receipts_evidence"][
+        "product_trace_action_receipts_coverage_rate"
+    ]["current"]["mean"] == pytest.approx(1.0)
+    assert runtime_drift["action_receipts_evidence"][
+        "product_trace_action_receipts_unsigned_receipt_rate"
+    ]["status_counts"] == {"pass": 1}
+    assert runtime_drift["receipt_claim_support_evidence"][
+        "product_trace_receipt_claim_support_reference_support_rate"
+    ]["current"]["mean"] == pytest.approx(1.0)
+    assert runtime_drift["receipt_claim_support_evidence"][
+        "product_trace_receipt_claim_support_unsigned_reference_rate"
     ]["status_counts"] == {"pass": 1}
     assert runtime_drift["trajectory_audit_evidence"][
         "product_trace_trajectory_audit_error_rate"
@@ -34685,6 +35156,12 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
         "promotion_contract_product_runtime_drift_action_gate_evidence_metric_count_mean"
     ] == pytest.approx(10.0)
     assert manifest["metadata"][
+        "promotion_contract_product_runtime_drift_action_receipts_evidence_metric_count_mean"
+    ] == pytest.approx(5.0)
+    assert manifest["metadata"][
+        "promotion_contract_product_runtime_drift_receipt_claim_support_evidence_metric_count_mean"
+    ] == pytest.approx(7.0)
+    assert manifest["metadata"][
         "promotion_contract_product_runtime_drift_trajectory_audit_evidence_metric_count_mean"
     ] == pytest.approx(7.0)
     assert manifest["metadata"][
@@ -34704,6 +35181,12 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     ] == pytest.approx(0.0)
     assert manifest["metadata"][
         "promotion_contract_product_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_status_counts"
+    ] == {"pass": 1}
+    assert manifest["metadata"][
+        "promotion_contract_product_runtime_drift_product_trace_action_receipts_coverage_rate_current_mean"
+    ] == pytest.approx(1.0)
+    assert manifest["metadata"][
+        "promotion_contract_product_runtime_drift_product_trace_receipt_claim_support_reference_support_rate_status_counts"
     ] == {"pass": 1}
     assert manifest["metadata"][
         "promotion_contract_product_runtime_drift_product_trace_trajectory_audit_error_rate_current_mean"
@@ -34832,6 +35315,12 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
         "promotion_contract_product_runtime_drift_counterfactual_evidence_metric_count_mean"
     ] == pytest.approx(6.0)
     assert record.metadata[
+        "promotion_contract_product_runtime_drift_action_receipts_evidence_metric_count_mean"
+    ] == pytest.approx(5.0)
+    assert record.metadata[
+        "promotion_contract_product_runtime_drift_receipt_claim_support_evidence_metric_count_mean"
+    ] == pytest.approx(7.0)
+    assert record.metadata[
         "promotion_contract_product_runtime_drift_pre_generation_probe_comparison_redline_pass_rate_status_counts"
     ] == {"pass": 1}
     assert record.metadata[
@@ -34839,6 +35328,12 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     ] == {"pass": 1}
     assert record.metadata[
         "promotion_contract_product_runtime_drift_triple_audit_pass_rate_current_mean"
+    ] == pytest.approx(1.0)
+    assert record.metadata[
+        "promotion_contract_product_runtime_drift_product_trace_action_receipts_coverage_rate_status_counts"
+    ] == {"pass": 1}
+    assert record.metadata[
+        "promotion_contract_product_runtime_drift_product_trace_receipt_claim_support_reference_support_rate_current_mean"
     ] == pytest.approx(1.0)
     assert (
         record.metadata["promotion_contract_product_trace_replay_available_trace_count"]
@@ -36693,7 +37188,7 @@ def test_run_product_runtime_baseline_reuses_trace_record_cache(tmp_path, monkey
     assert first["config"]["trace_record_cache"]["cache_hit"] is False
     assert first["config"]["trace_record_cache"]["cache_written"] is True
     assert first["paths"]["trace_records_cache"] == str(cache_path)
-    assert cache_payload["schema_version"] == 20
+    assert cache_payload["schema_version"] == 21
     assert cache_payload["workflow"] == "product_runtime_baseline_trace_records"
     assert cache_payload["summary"]["trace_count"] == 2
     assert cache_payload["policy"]["payload"]["max_total_seconds"] == 0.3

@@ -39,6 +39,12 @@ _PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES = (
 _PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_KEYS
 )
+_PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_KEYS
+)
+_PRODUCT_RUNTIME_DRIFT_RECEIPT_CLAIM_SUPPORT_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_RECEIPT_CLAIM_SUPPORT_EVIDENCE_KEYS
+)
 _PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_KEYS
 )
@@ -101,6 +107,8 @@ _PRODUCT_RUNTIME_DRIFT_GROUP_SUMMARY_KEYS = (
     ("triple_audit", "triple_audit"),
     ("covered_fact_property", "covered_fact_property"),
     ("action_gate", "action_gate"),
+    ("action_receipts", "action_receipts"),
+    ("receipt_claim_support", "receipt_claim_support"),
     ("trajectory_audit", "trajectory_audit"),
     ("evidence_handoff", "evidence_handoff"),
     ("world_model", "world_model"),
@@ -1101,6 +1109,18 @@ class ProductPromotionContract:
                 "product_runtime_drift_action_gate_evidence_required": config.get(
                     "require_product_runtime_drift_action_gate_evidence"
                 ),
+                "product_runtime_drift_action_receipts_evidence_required": config.get(
+                    "require_product_runtime_drift_action_receipts_evidence",
+                    product_runtime_drift_summary.get(
+                        "action_receipts_evidence_required"
+                    ),
+                ),
+                "product_runtime_drift_receipt_claim_support_evidence_required": config.get(
+                    "require_product_runtime_drift_receipt_claim_support_evidence",
+                    product_runtime_drift_summary.get(
+                        "receipt_claim_support_evidence_required"
+                    ),
+                ),
                 "product_runtime_drift_trajectory_audit_evidence_required": config.get(
                     "require_product_runtime_drift_trajectory_audit_evidence"
                 ),
@@ -1574,6 +1594,18 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         "product_runtime_drift_action_gate_evidence_blocked_metric_count": summary.get(
             "action_gate_evidence_blocked_metric_count"
         ),
+        "product_runtime_drift_action_receipts_evidence_metric_count": summary.get(
+            "action_receipts_evidence_metric_count"
+        ),
+        "product_runtime_drift_action_receipts_evidence_blocked_metric_count": (
+            summary.get("action_receipts_evidence_blocked_metric_count")
+        ),
+        "product_runtime_drift_receipt_claim_support_evidence_metric_count": (
+            summary.get("receipt_claim_support_evidence_metric_count")
+        ),
+        "product_runtime_drift_receipt_claim_support_evidence_blocked_metric_count": (
+            summary.get("receipt_claim_support_evidence_blocked_metric_count")
+        ),
         "product_runtime_drift_trajectory_audit_evidence_metric_count": summary.get(
             "trajectory_audit_evidence_metric_count"
         ),
@@ -1630,6 +1662,12 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     for prefix in _PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_RECEIPT_CLAIM_SUPPORT_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     for prefix in _PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_PREFIXES:
@@ -3631,6 +3669,8 @@ def _promotion_contract_product_runtime_drift_metadata(
         "product_runtime_drift_triple_audit_evidence_required",
         "product_runtime_drift_covered_fact_property_evidence_required",
         "product_runtime_drift_action_gate_evidence_required",
+        "product_runtime_drift_action_receipts_evidence_required",
+        "product_runtime_drift_receipt_claim_support_evidence_required",
         "product_runtime_drift_trajectory_audit_evidence_required",
         "product_runtime_drift_evidence_handoff_evidence_required",
         "product_runtime_drift_world_model_evidence_required",
@@ -3653,6 +3693,10 @@ def _promotion_contract_product_runtime_drift_metadata(
         "product_runtime_drift_covered_fact_property_evidence_blocked_metric_count",
         "product_runtime_drift_action_gate_evidence_metric_count",
         "product_runtime_drift_action_gate_evidence_blocked_metric_count",
+        "product_runtime_drift_action_receipts_evidence_metric_count",
+        "product_runtime_drift_action_receipts_evidence_blocked_metric_count",
+        "product_runtime_drift_receipt_claim_support_evidence_metric_count",
+        "product_runtime_drift_receipt_claim_support_evidence_blocked_metric_count",
         "product_runtime_drift_trajectory_audit_evidence_metric_count",
         "product_runtime_drift_trajectory_audit_evidence_blocked_metric_count",
         "product_runtime_drift_evidence_handoff_evidence_metric_count",
@@ -3679,6 +3723,8 @@ def _promotion_contract_product_runtime_drift_metadata(
         *_PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES,
         *_PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES,
         *_PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES,
+        *_PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_PREFIXES,
+        *_PRODUCT_RUNTIME_DRIFT_RECEIPT_CLAIM_SUPPORT_EVIDENCE_PREFIXES,
         *_PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_PREFIXES,
         *_PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES,
         *_PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_PREFIXES,

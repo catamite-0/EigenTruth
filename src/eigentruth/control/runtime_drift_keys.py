@@ -73,6 +73,22 @@ PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_KEYS: tuple[str, ...] = (
     "product_trace_action_execution_unexpected_result_rate",
     "product_trace_action_execution_request_id_mismatch_rate",
 )
+PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_KEYS: tuple[str, ...] = (
+    "product_trace_action_receipts_coverage_rate",
+    "product_trace_action_receipts_missing_receipt_rate",
+    "product_trace_action_receipts_invalid_receipt_rate",
+    "product_trace_action_receipts_fingerprint_mismatch_rate",
+    "product_trace_action_receipts_unsigned_receipt_rate",
+)
+PRODUCT_RUNTIME_DRIFT_RECEIPT_CLAIM_SUPPORT_EVIDENCE_KEYS: tuple[str, ...] = (
+    "product_trace_receipt_claim_support_reference_support_rate",
+    "product_trace_receipt_claim_support_unsupported_reference_rate",
+    "product_trace_receipt_claim_support_missing_reference_rate",
+    "product_trace_receipt_claim_support_unreceipted_reference_rate",
+    "product_trace_receipt_claim_support_failed_result_reference_rate",
+    "product_trace_receipt_claim_support_fingerprint_mismatch_reference_rate",
+    "product_trace_receipt_claim_support_unsigned_reference_rate",
+)
 PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_KEYS: tuple[str, ...] = (
     "product_trace_trajectory_audit_failed_trace_rate",
     "product_trace_trajectory_audit_error_rate",
@@ -150,6 +166,10 @@ PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS: dict[str, tuple[str, ...]] = {
     "triple_audit": PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_KEYS,
     "covered_fact_property": PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_KEYS,
     "action_gate": PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_KEYS,
+    "action_receipts": PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_KEYS,
+    "receipt_claim_support": (
+        PRODUCT_RUNTIME_DRIFT_RECEIPT_CLAIM_SUPPORT_EVIDENCE_KEYS
+    ),
     "trajectory_audit": PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_KEYS,
     "evidence_handoff": PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS,
     "world_model": PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_KEYS,

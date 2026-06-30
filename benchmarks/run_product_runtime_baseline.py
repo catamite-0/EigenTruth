@@ -21,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-_TRACE_RECORD_CACHE_SCHEMA_VERSION = 20
+_TRACE_RECORD_CACHE_SCHEMA_VERSION = 21
 _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "promotion_contract_coverage_rate",
     "triple_extraction_fixture_matrix_coverage_rate",
@@ -83,6 +83,22 @@ _PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "product_trace_action_execution_missing_result_rate",
     "product_trace_action_execution_unexpected_result_rate",
     "product_trace_action_execution_request_id_mismatch_rate",
+)
+_PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "product_trace_action_receipts_coverage_rate",
+    "product_trace_action_receipts_missing_receipt_rate",
+    "product_trace_action_receipts_invalid_receipt_rate",
+    "product_trace_action_receipts_fingerprint_mismatch_rate",
+    "product_trace_action_receipts_unsigned_receipt_rate",
+)
+_PRODUCT_RUNTIME_DRIFT_RECEIPT_CLAIM_SUPPORT_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "product_trace_receipt_claim_support_reference_support_rate",
+    "product_trace_receipt_claim_support_unsupported_reference_rate",
+    "product_trace_receipt_claim_support_missing_reference_rate",
+    "product_trace_receipt_claim_support_unreceipted_reference_rate",
+    "product_trace_receipt_claim_support_failed_result_reference_rate",
+    "product_trace_receipt_claim_support_fingerprint_mismatch_reference_rate",
+    "product_trace_receipt_claim_support_unsigned_reference_rate",
 )
 _PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "product_trace_trajectory_audit_failed_trace_rate",
@@ -163,6 +179,8 @@ _PROMOTION_CONTRACT_PRODUCT_RUNTIME_DRIFT_FIELDS: tuple[str, ...] = (
     "promotion_contract_product_runtime_drift_triple_audit_evidence_required",
     "promotion_contract_product_runtime_drift_covered_fact_property_evidence_required",
     "promotion_contract_product_runtime_drift_action_gate_evidence_required",
+    "promotion_contract_product_runtime_drift_action_receipts_evidence_required",
+    "promotion_contract_product_runtime_drift_receipt_claim_support_evidence_required",
     "promotion_contract_product_runtime_drift_trajectory_audit_evidence_required",
     "promotion_contract_product_runtime_drift_evidence_handoff_evidence_required",
     "promotion_contract_product_runtime_drift_world_model_evidence_required",
@@ -183,6 +201,10 @@ _PROMOTION_CONTRACT_PRODUCT_RUNTIME_DRIFT_FIELDS: tuple[str, ...] = (
     "promotion_contract_product_runtime_drift_covered_fact_property_evidence_blocked_metric_count",
     "promotion_contract_product_runtime_drift_action_gate_evidence_metric_count",
     "promotion_contract_product_runtime_drift_action_gate_evidence_blocked_metric_count",
+    "promotion_contract_product_runtime_drift_action_receipts_evidence_metric_count",
+    "promotion_contract_product_runtime_drift_action_receipts_evidence_blocked_metric_count",
+    "promotion_contract_product_runtime_drift_receipt_claim_support_evidence_metric_count",
+    "promotion_contract_product_runtime_drift_receipt_claim_support_evidence_blocked_metric_count",
     "promotion_contract_product_runtime_drift_trajectory_audit_evidence_metric_count",
     "promotion_contract_product_runtime_drift_trajectory_audit_evidence_blocked_metric_count",
     "promotion_contract_product_runtime_drift_evidence_handoff_evidence_metric_count",
@@ -1550,6 +1572,14 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
             field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
             compact[field_name] = metrics.get(field_name)
     for prefix in _PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
+            compact[field_name] = metrics.get(field_name)
+    for prefix in _PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
+            compact[field_name] = metrics.get(field_name)
+    for prefix in _PRODUCT_RUNTIME_DRIFT_RECEIPT_CLAIM_SUPPORT_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
             compact[field_name] = metrics.get(field_name)
@@ -4282,6 +4312,18 @@ def _aggregate_promotion_contract_product_runtime_drift(
             item.get("promotion_contract_product_runtime_drift_action_gate_evidence_required")
             for item in metrics
         ),
+        "action_receipts_evidence_required_counts": _counts(
+            item.get(
+                "promotion_contract_product_runtime_drift_action_receipts_evidence_required"
+            )
+            for item in metrics
+        ),
+        "receipt_claim_support_evidence_required_counts": _counts(
+            item.get(
+                "promotion_contract_product_runtime_drift_receipt_claim_support_evidence_required"
+            )
+            for item in metrics
+        ),
         "trajectory_audit_evidence_required_counts": _counts(
             item.get(
                 "promotion_contract_product_runtime_drift_trajectory_audit_evidence_required"
@@ -4388,6 +4430,30 @@ def _aggregate_promotion_contract_product_runtime_drift(
             )
             for item in metrics
         ),
+        "action_receipts_evidence_metric_count": _numeric_summary(
+            item.get(
+                "promotion_contract_product_runtime_drift_action_receipts_evidence_metric_count"
+            )
+            for item in metrics
+        ),
+        "action_receipts_evidence_blocked_metric_count": _numeric_summary(
+            item.get(
+                "promotion_contract_product_runtime_drift_action_receipts_evidence_blocked_metric_count"
+            )
+            for item in metrics
+        ),
+        "receipt_claim_support_evidence_metric_count": _numeric_summary(
+            item.get(
+                "promotion_contract_product_runtime_drift_receipt_claim_support_evidence_metric_count"
+            )
+            for item in metrics
+        ),
+        "receipt_claim_support_evidence_blocked_metric_count": _numeric_summary(
+            item.get(
+                "promotion_contract_product_runtime_drift_receipt_claim_support_evidence_blocked_metric_count"
+            )
+            for item in metrics
+        ),
         "trajectory_audit_evidence_metric_count": _numeric_summary(
             item.get(
                 "promotion_contract_product_runtime_drift_trajectory_audit_evidence_metric_count"
@@ -4485,6 +4551,14 @@ def _aggregate_promotion_contract_product_runtime_drift(
         "action_gate_evidence": _aggregate_product_runtime_drift_evidence(
             metrics,
             prefixes=_PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES,
+        ),
+        "action_receipts_evidence": _aggregate_product_runtime_drift_evidence(
+            metrics,
+            prefixes=_PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_PREFIXES,
+        ),
+        "receipt_claim_support_evidence": _aggregate_product_runtime_drift_evidence(
+            metrics,
+            prefixes=_PRODUCT_RUNTIME_DRIFT_RECEIPT_CLAIM_SUPPORT_EVIDENCE_PREFIXES,
         ),
         "trajectory_audit_evidence": _aggregate_product_runtime_drift_evidence(
             metrics,
@@ -5051,6 +5125,12 @@ def _promotion_contract_runtime_drift_flat_metadata(
         "promotion_contract_product_runtime_drift_action_gate_evidence_required_counts": dict(
             _mapping(drift.get("action_gate_evidence_required_counts"))
         ),
+        "promotion_contract_product_runtime_drift_action_receipts_evidence_required_counts": dict(
+            _mapping(drift.get("action_receipts_evidence_required_counts"))
+        ),
+        "promotion_contract_product_runtime_drift_receipt_claim_support_evidence_required_counts": dict(
+            _mapping(drift.get("receipt_claim_support_evidence_required_counts"))
+        ),
         "promotion_contract_product_runtime_drift_trajectory_audit_evidence_required_counts": dict(
             _mapping(drift.get("trajectory_audit_evidence_required_counts"))
         ),
@@ -5137,6 +5217,26 @@ def _promotion_contract_runtime_drift_flat_metadata(
         "promotion_contract_product_runtime_drift_action_gate_evidence_blocked_metric_count_mean": _nested(
             drift,
             "action_gate_evidence_blocked_metric_count",
+            "mean",
+        ),
+        "promotion_contract_product_runtime_drift_action_receipts_evidence_metric_count_mean": _nested(
+            drift,
+            "action_receipts_evidence_metric_count",
+            "mean",
+        ),
+        "promotion_contract_product_runtime_drift_action_receipts_evidence_blocked_metric_count_mean": _nested(
+            drift,
+            "action_receipts_evidence_blocked_metric_count",
+            "mean",
+        ),
+        "promotion_contract_product_runtime_drift_receipt_claim_support_evidence_metric_count_mean": _nested(
+            drift,
+            "receipt_claim_support_evidence_metric_count",
+            "mean",
+        ),
+        "promotion_contract_product_runtime_drift_receipt_claim_support_evidence_blocked_metric_count_mean": _nested(
+            drift,
+            "receipt_claim_support_evidence_blocked_metric_count",
             "mean",
         ),
         "promotion_contract_product_runtime_drift_trajectory_audit_evidence_metric_count_mean": _nested(
@@ -5243,6 +5343,18 @@ def _promotion_contract_runtime_drift_flat_metadata(
         _product_runtime_drift_evidence_flat_metadata(
             _mapping(drift.get("action_gate_evidence")),
             prefixes=_PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES,
+        )
+    )
+    metadata.update(
+        _product_runtime_drift_evidence_flat_metadata(
+            _mapping(drift.get("action_receipts_evidence")),
+            prefixes=_PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_PREFIXES,
+        )
+    )
+    metadata.update(
+        _product_runtime_drift_evidence_flat_metadata(
+            _mapping(drift.get("receipt_claim_support_evidence")),
+            prefixes=_PRODUCT_RUNTIME_DRIFT_RECEIPT_CLAIM_SUPPORT_EVIDENCE_PREFIXES,
         )
     )
     metadata.update(

@@ -267,6 +267,58 @@ _PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] 
         "product_trace_action_execution_request_id_mismatch_rate",
     ),
 )
+_PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = (
+    ("action_receipts.coverage_rate", "product_trace_action_receipts_coverage_rate"),
+    (
+        "action_receipts.missing_receipt_rate",
+        "product_trace_action_receipts_missing_receipt_rate",
+    ),
+    (
+        "action_receipts.invalid_receipt_rate",
+        "product_trace_action_receipts_invalid_receipt_rate",
+    ),
+    (
+        "action_receipts.fingerprint_mismatch_rate",
+        "product_trace_action_receipts_fingerprint_mismatch_rate",
+    ),
+    (
+        "action_receipts.unsigned_receipt_rate",
+        "product_trace_action_receipts_unsigned_receipt_rate",
+    ),
+)
+_PRODUCT_RUNTIME_DRIFT_RECEIPT_CLAIM_SUPPORT_EVIDENCE_FIELDS: tuple[
+    tuple[str, str],
+    ...
+] = (
+    (
+        "receipt_claim_support.reference_support_rate",
+        "product_trace_receipt_claim_support_reference_support_rate",
+    ),
+    (
+        "receipt_claim_support.unsupported_reference_rate",
+        "product_trace_receipt_claim_support_unsupported_reference_rate",
+    ),
+    (
+        "receipt_claim_support.missing_reference_rate",
+        "product_trace_receipt_claim_support_missing_reference_rate",
+    ),
+    (
+        "receipt_claim_support.unreceipted_reference_rate",
+        "product_trace_receipt_claim_support_unreceipted_reference_rate",
+    ),
+    (
+        "receipt_claim_support.failed_result_reference_rate",
+        "product_trace_receipt_claim_support_failed_result_reference_rate",
+    ),
+    (
+        "receipt_claim_support.fingerprint_mismatch_reference_rate",
+        "product_trace_receipt_claim_support_fingerprint_mismatch_reference_rate",
+    ),
+    (
+        "receipt_claim_support.unsigned_reference_rate",
+        "product_trace_receipt_claim_support_unsigned_reference_rate",
+    ),
+)
 _PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = (
     ("trajectory_audit.failed_trace_rate", "product_trace_trajectory_audit_failed_trace_rate"),
     ("trajectory_audit.error_rate", "product_trace_trajectory_audit_error_rate"),
@@ -487,6 +539,8 @@ def compare_release_candidates(
     require_product_runtime_drift_triple_audit_evidence: bool = False,
     require_product_runtime_drift_covered_fact_property_evidence: bool = False,
     require_product_runtime_drift_action_gate_evidence: bool = False,
+    require_product_runtime_drift_action_receipts_evidence: bool = False,
+    require_product_runtime_drift_receipt_claim_support_evidence: bool = False,
     require_product_runtime_drift_trajectory_audit_evidence: bool = False,
     require_product_runtime_drift_evidence_handoff_evidence: bool = False,
     require_product_runtime_drift_world_model_evidence: bool = False,
@@ -738,6 +792,12 @@ def compare_release_candidates(
                 "require_product_runtime_drift_action_gate_evidence": (
                     require_product_runtime_drift_action_gate_evidence
                 ),
+                "require_product_runtime_drift_action_receipts_evidence": (
+                    require_product_runtime_drift_action_receipts_evidence
+                ),
+                "require_product_runtime_drift_receipt_claim_support_evidence": (
+                    require_product_runtime_drift_receipt_claim_support_evidence
+                ),
                 "require_product_runtime_drift_trajectory_audit_evidence": (
                     require_product_runtime_drift_trajectory_audit_evidence
                 ),
@@ -880,6 +940,18 @@ def compare_release_candidates(
     )
     require_product_runtime_drift_action_gate_evidence = bool(
         release_policy_values["require_product_runtime_drift_action_gate_evidence"]
+    )
+    require_product_runtime_drift_action_receipts_evidence = bool(
+        release_policy_values.get(
+            "require_product_runtime_drift_action_receipts_evidence",
+            False,
+        )
+    )
+    require_product_runtime_drift_receipt_claim_support_evidence = bool(
+        release_policy_values.get(
+            "require_product_runtime_drift_receipt_claim_support_evidence",
+            False,
+        )
     )
     require_product_runtime_drift_trajectory_audit_evidence = bool(
         release_policy_values.get("require_product_runtime_drift_trajectory_audit_evidence", False)
@@ -1476,6 +1548,12 @@ def compare_release_candidates(
             require_product_runtime_drift_covered_fact_property_evidence
         ),
         require_action_gate_evidence=require_product_runtime_drift_action_gate_evidence,
+        require_action_receipts_evidence=(
+            require_product_runtime_drift_action_receipts_evidence
+        ),
+        require_receipt_claim_support_evidence=(
+            require_product_runtime_drift_receipt_claim_support_evidence
+        ),
         require_trajectory_audit_evidence=(
             require_product_runtime_drift_trajectory_audit_evidence
         ),
@@ -1739,6 +1817,12 @@ def compare_release_candidates(
             ),
             "require_product_runtime_drift_action_gate_evidence": bool(
                 require_product_runtime_drift_action_gate_evidence
+            ),
+            "require_product_runtime_drift_action_receipts_evidence": bool(
+                require_product_runtime_drift_action_receipts_evidence
+            ),
+            "require_product_runtime_drift_receipt_claim_support_evidence": bool(
+                require_product_runtime_drift_receipt_claim_support_evidence
             ),
             "require_product_runtime_drift_trajectory_audit_evidence": bool(
                 require_product_runtime_drift_trajectory_audit_evidence
@@ -6683,6 +6767,8 @@ def _product_runtime_drift_gate(
     require_triple_audit_evidence: bool,
     require_covered_fact_property_evidence: bool,
     require_action_gate_evidence: bool,
+    require_action_receipts_evidence: bool,
+    require_receipt_claim_support_evidence: bool,
     require_trajectory_audit_evidence: bool,
     require_evidence_handoff_evidence: bool,
     require_world_model_evidence: bool,
@@ -6704,6 +6790,8 @@ def _product_runtime_drift_gate(
             or require_triple_audit_evidence
             or require_covered_fact_property_evidence
             or require_action_gate_evidence
+            or require_action_receipts_evidence
+            or require_receipt_claim_support_evidence
             or require_trajectory_audit_evidence
             or require_evidence_handoff_evidence
             or require_world_model_evidence
@@ -6808,6 +6896,28 @@ def _product_runtime_drift_gate(
                         )
                     ) if require_action_gate_evidence else (),
                     "action_gate_evidence_blocked_metric_count": 0,
+                    "action_receipts_evidence_required": bool(
+                        require_action_receipts_evidence
+                    ),
+                    "action_receipts_evidence_metric_count": 0,
+                    "action_receipts_evidence_missing_metrics": tuple(
+                        metric_name
+                        for metric_name, _prefix in (
+                            _PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_FIELDS
+                        )
+                    ) if require_action_receipts_evidence else (),
+                    "action_receipts_evidence_blocked_metric_count": 0,
+                    "receipt_claim_support_evidence_required": bool(
+                        require_receipt_claim_support_evidence
+                    ),
+                    "receipt_claim_support_evidence_metric_count": 0,
+                    "receipt_claim_support_evidence_missing_metrics": tuple(
+                        metric_name
+                        for metric_name, _prefix in (
+                            _PRODUCT_RUNTIME_DRIFT_RECEIPT_CLAIM_SUPPORT_EVIDENCE_FIELDS
+                        )
+                    ) if require_receipt_claim_support_evidence else (),
+                    "receipt_claim_support_evidence_blocked_metric_count": 0,
                     "trajectory_audit_evidence_required": bool(
                         require_trajectory_audit_evidence
                     ),
@@ -6927,6 +7037,18 @@ def _product_runtime_drift_gate(
         metrics,
         required=require_action_gate_evidence,
     )
+    action_receipts_evidence_summary = (
+        _product_runtime_drift_action_receipts_evidence_summary(
+            metrics,
+            required=require_action_receipts_evidence,
+        )
+    )
+    receipt_claim_support_evidence_summary = (
+        _product_runtime_drift_receipt_claim_support_evidence_summary(
+            metrics,
+            required=require_receipt_claim_support_evidence,
+        )
+    )
     trajectory_audit_evidence_summary = (
         _product_runtime_drift_trajectory_audit_evidence_summary(
             metrics,
@@ -6986,6 +7108,10 @@ def _product_runtime_drift_gate(
         require_covered_fact_property_evidence=require_covered_fact_property_evidence,
         action_gate_evidence_summary=action_gate_evidence_summary,
         require_action_gate_evidence=require_action_gate_evidence,
+        action_receipts_evidence_summary=action_receipts_evidence_summary,
+        require_action_receipts_evidence=require_action_receipts_evidence,
+        receipt_claim_support_evidence_summary=receipt_claim_support_evidence_summary,
+        require_receipt_claim_support_evidence=require_receipt_claim_support_evidence,
         trajectory_audit_evidence_summary=trajectory_audit_evidence_summary,
         require_trajectory_audit_evidence=require_trajectory_audit_evidence,
         evidence_handoff_evidence_summary=evidence_handoff_evidence_summary,
@@ -7028,6 +7154,8 @@ def _product_runtime_drift_gate(
             **triple_audit_evidence_summary,
             **covered_fact_property_evidence_summary,
             **action_gate_evidence_summary,
+            **action_receipts_evidence_summary,
+            **receipt_claim_support_evidence_summary,
             **trajectory_audit_evidence_summary,
             **evidence_handoff_evidence_summary,
             **world_model_evidence_summary,
@@ -7063,6 +7191,10 @@ def _product_runtime_drift_report_gate(
     require_covered_fact_property_evidence: bool,
     action_gate_evidence_summary: Mapping[str, Any],
     require_action_gate_evidence: bool,
+    action_receipts_evidence_summary: Mapping[str, Any],
+    require_action_receipts_evidence: bool,
+    receipt_claim_support_evidence_summary: Mapping[str, Any],
+    require_receipt_claim_support_evidence: bool,
     trajectory_audit_evidence_summary: Mapping[str, Any],
     require_trajectory_audit_evidence: bool,
     evidence_handoff_evidence_summary: Mapping[str, Any],
@@ -7241,6 +7373,48 @@ def _product_runtime_drift_report_gate(
         if blocked_metric_count is not None and blocked_metric_count > 0:
             failures.append(
                 "product runtime drift action-gate evidence blocked "
+                f"{int(blocked_metric_count)} metric(s)"
+            )
+    if require_action_receipts_evidence:
+        missing_metrics = tuple(
+            action_receipts_evidence_summary.get(
+                "action_receipts_evidence_missing_metrics"
+            ) or ()
+        )
+        if missing_metrics:
+            failures.append(
+                "product runtime drift action-receipts evidence metrics are incomplete: "
+                + ", ".join(str(metric) for metric in missing_metrics)
+            )
+        blocked_metric_count = _float_or_none(
+            action_receipts_evidence_summary.get(
+                "action_receipts_evidence_blocked_metric_count"
+            )
+        )
+        if blocked_metric_count is not None and blocked_metric_count > 0:
+            failures.append(
+                "product runtime drift action-receipts evidence blocked "
+                f"{int(blocked_metric_count)} metric(s)"
+            )
+    if require_receipt_claim_support_evidence:
+        missing_metrics = tuple(
+            receipt_claim_support_evidence_summary.get(
+                "receipt_claim_support_evidence_missing_metrics"
+            ) or ()
+        )
+        if missing_metrics:
+            failures.append(
+                "product runtime drift receipt claim-support evidence metrics are incomplete: "
+                + ", ".join(str(metric) for metric in missing_metrics)
+            )
+        blocked_metric_count = _float_or_none(
+            receipt_claim_support_evidence_summary.get(
+                "receipt_claim_support_evidence_blocked_metric_count"
+            )
+        )
+        if blocked_metric_count is not None and blocked_metric_count > 0:
+            failures.append(
+                "product runtime drift receipt claim-support evidence blocked "
                 f"{int(blocked_metric_count)} metric(s)"
             )
     if require_trajectory_audit_evidence:
@@ -7675,6 +7849,69 @@ def _product_runtime_drift_action_gate_evidence_summary(
     summary["action_gate_evidence_metric_count"] = metric_count
     summary["action_gate_evidence_missing_metrics"] = tuple(missing_metrics)
     return summary
+
+
+def _product_runtime_drift_named_evidence_summary(
+    metrics: Sequence[Mapping[str, Any]],
+    *,
+    fields: Sequence[tuple[str, str]],
+    evidence_prefix: str,
+    required: bool = False,
+) -> dict[str, Any]:
+    metrics_by_name = {
+        str(metric["metric"]): metric
+        for metric in metrics
+        if isinstance(metric, Mapping) and isinstance(metric.get("metric"), str)
+    }
+    missing_metrics: list[str] = []
+    metric_count = 0
+    blocked_count_key = f"{evidence_prefix}_evidence_blocked_metric_count"
+    summary: dict[str, Any] = {
+        f"{evidence_prefix}_evidence_required": bool(required),
+        f"{evidence_prefix}_evidence_metric_count": 0,
+        f"{evidence_prefix}_evidence_missing_metrics": (),
+        blocked_count_key: 0,
+    }
+    for metric_name, prefix in fields:
+        metric = metrics_by_name.get(metric_name)
+        summary[f"{prefix}_baseline"] = None if metric is None else metric.get("baseline")
+        summary[f"{prefix}_current"] = None if metric is None else metric.get("current")
+        summary[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is None or metric.get("current") is None:
+            missing_metrics.append(metric_name)
+            continue
+        metric_count += 1
+        if metric.get("status") == "blocked":
+            summary[blocked_count_key] += 1
+    summary[f"{evidence_prefix}_evidence_metric_count"] = metric_count
+    summary[f"{evidence_prefix}_evidence_missing_metrics"] = tuple(missing_metrics)
+    return summary
+
+
+def _product_runtime_drift_action_receipts_evidence_summary(
+    metrics: Sequence[Mapping[str, Any]],
+    *,
+    required: bool = False,
+) -> dict[str, Any]:
+    return _product_runtime_drift_named_evidence_summary(
+        metrics,
+        fields=_PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_FIELDS,
+        evidence_prefix="action_receipts",
+        required=required,
+    )
+
+
+def _product_runtime_drift_receipt_claim_support_evidence_summary(
+    metrics: Sequence[Mapping[str, Any]],
+    *,
+    required: bool = False,
+) -> dict[str, Any]:
+    return _product_runtime_drift_named_evidence_summary(
+        metrics,
+        fields=_PRODUCT_RUNTIME_DRIFT_RECEIPT_CLAIM_SUPPORT_EVIDENCE_FIELDS,
+        evidence_prefix="receipt_claim_support",
+        required=required,
+    )
 
 
 def _product_runtime_drift_trajectory_audit_evidence_summary(
@@ -9395,6 +9632,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         require_product_runtime_drift_action_gate_evidence=bool(
             args.require_product_runtime_drift_action_gate_evidence
         ),
+        require_product_runtime_drift_action_receipts_evidence=bool(
+            args.require_product_runtime_drift_action_receipts_evidence
+        ),
+        require_product_runtime_drift_receipt_claim_support_evidence=bool(
+            args.require_product_runtime_drift_receipt_claim_support_evidence
+        ),
         require_product_runtime_drift_trajectory_audit_evidence=bool(
             args.require_product_runtime_drift_trajectory_audit_evidence
         ),
@@ -9700,6 +9943,13 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--require-product-runtime-drift-action-gate-evidence", action="store_true",
                         help="require the product runtime drift report to include product-trace "
                              "action-audit and action-execution drift metrics")
+    parser.add_argument("--require-product-runtime-drift-action-receipts-evidence", action="store_true",
+                        help="require the product runtime drift report to include product-trace "
+                             "action receipt coverage, validity, signature, and fingerprint metrics")
+    parser.add_argument("--require-product-runtime-drift-receipt-claim-support-evidence",
+                        action="store_true",
+                        help="require the product runtime drift report to include receipt-backed "
+                             "claim-support reference quality metrics")
     parser.add_argument("--require-product-runtime-drift-trajectory-audit-evidence", action="store_true",
                         help="require the product runtime drift report to include trajectory-audit "
                              "failed-trace/error and hallucination-taxonomy drift metrics")

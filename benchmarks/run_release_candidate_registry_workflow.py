@@ -61,6 +61,12 @@ _PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES = (
 _PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_KEYS
 )
+_PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_KEYS
+)
+_PRODUCT_RUNTIME_DRIFT_RECEIPT_CLAIM_SUPPORT_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_RECEIPT_CLAIM_SUPPORT_EVIDENCE_KEYS
+)
 _PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_KEYS
 )
@@ -178,6 +184,12 @@ def _apply_release_policy_profile_to_config(
             "require_product_runtime_drift_action_gate_evidence": (
                 config.require_product_runtime_drift_action_gate_evidence
             ),
+            "require_product_runtime_drift_action_receipts_evidence": (
+                config.require_product_runtime_drift_action_receipts_evidence
+            ),
+            "require_product_runtime_drift_receipt_claim_support_evidence": (
+                config.require_product_runtime_drift_receipt_claim_support_evidence
+            ),
             "require_product_runtime_drift_trajectory_audit_evidence": (
                 config.require_product_runtime_drift_trajectory_audit_evidence
             ),
@@ -267,6 +279,8 @@ class ReleaseCandidateRegistryWorkflowConfig:
     require_product_runtime_drift_triple_audit_evidence: bool = False
     require_product_runtime_drift_covered_fact_property_evidence: bool = False
     require_product_runtime_drift_action_gate_evidence: bool = False
+    require_product_runtime_drift_action_receipts_evidence: bool = False
+    require_product_runtime_drift_receipt_claim_support_evidence: bool = False
     require_product_runtime_drift_trajectory_audit_evidence: bool = False
     require_product_runtime_drift_evidence_handoff_evidence: bool = False
     require_product_runtime_drift_world_model_evidence: bool = False
@@ -819,6 +833,12 @@ def run_release_candidate_registry_workflow(
         require_product_runtime_drift_action_gate_evidence=(
             config.require_product_runtime_drift_action_gate_evidence
         ),
+        require_product_runtime_drift_action_receipts_evidence=(
+            config.require_product_runtime_drift_action_receipts_evidence
+        ),
+        require_product_runtime_drift_receipt_claim_support_evidence=(
+            config.require_product_runtime_drift_receipt_claim_support_evidence
+        ),
         require_product_runtime_drift_trajectory_audit_evidence=(
             config.require_product_runtime_drift_trajectory_audit_evidence
         ),
@@ -1149,6 +1169,12 @@ def run_release_candidate_registry_workflow(
             ),
             "require_product_runtime_drift_action_gate_evidence": (
                 config.require_product_runtime_drift_action_gate_evidence
+            ),
+            "require_product_runtime_drift_action_receipts_evidence": (
+                config.require_product_runtime_drift_action_receipts_evidence
+            ),
+            "require_product_runtime_drift_receipt_claim_support_evidence": (
+                config.require_product_runtime_drift_receipt_claim_support_evidence
             ),
             "require_product_runtime_drift_trajectory_audit_evidence": (
                 config.require_product_runtime_drift_trajectory_audit_evidence
@@ -2355,6 +2381,12 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "product_runtime_drift_action_gate_evidence_required": config.get(
             "require_product_runtime_drift_action_gate_evidence"
         ),
+        "product_runtime_drift_action_receipts_evidence_required": config.get(
+            "require_product_runtime_drift_action_receipts_evidence"
+        ),
+        "product_runtime_drift_receipt_claim_support_evidence_required": config.get(
+            "require_product_runtime_drift_receipt_claim_support_evidence"
+        ),
         "product_runtime_drift_trajectory_audit_evidence_required": config.get(
             "require_product_runtime_drift_trajectory_audit_evidence"
         ),
@@ -3089,6 +3121,18 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         "product_runtime_drift_action_gate_evidence_blocked_metric_count": summary.get(
             "action_gate_evidence_blocked_metric_count"
         ),
+        "product_runtime_drift_action_receipts_evidence_metric_count": summary.get(
+            "action_receipts_evidence_metric_count"
+        ),
+        "product_runtime_drift_action_receipts_evidence_blocked_metric_count": (
+            summary.get("action_receipts_evidence_blocked_metric_count")
+        ),
+        "product_runtime_drift_receipt_claim_support_evidence_metric_count": (
+            summary.get("receipt_claim_support_evidence_metric_count")
+        ),
+        "product_runtime_drift_receipt_claim_support_evidence_blocked_metric_count": (
+            summary.get("receipt_claim_support_evidence_blocked_metric_count")
+        ),
         "product_runtime_drift_trajectory_audit_evidence_metric_count": summary.get(
             "trajectory_audit_evidence_metric_count"
         ),
@@ -3145,6 +3189,12 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     for prefix in _PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_RECEIPT_CLAIM_SUPPORT_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     for prefix in _PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_PREFIXES:
@@ -3374,6 +3424,12 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         ),
         require_product_runtime_drift_action_gate_evidence=bool(
             args.require_product_runtime_drift_action_gate_evidence
+        ),
+        require_product_runtime_drift_action_receipts_evidence=bool(
+            args.require_product_runtime_drift_action_receipts_evidence
+        ),
+        require_product_runtime_drift_receipt_claim_support_evidence=bool(
+            args.require_product_runtime_drift_receipt_claim_support_evidence
         ),
         require_product_runtime_drift_trajectory_audit_evidence=bool(
             args.require_product_runtime_drift_trajectory_audit_evidence
@@ -3815,6 +3871,13 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--require-product-runtime-drift-action-gate-evidence", action="store_true",
                         help="require the product runtime drift report to include product-trace "
                              "action-audit and action-execution drift metrics")
+    parser.add_argument("--require-product-runtime-drift-action-receipts-evidence", action="store_true",
+                        help="require the product runtime drift report to include product-trace "
+                             "action receipt coverage, validity, signature, and fingerprint metrics")
+    parser.add_argument("--require-product-runtime-drift-receipt-claim-support-evidence",
+                        action="store_true",
+                        help="require the product runtime drift report to include receipt-backed "
+                             "claim-support reference quality metrics")
     parser.add_argument("--require-product-runtime-drift-trajectory-audit-evidence", action="store_true",
                         help="require the product runtime drift report to include trajectory-audit "
                              "failed-trace/error and hallucination-taxonomy drift metrics")
