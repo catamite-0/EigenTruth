@@ -804,6 +804,38 @@
       "name": "smollm2-l80-frontier-v4-unresolved-wikidata-source-family-citation-workflow",
       "path": "artifacts/frontier-release-evidence/unresolved-wikidata-source-family-citation-workflow-v1/source-family-citation-search-workflow.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "acquisition_plan_count": 192,
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-source-family-coverage-audit-v1/artifact-manifest.json",
+        "model": "smollm2-l80",
+        "request_count": 260,
+        "request_missing_target_family_count": 192,
+        "source": "frontier-v4",
+        "status": "needs_catalog_expansion",
+        "workflow": "source_family_coverage_audit"
+      },
+      "name": "smollm2-l80-frontier-v4-unresolved-source-family-coverage-audit",
+      "path": "artifacts/frontier-release-evidence/unresolved-source-family-coverage-audit-v1/source-family-coverage-audit.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "acquisition_row_count": 192,
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-source-family-catalog-collection-plan-v1/artifact-manifest.json",
+        "collection_task_count": 34,
+        "family_gap_count": 232,
+        "model": "smollm2-l80",
+        "source": "frontier-v4",
+        "status": "ready_for_source_collection",
+        "workflow": "source_family_catalog_collection_plan"
+      },
+      "name": "smollm2-l80-frontier-v4-unresolved-source-family-catalog-collection-plan",
+      "path": "artifacts/frontier-release-evidence/unresolved-source-family-catalog-collection-plan-v1/source-family-catalog-collection-plan.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

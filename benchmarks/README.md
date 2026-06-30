@@ -1905,6 +1905,47 @@ controlled-to-external comparison keeps a `1.0` generalization gap. Treat this
 as negative evidence for broad lexical citation retrieval over the current
 Wikidata catalog, not as a failed pipeline run.
 
+The follow-up v4 source-family coverage audit turns that negative result into a
+catalog collection queue:
+
+```bash
+COVERAGE=artifacts/frontier-release-evidence/unresolved-source-family-coverage-audit-v1
+PLAN=artifacts/frontier-release-evidence/unresolved-source-family-catalog-collection-plan-v1
+
+python benchmarks/audit_source_family_coverage.py \
+  --requests artifacts/frontier-release-evidence/unresolved-wikidata-source-family-citation-workflow-v1/source-family-citation-search-requests.jsonl \
+  --adapter-results artifacts/frontier-release-evidence/unresolved-wikidata-source-family-citation-workflow-v1/source-family-citation-search-results.jsonl \
+  --json "$COVERAGE/source-family-coverage-audit.json" \
+  --acquisition-plan-jsonl "$COVERAGE/source-family-acquisition-plan.jsonl" \
+  --artifact-manifest "$COVERAGE/artifact-manifest.json" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-source-family-coverage-audit \
+  --version 0.1 \
+  --metadata source=frontier-v4 \
+  --metadata model=smollm2-l80
+
+python benchmarks/plan_source_family_catalog_collection.py \
+  --acquisition-plan "$COVERAGE/source-family-acquisition-plan.jsonl" \
+  --tasks-jsonl "$PLAN/source-family-catalog-collection-tasks.jsonl" \
+  --report-json "$PLAN/source-family-catalog-collection-plan.json" \
+  --artifact-manifest "$PLAN/artifact-manifest.json" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-source-family-catalog-collection-plan \
+  --version 0.1 \
+  --metadata source=frontier-v4 \
+  --metadata model=smollm2-l80
+```
+
+The audit sees `192/260` requests missing non-fallback target families. The
+missing family split is `scholarly=156`, `official=52`, `news=20`, and
+`official_statistics=4`; no official-preferred or freshness-required request
+received a matching official/fresh result from the cached Wikidata catalog. The
+collection planner deduplicates `232` family gaps into `34` non-evidence tasks:
+`21` scholarly, `8` official, `4` news, and `1` official-statistics task, with
+provider hints for OpenAlex/Crossref, official-site search, GDELT/news, and
+World Bank/UN-style statistics collection. This is the concrete next execution
+queue for claim-specific source acquisition.
+
 ## `build_unresolved_world_model_rule_stubs.py`
 
 Bridges the world-model/calculator branch of the unresolved queue into the
