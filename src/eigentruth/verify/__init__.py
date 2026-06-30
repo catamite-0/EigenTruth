@@ -18,6 +18,7 @@ from eigentruth.verify.citations import (
 from eigentruth.verify.claims import (
     ClaimExtractor,
     SentenceClaimExtractor,
+    claim_entity_candidates,
     claim_features,
     enrich_claims_with_triples,
     extract_calculation,
@@ -143,6 +144,7 @@ __all__ = [
     "audit_counterfactual_verification",
     "generate_counterfactual_probes",
     "audit_claim_triples",
+    "claim_entity_candidates",
     "claim_features",
     "clean_search_query",
     "default_routed_verifier",

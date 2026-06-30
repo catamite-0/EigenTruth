@@ -3762,6 +3762,7 @@ def test_risk_controller_routes_bool_diagnostics_to_unknown():
 
 def test_claim_extraction_adds_rule_based_metadata():
     claim = extract_claims("As of 2026, revenue is not 10 dollars [1].")[0]
+    entity_claim = extract_claims("AlphaCorp acquired Beta Labs in Paris.")[0]
 
     features = claim.metadata["features"]
 
@@ -3770,6 +3771,10 @@ def test_claim_extraction_adds_rule_based_metadata():
     assert features["has_negation"] is True
     assert features["is_time_sensitive"] is True
     assert features["has_calculation"] is False
+    assert features["has_named_entity_hint"] is False
+    assert entity_claim.metadata["features"]["has_named_entity_hint"] is True
+    assert "AlphaCorp" in entity_claim.metadata["entity_candidates"]
+    assert "Beta Labs" in entity_claim.metadata["entity_candidates"]
 
 
 def test_claim_extraction_adds_structured_calculation_metadata():

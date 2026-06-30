@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Mapping, Protocol, Sequence, runtime_checkable
 
 from eigentruth.verify.protocols import Claim
+from eigentruth.verify.search_planning import clean_candidate, extract_entity_candidates
 
 if TYPE_CHECKING:
     from eigentruth.verify.triples import ClaimTripleExtractor
@@ -24,6 +25,7 @@ _TIME_SENSITIVE_RE = re.compile(
     r"as of|截至|目前|现在|今天|昨天|明天|最新|最近|今年|去年|明年)\b|\b20\d{2}\b",
     re.IGNORECASE,
 )
+_QUOTED_ENTITY_RE = re.compile(r"[\"'“”‘’](?P<span>[^\"'“”‘’]{2,80})[\"'“”‘’]")
 _CALC_NUMBER_RE = r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?"
 _CALC_EXPRESSION_RE = r"[-+*/().%\d\s]+[+*/%-][-+*/().%\d\s]*"
 _SYMBOLIC_CALCULATION_RE = re.compile(
@@ -49,6 +51,33 @@ _WORD_OPERATORS = {
     "multiplied by": "*",
     "divided by": "/",
     "over": "/",
+}
+_ENTITY_HINT_STOPWORDS = {
+    "a",
+    "an",
+    "as",
+    "at",
+    "by",
+    "for",
+    "from",
+    "how",
+    "in",
+    "no",
+    "not",
+    "on",
+    "that",
+    "the",
+    "these",
+    "this",
+    "those",
+    "what",
+    "when",
+    "where",
+    "which",
+    "who",
+    "why",
+    "with",
+    "without",
 }
 
 
@@ -77,11 +106,15 @@ class SentenceClaimExtractor:
             claim_text = match.group(0).strip()
             if len(claim_text) < min_chars:
                 continue
+            features = claim_features(claim_text)
             metadata: dict[str, Any] = {
                 "extractor": self.extractor_name,
                 "source_index": idx,
-                "features": claim_features(claim_text),
+                "features": features,
             }
+            entity_candidates = claim_entity_candidates(claim_text)
+            if entity_candidates:
+                metadata["entity_candidates"] = entity_candidates
             calculation = extract_calculation(claim_text)
             if calculation is not None:
                 metadata["calculation"] = calculation
@@ -189,6 +222,27 @@ def enrich_claims_with_triples(
     return tuple(enriched)
 
 
+def claim_entity_candidates(text: str, *, max_items: int = 4) -> tuple[str, ...]:
+    """Return conservative entity-like surface candidates from claim text."""
+    max_items = max(int(max_items), 0)
+    if max_items == 0:
+        return ()
+
+    quoted = (
+        clean_candidate(match.group("span"))
+        for match in _QUOTED_ENTITY_RE.finditer(str(text))
+    )
+    planned = extract_entity_candidates(str(text), max_items=max(max_items * 2, max_items))
+    candidates: list[str] = []
+    for candidate in quoted:
+        if _valid_quoted_entity_candidate(candidate):
+            candidates.append(candidate)
+    for candidate in planned:
+        if _looks_like_entity_surface(candidate):
+            candidates.append(candidate)
+    return tuple(dict.fromkeys(candidates))[:max_items]
+
+
 def claim_features(text: str) -> dict[str, bool]:
     """Return simple rule-based metadata flags for a claim."""
     return {
@@ -197,6 +251,7 @@ def claim_features(text: str) -> dict[str, bool]:
         "has_negation": bool(_NEGATION_RE.search(text)),
         "is_time_sensitive": bool(_TIME_SENSITIVE_RE.search(text)),
         "has_calculation": extract_calculation(text) is not None,
+        "has_named_entity_hint": bool(claim_entity_candidates(text, max_items=1)),
     }
 
 
@@ -249,3 +304,19 @@ def _calculation_payload(expression: str, expected: str, *, parser: str) -> dict
 def _normalize_operator(value: str) -> str:
     collapsed = " ".join(value.lower().split())
     return _WORD_OPERATORS[collapsed]
+
+
+def _valid_quoted_entity_candidate(candidate: str) -> bool:
+    candidate = clean_candidate(candidate)
+    return len(candidate) >= 2 and candidate.casefold() not in _ENTITY_HINT_STOPWORDS
+
+
+def _looks_like_entity_surface(candidate: str) -> bool:
+    candidate = clean_candidate(candidate)
+    if not candidate:
+        return False
+    if candidate.casefold() in _ENTITY_HINT_STOPWORDS:
+        return False
+    if len(candidate) < 3 and not candidate.isupper():
+        return False
+    return any(char.isupper() for char in candidate)
