@@ -322,15 +322,31 @@ def enrich_product_promotion_contract_evidence(
 
     triple_audit = _triple_audit_flat_metadata_from_runtime_baseline(runtime_baseline)
     triple_audit_source = "runtime_baseline"
+    triple_audit_metadata_source = "runtime_baseline"
     triple_audit_path = runtime_baseline_path
+    triple_audit_report: Mapping[str, Any] | None = runtime_baseline
     if not triple_audit:
         triple_audit = _triple_audit_flat_metadata_from_enrichment_report(
             triple_audit_enrichment
         )
         triple_audit_source = "triple_audit_enrichment"
+        triple_audit_metadata_source = (
+            _triple_audit_evidence_source_from_enrichment_report(triple_audit_enrichment)
+        )
         triple_audit_path = triple_audit_enrichment_path
+        triple_audit_report = triple_audit_enrichment
     if triple_audit:
-        _merge_metadata(payload, triple_audit)
+        _merge_metadata(
+            payload,
+            {
+                **triple_audit,
+                **_triple_audit_evidence_provenance_metadata(
+                    source=triple_audit_metadata_source,
+                    path=triple_audit_path,
+                    report=triple_audit_report,
+                ),
+            },
+        )
         filled_groups.append("triple_audit")
         export_metadata["sources"][triple_audit_source] = triple_audit_path
 
@@ -1011,6 +1027,32 @@ def _triple_audit_flat_metadata_from_enrichment_report(
             }
         )
     return {}
+
+
+def _triple_audit_evidence_source_from_enrichment_report(
+    report: Mapping[str, Any] | None,
+) -> str:
+    workflow = _optional_str(_mapping(report).get("workflow"))
+    if workflow == "source_family_structured_qa_claim_correction_workflow":
+        return "claim_correction_workflow"
+    return "triple_audit_enrichment"
+
+
+def _triple_audit_evidence_provenance_metadata(
+    *,
+    source: str,
+    path: str | None,
+    report: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    payload = _mapping(report)
+    return _drop_none_values(
+        {
+            "triple_audit_evidence_source": _optional_str(source),
+            "triple_audit_evidence_report": _optional_str(path),
+            "triple_audit_evidence_workflow": _optional_str(payload.get("workflow")),
+            "triple_audit_evidence_status": _optional_str(payload.get("status")),
+        }
+    )
 
 
 def _covered_fact_property_rollup(

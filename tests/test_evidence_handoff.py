@@ -137,6 +137,11 @@ def test_product_promotion_evidence_handoff_export_fills_explicit_sources():
     assert contract["metadata"]["pre_generation_probe_comparison_best_redline_auroc"] == 0.74
     assert contract["metadata"]["product_trace_action_audit_error_rate"] == 0.0
     assert contract["metadata"]["triple_slot_coverage_rate"] == 1.0
+    assert contract["metadata"]["triple_audit_evidence_source"] == "runtime_baseline"
+    assert (
+        contract["metadata"]["triple_audit_evidence_workflow"]
+        == "product_runtime_baseline"
+    )
     assert contract["frontier_release_evidence"]["decision_status"] == "promote"
     assert contract["metadata"]["frontier_release_evidence_abstention_track_status"] == "promote"
     assert (
@@ -168,6 +173,14 @@ def test_product_promotion_evidence_handoff_accepts_triple_audit_enrichment_repo
     assert contract["metadata"]["triple_audit_claim_coverage_rate"] == 1.0
     assert contract["metadata"]["triple_audit_pass_rate"] == 1.0
     assert contract["metadata"]["triple_slot_coverage_rate"] == 1.0
+    assert contract["metadata"]["triple_audit_evidence_source"] == (
+        "triple_audit_enrichment"
+    )
+    assert contract["metadata"]["triple_audit_evidence_report"] == "triple-audit.json"
+    assert contract["metadata"]["triple_audit_evidence_workflow"] == (
+        "product_trace_triple_audit_enrichment"
+    )
+    assert contract["metadata"]["triple_audit_evidence_status"] == "promote"
 
     blocked = enrich_product_promotion_contract_evidence(
         {
@@ -194,6 +207,7 @@ def test_product_promotion_evidence_handoff_accepts_claim_correction_workflow_re
             "model_id": "tiny",
         },
         triple_audit_enrichment=_claim_correction_workflow_report(),
+        triple_audit_enrichment_path="claim-correction-workflow.json",
         required_groups=("triple_audit",),
     )
     payload = result.to_dict()
@@ -201,6 +215,16 @@ def test_product_promotion_evidence_handoff_accepts_claim_correction_workflow_re
     assert payload["after_audit"]["status"] == "promote"
     assert payload["filled_groups"] == ("triple_audit",)
     assert payload["contract"]["metadata"]["triple_audit_pass_rate"] == 1.0
+    assert payload["contract"]["metadata"]["triple_audit_evidence_source"] == (
+        "claim_correction_workflow"
+    )
+    assert payload["contract"]["metadata"]["triple_audit_evidence_report"] == (
+        "claim-correction-workflow.json"
+    )
+    assert payload["contract"]["metadata"]["triple_audit_evidence_workflow"] == (
+        "source_family_structured_qa_claim_correction_workflow"
+    )
+    assert payload["contract"]["metadata"]["triple_audit_evidence_status"] == "promote"
 
 
 def test_product_promotion_evidence_handoff_rolls_up_covered_fact_route_summary():

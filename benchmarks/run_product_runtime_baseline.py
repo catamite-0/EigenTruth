@@ -272,6 +272,13 @@ _PROMOTION_CONTRACT_COUNTERFACTUAL_VERIFICATION_FIELDS: tuple[str, ...] = (
     "promotion_contract_counterfactual_verification_false_invariance_rate",
     "promotion_contract_counterfactual_verification_flip_success_count",
 )
+_PROMOTION_CONTRACT_TRIPLE_AUDIT_EVIDENCE_FIELDS: tuple[str, ...] = (
+    "promotion_contract_triple_audit_evidence_available",
+    "promotion_contract_triple_audit_evidence_source",
+    "promotion_contract_triple_audit_evidence_report",
+    "promotion_contract_triple_audit_evidence_workflow",
+    "promotion_contract_triple_audit_evidence_status",
+)
 _PROMOTION_CONTRACT_EVIDENCE_HANDOFF_FIELDS: tuple[str, ...] = (
     "promotion_contract_evidence_handoff_available",
     "promotion_contract_evidence_handoff_manifest",
@@ -1254,6 +1261,8 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
     for field_name in _PROMOTION_CONTRACT_CLAIM_FACTUALITY_PROBE_COMPARISON_FIELDS:
         compact[field_name] = metrics.get(field_name)
     for field_name in _PROMOTION_CONTRACT_COUNTERFACTUAL_VERIFICATION_FIELDS:
+        compact[field_name] = metrics.get(field_name)
+    for field_name in _PROMOTION_CONTRACT_TRIPLE_AUDIT_EVIDENCE_FIELDS:
         compact[field_name] = metrics.get(field_name)
     for field_name in _PROMOTION_CONTRACT_EVIDENCE_HANDOFF_FIELDS:
         value = metrics.get(field_name)
@@ -2542,6 +2551,7 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
         metrics
     )
     counterfactual = _aggregate_promotion_contract_counterfactual_verification(metrics)
+    triple_audit_evidence = _aggregate_promotion_contract_triple_audit_evidence(metrics)
     evidence_handoff = _aggregate_promotion_contract_evidence_handoff(metrics)
     frontier_release_evidence = _aggregate_promotion_contract_frontier_release_evidence(
         metrics
@@ -2598,6 +2608,7 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
         "pre_generation_probe_comparison": pre_generation,
         "claim_factuality_probe_comparison": claim_factuality,
         "counterfactual_verification": counterfactual,
+        "triple_audit_evidence": triple_audit_evidence,
         "evidence_handoff": evidence_handoff,
         "frontier_release_evidence": frontier_release_evidence,
         "triple_extraction_fixture_matrix": {
@@ -3000,6 +3011,37 @@ def _aggregate_promotion_contract_counterfactual_verification(
         ),
         "flip_success_count": _numeric_summary(
             item.get("promotion_contract_counterfactual_verification_flip_success_count")
+            for item in metrics
+        ),
+    }
+
+
+def _aggregate_promotion_contract_triple_audit_evidence(
+    metrics: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    available_count = sum(
+        1
+        for item in metrics
+        if bool(item.get("promotion_contract_triple_audit_evidence_available"))
+    )
+    return {
+        "available_trace_count": available_count,
+        "missing_trace_count": len(metrics) - available_count,
+        "coverage_rate": _safe_div(available_count, len(metrics)),
+        "source_counts": _counts(
+            item.get("promotion_contract_triple_audit_evidence_source")
+            for item in metrics
+        ),
+        "report_counts": _counts(
+            item.get("promotion_contract_triple_audit_evidence_report")
+            for item in metrics
+        ),
+        "workflow_counts": _counts(
+            item.get("promotion_contract_triple_audit_evidence_workflow")
+            for item in metrics
+        ),
+        "status_counts": _counts(
+            item.get("promotion_contract_triple_audit_evidence_status")
             for item in metrics
         ),
     }
@@ -3924,6 +3966,9 @@ def _write_artifact_manifest(
     promotion_contract_counterfactual_metadata = (
         _promotion_contract_counterfactual_verification_flat_metadata(report)
     )
+    promotion_contract_triple_audit_evidence_metadata = (
+        _promotion_contract_triple_audit_evidence_flat_metadata(report)
+    )
     promotion_contract_evidence_handoff_metadata = (
         _promotion_contract_evidence_handoff_flat_metadata(report)
     )
@@ -3968,6 +4013,7 @@ def _write_artifact_manifest(
             **promotion_contract_pre_generation_metadata,
             **promotion_contract_claim_factuality_metadata,
             **promotion_contract_counterfactual_metadata,
+            **promotion_contract_triple_audit_evidence_metadata,
             **promotion_contract_evidence_handoff_metadata,
             **promotion_contract_frontier_release_evidence_metadata,
             **dict(config.metadata),
@@ -4010,6 +4056,9 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
     )
     promotion_contract_counterfactual_metadata = (
         _promotion_contract_counterfactual_verification_flat_metadata(report)
+    )
+    promotion_contract_triple_audit_evidence_metadata = (
+        _promotion_contract_triple_audit_evidence_flat_metadata(report)
     )
     promotion_contract_evidence_handoff_metadata = (
         _promotion_contract_evidence_handoff_flat_metadata(report)
@@ -4060,6 +4109,7 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
             **promotion_contract_pre_generation_metadata,
             **promotion_contract_claim_factuality_metadata,
             **promotion_contract_counterfactual_metadata,
+            **promotion_contract_triple_audit_evidence_metadata,
             **promotion_contract_evidence_handoff_metadata,
             **promotion_contract_frontier_release_evidence_metadata,
             **dict(config.metadata),
@@ -4757,6 +4807,44 @@ def _promotion_contract_counterfactual_verification_flat_metadata(
                 "flip_success_count",
                 "mean",
             )
+        ),
+    }
+
+
+def _promotion_contract_triple_audit_evidence_flat_metadata(
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    evidence = _mapping(
+        _nested(
+            report,
+            "summary",
+            "promotion_contract",
+            "triple_audit_evidence",
+        )
+    )
+    if not evidence:
+        return {}
+    return {
+        "promotion_contract_triple_audit_evidence_available_trace_count": (
+            evidence.get("available_trace_count")
+        ),
+        "promotion_contract_triple_audit_evidence_missing_trace_count": (
+            evidence.get("missing_trace_count")
+        ),
+        "promotion_contract_triple_audit_evidence_coverage_rate": evidence.get(
+            "coverage_rate"
+        ),
+        "promotion_contract_triple_audit_evidence_source_counts": dict(
+            _mapping(evidence.get("source_counts"))
+        ),
+        "promotion_contract_triple_audit_evidence_report_counts": dict(
+            _mapping(evidence.get("report_counts"))
+        ),
+        "promotion_contract_triple_audit_evidence_workflow_counts": dict(
+            _mapping(evidence.get("workflow_counts"))
+        ),
+        "promotion_contract_triple_audit_evidence_status_counts": dict(
+            _mapping(evidence.get("status_counts"))
         ),
     }
 

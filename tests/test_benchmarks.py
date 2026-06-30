@@ -32508,6 +32508,14 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                     },
                 },
                 "promotion_contract_metadata": {
+                    "triple_audit_evidence_source": "triple_audit_enrichment",
+                    "triple_audit_evidence_report": (
+                        "artifacts/triple-audit/product-trace-triple-audit.json"
+                    ),
+                    "triple_audit_evidence_workflow": (
+                        "product_trace_triple_audit_enrichment"
+                    ),
+                    "triple_audit_evidence_status": "promote",
                     "required_route_baseline_covered_fact_property_counts": {
                         "benchmark_manifest:structured-fact-canonical:0.1": 3
                     },
@@ -32838,6 +32846,12 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                         "covered_fact_property": "block",
                     },
                 },
+                "promotion_contract_triple_audit_evidence": {
+                    "source": "claim_correction_workflow",
+                    "report": "artifacts/triple-audit/claim-correction-workflow.json",
+                    "workflow": "source_family_structured_qa_claim_correction_workflow",
+                    "status": "promote",
+                },
                 "triple_extraction_fixture_matrix_source": "runtime_evidence_bundle",
                 "triple_extraction_fixture_matrix_status": "promote",
                 "triple_extraction_fixture_matrix_manifest_verification": {"passed": True},
@@ -32953,6 +32967,7 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     trace_replay = promotion["product_trace_replay"]
     external_evidence = promotion["external_evidence_baseline_comparison"]
     pre_generation = promotion["pre_generation_probe_comparison"]
+    triple_audit_evidence = promotion["triple_audit_evidence"]
     evidence_handoff = promotion["evidence_handoff"]
     matrix = promotion["triple_extraction_fixture_matrix"]
     assert promotion["available_trace_count"] == 2
@@ -33100,6 +33115,17 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
         "claim_token_count": 1,
     }
     assert pre_generation["best_redline_margin"]["mean"] == pytest.approx(0.085)
+    assert triple_audit_evidence["available_trace_count"] == 2
+    assert triple_audit_evidence["coverage_rate"] == pytest.approx(1.0)
+    assert triple_audit_evidence["source_counts"] == {
+        "claim_correction_workflow": 1,
+        "triple_audit_enrichment": 1,
+    }
+    assert triple_audit_evidence["workflow_counts"] == {
+        "product_trace_triple_audit_enrichment": 1,
+        "source_family_structured_qa_claim_correction_workflow": 1,
+    }
+    assert triple_audit_evidence["status_counts"] == {"promote": 2}
     assert evidence_handoff["available_trace_count"] == 2
     assert evidence_handoff["coverage_rate"] == pytest.approx(1.0)
     assert evidence_handoff["status_counts"] == {"needs_evidence": 1, "promote": 1}
@@ -33205,6 +33231,12 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
         "promotion_contract_evidence_handoff_group_statuses"
     ]["promotion"] == "promote"
     assert payload["traces"][0]["metrics"][
+        "promotion_contract_triple_audit_evidence_source"
+    ] == "triple_audit_enrichment"
+    assert payload["traces"][0]["metrics"][
+        "promotion_contract_triple_audit_evidence_workflow"
+    ] == "product_trace_triple_audit_enrichment"
+    assert payload["traces"][0]["metrics"][
         "promotion_contract_recommended_route_covered_fact_property_count"
     ] == 3.0
     assert payload["traces"][0]["metrics"][
@@ -33274,6 +33306,12 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert payload["traces"][1]["metrics"][
         "promotion_contract_evidence_handoff_group_statuses"
     ]["covered_fact_property"] == "block"
+    assert payload["traces"][1]["metrics"][
+        "promotion_contract_triple_audit_evidence_source"
+    ] == "claim_correction_workflow"
+    assert payload["traces"][1]["metrics"][
+        "promotion_contract_triple_audit_evidence_workflow"
+    ] == "source_family_structured_qa_claim_correction_workflow"
     assert saved["artifact_manifest_summary"] == manifest["summary"]
     assert saved["artifact_manifest_summary"]["artifact_count"] == 3
     assert manifest["metadata"]["runner"] == "run_product_runtime_baseline"
@@ -33390,6 +33428,21 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
         "promotion_contract_pre_generation_probe_comparison_best_redline_margin_mean"
     ] == pytest.approx(0.085)
     assert (
+        manifest["metadata"][
+            "promotion_contract_triple_audit_evidence_available_trace_count"
+        ]
+        == 2
+    )
+    assert manifest["metadata"][
+        "promotion_contract_triple_audit_evidence_source_counts"
+    ] == {
+        "claim_correction_workflow": 1,
+        "triple_audit_enrichment": 1,
+    }
+    assert manifest["metadata"][
+        "promotion_contract_triple_audit_evidence_status_counts"
+    ] == {"promote": 2}
+    assert (
         manifest["metadata"]["promotion_contract_evidence_handoff_available_trace_count"]
         == 2
     )
@@ -33474,6 +33527,18 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert record.metadata[
         "promotion_contract_pre_generation_probe_comparison_best_redline_signal_counts"
     ] == {"answer_token_count": 1, "claim_token_count": 1}
+    assert (
+        record.metadata[
+            "promotion_contract_triple_audit_evidence_available_trace_count"
+        ]
+        == 2
+    )
+    assert record.metadata[
+        "promotion_contract_triple_audit_evidence_workflow_counts"
+    ] == {
+        "product_trace_triple_audit_enrichment": 1,
+        "source_family_structured_qa_claim_correction_workflow": 1,
+    }
     assert (
         record.metadata["promotion_contract_evidence_handoff_available_trace_count"]
         == 2

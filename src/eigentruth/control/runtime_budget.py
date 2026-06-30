@@ -1220,6 +1220,10 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         metadata,
         contract_metadata=contract_metadata,
     )
+    triple_audit_evidence = _promotion_contract_triple_audit_evidence_from_metadata(
+        metadata,
+        contract_metadata=contract_metadata,
+    )
     nested_frontier_release_evidence = _mapping(
         metadata.get("promotion_contract_frontier_release_evidence")
     )
@@ -1295,6 +1299,7 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         or bool(pathway)
         or bool(runtime_drift.get("available"))
         or bool(evidence_handoff.get("available"))
+        or bool(triple_audit_evidence.get("available"))
         or bool(frontier_release_evidence)
     )
     pre_generation_manifest_verification = _mapping(
@@ -1342,6 +1347,7 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         "product_trace_replay": product_trace_replay,
         "product_runtime_drift": runtime_drift,
         "evidence_handoff": evidence_handoff,
+        "triple_audit_evidence": triple_audit_evidence,
         "frontier_release_evidence": {
             "available": frontier_release_evidence_available,
             "source": _optional_string(frontier_release_evidence.get("source")),
@@ -2170,6 +2176,9 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
     evidence_handoff_metrics = _promotion_contract_evidence_handoff_metric_values(
         evidence_handoff
     )
+    triple_audit_evidence_metrics = (
+        _promotion_contract_triple_audit_evidence_metric_values(triple_audit_evidence)
+    )
     return {
         "promotion_contract_available": available,
         "promotion_contract_source": source,
@@ -2645,6 +2654,7 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         **product_trace_replay_metrics,
         **runtime_drift_metrics,
         **evidence_handoff_metrics,
+        **triple_audit_evidence_metrics,
     }
 
 
@@ -2817,6 +2827,49 @@ def _promotion_contract_evidence_handoff_metric_values(
         "promotion_contract_evidence_handoff_group_statuses": dict(
             _mapping(handoff.get("group_statuses"))
         ),
+    }
+
+
+def _promotion_contract_triple_audit_evidence_from_metadata(
+    metadata: Mapping[str, Any],
+    *,
+    contract_metadata: Mapping[str, Any],
+) -> dict[str, Any]:
+    nested = _mapping(metadata.get("promotion_contract_triple_audit_evidence"))
+
+    def value(key: str) -> Any:
+        return _first_present(
+            nested.get(key),
+            metadata.get(f"promotion_contract_triple_audit_evidence_{key}"),
+            metadata.get(f"triple_audit_evidence_{key}"),
+            contract_metadata.get(f"promotion_contract_triple_audit_evidence_{key}"),
+            contract_metadata.get(f"triple_audit_evidence_{key}"),
+        )
+
+    evidence = {
+        "available": False,
+        "source": _optional_string(value("source")),
+        "report": _optional_string(value("report")),
+        "workflow": _optional_string(value("workflow")),
+        "status": _optional_string(value("status")),
+    }
+    evidence["available"] = any(
+        item is not None for key, item in evidence.items() if key != "available"
+    )
+    return evidence
+
+
+def _promotion_contract_triple_audit_evidence_metric_values(
+    evidence: Mapping[str, Any],
+) -> dict[str, Any]:
+    return {
+        "promotion_contract_triple_audit_evidence_available": _optional_bool(
+            evidence.get("available")
+        ),
+        "promotion_contract_triple_audit_evidence_source": evidence.get("source"),
+        "promotion_contract_triple_audit_evidence_report": evidence.get("report"),
+        "promotion_contract_triple_audit_evidence_workflow": evidence.get("workflow"),
+        "promotion_contract_triple_audit_evidence_status": evidence.get("status"),
     }
 
 

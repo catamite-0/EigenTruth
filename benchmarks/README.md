@@ -2709,6 +2709,9 @@ not collect new evidence, lower mapping thresholds, or treat adapter results as
 verifier evidence. Add `--enable-triple-audit` when the correction handoff
 should immediately feed the trace-level triple-audit enrichment gate; if that
 optional child gate runs and fails to promote, the workflow fails closed.
+Promotion-contract evidence handoff records the accepted triple-audit source,
+report path, workflow, and status in contract metadata so runtime baselines can
+aggregate where the four trace-level triple-audit fields came from.
 
 ```bash
 WORKFLOW=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-claim-correction-workflow

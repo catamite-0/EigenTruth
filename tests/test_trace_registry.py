@@ -312,6 +312,44 @@ def test_product_trace_summarizes_triple_and_slot_coverage():
     json.dumps(bounded)
 
 
+def test_product_runtime_metrics_exposes_triple_audit_evidence_provenance():
+    trace = ProductTrace(
+        request_id="req-provenance",
+        metadata={
+            "promotion_contract_metadata": {
+                "triple_audit_evidence_source": "claim_correction_workflow",
+                "triple_audit_evidence_report": "claim-correction-workflow.json",
+                "triple_audit_evidence_workflow": (
+                    "source_family_structured_qa_claim_correction_workflow"
+                ),
+                "triple_audit_evidence_status": "promote",
+            }
+        },
+    )
+
+    metrics = product_runtime_metrics(trace)
+
+    assert metrics["promotion_contract_available"] is True
+    assert metrics["promotion_contract_triple_audit_evidence_available"] is True
+    assert metrics["promotion_contract_triple_audit_evidence_source"] == (
+        "claim_correction_workflow"
+    )
+    assert metrics["promotion_contract_triple_audit_evidence_report"] == (
+        "claim-correction-workflow.json"
+    )
+    assert metrics["promotion_contract_triple_audit_evidence_workflow"] == (
+        "source_family_structured_qa_claim_correction_workflow"
+    )
+    assert metrics["promotion_contract_triple_audit_evidence_status"] == "promote"
+    assert metrics["promotion_contract_summary"]["triple_audit_evidence"] == {
+        "available": True,
+        "source": "claim_correction_workflow",
+        "report": "claim-correction-workflow.json",
+        "workflow": "source_family_structured_qa_claim_correction_workflow",
+        "status": "promote",
+    }
+
+
 def test_product_trace_feedback_and_registry_normalize_strict_json_values(tmp_path):
     trace = ProductTrace(
         request_id="req-json",

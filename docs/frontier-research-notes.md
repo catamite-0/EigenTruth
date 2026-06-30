@@ -1149,7 +1149,10 @@ Added the first monitor-first tool-selection audit layer:
   when its optional triple-audit child promoted. Non-promoted reports are ignored
   for handoff filling, preserving fail-closed release behavior while removing
   the need to create a runtime-baseline report solely to carry four triple-audit
-  metrics.
+  metrics. The enriched contract also records `triple_audit_evidence_source`,
+  `triple_audit_evidence_report`, `triple_audit_evidence_workflow`, and
+  `triple_audit_evidence_status`, and runtime baselines aggregate those
+  provenance counts.
 - `eval_counterfactual_verification.py --verified-records --verifier structured_qa`
   now closes the counterfactual verifier audit with real covered-facts route
   evidence rather than an in-memory expected-status smoke. The saved SmolLM2
