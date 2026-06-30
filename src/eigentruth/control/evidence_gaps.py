@@ -314,6 +314,7 @@ def _blocking_records(decision: Mapping[str, Any]) -> tuple[dict[str, Any], ...]
             reasons = _string_tuple(item.get("reasons", ()))
             if not reasons and item.get("reason") is not None:
                 reasons = (str(item["reason"]),)
+            reasons = _drop_redundant_status_reasons(reasons)
             records.append({
                 "gate": str(item.get("gate") or "release_candidate"),
                 "status": str(item.get("status") or "blocked"),
@@ -335,6 +336,7 @@ def _frontier_release_evidence_blocking_records(
     raw_reasons = list(_string_tuple(decision.get("blocking_reasons", ())))
     if not raw_reasons:
         raw_reasons = list(_nested_frontier_blocking_reasons(payload))
+    raw_reasons = list(_drop_redundant_status_reasons(raw_reasons))
     abstention_metadata = _frontier_abstention_metadata(payload)
     multiple_testing_metadata = _frontier_multiple_testing_metadata(payload)
     citation_batch_metadata = _frontier_citation_batch_metadata(payload)
@@ -437,6 +439,30 @@ def _frontier_release_evidence_blocking_records(
             "reasons": ("frontier release evidence decision is blocked",),
         })
     return tuple(records)
+
+
+def _drop_redundant_status_reasons(reasons: Sequence[str]) -> tuple[str, ...]:
+    """Remove summary-only blocked-status reasons when detailed blockers exist."""
+    normalized = tuple(str(reason) for reason in reasons if str(reason))
+    if len(normalized) <= 1:
+        return normalized
+    detailed = tuple(reason for reason in normalized if not _is_summary_status_reason(reason))
+    return detailed or normalized
+
+
+def _is_summary_status_reason(reason: str) -> bool:
+    text = reason.lower()
+    if "_track_status" in text or " track status " in text:
+        return False
+    if "evidence blocked" in text:
+        return False
+    return (
+        "decision status is 'blocked'" in text
+        or "decision status is blocked" in text
+        or "decision is blocked" in text
+        or re.match(r"^[a-z0-9 _-]+ blocked \d+ metric\(s\)", text) is not None
+        or re.match(r"^[a-z0-9 _-]+ status is '?blocked'?", text) is not None
+    )
 
 
 def _nested_frontier_blocking_reasons(payload: Mapping[str, Any]) -> tuple[str, ...]:
@@ -785,7 +811,13 @@ def _classify_gap(
         return _kind("citation_batch_evidence", "evidence_coverage", "external_citation")
     if "pre-generation" in text or "pre_generation" in text:
         return _kind("pre_generation_probe", "model", "internal_state")
-    if "abstention_stability" in text or "participation-gate" in text or "participation gate" in text:
+    if (
+        "abstention_stability" in text
+        or "abstention_track_status" in text
+        or "abstention track" in text
+        or "participation-gate" in text
+        or "participation gate" in text
+    ):
         return _kind("abstention_stability", "model", "participation_calibration")
     if "verifier_stability" in text:
         return _kind("verifier_stability", "evidence_coverage", "external_verification")
@@ -956,7 +988,9 @@ def _is_product_runtime_frontier_release_evidence(
         text,
         missing_metrics,
         patterns=(
+            "frontier release evidence blocked",
             "frontier release evidence metrics",
+            "frontier_release_evidence blocked",
             "frontier_release_evidence metrics",
             "frontier_release_evidence.",
             "promotion_contract.frontier_release_evidence.",

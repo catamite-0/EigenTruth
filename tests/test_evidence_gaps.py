@@ -123,6 +123,45 @@ def test_evidence_gap_plan_maps_multiple_testing_frontier_blocker():
     )
 
 
+def test_evidence_gap_plan_maps_release_candidate_frontier_abstention_blocker():
+    plan = plan_evidence_gaps_from_release_candidate({
+        "workflow": "release_candidate_comparison",
+        "decision": {
+            "status": "blocked",
+            "blocking_reasons": [
+                {
+                    "gate": "frontier_release_evidence",
+                    "status": "blocked",
+                    "reasons": (
+                        "frontier release evidence decision status is 'blocked', expected 'promote'",
+                        "frontier release evidence abstention_track_status is 'blocked', expected 'promote'",
+                    ),
+                }
+            ],
+        },
+    })
+
+    payload = plan.to_dict()
+    actions = {action["action_id"]: action for action in payload["actions"]}
+    gaps = payload["gaps"]
+
+    assert payload["status"] == "needs_evidence"
+    assert payload["summary"]["gap_count"] == 1
+    assert payload["summary"]["research_axes"] == {"participation_calibration": 1}
+    assert payload["summary"]["top_action_ids"] == ("improve_abstention_participation_gate",)
+    assert gaps[0]["reason"] == (
+        "frontier release evidence abstention_track_status is 'blocked', expected 'promote'"
+    )
+    assert gaps[0]["root_cause"] == "model"
+    assert gaps[0]["metadata"]["evidence_kind"] == "abstention_stability"
+    assert gaps[0]["recommended_action_ids"] == ("improve_abstention_participation_gate",)
+    assert actions["improve_abstention_participation_gate"]["evidence_routes"] == (
+        "abstention_stability",
+        "participation_gate",
+        "frontier_release_evidence",
+    )
+
+
 def test_evidence_gap_plan_maps_frontier_release_evidence_report_tracks():
     plan = plan_evidence_gaps_from_release_candidate({
         "schema_version": 1,
@@ -739,6 +778,53 @@ def test_evidence_gap_plan_maps_product_runtime_frontier_release_metrics():
         "product_runtime_drift",
     )
     assert "complete_frontier_rerun_rollup_evidence" not in actions
+
+
+def test_evidence_gap_plan_maps_product_runtime_frontier_release_blocked_metrics():
+    plan = plan_evidence_gaps_from_release_candidate({
+        "workflow": "release_candidate_comparison",
+        "decision": {
+            "status": "blocked",
+            "blocking_reasons": [
+                {
+                    "gate": "product_runtime_drift",
+                    "status": "blocked",
+                    "reasons": (
+                        "product runtime drift status is 'blocked', expected 'promote'",
+                        "product runtime drift decision status is 'blocked', expected 'promote'",
+                        "product runtime drift blocked 3 metric(s)",
+                        "product runtime drift frontier release evidence blocked 3 metric(s)",
+                    ),
+                }
+            ],
+        },
+    })
+
+    payload = plan.to_dict()
+    actions = {action["action_id"]: action for action in payload["actions"]}
+    gaps = payload["gaps"]
+
+    assert payload["status"] == "needs_evidence"
+    assert payload["summary"]["gap_count"] == 1
+    assert payload["summary"]["research_axes"] == {"runtime_drift": 1}
+    assert payload["summary"]["root_causes"] == {"product_handoff": 1}
+    assert payload["summary"]["top_action_ids"] == (
+        "refresh_frontier_release_evidence_promotion_metrics",
+    )
+    assert gaps[0]["reason"] == "product runtime drift frontier release evidence blocked 3 metric(s)"
+    assert gaps[0]["metadata"]["evidence_kind"] == (
+        "product_runtime_frontier_release_evidence"
+    )
+    assert gaps[0]["recommended_action_ids"] == (
+        "refresh_frontier_release_evidence_promotion_metrics",
+    )
+    assert actions[
+        "refresh_frontier_release_evidence_promotion_metrics"
+    ]["evidence_routes"] == (
+        "frontier_release_evidence",
+        "product_promotion_contract",
+        "product_runtime_drift",
+    )
 
 
 def test_plan_release_evidence_gaps_cli_helper_writes_and_registers(tmp_path):
