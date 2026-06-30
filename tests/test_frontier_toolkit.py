@@ -1104,6 +1104,55 @@ def test_counterfactual_probe_generator_uses_extracted_entity_candidates():
     )
 
 
+def test_counterfactual_verification_report_summarizes_entity_candidates():
+    verifier = InMemoryVerifier({
+        normalize_claim_text("AlphaCorp acquired Beta Labs in Paris."): VerificationStatus.SUPPORTED,
+        normalize_claim_text("BetaCorp acquired Beta Labs in Paris."): VerificationStatus.SUPPORTED,
+        normalize_claim_text("AlphaCorp acquired Gamma Labs in Paris."): VerificationStatus.REFUTED,
+        normalize_claim_text("2 plus 2 is 4."): VerificationStatus.SUPPORTED,
+        normalize_claim_text("3 plus 2 is 4."): VerificationStatus.REFUTED,
+    })
+    claims = (
+        Claim(
+            "AlphaCorp acquired Beta Labs in Paris.",
+            metadata={"entity_candidates": ("AlphaCorp", "Beta Labs")},
+        ),
+    )
+    entity_probes = generate_counterfactual_probes(
+        claims,
+        max_probes_per_claim=2,
+        probe_types=("entity_swap",),
+    )
+    quantity_probe = CounterfactualProbe(
+        original={"text": "2 plus 2 is 4."},
+        counterfactual={
+            "text": "3 plus 2 is 4.",
+            "metadata": {
+                "replacement_source": "2",
+                "replacement_target": "3",
+                "replacement_source_kind": "numeric_literal",
+            },
+        },
+        probe_type="quantity",
+    )
+
+    report = CounterfactualVerificationAuditor(verifier).audit((*entity_probes, quantity_probe))
+    summary = report.summary()
+
+    assert summary["record_count"] == 3
+    assert summary["entity_candidate_count"] == 2
+    assert summary["entity_probe_count"] == 2
+    assert summary["counts_by_entity_source_kind"] == {"entity_candidate": 2}
+    assert "2" not in summary["by_entity_candidate"]
+    assert summary["by_entity_candidate"]["AlphaCorp"]["false_invariance_count"] == 1
+    assert summary["by_entity_candidate"]["AlphaCorp"]["false_invariance_rate"] == pytest.approx(1.0)
+    assert summary["by_entity_candidate"]["AlphaCorp"]["replacement_targets"] == ("BetaCorp",)
+    assert summary["by_entity_candidate"]["AlphaCorp"]["source_kinds"] == {"entity_candidate": 1}
+    assert summary["by_entity_candidate"]["Beta Labs"]["pass_rate"] == pytest.approx(1.0)
+    assert summary["by_entity_candidate"]["Beta Labs"]["replacement_targets"] == ("Gamma Labs",)
+    json.dumps(report.to_dict())
+
+
 def test_structured_fact_verifier_handles_fact_paraphrases_and_object_lists():
     verifier = StructuredFactVerifier.from_corpus({
         "facts": [

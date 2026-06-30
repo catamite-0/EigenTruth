@@ -185,6 +185,7 @@ class CounterfactualVerificationReport:
         counterfactual_expected = tuple(
             result for result in results if result.counterfactual_matches_expected is not None
         )
+        by_entity_candidate = _by_entity_candidate(results)
         return {
             "record_count": record_count,
             "passed_count": passed_count,
@@ -215,6 +216,10 @@ class CounterfactualVerificationReport:
                 len(counterfactual_expected),
             ),
             "by_probe_type": _by_probe_type(results),
+            "by_entity_candidate": by_entity_candidate,
+            "entity_candidate_count": len(by_entity_candidate),
+            "entity_probe_count": sum(1 for result in results if _entity_replacement_source(result) is not None),
+            "counts_by_entity_source_kind": _counts_by_entity_source_kind(results),
         }
 
     def error_examples(self) -> tuple[dict[str, Any], ...]:
@@ -850,6 +855,102 @@ def _by_probe_type(results: Sequence[CounterfactualProbeResult]) -> dict[str, di
         }
         for name, items in groups.items()
     }
+
+
+def _by_entity_candidate(results: Sequence[CounterfactualProbeResult]) -> dict[str, dict[str, Any]]:
+    groups: dict[str, list[CounterfactualProbeResult]] = {}
+    for result in results:
+        source = _entity_replacement_source(result)
+        if source is None:
+            continue
+        groups.setdefault(source, []).append(result)
+    return {
+        source: {
+            "record_count": len(items),
+            "passed_count": sum(1 for item in items if item.passed),
+            "failed_count": sum(1 for item in items if not item.passed),
+            "pass_rate": _safe_div(sum(1 for item in items if item.passed), len(items)),
+            "expected_flip_count": sum(1 for item in items if item.probe.expected_flip),
+            "flip_success_count": sum(
+                1 for item in items if item.probe.expected_flip and item.status_changed
+            ),
+            "false_invariance_count": sum(
+                1 for item in items if item.probe.expected_flip and not item.status_changed
+            ),
+            "false_invariance_rate": _safe_div(
+                sum(1 for item in items if item.probe.expected_flip and not item.status_changed),
+                sum(1 for item in items if item.probe.expected_flip),
+            ),
+            "replacement_targets": tuple(
+                dict.fromkeys(
+                    target
+                    for item in items
+                    if (target := _entity_replacement_target(item)) is not None
+                )
+            ),
+            "source_kinds": _count_values(
+                kind
+                for item in items
+                if (kind := _entity_replacement_source_kind(item)) is not None
+            ),
+        }
+        for source, items in groups.items()
+    }
+
+
+def _counts_by_entity_source_kind(results: Sequence[CounterfactualProbeResult]) -> dict[str, int]:
+    return _count_values(
+        kind
+        for result in results
+        if (kind := _entity_replacement_source_kind(result)) is not None
+    )
+
+
+def _entity_replacement_source(result: CounterfactualProbeResult) -> str | None:
+    if result.probe.probe_type != "entity_swap":
+        return None
+    return _first_non_empty_string(
+        result.probe.counterfactual.metadata.get("replacement_source"),
+        result.probe.metadata.get("replacement_source"),
+    )
+
+
+def _entity_replacement_target(result: CounterfactualProbeResult) -> str | None:
+    if result.probe.probe_type != "entity_swap":
+        return None
+    return _first_non_empty_string(
+        result.probe.counterfactual.metadata.get("replacement_target"),
+        result.probe.metadata.get("replacement_target"),
+    )
+
+
+def _entity_replacement_source_kind(result: CounterfactualProbeResult) -> str | None:
+    if result.probe.probe_type != "entity_swap":
+        return None
+    return _first_non_empty_string(
+        result.probe.counterfactual.metadata.get("replacement_source_kind"),
+        result.probe.metadata.get("replacement_source_kind"),
+        "metadata_replacement" if _entity_replacement_source(result) is not None else None,
+    )
+
+
+def _first_non_empty_string(*values: Any) -> str | None:
+    for value in values:
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text:
+            return text
+    return None
+
+
+def _count_values(values: Any) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for value in values:
+        text = str(value).strip()
+        if text:
+            counts[text] = counts.get(text, 0) + 1
+    return dict(sorted(counts.items()))
 
 
 def _safe_div(numerator: int, denominator: int) -> float:
