@@ -435,6 +435,36 @@ _PRODUCT_TRACE_ACTION_RECEIPT_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
         "product_trace_action_receipts_unsigned_receipt_rate",
     ),
 )
+_PRODUCT_TRACE_RECEIPT_CLAIM_SUPPORT_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
+    (
+        "receipt_claim_support.reference_support_rate",
+        "product_trace_receipt_claim_support_reference_support_rate",
+    ),
+    (
+        "receipt_claim_support.unsupported_reference_rate",
+        "product_trace_receipt_claim_support_unsupported_reference_rate",
+    ),
+    (
+        "receipt_claim_support.missing_reference_rate",
+        "product_trace_receipt_claim_support_missing_reference_rate",
+    ),
+    (
+        "receipt_claim_support.unreceipted_reference_rate",
+        "product_trace_receipt_claim_support_unreceipted_reference_rate",
+    ),
+    (
+        "receipt_claim_support.failed_result_reference_rate",
+        "product_trace_receipt_claim_support_failed_result_reference_rate",
+    ),
+    (
+        "receipt_claim_support.fingerprint_mismatch_reference_rate",
+        "product_trace_receipt_claim_support_fingerprint_mismatch_reference_rate",
+    ),
+    (
+        "receipt_claim_support.unsigned_reference_rate",
+        "product_trace_receipt_claim_support_unsigned_reference_rate",
+    ),
+)
 _PRODUCT_TRACE_TRAJECTORY_AUDIT_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
     ("trajectory_audit.failed_trace_rate", "product_trace_trajectory_audit_failed_trace_rate"),
     ("trajectory_audit.error_rate", "product_trace_trajectory_audit_error_rate"),
@@ -543,6 +573,41 @@ _PRODUCT_TRACE_ACTION_RECEIPT_RATE_METRIC_SPECS: tuple[
         "action_receipts.unsigned_receipt_rate",
         ("action_receipts", "unsigned_receipt_rate"),
         "max_product_trace_action_receipts_unsigned_receipt_rate_increase",
+    ),
+)
+_PRODUCT_TRACE_RECEIPT_CLAIM_SUPPORT_RATE_METRIC_SPECS: tuple[
+    tuple[str, tuple[str, ...], str],
+    ...
+] = (
+    (
+        "receipt_claim_support.unsupported_reference_rate",
+        ("receipt_claim_support", "unsupported_reference_rate"),
+        "max_product_trace_receipt_claim_support_unsupported_reference_rate_increase",
+    ),
+    (
+        "receipt_claim_support.missing_reference_rate",
+        ("receipt_claim_support", "missing_reference_rate"),
+        "max_product_trace_receipt_claim_support_missing_reference_rate_increase",
+    ),
+    (
+        "receipt_claim_support.unreceipted_reference_rate",
+        ("receipt_claim_support", "unreceipted_reference_rate"),
+        "max_product_trace_receipt_claim_support_unreceipted_reference_rate_increase",
+    ),
+    (
+        "receipt_claim_support.failed_result_reference_rate",
+        ("receipt_claim_support", "failed_result_reference_rate"),
+        "max_product_trace_receipt_claim_support_failed_result_reference_rate_increase",
+    ),
+    (
+        "receipt_claim_support.fingerprint_mismatch_reference_rate",
+        ("receipt_claim_support", "fingerprint_mismatch_reference_rate"),
+        "max_product_trace_receipt_claim_support_fingerprint_mismatch_reference_rate_increase",
+    ),
+    (
+        "receipt_claim_support.unsigned_reference_rate",
+        ("receipt_claim_support", "unsigned_reference_rate"),
+        "max_product_trace_receipt_claim_support_unsigned_reference_rate_increase",
     ),
 )
 _PRODUCT_TRACE_TRAJECTORY_AUDIT_METRIC_SPECS: tuple[tuple[str, tuple[str, ...], str], ...] = (
@@ -898,6 +963,25 @@ def compare_product_runtime_baselines(
     max_product_trace_action_receipts_invalid_receipt_rate_increase: float | None = None,
     max_product_trace_action_receipts_fingerprint_mismatch_rate_increase: float | None = None,
     max_product_trace_action_receipts_unsigned_receipt_rate_increase: float | None = None,
+    min_product_trace_receipt_claim_support_reference_support_rate: float | None = None,
+    max_product_trace_receipt_claim_support_unsupported_reference_rate_increase: (
+        float | None
+    ) = None,
+    max_product_trace_receipt_claim_support_missing_reference_rate_increase: (
+        float | None
+    ) = None,
+    max_product_trace_receipt_claim_support_unreceipted_reference_rate_increase: (
+        float | None
+    ) = None,
+    max_product_trace_receipt_claim_support_failed_result_reference_rate_increase: (
+        float | None
+    ) = None,
+    max_product_trace_receipt_claim_support_fingerprint_mismatch_reference_rate_increase: (
+        float | None
+    ) = None,
+    max_product_trace_receipt_claim_support_unsigned_reference_rate_increase: (
+        float | None
+    ) = None,
     max_product_trace_trajectory_audit_failed_trace_rate_increase: float | None = None,
     max_product_trace_trajectory_audit_error_rate_increase: float | None = None,
     max_product_trace_trajectory_audit_factual_rate_increase: float | None = None,
@@ -1302,6 +1386,41 @@ def compare_product_runtime_baselines(
                 max_product_trace_action_receipts_unsigned_receipt_rate_increase
             )
         ),
+        "min_product_trace_receipt_claim_support_reference_support_rate": (
+            _optional_rate_float(
+                min_product_trace_receipt_claim_support_reference_support_rate
+            )
+        ),
+        "max_product_trace_receipt_claim_support_unsupported_reference_rate_increase": (
+            _optional_rate_float(
+                max_product_trace_receipt_claim_support_unsupported_reference_rate_increase
+            )
+        ),
+        "max_product_trace_receipt_claim_support_missing_reference_rate_increase": (
+            _optional_rate_float(
+                max_product_trace_receipt_claim_support_missing_reference_rate_increase
+            )
+        ),
+        "max_product_trace_receipt_claim_support_unreceipted_reference_rate_increase": (
+            _optional_rate_float(
+                max_product_trace_receipt_claim_support_unreceipted_reference_rate_increase
+            )
+        ),
+        "max_product_trace_receipt_claim_support_failed_result_reference_rate_increase": (
+            _optional_rate_float(
+                max_product_trace_receipt_claim_support_failed_result_reference_rate_increase
+            )
+        ),
+        "max_product_trace_receipt_claim_support_fingerprint_mismatch_reference_rate_increase": (
+            _optional_rate_float(
+                max_product_trace_receipt_claim_support_fingerprint_mismatch_reference_rate_increase
+            )
+        ),
+        "max_product_trace_receipt_claim_support_unsigned_reference_rate_increase": (
+            _optional_rate_float(
+                max_product_trace_receipt_claim_support_unsigned_reference_rate_increase
+            )
+        ),
         "max_product_trace_trajectory_audit_failed_trace_rate_increase": (
             _optional_rate_float(max_product_trace_trajectory_audit_failed_trace_rate_increase)
         ),
@@ -1569,6 +1688,13 @@ def _comparison_metrics(
     metrics.extend(_covered_fact_property_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_product_trace_action_gate_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_product_trace_action_receipt_metrics(baseline_summary, current_summary, gates=gates))
+    metrics.extend(
+        _product_trace_receipt_claim_support_metrics(
+            baseline_summary,
+            current_summary,
+            gates=gates,
+        )
+    )
     metrics.extend(_product_trace_trajectory_audit_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_world_model_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_context_sensitivity_metrics(baseline_summary, current_summary, gates=gates))
@@ -2351,6 +2477,52 @@ def _product_trace_action_receipt_gate_enabled(gates: Mapping[str, Any]) -> bool
         or any(
             gates.get(gate_key) is not None
             for _, _, gate_key in _PRODUCT_TRACE_ACTION_RECEIPT_RATE_METRIC_SPECS
+        )
+    )
+
+
+def _product_trace_receipt_claim_support_metrics(
+    baseline_summary: Mapping[str, Any],
+    current_summary: Mapping[str, Any],
+    *,
+    gates: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    if not _product_trace_receipt_claim_support_gate_enabled(gates):
+        return []
+    metrics = [
+        _min_current_metric(
+            "receipt_claim_support.reference_support_rate",
+            _nested_float(
+                baseline_summary,
+                ("receipt_claim_support", "reference_support_rate"),
+            ),
+            _nested_float(
+                current_summary,
+                ("receipt_claim_support", "reference_support_rate"),
+            ),
+            gates.get("min_product_trace_receipt_claim_support_reference_support_rate"),
+        )
+    ]
+    metrics.extend(
+        _delta_metric(
+            metric_name,
+            _nested_float(baseline_summary, metric_path),
+            _nested_float(current_summary, metric_path),
+            gates.get(gate_key),
+        )
+        for metric_name, metric_path, gate_key in (
+            _PRODUCT_TRACE_RECEIPT_CLAIM_SUPPORT_RATE_METRIC_SPECS
+        )
+    )
+    return metrics
+
+
+def _product_trace_receipt_claim_support_gate_enabled(gates: Mapping[str, Any]) -> bool:
+    return (
+        gates.get("min_product_trace_receipt_claim_support_reference_support_rate") is not None
+        or any(
+            gates.get(gate_key) is not None
+            for _, _, gate_key in _PRODUCT_TRACE_RECEIPT_CLAIM_SUPPORT_RATE_METRIC_SPECS
         )
     )
 
@@ -3182,6 +3354,7 @@ def _drift_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
         **_claim_risk_localization_metadata(report),
         **_product_trace_action_gate_metadata(report),
         **_product_trace_action_receipt_metadata(report),
+        **_product_trace_receipt_claim_support_metadata(report),
         **_product_trace_trajectory_audit_metadata(report),
     }
 
@@ -3417,6 +3590,25 @@ def _product_trace_action_receipt_metadata(report: Mapping[str, Any]) -> dict[st
         metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
         if metric is not None and metric.get("status") == "blocked":
             metadata["product_trace_action_receipts_blocked_metric_count"] += 1
+    return metadata
+
+
+def _product_trace_receipt_claim_support_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    metrics = _metrics_by_name(report.get("metrics"))
+    metadata: dict[str, Any] = {
+        "product_trace_receipt_claim_support_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _PRODUCT_TRACE_RECEIPT_CLAIM_SUPPORT_METADATA_FIELDS:
+        metric = metrics.get(metric_name)
+        metadata[f"{prefix}_baseline"] = _finite_float(
+            None if metric is None else metric.get("baseline")
+        )
+        metadata[f"{prefix}_current"] = _finite_float(
+            None if metric is None else metric.get("current")
+        )
+        metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is not None and metric.get("status") == "blocked":
+            metadata["product_trace_receipt_claim_support_blocked_metric_count"] += 1
     return metadata
 
 
@@ -3899,6 +4091,27 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_product_trace_action_receipts_unsigned_receipt_rate_increase=(
             args.max_product_trace_action_receipts_unsigned_receipt_rate_increase
         ),
+        min_product_trace_receipt_claim_support_reference_support_rate=(
+            args.min_product_trace_receipt_claim_support_reference_support_rate
+        ),
+        max_product_trace_receipt_claim_support_unsupported_reference_rate_increase=(
+            args.max_product_trace_receipt_claim_support_unsupported_reference_rate_increase
+        ),
+        max_product_trace_receipt_claim_support_missing_reference_rate_increase=(
+            args.max_product_trace_receipt_claim_support_missing_reference_rate_increase
+        ),
+        max_product_trace_receipt_claim_support_unreceipted_reference_rate_increase=(
+            args.max_product_trace_receipt_claim_support_unreceipted_reference_rate_increase
+        ),
+        max_product_trace_receipt_claim_support_failed_result_reference_rate_increase=(
+            args.max_product_trace_receipt_claim_support_failed_result_reference_rate_increase
+        ),
+        max_product_trace_receipt_claim_support_fingerprint_mismatch_reference_rate_increase=(
+            args.max_product_trace_receipt_claim_support_fingerprint_mismatch_reference_rate_increase
+        ),
+        max_product_trace_receipt_claim_support_unsigned_reference_rate_increase=(
+            args.max_product_trace_receipt_claim_support_unsigned_reference_rate_increase
+        ),
         max_product_trace_trajectory_audit_failed_trace_rate_increase=(
             args.max_product_trace_trajectory_audit_failed_trace_rate_increase
         ),
@@ -4310,6 +4523,41 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument(
         "--max-product-trace-action-receipts-unsigned-receipt-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-product-trace-receipt-claim-support-reference-support-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-receipt-claim-support-unsupported-reference-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-receipt-claim-support-missing-reference-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-receipt-claim-support-unreceipted-reference-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-receipt-claim-support-failed-result-reference-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-receipt-claim-support-fingerprint-mismatch-reference-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-receipt-claim-support-unsigned-reference-rate-increase",
         type=float,
         default=None,
     )

@@ -8598,7 +8598,10 @@ coverage, manifest verification, record count, pass rate, false-invariance
 rate, flip-success drift, trace-level triple/slot-audit coverage, and
 trace-count drift. When ProductTrace action results carry action receipts, the
 same comparison can gate receipt coverage plus missing, invalid,
-fingerprint-mismatch, and unsigned receipt rates.
+fingerprint-mismatch, and unsigned receipt rates. When claims or final answers
+explicitly reference action request ids or receipt fingerprints, it can also
+gate receipt-backed claim-support rates and the drift of unsupported,
+unreceipted, failed-result, fingerprint-mismatch, or unsigned references.
 `build_product_trace_corpus.py` materializes redaction-safe
 `summaries.triple_coverage` plus
 `metadata.trace_corpus.triple_coverage_summary` for accepted full ProductTrace
@@ -8741,6 +8744,10 @@ python benchmarks/compare_product_runtime_baselines.py \
   --max-product-trace-action-receipts-invalid-receipt-rate-increase 0.0 \
   --max-product-trace-action-receipts-fingerprint-mismatch-rate-increase 0.0 \
   --max-product-trace-action-receipts-unsigned-receipt-rate-increase 0.0 \
+  --min-product-trace-receipt-claim-support-reference-support-rate 1.0 \
+  --max-product-trace-receipt-claim-support-unsupported-reference-rate-increase 0.0 \
+  --max-product-trace-receipt-claim-support-unreceipted-reference-rate-increase 0.0 \
+  --max-product-trace-receipt-claim-support-fingerprint-mismatch-reference-rate-increase 0.0 \
   --compact-json
 ```
 
@@ -8813,6 +8820,10 @@ python benchmarks/compare_product_runtime_baselines.py \
   --max-product-trace-action-receipts-invalid-receipt-rate-increase 0.0 \
   --max-product-trace-action-receipts-fingerprint-mismatch-rate-increase 0.0 \
   --max-product-trace-action-receipts-unsigned-receipt-rate-increase 0.0 \
+  --min-product-trace-receipt-claim-support-reference-support-rate 1.0 \
+  --max-product-trace-receipt-claim-support-unsupported-reference-rate-increase 0.0 \
+  --max-product-trace-receipt-claim-support-unreceipted-reference-rate-increase 0.0 \
+  --max-product-trace-receipt-claim-support-fingerprint-mismatch-reference-rate-increase 0.0 \
   --min-current-trace-count 12 \
   --metadata evidence=smollm2_product_runtime_drift_refresh_v1_6 \
   --fail-on-drift

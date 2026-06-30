@@ -39142,6 +39142,7 @@ def _write_receipted_product_runtime_trace(
     *,
     request_id: str,
     receipt_mode: str,
+    include_claim_support_refs: bool = False,
 ) -> None:
     from eigentruth.control import (
         ActionExecutionStatus,
@@ -39149,11 +39150,14 @@ def _write_receipted_product_runtime_trace(
         ActionRequest,
         ActionResult,
         ControlAction,
+        FinalAnswer,
         ProductTrace,
+        RiskLevel,
         RuntimePhaseTiming,
         RuntimeTrace,
         attach_action_receipt,
     )
+    from eigentruth.verify import Claim
 
     action_request = ActionRequest(
         action=ControlAction.EXECUTE_TOOL,
@@ -39189,10 +39193,38 @@ def _write_receipted_product_runtime_trace(
     elif receipt_mode != "missing":
         raise ValueError(f"unknown receipt_mode {receipt_mode!r}")
 
+    claims = ()
+    final_answer = None
+    if include_claim_support_refs:
+        claims = (
+            Claim(
+                "Reserved one unit of A1.",
+                claim_id=f"{request_id}-claim",
+                metadata={"tool_request_id": action_request.request_id},
+            ),
+        )
+        final_answer = FinalAnswer(
+            status="answered",
+            text="Reserved one unit of A1.",
+            answerable=True,
+            action=ControlAction.ACCEPT,
+            risk_level=RiskLevel.LOW,
+            confidence=0.95,
+            reason="tool receipt",
+            evidence=(
+                {
+                    "text": "reservation result",
+                    "request_id": action_request.request_id,
+                },
+            ),
+        )
+
     trace = ProductTrace(
         request_id=request_id,
+        claims=claims,
         actions=(action_request,),
         action_results=(action_result,),
+        final_answer=final_answer,
         runtime_trace=RuntimeTrace(
             phases=(RuntimePhaseTiming("tool_execution", 0.01),),
             total_seconds=0.02,
@@ -39252,6 +39284,60 @@ def test_run_product_runtime_baseline_aggregates_action_receipts(tmp_path):
     assert payload["traces"][0]["metrics"]["action_receipts_passed"] is True
     assert payload["traces"][1]["metrics"]["action_receipts_fingerprint_mismatch_count"] == 1.0
     assert payload["traces"][2]["metrics"]["action_receipts_missing_receipt_count"] == 1.0
+
+
+def test_run_product_runtime_baseline_aggregates_receipt_claim_support(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    signed_trace = tmp_path / "signed.json"
+    mismatch_trace = tmp_path / "mismatch.json"
+    missing_trace = tmp_path / "missing.json"
+    _write_receipted_product_runtime_trace(
+        signed_trace,
+        request_id="signed",
+        receipt_mode="signed",
+        include_claim_support_refs=True,
+    )
+    _write_receipted_product_runtime_trace(
+        mismatch_trace,
+        request_id="mismatch",
+        receipt_mode="mismatch",
+        include_claim_support_refs=True,
+    )
+    _write_receipted_product_runtime_trace(
+        missing_trace,
+        request_id="missing",
+        receipt_mode="missing",
+        include_claim_support_refs=True,
+    )
+
+    payload = module.build_product_runtime_baseline(
+        module.ProductRuntimeBaselineConfig(
+            trace_paths=(signed_trace, mismatch_trace, missing_trace),
+            report_path=tmp_path / "baseline.json",
+        )
+    )
+
+    support = payload["summary"]["receipt_claim_support"]
+    assert support["available_trace_count"] == 3
+    assert support["passed_trace_count"] == 1
+    assert support["failed_trace_count"] == 2
+    assert support["reference_count"] == pytest.approx(6.0)
+    assert support["supported_reference_count"] == pytest.approx(2.0)
+    assert support["unsupported_reference_count"] == pytest.approx(4.0)
+    assert support["unreceipted_reference_count"] == pytest.approx(2.0)
+    assert support["fingerprint_mismatch_reference_count"] == pytest.approx(2.0)
+    assert support["reference_support_rate"] == pytest.approx(2 / 6)
+    assert support["unsupported_reference_rate"] == pytest.approx(4 / 6)
+    assert support["unreceipted_reference_rate"] == pytest.approx(2 / 6)
+    assert support["fingerprint_mismatch_reference_rate"] == pytest.approx(2 / 6)
+    assert support["source_counts"] == {"full_trace": 3}
+    assert payload["traces"][0]["metrics"]["receipt_claim_support_passed"] is True
+    assert payload["traces"][1]["metrics"][
+        "receipt_claim_support_fingerprint_mismatch_reference_count"
+    ] == 2.0
+    assert payload["traces"][2]["metrics"][
+        "receipt_claim_support_unreceipted_reference_count"
+    ] == 2.0
 
 
 def test_compare_product_runtime_baselines_gates_action_receipts(tmp_path):
@@ -39341,6 +39427,107 @@ def test_compare_product_runtime_baselines_gates_action_receipts(tmp_path):
         "product_trace_action_receipts_fingerprint_mismatch_rate_current"
     ] == pytest.approx(1 / 2)
     assert record.metadata["product_trace_action_receipts_blocked_metric_count"] == 3
+
+
+def test_compare_product_runtime_baselines_gates_receipt_claim_support(tmp_path):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    registry_module = importlib.import_module("eigentruth.registry")
+    baseline_trace_a = tmp_path / "baseline-a.json"
+    baseline_trace_b = tmp_path / "baseline-b.json"
+    current_trace_a = tmp_path / "current-a.json"
+    current_trace_b = tmp_path / "current-b.json"
+    current_trace_c = tmp_path / "current-c.json"
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    drift_report = tmp_path / "drift.json"
+    manifest_path = tmp_path / "manifest.json"
+    registry_path = tmp_path / "registry.json"
+    for path, request_id in (
+        (baseline_trace_a, "baseline-a"),
+        (baseline_trace_b, "baseline-b"),
+        (current_trace_a, "current-a"),
+    ):
+        _write_receipted_product_runtime_trace(
+            path,
+            request_id=request_id,
+            receipt_mode="signed",
+            include_claim_support_refs=True,
+        )
+    _write_receipted_product_runtime_trace(
+        current_trace_b,
+        request_id="current-b",
+        receipt_mode="mismatch",
+        include_claim_support_refs=True,
+    )
+    _write_receipted_product_runtime_trace(
+        current_trace_c,
+        request_id="current-c",
+        receipt_mode="missing",
+        include_claim_support_refs=True,
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace_a, baseline_trace_b),
+            report_path=baseline_report,
+        )
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(current_trace_a, current_trace_b, current_trace_c),
+            report_path=current_report,
+        )
+    )
+
+    payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        report_path=drift_report,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="runtime-drift-claim-support",
+        version="0.1",
+        min_product_trace_receipt_claim_support_reference_support_rate=0.90,
+        max_product_trace_receipt_claim_support_unsupported_reference_rate_increase=0.0,
+        max_product_trace_receipt_claim_support_unreceipted_reference_rate_increase=0.0,
+        max_product_trace_receipt_claim_support_fingerprint_mismatch_reference_rate_increase=0.0,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "product_runtime_drift_report:runtime-drift-claim-support:0.1"
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["blocked_metric_count"] == 4
+    assert _metric_by_name(payload, "receipt_claim_support.reference_support_rate")[
+        "status"
+    ] == "blocked"
+    assert _metric_by_name(payload, "receipt_claim_support.reference_support_rate")[
+        "current"
+    ] == pytest.approx(1 / 3)
+    assert _metric_by_name(payload, "receipt_claim_support.unsupported_reference_rate")[
+        "absolute_delta"
+    ] == pytest.approx(2 / 3)
+    assert _metric_by_name(payload, "receipt_claim_support.unreceipted_reference_rate")[
+        "status"
+    ] == "blocked"
+    assert _metric_by_name(
+        payload,
+        "receipt_claim_support.fingerprint_mismatch_reference_rate",
+    )["status"] == "blocked"
+    assert payload["config"][
+        "min_product_trace_receipt_claim_support_reference_support_rate"
+    ] == pytest.approx(0.90)
+    assert manifest["metadata"][
+        "product_trace_receipt_claim_support_blocked_metric_count"
+    ] == 4
+    assert manifest["metadata"][
+        "product_trace_receipt_claim_support_reference_support_rate_current"
+    ] == pytest.approx(1 / 3)
+    assert manifest["metadata"][
+        "product_trace_receipt_claim_support_unsupported_reference_rate_current"
+    ] == pytest.approx(2 / 3)
+    assert record.metadata["product_trace_receipt_claim_support_blocked_metric_count"] == 4
 
 
 def _promotion_evidence_handoff_metadata(

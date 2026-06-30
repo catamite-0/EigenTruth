@@ -1122,6 +1122,41 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
             "action_receipts_fingerprint_mismatch_count"
         ),
         "action_receipts_coverage": metrics.get("action_receipts_coverage"),
+        "receipt_claim_support_summary": dict(
+            _mapping(metrics.get("receipt_claim_support_summary"))
+        ),
+        "receipt_claim_support_available": bool(
+            metrics.get("receipt_claim_support_available")
+        ),
+        "receipt_claim_support_source": metrics.get("receipt_claim_support_source"),
+        "receipt_claim_support_passed": metrics.get("receipt_claim_support_passed"),
+        "receipt_claim_support_reference_count": metrics.get(
+            "receipt_claim_support_reference_count"
+        ),
+        "receipt_claim_support_referenced_claim_count": metrics.get(
+            "receipt_claim_support_referenced_claim_count"
+        ),
+        "receipt_claim_support_referenced_final_answer_evidence_count": metrics.get(
+            "receipt_claim_support_referenced_final_answer_evidence_count"
+        ),
+        "receipt_claim_support_unsupported_reference_count": metrics.get(
+            "receipt_claim_support_unsupported_reference_count"
+        ),
+        "receipt_claim_support_missing_reference_count": metrics.get(
+            "receipt_claim_support_missing_reference_count"
+        ),
+        "receipt_claim_support_unreceipted_reference_count": metrics.get(
+            "receipt_claim_support_unreceipted_reference_count"
+        ),
+        "receipt_claim_support_failed_result_reference_count": metrics.get(
+            "receipt_claim_support_failed_result_reference_count"
+        ),
+        "receipt_claim_support_fingerprint_mismatch_reference_count": metrics.get(
+            "receipt_claim_support_fingerprint_mismatch_reference_count"
+        ),
+        "receipt_claim_support_unsigned_reference_count": metrics.get(
+            "receipt_claim_support_unsigned_reference_count"
+        ),
         "action_audit_summary": dict(_mapping(metrics.get("action_audit_summary"))),
         "action_audit_available": bool(metrics.get("action_audit_available")),
         "action_audit_source": metrics.get("action_audit_source"),
@@ -1592,6 +1627,7 @@ def _aggregate_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "verification_plan": _aggregate_verification_plan(metrics),
         "action_execution": _aggregate_action_execution(metrics),
         "action_receipts": _aggregate_action_receipts(metrics),
+        "receipt_claim_support": _aggregate_receipt_claim_support(metrics),
         "action_audit": _aggregate_action_audit(metrics),
         "trajectory_audit": _aggregate_trajectory_audit(metrics),
         "claim_risk_localization": _aggregate_claim_risk_localization(metrics),
@@ -1707,6 +1743,26 @@ def _optimization_report(
                 summary,
                 "action_receipts",
                 "fingerprint_mismatch_rate",
+            ),
+            "receipt_claim_support_reference_support_rate": _nested(
+                summary,
+                "receipt_claim_support",
+                "reference_support_rate",
+            ),
+            "receipt_claim_support_unsupported_reference_rate": _nested(
+                summary,
+                "receipt_claim_support",
+                "unsupported_reference_rate",
+            ),
+            "receipt_claim_support_unreceipted_reference_rate": _nested(
+                summary,
+                "receipt_claim_support",
+                "unreceipted_reference_rate",
+            ),
+            "receipt_claim_support_fingerprint_mismatch_reference_rate": _nested(
+                summary,
+                "receipt_claim_support",
+                "fingerprint_mismatch_reference_rate",
             ),
             "trajectory_audit_error_rate": _nested(summary, "trajectory_audit", "error_rate"),
             "trajectory_audit_failed_trace_rate": _nested(
@@ -2446,6 +2502,102 @@ def _aggregate_action_receipts(metrics: Sequence[Mapping[str, Any]]) -> dict[str
         ),
         "per_trace_coverage": _numeric_summary(
             item.get("action_receipts_coverage") for item in metrics
+        ),
+        "summary_observations": sum(1 for summary in summaries if summary),
+    }
+
+
+def _aggregate_receipt_claim_support(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    summaries = [_mapping(item.get("receipt_claim_support_summary")) for item in metrics]
+    n_traces = len(metrics)
+    available_count = sum(
+        1 for item in metrics if item.get("receipt_claim_support_available") is True
+    )
+    passed_count = sum(1 for item in metrics if item.get("receipt_claim_support_passed") is True)
+    failed_count = sum(1 for item in metrics if item.get("receipt_claim_support_passed") is False)
+    reference_count = _sum_float(metrics, "receipt_claim_support_reference_count") or 0.0
+    referenced_claim_count = (
+        _sum_float(metrics, "receipt_claim_support_referenced_claim_count") or 0.0
+    )
+    referenced_final_answer_evidence_count = (
+        _sum_float(metrics, "receipt_claim_support_referenced_final_answer_evidence_count")
+        or 0.0
+    )
+    unsupported_reference_count = (
+        _sum_float(metrics, "receipt_claim_support_unsupported_reference_count") or 0.0
+    )
+    missing_reference_count = (
+        _sum_float(metrics, "receipt_claim_support_missing_reference_count") or 0.0
+    )
+    unreceipted_reference_count = (
+        _sum_float(metrics, "receipt_claim_support_unreceipted_reference_count") or 0.0
+    )
+    failed_result_reference_count = (
+        _sum_float(metrics, "receipt_claim_support_failed_result_reference_count") or 0.0
+    )
+    fingerprint_mismatch_reference_count = (
+        _sum_float(metrics, "receipt_claim_support_fingerprint_mismatch_reference_count")
+        or 0.0
+    )
+    unsigned_reference_count = (
+        _sum_float(metrics, "receipt_claim_support_unsigned_reference_count") or 0.0
+    )
+    counts_by_code: dict[str, int] = {}
+    counts_by_severity: dict[str, int] = {}
+    for summary in summaries:
+        _merge_counts(counts_by_code, _mapping(summary.get("counts_by_code")))
+        _merge_counts(counts_by_severity, _mapping(summary.get("counts_by_severity")))
+    supported_reference_count = max(reference_count - unsupported_reference_count, 0.0)
+    return {
+        "source_trace_count": n_traces,
+        "available_trace_count": available_count,
+        "missing_trace_count": n_traces - available_count,
+        "trace_coverage_rate": _safe_div(available_count, n_traces),
+        "passed_trace_count": passed_count,
+        "failed_trace_count": failed_count,
+        "passed_trace_rate": _safe_div(passed_count, available_count),
+        "failed_trace_rate": _safe_div(failed_count, available_count),
+        "source_counts": _counts(item.get("receipt_claim_support_source") for item in metrics),
+        "reference_count": reference_count,
+        "supported_reference_count": supported_reference_count,
+        "unsupported_reference_count": unsupported_reference_count,
+        "missing_reference_count": missing_reference_count,
+        "unreceipted_reference_count": unreceipted_reference_count,
+        "failed_result_reference_count": failed_result_reference_count,
+        "fingerprint_mismatch_reference_count": fingerprint_mismatch_reference_count,
+        "unsigned_reference_count": unsigned_reference_count,
+        "referenced_claim_count": referenced_claim_count,
+        "referenced_final_answer_evidence_count": referenced_final_answer_evidence_count,
+        "reference_support_rate": _safe_div(supported_reference_count, reference_count),
+        "unsupported_reference_rate": _safe_div(unsupported_reference_count, reference_count),
+        "missing_reference_rate": _safe_div(missing_reference_count, reference_count),
+        "unreceipted_reference_rate": _safe_div(unreceipted_reference_count, reference_count),
+        "failed_result_reference_rate": _safe_div(
+            failed_result_reference_count,
+            reference_count,
+        ),
+        "fingerprint_mismatch_reference_rate": _safe_div(
+            fingerprint_mismatch_reference_count,
+            reference_count,
+        ),
+        "unsigned_reference_rate": _safe_div(unsigned_reference_count, reference_count),
+        "counts_by_code": counts_by_code,
+        "counts_by_severity": counts_by_severity,
+        "per_trace_reference_count": _numeric_summary(
+            item.get("receipt_claim_support_reference_count") for item in metrics
+        ),
+        "per_trace_unsupported_reference_count": _numeric_summary(
+            item.get("receipt_claim_support_unsupported_reference_count") for item in metrics
+        ),
+        "per_trace_missing_reference_count": _numeric_summary(
+            item.get("receipt_claim_support_missing_reference_count") for item in metrics
+        ),
+        "per_trace_unreceipted_reference_count": _numeric_summary(
+            item.get("receipt_claim_support_unreceipted_reference_count") for item in metrics
+        ),
+        "per_trace_fingerprint_mismatch_reference_count": _numeric_summary(
+            item.get("receipt_claim_support_fingerprint_mismatch_reference_count")
+            for item in metrics
         ),
         "summary_observations": sum(1 for summary in summaries if summary),
     }
