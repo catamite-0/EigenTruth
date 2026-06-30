@@ -173,6 +173,51 @@ def test_frontier_artifact_reference_audit_handoff_command_uses_current_frontier
     )
 
 
+def test_frontier_artifact_reference_audit_v6_rebuild_action_has_commands(tmp_path):
+    doc_path = tmp_path / "README.md"
+    doc_path.write_text(
+        "\n".join((
+            "`artifacts/frontier-audit-release-candidate-v6/frontier-audit-registry-workflow.json`",
+            "`artifacts/frontier-audit-release-candidate-v6/frontier-audit-comparison.json`",
+        ))
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = build_frontier_artifact_reference_audit(
+        doc_paths=(doc_path,),
+        root=tmp_path,
+        include_regex="frontier-audit-release-candidate-v6",
+    )
+    rebuild_action = next(
+        action
+        for action in payload["recommended_actions"]
+        if action["action_id"] == "rebuild_frontier_audit_release_candidate_v6"
+    )
+    bundle_command, release_command = rebuild_action["suggested_commands"]
+
+    assert bundle_command.startswith("python benchmarks/build_mechanism_handoff_evidence_bundle.py")
+    assert "truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle" in bundle_command
+    assert release_command.startswith("python benchmarks/run_release_candidate_registry_workflow.py")
+    assert (
+        "--route-registry artifacts/frontier-release-evidence/frontier-route-registry.json"
+    ) in release_command
+    assert (
+        "--frontier-release-evidence "
+        "artifacts/frontier-release-evidence/frontier-release-evidence-refreshed.json"
+    ) in release_command
+    assert (
+        "--structured-fact-canonical-route-key "
+        "benchmark_manifest:wikidata-country-core-facts-structured-fact-canonical-route:0.1"
+    ) in release_command
+    assert rebuild_action["metadata"]["route_registry"] == (
+        "artifacts/frontier-release-evidence/frontier-route-registry.json"
+    )
+    assert rebuild_action["metadata"]["frontier_release_evidence"] == (
+        "artifacts/frontier-release-evidence/frontier-release-evidence-refreshed.json"
+    )
+
+
 def test_frontier_artifact_reference_audit_passes_when_filtered_refs_exist(tmp_path):
     artifact_dir = tmp_path / "artifacts" / "frontier-audit-release-candidate-v6"
     artifact_dir.mkdir(parents=True)

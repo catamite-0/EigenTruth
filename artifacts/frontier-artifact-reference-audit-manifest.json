@@ -37,8 +37,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "frontier-artifact-reference-audit.json",
-      "sha256": "1c380174a442dd262e79eb95ed21ba4c7047c416208dc936cfaf6453b4db79ed",
-      "size_bytes": 20144
+      "sha256": "92526938b13d6f85d68496fee545cabf8a8cb0166cb2126c4f3126e24cb67959",
+      "size_bytes": 24264
     },
     "reference.001": {
       "exists": true,

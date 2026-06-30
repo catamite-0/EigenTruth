@@ -73,6 +73,13 @@ COVERED_FACT_PROPERTY_METRICS_PATH = (
 FRONTIER_RELEASE_EVIDENCE_PATH = (
     "artifacts/frontier-release-evidence/frontier-release-evidence-refreshed.json"
 )
+FRONTIER_ROUTE_REGISTRY_PATH = "artifacts/frontier-release-evidence/frontier-route-registry.json"
+FRONTIER_MECHANISM_HANDOFF_BUNDLE_PREFIX = (
+    "artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle"
+)
+FRONTIER_MECHANISM_HANDOFF_BUNDLE_PATH = (
+    f"{FRONTIER_MECHANISM_HANDOFF_BUNDLE_PREFIX}/mechanism-handoff-evidence-bundle.json"
+)
 FRONTIER_AUDIT_HANDOFF_REQUIRED_GROUPS = (
     "promotion",
     "pre_generation",
@@ -104,6 +111,92 @@ RESTORE_CACHED_JSON_ARTIFACTS_COMMAND = (
     "--version 0.1 "
     "--no-fail"
 )
+BUILD_FRONTIER_MECHANISM_HANDOFF_BUNDLE_COMMAND = " ".join((
+    "python",
+    "benchmarks/build_mechanism_handoff_evidence_bundle.py",
+    "--handoff",
+    "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff/world-model-rule-candidate-handoff.json",
+    "--handoff",
+    "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff/world-model-rule-candidate-handoff.json",
+    "--handoff",
+    "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff/world-model-rule-candidate-handoff.json",
+    "--output-dir",
+    FRONTIER_MECHANISM_HANDOFF_BUNDLE_PREFIX,
+    "--registry",
+    f"{FRONTIER_MECHANISM_HANDOFF_BUNDLE_PREFIX}/registry.json",
+    "--name",
+    "truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle",
+    "--version",
+    "0.1",
+    "--expected-target-count",
+    "9",
+    "--min-trace-count",
+    "9",
+    "--min-supported-count",
+    "7",
+    "--min-refuted-count",
+    "2",
+))
+REBUILD_FRONTIER_AUDIT_RELEASE_CANDIDATE_V6_COMMAND = " ".join((
+    "python",
+    "benchmarks/run_release_candidate_registry_workflow.py",
+    "--readiness-registry",
+    "artifacts/local-readiness-registry.json",
+    "--route-registry",
+    FRONTIER_ROUTE_REGISTRY_PATH,
+    "--performance-registry",
+    "artifacts/local-readiness-registry.json",
+    "--release-registry",
+    "artifacts/local-release-registry.json",
+    "--name",
+    "smollm2-l8-frontier-audit-release-candidate",
+    "--version",
+    "0.6",
+    "--release-policy-profile",
+    "frontier_audit",
+    "--readiness-baseline-key",
+    "benchmark_manifest:smollm2-l8-read-cache-worker-sweep-score-fusion-readiness:0.2",
+    "--route-baseline-key",
+    "benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4",
+    "--required-route-baseline-key",
+    "benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.6",
+    "--structured-fact-canonical-route-key",
+    "benchmark_manifest:wikidata-country-core-facts-structured-fact-canonical-route:0.1",
+    "--structured-fact-paraphrase-route-key",
+    "benchmark_manifest:wikidata-country-core-facts-structured-fact-paraphrase-route:0.1",
+    "--performance-baseline-key",
+    "performance_baseline:smollm2-l8-read-cache-worker-sweep-score-fusion-performance-baseline:0.2",
+    "--product-trace-replay-workflow",
+    "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/product-trace-replay-workflow.json",
+    "--selector-replay-report",
+    "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/selector-replay/runtime-profile-selector-replay.json",
+    "--product-runtime-drift-report",
+    "artifacts/smollm2_product_runtime_drift_v1_8/product-runtime-drift.json",
+    "--adapter-family-matrix",
+    "artifacts/frontier-audit-strict-adapter-family-matrix-v0/adapter-family-matrix.json",
+    "--triple-extraction-fixture-matrix",
+    "artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/triple-extraction-fixture-matrix.json",
+    "--external-evidence-baseline-comparison",
+    "artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-covered-facts-handoff/external-evidence-baseline-comparison.json",
+    "--mechanism-handoff-evidence-bundle",
+    FRONTIER_MECHANISM_HANDOFF_BUNDLE_PATH,
+    "--frontier-release-evidence",
+    FRONTIER_RELEASE_EVIDENCE_PATH,
+    "--json",
+    "artifacts/frontier-audit-release-candidate-v6/frontier-audit-registry-workflow.json",
+    "--release-report-json",
+    "artifacts/frontier-audit-release-candidate-v6/frontier-audit-comparison.json",
+    "--artifact-manifest",
+    "artifacts/frontier-audit-release-candidate-v6/artifact-manifest.json",
+    "--verification-report",
+    "artifacts/frontier-audit-release-candidate-v6/manifest-verification.json",
+    "--fingerprint-cache",
+    "artifacts/frontier-audit-release-candidate-v6/fingerprints.json",
+    "--artifact-json-cache",
+    "artifacts/frontier-audit-release-candidate-v6/artifact-json-cache.json",
+    "--manifest-fingerprint-workers",
+    "2",
+))
 EXPORT_PRODUCT_V19_COMMAND = (
     "python benchmarks/export_product_promotion_contract.py "
     "--source artifacts/frontier-audit-release-candidate-v6/frontier-audit-registry-workflow.json "
@@ -647,13 +740,20 @@ def _recommended_actions(references: Sequence[Mapping[str, Any]]) -> tuple[dict[
                 "but one or more source reports/manifests are missing locally."
             ),
             "affected_paths": frontier_missing,
-            "suggested_commands": (),
+            "suggested_commands": (
+                BUILD_FRONTIER_MECHANISM_HANDOFF_BUNDLE_COMMAND,
+                REBUILD_FRONTIER_AUDIT_RELEASE_CANDIDATE_V6_COMMAND,
+            ),
             "metadata": {
                 "required_output": (
                     "artifacts/frontier-audit-release-candidate-v6/"
                     "frontier-audit-registry-workflow.json"
                 ),
                 "release_policy_profile": "frontier_audit",
+                "route_registry": FRONTIER_ROUTE_REGISTRY_PATH,
+                "frontier_release_evidence": FRONTIER_RELEASE_EVIDENCE_PATH,
+                "mechanism_handoff_evidence_bundle": FRONTIER_MECHANISM_HANDOFF_BUNDLE_PATH,
+                "prerequisite_action_ids": ("refresh_frontier_mechanism_handoff_bundle",),
                 "notes": (
                     "Rerun the release-candidate registry workflow that produced the "
                     "frontier-audit v6 candidate before exporting v1.9 product handoff artifacts."
