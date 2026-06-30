@@ -62,6 +62,8 @@ RELEASE_POLICY_PROFILES: Mapping[str, Mapping[str, Any]] = {
         "require_product_runtime_drift_triple_audit_evidence": True,
         "require_product_runtime_drift_covered_fact_property_evidence": True,
         "require_product_runtime_drift_action_gate_evidence": True,
+        "require_product_runtime_drift_action_receipts_evidence": True,
+        "require_product_runtime_drift_receipt_claim_support_evidence": True,
         "require_product_runtime_drift_trajectory_audit_evidence": True,
         "require_product_runtime_drift_evidence_handoff_evidence": True,
         "require_product_runtime_drift_world_model_evidence": True,

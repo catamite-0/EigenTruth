@@ -1277,6 +1277,10 @@ Added the first monitor-first tool-selection audit layer:
   trace-gap evidence. This keeps world-model correction observable at the
   release boundary without claiming that current deterministic rules solve
   open-domain hallucination by themselves.
+- `frontier_audit` also now requires action-receipt and receipt-claim-support
+  runtime drift evidence. Strict frontier releases must keep receipt coverage,
+  invalid/fingerprint/unsigned receipt rates, and explicit claim-to-receipt
+  reference support visible at the release boundary.
 
 ## Next Research-to-Code Candidates
 

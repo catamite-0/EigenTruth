@@ -341,7 +341,8 @@ complete new export carries `65/65` promoted evidence fields when
 The `frontier_audit` release policy also now requires product-runtime drift
 reports to carry trace-level context-sensitivity participation, coverage,
 flagged-rate, trace-gap, max-flagged-rate, and max-ratio evidence beside the
-world-model and counterfactual-robustness drift evidence.
+world-model, counterfactual-robustness, action-receipt, and
+receipt-claim-support drift evidence.
 The current registered product runtime profile sweep
 `report:smollm2-product-runtime-profile-sweep:0.1` verifies that `latency`,
 `balanced`, `audit`, and request-level `auto` selection all pass the strict product
@@ -765,6 +766,12 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `audit_frontier_artifact_references.py` | Scans the active frontier/product handoff references in docs, checks whether the referenced local artifacts exist, verifies referenced artifact manifests when present, and can write a registry-backed JSON report with recommended regeneration actions so docs do not drift from reproducible release inputs. |
 | `run_release_gate_overhead_baseline.py` | Aggregates one or more release-candidate registry workflow JSON reports into a release-gate overhead baseline with total/phase timing summaries, artifact fingerprint/JSON cache hit-rate summaries, hotspot recommendations, optional timing/fingerprint-cache/JSON-cache gates, and optional `report:*:*` registry recording. |
 
+`frontier_audit` now also defaults
+`--require-product-runtime-drift-action-receipts-evidence` and
+`--require-product-runtime-drift-receipt-claim-support-evidence`, so strict
+frontier releases must preserve receipt coverage and explicit claim-to-receipt
+support evidence through the product-runtime drift handoff.
+
 Release-candidate gates can now also require an uncertainty escalation workflow
 report via `--uncertainty-escalation-workflow` or
 `--uncertainty-escalation-workflow-key`, with optional minimum trigger/retrieval
@@ -1021,6 +1028,12 @@ evidence rates and maximum final false-accept / false-accept-delta thresholds.
 | `run_manifest_fingerprint_worker_sweep.py` | 对一个或多个已保存 manifest 用多个有界 fingerprint worker 数重复执行 artifact-manifest verification，记录每档 timing/cache summary，为本地 release check 推荐最快通过的 worker 数，并可登记为 `report:*:*` artifact。 |
 | `audit_frontier_artifact_references.py` | 扫描文档中的当前 frontier/product handoff artifact 引用，检查本地文件是否存在，并在 manifest 存在时执行校验，可输出带 recommended regeneration actions 的 registry-backed JSON report，避免实验记录和可复现 release 输入漂移。 |
 | `run_release_gate_overhead_baseline.py` | 将一个或多个 release-candidate registry workflow JSON 汇总成 release-gate overhead baseline，输出总耗时/phase timing、artifact fingerprint/JSON cache 命中率、热点建议、可选 timing/fingerprint-cache/JSON-cache gate，并可登记 `report:*:*` registry record。 |
+
+`frontier_audit` 现在也默认启用
+`--require-product-runtime-drift-action-receipts-evidence` 和
+`--require-product-runtime-drift-receipt-claim-support-evidence`，因此严格
+frontier release 必须把 action receipt 覆盖率与显式 claim-to-receipt 支撑证据
+保留到 product-runtime drift handoff。
 
 Release candidate 现在也可以通过 `--uncertainty-escalation-workflow` 或
 `--uncertainty-escalation-workflow-key` 要求 uncertainty escalation workflow
