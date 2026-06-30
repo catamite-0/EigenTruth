@@ -5657,7 +5657,9 @@ when refreshed drift reports are supplied. The main contract manifest
 verifies with `checked=2`; the evidence-handoff manifest verifies with
 `checked=9`.
 Before treating the v6/v1.9 handoff as locally reproducible, scan the active
-doc references against the checkout:
+doc references against the checkout. A blocked report includes
+`recommended_actions` for the v6 release-candidate rerun, v1.9 contract export,
+evidence-handoff export, manifest verification, and final re-audit:
 
 ```bash
 python benchmarks/audit_frontier_artifact_references.py \
@@ -8398,7 +8400,8 @@ for large release manifests.
 Use `audit_frontier_artifact_references.py` one level higher when the question is
 whether the docs' active frontier/product handoff references are actually
 materialized in the local checkout; it reports missing artifacts and verifies any
-referenced artifact manifests that exist.
+referenced artifact manifests that exist, then emits ordered
+`recommended_actions` for regenerating and verifying missing handoff artifacts.
 
 Once verification passes, `promote_artifact_manifest.py` can register the
 manifest and verification report in a local `ArtifactRegistry` JSON file:

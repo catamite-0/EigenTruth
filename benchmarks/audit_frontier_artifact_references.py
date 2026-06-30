@@ -34,6 +34,92 @@ DEFAULT_INCLUDE_REGEX = (
     "smollm2_product_promotion_contract_v1_9"
 )
 ARTIFACT_REFERENCE_RE = re.compile(r"artifacts/[^\s`'\"|)>\\]+")
+FRONTIER_V6_PREFIX = "artifacts/frontier-audit-release-candidate-v6/"
+PRODUCT_V19_PREFIX = "artifacts/smollm2_product_promotion_contract_v1_9/"
+PRODUCT_V19_CONTRACT_PATH = f"{PRODUCT_V19_PREFIX}product-promotion-contract.json"
+PRODUCT_V19_ARTIFACT_MANIFEST_PATH = f"{PRODUCT_V19_PREFIX}artifact-manifest.json"
+PRODUCT_V19_HANDOFF_PATH = f"{PRODUCT_V19_PREFIX}product-promotion-contract-evidence-handoff.json"
+PRODUCT_V19_HANDOFF_AUDIT_PATH = f"{PRODUCT_V19_PREFIX}product-promotion-contract-evidence-handoff-audit.json"
+PRODUCT_V19_HANDOFF_MANIFEST_PATH = f"{PRODUCT_V19_PREFIX}evidence-handoff-artifact-manifest.json"
+PRE_GENERATION_COMPARISON_PATH = (
+    "artifacts/runtime_evidence/"
+    "pre-generation-qwen-smollm2-l12-comparison/comparison.json"
+)
+TRIPLE_EXTRACTION_FIXTURE_MATRIX_PATH = (
+    "artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/"
+    "triple-extraction-fixture-matrix.json"
+)
+COUNTERFACTUAL_VERIFICATION_PATH = (
+    "artifacts/smollm2_product_counterfactual_structured_qa_audit_v0/"
+    "counterfactual-verification-report.json"
+)
+PRODUCT_TRACE_REPLAY_WORKFLOW_PATH = (
+    "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/"
+    "product-trace-replay-workflow.json"
+)
+TRIPLE_AUDIT_ENRICHMENT_PATH = (
+    "artifacts/smollm2_product_trace_triple_audit_enrichment_v1/"
+    "product-trace-triple-audit-enrichment.json"
+)
+COVERED_FACT_PROPERTY_METRICS_PATH = (
+    "artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-route/"
+    "structured-qa-route-summary.json"
+)
+FRONTIER_ARTIFACT_REFERENCE_AUDIT_COMMAND = (
+    "python benchmarks/audit_frontier_artifact_references.py "
+    "--json artifacts/frontier-artifact-reference-audit.json "
+    "--artifact-manifest artifacts/frontier-artifact-reference-audit-manifest.json "
+    "--registry artifacts/local-release-registry.json "
+    "--name frontier-artifact-reference-audit "
+    "--version 0.1 "
+    "--no-fail"
+)
+EXPORT_PRODUCT_V19_COMMAND = (
+    "python benchmarks/export_product_promotion_contract.py "
+    "--source artifacts/frontier-audit-release-candidate-v6/frontier-audit-registry-workflow.json "
+    "--output artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json "
+    "--artifact-manifest artifacts/smollm2_product_promotion_contract_v1_9/artifact-manifest.json "
+    "--registry artifacts/local-release-registry.json "
+    "--name smollm2-product-promotion-contract "
+    "--version 1.9 "
+    "--metadata release=smollm2-v1.9 "
+    "--metadata source_record=benchmark_manifest:smollm2-l8-frontier-audit-release-candidate:0.6 "
+    "--compact-json"
+)
+EXPORT_PRODUCT_V19_HANDOFF_COMMAND = " ".join((
+    "python",
+    "benchmarks/export_product_promotion_contract_evidence_handoff.py",
+    "--contract",
+    PRODUCT_V19_CONTRACT_PATH,
+    "--json",
+    PRODUCT_V19_HANDOFF_PATH,
+    "--audit-json",
+    PRODUCT_V19_HANDOFF_AUDIT_PATH,
+    "--pre-generation-probe-comparison",
+    PRE_GENERATION_COMPARISON_PATH,
+    "--triple-extraction-fixture-matrix",
+    TRIPLE_EXTRACTION_FIXTURE_MATRIX_PATH,
+    "--counterfactual-verification",
+    COUNTERFACTUAL_VERIFICATION_PATH,
+    "--product-trace-replay-workflow",
+    PRODUCT_TRACE_REPLAY_WORKFLOW_PATH,
+    "--triple-audit-enrichment",
+    TRIPLE_AUDIT_ENRICHMENT_PATH,
+    "--covered-fact-property-metrics",
+    COVERED_FACT_PROPERTY_METRICS_PATH,
+    "--artifact-manifest",
+    PRODUCT_V19_HANDOFF_MANIFEST_PATH,
+    "--registry",
+    "artifacts/local-release-registry.json",
+    "--name",
+    "smollm2-product-promotion-contract-v1-9-evidence-handoff",
+    "--version",
+    "0.3",
+    "--metadata",
+    "release=smollm2-v1.9",
+    "--metadata",
+    "triple_audit_enrichment=triple_audit_v1",
+))
 
 
 def build_frontier_artifact_reference_audit(
@@ -74,7 +160,10 @@ def build_frontier_artifact_reference_audit(
     blocking_reasons = _blocking_reasons(references)
     if not references:
         blocking_reasons.append("no artifact references matched the configured include/exclude filters")
+    recommended_actions = _recommended_actions(references)
     summary = _summary(references, document_count=len(documents))
+    summary["recommended_action_count"] = len(recommended_actions)
+    summary["recommended_action_ids"] = tuple(action["action_id"] for action in recommended_actions)
     status = "passed" if not blocking_reasons else "blocked"
     payload: dict[str, Any] = {
         "schema_version": 1,
@@ -92,6 +181,7 @@ def build_frontier_artifact_reference_audit(
         },
         "references": references,
         "blocking_reasons": tuple(blocking_reasons),
+        "recommended_actions": recommended_actions,
         "metadata": dict(metadata or {}),
     }
 
@@ -285,6 +375,151 @@ def _blocking_reasons(references: Sequence[Mapping[str, Any]]) -> list[str]:
         elif status == "manifest_error":
             reasons.append(f"artifact manifest verification errored: {path}")
     return reasons
+
+
+def _recommended_actions(references: Sequence[Mapping[str, Any]]) -> tuple[dict[str, Any], ...]:
+    missing_paths = tuple(
+        sorted(str(reference["path"]) for reference in references if reference["status"] == "missing")
+    )
+    if not missing_paths:
+        return ()
+    actions: list[dict[str, Any]] = []
+    frontier_missing = tuple(path for path in missing_paths if path.startswith(FRONTIER_V6_PREFIX))
+    if frontier_missing:
+        actions.append({
+            "action_id": "rebuild_frontier_audit_release_candidate_v6",
+            "title": "Regenerate frontier audit release-candidate v6 artifacts",
+            "action_type": "rerun_release_candidate_workflow",
+            "priority": 100,
+            "rationale": (
+                "The active docs reference the v6 frontier-audit release candidate, "
+                "but one or more source reports/manifests are missing locally."
+            ),
+            "affected_paths": frontier_missing,
+            "suggested_commands": (),
+            "metadata": {
+                "required_output": (
+                    "artifacts/frontier-audit-release-candidate-v6/"
+                    "frontier-audit-registry-workflow.json"
+                ),
+                "release_policy_profile": "frontier_audit",
+                "notes": (
+                    "Rerun the release-candidate registry workflow that produced the "
+                    "frontier-audit v6 candidate before exporting v1.9 product handoff artifacts."
+                ),
+            },
+        })
+
+    product_contract_missing = tuple(
+        path
+        for path in missing_paths
+        if path
+        in {
+            PRODUCT_V19_PREFIX.rstrip("/"),
+            PRODUCT_V19_PREFIX,
+            PRODUCT_V19_CONTRACT_PATH,
+            PRODUCT_V19_ARTIFACT_MANIFEST_PATH,
+        }
+    )
+    if product_contract_missing:
+        actions.append({
+            "action_id": "export_product_promotion_contract_v1_9",
+            "title": "Export product promotion contract v1.9 from frontier v6",
+            "action_type": "export_product_promotion_contract",
+            "priority": 80,
+            "rationale": (
+                "The demo prefers the v1.9 handoff when present, but the local "
+                "product contract or its manifest is missing."
+            ),
+            "affected_paths": product_contract_missing,
+            "suggested_commands": (EXPORT_PRODUCT_V19_COMMAND,),
+            "metadata": {
+                "depends_on_action_ids": (
+                    ("rebuild_frontier_audit_release_candidate_v6",) if frontier_missing else ()
+                ),
+                "source": (
+                    "artifacts/frontier-audit-release-candidate-v6/"
+                    "frontier-audit-registry-workflow.json"
+                ),
+            },
+        })
+
+    handoff_missing = tuple(
+        path
+        for path in missing_paths
+        if path
+        in {
+            PRODUCT_V19_HANDOFF_PATH,
+            PRODUCT_V19_HANDOFF_AUDIT_PATH,
+            PRODUCT_V19_HANDOFF_MANIFEST_PATH,
+        }
+    )
+    if handoff_missing:
+        actions.append({
+            "action_id": "export_product_promotion_contract_v1_9_evidence_handoff",
+            "title": "Export enriched v1.9 product evidence handoff",
+            "action_type": "export_product_promotion_contract_evidence_handoff",
+            "priority": 70,
+            "rationale": (
+                "The active docs reference enriched v1.9 evidence-handoff reports, "
+                "but the handoff JSON, audit, or handoff manifest is missing locally."
+            ),
+            "affected_paths": handoff_missing,
+            "suggested_commands": (EXPORT_PRODUCT_V19_HANDOFF_COMMAND,),
+            "metadata": {
+                "depends_on_action_ids": ("export_product_promotion_contract_v1_9",),
+                "contract": PRODUCT_V19_CONTRACT_PATH,
+            },
+        })
+
+    verification_missing = tuple(
+        path
+        for path in missing_paths
+        if path.endswith("manifest-verification.json") or path.endswith("evidence-handoff-manifest-verification.json")
+    )
+    if verification_missing:
+        actions.append({
+            "action_id": "verify_frontier_artifact_manifests",
+            "title": "Verify regenerated frontier artifact manifests",
+            "action_type": "verify_artifact_manifests",
+            "priority": 50,
+            "rationale": (
+                "The active docs reference saved manifest-verification reports that "
+                "should be refreshed after the source manifests are regenerated."
+            ),
+            "affected_paths": verification_missing,
+            "suggested_commands": (
+                "python benchmarks/verify_artifact_manifest.py "
+                "--manifest artifacts/frontier-audit-release-candidate-v6/artifact-manifest.json "
+                "--recursive "
+                "--json artifacts/frontier-audit-release-candidate-v6/manifest-verification.json",
+                "python benchmarks/verify_artifact_manifest.py "
+                "--manifest artifacts/smollm2_product_promotion_contract_v1_9/artifact-manifest.json "
+                "--json artifacts/smollm2_product_promotion_contract_v1_9/manifest-verification.json",
+                "python benchmarks/verify_artifact_manifest.py "
+                "--manifest artifacts/smollm2_product_promotion_contract_v1_9/evidence-handoff-artifact-manifest.json "
+                "--json artifacts/smollm2_product_promotion_contract_v1_9/evidence-handoff-manifest-verification.json",
+            ),
+            "metadata": {
+                "depends_on_action_ids": (
+                    "rebuild_frontier_audit_release_candidate_v6",
+                    "export_product_promotion_contract_v1_9",
+                    "export_product_promotion_contract_v1_9_evidence_handoff",
+                ),
+            },
+        })
+
+    actions.append({
+        "action_id": "rerun_frontier_artifact_reference_audit",
+        "title": "Rerun the frontier artifact reference audit",
+        "action_type": "audit_frontier_artifact_references",
+        "priority": 10,
+        "rationale": "Recheck doc references after regenerating missing frontier artifacts.",
+        "affected_paths": missing_paths,
+        "suggested_commands": (FRONTIER_ARTIFACT_REFERENCE_AUDIT_COMMAND,),
+        "metadata": {},
+    })
+    return tuple(sorted(actions, key=lambda action: (-int(action["priority"]), str(action["action_id"]))))
 
 
 def _write_artifact_manifest(

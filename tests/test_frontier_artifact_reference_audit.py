@@ -63,6 +63,14 @@ def test_frontier_artifact_reference_audit_reports_missing_refs_and_verified_man
     assert payload["summary"]["reference_count"] == 3
     assert payload["summary"]["missing_count"] == 1
     assert payload["summary"]["manifest_verified_count"] == 1
+    assert payload["summary"]["recommended_action_ids"] == (
+        "export_product_promotion_contract_v1_9",
+        "rerun_frontier_artifact_reference_audit",
+    )
+    assert payload["recommended_actions"][0]["action_id"] == "export_product_promotion_contract_v1_9"
+    assert payload["recommended_actions"][0]["suggested_commands"][0].startswith(
+        "python benchmarks/export_product_promotion_contract.py"
+    )
     assert references[
         "artifacts/frontier-audit-release-candidate-v6/artifact-manifest.json"
     ]["manifest_verification"]["passed"] is True
@@ -98,3 +106,4 @@ def test_frontier_artifact_reference_audit_passes_when_filtered_refs_exist(tmp_p
     assert payload["status"] == "passed"
     assert payload["summary"]["existing_count"] == 1
     assert payload["blocking_reasons"] == ()
+    assert payload["recommended_actions"] == ()
