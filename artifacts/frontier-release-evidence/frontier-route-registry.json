@@ -712,6 +712,75 @@
       "name": "smollm2-l80-blind-spot-wikidata-structured-qa-route-v1",
       "path": "artifacts/frontier-release-evidence/blind-spot-wikidata-structured-qa-route-v1/structured-qa-route-summary.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "adapter_request_count": 332,
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-blind-spot-evidence-queue-v1/artifact-manifest.json",
+        "batch_count": 8,
+        "counterfactual_probe_count": 46,
+        "external_citation_count": 260,
+        "model": "smollm2-l80",
+        "resolved_by_question_property_count": 1,
+        "source": "frontier-v4",
+        "status": "ready_for_adapter_execution",
+        "target_count": 88,
+        "workflow": "unresolved_blind_spot_evidence_queue",
+        "world_model_rule_count": 26
+      },
+      "name": "smollm2-l80-frontier-v4-unresolved-blind-spot-evidence-queue",
+      "path": "artifacts/frontier-release-evidence/unresolved-blind-spot-evidence-queue-v1/unresolved-evidence-queue.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "adapter_request_count": 260,
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-citation-search-handoff-v1/artifact-manifest.json",
+        "corpus_document_count": 0,
+        "model": "smollm2-l80",
+        "selected_batch_count": 0,
+        "source": "frontier-v4",
+        "source_document_count": 0,
+        "status": "ready_for_external_adapter",
+        "workflow": "citation_search_adapter_handoff"
+      },
+      "name": "smollm2-l80-frontier-v4-unresolved-citation-search-handoff",
+      "path": "artifacts/frontier-release-evidence/unresolved-citation-search-handoff-v1/citation-search-handoff.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-world-model-rule-authoring-adapter-v1/artifact-manifest.json",
+        "executed_count": 0,
+        "input_request_count": 26,
+        "model": "smollm2-l80",
+        "needs_input_count": 26,
+        "source": "frontier-v4",
+        "status": "needs_inputs",
+        "stub_count": 26,
+        "workflow": "world_model_rule_authoring_adapter"
+      },
+      "name": "smollm2-l80-frontier-v4-unresolved-world-model-rule-authoring-adapter",
+      "path": "artifacts/frontier-release-evidence/unresolved-world-model-rule-authoring-adapter-v1/world-model-rule-authoring-adapter.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-world-model-rule-input-collection-plan-v1/artifact-manifest.json",
+        "batch_count": 3,
+        "model": "smollm2-l80",
+        "source": "frontier-v4",
+        "status": "ready_for_input_collection",
+        "task_count": 26,
+        "workflow": "world_model_rule_input_collection_plan"
+      },
+      "name": "smollm2-l80-frontier-v4-unresolved-world-model-rule-input-collection-plan",
+      "path": "artifacts/frontier-release-evidence/unresolved-world-model-rule-input-collection-plan-v1/rule-input-collection-plan.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

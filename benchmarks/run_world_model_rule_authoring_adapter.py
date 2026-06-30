@@ -37,6 +37,13 @@ INPUT_KEYS_BY_FAMILY = {
     "causal_or_procedural": ("mechanism", "precondition", "source_citation", "mechanism_status"),
     "temporal_consistency": ("claim_time", "source_time", "retrieved_at", "source_citation"),
 }
+RULE_FAMILY_ALIASES = {
+    "causal_or_procedural_consistency": "causal_or_procedural",
+    "causal_procedural": "causal_or_procedural",
+    "causal_procedural_consistency": "causal_or_procedural",
+    "temporal_freshness": "temporal_consistency",
+    "time_sensitive_retrieval": "temporal_consistency",
+}
 MECHANISM_STATUS_ALIASES = {
     "support": VerificationStatus.SUPPORTED.value,
     "supported": VerificationStatus.SUPPORTED.value,
@@ -81,14 +88,21 @@ def run_world_model_rule_authoring_adapter(
     requests_path = Path(input_requests_path or output / "world-model-rule-input-requests.jsonl")
     manifest_path = Path(artifact_manifest_path or output / "artifact-manifest.json")
 
-    stubs = _load_jsonl_mappings(rule_stubs_path)
+    raw_stubs = _load_jsonl_mappings(rule_stubs_path)
+    stubs = tuple(_normalize_rule_stub(stub) for stub in raw_stubs if _is_rule_stub(stub))
+    skipped_non_rule_stub_count = len(raw_stubs) - len(stubs)
     rule_inputs = _load_rule_inputs(rule_inputs_path)
     results = tuple(_evaluate_stub(stub, rule_inputs.get(str(stub.get("request_id") or ""))) for stub in stubs)
     input_requests = tuple(_input_request(result) for result in results if result["status"] == "needs_inputs")
     _write_jsonl(results_path, results, compact=compact_json)
     _write_jsonl(requests_path, input_requests, compact=compact_json)
 
-    summary = _summary(results=results, input_requests=input_requests)
+    summary = _summary(
+        results=results,
+        input_requests=input_requests,
+        source_stub_count=len(raw_stubs),
+        skipped_non_rule_stub_count=skipped_non_rule_stub_count,
+    )
     payload = {
         "schema_version": 1,
         "workflow": WORKFLOW,
@@ -301,7 +315,7 @@ def _result(
         "missing_inputs": tuple(missing_inputs),
         "question": str(stub.get("question") or ""),
         "question_type": str(stub.get("question_type") or ""),
-        "gap_type": str(stub.get("gap_type") or ""),
+        "gap_type": str(stub.get("gap_type") or stub.get("evidence_status") or ""),
         "priority": str(stub.get("priority") or ""),
         "authored_rule": dict(authored_rule),
         "evidence": tuple(str(item) for item in evidence if str(item)),
@@ -327,7 +341,7 @@ def _authored_rule(
         "rule_id": str(stub.get("request_id") or ""),
         "adapter": adapter,
         "rule_family": family,
-        "rule_seed": str(stub.get("rule_seed") or ""),
+        "rule_seed": str(stub.get("rule_seed") or stub.get("query") or ""),
         "rule_reason": str(stub.get("rule_reason") or ""),
         "input_schema": tuple(required_inputs),
         "not_verifier_evidence": True,
@@ -356,6 +370,8 @@ def _summary(
     *,
     results: Sequence[Mapping[str, Any]],
     input_requests: Sequence[Mapping[str, Any]],
+    source_stub_count: int | None = None,
+    skipped_non_rule_stub_count: int = 0,
 ) -> dict[str, Any]:
     status_counts = Counter(str(row.get("status") or "") for row in results)
     family_counts = Counter(str(row.get("rule_family") or "") for row in results)
@@ -366,6 +382,8 @@ def _summary(
             missing_counts[item] += 1
     executed_count = sum(count for status, count in status_counts.items() if status in EXECUTED_STATUSES)
     return {
+        "source_stub_count": len(results) if source_stub_count is None else int(source_stub_count),
+        "skipped_non_rule_stub_count": int(skipped_non_rule_stub_count),
         "stub_count": len(results),
         "result_count": len(results),
         "executed_count": executed_count,
@@ -611,6 +629,51 @@ def _missing_inputs(required: Sequence[str], supplied: Mapping[str, Any], *, fam
         if not expected:
             return ("expected_entity",)
     return ()
+
+
+def _is_rule_stub(stub: Mapping[str, Any]) -> bool:
+    request_type = _clean(stub.get("request_type"))
+    if request_type:
+        return request_type == RULE_REQUEST_TYPE
+    return bool(
+        _clean(stub.get("rule_family"))
+        or _clean(stub.get("rule_seed"))
+        or _clean(stub.get("query"))
+        or _string_sequence(stub.get("required_inputs", ()))
+    )
+
+
+def _normalize_rule_stub(stub: Mapping[str, Any]) -> dict[str, Any]:
+    request_id = _stub_request_id(stub)
+    family = _normalize_rule_family(stub.get("rule_family") or "world_model_consistency")
+    rule_seed = _clean(stub.get("rule_seed")) or _clean(stub.get("query"))
+    gap_type = _clean(stub.get("gap_type")) or _clean(stub.get("evidence_status"))
+    return {
+        **dict(stub),
+        "request_id": request_id,
+        "request_type": RULE_REQUEST_TYPE,
+        "rule_family": family,
+        "rule_seed": rule_seed,
+        "gap_type": gap_type,
+    }
+
+
+def _normalize_rule_family(value: Any) -> str:
+    raw = _clean(value)
+    return RULE_FAMILY_ALIASES.get(raw, raw or "world_model_consistency")
+
+
+def _stub_request_id(stub: Mapping[str, Any]) -> str:
+    for key in ("request_id", "source_request_id", "queue_id"):
+        value = _clean(stub.get(key))
+        if value:
+            return value
+    metadata = _mapping(stub.get("metadata"))
+    for key in ("request_id", "source_request_id", "queue_id"):
+        value = _clean(metadata.get(key))
+        if value:
+            return value
+    return ""
 
 
 def _load_rule_inputs(path: str | Path | None) -> dict[str, Mapping[str, Any]]:

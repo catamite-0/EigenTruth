@@ -2182,6 +2182,78 @@ def test_world_model_rule_authoring_adapter_requests_missing_inputs(tmp_path):
     assert registry_record.metadata["input_request_count"] == 1
 
 
+def test_world_model_rule_authoring_adapter_accepts_mixed_unresolved_queue_rows(tmp_path):
+    module = importlib.import_module("benchmarks.run_world_model_rule_authoring_adapter")
+
+    stubs_path = tmp_path / "adapter-requests.jsonl"
+    output_dir = tmp_path / "rule-adapter"
+    stubs_path.write_text(
+        "\n".join(
+            json.dumps(row)
+            for row in (
+                {
+                    "schema_version": 1,
+                    "queue_id": "queue:record-1:external_citation:1",
+                    "source_request_id": "citation:record-1:1",
+                    "target_id": "record-1",
+                    "request_type": "external_citation",
+                    "adapter_family": "external_citation_search",
+                    "question": "Who first started Tesla Motors?",
+                    "query": "Tesla founder source",
+                    "not_verifier_evidence": True,
+                },
+                {
+                    "schema_version": 1,
+                    "queue_id": "queue:record-2:world_model_or_calculator_rule:1",
+                    "source_request_id": "rule:record-2:1",
+                    "target_id": "record-2",
+                    "request_type": "world_model_or_calculator_rule",
+                    "adapter_family": "world_model_rule_authoring",
+                    "rule_family": "temporal_freshness",
+                    "question": "What happened recently?",
+                    "question_type": "temporal",
+                    "evidence_status": "no_joined_facts",
+                    "query": "Check the answer with an explicit retrieval timestamp",
+                    "not_verifier_evidence": True,
+                },
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = module.run_world_model_rule_authoring_adapter(
+        rule_stubs_path=stubs_path,
+        output_dir=output_dir,
+        metadata={"suite": "unit"},
+    )
+    results = [
+        json.loads(line)
+        for line in (output_dir / "world-model-rule-results.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    input_requests = [
+        json.loads(line)
+        for line in (output_dir / "world-model-rule-input-requests.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+    assert payload["status"] == "needs_inputs"
+    assert payload["summary"]["source_stub_count"] == 2
+    assert payload["summary"]["skipped_non_rule_stub_count"] == 1
+    assert payload["summary"]["stub_count"] == 1
+    assert results[0]["request_id"] == "rule:record-2:1"
+    assert results[0]["rule_family"] == "temporal_consistency"
+    assert results[0]["gap_type"] == "no_joined_facts"
+    assert results[0]["authored_rule"]["rule_seed"] == "Check the answer with an explicit retrieval timestamp"
+    assert input_requests[0]["missing_inputs"] == [
+        "claim_time",
+        "source_time",
+        "retrieved_at",
+        "source_citation",
+    ]
+
+
 def test_world_model_rule_authoring_adapter_executes_explicit_calculator_input(tmp_path):
     module = importlib.import_module("benchmarks.run_world_model_rule_authoring_adapter")
 

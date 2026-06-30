@@ -1851,6 +1851,28 @@ recursively. The counterfactual branch can be lowered with
 heuristically stay in a pending-generation JSONL rather than becoming silent
 pseudo-evidence.
 
+The frontier v4 full-queue replay writes its queue to
+`artifacts/frontier-release-evidence/unresolved-blind-spot-evidence-queue-v1/`.
+It starts from all `89` collection targets, removes the single resolved
+Tesla/P112 property slot, and emits `332` adapter/rule requests for `88`
+unresolved targets: `260` external citation/search requests, `46`
+counterfactual-probe rows, and `26` world-model/calculator-rule rows. The
+evidence-status split preserves the stricter question/property gate outcome:
+`41` no-joined-fact targets, `20` unmapped-low-relevance targets, `15`
+subject-only/unsupported-property targets, `6` generic-fact-only targets, `4`
+answer-supported targets, and `2` answer-entity-collision targets. This queue is
+still non-evidence; it is the execution contract for the next source and
+rule-input collection pass.
+
+The matching v4 citation/search handoff lives at
+`artifacts/frontier-release-evidence/unresolved-citation-search-handoff-v1/`.
+It uses `--query-mode claim_entity`, removes `194` disallowed model-answer
+phrases from query planning, and writes `260` sanitized external-adapter
+requests with no `record_index`, `target_id`, `model_answer`, or label fields.
+The source-family plan flags `52` official-preferred requests, `20`
+freshness-required requests, and `4` official-statistics-preferred requests; it
+does not contain source documents until a real adapter returns results.
+
 ## `build_unresolved_world_model_rule_stubs.py`
 
 Bridges the world-model/calculator branch of the unresolved queue into the
@@ -1905,6 +1927,21 @@ That follow-up chain is `needs_inputs` then `ready_for_input_collection`: all
 `6` stubs become explicit input requests, then `6` typed tasks in `2` batches
 (`5` numeric, `1` temporal snapshot). No rule candidate is executed or promoted
 until explicit inputs and a later promotion gate are supplied.
+
+The frontier v4 rule path can now skip the separate bridge and feed the mixed
+`adapter-requests.jsonl` directly into
+`run_world_model_rule_authoring_adapter.py`; the adapter filters
+`world_model_or_calculator_rule` rows and uses `source_request_id` as the stable
+request id. The v4 run at
+`artifacts/frontier-release-evidence/unresolved-world-model-rule-authoring-adapter-v1/`
+filters `26` rule stubs out of `332` mixed requests, normalizes
+`temporal_freshness` and `causal_or_procedural_consistency` into executable
+families, and produces `26` typed input requests with `0` executed rules. The
+follow-up plan at
+`artifacts/frontier-release-evidence/unresolved-world-model-rule-input-collection-plan-v1/`
+groups them into `3` batches: `12` numeric/calculator tasks, `5` temporal
+snapshot tasks, and `9` mechanism tasks. Every task remains non-evidence until
+explicit values and source citations are supplied.
 
 Audit the typed tasks before collecting values:
 
