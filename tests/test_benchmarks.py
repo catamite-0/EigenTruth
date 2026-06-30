@@ -43642,7 +43642,7 @@ def test_audit_blind_spot_alignment_requests_extracts_property_values_and_dedupe
         "schema_version": 1,
         "workflow": "blind_spot_evidence_collection_corpus",
         "status": "ready_for_collection",
-        "summary": {"target_count": 3},
+        "summary": {"target_count": 5},
         "requests": {
             "alignment_audit": [
                 {
@@ -43673,8 +43673,30 @@ def test_audit_blind_spot_alignment_requests_extracts_property_values_and_dedupe
                     "question_type": "definition",
                     "question": "What is Jennifer Aniston?",
                     "model_answer": "a singer",
-                    "entity_candidates": ["Jennifer Aniston"],
+                    "entity_candidates": ["Jennifer"],
                     "wikidata_property_hints": ["description"],
+                    "alignment_actions": ["claim_evidence_alignment"],
+                    "usage": "alignment_audit_only",
+                },
+                {
+                    "request_id": "align:poverty:1",
+                    "target_id": "record-poverty",
+                    "question_type": "entity",
+                    "question": "What has part is listed for poverty?",
+                    "model_answer": "wealth",
+                    "entity_candidates": ["poverty"],
+                    "wikidata_property_hints": ["has_part:P527"],
+                    "alignment_actions": ["claim_evidence_alignment"],
+                    "usage": "alignment_audit_only",
+                },
+                {
+                    "request_id": "align:time:1",
+                    "target_id": "record-time",
+                    "question_type": "temporal",
+                    "question": "What is the publication date?",
+                    "model_answer": "today",
+                    "entity_candidates": ["time"],
+                    "wikidata_property_hints": ["publication_date:P577"],
                     "alignment_actions": ["claim_evidence_alignment"],
                     "usage": "alignment_audit_only",
                 },
@@ -43711,6 +43733,19 @@ def test_audit_blind_spot_alignment_requests_extracts_property_values_and_dedupe
             ),
             "metadata": {"provider": "source_family_catalog", "source_family": "reference"},
         },
+        {
+            "source": "wikidata:Q10294:P527",
+            "text": "According to Wikidata structured data, poverty has has part(s) Poverty in Islam.",
+            "metadata": {"provider": "source_family_catalog", "source_family": "reference"},
+        },
+        {
+            "source": "ap:clock-context",
+            "text": (
+                "AP coverage explains daylight saving time, clock changes, dates, "
+                "and timekeeping context for readers asking about the time right now."
+            ),
+            "metadata": {"provider": "apnews", "source_family": "news"},
+        },
     ]
 
     payload = module.audit_blind_spot_alignment_requests(
@@ -43723,10 +43758,16 @@ def test_audit_blind_spot_alignment_requests_extracts_property_values_and_dedupe
         for candidate in candidates
     }
 
-    assert payload["summary"]["fact_candidate_count"] == 3
+    assert payload["summary"]["fact_candidate_count"] == 4
     assert by_request["align:red-bull:1"]["value"] == "https://www.redbull.com/it-it/energydrink"
     assert by_request["align:french:1"]["value"] == "France"
     assert by_request["align:jennifer:1"]["value"] == "American actress (born 1969)"
+    assert by_request["align:jennifer:1"]["subject"] == "Jennifer Aniston"
+    assert by_request["align:jennifer:1"]["requested_subject"] == "Jennifer"
+    assert by_request["align:jennifer:1"]["matched_entity"] == "Jennifer"
+    assert by_request["align:poverty:1"]["subject"] == "poverty"
+    assert by_request["align:poverty:1"]["value"] == "Poverty in Islam"
+    assert "align:time:1" not in by_request
     assert [
         candidate["request_id"]
         for candidate in candidates

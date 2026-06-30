@@ -5,16 +5,16 @@
       "file_count": 1,
       "kind": "file",
       "path": "alignment-records.jsonl",
-      "sha256": "ba98556992293591e757da32a955f88932ce289dcf6075d6fb412ed66c09d413",
-      "size_bytes": 399621
+      "sha256": "3e343ffe17ee2e55fcc19110d3102459371dec799aac08befe495fd95b295d46",
+      "size_bytes": 397169
     },
     "blind_spot_alignment_audit": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "alignment-audit.json",
-      "sha256": "6676bb1503b29463bff56e22f901c721522299f6abdbf79a5f0591f55a3525b2",
-      "size_bytes": 515779
+      "sha256": "e4621c5df8de9486da10272ea4f216d27e34ddd18bd5828ae834a3ba61937cb4",
+      "size_bytes": 509964
     },
     "blind_spot_evidence_collection_corpus": {
       "exists": true,
@@ -37,14 +37,14 @@
       "file_count": 1,
       "kind": "file",
       "path": "structured-fact-candidates.jsonl",
-      "sha256": "3a7deff26550126bf9f7c32d5200fbcd8c15947591fe3bbf75ce41c9ea222ab9",
-      "size_bytes": 24349
+      "sha256": "b6b3b5666cab089f2e84bc48ecd59dbc5979f3afffc8b65fdfb850794f6c25ab",
+      "size_bytes": 21877
     }
   },
   "digest_algorithm": "sha256",
   "metadata": {
     "alignment_request_count": 89,
-    "fact_candidate_count": 37,
+    "fact_candidate_count": 30,
     "model": "smollm2-l80",
     "source": "frontier-v4",
     "status": "ready_for_fact_review",

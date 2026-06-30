@@ -34,11 +34,18 @@ DEFAULT_MAX_DOCS_PER_REQUEST = 5
 DEFAULT_MIN_ALIGNMENT_SCORE = 0.12
 TOKEN_RE = re.compile(r"[A-Za-z0-9]+|[\u4e00-\u9fff]+")
 NUMBER_RE = re.compile(r"[-+]?\d[\d,]*(?:\.\d+)?(?:\s*(?:million|billion|thousand|%|percent))?", re.I)
+DATE_RE = re.compile(
+    r"\b(?:\d{4}-\d{2}-\d{2}|\d{4}|"
+    r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4})\b",
+    re.I,
+)
 URL_RE = re.compile(r"https?://[^\s)]+")
 CAPITALIZED_SPAN_RE = re.compile(r"\b[A-Z][A-Za-z0-9&.'-]*(?:\s+[A-Z][A-Za-z0-9&.'-]*)*")
 SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+|\n+")
 DESCRIBED_AS_RE = re.compile(r"\b(?:is|are|was|were)\s+described\s+as\s+(?P<value>[^.]+)", re.I)
+DESCRIBED_SUBJECT_RE = re.compile(r"^(?P<subject>.+?)\s+(?:is|are|was|were)\s+described\s+as\b", re.I)
 IS_A_RE = re.compile(r"\b(?:is|are|was|were)\s+(?:an?|the)\s+(?P<value>[^.]+)", re.I)
+IS_A_SUBJECT_RE = re.compile(r"^(?P<subject>.+?)\s+(?:is|are|was|were)\s+(?:an?|the)\s+", re.I)
 BY_VALUE_RE = re.compile(r"\b(?:founded|created|written|authored|produced)\s+by\s+(?P<value>[^.]+)", re.I)
 GENERIC_VALUE_CANDIDATES = {
     "A",
@@ -54,8 +61,25 @@ GENERIC_VALUE_CANDIDATES = {
     "Official USDA ERS",
     "Population",
     "World Bank",
+    "Wikidata",
+    "AP",
 }
 GENERIC_VALUE_CANDIDATES_CASEFOLD = {item.casefold() for item in GENERIC_VALUE_CANDIDATES}
+SOURCE_PREFIX_MARKERS = (
+    "catalog",
+    "citation",
+    "crossref",
+    "gdelt",
+    "metadata",
+    "official",
+    "openalex",
+    "queries",
+    "reference",
+    "source",
+    "statistics",
+    "wikidata",
+    "world bank",
+)
 QUESTION_STOPWORDS = {
     "a",
     "an",
@@ -349,12 +373,19 @@ def _fact_candidates(
     candidates: list[dict[str, Any]] = []
     seen: set[tuple[str, str, str, str]] = set()
     request_id = str(request.get("request_id", ""))
-    subject = _first_nonempty(tuple(str(item) for item in _sequence(request.get("entity_candidates"))))
+    requested_subject = _first_nonempty(tuple(str(item) for item in _sequence(request.get("entity_candidates"))))
     for hit in hits:
         property_hint = str(hit.get("matched_property_hint") or "")
+        evidence_span = str(hit.get("evidence_span", ""))
+        subject = _candidate_subject(
+            evidence_span,
+            property_hint=property_hint,
+            requested_subject=requested_subject,
+            matched_entity=str(hit.get("matched_entity") or ""),
+        )
         if not subject or not property_hint:
             continue
-        value = _candidate_value(str(hit.get("evidence_span", "")), request=request, property_hint=property_hint)
+        value = _candidate_value(evidence_span, request=request, property_hint=property_hint)
         if not value:
             continue
         fact_key = (
@@ -372,11 +403,13 @@ def _fact_candidates(
             "request_id": request_id,
             "target_id": str(request.get("target_id", "")),
             "subject": subject,
+            "requested_subject": requested_subject,
+            "matched_entity": hit.get("matched_entity"),
             "property_hint": property_hint,
             "value": value,
             "model_answer": str(request.get("model_answer", "")),
             "question": str(request.get("question", "")),
-            "evidence_span": str(hit.get("evidence_span", "")),
+            "evidence_span": evidence_span,
             "evidence_source": str(hit.get("source", "")),
             "source_family": hit.get("source_family"),
             "provider": hit.get("provider"),
@@ -573,6 +606,12 @@ def _candidate_value(
         url = _extract_url(span)
         if url:
             return url
+        return None
+    if property_id == "P577" or property_label == "publication date":
+        date_value = _extract_date(span)
+        if date_value:
+            return date_value
+        return None
     if property_label:
         value = _extract_has_property_value(span, property_label)
         if value:
@@ -617,6 +656,73 @@ def _clean_candidate_value(value: str) -> str:
     return value
 
 
+def _candidate_subject(
+    span: str,
+    *,
+    property_hint: str,
+    requested_subject: str,
+    matched_entity: str,
+) -> str | None:
+    text = _strip_source_prefix(span)
+    property_label, _ = _property_parts(property_hint)
+    if property_label == "description":
+        raw_subject = _raw_subject_from_pattern(text, DESCRIBED_SUBJECT_RE)
+        if raw_subject is not None:
+            return _clean_candidate_subject(raw_subject)
+    if property_label:
+        raw_subject = _raw_subject_before_property(text, property_label)
+        if raw_subject is not None:
+            return _clean_candidate_subject(raw_subject)
+    raw_subject = _raw_subject_from_pattern(text, IS_A_SUBJECT_RE)
+    if raw_subject is not None:
+        return _clean_candidate_subject(raw_subject)
+    for fallback in (matched_entity, requested_subject):
+        subject = _clean_candidate_subject(fallback)
+        if subject:
+            return subject
+    return None
+
+
+def _strip_source_prefix(span: str) -> str:
+    text = re.sub(r"^\s*According to [^,]+,\s*", "", span.strip(), flags=re.I)
+    prefix, separator, remainder = text.partition(":")
+    if separator and remainder.strip():
+        normalized_prefix = prefix.casefold()
+        if len(prefix.split()) <= 16 and any(marker in normalized_prefix for marker in SOURCE_PREFIX_MARKERS):
+            return remainder.strip()
+    return text
+
+
+def _raw_subject_from_pattern(text: str, pattern: re.Pattern[str]) -> str | None:
+    match = pattern.search(text)
+    if match is None:
+        return None
+    return match.group("subject")
+
+
+def _raw_subject_before_property(text: str, property_label: str) -> str | None:
+    label = property_label.replace("_", " ").strip()
+    if not label:
+        return None
+    label_pattern = _property_label_pattern(label)
+    pattern = re.compile(rf"^(?P<subject>.+?)\s+(?:has|have|had)\s+{label_pattern}\b", re.I)
+    match = pattern.search(text)
+    if match is None:
+        return None
+    return match.group("subject")
+
+
+def _clean_candidate_subject(subject: str) -> str | None:
+    value = subject.strip(" \t\r\n.,;:!?\"'")
+    value = re.sub(r"\s+", " ", value)
+    if not value or _is_generic_value(value):
+        return None
+    words = value.split()
+    if len(words) > 16:
+        return None
+    return value
+
+
 def _property_parts(property_hint: str) -> tuple[str, str | None]:
     label, sep, property_id = str(property_hint).partition(":")
     label = label.replace("_", " ").strip().casefold()
@@ -632,15 +738,33 @@ def _extract_url(text: str) -> str | None:
     return match.group(0).rstrip(".,;")
 
 
+def _extract_date(text: str) -> str | None:
+    match = DATE_RE.search(text)
+    if match is None:
+        return None
+    return match.group(0).strip()
+
+
 def _extract_has_property_value(text: str, property_label: str) -> str | None:
     label = property_label.replace("_", " ").strip()
     if not label:
         return None
-    pattern = re.compile(rf"\bhas\s+{re.escape(label)}\s+(?P<value>[^.]+)", re.I)
+    label_pattern = _property_label_pattern(label)
+    pattern = re.compile(rf"\bhas\s+{label_pattern}\s+(?P<value>[^.]+)", re.I)
     match = pattern.search(text)
     if match is None:
         return None
     return _clean_candidate_value(match.group("value"))
+
+
+def _property_label_pattern(label: str) -> str:
+    parts = [re.escape(part) for part in label.split()]
+    if not parts:
+        return ""
+    pattern = r"\s+".join(parts)
+    if label.casefold() == "has part":
+        pattern += r"(?:\(s\))?"
+    return pattern
 
 
 def _extract_description_value(text: str) -> str | None:

@@ -19,34 +19,36 @@
   },
   "status": "ready_for_review",
   "summary": {
-    "accepted_document_count": 8,
+    "accepted_document_count": 11,
     "by_property_hint": {
       "country:P17": 1,
-      "description": 6,
+      "description": 7,
+      "has_part:P527": 1,
+      "instance_of:P31": 1,
       "official_website:P856": 1
     },
     "by_provider": {
-      "source_family_catalog": 8
+      "source_family_catalog": 11
     },
     "by_source_family": {
-      "reference": 8
+      "reference": 11
     },
-    "input_candidate_count": 37,
+    "input_candidate_count": 30,
     "skipped": {
       "answer_value_matches_model_answer": 0,
-      "duplicate_candidate": 4,
+      "duplicate_candidate": 14,
       "generic_value": 0,
       "invalid_row": 0,
       "low_confidence": 0,
       "missing_required_fields": 0,
       "non_review_usage": 0,
-      "property_value_invalid": 1,
-      "subject_not_in_evidence_span": 24,
+      "property_value_invalid": 0,
+      "subject_not_in_evidence_span": 5,
       "value_equals_subject": 0,
       "value_not_in_evidence_span": 0
     },
-    "skipped_count": 29,
-    "unique_candidate_count": 37
+    "skipped_count": 19,
+    "unique_candidate_count": 30
   },
   "workflow": "alignment_fact_review_corpus_builder"
 }
