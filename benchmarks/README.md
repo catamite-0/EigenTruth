@@ -880,7 +880,11 @@ post-policy records rather than reusing a pre-acquisition threshold. It compares
 the naive pre-score abstention report against the post-acquisition policy report
 and saves the post-policy threshold as a standard `CalibrationArtifact`, matching
 the evidence-acquisition control loop without adding a model or network
-dependency.
+dependency. Saved product traces can be converted into those rows with
+`evidence_acquisition_record_from_trace` or
+`evidence_acquisition_records_from_trace_feedback`, so feedback-labeled
+answer/acquire/abstain runs can be recalibrated offline against the complete
+policy score distribution.
 When `--save-abstention-comparison` or `--include-abstention-comparison` is set,
 the script emits a `ConformalAbstentionComparisonReport` over `--abstention-signals`
 (or `--signals` when no abstention list is provided). The default ranking metric is

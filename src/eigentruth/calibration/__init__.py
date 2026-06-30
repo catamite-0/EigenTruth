@@ -12,6 +12,9 @@ from eigentruth.calibration.acquisition import (
     EvidenceAcquisitionCalibrationReport,
     EvidenceAcquisitionCalibrationResult,
     EvidenceAcquisitionConformalCalibrator,
+    evidence_acquisition_record_from_trace,
+    evidence_acquisition_records_from_trace_feedback,
+    evidence_acquisition_records_from_traces,
 )
 from eigentruth.calibration.artifacts import CalibrationArtifact, CalibrationScore, SteeringPolicyConfig
 from eigentruth.calibration.calibrator import AdaptiveConformalCalibrator, ConformalCalibrator
@@ -58,6 +61,9 @@ __all__ = [
     "EvidenceAcquisitionCalibrationReport",
     "EvidenceAcquisitionCalibrationResult",
     "EvidenceAcquisitionConformalCalibrator",
+    "evidence_acquisition_record_from_trace",
+    "evidence_acquisition_records_from_trace_feedback",
+    "evidence_acquisition_records_from_traces",
     "GeometryScoreFusionArtifact",
     "GeometryScoreFusionCalibrator",
     "LayerScoreSweepCalibrator",

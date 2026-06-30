@@ -23,6 +23,8 @@ from eigentruth.calibration import (
     SequentialConformalArtifact,
     SequentialConformalCalibrator,
     SteeringPolicyConfig,
+    evidence_acquisition_record_from_trace,
+    evidence_acquisition_records_from_trace_feedback,
 )
 from eigentruth.eval import (
     AdaptiveScoreTransform,
@@ -259,6 +261,137 @@ def test_evidence_acquisition_conformal_calibrator_rejects_invalid_inputs():
         EvidenceAcquisitionCalibrationRecord(post_score=0.1, correct=True, action="retrieve")
     with pytest.raises(ValueError, match="finite"):
         EvidenceAcquisitionCalibrationRecord(post_score=math.inf, correct=True)
+
+
+def test_evidence_acquisition_record_from_trace_uses_post_policy_score():
+    trace = {
+        "request_id": "req-trace",
+        "diagnostics": {"policy_score": 0.2},
+        "risk_decision": {
+            "action": "accept",
+            "risk_level": "low",
+            "diagnostics": {"policy_score": 0.85},
+        },
+        "actions": [{"action": "retrieve"}],
+        "metadata": {
+            "correct": True,
+            "evidence_acquisition": {
+                "pre_score": 0.2,
+                "decision": {
+                    "action": "acquire",
+                    "metadata": {"post_acquisition_calibration_required": True},
+                },
+            },
+        },
+        "events": [
+            {
+                "event_type": "initial_risk_decision",
+                "payload": {"diagnostics": {"policy_score": 0.2}},
+            },
+            {
+                "event_type": "final_risk_decision",
+                "payload": {"diagnostics": {"policy_score": 0.85}},
+            },
+        ],
+    }
+
+    record = evidence_acquisition_record_from_trace(trace, score_name="policy_score")
+
+    assert record.record_id == "req-trace"
+    assert record.pre_score == pytest.approx(0.2)
+    assert record.post_score == pytest.approx(0.85)
+    assert record.correct is True
+    assert record.action == "acquire"
+    assert record.acquired is True
+    assert record.metadata["post_score_source"] == "risk_decision.diagnostics.policy_score"
+    assert record.metadata["pre_score_source"] == "metadata.evidence_acquisition.pre_score"
+    assert record.metadata["label_source"] == "metadata.correct"
+
+
+def test_evidence_acquisition_records_from_trace_feedback_join_and_calibrate():
+    traces = (
+        {
+            "request_id": "req-good",
+            "diagnostics": {"policy_score": 0.2},
+            "risk_decision": {
+                "action": "accept",
+                "risk_level": "low",
+                "diagnostics": {"policy_score": 0.15},
+            },
+            "metadata": {"evidence_acquisition": {"decision": {"action": "answer"}}},
+        },
+        {
+            "request_id": "req-acquired-bad",
+            "diagnostics": {"policy_score": 0.1},
+            "risk_decision": {
+                "action": "accept",
+                "risk_level": "low",
+                "diagnostics": {"policy_score": 0.9},
+            },
+            "metadata": {"evidence_acquisition": {"decision": {"action": "acquire"}}},
+        },
+        {
+            "request_id": "req-blocked-good",
+            "diagnostics": {"policy_score": 0.3},
+            "risk_decision": {
+                "action": "abstain",
+                "risk_level": "high",
+                "diagnostics": {"policy_score": 0.8},
+            },
+            "metadata": {"evidence_acquisition": {"decision": {"action": "abstain"}}},
+        },
+    )
+    feedback = (
+        {"request_id": "req-good", "outcome": "correct", "feedback_source": "eval"},
+        {"request_id": "req-acquired-bad", "outcome": "incorrect", "feedback_source": "eval"},
+        {"request_id": "req-blocked-good", "outcome": "unnecessary_block", "feedback_source": "eval"},
+    )
+
+    records = evidence_acquisition_records_from_trace_feedback(
+        traces,
+        feedback,
+        score_name="policy_score",
+    )
+    result = EvidenceAcquisitionConformalCalibrator(alpha=0.5, score_name="policy_score").calibrate(
+        model_id="trace-model",
+        target_layer=-1,
+        records=records,
+        created_at="2026-06-30T00:00:00+00:00",
+        eigentruth_version="0.1.0",
+    )
+
+    assert [record.correct for record in records] == [True, False, True]
+    assert [record.action for record in records] == ["answer", "acquire", "abstain"]
+    assert records[1].metadata["feedback_outcome"] == "incorrect"
+    assert result.report.n_acquired == 1
+    assert result.report.n_abstained == 1
+    assert result.report.naive_pre_report is not None
+    assert result.artifact.get_score("policy_score").threshold == pytest.approx(
+        result.report.post_threshold
+    )
+
+
+def test_evidence_acquisition_trace_feedback_join_fails_closed_on_ambiguous_request():
+    traces = (
+        {
+            "request_id": "duplicate",
+            "risk_decision": {"diagnostics": {"policy_score": 0.1}},
+            "metadata": {"correct": True},
+        },
+        {
+            "request_id": "duplicate",
+            "risk_decision": {"diagnostics": {"policy_score": 0.2}},
+            "metadata": {"correct": True},
+        },
+    )
+    feedback = ({"request_id": "duplicate", "outcome": "correct"},)
+
+    with pytest.raises(ValueError, match="ambiguous_request_id"):
+        evidence_acquisition_records_from_trace_feedback(
+            traces,
+            feedback,
+            score_name="policy_score",
+        )
 
 
 def test_multiple_testing_conformal_artifact_roundtrip_and_runtime_decision(tmp_path):
