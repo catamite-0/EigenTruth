@@ -2700,6 +2700,34 @@ promotion; the remaining records are `13` answer-entity collisions, `28`
 subject-only gaps, `2` intent-only gaps, `7` weak-overlap rows, and `38`
 no-candidate rows.
 
+`run_source_family_structured_qa_claim_correction_workflow.py` is the
+one-command wrapper for the same covered-fact correction loop once a promoted
+source-family structured-QA route summary and QA corpus already exist. It runs
+claim mapping, gap triage, and correction handoff, writes child manifests plus a
+top-level workflow manifest, and leaves weak or no-fact rows in triage. It does
+not collect new evidence, lower mapping thresholds, or treat adapter results as
+verifier evidence.
+
+```bash
+WORKFLOW=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-claim-correction-workflow
+
+python benchmarks/run_source_family_structured_qa_claim_correction_workflow.py \
+  --claims artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
+  --qa-corpus artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-workflow/source-family-structured-qa-corpus.json \
+  --route-summary artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-route/structured-qa-route-summary.json \
+  --output-dir "$WORKFLOW" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-source-family-structured-qa-claim-correction-workflow \
+  --version 0.1 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_fact_collection_workflow \
+  --compact-json
+```
+
+Pass `--fact-expansion-plan`, `--fact-collection-corpus`, and
+`--fact-collection-workflow` when the gap-triage child report should carry
+post-collection provenance alongside the correction handoff.
+
 `build_source_family_structured_qa_correction_handoff.py` converts only those
 mapped QA candidates into target-specific ProductTrace-visible corrections. It
 fail-closes unless the upstream source-family structured-QA route was promoted;

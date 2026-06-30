@@ -571,6 +571,105 @@ def test_source_family_structured_qa_correction_handoff_requires_promoted_route(
     assert payload["action_results"] == ()
 
 
+def test_source_family_structured_qa_claim_correction_workflow_runs_full_loop(tmp_path):
+    module = importlib.import_module("benchmarks.run_source_family_structured_qa_claim_correction_workflow")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    claims_path = tmp_path / "claims.json"
+    qa_path = tmp_path / "source-family-qa-corpus.json"
+    route_summary_path = tmp_path / "structured-qa-route-summary.json"
+    output_dir = tmp_path / "claim-correction-workflow"
+    registry_path = tmp_path / "registry.json"
+    qa_path.write_text(
+        json.dumps({
+            "corpus_type": "source_family_structured_qa_external_evidence",
+            "documents": [
+                {
+                    "question": "What does Wikidata list as the founder for Tesla Motors?",
+                    "answer": "Martin Eberhard",
+                    "source": "wikidata:Q478214:P112:Q92743",
+                    "metadata": {
+                        "provider": "wikidata",
+                        "source_family": "reference",
+                        "statement_property": "P112",
+                        "statement_property_label": "founder",
+                        "subject": "Tesla Motors",
+                        "subject_qid": "Q478214",
+                        "url": "https://www.wikidata.org/wiki/Q478214",
+                    },
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
+    claims_path.write_text(
+        json.dumps({
+            "records": [
+                {
+                    "record_index": 10,
+                    "question": "Who first started Tesla Motors?",
+                    "answer": "Elon Musk",
+                    "text": "Who first started Tesla Motors? Elon Musk",
+                    "label": 1,
+                    "question_type": "person",
+                }
+            ]
+        }),
+        encoding="utf-8",
+    )
+    route_summary_path.write_text(
+        json.dumps({
+            "workflow": "source_family_structured_qa_route_workflow",
+            "status": "promote",
+            "route": "structured_qa",
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run_source_family_structured_qa_claim_correction_workflow(
+        claims_path=claims_path,
+        qa_corpus_path=qa_path,
+        route_summary_path=route_summary_path,
+        output_dir=output_dir,
+        registry_path=registry_path,
+        name="source-family-claim-correction-workflow-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+        compact_json=True,
+    )
+    workflow_report = json.loads((output_dir / "claim-correction-workflow.json").read_text(encoding="utf-8"))
+    trace_rows = [
+        json.loads(line)
+        for line in (output_dir / "correction-handoff" / "product-traces.jsonl").read_text(
+            encoding="utf-8"
+        ).splitlines()
+        if line.strip()
+    ]
+    registry_record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:source-family-claim-correction-workflow-unit:0.1"
+    )
+
+    assert payload["workflow"] == "source_family_structured_qa_claim_correction_workflow"
+    assert payload["status"] == "promote"
+    assert workflow_report["summary"] == payload["summary"]
+    assert payload["child_statuses"] == {
+        "claim_mapping": "observed",
+        "gap_triage": "handoff_ready",
+        "correction_handoff": "promote",
+    }
+    assert payload["summary"]["mapped_qa_fact_candidate_count"] == 1
+    assert payload["summary"]["handoff_ready_count"] == 1
+    assert payload["summary"]["correction_candidate_count"] == 1
+    assert payload["summary"]["trace_count"] == 1
+    assert payload["label_usage"]["weak_matches_promoted"] is False
+    assert trace_rows[0]["risk_decision"]["action"] == "abstain"
+    assert registry_module.load_and_verify_artifact_manifest(output_dir / "artifact-manifest.json").passed is True
+    assert registry_record is not None
+    assert registry_record.metadata["workflow"] == "source_family_structured_qa_claim_correction_workflow"
+    assert registry_record.metadata["trace_count"] == 1
+    assert registry_record.metadata["suite"] == "unit"
+
+
 def test_source_family_structured_qa_fact_expansion_plans_mapping_gaps(tmp_path):
     module = importlib.import_module("benchmarks.plan_source_family_structured_qa_fact_expansion")
     registry_module = importlib.import_module("eigentruth.registry")
