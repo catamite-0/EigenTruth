@@ -884,7 +884,11 @@ dependency. Saved product traces can be converted into those rows with
 `evidence_acquisition_record_from_trace` or
 `evidence_acquisition_records_from_trace_feedback`, so feedback-labeled
 answer/acquire/abstain runs can be recalibrated offline against the complete
-policy score distribution.
+policy score distribution. The corresponding workflow script is
+`calibrate_evidence_acquisition_from_traces.py`: it reads saved `ProductTrace`
+JSON/JSONL and optional `ProductFeedbackRecord` JSONL labels, emits extracted
+records when requested, writes an `EvidenceAcquisitionCalibrationReport`, saves
+the post-policy `CalibrationArtifact`, and can fingerprint/register the result.
 When `--save-abstention-comparison` or `--include-abstention-comparison` is set,
 the script emits a `ConformalAbstentionComparisonReport` over `--abstention-signals`
 (or `--signals` when no abstention list is provided). The default ranking metric is

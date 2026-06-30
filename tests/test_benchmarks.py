@@ -35698,6 +35698,136 @@ def test_product_feedback_report_joins_feedback_and_registers(tmp_path):
         )
 
 
+def test_evidence_acquisition_trace_calibration_workflow_writes_artifacts(tmp_path):
+    module = importlib.import_module("benchmarks.calibrate_evidence_acquisition_from_traces")
+    registry_module = importlib.import_module("eigentruth.registry")
+    calibration_module = importlib.import_module("eigentruth.calibration")
+    from eigentruth.control import ProductFeedbackRecord, write_feedback_jsonl
+
+    trace_paths = []
+    for request_id, action, pre_score, post_score in (
+        ("req-good", "answer", 0.2, 0.1),
+        ("req-acquire-bad", "acquire", 0.15, 0.9),
+        ("req-blocked-good", "abstain", 0.3, 0.8),
+    ):
+        path = tmp_path / f"{request_id}.json"
+        path.write_text(
+            json.dumps({
+                "request_id": request_id,
+                "diagnostics": {"policy_score": pre_score},
+                "risk_decision": {
+                    "action": "accept" if action != "abstain" else "abstain",
+                    "risk_level": "low" if action != "abstain" else "high",
+                    "confidence": 0.8,
+                    "reason": "unit",
+                    "diagnostics": {"policy_score": post_score},
+                },
+                "metadata": {
+                    "evidence_acquisition": {
+                        "pre_score": pre_score,
+                        "decision": {"action": action},
+                    },
+                },
+            }),
+            encoding="utf-8",
+        )
+        trace_paths.append(path)
+
+    feedback_path = tmp_path / "feedback.jsonl"
+    write_feedback_jsonl(
+        feedback_path,
+        (
+            ProductFeedbackRecord(request_id="req-good", outcome="correct"),
+            ProductFeedbackRecord(request_id="req-acquire-bad", outcome="incorrect"),
+            ProductFeedbackRecord(request_id="req-blocked-good", outcome="unnecessary_block"),
+        ),
+    )
+    report_path = tmp_path / "evidence-acquisition-calibration.json"
+    artifact_path = tmp_path / "evidence-acquisition-artifact.json"
+    records_path = tmp_path / "evidence-acquisition-records.jsonl"
+    manifest_path = tmp_path / "evidence-acquisition-manifest.json"
+    registry_path = tmp_path / "registry.json"
+
+    report = module.build_evidence_acquisition_trace_calibration(
+        module.EvidenceAcquisitionTraceCalibrationConfig(
+            trace_paths=trace_paths,
+            feedback_paths=(feedback_path,),
+            report_path=report_path,
+            artifact_path=artifact_path,
+            records_jsonl_path=records_path,
+            artifact_manifest_path=manifest_path,
+            registry_path=registry_path,
+            name="evidence-acquisition-calibration",
+            version="0.1",
+            model_id="trace-policy",
+            target_layer=-1,
+            score_name="policy_score",
+            alpha=0.5,
+            metadata={"suite": "unit"},
+        )
+    )
+
+    artifact = calibration_module.CalibrationArtifact.load_json(artifact_path)
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    report_record = registry.get("calibration_report:evidence-acquisition-calibration:0.1")
+    artifact_record = registry.get("calibration_artifact:evidence-acquisition-calibration:0.1")
+    record_rows = [json.loads(line) for line in records_path.read_text(encoding="utf-8").splitlines()]
+
+    assert report["status"] == "passed"
+    assert report["summary"]["n_records"] == 3
+    assert report["summary"]["n_acquired"] == 1
+    assert report["summary"]["n_abstained"] == 1
+    assert report["calibration_report"]["naive_pre_report"] is not None
+    assert artifact.get_score("policy_score").threshold == pytest.approx(report["summary"]["post_threshold"])
+    assert len(record_rows) == 3
+    assert record_rows[1]["metadata"]["feedback_outcome"] == "incorrect"
+    assert report_record.metadata["workflow"] == "evidence_acquisition_trace_calibration"
+    assert report_record.metadata["suite"] == "unit"
+    assert artifact_record.metadata["post_threshold"] == pytest.approx(report["summary"]["post_threshold"])
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+
+
+def test_evidence_acquisition_trace_calibration_workflow_reads_jsonl_labels(tmp_path):
+    module = importlib.import_module("benchmarks.calibrate_evidence_acquisition_from_traces")
+
+    trace_jsonl = tmp_path / "traces.jsonl"
+    traces = (
+        {
+            "request_id": "req-jsonl-good",
+            "diagnostics": {"policy_score": 0.2},
+            "risk_decision": {"action": "accept", "diagnostics": {"policy_score": 0.1}},
+            "metadata": {"correct": True, "evidence_acquisition": {"decision": {"action": "answer"}}},
+        },
+        {
+            "trace": {
+                "request_id": "req-jsonl-bad",
+                "diagnostics": {"policy_score": 0.1},
+                "risk_decision": {"action": "retrieve", "diagnostics": {"policy_score": 0.9}},
+                "metadata": {"correct": False, "evidence_acquisition": {"decision": {"action": "acquire"}}},
+            },
+        },
+    )
+    trace_jsonl.write_text(
+        "\n".join(json.dumps(trace) for trace in traces) + "\n",
+        encoding="utf-8",
+    )
+
+    report = module.build_evidence_acquisition_trace_calibration(
+        module.EvidenceAcquisitionTraceCalibrationConfig(
+            trace_jsonl_paths=(trace_jsonl,),
+            report_path=tmp_path / "jsonl-calibration.json",
+            model_id="trace-policy",
+            score_name="policy_score",
+            alpha=0.5,
+        )
+    )
+
+    assert report["status"] == "passed"
+    assert report["summary"]["n_records"] == 2
+    assert report["summary"]["n_acquired"] == 1
+    assert report["config"]["trace_jsonl_paths"] == (str(trace_jsonl),)
+
+
 def test_feedback_policy_recommendation_uses_feedback_report_and_registers(tmp_path):
     module = importlib.import_module("benchmarks.recommend_control_policy_from_feedback")
     registry_module = importlib.import_module("eigentruth.registry")
