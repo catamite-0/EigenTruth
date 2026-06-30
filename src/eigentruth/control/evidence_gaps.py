@@ -712,6 +712,14 @@ def _classify_gap(
     missing_metrics: Sequence[str],
 ) -> dict[str, str]:
     text = f"{gate} {reason}".lower()
+    if _is_product_runtime_claim_factuality_evidence(gate, text, missing_metrics):
+        return _kind("product_runtime_claim_factuality_evidence", "claim_factuality", "runtime_drift")
+    if _is_product_runtime_claim_risk_localization_evidence(gate, text, missing_metrics):
+        return _kind(
+            "product_runtime_claim_risk_localization_evidence",
+            "claim_risk_localization",
+            "runtime_drift",
+        )
     if _is_product_runtime_world_model_evidence(gate, text, missing_metrics):
         return _kind("product_runtime_world_model_evidence", "world_model", "runtime_drift")
     if _is_product_runtime_context_sensitivity_evidence(gate, text, missing_metrics):
@@ -724,6 +732,18 @@ def _classify_gap(
         return _kind(
             "product_runtime_counterfactual_robustness_evidence",
             "counterfactual_robustness",
+            "runtime_drift",
+        )
+    if _is_product_runtime_trajectory_audit_evidence(gate, text, missing_metrics):
+        return _kind(
+            "product_runtime_trajectory_audit_evidence",
+            "trajectory_audit",
+            "runtime_drift",
+        )
+    if _is_product_runtime_evidence_handoff_evidence(gate, text, missing_metrics):
+        return _kind(
+            "product_runtime_evidence_handoff_evidence",
+            "product_handoff",
             "runtime_drift",
         )
     if (
@@ -810,6 +830,42 @@ def _is_product_runtime_world_model_evidence(
     )
 
 
+def _is_product_runtime_claim_factuality_evidence(
+    gate: str,
+    text: str,
+    missing_metrics: Sequence[str],
+) -> bool:
+    return _is_product_runtime_evidence_kind(
+        gate,
+        text,
+        missing_metrics,
+        patterns=(
+            "claim factuality evidence",
+            "claim-factuality evidence",
+            "claim_factuality_evidence",
+            "claim_factuality_probe_comparison.",
+        ),
+    )
+
+
+def _is_product_runtime_claim_risk_localization_evidence(
+    gate: str,
+    text: str,
+    missing_metrics: Sequence[str],
+) -> bool:
+    return _is_product_runtime_evidence_kind(
+        gate,
+        text,
+        missing_metrics,
+        patterns=(
+            "claim-risk localization evidence",
+            "claim risk localization evidence",
+            "claim_risk_localization_evidence",
+            "claim_risk_localization.",
+        ),
+    )
+
+
 def _is_product_runtime_context_sensitivity_evidence(
     gate: str,
     text: str,
@@ -842,6 +898,44 @@ def _is_product_runtime_counterfactual_robustness_evidence(
             "counterfactual robustness evidence",
             "counterfactual_robustness_evidence",
             "counterfactual_robustness.",
+        ),
+    )
+
+
+def _is_product_runtime_trajectory_audit_evidence(
+    gate: str,
+    text: str,
+    missing_metrics: Sequence[str],
+) -> bool:
+    return _is_product_runtime_evidence_kind(
+        gate,
+        text,
+        missing_metrics,
+        patterns=(
+            "trajectory-audit evidence",
+            "trajectory audit evidence",
+            "trajectory_audit_evidence",
+            "trajectory_audit.",
+            "product_trace_trajectory_audit",
+        ),
+    )
+
+
+def _is_product_runtime_evidence_handoff_evidence(
+    gate: str,
+    text: str,
+    missing_metrics: Sequence[str],
+) -> bool:
+    return _is_product_runtime_evidence_kind(
+        gate,
+        text,
+        missing_metrics,
+        patterns=(
+            "evidence-handoff evidence",
+            "evidence handoff evidence",
+            "evidence_handoff_evidence",
+            "promotion_contract.evidence_handoff.",
+            "evidence_handoff.",
         ),
     )
 
@@ -917,6 +1011,47 @@ def _action_template(kind: Mapping[str, str], *, gate: str, reason: str) -> Evid
             ),
             evidence_routes=("pre_generation_probe_comparison", "product_runtime_drift"),
             suggested_commands=("benchmarks/compare_pre_generation_probe_workflows.py",),
+        )
+    if evidence_kind == "product_runtime_claim_factuality_evidence":
+        return EvidenceGapAction(
+            action_id="rerun_claim_factuality_probe_comparison",
+            title="Add claim factuality probe comparison evidence",
+            action_type="experiment",
+            priority=89,
+            rationale=(
+                "Runtime drift gates need multi-run, manifest-backed claim factuality "
+                "probe evidence before claim-level detector behavior is treated as "
+                "stable enough for release."
+            ),
+            evidence_routes=("claim_factuality_probe_comparison", "product_runtime_drift"),
+            suggested_commands=(
+                "benchmarks/run_claim_factuality_probe_workflow.py",
+                "benchmarks/compare_claim_factuality_probe_workflows.py",
+                "benchmarks/compare_product_runtime_baselines.py",
+            ),
+        )
+    if evidence_kind == "product_runtime_claim_risk_localization_evidence":
+        return EvidenceGapAction(
+            action_id="rerun_product_trace_claim_risk_localization_evidence",
+            title="Replay product traces with claim-risk localization evidence",
+            action_type="workflow",
+            priority=88,
+            rationale=(
+                "Runtime drift gates need trace-level claim-risk localization coverage "
+                "and entity-risk counts so release checks can catch concentrated "
+                "high-risk claim regressions instead of only aggregate verifier drift."
+            ),
+            evidence_routes=(
+                "product_trace_replay",
+                "product_runtime_baseline",
+                "claim_risk_localization",
+                "product_runtime_drift",
+            ),
+            suggested_commands=(
+                "benchmarks/run_product_trace_replay_workflow.py",
+                "benchmarks/run_product_runtime_baseline.py",
+                "benchmarks/compare_product_runtime_baselines.py",
+            ),
         )
     if evidence_kind == "frontier_multiple_testing":
         return EvidenceGapAction(
@@ -1126,6 +1261,50 @@ def _action_template(kind: Mapping[str, str], *, gate: str, reason: str) -> Evid
             ),
             suggested_commands=(
                 "benchmarks/run_product_trace_replay_workflow.py",
+                "benchmarks/run_product_runtime_baseline.py",
+                "benchmarks/compare_product_runtime_baselines.py",
+            ),
+        )
+    if evidence_kind == "product_runtime_trajectory_audit_evidence":
+        return EvidenceGapAction(
+            action_id="rerun_product_trace_trajectory_audit_evidence",
+            title="Replay product traces with trajectory-audit evidence",
+            action_type="workflow",
+            priority=86,
+            rationale=(
+                "Runtime drift gates need trajectory-level factual, referential, "
+                "logical, procedural, and scope audit rates before agent behavior is "
+                "treated as stable across releases."
+            ),
+            evidence_routes=(
+                "product_trace_replay",
+                "trajectory_audit",
+                "product_runtime_drift",
+            ),
+            suggested_commands=(
+                "benchmarks/run_product_trace_replay_workflow.py",
+                "benchmarks/run_product_runtime_baseline.py",
+                "benchmarks/compare_product_runtime_baselines.py",
+            ),
+        )
+    if evidence_kind == "product_runtime_evidence_handoff_evidence":
+        return EvidenceGapAction(
+            action_id="refresh_product_promotion_evidence_handoff",
+            title="Refresh product-promotion evidence handoff",
+            action_type="workflow",
+            priority=85,
+            rationale=(
+                "Runtime drift gates need the promotion contract to carry a verified "
+                "evidence-handoff audit, including missing-metric and promoted-group "
+                "rates, before downstream release evidence can be trusted."
+            ),
+            evidence_routes=(
+                "product_promotion_contract",
+                "evidence_handoff",
+                "product_runtime_drift",
+            ),
+            suggested_commands=(
+                "benchmarks/export_product_promotion_contract_evidence_handoff.py",
                 "benchmarks/run_product_runtime_baseline.py",
                 "benchmarks/compare_product_runtime_baselines.py",
             ),

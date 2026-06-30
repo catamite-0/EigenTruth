@@ -562,6 +562,132 @@ def test_evidence_gap_plan_maps_product_runtime_trace_robustness_blockers():
     )
 
 
+def test_evidence_gap_plan_maps_product_runtime_claim_level_blockers():
+    plan = plan_evidence_gaps_from_release_candidate({
+        "workflow": "release_candidate_comparison",
+        "decision": {
+            "status": "blocked",
+            "blocking_reasons": [
+                {
+                    "gate": "product_runtime_drift",
+                    "status": "blocked",
+                    "reasons": (
+                        "product runtime drift claim factuality evidence metrics are incomplete: "
+                        "promotion_contract.claim_factuality_probe_comparison.coverage_rate, "
+                        "promotion_contract.claim_factuality_probe_comparison.best_redline_margin.mean",
+                        "product runtime drift claim-risk localization evidence metrics are incomplete: "
+                        "claim_risk_localization.coverage_rate, "
+                        "claim_risk_localization.high_risk_entity_candidate_count",
+                        "product runtime drift claim-risk localization evidence blocked 1 metric(s)",
+                    ),
+                }
+            ],
+        },
+    })
+
+    payload = plan.to_dict()
+    actions = {action["action_id"]: action for action in payload["actions"]}
+    gaps_by_kind = {
+        gap["metadata"]["evidence_kind"]: gap
+        for gap in payload["gaps"]
+        if gap["missing_metrics"]
+    }
+
+    assert payload["status"] == "needs_evidence"
+    assert payload["summary"]["gap_count"] == 3
+    assert payload["summary"]["action_count"] == 2
+    assert payload["summary"]["missing_metric_count"] == 4
+    assert payload["summary"]["root_causes"] == {
+        "claim_factuality": 1,
+        "claim_risk_localization": 2,
+    }
+    assert gaps_by_kind[
+        "product_runtime_claim_factuality_evidence"
+    ]["recommended_action_ids"] == (
+        "rerun_claim_factuality_probe_comparison",
+    )
+    assert gaps_by_kind[
+        "product_runtime_claim_risk_localization_evidence"
+    ]["recommended_action_ids"] == (
+        "rerun_product_trace_claim_risk_localization_evidence",
+    )
+    assert actions["rerun_claim_factuality_probe_comparison"]["evidence_routes"] == (
+        "claim_factuality_probe_comparison",
+        "product_runtime_drift",
+    )
+    assert actions[
+        "rerun_product_trace_claim_risk_localization_evidence"
+    ]["evidence_routes"] == (
+        "product_trace_replay",
+        "product_runtime_baseline",
+        "claim_risk_localization",
+        "product_runtime_drift",
+    )
+    assert payload["gaps"][2]["missing_metrics"] == ()
+
+
+def test_evidence_gap_plan_maps_product_runtime_trace_and_handoff_blockers():
+    plan = plan_evidence_gaps_from_release_candidate({
+        "workflow": "release_candidate_comparison",
+        "decision": {
+            "status": "blocked",
+            "blocking_reasons": [
+                {
+                    "gate": "product_runtime_drift",
+                    "status": "blocked",
+                    "reasons": (
+                        "product runtime drift trajectory-audit evidence metrics are incomplete: "
+                        "trajectory_audit.error_rate, trajectory_audit.scope_rate",
+                        "product runtime drift evidence-handoff evidence metrics are incomplete: "
+                        "promotion_contract.evidence_handoff.coverage_rate, "
+                        "promotion_contract.evidence_handoff.promoted_group_rate.mean",
+                    ),
+                }
+            ],
+        },
+    })
+
+    payload = plan.to_dict()
+    actions = {action["action_id"]: action for action in payload["actions"]}
+    gaps_by_kind = {
+        gap["metadata"]["evidence_kind"]: gap
+        for gap in payload["gaps"]
+    }
+
+    assert payload["status"] == "needs_evidence"
+    assert payload["summary"]["gap_count"] == 2
+    assert payload["summary"]["action_count"] == 2
+    assert payload["summary"]["missing_metric_count"] == 4
+    assert payload["summary"]["root_causes"] == {
+        "product_handoff": 1,
+        "trajectory_audit": 1,
+    }
+    assert gaps_by_kind[
+        "product_runtime_trajectory_audit_evidence"
+    ]["recommended_action_ids"] == (
+        "rerun_product_trace_trajectory_audit_evidence",
+    )
+    assert gaps_by_kind[
+        "product_runtime_evidence_handoff_evidence"
+    ]["recommended_action_ids"] == (
+        "refresh_product_promotion_evidence_handoff",
+    )
+    assert actions[
+        "rerun_product_trace_trajectory_audit_evidence"
+    ]["evidence_routes"] == (
+        "product_trace_replay",
+        "trajectory_audit",
+        "product_runtime_drift",
+    )
+    assert actions[
+        "refresh_product_promotion_evidence_handoff"
+    ]["evidence_routes"] == (
+        "product_promotion_contract",
+        "evidence_handoff",
+        "product_runtime_drift",
+    )
+
+
 def test_plan_release_evidence_gaps_cli_helper_writes_and_registers(tmp_path):
     source = tmp_path / "release-workflow.json"
     output = tmp_path / "evidence-gap-plan.json"
