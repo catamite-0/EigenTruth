@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+from eigentruth.control.acquisition import (
+    EvidenceAcquisitionAction,
+    EvidenceAcquisitionDecision,
+    EvidenceAcquisitionPolicy,
+)
 from eigentruth.control.action_audit import (
     ActionAuditIssue,
     ActionAuditPolicy,
@@ -141,6 +146,9 @@ __all__ = [
     "CorrectionPolicy",
     "DefaultCorrectionPolicy",
     "DryRunActionExecutor",
+    "EvidenceAcquisitionAction",
+    "EvidenceAcquisitionDecision",
+    "EvidenceAcquisitionPolicy",
     "EvidenceBundle",
     "EvidenceGap",
     "EvidenceGapAction",

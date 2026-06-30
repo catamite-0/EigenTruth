@@ -15,6 +15,8 @@ from eigentruth.control import (
     ActionResult,
     ControlAction,
     ControlPolicyConfig,
+    EvidenceAcquisitionAction,
+    EvidenceAcquisitionPolicy,
     EvidenceBundle,
     FinalAnswer,
     FinalAnswerStatus,
@@ -31,6 +33,7 @@ from eigentruth.control import (
 from eigentruth.verify import (
     Claim,
     ClaimDependency,
+    ClaimVerificationPlanner,
     GroundednessVerifier,
     VerificationEscalationPolicy,
     VerificationResult,
@@ -590,6 +593,200 @@ def test_verification_loop_escalates_low_confidence_supported_claims_to_retrieva
     payload = result.to_dict()
     assert payload["uncertainty_escalation_plan"]["verify_claim_ids"] == ("c1",)
     json.dumps(payload)
+
+
+def test_evidence_acquisition_policy_limits_queries_and_marks_calibration_scope():
+    claims = (
+        Claim(
+            "AlphaCorp has 10 offices.",
+            claim_id="c1",
+            metadata={
+                "retrieval_queries": (
+                    "AlphaCorp offices annual report",
+                    "AlphaCorp offices official site",
+                ),
+            },
+        ),
+    )
+    plan = ClaimVerificationPlanner().plan(claims)
+    policy = EvidenceAcquisitionPolicy(max_retrieval_queries=1)
+    decision = policy.decide(
+        RiskController(_artifact()).decide({"maha_last": 1.0}),
+        verification_results=(
+            VerificationResult(
+                status=VerificationStatus.INSUFFICIENT_EVIDENCE,
+                confidence=0.2,
+            ),
+        ),
+        verification_plan=plan,
+    )
+    budgeted_plan = policy.apply_to_plan(plan, decision)
+
+    assert decision.action is EvidenceAcquisitionAction.ACQUIRE
+    assert decision.control_action is ControlAction.RETRIEVE
+    assert decision.selected_claim_ids == ("c1",)
+    assert [query["query"] for query in decision.selected_retrieval_queries] == [
+        "AlphaCorp offices annual report",
+    ]
+    assert [query["query"] for query in decision.dropped_retrieval_queries] == [
+        "AlphaCorp offices official site",
+    ]
+    assert decision.metadata["post_acquisition_calibration_required"] is True
+    assert decision.calibration_scope == "post_acquisition_policy"
+    assert [query["query"] for query in budgeted_plan.retrieval_queries] == [
+        "AlphaCorp offices annual report",
+    ]
+    assert budgeted_plan.budget["evidence_acquisition"]["action"] == "acquire"
+    json.dumps(decision.to_dict())
+
+
+def test_evidence_acquisition_policy_does_not_acquire_for_supported_result_only():
+    claims = (
+        Claim(
+            "AlphaCorp has 10 offices.",
+            claim_id="c1",
+            metadata={"retrieval_query": "AlphaCorp offices annual report"},
+        ),
+    )
+    plan = ClaimVerificationPlanner().plan(claims)
+    policy = EvidenceAcquisitionPolicy()
+    decision = policy.decide(
+        RiskController(_artifact()).decide({"maha_last": 1.0}),
+        verification_results=(
+            VerificationResult(
+                status=VerificationStatus.SUPPORTED,
+                confidence=0.95,
+            ),
+        ),
+        verification_plan=plan,
+    )
+
+    assert decision.action is EvidenceAcquisitionAction.ANSWER
+    assert decision.control_action is ControlAction.ACCEPT
+    assert decision.metadata["post_acquisition_calibration_required"] is False
+
+
+def test_verification_loop_records_evidence_acquisition_and_retrieves_when_budget_available():
+    claims = (Claim("Paris is the capital of France.", claim_id="c1"),)
+    verifier = GroundednessVerifier(evidence=(), min_overlap=0.7)
+    registry = _registry_with_retrieval(("Paris is the capital of France.",), min_overlap=0.7)
+
+    result = run_verification_loop(
+        request_id="req-acquire",
+        diagnostics={"maha_last": 1.0},
+        claims=claims,
+        verifier=verifier,
+        controller=RiskController(_artifact()),
+        executor_registry=registry,
+        evidence_acquisition_policy=EvidenceAcquisitionPolicy(max_acquisition_rounds=1),
+    )
+
+    assert result.evidence_acquisition_decision is not None
+    assert result.evidence_acquisition_decision.action is EvidenceAcquisitionAction.ACQUIRE
+    assert result.action_requests[0].action is ControlAction.RETRIEVE
+    assert result.retrieval_evidence.has_evidence()
+    assert result.final_verification_results[0].status is VerificationStatus.SUPPORTED
+    assert result.final_decision.action is ControlAction.ACCEPT
+
+    trace = result.trace.to_dict()
+    assert trace["metadata"]["evidence_acquisition"]["policy"]["max_acquisition_rounds"] == 1
+    assert trace["metadata"]["evidence_acquisition"]["decision"]["action"] == "acquire"
+    assert "evidence_acquisition_decision" in {event["event_type"] for event in trace["events"]}
+    assert "evidence_acquisition_decision" in {
+        phase["name"] for phase in trace["runtime_trace"]["phases"]
+    }
+    assert result.to_dict()["evidence_acquisition_decision"]["control_action"] == "retrieve"
+
+
+def test_verification_loop_evidence_acquisition_payload_respects_query_budget():
+    claims = (
+        Claim(
+            "AlphaCorp has 10 offices.",
+            claim_id="c1",
+            metadata={
+                "retrieval_queries": (
+                    "AlphaCorp offices annual report",
+                    "AlphaCorp offices official site",
+                ),
+            },
+        ),
+    )
+    verifier = GroundednessVerifier(evidence=(), min_overlap=0.7)
+    registry = _registry_with_retrieval(("AlphaCorp offices annual report",), min_overlap=0.7)
+
+    result = run_verification_loop(
+        request_id="req-acquire-query-budget",
+        diagnostics={"maha_last": 1.0},
+        claims=claims,
+        verifier=verifier,
+        controller=RiskController(_artifact()),
+        executor_registry=registry,
+        evidence_acquisition_policy=EvidenceAcquisitionPolicy(max_retrieval_queries=1),
+    )
+
+    retrieve_payload = result.action_requests[0].payload
+    assert [target["text"] for target in retrieve_payload["retrieval_targets"]] == [
+        "AlphaCorp offices annual report",
+    ]
+    assert [query["query"] for query in retrieve_payload["retrieval_queries"]] == [
+        "AlphaCorp offices annual report",
+    ]
+    assert retrieve_payload["plan_retrieval_query_count"] == 1
+    assert result.evidence_acquisition_decision is not None
+    assert [query["query"] for query in result.evidence_acquisition_decision.dropped_retrieval_queries] == [
+        "AlphaCorp offices official site",
+    ]
+
+
+def test_verification_loop_evidence_acquisition_abstains_when_round_budget_exhausted():
+    claims = (Claim("Paris is the capital of France.", claim_id="c1"),)
+    verifier = GroundednessVerifier(evidence=(), min_overlap=0.7)
+    registry = _registry_with_retrieval(("Paris is the capital of France.",), min_overlap=0.7)
+
+    result = run_verification_loop(
+        request_id="req-acquire-budget-exhausted",
+        diagnostics={"maha_last": 1.0},
+        claims=claims,
+        verifier=verifier,
+        controller=RiskController(_artifact()),
+        executor_registry=registry,
+        context={"acquisition_round": 1},
+        evidence_acquisition_policy=EvidenceAcquisitionPolicy(max_acquisition_rounds=1),
+    )
+
+    assert result.evidence_acquisition_decision is not None
+    assert result.evidence_acquisition_decision.action is EvidenceAcquisitionAction.ABSTAIN
+    assert result.evidence_acquisition_decision.budget_exhausted is True
+    assert result.evidence_acquisition_decision.metadata["budget_reasons"] == ("max_acquisition_rounds",)
+    assert result.action_requests[0].action is ControlAction.ABSTAIN
+    assert result.action_results[0].status is ActionExecutionStatus.DRY_RUN
+    assert result.retrieval_evidence.has_evidence() is False
+    assert result.final_decision.action is ControlAction.ABSTAIN
+    assert result.final_decision.risk_level is RiskLevel.HIGH
+    assert "evidence acquisition: evidence-acquisition budget exhausted" in result.final_decision.reason
+
+
+def test_verification_loop_evidence_acquisition_abstains_when_query_budget_is_zero():
+    claims = (Claim("Paris is the capital of France.", claim_id="c1"),)
+    verifier = GroundednessVerifier(evidence=(), min_overlap=0.7)
+    registry = _registry_with_retrieval(("Paris is the capital of France.",), min_overlap=0.7)
+
+    result = run_verification_loop(
+        request_id="req-acquire-zero-query-budget",
+        diagnostics={"maha_last": 1.0},
+        claims=claims,
+        verifier=verifier,
+        controller=RiskController(_artifact()),
+        executor_registry=registry,
+        evidence_acquisition_policy=EvidenceAcquisitionPolicy(max_retrieval_queries=0),
+    )
+
+    assert result.evidence_acquisition_decision is not None
+    assert result.evidence_acquisition_decision.action is EvidenceAcquisitionAction.ABSTAIN
+    assert result.evidence_acquisition_decision.metadata["budget_reasons"] == ("max_retrieval_queries",)
+    assert result.action_requests[0].action is ControlAction.ABSTAIN
+    assert result.retrieval_evidence.has_evidence() is False
+    assert result.final_decision.action is ControlAction.ABSTAIN
 
 
 def test_verification_loop_can_enforce_claim_coherence_for_triggered_subset():

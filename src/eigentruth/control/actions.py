@@ -1114,12 +1114,13 @@ def _with_plan_retrieval_payload(
     plan: Mapping[str, Any],
 ) -> ActionRequest:
     payload = dict(request.payload)
+    replace_existing = _replace_retrieval_payload_from_plan(plan)
     payload["retrieval_targets"] = _merge_retrieval_targets(
-        payload.get("retrieval_targets", ()),
+        () if replace_existing else payload.get("retrieval_targets", ()),
         retrieval_targets,
     )
     payload["retrieval_queries"] = _merge_retrieval_queries(
-        payload.get("retrieval_queries", ()),
+        () if replace_existing else payload.get("retrieval_queries", ()),
         retrieval_queries,
     )
     payload["plan_retrieval_query_count"] = len(retrieval_queries)
@@ -1178,6 +1179,21 @@ def _plan_aware_metadata(
         "verification_plan_action_injected": bool(injected),
         "verification_plan_cost": estimate_verification_plan_cost(plan).to_dict(),
     }
+
+
+def _replace_retrieval_payload_from_plan(plan: Mapping[str, Any]) -> bool:
+    budget = plan.get("budget", {})
+    if not isinstance(budget, Mapping):
+        return False
+    acquisition = budget.get("evidence_acquisition", {})
+    if not isinstance(acquisition, Mapping):
+        return False
+    if str(acquisition.get("action", "")).strip().lower() != "acquire":
+        return False
+    return bool(
+        _as_tuple(acquisition.get("selected_retrieval_queries", ()))
+        or _as_tuple(acquisition.get("dropped_retrieval_queries", ()))
+    )
 
 
 def _merge_retrieval_targets(

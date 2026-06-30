@@ -46,7 +46,7 @@ Implemented today:
 - Product promotion contracts now preserve release-candidate recommended-runtime evidence (`recommended_runtime_seconds`, cost source, max recommended-runtime gate, and uncached forward cost) in contract metadata and ProductTrace metadata. The current frontier-audit handoff is `artifacts/smollm2_product_promotion_contract_v1_9/`: the source contract is exported from the promoted v13 release candidate (`benchmark_manifest:smollm2-l8-frontier-audit-release-candidate:0.13`) and carries the selected cache-only runtime recommendation (`0.191662s`). The enriched handoff records explicit child-report evidence, requires frontier release-evidence verdict provenance as the seventh default `frontier_audit` handoff group, and independently audits as promoted with `65/65` fields, verified manifests, and zero blocked groups.
 - `eigentruth.control.FinalAnswer`: conservative JSON-ready product output that turns control-loop results into an answered/abstained/needs-retrieval/needs-clarification status with claim summaries, evidence snippets, follow-up metadata, and no hidden LLM rewrite step; `ProductTrace` can carry it for replay, feedback, bounded telemetry, and runtime-baseline audits.
 - `eigentruth.control.ProductFeedbackRecord` / `ProductFeedbackStore`: dependency-free JSONL feedback records for post-hoc request or claim outcomes, linked by request id or trace fingerprint for product-quality audit reports.
-- `eigentruth.control.run_verification_loop` / `StagedVerificationPolicy` / `EvidenceBundle`: dependency-free verify -> decide -> execute -> reverify loop that records a `ClaimVerificationPlan`, passes it through action-planning context for optional plan-aware policies, can gate expensive verifier routes behind diagnostic risk or sensitive claim metadata, can opt into uncertainty-driven second-stage verification planning for low-confidence preliminary results, then feed retrieval action results back into verifier context.
+- `eigentruth.control.run_verification_loop` / `StagedVerificationPolicy` / `EvidenceAcquisitionPolicy` / `EvidenceBundle`: dependency-free verify -> decide -> execute -> reverify loop that records a `ClaimVerificationPlan`, passes it through action-planning context for optional plan-aware policies, can gate expensive verifier routes behind diagnostic risk or sensitive claim metadata, can opt into uncertainty-driven second-stage verification planning for low-confidence preliminary results, can apply a budgeted answer/acquire/abstain evidence-acquisition decision before action planning, then feed retrieval action results back into verifier context. Evidence-acquisition traces explicitly record that conformal guarantees should be calibrated on the post-acquisition policy score, not inherited from a naive pre-acquisition threshold.
 - `eigentruth.verify.ClaimVerificationPlanner` / `ClaimVerificationPlan` / `VerificationBudgetPolicy` / `VerificationEscalationPolicy` / `VerificationPlanCostEstimate`: dependency-free claim verification planning layer that preserves extracted claim metadata while emitting verifier scope, route hints, retrieval queries, citation checks, calculator checks, structured-state checks, world-model checks, triple-evidence audit routes for sensitive factual claims, inferred claim dependencies, and relative route/tool cost estimates for later control/runtime integration. `VerificationBudgetPolicy` adds a monitor-first adaptive verification step: it selects high-value claims and routes under claim, route, tool-payload, or estimated-cost caps, then records dropped-claim/route budget evidence for `ProductTrace` and runtime-baseline reports. `VerificationEscalationPolicy` adds the next monitor-first step: after a cheap preliminary verifier, low-confidence, insufficient-evidence, or entity-sensitive medium-confidence claims can produce a second-stage plan for stronger retrieval, triple-evidence, or world-model routes while preserving uncertainty reasons, entity candidates, and budget metadata.
 - `eigentruth.verify.ClaimRiskSpan` / `ClaimRiskLocalizationReport` / `localize_claim_risk_spans`: dependency-free claim/span risk localization built from existing claim offsets, verifier statuses, route hints, entity/surface candidates, claim feature flags, and verification-budget drops; the report is JSON-ready and feeds `ProductTrace.to_bounded_dict()` plus runtime metrics without introducing learned token detectors.
 - `eigentruth.verify.ClaimDependency` / `ClaimCoherenceReport` / `apply_claim_coherence`: optional claim dependency-graph coherence pass that downgrades supported child claims when required parent claims are missing or unsupported; `run_verification_loop(..., enforce_claim_coherence=True)` records coherence reports in product traces.
@@ -119,8 +119,9 @@ A product system should be able to:
 2. Generate a draft answer creatively under the selected runtime budget.
 3. Extract atomic claims from the draft.
 4. Score internal drift and semantic instability.
-5. Verify high-risk claims with external tools or world models.
-6. Produce a final answer with confidence, evidence, and correction trace.
+5. Decide whether to answer, acquire more evidence, or abstain under an explicit evidence budget.
+6. Verify high-risk claims with external tools or world models.
+7. Produce a final answer with confidence, evidence, and correction trace.
 
 ## Proposed Runtime Architecture
 
@@ -139,6 +140,9 @@ LLM draft generation <---- optional retrieval/context injection
   |
   v
 atomic claim extraction
+  |
+  v
+budgeted evidence acquisition decision
   |
   +--> retrieval / database / calculator / code tools
   +--> world-model or domain-state verifier
@@ -276,7 +280,7 @@ For product features:
 
 ### Completed 0.4 Verification Loop Shell
 
-- Dependency-free verify -> decide -> execute -> reverify helper with final `ProductTrace` output and optional staged verifier gating for low-risk, non-sensitive claims.
+- Dependency-free verify -> decide -> execute -> reverify helper with final `ProductTrace` output, optional staged verifier gating for low-risk non-sensitive claims, and optional budgeted answer/acquire/abstain evidence acquisition before action planning.
 - `EvidenceBundle` conversion from retrieval `ActionResult` payloads into claim-scoped verifier evidence context.
 - Demo and tests for unsupported -> retrieve -> supported, no-hit retrieve, and refuted-claim hard stop paths.
 - `eval_verifier_ensemble.py` benchmark shell for comparing calibrated internal diagnostics against retrieval/verifier suppression and refutation policies, including structured QA, static state, and action-conditioned state-transition routes.
