@@ -45301,6 +45301,126 @@ def test_build_verifier_signal_score_dump_from_verified_records_jsonl(tmp_path):
     assert DEFAULT_SCORE_DIRECTIONS["context_sensitivity_max_ratio"] == "higher"
 
 
+def test_context_sensitivity_sidecar_enrichment_feeds_verifier_signal_score_dump(tmp_path):
+    enricher = importlib.import_module("benchmarks.enrich_context_sensitivity_sidecar")
+    signal_builder = importlib.import_module("benchmarks.build_verifier_signal_score_dump")
+    from eigentruth.eval.score_dump import load_score_dump
+
+    scores_path = tmp_path / "scores.json"
+    verified_records_path = tmp_path / "verified-records.jsonl"
+    paired_logprobs_path = tmp_path / "paired-logprobs.jsonl"
+    enriched_path = tmp_path / "verified-records-context.jsonl"
+    enhanced_path = tmp_path / "enhanced.manifest.json"
+    report_path = tmp_path / "context-enrichment-report.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -2},
+            "labels": [0, 1],
+            "scores": {"truth_proj": [0.1, 0.9]},
+            "statements": [{"text": "supported"}, {"text": "refuted"}],
+        }),
+        encoding="utf-8",
+    )
+    verified_records = [
+        {
+            "schema_version": 1,
+            "workflow": "verifier_ensemble_verified_record",
+            "run": "synthetic",
+            "record_index": 0,
+            "label": 0,
+            "score": 0.1,
+            "record": {
+                "final": {"status": "supported", "confidence": 0.9},
+                "retrieval_hits": [{"id": "doc-1"}],
+            },
+        },
+        {
+            "schema_version": 1,
+            "workflow": "verifier_ensemble_verified_record",
+            "run": "synthetic",
+            "record_index": 1,
+            "label": 1,
+            "score": 0.9,
+            "record": {
+                "final": {"status": "refuted", "confidence": 0.8},
+                "retrieval_hits": [{"id": "doc-2"}],
+            },
+        },
+    ]
+    paired_records = [
+        {
+            "run": "synthetic",
+            "record_index": 0,
+            "tokens": [
+                {"token": " supported", "baseline_logprob": -1.0, "context_logprob": -0.5},
+            ],
+        },
+        {
+            "run": "synthetic",
+            "record_index": 1,
+            "tokens": [
+                {"token": " wrong", "baseline_logprob": -0.5, "context_logprob": -1.5},
+                {"token": " answer", "baseline_logprob": -1.0, "context_logprob": -0.8},
+            ],
+            "metadata": {"adapter": "unit-logprob"},
+        },
+    ]
+    verified_records_path.write_text(
+        "".join(json.dumps(record, sort_keys=True) + "\n" for record in verified_records),
+        encoding="utf-8",
+    )
+    paired_logprobs_path.write_text(
+        "".join(json.dumps(record, sort_keys=True) + "\n" for record in paired_records),
+        encoding="utf-8",
+    )
+
+    enrichment_report = enricher.run(
+        SimpleNamespace(
+            verified_records_jsonl=str(verified_records_path),
+            paired_logprobs=str(paired_logprobs_path),
+            output=str(enriched_path),
+            run_name="synthetic",
+            ratio_threshold=2.0,
+            shift_threshold=0.5,
+            min_abs_delta=0.0,
+            allow_missing=False,
+            overwrite=False,
+            json=str(report_path),
+        )
+    )
+    signal_builder.run(
+        SimpleNamespace(
+            scores=str(scores_path),
+            verified_records_jsonl=str(enriched_path),
+            run_name="synthetic",
+            keep_signals="truth_proj",
+            verifier_signals=(
+                "context_sensitivity_flagged_rate,context_sensitivity_max_shift,"
+                "context_sensitivity_mean_shift,context_sensitivity_max_ratio"
+            ),
+            output=str(enhanced_path),
+            output_format="jsonl",
+            json=None,
+        )
+    )
+    enriched_records = [
+        json.loads(line)
+        for line in enriched_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    enhanced = load_score_dump(enhanced_path, required_scores=("context_sensitivity_flagged_rate",))
+    saved_report = json.loads(report_path.read_text(encoding="utf-8"))
+
+    assert enrichment_report["enriched_record_count"] == 2
+    assert saved_report["summary"]["max_flagged_rate"] == pytest.approx(0.5)
+    assert enriched_records[1]["context_sensitivity"]["metadata"]["paired_metadata"]["adapter"] == "unit-logprob"
+    assert enriched_records[1]["context_sensitivity"]["summary"]["flagged_token_count"] == 1
+    assert enhanced.scores["context_sensitivity_flagged_rate"] == pytest.approx((0.0, 0.5))
+    assert enhanced.scores["context_sensitivity_max_shift"] == pytest.approx((0.0, 1.0))
+    assert enhanced.scores["context_sensitivity_mean_shift"] == pytest.approx((0.0, 0.5))
+    assert enhanced.scores["context_sensitivity_max_ratio"] == pytest.approx((0.5, 3.0))
+
+
 def test_verifier_signal_features_extract_direct_world_model_ensemble_metadata():
     module = importlib.import_module("benchmarks.build_verifier_signal_score_dump")
 

@@ -6867,9 +6867,16 @@ python benchmarks/eval_verifier_ensemble.py \
   --verified-records-jsonl artifacts/verifier-signals/verified-records.jsonl \
   --json artifacts/verifier-signals/verifier-ensemble-report.json
 
+python benchmarks/enrich_context_sensitivity_sidecar.py \
+  --verified-records-jsonl artifacts/verifier-signals/verified-records.jsonl \
+  --paired-logprobs artifacts/verifier-signals/paired-context-logprobs.jsonl \
+  --run-name qwen-l80 \
+  --output artifacts/verifier-signals/verified-records-context.jsonl \
+  --json artifacts/verifier-signals/context-sensitivity-sidecar-report.json
+
 python benchmarks/build_verifier_signal_score_dump.py \
   --scores artifacts/qwen05_truthfulqa_l80_scores_with_statements.json \
-  --verified-records-jsonl artifacts/verifier-signals/verified-records.jsonl \
+  --verified-records-jsonl artifacts/verifier-signals/verified-records-context.jsonl \
   --run-name qwen-l80 \
   --keep-signals truth_proj,maha_last,subspace_resid,eigenscore,nll_answer \
   --output artifacts/verifier-signals/qwen-l80-enhanced-scores.manifest.json \
@@ -6884,12 +6891,14 @@ metadata includes explicit postcondition conflicts, it also emits
 `world_model_conflict`, `world_model_conflict_delta`, and the audit-oriented
 `world_model_trace_gap`, so simulator/model disagreement and expected-vs-actual
 world conflicts can be swept or fused under the same conformal calibration path.
-If the verified-record sidecar includes a `context_sensitivity` report or raw
-paired token log-probability rows under `context_sensitivity.tokens`, the
-converter additionally emits `context_sensitivity_flagged_rate`,
-`context_sensitivity_max_shift`, `context_sensitivity_mean_shift`, and
-`context_sensitivity_max_ratio` so evidence-context likelihood disagreements
-can be calibrated alongside geometry and verifier outcomes.
+When an external model adapter has already computed paired no-context and
+evidence-context token log-probabilities, `enrich_context_sensitivity_sidecar.py`
+adds per-record `ContextSensitivityReport` payloads without depending on that
+model runtime. The score-dump converter then emits
+`context_sensitivity_flagged_rate`, `context_sensitivity_max_shift`,
+`context_sensitivity_mean_shift`, and `context_sensitivity_max_ratio` so
+evidence-context likelihood disagreements can be calibrated alongside geometry
+and verifier outcomes.
 
 Simple text baselines can also be appended to statement-bearing dumps as
 redline controls. This is a post-hoc check for whether a proposed detector is
