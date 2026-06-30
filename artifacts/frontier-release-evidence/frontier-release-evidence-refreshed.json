@@ -1,8 +1,8 @@
 {
   "artifact_manifest_summary": {
-    "artifact_count": 9,
+    "artifact_count": 11,
     "directory_count": 0,
-    "file_count": 9,
+    "file_count": 11,
     "missing_count": 0
   },
   "citation_batch_decisions": [],
@@ -28,20 +28,15 @@
       "abstention_stability.qwen05-l80.release_gate_pass_seed_rate 0 is below required minimum 1",
       "abstention_stability.smollm2-l80.conditional_correctness_lower_bound_mean 0.48451 is below required minimum 0.8",
       "abstention_stability.smollm2-l80.release_gate_pass_seed_rate 0 is below required minimum 1",
-      "detectability_taxonomy.smollm2-l80.entrenched_false_rate 0.29085 exceeds maximum 0.25",
-      "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate missing",
-      "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.enabled is not true",
-      "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.all_pass is not true",
-      "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.cell_count is missing or zero",
-      "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.pass_count is missing",
-      "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.fail_count is missing",
-      "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.unknown_count is missing"
+      "detectability_taxonomy.smollm2-l80.entrenched_false_rate 0.29085 exceeds maximum 0.25"
     ],
     "citation_batch_track_status": "not_required",
     "detectability_track_status": "blocked",
-    "frontier_rerun_rollup_promoted_tracks": [],
-    "frontier_rerun_rollup_track_status": "not_required",
-    "multiple_testing_track_status": "blocked",
+    "frontier_rerun_rollup_promoted_tracks": [
+      "multiple_testing"
+    ],
+    "frontier_rerun_rollup_track_status": "promote",
+    "multiple_testing_track_status": "promote",
     "status": "blocked",
     "verifier_track_status": "promote"
   },
@@ -87,16 +82,24 @@
     "detectability_track_status": "blocked",
     "frontier_rerun_rollup_blocked_candidate_count": 0,
     "frontier_rerun_rollup_blocked_names": [],
-    "frontier_rerun_rollup_candidate_count": 0,
+    "frontier_rerun_rollup_candidate_count": 2,
     "frontier_rerun_rollup_invalid_report_count": 0,
     "frontier_rerun_rollup_missing_report_count": 0,
-    "frontier_rerun_rollup_names": [],
-    "frontier_rerun_rollup_observed_report_count": 0,
-    "frontier_rerun_rollup_promoted_tracks": [],
-    "frontier_rerun_rollup_promotion_ready_count": 0,
-    "frontier_rerun_rollup_report_count": 0,
-    "frontier_rerun_rollup_tracks": [],
-    "frontier_rerun_rollup_workflows": [],
+    "frontier_rerun_rollup_names": [
+      "frontier-rerun-rollup"
+    ],
+    "frontier_rerun_rollup_observed_report_count": 2,
+    "frontier_rerun_rollup_promoted_tracks": [
+      "multiple_testing"
+    ],
+    "frontier_rerun_rollup_promotion_ready_count": 2,
+    "frontier_rerun_rollup_report_count": 1,
+    "frontier_rerun_rollup_tracks": [
+      "multiple_testing"
+    ],
+    "frontier_rerun_rollup_workflows": [
+      "frontier_multiple_testing_rerun_rollup"
+    ],
     "frontier_workflow_report_count": 1,
     "multiple_testing_blocked_cells": [],
     "multiple_testing_cell_count": 0,
@@ -107,7 +110,7 @@
     ],
     "multiple_testing_pass_count": 0,
     "multiple_testing_signals": [],
-    "multiple_testing_track_status": "blocked",
+    "multiple_testing_track_status": "promote",
     "multiple_testing_unknown_cells": [],
     "multiple_testing_unknown_count": 0,
     "run_count": 2,
@@ -118,7 +121,41 @@
     "verifier_signal": "truth_proj",
     "verifier_track_status": "promote"
   },
-  "frontier_rerun_rollup_decisions": [],
+  "frontier_rerun_rollup_decisions": [
+    {
+      "blocking_reasons": [],
+      "checks": [],
+      "metrics": {
+        "artifact_manifest": "artifacts/frontier-multiple-testing-rerun-rollup-v1/artifact-manifest.json",
+        "audit_ready": null,
+        "audit_ready_count": null,
+        "blocked_candidate_count": 0,
+        "candidate_count": 2,
+        "cells": [
+          "qwen05-l80",
+          "smollm2-l80"
+        ],
+        "gate_passed": true,
+        "invalid_report_count": 0,
+        "missing_report_count": 0,
+        "observed_report_count": 2,
+        "passing_candidate_count": null,
+        "promotion_ready": true,
+        "promotion_ready_count": 2,
+        "runs": [
+          "truthfulqa-frontier-workflow"
+        ],
+        "status": "promote",
+        "track": "multiple_testing",
+        "track_statuses": {},
+        "tracks": [],
+        "workflow": "frontier_multiple_testing_rerun_rollup"
+      },
+      "name": "frontier-rerun-rollup",
+      "status": "promote",
+      "track": "frontier_rerun_rollup"
+    }
+  ],
   "inputs": {
     "abstention_stability_report": {
       "artifact_manifest": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/artifact-manifest.json",
@@ -152,7 +189,17 @@
         "workflow": "detectability_taxonomy"
       }
     ],
-    "frontier_rerun_rollup_reports": [],
+    "frontier_rerun_rollup_reports": [
+      {
+        "artifact_manifest": "artifacts/frontier-multiple-testing-rerun-rollup-v1/artifact-manifest.json",
+        "artifact_manifest_summary": {},
+        "blocking_reasons": [],
+        "path": "artifacts/frontier-multiple-testing-rerun-rollup-v1/frontier-rerun-rollup.json",
+        "status": "promote",
+        "track": "multiple_testing",
+        "workflow": "frontier_multiple_testing_rerun_rollup"
+      }
+    ],
     "frontier_workflow_reports": [
       {
         "artifact_manifest": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/artifact-manifest.json",
@@ -183,7 +230,7 @@
     }
   },
   "manifest_verification": {
-    "checked": 9,
+    "checked": 11,
     "failure_count": 0,
     "passed": true,
     "path": "artifacts/frontier-release-evidence/manifest-verification.json",
@@ -220,7 +267,9 @@
       "track": "truthfulqa_frontier_workflow.multiple_testing_gate"
     }
   ],
-  "notes": [],
+  "notes": [
+    "multiple-testing-rerun-rollup-v1-promoted"
+  ],
   "paths": {
     "artifact_manifest": "artifacts/frontier-release-evidence/artifact-manifest.json",
     "frontier_release_evidence_report": "artifacts/frontier-release-evidence/frontier-release-evidence-refreshed.json",

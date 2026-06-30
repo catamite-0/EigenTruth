@@ -37,8 +37,24 @@
       "file_count": 1,
       "kind": "file",
       "path": "frontier-release-evidence-refreshed.json",
-      "sha256": "4034b1f6214b094e3b9e03af3cb39dfa8461abd54ec9b005e942a69b10255e7f",
-      "size_bytes": 20500
+      "sha256": "7415f3d34ea65b1601df47c4faa9a34fd83d02f9b8048df2219410738d2d681a",
+      "size_bytes": 21390
+    },
+    "frontier_rerun_rollup_manifest_0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../frontier-multiple-testing-rerun-rollup-v1/artifact-manifest.json",
+      "sha256": "ac3a8df22a3fec85d8b184d152e8bb7111707963a386b2a0152172666ec64ef7",
+      "size_bytes": 1762
+    },
+    "frontier_rerun_rollup_report_0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../frontier-multiple-testing-rerun-rollup-v1/frontier-rerun-rollup.json",
+      "sha256": "1c0e6ed3df2b5e41970a48e8e6af3e76c9ad470cd7d024ac4d52b40df07b54a2",
+      "size_bytes": 5975
     },
     "frontier_workflow_manifest_0": {
       "exists": true,
@@ -78,18 +94,20 @@
     "abstention_track_status": "blocked",
     "citation_batch_track_status": "not_required",
     "detectability_track_status": "blocked",
-    "frontier_rerun_rollup_promoted_tracks": [],
-    "frontier_rerun_rollup_track_status": "not_required",
-    "multiple_testing_track_status": "blocked",
+    "frontier_rerun_rollup_promoted_tracks": [
+      "multiple_testing"
+    ],
+    "frontier_rerun_rollup_track_status": "promote",
+    "multiple_testing_track_status": "promote",
     "runner": "compare_frontier_release_evidence",
     "status": "blocked",
     "verifier_track_status": "promote"
   },
   "schema_version": 1,
   "summary": {
-    "artifact_count": 9,
+    "artifact_count": 11,
     "directory_count": 0,
-    "file_count": 9,
+    "file_count": 11,
     "missing_count": 0
   }
 }

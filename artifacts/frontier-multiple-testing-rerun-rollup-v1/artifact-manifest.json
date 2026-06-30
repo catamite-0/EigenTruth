@@ -1,0 +1,55 @@
+{
+  "artifacts": {
+    "frontier_multiple_testing_rerun_queue": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../frontier-multiple-testing-rerun-queue-v1/rerun-queue.json",
+      "sha256": "d9481b2170cfcef89b2dc06852aeaf03bcc81cdc4b38b3e6531e18752a137e3f",
+      "size_bytes": 10380
+    },
+    "frontier_multiple_testing_rerun_rollup": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-rerun-rollup.json",
+      "sha256": "1c0e6ed3df2b5e41970a48e8e6af3e76c9ad470cd7d024ac4d52b40df07b54a2",
+      "size_bytes": 5975
+    },
+    "frontier_workflow_rerun_report_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../frontier-multiple-testing-reruns-v1/qwen05-l80/truthfulqa-frontier-workflow.json",
+      "sha256": "dc59de707053c47d33155850d0ce3cbc33298fec6fe8618ae66c46f89d78fcf4",
+      "size_bytes": 8316
+    },
+    "frontier_workflow_rerun_report_2": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../frontier-multiple-testing-reruns-v1/smollm2-l80/truthfulqa-frontier-workflow.json",
+      "sha256": "46b21d59f64cf6db2db2e74f2c790254940d2c2f7795e83236ed65034f5f1ce0",
+      "size_bytes": 8375
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "candidate_count": 2,
+    "missing_report_count": 0,
+    "passed": true,
+    "promotion_ready": true,
+    "promotion_ready_count": 2,
+    "runner": "rollup_frontier_multiple_testing_reruns",
+    "source": "v6-missing-gate",
+    "status": "promote",
+    "workflow": "frontier_multiple_testing_rerun_rollup"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "artifacts": {
+    "best_calibration_artifact": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "best-calibration.json",
+      "sha256": "833b95a25a5245f7bbe05a9567c84205e72c8911fb12d93fb0e92b59dae163df",
+      "size_bytes": 901
+    },
+    "conformal_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "conformal-report.json",
+      "sha256": "d6225890c6be34a83584157b18993f799f4b65c91fdfdce94055a4528dd9da82",
+      "size_bytes": 44140
+    },
+    "input_scores": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json",
+      "sha256": "2fb7b3e3d31bf01bc4df035891208055ae1bda08ecb2c0e6396e86b866f609dc",
+      "size_bytes": 3248
+    },
+    "multiple_testing_calibration_artifact": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "multiple-testing-calibration.json",
+      "sha256": "a931f4d7716b0f8896dadc7c6d36cb3b655f23e9a9a90dac72c43a6dbcad2d33",
+      "size_bytes": 36381
+    },
+    "multiple_testing_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "multiple-testing-report.json",
+      "sha256": "ffe9b09bf791189d7baf32bf18512923c63f7a38c657da0bd9b5c25d38d884b0",
+      "size_bytes": 13952
+    },
+    "sweep_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "sweep-report.json",
+      "sha256": "66be3438e3db98e00a0bd48400c2d1150b03407c3341431bf0cb1ef775456413",
+      "size_bytes": 12364
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "direction": "higher",
+    "has_abstention_comparison_report": false,
+    "has_abstention_release_gate": false,
+    "has_abstention_report": false,
+    "has_adaptive_report": false,
+    "has_multiple_testing_calibration_artifact": true,
+    "has_multiple_testing_report": true,
+    "has_sequential_calibration_artifact": false,
+    "has_sequential_report": false,
+    "has_sweep_report": true,
+    "multiple_testing": {
+      "alpha": 0.1,
+      "directions": {
+        "eigenscore": "higher",
+        "maha_last": "higher",
+        "resid_update_norm": "higher",
+        "subspace_resid": "higher",
+        "truth_proj": "higher"
+      },
+      "method": "by",
+      "pass": true,
+      "signals": [
+        "truth_proj",
+        "maha_last",
+        "subspace_resid",
+        "resid_update_norm",
+        "eigenscore"
+      ]
+    },
+    "runner": "eval_conformal",
+    "signal": "truth_proj",
+    "verdict": "ACCEPT"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 6,
+    "directory_count": 0,
+    "file_count": 6,
+    "missing_count": 0
+  }
+}

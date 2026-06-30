@@ -1,0 +1,128 @@
+{
+  "artifacts": {
+    "best_calibration": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "best-calibration.json",
+      "sha256": "833b95a25a5245f7bbe05a9567c84205e72c8911fb12d93fb0e92b59dae163df",
+      "size_bytes": 901
+    },
+    "conformal_artifact_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "conformal-artifact-manifest.json",
+      "sha256": "6c9d57c895002c2e19d18cfbfa7793db8b1e1f4c0b2916ba4c572dd8c94ee542",
+      "size_bytes": 2744
+    },
+    "conformal_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "conformal-report.json",
+      "sha256": "d6225890c6be34a83584157b18993f799f4b65c91fdfdce94055a4528dd9da82",
+      "size_bytes": 44140
+    },
+    "eval_reps_cache": {
+      "exists": true,
+      "file_count": 36,
+      "kind": "directory",
+      "path": "../../../cache/truthfulqa-frontier-qwen-smollm2/smollm2-l80/eval-reps-cache",
+      "sha256": "089a8d8e967eea04ee76f8d3432541ced709770cd035cffb259cc865c05f985b",
+      "size_bytes": 160240134
+    },
+    "layer_stats_cache": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../cache/truthfulqa-frontier-qwen-smollm2/smollm2-l80/layer-stats.pt",
+      "sha256": "cdcba7d11183432be16be61675c3fdf9dd4da3a368b26093f29ae0e444cd486c",
+      "size_bytes": 6752936
+    },
+    "multiple_testing_calibration": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "multiple-testing-calibration.json",
+      "sha256": "a931f4d7716b0f8896dadc7c6d36cb3b655f23e9a9a90dac72c43a6dbcad2d33",
+      "size_bytes": 36381
+    },
+    "multiple_testing_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "multiple-testing-report.json",
+      "sha256": "ffe9b09bf791189d7baf32bf18512923c63f7a38c657da0bd9b5c25d38d884b0",
+      "size_bytes": 13952
+    },
+    "score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json",
+      "sha256": "2fb7b3e3d31bf01bc4df035891208055ae1bda08ecb2c0e6396e86b866f609dc",
+      "size_bytes": 3248
+    },
+    "score_dump_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.records.jsonl",
+      "sha256": "ca00ae6a2fa86fab0056d22e63b3f021047eb957ec7d7908195b288d3f27587f",
+      "size_bytes": 857544
+    },
+    "sweep_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "sweep-report.json",
+      "sha256": "66be3438e3db98e00a0bd48400c2d1150b03407c3341431bf0cb1ef775456413",
+      "size_bytes": 12364
+    },
+    "workflow_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "calibrated-observability-workflow.json",
+      "sha256": "c0a5b23543c9e473c9ae9ccba1cc9a6b80dd51f0515c9b6e7c16784a9418e128",
+      "size_bytes": 12388
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "artifact_alpha": 0.1,
+    "best_by": "auroc",
+    "cache_only": true,
+    "conformal_verdict": "ACCEPT",
+    "dry_run": false,
+    "dtype": "float32",
+    "dump_scores_format": "jsonl",
+    "layer": -12,
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "multiple_testing_alpha": 0.1,
+    "multiple_testing_enabled": true,
+    "multiple_testing_method": "by",
+    "multiple_testing_pass": true,
+    "multiple_testing_signals": [
+      "truth_proj",
+      "maha_last",
+      "subspace_resid",
+      "resid_update_norm",
+      "eigenscore"
+    ],
+    "offline": false,
+    "runner": "run_calibrated_observability_workflow",
+    "runtime_preset": "custom",
+    "score_dump_reused": true,
+    "status": "complete",
+    "sweep_layers_source": null
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 11,
+    "directory_count": 1,
+    "file_count": 10,
+    "missing_count": 0
+  }
+}

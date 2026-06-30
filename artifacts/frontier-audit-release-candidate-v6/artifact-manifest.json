@@ -13,16 +13,16 @@
       "file_count": 1,
       "kind": "file",
       "path": "../frontier-release-evidence/artifact-manifest.json",
-      "sha256": "98865730db78331faee9c671e14cf040fb1183fa7e212411fc2364bcca3fec6b",
-      "size_bytes": 3533
+      "sha256": "d34207df4387f89ef464ff6a605883054a4b849f797b4268992bf36cde243db7",
+      "size_bytes": 4182
     },
     "release_candidate_report": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "frontier-audit-comparison.json",
-      "sha256": "7005b1e9e6e65a3df720a7840f0c47c8094c17cfecc2c1adaa872944a8c1f6a2",
-      "size_bytes": 251646
+      "sha256": "edad43f7cc92d2f1cd8a97fd1d0a18130c171c3eec412403ae1cb9a649c9c257",
+      "size_bytes": 251139
     }
   },
   "digest_algorithm": "sha256",
@@ -129,15 +129,17 @@
     "frontier_release_evidence_citation_batch_unexpected_batch_count": 0,
     "frontier_release_evidence_decision_status": "blocked",
     "frontier_release_evidence_frontier_rerun_rollup_blocked_candidate_count": 0,
-    "frontier_release_evidence_frontier_rerun_rollup_candidate_count": 0,
+    "frontier_release_evidence_frontier_rerun_rollup_candidate_count": 2,
     "frontier_release_evidence_frontier_rerun_rollup_invalid_report_count": 0,
     "frontier_release_evidence_frontier_rerun_rollup_missing_report_count": 0,
-    "frontier_release_evidence_frontier_rerun_rollup_promoted_tracks": [],
-    "frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count": 0,
-    "frontier_release_evidence_frontier_rerun_rollup_report_count": 0,
-    "frontier_release_evidence_frontier_rerun_rollup_track_status": "not_required",
+    "frontier_release_evidence_frontier_rerun_rollup_promoted_tracks": [
+      "multiple_testing"
+    ],
+    "frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count": 2,
+    "frontier_release_evidence_frontier_rerun_rollup_report_count": 1,
+    "frontier_release_evidence_frontier_rerun_rollup_track_status": "promote",
     "frontier_release_evidence_manifest": "artifacts/frontier-release-evidence/artifact-manifest.json",
-    "frontier_release_evidence_multiple_testing_track_status": "blocked",
+    "frontier_release_evidence_multiple_testing_track_status": "promote",
     "frontier_release_evidence_report": "artifacts/frontier-release-evidence/frontier-release-evidence-refreshed.json",
     "frontier_release_evidence_verifier_track_status": "promote",
     "max_covariance_maha_last_auroc_drop": null,
@@ -679,7 +681,13 @@
     "release_performance_status": "promote",
     "release_policy_profile": "frontier_audit",
     "release_policy_profile_applied_defaults": {
-      "max_uncached_forward_seconds": null
+      "max_false_supported_rate": 0.0,
+      "max_recommended_runtime_seconds": 1.0,
+      "max_uncached_forward_seconds": null,
+      "min_best_quality_auroc": 0.7,
+      "min_decision_accuracy": 0.99,
+      "min_false_refuted_rate": 0.99,
+      "min_selected": 4
     },
     "release_pre_generation_probe_comparison_status": null,
     "release_product_runtime_drift_status": "blocked",

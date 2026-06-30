@@ -1,5 +1,5 @@
 {
-  "checked": 9,
+  "checked": 11,
   "failures": [],
   "manifest_path": "artifacts/frontier-release-evidence/artifact-manifest.json",
   "nested": [
@@ -7,6 +7,13 @@
       "checked": 5,
       "failures": [],
       "manifest_path": "artifacts/frontier-release-evidence/../truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/artifact-manifest.json",
+      "nested": [],
+      "passed": true
+    },
+    {
+      "checked": 4,
+      "failures": [],
+      "manifest_path": "artifacts/frontier-release-evidence/../frontier-multiple-testing-rerun-rollup-v1/artifact-manifest.json",
       "nested": [],
       "passed": true
     },

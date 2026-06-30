@@ -42,7 +42,10 @@ def build_frontier_multiple_testing_rerun_queue(
     source_dir = source_path.parent
     rerun_root = Path(output_dir) if output_dir is not None else source_dir / "frontier-multiple-testing-reruns"
     workflow_reports = _load_frontier_workflow_reports(payload, source_path=source_path, source_dir=source_dir)
-    blocked_cells = _blocked_cells_from_payload(payload)
+    blocked_cells = _unique_cells((
+        *_blocked_cells_from_payload(payload),
+        *_cells_from_missing_workflow_gates(payload, workflow_reports=workflow_reports),
+    ))
     entries = []
     for cell in blocked_cells:
         entry = _queue_entry(
@@ -140,17 +143,13 @@ def _blocked_cells_from_payload(payload: Mapping[str, Any]) -> tuple[dict[str, A
             metrics = _mapping(decision.get("metrics"))
             run_name = _optional_str(decision.get("name"))
             cells.extend(_cells_from_metadata(metrics, source_workflow=str(workflow), run_name=run_name))
+            cells.extend(_cells_from_missing_gate_decision(decision, source_workflow=str(workflow)))
     elif workflow == "evidence_gap_plan":
         for gap in _mapping_sequence(payload.get("gaps", ())):
             metadata = _mapping(gap.get("metadata"))
             cells.extend(_cells_from_metadata(metadata, source_workflow=str(workflow)))
     elif workflow == "truthfulqa_frontier_workflow":
-        gate = _mapping(payload.get("multiple_testing_gate"))
-        for item in _mapping_sequence(gate.get("cells", ())):
-            passed = item.get("pass")
-            if passed is True:
-                continue
-            cells.append(_cell_record(item, source_workflow=str(workflow)))
+        cells.extend(_cells_from_frontier_workflow(payload, source_workflow=str(workflow)))
     return tuple(_unique_cells(cells))
 
 
@@ -165,6 +164,123 @@ def _cells_from_metadata(
         for item in _mapping_sequence(metadata.get(key, ())):
             cells.append(_cell_record(item, source_workflow=source_workflow, run_name=run_name))
     return tuple(cells)
+
+
+def _cells_from_missing_gate_decision(
+    decision: Mapping[str, Any],
+    *,
+    source_workflow: str,
+) -> tuple[dict[str, Any], ...]:
+    metrics = _mapping(decision.get("metrics"))
+    if metrics.get("gate_present") is True:
+        return ()
+    if _optional_str(metrics.get("workflow")) != "truthfulqa_frontier_workflow":
+        return ()
+    return _cells_from_frontier_workflow(
+        metrics,
+        source_workflow=source_workflow,
+        run_name=_optional_str(decision.get("name")),
+    )
+
+
+def _cells_from_frontier_workflow(
+    payload: Mapping[str, Any],
+    *,
+    source_workflow: str,
+    run_name: str | None = None,
+) -> tuple[dict[str, Any], ...]:
+    cells: list[dict[str, Any]] = []
+    gate = payload.get("multiple_testing_gate")
+    if isinstance(gate, Mapping) and gate:
+        for item in _mapping_sequence(gate.get("cells", ())):
+            passed = item.get("pass")
+            if passed is True:
+                continue
+            cells.append(_cell_record(item, source_workflow=source_workflow, run_name=run_name))
+        return tuple(cells)
+    config = _mapping(payload.get("config"))
+    models = _mapping_sequence(config.get("models", ()))
+    scales = _mapping_sequence(config.get("scales", ()))
+    if not models or not scales:
+        return ()
+    for model in models:
+        model_name = _optional_str(model.get("name"))
+        if model_name is None:
+            continue
+        for scale in scales:
+            scale_name = _optional_str(scale.get("name"))
+            if scale_name is None:
+                continue
+            cells.append({
+                "run": run_name,
+                "cell": f"{model_name}-{scale_name}",
+                "status": "missing_gate",
+                "false_alarm": None,
+                "detection": None,
+                "report": None,
+                "calibration": None,
+                "source_workflow": source_workflow,
+            })
+    return tuple(cells)
+
+
+def _cells_from_missing_workflow_gates(
+    payload: Mapping[str, Any],
+    *,
+    workflow_reports: Sequence[tuple[Path, Mapping[str, Any]]],
+) -> tuple[dict[str, Any], ...]:
+    if payload.get("workflow") == "truthfulqa_frontier_workflow":
+        return ()
+    if not _has_missing_multiple_testing_gate(payload):
+        return ()
+    source_workflow = str(payload.get("workflow") or "unknown")
+    run_names = _missing_gate_run_names(payload)
+    cells: list[dict[str, Any]] = []
+    for path, report in workflow_reports:
+        report_name = _workflow_report_name(path, report)
+        if run_names and report_name not in run_names and path.stem not in run_names:
+            continue
+        gate = report.get("multiple_testing_gate")
+        if isinstance(gate, Mapping) and gate:
+            continue
+        cells.extend(
+            _cells_from_frontier_workflow(
+                report,
+                source_workflow=source_workflow,
+                run_name=report_name,
+            )
+        )
+    return tuple(cells)
+
+
+def _has_missing_multiple_testing_gate(payload: Mapping[str, Any]) -> bool:
+    if payload.get("workflow") == "truthfulqa_frontier_workflow":
+        return not bool(_mapping(payload.get("multiple_testing_gate")))
+    for decision in _mapping_sequence(payload.get("multiple_testing_decisions", ())):
+        if _decision_has_missing_gate_reason(decision):
+            return True
+    decision = _mapping(payload.get("decision"))
+    return any(
+        "multiple_testing_gate missing" in reason
+        for reason in _string_tuple(decision.get("blocking_reasons", ()))
+    )
+
+
+def _missing_gate_run_names(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    names = []
+    for decision in _mapping_sequence(payload.get("multiple_testing_decisions", ())):
+        if _decision_has_missing_gate_reason(decision):
+            name = _optional_str(decision.get("name"))
+            if name:
+                names.append(name)
+    return tuple(dict.fromkeys(names))
+
+
+def _decision_has_missing_gate_reason(decision: Mapping[str, Any]) -> bool:
+    return any(
+        "multiple_testing_gate missing" in reason
+        for reason in _string_tuple(decision.get("blocking_reasons", ()))
+    )
 
 
 def _cell_record(
@@ -236,6 +352,9 @@ def _rerun_command(
     model, scale = _model_scale_for_cell(config, cell_name)
     if model is None or scale is None:
         return None
+    multiple_testing_signals = _multiple_testing_signals_for_command(config)
+    if not multiple_testing_signals:
+        return None
     command: list[str] = [
         str(python_executable),
         "benchmarks/run_truthfulqa_frontier_workflow.py",
@@ -282,7 +401,7 @@ def _rerun_command(
         "--artifact-alpha",
         str(config.get("artifact_alpha") or 0.10),
         "--multiple-testing-signals",
-        _csv(config.get("multiple_testing_signals", ())),
+        multiple_testing_signals,
         "--multiple-testing-alpha",
         str(config.get("multiple_testing_alpha") or config.get("artifact_alpha") or 0.10),
         "--multiple-testing-method",
@@ -296,6 +415,9 @@ def _rerun_command(
         "--alphas",
         _csv(config.get("alphas", ())),
     ]
+    score_dump = _score_dump_for_cell(workflow_report, cell_name)
+    if score_dump is not None:
+        command.extend(("--scores", score_dump))
     _append_optional_value(command, "--cache-dir", config.get("cache_dir"))
     _append_optional_value(command, "--attn-implementation", config.get("attn_implementation"))
     _append_optional_value(command, "--sweep-layers-from-band-report", config.get("sweep_layers_from_band_report"))
@@ -339,6 +461,24 @@ def _rerun_command(
     if config.get("refresh_scores") is True:
         command.append("--refresh-scores")
     return tuple(command)
+
+
+def _multiple_testing_signals_for_command(config: Mapping[str, Any]) -> str:
+    return _csv(config.get("multiple_testing_signals", ())) or _csv(config.get("signals", ()))
+
+
+def _score_dump_for_cell(
+    workflow_report: Mapping[str, Any],
+    cell_name: str,
+) -> str | None:
+    for cell in _mapping_sequence(workflow_report.get("cells", ())):
+        if _optional_str(cell.get("name")) != cell_name:
+            continue
+        score_dump = _mapping(cell.get("score_dump"))
+        path = _optional_str(score_dump.get("path"))
+        if path is not None:
+            return path
+    return None
 
 
 def _model_scale_for_cell(

@@ -688,6 +688,59 @@ def test_evidence_gap_plan_maps_product_runtime_trace_and_handoff_blockers():
     )
 
 
+def test_evidence_gap_plan_maps_product_runtime_frontier_release_metrics():
+    plan = plan_evidence_gaps_from_release_candidate({
+        "workflow": "release_candidate_comparison",
+        "decision": {
+            "status": "blocked",
+            "blocking_reasons": [
+                {
+                    "gate": "product_runtime_drift",
+                    "status": "blocked",
+                    "reasons": (
+                        "product runtime drift frontier release evidence metrics are incomplete: "
+                        "promotion_contract.frontier_release_evidence.coverage_rate, "
+                        "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_track_promote_rate, "
+                        "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_report_count.mean",
+                    ),
+                }
+            ],
+        },
+    })
+
+    payload = plan.to_dict()
+    actions = {action["action_id"]: action for action in payload["actions"]}
+    gap = payload["gaps"][0]
+
+    assert payload["status"] == "needs_evidence"
+    assert payload["summary"]["gap_count"] == 1
+    assert payload["summary"]["action_count"] == 1
+    assert payload["summary"]["research_axes"] == {"runtime_drift": 1}
+    assert payload["summary"]["root_causes"] == {"product_handoff": 1}
+    assert payload["summary"]["top_action_ids"] == (
+        "refresh_frontier_release_evidence_promotion_metrics",
+    )
+    assert gap["metadata"]["evidence_kind"] == (
+        "product_runtime_frontier_release_evidence"
+    )
+    assert gap["recommended_action_ids"] == (
+        "refresh_frontier_release_evidence_promotion_metrics",
+    )
+    assert gap["missing_metrics"] == (
+        "promotion_contract.frontier_release_evidence.coverage_rate",
+        "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_track_promote_rate",
+        "promotion_contract.frontier_release_evidence.frontier_rerun_rollup_report_count.mean",
+    )
+    assert actions[
+        "refresh_frontier_release_evidence_promotion_metrics"
+    ]["evidence_routes"] == (
+        "frontier_release_evidence",
+        "product_promotion_contract",
+        "product_runtime_drift",
+    )
+    assert "complete_frontier_rerun_rollup_evidence" not in actions
+
+
 def test_plan_release_evidence_gaps_cli_helper_writes_and_registers(tmp_path):
     source = tmp_path / "release-workflow.json"
     output = tmp_path / "evidence-gap-plan.json"
@@ -803,6 +856,85 @@ def test_plan_release_evidence_gaps_can_emit_multiple_testing_rerun_queue(tmp_pa
     assert gap_record.metadata["gap_count"] == 1
     assert queue_record.metadata["blocked_cell_count"] == 1
     assert queue_record.metadata["command_count"] == 1
+
+
+def test_frontier_multiple_testing_rerun_queue_expands_missing_gate_from_workflow_config(tmp_path):
+    source = tmp_path / "frontier-release-evidence.json"
+    queue_path = tmp_path / "multiple-testing-rerun-queue.json"
+    workflow_path = tmp_path / "frontier" / "truthfulqa-frontier-workflow.json"
+    workflow = _frontier_workflow_payload_for_multiple_testing_queue()
+    workflow.pop("multiple_testing_gate")
+    workflow["config"]["multiple_testing_signals"] = ()
+    score_dump_path = tmp_path / "frontier" / "a-l2" / "scores.manifest.json"
+    workflow["cells"] = (
+        {
+            "name": "a-l2",
+            "score_dump": {"path": str(score_dump_path)},
+        },
+    )
+    workflow_path.parent.mkdir(parents=True, exist_ok=True)
+    workflow_path.write_text(json.dumps(workflow), encoding="utf-8")
+    source.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "frontier_release_evidence_comparison",
+            "status": "complete",
+            "inputs": {
+                "frontier_workflow_reports": (
+                    {
+                        "path": str(workflow_path),
+                        "workflow": "truthfulqa_frontier_workflow",
+                        "status": "complete",
+                    },
+                ),
+            },
+            "multiple_testing_decisions": (
+                {
+                    "name": "truthfulqa-frontier-workflow",
+                    "status": "blocked",
+                    "track": "truthfulqa_frontier_workflow.multiple_testing_gate",
+                    "metrics": {
+                        "enabled": None,
+                        "all_pass": None,
+                        "cell_count": None,
+                        "failed_cells": (),
+                        "unknown_cells": (),
+                        "blocked_cells": (),
+                    },
+                    "blocking_reasons": (
+                        "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow."
+                        "multiple_testing_gate missing",
+                    ),
+                },
+            ),
+            "evidence_summary": {
+                "multiple_testing_failed_cells": (),
+                "multiple_testing_unknown_cells": (),
+                "multiple_testing_blocked_cells": (),
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    payload = build_frontier_multiple_testing_rerun_queue(
+        source=source,
+        json_path=queue_path,
+        output_dir=tmp_path / "reruns",
+        python_executable="python",
+    )
+    entry = payload["entries"][0]
+
+    assert payload["status"] == "ready"
+    assert payload["summary"]["blocked_cell_count"] == 1
+    assert payload["summary"]["command_count"] == 1
+    assert entry["run"] == "truthfulqa-frontier-workflow"
+    assert entry["cell"] == "a-l2"
+    assert entry["status"] == "missing_gate"
+    assert entry["command_status"] == "ready"
+    assert entry["command"][entry["command"].index("--scores") + 1] == str(score_dump_path)
+    assert entry["command"][entry["command"].index("--multiple-testing-signals") + 1] == (
+        "truth_proj,subspace_resid"
+    )
 
 
 def test_frontier_multiple_testing_rerun_rollup_promotes_passing_cell(tmp_path):

@@ -150,7 +150,13 @@
     "release_efficiency_report": null,
     "release_policy_profile": "frontier_audit",
     "release_policy_profile_applied_defaults": {
-      "max_uncached_forward_seconds": null
+      "max_false_supported_rate": 0.0,
+      "max_recommended_runtime_seconds": 1.0,
+      "max_uncached_forward_seconds": null,
+      "min_best_quality_auroc": 0.7,
+      "min_decision_accuracy": 0.99,
+      "min_false_refuted_rate": 0.99,
+      "min_selected": 4
     },
     "require_non_oracle_evidence": false,
     "require_performance_score_dump_cache": false,
@@ -274,8 +280,7 @@
         "gate": "frontier_release_evidence",
         "reasons": [
           "frontier release evidence decision status is 'blocked', expected 'promote'",
-          "frontier release evidence abstention_track_status is 'blocked', expected 'promote'",
-          "frontier release evidence multiple_testing_track_status is 'blocked', expected 'promote' or 'not_required'"
+          "frontier release evidence abstention_track_status is 'blocked', expected 'promote'"
         ],
         "status": "blocked"
       }
@@ -370,14 +375,7 @@
       "abstention_stability.qwen05-l80.release_gate_pass_seed_rate 0 is below required minimum 1",
       "abstention_stability.smollm2-l80.conditional_correctness_lower_bound_mean 0.48451 is below required minimum 0.8",
       "abstention_stability.smollm2-l80.release_gate_pass_seed_rate 0 is below required minimum 1",
-      "detectability_taxonomy.smollm2-l80.entrenched_false_rate 0.29085 exceeds maximum 0.25",
-      "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate missing",
-      "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.enabled is not true",
-      "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.all_pass is not true",
-      "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.cell_count is missing or zero",
-      "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.pass_count is missing",
-      "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.fail_count is missing",
-      "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.unknown_count is missing"
+      "detectability_taxonomy.smollm2-l80.entrenched_false_rate 0.29085 exceeds maximum 0.25"
     ],
     "citation_batch_duplicate_batch_count": 0,
     "citation_batch_expected_batch_count": 0,
@@ -388,23 +386,24 @@
     "citation_batch_unexpected_batch_count": 0,
     "decision_status": "blocked",
     "frontier_rerun_rollup_blocked_candidate_count": 0,
-    "frontier_rerun_rollup_candidate_count": 0,
+    "frontier_rerun_rollup_candidate_count": 2,
     "frontier_rerun_rollup_invalid_report_count": 0,
     "frontier_rerun_rollup_missing_report_count": 0,
-    "frontier_rerun_rollup_promoted_tracks": [],
-    "frontier_rerun_rollup_promotion_ready_count": 0,
-    "frontier_rerun_rollup_report_count": 0,
-    "frontier_rerun_rollup_track_status": "not_required",
+    "frontier_rerun_rollup_promoted_tracks": [
+      "multiple_testing"
+    ],
+    "frontier_rerun_rollup_promotion_ready_count": 2,
+    "frontier_rerun_rollup_report_count": 1,
+    "frontier_rerun_rollup_track_status": "promote",
     "gate": {
       "blocking_reasons": [
         "frontier release evidence decision status is 'blocked', expected 'promote'",
-        "frontier release evidence abstention_track_status is 'blocked', expected 'promote'",
-        "frontier release evidence multiple_testing_track_status is 'blocked', expected 'promote' or 'not_required'"
+        "frontier release evidence abstention_track_status is 'blocked', expected 'promote'"
       ],
       "passed": false
     },
     "manifest_path": "artifacts/frontier-release-evidence/artifact-manifest.json",
-    "multiple_testing_track_status": "blocked",
+    "multiple_testing_track_status": "promote",
     "record": null,
     "record_key": null,
     "registry": null,
@@ -418,7 +417,7 @@
     "source": "file",
     "status": "blocked",
     "verification": {
-      "checked": 9,
+      "checked": 11,
       "failures": [],
       "manifest_path": "artifacts/frontier-release-evidence/artifact-manifest.json",
       "nested": [
@@ -426,6 +425,13 @@
           "checked": 5,
           "failures": [],
           "manifest_path": "artifacts/frontier-release-evidence/../truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/artifact-manifest.json",
+          "nested": [],
+          "passed": true
+        },
+        {
+          "checked": 4,
+          "failures": [],
+          "manifest_path": "artifacts/frontier-release-evidence/../frontier-multiple-testing-rerun-rollup-v1/artifact-manifest.json",
           "nested": [],
           "passed": true
         },
@@ -5489,12 +5495,12 @@
   "selfcheck_signal_fusion_workflow_gate": null,
   "summary": {
     "artifact_json_cache": {
-      "entries": 54,
+      "entries": 53,
       "errors": 0,
-      "hit_rate": 0.9285714285714286,
-      "hits": 52,
-      "misses": 4,
-      "requests": 56
+      "hit_rate": 0.9473684210526315,
+      "hits": 54,
+      "misses": 3,
+      "requests": 57
     }
   },
   "triple_extraction_fixture_matrix_gate": {

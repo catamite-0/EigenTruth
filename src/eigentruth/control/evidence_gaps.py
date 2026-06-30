@@ -746,6 +746,12 @@ def _classify_gap(
             "product_handoff",
             "runtime_drift",
         )
+    if _is_product_runtime_frontier_release_evidence(gate, text, missing_metrics):
+        return _kind(
+            "product_runtime_frontier_release_evidence",
+            "product_handoff",
+            "runtime_drift",
+        )
     if (
         gate == "frontier_rerun_rollup_evidence"
         or "frontier_rerun_rollup" in text
@@ -936,6 +942,24 @@ def _is_product_runtime_evidence_handoff_evidence(
             "evidence_handoff_evidence",
             "promotion_contract.evidence_handoff.",
             "evidence_handoff.",
+        ),
+    )
+
+
+def _is_product_runtime_frontier_release_evidence(
+    gate: str,
+    text: str,
+    missing_metrics: Sequence[str],
+) -> bool:
+    return _is_product_runtime_evidence_kind(
+        gate,
+        text,
+        missing_metrics,
+        patterns=(
+            "frontier release evidence metrics",
+            "frontier_release_evidence metrics",
+            "frontier_release_evidence.",
+            "promotion_contract.frontier_release_evidence.",
         ),
     )
 
@@ -1305,6 +1329,29 @@ def _action_template(kind: Mapping[str, str], *, gate: str, reason: str) -> Evid
             ),
             suggested_commands=(
                 "benchmarks/export_product_promotion_contract_evidence_handoff.py",
+                "benchmarks/run_product_runtime_baseline.py",
+                "benchmarks/compare_product_runtime_baselines.py",
+            ),
+        )
+    if evidence_kind == "product_runtime_frontier_release_evidence":
+        return EvidenceGapAction(
+            action_id="refresh_frontier_release_evidence_promotion_metrics",
+            title="Refresh frontier release-evidence promotion metrics",
+            action_type="workflow",
+            priority=85,
+            rationale=(
+                "Runtime drift gates need the promotion contract to carry frontier "
+                "release-evidence coverage, track status, rerun-rollup, and citation "
+                "batch metrics before top-level release checks can consume the evidence "
+                "without re-running the frontier workflows."
+            ),
+            evidence_routes=(
+                "frontier_release_evidence",
+                "product_promotion_contract",
+                "product_runtime_drift",
+            ),
+            suggested_commands=(
+                "benchmarks/export_product_promotion_contract_evidence_handoff.py --frontier-release-evidence ...",
                 "benchmarks/run_product_runtime_baseline.py",
                 "benchmarks/compare_product_runtime_baselines.py",
             ),

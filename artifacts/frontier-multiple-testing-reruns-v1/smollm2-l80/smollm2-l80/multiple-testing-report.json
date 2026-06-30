@@ -1,0 +1,575 @@
+{
+  "config": {
+    "alpha": 0.1,
+    "directions": {
+      "eigenscore": "higher",
+      "maha_last": "higher",
+      "resid_update_norm": "higher",
+      "subspace_resid": "higher",
+      "truth_proj": "higher"
+    },
+    "method": "by",
+    "n_false": 306,
+    "n_true": 250,
+    "repeats": 20,
+    "seed": 0,
+    "signals": [
+      "truth_proj",
+      "maha_last",
+      "subspace_resid",
+      "resid_update_norm",
+      "eigenscore"
+    ]
+  },
+  "conservative": true,
+  "coverage": 0.9616,
+  "detection": 0.08300653594771243,
+  "false_alarm": 0.03840000000000001,
+  "false_rejected_by_signal": {
+    "eigenscore": {
+      "count": 99,
+      "rate": 0.016176470588235296
+    },
+    "maha_last": {
+      "count": 210,
+      "rate": 0.03431372549019608
+    },
+    "resid_update_norm": {
+      "count": 84,
+      "rate": 0.013725490196078431
+    },
+    "subspace_resid": {
+      "count": 215,
+      "rate": 0.035130718954248366
+    },
+    "truth_proj": {
+      "count": 203,
+      "rate": 0.033169934640522876
+    }
+  },
+  "pass": true,
+  "repeats": [
+    {
+      "coverage": 0.968,
+      "detection": 0.08823529411764706,
+      "false_alarm": 0.032,
+      "false_rejected_by_signal": {
+        "eigenscore": 6,
+        "maha_last": 14,
+        "resid_update_norm": 3,
+        "subspace_resid": 13,
+        "truth_proj": 6
+      },
+      "false_rejected_count": 27,
+      "n_calibration": 125,
+      "n_false": 306,
+      "n_test_true": 125,
+      "repeat": 0,
+      "true_rejected_by_signal": {
+        "eigenscore": 2,
+        "maha_last": 2,
+        "resid_update_norm": 0,
+        "subspace_resid": 1,
+        "truth_proj": 1
+      },
+      "true_rejected_count": 4
+    },
+    {
+      "coverage": 0.952,
+      "detection": 0.09477124183006536,
+      "false_alarm": 0.048,
+      "false_rejected_by_signal": {
+        "eigenscore": 7,
+        "maha_last": 11,
+        "resid_update_norm": 3,
+        "subspace_resid": 13,
+        "truth_proj": 12
+      },
+      "false_rejected_count": 29,
+      "n_calibration": 125,
+      "n_false": 306,
+      "n_test_true": 125,
+      "repeat": 1,
+      "true_rejected_by_signal": {
+        "eigenscore": 4,
+        "maha_last": 1,
+        "resid_update_norm": 0,
+        "subspace_resid": 1,
+        "truth_proj": 1
+      },
+      "true_rejected_count": 6
+    },
+    {
+      "coverage": 0.968,
+      "detection": 0.0784313725490196,
+      "false_alarm": 0.032,
+      "false_rejected_by_signal": {
+        "eigenscore": 7,
+        "maha_last": 6,
+        "resid_update_norm": 5,
+        "subspace_resid": 9,
+        "truth_proj": 11
+      },
+      "false_rejected_count": 24,
+      "n_calibration": 125,
+      "n_false": 306,
+      "n_test_true": 125,
+      "repeat": 2,
+      "true_rejected_by_signal": {
+        "eigenscore": 3,
+        "maha_last": 0,
+        "resid_update_norm": 0,
+        "subspace_resid": 0,
+        "truth_proj": 1
+      },
+      "true_rejected_count": 4
+    },
+    {
+      "coverage": 0.992,
+      "detection": 0.0784313725490196,
+      "false_alarm": 0.008,
+      "false_rejected_by_signal": {
+        "eigenscore": 3,
+        "maha_last": 14,
+        "resid_update_norm": 3,
+        "subspace_resid": 11,
+        "truth_proj": 6
+      },
+      "false_rejected_count": 24,
+      "n_calibration": 125,
+      "n_false": 306,
+      "n_test_true": 125,
+      "repeat": 3,
+      "true_rejected_by_signal": {
+        "eigenscore": 0,
+        "maha_last": 1,
+        "resid_update_norm": 0,
+        "subspace_resid": 1,
+        "truth_proj": 0
+      },
+      "true_rejected_count": 1
+    },
+    {
+      "coverage": 0.888,
+      "detection": 0.08823529411764706,
+      "false_alarm": 0.112,
+      "false_rejected_by_signal": {
+        "eigenscore": 12,
+        "maha_last": 6,
+        "resid_update_norm": 7,
+        "subspace_resid": 9,
+        "truth_proj": 6
+      },
+      "false_rejected_count": 27,
+      "n_calibration": 125,
+      "n_false": 306,
+      "n_test_true": 125,
+      "repeat": 4,
+      "true_rejected_by_signal": {
+        "eigenscore": 11,
+        "maha_last": 0,
+        "resid_update_norm": 3,
+        "subspace_resid": 0,
+        "truth_proj": 0
+      },
+      "true_rejected_count": 14
+    },
+    {
+      "coverage": 0.976,
+      "detection": 0.05228758169934641,
+      "false_alarm": 0.024,
+      "false_rejected_by_signal": {
+        "eigenscore": 3,
+        "maha_last": 6,
+        "resid_update_norm": 5,
+        "subspace_resid": 9,
+        "truth_proj": 6
+      },
+      "false_rejected_count": 16,
+      "n_calibration": 125,
+      "n_false": 306,
+      "n_test_true": 125,
+      "repeat": 5,
+      "true_rejected_by_signal": {
+        "eigenscore": 1,
+        "maha_last": 0,
+        "resid_update_norm": 2,
+        "subspace_resid": 0,
+        "truth_proj": 0
+      },
+      "true_rejected_count": 3
+    },
+    {
+      "coverage": 0.984,
+      "detection": 0.05555555555555555,
+      "false_alarm": 0.016,
+      "false_rejected_by_signal": {
+        "eigenscore": 3,
+        "maha_last": 8,
+        "resid_update_norm": 3,
+        "subspace_resid": 11,
+        "truth_proj": 6
+      },
+      "false_rejected_count": 17,
+      "n_calibration": 125,
+      "n_false": 306,
+      "n_test_true": 125,
+      "repeat": 6,
+      "true_rejected_by_signal": {
+        "eigenscore": 1,
+        "maha_last": 1,
+        "resid_update_norm": 0,
+        "subspace_resid": 1,
+        "truth_proj": 0
+      },
+      "true_rejected_count": 2
+    },
+    {
+      "coverage": 0.984,
+      "detection": 0.058823529411764705,
+      "false_alarm": 0.016,
+      "false_rejected_by_signal": {
+        "eigenscore": 6,
+        "maha_last": 6,
+        "resid_update_norm": 3,
+        "subspace_resid": 9,
+        "truth_proj": 6
+      },
+      "false_rejected_count": 18,
+      "n_calibration": 125,
+      "n_false": 306,
+      "n_test_true": 125,
+      "repeat": 7,
+      "true_rejected_by_signal": {
+        "eigenscore": 2,
+        "maha_last": 0,
+        "resid_update_norm": 0,
+        "subspace_resid": 0,
+        "truth_proj": 0
+      },
+      "true_rejected_count": 2
+    },
+    {
+      "coverage": 0.968,
+      "detection": 0.08169934640522876,
+      "false_alarm": 0.032,
+      "false_rejected_by_signal": {
+        "eigenscore": 3,
+        "maha_last": 9,
+        "resid_update_norm": 6,
+        "subspace_resid": 11,
+        "truth_proj": 14
+      },
+      "false_rejected_count": 25,
+      "n_calibration": 125,
+      "n_false": 306,
+      "n_test_true": 125,
+      "repeat": 8,
+      "true_rejected_by_signal": {
+        "eigenscore": 1,
+        "maha_last": 1,
+        "resid_update_norm": 0,
+        "subspace_resid": 1,
+        "truth_proj": 2
+      },
+      "true_rejected_count": 4
+    },
+    {
+      "coverage": 0.96,
+      "detection": 0.06862745098039216,
+      "false_alarm": 0.04,
+      "false_rejected_by_signal": {
+        "eigenscore": 6,
+        "maha_last": 6,
+        "resid_update_norm": 7,
+        "subspace_resid": 9,
+        "truth_proj": 6
+      },
+      "false_rejected_count": 21,
+      "n_calibration": 125,
+      "n_false": 306,
+      "n_test_true": 125,
+      "repeat": 9,
+      "true_rejected_by_signal": {
+        "eigenscore": 2,
+        "maha_last": 0,
+        "resid_update_norm": 3,
+        "subspace_resid": 0,
+        "truth_proj": 0
+      },
+      "true_rejected_count": 5
+    },
+    {
+      "coverage": 0.888,
+      "detection": 0.1568627450980392,
+      "false_alarm": 0.112,
+      "false_rejected_by_signal": {
+        "eigenscore": 7,
+        "maha_last": 22,
+        "resid_update_norm": 4,
+        "subspace_resid": 13,
+        "truth_proj": 24
+      },
+      "false_rejected_count": 48,
+      "n_calibration": 125,
+      "n_false": 306,
+      "n_test_true": 125,
+      "repeat": 10,
+      "true_rejected_by_signal": {
+        "eigenscore": 3,
+        "maha_last": 5,
+        "resid_update_norm": 0,
+        "subspace_resid": 3,
+        "truth_proj": 7
+      },
+      "true_rejected_count": 14
+    },
+    {
+      "coverage": 0.9359999999999999,
+      "detection": 0.11764705882352941,
+      "false_alarm": 0.064,
+      "false_rejected_by_signal": {
+        "eigenscore": 3,
+        "maha_last": 12,
+        "resid_update_norm": 6,
+        "subspace_resid": 11,
+        "truth_proj": 25
+      },
+      "false_rejected_count": 36,
+      "n_calibration": 125,
+      "n_false": 306,
+      "n_test_true": 125,
+      "repeat": 11,
+      "true_rejected_by_signal": {
+        "eigenscore": 0,
+        "maha_last": 2,
+        "resid_update_norm": 0,
+        "subspace_resid": 1,
+        "truth_proj": 7
+      },
+      "true_rejected_count": 8
+    },
+    {
+      "coverage": 0.976,
+      "detection": 0.058823529411764705,
+      "false_alarm": 0.024,
+      "false_rejected_by_signal": {
+        "eigenscore": 4,
+        "maha_last": 9,
+        "resid_update_norm": 3,
+        "subspace_resid": 11,
+        "truth_proj": 6
+      },
+      "false_rejected_count": 18,
+      "n_calibration": 125,
+      "n_false": 306,
+      "n_test_true": 125,
+      "repeat": 12,
+      "true_rejected_by_signal": {
+        "eigenscore": 0,
+        "maha_last": 2,
+        "resid_update_norm": 1,
+        "subspace_resid": 1,
+        "truth_proj": 1
+      },
+      "true_rejected_count": 3
+    },
+    {
+      "coverage": 0.952,
+      "detection": 0.09477124183006536,
+      "false_alarm": 0.048,
+      "false_rejected_by_signal": {
+        "eigenscore": 4,
+        "maha_last": 19,
+        "resid_update_norm": 3,
+        "subspace_resid": 13,
+        "truth_proj": 7
+      },
+      "false_rejected_count": 29,
+      "n_calibration": 125,
+      "n_false": 306,
+      "n_test_true": 125,
+      "repeat": 13,
+      "true_rejected_by_signal": {
+        "eigenscore": 1,
+        "maha_last": 4,
+        "resid_update_norm": 0,
+        "subspace_resid": 3,
+        "truth_proj": 0
+      },
+      "true_rejected_count": 6
+    },
+    {
+      "coverage": 0.992,
+      "detection": 0.049019607843137254,
+      "false_alarm": 0.008,
+      "false_rejected_by_signal": {
+        "eigenscore": 3,
+        "maha_last": 6,
+        "resid_update_norm": 3,
+        "subspace_resid": 9,
+        "truth_proj": 6
+      },
+      "false_rejected_count": 15,
+      "n_calibration": 125,
+      "n_false": 306,
+      "n_test_true": 125,
+      "repeat": 14,
+      "true_rejected_by_signal": {
+        "eigenscore": 1,
+        "maha_last": 0,
+        "resid_update_norm": 0,
+        "subspace_resid": 0,
+        "truth_proj": 0
+      },
+      "true_rejected_count": 1
+    },
+    {
+      "coverage": 0.976,
+      "detection": 0.10130718954248366,
+      "false_alarm": 0.024,
+      "false_rejected_by_signal": {
+        "eigenscore": 3,
+        "maha_last": 14,
+        "resid_update_norm": 6,
+        "subspace_resid": 11,
+        "truth_proj": 14
+      },
+      "false_rejected_count": 31,
+      "n_calibration": 125,
+      "n_false": 306,
+      "n_test_true": 125,
+      "repeat": 15,
+      "true_rejected_by_signal": {
+        "eigenscore": 0,
+        "maha_last": 1,
+        "resid_update_norm": 0,
+        "subspace_resid": 1,
+        "truth_proj": 2
+      },
+      "true_rejected_count": 3
+    },
+    {
+      "coverage": 0.968,
+      "detection": 0.06209150326797386,
+      "false_alarm": 0.032,
+      "false_rejected_by_signal": {
+        "eigenscore": 7,
+        "maha_last": 6,
+        "resid_update_norm": 3,
+        "subspace_resid": 9,
+        "truth_proj": 6
+      },
+      "false_rejected_count": 19,
+      "n_calibration": 125,
+      "n_false": 306,
+      "n_test_true": 125,
+      "repeat": 16,
+      "true_rejected_by_signal": {
+        "eigenscore": 4,
+        "maha_last": 0,
+        "resid_update_norm": 0,
+        "subspace_resid": 0,
+        "truth_proj": 0
+      },
+      "true_rejected_count": 4
+    },
+    {
+      "coverage": 0.952,
+      "detection": 0.10784313725490197,
+      "false_alarm": 0.048,
+      "false_rejected_by_signal": {
+        "eigenscore": 6,
+        "maha_last": 14,
+        "resid_update_norm": 5,
+        "subspace_resid": 12,
+        "truth_proj": 13
+      },
+      "false_rejected_count": 33,
+      "n_calibration": 125,
+      "n_false": 306,
+      "n_test_true": 125,
+      "repeat": 17,
+      "true_rejected_by_signal": {
+        "eigenscore": 2,
+        "maha_last": 1,
+        "resid_update_norm": 1,
+        "subspace_resid": 1,
+        "truth_proj": 2
+      },
+      "true_rejected_count": 6
+    },
+    {
+      "coverage": 0.992,
+      "detection": 0.06862745098039216,
+      "false_alarm": 0.008,
+      "false_rejected_by_signal": {
+        "eigenscore": 3,
+        "maha_last": 7,
+        "resid_update_norm": 3,
+        "subspace_resid": 9,
+        "truth_proj": 12
+      },
+      "false_rejected_count": 21,
+      "n_calibration": 125,
+      "n_false": 306,
+      "n_test_true": 125,
+      "repeat": 18,
+      "true_rejected_by_signal": {
+        "eigenscore": 0,
+        "maha_last": 0,
+        "resid_update_norm": 0,
+        "subspace_resid": 0,
+        "truth_proj": 1
+      },
+      "true_rejected_count": 1
+    },
+    {
+      "coverage": 0.96,
+      "detection": 0.09803921568627451,
+      "false_alarm": 0.04,
+      "false_rejected_by_signal": {
+        "eigenscore": 3,
+        "maha_last": 15,
+        "resid_update_norm": 3,
+        "subspace_resid": 13,
+        "truth_proj": 11
+      },
+      "false_rejected_count": 30,
+      "n_calibration": 125,
+      "n_false": 306,
+      "n_test_true": 125,
+      "repeat": 19,
+      "true_rejected_by_signal": {
+        "eigenscore": 0,
+        "maha_last": 2,
+        "resid_update_norm": 1,
+        "subspace_resid": 2,
+        "truth_proj": 2
+      },
+      "true_rejected_count": 5
+    }
+  ],
+  "true_rejected_by_signal": {
+    "eigenscore": {
+      "count": 38,
+      "rate": 0.0152
+    },
+    "maha_last": {
+      "count": 23,
+      "rate": 0.0092
+    },
+    "resid_update_norm": {
+      "count": 11,
+      "rate": 0.0044
+    },
+    "subspace_resid": {
+      "count": 17,
+      "rate": 0.0068
+    },
+    "truth_proj": {
+      "count": 27,
+      "rate": 0.0108
+    }
+  }
+}

@@ -4281,6 +4281,41 @@ def test_truthfulqa_frontier_workflow_rejects_refresh_caches_without_cache_dir(t
         )
 
 
+def test_truthfulqa_frontier_workflow_accepts_single_cell_scores_path(tmp_path):
+    module = importlib.import_module("benchmarks.run_truthfulqa_frontier_workflow")
+    scores_path = tmp_path / "scores.manifest.json"
+
+    payload = module.run_truthfulqa_frontier_workflow(
+        module.TruthfulQAFrontierWorkflowConfig(
+            output_dir=tmp_path / "frontier",
+            models=(module.ModelSpec(name="tiny", model_id="tiny-local"),),
+            scales=(module.ScaleSpec(name="l4", limit=4, manifold_questions=2, layer=-1, sweep_layers=(-1,)),),
+            scores_path=scores_path,
+            dry_run=True,
+        )
+    )
+
+    assert payload["config"]["scores_path"] == str(scores_path)
+    cell_report = json.loads(Path(payload["cells"][0]["workflow_report"]).read_text(encoding="utf-8"))
+    command = cell_report["execution"]["truthfulqa_command"]
+    assert command[command.index("--dump-scores") + 1] == str(scores_path)
+
+
+def test_truthfulqa_frontier_workflow_rejects_scores_path_for_multiple_cells(tmp_path):
+    module = importlib.import_module("benchmarks.run_truthfulqa_frontier_workflow")
+
+    with pytest.raises(ValueError, match="scores_path can only be used with exactly one model-scale cell"):
+        module.TruthfulQAFrontierWorkflowConfig(
+            output_dir=tmp_path / "frontier",
+            models=(
+                module.ModelSpec(name="tiny-a", model_id="tiny-a"),
+                module.ModelSpec(name="tiny-b", model_id="tiny-b"),
+            ),
+            scales=(module.ScaleSpec(name="l4", limit=4, manifold_questions=2, layer=-1, sweep_layers=(-1,)),),
+            scores_path=tmp_path / "scores.manifest.json",
+        )
+
+
 def test_truthfulqa_frontier_workflow_dry_run_does_not_write_registry(tmp_path):
     module = importlib.import_module("benchmarks.run_truthfulqa_frontier_workflow")
     registry = tmp_path / "registry.json"

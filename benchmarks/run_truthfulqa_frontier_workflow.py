@@ -121,6 +121,7 @@ class TruthfulQAFrontierWorkflowConfig:
     name: str | None = None
     version: str | None = None
     cache_dir: Path | None = None
+    scores_path: Path | None = None
     sweep_layers_from_band_report: Path | None = None
     sweep_band_strategy: str | None = None
     sweep_band_expand_radius: int = 0
@@ -174,6 +175,8 @@ class TruthfulQAFrontierWorkflowConfig:
             object.__setattr__(self, "registry_path", Path(self.registry_path))
         if self.cache_dir is not None:
             object.__setattr__(self, "cache_dir", Path(self.cache_dir))
+        if self.scores_path is not None:
+            object.__setattr__(self, "scores_path", Path(self.scores_path))
         if self.sweep_layers_from_band_report is not None:
             object.__setattr__(self, "sweep_layers_from_band_report", Path(self.sweep_layers_from_band_report))
         if self.registry_path is not None and (not self.name or not self.version):
@@ -188,6 +191,8 @@ class TruthfulQAFrontierWorkflowConfig:
             raise ValueError("model names must be unique.")
         if len({scale.name for scale in scales}) != len(scales):
             raise ValueError("scale names must be unique.")
+        if self.scores_path is not None and len(models) * len(scales) != 1:
+            raise ValueError("scores_path can only be used with exactly one model-scale cell.")
         if int(self.batch_size) < 1:
             raise ValueError("batch_size must be >=1.")
         if int(self.max_batch_tokens) < 0:
@@ -430,6 +435,7 @@ def _cell_config(
         limit=scale.limit,
         manifold_questions=scale.manifold_questions,
         max_length=config.max_length,
+        scores_path=config.scores_path,
         batch_size=config.batch_size,
         max_batch_tokens=config.max_batch_tokens,
         hidden_state_capture=config.hidden_state_capture,
@@ -800,6 +806,7 @@ def _config_payload(config: TruthfulQAFrontierWorkflowConfig) -> dict[str, Any]:
         "auto_batch_size": config.auto_batch_size,
         "cache_only": config.cache_only,
         "cache_dir": None if config.cache_dir is None else str(config.cache_dir),
+        "scores_path": None if config.scores_path is None else str(config.scores_path),
         "sweep_layers_from_band_report": (
             None if config.sweep_layers_from_band_report is None else str(config.sweep_layers_from_band_report)
         ),
@@ -919,6 +926,7 @@ def _config_from_args(args: argparse.Namespace) -> TruthfulQAFrontierWorkflowCon
         name=args.name,
         version=args.version,
         cache_dir=Path(args.cache_dir) if args.cache_dir else None,
+        scores_path=Path(args.scores) if args.scores else None,
         sweep_layers_from_band_report=(
             Path(args.sweep_layers_from_band_report) if args.sweep_layers_from_band_report else None
         ),
@@ -998,6 +1006,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--version", default=None)
     parser.add_argument("--cache-dir", default=None,
                         help="optional root for per-cell statement/layer/eval cache artifacts")
+    parser.add_argument(
+        "--scores",
+        default=None,
+        help="reuse this score dump for a single-cell frontier rerun instead of materializing scores",
+    )
     parser.add_argument(
         "--sweep-layers-from-band-report",
         default=None,
