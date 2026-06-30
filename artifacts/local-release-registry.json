@@ -7010,6 +7010,18 @@
       "name": "frontier-audit-evidence-gap-plan",
       "path": "artifacts/frontier-audit-release-candidate-v6/evidence-gap-plan.json",
       "version": "0.6"
+    },
+    {
+      "artifact_type": "evidence_gap_plan",
+      "metadata": {
+        "action_count": 11,
+        "gap_count": 15,
+        "source": "artifacts/frontier-audit-release-candidate-v7/frontier-audit-registry-workflow.json",
+        "status": "needs_evidence"
+      },
+      "name": "frontier-audit-evidence-gap-plan-v7",
+      "path": "artifacts/frontier-audit-release-candidate-v7/evidence-gap-plan.json",
+      "version": "0.7"
     }
   ],
   "schema_version": 1

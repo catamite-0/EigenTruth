@@ -258,6 +258,11 @@ def test_product_promotion_evidence_handoff_export_fills_explicit_sources():
     )
     assert contract["metadata"]["frontier_release_evidence_frontier_rerun_rollup_report_count"] == 0
     assert contract["metadata"]["frontier_release_evidence_citation_batch_rollup_count"] == 0
+    assert contract["metadata"]["evidence_handoff_coverage_rate"] == 1.0
+    assert contract["metadata"]["evidence_handoff_status"] == "promote"
+    assert contract["metadata"]["evidence_handoff_missing_metric_count"] == 0.0
+    assert contract["metadata"]["evidence_handoff_present_metric_rate"] == 1.0
+    assert contract["metadata"]["evidence_handoff_promoted_group_rate"] == 1.0
 
 
 def test_product_promotion_evidence_handoff_accepts_triple_audit_enrichment_report():
@@ -410,6 +415,13 @@ def test_product_promotion_evidence_handoff_cli_helper_writes_and_registers(tmp_
     assert payload["summary"]["before_missing_metric_count"] == 64
     assert payload["summary"]["after_missing_metric_count"] == 12
     assert payload["summary"]["resolved_missing_metric_count"] == 52
+    output_payload = json.loads(output.read_text(encoding="utf-8"))
+    assert output_payload["metadata"]["evidence_handoff_manifest"] == str(manifest)
+    assert output_payload["metadata"]["evidence_handoff_contract"] == str(output)
+    assert output_payload["metadata"]["evidence_handoff_audit"] == str(audit)
+    assert output_payload["metadata"]["evidence_handoff_manifest_verified"] is True
+    assert output_payload["metadata"]["evidence_handoff_manifest_verified_rate"] == 1.0
+    assert output_payload["metadata"]["evidence_handoff_missing_metric_count"] == 12.0
     manifest_payload = json.loads(manifest.read_text(encoding="utf-8"))
     assert manifest_payload["summary"]["missing_count"] == 0
     assert set(manifest_payload["artifacts"]) == {

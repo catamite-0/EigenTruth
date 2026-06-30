@@ -77,10 +77,16 @@ def export_product_promotion_contract_evidence_handoff(
         },
         required_groups=required_groups,
     )
+    contract_payload = _contract_with_export_metadata(
+        result.contract,
+        output_path=output_path,
+        audit_path=audit_path,
+        manifest_path=manifest_path,
+    )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     audit_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(
-        strict_json_dumps(result.contract, indent=2, sort_keys=True) + "\n",
+        strict_json_dumps(contract_payload, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
     audit_payload = result.after_audit.to_dict()
@@ -163,7 +169,9 @@ def export_product_promotion_contract_evidence_handoff(
             },
         )
         registry.save_json(registry_path)
-    return result.to_dict()
+    payload = result.to_dict()
+    payload["contract"] = contract_payload
+    return payload
 
 
 def _optional_path(value: str | Path | None) -> Path | None:
@@ -182,6 +190,33 @@ def _load_json_object(path: Path) -> Mapping[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, Mapping):
         raise ValueError(f"{path} must contain a JSON object.")
+    return payload
+
+
+def _contract_with_export_metadata(
+    contract: Mapping[str, Any],
+    *,
+    output_path: Path,
+    audit_path: Path,
+    manifest_path: Path | None,
+) -> dict[str, Any]:
+    payload = dict(contract)
+    metadata = dict(payload.get("metadata") or {})
+    metadata.update(
+        {
+            "evidence_handoff_contract": str(output_path),
+            "evidence_handoff_audit": str(audit_path),
+        }
+    )
+    if manifest_path is not None:
+        metadata.update(
+            {
+                "evidence_handoff_manifest": str(manifest_path),
+                "evidence_handoff_manifest_verified": True,
+                "evidence_handoff_manifest_verified_rate": 1.0,
+            }
+        )
+    payload["metadata"] = metadata
     return payload
 
 

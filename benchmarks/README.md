@@ -5709,6 +5709,15 @@ runtime-drift reports also carry promotion-contract evidence-handoff
 coverage/manifest/metric-gap/group-status as a release-gated evidence group.
 The release-policy wiring also expects trajectory-audit runtime-drift evidence
 as a separate fail-closed group when refreshed drift reports are supplied.
+The latest local handoff smoke does not export a v1.9 product contract from the
+blocked frontier candidate. Instead it enriches the last promoted v1.6 contract
+with explicit frontier child reports under
+`artifacts/smollm2_product_promotion_evidence_handoff_v1_6_frontier_v1/`, then
+builds `artifacts/smollm2_product_runtime_drift_v1_9_frontier_handoff/` only to
+verify that `evidence_handoff_*` metadata survives runtime-baseline aggregation.
+That repair resolves `49/64` handoff fields and reduces the v7 gap plan to `48`
+missing metrics, while the release remains blocked by upstream frontier-release
+promotion rates and remaining trace/runtime evidence families.
 Before treating the v6 handoff as locally reproducible, scan the active doc
 references against the checkout. A blocked report includes `recommended_actions`
 for the v6 release-candidate rerun, manifest verification, and final re-audit.

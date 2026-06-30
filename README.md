@@ -309,6 +309,10 @@ still record promotion-contract evidence-handoff status without rerunning
 release gates, and can include manifest verification with
 `--verify-promotion-contract-evidence-handoff-manifest` when a promoted contract
 exists.
+A local v1.6-based frontier handoff smoke now carries the same
+`evidence_handoff_*` metadata through product-runtime aggregation and the v7
+frontier audit, reducing the current gap plan while preserving the blocked
+release boundary.
 Use `benchmarks/audit_frontier_artifact_references.py` to fail-closed on the
 current docs' active frontier references when checking whether the v6 release
 candidate artifacts are actually present in the checkout. When references are

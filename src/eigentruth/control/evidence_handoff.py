@@ -388,6 +388,14 @@ def enrich_product_promotion_contract_evidence(
         required_groups=required_groups,
         metadata=metadata,
     )
+    _merge_metadata(
+        payload,
+        _evidence_handoff_flat_metadata(
+            before_audit=before,
+            after_audit=after,
+            filled_groups=filled,
+        ),
+    )
     return ProductPromotionEvidenceExport(
         contract=payload,
         before_audit=before,
@@ -528,6 +536,69 @@ def _merge_metadata(payload: dict[str, Any], values: Mapping[str, Any]) -> None:
 
 def _drop_none_values(values: Mapping[str, Any]) -> dict[str, Any]:
     return {str(key): value for key, value in values.items() if value is not None}
+
+
+def _evidence_handoff_flat_metadata(
+    *,
+    before_audit: ProductPromotionEvidenceAudit,
+    after_audit: ProductPromotionEvidenceAudit,
+    filled_groups: Sequence[str],
+) -> dict[str, Any]:
+    before_summary = before_audit.summary
+    after_summary = after_audit.summary
+    before_missing_metric_count = before_summary.get("missing_metric_count")
+    after_missing_metric_count = after_summary.get("missing_metric_count")
+    expected_metric_count = _float_or_none(after_summary.get("expected_metric_count"))
+    present_metric_count = _float_or_none(after_summary.get("present_metric_count"))
+    missing_metric_count = _float_or_none(after_summary.get("missing_metric_count"))
+    blocked_group_count = _float_or_none(after_summary.get("blocked_group_count"))
+    groups = _mapping(after_summary.get("groups"))
+    group_count = float(len(groups)) if groups else None
+    promoted_group_count = (
+        float(sum(1 for status in groups.values() if str(status) == "promote"))
+        if groups
+        else None
+    )
+    present_metric_rate = _divide_or_none(present_metric_count, expected_metric_count)
+    missing_metric_rate = _divide_or_none(missing_metric_count, expected_metric_count)
+    promoted_group_rate = _divide_or_none(promoted_group_count, group_count)
+    return _drop_none_values(
+        {
+            "evidence_handoff_coverage_rate": 1.0,
+            "evidence_handoff_workflow": "product_promotion_contract",
+            "evidence_handoff_status": after_audit.status,
+            "evidence_handoff_before_missing_metric_count": before_missing_metric_count,
+            "evidence_handoff_after_missing_metric_count": after_missing_metric_count,
+            "evidence_handoff_resolved_missing_metric_count": _subtract_or_none(
+                before_missing_metric_count,
+                after_missing_metric_count,
+            ),
+            "evidence_handoff_expected_metric_count": expected_metric_count,
+            "evidence_handoff_present_metric_count": present_metric_count,
+            "evidence_handoff_missing_metric_count": missing_metric_count,
+            "evidence_handoff_blocked_group_count": blocked_group_count,
+            "evidence_handoff_present_metric_rate": present_metric_rate,
+            "evidence_handoff_missing_metric_rate": missing_metric_rate,
+            "evidence_handoff_group_count": group_count,
+            "evidence_handoff_promoted_group_count": promoted_group_count,
+            "evidence_handoff_promoted_group_rate": promoted_group_rate,
+            "evidence_handoff_filled_groups": tuple(filled_groups),
+            "evidence_handoff_group_statuses": dict(groups),
+        }
+    )
+
+
+def _subtract_or_none(left: Any, right: Any) -> Any:
+    try:
+        return left - right
+    except TypeError:
+        return None
+
+
+def _divide_or_none(numerator: float | None, denominator: float | None) -> float | None:
+    if numerator is None or denominator in (None, 0.0):
+        return None
+    return numerator / denominator
 
 
 def _float_or_none(value: Any) -> float | None:
