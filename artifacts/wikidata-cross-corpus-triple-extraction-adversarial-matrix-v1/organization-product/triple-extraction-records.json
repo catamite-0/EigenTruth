@@ -1,0 +1,3396 @@
+{
+  "description": "Labeled subject-predicate-object extraction records generated from structured facts. Use with eval_triple_extraction.py to compare extractor variants.",
+  "fixture_type": "triple_extraction_labeled_fixture",
+  "input_provenance": {
+    "builder": "build_triple_extraction_fixture",
+    "config": {
+      "adversarial_negatives_per_fact": 1,
+      "ambiguity_negatives_per_fact": 1,
+      "max_facts": null,
+      "metalinguistic_negatives_per_fact": 1,
+      "non_assertive_negatives_per_fact": 1,
+      "predicate_confusions_per_fact": 1,
+      "temporal_negatives_per_fact": 1
+    },
+    "schema_version": 1,
+    "sources": [
+      {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/wikidata-organization-product-core-facts/wikidata-organization-product-source.jsonl",
+        "sha256": "f4cd3dc8d01c7c4e5b11de0e1e38041e70827115cb02f4fdc1e4d1899a454f94",
+        "size_bytes": 9663
+      }
+    ]
+  },
+  "records": [
+    {
+      "expected_triples": [
+        {
+          "object": "Cupertino",
+          "predicate": "headquarters_location_of",
+          "subject": "Apple Inc"
+        }
+      ],
+      "id": "0001-headquarters_location_of-headquarters-headquartered-in",
+      "metadata": {
+        "predicate": "headquarters_location_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "Cupertino",
+            "headquarters_qid": "Q189471",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "Apple Inc.",
+            "subject_qid": "Q312",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q312",
+            "value": "Cupertino",
+            "value_qid": "Q189471"
+          },
+          "object": "Cupertino",
+          "predicate": "P159",
+          "source": "wikidata:Q312:P159:Q189471",
+          "subject": "Apple Inc"
+        },
+        "source_fact_index": 0,
+        "template_id": "headquarters-headquartered-in"
+      },
+      "text": "Apple Inc is headquartered in Cupertino."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "Cupertino",
+          "predicate": "headquarters_location_of",
+          "subject": "Apple Inc"
+        }
+      ],
+      "id": "0001-headquarters_location_of-headquarters-of",
+      "metadata": {
+        "predicate": "headquarters_location_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "Cupertino",
+            "headquarters_qid": "Q189471",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "Apple Inc.",
+            "subject_qid": "Q312",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q312",
+            "value": "Cupertino",
+            "value_qid": "Q189471"
+          },
+          "object": "Cupertino",
+          "predicate": "P159",
+          "source": "wikidata:Q312:P159:Q189471",
+          "subject": "Apple Inc"
+        },
+        "source_fact_index": 0,
+        "template_id": "headquarters-of"
+      },
+      "text": "The headquarters of Apple Inc are in Cupertino."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "Cupertino",
+          "predicate": "headquarters_location_of",
+          "subject": "Apple Inc"
+        }
+      ],
+      "id": "0001-headquarters_location_of-headquarters-possessive",
+      "metadata": {
+        "predicate": "headquarters_location_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "Cupertino",
+            "headquarters_qid": "Q189471",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "Apple Inc.",
+            "subject_qid": "Q312",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q312",
+            "value": "Cupertino",
+            "value_qid": "Q189471"
+          },
+          "object": "Cupertino",
+          "predicate": "P159",
+          "source": "wikidata:Q312:P159:Q189471",
+          "subject": "Apple Inc"
+        },
+        "source_fact_index": 0,
+        "template_id": "headquarters-possessive"
+      },
+      "text": "Apple Inc's headquarters are in Cupertino."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "Cupertino",
+          "predicate": "headquarters_location_of",
+          "subject": "Apple Inc"
+        }
+      ],
+      "id": "0001-headquarters_location_of-headquarters-object-first",
+      "metadata": {
+        "predicate": "headquarters_location_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "Cupertino",
+            "headquarters_qid": "Q189471",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "Apple Inc.",
+            "subject_qid": "Q312",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q312",
+            "value": "Cupertino",
+            "value_qid": "Q189471"
+          },
+          "object": "Cupertino",
+          "predicate": "P159",
+          "source": "wikidata:Q312:P159:Q189471",
+          "subject": "Apple Inc"
+        },
+        "source_fact_index": 0,
+        "template_id": "headquarters-object-first"
+      },
+      "text": "Cupertino is the headquarters location of Apple Inc."
+    },
+    {
+      "expected_triples": [],
+      "id": "0001-headquarters_location_of-adversarial-negative-headquarters-negated-headquartered-in",
+      "metadata": {
+        "adversarial_family": "negated_known_fact",
+        "predicate": "headquarters_location_of",
+        "record_type": "adversarial_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "Cupertino",
+            "headquarters_qid": "Q189471",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "Apple Inc.",
+            "subject_qid": "Q312",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q312",
+            "value": "Cupertino",
+            "value_qid": "Q189471"
+          },
+          "object": "Cupertino",
+          "predicate": "P159",
+          "source": "wikidata:Q312:P159:Q189471",
+          "subject": "Apple Inc"
+        },
+        "source_fact_index": 0,
+        "template_id": "headquarters-negated-headquartered-in"
+      },
+      "text": "Apple Inc is not headquartered in Cupertino."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "Cupertino",
+          "predicate": "manufacturer_of",
+          "subject": "Apple Inc"
+        }
+      ],
+      "id": "0001-headquarters_location_of-predicate-confusion-headquarters-as-manufacturer",
+      "metadata": {
+        "adversarial_family": "wrong_predicate_claim",
+        "predicate": "manufacturer_of",
+        "record_type": "predicate_confusion",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "Cupertino",
+            "headquarters_qid": "Q189471",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "Apple Inc.",
+            "subject_qid": "Q312",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q312",
+            "value": "Cupertino",
+            "value_qid": "Q189471"
+          },
+          "object": "Cupertino",
+          "predicate": "P159",
+          "source": "wikidata:Q312:P159:Q189471",
+          "subject": "Apple Inc"
+        },
+        "source_fact_index": 0,
+        "source_predicate": "headquarters_location_of",
+        "template_id": "headquarters-as-manufacturer"
+      },
+      "text": "Apple Inc is manufactured by Cupertino."
+    },
+    {
+      "expected_triples": [],
+      "id": "0001-headquarters_location_of-non-assertive-negative-quoted-claim-reviewed",
+      "metadata": {
+        "adversarial_family": "quoted_or_questioned_fact",
+        "predicate": "headquarters_location_of",
+        "record_type": "non_assertive_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "Cupertino",
+            "headquarters_qid": "Q189471",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "Apple Inc.",
+            "subject_qid": "Q312",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q312",
+            "value": "Cupertino",
+            "value_qid": "Q189471"
+          },
+          "object": "Cupertino",
+          "predicate": "P159",
+          "source": "wikidata:Q312:P159:Q189471",
+          "subject": "Apple Inc"
+        },
+        "source_fact_index": 0,
+        "template_id": "quoted-claim-reviewed"
+      },
+      "text": "The claim \"Apple Inc is headquartered in Cupertino\" was reviewed."
+    },
+    {
+      "expected_triples": [],
+      "id": "0001-headquarters_location_of-ambiguity-negative-either-or-claim",
+      "metadata": {
+        "adversarial_family": "ambiguous_or_multi_object_claim",
+        "predicate": "headquarters_location_of",
+        "record_type": "ambiguity_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "Cupertino",
+            "headquarters_qid": "Q189471",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "Apple Inc.",
+            "subject_qid": "Q312",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q312",
+            "value": "Cupertino",
+            "value_qid": "Q189471"
+          },
+          "object": "Cupertino",
+          "predicate": "P159",
+          "source": "wikidata:Q312:P159:Q189471",
+          "subject": "Apple Inc"
+        },
+        "source_fact_index": 0,
+        "template_id": "either-or-claim"
+      },
+      "text": "Either Apple Inc is headquartered in Cupertino or an alternate record says otherwise."
+    },
+    {
+      "expected_triples": [],
+      "id": "0001-headquarters_location_of-temporal-negative-historical-period",
+      "metadata": {
+        "adversarial_family": "temporal_qualified_claim",
+        "predicate": "headquarters_location_of",
+        "record_type": "temporal_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "Cupertino",
+            "headquarters_qid": "Q189471",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "Apple Inc.",
+            "subject_qid": "Q312",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q312",
+            "value": "Cupertino",
+            "value_qid": "Q189471"
+          },
+          "object": "Cupertino",
+          "predicate": "P159",
+          "source": "wikidata:Q312:P159:Q189471",
+          "subject": "Apple Inc"
+        },
+        "source_fact_index": 0,
+        "template_id": "historical-period"
+      },
+      "text": "Historically, Apple Inc is headquartered in Cupertino for a past period."
+    },
+    {
+      "expected_triples": [],
+      "id": "0001-headquarters_location_of-metalinguistic-negative-phrase-mentions",
+      "metadata": {
+        "adversarial_family": "metalinguistic_or_comparative_claim",
+        "predicate": "headquarters_location_of",
+        "record_type": "metalinguistic_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "Cupertino",
+            "headquarters_qid": "Q189471",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "Apple Inc.",
+            "subject_qid": "Q312",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q312",
+            "value": "Cupertino",
+            "value_qid": "Q189471"
+          },
+          "object": "Cupertino",
+          "predicate": "P159",
+          "source": "wikidata:Q312:P159:Q189471",
+          "subject": "Apple Inc"
+        },
+        "source_fact_index": 0,
+        "template_id": "phrase-mentions"
+      },
+      "text": "The phrase \"Apple Inc is headquartered in Cupertino\" mentions Cupertino."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "1976-04-01T00:00:00Z",
+          "predicate": "inception_of",
+          "subject": "Apple Inc"
+        }
+      ],
+      "id": "0002-inception_of-inception-founded-in",
+      "metadata": {
+        "predicate": "inception_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "1976-04-01T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "Apple Inc.",
+            "subject_qid": "Q312",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q312",
+            "value": "1976-04-01T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "1976-04-01T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q312:P571:1976-04-01T00:00:00Z",
+          "subject": "Apple Inc"
+        },
+        "source_fact_index": 1,
+        "template_id": "inception-founded-in"
+      },
+      "text": "Apple Inc was founded in 1976-04-01T00:00:00Z."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "1976-04-01T00:00:00Z",
+          "predicate": "inception_of",
+          "subject": "Apple Inc"
+        }
+      ],
+      "id": "0002-inception_of-inception-date-subject",
+      "metadata": {
+        "predicate": "inception_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "1976-04-01T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "Apple Inc.",
+            "subject_qid": "Q312",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q312",
+            "value": "1976-04-01T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "1976-04-01T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q312:P571:1976-04-01T00:00:00Z",
+          "subject": "Apple Inc"
+        },
+        "source_fact_index": 1,
+        "template_id": "inception-date-subject"
+      },
+      "text": "The inception date of Apple Inc is 1976-04-01T00:00:00Z."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "1976-04-01T00:00:00Z",
+          "predicate": "inception_of",
+          "subject": "Apple Inc"
+        }
+      ],
+      "id": "0002-inception_of-inception-possessive",
+      "metadata": {
+        "predicate": "inception_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "1976-04-01T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "Apple Inc.",
+            "subject_qid": "Q312",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q312",
+            "value": "1976-04-01T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "1976-04-01T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q312:P571:1976-04-01T00:00:00Z",
+          "subject": "Apple Inc"
+        },
+        "source_fact_index": 1,
+        "template_id": "inception-possessive"
+      },
+      "text": "Apple Inc's inception date is 1976-04-01T00:00:00Z."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "1976-04-01T00:00:00Z",
+          "predicate": "inception_of",
+          "subject": "Apple Inc"
+        }
+      ],
+      "id": "0002-inception_of-inception-object-first",
+      "metadata": {
+        "predicate": "inception_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "1976-04-01T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "Apple Inc.",
+            "subject_qid": "Q312",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q312",
+            "value": "1976-04-01T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "1976-04-01T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q312:P571:1976-04-01T00:00:00Z",
+          "subject": "Apple Inc"
+        },
+        "source_fact_index": 1,
+        "template_id": "inception-object-first"
+      },
+      "text": "1976-04-01T00:00:00Z is the inception date of Apple Inc."
+    },
+    {
+      "expected_triples": [],
+      "id": "0002-inception_of-adversarial-negative-inception-negated-founded-in",
+      "metadata": {
+        "adversarial_family": "negated_known_fact",
+        "predicate": "inception_of",
+        "record_type": "adversarial_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "1976-04-01T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "Apple Inc.",
+            "subject_qid": "Q312",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q312",
+            "value": "1976-04-01T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "1976-04-01T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q312:P571:1976-04-01T00:00:00Z",
+          "subject": "Apple Inc"
+        },
+        "source_fact_index": 1,
+        "template_id": "inception-negated-founded-in"
+      },
+      "text": "Apple Inc was not founded in 1976-04-01T00:00:00Z."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "1976-04-01T00:00:00Z",
+          "predicate": "headquarters_location_of",
+          "subject": "Apple Inc"
+        }
+      ],
+      "id": "0002-inception_of-predicate-confusion-inception-as-headquarters",
+      "metadata": {
+        "adversarial_family": "wrong_predicate_claim",
+        "predicate": "headquarters_location_of",
+        "record_type": "predicate_confusion",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "1976-04-01T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "Apple Inc.",
+            "subject_qid": "Q312",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q312",
+            "value": "1976-04-01T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "1976-04-01T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q312:P571:1976-04-01T00:00:00Z",
+          "subject": "Apple Inc"
+        },
+        "source_fact_index": 1,
+        "source_predicate": "inception_of",
+        "template_id": "inception-as-headquarters"
+      },
+      "text": "Apple Inc is headquartered in 1976-04-01T00:00:00Z."
+    },
+    {
+      "expected_triples": [],
+      "id": "0002-inception_of-non-assertive-negative-quoted-claim-reviewed",
+      "metadata": {
+        "adversarial_family": "quoted_or_questioned_fact",
+        "predicate": "inception_of",
+        "record_type": "non_assertive_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "1976-04-01T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "Apple Inc.",
+            "subject_qid": "Q312",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q312",
+            "value": "1976-04-01T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "1976-04-01T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q312:P571:1976-04-01T00:00:00Z",
+          "subject": "Apple Inc"
+        },
+        "source_fact_index": 1,
+        "template_id": "quoted-claim-reviewed"
+      },
+      "text": "The claim \"Apple Inc was founded in 1976-04-01T00:00:00Z\" was reviewed."
+    },
+    {
+      "expected_triples": [],
+      "id": "0002-inception_of-ambiguity-negative-either-or-claim",
+      "metadata": {
+        "adversarial_family": "ambiguous_or_multi_object_claim",
+        "predicate": "inception_of",
+        "record_type": "ambiguity_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "1976-04-01T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "Apple Inc.",
+            "subject_qid": "Q312",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q312",
+            "value": "1976-04-01T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "1976-04-01T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q312:P571:1976-04-01T00:00:00Z",
+          "subject": "Apple Inc"
+        },
+        "source_fact_index": 1,
+        "template_id": "either-or-claim"
+      },
+      "text": "Either Apple Inc was founded in 1976-04-01T00:00:00Z or an alternate record says otherwise."
+    },
+    {
+      "expected_triples": [],
+      "id": "0002-inception_of-temporal-negative-historical-period",
+      "metadata": {
+        "adversarial_family": "temporal_qualified_claim",
+        "predicate": "inception_of",
+        "record_type": "temporal_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "1976-04-01T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "Apple Inc.",
+            "subject_qid": "Q312",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q312",
+            "value": "1976-04-01T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "1976-04-01T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q312:P571:1976-04-01T00:00:00Z",
+          "subject": "Apple Inc"
+        },
+        "source_fact_index": 1,
+        "template_id": "historical-period"
+      },
+      "text": "Historically, Apple Inc was founded in 1976-04-01T00:00:00Z for a past period."
+    },
+    {
+      "expected_triples": [],
+      "id": "0002-inception_of-metalinguistic-negative-phrase-mentions",
+      "metadata": {
+        "adversarial_family": "metalinguistic_or_comparative_claim",
+        "predicate": "inception_of",
+        "record_type": "metalinguistic_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "1976-04-01T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "Apple Inc.",
+            "subject_qid": "Q312",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q312",
+            "value": "1976-04-01T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "1976-04-01T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q312:P571:1976-04-01T00:00:00Z",
+          "subject": "Apple Inc"
+        },
+        "source_fact_index": 1,
+        "template_id": "phrase-mentions"
+      },
+      "text": "The phrase \"Apple Inc was founded in 1976-04-01T00:00:00Z\" mentions 1976-04-01T00:00:00Z."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "San Francisco",
+          "predicate": "headquarters_location_of",
+          "subject": "OpenAI"
+        }
+      ],
+      "id": "0003-headquarters_location_of-headquarters-headquartered-in",
+      "metadata": {
+        "predicate": "headquarters_location_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "San Francisco",
+            "headquarters_qid": "Q62",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "OpenAI",
+            "subject_qid": "Q21708200",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q21708200",
+            "value": "San Francisco",
+            "value_qid": "Q62"
+          },
+          "object": "San Francisco",
+          "predicate": "P159",
+          "source": "wikidata:Q21708200:P159:Q62",
+          "subject": "OpenAI"
+        },
+        "source_fact_index": 2,
+        "template_id": "headquarters-headquartered-in"
+      },
+      "text": "OpenAI is headquartered in San Francisco."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "San Francisco",
+          "predicate": "headquarters_location_of",
+          "subject": "OpenAI"
+        }
+      ],
+      "id": "0003-headquarters_location_of-headquarters-of",
+      "metadata": {
+        "predicate": "headquarters_location_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "San Francisco",
+            "headquarters_qid": "Q62",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "OpenAI",
+            "subject_qid": "Q21708200",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q21708200",
+            "value": "San Francisco",
+            "value_qid": "Q62"
+          },
+          "object": "San Francisco",
+          "predicate": "P159",
+          "source": "wikidata:Q21708200:P159:Q62",
+          "subject": "OpenAI"
+        },
+        "source_fact_index": 2,
+        "template_id": "headquarters-of"
+      },
+      "text": "The headquarters of OpenAI are in San Francisco."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "San Francisco",
+          "predicate": "headquarters_location_of",
+          "subject": "OpenAI"
+        }
+      ],
+      "id": "0003-headquarters_location_of-headquarters-possessive",
+      "metadata": {
+        "predicate": "headquarters_location_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "San Francisco",
+            "headquarters_qid": "Q62",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "OpenAI",
+            "subject_qid": "Q21708200",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q21708200",
+            "value": "San Francisco",
+            "value_qid": "Q62"
+          },
+          "object": "San Francisco",
+          "predicate": "P159",
+          "source": "wikidata:Q21708200:P159:Q62",
+          "subject": "OpenAI"
+        },
+        "source_fact_index": 2,
+        "template_id": "headquarters-possessive"
+      },
+      "text": "OpenAI's headquarters are in San Francisco."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "San Francisco",
+          "predicate": "headquarters_location_of",
+          "subject": "OpenAI"
+        }
+      ],
+      "id": "0003-headquarters_location_of-headquarters-object-first",
+      "metadata": {
+        "predicate": "headquarters_location_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "San Francisco",
+            "headquarters_qid": "Q62",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "OpenAI",
+            "subject_qid": "Q21708200",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q21708200",
+            "value": "San Francisco",
+            "value_qid": "Q62"
+          },
+          "object": "San Francisco",
+          "predicate": "P159",
+          "source": "wikidata:Q21708200:P159:Q62",
+          "subject": "OpenAI"
+        },
+        "source_fact_index": 2,
+        "template_id": "headquarters-object-first"
+      },
+      "text": "San Francisco is the headquarters location of OpenAI."
+    },
+    {
+      "expected_triples": [],
+      "id": "0003-headquarters_location_of-adversarial-negative-headquarters-negated-headquartered-in",
+      "metadata": {
+        "adversarial_family": "negated_known_fact",
+        "predicate": "headquarters_location_of",
+        "record_type": "adversarial_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "San Francisco",
+            "headquarters_qid": "Q62",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "OpenAI",
+            "subject_qid": "Q21708200",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q21708200",
+            "value": "San Francisco",
+            "value_qid": "Q62"
+          },
+          "object": "San Francisco",
+          "predicate": "P159",
+          "source": "wikidata:Q21708200:P159:Q62",
+          "subject": "OpenAI"
+        },
+        "source_fact_index": 2,
+        "template_id": "headquarters-negated-headquartered-in"
+      },
+      "text": "OpenAI is not headquartered in San Francisco."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "San Francisco",
+          "predicate": "manufacturer_of",
+          "subject": "OpenAI"
+        }
+      ],
+      "id": "0003-headquarters_location_of-predicate-confusion-headquarters-as-manufacturer",
+      "metadata": {
+        "adversarial_family": "wrong_predicate_claim",
+        "predicate": "manufacturer_of",
+        "record_type": "predicate_confusion",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "San Francisco",
+            "headquarters_qid": "Q62",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "OpenAI",
+            "subject_qid": "Q21708200",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q21708200",
+            "value": "San Francisco",
+            "value_qid": "Q62"
+          },
+          "object": "San Francisco",
+          "predicate": "P159",
+          "source": "wikidata:Q21708200:P159:Q62",
+          "subject": "OpenAI"
+        },
+        "source_fact_index": 2,
+        "source_predicate": "headquarters_location_of",
+        "template_id": "headquarters-as-manufacturer"
+      },
+      "text": "OpenAI is manufactured by San Francisco."
+    },
+    {
+      "expected_triples": [],
+      "id": "0003-headquarters_location_of-non-assertive-negative-quoted-claim-reviewed",
+      "metadata": {
+        "adversarial_family": "quoted_or_questioned_fact",
+        "predicate": "headquarters_location_of",
+        "record_type": "non_assertive_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "San Francisco",
+            "headquarters_qid": "Q62",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "OpenAI",
+            "subject_qid": "Q21708200",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q21708200",
+            "value": "San Francisco",
+            "value_qid": "Q62"
+          },
+          "object": "San Francisco",
+          "predicate": "P159",
+          "source": "wikidata:Q21708200:P159:Q62",
+          "subject": "OpenAI"
+        },
+        "source_fact_index": 2,
+        "template_id": "quoted-claim-reviewed"
+      },
+      "text": "The claim \"OpenAI is headquartered in San Francisco\" was reviewed."
+    },
+    {
+      "expected_triples": [],
+      "id": "0003-headquarters_location_of-ambiguity-negative-either-or-claim",
+      "metadata": {
+        "adversarial_family": "ambiguous_or_multi_object_claim",
+        "predicate": "headquarters_location_of",
+        "record_type": "ambiguity_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "San Francisco",
+            "headquarters_qid": "Q62",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "OpenAI",
+            "subject_qid": "Q21708200",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q21708200",
+            "value": "San Francisco",
+            "value_qid": "Q62"
+          },
+          "object": "San Francisco",
+          "predicate": "P159",
+          "source": "wikidata:Q21708200:P159:Q62",
+          "subject": "OpenAI"
+        },
+        "source_fact_index": 2,
+        "template_id": "either-or-claim"
+      },
+      "text": "Either OpenAI is headquartered in San Francisco or an alternate record says otherwise."
+    },
+    {
+      "expected_triples": [],
+      "id": "0003-headquarters_location_of-temporal-negative-historical-period",
+      "metadata": {
+        "adversarial_family": "temporal_qualified_claim",
+        "predicate": "headquarters_location_of",
+        "record_type": "temporal_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "San Francisco",
+            "headquarters_qid": "Q62",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "OpenAI",
+            "subject_qid": "Q21708200",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q21708200",
+            "value": "San Francisco",
+            "value_qid": "Q62"
+          },
+          "object": "San Francisco",
+          "predicate": "P159",
+          "source": "wikidata:Q21708200:P159:Q62",
+          "subject": "OpenAI"
+        },
+        "source_fact_index": 2,
+        "template_id": "historical-period"
+      },
+      "text": "Historically, OpenAI is headquartered in San Francisco for a past period."
+    },
+    {
+      "expected_triples": [],
+      "id": "0003-headquarters_location_of-metalinguistic-negative-phrase-mentions",
+      "metadata": {
+        "adversarial_family": "metalinguistic_or_comparative_claim",
+        "predicate": "headquarters_location_of",
+        "record_type": "metalinguistic_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "San Francisco",
+            "headquarters_qid": "Q62",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "OpenAI",
+            "subject_qid": "Q21708200",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q21708200",
+            "value": "San Francisco",
+            "value_qid": "Q62"
+          },
+          "object": "San Francisco",
+          "predicate": "P159",
+          "source": "wikidata:Q21708200:P159:Q62",
+          "subject": "OpenAI"
+        },
+        "source_fact_index": 2,
+        "template_id": "phrase-mentions"
+      },
+      "text": "The phrase \"OpenAI is headquartered in San Francisco\" mentions San Francisco."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "2015-12-08T00:00:00Z",
+          "predicate": "inception_of",
+          "subject": "OpenAI"
+        }
+      ],
+      "id": "0004-inception_of-inception-founded-in",
+      "metadata": {
+        "predicate": "inception_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "2015-12-08T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "OpenAI",
+            "subject_qid": "Q21708200",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q21708200",
+            "value": "2015-12-08T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "2015-12-08T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q21708200:P571:2015-12-08T00:00:00Z",
+          "subject": "OpenAI"
+        },
+        "source_fact_index": 3,
+        "template_id": "inception-founded-in"
+      },
+      "text": "OpenAI was founded in 2015-12-08T00:00:00Z."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "2015-12-08T00:00:00Z",
+          "predicate": "inception_of",
+          "subject": "OpenAI"
+        }
+      ],
+      "id": "0004-inception_of-inception-date-subject",
+      "metadata": {
+        "predicate": "inception_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "2015-12-08T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "OpenAI",
+            "subject_qid": "Q21708200",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q21708200",
+            "value": "2015-12-08T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "2015-12-08T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q21708200:P571:2015-12-08T00:00:00Z",
+          "subject": "OpenAI"
+        },
+        "source_fact_index": 3,
+        "template_id": "inception-date-subject"
+      },
+      "text": "The inception date of OpenAI is 2015-12-08T00:00:00Z."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "2015-12-08T00:00:00Z",
+          "predicate": "inception_of",
+          "subject": "OpenAI"
+        }
+      ],
+      "id": "0004-inception_of-inception-possessive",
+      "metadata": {
+        "predicate": "inception_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "2015-12-08T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "OpenAI",
+            "subject_qid": "Q21708200",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q21708200",
+            "value": "2015-12-08T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "2015-12-08T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q21708200:P571:2015-12-08T00:00:00Z",
+          "subject": "OpenAI"
+        },
+        "source_fact_index": 3,
+        "template_id": "inception-possessive"
+      },
+      "text": "OpenAI's inception date is 2015-12-08T00:00:00Z."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "2015-12-08T00:00:00Z",
+          "predicate": "inception_of",
+          "subject": "OpenAI"
+        }
+      ],
+      "id": "0004-inception_of-inception-object-first",
+      "metadata": {
+        "predicate": "inception_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "2015-12-08T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "OpenAI",
+            "subject_qid": "Q21708200",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q21708200",
+            "value": "2015-12-08T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "2015-12-08T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q21708200:P571:2015-12-08T00:00:00Z",
+          "subject": "OpenAI"
+        },
+        "source_fact_index": 3,
+        "template_id": "inception-object-first"
+      },
+      "text": "2015-12-08T00:00:00Z is the inception date of OpenAI."
+    },
+    {
+      "expected_triples": [],
+      "id": "0004-inception_of-adversarial-negative-inception-negated-founded-in",
+      "metadata": {
+        "adversarial_family": "negated_known_fact",
+        "predicate": "inception_of",
+        "record_type": "adversarial_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "2015-12-08T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "OpenAI",
+            "subject_qid": "Q21708200",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q21708200",
+            "value": "2015-12-08T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "2015-12-08T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q21708200:P571:2015-12-08T00:00:00Z",
+          "subject": "OpenAI"
+        },
+        "source_fact_index": 3,
+        "template_id": "inception-negated-founded-in"
+      },
+      "text": "OpenAI was not founded in 2015-12-08T00:00:00Z."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "2015-12-08T00:00:00Z",
+          "predicate": "headquarters_location_of",
+          "subject": "OpenAI"
+        }
+      ],
+      "id": "0004-inception_of-predicate-confusion-inception-as-headquarters",
+      "metadata": {
+        "adversarial_family": "wrong_predicate_claim",
+        "predicate": "headquarters_location_of",
+        "record_type": "predicate_confusion",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "2015-12-08T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "OpenAI",
+            "subject_qid": "Q21708200",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q21708200",
+            "value": "2015-12-08T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "2015-12-08T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q21708200:P571:2015-12-08T00:00:00Z",
+          "subject": "OpenAI"
+        },
+        "source_fact_index": 3,
+        "source_predicate": "inception_of",
+        "template_id": "inception-as-headquarters"
+      },
+      "text": "OpenAI is headquartered in 2015-12-08T00:00:00Z."
+    },
+    {
+      "expected_triples": [],
+      "id": "0004-inception_of-non-assertive-negative-quoted-claim-reviewed",
+      "metadata": {
+        "adversarial_family": "quoted_or_questioned_fact",
+        "predicate": "inception_of",
+        "record_type": "non_assertive_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "2015-12-08T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "OpenAI",
+            "subject_qid": "Q21708200",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q21708200",
+            "value": "2015-12-08T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "2015-12-08T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q21708200:P571:2015-12-08T00:00:00Z",
+          "subject": "OpenAI"
+        },
+        "source_fact_index": 3,
+        "template_id": "quoted-claim-reviewed"
+      },
+      "text": "The claim \"OpenAI was founded in 2015-12-08T00:00:00Z\" was reviewed."
+    },
+    {
+      "expected_triples": [],
+      "id": "0004-inception_of-ambiguity-negative-either-or-claim",
+      "metadata": {
+        "adversarial_family": "ambiguous_or_multi_object_claim",
+        "predicate": "inception_of",
+        "record_type": "ambiguity_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "2015-12-08T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "OpenAI",
+            "subject_qid": "Q21708200",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q21708200",
+            "value": "2015-12-08T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "2015-12-08T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q21708200:P571:2015-12-08T00:00:00Z",
+          "subject": "OpenAI"
+        },
+        "source_fact_index": 3,
+        "template_id": "either-or-claim"
+      },
+      "text": "Either OpenAI was founded in 2015-12-08T00:00:00Z or an alternate record says otherwise."
+    },
+    {
+      "expected_triples": [],
+      "id": "0004-inception_of-temporal-negative-historical-period",
+      "metadata": {
+        "adversarial_family": "temporal_qualified_claim",
+        "predicate": "inception_of",
+        "record_type": "temporal_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "2015-12-08T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "OpenAI",
+            "subject_qid": "Q21708200",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q21708200",
+            "value": "2015-12-08T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "2015-12-08T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q21708200:P571:2015-12-08T00:00:00Z",
+          "subject": "OpenAI"
+        },
+        "source_fact_index": 3,
+        "template_id": "historical-period"
+      },
+      "text": "Historically, OpenAI was founded in 2015-12-08T00:00:00Z for a past period."
+    },
+    {
+      "expected_triples": [],
+      "id": "0004-inception_of-metalinguistic-negative-phrase-mentions",
+      "metadata": {
+        "adversarial_family": "metalinguistic_or_comparative_claim",
+        "predicate": "inception_of",
+        "record_type": "metalinguistic_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "2015-12-08T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "OpenAI",
+            "subject_qid": "Q21708200",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q21708200",
+            "value": "2015-12-08T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "2015-12-08T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q21708200:P571:2015-12-08T00:00:00Z",
+          "subject": "OpenAI"
+        },
+        "source_fact_index": 3,
+        "template_id": "phrase-mentions"
+      },
+      "text": "The phrase \"OpenAI was founded in 2015-12-08T00:00:00Z\" mentions 2015-12-08T00:00:00Z."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "Austin",
+          "predicate": "headquarters_location_of",
+          "subject": "Tesla"
+        }
+      ],
+      "id": "0005-headquarters_location_of-headquarters-headquartered-in",
+      "metadata": {
+        "predicate": "headquarters_location_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "Austin",
+            "headquarters_qid": "Q16559",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "Tesla",
+            "subject_qid": "Q478214",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q478214",
+            "value": "Austin",
+            "value_qid": "Q16559"
+          },
+          "object": "Austin",
+          "predicate": "P159",
+          "source": "wikidata:Q478214:P159:Q16559",
+          "subject": "Tesla"
+        },
+        "source_fact_index": 4,
+        "template_id": "headquarters-headquartered-in"
+      },
+      "text": "Tesla is headquartered in Austin."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "Austin",
+          "predicate": "headquarters_location_of",
+          "subject": "Tesla"
+        }
+      ],
+      "id": "0005-headquarters_location_of-headquarters-of",
+      "metadata": {
+        "predicate": "headquarters_location_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "Austin",
+            "headquarters_qid": "Q16559",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "Tesla",
+            "subject_qid": "Q478214",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q478214",
+            "value": "Austin",
+            "value_qid": "Q16559"
+          },
+          "object": "Austin",
+          "predicate": "P159",
+          "source": "wikidata:Q478214:P159:Q16559",
+          "subject": "Tesla"
+        },
+        "source_fact_index": 4,
+        "template_id": "headquarters-of"
+      },
+      "text": "The headquarters of Tesla are in Austin."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "Austin",
+          "predicate": "headquarters_location_of",
+          "subject": "Tesla"
+        }
+      ],
+      "id": "0005-headquarters_location_of-headquarters-possessive",
+      "metadata": {
+        "predicate": "headquarters_location_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "Austin",
+            "headquarters_qid": "Q16559",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "Tesla",
+            "subject_qid": "Q478214",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q478214",
+            "value": "Austin",
+            "value_qid": "Q16559"
+          },
+          "object": "Austin",
+          "predicate": "P159",
+          "source": "wikidata:Q478214:P159:Q16559",
+          "subject": "Tesla"
+        },
+        "source_fact_index": 4,
+        "template_id": "headquarters-possessive"
+      },
+      "text": "Tesla's headquarters are in Austin."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "Austin",
+          "predicate": "headquarters_location_of",
+          "subject": "Tesla"
+        }
+      ],
+      "id": "0005-headquarters_location_of-headquarters-object-first",
+      "metadata": {
+        "predicate": "headquarters_location_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "Austin",
+            "headquarters_qid": "Q16559",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "Tesla",
+            "subject_qid": "Q478214",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q478214",
+            "value": "Austin",
+            "value_qid": "Q16559"
+          },
+          "object": "Austin",
+          "predicate": "P159",
+          "source": "wikidata:Q478214:P159:Q16559",
+          "subject": "Tesla"
+        },
+        "source_fact_index": 4,
+        "template_id": "headquarters-object-first"
+      },
+      "text": "Austin is the headquarters location of Tesla."
+    },
+    {
+      "expected_triples": [],
+      "id": "0005-headquarters_location_of-adversarial-negative-headquarters-negated-headquartered-in",
+      "metadata": {
+        "adversarial_family": "negated_known_fact",
+        "predicate": "headquarters_location_of",
+        "record_type": "adversarial_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "Austin",
+            "headquarters_qid": "Q16559",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "Tesla",
+            "subject_qid": "Q478214",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q478214",
+            "value": "Austin",
+            "value_qid": "Q16559"
+          },
+          "object": "Austin",
+          "predicate": "P159",
+          "source": "wikidata:Q478214:P159:Q16559",
+          "subject": "Tesla"
+        },
+        "source_fact_index": 4,
+        "template_id": "headquarters-negated-headquartered-in"
+      },
+      "text": "Tesla is not headquartered in Austin."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "Austin",
+          "predicate": "manufacturer_of",
+          "subject": "Tesla"
+        }
+      ],
+      "id": "0005-headquarters_location_of-predicate-confusion-headquarters-as-manufacturer",
+      "metadata": {
+        "adversarial_family": "wrong_predicate_claim",
+        "predicate": "manufacturer_of",
+        "record_type": "predicate_confusion",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "Austin",
+            "headquarters_qid": "Q16559",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "Tesla",
+            "subject_qid": "Q478214",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q478214",
+            "value": "Austin",
+            "value_qid": "Q16559"
+          },
+          "object": "Austin",
+          "predicate": "P159",
+          "source": "wikidata:Q478214:P159:Q16559",
+          "subject": "Tesla"
+        },
+        "source_fact_index": 4,
+        "source_predicate": "headquarters_location_of",
+        "template_id": "headquarters-as-manufacturer"
+      },
+      "text": "Tesla is manufactured by Austin."
+    },
+    {
+      "expected_triples": [],
+      "id": "0005-headquarters_location_of-non-assertive-negative-quoted-claim-reviewed",
+      "metadata": {
+        "adversarial_family": "quoted_or_questioned_fact",
+        "predicate": "headquarters_location_of",
+        "record_type": "non_assertive_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "Austin",
+            "headquarters_qid": "Q16559",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "Tesla",
+            "subject_qid": "Q478214",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q478214",
+            "value": "Austin",
+            "value_qid": "Q16559"
+          },
+          "object": "Austin",
+          "predicate": "P159",
+          "source": "wikidata:Q478214:P159:Q16559",
+          "subject": "Tesla"
+        },
+        "source_fact_index": 4,
+        "template_id": "quoted-claim-reviewed"
+      },
+      "text": "The claim \"Tesla is headquartered in Austin\" was reviewed."
+    },
+    {
+      "expected_triples": [],
+      "id": "0005-headquarters_location_of-ambiguity-negative-either-or-claim",
+      "metadata": {
+        "adversarial_family": "ambiguous_or_multi_object_claim",
+        "predicate": "headquarters_location_of",
+        "record_type": "ambiguity_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "Austin",
+            "headquarters_qid": "Q16559",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "Tesla",
+            "subject_qid": "Q478214",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q478214",
+            "value": "Austin",
+            "value_qid": "Q16559"
+          },
+          "object": "Austin",
+          "predicate": "P159",
+          "source": "wikidata:Q478214:P159:Q16559",
+          "subject": "Tesla"
+        },
+        "source_fact_index": 4,
+        "template_id": "either-or-claim"
+      },
+      "text": "Either Tesla is headquartered in Austin or an alternate record says otherwise."
+    },
+    {
+      "expected_triples": [],
+      "id": "0005-headquarters_location_of-temporal-negative-historical-period",
+      "metadata": {
+        "adversarial_family": "temporal_qualified_claim",
+        "predicate": "headquarters_location_of",
+        "record_type": "temporal_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "Austin",
+            "headquarters_qid": "Q16559",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "Tesla",
+            "subject_qid": "Q478214",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q478214",
+            "value": "Austin",
+            "value_qid": "Q16559"
+          },
+          "object": "Austin",
+          "predicate": "P159",
+          "source": "wikidata:Q478214:P159:Q16559",
+          "subject": "Tesla"
+        },
+        "source_fact_index": 4,
+        "template_id": "historical-period"
+      },
+      "text": "Historically, Tesla is headquartered in Austin for a past period."
+    },
+    {
+      "expected_triples": [],
+      "id": "0005-headquarters_location_of-metalinguistic-negative-phrase-mentions",
+      "metadata": {
+        "adversarial_family": "metalinguistic_or_comparative_claim",
+        "predicate": "headquarters_location_of",
+        "record_type": "metalinguistic_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "headquarters": "Austin",
+            "headquarters_qid": "Q16559",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P159",
+            "statement_property_label": "headquarters location",
+            "subject": "Tesla",
+            "subject_qid": "Q478214",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q478214",
+            "value": "Austin",
+            "value_qid": "Q16559"
+          },
+          "object": "Austin",
+          "predicate": "P159",
+          "source": "wikidata:Q478214:P159:Q16559",
+          "subject": "Tesla"
+        },
+        "source_fact_index": 4,
+        "template_id": "phrase-mentions"
+      },
+      "text": "The phrase \"Tesla is headquartered in Austin\" mentions Austin."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "2003-07-01T00:00:00Z",
+          "predicate": "inception_of",
+          "subject": "Tesla"
+        }
+      ],
+      "id": "0006-inception_of-inception-founded-in",
+      "metadata": {
+        "predicate": "inception_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "2003-07-01T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "Tesla",
+            "subject_qid": "Q478214",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q478214",
+            "value": "2003-07-01T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "2003-07-01T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q478214:P571:2003-07-01T00:00:00Z",
+          "subject": "Tesla"
+        },
+        "source_fact_index": 5,
+        "template_id": "inception-founded-in"
+      },
+      "text": "Tesla was founded in 2003-07-01T00:00:00Z."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "2003-07-01T00:00:00Z",
+          "predicate": "inception_of",
+          "subject": "Tesla"
+        }
+      ],
+      "id": "0006-inception_of-inception-date-subject",
+      "metadata": {
+        "predicate": "inception_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "2003-07-01T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "Tesla",
+            "subject_qid": "Q478214",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q478214",
+            "value": "2003-07-01T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "2003-07-01T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q478214:P571:2003-07-01T00:00:00Z",
+          "subject": "Tesla"
+        },
+        "source_fact_index": 5,
+        "template_id": "inception-date-subject"
+      },
+      "text": "The inception date of Tesla is 2003-07-01T00:00:00Z."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "2003-07-01T00:00:00Z",
+          "predicate": "inception_of",
+          "subject": "Tesla"
+        }
+      ],
+      "id": "0006-inception_of-inception-possessive",
+      "metadata": {
+        "predicate": "inception_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "2003-07-01T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "Tesla",
+            "subject_qid": "Q478214",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q478214",
+            "value": "2003-07-01T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "2003-07-01T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q478214:P571:2003-07-01T00:00:00Z",
+          "subject": "Tesla"
+        },
+        "source_fact_index": 5,
+        "template_id": "inception-possessive"
+      },
+      "text": "Tesla's inception date is 2003-07-01T00:00:00Z."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "2003-07-01T00:00:00Z",
+          "predicate": "inception_of",
+          "subject": "Tesla"
+        }
+      ],
+      "id": "0006-inception_of-inception-object-first",
+      "metadata": {
+        "predicate": "inception_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "2003-07-01T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "Tesla",
+            "subject_qid": "Q478214",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q478214",
+            "value": "2003-07-01T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "2003-07-01T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q478214:P571:2003-07-01T00:00:00Z",
+          "subject": "Tesla"
+        },
+        "source_fact_index": 5,
+        "template_id": "inception-object-first"
+      },
+      "text": "2003-07-01T00:00:00Z is the inception date of Tesla."
+    },
+    {
+      "expected_triples": [],
+      "id": "0006-inception_of-adversarial-negative-inception-negated-founded-in",
+      "metadata": {
+        "adversarial_family": "negated_known_fact",
+        "predicate": "inception_of",
+        "record_type": "adversarial_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "2003-07-01T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "Tesla",
+            "subject_qid": "Q478214",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q478214",
+            "value": "2003-07-01T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "2003-07-01T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q478214:P571:2003-07-01T00:00:00Z",
+          "subject": "Tesla"
+        },
+        "source_fact_index": 5,
+        "template_id": "inception-negated-founded-in"
+      },
+      "text": "Tesla was not founded in 2003-07-01T00:00:00Z."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "2003-07-01T00:00:00Z",
+          "predicate": "headquarters_location_of",
+          "subject": "Tesla"
+        }
+      ],
+      "id": "0006-inception_of-predicate-confusion-inception-as-headquarters",
+      "metadata": {
+        "adversarial_family": "wrong_predicate_claim",
+        "predicate": "headquarters_location_of",
+        "record_type": "predicate_confusion",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "2003-07-01T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "Tesla",
+            "subject_qid": "Q478214",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q478214",
+            "value": "2003-07-01T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "2003-07-01T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q478214:P571:2003-07-01T00:00:00Z",
+          "subject": "Tesla"
+        },
+        "source_fact_index": 5,
+        "source_predicate": "inception_of",
+        "template_id": "inception-as-headquarters"
+      },
+      "text": "Tesla is headquartered in 2003-07-01T00:00:00Z."
+    },
+    {
+      "expected_triples": [],
+      "id": "0006-inception_of-non-assertive-negative-quoted-claim-reviewed",
+      "metadata": {
+        "adversarial_family": "quoted_or_questioned_fact",
+        "predicate": "inception_of",
+        "record_type": "non_assertive_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "2003-07-01T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "Tesla",
+            "subject_qid": "Q478214",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q478214",
+            "value": "2003-07-01T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "2003-07-01T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q478214:P571:2003-07-01T00:00:00Z",
+          "subject": "Tesla"
+        },
+        "source_fact_index": 5,
+        "template_id": "quoted-claim-reviewed"
+      },
+      "text": "The claim \"Tesla was founded in 2003-07-01T00:00:00Z\" was reviewed."
+    },
+    {
+      "expected_triples": [],
+      "id": "0006-inception_of-ambiguity-negative-either-or-claim",
+      "metadata": {
+        "adversarial_family": "ambiguous_or_multi_object_claim",
+        "predicate": "inception_of",
+        "record_type": "ambiguity_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "2003-07-01T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "Tesla",
+            "subject_qid": "Q478214",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q478214",
+            "value": "2003-07-01T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "2003-07-01T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q478214:P571:2003-07-01T00:00:00Z",
+          "subject": "Tesla"
+        },
+        "source_fact_index": 5,
+        "template_id": "either-or-claim"
+      },
+      "text": "Either Tesla was founded in 2003-07-01T00:00:00Z or an alternate record says otherwise."
+    },
+    {
+      "expected_triples": [],
+      "id": "0006-inception_of-temporal-negative-historical-period",
+      "metadata": {
+        "adversarial_family": "temporal_qualified_claim",
+        "predicate": "inception_of",
+        "record_type": "temporal_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "2003-07-01T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "Tesla",
+            "subject_qid": "Q478214",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q478214",
+            "value": "2003-07-01T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "2003-07-01T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q478214:P571:2003-07-01T00:00:00Z",
+          "subject": "Tesla"
+        },
+        "source_fact_index": 5,
+        "template_id": "historical-period"
+      },
+      "text": "Historically, Tesla was founded in 2003-07-01T00:00:00Z for a past period."
+    },
+    {
+      "expected_triples": [],
+      "id": "0006-inception_of-metalinguistic-negative-phrase-mentions",
+      "metadata": {
+        "adversarial_family": "metalinguistic_or_comparative_claim",
+        "predicate": "inception_of",
+        "record_type": "metalinguistic_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "inception": "2003-07-01T00:00:00Z",
+            "inception_qid": null,
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P571",
+            "statement_property_label": "inception",
+            "subject": "Tesla",
+            "subject_qid": "Q478214",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q478214",
+            "value": "2003-07-01T00:00:00Z",
+            "value_qid": null
+          },
+          "object": "2003-07-01T00:00:00Z",
+          "predicate": "P571",
+          "source": "wikidata:Q478214:P571:2003-07-01T00:00:00Z",
+          "subject": "Tesla"
+        },
+        "source_fact_index": 5,
+        "template_id": "phrase-mentions"
+      },
+      "text": "The phrase \"Tesla was founded in 2003-07-01T00:00:00Z\" mentions 2003-07-01T00:00:00Z."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "Apple Inc",
+          "predicate": "manufacturer_of",
+          "subject": "iPhone"
+        }
+      ],
+      "id": "0007-manufacturer_of-manufacturer-object-first",
+      "metadata": {
+        "predicate": "manufacturer_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "manufacturer": "Apple Inc.",
+            "manufacturer_qid": "Q312",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P176",
+            "statement_property_label": "manufacturer",
+            "subject": "iPhone",
+            "subject_qid": "Q2766",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q2766",
+            "value": "Apple Inc.",
+            "value_qid": "Q312"
+          },
+          "object": "Apple Inc",
+          "predicate": "P176",
+          "source": "wikidata:Q2766:P176:Q312",
+          "subject": "iPhone"
+        },
+        "source_fact_index": 6,
+        "template_id": "manufacturer-object-first"
+      },
+      "text": "Apple Inc manufactures iPhone."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "Apple Inc",
+          "predicate": "manufacturer_of",
+          "subject": "iPhone"
+        }
+      ],
+      "id": "0007-manufacturer_of-manufacturer-subject-first",
+      "metadata": {
+        "predicate": "manufacturer_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "manufacturer": "Apple Inc.",
+            "manufacturer_qid": "Q312",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P176",
+            "statement_property_label": "manufacturer",
+            "subject": "iPhone",
+            "subject_qid": "Q2766",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q2766",
+            "value": "Apple Inc.",
+            "value_qid": "Q312"
+          },
+          "object": "Apple Inc",
+          "predicate": "P176",
+          "source": "wikidata:Q2766:P176:Q312",
+          "subject": "iPhone"
+        },
+        "source_fact_index": 6,
+        "template_id": "manufacturer-subject-first"
+      },
+      "text": "iPhone is manufactured by Apple Inc."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "Apple Inc",
+          "predicate": "manufacturer_of",
+          "subject": "iPhone"
+        }
+      ],
+      "id": "0007-manufacturer_of-manufacturer-made-by",
+      "metadata": {
+        "predicate": "manufacturer_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "manufacturer": "Apple Inc.",
+            "manufacturer_qid": "Q312",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P176",
+            "statement_property_label": "manufacturer",
+            "subject": "iPhone",
+            "subject_qid": "Q2766",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q2766",
+            "value": "Apple Inc.",
+            "value_qid": "Q312"
+          },
+          "object": "Apple Inc",
+          "predicate": "P176",
+          "source": "wikidata:Q2766:P176:Q312",
+          "subject": "iPhone"
+        },
+        "source_fact_index": 6,
+        "template_id": "manufacturer-made-by"
+      },
+      "text": "iPhone is made by Apple Inc."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "Apple Inc",
+          "predicate": "manufacturer_of",
+          "subject": "iPhone"
+        }
+      ],
+      "id": "0007-manufacturer_of-manufacturer-possessive",
+      "metadata": {
+        "predicate": "manufacturer_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "manufacturer": "Apple Inc.",
+            "manufacturer_qid": "Q312",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P176",
+            "statement_property_label": "manufacturer",
+            "subject": "iPhone",
+            "subject_qid": "Q2766",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q2766",
+            "value": "Apple Inc.",
+            "value_qid": "Q312"
+          },
+          "object": "Apple Inc",
+          "predicate": "P176",
+          "source": "wikidata:Q2766:P176:Q312",
+          "subject": "iPhone"
+        },
+        "source_fact_index": 6,
+        "template_id": "manufacturer-possessive"
+      },
+      "text": "iPhone's manufacturer is Apple Inc."
+    },
+    {
+      "expected_triples": [],
+      "id": "0007-manufacturer_of-adversarial-negative-manufacturer-negated-subject-first",
+      "metadata": {
+        "adversarial_family": "negated_known_fact",
+        "predicate": "manufacturer_of",
+        "record_type": "adversarial_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "manufacturer": "Apple Inc.",
+            "manufacturer_qid": "Q312",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P176",
+            "statement_property_label": "manufacturer",
+            "subject": "iPhone",
+            "subject_qid": "Q2766",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q2766",
+            "value": "Apple Inc.",
+            "value_qid": "Q312"
+          },
+          "object": "Apple Inc",
+          "predicate": "P176",
+          "source": "wikidata:Q2766:P176:Q312",
+          "subject": "iPhone"
+        },
+        "source_fact_index": 6,
+        "template_id": "manufacturer-negated-subject-first"
+      },
+      "text": "iPhone is not manufactured by Apple Inc."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "Apple Inc",
+          "predicate": "headquarters_location_of",
+          "subject": "iPhone"
+        }
+      ],
+      "id": "0007-manufacturer_of-predicate-confusion-manufacturer-as-headquarters",
+      "metadata": {
+        "adversarial_family": "wrong_predicate_claim",
+        "predicate": "headquarters_location_of",
+        "record_type": "predicate_confusion",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "manufacturer": "Apple Inc.",
+            "manufacturer_qid": "Q312",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P176",
+            "statement_property_label": "manufacturer",
+            "subject": "iPhone",
+            "subject_qid": "Q2766",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q2766",
+            "value": "Apple Inc.",
+            "value_qid": "Q312"
+          },
+          "object": "Apple Inc",
+          "predicate": "P176",
+          "source": "wikidata:Q2766:P176:Q312",
+          "subject": "iPhone"
+        },
+        "source_fact_index": 6,
+        "source_predicate": "manufacturer_of",
+        "template_id": "manufacturer-as-headquarters"
+      },
+      "text": "The headquarters of iPhone are in Apple Inc."
+    },
+    {
+      "expected_triples": [],
+      "id": "0007-manufacturer_of-non-assertive-negative-quoted-claim-reviewed",
+      "metadata": {
+        "adversarial_family": "quoted_or_questioned_fact",
+        "predicate": "manufacturer_of",
+        "record_type": "non_assertive_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "manufacturer": "Apple Inc.",
+            "manufacturer_qid": "Q312",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P176",
+            "statement_property_label": "manufacturer",
+            "subject": "iPhone",
+            "subject_qid": "Q2766",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q2766",
+            "value": "Apple Inc.",
+            "value_qid": "Q312"
+          },
+          "object": "Apple Inc",
+          "predicate": "P176",
+          "source": "wikidata:Q2766:P176:Q312",
+          "subject": "iPhone"
+        },
+        "source_fact_index": 6,
+        "template_id": "quoted-claim-reviewed"
+      },
+      "text": "The claim \"Apple Inc manufactures iPhone\" was reviewed."
+    },
+    {
+      "expected_triples": [],
+      "id": "0007-manufacturer_of-ambiguity-negative-either-or-claim",
+      "metadata": {
+        "adversarial_family": "ambiguous_or_multi_object_claim",
+        "predicate": "manufacturer_of",
+        "record_type": "ambiguity_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "manufacturer": "Apple Inc.",
+            "manufacturer_qid": "Q312",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P176",
+            "statement_property_label": "manufacturer",
+            "subject": "iPhone",
+            "subject_qid": "Q2766",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q2766",
+            "value": "Apple Inc.",
+            "value_qid": "Q312"
+          },
+          "object": "Apple Inc",
+          "predicate": "P176",
+          "source": "wikidata:Q2766:P176:Q312",
+          "subject": "iPhone"
+        },
+        "source_fact_index": 6,
+        "template_id": "either-or-claim"
+      },
+      "text": "Either Apple Inc manufactures iPhone or an alternate record says otherwise."
+    },
+    {
+      "expected_triples": [],
+      "id": "0007-manufacturer_of-temporal-negative-historical-period",
+      "metadata": {
+        "adversarial_family": "temporal_qualified_claim",
+        "predicate": "manufacturer_of",
+        "record_type": "temporal_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "manufacturer": "Apple Inc.",
+            "manufacturer_qid": "Q312",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P176",
+            "statement_property_label": "manufacturer",
+            "subject": "iPhone",
+            "subject_qid": "Q2766",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q2766",
+            "value": "Apple Inc.",
+            "value_qid": "Q312"
+          },
+          "object": "Apple Inc",
+          "predicate": "P176",
+          "source": "wikidata:Q2766:P176:Q312",
+          "subject": "iPhone"
+        },
+        "source_fact_index": 6,
+        "template_id": "historical-period"
+      },
+      "text": "Historically, Apple Inc manufactures iPhone for a past period."
+    },
+    {
+      "expected_triples": [],
+      "id": "0007-manufacturer_of-metalinguistic-negative-phrase-mentions",
+      "metadata": {
+        "adversarial_family": "metalinguistic_or_comparative_claim",
+        "predicate": "manufacturer_of",
+        "record_type": "metalinguistic_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "manufacturer": "Apple Inc.",
+            "manufacturer_qid": "Q312",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P176",
+            "statement_property_label": "manufacturer",
+            "subject": "iPhone",
+            "subject_qid": "Q2766",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q2766",
+            "value": "Apple Inc.",
+            "value_qid": "Q312"
+          },
+          "object": "Apple Inc",
+          "predicate": "P176",
+          "source": "wikidata:Q2766:P176:Q312",
+          "subject": "iPhone"
+        },
+        "source_fact_index": 6,
+        "template_id": "phrase-mentions"
+      },
+      "text": "The phrase \"Apple Inc manufactures iPhone\" mentions Apple Inc."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "Foxconn",
+          "predicate": "manufacturer_of",
+          "subject": "iPhone"
+        }
+      ],
+      "id": "0008-manufacturer_of-manufacturer-object-first",
+      "metadata": {
+        "predicate": "manufacturer_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "manufacturer": "Foxconn",
+            "manufacturer_qid": "Q463094",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P176",
+            "statement_property_label": "manufacturer",
+            "subject": "iPhone",
+            "subject_qid": "Q2766",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q2766",
+            "value": "Foxconn",
+            "value_qid": "Q463094"
+          },
+          "object": "Foxconn",
+          "predicate": "P176",
+          "source": "wikidata:Q2766:P176:Q463094",
+          "subject": "iPhone"
+        },
+        "source_fact_index": 7,
+        "template_id": "manufacturer-object-first"
+      },
+      "text": "Foxconn manufactures iPhone."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "Foxconn",
+          "predicate": "manufacturer_of",
+          "subject": "iPhone"
+        }
+      ],
+      "id": "0008-manufacturer_of-manufacturer-subject-first",
+      "metadata": {
+        "predicate": "manufacturer_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "manufacturer": "Foxconn",
+            "manufacturer_qid": "Q463094",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P176",
+            "statement_property_label": "manufacturer",
+            "subject": "iPhone",
+            "subject_qid": "Q2766",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q2766",
+            "value": "Foxconn",
+            "value_qid": "Q463094"
+          },
+          "object": "Foxconn",
+          "predicate": "P176",
+          "source": "wikidata:Q2766:P176:Q463094",
+          "subject": "iPhone"
+        },
+        "source_fact_index": 7,
+        "template_id": "manufacturer-subject-first"
+      },
+      "text": "iPhone is manufactured by Foxconn."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "Foxconn",
+          "predicate": "manufacturer_of",
+          "subject": "iPhone"
+        }
+      ],
+      "id": "0008-manufacturer_of-manufacturer-made-by",
+      "metadata": {
+        "predicate": "manufacturer_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "manufacturer": "Foxconn",
+            "manufacturer_qid": "Q463094",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P176",
+            "statement_property_label": "manufacturer",
+            "subject": "iPhone",
+            "subject_qid": "Q2766",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q2766",
+            "value": "Foxconn",
+            "value_qid": "Q463094"
+          },
+          "object": "Foxconn",
+          "predicate": "P176",
+          "source": "wikidata:Q2766:P176:Q463094",
+          "subject": "iPhone"
+        },
+        "source_fact_index": 7,
+        "template_id": "manufacturer-made-by"
+      },
+      "text": "iPhone is made by Foxconn."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "Foxconn",
+          "predicate": "manufacturer_of",
+          "subject": "iPhone"
+        }
+      ],
+      "id": "0008-manufacturer_of-manufacturer-possessive",
+      "metadata": {
+        "predicate": "manufacturer_of",
+        "record_type": "positive",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "manufacturer": "Foxconn",
+            "manufacturer_qid": "Q463094",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P176",
+            "statement_property_label": "manufacturer",
+            "subject": "iPhone",
+            "subject_qid": "Q2766",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q2766",
+            "value": "Foxconn",
+            "value_qid": "Q463094"
+          },
+          "object": "Foxconn",
+          "predicate": "P176",
+          "source": "wikidata:Q2766:P176:Q463094",
+          "subject": "iPhone"
+        },
+        "source_fact_index": 7,
+        "template_id": "manufacturer-possessive"
+      },
+      "text": "iPhone's manufacturer is Foxconn."
+    },
+    {
+      "expected_triples": [],
+      "id": "0008-manufacturer_of-adversarial-negative-manufacturer-negated-subject-first",
+      "metadata": {
+        "adversarial_family": "negated_known_fact",
+        "predicate": "manufacturer_of",
+        "record_type": "adversarial_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "manufacturer": "Foxconn",
+            "manufacturer_qid": "Q463094",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P176",
+            "statement_property_label": "manufacturer",
+            "subject": "iPhone",
+            "subject_qid": "Q2766",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q2766",
+            "value": "Foxconn",
+            "value_qid": "Q463094"
+          },
+          "object": "Foxconn",
+          "predicate": "P176",
+          "source": "wikidata:Q2766:P176:Q463094",
+          "subject": "iPhone"
+        },
+        "source_fact_index": 7,
+        "template_id": "manufacturer-negated-subject-first"
+      },
+      "text": "iPhone is not manufactured by Foxconn."
+    },
+    {
+      "expected_triples": [
+        {
+          "object": "Foxconn",
+          "predicate": "headquarters_location_of",
+          "subject": "iPhone"
+        }
+      ],
+      "id": "0008-manufacturer_of-predicate-confusion-manufacturer-as-headquarters",
+      "metadata": {
+        "adversarial_family": "wrong_predicate_claim",
+        "predicate": "headquarters_location_of",
+        "record_type": "predicate_confusion",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "manufacturer": "Foxconn",
+            "manufacturer_qid": "Q463094",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P176",
+            "statement_property_label": "manufacturer",
+            "subject": "iPhone",
+            "subject_qid": "Q2766",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q2766",
+            "value": "Foxconn",
+            "value_qid": "Q463094"
+          },
+          "object": "Foxconn",
+          "predicate": "P176",
+          "source": "wikidata:Q2766:P176:Q463094",
+          "subject": "iPhone"
+        },
+        "source_fact_index": 7,
+        "source_predicate": "manufacturer_of",
+        "template_id": "manufacturer-as-headquarters"
+      },
+      "text": "The headquarters of iPhone are in Foxconn."
+    },
+    {
+      "expected_triples": [],
+      "id": "0008-manufacturer_of-non-assertive-negative-quoted-claim-reviewed",
+      "metadata": {
+        "adversarial_family": "quoted_or_questioned_fact",
+        "predicate": "manufacturer_of",
+        "record_type": "non_assertive_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "manufacturer": "Foxconn",
+            "manufacturer_qid": "Q463094",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P176",
+            "statement_property_label": "manufacturer",
+            "subject": "iPhone",
+            "subject_qid": "Q2766",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q2766",
+            "value": "Foxconn",
+            "value_qid": "Q463094"
+          },
+          "object": "Foxconn",
+          "predicate": "P176",
+          "source": "wikidata:Q2766:P176:Q463094",
+          "subject": "iPhone"
+        },
+        "source_fact_index": 7,
+        "template_id": "quoted-claim-reviewed"
+      },
+      "text": "The claim \"Foxconn manufactures iPhone\" was reviewed."
+    },
+    {
+      "expected_triples": [],
+      "id": "0008-manufacturer_of-ambiguity-negative-either-or-claim",
+      "metadata": {
+        "adversarial_family": "ambiguous_or_multi_object_claim",
+        "predicate": "manufacturer_of",
+        "record_type": "ambiguity_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "manufacturer": "Foxconn",
+            "manufacturer_qid": "Q463094",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P176",
+            "statement_property_label": "manufacturer",
+            "subject": "iPhone",
+            "subject_qid": "Q2766",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q2766",
+            "value": "Foxconn",
+            "value_qid": "Q463094"
+          },
+          "object": "Foxconn",
+          "predicate": "P176",
+          "source": "wikidata:Q2766:P176:Q463094",
+          "subject": "iPhone"
+        },
+        "source_fact_index": 7,
+        "template_id": "either-or-claim"
+      },
+      "text": "Either Foxconn manufactures iPhone or an alternate record says otherwise."
+    },
+    {
+      "expected_triples": [],
+      "id": "0008-manufacturer_of-temporal-negative-historical-period",
+      "metadata": {
+        "adversarial_family": "temporal_qualified_claim",
+        "predicate": "manufacturer_of",
+        "record_type": "temporal_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "manufacturer": "Foxconn",
+            "manufacturer_qid": "Q463094",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P176",
+            "statement_property_label": "manufacturer",
+            "subject": "iPhone",
+            "subject_qid": "Q2766",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q2766",
+            "value": "Foxconn",
+            "value_qid": "Q463094"
+          },
+          "object": "Foxconn",
+          "predicate": "P176",
+          "source": "wikidata:Q2766:P176:Q463094",
+          "subject": "iPhone"
+        },
+        "source_fact_index": 7,
+        "template_id": "historical-period"
+      },
+      "text": "Historically, Foxconn manufactures iPhone for a past period."
+    },
+    {
+      "expected_triples": [],
+      "id": "0008-manufacturer_of-metalinguistic-negative-phrase-mentions",
+      "metadata": {
+        "adversarial_family": "metalinguistic_or_comparative_claim",
+        "predicate": "manufacturer_of",
+        "record_type": "metalinguistic_negative",
+        "source_fact": {
+          "metadata": {
+            "country": null,
+            "country_qid": null,
+            "endpoint": "https://query.wikidata.org/sparql",
+            "license": "CC0-1.0",
+            "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+            "manufacturer": "Foxconn",
+            "manufacturer_qid": "Q463094",
+            "provider": "wikidata",
+            "query": "SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {\n  VALUES ?property { wd:P159 wd:P176 wd:P571 }\n  VALUES ?subject { wd:Q21708200 wd:Q32399 wd:Q2766 wd:Q478214 wd:Q312 }\n  ?property wikibase:directClaim ?directClaim.\n  ?subject ?directClaim ?value.\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". }\n}\nORDER BY ?subjectLabel ?propertyLabel ?valueLabel\nLIMIT 180",
+            "query_preset": "organization_product_core_facts",
+            "retrieved_at": "2026-06-26T17:26:44+00:00",
+            "statement_property": "P176",
+            "statement_property_label": "manufacturer",
+            "subject": "iPhone",
+            "subject_qid": "Q2766",
+            "timestamp": "2026-06-26T17:26:44+00:00",
+            "url": "https://www.wikidata.org/wiki/Q2766",
+            "value": "Foxconn",
+            "value_qid": "Q463094"
+          },
+          "object": "Foxconn",
+          "predicate": "P176",
+          "source": "wikidata:Q2766:P176:Q463094",
+          "subject": "iPhone"
+        },
+        "source_fact_index": 7,
+        "template_id": "phrase-mentions"
+      },
+      "text": "The phrase \"Foxconn manufactures iPhone\" mentions Foxconn."
+    }
+  ],
+  "schema_version": 1,
+  "summary": {
+    "by_predicate": {
+      "headquarters_location_of": {
+        "fact_count": 3,
+        "record_count": 32
+      },
+      "inception_of": {
+        "fact_count": 3,
+        "record_count": 27
+      },
+      "manufacturer_of": {
+        "fact_count": 2,
+        "record_count": 21
+      }
+    },
+    "n_adversarial_negative_records": 8,
+    "n_ambiguity_negative_records": 8,
+    "n_facts": 8,
+    "n_metalinguistic_negative_records": 8,
+    "n_non_assertive_negative_records": 8,
+    "n_predicate_confusion_records": 8,
+    "n_records": 80,
+    "n_source_records": 8,
+    "n_temporal_negative_records": 8,
+    "skipped": {
+      "duplicate_record": 0,
+      "invalid_fact": 0,
+      "unsupported_predicate": 0
+    }
+  }
+}

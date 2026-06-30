@@ -6689,6 +6689,18 @@
       "name": "smollm2-product-trace-action-payload-compat",
       "path": "artifacts/smollm2_product_trace_action_payload_compat_v0/action-payload-compat.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "evidence_gap_plan",
+      "metadata": {
+        "action_count": 15,
+        "gap_count": 16,
+        "source": "artifacts/frontier-audit-release-candidate-v6/frontier-audit-comparison.json",
+        "status": "needs_evidence"
+      },
+      "name": "frontier-audit-v6-evidence-gap-plan",
+      "path": "artifacts/frontier-audit-release-candidate-v6/evidence-gap-plan.json",
+      "version": "0.2"
     }
   ],
   "schema_version": 1

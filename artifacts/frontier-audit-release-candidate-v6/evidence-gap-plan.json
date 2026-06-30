@@ -15,7 +15,7 @@
       "priority": 90,
       "rationale": "The frontier release has targeted rerun evidence, but the rerun rollup is missing, invalid, or still blocked; complete the per-track reruns and feed the promotion-ready rollup back into the frontier release comparator.",
       "source_gap_ids": [
-        "gap-004-08"
+        "gap-001-13"
       ],
       "suggested_commands": [
         "benchmarks/plan_frontier_stability_evidence_reruns.py",
@@ -26,6 +26,24 @@
         "benchmarks/compare_frontier_release_evidence.py --frontier-rerun-rollup-report ..."
       ],
       "title": "Complete frontier rerun-rollup evidence"
+    },
+    {
+      "action_id": "run_pre_generation_probe_comparison",
+      "action_type": "experiment",
+      "evidence_routes": [
+        "pre_generation_probe_comparison",
+        "product_runtime_drift"
+      ],
+      "metadata": {},
+      "priority": 90,
+      "rationale": "Current frontier work treats hallucination risk before decoding as a probability; release drift needs multi-run probe evidence and redline margins.",
+      "source_gap_ids": [
+        "gap-001-02"
+      ],
+      "suggested_commands": [
+        "benchmarks/compare_pre_generation_probe_workflows.py"
+      ],
+      "title": "Add pre-generation probe redline evidence"
     },
     {
       "action_id": "rerun_frontier_multiple_testing_gate",
@@ -39,7 +57,7 @@
       "priority": 89,
       "rationale": "The release is blocked by the family-wise multi-signal hallucination gate; rerun or inspect the frontier workflow cells to identify failing signal/layer families before promoting runtime defaults.",
       "source_gap_ids": [
-        "gap-005-03"
+        "gap-002-03"
       ],
       "suggested_commands": [
         "benchmarks/run_truthfulqa_frontier_workflow.py --multiple-testing-signals ...",
@@ -60,7 +78,7 @@
       "priority": 88,
       "rationale": "Runtime drift gates need trace-level claim-risk localization coverage and entity-risk counts so release checks can catch concentrated high-risk claim regressions instead of only aggregate verifier drift.",
       "source_gap_ids": [
-        "gap-004-02"
+        "gap-001-03"
       ],
       "suggested_commands": [
         "benchmarks/run_product_trace_replay_workflow.py",
@@ -68,6 +86,43 @@
         "benchmarks/compare_product_runtime_baselines.py"
       ],
       "title": "Replay product traces with claim-risk localization evidence"
+    },
+    {
+      "action_id": "run_counterfactual_verifier_audit",
+      "action_type": "experiment",
+      "evidence_routes": [
+        "counterfactual_verification",
+        "product_runtime_drift"
+      ],
+      "metadata": {},
+      "priority": 88,
+      "rationale": "Verifier routes should flip on plausible false variants instead of remaining invariant to entity, numeric, temporal, or negation changes.",
+      "source_gap_ids": [
+        "gap-001-04"
+      ],
+      "suggested_commands": [
+        "benchmarks/eval_counterfactual_verification.py"
+      ],
+      "title": "Add counterfactual verifier sensitivity evidence"
+    },
+    {
+      "action_id": "rerun_product_trace_action_gates",
+      "action_type": "workflow",
+      "evidence_routes": [
+        "product_trace_replay",
+        "action_audit",
+        "action_execution"
+      ],
+      "metadata": {},
+      "priority": 87,
+      "rationale": "Agent-style hallucinations include fabricated, missing, or malformed tool actions; release evidence should carry action-audit and execution alignment rates.",
+      "source_gap_ids": [
+        "gap-001-07"
+      ],
+      "suggested_commands": [
+        "benchmarks/run_product_trace_replay_workflow.py"
+      ],
+      "title": "Replay product traces with action audit and execution gates"
     },
     {
       "action_id": "rerun_product_trace_context_sensitivity_evidence",
@@ -81,7 +136,7 @@
       "priority": 86,
       "rationale": "Frontier runtime drift gates need trace-level context-sensitivity participation, coverage, flagged-result, trace-gap, and ratio evidence before the release can trust evidence-conditioned correction signals.",
       "source_gap_ids": [
-        "gap-004-06"
+        "gap-001-11"
       ],
       "suggested_commands": [
         "benchmarks/run_product_trace_replay_workflow.py",
@@ -102,7 +157,7 @@
       "priority": 86,
       "rationale": "Frontier runtime drift gates need trace-level counterfactual robustness participation, coverage, pass, flip-success, false-invariance, and trace-gap evidence before verifier behavior is treated as stable.",
       "source_gap_ids": [
-        "gap-004-07"
+        "gap-001-12"
       ],
       "suggested_commands": [
         "benchmarks/run_product_trace_replay_workflow.py",
@@ -123,7 +178,7 @@
       "priority": 86,
       "rationale": "Runtime drift gates need trajectory-level factual, referential, logical, procedural, and scope audit rates before agent behavior is treated as stable across releases.",
       "source_gap_ids": [
-        "gap-004-03"
+        "gap-001-08"
       ],
       "suggested_commands": [
         "benchmarks/run_product_trace_replay_workflow.py",
@@ -144,7 +199,7 @@
       "priority": 86,
       "rationale": "Frontier runtime drift gates need trace-level world-model participation, coverage, conflict, low-agreement, and trace-gap evidence before the release can trust model-state correction signals.",
       "source_gap_ids": [
-        "gap-004-05"
+        "gap-001-10"
       ],
       "suggested_commands": [
         "benchmarks/run_product_trace_replay_workflow.py",
@@ -165,7 +220,7 @@
       "priority": 85,
       "rationale": "Runtime drift gates need the promotion contract to carry a verified evidence-handoff audit, including missing-metric and promoted-group rates, before downstream release evidence can be trusted.",
       "source_gap_ids": [
-        "gap-004-04"
+        "gap-001-09"
       ],
       "suggested_commands": [
         "benchmarks/export_product_promotion_contract_evidence_handoff.py",
@@ -173,6 +228,62 @@
         "benchmarks/compare_product_runtime_baselines.py"
       ],
       "title": "Refresh product-promotion evidence handoff"
+    },
+    {
+      "action_id": "add_trace_level_triple_audit",
+      "action_type": "workflow",
+      "evidence_routes": [
+        "triple_evidence",
+        "product_runtime_drift"
+      ],
+      "metadata": {},
+      "priority": 84,
+      "rationale": "Fact-level verification needs extracted triples, claim coverage, slot coverage, and pass rates rather than only sentence-level groundedness.",
+      "source_gap_ids": [
+        "gap-001-05"
+      ],
+      "suggested_commands": [
+        "benchmarks/run_triple_extraction_fixture_matrix.py",
+        "benchmarks/run_product_runtime_baseline.py"
+      ],
+      "title": "Add trace-level triple and slot-audit evidence"
+    },
+    {
+      "action_id": "refresh_covered_fact_property_routes",
+      "action_type": "workflow",
+      "evidence_routes": [
+        "structured_fact",
+        "covered_fact_property"
+      ],
+      "metadata": {},
+      "priority": 82,
+      "rationale": "Structured fact routes need per-property record/source/quality metrics so the release can show exactly which predicates are gated.",
+      "source_gap_ids": [
+        "gap-001-06"
+      ],
+      "suggested_commands": [
+        "benchmarks/run_wikidata_structured_qa_route_workflow.py"
+      ],
+      "title": "Refresh covered-fact property robustness evidence"
+    },
+    {
+      "action_id": "export_promotion_contract_runtime_evidence",
+      "action_type": "workflow",
+      "evidence_routes": [
+        "product_promotion_contract",
+        "product_runtime_baseline"
+      ],
+      "metadata": {},
+      "priority": 80,
+      "rationale": "Runtime drift gates require a product promotion contract to be present inside trace metrics before they can compare handoff coverage.",
+      "source_gap_ids": [
+        "gap-001-01"
+      ],
+      "suggested_commands": [
+        "benchmarks/export_product_promotion_contract.py",
+        "benchmarks/run_product_runtime_baseline.py"
+      ],
+      "title": "Export promotion contract and runtime evidence"
     },
     {
       "action_id": "inspect_frontier_release_evidence_blocker",
@@ -184,68 +295,8 @@
       "priority": 10,
       "rationale": "No specific planner mapping exists yet for this blocker: frontier release evidence abstention_track_status is 'blocked', expected 'promote'",
       "source_gap_ids": [
-        "gap-005-01",
-        "gap-005-02"
-      ],
-      "suggested_commands": [],
-      "title": "Inspect release blocker"
-    },
-    {
-      "action_id": "inspect_product_runtime_drift_blocker",
-      "action_type": "manual_triage",
-      "evidence_routes": [
-        "product_runtime_drift"
-      ],
-      "metadata": {},
-      "priority": 10,
-      "rationale": "No specific planner mapping exists yet for this blocker: product runtime drift manifest verification failed",
-      "source_gap_ids": [
-        "gap-004-01"
-      ],
-      "suggested_commands": [],
-      "title": "Inspect release blocker"
-    },
-    {
-      "action_id": "inspect_product_trace_replay_workflow_blocker",
-      "action_type": "manual_triage",
-      "evidence_routes": [
-        "product_trace_replay_workflow"
-      ],
-      "metadata": {},
-      "priority": 10,
-      "rationale": "No specific planner mapping exists yet for this blocker: product trace replay workflow manifest verification failed",
-      "source_gap_ids": [
-        "gap-002-01"
-      ],
-      "suggested_commands": [],
-      "title": "Inspect release blocker"
-    },
-    {
-      "action_id": "inspect_selector_replay_blocker",
-      "action_type": "manual_triage",
-      "evidence_routes": [
-        "selector_replay"
-      ],
-      "metadata": {},
-      "priority": 10,
-      "rationale": "No specific planner mapping exists yet for this blocker: selector replay manifest verification failed",
-      "source_gap_ids": [
-        "gap-003-01"
-      ],
-      "suggested_commands": [],
-      "title": "Inspect release blocker"
-    },
-    {
-      "action_id": "inspect_triple_extraction_fixture_matrix_blocker",
-      "action_type": "manual_triage",
-      "evidence_routes": [
-        "triple_extraction_fixture_matrix"
-      ],
-      "metadata": {},
-      "priority": 10,
-      "rationale": "No specific planner mapping exists yet for this blocker: triple extraction fixture matrix manifest verification failed",
-      "source_gap_ids": [
-        "gap-001-01"
+        "gap-002-01",
+        "gap-002-02"
       ],
       "suggested_commands": [],
       "title": "Inspect release blocker"
@@ -254,17 +305,20 @@
   "gaps": [
     {
       "gap_id": "gap-001-01",
-      "gate": "triple_extraction_fixture_matrix",
+      "gate": "product_runtime_drift",
       "metadata": {
-        "evidence_kind": "manual_triage",
-        "research_axis": "release_gate"
+        "evidence_kind": "promotion_contract",
+        "research_axis": "release_contract"
       },
-      "missing_metrics": [],
-      "reason": "triple extraction fixture matrix manifest verification failed",
-      "recommended_action_ids": [
-        "inspect_triple_extraction_fixture_matrix_blocker"
+      "missing_metrics": [
+        "promotion_contract.triple_extraction_fixture_matrix.mean_best_f1.mean",
+        "promotion_contract.triple_extraction_fixture_matrix.mean_f1_lift.mean"
       ],
-      "root_cause": "unknown",
+      "reason": "product runtime drift promotion evidence metrics are incomplete: promotion_contract.triple_extraction_fixture_matrix.mean_best_f1.mean, promotion_contract.triple_extraction_fixture_matrix.mean_f1_lift.mean",
+      "recommended_action_ids": [
+        "export_promotion_contract_runtime_evidence"
+      ],
+      "root_cause": "product_handoff",
       "source": {
         "blocker_index": 1,
         "decision_status": "blocked",
@@ -273,67 +327,36 @@
       "status": "blocked"
     },
     {
-      "gap_id": "gap-002-01",
-      "gate": "product_trace_replay_workflow",
-      "metadata": {
-        "evidence_kind": "manual_triage",
-        "research_axis": "release_gate"
-      },
-      "missing_metrics": [],
-      "reason": "product trace replay workflow manifest verification failed",
-      "recommended_action_ids": [
-        "inspect_product_trace_replay_workflow_blocker"
-      ],
-      "root_cause": "unknown",
-      "source": {
-        "blocker_index": 2,
-        "decision_status": "blocked",
-        "reason_index": 1
-      },
-      "status": "blocked"
-    },
-    {
-      "gap_id": "gap-003-01",
-      "gate": "selector_replay",
-      "metadata": {
-        "evidence_kind": "manual_triage",
-        "research_axis": "release_gate"
-      },
-      "missing_metrics": [],
-      "reason": "selector replay manifest verification failed",
-      "recommended_action_ids": [
-        "inspect_selector_replay_blocker"
-      ],
-      "root_cause": "unknown",
-      "source": {
-        "blocker_index": 3,
-        "decision_status": "blocked",
-        "reason_index": 1
-      },
-      "status": "blocked"
-    },
-    {
-      "gap_id": "gap-004-01",
+      "gap_id": "gap-001-02",
       "gate": "product_runtime_drift",
       "metadata": {
-        "evidence_kind": "manual_triage",
-        "research_axis": "release_gate"
+        "evidence_kind": "pre_generation_probe",
+        "research_axis": "internal_state"
       },
-      "missing_metrics": [],
-      "reason": "product runtime drift manifest verification failed",
-      "recommended_action_ids": [
-        "inspect_product_runtime_drift_blocker"
+      "missing_metrics": [
+        "promotion_contract.pre_generation_probe_comparison.coverage_rate",
+        "promotion_contract.pre_generation_probe_comparison.manifest_verified_rate",
+        "promotion_contract.pre_generation_probe_comparison.model_count.mean",
+        "promotion_contract.pre_generation_probe_comparison.run_count.mean",
+        "promotion_contract.pre_generation_probe_comparison.redline_pass_rate",
+        "promotion_contract.pre_generation_probe_comparison.best_test_label_auroc.mean",
+        "promotion_contract.pre_generation_probe_comparison.best_redline_auroc.mean",
+        "promotion_contract.pre_generation_probe_comparison.best_redline_margin.mean"
       ],
-      "root_cause": "unknown",
+      "reason": "product runtime drift pre-generation evidence metrics are incomplete: promotion_contract.pre_generation_probe_comparison.coverage_rate, promotion_contract.pre_generation_probe_comparison.manifest_verified_rate, promotion_contract.pre_generation_probe_comparison.model_count.mean, promotion_contract.pre_generation_probe_comparison.run_count.mean, promotion_contract.pre_generation_probe_comparison.redline_pass_rate, promotion_contract.pre_generation_probe_comparison.best_test_label_auroc.mean, promotion_contract.pre_generation_probe_comparison.best_redline_auroc.mean, promotion_contract.pre_generation_probe_comparison.best_redline_margin.mean",
+      "recommended_action_ids": [
+        "run_pre_generation_probe_comparison"
+      ],
+      "root_cause": "model",
       "source": {
-        "blocker_index": 4,
+        "blocker_index": 1,
         "decision_status": "blocked",
-        "reason_index": 1
+        "reason_index": 2
       },
       "status": "blocked"
     },
     {
-      "gap_id": "gap-004-02",
+      "gap_id": "gap-001-03",
       "gate": "product_runtime_drift",
       "metadata": {
         "evidence_kind": "product_runtime_claim_risk_localization_evidence",
@@ -354,14 +377,123 @@
       ],
       "root_cause": "claim_risk_localization",
       "source": {
-        "blocker_index": 4,
+        "blocker_index": 1,
         "decision_status": "blocked",
-        "reason_index": 2
+        "reason_index": 3
       },
       "status": "blocked"
     },
     {
-      "gap_id": "gap-004-03",
+      "gap_id": "gap-001-04",
+      "gate": "product_runtime_drift",
+      "metadata": {
+        "evidence_kind": "counterfactual_verification",
+        "research_axis": "counterfactual"
+      },
+      "missing_metrics": [
+        "promotion_contract.counterfactual_verification.coverage_rate",
+        "promotion_contract.counterfactual_verification.manifest_verified_rate",
+        "promotion_contract.counterfactual_verification.record_count.mean",
+        "promotion_contract.counterfactual_verification.pass_rate.mean",
+        "promotion_contract.counterfactual_verification.false_invariance_rate.mean",
+        "promotion_contract.counterfactual_verification.flip_success_count.mean"
+      ],
+      "reason": "product runtime drift counterfactual evidence metrics are incomplete: promotion_contract.counterfactual_verification.coverage_rate, promotion_contract.counterfactual_verification.manifest_verified_rate, promotion_contract.counterfactual_verification.record_count.mean, promotion_contract.counterfactual_verification.pass_rate.mean, promotion_contract.counterfactual_verification.false_invariance_rate.mean, promotion_contract.counterfactual_verification.flip_success_count.mean",
+      "recommended_action_ids": [
+        "run_counterfactual_verifier_audit"
+      ],
+      "root_cause": "context",
+      "source": {
+        "blocker_index": 1,
+        "decision_status": "blocked",
+        "reason_index": 4
+      },
+      "status": "blocked"
+    },
+    {
+      "gap_id": "gap-001-05",
+      "gate": "product_runtime_drift",
+      "metadata": {
+        "evidence_kind": "triple_audit",
+        "research_axis": "fact_level"
+      },
+      "missing_metrics": [
+        "triple_coverage.audit_claim_coverage_rate",
+        "triple_coverage.audit_pass_rate",
+        "triple_coverage.slot_coverage_rate"
+      ],
+      "reason": "product runtime drift triple audit evidence metrics are incomplete: triple_coverage.audit_claim_coverage_rate, triple_coverage.audit_pass_rate, triple_coverage.slot_coverage_rate",
+      "recommended_action_ids": [
+        "add_trace_level_triple_audit"
+      ],
+      "root_cause": "evidence_coverage",
+      "source": {
+        "blocker_index": 1,
+        "decision_status": "blocked",
+        "reason_index": 5
+      },
+      "status": "blocked"
+    },
+    {
+      "gap_id": "gap-001-06",
+      "gate": "product_runtime_drift",
+      "metadata": {
+        "evidence_kind": "covered_fact_property",
+        "research_axis": "structured_facts"
+      },
+      "missing_metrics": [
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.property_metric_count.mean",
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_records.mean",
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_source_documents.mean",
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_decision_accuracy.mean",
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.max_false_supported_rate.mean",
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_false_refuted_rate.mean"
+      ],
+      "reason": "product runtime drift covered-fact property evidence metrics are incomplete: promotion_contract.covered_fact_properties.recommended_route_property_metrics.property_metric_count.mean, promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_records.mean, promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_source_documents.mean, promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_decision_accuracy.mean, promotion_contract.covered_fact_properties.recommended_route_property_metrics.max_false_supported_rate.mean, promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_false_refuted_rate.mean",
+      "recommended_action_ids": [
+        "refresh_covered_fact_property_routes"
+      ],
+      "root_cause": "evidence_coverage",
+      "source": {
+        "blocker_index": 1,
+        "decision_status": "blocked",
+        "reason_index": 6
+      },
+      "status": "blocked"
+    },
+    {
+      "gap_id": "gap-001-07",
+      "gate": "product_runtime_drift",
+      "metadata": {
+        "evidence_kind": "action_gate",
+        "research_axis": "tool_receipts"
+      },
+      "missing_metrics": [
+        "promotion_contract.product_trace_replay.action_audit_gate.error_rate.mean",
+        "promotion_contract.product_trace_replay.action_audit_gate.missing_retrieval_action_rate.mean",
+        "promotion_contract.product_trace_replay.action_audit_gate.missing_plan_retrieval_query_rate.mean",
+        "promotion_contract.product_trace_replay.action_audit_gate.malformed_payload_rate.mean",
+        "promotion_contract.product_trace_replay.action_audit_gate.unexpected_action_rate.mean",
+        "promotion_contract.product_trace_replay.action_audit_gate.unknown_claim_id_rate.mean",
+        "promotion_contract.product_trace_replay.action_execution_gate.alignment_failed_trace_rate.mean",
+        "promotion_contract.product_trace_replay.action_execution_gate.missing_result_rate.mean",
+        "promotion_contract.product_trace_replay.action_execution_gate.unexpected_result_rate.mean",
+        "promotion_contract.product_trace_replay.action_execution_gate.request_id_mismatch_rate.mean"
+      ],
+      "reason": "product runtime drift action-gate evidence metrics are incomplete: promotion_contract.product_trace_replay.action_audit_gate.error_rate.mean, promotion_contract.product_trace_replay.action_audit_gate.missing_retrieval_action_rate.mean, promotion_contract.product_trace_replay.action_audit_gate.missing_plan_retrieval_query_rate.mean, promotion_contract.product_trace_replay.action_audit_gate.malformed_payload_rate.mean, promotion_contract.product_trace_replay.action_audit_gate.unexpected_action_rate.mean, promotion_contract.product_trace_replay.action_audit_gate.unknown_claim_id_rate.mean, promotion_contract.product_trace_replay.action_execution_gate.alignment_failed_trace_rate.mean, promotion_contract.product_trace_replay.action_execution_gate.missing_result_rate.mean, promotion_contract.product_trace_replay.action_execution_gate.unexpected_result_rate.mean, promotion_contract.product_trace_replay.action_execution_gate.request_id_mismatch_rate.mean",
+      "recommended_action_ids": [
+        "rerun_product_trace_action_gates"
+      ],
+      "root_cause": "action_execution",
+      "source": {
+        "blocker_index": 1,
+        "decision_status": "blocked",
+        "reason_index": 7
+      },
+      "status": "blocked"
+    },
+    {
+      "gap_id": "gap-001-08",
       "gate": "product_runtime_drift",
       "metadata": {
         "evidence_kind": "product_runtime_trajectory_audit_evidence",
@@ -382,14 +514,14 @@
       ],
       "root_cause": "trajectory_audit",
       "source": {
-        "blocker_index": 4,
+        "blocker_index": 1,
         "decision_status": "blocked",
-        "reason_index": 3
+        "reason_index": 8
       },
       "status": "blocked"
     },
     {
-      "gap_id": "gap-004-04",
+      "gap_id": "gap-001-09",
       "gate": "product_runtime_drift",
       "metadata": {
         "evidence_kind": "product_runtime_evidence_handoff_evidence",
@@ -410,14 +542,14 @@
       ],
       "root_cause": "product_handoff",
       "source": {
-        "blocker_index": 4,
+        "blocker_index": 1,
         "decision_status": "blocked",
-        "reason_index": 4
+        "reason_index": 9
       },
       "status": "blocked"
     },
     {
-      "gap_id": "gap-004-05",
+      "gap_id": "gap-001-10",
       "gate": "product_runtime_drift",
       "metadata": {
         "evidence_kind": "product_runtime_world_model_evidence",
@@ -436,14 +568,14 @@
       ],
       "root_cause": "world_model",
       "source": {
-        "blocker_index": 4,
+        "blocker_index": 1,
         "decision_status": "blocked",
-        "reason_index": 5
+        "reason_index": 10
       },
       "status": "blocked"
     },
     {
-      "gap_id": "gap-004-06",
+      "gap_id": "gap-001-11",
       "gate": "product_runtime_drift",
       "metadata": {
         "evidence_kind": "product_runtime_context_sensitivity_evidence",
@@ -463,14 +595,14 @@
       ],
       "root_cause": "context_sensitivity",
       "source": {
-        "blocker_index": 4,
+        "blocker_index": 1,
         "decision_status": "blocked",
-        "reason_index": 6
+        "reason_index": 11
       },
       "status": "blocked"
     },
     {
-      "gap_id": "gap-004-07",
+      "gap_id": "gap-001-12",
       "gate": "product_runtime_drift",
       "metadata": {
         "evidence_kind": "product_runtime_counterfactual_robustness_evidence",
@@ -490,14 +622,14 @@
       ],
       "root_cause": "counterfactual_robustness",
       "source": {
-        "blocker_index": 4,
+        "blocker_index": 1,
         "decision_status": "blocked",
-        "reason_index": 7
+        "reason_index": 12
       },
       "status": "blocked"
     },
     {
-      "gap_id": "gap-004-08",
+      "gap_id": "gap-001-13",
       "gate": "product_runtime_drift",
       "metadata": {
         "evidence_kind": "frontier_rerun_rollup_evidence",
@@ -533,14 +665,14 @@
       ],
       "root_cause": "evidence_coverage",
       "source": {
-        "blocker_index": 4,
+        "blocker_index": 1,
         "decision_status": "blocked",
-        "reason_index": 8
+        "reason_index": 13
       },
       "status": "blocked"
     },
     {
-      "gap_id": "gap-005-01",
+      "gap_id": "gap-002-01",
       "gate": "frontier_release_evidence",
       "metadata": {
         "evidence_kind": "manual_triage",
@@ -553,14 +685,14 @@
       ],
       "root_cause": "unknown",
       "source": {
-        "blocker_index": 5,
+        "blocker_index": 2,
         "decision_status": "blocked",
         "reason_index": 1
       },
       "status": "blocked"
     },
     {
-      "gap_id": "gap-005-02",
+      "gap_id": "gap-002-02",
       "gate": "frontier_release_evidence",
       "metadata": {
         "evidence_kind": "manual_triage",
@@ -573,14 +705,14 @@
       ],
       "root_cause": "unknown",
       "source": {
-        "blocker_index": 5,
+        "blocker_index": 2,
         "decision_status": "blocked",
         "reason_index": 2
       },
       "status": "blocked"
     },
     {
-      "gap_id": "gap-005-03",
+      "gap_id": "gap-002-03",
       "gate": "frontier_release_evidence",
       "metadata": {
         "evidence_kind": "frontier_multiple_testing",
@@ -593,7 +725,7 @@
       ],
       "root_cause": "model",
       "source": {
-        "blocker_index": 5,
+        "blocker_index": 2,
         "decision_status": "blocked",
         "reason_index": 3
       },
@@ -601,7 +733,7 @@
     }
   ],
   "metadata": {
-    "source": "frontier_audit_v6_rebuild"
+    "source": "frontier_audit_v6_triple_matrix_repair"
   },
   "schema_version": 1,
   "source_path": "artifacts/frontier-audit-release-candidate-v6/frontier-audit-comparison.json",
@@ -609,40 +741,45 @@
   "source_workflow": "release_candidate_comparison",
   "status": "needs_evidence",
   "summary": {
-    "action_count": 13,
-    "gap_count": 14,
+    "action_count": 15,
+    "gap_count": 16,
     "gates": {
       "frontier_release_evidence": 3,
-      "product_runtime_drift": 8,
-      "product_trace_replay_workflow": 1,
-      "selector_replay": 1,
-      "triple_extraction_fixture_matrix": 1
+      "product_runtime_drift": 13
     },
-    "missing_metric_count": 60,
+    "missing_metric_count": 95,
     "research_axes": {
+      "counterfactual": 1,
+      "fact_level": 1,
       "frontier_rerun_validation": 1,
+      "internal_state": 1,
       "multi_signal_calibration": 1,
-      "release_gate": 6,
-      "runtime_drift": 6
+      "release_contract": 1,
+      "release_gate": 2,
+      "runtime_drift": 6,
+      "structured_facts": 1,
+      "tool_receipts": 1
     },
     "root_causes": {
+      "action_execution": 1,
       "claim_risk_localization": 1,
+      "context": 1,
       "context_sensitivity": 1,
       "counterfactual_robustness": 1,
-      "evidence_coverage": 1,
-      "model": 1,
-      "product_handoff": 1,
+      "evidence_coverage": 3,
+      "model": 2,
+      "product_handoff": 2,
       "trajectory_audit": 1,
-      "unknown": 6,
+      "unknown": 2,
       "world_model": 1
     },
     "source_decision_status": "blocked",
     "top_action_ids": [
       "complete_frontier_rerun_rollup_evidence",
+      "run_pre_generation_probe_comparison",
       "rerun_frontier_multiple_testing_gate",
       "rerun_product_trace_claim_risk_localization_evidence",
-      "rerun_product_trace_context_sensitivity_evidence",
-      "rerun_product_trace_counterfactual_robustness_evidence"
+      "run_counterfactual_verifier_audit"
     ]
   },
   "workflow": "evidence_gap_plan"

@@ -5,7 +5,7 @@
       "file_count": 1,
       "kind": "file",
       "path": "country-core/artifact-manifest.json",
-      "sha256": "96fd25aeeba4faf2230c0986c64111748c97cc7037773b7eb2fd7db4fb80c42b",
+      "sha256": "a0a62c26288662da13e5298047ef52621fb196813155d2a87f7e20ea758f8b60",
       "size_bytes": 3636
     },
     "corpus.country-core.external_predictions.lookup_gold": {
@@ -13,8 +13,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "external-predictions/country-core-lookup-gold-predictions.json",
-      "sha256": "cf7f2bf72b63c5b1d029928808c5cdd9897a2ed476643edea731824f79467f61",
-      "size_bytes": 622742
+      "sha256": "767702f2690c30380505cb82fe1af694b248b5270ae04b14471c62e7aa767404",
+      "size_bytes": 464712
     },
     "corpus.country-core.source.1.wikidata-country-core-facts-source": {
       "exists": true,
@@ -37,7 +37,7 @@
       "file_count": 1,
       "kind": "file",
       "path": "organization-product/artifact-manifest.json",
-      "sha256": "5c30c3febadda005e8fd40a4e603f912ba79abd7708f876b406a859dc22bbc77",
+      "sha256": "2ec685a7aac458548f534b8da703a81fa58dd477bab2cb7d19b920d33c0d8932",
       "size_bytes": 3596
     },
     "corpus.organization-product.external_predictions.lookup_gold": {
@@ -45,8 +45,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "external-predictions/organization-product-lookup-gold-predictions.json",
-      "sha256": "f9f47423b0c7289817c83563128832488577f8e4bd8c0d836702ba8857fac329",
-      "size_bytes": 14329
+      "sha256": "f0601a5183d2b26fe0ac901b482a624c00104fec298e77ca31143bfb68622d58",
+      "size_bytes": 10738
     },
     "corpus.organization-product.source.1.wikidata-organization-product-source": {
       "exists": true,

@@ -1344,6 +1344,51 @@ def test_eval_triple_extraction_uses_external_prediction_lookup(tmp_path):
     assert report["report"]["f1"] == pytest.approx(1.0)
 
 
+def test_build_triple_extraction_lookup_gold_predictions_replays_fixture(tmp_path):
+    builder = importlib.import_module("benchmarks.build_triple_extraction_lookup_gold_predictions")
+    evaluator = importlib.import_module("benchmarks.eval_triple_extraction")
+    records_path = tmp_path / "triple-records.json"
+    predictions_path = tmp_path / "predictions.json"
+    records_path.write_text(
+        json.dumps({
+            "records": [
+                {
+                    "id": "capital",
+                    "text": "France has its capital at Paris.",
+                    "expected_triples": [
+                        {"subject": "France", "predicate": "capital_of", "object": "Paris"},
+                    ],
+                },
+                {
+                    "id": "negated",
+                    "text": "France does not have its capital at Paris.",
+                    "expected_triples": [],
+                    "metadata": {"record_type": "adversarial_negative"},
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    predictions = builder.build_lookup_gold_predictions(records_path)
+    predictions_path.write_text(json.dumps(predictions), encoding="utf-8")
+    report = evaluator.run_triple_extraction_eval(
+        records_path,
+        extractor_name="external_predictions",
+        predictions_path=predictions_path,
+    )
+
+    assert predictions == {
+        "claim_id:capital": [{"subject": "France", "predicate": "capital_of", "object": "Paris"}],
+        "claim_id:negated": [],
+    }
+    assert report["prediction_key_count"] == 2
+    assert report["report"]["precision"] == pytest.approx(1.0)
+    assert report["report"]["recall"] == pytest.approx(1.0)
+    assert report["report"]["f1"] == pytest.approx(1.0)
+    assert report["report"]["false_positive_record_count"] == 0
+
+
 def test_external_triple_extractor_handoff_runs_command_and_registers(tmp_path):
     module = importlib.import_module("benchmarks.run_external_triple_extractor_handoff")
     from eigentruth.registry import ArtifactRegistry

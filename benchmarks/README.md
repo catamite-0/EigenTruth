@@ -8075,6 +8075,17 @@ retrieval targets, and verifies its manifest. Feed
 `run_product_trace_replay_workflow.py` when enforcing zero-tolerance
 action-audit gates over the historical profile-sweep traces.
 
+The latest local frontier-audit v6 refresh also repairs the cross-corpus
+triple-extraction matrix provenance. Generate the lookup-gold external
+prediction files from the generated fixture records with
+`build_triple_extraction_lookup_gold_predictions.py`, then rerun
+`run_triple_extraction_fixture_matrix.py` with the two `--external-predictions`
+paths under `artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/`.
+The v1 matrix manifest now verifies and
+`triple_extraction_fixture_matrix_gate` promotes in v6. The release candidate
+still blocks on frontier-release evidence and product-runtime evidence coverage;
+the refreshed `evidence-gap-plan.json` tracks 16 remaining gaps and 15 actions.
+
 The canonical local action-gated replay rebuild is:
 
 ```bash

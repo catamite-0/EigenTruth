@@ -150,50 +150,7 @@
     "release_efficiency_report": null,
     "release_policy_profile": "frontier_audit",
     "release_policy_profile_applied_defaults": {
-      "adapter_family_profile": "strict_audit",
-      "max_false_supported_rate": 0.0,
-      "max_recommended_runtime_seconds": 1.0,
-      "max_uncached_forward_seconds": null,
-      "min_best_quality_auroc": 0.7,
-      "min_decision_accuracy": 0.99,
-      "min_false_refuted_rate": 0.99,
-      "min_selected": 4,
-      "min_triple_extraction_corpora": 2,
-      "min_triple_extraction_distinct_predicates": 6,
-      "min_triple_extraction_external_prediction_corpora": 2,
-      "min_triple_extraction_external_prediction_count": 2,
-      "min_triple_extraction_mean_best_external_f1": 0.9,
-      "require_product_runtime_drift_action_gate_evidence": true,
-      "require_product_runtime_drift_claim_risk_localization_evidence": true,
-      "require_product_runtime_drift_context_sensitivity_evidence": true,
-      "require_product_runtime_drift_counterfactual_evidence": true,
-      "require_product_runtime_drift_counterfactual_robustness_evidence": true,
-      "require_product_runtime_drift_covered_fact_property_evidence": true,
-      "require_product_runtime_drift_evidence_handoff_evidence": true,
-      "require_product_runtime_drift_frontier_release_evidence": true,
-      "require_product_runtime_drift_pre_generation_evidence": true,
-      "require_product_runtime_drift_promotion_evidence": true,
-      "require_product_runtime_drift_trajectory_audit_evidence": true,
-      "require_product_runtime_drift_triple_audit_evidence": true,
-      "require_product_runtime_drift_world_model_evidence": true,
-      "require_product_trace_action_audit_gate": true,
-      "require_product_trace_action_execution_gate": true,
-      "require_state_transition_world_model": true,
-      "require_structured_fact_robustness": true,
-      "required_route_max_false_supported_rate": 0.0,
-      "required_route_min_decision_accuracy": 0.99,
-      "required_route_min_false_refuted_rate": 0.99,
-      "required_route_min_selected": 200,
-      "structured_fact_robustness_max_covered_fact_property_false_supported_rate": 0.0,
-      "structured_fact_robustness_max_false_supported_rate": 0.0,
-      "structured_fact_robustness_min_covered_fact_properties": 3,
-      "structured_fact_robustness_min_covered_fact_property_decision_accuracy": 0.99,
-      "structured_fact_robustness_min_covered_fact_property_false_refuted_rate": 0.99,
-      "structured_fact_robustness_min_covered_fact_property_records": 2,
-      "structured_fact_robustness_min_covered_fact_property_source_documents": 1,
-      "structured_fact_robustness_min_decision_accuracy": 0.99,
-      "structured_fact_robustness_min_false_refuted_rate": 0.99,
-      "structured_fact_robustness_min_selected": 700
+      "max_uncached_forward_seconds": null
     },
     "require_non_oracle_evidence": false,
     "require_performance_score_dump_cache": false,
@@ -295,31 +252,15 @@
     "adapter_family_status": "promote",
     "blocking_reasons": [
       {
-        "gate": "triple_extraction_fixture_matrix",
-        "reasons": [
-          "triple extraction fixture matrix manifest verification failed"
-        ],
-        "status": "blocked"
-      },
-      {
-        "gate": "product_trace_replay_workflow",
-        "reasons": [
-          "product trace replay workflow manifest verification failed"
-        ],
-        "status": "blocked"
-      },
-      {
-        "gate": "selector_replay",
-        "reasons": [
-          "selector replay manifest verification failed"
-        ],
-        "status": "blocked"
-      },
-      {
         "gate": "product_runtime_drift",
         "reasons": [
-          "product runtime drift manifest verification failed",
+          "product runtime drift promotion evidence metrics are incomplete: promotion_contract.triple_extraction_fixture_matrix.mean_best_f1.mean, promotion_contract.triple_extraction_fixture_matrix.mean_f1_lift.mean",
+          "product runtime drift pre-generation evidence metrics are incomplete: promotion_contract.pre_generation_probe_comparison.coverage_rate, promotion_contract.pre_generation_probe_comparison.manifest_verified_rate, promotion_contract.pre_generation_probe_comparison.model_count.mean, promotion_contract.pre_generation_probe_comparison.run_count.mean, promotion_contract.pre_generation_probe_comparison.redline_pass_rate, promotion_contract.pre_generation_probe_comparison.best_test_label_auroc.mean, promotion_contract.pre_generation_probe_comparison.best_redline_auroc.mean, promotion_contract.pre_generation_probe_comparison.best_redline_margin.mean",
           "product runtime drift claim-risk localization evidence metrics are incomplete: claim_risk_localization.coverage_rate, claim_risk_localization.high_risk_claim_count, claim_risk_localization.medium_or_high_risk_claim_count, claim_risk_localization.entity_candidate_observation_count, claim_risk_localization.unique_entity_candidate_count, claim_risk_localization.high_risk_entity_candidate_count, claim_risk_localization.medium_or_high_entity_candidate_count",
+          "product runtime drift counterfactual evidence metrics are incomplete: promotion_contract.counterfactual_verification.coverage_rate, promotion_contract.counterfactual_verification.manifest_verified_rate, promotion_contract.counterfactual_verification.record_count.mean, promotion_contract.counterfactual_verification.pass_rate.mean, promotion_contract.counterfactual_verification.false_invariance_rate.mean, promotion_contract.counterfactual_verification.flip_success_count.mean",
+          "product runtime drift triple audit evidence metrics are incomplete: triple_coverage.audit_claim_coverage_rate, triple_coverage.audit_pass_rate, triple_coverage.slot_coverage_rate",
+          "product runtime drift covered-fact property evidence metrics are incomplete: promotion_contract.covered_fact_properties.recommended_route_property_metrics.property_metric_count.mean, promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_records.mean, promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_source_documents.mean, promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_decision_accuracy.mean, promotion_contract.covered_fact_properties.recommended_route_property_metrics.max_false_supported_rate.mean, promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_false_refuted_rate.mean",
+          "product runtime drift action-gate evidence metrics are incomplete: promotion_contract.product_trace_replay.action_audit_gate.error_rate.mean, promotion_contract.product_trace_replay.action_audit_gate.missing_retrieval_action_rate.mean, promotion_contract.product_trace_replay.action_audit_gate.missing_plan_retrieval_query_rate.mean, promotion_contract.product_trace_replay.action_audit_gate.malformed_payload_rate.mean, promotion_contract.product_trace_replay.action_audit_gate.unexpected_action_rate.mean, promotion_contract.product_trace_replay.action_audit_gate.unknown_claim_id_rate.mean, promotion_contract.product_trace_replay.action_execution_gate.alignment_failed_trace_rate.mean, promotion_contract.product_trace_replay.action_execution_gate.missing_result_rate.mean, promotion_contract.product_trace_replay.action_execution_gate.unexpected_result_rate.mean, promotion_contract.product_trace_replay.action_execution_gate.request_id_mismatch_rate.mean",
           "product runtime drift trajectory-audit evidence metrics are incomplete: trajectory_audit.failed_trace_rate, trajectory_audit.error_rate, trajectory_audit.factual_rate, trajectory_audit.referential_rate, trajectory_audit.logical_rate, trajectory_audit.procedural_rate, trajectory_audit.scope_rate",
           "product runtime drift evidence-handoff evidence metrics are incomplete: promotion_contract.evidence_handoff.coverage_rate, promotion_contract.evidence_handoff.manifest_verified_rate, promotion_contract.evidence_handoff.present_metric_rate.mean, promotion_contract.evidence_handoff.missing_metric_rate.mean, promotion_contract.evidence_handoff.missing_metric_count.mean, promotion_contract.evidence_handoff.blocked_group_count.mean, promotion_contract.evidence_handoff.promoted_group_rate.mean",
           "product runtime drift world-model evidence metrics are incomplete: world_model.participating_trace_rate, world_model.coverage_rate, world_model.conflict_rate, world_model.low_agreement_rate, world_model.trace_gap_rate",
@@ -350,7 +291,7 @@
     "performance_status": "promote",
     "pre_generation_probe_comparison_status": null,
     "product_runtime_drift_status": "blocked",
-    "product_trace_replay_workflow_status": "blocked",
+    "product_trace_replay_workflow_status": "promote",
     "readiness_status": "promote",
     "recommended_claim_factuality_probe_comparison_report": null,
     "recommended_context_sensitivity_workflow_report": null,
@@ -371,9 +312,9 @@
     "recommended_release_efficiency_report": null,
     "recommended_route": "structured_qa",
     "recommended_route_record": "benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4",
-    "recommended_selector_replay_candidate": null,
+    "recommended_selector_replay_candidate": "default",
     "recommended_selfcheck_signal_fusion_workflow_report": null,
-    "recommended_triple_extraction_fixture_matrix_report": null,
+    "recommended_triple_extraction_fixture_matrix_report": "artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/triple-extraction-fixture-matrix.json",
     "recommended_uncertainty_escalation_workflow_report": null,
     "recommended_world_model_signal_workflow_report": null,
     "release_efficiency_status": null,
@@ -389,10 +330,10 @@
     ],
     "required_route_baseline_status": "promote",
     "route_status": "promote",
-    "selector_replay_status": "blocked",
+    "selector_replay_status": "promote",
     "selfcheck_signal_fusion_workflow_status": null,
     "status": "blocked",
-    "triple_extraction_fixture_matrix_status": "blocked",
+    "triple_extraction_fixture_matrix_status": "promote",
     "uncertainty_escalation_workflow_status": null,
     "world_model_signal_workflow_status": null
   },
@@ -985,28 +926,8 @@
   "pre_generation_probe_comparison_gate": null,
   "product_runtime_drift_gate": {
     "baseline": {
-      "optimization": {
-        "policy_hints": {
-          "candidate_control_defaults": {
-            "max_verifier_route_attempts": null
-          },
-          "candidate_runtime_budget_policy": {
-            "max_mean_attempted_route_count": 1.25,
-            "max_phase_p95_seconds": {
-              "action_planning": 0.000108,
-              "initial_verification": 0.000281,
-              "retrieval_evidence_collection": 0.00011
-            },
-            "max_retrieval_use_rate": 1.0,
-            "max_route_budget_exhaustion_rate": null,
-            "max_total_seconds": 0.000667,
-            "min_cache_hit_rate": 0.0
-          },
-          "source": "observed_baseline_with_25_percent_headroom"
-        },
-        "status": "needs_attention"
-      },
-      "path": "artifacts/smollm2_product_runtime_contract_v1_8/baseline/product-runtime-baseline.json",
+      "optimization": {},
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/baselines/auto/product-runtime-baseline.json",
       "record": null,
       "record_key": null,
       "registry": null,
@@ -1035,14 +956,19 @@
         },
         "status": "needs_attention"
       },
-      "path": "artifacts/smollm2_product_runtime_contract_v1_8/current/product-runtime-baseline.json",
-      "status": "blocked"
+      "path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/runtime-baseline/product-runtime-baseline.json",
+      "status": "observed"
     },
     "decision_status": "promote",
     "gate": {
       "blocking_reasons": [
-        "product runtime drift manifest verification failed",
+        "product runtime drift promotion evidence metrics are incomplete: promotion_contract.triple_extraction_fixture_matrix.mean_best_f1.mean, promotion_contract.triple_extraction_fixture_matrix.mean_f1_lift.mean",
+        "product runtime drift pre-generation evidence metrics are incomplete: promotion_contract.pre_generation_probe_comparison.coverage_rate, promotion_contract.pre_generation_probe_comparison.manifest_verified_rate, promotion_contract.pre_generation_probe_comparison.model_count.mean, promotion_contract.pre_generation_probe_comparison.run_count.mean, promotion_contract.pre_generation_probe_comparison.redline_pass_rate, promotion_contract.pre_generation_probe_comparison.best_test_label_auroc.mean, promotion_contract.pre_generation_probe_comparison.best_redline_auroc.mean, promotion_contract.pre_generation_probe_comparison.best_redline_margin.mean",
         "product runtime drift claim-risk localization evidence metrics are incomplete: claim_risk_localization.coverage_rate, claim_risk_localization.high_risk_claim_count, claim_risk_localization.medium_or_high_risk_claim_count, claim_risk_localization.entity_candidate_observation_count, claim_risk_localization.unique_entity_candidate_count, claim_risk_localization.high_risk_entity_candidate_count, claim_risk_localization.medium_or_high_entity_candidate_count",
+        "product runtime drift counterfactual evidence metrics are incomplete: promotion_contract.counterfactual_verification.coverage_rate, promotion_contract.counterfactual_verification.manifest_verified_rate, promotion_contract.counterfactual_verification.record_count.mean, promotion_contract.counterfactual_verification.pass_rate.mean, promotion_contract.counterfactual_verification.false_invariance_rate.mean, promotion_contract.counterfactual_verification.flip_success_count.mean",
+        "product runtime drift triple audit evidence metrics are incomplete: triple_coverage.audit_claim_coverage_rate, triple_coverage.audit_pass_rate, triple_coverage.slot_coverage_rate",
+        "product runtime drift covered-fact property evidence metrics are incomplete: promotion_contract.covered_fact_properties.recommended_route_property_metrics.property_metric_count.mean, promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_records.mean, promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_source_documents.mean, promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_decision_accuracy.mean, promotion_contract.covered_fact_properties.recommended_route_property_metrics.max_false_supported_rate.mean, promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_false_refuted_rate.mean",
+        "product runtime drift action-gate evidence metrics are incomplete: promotion_contract.product_trace_replay.action_audit_gate.error_rate.mean, promotion_contract.product_trace_replay.action_audit_gate.missing_retrieval_action_rate.mean, promotion_contract.product_trace_replay.action_audit_gate.missing_plan_retrieval_query_rate.mean, promotion_contract.product_trace_replay.action_audit_gate.malformed_payload_rate.mean, promotion_contract.product_trace_replay.action_audit_gate.unexpected_action_rate.mean, promotion_contract.product_trace_replay.action_audit_gate.unknown_claim_id_rate.mean, promotion_contract.product_trace_replay.action_execution_gate.alignment_failed_trace_rate.mean, promotion_contract.product_trace_replay.action_execution_gate.missing_result_rate.mean, promotion_contract.product_trace_replay.action_execution_gate.unexpected_result_rate.mean, promotion_contract.product_trace_replay.action_execution_gate.request_id_mismatch_rate.mean",
         "product runtime drift trajectory-audit evidence metrics are incomplete: trajectory_audit.failed_trace_rate, trajectory_audit.error_rate, trajectory_audit.factual_rate, trajectory_audit.referential_rate, trajectory_audit.logical_rate, trajectory_audit.procedural_rate, trajectory_audit.scope_rate",
         "product runtime drift evidence-handoff evidence metrics are incomplete: promotion_contract.evidence_handoff.coverage_rate, promotion_contract.evidence_handoff.manifest_verified_rate, promotion_contract.evidence_handoff.present_metric_rate.mean, promotion_contract.evidence_handoff.missing_metric_rate.mean, promotion_contract.evidence_handoff.missing_metric_count.mean, promotion_contract.evidence_handoff.blocked_group_count.mean, promotion_contract.evidence_handoff.promoted_group_rate.mean",
         "product runtime drift world-model evidence metrics are incomplete: world_model.participating_trace_rate, world_model.coverage_rate, world_model.conflict_rate, world_model.low_agreement_rate, world_model.trace_gap_rate",
@@ -1079,35 +1005,35 @@
         "threshold": 1.6
       },
       {
-        "absolute_delta": 2.3637364696090422e-05,
+        "absolute_delta": 3.6776376267274243e-06,
         "absolute_drop": null,
         "baseline": 3.624181651199857e-05,
         "comparison": "max_ratio",
-        "current": 5.9879181208088994e-05,
+        "current": 3.9919454138725996e-05,
         "metric": "route.mean_duration_seconds.mean",
-        "ratio_to_baseline": 1.6522124708695218,
+        "ratio_to_baseline": 1.1014749805796813,
         "reason": null,
         "status": "pass",
         "threshold": 2.0
       },
       {
-        "absolute_delta": 2.3866928434775517e-05,
+        "absolute_delta": 3.576434877080216e-06,
         "absolute_drop": null,
         "baseline": 3.700455223831038e-05,
         "comparison": "max_ratio",
-        "current": 6.0871480673085895e-05,
+        "current": 4.0580987115390595e-05,
         "metric": "route.p95_duration_seconds.mean",
-        "ratio_to_baseline": 1.6449727666226526,
+        "ratio_to_baseline": 1.0966485110817683,
         "reason": null,
         "status": "pass",
         "threshold": 2.0
       },
       {
-        "absolute_delta": 0.33333333333333337,
+        "absolute_delta": 0.0,
         "absolute_drop": null,
         "baseline": 0.6666666666666666,
         "comparison": "max_increase",
-        "current": 1.0,
+        "current": 0.6666666666666666,
         "metric": "mean_attempted_route_count.mean",
         "ratio_to_baseline": null,
         "reason": null,
@@ -1151,100 +1077,100 @@
         "threshold": 0.0
       },
       {
-        "absolute_delta": 0.0,
+        "absolute_delta": null,
         "absolute_drop": null,
-        "baseline": 1.0,
+        "baseline": null,
         "comparison": "min_current",
         "current": 1.0,
         "metric": "promotion_contract.coverage_rate",
         "ratio_to_baseline": null,
         "reason": null,
-        "status": "pass",
-        "threshold": 1.0
+        "status": "observed",
+        "threshold": null
       },
       {
-        "absolute_delta": 0.0,
+        "absolute_delta": null,
         "absolute_drop": null,
-        "baseline": 1.0,
+        "baseline": null,
         "comparison": "min_current",
-        "current": 1.0,
+        "current": 0.0,
         "metric": "promotion_contract.triple_extraction_fixture_matrix.coverage_rate",
         "ratio_to_baseline": null,
         "reason": null,
-        "status": "pass",
-        "threshold": 1.0
+        "status": "observed",
+        "threshold": null
       },
       {
-        "absolute_delta": 0.0,
-        "absolute_drop": 0.0,
-        "baseline": 1.0,
+        "absolute_delta": null,
+        "absolute_drop": null,
+        "baseline": null,
         "comparison": "max_drop",
-        "current": 1.0,
+        "current": null,
         "metric": "promotion_contract.triple_extraction_fixture_matrix.mean_best_f1.mean",
         "ratio_to_baseline": null,
         "reason": null,
-        "status": "pass",
-        "threshold": 0.0
+        "status": "observed",
+        "threshold": null
       },
       {
-        "absolute_delta": 0.0,
-        "absolute_drop": 0.0,
-        "baseline": 0.5999999999999999,
+        "absolute_delta": null,
+        "absolute_drop": null,
+        "baseline": null,
         "comparison": "max_drop",
-        "current": 0.5999999999999999,
+        "current": null,
         "metric": "promotion_contract.triple_extraction_fixture_matrix.mean_f1_lift.mean",
         "ratio_to_baseline": null,
         "reason": null,
-        "status": "pass",
-        "threshold": 0.0
+        "status": "observed",
+        "threshold": null
       },
       {
-        "absolute_delta": 1.0,
+        "absolute_delta": null,
         "absolute_drop": null,
-        "baseline": 0.0,
+        "baseline": null,
         "comparison": "min_current",
-        "current": 1.0,
+        "current": 0.0,
         "metric": "triple_coverage.claim_triple_coverage_rate",
         "ratio_to_baseline": null,
         "reason": null,
-        "status": "pass",
-        "threshold": 1.0
+        "status": "observed",
+        "threshold": null
       },
       {
         "absolute_delta": null,
         "absolute_drop": null,
         "baseline": null,
         "comparison": "min_current",
-        "current": 1.0,
+        "current": null,
         "metric": "triple_coverage.audit_claim_coverage_rate",
         "ratio_to_baseline": null,
         "reason": null,
-        "status": "pass",
-        "threshold": 1.0
+        "status": "observed",
+        "threshold": null
       },
       {
         "absolute_delta": null,
         "absolute_drop": null,
         "baseline": null,
         "comparison": "min_current",
-        "current": 1.0,
+        "current": null,
         "metric": "triple_coverage.audit_pass_rate",
         "ratio_to_baseline": null,
         "reason": null,
-        "status": "pass",
-        "threshold": 1.0
+        "status": "observed",
+        "threshold": null
       },
       {
         "absolute_delta": null,
         "absolute_drop": null,
         "baseline": null,
         "comparison": "min_current",
-        "current": 1.0,
+        "current": null,
         "metric": "triple_coverage.slot_coverage_rate",
         "ratio_to_baseline": null,
         "reason": null,
-        "status": "pass",
-        "threshold": 1.0
+        "status": "observed",
+        "threshold": null
       },
       {
         "absolute_delta": null,
@@ -1257,366 +1183,6 @@
         "reason": null,
         "status": "pass",
         "threshold": 12
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": null,
-        "baseline": 9.0,
-        "comparison": "min_current",
-        "current": 9.0,
-        "metric": "promotion_contract.covered_fact_properties.recommended_route_property_metrics.property_metric_count.mean",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 6.0
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": null,
-        "baseline": 4.0,
-        "comparison": "min_current",
-        "current": 4.0,
-        "metric": "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_records.mean",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 4.0
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": null,
-        "baseline": 2.0,
-        "comparison": "min_current",
-        "current": 2.0,
-        "metric": "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_source_documents.mean",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 2.0
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": 0.0,
-        "baseline": 1.0,
-        "comparison": "max_drop",
-        "current": 1.0,
-        "metric": "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_decision_accuracy.mean",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 0.0
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": null,
-        "baseline": 0.0,
-        "comparison": "max_increase",
-        "current": 0.0,
-        "metric": "promotion_contract.covered_fact_properties.recommended_route_property_metrics.max_false_supported_rate.mean",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 0.0
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": 0.0,
-        "baseline": 1.0,
-        "comparison": "max_drop",
-        "current": 1.0,
-        "metric": "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_false_refuted_rate.mean",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 0.0
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": null,
-        "baseline": 0.0,
-        "comparison": "max_increase",
-        "current": 0.0,
-        "metric": "promotion_contract.product_trace_replay.action_audit_gate.error_rate.mean",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 0.0
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": null,
-        "baseline": 0.0,
-        "comparison": "max_increase",
-        "current": 0.0,
-        "metric": "promotion_contract.product_trace_replay.action_audit_gate.missing_retrieval_action_rate.mean",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 0.0
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": null,
-        "baseline": 0.0,
-        "comparison": "max_increase",
-        "current": 0.0,
-        "metric": "promotion_contract.product_trace_replay.action_audit_gate.missing_plan_retrieval_query_rate.mean",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 0.0
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": null,
-        "baseline": 0.0,
-        "comparison": "max_increase",
-        "current": 0.0,
-        "metric": "promotion_contract.product_trace_replay.action_audit_gate.malformed_payload_rate.mean",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 0.0
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": null,
-        "baseline": 0.0,
-        "comparison": "max_increase",
-        "current": 0.0,
-        "metric": "promotion_contract.product_trace_replay.action_audit_gate.unexpected_action_rate.mean",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 0.0
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": null,
-        "baseline": 0.0,
-        "comparison": "max_increase",
-        "current": 0.0,
-        "metric": "promotion_contract.product_trace_replay.action_audit_gate.unknown_claim_id_rate.mean",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 0.0
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": null,
-        "baseline": 0.0,
-        "comparison": "max_increase",
-        "current": 0.0,
-        "metric": "promotion_contract.product_trace_replay.action_execution_gate.alignment_failed_trace_rate.mean",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 0.0
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": null,
-        "baseline": 0.0,
-        "comparison": "max_increase",
-        "current": 0.0,
-        "metric": "promotion_contract.product_trace_replay.action_execution_gate.missing_result_rate.mean",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 0.0
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": null,
-        "baseline": 0.0,
-        "comparison": "max_increase",
-        "current": 0.0,
-        "metric": "promotion_contract.product_trace_replay.action_execution_gate.unexpected_result_rate.mean",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 0.0
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": null,
-        "baseline": 0.0,
-        "comparison": "max_increase",
-        "current": 0.0,
-        "metric": "promotion_contract.product_trace_replay.action_execution_gate.request_id_mismatch_rate.mean",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 0.0
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": null,
-        "baseline": 1.0,
-        "comparison": "min_current",
-        "current": 1.0,
-        "metric": "promotion_contract.pre_generation_probe_comparison.coverage_rate",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 1.0
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": null,
-        "baseline": 1.0,
-        "comparison": "min_current",
-        "current": 1.0,
-        "metric": "promotion_contract.pre_generation_probe_comparison.manifest_verified_rate",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 1.0
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": null,
-        "baseline": 2.0,
-        "comparison": "min_current",
-        "current": 2.0,
-        "metric": "promotion_contract.pre_generation_probe_comparison.model_count.mean",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 2.0
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": null,
-        "baseline": 2.0,
-        "comparison": "min_current",
-        "current": 2.0,
-        "metric": "promotion_contract.pre_generation_probe_comparison.run_count.mean",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 2.0
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": null,
-        "baseline": 1.0,
-        "comparison": "min_current",
-        "current": 1.0,
-        "metric": "promotion_contract.pre_generation_probe_comparison.redline_pass_rate",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 1.0
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": 0.0,
-        "baseline": 0.8346153846153846,
-        "comparison": "max_drop",
-        "current": 0.8346153846153846,
-        "metric": "promotion_contract.pre_generation_probe_comparison.best_test_label_auroc.mean",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 0.0
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": 0.0,
-        "baseline": 0.7403846153846154,
-        "comparison": "max_drop",
-        "current": 0.7403846153846154,
-        "metric": "promotion_contract.pre_generation_probe_comparison.best_redline_auroc.mean",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 0.0
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": 0.0,
-        "baseline": 0.09423076923076923,
-        "comparison": "max_drop",
-        "current": 0.09423076923076923,
-        "metric": "promotion_contract.pre_generation_probe_comparison.best_redline_margin.mean",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 0.0
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": null,
-        "baseline": 1.0,
-        "comparison": "min_current",
-        "current": 1.0,
-        "metric": "promotion_contract.counterfactual_verification.coverage_rate",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 1.0
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": null,
-        "baseline": 1.0,
-        "comparison": "min_current",
-        "current": 1.0,
-        "metric": "promotion_contract.counterfactual_verification.manifest_verified_rate",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 1.0
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": null,
-        "baseline": 70.0,
-        "comparison": "min_current",
-        "current": 70.0,
-        "metric": "promotion_contract.counterfactual_verification.record_count.mean",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 70.0
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": null,
-        "baseline": 1.0,
-        "comparison": "min_current",
-        "current": 1.0,
-        "metric": "promotion_contract.counterfactual_verification.pass_rate.mean",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 1.0
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": null,
-        "baseline": 0.0,
-        "comparison": "max_current",
-        "current": 0.0,
-        "metric": "promotion_contract.counterfactual_verification.false_invariance_rate.mean",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 0.0
-      },
-      {
-        "absolute_delta": 0.0,
-        "absolute_drop": 0.0,
-        "baseline": 70.0,
-        "comparison": "max_drop",
-        "current": 70.0,
-        "metric": "promotion_contract.counterfactual_verification.flip_success_count.mean",
-        "ratio_to_baseline": null,
-        "reason": null,
-        "status": "pass",
-        "threshold": 0.0
       }
     ],
     "report_path": "artifacts/smollm2_product_runtime_drift_v1_8/product-runtime-drift.json",
@@ -1625,8 +1191,19 @@
     "status": "blocked",
     "summary": {
       "action_gate_evidence_blocked_metric_count": 0,
-      "action_gate_evidence_metric_count": 10,
-      "action_gate_evidence_missing_metrics": [],
+      "action_gate_evidence_metric_count": 0,
+      "action_gate_evidence_missing_metrics": [
+        "promotion_contract.product_trace_replay.action_audit_gate.error_rate.mean",
+        "promotion_contract.product_trace_replay.action_audit_gate.missing_retrieval_action_rate.mean",
+        "promotion_contract.product_trace_replay.action_audit_gate.missing_plan_retrieval_query_rate.mean",
+        "promotion_contract.product_trace_replay.action_audit_gate.malformed_payload_rate.mean",
+        "promotion_contract.product_trace_replay.action_audit_gate.unexpected_action_rate.mean",
+        "promotion_contract.product_trace_replay.action_audit_gate.unknown_claim_id_rate.mean",
+        "promotion_contract.product_trace_replay.action_execution_gate.alignment_failed_trace_rate.mean",
+        "promotion_contract.product_trace_replay.action_execution_gate.missing_result_rate.mean",
+        "promotion_contract.product_trace_replay.action_execution_gate.unexpected_result_rate.mean",
+        "promotion_contract.product_trace_replay.action_execution_gate.request_id_mismatch_rate.mean"
+      ],
       "action_gate_evidence_required": true,
       "blocked_metric_count": 0,
       "claim_factuality_evidence_blocked_metric_count": 0,
@@ -1707,7 +1284,7 @@
       "claim_risk_localization_unique_entity_candidate_count_baseline": null,
       "claim_risk_localization_unique_entity_candidate_count_current": null,
       "claim_risk_localization_unique_entity_candidate_count_status": null,
-      "compared_metric_count": 47,
+      "compared_metric_count": 17,
       "context_sensitivity_coverage_rate_baseline": null,
       "context_sensitivity_coverage_rate_current": null,
       "context_sensitivity_coverage_rate_status": null,
@@ -1738,8 +1315,15 @@
       "context_sensitivity_trace_gap_rate_current": null,
       "context_sensitivity_trace_gap_rate_status": null,
       "counterfactual_evidence_blocked_metric_count": 0,
-      "counterfactual_evidence_metric_count": 6,
-      "counterfactual_evidence_missing_metrics": [],
+      "counterfactual_evidence_metric_count": 0,
+      "counterfactual_evidence_missing_metrics": [
+        "promotion_contract.counterfactual_verification.coverage_rate",
+        "promotion_contract.counterfactual_verification.manifest_verified_rate",
+        "promotion_contract.counterfactual_verification.record_count.mean",
+        "promotion_contract.counterfactual_verification.pass_rate.mean",
+        "promotion_contract.counterfactual_verification.false_invariance_rate.mean",
+        "promotion_contract.counterfactual_verification.flip_success_count.mean"
+      ],
       "counterfactual_evidence_required": true,
       "counterfactual_robustness_coverage_rate_baseline": null,
       "counterfactual_robustness_coverage_rate_current": null,
@@ -1770,46 +1354,53 @@
       "counterfactual_robustness_trace_gap_rate_baseline": null,
       "counterfactual_robustness_trace_gap_rate_current": null,
       "counterfactual_robustness_trace_gap_rate_status": null,
-      "counterfactual_verification_coverage_rate_baseline": 1.0,
-      "counterfactual_verification_coverage_rate_current": 1.0,
-      "counterfactual_verification_coverage_rate_status": "pass",
-      "counterfactual_verification_false_invariance_rate_baseline": 0.0,
-      "counterfactual_verification_false_invariance_rate_current": 0.0,
-      "counterfactual_verification_false_invariance_rate_status": "pass",
-      "counterfactual_verification_flip_success_count_baseline": 70.0,
-      "counterfactual_verification_flip_success_count_current": 70.0,
-      "counterfactual_verification_flip_success_count_status": "pass",
-      "counterfactual_verification_manifest_verified_rate_baseline": 1.0,
-      "counterfactual_verification_manifest_verified_rate_current": 1.0,
-      "counterfactual_verification_manifest_verified_rate_status": "pass",
-      "counterfactual_verification_pass_rate_baseline": 1.0,
-      "counterfactual_verification_pass_rate_current": 1.0,
-      "counterfactual_verification_pass_rate_status": "pass",
-      "counterfactual_verification_record_count_baseline": 70.0,
-      "counterfactual_verification_record_count_current": 70.0,
-      "counterfactual_verification_record_count_status": "pass",
+      "counterfactual_verification_coverage_rate_baseline": null,
+      "counterfactual_verification_coverage_rate_current": null,
+      "counterfactual_verification_coverage_rate_status": null,
+      "counterfactual_verification_false_invariance_rate_baseline": null,
+      "counterfactual_verification_false_invariance_rate_current": null,
+      "counterfactual_verification_false_invariance_rate_status": null,
+      "counterfactual_verification_flip_success_count_baseline": null,
+      "counterfactual_verification_flip_success_count_current": null,
+      "counterfactual_verification_flip_success_count_status": null,
+      "counterfactual_verification_manifest_verified_rate_baseline": null,
+      "counterfactual_verification_manifest_verified_rate_current": null,
+      "counterfactual_verification_manifest_verified_rate_status": null,
+      "counterfactual_verification_pass_rate_baseline": null,
+      "counterfactual_verification_pass_rate_current": null,
+      "counterfactual_verification_pass_rate_status": null,
+      "counterfactual_verification_record_count_baseline": null,
+      "counterfactual_verification_record_count_current": null,
+      "counterfactual_verification_record_count_status": null,
       "covered_fact_property_evidence_blocked_metric_count": 0,
-      "covered_fact_property_evidence_metric_count": 6,
-      "covered_fact_property_evidence_missing_metrics": [],
+      "covered_fact_property_evidence_metric_count": 0,
+      "covered_fact_property_evidence_missing_metrics": [
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.property_metric_count.mean",
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_records.mean",
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_source_documents.mean",
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_decision_accuracy.mean",
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.max_false_supported_rate.mean",
+        "promotion_contract.covered_fact_properties.recommended_route_property_metrics.min_false_refuted_rate.mean"
+      ],
       "covered_fact_property_evidence_required": true,
-      "covered_fact_recommended_route_max_false_supported_rate_baseline": 0.0,
-      "covered_fact_recommended_route_max_false_supported_rate_current": 0.0,
-      "covered_fact_recommended_route_max_false_supported_rate_status": "pass",
-      "covered_fact_recommended_route_min_decision_accuracy_baseline": 1.0,
-      "covered_fact_recommended_route_min_decision_accuracy_current": 1.0,
-      "covered_fact_recommended_route_min_decision_accuracy_status": "pass",
-      "covered_fact_recommended_route_min_false_refuted_rate_baseline": 1.0,
-      "covered_fact_recommended_route_min_false_refuted_rate_current": 1.0,
-      "covered_fact_recommended_route_min_false_refuted_rate_status": "pass",
-      "covered_fact_recommended_route_min_records_baseline": 4.0,
-      "covered_fact_recommended_route_min_records_current": 4.0,
-      "covered_fact_recommended_route_min_records_status": "pass",
-      "covered_fact_recommended_route_min_source_documents_baseline": 2.0,
-      "covered_fact_recommended_route_min_source_documents_current": 2.0,
-      "covered_fact_recommended_route_min_source_documents_status": "pass",
-      "covered_fact_recommended_route_property_metric_count_baseline": 9.0,
-      "covered_fact_recommended_route_property_metric_count_current": 9.0,
-      "covered_fact_recommended_route_property_metric_count_status": "pass",
+      "covered_fact_recommended_route_max_false_supported_rate_baseline": null,
+      "covered_fact_recommended_route_max_false_supported_rate_current": null,
+      "covered_fact_recommended_route_max_false_supported_rate_status": null,
+      "covered_fact_recommended_route_min_decision_accuracy_baseline": null,
+      "covered_fact_recommended_route_min_decision_accuracy_current": null,
+      "covered_fact_recommended_route_min_decision_accuracy_status": null,
+      "covered_fact_recommended_route_min_false_refuted_rate_baseline": null,
+      "covered_fact_recommended_route_min_false_refuted_rate_current": null,
+      "covered_fact_recommended_route_min_false_refuted_rate_status": null,
+      "covered_fact_recommended_route_min_records_baseline": null,
+      "covered_fact_recommended_route_min_records_current": null,
+      "covered_fact_recommended_route_min_records_status": null,
+      "covered_fact_recommended_route_min_source_documents_baseline": null,
+      "covered_fact_recommended_route_min_source_documents_current": null,
+      "covered_fact_recommended_route_min_source_documents_status": null,
+      "covered_fact_recommended_route_property_metric_count_baseline": null,
+      "covered_fact_recommended_route_property_metric_count_current": null,
+      "covered_fact_recommended_route_property_metric_count_status": null,
       "evidence_handoff_blocked_group_count_baseline": null,
       "evidence_handoff_blocked_group_count_current": null,
       "evidence_handoff_blocked_group_count_status": null,
@@ -1937,65 +1528,74 @@
       "frontier_release_evidence_verifier_track_promote_rate_current": null,
       "frontier_release_evidence_verifier_track_promote_rate_status": null,
       "gate_enabled": true,
-      "observed_metric_count": 0,
+      "observed_metric_count": 8,
       "pre_generation_evidence_blocked_metric_count": 0,
-      "pre_generation_evidence_metric_count": 8,
-      "pre_generation_evidence_missing_metrics": [],
+      "pre_generation_evidence_metric_count": 0,
+      "pre_generation_evidence_missing_metrics": [
+        "promotion_contract.pre_generation_probe_comparison.coverage_rate",
+        "promotion_contract.pre_generation_probe_comparison.manifest_verified_rate",
+        "promotion_contract.pre_generation_probe_comparison.model_count.mean",
+        "promotion_contract.pre_generation_probe_comparison.run_count.mean",
+        "promotion_contract.pre_generation_probe_comparison.redline_pass_rate",
+        "promotion_contract.pre_generation_probe_comparison.best_test_label_auroc.mean",
+        "promotion_contract.pre_generation_probe_comparison.best_redline_auroc.mean",
+        "promotion_contract.pre_generation_probe_comparison.best_redline_margin.mean"
+      ],
       "pre_generation_evidence_required": true,
-      "pre_generation_probe_comparison_best_redline_auroc_baseline": 0.7403846153846154,
-      "pre_generation_probe_comparison_best_redline_auroc_current": 0.7403846153846154,
-      "pre_generation_probe_comparison_best_redline_auroc_status": "pass",
-      "pre_generation_probe_comparison_best_redline_margin_baseline": 0.09423076923076923,
-      "pre_generation_probe_comparison_best_redline_margin_current": 0.09423076923076923,
-      "pre_generation_probe_comparison_best_redline_margin_status": "pass",
-      "pre_generation_probe_comparison_best_test_label_auroc_baseline": 0.8346153846153846,
-      "pre_generation_probe_comparison_best_test_label_auroc_current": 0.8346153846153846,
-      "pre_generation_probe_comparison_best_test_label_auroc_status": "pass",
-      "pre_generation_probe_comparison_coverage_rate_baseline": 1.0,
-      "pre_generation_probe_comparison_coverage_rate_current": 1.0,
-      "pre_generation_probe_comparison_coverage_rate_status": "pass",
-      "pre_generation_probe_comparison_manifest_verified_rate_baseline": 1.0,
-      "pre_generation_probe_comparison_manifest_verified_rate_current": 1.0,
-      "pre_generation_probe_comparison_manifest_verified_rate_status": "pass",
-      "pre_generation_probe_comparison_model_count_baseline": 2.0,
-      "pre_generation_probe_comparison_model_count_current": 2.0,
-      "pre_generation_probe_comparison_model_count_status": "pass",
-      "pre_generation_probe_comparison_redline_pass_rate_baseline": 1.0,
-      "pre_generation_probe_comparison_redline_pass_rate_current": 1.0,
-      "pre_generation_probe_comparison_redline_pass_rate_status": "pass",
-      "pre_generation_probe_comparison_run_count_baseline": 2.0,
-      "pre_generation_probe_comparison_run_count_current": 2.0,
-      "pre_generation_probe_comparison_run_count_status": "pass",
-      "product_trace_action_audit_error_rate_baseline": 0.0,
-      "product_trace_action_audit_error_rate_current": 0.0,
-      "product_trace_action_audit_error_rate_status": "pass",
-      "product_trace_action_audit_malformed_payload_rate_baseline": 0.0,
-      "product_trace_action_audit_malformed_payload_rate_current": 0.0,
-      "product_trace_action_audit_malformed_payload_rate_status": "pass",
-      "product_trace_action_audit_missing_plan_retrieval_query_rate_baseline": 0.0,
-      "product_trace_action_audit_missing_plan_retrieval_query_rate_current": 0.0,
-      "product_trace_action_audit_missing_plan_retrieval_query_rate_status": "pass",
-      "product_trace_action_audit_missing_retrieval_action_rate_baseline": 0.0,
-      "product_trace_action_audit_missing_retrieval_action_rate_current": 0.0,
-      "product_trace_action_audit_missing_retrieval_action_rate_status": "pass",
-      "product_trace_action_audit_unexpected_action_rate_baseline": 0.0,
-      "product_trace_action_audit_unexpected_action_rate_current": 0.0,
-      "product_trace_action_audit_unexpected_action_rate_status": "pass",
-      "product_trace_action_audit_unknown_claim_id_rate_baseline": 0.0,
-      "product_trace_action_audit_unknown_claim_id_rate_current": 0.0,
-      "product_trace_action_audit_unknown_claim_id_rate_status": "pass",
-      "product_trace_action_execution_alignment_failed_trace_rate_baseline": 0.0,
-      "product_trace_action_execution_alignment_failed_trace_rate_current": 0.0,
-      "product_trace_action_execution_alignment_failed_trace_rate_status": "pass",
-      "product_trace_action_execution_missing_result_rate_baseline": 0.0,
-      "product_trace_action_execution_missing_result_rate_current": 0.0,
-      "product_trace_action_execution_missing_result_rate_status": "pass",
-      "product_trace_action_execution_request_id_mismatch_rate_baseline": 0.0,
-      "product_trace_action_execution_request_id_mismatch_rate_current": 0.0,
-      "product_trace_action_execution_request_id_mismatch_rate_status": "pass",
-      "product_trace_action_execution_unexpected_result_rate_baseline": 0.0,
-      "product_trace_action_execution_unexpected_result_rate_current": 0.0,
-      "product_trace_action_execution_unexpected_result_rate_status": "pass",
+      "pre_generation_probe_comparison_best_redline_auroc_baseline": null,
+      "pre_generation_probe_comparison_best_redline_auroc_current": null,
+      "pre_generation_probe_comparison_best_redline_auroc_status": null,
+      "pre_generation_probe_comparison_best_redline_margin_baseline": null,
+      "pre_generation_probe_comparison_best_redline_margin_current": null,
+      "pre_generation_probe_comparison_best_redline_margin_status": null,
+      "pre_generation_probe_comparison_best_test_label_auroc_baseline": null,
+      "pre_generation_probe_comparison_best_test_label_auroc_current": null,
+      "pre_generation_probe_comparison_best_test_label_auroc_status": null,
+      "pre_generation_probe_comparison_coverage_rate_baseline": null,
+      "pre_generation_probe_comparison_coverage_rate_current": null,
+      "pre_generation_probe_comparison_coverage_rate_status": null,
+      "pre_generation_probe_comparison_manifest_verified_rate_baseline": null,
+      "pre_generation_probe_comparison_manifest_verified_rate_current": null,
+      "pre_generation_probe_comparison_manifest_verified_rate_status": null,
+      "pre_generation_probe_comparison_model_count_baseline": null,
+      "pre_generation_probe_comparison_model_count_current": null,
+      "pre_generation_probe_comparison_model_count_status": null,
+      "pre_generation_probe_comparison_redline_pass_rate_baseline": null,
+      "pre_generation_probe_comparison_redline_pass_rate_current": null,
+      "pre_generation_probe_comparison_redline_pass_rate_status": null,
+      "pre_generation_probe_comparison_run_count_baseline": null,
+      "pre_generation_probe_comparison_run_count_current": null,
+      "pre_generation_probe_comparison_run_count_status": null,
+      "product_trace_action_audit_error_rate_baseline": null,
+      "product_trace_action_audit_error_rate_current": null,
+      "product_trace_action_audit_error_rate_status": null,
+      "product_trace_action_audit_malformed_payload_rate_baseline": null,
+      "product_trace_action_audit_malformed_payload_rate_current": null,
+      "product_trace_action_audit_malformed_payload_rate_status": null,
+      "product_trace_action_audit_missing_plan_retrieval_query_rate_baseline": null,
+      "product_trace_action_audit_missing_plan_retrieval_query_rate_current": null,
+      "product_trace_action_audit_missing_plan_retrieval_query_rate_status": null,
+      "product_trace_action_audit_missing_retrieval_action_rate_baseline": null,
+      "product_trace_action_audit_missing_retrieval_action_rate_current": null,
+      "product_trace_action_audit_missing_retrieval_action_rate_status": null,
+      "product_trace_action_audit_unexpected_action_rate_baseline": null,
+      "product_trace_action_audit_unexpected_action_rate_current": null,
+      "product_trace_action_audit_unexpected_action_rate_status": null,
+      "product_trace_action_audit_unknown_claim_id_rate_baseline": null,
+      "product_trace_action_audit_unknown_claim_id_rate_current": null,
+      "product_trace_action_audit_unknown_claim_id_rate_status": null,
+      "product_trace_action_execution_alignment_failed_trace_rate_baseline": null,
+      "product_trace_action_execution_alignment_failed_trace_rate_current": null,
+      "product_trace_action_execution_alignment_failed_trace_rate_status": null,
+      "product_trace_action_execution_missing_result_rate_baseline": null,
+      "product_trace_action_execution_missing_result_rate_current": null,
+      "product_trace_action_execution_missing_result_rate_status": null,
+      "product_trace_action_execution_request_id_mismatch_rate_baseline": null,
+      "product_trace_action_execution_request_id_mismatch_rate_current": null,
+      "product_trace_action_execution_request_id_mismatch_rate_status": null,
+      "product_trace_action_execution_unexpected_result_rate_baseline": null,
+      "product_trace_action_execution_unexpected_result_rate_current": null,
+      "product_trace_action_execution_unexpected_result_rate_status": null,
       "product_trace_trajectory_audit_error_rate_baseline": null,
       "product_trace_trajectory_audit_error_rate_current": null,
       "product_trace_trajectory_audit_error_rate_status": null,
@@ -2017,12 +1617,15 @@
       "product_trace_trajectory_audit_scope_rate_baseline": null,
       "product_trace_trajectory_audit_scope_rate_current": null,
       "product_trace_trajectory_audit_scope_rate_status": null,
-      "promotion_contract_coverage_rate_baseline": 1.0,
+      "promotion_contract_coverage_rate_baseline": null,
       "promotion_contract_coverage_rate_current": 1.0,
-      "promotion_contract_coverage_rate_status": "pass",
+      "promotion_contract_coverage_rate_status": "observed",
       "promotion_evidence_blocked_metric_count": 0,
-      "promotion_evidence_metric_count": 4,
-      "promotion_evidence_missing_metrics": [],
+      "promotion_evidence_metric_count": 2,
+      "promotion_evidence_missing_metrics": [
+        "promotion_contract.triple_extraction_fixture_matrix.mean_best_f1.mean",
+        "promotion_contract.triple_extraction_fixture_matrix.mean_f1_lift.mean"
+      ],
       "promotion_evidence_required": true,
       "trajectory_audit_evidence_blocked_metric_count": 0,
       "trajectory_audit_evidence_metric_count": 0,
@@ -2037,30 +1640,34 @@
       ],
       "trajectory_audit_evidence_required": true,
       "triple_audit_claim_coverage_rate_baseline": null,
-      "triple_audit_claim_coverage_rate_current": 1.0,
-      "triple_audit_claim_coverage_rate_status": "pass",
+      "triple_audit_claim_coverage_rate_current": null,
+      "triple_audit_claim_coverage_rate_status": "observed",
       "triple_audit_evidence_blocked_metric_count": 0,
-      "triple_audit_evidence_metric_count": 4,
-      "triple_audit_evidence_missing_metrics": [],
+      "triple_audit_evidence_metric_count": 1,
+      "triple_audit_evidence_missing_metrics": [
+        "triple_coverage.audit_claim_coverage_rate",
+        "triple_coverage.audit_pass_rate",
+        "triple_coverage.slot_coverage_rate"
+      ],
       "triple_audit_evidence_required": true,
       "triple_audit_pass_rate_baseline": null,
-      "triple_audit_pass_rate_current": 1.0,
-      "triple_audit_pass_rate_status": "pass",
-      "triple_claim_coverage_rate_baseline": 0.0,
-      "triple_claim_coverage_rate_current": 1.0,
-      "triple_claim_coverage_rate_status": "pass",
-      "triple_extraction_fixture_matrix_coverage_rate_baseline": 1.0,
-      "triple_extraction_fixture_matrix_coverage_rate_current": 1.0,
-      "triple_extraction_fixture_matrix_coverage_rate_status": "pass",
-      "triple_extraction_fixture_matrix_mean_best_f1_baseline": 1.0,
-      "triple_extraction_fixture_matrix_mean_best_f1_current": 1.0,
-      "triple_extraction_fixture_matrix_mean_best_f1_status": "pass",
-      "triple_extraction_fixture_matrix_mean_f1_lift_baseline": 0.5999999999999999,
-      "triple_extraction_fixture_matrix_mean_f1_lift_current": 0.5999999999999999,
-      "triple_extraction_fixture_matrix_mean_f1_lift_status": "pass",
+      "triple_audit_pass_rate_current": null,
+      "triple_audit_pass_rate_status": "observed",
+      "triple_claim_coverage_rate_baseline": null,
+      "triple_claim_coverage_rate_current": 0.0,
+      "triple_claim_coverage_rate_status": "observed",
+      "triple_extraction_fixture_matrix_coverage_rate_baseline": null,
+      "triple_extraction_fixture_matrix_coverage_rate_current": 0.0,
+      "triple_extraction_fixture_matrix_coverage_rate_status": "observed",
+      "triple_extraction_fixture_matrix_mean_best_f1_baseline": null,
+      "triple_extraction_fixture_matrix_mean_best_f1_current": null,
+      "triple_extraction_fixture_matrix_mean_best_f1_status": "observed",
+      "triple_extraction_fixture_matrix_mean_f1_lift_baseline": null,
+      "triple_extraction_fixture_matrix_mean_f1_lift_current": null,
+      "triple_extraction_fixture_matrix_mean_f1_lift_status": "observed",
       "triple_slot_coverage_rate_baseline": null,
-      "triple_slot_coverage_rate_current": 1.0,
-      "triple_slot_coverage_rate_status": "pass",
+      "triple_slot_coverage_rate_current": null,
+      "triple_slot_coverage_rate_status": "observed",
       "world_model_conflict_rate_baseline": null,
       "world_model_conflict_rate_current": null,
       "world_model_conflict_rate_status": null,
@@ -2089,81 +1696,10 @@
     },
     "verification": {
       "checked": 3,
-      "failures": [
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "baseline_product_runtime_baseline",
-          "path": "../smollm2_product_runtime_contract_v1_8/baseline/product-runtime-baseline.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "baseline_product_runtime_baseline",
-          "path": "../smollm2_product_runtime_contract_v1_8/baseline/product-runtime-baseline.json"
-        },
-        {
-          "actual": null,
-          "expected": "a5be1cd927f28c313bf31cb44efa24cba93274fa9b962777b3c9a6b5ed7b074e",
-          "field": "sha256",
-          "name": "baseline_product_runtime_baseline",
-          "path": "../smollm2_product_runtime_contract_v1_8/baseline/product-runtime-baseline.json"
-        },
-        {
-          "actual": null,
-          "expected": 194735,
-          "field": "size_bytes",
-          "name": "baseline_product_runtime_baseline",
-          "path": "../smollm2_product_runtime_contract_v1_8/baseline/product-runtime-baseline.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "baseline_product_runtime_baseline",
-          "path": "../smollm2_product_runtime_contract_v1_8/baseline/product-runtime-baseline.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "current_product_runtime_baseline",
-          "path": "../smollm2_product_runtime_contract_v1_8/current/product-runtime-baseline.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "current_product_runtime_baseline",
-          "path": "../smollm2_product_runtime_contract_v1_8/current/product-runtime-baseline.json"
-        },
-        {
-          "actual": null,
-          "expected": "5a8e1a715530602394df7fce47303b713ddbb61a37be5b795485b7f0f6840059",
-          "field": "sha256",
-          "name": "current_product_runtime_baseline",
-          "path": "../smollm2_product_runtime_contract_v1_8/current/product-runtime-baseline.json"
-        },
-        {
-          "actual": null,
-          "expected": 644279,
-          "field": "size_bytes",
-          "name": "current_product_runtime_baseline",
-          "path": "../smollm2_product_runtime_contract_v1_8/current/product-runtime-baseline.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "current_product_runtime_baseline",
-          "path": "../smollm2_product_runtime_contract_v1_8/current/product-runtime-baseline.json"
-        }
-      ],
+      "failures": [],
       "manifest_path": "artifacts/smollm2_product_runtime_drift_v1_8/artifact-manifest.json",
       "nested": [],
-      "passed": false
+      "passed": true
     },
     "workflow": "product_runtime_drift_comparison"
   },
@@ -2257,10 +1793,8 @@
       "action_execution_gate_report_workflow": "product_trace_action_execution_gate",
       "action_execution_manifest_artifact_path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/action-execution-gate.json",
       "action_execution_manifest_artifact_present": true,
-      "blocking_reasons": [
-        "product trace replay workflow manifest verification failed"
-      ],
-      "passed": false,
+      "blocking_reasons": [],
+      "passed": true,
       "require_action_audit_gate": true,
       "require_action_execution_gate": true
     },
@@ -2278,2384 +1812,35 @@
     "selector_replay_report_path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/selector-replay/runtime-profile-selector-replay.json",
     "selector_replay_report_source": "explicit",
     "source": "file",
-    "status": "blocked",
+    "status": "promote",
     "verification": {
       "checked": 28,
-      "failures": [
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "corpus_cache",
-          "path": "corpus-cache.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "corpus_cache",
-          "path": "corpus-cache.json"
-        },
-        {
-          "actual": null,
-          "expected": "5f48098e1e40d734a4e6e38ef63eecaecf8fe5c22237f3ed4dd6d5d867a08711",
-          "field": "sha256",
-          "name": "corpus_cache",
-          "path": "corpus-cache.json"
-        },
-        {
-          "actual": null,
-          "expected": 12911,
-          "field": "size_bytes",
-          "name": "corpus_cache",
-          "path": "corpus-cache.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "corpus_cache",
-          "path": "corpus-cache.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "corpus_report",
-          "path": "corpus/product-trace-corpus.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "corpus_report",
-          "path": "corpus/product-trace-corpus.json"
-        },
-        {
-          "actual": null,
-          "expected": "a4fcd00849ec04f6bb96ebbc007b540bb8cb839e1d5b2617fb980345bb4afbdd",
-          "field": "sha256",
-          "name": "corpus_report",
-          "path": "corpus/product-trace-corpus.json"
-        },
-        {
-          "actual": null,
-          "expected": 12811,
-          "field": "size_bytes",
-          "name": "corpus_report",
-          "path": "corpus/product-trace-corpus.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "corpus_report",
-          "path": "corpus/product-trace-corpus.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "corpus_runtime_pair_index",
-          "path": "corpus/runtime-pair-index.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "corpus_runtime_pair_index",
-          "path": "corpus/runtime-pair-index.json"
-        },
-        {
-          "actual": null,
-          "expected": "5916ce7c79a4dbaff0e676c36c188b36ac2185a0da2e50cc03b550c4c7c86bc1",
-          "field": "sha256",
-          "name": "corpus_runtime_pair_index",
-          "path": "corpus/runtime-pair-index.json"
-        },
-        {
-          "actual": null,
-          "expected": 3933,
-          "field": "size_bytes",
-          "name": "corpus_runtime_pair_index",
-          "path": "corpus/runtime-pair-index.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "corpus_runtime_pair_index",
-          "path": "corpus/runtime-pair-index.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "corpus_source_cache",
-          "path": "corpus/source-cache.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "corpus_source_cache",
-          "path": "corpus/source-cache.json"
-        },
-        {
-          "actual": null,
-          "expected": "64cee898c2b04e636b59fb558b0b8de75ebb29ac241d70f77b6b77b0c8f43846",
-          "field": "sha256",
-          "name": "corpus_source_cache",
-          "path": "corpus/source-cache.json"
-        },
-        {
-          "actual": null,
-          "expected": 338085,
-          "field": "size_bytes",
-          "name": "corpus_source_cache",
-          "path": "corpus/source-cache.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "corpus_source_cache",
-          "path": "corpus/source-cache.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "corpus_traces_dir",
-          "path": "corpus/traces"
-        },
-        {
-          "actual": "missing",
-          "expected": "directory",
-          "field": "kind",
-          "name": "corpus_traces_dir",
-          "path": "corpus/traces"
-        },
-        {
-          "actual": null,
-          "expected": "fb98ea62e35a38e0aa0fdf312034b464992b75639c5d69d4fb491ce2d14ef870",
-          "field": "sha256",
-          "name": "corpus_traces_dir",
-          "path": "corpus/traces"
-        },
-        {
-          "actual": null,
-          "expected": 476410,
-          "field": "size_bytes",
-          "name": "corpus_traces_dir",
-          "path": "corpus/traces"
-        },
-        {
-          "actual": null,
-          "expected": 12,
-          "field": "file_count",
-          "name": "corpus_traces_dir",
-          "path": "corpus/traces"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "input_trace_0000_calculator_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/audit/calculator_refuted-r0.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "input_trace_0000_calculator_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/audit/calculator_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": "d02087adf9c783935ee18b84ff5c2e002e3514cc1b94fc8ea331650f97df694a",
-          "field": "sha256",
-          "name": "input_trace_0000_calculator_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/audit/calculator_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 39309,
-          "field": "size_bytes",
-          "name": "input_trace_0000_calculator_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/audit/calculator_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "input_trace_0000_calculator_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/audit/calculator_refuted-r0.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "input_trace_0001_diagnostic_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/audit/diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "input_trace_0001_diagnostic_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/audit/diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": "68476bb48460b31e3403e4e85fa63ddecba54eb5f36955a08bf52b9e1f54c011",
-          "field": "sha256",
-          "name": "input_trace_0001_diagnostic_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/audit/diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 40431,
-          "field": "size_bytes",
-          "name": "input_trace_0001_diagnostic_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/audit/diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "input_trace_0001_diagnostic_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/audit/diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "input_trace_0002_low_risk_supported-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/audit/low_risk_supported-r0.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "input_trace_0002_low_risk_supported-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/audit/low_risk_supported-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": "a48587ddd9e3f0bfa2092a170c9ecded1dbbefaa511e13fa264b1ba30dfd912e",
-          "field": "sha256",
-          "name": "input_trace_0002_low_risk_supported-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/audit/low_risk_supported-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 36783,
-          "field": "size_bytes",
-          "name": "input_trace_0002_low_risk_supported-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/audit/low_risk_supported-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "input_trace_0002_low_risk_supported-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/audit/low_risk_supported-r0.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "input_trace_0003_calculator_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/auto/calculator_refuted-r0.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "input_trace_0003_calculator_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/auto/calculator_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": "a7140605552033833a1b25b99d655831aae3ec656c425b6ab0040e3eaa4865cf",
-          "field": "sha256",
-          "name": "input_trace_0003_calculator_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/auto/calculator_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 40576,
-          "field": "size_bytes",
-          "name": "input_trace_0003_calculator_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/auto/calculator_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "input_trace_0003_calculator_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/auto/calculator_refuted-r0.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "input_trace_0004_diagnostic_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/auto/diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "input_trace_0004_diagnostic_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/auto/diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": "3ea2e419a99dc7278415f2b4db6971d67be6aaa0aff3f1ee4002fca024352610",
-          "field": "sha256",
-          "name": "input_trace_0004_diagnostic_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/auto/diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 46218,
-          "field": "size_bytes",
-          "name": "input_trace_0004_diagnostic_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/auto/diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "input_trace_0004_diagnostic_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/auto/diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "input_trace_0005_low_risk_supported-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/auto/low_risk_supported-r0.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "input_trace_0005_low_risk_supported-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/auto/low_risk_supported-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": "12afd26f4a8c78f8c1b2a9b7b366f976d2971f3f7f6a843823a9a14a6a4ea211",
-          "field": "sha256",
-          "name": "input_trace_0005_low_risk_supported-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/auto/low_risk_supported-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 34166,
-          "field": "size_bytes",
-          "name": "input_trace_0005_low_risk_supported-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/auto/low_risk_supported-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "input_trace_0005_low_risk_supported-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/auto/low_risk_supported-r0.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "input_trace_0006_calculator_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/balanced/calculator_refuted-r0.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "input_trace_0006_calculator_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/balanced/calculator_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": "58ea3ab78c9d4fb864f9c25fa937bd38b911d2860d494ca401c861fe7c7ee5f6",
-          "field": "sha256",
-          "name": "input_trace_0006_calculator_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/balanced/calculator_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 44357,
-          "field": "size_bytes",
-          "name": "input_trace_0006_calculator_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/balanced/calculator_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "input_trace_0006_calculator_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/balanced/calculator_refuted-r0.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "input_trace_0007_diagnostic_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/balanced/diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "input_trace_0007_diagnostic_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/balanced/diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": "79a57e1f5281c51a0d01667d10c1a9fca58bab22805b4c333d6df5568961d246",
-          "field": "sha256",
-          "name": "input_trace_0007_diagnostic_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/balanced/diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 45152,
-          "field": "size_bytes",
-          "name": "input_trace_0007_diagnostic_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/balanced/diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "input_trace_0007_diagnostic_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/balanced/diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "input_trace_0008_low_risk_supported-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/balanced/low_risk_supported-r0.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "input_trace_0008_low_risk_supported-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/balanced/low_risk_supported-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": "db7f5bd3a37850b4a7c2ae89132f7bb541ea00d845535915b8877fb343e22409",
-          "field": "sha256",
-          "name": "input_trace_0008_low_risk_supported-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/balanced/low_risk_supported-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 33267,
-          "field": "size_bytes",
-          "name": "input_trace_0008_low_risk_supported-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/balanced/low_risk_supported-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "input_trace_0008_low_risk_supported-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/balanced/low_risk_supported-r0.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "input_trace_0009_calculator_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/latency/calculator_refuted-r0.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "input_trace_0009_calculator_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/latency/calculator_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": "718da025fc751970704ed1417c6772bd40743cb22be1a897a239601739d68ccd",
-          "field": "sha256",
-          "name": "input_trace_0009_calculator_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/latency/calculator_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 44087,
-          "field": "size_bytes",
-          "name": "input_trace_0009_calculator_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/latency/calculator_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "input_trace_0009_calculator_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/latency/calculator_refuted-r0.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "input_trace_0010_diagnostic_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/latency/diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "input_trace_0010_diagnostic_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/latency/diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": "ebf167d00f52cbb4f77c7ced44e7276ded6b9f7821b87101d62177db1402b98c",
-          "field": "sha256",
-          "name": "input_trace_0010_diagnostic_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/latency/diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 34683,
-          "field": "size_bytes",
-          "name": "input_trace_0010_diagnostic_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/latency/diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "input_trace_0010_diagnostic_refuted-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/latency/diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "input_trace_0011_low_risk_supported-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/latency/low_risk_supported-r0.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "input_trace_0011_low_risk_supported-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/latency/low_risk_supported-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": "4be668a2f5610227f6debc4a5dd61e3c5b276c7458d5b2795a8c61168df4e169",
-          "field": "sha256",
-          "name": "input_trace_0011_low_risk_supported-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/latency/low_risk_supported-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 33046,
-          "field": "size_bytes",
-          "name": "input_trace_0011_low_risk_supported-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/latency/low_risk_supported-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "input_trace_0011_low_risk_supported-r0",
-          "path": "../smollm2_product_trace_action_payload_compat_v0/traces/latency/low_risk_supported-r0.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "runtime_baseline_report",
-          "path": "runtime-baseline/product-runtime-baseline.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "runtime_baseline_report",
-          "path": "runtime-baseline/product-runtime-baseline.json"
-        },
-        {
-          "actual": null,
-          "expected": "9164d6ef7f68bb334737eccedf1709cee8cf301e43b1ed1dda2f5f6e8916ad97",
-          "field": "sha256",
-          "name": "runtime_baseline_report",
-          "path": "runtime-baseline/product-runtime-baseline.json"
-        },
-        {
-          "actual": null,
-          "expected": 693525,
-          "field": "size_bytes",
-          "name": "runtime_baseline_report",
-          "path": "runtime-baseline/product-runtime-baseline.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "runtime_baseline_report",
-          "path": "runtime-baseline/product-runtime-baseline.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "runtime_trace_records_cache",
-          "path": "runtime-baseline/trace-record-cache.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "runtime_trace_records_cache",
-          "path": "runtime-baseline/trace-record-cache.json"
-        },
-        {
-          "actual": null,
-          "expected": "46cecf6f83c7364f532a34c74d46c0e00c70e72d8e3cb15196abe478f2bf3112",
-          "field": "sha256",
-          "name": "runtime_trace_records_cache",
-          "path": "runtime-baseline/trace-record-cache.json"
-        },
-        {
-          "actual": null,
-          "expected": 617047,
-          "field": "size_bytes",
-          "name": "runtime_trace_records_cache",
-          "path": "runtime-baseline/trace-record-cache.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "runtime_trace_records_cache",
-          "path": "runtime-baseline/trace-record-cache.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "selector_trace_inputs",
-          "path": "selector-replay/trace-inputs.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "selector_trace_inputs",
-          "path": "selector-replay/trace-inputs.json"
-        },
-        {
-          "actual": null,
-          "expected": "f5c60d1ec99a766dc321adc27cace0f452ac5d2a18699ce6b76fa052d5fd66f0",
-          "field": "sha256",
-          "name": "selector_trace_inputs",
-          "path": "selector-replay/trace-inputs.json"
-        },
-        {
-          "actual": null,
-          "expected": 28053,
-          "field": "size_bytes",
-          "name": "selector_trace_inputs",
-          "path": "selector-replay/trace-inputs.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "selector_trace_inputs",
-          "path": "selector-replay/trace-inputs.json"
-        }
-      ],
+      "failures": [],
       "manifest_path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/artifact-manifest.json",
       "nested": [
         {
           "checked": 16,
-          "failures": [
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "input_trace_0000_calculator_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/audit/calculator_refuted-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "input_trace_0000_calculator_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/audit/calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "d02087adf9c783935ee18b84ff5c2e002e3514cc1b94fc8ea331650f97df694a",
-              "field": "sha256",
-              "name": "input_trace_0000_calculator_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/audit/calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 39309,
-              "field": "size_bytes",
-              "name": "input_trace_0000_calculator_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/audit/calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "input_trace_0000_calculator_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/audit/calculator_refuted-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "input_trace_0001_diagnostic_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/audit/diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "input_trace_0001_diagnostic_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/audit/diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "68476bb48460b31e3403e4e85fa63ddecba54eb5f36955a08bf52b9e1f54c011",
-              "field": "sha256",
-              "name": "input_trace_0001_diagnostic_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/audit/diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 40431,
-              "field": "size_bytes",
-              "name": "input_trace_0001_diagnostic_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/audit/diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "input_trace_0001_diagnostic_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/audit/diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "input_trace_0002_low_risk_supported-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/audit/low_risk_supported-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "input_trace_0002_low_risk_supported-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/audit/low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "a48587ddd9e3f0bfa2092a170c9ecded1dbbefaa511e13fa264b1ba30dfd912e",
-              "field": "sha256",
-              "name": "input_trace_0002_low_risk_supported-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/audit/low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 36783,
-              "field": "size_bytes",
-              "name": "input_trace_0002_low_risk_supported-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/audit/low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "input_trace_0002_low_risk_supported-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/audit/low_risk_supported-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "input_trace_0003_calculator_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/auto/calculator_refuted-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "input_trace_0003_calculator_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/auto/calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "a7140605552033833a1b25b99d655831aae3ec656c425b6ab0040e3eaa4865cf",
-              "field": "sha256",
-              "name": "input_trace_0003_calculator_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/auto/calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 40576,
-              "field": "size_bytes",
-              "name": "input_trace_0003_calculator_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/auto/calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "input_trace_0003_calculator_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/auto/calculator_refuted-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "input_trace_0004_diagnostic_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/auto/diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "input_trace_0004_diagnostic_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/auto/diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "3ea2e419a99dc7278415f2b4db6971d67be6aaa0aff3f1ee4002fca024352610",
-              "field": "sha256",
-              "name": "input_trace_0004_diagnostic_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/auto/diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 46218,
-              "field": "size_bytes",
-              "name": "input_trace_0004_diagnostic_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/auto/diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "input_trace_0004_diagnostic_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/auto/diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "input_trace_0005_low_risk_supported-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/auto/low_risk_supported-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "input_trace_0005_low_risk_supported-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/auto/low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "12afd26f4a8c78f8c1b2a9b7b366f976d2971f3f7f6a843823a9a14a6a4ea211",
-              "field": "sha256",
-              "name": "input_trace_0005_low_risk_supported-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/auto/low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 34166,
-              "field": "size_bytes",
-              "name": "input_trace_0005_low_risk_supported-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/auto/low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "input_trace_0005_low_risk_supported-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/auto/low_risk_supported-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "input_trace_0006_calculator_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/balanced/calculator_refuted-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "input_trace_0006_calculator_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/balanced/calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "58ea3ab78c9d4fb864f9c25fa937bd38b911d2860d494ca401c861fe7c7ee5f6",
-              "field": "sha256",
-              "name": "input_trace_0006_calculator_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/balanced/calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 44357,
-              "field": "size_bytes",
-              "name": "input_trace_0006_calculator_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/balanced/calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "input_trace_0006_calculator_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/balanced/calculator_refuted-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "input_trace_0007_diagnostic_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/balanced/diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "input_trace_0007_diagnostic_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/balanced/diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "79a57e1f5281c51a0d01667d10c1a9fca58bab22805b4c333d6df5568961d246",
-              "field": "sha256",
-              "name": "input_trace_0007_diagnostic_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/balanced/diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 45152,
-              "field": "size_bytes",
-              "name": "input_trace_0007_diagnostic_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/balanced/diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "input_trace_0007_diagnostic_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/balanced/diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "input_trace_0008_low_risk_supported-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/balanced/low_risk_supported-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "input_trace_0008_low_risk_supported-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/balanced/low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "db7f5bd3a37850b4a7c2ae89132f7bb541ea00d845535915b8877fb343e22409",
-              "field": "sha256",
-              "name": "input_trace_0008_low_risk_supported-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/balanced/low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 33267,
-              "field": "size_bytes",
-              "name": "input_trace_0008_low_risk_supported-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/balanced/low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "input_trace_0008_low_risk_supported-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/balanced/low_risk_supported-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "input_trace_0009_calculator_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/latency/calculator_refuted-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "input_trace_0009_calculator_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/latency/calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "718da025fc751970704ed1417c6772bd40743cb22be1a897a239601739d68ccd",
-              "field": "sha256",
-              "name": "input_trace_0009_calculator_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/latency/calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 44087,
-              "field": "size_bytes",
-              "name": "input_trace_0009_calculator_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/latency/calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "input_trace_0009_calculator_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/latency/calculator_refuted-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "input_trace_0010_diagnostic_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/latency/diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "input_trace_0010_diagnostic_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/latency/diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "ebf167d00f52cbb4f77c7ced44e7276ded6b9f7821b87101d62177db1402b98c",
-              "field": "sha256",
-              "name": "input_trace_0010_diagnostic_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/latency/diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 34683,
-              "field": "size_bytes",
-              "name": "input_trace_0010_diagnostic_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/latency/diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "input_trace_0010_diagnostic_refuted-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/latency/diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "input_trace_0011_low_risk_supported-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/latency/low_risk_supported-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "input_trace_0011_low_risk_supported-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/latency/low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "4be668a2f5610227f6debc4a5dd61e3c5b276c7458d5b2795a8c61168df4e169",
-              "field": "sha256",
-              "name": "input_trace_0011_low_risk_supported-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/latency/low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 33046,
-              "field": "size_bytes",
-              "name": "input_trace_0011_low_risk_supported-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/latency/low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "input_trace_0011_low_risk_supported-r0",
-              "path": "../../smollm2_product_trace_action_payload_compat_v0/traces/latency/low_risk_supported-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "product_trace_corpus_report",
-              "path": "product-trace-corpus.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "product_trace_corpus_report",
-              "path": "product-trace-corpus.json"
-            },
-            {
-              "actual": null,
-              "expected": "a4fcd00849ec04f6bb96ebbc007b540bb8cb839e1d5b2617fb980345bb4afbdd",
-              "field": "sha256",
-              "name": "product_trace_corpus_report",
-              "path": "product-trace-corpus.json"
-            },
-            {
-              "actual": null,
-              "expected": 12811,
-              "field": "size_bytes",
-              "name": "product_trace_corpus_report",
-              "path": "product-trace-corpus.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "product_trace_corpus_report",
-              "path": "product-trace-corpus.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "product_trace_corpus_traces",
-              "path": "traces"
-            },
-            {
-              "actual": "missing",
-              "expected": "directory",
-              "field": "kind",
-              "name": "product_trace_corpus_traces",
-              "path": "traces"
-            },
-            {
-              "actual": null,
-              "expected": "fb98ea62e35a38e0aa0fdf312034b464992b75639c5d69d4fb491ce2d14ef870",
-              "field": "sha256",
-              "name": "product_trace_corpus_traces",
-              "path": "traces"
-            },
-            {
-              "actual": null,
-              "expected": 476410,
-              "field": "size_bytes",
-              "name": "product_trace_corpus_traces",
-              "path": "traces"
-            },
-            {
-              "actual": null,
-              "expected": 12,
-              "field": "file_count",
-              "name": "product_trace_corpus_traces",
-              "path": "traces"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "product_trace_runtime_pair_index",
-              "path": "runtime-pair-index.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "product_trace_runtime_pair_index",
-              "path": "runtime-pair-index.json"
-            },
-            {
-              "actual": null,
-              "expected": "5916ce7c79a4dbaff0e676c36c188b36ac2185a0da2e50cc03b550c4c7c86bc1",
-              "field": "sha256",
-              "name": "product_trace_runtime_pair_index",
-              "path": "runtime-pair-index.json"
-            },
-            {
-              "actual": null,
-              "expected": 3933,
-              "field": "size_bytes",
-              "name": "product_trace_runtime_pair_index",
-              "path": "runtime-pair-index.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "product_trace_runtime_pair_index",
-              "path": "runtime-pair-index.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "product_trace_source_cache",
-              "path": "source-cache.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "product_trace_source_cache",
-              "path": "source-cache.json"
-            },
-            {
-              "actual": null,
-              "expected": "64cee898c2b04e636b59fb558b0b8de75ebb29ac241d70f77b6b77b0c8f43846",
-              "field": "sha256",
-              "name": "product_trace_source_cache",
-              "path": "source-cache.json"
-            },
-            {
-              "actual": null,
-              "expected": 338085,
-              "field": "size_bytes",
-              "name": "product_trace_source_cache",
-              "path": "source-cache.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "product_trace_source_cache",
-              "path": "source-cache.json"
-            }
-          ],
+          "failures": [],
           "manifest_path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/corpus/artifact-manifest.json",
           "nested": [],
-          "passed": false
+          "passed": true
         },
         {
           "checked": 14,
-          "failures": [
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "product_runtime_baseline_report",
-              "path": "product-runtime-baseline.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "product_runtime_baseline_report",
-              "path": "product-runtime-baseline.json"
-            },
-            {
-              "actual": null,
-              "expected": "9164d6ef7f68bb334737eccedf1709cee8cf301e43b1ed1dda2f5f6e8916ad97",
-              "field": "sha256",
-              "name": "product_runtime_baseline_report",
-              "path": "product-runtime-baseline.json"
-            },
-            {
-              "actual": null,
-              "expected": 693525,
-              "field": "size_bytes",
-              "name": "product_runtime_baseline_report",
-              "path": "product-runtime-baseline.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "product_runtime_baseline_report",
-              "path": "product-runtime-baseline.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "product_runtime_trace_record_cache",
-              "path": "trace-record-cache.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "product_runtime_trace_record_cache",
-              "path": "trace-record-cache.json"
-            },
-            {
-              "actual": null,
-              "expected": "46cecf6f83c7364f532a34c74d46c0e00c70e72d8e3cb15196abe478f2bf3112",
-              "field": "sha256",
-              "name": "product_runtime_trace_record_cache",
-              "path": "trace-record-cache.json"
-            },
-            {
-              "actual": null,
-              "expected": 617047,
-              "field": "size_bytes",
-              "name": "product_runtime_trace_record_cache",
-              "path": "trace-record-cache.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "product_runtime_trace_record_cache",
-              "path": "trace-record-cache.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "trace_0000_audit-calculator_refuted-r0",
-              "path": "../corpus/traces/audit-calculator_refuted-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "trace_0000_audit-calculator_refuted-r0",
-              "path": "../corpus/traces/audit-calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "f5c4e2febddc750d3bb31224624e1f432c1ffe9978ca5540dce9848d9c112072",
-              "field": "sha256",
-              "name": "trace_0000_audit-calculator_refuted-r0",
-              "path": "../corpus/traces/audit-calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 39719,
-              "field": "size_bytes",
-              "name": "trace_0000_audit-calculator_refuted-r0",
-              "path": "../corpus/traces/audit-calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "trace_0000_audit-calculator_refuted-r0",
-              "path": "../corpus/traces/audit-calculator_refuted-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "trace_0001_audit-diagnostic_refuted-r0",
-              "path": "../corpus/traces/audit-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "trace_0001_audit-diagnostic_refuted-r0",
-              "path": "../corpus/traces/audit-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "99fec1813e937bef86559dfdcddee5bbd5094294435cdfdfb221bfa10252f1f3",
-              "field": "sha256",
-              "name": "trace_0001_audit-diagnostic_refuted-r0",
-              "path": "../corpus/traces/audit-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 40840,
-              "field": "size_bytes",
-              "name": "trace_0001_audit-diagnostic_refuted-r0",
-              "path": "../corpus/traces/audit-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "trace_0001_audit-diagnostic_refuted-r0",
-              "path": "../corpus/traces/audit-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "trace_0002_audit-low_risk_supported-r0",
-              "path": "../corpus/traces/audit-low_risk_supported-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "trace_0002_audit-low_risk_supported-r0",
-              "path": "../corpus/traces/audit-low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "41f86918466749bbd6ac81886b45fc5f8e109fd3525f7556be31cb91233fdf8c",
-              "field": "sha256",
-              "name": "trace_0002_audit-low_risk_supported-r0",
-              "path": "../corpus/traces/audit-low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 37106,
-              "field": "size_bytes",
-              "name": "trace_0002_audit-low_risk_supported-r0",
-              "path": "../corpus/traces/audit-low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "trace_0002_audit-low_risk_supported-r0",
-              "path": "../corpus/traces/audit-low_risk_supported-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "trace_0003_audit-calculator_refuted-r0-2",
-              "path": "../corpus/traces/audit-calculator_refuted-r0-2.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "trace_0003_audit-calculator_refuted-r0-2",
-              "path": "../corpus/traces/audit-calculator_refuted-r0-2.json"
-            },
-            {
-              "actual": null,
-              "expected": "58de7c3ddf6bcf86bfa57b2adf9752ff5fec7f3ad17cc091e44d10e043d5eae2",
-              "field": "sha256",
-              "name": "trace_0003_audit-calculator_refuted-r0-2",
-              "path": "../corpus/traces/audit-calculator_refuted-r0-2.json"
-            },
-            {
-              "actual": null,
-              "expected": 40985,
-              "field": "size_bytes",
-              "name": "trace_0003_audit-calculator_refuted-r0-2",
-              "path": "../corpus/traces/audit-calculator_refuted-r0-2.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "trace_0003_audit-calculator_refuted-r0-2",
-              "path": "../corpus/traces/audit-calculator_refuted-r0-2.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "trace_0004_balanced-diagnostic_refuted-r0",
-              "path": "../corpus/traces/balanced-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "trace_0004_balanced-diagnostic_refuted-r0",
-              "path": "../corpus/traces/balanced-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "795812d4fb5fb6e841c428d3e9258499a07280f2c15fbc64db13d392289b9073",
-              "field": "sha256",
-              "name": "trace_0004_balanced-diagnostic_refuted-r0",
-              "path": "../corpus/traces/balanced-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 46626,
-              "field": "size_bytes",
-              "name": "trace_0004_balanced-diagnostic_refuted-r0",
-              "path": "../corpus/traces/balanced-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "trace_0004_balanced-diagnostic_refuted-r0",
-              "path": "../corpus/traces/balanced-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "trace_0005_latency-low_risk_supported-r0",
-              "path": "../corpus/traces/latency-low_risk_supported-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "trace_0005_latency-low_risk_supported-r0",
-              "path": "../corpus/traces/latency-low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "55a6d755be52f355af2c3a9be5ee645d4e1841c045cf2419f3b6a5051cb1453a",
-              "field": "sha256",
-              "name": "trace_0005_latency-low_risk_supported-r0",
-              "path": "../corpus/traces/latency-low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 34462,
-              "field": "size_bytes",
-              "name": "trace_0005_latency-low_risk_supported-r0",
-              "path": "../corpus/traces/latency-low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "trace_0005_latency-low_risk_supported-r0",
-              "path": "../corpus/traces/latency-low_risk_supported-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "trace_0006_balanced-calculator_refuted-r0",
-              "path": "../corpus/traces/balanced-calculator_refuted-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "trace_0006_balanced-calculator_refuted-r0",
-              "path": "../corpus/traces/balanced-calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "7cac7a4df463ea2f310322495f59fe773e5c779c08eda97a6b13036f9e604bab",
-              "field": "sha256",
-              "name": "trace_0006_balanced-calculator_refuted-r0",
-              "path": "../corpus/traces/balanced-calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 44770,
-              "field": "size_bytes",
-              "name": "trace_0006_balanced-calculator_refuted-r0",
-              "path": "../corpus/traces/balanced-calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "trace_0006_balanced-calculator_refuted-r0",
-              "path": "../corpus/traces/balanced-calculator_refuted-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "trace_0007_balanced-diagnostic_refuted-r0-2",
-              "path": "../corpus/traces/balanced-diagnostic_refuted-r0-2.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "trace_0007_balanced-diagnostic_refuted-r0-2",
-              "path": "../corpus/traces/balanced-diagnostic_refuted-r0-2.json"
-            },
-            {
-              "actual": null,
-              "expected": "00feb3882734ba4a15ae2f050a6c669ca7882641b5089199b60837a2ad6565da",
-              "field": "sha256",
-              "name": "trace_0007_balanced-diagnostic_refuted-r0-2",
-              "path": "../corpus/traces/balanced-diagnostic_refuted-r0-2.json"
-            },
-            {
-              "actual": null,
-              "expected": 45564,
-              "field": "size_bytes",
-              "name": "trace_0007_balanced-diagnostic_refuted-r0-2",
-              "path": "../corpus/traces/balanced-diagnostic_refuted-r0-2.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "trace_0007_balanced-diagnostic_refuted-r0-2",
-              "path": "../corpus/traces/balanced-diagnostic_refuted-r0-2.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "trace_0008_balanced-low_risk_supported-r0",
-              "path": "../corpus/traces/balanced-low_risk_supported-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "trace_0008_balanced-low_risk_supported-r0",
-              "path": "../corpus/traces/balanced-low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "f773eecd4010d817953e66708234c94dcef9c3f655af5549b5ee80c84bd73d1f",
-              "field": "sha256",
-              "name": "trace_0008_balanced-low_risk_supported-r0",
-              "path": "../corpus/traces/balanced-low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 33567,
-              "field": "size_bytes",
-              "name": "trace_0008_balanced-low_risk_supported-r0",
-              "path": "../corpus/traces/balanced-low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "trace_0008_balanced-low_risk_supported-r0",
-              "path": "../corpus/traces/balanced-low_risk_supported-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "trace_0009_latency-calculator_refuted-r0",
-              "path": "../corpus/traces/latency-calculator_refuted-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "trace_0009_latency-calculator_refuted-r0",
-              "path": "../corpus/traces/latency-calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "f049eef6270343a56da10279f45fcee9bad00796da966f492d6d9e72a87bc26a",
-              "field": "sha256",
-              "name": "trace_0009_latency-calculator_refuted-r0",
-              "path": "../corpus/traces/latency-calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 44499,
-              "field": "size_bytes",
-              "name": "trace_0009_latency-calculator_refuted-r0",
-              "path": "../corpus/traces/latency-calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "trace_0009_latency-calculator_refuted-r0",
-              "path": "../corpus/traces/latency-calculator_refuted-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "trace_0010_latency-diagnostic_refuted-r0",
-              "path": "../corpus/traces/latency-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "trace_0010_latency-diagnostic_refuted-r0",
-              "path": "../corpus/traces/latency-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "f475633fb557a324971e3930febcbf589224f7a4a56aa904a10a4a3ca29bf37d",
-              "field": "sha256",
-              "name": "trace_0010_latency-diagnostic_refuted-r0",
-              "path": "../corpus/traces/latency-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 34927,
-              "field": "size_bytes",
-              "name": "trace_0010_latency-diagnostic_refuted-r0",
-              "path": "../corpus/traces/latency-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "trace_0010_latency-diagnostic_refuted-r0",
-              "path": "../corpus/traces/latency-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "trace_0011_latency-low_risk_supported-r0-2",
-              "path": "../corpus/traces/latency-low_risk_supported-r0-2.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "trace_0011_latency-low_risk_supported-r0-2",
-              "path": "../corpus/traces/latency-low_risk_supported-r0-2.json"
-            },
-            {
-              "actual": null,
-              "expected": "a99487944ff5436d4cf1aaf96e50f3a265081fde48a5830dc34f9b3661deaa11",
-              "field": "sha256",
-              "name": "trace_0011_latency-low_risk_supported-r0-2",
-              "path": "../corpus/traces/latency-low_risk_supported-r0-2.json"
-            },
-            {
-              "actual": null,
-              "expected": 33345,
-              "field": "size_bytes",
-              "name": "trace_0011_latency-low_risk_supported-r0-2",
-              "path": "../corpus/traces/latency-low_risk_supported-r0-2.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "trace_0011_latency-low_risk_supported-r0-2",
-              "path": "../corpus/traces/latency-low_risk_supported-r0-2.json"
-            }
-          ],
+          "failures": [],
           "manifest_path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/runtime-baseline/artifact-manifest.json",
           "nested": [],
-          "passed": false
+          "passed": true
         },
         {
           "checked": 19,
-          "failures": [
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "audit_biased_selector_policy",
-              "path": "policies/audit_biased.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "audit_biased_selector_policy",
-              "path": "policies/audit_biased.json"
-            },
-            {
-              "actual": null,
-              "expected": "54dc2a1e1cce907a174656700915cdfce035549e6ebca01988bcd5c7f2784e96",
-              "field": "sha256",
-              "name": "audit_biased_selector_policy",
-              "path": "policies/audit_biased.json"
-            },
-            {
-              "actual": null,
-              "expected": 674,
-              "field": "size_bytes",
-              "name": "audit_biased_selector_policy",
-              "path": "policies/audit_biased.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "audit_biased_selector_policy",
-              "path": "policies/audit_biased.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "default_selector_policy",
-              "path": "policies/default.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "default_selector_policy",
-              "path": "policies/default.json"
-            },
-            {
-              "actual": null,
-              "expected": "1983988b2bee5193c6b4f75f4528efe8dd9a7d6e6389f7b241fffdbf09942bbf",
-              "field": "sha256",
-              "name": "default_selector_policy",
-              "path": "policies/default.json"
-            },
-            {
-              "actual": null,
-              "expected": 658,
-              "field": "size_bytes",
-              "name": "default_selector_policy",
-              "path": "policies/default.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "default_selector_policy",
-              "path": "policies/default.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "latency_biased_selector_policy",
-              "path": "policies/latency_biased.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "latency_biased_selector_policy",
-              "path": "policies/latency_biased.json"
-            },
-            {
-              "actual": null,
-              "expected": "2ba659923a846179fab840daa347b69461fe7ba976b3aac70767f77eead8ef03",
-              "field": "sha256",
-              "name": "latency_biased_selector_policy",
-              "path": "policies/latency_biased.json"
-            },
-            {
-              "actual": null,
-              "expected": 617,
-              "field": "size_bytes",
-              "name": "latency_biased_selector_policy",
-              "path": "policies/latency_biased.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "latency_biased_selector_policy",
-              "path": "policies/latency_biased.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "runtime_pair_index",
-              "path": "../corpus/runtime-pair-index.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "runtime_pair_index",
-              "path": "../corpus/runtime-pair-index.json"
-            },
-            {
-              "actual": null,
-              "expected": "5916ce7c79a4dbaff0e676c36c188b36ac2185a0da2e50cc03b550c4c7c86bc1",
-              "field": "sha256",
-              "name": "runtime_pair_index",
-              "path": "../corpus/runtime-pair-index.json"
-            },
-            {
-              "actual": null,
-              "expected": 3933,
-              "field": "size_bytes",
-              "name": "runtime_pair_index",
-              "path": "../corpus/runtime-pair-index.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "runtime_pair_index",
-              "path": "../corpus/runtime-pair-index.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "trace_0000_audit-calculator_refuted-r0",
-              "path": "../corpus/traces/audit-calculator_refuted-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "trace_0000_audit-calculator_refuted-r0",
-              "path": "../corpus/traces/audit-calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "f5c4e2febddc750d3bb31224624e1f432c1ffe9978ca5540dce9848d9c112072",
-              "field": "sha256",
-              "name": "trace_0000_audit-calculator_refuted-r0",
-              "path": "../corpus/traces/audit-calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 39719,
-              "field": "size_bytes",
-              "name": "trace_0000_audit-calculator_refuted-r0",
-              "path": "../corpus/traces/audit-calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "trace_0000_audit-calculator_refuted-r0",
-              "path": "../corpus/traces/audit-calculator_refuted-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "trace_0001_audit-diagnostic_refuted-r0",
-              "path": "../corpus/traces/audit-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "trace_0001_audit-diagnostic_refuted-r0",
-              "path": "../corpus/traces/audit-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "99fec1813e937bef86559dfdcddee5bbd5094294435cdfdfb221bfa10252f1f3",
-              "field": "sha256",
-              "name": "trace_0001_audit-diagnostic_refuted-r0",
-              "path": "../corpus/traces/audit-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 40840,
-              "field": "size_bytes",
-              "name": "trace_0001_audit-diagnostic_refuted-r0",
-              "path": "../corpus/traces/audit-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "trace_0001_audit-diagnostic_refuted-r0",
-              "path": "../corpus/traces/audit-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "trace_0002_audit-low_risk_supported-r0",
-              "path": "../corpus/traces/audit-low_risk_supported-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "trace_0002_audit-low_risk_supported-r0",
-              "path": "../corpus/traces/audit-low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "41f86918466749bbd6ac81886b45fc5f8e109fd3525f7556be31cb91233fdf8c",
-              "field": "sha256",
-              "name": "trace_0002_audit-low_risk_supported-r0",
-              "path": "../corpus/traces/audit-low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 37106,
-              "field": "size_bytes",
-              "name": "trace_0002_audit-low_risk_supported-r0",
-              "path": "../corpus/traces/audit-low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "trace_0002_audit-low_risk_supported-r0",
-              "path": "../corpus/traces/audit-low_risk_supported-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "trace_0003_audit-calculator_refuted-r0-2",
-              "path": "../corpus/traces/audit-calculator_refuted-r0-2.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "trace_0003_audit-calculator_refuted-r0-2",
-              "path": "../corpus/traces/audit-calculator_refuted-r0-2.json"
-            },
-            {
-              "actual": null,
-              "expected": "58de7c3ddf6bcf86bfa57b2adf9752ff5fec7f3ad17cc091e44d10e043d5eae2",
-              "field": "sha256",
-              "name": "trace_0003_audit-calculator_refuted-r0-2",
-              "path": "../corpus/traces/audit-calculator_refuted-r0-2.json"
-            },
-            {
-              "actual": null,
-              "expected": 40985,
-              "field": "size_bytes",
-              "name": "trace_0003_audit-calculator_refuted-r0-2",
-              "path": "../corpus/traces/audit-calculator_refuted-r0-2.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "trace_0003_audit-calculator_refuted-r0-2",
-              "path": "../corpus/traces/audit-calculator_refuted-r0-2.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "trace_0004_balanced-diagnostic_refuted-r0",
-              "path": "../corpus/traces/balanced-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "trace_0004_balanced-diagnostic_refuted-r0",
-              "path": "../corpus/traces/balanced-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "795812d4fb5fb6e841c428d3e9258499a07280f2c15fbc64db13d392289b9073",
-              "field": "sha256",
-              "name": "trace_0004_balanced-diagnostic_refuted-r0",
-              "path": "../corpus/traces/balanced-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 46626,
-              "field": "size_bytes",
-              "name": "trace_0004_balanced-diagnostic_refuted-r0",
-              "path": "../corpus/traces/balanced-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "trace_0004_balanced-diagnostic_refuted-r0",
-              "path": "../corpus/traces/balanced-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "trace_0005_latency-low_risk_supported-r0",
-              "path": "../corpus/traces/latency-low_risk_supported-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "trace_0005_latency-low_risk_supported-r0",
-              "path": "../corpus/traces/latency-low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "55a6d755be52f355af2c3a9be5ee645d4e1841c045cf2419f3b6a5051cb1453a",
-              "field": "sha256",
-              "name": "trace_0005_latency-low_risk_supported-r0",
-              "path": "../corpus/traces/latency-low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 34462,
-              "field": "size_bytes",
-              "name": "trace_0005_latency-low_risk_supported-r0",
-              "path": "../corpus/traces/latency-low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "trace_0005_latency-low_risk_supported-r0",
-              "path": "../corpus/traces/latency-low_risk_supported-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "trace_0006_balanced-calculator_refuted-r0",
-              "path": "../corpus/traces/balanced-calculator_refuted-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "trace_0006_balanced-calculator_refuted-r0",
-              "path": "../corpus/traces/balanced-calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "7cac7a4df463ea2f310322495f59fe773e5c779c08eda97a6b13036f9e604bab",
-              "field": "sha256",
-              "name": "trace_0006_balanced-calculator_refuted-r0",
-              "path": "../corpus/traces/balanced-calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 44770,
-              "field": "size_bytes",
-              "name": "trace_0006_balanced-calculator_refuted-r0",
-              "path": "../corpus/traces/balanced-calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "trace_0006_balanced-calculator_refuted-r0",
-              "path": "../corpus/traces/balanced-calculator_refuted-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "trace_0007_balanced-diagnostic_refuted-r0-2",
-              "path": "../corpus/traces/balanced-diagnostic_refuted-r0-2.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "trace_0007_balanced-diagnostic_refuted-r0-2",
-              "path": "../corpus/traces/balanced-diagnostic_refuted-r0-2.json"
-            },
-            {
-              "actual": null,
-              "expected": "00feb3882734ba4a15ae2f050a6c669ca7882641b5089199b60837a2ad6565da",
-              "field": "sha256",
-              "name": "trace_0007_balanced-diagnostic_refuted-r0-2",
-              "path": "../corpus/traces/balanced-diagnostic_refuted-r0-2.json"
-            },
-            {
-              "actual": null,
-              "expected": 45564,
-              "field": "size_bytes",
-              "name": "trace_0007_balanced-diagnostic_refuted-r0-2",
-              "path": "../corpus/traces/balanced-diagnostic_refuted-r0-2.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "trace_0007_balanced-diagnostic_refuted-r0-2",
-              "path": "../corpus/traces/balanced-diagnostic_refuted-r0-2.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "trace_0008_balanced-low_risk_supported-r0",
-              "path": "../corpus/traces/balanced-low_risk_supported-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "trace_0008_balanced-low_risk_supported-r0",
-              "path": "../corpus/traces/balanced-low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "f773eecd4010d817953e66708234c94dcef9c3f655af5549b5ee80c84bd73d1f",
-              "field": "sha256",
-              "name": "trace_0008_balanced-low_risk_supported-r0",
-              "path": "../corpus/traces/balanced-low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 33567,
-              "field": "size_bytes",
-              "name": "trace_0008_balanced-low_risk_supported-r0",
-              "path": "../corpus/traces/balanced-low_risk_supported-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "trace_0008_balanced-low_risk_supported-r0",
-              "path": "../corpus/traces/balanced-low_risk_supported-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "trace_0009_latency-calculator_refuted-r0",
-              "path": "../corpus/traces/latency-calculator_refuted-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "trace_0009_latency-calculator_refuted-r0",
-              "path": "../corpus/traces/latency-calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "f049eef6270343a56da10279f45fcee9bad00796da966f492d6d9e72a87bc26a",
-              "field": "sha256",
-              "name": "trace_0009_latency-calculator_refuted-r0",
-              "path": "../corpus/traces/latency-calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 44499,
-              "field": "size_bytes",
-              "name": "trace_0009_latency-calculator_refuted-r0",
-              "path": "../corpus/traces/latency-calculator_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "trace_0009_latency-calculator_refuted-r0",
-              "path": "../corpus/traces/latency-calculator_refuted-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "trace_0010_latency-diagnostic_refuted-r0",
-              "path": "../corpus/traces/latency-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "trace_0010_latency-diagnostic_refuted-r0",
-              "path": "../corpus/traces/latency-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": "f475633fb557a324971e3930febcbf589224f7a4a56aa904a10a4a3ca29bf37d",
-              "field": "sha256",
-              "name": "trace_0010_latency-diagnostic_refuted-r0",
-              "path": "../corpus/traces/latency-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 34927,
-              "field": "size_bytes",
-              "name": "trace_0010_latency-diagnostic_refuted-r0",
-              "path": "../corpus/traces/latency-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "trace_0010_latency-diagnostic_refuted-r0",
-              "path": "../corpus/traces/latency-diagnostic_refuted-r0.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "trace_0011_latency-low_risk_supported-r0-2",
-              "path": "../corpus/traces/latency-low_risk_supported-r0-2.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "trace_0011_latency-low_risk_supported-r0-2",
-              "path": "../corpus/traces/latency-low_risk_supported-r0-2.json"
-            },
-            {
-              "actual": null,
-              "expected": "a99487944ff5436d4cf1aaf96e50f3a265081fde48a5830dc34f9b3661deaa11",
-              "field": "sha256",
-              "name": "trace_0011_latency-low_risk_supported-r0-2",
-              "path": "../corpus/traces/latency-low_risk_supported-r0-2.json"
-            },
-            {
-              "actual": null,
-              "expected": 33345,
-              "field": "size_bytes",
-              "name": "trace_0011_latency-low_risk_supported-r0-2",
-              "path": "../corpus/traces/latency-low_risk_supported-r0-2.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "trace_0011_latency-low_risk_supported-r0-2",
-              "path": "../corpus/traces/latency-low_risk_supported-r0-2.json"
-            },
-            {
-              "actual": false,
-              "expected": true,
-              "field": "exists",
-              "name": "trace_inputs",
-              "path": "trace-inputs.json"
-            },
-            {
-              "actual": "missing",
-              "expected": "file",
-              "field": "kind",
-              "name": "trace_inputs",
-              "path": "trace-inputs.json"
-            },
-            {
-              "actual": null,
-              "expected": "f5c60d1ec99a766dc321adc27cace0f452ac5d2a18699ce6b76fa052d5fd66f0",
-              "field": "sha256",
-              "name": "trace_inputs",
-              "path": "trace-inputs.json"
-            },
-            {
-              "actual": null,
-              "expected": 28053,
-              "field": "size_bytes",
-              "name": "trace_inputs",
-              "path": "trace-inputs.json"
-            },
-            {
-              "actual": null,
-              "expected": 1,
-              "field": "file_count",
-              "name": "trace_inputs",
-              "path": "trace-inputs.json"
-            }
-          ],
+          "failures": [],
           "manifest_path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/selector-replay/artifact-manifest.json",
           "nested": [],
-          "passed": false
+          "passed": true
         }
       ],
-      "passed": false
+      "passed": true
     },
     "workflow": "product_trace_replay_workflow"
   },
@@ -4864,7 +2049,7 @@
     "schema_version": 1,
     "summary": {
       "artifact_json_cache": {
-        "entries": 41,
+        "entries": 50,
         "errors": 0,
         "hit_rate": 1.0,
         "hits": 11,
@@ -5724,7 +2909,7 @@
         "schema_version": 1,
         "summary": {
           "artifact_json_cache": {
-            "entries": 41,
+            "entries": 50,
             "errors": 0,
             "hit_rate": 1.0,
             "hits": 15,
@@ -6196,7 +3381,7 @@
         "schema_version": 1,
         "summary": {
           "artifact_json_cache": {
-            "entries": 41,
+            "entries": 50,
             "errors": 0,
             "hit_rate": 1.0,
             "hits": 21,
@@ -6420,7 +3605,7 @@
         "schema_version": 1,
         "summary": {
           "artifact_json_cache": {
-            "entries": 41,
+            "entries": 50,
             "errors": 0,
             "hit_rate": 1.0,
             "hits": 15,
@@ -7621,7 +4806,7 @@
         "schema_version": 1,
         "summary": {
           "artifact_json_cache": {
-            "entries": 41,
+            "entries": 50,
             "errors": 0,
             "hit_rate": 1.0,
             "hits": 21,
@@ -8252,7 +5437,7 @@
     "schema_version": 1,
     "summary": {
       "artifact_json_cache": {
-        "entries": 41,
+        "entries": 50,
         "errors": 0,
         "hit_rate": 1.0,
         "hits": 13,
@@ -8269,10 +5454,8 @@
   "schema_version": 1,
   "selector_replay_gate": {
     "gate": {
-      "blocking_reasons": [
-        "selector replay manifest verification failed"
-      ],
-      "passed": false
+      "blocking_reasons": [],
+      "passed": true
     },
     "manifest_path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/selector-replay/artifact-manifest.json",
     "recommended": {
@@ -8293,621 +5476,25 @@
     "report_path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/selector-replay/runtime-profile-selector-replay.json",
     "report_status": "promote",
     "schema_version": 1,
-    "status": "blocked",
+    "status": "promote",
     "verification": {
       "checked": 19,
-      "failures": [
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "audit_biased_selector_policy",
-          "path": "policies/audit_biased.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "audit_biased_selector_policy",
-          "path": "policies/audit_biased.json"
-        },
-        {
-          "actual": null,
-          "expected": "54dc2a1e1cce907a174656700915cdfce035549e6ebca01988bcd5c7f2784e96",
-          "field": "sha256",
-          "name": "audit_biased_selector_policy",
-          "path": "policies/audit_biased.json"
-        },
-        {
-          "actual": null,
-          "expected": 674,
-          "field": "size_bytes",
-          "name": "audit_biased_selector_policy",
-          "path": "policies/audit_biased.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "audit_biased_selector_policy",
-          "path": "policies/audit_biased.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "default_selector_policy",
-          "path": "policies/default.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "default_selector_policy",
-          "path": "policies/default.json"
-        },
-        {
-          "actual": null,
-          "expected": "1983988b2bee5193c6b4f75f4528efe8dd9a7d6e6389f7b241fffdbf09942bbf",
-          "field": "sha256",
-          "name": "default_selector_policy",
-          "path": "policies/default.json"
-        },
-        {
-          "actual": null,
-          "expected": 658,
-          "field": "size_bytes",
-          "name": "default_selector_policy",
-          "path": "policies/default.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "default_selector_policy",
-          "path": "policies/default.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "latency_biased_selector_policy",
-          "path": "policies/latency_biased.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "latency_biased_selector_policy",
-          "path": "policies/latency_biased.json"
-        },
-        {
-          "actual": null,
-          "expected": "2ba659923a846179fab840daa347b69461fe7ba976b3aac70767f77eead8ef03",
-          "field": "sha256",
-          "name": "latency_biased_selector_policy",
-          "path": "policies/latency_biased.json"
-        },
-        {
-          "actual": null,
-          "expected": 617,
-          "field": "size_bytes",
-          "name": "latency_biased_selector_policy",
-          "path": "policies/latency_biased.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "latency_biased_selector_policy",
-          "path": "policies/latency_biased.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "runtime_pair_index",
-          "path": "../corpus/runtime-pair-index.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "runtime_pair_index",
-          "path": "../corpus/runtime-pair-index.json"
-        },
-        {
-          "actual": null,
-          "expected": "5916ce7c79a4dbaff0e676c36c188b36ac2185a0da2e50cc03b550c4c7c86bc1",
-          "field": "sha256",
-          "name": "runtime_pair_index",
-          "path": "../corpus/runtime-pair-index.json"
-        },
-        {
-          "actual": null,
-          "expected": 3933,
-          "field": "size_bytes",
-          "name": "runtime_pair_index",
-          "path": "../corpus/runtime-pair-index.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "runtime_pair_index",
-          "path": "../corpus/runtime-pair-index.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "trace_0000_audit-calculator_refuted-r0",
-          "path": "../corpus/traces/audit-calculator_refuted-r0.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "trace_0000_audit-calculator_refuted-r0",
-          "path": "../corpus/traces/audit-calculator_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": "f5c4e2febddc750d3bb31224624e1f432c1ffe9978ca5540dce9848d9c112072",
-          "field": "sha256",
-          "name": "trace_0000_audit-calculator_refuted-r0",
-          "path": "../corpus/traces/audit-calculator_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 39719,
-          "field": "size_bytes",
-          "name": "trace_0000_audit-calculator_refuted-r0",
-          "path": "../corpus/traces/audit-calculator_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "trace_0000_audit-calculator_refuted-r0",
-          "path": "../corpus/traces/audit-calculator_refuted-r0.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "trace_0001_audit-diagnostic_refuted-r0",
-          "path": "../corpus/traces/audit-diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "trace_0001_audit-diagnostic_refuted-r0",
-          "path": "../corpus/traces/audit-diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": "99fec1813e937bef86559dfdcddee5bbd5094294435cdfdfb221bfa10252f1f3",
-          "field": "sha256",
-          "name": "trace_0001_audit-diagnostic_refuted-r0",
-          "path": "../corpus/traces/audit-diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 40840,
-          "field": "size_bytes",
-          "name": "trace_0001_audit-diagnostic_refuted-r0",
-          "path": "../corpus/traces/audit-diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "trace_0001_audit-diagnostic_refuted-r0",
-          "path": "../corpus/traces/audit-diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "trace_0002_audit-low_risk_supported-r0",
-          "path": "../corpus/traces/audit-low_risk_supported-r0.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "trace_0002_audit-low_risk_supported-r0",
-          "path": "../corpus/traces/audit-low_risk_supported-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": "41f86918466749bbd6ac81886b45fc5f8e109fd3525f7556be31cb91233fdf8c",
-          "field": "sha256",
-          "name": "trace_0002_audit-low_risk_supported-r0",
-          "path": "../corpus/traces/audit-low_risk_supported-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 37106,
-          "field": "size_bytes",
-          "name": "trace_0002_audit-low_risk_supported-r0",
-          "path": "../corpus/traces/audit-low_risk_supported-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "trace_0002_audit-low_risk_supported-r0",
-          "path": "../corpus/traces/audit-low_risk_supported-r0.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "trace_0003_audit-calculator_refuted-r0-2",
-          "path": "../corpus/traces/audit-calculator_refuted-r0-2.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "trace_0003_audit-calculator_refuted-r0-2",
-          "path": "../corpus/traces/audit-calculator_refuted-r0-2.json"
-        },
-        {
-          "actual": null,
-          "expected": "58de7c3ddf6bcf86bfa57b2adf9752ff5fec7f3ad17cc091e44d10e043d5eae2",
-          "field": "sha256",
-          "name": "trace_0003_audit-calculator_refuted-r0-2",
-          "path": "../corpus/traces/audit-calculator_refuted-r0-2.json"
-        },
-        {
-          "actual": null,
-          "expected": 40985,
-          "field": "size_bytes",
-          "name": "trace_0003_audit-calculator_refuted-r0-2",
-          "path": "../corpus/traces/audit-calculator_refuted-r0-2.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "trace_0003_audit-calculator_refuted-r0-2",
-          "path": "../corpus/traces/audit-calculator_refuted-r0-2.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "trace_0004_balanced-diagnostic_refuted-r0",
-          "path": "../corpus/traces/balanced-diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "trace_0004_balanced-diagnostic_refuted-r0",
-          "path": "../corpus/traces/balanced-diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": "795812d4fb5fb6e841c428d3e9258499a07280f2c15fbc64db13d392289b9073",
-          "field": "sha256",
-          "name": "trace_0004_balanced-diagnostic_refuted-r0",
-          "path": "../corpus/traces/balanced-diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 46626,
-          "field": "size_bytes",
-          "name": "trace_0004_balanced-diagnostic_refuted-r0",
-          "path": "../corpus/traces/balanced-diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "trace_0004_balanced-diagnostic_refuted-r0",
-          "path": "../corpus/traces/balanced-diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "trace_0005_latency-low_risk_supported-r0",
-          "path": "../corpus/traces/latency-low_risk_supported-r0.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "trace_0005_latency-low_risk_supported-r0",
-          "path": "../corpus/traces/latency-low_risk_supported-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": "55a6d755be52f355af2c3a9be5ee645d4e1841c045cf2419f3b6a5051cb1453a",
-          "field": "sha256",
-          "name": "trace_0005_latency-low_risk_supported-r0",
-          "path": "../corpus/traces/latency-low_risk_supported-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 34462,
-          "field": "size_bytes",
-          "name": "trace_0005_latency-low_risk_supported-r0",
-          "path": "../corpus/traces/latency-low_risk_supported-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "trace_0005_latency-low_risk_supported-r0",
-          "path": "../corpus/traces/latency-low_risk_supported-r0.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "trace_0006_balanced-calculator_refuted-r0",
-          "path": "../corpus/traces/balanced-calculator_refuted-r0.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "trace_0006_balanced-calculator_refuted-r0",
-          "path": "../corpus/traces/balanced-calculator_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": "7cac7a4df463ea2f310322495f59fe773e5c779c08eda97a6b13036f9e604bab",
-          "field": "sha256",
-          "name": "trace_0006_balanced-calculator_refuted-r0",
-          "path": "../corpus/traces/balanced-calculator_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 44770,
-          "field": "size_bytes",
-          "name": "trace_0006_balanced-calculator_refuted-r0",
-          "path": "../corpus/traces/balanced-calculator_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "trace_0006_balanced-calculator_refuted-r0",
-          "path": "../corpus/traces/balanced-calculator_refuted-r0.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "trace_0007_balanced-diagnostic_refuted-r0-2",
-          "path": "../corpus/traces/balanced-diagnostic_refuted-r0-2.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "trace_0007_balanced-diagnostic_refuted-r0-2",
-          "path": "../corpus/traces/balanced-diagnostic_refuted-r0-2.json"
-        },
-        {
-          "actual": null,
-          "expected": "00feb3882734ba4a15ae2f050a6c669ca7882641b5089199b60837a2ad6565da",
-          "field": "sha256",
-          "name": "trace_0007_balanced-diagnostic_refuted-r0-2",
-          "path": "../corpus/traces/balanced-diagnostic_refuted-r0-2.json"
-        },
-        {
-          "actual": null,
-          "expected": 45564,
-          "field": "size_bytes",
-          "name": "trace_0007_balanced-diagnostic_refuted-r0-2",
-          "path": "../corpus/traces/balanced-diagnostic_refuted-r0-2.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "trace_0007_balanced-diagnostic_refuted-r0-2",
-          "path": "../corpus/traces/balanced-diagnostic_refuted-r0-2.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "trace_0008_balanced-low_risk_supported-r0",
-          "path": "../corpus/traces/balanced-low_risk_supported-r0.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "trace_0008_balanced-low_risk_supported-r0",
-          "path": "../corpus/traces/balanced-low_risk_supported-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": "f773eecd4010d817953e66708234c94dcef9c3f655af5549b5ee80c84bd73d1f",
-          "field": "sha256",
-          "name": "trace_0008_balanced-low_risk_supported-r0",
-          "path": "../corpus/traces/balanced-low_risk_supported-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 33567,
-          "field": "size_bytes",
-          "name": "trace_0008_balanced-low_risk_supported-r0",
-          "path": "../corpus/traces/balanced-low_risk_supported-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "trace_0008_balanced-low_risk_supported-r0",
-          "path": "../corpus/traces/balanced-low_risk_supported-r0.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "trace_0009_latency-calculator_refuted-r0",
-          "path": "../corpus/traces/latency-calculator_refuted-r0.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "trace_0009_latency-calculator_refuted-r0",
-          "path": "../corpus/traces/latency-calculator_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": "f049eef6270343a56da10279f45fcee9bad00796da966f492d6d9e72a87bc26a",
-          "field": "sha256",
-          "name": "trace_0009_latency-calculator_refuted-r0",
-          "path": "../corpus/traces/latency-calculator_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 44499,
-          "field": "size_bytes",
-          "name": "trace_0009_latency-calculator_refuted-r0",
-          "path": "../corpus/traces/latency-calculator_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "trace_0009_latency-calculator_refuted-r0",
-          "path": "../corpus/traces/latency-calculator_refuted-r0.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "trace_0010_latency-diagnostic_refuted-r0",
-          "path": "../corpus/traces/latency-diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "trace_0010_latency-diagnostic_refuted-r0",
-          "path": "../corpus/traces/latency-diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": "f475633fb557a324971e3930febcbf589224f7a4a56aa904a10a4a3ca29bf37d",
-          "field": "sha256",
-          "name": "trace_0010_latency-diagnostic_refuted-r0",
-          "path": "../corpus/traces/latency-diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 34927,
-          "field": "size_bytes",
-          "name": "trace_0010_latency-diagnostic_refuted-r0",
-          "path": "../corpus/traces/latency-diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "trace_0010_latency-diagnostic_refuted-r0",
-          "path": "../corpus/traces/latency-diagnostic_refuted-r0.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "trace_0011_latency-low_risk_supported-r0-2",
-          "path": "../corpus/traces/latency-low_risk_supported-r0-2.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "trace_0011_latency-low_risk_supported-r0-2",
-          "path": "../corpus/traces/latency-low_risk_supported-r0-2.json"
-        },
-        {
-          "actual": null,
-          "expected": "a99487944ff5436d4cf1aaf96e50f3a265081fde48a5830dc34f9b3661deaa11",
-          "field": "sha256",
-          "name": "trace_0011_latency-low_risk_supported-r0-2",
-          "path": "../corpus/traces/latency-low_risk_supported-r0-2.json"
-        },
-        {
-          "actual": null,
-          "expected": 33345,
-          "field": "size_bytes",
-          "name": "trace_0011_latency-low_risk_supported-r0-2",
-          "path": "../corpus/traces/latency-low_risk_supported-r0-2.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "trace_0011_latency-low_risk_supported-r0-2",
-          "path": "../corpus/traces/latency-low_risk_supported-r0-2.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "trace_inputs",
-          "path": "trace-inputs.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "trace_inputs",
-          "path": "trace-inputs.json"
-        },
-        {
-          "actual": null,
-          "expected": "f5c60d1ec99a766dc321adc27cace0f452ac5d2a18699ce6b76fa052d5fd66f0",
-          "field": "sha256",
-          "name": "trace_inputs",
-          "path": "trace-inputs.json"
-        },
-        {
-          "actual": null,
-          "expected": 28053,
-          "field": "size_bytes",
-          "name": "trace_inputs",
-          "path": "trace-inputs.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "trace_inputs",
-          "path": "trace-inputs.json"
-        }
-      ],
+      "failures": [],
       "manifest_path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/selector-replay/artifact-manifest.json",
       "nested": [],
-      "passed": false
+      "passed": true
     },
     "workflow": "runtime_profile_selector_replay"
   },
   "selfcheck_signal_fusion_workflow_gate": null,
   "summary": {
     "artifact_json_cache": {
-      "entries": 55,
+      "entries": 54,
       "errors": 0,
-      "hit_rate": 0.7407407407407407,
-      "hits": 40,
-      "misses": 14,
-      "requests": 54
+      "hit_rate": 0.9285714285714286,
+      "hits": 52,
+      "misses": 4,
+      "requests": 56
     }
   },
   "triple_extraction_fixture_matrix_gate": {
@@ -8926,10 +5513,8 @@
     ],
     "external_prediction_count": 2.0,
     "gate": {
-      "blocking_reasons": [
-        "triple extraction fixture matrix manifest verification failed"
-      ],
-      "passed": false,
+      "blocking_reasons": [],
+      "passed": true,
       "policy": {
         "min_corpora": 2,
         "min_distinct_predicates": 6,
@@ -8952,224 +5537,28 @@
     "report_status": "promote",
     "schema_version": 1,
     "source": "file",
-    "status": "blocked",
+    "status": "promote",
     "verification": {
       "checked": 9,
-      "failures": [
+      "failures": [],
+      "manifest_path": "artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/artifact-manifest.json",
+      "nested": [
         {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "corpus.country-core.artifact_manifest",
-          "path": "country-core/artifact-manifest.json"
+          "checked": 9,
+          "failures": [],
+          "manifest_path": "artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/country-core/artifact-manifest.json",
+          "nested": [],
+          "passed": true
         },
         {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "corpus.country-core.artifact_manifest",
-          "path": "country-core/artifact-manifest.json"
-        },
-        {
-          "actual": null,
-          "expected": "96fd25aeeba4faf2230c0986c64111748c97cc7037773b7eb2fd7db4fb80c42b",
-          "field": "sha256",
-          "name": "corpus.country-core.artifact_manifest",
-          "path": "country-core/artifact-manifest.json"
-        },
-        {
-          "actual": null,
-          "expected": 3636,
-          "field": "size_bytes",
-          "name": "corpus.country-core.artifact_manifest",
-          "path": "country-core/artifact-manifest.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "corpus.country-core.artifact_manifest",
-          "path": "country-core/artifact-manifest.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "corpus.country-core.external_predictions.lookup_gold",
-          "path": "external-predictions/country-core-lookup-gold-predictions.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "corpus.country-core.external_predictions.lookup_gold",
-          "path": "external-predictions/country-core-lookup-gold-predictions.json"
-        },
-        {
-          "actual": null,
-          "expected": "cf7f2bf72b63c5b1d029928808c5cdd9897a2ed476643edea731824f79467f61",
-          "field": "sha256",
-          "name": "corpus.country-core.external_predictions.lookup_gold",
-          "path": "external-predictions/country-core-lookup-gold-predictions.json"
-        },
-        {
-          "actual": null,
-          "expected": 622742,
-          "field": "size_bytes",
-          "name": "corpus.country-core.external_predictions.lookup_gold",
-          "path": "external-predictions/country-core-lookup-gold-predictions.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "corpus.country-core.external_predictions.lookup_gold",
-          "path": "external-predictions/country-core-lookup-gold-predictions.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "corpus.country-core.workflow_summary",
-          "path": "country-core/triple-extraction-workflow-summary.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "corpus.country-core.workflow_summary",
-          "path": "country-core/triple-extraction-workflow-summary.json"
-        },
-        {
-          "actual": null,
-          "expected": "0267fd209cd16c86b836e9711c389c22a55028ab7668afdbcf51926030af9594",
-          "field": "sha256",
-          "name": "corpus.country-core.workflow_summary",
-          "path": "country-core/triple-extraction-workflow-summary.json"
-        },
-        {
-          "actual": null,
-          "expected": 72621,
-          "field": "size_bytes",
-          "name": "corpus.country-core.workflow_summary",
-          "path": "country-core/triple-extraction-workflow-summary.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "corpus.country-core.workflow_summary",
-          "path": "country-core/triple-extraction-workflow-summary.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "corpus.organization-product.artifact_manifest",
-          "path": "organization-product/artifact-manifest.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "corpus.organization-product.artifact_manifest",
-          "path": "organization-product/artifact-manifest.json"
-        },
-        {
-          "actual": null,
-          "expected": "5c30c3febadda005e8fd40a4e603f912ba79abd7708f876b406a859dc22bbc77",
-          "field": "sha256",
-          "name": "corpus.organization-product.artifact_manifest",
-          "path": "organization-product/artifact-manifest.json"
-        },
-        {
-          "actual": null,
-          "expected": 3596,
-          "field": "size_bytes",
-          "name": "corpus.organization-product.artifact_manifest",
-          "path": "organization-product/artifact-manifest.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "corpus.organization-product.artifact_manifest",
-          "path": "organization-product/artifact-manifest.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "corpus.organization-product.external_predictions.lookup_gold",
-          "path": "external-predictions/organization-product-lookup-gold-predictions.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "corpus.organization-product.external_predictions.lookup_gold",
-          "path": "external-predictions/organization-product-lookup-gold-predictions.json"
-        },
-        {
-          "actual": null,
-          "expected": "f9f47423b0c7289817c83563128832488577f8e4bd8c0d836702ba8857fac329",
-          "field": "sha256",
-          "name": "corpus.organization-product.external_predictions.lookup_gold",
-          "path": "external-predictions/organization-product-lookup-gold-predictions.json"
-        },
-        {
-          "actual": null,
-          "expected": 14329,
-          "field": "size_bytes",
-          "name": "corpus.organization-product.external_predictions.lookup_gold",
-          "path": "external-predictions/organization-product-lookup-gold-predictions.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "corpus.organization-product.external_predictions.lookup_gold",
-          "path": "external-predictions/organization-product-lookup-gold-predictions.json"
-        },
-        {
-          "actual": false,
-          "expected": true,
-          "field": "exists",
-          "name": "corpus.organization-product.workflow_summary",
-          "path": "organization-product/triple-extraction-workflow-summary.json"
-        },
-        {
-          "actual": "missing",
-          "expected": "file",
-          "field": "kind",
-          "name": "corpus.organization-product.workflow_summary",
-          "path": "organization-product/triple-extraction-workflow-summary.json"
-        },
-        {
-          "actual": null,
-          "expected": "6609980be974a059b194beda10b4abaa8d4a286f7bdce0dd6f15eadcddeb6f24",
-          "field": "sha256",
-          "name": "corpus.organization-product.workflow_summary",
-          "path": "organization-product/triple-extraction-workflow-summary.json"
-        },
-        {
-          "actual": null,
-          "expected": 73264,
-          "field": "size_bytes",
-          "name": "corpus.organization-product.workflow_summary",
-          "path": "organization-product/triple-extraction-workflow-summary.json"
-        },
-        {
-          "actual": null,
-          "expected": 1,
-          "field": "file_count",
-          "name": "corpus.organization-product.workflow_summary",
-          "path": "organization-product/triple-extraction-workflow-summary.json"
+          "checked": 9,
+          "failures": [],
+          "manifest_path": "artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/organization-product/artifact-manifest.json",
+          "nested": [],
+          "passed": true
         }
       ],
-      "manifest_path": "artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/artifact-manifest.json",
-      "nested": [],
-      "passed": false
+      "passed": true
     },
     "workflow": "triple_extraction_fixture_matrix"
   },

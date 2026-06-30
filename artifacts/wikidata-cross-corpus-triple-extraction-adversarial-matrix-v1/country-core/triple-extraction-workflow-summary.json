@@ -1,0 +1,2339 @@
+{
+  "baseline_extractor": "rule_based",
+  "baseline_report": {
+    "by_record_type": {
+      "adversarial_negative": {
+        "exact_match_count": 0,
+        "expected_triple_count": 0,
+        "extracted_triple_count": 0,
+        "f1": 0.0,
+        "false_positive_rate": 0.0,
+        "false_positive_record_count": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "record_count": 359,
+        "zero_expected_record_count": 359
+      },
+      "ambiguity_negative": {
+        "exact_match_count": 0,
+        "expected_triple_count": 0,
+        "extracted_triple_count": 0,
+        "f1": 0.0,
+        "false_positive_rate": 0.0,
+        "false_positive_record_count": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "record_count": 359,
+        "zero_expected_record_count": 359
+      },
+      "metalinguistic_negative": {
+        "exact_match_count": 0,
+        "expected_triple_count": 0,
+        "extracted_triple_count": 0,
+        "f1": 0.0,
+        "false_positive_rate": 0.0,
+        "false_positive_record_count": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "record_count": 359,
+        "zero_expected_record_count": 359
+      },
+      "non_assertive_negative": {
+        "exact_match_count": 0,
+        "expected_triple_count": 0,
+        "extracted_triple_count": 0,
+        "f1": 0.0,
+        "false_positive_rate": 0.0,
+        "false_positive_record_count": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "record_count": 359,
+        "zero_expected_record_count": 359
+      },
+      "positive": {
+        "exact_match_count": 1077,
+        "expected_triple_count": 1436,
+        "extracted_triple_count": 1436,
+        "f1": 0.75,
+        "false_positive_rate": 0.0,
+        "false_positive_record_count": 0,
+        "precision": 0.75,
+        "recall": 0.75,
+        "record_count": 1436,
+        "zero_expected_record_count": 0
+      },
+      "predicate_confusion": {
+        "exact_match_count": 359,
+        "expected_triple_count": 359,
+        "extracted_triple_count": 359,
+        "f1": 1.0,
+        "false_positive_rate": 0.0,
+        "false_positive_record_count": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "record_count": 359,
+        "zero_expected_record_count": 0
+      },
+      "temporal_negative": {
+        "exact_match_count": 0,
+        "expected_triple_count": 0,
+        "extracted_triple_count": 0,
+        "f1": 0.0,
+        "false_positive_rate": 0.0,
+        "false_positive_record_count": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "record_count": 359,
+        "zero_expected_record_count": 359
+      }
+    },
+    "error_examples": [
+      {
+        "claim_id": "0001-capital_of-capital-has-at",
+        "expected": [
+          {
+            "object": "kabul",
+            "predicate": "capital_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "extra": [
+          {
+            "object": "its capital at kabul",
+            "predicate": "has",
+            "subject": "afghanistan"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0001-capital_of-capital-has-at",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "has_rule"
+            },
+            "object": "its capital at Kabul",
+            "predicate": "has",
+            "source_text": "Afghanistan has its capital at Kabul.",
+            "subject": "Afghanistan"
+          }
+        ],
+        "index": 3,
+        "missing": [
+          {
+            "object": "kabul",
+            "predicate": "capital_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "text": "Afghanistan has its capital at Kabul."
+      },
+      {
+        "claim_id": "0002-currency_of-currency-possessive-inverse",
+        "expected": [
+          {
+            "object": "afghani",
+            "predicate": "currency_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "extra": [
+          {
+            "object": "afghanistan's currency",
+            "predicate": "is",
+            "subject": "afghani"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0002-currency_of-currency-possessive-inverse",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "is_rule"
+            },
+            "object": "Afghanistan's currency",
+            "predicate": "is",
+            "source_text": "afghani is Afghanistan's currency.",
+            "subject": "afghani"
+          }
+        ],
+        "index": 13,
+        "missing": [
+          {
+            "object": "afghani",
+            "predicate": "currency_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "text": "afghani is Afghanistan's currency."
+      },
+      {
+        "claim_id": "0003-official_language_of-official-language-spoken-in",
+        "expected": [
+          {
+            "object": "arabic",
+            "predicate": "official_language_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "extra": [
+          {
+            "object": "arabic",
+            "predicate": "is",
+            "subject": "the official language spoken in afghanistan"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0003-official_language_of-official-language-spoken-in",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "is_rule"
+            },
+            "object": "Arabic",
+            "predicate": "is",
+            "source_text": "The official language spoken in Afghanistan is Arabic.",
+            "subject": "The official language spoken in Afghanistan"
+          }
+        ],
+        "index": 23,
+        "missing": [
+          {
+            "object": "arabic",
+            "predicate": "official_language_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "text": "The official language spoken in Afghanistan is Arabic."
+      },
+      {
+        "claim_id": "0004-official_language_of-official-language-spoken-in",
+        "expected": [
+          {
+            "object": "balochi",
+            "predicate": "official_language_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "extra": [
+          {
+            "object": "balochi",
+            "predicate": "is",
+            "subject": "the official language spoken in afghanistan"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0004-official_language_of-official-language-spoken-in",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "is_rule"
+            },
+            "object": "Balochi",
+            "predicate": "is",
+            "source_text": "The official language spoken in Afghanistan is Balochi.",
+            "subject": "The official language spoken in Afghanistan"
+          }
+        ],
+        "index": 33,
+        "missing": [
+          {
+            "object": "balochi",
+            "predicate": "official_language_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "text": "The official language spoken in Afghanistan is Balochi."
+      },
+      {
+        "claim_id": "0005-official_language_of-official-language-spoken-in",
+        "expected": [
+          {
+            "object": "dari",
+            "predicate": "official_language_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "extra": [
+          {
+            "object": "dari",
+            "predicate": "is",
+            "subject": "the official language spoken in afghanistan"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0005-official_language_of-official-language-spoken-in",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "is_rule"
+            },
+            "object": "Dari",
+            "predicate": "is",
+            "source_text": "The official language spoken in Afghanistan is Dari.",
+            "subject": "The official language spoken in Afghanistan"
+          }
+        ],
+        "index": 43,
+        "missing": [
+          {
+            "object": "dari",
+            "predicate": "official_language_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "text": "The official language spoken in Afghanistan is Dari."
+      },
+      {
+        "claim_id": "0006-official_language_of-official-language-spoken-in",
+        "expected": [
+          {
+            "object": "nuristani",
+            "predicate": "official_language_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "extra": [
+          {
+            "object": "nuristani",
+            "predicate": "is",
+            "subject": "the official language spoken in afghanistan"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0006-official_language_of-official-language-spoken-in",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "is_rule"
+            },
+            "object": "Nuristani",
+            "predicate": "is",
+            "source_text": "The official language spoken in Afghanistan is Nuristani.",
+            "subject": "The official language spoken in Afghanistan"
+          }
+        ],
+        "index": 53,
+        "missing": [
+          {
+            "object": "nuristani",
+            "predicate": "official_language_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "text": "The official language spoken in Afghanistan is Nuristani."
+      },
+      {
+        "claim_id": "0007-official_language_of-official-language-spoken-in",
+        "expected": [
+          {
+            "object": "pamir",
+            "predicate": "official_language_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "extra": [
+          {
+            "object": "pamir",
+            "predicate": "is",
+            "subject": "the official language spoken in afghanistan"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0007-official_language_of-official-language-spoken-in",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "is_rule"
+            },
+            "object": "Pamir",
+            "predicate": "is",
+            "source_text": "The official language spoken in Afghanistan is Pamir.",
+            "subject": "The official language spoken in Afghanistan"
+          }
+        ],
+        "index": 63,
+        "missing": [
+          {
+            "object": "pamir",
+            "predicate": "official_language_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "text": "The official language spoken in Afghanistan is Pamir."
+      },
+      {
+        "claim_id": "0008-official_language_of-official-language-spoken-in",
+        "expected": [
+          {
+            "object": "pashayi",
+            "predicate": "official_language_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "extra": [
+          {
+            "object": "pashayi",
+            "predicate": "is",
+            "subject": "the official language spoken in afghanistan"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0008-official_language_of-official-language-spoken-in",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "is_rule"
+            },
+            "object": "Pashayi",
+            "predicate": "is",
+            "source_text": "The official language spoken in Afghanistan is Pashayi.",
+            "subject": "The official language spoken in Afghanistan"
+          }
+        ],
+        "index": 73,
+        "missing": [
+          {
+            "object": "pashayi",
+            "predicate": "official_language_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "text": "The official language spoken in Afghanistan is Pashayi."
+      },
+      {
+        "claim_id": "0009-official_language_of-official-language-spoken-in",
+        "expected": [
+          {
+            "object": "pashto",
+            "predicate": "official_language_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "extra": [
+          {
+            "object": "pashto",
+            "predicate": "is",
+            "subject": "the official language spoken in afghanistan"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0009-official_language_of-official-language-spoken-in",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "is_rule"
+            },
+            "object": "Pashto",
+            "predicate": "is",
+            "source_text": "The official language spoken in Afghanistan is Pashto.",
+            "subject": "The official language spoken in Afghanistan"
+          }
+        ],
+        "index": 83,
+        "missing": [
+          {
+            "object": "pashto",
+            "predicate": "official_language_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "text": "The official language spoken in Afghanistan is Pashto."
+      },
+      {
+        "claim_id": "0010-official_language_of-official-language-spoken-in",
+        "expected": [
+          {
+            "object": "turkmen",
+            "predicate": "official_language_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "extra": [
+          {
+            "object": "turkmen",
+            "predicate": "is",
+            "subject": "the official language spoken in afghanistan"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0010-official_language_of-official-language-spoken-in",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "is_rule"
+            },
+            "object": "Turkmen",
+            "predicate": "is",
+            "source_text": "The official language spoken in Afghanistan is Turkmen.",
+            "subject": "The official language spoken in Afghanistan"
+          }
+        ],
+        "index": 93,
+        "missing": [
+          {
+            "object": "turkmen",
+            "predicate": "official_language_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "text": "The official language spoken in Afghanistan is Turkmen."
+      },
+      {
+        "claim_id": "0011-official_language_of-official-language-spoken-in",
+        "expected": [
+          {
+            "object": "uzbek",
+            "predicate": "official_language_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "extra": [
+          {
+            "object": "uzbek",
+            "predicate": "is",
+            "subject": "the official language spoken in afghanistan"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0011-official_language_of-official-language-spoken-in",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "is_rule"
+            },
+            "object": "Uzbek",
+            "predicate": "is",
+            "source_text": "The official language spoken in Afghanistan is Uzbek.",
+            "subject": "The official language spoken in Afghanistan"
+          }
+        ],
+        "index": 103,
+        "missing": [
+          {
+            "object": "uzbek",
+            "predicate": "official_language_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "text": "The official language spoken in Afghanistan is Uzbek."
+      },
+      {
+        "claim_id": "0012-capital_of-capital-has-at",
+        "expected": [
+          {
+            "object": "tirana",
+            "predicate": "capital_of",
+            "subject": "albania"
+          }
+        ],
+        "extra": [
+          {
+            "object": "its capital at tirana",
+            "predicate": "has",
+            "subject": "albania"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0012-capital_of-capital-has-at",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "has_rule"
+            },
+            "object": "its capital at Tirana",
+            "predicate": "has",
+            "source_text": "Albania has its capital at Tirana.",
+            "subject": "Albania"
+          }
+        ],
+        "index": 113,
+        "missing": [
+          {
+            "object": "tirana",
+            "predicate": "capital_of",
+            "subject": "albania"
+          }
+        ],
+        "text": "Albania has its capital at Tirana."
+      },
+      {
+        "claim_id": "0013-currency_of-currency-possessive-inverse",
+        "expected": [
+          {
+            "object": "albanian lek",
+            "predicate": "currency_of",
+            "subject": "albania"
+          }
+        ],
+        "extra": [
+          {
+            "object": "albania's currency",
+            "predicate": "is",
+            "subject": "albanian lek"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0013-currency_of-currency-possessive-inverse",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "is_rule"
+            },
+            "object": "Albania's currency",
+            "predicate": "is",
+            "source_text": "Albanian lek is Albania's currency.",
+            "subject": "Albanian lek"
+          }
+        ],
+        "index": 123,
+        "missing": [
+          {
+            "object": "albanian lek",
+            "predicate": "currency_of",
+            "subject": "albania"
+          }
+        ],
+        "text": "Albanian lek is Albania's currency."
+      },
+      {
+        "claim_id": "0014-official_language_of-official-language-spoken-in",
+        "expected": [
+          {
+            "object": "albanian",
+            "predicate": "official_language_of",
+            "subject": "albania"
+          }
+        ],
+        "extra": [
+          {
+            "object": "albanian",
+            "predicate": "is",
+            "subject": "the official language spoken in albania"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0014-official_language_of-official-language-spoken-in",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "is_rule"
+            },
+            "object": "Albanian",
+            "predicate": "is",
+            "source_text": "The official language spoken in Albania is Albanian.",
+            "subject": "The official language spoken in Albania"
+          }
+        ],
+        "index": 133,
+        "missing": [
+          {
+            "object": "albanian",
+            "predicate": "official_language_of",
+            "subject": "albania"
+          }
+        ],
+        "text": "The official language spoken in Albania is Albanian."
+      },
+      {
+        "claim_id": "0015-capital_of-capital-has-at",
+        "expected": [
+          {
+            "object": "algiers",
+            "predicate": "capital_of",
+            "subject": "algeria"
+          }
+        ],
+        "extra": [
+          {
+            "object": "its capital at algiers",
+            "predicate": "has",
+            "subject": "algeria"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0015-capital_of-capital-has-at",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "has_rule"
+            },
+            "object": "its capital at Algiers",
+            "predicate": "has",
+            "source_text": "Algeria has its capital at Algiers.",
+            "subject": "Algeria"
+          }
+        ],
+        "index": 143,
+        "missing": [
+          {
+            "object": "algiers",
+            "predicate": "capital_of",
+            "subject": "algeria"
+          }
+        ],
+        "text": "Algeria has its capital at Algiers."
+      },
+      {
+        "claim_id": "0016-currency_of-currency-possessive-inverse",
+        "expected": [
+          {
+            "object": "algerian dinar",
+            "predicate": "currency_of",
+            "subject": "algeria"
+          }
+        ],
+        "extra": [
+          {
+            "object": "algeria's currency",
+            "predicate": "is",
+            "subject": "algerian dinar"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0016-currency_of-currency-possessive-inverse",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "is_rule"
+            },
+            "object": "Algeria's currency",
+            "predicate": "is",
+            "source_text": "Algerian dinar is Algeria's currency.",
+            "subject": "Algerian dinar"
+          }
+        ],
+        "index": 153,
+        "missing": [
+          {
+            "object": "algerian dinar",
+            "predicate": "currency_of",
+            "subject": "algeria"
+          }
+        ],
+        "text": "Algerian dinar is Algeria's currency."
+      },
+      {
+        "claim_id": "0017-official_language_of-official-language-spoken-in",
+        "expected": [
+          {
+            "object": "arabic",
+            "predicate": "official_language_of",
+            "subject": "algeria"
+          }
+        ],
+        "extra": [
+          {
+            "object": "arabic",
+            "predicate": "is",
+            "subject": "the official language spoken in algeria"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0017-official_language_of-official-language-spoken-in",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "is_rule"
+            },
+            "object": "Arabic",
+            "predicate": "is",
+            "source_text": "The official language spoken in Algeria is Arabic.",
+            "subject": "The official language spoken in Algeria"
+          }
+        ],
+        "index": 163,
+        "missing": [
+          {
+            "object": "arabic",
+            "predicate": "official_language_of",
+            "subject": "algeria"
+          }
+        ],
+        "text": "The official language spoken in Algeria is Arabic."
+      },
+      {
+        "claim_id": "0018-official_language_of-official-language-spoken-in",
+        "expected": [
+          {
+            "object": "standard algerian berber",
+            "predicate": "official_language_of",
+            "subject": "algeria"
+          }
+        ],
+        "extra": [
+          {
+            "object": "standard algerian berber",
+            "predicate": "is",
+            "subject": "the official language spoken in algeria"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0018-official_language_of-official-language-spoken-in",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "is_rule"
+            },
+            "object": "Standard Algerian Berber",
+            "predicate": "is",
+            "source_text": "The official language spoken in Algeria is Standard Algerian Berber.",
+            "subject": "The official language spoken in Algeria"
+          }
+        ],
+        "index": 173,
+        "missing": [
+          {
+            "object": "standard algerian berber",
+            "predicate": "official_language_of",
+            "subject": "algeria"
+          }
+        ],
+        "text": "The official language spoken in Algeria is Standard Algerian Berber."
+      },
+      {
+        "claim_id": "0019-capital_of-capital-has-at",
+        "expected": [
+          {
+            "object": "andorra la vella",
+            "predicate": "capital_of",
+            "subject": "andorra"
+          }
+        ],
+        "extra": [
+          {
+            "object": "its capital at andorra la vella",
+            "predicate": "has",
+            "subject": "andorra"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0019-capital_of-capital-has-at",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "has_rule"
+            },
+            "object": "its capital at Andorra la Vella",
+            "predicate": "has",
+            "source_text": "Andorra has its capital at Andorra la Vella.",
+            "subject": "Andorra"
+          }
+        ],
+        "index": 183,
+        "missing": [
+          {
+            "object": "andorra la vella",
+            "predicate": "capital_of",
+            "subject": "andorra"
+          }
+        ],
+        "text": "Andorra has its capital at Andorra la Vella."
+      },
+      {
+        "claim_id": "0020-currency_of-currency-possessive-inverse",
+        "expected": [
+          {
+            "object": "euro",
+            "predicate": "currency_of",
+            "subject": "andorra"
+          }
+        ],
+        "extra": [
+          {
+            "object": "andorra's currency",
+            "predicate": "is",
+            "subject": "euro"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0020-currency_of-currency-possessive-inverse",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "is_rule"
+            },
+            "object": "Andorra's currency",
+            "predicate": "is",
+            "source_text": "euro is Andorra's currency.",
+            "subject": "euro"
+          }
+        ],
+        "index": 193,
+        "missing": [
+          {
+            "object": "euro",
+            "predicate": "currency_of",
+            "subject": "andorra"
+          }
+        ],
+        "text": "euro is Andorra's currency."
+      }
+    ],
+    "exact_match_count": 1436,
+    "expected_triple_count": 1795,
+    "extracted_triple_count": 1795,
+    "f1": 0.8000000000000002,
+    "false_positive_rate": 0.0,
+    "false_positive_record_count": 0,
+    "precision": 0.8,
+    "recall": 0.8,
+    "record_count": 3590,
+    "zero_expected_record_count": 1795
+  },
+  "best_adversarial_report": {
+    "exact_match_count": 0,
+    "expected_triple_count": 0,
+    "extracted_triple_count": 0,
+    "f1": 0.0,
+    "false_positive_rate": 0.0,
+    "false_positive_record_count": 0,
+    "precision": 0.0,
+    "recall": 0.0,
+    "record_count": 359,
+    "zero_expected_record_count": 359
+  },
+  "best_ambiguity_report": {
+    "exact_match_count": 0,
+    "expected_triple_count": 0,
+    "extracted_triple_count": 0,
+    "f1": 0.0,
+    "false_positive_rate": 0.0,
+    "false_positive_record_count": 0,
+    "precision": 0.0,
+    "recall": 0.0,
+    "record_count": 359,
+    "zero_expected_record_count": 359
+  },
+  "best_extractor": "regex_rule_based",
+  "best_metalinguistic_report": {
+    "exact_match_count": 0,
+    "expected_triple_count": 0,
+    "extracted_triple_count": 0,
+    "f1": 0.0,
+    "false_positive_rate": 0.0,
+    "false_positive_record_count": 0,
+    "precision": 0.0,
+    "recall": 0.0,
+    "record_count": 359,
+    "zero_expected_record_count": 359
+  },
+  "best_non_assertive_report": {
+    "exact_match_count": 0,
+    "expected_triple_count": 0,
+    "extracted_triple_count": 0,
+    "f1": 0.0,
+    "false_positive_rate": 0.0,
+    "false_positive_record_count": 0,
+    "precision": 0.0,
+    "recall": 0.0,
+    "record_count": 359,
+    "zero_expected_record_count": 359
+  },
+  "best_predicate_confusion_report": {
+    "exact_match_count": 359,
+    "expected_triple_count": 359,
+    "extracted_triple_count": 359,
+    "f1": 1.0,
+    "false_positive_rate": 0.0,
+    "false_positive_record_count": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "record_count": 359,
+    "zero_expected_record_count": 0
+  },
+  "best_report": {
+    "by_record_type": {
+      "adversarial_negative": {
+        "exact_match_count": 0,
+        "expected_triple_count": 0,
+        "extracted_triple_count": 0,
+        "f1": 0.0,
+        "false_positive_rate": 0.0,
+        "false_positive_record_count": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "record_count": 359,
+        "zero_expected_record_count": 359
+      },
+      "ambiguity_negative": {
+        "exact_match_count": 0,
+        "expected_triple_count": 0,
+        "extracted_triple_count": 0,
+        "f1": 0.0,
+        "false_positive_rate": 0.0,
+        "false_positive_record_count": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "record_count": 359,
+        "zero_expected_record_count": 359
+      },
+      "metalinguistic_negative": {
+        "exact_match_count": 0,
+        "expected_triple_count": 0,
+        "extracted_triple_count": 0,
+        "f1": 0.0,
+        "false_positive_rate": 0.0,
+        "false_positive_record_count": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "record_count": 359,
+        "zero_expected_record_count": 359
+      },
+      "non_assertive_negative": {
+        "exact_match_count": 0,
+        "expected_triple_count": 0,
+        "extracted_triple_count": 0,
+        "f1": 0.0,
+        "false_positive_rate": 0.0,
+        "false_positive_record_count": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "record_count": 359,
+        "zero_expected_record_count": 359
+      },
+      "positive": {
+        "exact_match_count": 1436,
+        "expected_triple_count": 1436,
+        "extracted_triple_count": 1436,
+        "f1": 1.0,
+        "false_positive_rate": 0.0,
+        "false_positive_record_count": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "record_count": 1436,
+        "zero_expected_record_count": 0
+      },
+      "predicate_confusion": {
+        "exact_match_count": 359,
+        "expected_triple_count": 359,
+        "extracted_triple_count": 359,
+        "f1": 1.0,
+        "false_positive_rate": 0.0,
+        "false_positive_record_count": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "record_count": 359,
+        "zero_expected_record_count": 0
+      },
+      "temporal_negative": {
+        "exact_match_count": 0,
+        "expected_triple_count": 0,
+        "extracted_triple_count": 0,
+        "f1": 0.0,
+        "false_positive_rate": 0.0,
+        "false_positive_record_count": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "record_count": 359,
+        "zero_expected_record_count": 359
+      }
+    },
+    "error_examples": [],
+    "exact_match_count": 1795,
+    "expected_triple_count": 1795,
+    "extracted_triple_count": 1795,
+    "f1": 1.0,
+    "false_positive_rate": 0.0,
+    "false_positive_record_count": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "record_count": 3590,
+    "zero_expected_record_count": 1795
+  },
+  "best_temporal_report": {
+    "exact_match_count": 0,
+    "expected_triple_count": 0,
+    "extracted_triple_count": 0,
+    "f1": 0.0,
+    "false_positive_rate": 0.0,
+    "false_positive_record_count": 0,
+    "precision": 0.0,
+    "recall": 0.0,
+    "record_count": 359,
+    "zero_expected_record_count": 359
+  },
+  "external_prediction_paths": {
+    "lookup_gold": "artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/external-predictions/country-core-lookup-gold-predictions.json"
+  },
+  "f1_lift": 0.19999999999999984,
+  "fact_corpus_paths": [
+    "artifacts/wikidata-country-core-facts-external-corpus/wikidata-country-core-facts-source.jsonl"
+  ],
+  "fixture_summary": {
+    "by_predicate": {
+      "capital_of": {
+        "fact_count": 103,
+        "record_count": 1082
+      },
+      "currency_of": {
+        "fact_count": 101,
+        "record_count": 1012
+      },
+      "official_language_of": {
+        "fact_count": 155,
+        "record_count": 1496
+      }
+    },
+    "n_adversarial_negative_records": 359,
+    "n_ambiguity_negative_records": 359,
+    "n_facts": 359,
+    "n_metalinguistic_negative_records": 359,
+    "n_non_assertive_negative_records": 359,
+    "n_predicate_confusion_records": 359,
+    "n_records": 3590,
+    "n_source_records": 359,
+    "n_temporal_negative_records": 359,
+    "skipped": {
+      "duplicate_record": 0,
+      "invalid_fact": 0,
+      "unsupported_predicate": 0
+    }
+  },
+  "pattern_count": 15,
+  "patterns_path": "artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/country-core/triple-extraction-regex-patterns.json",
+  "promotion_gate": {
+    "adversarial_negatives_per_fact": 1,
+    "ambiguity_negatives_per_fact": 1,
+    "failures": [],
+    "max_adversarial_false_positive_rate": 0.0,
+    "max_ambiguity_false_positive_rate": 0.0,
+    "max_metalinguistic_false_positive_rate": 0.0,
+    "max_non_assertive_false_positive_rate": 0.0,
+    "max_temporal_false_positive_rate": 0.0,
+    "metalinguistic_negatives_per_fact": 1,
+    "min_augmented_f1": 1.0,
+    "min_predicate_confusion_f1": 1.0,
+    "non_assertive_negatives_per_fact": 1,
+    "predicate_confusions_per_fact": 1,
+    "require_f1_lift": true,
+    "temporal_negatives_per_fact": 1
+  },
+  "records_path": "artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/country-core/triple-extraction-records.json",
+  "report_paths": {
+    "composite": "artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/country-core/composite-triple-extraction-report.json",
+    "external_lookup_gold": "artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/country-core/external_lookup_gold-triple-extraction-report.json",
+    "regex_rule_based": "artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/country-core/regex_rule_based-triple-extraction-report.json",
+    "rule_based": "artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/country-core/rule_based-triple-extraction-report.json"
+  },
+  "reports": {
+    "composite": {
+      "by_record_type": {
+        "adversarial_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 359,
+          "zero_expected_record_count": 359
+        },
+        "ambiguity_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 359,
+          "zero_expected_record_count": 359
+        },
+        "metalinguistic_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 359,
+          "zero_expected_record_count": 359
+        },
+        "non_assertive_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 359,
+          "zero_expected_record_count": 359
+        },
+        "positive": {
+          "exact_match_count": 1436,
+          "expected_triple_count": 1436,
+          "extracted_triple_count": 1436,
+          "f1": 1.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "record_count": 1436,
+          "zero_expected_record_count": 0
+        },
+        "predicate_confusion": {
+          "exact_match_count": 359,
+          "expected_triple_count": 359,
+          "extracted_triple_count": 359,
+          "f1": 1.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "record_count": 359,
+          "zero_expected_record_count": 0
+        },
+        "temporal_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 359,
+          "zero_expected_record_count": 359
+        }
+      },
+      "error_examples": [],
+      "exact_match_count": 1795,
+      "expected_triple_count": 1795,
+      "extracted_triple_count": 1795,
+      "f1": 1.0,
+      "false_positive_rate": 0.0,
+      "false_positive_record_count": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "record_count": 3590,
+      "zero_expected_record_count": 1795
+    },
+    "external_lookup_gold": {
+      "by_record_type": {
+        "adversarial_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 359,
+          "zero_expected_record_count": 359
+        },
+        "ambiguity_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 359,
+          "zero_expected_record_count": 359
+        },
+        "metalinguistic_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 359,
+          "zero_expected_record_count": 359
+        },
+        "non_assertive_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 359,
+          "zero_expected_record_count": 359
+        },
+        "positive": {
+          "exact_match_count": 1436,
+          "expected_triple_count": 1436,
+          "extracted_triple_count": 1436,
+          "f1": 1.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "record_count": 1436,
+          "zero_expected_record_count": 0
+        },
+        "predicate_confusion": {
+          "exact_match_count": 359,
+          "expected_triple_count": 359,
+          "extracted_triple_count": 359,
+          "f1": 1.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "record_count": 359,
+          "zero_expected_record_count": 0
+        },
+        "temporal_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 359,
+          "zero_expected_record_count": 359
+        }
+      },
+      "error_examples": [],
+      "exact_match_count": 1795,
+      "expected_triple_count": 1795,
+      "extracted_triple_count": 1795,
+      "f1": 1.0,
+      "false_positive_rate": 0.0,
+      "false_positive_record_count": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "record_count": 3590,
+      "zero_expected_record_count": 1795
+    },
+    "regex_rule_based": {
+      "by_record_type": {
+        "adversarial_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 359,
+          "zero_expected_record_count": 359
+        },
+        "ambiguity_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 359,
+          "zero_expected_record_count": 359
+        },
+        "metalinguistic_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 359,
+          "zero_expected_record_count": 359
+        },
+        "non_assertive_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 359,
+          "zero_expected_record_count": 359
+        },
+        "positive": {
+          "exact_match_count": 1436,
+          "expected_triple_count": 1436,
+          "extracted_triple_count": 1436,
+          "f1": 1.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "record_count": 1436,
+          "zero_expected_record_count": 0
+        },
+        "predicate_confusion": {
+          "exact_match_count": 359,
+          "expected_triple_count": 359,
+          "extracted_triple_count": 359,
+          "f1": 1.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "record_count": 359,
+          "zero_expected_record_count": 0
+        },
+        "temporal_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 359,
+          "zero_expected_record_count": 359
+        }
+      },
+      "error_examples": [],
+      "exact_match_count": 1795,
+      "expected_triple_count": 1795,
+      "extracted_triple_count": 1795,
+      "f1": 1.0,
+      "false_positive_rate": 0.0,
+      "false_positive_record_count": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "record_count": 3590,
+      "zero_expected_record_count": 1795
+    },
+    "rule_based": {
+      "by_record_type": {
+        "adversarial_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 359,
+          "zero_expected_record_count": 359
+        },
+        "ambiguity_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 359,
+          "zero_expected_record_count": 359
+        },
+        "metalinguistic_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 359,
+          "zero_expected_record_count": 359
+        },
+        "non_assertive_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 359,
+          "zero_expected_record_count": 359
+        },
+        "positive": {
+          "exact_match_count": 1077,
+          "expected_triple_count": 1436,
+          "extracted_triple_count": 1436,
+          "f1": 0.75,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.75,
+          "recall": 0.75,
+          "record_count": 1436,
+          "zero_expected_record_count": 0
+        },
+        "predicate_confusion": {
+          "exact_match_count": 359,
+          "expected_triple_count": 359,
+          "extracted_triple_count": 359,
+          "f1": 1.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "record_count": 359,
+          "zero_expected_record_count": 0
+        },
+        "temporal_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 359,
+          "zero_expected_record_count": 359
+        }
+      },
+      "error_examples": [
+        {
+          "claim_id": "0001-capital_of-capital-has-at",
+          "expected": [
+            {
+              "object": "kabul",
+              "predicate": "capital_of",
+              "subject": "afghanistan"
+            }
+          ],
+          "extra": [
+            {
+              "object": "its capital at kabul",
+              "predicate": "has",
+              "subject": "afghanistan"
+            }
+          ],
+          "extracted": [
+            {
+              "claim_id": "0001-capital_of-capital-has-at",
+              "confidence": 0.55,
+              "metadata": {
+                "extractor": "rule_based_triple_extractor",
+                "source": "has_rule"
+              },
+              "object": "its capital at Kabul",
+              "predicate": "has",
+              "source_text": "Afghanistan has its capital at Kabul.",
+              "subject": "Afghanistan"
+            }
+          ],
+          "index": 3,
+          "missing": [
+            {
+              "object": "kabul",
+              "predicate": "capital_of",
+              "subject": "afghanistan"
+            }
+          ],
+          "text": "Afghanistan has its capital at Kabul."
+        },
+        {
+          "claim_id": "0002-currency_of-currency-possessive-inverse",
+          "expected": [
+            {
+              "object": "afghani",
+              "predicate": "currency_of",
+              "subject": "afghanistan"
+            }
+          ],
+          "extra": [
+            {
+              "object": "afghanistan's currency",
+              "predicate": "is",
+              "subject": "afghani"
+            }
+          ],
+          "extracted": [
+            {
+              "claim_id": "0002-currency_of-currency-possessive-inverse",
+              "confidence": 0.55,
+              "metadata": {
+                "extractor": "rule_based_triple_extractor",
+                "source": "is_rule"
+              },
+              "object": "Afghanistan's currency",
+              "predicate": "is",
+              "source_text": "afghani is Afghanistan's currency.",
+              "subject": "afghani"
+            }
+          ],
+          "index": 13,
+          "missing": [
+            {
+              "object": "afghani",
+              "predicate": "currency_of",
+              "subject": "afghanistan"
+            }
+          ],
+          "text": "afghani is Afghanistan's currency."
+        },
+        {
+          "claim_id": "0003-official_language_of-official-language-spoken-in",
+          "expected": [
+            {
+              "object": "arabic",
+              "predicate": "official_language_of",
+              "subject": "afghanistan"
+            }
+          ],
+          "extra": [
+            {
+              "object": "arabic",
+              "predicate": "is",
+              "subject": "the official language spoken in afghanistan"
+            }
+          ],
+          "extracted": [
+            {
+              "claim_id": "0003-official_language_of-official-language-spoken-in",
+              "confidence": 0.55,
+              "metadata": {
+                "extractor": "rule_based_triple_extractor",
+                "source": "is_rule"
+              },
+              "object": "Arabic",
+              "predicate": "is",
+              "source_text": "The official language spoken in Afghanistan is Arabic.",
+              "subject": "The official language spoken in Afghanistan"
+            }
+          ],
+          "index": 23,
+          "missing": [
+            {
+              "object": "arabic",
+              "predicate": "official_language_of",
+              "subject": "afghanistan"
+            }
+          ],
+          "text": "The official language spoken in Afghanistan is Arabic."
+        },
+        {
+          "claim_id": "0004-official_language_of-official-language-spoken-in",
+          "expected": [
+            {
+              "object": "balochi",
+              "predicate": "official_language_of",
+              "subject": "afghanistan"
+            }
+          ],
+          "extra": [
+            {
+              "object": "balochi",
+              "predicate": "is",
+              "subject": "the official language spoken in afghanistan"
+            }
+          ],
+          "extracted": [
+            {
+              "claim_id": "0004-official_language_of-official-language-spoken-in",
+              "confidence": 0.55,
+              "metadata": {
+                "extractor": "rule_based_triple_extractor",
+                "source": "is_rule"
+              },
+              "object": "Balochi",
+              "predicate": "is",
+              "source_text": "The official language spoken in Afghanistan is Balochi.",
+              "subject": "The official language spoken in Afghanistan"
+            }
+          ],
+          "index": 33,
+          "missing": [
+            {
+              "object": "balochi",
+              "predicate": "official_language_of",
+              "subject": "afghanistan"
+            }
+          ],
+          "text": "The official language spoken in Afghanistan is Balochi."
+        },
+        {
+          "claim_id": "0005-official_language_of-official-language-spoken-in",
+          "expected": [
+            {
+              "object": "dari",
+              "predicate": "official_language_of",
+              "subject": "afghanistan"
+            }
+          ],
+          "extra": [
+            {
+              "object": "dari",
+              "predicate": "is",
+              "subject": "the official language spoken in afghanistan"
+            }
+          ],
+          "extracted": [
+            {
+              "claim_id": "0005-official_language_of-official-language-spoken-in",
+              "confidence": 0.55,
+              "metadata": {
+                "extractor": "rule_based_triple_extractor",
+                "source": "is_rule"
+              },
+              "object": "Dari",
+              "predicate": "is",
+              "source_text": "The official language spoken in Afghanistan is Dari.",
+              "subject": "The official language spoken in Afghanistan"
+            }
+          ],
+          "index": 43,
+          "missing": [
+            {
+              "object": "dari",
+              "predicate": "official_language_of",
+              "subject": "afghanistan"
+            }
+          ],
+          "text": "The official language spoken in Afghanistan is Dari."
+        },
+        {
+          "claim_id": "0006-official_language_of-official-language-spoken-in",
+          "expected": [
+            {
+              "object": "nuristani",
+              "predicate": "official_language_of",
+              "subject": "afghanistan"
+            }
+          ],
+          "extra": [
+            {
+              "object": "nuristani",
+              "predicate": "is",
+              "subject": "the official language spoken in afghanistan"
+            }
+          ],
+          "extracted": [
+            {
+              "claim_id": "0006-official_language_of-official-language-spoken-in",
+              "confidence": 0.55,
+              "metadata": {
+                "extractor": "rule_based_triple_extractor",
+                "source": "is_rule"
+              },
+              "object": "Nuristani",
+              "predicate": "is",
+              "source_text": "The official language spoken in Afghanistan is Nuristani.",
+              "subject": "The official language spoken in Afghanistan"
+            }
+          ],
+          "index": 53,
+          "missing": [
+            {
+              "object": "nuristani",
+              "predicate": "official_language_of",
+              "subject": "afghanistan"
+            }
+          ],
+          "text": "The official language spoken in Afghanistan is Nuristani."
+        },
+        {
+          "claim_id": "0007-official_language_of-official-language-spoken-in",
+          "expected": [
+            {
+              "object": "pamir",
+              "predicate": "official_language_of",
+              "subject": "afghanistan"
+            }
+          ],
+          "extra": [
+            {
+              "object": "pamir",
+              "predicate": "is",
+              "subject": "the official language spoken in afghanistan"
+            }
+          ],
+          "extracted": [
+            {
+              "claim_id": "0007-official_language_of-official-language-spoken-in",
+              "confidence": 0.55,
+              "metadata": {
+                "extractor": "rule_based_triple_extractor",
+                "source": "is_rule"
+              },
+              "object": "Pamir",
+              "predicate": "is",
+              "source_text": "The official language spoken in Afghanistan is Pamir.",
+              "subject": "The official language spoken in Afghanistan"
+            }
+          ],
+          "index": 63,
+          "missing": [
+            {
+              "object": "pamir",
+              "predicate": "official_language_of",
+              "subject": "afghanistan"
+            }
+          ],
+          "text": "The official language spoken in Afghanistan is Pamir."
+        },
+        {
+          "claim_id": "0008-official_language_of-official-language-spoken-in",
+          "expected": [
+            {
+              "object": "pashayi",
+              "predicate": "official_language_of",
+              "subject": "afghanistan"
+            }
+          ],
+          "extra": [
+            {
+              "object": "pashayi",
+              "predicate": "is",
+              "subject": "the official language spoken in afghanistan"
+            }
+          ],
+          "extracted": [
+            {
+              "claim_id": "0008-official_language_of-official-language-spoken-in",
+              "confidence": 0.55,
+              "metadata": {
+                "extractor": "rule_based_triple_extractor",
+                "source": "is_rule"
+              },
+              "object": "Pashayi",
+              "predicate": "is",
+              "source_text": "The official language spoken in Afghanistan is Pashayi.",
+              "subject": "The official language spoken in Afghanistan"
+            }
+          ],
+          "index": 73,
+          "missing": [
+            {
+              "object": "pashayi",
+              "predicate": "official_language_of",
+              "subject": "afghanistan"
+            }
+          ],
+          "text": "The official language spoken in Afghanistan is Pashayi."
+        },
+        {
+          "claim_id": "0009-official_language_of-official-language-spoken-in",
+          "expected": [
+            {
+              "object": "pashto",
+              "predicate": "official_language_of",
+              "subject": "afghanistan"
+            }
+          ],
+          "extra": [
+            {
+              "object": "pashto",
+              "predicate": "is",
+              "subject": "the official language spoken in afghanistan"
+            }
+          ],
+          "extracted": [
+            {
+              "claim_id": "0009-official_language_of-official-language-spoken-in",
+              "confidence": 0.55,
+              "metadata": {
+                "extractor": "rule_based_triple_extractor",
+                "source": "is_rule"
+              },
+              "object": "Pashto",
+              "predicate": "is",
+              "source_text": "The official language spoken in Afghanistan is Pashto.",
+              "subject": "The official language spoken in Afghanistan"
+            }
+          ],
+          "index": 83,
+          "missing": [
+            {
+              "object": "pashto",
+              "predicate": "official_language_of",
+              "subject": "afghanistan"
+            }
+          ],
+          "text": "The official language spoken in Afghanistan is Pashto."
+        },
+        {
+          "claim_id": "0010-official_language_of-official-language-spoken-in",
+          "expected": [
+            {
+              "object": "turkmen",
+              "predicate": "official_language_of",
+              "subject": "afghanistan"
+            }
+          ],
+          "extra": [
+            {
+              "object": "turkmen",
+              "predicate": "is",
+              "subject": "the official language spoken in afghanistan"
+            }
+          ],
+          "extracted": [
+            {
+              "claim_id": "0010-official_language_of-official-language-spoken-in",
+              "confidence": 0.55,
+              "metadata": {
+                "extractor": "rule_based_triple_extractor",
+                "source": "is_rule"
+              },
+              "object": "Turkmen",
+              "predicate": "is",
+              "source_text": "The official language spoken in Afghanistan is Turkmen.",
+              "subject": "The official language spoken in Afghanistan"
+            }
+          ],
+          "index": 93,
+          "missing": [
+            {
+              "object": "turkmen",
+              "predicate": "official_language_of",
+              "subject": "afghanistan"
+            }
+          ],
+          "text": "The official language spoken in Afghanistan is Turkmen."
+        },
+        {
+          "claim_id": "0011-official_language_of-official-language-spoken-in",
+          "expected": [
+            {
+              "object": "uzbek",
+              "predicate": "official_language_of",
+              "subject": "afghanistan"
+            }
+          ],
+          "extra": [
+            {
+              "object": "uzbek",
+              "predicate": "is",
+              "subject": "the official language spoken in afghanistan"
+            }
+          ],
+          "extracted": [
+            {
+              "claim_id": "0011-official_language_of-official-language-spoken-in",
+              "confidence": 0.55,
+              "metadata": {
+                "extractor": "rule_based_triple_extractor",
+                "source": "is_rule"
+              },
+              "object": "Uzbek",
+              "predicate": "is",
+              "source_text": "The official language spoken in Afghanistan is Uzbek.",
+              "subject": "The official language spoken in Afghanistan"
+            }
+          ],
+          "index": 103,
+          "missing": [
+            {
+              "object": "uzbek",
+              "predicate": "official_language_of",
+              "subject": "afghanistan"
+            }
+          ],
+          "text": "The official language spoken in Afghanistan is Uzbek."
+        },
+        {
+          "claim_id": "0012-capital_of-capital-has-at",
+          "expected": [
+            {
+              "object": "tirana",
+              "predicate": "capital_of",
+              "subject": "albania"
+            }
+          ],
+          "extra": [
+            {
+              "object": "its capital at tirana",
+              "predicate": "has",
+              "subject": "albania"
+            }
+          ],
+          "extracted": [
+            {
+              "claim_id": "0012-capital_of-capital-has-at",
+              "confidence": 0.55,
+              "metadata": {
+                "extractor": "rule_based_triple_extractor",
+                "source": "has_rule"
+              },
+              "object": "its capital at Tirana",
+              "predicate": "has",
+              "source_text": "Albania has its capital at Tirana.",
+              "subject": "Albania"
+            }
+          ],
+          "index": 113,
+          "missing": [
+            {
+              "object": "tirana",
+              "predicate": "capital_of",
+              "subject": "albania"
+            }
+          ],
+          "text": "Albania has its capital at Tirana."
+        },
+        {
+          "claim_id": "0013-currency_of-currency-possessive-inverse",
+          "expected": [
+            {
+              "object": "albanian lek",
+              "predicate": "currency_of",
+              "subject": "albania"
+            }
+          ],
+          "extra": [
+            {
+              "object": "albania's currency",
+              "predicate": "is",
+              "subject": "albanian lek"
+            }
+          ],
+          "extracted": [
+            {
+              "claim_id": "0013-currency_of-currency-possessive-inverse",
+              "confidence": 0.55,
+              "metadata": {
+                "extractor": "rule_based_triple_extractor",
+                "source": "is_rule"
+              },
+              "object": "Albania's currency",
+              "predicate": "is",
+              "source_text": "Albanian lek is Albania's currency.",
+              "subject": "Albanian lek"
+            }
+          ],
+          "index": 123,
+          "missing": [
+            {
+              "object": "albanian lek",
+              "predicate": "currency_of",
+              "subject": "albania"
+            }
+          ],
+          "text": "Albanian lek is Albania's currency."
+        },
+        {
+          "claim_id": "0014-official_language_of-official-language-spoken-in",
+          "expected": [
+            {
+              "object": "albanian",
+              "predicate": "official_language_of",
+              "subject": "albania"
+            }
+          ],
+          "extra": [
+            {
+              "object": "albanian",
+              "predicate": "is",
+              "subject": "the official language spoken in albania"
+            }
+          ],
+          "extracted": [
+            {
+              "claim_id": "0014-official_language_of-official-language-spoken-in",
+              "confidence": 0.55,
+              "metadata": {
+                "extractor": "rule_based_triple_extractor",
+                "source": "is_rule"
+              },
+              "object": "Albanian",
+              "predicate": "is",
+              "source_text": "The official language spoken in Albania is Albanian.",
+              "subject": "The official language spoken in Albania"
+            }
+          ],
+          "index": 133,
+          "missing": [
+            {
+              "object": "albanian",
+              "predicate": "official_language_of",
+              "subject": "albania"
+            }
+          ],
+          "text": "The official language spoken in Albania is Albanian."
+        },
+        {
+          "claim_id": "0015-capital_of-capital-has-at",
+          "expected": [
+            {
+              "object": "algiers",
+              "predicate": "capital_of",
+              "subject": "algeria"
+            }
+          ],
+          "extra": [
+            {
+              "object": "its capital at algiers",
+              "predicate": "has",
+              "subject": "algeria"
+            }
+          ],
+          "extracted": [
+            {
+              "claim_id": "0015-capital_of-capital-has-at",
+              "confidence": 0.55,
+              "metadata": {
+                "extractor": "rule_based_triple_extractor",
+                "source": "has_rule"
+              },
+              "object": "its capital at Algiers",
+              "predicate": "has",
+              "source_text": "Algeria has its capital at Algiers.",
+              "subject": "Algeria"
+            }
+          ],
+          "index": 143,
+          "missing": [
+            {
+              "object": "algiers",
+              "predicate": "capital_of",
+              "subject": "algeria"
+            }
+          ],
+          "text": "Algeria has its capital at Algiers."
+        },
+        {
+          "claim_id": "0016-currency_of-currency-possessive-inverse",
+          "expected": [
+            {
+              "object": "algerian dinar",
+              "predicate": "currency_of",
+              "subject": "algeria"
+            }
+          ],
+          "extra": [
+            {
+              "object": "algeria's currency",
+              "predicate": "is",
+              "subject": "algerian dinar"
+            }
+          ],
+          "extracted": [
+            {
+              "claim_id": "0016-currency_of-currency-possessive-inverse",
+              "confidence": 0.55,
+              "metadata": {
+                "extractor": "rule_based_triple_extractor",
+                "source": "is_rule"
+              },
+              "object": "Algeria's currency",
+              "predicate": "is",
+              "source_text": "Algerian dinar is Algeria's currency.",
+              "subject": "Algerian dinar"
+            }
+          ],
+          "index": 153,
+          "missing": [
+            {
+              "object": "algerian dinar",
+              "predicate": "currency_of",
+              "subject": "algeria"
+            }
+          ],
+          "text": "Algerian dinar is Algeria's currency."
+        },
+        {
+          "claim_id": "0017-official_language_of-official-language-spoken-in",
+          "expected": [
+            {
+              "object": "arabic",
+              "predicate": "official_language_of",
+              "subject": "algeria"
+            }
+          ],
+          "extra": [
+            {
+              "object": "arabic",
+              "predicate": "is",
+              "subject": "the official language spoken in algeria"
+            }
+          ],
+          "extracted": [
+            {
+              "claim_id": "0017-official_language_of-official-language-spoken-in",
+              "confidence": 0.55,
+              "metadata": {
+                "extractor": "rule_based_triple_extractor",
+                "source": "is_rule"
+              },
+              "object": "Arabic",
+              "predicate": "is",
+              "source_text": "The official language spoken in Algeria is Arabic.",
+              "subject": "The official language spoken in Algeria"
+            }
+          ],
+          "index": 163,
+          "missing": [
+            {
+              "object": "arabic",
+              "predicate": "official_language_of",
+              "subject": "algeria"
+            }
+          ],
+          "text": "The official language spoken in Algeria is Arabic."
+        },
+        {
+          "claim_id": "0018-official_language_of-official-language-spoken-in",
+          "expected": [
+            {
+              "object": "standard algerian berber",
+              "predicate": "official_language_of",
+              "subject": "algeria"
+            }
+          ],
+          "extra": [
+            {
+              "object": "standard algerian berber",
+              "predicate": "is",
+              "subject": "the official language spoken in algeria"
+            }
+          ],
+          "extracted": [
+            {
+              "claim_id": "0018-official_language_of-official-language-spoken-in",
+              "confidence": 0.55,
+              "metadata": {
+                "extractor": "rule_based_triple_extractor",
+                "source": "is_rule"
+              },
+              "object": "Standard Algerian Berber",
+              "predicate": "is",
+              "source_text": "The official language spoken in Algeria is Standard Algerian Berber.",
+              "subject": "The official language spoken in Algeria"
+            }
+          ],
+          "index": 173,
+          "missing": [
+            {
+              "object": "standard algerian berber",
+              "predicate": "official_language_of",
+              "subject": "algeria"
+            }
+          ],
+          "text": "The official language spoken in Algeria is Standard Algerian Berber."
+        },
+        {
+          "claim_id": "0019-capital_of-capital-has-at",
+          "expected": [
+            {
+              "object": "andorra la vella",
+              "predicate": "capital_of",
+              "subject": "andorra"
+            }
+          ],
+          "extra": [
+            {
+              "object": "its capital at andorra la vella",
+              "predicate": "has",
+              "subject": "andorra"
+            }
+          ],
+          "extracted": [
+            {
+              "claim_id": "0019-capital_of-capital-has-at",
+              "confidence": 0.55,
+              "metadata": {
+                "extractor": "rule_based_triple_extractor",
+                "source": "has_rule"
+              },
+              "object": "its capital at Andorra la Vella",
+              "predicate": "has",
+              "source_text": "Andorra has its capital at Andorra la Vella.",
+              "subject": "Andorra"
+            }
+          ],
+          "index": 183,
+          "missing": [
+            {
+              "object": "andorra la vella",
+              "predicate": "capital_of",
+              "subject": "andorra"
+            }
+          ],
+          "text": "Andorra has its capital at Andorra la Vella."
+        },
+        {
+          "claim_id": "0020-currency_of-currency-possessive-inverse",
+          "expected": [
+            {
+              "object": "euro",
+              "predicate": "currency_of",
+              "subject": "andorra"
+            }
+          ],
+          "extra": [
+            {
+              "object": "andorra's currency",
+              "predicate": "is",
+              "subject": "euro"
+            }
+          ],
+          "extracted": [
+            {
+              "claim_id": "0020-currency_of-currency-possessive-inverse",
+              "confidence": 0.55,
+              "metadata": {
+                "extractor": "rule_based_triple_extractor",
+                "source": "is_rule"
+              },
+              "object": "Andorra's currency",
+              "predicate": "is",
+              "source_text": "euro is Andorra's currency.",
+              "subject": "euro"
+            }
+          ],
+          "index": 193,
+          "missing": [
+            {
+              "object": "euro",
+              "predicate": "currency_of",
+              "subject": "andorra"
+            }
+          ],
+          "text": "euro is Andorra's currency."
+        }
+      ],
+      "exact_match_count": 1436,
+      "expected_triple_count": 1795,
+      "extracted_triple_count": 1795,
+      "f1": 0.8000000000000002,
+      "false_positive_rate": 0.0,
+      "false_positive_record_count": 0,
+      "precision": 0.8,
+      "recall": 0.8,
+      "record_count": 3590,
+      "zero_expected_record_count": 1795
+    }
+  },
+  "status": "promote",
+  "workflow": "triple_extraction_fixture_workflow"
+}
