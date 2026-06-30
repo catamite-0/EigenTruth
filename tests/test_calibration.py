@@ -11,6 +11,7 @@ from eigentruth.calibration import (
     CalibrationArtifact,
     CalibrationScore,
     ConformalCalibrator,
+    EvidenceAcquisitionAnytimeRiskMonitorReport,
     EvidenceAcquisitionCalibrationRecord,
     EvidenceAcquisitionCalibrationReport,
     EvidenceAcquisitionConformalCalibrator,
@@ -24,6 +25,7 @@ from eigentruth.calibration import (
     SequentialConformalArtifact,
     SequentialConformalCalibrator,
     SteeringPolicyConfig,
+    audit_evidence_acquisition_anytime_risk,
     audit_evidence_acquisition_risk,
     evidence_acquisition_record_from_trace,
     evidence_acquisition_records_from_trace_feedback,
@@ -366,6 +368,103 @@ def test_evidence_acquisition_risk_monitor_dict_is_strict_json_ready_for_infinit
     assert payload["threshold"] == "inf"
     assert payload["checks"][0]["threshold"] == "inf"
     assert restored.threshold == math.inf
+
+
+def test_evidence_acquisition_anytime_risk_monitor_passes_stable_feedback_stream():
+    records = tuple(
+        EvidenceAcquisitionCalibrationRecord(
+            post_score=0.1,
+            correct=True,
+            action="answer",
+        )
+        for _ in range(20)
+    )
+
+    report = audit_evidence_acquisition_anytime_risk(
+        records,
+        threshold=0.5,
+        target_error_rate=0.25,
+        monitor_alpha=0.1,
+        score_name="policy_score",
+        bet_fractions=(0.8,),
+        metadata={"suite": "unit"},
+    )
+    roundtrip = EvidenceAcquisitionAnytimeRiskMonitorReport.from_dict(report.to_dict())
+
+    assert report.passed is True
+    assert report.first_alarm_record_index is None
+    assert report.accepted_count == 20
+    assert report.accepted_errors == 0
+    assert report.e_value < 1.0
+    assert report.metadata["suite"] == "unit"
+    assert roundtrip.to_dict() == report.to_dict()
+
+
+def test_evidence_acquisition_anytime_risk_monitor_blocks_drifted_feedback_stream():
+    records = tuple(
+        EvidenceAcquisitionCalibrationRecord(
+            post_score=0.1,
+            correct=False,
+            action="answer",
+        )
+        for _ in range(6)
+    )
+
+    report = audit_evidence_acquisition_anytime_risk(
+        records,
+        threshold=0.5,
+        target_error_rate=0.1,
+        monitor_alpha=0.2,
+        bet_fractions=(0.8,),
+    )
+
+    assert report.passed is False
+    assert report.accepted_count == 6
+    assert report.accepted_errors == 6
+    assert report.first_alarm_record_index is not None
+    assert report.first_alarm_accepted_index == report.first_alarm_record_index
+    assert report.e_value >= report.alarm_threshold
+    assert "mixture_e_value" in report.blocking_reasons[0]
+    assert any(step.alarmed for step in report.steps)
+
+
+def test_evidence_acquisition_anytime_risk_monitor_respects_lower_direction_and_validates_inputs():
+    records = (
+        {"post_score": 0.9, "correct": 1, "action": "answer"},
+        {"post_score": 0.8, "correct": 1, "action": "answer"},
+        {"post_score": 0.1, "correct": 0, "action": "abstain"},
+    )
+
+    report = audit_evidence_acquisition_anytime_risk(
+        records,
+        threshold=0.5,
+        target_error_rate=0.5,
+        monitor_alpha=0.2,
+        direction="lower",
+        bet_fractions=(0.5,),
+    )
+    raw = json.dumps(report.to_dict(), allow_nan=False)
+    restored = EvidenceAcquisitionAnytimeRiskMonitorReport.from_dict(json.loads(raw))
+
+    assert report.passed is True
+    assert report.accepted_count == 2
+    assert report.accepted_errors == 0
+    assert report.steps[-1].accepted is False
+    assert restored.to_dict() == report.to_dict()
+    with pytest.raises(ValueError, match="bet_fractions"):
+        audit_evidence_acquisition_anytime_risk(
+            records,
+            threshold=0.5,
+            target_error_rate=0.5,
+            bet_fractions=(0.0,),
+        )
+    with pytest.raises(ValueError, match="direction"):
+        audit_evidence_acquisition_anytime_risk(
+            records,
+            threshold=0.5,
+            target_error_rate=0.5,
+            direction="sideways",
+        )
 
 
 def test_evidence_acquisition_conformal_calibrator_rejects_invalid_inputs():

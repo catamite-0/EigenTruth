@@ -1,6 +1,6 @@
 # EigenTruth Frontier Research Notes
 
-Date: 2026-06-29
+Date: 2026-06-30
 
 ## Current Frontier Direction
 
@@ -34,8 +34,26 @@ EigenTruth should move from hallucination detection alone toward calibrated part
 - Tool Receipts, Not Zero-Knowledge Proofs (arXiv:2603.10060) argues that interactive agents need low-latency signed/tool-execution receipts and claim-to-receipt checks. EigenTruth's action-audit/action-execution gates are the local analog; release reports should surface missing receipt-style metrics as first-class gaps.
 - Retromorphic Testing with Hierarchical Verification for RAG (arXiv:2603.27752) treats RAG faithfulness as traceability from answer claims back to context-side evidence spans. This supports keeping claim/span localization, triple/slot evidence, and source-side evidence coverage explicit in ProductTrace and release-drift reports.
 - HIVE (arXiv:2604.26139) shows a newer trajectory-level direction for diffusion LMs: select sparse hidden evidence under a budget and condition a verifier on it. EigenTruth should keep trajectory/pathway evidence as selected, budgeted evidence artifacts before making any default routing claim.
+- Look Again Before You Abstain: Budgeted Conformal Evidence Acquisition (arXiv:2606.16667) strengthens the product-control lesson that evidence acquisition changes the policy distribution: guarantees should be calibrated and monitored on the post-acquisition policy, not only on a pre-retrieval uncertainty score.
+- Anytime-Valid Conformal Risk Control (arXiv:2602.04364) points toward risk control under ongoing streams and optional stopping. EigenTruth's current lightweight implementation is deliberately narrower: an accepted-error Bernoulli e-process monitor over labeled feedback, plus the existing finite prefix alpha-spending monitor. It is an online drift alarm for a fixed deployed threshold, not a full anytime-valid CRC optimizer.
 
 ## Implemented This Continuation
+
+Added an anytime-valid feedback risk monitor for evidence acquisition:
+
+- `EvidenceAcquisitionAnytimeRiskStep`,
+  `EvidenceAcquisitionAnytimeRiskMonitorReport`, and
+  `audit_evidence_acquisition_anytime_risk(...)` run a dependency-free mixture
+  e-process over accepted post-acquisition errors.
+- The deployed threshold is fixed; feedback is used only for monitoring, not
+  for silent recalibration.
+- The alarm threshold is `1 / monitor_alpha`, and a failed monitor reports the
+  first record/accepted-row index where the mixture e-value crossed that line.
+- `benchmarks/calibrate_evidence_acquisition_from_traces.py` now supports
+  `--risk-monitor-mode anytime` or `both`, `--anytime-risk-monitor-json`, and
+  repeatable `--risk-monitor-bet-fraction`; any failed prefix or anytime monitor
+  sets workflow `status=blocked` and is represented in manifests/registry
+  metadata.
 
 Added receipt-style action result verification:
 

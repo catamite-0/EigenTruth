@@ -441,6 +441,254 @@ class EvidenceAcquisitionRiskMonitorReport:
         )
 
 
+@dataclass(frozen=True)
+class EvidenceAcquisitionAnytimeRiskStep:
+    """One labeled feedback step in an anytime-valid betting risk monitor."""
+
+    record_index: int
+    accepted_index: int
+    score: float
+    threshold: float
+    direction: str
+    correct: bool
+    accepted: bool
+    accepted_error: bool
+    e_value: float
+    max_component_e_value: float
+    alarmed: bool
+    action: str = "answer"
+    acquired: bool = False
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        record_index = _positive_int(self.record_index, name="record_index")
+        accepted_index = _non_negative_int(self.accepted_index, name="accepted_index")
+        if accepted_index > record_index:
+            raise ValueError("accepted_index must not exceed record_index.")
+        direction = str(self.direction)
+        if direction not in {"higher", "lower"}:
+            raise ValueError("direction must be 'higher' or 'lower'.")
+        action = str(self.action).strip().lower() or "answer"
+        if action not in {"answer", "acquire", "abstain"}:
+            raise ValueError("action must be one of: answer, acquire, abstain.")
+        object.__setattr__(self, "record_index", record_index)
+        object.__setattr__(self, "accepted_index", accepted_index)
+        object.__setattr__(self, "score", _finite_float(self.score, name="score"))
+        object.__setattr__(self, "threshold", _threshold_float(self.threshold, name="threshold"))
+        object.__setattr__(self, "direction", direction)
+        object.__setattr__(self, "correct", _strict_bool(self.correct, name="correct"))
+        object.__setattr__(self, "accepted", _strict_bool(self.accepted, name="accepted"))
+        object.__setattr__(
+            self,
+            "accepted_error",
+            _strict_bool(self.accepted_error, name="accepted_error"),
+        )
+        if self.accepted_error and (not self.accepted or self.correct):
+            raise ValueError("accepted_error requires accepted=True and correct=False.")
+        object.__setattr__(self, "e_value", _non_negative_number(self.e_value, name="e_value"))
+        object.__setattr__(
+            self,
+            "max_component_e_value",
+            _non_negative_number(self.max_component_e_value, name="max_component_e_value"),
+        )
+        object.__setattr__(self, "alarmed", _strict_bool(self.alarmed, name="alarmed"))
+        object.__setattr__(self, "action", action)
+        object.__setattr__(self, "acquired", _strict_bool(self.acquired, name="acquired") or action == "acquire")
+        object.__setattr__(self, "metadata", dict(self.metadata))
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-ready step payload."""
+        return to_jsonable(
+            {
+                "record_index": self.record_index,
+                "accepted_index": self.accepted_index,
+                "score": self.score,
+                "threshold": self.threshold,
+                "direction": self.direction,
+                "correct": self.correct,
+                "accepted": self.accepted,
+                "accepted_error": self.accepted_error,
+                "e_value": self.e_value,
+                "max_component_e_value": self.max_component_e_value,
+                "alarmed": self.alarmed,
+                "action": self.action,
+                "acquired": self.acquired,
+                "metadata": to_jsonable(dict(self.metadata)),
+            }
+        )
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "EvidenceAcquisitionAnytimeRiskStep":
+        """Build a step from JSON-like data."""
+        return cls(
+            record_index=data["record_index"],
+            accepted_index=data["accepted_index"],
+            score=data["score"],
+            threshold=data["threshold"],
+            direction=str(data.get("direction", "higher")),
+            correct=data["correct"],
+            accepted=data["accepted"],
+            accepted_error=data["accepted_error"],
+            e_value=data["e_value"],
+            max_component_e_value=data["max_component_e_value"],
+            alarmed=data["alarmed"],
+            action=str(data.get("action", "answer")),
+            acquired=data.get("acquired", False),
+            metadata=dict(data.get("metadata", {})),
+        )
+
+
+@dataclass(frozen=True)
+class EvidenceAcquisitionAnytimeRiskMonitorReport:
+    """Anytime-valid e-process monitor for accepted post-acquisition errors."""
+
+    score_name: str
+    threshold: float
+    direction: str
+    target_error_rate: float
+    monitor_alpha: float
+    bet_fractions: tuple[float, ...]
+    component_e_values: tuple[float, ...]
+    n_records: int
+    accepted_count: int
+    accepted_errors: int
+    passed: bool
+    blocking_reasons: tuple[str, ...]
+    steps: tuple[EvidenceAcquisitionAnytimeRiskStep, ...]
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        direction = str(self.direction)
+        if direction not in {"higher", "lower"}:
+            raise ValueError("direction must be 'higher' or 'lower'.")
+        bet_fractions = _bet_fraction_tuple(self.bet_fractions)
+        component_e_values = tuple(
+            _non_negative_number(value, name="component_e_values") for value in self.component_e_values
+        )
+        if len(component_e_values) != len(bet_fractions):
+            raise ValueError("component_e_values must match bet_fractions.")
+        steps = tuple(
+            step
+            if isinstance(step, EvidenceAcquisitionAnytimeRiskStep)
+            else EvidenceAcquisitionAnytimeRiskStep.from_dict(step)
+            for step in self.steps
+        )
+        if not steps:
+            raise ValueError("steps must be non-empty.")
+        n_records = _non_negative_int(self.n_records, name="n_records")
+        accepted_count = _non_negative_int(self.accepted_count, name="accepted_count")
+        accepted_errors = _non_negative_int(self.accepted_errors, name="accepted_errors")
+        if accepted_count > n_records:
+            raise ValueError("accepted_count must not exceed n_records.")
+        if accepted_errors > accepted_count:
+            raise ValueError("accepted_errors must not exceed accepted_count.")
+        if len(steps) != n_records:
+            raise ValueError("steps must match n_records.")
+        object.__setattr__(self, "score_name", str(self.score_name))
+        object.__setattr__(self, "threshold", _threshold_float(self.threshold, name="threshold"))
+        object.__setattr__(self, "direction", direction)
+        object.__setattr__(
+            self,
+            "target_error_rate",
+            _unit_interval_float(self.target_error_rate, name="target_error_rate"),
+        )
+        object.__setattr__(self, "monitor_alpha", _alpha_float(self.monitor_alpha))
+        object.__setattr__(self, "bet_fractions", bet_fractions)
+        object.__setattr__(self, "component_e_values", component_e_values)
+        object.__setattr__(self, "n_records", n_records)
+        object.__setattr__(self, "accepted_count", accepted_count)
+        object.__setattr__(self, "accepted_errors", accepted_errors)
+        object.__setattr__(self, "passed", _strict_bool(self.passed, name="passed"))
+        object.__setattr__(self, "blocking_reasons", tuple(str(reason) for reason in self.blocking_reasons))
+        object.__setattr__(self, "steps", steps)
+        object.__setattr__(self, "metadata", dict(self.metadata))
+
+    @property
+    def accepted_error_rate(self) -> float | None:
+        """Return the empirical accepted-error rate, if any records were accepted."""
+        if self.accepted_count == 0:
+            return None
+        return self.accepted_errors / self.accepted_count
+
+    @property
+    def e_value(self) -> float:
+        """Return the final mixture e-value."""
+        return sum(self.component_e_values) / len(self.component_e_values)
+
+    @property
+    def max_component_e_value(self) -> float:
+        """Return the largest final component e-value."""
+        return max(self.component_e_values)
+
+    @property
+    def alarm_threshold(self) -> float:
+        """Return the e-value threshold used for anytime-valid alarm."""
+        return 1.0 / self.monitor_alpha
+
+    @property
+    def first_alarm_record_index(self) -> int | None:
+        """Return the first record index where the mixture e-value crossed the alarm threshold."""
+        for step in self.steps:
+            if step.alarmed:
+                return step.record_index
+        return None
+
+    @property
+    def first_alarm_accepted_index(self) -> int | None:
+        """Return the accepted-row count at the first alarm, if any."""
+        for step in self.steps:
+            if step.alarmed:
+                return step.accepted_index
+        return None
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-ready monitor report."""
+        return to_jsonable(
+            {
+                "score_name": self.score_name,
+                "threshold": self.threshold,
+                "direction": self.direction,
+                "target_error_rate": self.target_error_rate,
+                "monitor_alpha": self.monitor_alpha,
+                "bet_fractions": list(self.bet_fractions),
+                "component_e_values": list(self.component_e_values),
+                "e_value": self.e_value,
+                "max_component_e_value": self.max_component_e_value,
+                "alarm_threshold": self.alarm_threshold,
+                "n_records": self.n_records,
+                "accepted_count": self.accepted_count,
+                "accepted_errors": self.accepted_errors,
+                "accepted_error_rate": self.accepted_error_rate,
+                "passed": self.passed,
+                "blocking_reasons": list(self.blocking_reasons),
+                "first_alarm_record_index": self.first_alarm_record_index,
+                "first_alarm_accepted_index": self.first_alarm_accepted_index,
+                "steps": [step.to_dict() for step in self.steps],
+                "metadata": to_jsonable(dict(self.metadata)),
+            }
+        )
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "EvidenceAcquisitionAnytimeRiskMonitorReport":
+        """Build a monitor report from JSON-like data."""
+        return cls(
+            score_name=str(data["score_name"]),
+            threshold=data["threshold"],
+            direction=str(data.get("direction", "higher")),
+            target_error_rate=data["target_error_rate"],
+            monitor_alpha=data["monitor_alpha"],
+            bet_fractions=tuple(data["bet_fractions"]),
+            component_e_values=tuple(data["component_e_values"]),
+            n_records=data["n_records"],
+            accepted_count=data["accepted_count"],
+            accepted_errors=data["accepted_errors"],
+            passed=data["passed"],
+            blocking_reasons=tuple(data.get("blocking_reasons", ())),
+            steps=tuple(EvidenceAcquisitionAnytimeRiskStep.from_dict(item) for item in data["steps"]),
+            metadata=dict(data.get("metadata", {})),
+        )
+
+
 def audit_evidence_acquisition_risk(
     records: Sequence[EvidenceAcquisitionCalibrationRecord | Mapping[str, Any]],
     *,
@@ -526,6 +774,106 @@ def audit_evidence_acquisition_risk(
         metadata={
             "calibration_scope": "post_acquisition_policy",
             "monitor": "alpha_spent_feedback_prefix_risk",
+            **({} if metadata is None else dict(metadata)),
+        },
+    )
+
+
+def audit_evidence_acquisition_anytime_risk(
+    records: Sequence[EvidenceAcquisitionCalibrationRecord | Mapping[str, Any]],
+    *,
+    threshold: float,
+    target_error_rate: float,
+    monitor_alpha: float = 0.05,
+    direction: str = "higher",
+    score_name: str = "post_acquisition_policy_score",
+    bet_fractions: Sequence[float] | None = None,
+    metadata: Mapping[str, Any] | None = None,
+) -> EvidenceAcquisitionAnytimeRiskMonitorReport:
+    """Run an anytime-valid betting monitor over accepted feedback errors.
+
+    The deployed threshold is fixed and never updated on the monitored feedback.
+    Each record accepted by the threshold contributes a Bernoulli error outcome
+    to a mixture of simple e-processes for testing whether accepted-error risk
+    exceeds ``target_error_rate``. Ville's inequality makes the alarm threshold
+    ``1 / monitor_alpha`` valid under optional stopping for the monitor-first
+    setting; this is a drift alarm, not a recalibration procedure.
+    """
+    rows = _records(records, require_correct=False)
+    threshold_value = _threshold_float(threshold, name="threshold")
+    target = _unit_interval_float(target_error_rate, name="target_error_rate")
+    monitor_alpha_value = _alpha_float(monitor_alpha)
+    direction_value = str(direction)
+    if direction_value not in {"higher", "lower"}:
+        raise ValueError("direction must be 'higher' or 'lower'.")
+    bets = _bet_fraction_tuple(
+        (0.05, 0.1, 0.2, 0.4, 0.8) if bet_fractions is None else bet_fractions
+    )
+    component_e_values = [1.0 for _ in bets]
+    steps: list[EvidenceAcquisitionAnytimeRiskStep] = []
+    accepted_count = 0
+    accepted_errors = 0
+    alarm_threshold = 1.0 / monitor_alpha_value
+    first_alarm: tuple[int, int, float] | None = None
+    for record_index, row in enumerate(rows, start=1):
+        accepted = _accepted_by_threshold(row.post_score, threshold_value, direction_value)
+        accepted_error = accepted and not row.correct
+        if accepted:
+            accepted_count += 1
+            outcome = 1.0 if accepted_error else 0.0
+            accepted_errors += int(accepted_error)
+            for bet_index, bet_fraction in enumerate(bets):
+                factor = 1.0 + bet_fraction * (outcome - target)
+                component_e_values[bet_index] *= max(0.0, factor)
+        mixture_e_value = sum(component_e_values) / len(component_e_values)
+        max_component_e_value = max(component_e_values)
+        alarmed = mixture_e_value >= alarm_threshold
+        if alarmed and first_alarm is None:
+            first_alarm = (record_index, accepted_count, mixture_e_value)
+        steps.append(
+            EvidenceAcquisitionAnytimeRiskStep(
+                record_index=record_index,
+                accepted_index=accepted_count,
+                score=row.post_score,
+                threshold=threshold_value,
+                direction=direction_value,
+                correct=row.correct,
+                accepted=accepted,
+                accepted_error=accepted_error,
+                e_value=mixture_e_value,
+                max_component_e_value=max_component_e_value,
+                alarmed=alarmed,
+                action=row.action,
+                acquired=row.acquired,
+                metadata={"record_id": row.record_id},
+            )
+        )
+    blocking_reasons = ()
+    if first_alarm is not None:
+        record_index, accepted_index, e_value = first_alarm
+        blocking_reasons = (
+            "record "
+            f"{record_index} accepted_index {accepted_index} mixture_e_value "
+            f"{e_value:.6g} exceeds anytime alarm threshold {alarm_threshold:.6g}",
+        )
+    return EvidenceAcquisitionAnytimeRiskMonitorReport(
+        score_name=str(score_name),
+        threshold=threshold_value,
+        direction=direction_value,
+        target_error_rate=target,
+        monitor_alpha=monitor_alpha_value,
+        bet_fractions=bets,
+        component_e_values=tuple(component_e_values),
+        n_records=len(rows),
+        accepted_count=accepted_count,
+        accepted_errors=accepted_errors,
+        passed=first_alarm is None,
+        blocking_reasons=blocking_reasons,
+        steps=tuple(steps),
+        metadata={
+            "calibration_scope": "post_acquisition_policy",
+            "monitor": "anytime_betting_feedback_risk",
+            "validity_note": "mixture e-process over accepted-error Bernoulli feedback; threshold is fixed",
             **({} if metadata is None else dict(metadata)),
         },
     )
@@ -921,6 +1269,30 @@ def _unit_interval_float(value: Any, *, name: str) -> float:
     if not (0.0 <= number <= 1.0):
         raise ValueError(f"{name} must be in [0, 1].")
     return number
+
+
+def _non_negative_number(value: Any, *, name: str) -> float:
+    if isinstance(value, bool):
+        raise ValueError(f"{name} must be a non-negative number.")
+    try:
+        number = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a non-negative number.") from exc
+    if math.isnan(number) or number < 0.0:
+        raise ValueError(f"{name} must be a non-negative number.")
+    return number
+
+
+def _bet_fraction_tuple(values: Sequence[float]) -> tuple[float, ...]:
+    if isinstance(values, str | bytes):
+        raise ValueError("bet_fractions must be a sequence of numbers.")
+    bets = tuple(_finite_float(value, name="bet_fraction") for value in values)
+    if not bets:
+        raise ValueError("bet_fractions must be non-empty.")
+    for value in bets:
+        if not (0.0 < value <= 1.0):
+            raise ValueError("bet_fractions must all be in (0, 1].")
+    return bets
 
 
 def _risk_checkpoints(checkpoints: Sequence[int] | None, *, n_records: int) -> tuple[int, ...]:

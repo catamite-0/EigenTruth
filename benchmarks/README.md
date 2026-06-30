@@ -892,11 +892,18 @@ the post-policy `CalibrationArtifact`, and can fingerprint/register the result.
 For held-out or subsequently collected feedback, `audit_evidence_acquisition_risk`
 can replay the deployed threshold over labeled post-policy records and alpha-spend
 finite prefix checks, producing a JSON-ready monitor report that fails closed when
-the accepted-error upper bound exceeds the target error rate. The trace workflow
-can emit that monitor directly with `--risk-target-error-rate`, optionally
-`--risk-monitor-json`, `--risk-monitor-alpha`, `--risk-monitor-schedule`, and
-repeatable `--risk-monitor-checkpoint`; a failed monitor sets the workflow status
-to `blocked` and is included in the artifact manifest and local registry metadata.
+the accepted-error upper bound exceeds the target error rate. For continuously
+arriving feedback, `audit_evidence_acquisition_anytime_risk` adds a dependency-free
+mixture e-process monitor over accepted-error Bernoulli outcomes; it alarms when
+the mixture e-value crosses `1 / monitor_alpha` without recalibrating on the same
+feedback stream. The trace workflow can emit these monitors directly with
+`--risk-target-error-rate`; `--risk-monitor-mode prefix` preserves the finite
+prefix default, while `--risk-monitor-mode anytime` or `both` adds the anytime
+report. Use `--risk-monitor-json`, `--anytime-risk-monitor-json`,
+`--risk-monitor-alpha`, `--risk-monitor-schedule`, repeatable
+`--risk-monitor-checkpoint`, and repeatable `--risk-monitor-bet-fraction` to
+control outputs. Any failed monitor sets the workflow status to `blocked` and is
+included in the artifact manifest and local registry metadata.
 When `--save-abstention-comparison` or `--include-abstention-comparison` is set,
 the script emits a `ConformalAbstentionComparisonReport` over `--abstention-signals`
 (or `--signals` when no abstention list is provided). The default ranking metric is
