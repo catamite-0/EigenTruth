@@ -137,3 +137,86 @@ def test_frontier_artifact_reference_audit_passes_when_filtered_refs_exist(tmp_p
     assert payload["summary"]["existing_count"] == 1
     assert payload["blocking_reasons"] == ()
     assert payload["recommended_actions"] == ()
+
+
+def test_frontier_artifact_reference_audit_restores_cached_json_payload(tmp_path):
+    contract_path = (
+        tmp_path
+        / "artifacts"
+        / "smollm2_product_promotion_contract_v1_9"
+        / "product-promotion-contract.json"
+    )
+    json_cache_path = tmp_path / "artifact-json-cache.json"
+    json_cache_path.write_text(
+        json.dumps({
+            f"{contract_path}:10:20:30:40:cached": {
+                "error": None,
+                "payload": {
+                    "workflow": "product_promotion_contract",
+                    "source_status": "promote",
+                    "model_id": "fixture-model",
+                },
+            },
+        }),
+        encoding="utf-8",
+    )
+    doc_path = tmp_path / "README.md"
+    doc_path.write_text(
+        "`artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json`\n",
+        encoding="utf-8",
+    )
+
+    payload = build_frontier_artifact_reference_audit(
+        doc_paths=(doc_path,),
+        root=tmp_path,
+        include_regex="smollm2_product_promotion_contract_v1_9",
+        json_cache_paths=(json_cache_path,),
+        restore_json_cache_artifacts=True,
+    )
+    restored_payload = json.loads(contract_path.read_text(encoding="utf-8"))
+
+    assert payload["status"] == "passed"
+    assert payload["summary"]["missing_count"] == 0
+    assert payload["summary"]["recommended_action_ids"] == ()
+    assert payload["restore_report"]["restored_count"] == 1
+    assert payload["restore_report"]["restored"][0]["path"] == (
+        "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json"
+    )
+    assert restored_payload["workflow"] == "product_promotion_contract"
+    assert restored_payload["model_id"] == "fixture-model"
+
+
+def test_frontier_artifact_reference_audit_restore_skips_paths_outside_root(tmp_path):
+    escaped_path = (tmp_path / "artifacts" / ".." / ".." / "outside.json").resolve()
+    json_cache_path = tmp_path / "artifact-json-cache.json"
+    json_cache_path.write_text(
+        json.dumps({
+            f"{escaped_path}:10:20:30:40:cached": {
+                "error": None,
+                "payload": {"workflow": "escaped"},
+            },
+        }),
+        encoding="utf-8",
+    )
+    doc_path = tmp_path / "README.md"
+    doc_path.write_text("`artifacts/../../outside.json`\n", encoding="utf-8")
+
+    payload = build_frontier_artifact_reference_audit(
+        doc_paths=(doc_path,),
+        root=tmp_path,
+        include_regex="outside",
+        json_cache_paths=(json_cache_path,),
+        restore_json_cache_artifacts=True,
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["missing_count"] == 1
+    assert payload["summary"]["missing_recoverable_from_json_cache_count"] == 1
+    assert payload["restore_report"]["restored_count"] == 0
+    assert payload["restore_report"]["skipped"] == (
+        {
+            "path": "artifacts/../../outside.json",
+            "reason": "path_outside_root",
+        },
+    )
+    assert not escaped_path.exists()

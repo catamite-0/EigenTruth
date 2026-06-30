@@ -5661,7 +5661,9 @@ doc references against the checkout. A blocked report includes
 `recommended_actions` for the v6 release-candidate rerun, v1.9 contract export,
 evidence-handoff export, manifest verification, and final re-audit. By default
 it also inspects the frontier `artifact-json-cache.json` so the summary splits
-missing references into cache-recoverable and unrecoverable counts:
+missing references into cache-recoverable and unrecoverable counts. Add
+`--restore-json-cache-artifacts` to restore only those cache-backed missing JSON
+files and re-run the audit before writing the final report:
 
 ```bash
 python benchmarks/audit_frontier_artifact_references.py \
@@ -8405,7 +8407,9 @@ materialized in the local checkout; it reports missing artifacts and verifies an
 referenced artifact manifests that exist, then emits ordered
 `recommended_actions` for regenerating and verifying missing handoff artifacts.
 Use repeated `--json-cache` arguments to inspect additional persisted JSON
-artifact caches, or `--no-json-cache` for a pure filesystem-only audit.
+artifact caches, or `--no-json-cache` for a pure filesystem-only audit. The
+restore mode never rewrites existing files; it only writes references that were
+missing and had a valid cached JSON payload.
 
 Once verification passes, `promote_artifact_manifest.py` can register the
 manifest and verification report in a local `ArtifactRegistry` JSON file:

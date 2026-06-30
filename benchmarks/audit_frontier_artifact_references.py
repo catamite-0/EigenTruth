@@ -78,6 +78,16 @@ FRONTIER_ARTIFACT_REFERENCE_AUDIT_COMMAND = (
     "--version 0.1 "
     "--no-fail"
 )
+RESTORE_CACHED_JSON_ARTIFACTS_COMMAND = (
+    "python benchmarks/audit_frontier_artifact_references.py "
+    "--restore-json-cache-artifacts "
+    "--json artifacts/frontier-artifact-reference-audit.json "
+    "--artifact-manifest artifacts/frontier-artifact-reference-audit-manifest.json "
+    "--registry artifacts/local-release-registry.json "
+    "--name frontier-artifact-reference-audit "
+    "--version 0.1 "
+    "--no-fail"
+)
 EXPORT_PRODUCT_V19_COMMAND = (
     "python benchmarks/export_product_promotion_contract.py "
     "--source artifacts/frontier-audit-release-candidate-v6/frontier-audit-registry-workflow.json "
@@ -136,6 +146,7 @@ def build_frontier_artifact_reference_audit(
     recursive_manifests: bool = False,
     max_workers: int = 1,
     json_cache_paths: Sequence[str | Path] = DEFAULT_JSON_CACHE_PATHS,
+    restore_json_cache_artifacts: bool = False,
     json_path: str | Path | None = None,
     artifact_manifest_path: str | Path | None = None,
     registry_path: str | Path | None = None,
@@ -164,6 +175,24 @@ def build_frontier_artifact_reference_audit(
         max_workers=max_workers,
         json_cache_sources=json_cache_sources,
     )
+    restore_report = None
+    if restore_json_cache_artifacts:
+        restore_report = _restore_recoverable_json_artifacts(
+            references,
+            root=root_path,
+            json_cache_sources=json_cache_sources,
+        )
+        if restore_report["restored_count"]:
+            references = _collect_references(
+                documents,
+                root=root_path,
+                include_pattern=include_pattern,
+                exclude_pattern=exclude_pattern,
+                verify_manifests=verify_manifests,
+                recursive_manifests=recursive_manifests,
+                max_workers=max_workers,
+                json_cache_sources=json_cache_sources,
+            )
     blocking_reasons = _blocking_reasons(references)
     if not references:
         blocking_reasons.append("no artifact references matched the configured include/exclude filters")
@@ -186,12 +215,15 @@ def build_frontier_artifact_reference_audit(
             "recursive_manifests": recursive_manifests,
             "max_workers": max_workers,
             "json_cache_paths": tuple(source["path"] for source in json_cache_sources),
+            "restore_json_cache_artifacts": restore_json_cache_artifacts,
         },
         "references": references,
         "blocking_reasons": tuple(blocking_reasons),
         "recommended_actions": recommended_actions,
         "metadata": dict(metadata or {}),
     }
+    if restore_report is not None:
+        payload["restore_report"] = restore_report
 
     output_path = None if json_path is None else Path(json_path)
     manifest_path = None if artifact_manifest_path is None else Path(artifact_manifest_path)
@@ -436,7 +468,7 @@ def _recommended_actions(references: Sequence[Mapping[str, Any]]) -> tuple[dict[
                 "artifact JSON caches and can be restored without rerunning model work."
             ),
             "affected_paths": recoverable_paths,
-            "suggested_commands": (),
+            "suggested_commands": (RESTORE_CACHED_JSON_ARTIFACTS_COMMAND,),
             "metadata": {
                 "json_cache_paths": cache_paths,
                 "notes": (
@@ -584,6 +616,65 @@ def _recommended_actions(references: Sequence[Mapping[str, Any]]) -> tuple[dict[
     return tuple(sorted(actions, key=lambda action: (-int(action["priority"]), str(action["action_id"]))))
 
 
+def _restore_recoverable_json_artifacts(
+    references: Sequence[Mapping[str, Any]],
+    *,
+    root: Path,
+    json_cache_sources: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    root_path = root.resolve()
+    restored: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    for reference in references:
+        if reference["status"] != "missing" or not reference.get("recoverable_from_json_cache"):
+            continue
+        reference_path = str(reference["path"])
+        output_path = root / reference_path
+        resolved_output_path = output_path.resolve()
+        if not resolved_output_path.is_relative_to(root_path):
+            skipped.append({
+                "path": reference_path,
+                "reason": "path_outside_root",
+            })
+            continue
+        if resolved_output_path.exists():
+            skipped.append({
+                "path": reference_path,
+                "reason": "path_already_exists",
+            })
+            continue
+        cached_payload = _cached_payload_for_reference(
+            reference_path,
+            root=root,
+            json_cache_sources=json_cache_sources,
+        )
+        if cached_payload is None:
+            skipped.append({
+                "path": reference_path,
+                "reason": "cached_payload_not_found",
+            })
+            continue
+        resolved_output_path.parent.mkdir(parents=True, exist_ok=True)
+        resolved_output_path.write_text(
+            strict_json_dumps(cached_payload["payload"], indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        restored.append({
+            "path": reference_path,
+            "cache_path": cached_payload["cache_path"],
+            "entry_key": cached_payload["entry_key"],
+            "payload_keys": tuple(sorted(str(key) for key in cached_payload["payload"].keys())),
+            "workflow": cached_payload["payload"].get("workflow"),
+            "status": cached_payload["payload"].get("status"),
+        })
+    return {
+        "restored_count": len(restored),
+        "skipped_count": len(skipped),
+        "restored": tuple(restored),
+        "skipped": tuple(skipped),
+    }
+
+
 def _load_json_cache_sources(
     json_cache_paths: Sequence[str | Path],
     *,
@@ -633,6 +724,33 @@ def _json_cache_hits_for_reference(
                 "status": payload.get("status"),
             })
     return tuple(hits)
+
+
+def _cached_payload_for_reference(
+    reference: str,
+    *,
+    root: Path,
+    json_cache_sources: Sequence[Mapping[str, Any]],
+) -> dict[str, Any] | None:
+    reference_path = str((root / reference).resolve())
+    reference_suffix = "/" + reference.replace("\\", "/")
+    for source in json_cache_sources:
+        cache = _mapping(source.get("cache"))
+        for key, entry in cache.items():
+            key_path = _json_cache_key_path(str(key))
+            if key_path != reference_path and not key_path.endswith(reference_suffix):
+                continue
+            entry_mapping = _mapping(entry)
+            payload = _mapping(entry_mapping.get("payload"))
+            error = entry_mapping.get("error")
+            if error is not None or not payload:
+                continue
+            return {
+                "cache_path": str(source["path"]),
+                "entry_key": str(key),
+                "payload": dict(payload),
+            }
+    return None
 
 
 def _json_cache_key_path(key: str) -> str:
@@ -735,6 +853,11 @@ def main(argv: Sequence[str] | None = None) -> None:
         help="artifact JSON cache to inspect for recoverable missing references; repeatable",
     )
     parser.add_argument("--no-json-cache", action="store_true", help="do not inspect artifact JSON caches")
+    parser.add_argument(
+        "--restore-json-cache-artifacts",
+        action="store_true",
+        help="write missing JSON references when a cached payload is available, then re-run the audit",
+    )
     parser.add_argument("--json", default=None, help="optional audit JSON output path")
     parser.add_argument("--artifact-manifest", default=None, help="optional artifact manifest output path")
     parser.add_argument("--registry", default=None, help="optional local ArtifactRegistry JSON path")
@@ -754,6 +877,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         recursive_manifests=args.recursive_manifests,
         max_workers=args.max_workers,
         json_cache_paths=json_cache_paths,
+        restore_json_cache_artifacts=args.restore_json_cache_artifacts,
         json_path=args.json,
         artifact_manifest_path=args.artifact_manifest,
         registry_path=args.registry,
