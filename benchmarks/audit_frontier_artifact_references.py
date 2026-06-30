@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -378,6 +379,15 @@ def _reference_record(
     if status == "missing" and json_cache_hits:
         record["recoverable_from_json_cache"] = True
         record["json_cache_sources"] = json_cache_hits
+    if manifest_verification is not None and not manifest_verification["passed"]:
+        manifest_missing_json_cache_sources = _manifest_missing_json_cache_records(
+            manifest_path=actual_path,
+            manifest_verification=manifest_verification,
+            root=root,
+            json_cache_sources=json_cache_sources,
+        )
+        if manifest_missing_json_cache_sources:
+            record["manifest_missing_json_cache_sources"] = manifest_missing_json_cache_sources
     return record
 
 
@@ -403,6 +413,16 @@ def _summary(references: Sequence[Mapping[str, Any]], *, document_count: int) ->
         for reference in references
         if reference["status"] == "missing" and reference.get("recoverable_from_json_cache")
     )
+    manifest_child_missing_records = tuple(
+        child
+        for reference in references
+        for child in reference.get("manifest_missing_json_cache_sources", ())
+    )
+    manifest_child_recoverable_records = tuple(
+        child
+        for child in manifest_child_missing_records
+        if child.get("recoverable_from_json_cache")
+    )
     return {
         "document_count": document_count,
         "reference_count": len(references),
@@ -418,6 +438,11 @@ def _summary(references: Sequence[Mapping[str, Any]], *, document_count: int) ->
         "manifest_error_count": len(errored_manifests),
         "missing_recoverable_from_json_cache_count": len(recoverable_missing),
         "missing_unrecoverable_count": statuses.get("missing", 0) - len(recoverable_missing),
+        "manifest_child_missing_count": len(manifest_child_missing_records),
+        "manifest_child_recoverable_from_json_cache_count": len(manifest_child_recoverable_records),
+        "manifest_child_unrecoverable_count": (
+            len(manifest_child_missing_records) - len(manifest_child_recoverable_records)
+        ),
     }
 
 
@@ -435,27 +460,127 @@ def _blocking_reasons(references: Sequence[Mapping[str, Any]]) -> list[str]:
     return reasons
 
 
+def _manifest_missing_json_cache_records(
+    *,
+    manifest_path: Path,
+    manifest_verification: Mapping[str, Any],
+    root: Path,
+    json_cache_sources: Sequence[Mapping[str, Any]],
+) -> tuple[dict[str, Any], ...]:
+    records: list[dict[str, Any]] = []
+    seen_paths: set[str] = set()
+    failures = tuple(_mapping(failure) for failure in manifest_verification.get("failures", ()))
+    for failure_mapping in failures:
+        if failure_mapping.get("field") != "exists" or failure_mapping.get("actual") is not False:
+            continue
+        raw_path = failure_mapping.get("path")
+        if not isinstance(raw_path, str):
+            continue
+        child_path = (manifest_path.parent / raw_path).resolve()
+        display_path = _display_path(child_path, root=root)
+        if display_path in seen_paths:
+            continue
+        seen_paths.add(display_path)
+        json_cache_hits = _json_cache_hits_for_reference(
+            display_path,
+            root=root,
+            json_cache_sources=json_cache_sources,
+        )
+        record: dict[str, Any] = {
+            "name": failure_mapping.get("name"),
+            "path": display_path,
+            "manifest_relative_path": raw_path,
+        }
+        expected_sha256 = _expected_manifest_failure_value(failures, raw_path=raw_path, field="sha256")
+        expected_size_bytes = _expected_manifest_failure_value(
+            failures,
+            raw_path=raw_path,
+            field="size_bytes",
+        )
+        if expected_sha256 is not None:
+            record["expected_sha256"] = expected_sha256
+        if expected_size_bytes is not None:
+            record["expected_size_bytes"] = expected_size_bytes
+        cached_payload = _cached_payload_for_reference(
+            display_path,
+            root=root,
+            json_cache_sources=json_cache_sources,
+        )
+        if json_cache_hits:
+            record["json_cache_sources"] = json_cache_hits
+        if cached_payload is not None:
+            normalized_payload, normalized_absolute_path_count = _normalize_cached_json_payload(
+                cached_payload["payload"],
+                root=root.resolve(),
+            )
+            restored_text = strict_json_dumps(normalized_payload, indent=2, sort_keys=True) + "\n"
+            digest_mismatch = _manifest_digest_mismatch(
+                restored_text,
+                candidate={
+                    "expected_sha256": expected_sha256,
+                    "expected_size_bytes": expected_size_bytes,
+                },
+            )
+            if digest_mismatch is not None:
+                record["json_cache_digest_mismatch"] = digest_mismatch
+                record["normalized_absolute_path_count"] = normalized_absolute_path_count
+                records.append(record)
+                continue
+            record["recoverable_from_json_cache"] = True
+            record["normalized_absolute_path_count"] = normalized_absolute_path_count
+        records.append(record)
+    return tuple(records)
+
+
+def _expected_manifest_failure_value(
+    failures: Sequence[Mapping[str, Any]],
+    *,
+    raw_path: str,
+    field: str,
+) -> Any:
+    for failure in failures:
+        if failure.get("path") == raw_path and failure.get("field") == field:
+            return failure.get("expected")
+    return None
+
+
 def _recommended_actions(references: Sequence[Mapping[str, Any]]) -> tuple[dict[str, Any], ...]:
     missing_paths = tuple(
         sorted(str(reference["path"]) for reference in references if reference["status"] == "missing")
     )
-    if not missing_paths:
+    manifest_child_recoverable_paths = tuple(
+        sorted({
+            str(child["path"])
+            for reference in references
+            for child in reference.get("manifest_missing_json_cache_sources", ())
+            if child.get("recoverable_from_json_cache")
+        })
+    )
+    if not missing_paths and not manifest_child_recoverable_paths:
         return ()
+    blocking_paths = tuple(sorted(set(missing_paths) | set(manifest_child_recoverable_paths)))
     actions: list[dict[str, Any]] = []
     recoverable_paths = tuple(
-        sorted(
+        sorted({
             str(reference["path"])
             for reference in references
             if reference["status"] == "missing" and reference.get("recoverable_from_json_cache")
-        )
+        } | set(manifest_child_recoverable_paths))
     )
     if recoverable_paths:
         cache_paths = tuple(
             sorted({
                 str(source["cache_path"])
                 for reference in references
-                if str(reference["path"]) in recoverable_paths
-                for source in reference.get("json_cache_sources", ())
+                for source in (
+                    tuple(reference.get("json_cache_sources", ()))
+                    + tuple(
+                        source
+                        for child in reference.get("manifest_missing_json_cache_sources", ())
+                        if str(child["path"]) in recoverable_paths
+                        for source in child.get("json_cache_sources", ())
+                    )
+                )
             })
         )
         actions.append({
@@ -609,7 +734,7 @@ def _recommended_actions(references: Sequence[Mapping[str, Any]]) -> tuple[dict[
         "action_type": "audit_frontier_artifact_references",
         "priority": 10,
         "rationale": "Recheck doc references after regenerating missing frontier artifacts.",
-        "affected_paths": missing_paths,
+        "affected_paths": blocking_paths,
         "suggested_commands": (FRONTIER_ARTIFACT_REFERENCE_AUDIT_COMMAND,),
         "metadata": {},
     })
@@ -625,21 +750,21 @@ def _restore_recoverable_json_artifacts(
     root_path = root.resolve()
     restored: list[dict[str, Any]] = []
     skipped: list[dict[str, Any]] = []
-    for reference in references:
-        if reference["status"] != "missing" or not reference.get("recoverable_from_json_cache"):
-            continue
-        reference_path = str(reference["path"])
+    for candidate in _cached_json_restore_candidates(references):
+        reference_path = str(candidate["path"])
         output_path = root / reference_path
         resolved_output_path = output_path.resolve()
         if not resolved_output_path.is_relative_to(root_path):
             skipped.append({
                 "path": reference_path,
+                "source": candidate["source"],
                 "reason": "path_outside_root",
             })
             continue
         if resolved_output_path.exists():
             skipped.append({
                 "path": reference_path,
+                "source": candidate["source"],
                 "reason": "path_already_exists",
             })
             continue
@@ -651,6 +776,7 @@ def _restore_recoverable_json_artifacts(
         if cached_payload is None:
             skipped.append({
                 "path": reference_path,
+                "source": candidate["source"],
                 "reason": "cached_payload_not_found",
             })
             continue
@@ -658,25 +784,94 @@ def _restore_recoverable_json_artifacts(
             cached_payload["payload"],
             root=root_path,
         )
+        restored_text = strict_json_dumps(normalized_payload, indent=2, sort_keys=True) + "\n"
+        digest_mismatch = _manifest_digest_mismatch(
+            restored_text,
+            candidate=_mapping(candidate.get("metadata")),
+        )
+        if digest_mismatch is not None:
+            skipped.append({
+                "path": reference_path,
+                "source": candidate["source"],
+                "reason": "manifest_digest_mismatch",
+                **digest_mismatch,
+                **_mapping(candidate.get("metadata")),
+            })
+            continue
         resolved_output_path.parent.mkdir(parents=True, exist_ok=True)
         resolved_output_path.write_text(
-            strict_json_dumps(normalized_payload, indent=2, sort_keys=True) + "\n",
+            restored_text,
             encoding="utf-8",
         )
         restored.append({
             "path": reference_path,
+            "source": candidate["source"],
             "cache_path": cached_payload["cache_path"],
             "entry_key": cached_payload["entry_key"],
             "payload_keys": tuple(sorted(str(key) for key in normalized_payload.keys())),
             "workflow": normalized_payload.get("workflow"),
             "status": normalized_payload.get("status"),
             "normalized_absolute_path_count": normalized_absolute_path_count,
+            **_mapping(candidate.get("metadata")),
         })
     return {
         "restored_count": len(restored),
         "skipped_count": len(skipped),
         "restored": tuple(restored),
         "skipped": tuple(skipped),
+    }
+
+
+def _cached_json_restore_candidates(references: Sequence[Mapping[str, Any]]) -> tuple[dict[str, Any], ...]:
+    candidates: list[dict[str, Any]] = []
+    seen_paths: set[str] = set()
+    for reference in references:
+        if reference["status"] == "missing" and reference.get("recoverable_from_json_cache"):
+            reference_path = str(reference["path"])
+            if reference_path not in seen_paths:
+                candidates.append({
+                    "path": reference_path,
+                    "source": "document_reference",
+                    "metadata": {},
+                })
+                seen_paths.add(reference_path)
+        for child in reference.get("manifest_missing_json_cache_sources", ()):
+            if not child.get("recoverable_from_json_cache"):
+                continue
+            child_path = str(child["path"])
+            if child_path in seen_paths:
+                continue
+            candidates.append({
+                "path": child_path,
+                "source": "manifest_child",
+                "metadata": {
+                    "manifest_path": reference["path"],
+                    "artifact_name": child.get("name"),
+                    "expected_sha256": child.get("expected_sha256"),
+                    "expected_size_bytes": child.get("expected_size_bytes"),
+                },
+            })
+            seen_paths.add(child_path)
+    return tuple(candidates)
+
+
+def _manifest_digest_mismatch(restored_text: str, *, candidate: Mapping[str, Any]) -> dict[str, Any] | None:
+    expected_sha256 = candidate.get("expected_sha256")
+    expected_size_bytes = candidate.get("expected_size_bytes")
+    if expected_sha256 is None and expected_size_bytes is None:
+        return None
+    restored_bytes = restored_text.encode()
+    restored_sha256 = hashlib.sha256(restored_bytes).hexdigest()
+    restored_size_bytes = len(restored_bytes)
+    sha_matches = expected_sha256 is None or restored_sha256 == expected_sha256
+    size_matches = expected_size_bytes is None or restored_size_bytes == expected_size_bytes
+    if sha_matches and size_matches:
+        return None
+    return {
+        "expected_sha256": expected_sha256,
+        "restored_sha256": restored_sha256,
+        "expected_size_bytes": expected_size_bytes,
+        "restored_size_bytes": restored_size_bytes,
     }
 
 

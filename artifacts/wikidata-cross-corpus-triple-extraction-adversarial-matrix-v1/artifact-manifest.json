@@ -1,0 +1,114 @@
+{
+  "artifacts": {
+    "corpus.country-core.artifact_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "country-core/artifact-manifest.json",
+      "sha256": "96fd25aeeba4faf2230c0986c64111748c97cc7037773b7eb2fd7db4fb80c42b",
+      "size_bytes": 3636
+    },
+    "corpus.country-core.external_predictions.lookup_gold": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "external-predictions/country-core-lookup-gold-predictions.json",
+      "sha256": "cf7f2bf72b63c5b1d029928808c5cdd9897a2ed476643edea731824f79467f61",
+      "size_bytes": 622742
+    },
+    "corpus.country-core.source.1.wikidata-country-core-facts-source": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../wikidata-country-core-facts-external-corpus/wikidata-country-core-facts-source.jsonl",
+      "sha256": "4e542340473cf9582b85a86c59284852e3a5fb5650e9248a77b5c2e2464d7cd3",
+      "size_bytes": 388639
+    },
+    "corpus.country-core.workflow_summary": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "country-core/triple-extraction-workflow-summary.json",
+      "sha256": "0267fd209cd16c86b836e9711c389c22a55028ab7668afdbcf51926030af9594",
+      "size_bytes": 72621
+    },
+    "corpus.organization-product.artifact_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "organization-product/artifact-manifest.json",
+      "sha256": "5c30c3febadda005e8fd40a4e603f912ba79abd7708f876b406a859dc22bbc77",
+      "size_bytes": 3596
+    },
+    "corpus.organization-product.external_predictions.lookup_gold": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "external-predictions/organization-product-lookup-gold-predictions.json",
+      "sha256": "f9f47423b0c7289817c83563128832488577f8e4bd8c0d836702ba8857fac329",
+      "size_bytes": 14329
+    },
+    "corpus.organization-product.source.1.wikidata-organization-product-source": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../wikidata-organization-product-core-facts/wikidata-organization-product-source.jsonl",
+      "sha256": "f4cd3dc8d01c7c4e5b11de0e1e38041e70827115cb02f4fdc1e4d1899a454f94",
+      "size_bytes": 9663
+    },
+    "corpus.organization-product.workflow_summary": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "organization-product/triple-extraction-workflow-summary.json",
+      "sha256": "6609980be974a059b194beda10b4abaa8d4a286f7bdce0dd6f15eadcddeb6f24",
+      "size_bytes": 73264
+    },
+    "matrix_summary": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "triple-extraction-fixture-matrix.json",
+      "sha256": "ccf96d6cd88be370a8909f72579dfbee9bad56f73ad62ebeaee5e1dbdc88af46",
+      "size_bytes": 6695
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "distinct_predicate_count": 6,
+    "external_prediction_corpora": [
+      "country-core",
+      "organization-product"
+    ],
+    "external_prediction_count": 2,
+    "max_best_adversarial_false_positive_rate": 0.0,
+    "max_best_ambiguity_false_positive_rate": 0.0,
+    "max_best_metalinguistic_false_positive_rate": 0.0,
+    "max_best_non_assertive_false_positive_rate": 0.0,
+    "max_best_temporal_false_positive_rate": 0.0,
+    "mean_baseline_f1": 0.4000000000000001,
+    "mean_best_adversarial_false_positive_rate": 0.0,
+    "mean_best_ambiguity_false_positive_rate": 0.0,
+    "mean_best_external_f1": 1.0,
+    "mean_best_f1": 1.0,
+    "mean_best_metalinguistic_false_positive_rate": 0.0,
+    "mean_best_non_assertive_false_positive_rate": 0.0,
+    "mean_best_predicate_confusion_f1": 1.0,
+    "mean_best_temporal_false_positive_rate": 0.0,
+    "mean_f1_lift": 0.5999999999999999,
+    "min_best_predicate_confusion_f1": 1.0,
+    "min_distinct_predicates": 6,
+    "n_corpora": 2,
+    "promoted_corpora": 2,
+    "promotes_cross_corpus_extractor": true,
+    "status": "promote",
+    "workflow": "triple_extraction_fixture_matrix"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 9,
+    "directory_count": 0,
+    "file_count": 9,
+    "missing_count": 0
+  }
+}

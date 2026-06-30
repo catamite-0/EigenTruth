@@ -5664,8 +5664,10 @@ it also inspects the frontier `artifact-json-cache.json` so the summary splits
 missing references into cache-recoverable and unrecoverable counts. Add
 `--restore-json-cache-artifacts` to restore only those cache-backed missing JSON
 files and re-run the audit before writing the final report. Restore mode
-normalizes repo-local absolute paths in cached JSON payloads to repo-relative
-paths before writing files:
+also inspects failed artifact manifests for missing cache-backed JSON child
+artifacts; manifest children are written only when the restored bytes match the
+parent manifest digest. It normalizes repo-local absolute paths in cached JSON
+payloads to repo-relative paths before writing files:
 
 ```bash
 python benchmarks/audit_frontier_artifact_references.py \
@@ -8412,7 +8414,9 @@ Use repeated `--json-cache` arguments to inspect additional persisted JSON
 artifact caches, or `--no-json-cache` for a pure filesystem-only audit. The
 restore mode never rewrites existing files; it only writes references that were
 missing and had a valid cached JSON payload, with repo-local absolute paths
-normalized for portability.
+normalized for portability. When restoring a child of an artifact manifest, a
+cache payload whose restored bytes would not match the manifest sha/size is
+reported as a digest mismatch rather than written.
 
 Once verification passes, `promote_artifact_manifest.py` can register the
 manifest and verification report in a local `ArtifactRegistry` JSON file:
