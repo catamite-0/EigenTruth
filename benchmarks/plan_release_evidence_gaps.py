@@ -32,7 +32,33 @@ from benchmarks.plan_frontier_stability_evidence_reruns import (  # noqa: E402
 )
 from eigentruth.control import plan_evidence_gaps_from_release_candidate  # noqa: E402
 from eigentruth.json_utils import strict_json_dumps  # noqa: E402
-from eigentruth.registry import ArtifactRegistry  # noqa: E402
+from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
+
+FRONTIER_RERUN_ROLLUP_COMPLETION_WORKFLOW = "frontier_rerun_rollup_completion_plan"
+FRONTIER_RERUN_ROLLUP_WORKFLOW_TO_TRACK = {
+    "frontier_stability_evidence_rerun_rollup": "stability",
+    "frontier_abstention_evidence_rerun_rollup": "abstention",
+    "frontier_detectability_evidence_rerun_rollup": "detectability",
+    "frontier_multiple_testing_rerun_rollup": "multiple_testing",
+}
+FRONTIER_RERUN_ROLLUP_TRACKS = {
+    "stability": {
+        "workflow": "frontier_stability_evidence_rerun_rollup",
+        "script": "benchmarks/rollup_frontier_stability_evidence_reruns.py",
+    },
+    "abstention": {
+        "workflow": "frontier_abstention_evidence_rerun_rollup",
+        "script": "benchmarks/rollup_frontier_abstention_evidence_reruns.py",
+    },
+    "detectability": {
+        "workflow": "frontier_detectability_evidence_rerun_rollup",
+        "script": "benchmarks/rollup_frontier_detectability_evidence_reruns.py",
+    },
+    "multiple_testing": {
+        "workflow": "frontier_multiple_testing_rerun_rollup",
+        "script": "benchmarks/rollup_frontier_multiple_testing_reruns.py",
+    },
+}
 
 
 def build_release_evidence_gap_plan(
@@ -95,6 +121,12 @@ def build_release_evidence_gap_plan(
     detectability_confidence_direction: str = "higher",
     detectability_cell: str = "entrenched",
     detectability_max_records: int = 100,
+    frontier_rerun_rollup_completion_json_path: str | Path | None = None,
+    frontier_rerun_rollup_completion_artifact_manifest_path: str | Path | None = None,
+    frontier_rerun_rollup_completion_output_dir: str | Path | None = None,
+    frontier_rerun_rollup_completion_name: str | None = None,
+    frontier_rerun_rollup_completion_version: str | None = None,
+    frontier_rerun_rollup_queue_paths: Sequence[str | Path] = (),
     python_executable: str = sys.executable,
 ) -> dict[str, Any]:
     """Load a release report and optionally write/register its evidence-gap plan."""
@@ -130,6 +162,25 @@ def build_release_evidence_gap_plan(
         raise ValueError("detectability_rerun_name/version require registry_path.")
     if (detectability_rerun_name is None) != (detectability_rerun_version is None):
         raise ValueError("detectability_rerun_name and detectability_rerun_version must be provided together.")
+    if (
+        frontier_rerun_rollup_completion_artifact_manifest_path is not None
+        and frontier_rerun_rollup_completion_json_path is None
+    ):
+        raise ValueError(
+            "frontier_rerun_rollup_completion_artifact_manifest_path requires "
+            "frontier_rerun_rollup_completion_json_path."
+        )
+    if (
+        frontier_rerun_rollup_completion_name or frontier_rerun_rollup_completion_version
+    ) and registry_path is None:
+        raise ValueError("frontier_rerun_rollup_completion_name/version require registry_path.")
+    if (frontier_rerun_rollup_completion_name is None) != (
+        frontier_rerun_rollup_completion_version is None
+    ):
+        raise ValueError(
+            "frontier_rerun_rollup_completion_name and "
+            "frontier_rerun_rollup_completion_version must be provided together."
+        )
     source_path = Path(source)
     payload = _load_json_object(source_path)
     plan = plan_evidence_gaps_from_release_candidate(
@@ -193,6 +244,20 @@ def build_release_evidence_gap_plan(
         detectability_confidence_direction=detectability_confidence_direction,
         detectability_cell=detectability_cell,
         detectability_max_records=detectability_max_records,
+        frontier_rerun_rollup_completion_json_path=(
+            frontier_rerun_rollup_completion_json_path
+        ),
+        frontier_rerun_rollup_completion_artifact_manifest_path=(
+            frontier_rerun_rollup_completion_artifact_manifest_path
+        ),
+        frontier_rerun_rollup_completion_output_dir=(
+            frontier_rerun_rollup_completion_output_dir
+        ),
+        frontier_rerun_rollup_completion_name=frontier_rerun_rollup_completion_name,
+        frontier_rerun_rollup_completion_version=(
+            frontier_rerun_rollup_completion_version
+        ),
+        frontier_rerun_rollup_queue_paths=frontier_rerun_rollup_queue_paths,
         python_executable=python_executable,
     )
     if derived_artifacts:
@@ -280,6 +345,22 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         detectability_confidence_direction=args.detectability_confidence_direction,
         detectability_cell=args.detectability_cell,
         detectability_max_records=args.detectability_max_records,
+        frontier_rerun_rollup_completion_json_path=(
+            args.frontier_rerun_rollup_completion_json
+        ),
+        frontier_rerun_rollup_completion_artifact_manifest_path=(
+            args.frontier_rerun_rollup_completion_artifact_manifest
+        ),
+        frontier_rerun_rollup_completion_output_dir=(
+            args.frontier_rerun_rollup_completion_output_dir
+        ),
+        frontier_rerun_rollup_completion_name=(
+            args.frontier_rerun_rollup_completion_name
+        ),
+        frontier_rerun_rollup_completion_version=(
+            args.frontier_rerun_rollup_completion_version
+        ),
+        frontier_rerun_rollup_queue_paths=tuple(args.frontier_rerun_rollup_queue or ()),
         python_executable=args.python,
     )
     summary = payload["summary"]
@@ -449,6 +530,37 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--detectability-confidence-direction", choices=("higher", "lower"), default="higher")
     parser.add_argument("--detectability-cell", default="entrenched")
     parser.add_argument("--detectability-max-records", type=int, default=100)
+    parser.add_argument(
+        "--frontier-rerun-rollup-completion-json",
+        default=None,
+        help="optional output JSON path for a frontier rerun-rollup completion plan",
+    )
+    parser.add_argument(
+        "--frontier-rerun-rollup-completion-artifact-manifest",
+        default=None,
+        help="optional artifact manifest path for the rerun-rollup completion plan",
+    )
+    parser.add_argument(
+        "--frontier-rerun-rollup-completion-output-dir",
+        default=None,
+        help="optional root directory for derived rerun-rollup outputs",
+    )
+    parser.add_argument(
+        "--frontier-rerun-rollup-completion-name",
+        default=None,
+        help="optional registry name for the rerun-rollup completion plan",
+    )
+    parser.add_argument(
+        "--frontier-rerun-rollup-completion-version",
+        default=None,
+        help="optional registry version for the rerun-rollup completion plan",
+    )
+    parser.add_argument(
+        "--frontier-rerun-rollup-queue",
+        action="append",
+        default=[],
+        help="TRACK=PATH queue mapping for rollup commands; repeatable",
+    )
     parser.add_argument("--python", default=sys.executable, help="Python executable for generated rerun commands")
     run(parser.parse_args(argv))
 
@@ -509,6 +621,12 @@ def _build_derived_artifacts(
     detectability_confidence_direction: str,
     detectability_cell: str,
     detectability_max_records: int,
+    frontier_rerun_rollup_completion_json_path: str | Path | None,
+    frontier_rerun_rollup_completion_artifact_manifest_path: str | Path | None,
+    frontier_rerun_rollup_completion_output_dir: str | Path | None,
+    frontier_rerun_rollup_completion_name: str | None,
+    frontier_rerun_rollup_completion_version: str | None,
+    frontier_rerun_rollup_queue_paths: Sequence[str | Path],
     python_executable: str,
 ) -> dict[str, Any]:
     derived: dict[str, Any] = {}
@@ -671,7 +789,367 @@ def _build_derived_artifacts(
             "command_count": summary["command_count"],
             "missing_command_count": summary["missing_command_count"],
         }
+    if frontier_rerun_rollup_completion_json_path is not None:
+        completion_payload = build_frontier_rerun_rollup_completion_plan(
+            source=source_path,
+            json_path=frontier_rerun_rollup_completion_json_path,
+            artifact_manifest_path=frontier_rerun_rollup_completion_artifact_manifest_path,
+            registry_path=None
+            if (
+                frontier_rerun_rollup_completion_name is None
+                or frontier_rerun_rollup_completion_version is None
+            )
+            else registry_path,
+            name=frontier_rerun_rollup_completion_name,
+            version=frontier_rerun_rollup_completion_version,
+            output_dir=frontier_rerun_rollup_completion_output_dir,
+            queue_paths=frontier_rerun_rollup_queue_paths,
+            python_executable=python_executable,
+        )
+        summary = completion_payload["summary"]
+        derived["frontier_rerun_rollup_completion_plan"] = {
+            "path": str(frontier_rerun_rollup_completion_json_path),
+            "artifact_manifest": None
+            if frontier_rerun_rollup_completion_artifact_manifest_path is None
+            else str(frontier_rerun_rollup_completion_artifact_manifest_path),
+            "status": completion_payload["status"],
+            "entry_count": summary["entry_count"],
+            "command_count": summary["command_count"],
+            "missing_queue_count": summary["missing_queue_count"],
+            "unsupported_workflow_count": summary["unsupported_workflow_count"],
+        }
     return derived
+
+
+def build_frontier_rerun_rollup_completion_plan(
+    *,
+    source: str | Path,
+    json_path: str | Path | None = None,
+    artifact_manifest_path: str | Path | None = None,
+    registry_path: str | Path | None = None,
+    name: str | None = None,
+    version: str | None = None,
+    output_dir: str | Path | None = None,
+    queue_paths: Sequence[str | Path] = (),
+    python_executable: str = sys.executable,
+    metadata: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build a command plan that completes blocked frontier rerun rollups."""
+    if artifact_manifest_path is not None and json_path is None:
+        raise ValueError("artifact_manifest_path requires json_path.")
+    if registry_path is not None and (not name or not version):
+        raise ValueError("registry_path requires name and version.")
+    source_path = Path(source)
+    output_path = None if json_path is None else Path(json_path)
+    manifest_path = None if artifact_manifest_path is None else Path(artifact_manifest_path)
+    rollup_root = (
+        Path(output_dir)
+        if output_dir is not None
+        else source_path.parent / "frontier-rerun-rollup-completion"
+    )
+    payload = _load_json_object(source_path)
+    queue_map = _frontier_rerun_rollup_queue_map(queue_paths)
+    decisions = _frontier_rerun_rollup_completion_decisions(payload)
+    entries = tuple(
+        _frontier_rerun_rollup_completion_entry(
+            decision,
+            rollup_root=rollup_root,
+            queue_map=queue_map,
+            python_executable=python_executable,
+        )
+        for decision in decisions
+    )
+    summary = {
+        "entry_count": len(entries),
+        "command_count": sum(1 for entry in entries if entry["command_status"] == "ready"),
+        "missing_queue_count": sum(
+            1 for entry in entries if entry["command_status"] == "missing_queue"
+        ),
+        "unsupported_workflow_count": sum(
+            1 for entry in entries if entry["command_status"] == "unsupported_workflow"
+        ),
+        "blocked_rollup_count": sum(
+            1 for entry in entries if entry["source_status"] != "promote"
+        ),
+        "tracks": tuple(sorted({str(entry["track"]) for entry in entries if entry.get("track")})),
+    }
+    status = _frontier_rerun_rollup_completion_status(summary)
+    output = {
+        "schema_version": 1,
+        "workflow": FRONTIER_RERUN_ROLLUP_COMPLETION_WORKFLOW,
+        "status": status,
+        "source": {
+            "path": str(source_path),
+            "workflow": payload.get("workflow"),
+            "status": payload.get("status"),
+            "decision_status": _nested_value(payload, "decision", "status"),
+            "frontier_rerun_rollup_track_status": _nested_value(
+                payload,
+                "decision",
+                "frontier_rerun_rollup_track_status",
+            ),
+        },
+        "summary": summary,
+        "paths": {
+            "completion_plan": None if output_path is None else str(output_path),
+            "artifact_manifest": None if manifest_path is None else str(manifest_path),
+            "rollup_output_dir": str(rollup_root),
+        },
+        "config": {
+            "queues": queue_map,
+            "python_executable": python_executable,
+        },
+        "entries": entries,
+        "metadata": dict(metadata or {}),
+    }
+    if output_path is not None:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(
+            strict_json_dumps(output, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+    manifest = None
+    if manifest_path is not None:
+        manifest = _write_frontier_rerun_rollup_completion_manifest(
+            source_path=source_path,
+            output_path=output_path,
+            manifest_path=manifest_path,
+            queue_map=queue_map,
+            payload=output,
+            metadata=metadata or {},
+        )
+    if registry_path is not None:
+        assert name is not None and version is not None
+        ArtifactRegistry.load_json(registry_path).record_report(
+            name=name,
+            version=version,
+            path=output_path if output_path is not None else source_path,
+            metadata={
+                "workflow": FRONTIER_RERUN_ROLLUP_COMPLETION_WORKFLOW,
+                "status": status,
+                "source": str(source_path),
+                "artifact_manifest": None if manifest_path is None else str(manifest_path),
+                "entry_count": summary["entry_count"],
+                "command_count": summary["command_count"],
+                "missing_queue_count": summary["missing_queue_count"],
+                "unsupported_workflow_count": summary["unsupported_workflow_count"],
+                "tracks": summary["tracks"],
+                "manifest_summary": {} if manifest is None else manifest.get("summary", {}),
+                **dict(metadata or {}),
+            },
+        ).save_json()
+    return output
+
+
+def _frontier_rerun_rollup_completion_decisions(
+    payload: Mapping[str, Any],
+) -> tuple[Mapping[str, Any], ...]:
+    decisions = tuple(
+        item
+        for item in _mapping_sequence(payload.get("frontier_rerun_rollup_decisions", ()))
+        if item.get("status") != "promote"
+    )
+    if decisions:
+        return decisions
+    workflow = _optional_str(payload.get("workflow"))
+    if workflow in FRONTIER_RERUN_ROLLUP_WORKFLOW_TO_TRACK and payload.get("status") != "promote":
+        return (
+            {
+                "name": _frontier_rerun_rollup_name(payload),
+                "status": payload.get("status", "blocked"),
+                "metrics": {
+                    "workflow": workflow,
+                    "track": FRONTIER_RERUN_ROLLUP_WORKFLOW_TO_TRACK[workflow],
+                    **dict(_mapping(payload.get("summary"))),
+                },
+                "blocking_reasons": _frontier_rerun_rollup_report_blocking_reasons(payload),
+            },
+        )
+    return ()
+
+
+def _frontier_rerun_rollup_completion_entry(
+    decision: Mapping[str, Any],
+    *,
+    rollup_root: Path,
+    queue_map: Mapping[str, str],
+    python_executable: str,
+) -> dict[str, Any]:
+    metrics = _mapping(decision.get("metrics"))
+    workflow = _optional_str(metrics.get("workflow")) or _infer_rollup_workflow(decision)
+    track = (
+        _optional_str(metrics.get("track"))
+        or FRONTIER_RERUN_ROLLUP_WORKFLOW_TO_TRACK.get(workflow or "")
+        or ""
+    )
+    config = FRONTIER_RERUN_ROLLUP_TRACKS.get(track)
+    name = _optional_str(decision.get("name")) or f"frontier-{track or 'unknown'}-rerun-rollup"
+    base = {
+        "name": name,
+        "track": track,
+        "rollup_workflow": workflow,
+        "source_status": _optional_str(decision.get("status")) or "blocked",
+        "metrics": _frontier_rerun_rollup_metrics(metrics),
+        "blocking_reasons": _string_tuple(decision.get("blocking_reasons", ())),
+    }
+    if config is None or workflow not in FRONTIER_RERUN_ROLLUP_WORKFLOW_TO_TRACK:
+        return {
+            **base,
+            "command_status": "unsupported_workflow",
+            "missing_inputs": ("supported_rollup_workflow",),
+            "queue": None,
+            "report": None,
+            "artifact_manifest": None,
+            "command": (),
+        }
+    queue = queue_map.get(track) or queue_map.get(str(config["workflow"]))
+    output_dir = rollup_root / track
+    report = output_dir / "frontier-rerun-rollup.json"
+    manifest = output_dir / "artifact-manifest.json"
+    if queue is None:
+        return {
+            **base,
+            "command_status": "missing_queue",
+            "missing_inputs": (f"{track}_queue",),
+            "queue": None,
+            "report": str(report),
+            "artifact_manifest": str(manifest),
+            "command": (),
+        }
+    command = (
+        python_executable,
+        str(config["script"]),
+        "--queue",
+        queue,
+        "--json",
+        str(report),
+        "--artifact-manifest",
+        str(manifest),
+        "--require-all-reports",
+    )
+    return {
+        **base,
+        "command_status": "ready",
+        "missing_inputs": (),
+        "queue": queue,
+        "report": str(report),
+        "artifact_manifest": str(manifest),
+        "command": command,
+    }
+
+
+def _frontier_rerun_rollup_queue_map(values: Sequence[str | Path]) -> dict[str, str]:
+    queue_map: dict[str, str] = {}
+    for value in values:
+        item = str(value)
+        if "=" not in item:
+            raise ValueError(f"frontier rerun-rollup queue must be TRACK=PATH, got {item!r}.")
+        key, path = item.split("=", 1)
+        key = key.strip()
+        path = path.strip()
+        if not key or not path:
+            raise ValueError(f"frontier rerun-rollup queue must be TRACK=PATH, got {item!r}.")
+        normalized = FRONTIER_RERUN_ROLLUP_WORKFLOW_TO_TRACK.get(key, key)
+        if normalized not in FRONTIER_RERUN_ROLLUP_TRACKS:
+            raise ValueError(
+                "frontier rerun-rollup queue track must be one of "
+                f"{tuple(FRONTIER_RERUN_ROLLUP_TRACKS)}, got {key!r}."
+            )
+        queue_map[normalized] = path
+        queue_map[FRONTIER_RERUN_ROLLUP_TRACKS[normalized]["workflow"]] = path
+    return queue_map
+
+
+def _frontier_rerun_rollup_completion_status(summary: Mapping[str, Any]) -> str:
+    if summary["entry_count"] == 0:
+        return "empty"
+    if summary["missing_queue_count"] or summary["unsupported_workflow_count"]:
+        return "needs_inputs"
+    return "ready"
+
+
+def _frontier_rerun_rollup_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
+    keys = (
+        "candidate_count",
+        "observed_report_count",
+        "missing_report_count",
+        "invalid_report_count",
+        "blocked_candidate_count",
+        "promotion_ready_count",
+        "promotion_ready",
+    )
+    return {key: metrics.get(key) for key in keys if key in metrics}
+
+
+def _infer_rollup_workflow(decision: Mapping[str, Any]) -> str | None:
+    text = " ".join((
+        _optional_str(decision.get("name")) or "",
+        " ".join(_string_tuple(decision.get("blocking_reasons", ()))),
+    ))
+    for workflow in FRONTIER_RERUN_ROLLUP_WORKFLOW_TO_TRACK:
+        if workflow in text:
+            return workflow
+    return None
+
+
+def _frontier_rerun_rollup_name(payload: Mapping[str, Any]) -> str:
+    metadata = _mapping(payload.get("metadata"))
+    return (
+        _optional_str(metadata.get("name"))
+        or _optional_str(_nested_value(payload, "paths", "report"))
+        or "frontier-rerun-rollup"
+    )
+
+
+def _frontier_rerun_rollup_report_blocking_reasons(
+    payload: Mapping[str, Any],
+) -> tuple[str, ...]:
+    gate = _mapping(payload.get("gate"))
+    reasons = []
+    for reason in _mapping_sequence(gate.get("blocking_reasons", ())):
+        text = _optional_str(reason.get("reason"))
+        if text:
+            reasons.append(text)
+    reasons.extend(_string_tuple(gate.get("blocking_reasons", ())))
+    return tuple(dict.fromkeys(reasons))
+
+
+def _write_frontier_rerun_rollup_completion_manifest(
+    *,
+    source_path: Path,
+    output_path: Path | None,
+    manifest_path: Path,
+    queue_map: Mapping[str, str],
+    payload: Mapping[str, Any],
+    metadata: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    artifacts: dict[str, str | Path | None] = {
+        "frontier_rerun_rollup_completion_plan": output_path,
+        "source": source_path,
+    }
+    for track in FRONTIER_RERUN_ROLLUP_TRACKS:
+        queue = queue_map.get(track)
+        if queue is not None:
+            artifacts[f"{track}_rerun_queue"] = queue
+    manifest = build_artifact_manifest(
+        artifacts,
+        root=manifest_path.parent,
+        metadata={
+            "runner": "plan_release_evidence_gaps",
+            "workflow": FRONTIER_RERUN_ROLLUP_COMPLETION_WORKFLOW,
+            "status": payload.get("status"),
+            "entry_count": _nested_value(payload, "summary", "entry_count"),
+            "command_count": _nested_value(payload, "summary", "command_count"),
+            "missing_queue_count": _nested_value(payload, "summary", "missing_queue_count"),
+            **dict(metadata),
+        },
+    )
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(
+        strict_json_dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return manifest
 
 
 def _load_json_object(path: Path) -> Mapping[str, Any]:
@@ -679,6 +1157,37 @@ def _load_json_object(path: Path) -> Mapping[str, Any]:
     if not isinstance(data, Mapping):
         raise ValueError("source JSON must contain an object.")
     return data
+
+
+def _mapping(value: Any) -> Mapping[str, Any]:
+    return value if isinstance(value, Mapping) else {}
+
+
+def _mapping_sequence(value: Any) -> tuple[Mapping[str, Any], ...]:
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return tuple(item for item in value if isinstance(item, Mapping))
+    return ()
+
+
+def _optional_str(value: Any) -> str | None:
+    return value if isinstance(value, str) and value else None
+
+
+def _string_tuple(value: Any) -> tuple[str, ...]:
+    if isinstance(value, str):
+        return (value,) if value else ()
+    if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray)):
+        return tuple(str(item) for item in value if str(item))
+    return ()
+
+
+def _nested_value(mapping: Mapping[str, Any], *keys: str) -> Any:
+    current: Any = mapping
+    for key in keys:
+        if not isinstance(current, Mapping):
+            return None
+        current = current.get(key)
+    return current
 
 
 def _parse_metadata(items: Sequence[str]) -> dict[str, str]:

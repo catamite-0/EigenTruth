@@ -339,6 +339,117 @@ def test_evidence_gap_plan_maps_frontier_rerun_rollup_blocker():
     )
 
 
+def test_plan_release_evidence_gaps_can_emit_frontier_rerun_rollup_completion_plan(
+    tmp_path,
+):
+    source = tmp_path / "frontier-release-evidence.json"
+    output = tmp_path / "evidence-gap-plan.json"
+    completion_path = tmp_path / "frontier-rerun-rollup-completion.json"
+    manifest_path = tmp_path / "frontier-rerun-rollup-completion-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    queue_path = tmp_path / "abstention-rerun-queue.json"
+    queue_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "frontier_abstention_evidence_rerun_queue",
+            "status": "ready",
+            "entries": (),
+        }),
+        encoding="utf-8",
+    )
+    source.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "frontier_release_evidence_comparison",
+            "status": "complete",
+            "decision": {
+                "status": "blocked",
+                "verifier_track_status": "promote",
+                "abstention_track_status": "promote",
+                "frontier_rerun_rollup_track_status": "blocked",
+                "blocking_reasons": (),
+            },
+            "evidence_summary": {
+                "frontier_rerun_rollup_missing_report_count": 1,
+                "frontier_rerun_rollup_blocked_names": (
+                    "frontier-abstention-rerun-rollup",
+                ),
+            },
+            "frontier_rerun_rollup_decisions": (
+                {
+                    "name": "frontier-abstention-rerun-rollup",
+                    "status": "blocked",
+                    "metrics": {
+                        "workflow": "frontier_abstention_evidence_rerun_rollup",
+                        "track": "abstention",
+                        "candidate_count": 2,
+                        "missing_report_count": 1,
+                        "blocked_candidate_count": 1,
+                        "promotion_ready_count": 0,
+                    },
+                    "blocking_reasons": (
+                        "frontier_rerun_rollup.frontier-abstention-rerun-rollup."
+                        "summary.missing_report_count 1 is non-zero",
+                    ),
+                },
+            ),
+        }),
+        encoding="utf-8",
+    )
+
+    payload = build_release_evidence_gap_plan(
+        source=source,
+        json_path=output,
+        registry_path=registry_path,
+        name="frontier-gap-plan",
+        version="0.1",
+        frontier_rerun_rollup_completion_json_path=completion_path,
+        frontier_rerun_rollup_completion_artifact_manifest_path=manifest_path,
+        frontier_rerun_rollup_completion_output_dir=tmp_path / "frontier-rerun-rollups",
+        frontier_rerun_rollup_completion_name="frontier-rerun-rollup-completion",
+        frontier_rerun_rollup_completion_version="0.1",
+        frontier_rerun_rollup_queue_paths=(f"abstention={queue_path}",),
+        python_executable="python",
+    )
+
+    saved = json.loads(output.read_text(encoding="utf-8"))
+    completion = json.loads(completion_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    registry = ArtifactRegistry.load_json(registry_path)
+    gap_record = registry.get("evidence_gap_plan:frontier-gap-plan:0.1")
+    completion_record = registry.get("report:frontier-rerun-rollup-completion:0.1")
+    derived = payload["derived_artifacts"]["frontier_rerun_rollup_completion_plan"]
+    entry = completion["entries"][0]
+    command = entry["command"]
+
+    assert saved["derived_artifacts"] == payload["derived_artifacts"]
+    assert derived["path"] == str(completion_path)
+    assert derived["artifact_manifest"] == str(manifest_path)
+    assert derived["status"] == "ready"
+    assert derived["entry_count"] == 1
+    assert derived["command_count"] == 1
+    assert derived["missing_queue_count"] == 0
+    assert completion["workflow"] == "frontier_rerun_rollup_completion_plan"
+    assert completion["summary"]["tracks"] == ["abstention"]
+    assert entry["track"] == "abstention"
+    assert entry["rollup_workflow"] == "frontier_abstention_evidence_rerun_rollup"
+    assert entry["command_status"] == "ready"
+    assert command[:2] == [
+        "python",
+        "benchmarks/rollup_frontier_abstention_evidence_reruns.py",
+    ]
+    assert command[command.index("--queue") + 1] == str(queue_path)
+    assert command[command.index("--json") + 1] == str(
+        tmp_path / "frontier-rerun-rollups" / "abstention" / "frontier-rerun-rollup.json"
+    )
+    assert "--require-all-reports" in command
+    assert manifest["artifacts"]["frontier_rerun_rollup_completion_plan"]["exists"] is True
+    assert manifest["artifacts"]["abstention_rerun_queue"]["exists"] is True
+    assert gap_record.metadata["gap_count"] == 1
+    assert completion_record.metadata["command_count"] == 1
+    assert completion_record.metadata["tracks"] == ["abstention"]
+
+
 def test_evidence_gap_plan_maps_product_runtime_world_model_blockers():
     plan = plan_evidence_gaps_from_release_candidate({
         "workflow": "release_candidate_comparison",
