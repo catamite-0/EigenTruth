@@ -36466,7 +36466,7 @@ def test_run_product_runtime_baseline_reuses_trace_record_cache(tmp_path, monkey
     assert first["config"]["trace_record_cache"]["cache_hit"] is False
     assert first["config"]["trace_record_cache"]["cache_written"] is True
     assert first["paths"]["trace_records_cache"] == str(cache_path)
-    assert cache_payload["schema_version"] == 19
+    assert cache_payload["schema_version"] == 20
     assert cache_payload["workflow"] == "product_runtime_baseline_trace_records"
     assert cache_payload["summary"]["trace_count"] == 2
     assert cache_payload["policy"]["payload"]["max_total_seconds"] == 0.3
@@ -38908,6 +38908,212 @@ def _write_product_runtime_trace(
         }),
         encoding="utf-8",
     )
+
+
+def _write_receipted_product_runtime_trace(
+    path: Path,
+    *,
+    request_id: str,
+    receipt_mode: str,
+) -> None:
+    from eigentruth.control import (
+        ActionExecutionStatus,
+        ActionReceiptSigner,
+        ActionRequest,
+        ActionResult,
+        ControlAction,
+        ProductTrace,
+        RuntimePhaseTiming,
+        RuntimeTrace,
+        attach_action_receipt,
+    )
+
+    action_request = ActionRequest(
+        action=ControlAction.EXECUTE_TOOL,
+        reason="reserve inventory",
+        payload={"tool": "reserve_inventory", "input": {"sku": "A1", "qty": 1}},
+        request_id=f"{request_id}-tool",
+    )
+    action_result = ActionResult(
+        action=ControlAction.EXECUTE_TOOL,
+        status=ActionExecutionStatus.SUCCEEDED,
+        output={"reserved": True, "sku": "A1", "qty": 1},
+        request_id=f"{request_id}-tool",
+    )
+    if receipt_mode == "signed":
+        signer = ActionReceiptSigner("unit-test-secret")
+        action_result = attach_action_receipt(
+            action_result,
+            signer.issue(action_result, request=action_request),
+        )
+    elif receipt_mode == "mismatch":
+        signer = ActionReceiptSigner("unit-test-secret")
+        receipt = signer.issue(action_result, request=action_request).to_dict()
+        receipt["result_fingerprint"] = "0" * 64
+        receipt["signature_algorithm"] = "unsigned"
+        receipt["signature"] = None
+        action_result = ActionResult(
+            action=action_result.action,
+            status=action_result.status,
+            output=action_result.output,
+            metadata={"action_receipt": receipt},
+            request_id=action_result.request_id,
+        )
+    elif receipt_mode != "missing":
+        raise ValueError(f"unknown receipt_mode {receipt_mode!r}")
+
+    trace = ProductTrace(
+        request_id=request_id,
+        actions=(action_request,),
+        action_results=(action_result,),
+        runtime_trace=RuntimeTrace(
+            phases=(RuntimePhaseTiming("tool_execution", 0.01),),
+            total_seconds=0.02,
+        ),
+        metadata={"cache": {"verifier": {"hits": 1, "misses": 0}}},
+    )
+    path.write_text(json.dumps(trace.to_dict()), encoding="utf-8")
+
+
+def test_run_product_runtime_baseline_aggregates_action_receipts(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    signed_trace = tmp_path / "signed.json"
+    mismatch_trace = tmp_path / "mismatch.json"
+    missing_trace = tmp_path / "missing.json"
+    _write_receipted_product_runtime_trace(
+        signed_trace,
+        request_id="signed",
+        receipt_mode="signed",
+    )
+    _write_receipted_product_runtime_trace(
+        mismatch_trace,
+        request_id="mismatch",
+        receipt_mode="mismatch",
+    )
+    _write_receipted_product_runtime_trace(
+        missing_trace,
+        request_id="missing",
+        receipt_mode="missing",
+    )
+
+    payload = module.build_product_runtime_baseline(
+        module.ProductRuntimeBaselineConfig(
+            trace_paths=(signed_trace, mismatch_trace, missing_trace),
+            report_path=tmp_path / "baseline.json",
+        )
+    )
+
+    receipts = payload["summary"]["action_receipts"]
+    assert receipts["available_trace_count"] == 3
+    assert receipts["passed_trace_count"] == 1
+    assert receipts["failed_trace_count"] == 2
+    assert receipts["result_count"] == pytest.approx(3.0)
+    assert receipts["receipt_count"] == pytest.approx(2.0)
+    assert receipts["missing_receipt_count"] == pytest.approx(1.0)
+    assert receipts["unsigned_receipt_count"] == pytest.approx(1.0)
+    assert receipts["invalid_receipt_count"] == pytest.approx(0.0)
+    assert receipts["fingerprint_match_count"] == pytest.approx(1.0)
+    assert receipts["fingerprint_mismatch_count"] == pytest.approx(1.0)
+    assert receipts["coverage_rate"] == pytest.approx(2 / 3)
+    assert receipts["missing_receipt_rate"] == pytest.approx(1 / 3)
+    assert receipts["unsigned_receipt_rate"] == pytest.approx(1 / 2)
+    assert receipts["fingerprint_mismatch_rate"] == pytest.approx(1 / 2)
+    assert receipts["counts_by_algorithm"] == {
+        "hmac-sha256": 1,
+        "unsigned": 1,
+    }
+    assert payload["traces"][0]["metrics"]["action_receipts_passed"] is True
+    assert payload["traces"][1]["metrics"]["action_receipts_fingerprint_mismatch_count"] == 1.0
+    assert payload["traces"][2]["metrics"]["action_receipts_missing_receipt_count"] == 1.0
+
+
+def test_compare_product_runtime_baselines_gates_action_receipts(tmp_path):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    registry_module = importlib.import_module("eigentruth.registry")
+    baseline_trace_a = tmp_path / "baseline-a.json"
+    baseline_trace_b = tmp_path / "baseline-b.json"
+    current_trace_a = tmp_path / "current-a.json"
+    current_trace_b = tmp_path / "current-b.json"
+    current_trace_c = tmp_path / "current-c.json"
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    drift_report = tmp_path / "drift.json"
+    manifest_path = tmp_path / "manifest.json"
+    registry_path = tmp_path / "registry.json"
+    for path, request_id in (
+        (baseline_trace_a, "baseline-a"),
+        (baseline_trace_b, "baseline-b"),
+        (current_trace_a, "current-a"),
+    ):
+        _write_receipted_product_runtime_trace(
+            path,
+            request_id=request_id,
+            receipt_mode="signed",
+        )
+    _write_receipted_product_runtime_trace(
+        current_trace_b,
+        request_id="current-b",
+        receipt_mode="mismatch",
+    )
+    _write_receipted_product_runtime_trace(
+        current_trace_c,
+        request_id="current-c",
+        receipt_mode="missing",
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace_a, baseline_trace_b),
+            report_path=baseline_report,
+        )
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(current_trace_a, current_trace_b, current_trace_c),
+            report_path=current_report,
+        )
+    )
+
+    payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        report_path=drift_report,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="runtime-drift-receipts",
+        version="0.1",
+        min_product_trace_action_receipts_coverage_rate=0.90,
+        max_product_trace_action_receipts_missing_receipt_rate_increase=0.0,
+        max_product_trace_action_receipts_fingerprint_mismatch_rate_increase=0.0,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "product_runtime_drift_report:runtime-drift-receipts:0.1"
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["blocked_metric_count"] == 3
+    assert _metric_by_name(payload, "action_receipts.coverage_rate")["status"] == "blocked"
+    assert _metric_by_name(payload, "action_receipts.missing_receipt_rate")[
+        "absolute_delta"
+    ] == pytest.approx(1 / 3)
+    assert _metric_by_name(payload, "action_receipts.fingerprint_mismatch_rate")[
+        "status"
+    ] == "blocked"
+    assert _metric_by_name(payload, "action_receipts.unsigned_receipt_rate")[
+        "status"
+    ] == "observed"
+    assert payload["config"]["min_product_trace_action_receipts_coverage_rate"] == (
+        pytest.approx(0.90)
+    )
+    assert manifest["metadata"]["product_trace_action_receipts_blocked_metric_count"] == 3
+    assert manifest["metadata"]["product_trace_action_receipts_coverage_rate_current"] == (
+        pytest.approx(2 / 3)
+    )
+    assert manifest["metadata"][
+        "product_trace_action_receipts_fingerprint_mismatch_rate_current"
+    ] == pytest.approx(1 / 2)
+    assert record.metadata["product_trace_action_receipts_blocked_metric_count"] == 3
 
 
 def _promotion_evidence_handoff_metadata(

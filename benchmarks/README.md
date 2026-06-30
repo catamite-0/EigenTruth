@@ -8564,7 +8564,9 @@ comparison coverage, manifest-verification, redline, AUROC,
 selective-accuracy, and selective-coverage drift, counterfactual verifier-audit
 coverage, manifest verification, record count, pass rate, false-invariance
 rate, flip-success drift, trace-level triple/slot-audit coverage, and
-trace-count drift.
+trace-count drift. When ProductTrace action results carry action receipts, the
+same comparison can gate receipt coverage plus missing, invalid,
+fingerprint-mismatch, and unsigned receipt rates.
 `build_product_trace_corpus.py` materializes redaction-safe
 `summaries.triple_coverage` plus
 `metadata.trace_corpus.triple_coverage_summary` for accepted full ProductTrace
@@ -8702,6 +8704,11 @@ python benchmarks/compare_product_runtime_baselines.py \
   --min-counterfactual-robustness-flip-success-rate 1.0 \
   --max-counterfactual-robustness-false-invariance-rate-increase 0.0 \
   --max-counterfactual-robustness-trace-gap-rate-increase 0.0 \
+  --min-product-trace-action-receipts-coverage-rate 1.0 \
+  --max-product-trace-action-receipts-missing-receipt-rate-increase 0.0 \
+  --max-product-trace-action-receipts-invalid-receipt-rate-increase 0.0 \
+  --max-product-trace-action-receipts-fingerprint-mismatch-rate-increase 0.0 \
+  --max-product-trace-action-receipts-unsigned-receipt-rate-increase 0.0 \
   --compact-json
 ```
 
@@ -8769,6 +8776,11 @@ python benchmarks/compare_product_runtime_baselines.py \
   --min-triple-audit-claim-coverage 1.0 \
   --min-triple-audit-pass-rate 1.0 \
   --min-triple-slot-coverage 1.0 \
+  --min-product-trace-action-receipts-coverage-rate 1.0 \
+  --max-product-trace-action-receipts-missing-receipt-rate-increase 0.0 \
+  --max-product-trace-action-receipts-invalid-receipt-rate-increase 0.0 \
+  --max-product-trace-action-receipts-fingerprint-mismatch-rate-increase 0.0 \
+  --max-product-trace-action-receipts-unsigned-receipt-rate-increase 0.0 \
   --min-current-trace-count 12 \
   --metadata evidence=smollm2_product_runtime_drift_refresh_v1_6 \
   --fail-on-drift

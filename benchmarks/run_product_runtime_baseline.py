@@ -21,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-_TRACE_RECORD_CACHE_SCHEMA_VERSION = 19
+_TRACE_RECORD_CACHE_SCHEMA_VERSION = 20
 _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "promotion_contract_coverage_rate",
     "triple_extraction_fixture_matrix_coverage_rate",
@@ -1097,6 +1097,31 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         "action_execution_alignment_available": bool(
             metrics.get("action_execution_alignment_available")
         ),
+        "action_receipts_summary": dict(_mapping(metrics.get("action_receipts_summary"))),
+        "action_receipts_available": bool(metrics.get("action_receipts_available")),
+        "action_receipts_source": metrics.get("action_receipts_source"),
+        "action_receipts_passed": metrics.get("action_receipts_passed"),
+        "action_receipts_result_count": metrics.get("action_receipts_result_count"),
+        "action_receipts_receipt_count": metrics.get("action_receipts_receipt_count"),
+        "action_receipts_missing_receipt_count": metrics.get(
+            "action_receipts_missing_receipt_count"
+        ),
+        "action_receipts_signed_receipt_count": metrics.get(
+            "action_receipts_signed_receipt_count"
+        ),
+        "action_receipts_unsigned_receipt_count": metrics.get(
+            "action_receipts_unsigned_receipt_count"
+        ),
+        "action_receipts_invalid_receipt_count": metrics.get(
+            "action_receipts_invalid_receipt_count"
+        ),
+        "action_receipts_fingerprint_match_count": metrics.get(
+            "action_receipts_fingerprint_match_count"
+        ),
+        "action_receipts_fingerprint_mismatch_count": metrics.get(
+            "action_receipts_fingerprint_mismatch_count"
+        ),
+        "action_receipts_coverage": metrics.get("action_receipts_coverage"),
         "action_audit_summary": dict(_mapping(metrics.get("action_audit_summary"))),
         "action_audit_available": bool(metrics.get("action_audit_available")),
         "action_audit_source": metrics.get("action_audit_source"),
@@ -1566,6 +1591,7 @@ def _aggregate_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "verification_stage": _aggregate_verification_stage(metrics),
         "verification_plan": _aggregate_verification_plan(metrics),
         "action_execution": _aggregate_action_execution(metrics),
+        "action_receipts": _aggregate_action_receipts(metrics),
         "action_audit": _aggregate_action_audit(metrics),
         "trajectory_audit": _aggregate_trajectory_audit(metrics),
         "claim_risk_localization": _aggregate_claim_risk_localization(metrics),
@@ -1661,6 +1687,26 @@ def _optimization_report(
                 summary,
                 "action_audit",
                 "malformed_payload_rate",
+            ),
+            "action_receipts_coverage_rate": _nested(
+                summary,
+                "action_receipts",
+                "coverage_rate",
+            ),
+            "action_receipts_missing_receipt_rate": _nested(
+                summary,
+                "action_receipts",
+                "missing_receipt_rate",
+            ),
+            "action_receipts_invalid_receipt_rate": _nested(
+                summary,
+                "action_receipts",
+                "invalid_receipt_rate",
+            ),
+            "action_receipts_fingerprint_mismatch_rate": _nested(
+                summary,
+                "action_receipts",
+                "fingerprint_mismatch_rate",
             ),
             "trajectory_audit_error_rate": _nested(summary, "trajectory_audit", "error_rate"),
             "trajectory_audit_failed_trace_rate": _nested(
@@ -2329,6 +2375,77 @@ def _aggregate_action_execution(metrics: Sequence[Mapping[str, Any]]) -> dict[st
         ),
         "per_trace_missing_result_count": _numeric_summary(
             item.get("action_execution_missing_result_count") for item in metrics
+        ),
+        "summary_observations": sum(1 for summary in summaries if summary),
+    }
+
+
+def _aggregate_action_receipts(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    summaries = [_mapping(item.get("action_receipts_summary")) for item in metrics]
+    n_traces = len(metrics)
+    available_count = sum(1 for item in metrics if item.get("action_receipts_available") is True)
+    passed_count = sum(1 for item in metrics if item.get("action_receipts_passed") is True)
+    failed_count = sum(1 for item in metrics if item.get("action_receipts_passed") is False)
+    result_count = _sum_float(metrics, "action_receipts_result_count") or 0.0
+    receipt_count = _sum_float(metrics, "action_receipts_receipt_count") or 0.0
+    missing_receipt_count = _sum_float(metrics, "action_receipts_missing_receipt_count") or 0.0
+    signed_receipt_count = _sum_float(metrics, "action_receipts_signed_receipt_count") or 0.0
+    unsigned_receipt_count = _sum_float(metrics, "action_receipts_unsigned_receipt_count") or 0.0
+    invalid_receipt_count = _sum_float(metrics, "action_receipts_invalid_receipt_count") or 0.0
+    fingerprint_match_count = _sum_float(
+        metrics,
+        "action_receipts_fingerprint_match_count",
+    ) or 0.0
+    fingerprint_mismatch_count = _sum_float(
+        metrics,
+        "action_receipts_fingerprint_mismatch_count",
+    ) or 0.0
+    counts_by_algorithm: dict[str, int] = {}
+    for summary in summaries:
+        _merge_counts(counts_by_algorithm, _mapping(summary.get("counts_by_algorithm")))
+    return {
+        "source_trace_count": n_traces,
+        "available_trace_count": available_count,
+        "missing_trace_count": n_traces - available_count,
+        "trace_coverage_rate": _safe_div(available_count, n_traces),
+        "passed_trace_count": passed_count,
+        "failed_trace_count": failed_count,
+        "passed_trace_rate": _safe_div(passed_count, available_count),
+        "failed_trace_rate": _safe_div(failed_count, available_count),
+        "source_counts": _counts(item.get("action_receipts_source") for item in metrics),
+        "result_count": result_count,
+        "receipt_count": receipt_count,
+        "missing_receipt_count": missing_receipt_count,
+        "signed_receipt_count": signed_receipt_count,
+        "unsigned_receipt_count": unsigned_receipt_count,
+        "invalid_receipt_count": invalid_receipt_count,
+        "fingerprint_match_count": fingerprint_match_count,
+        "fingerprint_mismatch_count": fingerprint_mismatch_count,
+        "coverage_rate": _safe_div(receipt_count, result_count),
+        "missing_receipt_rate": _safe_div(missing_receipt_count, result_count),
+        "signed_receipt_rate": _safe_div(signed_receipt_count, receipt_count),
+        "unsigned_receipt_rate": _safe_div(unsigned_receipt_count, receipt_count),
+        "invalid_receipt_rate": _safe_div(invalid_receipt_count, receipt_count),
+        "fingerprint_match_rate": _safe_div(fingerprint_match_count, receipt_count),
+        "fingerprint_mismatch_rate": _safe_div(
+            fingerprint_mismatch_count,
+            receipt_count,
+        ),
+        "counts_by_algorithm": counts_by_algorithm,
+        "per_trace_result_count": _numeric_summary(
+            item.get("action_receipts_result_count") for item in metrics
+        ),
+        "per_trace_receipt_count": _numeric_summary(
+            item.get("action_receipts_receipt_count") for item in metrics
+        ),
+        "per_trace_missing_receipt_count": _numeric_summary(
+            item.get("action_receipts_missing_receipt_count") for item in metrics
+        ),
+        "per_trace_fingerprint_mismatch_count": _numeric_summary(
+            item.get("action_receipts_fingerprint_mismatch_count") for item in metrics
+        ),
+        "per_trace_coverage": _numeric_summary(
+            item.get("action_receipts_coverage") for item in metrics
         ),
         "summary_observations": sum(1 for summary in summaries if summary),
     }
