@@ -38,6 +38,15 @@ from eigentruth.eval.conformal import (
     sequential_conformal_monitor,
     sequential_pvalue_monitor,
 )
+from eigentruth.eval.context_sensitivity import (
+    ContextSensitivityReport,
+    ContextSensitivityToken,
+    ContextSensitivityTokenScore,
+    context_logprob_delta,
+    context_sensitivity_ratio,
+    score_context_sensitivity,
+    unsupported_context_shift,
+)
 from eigentruth.eval.escalation import uncertainty_escalation_report
 from eigentruth.eval.hidden_evidence import (
     DEFAULT_STATEMENT_METADATA_KEYS,
@@ -156,6 +165,13 @@ __all__ = [
     "multiple_testing_conformal_report",
     "sequential_pvalue_monitor",
     "sequential_conformal_monitor",
+    "ContextSensitivityToken",
+    "ContextSensitivityTokenScore",
+    "ContextSensitivityReport",
+    "context_logprob_delta",
+    "unsupported_context_shift",
+    "context_sensitivity_ratio",
+    "score_context_sensitivity",
     "GEOMETRY_UNCERTAINTY_FUSION_METHODS",
     "RANK_SCORE_FUSION_METHODS",
     "native_anomaly_scores",
