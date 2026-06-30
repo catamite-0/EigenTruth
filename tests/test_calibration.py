@@ -11,6 +11,9 @@ from eigentruth.calibration import (
     CalibrationArtifact,
     CalibrationScore,
     ConformalCalibrator,
+    EvidenceAcquisitionCalibrationRecord,
+    EvidenceAcquisitionCalibrationReport,
+    EvidenceAcquisitionConformalCalibrator,
     GeometryScoreFusionArtifact,
     GeometryScoreFusionCalibrator,
     MultipleTestingConformalArtifact,
@@ -158,6 +161,104 @@ def test_conformal_calibrator_rejects_invalid_inputs():
 
     with pytest.raises(ValueError, match="alpha"):
         AdaptiveConformalCalibrator(alpha=0.0)
+
+
+def test_evidence_acquisition_conformal_calibrator_reports_post_policy_gain(tmp_path):
+    records = (
+        EvidenceAcquisitionCalibrationRecord(pre_score=0.1, post_score=0.1, correct=True, action="answer"),
+        EvidenceAcquisitionCalibrationRecord(pre_score=0.2, post_score=0.2, correct=True, action="answer"),
+        EvidenceAcquisitionCalibrationRecord(pre_score=0.3, post_score=0.3, correct=True, action="answer"),
+        EvidenceAcquisitionCalibrationRecord(pre_score=0.4, post_score=0.4, correct=True, action="answer"),
+        EvidenceAcquisitionCalibrationRecord(pre_score=0.5, post_score=0.5, correct=True, action="answer"),
+        EvidenceAcquisitionCalibrationRecord(pre_score=0.15, post_score=0.9, correct=False, action="acquire"),
+        EvidenceAcquisitionCalibrationRecord(pre_score=0.25, post_score=1.1, correct=False, action="acquire"),
+    )
+    calibrator = EvidenceAcquisitionConformalCalibrator(alpha=0.4, score_name="policy_score")
+    result = calibrator.calibrate(
+        model_id="tiny-model",
+        target_layer=-4,
+        records=records,
+        calibration_dataset_metadata={"fixture": "post-acquisition"},
+        created_at="2026-06-30T00:00:00+00:00",
+        eigentruth_version="0.1.0",
+    )
+
+    report = result.report
+    artifact = result.artifact
+    assert report.naive_pre_threshold == pytest.approx(0.4)
+    assert report.post_threshold == pytest.approx(0.4)
+    assert report.n_acquired == 2
+    assert report.acquisition_rate == pytest.approx(2 / 7)
+    assert report.naive_pre_report is not None
+    assert report.naive_pre_report.empirical_selective_accuracy == pytest.approx(4 / 6)
+    assert report.post_acquisition_report.empirical_selective_accuracy == pytest.approx(1.0)
+    assert report.selective_accuracy_delta == pytest.approx(1.0 - (4 / 6))
+    assert report.metadata["post_acquisition_calibration"] is True
+    assert report.metadata["calibration_scope"] == "post_acquisition_policy"
+
+    score = artifact.get_score("policy_score")
+    assert score.threshold == pytest.approx(report.post_threshold)
+    assert score.conformal_alpha == pytest.approx(0.4)
+    assert score.direction == "higher"
+    assert artifact.calibration_dataset_metadata["fixture"] == "post-acquisition"
+    assert artifact.calibration_dataset_metadata["post_acquisition_calibration"]["n_acquired"] == 2
+
+    report_path = tmp_path / "evidence-acquisition-report.json"
+    artifact_path = tmp_path / "evidence-acquisition-artifact.json"
+    report.save_json(report_path)
+    artifact.save_json(artifact_path)
+
+    loaded_report = EvidenceAcquisitionCalibrationReport.from_dict(json.loads(report_path.read_text()))
+    loaded_artifact = CalibrationArtifact.load_json(artifact_path)
+    assert loaded_report.to_dict() == report.to_dict()
+    assert loaded_artifact == artifact
+
+
+def test_evidence_acquisition_conformal_calibrator_supports_lower_direction():
+    records = (
+        {"pre_score": 0.8, "post_score": 0.8, "correct": 1, "action": "answer"},
+        {"pre_score": 0.7, "post_score": 0.7, "correct": 1, "action": "answer"},
+        {"pre_score": 0.6, "post_score": 0.6, "correct": 1, "action": "answer"},
+        {"pre_score": 0.5, "post_score": 0.5, "correct": 1, "action": "answer"},
+        {"pre_score": 0.4, "post_score": 0.4, "correct": 1, "action": "answer"},
+        {"pre_score": 0.65, "post_score": 0.1, "correct": 0, "action": "acquire"},
+    )
+    calibrator = EvidenceAcquisitionConformalCalibrator(
+        alpha=0.4,
+        score_name="support_policy_score",
+        direction="lower",
+    )
+    result = calibrator.calibrate(
+        model_id="tiny-model",
+        target_layer=-4,
+        records=records,
+        created_at="2026-06-30T00:00:00+00:00",
+        eigentruth_version="0.1.0",
+    )
+
+    assert result.report.post_threshold == pytest.approx(0.5)
+    assert result.report.post_acquisition_report.empirical_selective_accuracy == pytest.approx(1.0)
+    assert result.artifact.get_score("support_policy_score").direction == "lower"
+    assert result.artifact.get_score("support_policy_score").threshold == pytest.approx(0.5)
+
+
+def test_evidence_acquisition_conformal_calibrator_rejects_invalid_inputs():
+    with pytest.raises(ValueError, match="alpha"):
+        EvidenceAcquisitionConformalCalibrator(alpha=1.0)
+    with pytest.raises(ValueError, match="direction"):
+        EvidenceAcquisitionConformalCalibrator(direction="sideways")
+    with pytest.raises(ValueError, match="non-empty"):
+        EvidenceAcquisitionConformalCalibrator(score_name="")
+
+    calibrator = EvidenceAcquisitionConformalCalibrator(alpha=0.4)
+    with pytest.raises(ValueError, match="non-empty"):
+        calibrator.report(())
+    with pytest.raises(ValueError, match="correct"):
+        calibrator.report(({"post_score": 0.1, "correct": 0},))
+    with pytest.raises(ValueError, match="action"):
+        EvidenceAcquisitionCalibrationRecord(post_score=0.1, correct=True, action="retrieve")
+    with pytest.raises(ValueError, match="finite"):
+        EvidenceAcquisitionCalibrationRecord(post_score=math.inf, correct=True)
 
 
 def test_multiple_testing_conformal_artifact_roundtrip_and_runtime_decision(tmp_path):

@@ -874,6 +874,13 @@ retained participation region on correct responses, then reports empirical
 participation/abstention, selective accuracy, correct-retention, and conservative
 conditional-correctness lower bounds. This is for answer participation control and
 does not change the base E1 conformal verdict.
+For budgeted answer/acquire/abstain policies, use
+`eigentruth.calibration.EvidenceAcquisitionConformalCalibrator` on labeled
+post-policy records rather than reusing a pre-acquisition threshold. It compares
+the naive pre-score abstention report against the post-acquisition policy report
+and saves the post-policy threshold as a standard `CalibrationArtifact`, matching
+the evidence-acquisition control loop without adding a model or network
+dependency.
 When `--save-abstention-comparison` or `--include-abstention-comparison` is set,
 the script emits a `ConformalAbstentionComparisonReport` over `--abstention-signals`
 (or `--signals` when no abstention list is provided). The default ranking metric is

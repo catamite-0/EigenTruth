@@ -7,6 +7,12 @@ network dependencies.
 
 from __future__ import annotations
 
+from eigentruth.calibration.acquisition import (
+    EvidenceAcquisitionCalibrationRecord,
+    EvidenceAcquisitionCalibrationReport,
+    EvidenceAcquisitionCalibrationResult,
+    EvidenceAcquisitionConformalCalibrator,
+)
 from eigentruth.calibration.artifacts import CalibrationArtifact, CalibrationScore, SteeringPolicyConfig
 from eigentruth.calibration.calibrator import AdaptiveConformalCalibrator, ConformalCalibrator
 from eigentruth.calibration.fusion import (
@@ -48,6 +54,10 @@ __all__ = [
     "DEFAULT_SCORE_DIRECTIONS",
     "DEFAULT_NLL_SIGNAL_NAME",
     "DEFAULT_TRAJECTORY_SIGNAL_NAME",
+    "EvidenceAcquisitionCalibrationRecord",
+    "EvidenceAcquisitionCalibrationReport",
+    "EvidenceAcquisitionCalibrationResult",
+    "EvidenceAcquisitionConformalCalibrator",
     "GeometryScoreFusionArtifact",
     "GeometryScoreFusionCalibrator",
     "LayerScoreSweepCalibrator",
