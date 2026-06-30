@@ -640,6 +640,78 @@
       "name": "smollm2-l80-blind-spot-wikidata-evidence",
       "path": "artifacts/frontier-release-evidence/blind-spot-wikidata-evidence-v1/wikidata-evidence-fetch-report.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "answer_entity_collision_count": 5,
+        "artifact_manifest": "artifacts/frontier-release-evidence/blind-spot-wikidata-structured-qa-route-v1/covered-fact-mapping-manifest.json",
+        "candidate_fact_coverage_count": 16,
+        "model": "smollm2-l80",
+        "source": "frontier-v4",
+        "status": "observed",
+        "target_count": 89,
+        "workflow": "blind_spot_covered_fact_mapping_audit"
+      },
+      "name": "smollm2-l80-blind-spot-wikidata-covered-fact-mapping-v1",
+      "path": "artifacts/frontier-release-evidence/blind-spot-wikidata-structured-qa-route-v1/blind-spot-covered-fact-mapping.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/blind-spot-wikidata-structured-qa-route-v1/question-property-mapping-manifest.json",
+        "generic_fact_only_count": 6,
+        "mapped_correction_candidate_count": 1,
+        "model": "smollm2-l80",
+        "source": "frontier-v4",
+        "status": "observed",
+        "target_count": 89,
+        "workflow": "blind_spot_question_property_mapping"
+      },
+      "name": "smollm2-l80-blind-spot-wikidata-question-property-mapping-v1",
+      "path": "artifacts/frontier-release-evidence/blind-spot-wikidata-structured-qa-route-v1/blind-spot-question-property-mapping.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/blind-spot-wikidata-structured-qa-route-v1/question-property-correction-handoff-manifest.json",
+        "corpus_document_count": 2,
+        "correction_candidate_count": 1,
+        "model": "smollm2-l80",
+        "source": "frontier-v4",
+        "status": "promote",
+        "trace_count": 1,
+        "workflow": "question_property_correction_handoff"
+      },
+      "name": "smollm2-l80-blind-spot-wikidata-question-property-correction-handoff-v1",
+      "path": "artifacts/frontier-release-evidence/blind-spot-wikidata-structured-qa-route-v1/question-property-correction-handoff.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/blind-spot-wikidata-structured-qa-route-v1/route-artifact-manifest.json",
+        "decision_accuracy": 1.0,
+        "false_refuted_rate": 1.0,
+        "false_supported_rate": 0.0,
+        "model": "smollm2-l80",
+        "n_false": 322,
+        "n_records": 644,
+        "n_source_documents": 322,
+        "n_true": 322,
+        "property_count": 12,
+        "qa_corpus_manifest": "artifacts/frontier-release-evidence/blind-spot-wikidata-structured-qa-route-v1/qa-corpus-manifest.json",
+        "route": "structured_qa",
+        "source": "frontier-v4",
+        "status": "promote",
+        "true_supported_rate": 1.0,
+        "workflow": "wikidata_structured_qa_route_workflow"
+      },
+      "name": "smollm2-l80-blind-spot-wikidata-structured-qa-route-v1",
+      "path": "artifacts/frontier-release-evidence/blind-spot-wikidata-structured-qa-route-v1/structured-qa-route-summary.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

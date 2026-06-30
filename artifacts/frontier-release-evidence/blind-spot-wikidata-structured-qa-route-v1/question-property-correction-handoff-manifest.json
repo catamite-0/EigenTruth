@@ -1,0 +1,53 @@
+{
+  "artifacts": {
+    "product_traces": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "question-property-product-traces.jsonl",
+      "sha256": "dd7f0b5f352dedd5eff36cad2bc4ecc37f53fae4dd6e4c75f74be365776d711c",
+      "size_bytes": 16585
+    },
+    "question_property_correction_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "question-property-correction-corpus.json",
+      "sha256": "c7461578b1b9a6702121081897030d7394a5a73c6b1964de920a1969b6aed548",
+      "size_bytes": 2401
+    },
+    "question_property_correction_handoff": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "question-property-correction-handoff.json",
+      "sha256": "dcbfbe98a7d11c0d48f4fa521dfcdde47742905e06b83874032e554cc019f0ea",
+      "size_bytes": 1867
+    },
+    "question_property_mapping": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "blind-spot-question-property-mapping.json",
+      "sha256": "9bfe551bd40dc1effc6a7abb5235a459fa2195ac840b14d5f0ac8a4451dd8416",
+      "size_bytes": 329487
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "correction_candidate_count": 1,
+    "model": "smollm2-l80",
+    "refuted_count": 1,
+    "source": "frontier-v4",
+    "status": "promote",
+    "trace_count": 1,
+    "workflow": "question_property_correction_handoff"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

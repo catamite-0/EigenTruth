@@ -1695,6 +1695,22 @@ links, `0` row links, `0` label metadata documents, and exact answer-copy rate
 approved as external source material, not as proof that the route now covers the
 blind spots.
 
+The matching v4 structured replay lives at
+`artifacts/frontier-release-evidence/blind-spot-wikidata-structured-qa-route-v1/`.
+`build_wikidata_qa_corpus.py --auto-template-from-source` turns all `322`
+source docs into structured QA facts over `12` properties, and
+`run_wikidata_structured_qa_route_workflow.py --route structured_qa` promotes on
+`644` balanced true/false covered-fact rows with decision accuracy `1.0`,
+true-supported rate `1.0`, false-refuted rate `1.0`, and false-supported rate
+`0.0`. The downstream covered-fact mapping improves joined blind spots from the
+older `37/89` run to `48/89` and conservative candidates from `10/89` to
+`16/89`, but the explicit question/property gate still keeps only `1/89`
+deployable correction candidate. The product handoff therefore promotes exactly
+one abstain trace for the Tesla founder slot while preserving the broader
+conclusion: full-queue Wikidata improves fact coverage, but most remaining
+blind spots need citation, richer property, time-series, or world-model
+evidence rather than a relaxed KG gate.
+
 ## `audit_blind_spot_covered_fact_mapping.py`
 
 Joins blind-spot records to target-specific Wikidata source docs and structured
@@ -1721,13 +1737,14 @@ python benchmarks/audit_blind_spot_covered_fact_mapping.py \
   --version 0.1
 ```
 
-The current SmolLM2 l80 run observes joined Wikidata facts for `37/89` blind
-spots, but only `10/89` are conservative correction candidates. Another `5`
-records have evidence values that support the model answer, `6` show answer
-entity collision risk, and `52` have no joined facts. This makes the next
-frontier step concrete: add explicit question/property claim mapping for the
-candidate set and route the remaining records to citation retrieval or
-world-model evidence collection.
+The original SmolLM2 l80 run observes joined Wikidata facts for `37/89` blind
+spots, but only `10/89` are conservative correction candidates. The v4 full
+queue replay observes joined facts for `48/89`, with `16/89` conservative
+candidates, `4` answer-supported rows, `5` answer-entity collision rows, and
+`41` rows with no joined facts. This makes the next frontier step concrete: add
+better claim/property collection for the candidate set and route the remaining
+records to citation retrieval, numerical/time-series sources, or world-model
+evidence collection.
 
 ## `map_blind_spot_question_properties.py`
 
@@ -1754,6 +1771,13 @@ The current SmolLM2 l80 run narrows the `10/89` covered-fact candidates to
 Wikidata `P112` with Martin Eberhard and Marc Tarpenning as covered facts.
 Another `7` records are generic fact-only joins. This turns the Wikidata path
 into a precise property gate while making the remaining gap explicit.
+
+The v4 full-queue replay narrows `16/89` conservative candidates to the same
+`1/89` explicit correction candidate. It records `6` generic fact-only rows,
+`4` answer-supported rows, `2` answer-entity collision rows, and `41` rows with
+no joined facts. The unchanged deployable count is intentional: the added facts
+mostly broaden entity/background coverage, not explicit question-property
+support for the model's false answers.
 
 ## `build_question_property_correction_handoff.py`
 

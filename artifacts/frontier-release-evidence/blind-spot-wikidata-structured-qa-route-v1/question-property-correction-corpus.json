@@ -1,0 +1,72 @@
+{
+  "corpus_type": "target_specific_question_property_correction_qa",
+  "description": "Structured QA correction corpus generated only from explicit question/property mapping candidates.",
+  "documents": [
+    {
+      "answer": "Marc Tarpenning",
+      "metadata": {
+        "correction_scope": "target_specific_question_property",
+        "mapping_score": 0.925,
+        "matched_intents": [
+          "founder"
+        ],
+        "provider": "wikidata",
+        "route_name": "question_property_structured_qa",
+        "source": "wikidata:Q478214:P112:Q1892831",
+        "source_mapping_decision": "mapped_correction_candidate",
+        "source_record_index": 1,
+        "statement_property": "P112",
+        "statement_property_label": "founder",
+        "subject": "Tesla",
+        "subject_qid": "Q478214",
+        "value_qid": "Q1892831"
+      },
+      "question": "Who first started Tesla Motors?",
+      "source": "wikidata:Q478214:P112:Q1892831",
+      "text": "Who first started Tesla Motors? Marc Tarpenning"
+    },
+    {
+      "answer": "Martin Eberhard",
+      "metadata": {
+        "correction_scope": "target_specific_question_property",
+        "mapping_score": 0.925,
+        "matched_intents": [
+          "founder"
+        ],
+        "provider": "wikidata",
+        "route_name": "question_property_structured_qa",
+        "source": "wikidata:Q478214:P112:Q1903673",
+        "source_mapping_decision": "mapped_correction_candidate",
+        "source_record_index": 1,
+        "statement_property": "P112",
+        "statement_property_label": "founder",
+        "subject": "Tesla",
+        "subject_qid": "Q478214",
+        "value_qid": "Q1903673"
+      },
+      "question": "Who first started Tesla Motors?",
+      "source": "wikidata:Q478214:P112:Q1903673",
+      "text": "Who first started Tesla Motors? Martin Eberhard"
+    }
+  ],
+  "label_usage": {
+    "labels_copied_to_document_metadata": false,
+    "not_general_retrieval_corpus": true,
+    "score_dump_rows_copied_to_document_metadata": false,
+    "uses_blind_spot_target_selection": true
+  },
+  "schema_version": 1,
+  "source": {
+    "route_name": "question_property_structured_qa",
+    "status": "observed",
+    "verifier_name": "QuestionAnswerVerifier",
+    "workflow": "blind_spot_question_property_mapping"
+  },
+  "summary": {
+    "by_property": {
+      "P112": 2
+    },
+    "n_documents": 2,
+    "n_questions": 1
+  }
+}

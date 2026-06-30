@@ -1,0 +1,136 @@
+{
+  "templates": [
+    {
+      "answer_field": "value",
+      "qid_label_fields": [
+        "statement_property_label",
+        "subject",
+        "value"
+      ],
+      "question_template": "What does Wikidata list as the {statement_property_label} for {subject}?",
+      "statement_property": "P106",
+      "statement_property_label": "occupation"
+    },
+    {
+      "answer_field": "value",
+      "qid_label_fields": [
+        "statement_property_label",
+        "subject",
+        "value"
+      ],
+      "question_template": "What does Wikidata list as the {statement_property_label} for {subject}?",
+      "statement_property": "P112",
+      "statement_property_label": "founder"
+    },
+    {
+      "answer_field": "value",
+      "qid_label_fields": [
+        "statement_property_label",
+        "subject",
+        "value"
+      ],
+      "question_template": "What does Wikidata list as the {statement_property_label} for {subject}?",
+      "statement_property": "P131",
+      "statement_property_label": "located in the administrative territorial entity"
+    },
+    {
+      "answer_field": "value",
+      "qid_label_fields": [
+        "statement_property_label",
+        "subject",
+        "value"
+      ],
+      "question_template": "What does Wikidata list as the {statement_property_label} for {subject}?",
+      "statement_property": "P17",
+      "statement_property_label": "country"
+    },
+    {
+      "answer_field": "value",
+      "qid_label_fields": [
+        "statement_property_label",
+        "subject",
+        "value"
+      ],
+      "question_template": "What does Wikidata list as the {statement_property_label} for {subject}?",
+      "statement_property": "P170",
+      "statement_property_label": "creator"
+    },
+    {
+      "answer_field": "value",
+      "qid_label_fields": [
+        "statement_property_label",
+        "subject",
+        "value"
+      ],
+      "question_template": "What does Wikidata list as the {statement_property_label} for {subject}?",
+      "statement_property": "P27",
+      "statement_property_label": "country of citizenship"
+    },
+    {
+      "answer_field": "value",
+      "qid_label_fields": [
+        "statement_property_label",
+        "subject",
+        "value"
+      ],
+      "question_template": "What does Wikidata list as the {statement_property_label} for {subject}?",
+      "statement_property": "P279",
+      "statement_property_label": "subclass of"
+    },
+    {
+      "answer_field": "value",
+      "qid_label_fields": [
+        "statement_property_label",
+        "subject",
+        "value"
+      ],
+      "question_template": "What does Wikidata list as the {statement_property_label} for {subject}?",
+      "statement_property": "P31",
+      "statement_property_label": "instance of"
+    },
+    {
+      "answer_field": "value",
+      "qid_label_fields": [
+        "statement_property_label",
+        "subject",
+        "value"
+      ],
+      "question_template": "What does Wikidata list as the {statement_property_label} for {subject}?",
+      "statement_property": "P527",
+      "statement_property_label": "has part(s)"
+    },
+    {
+      "answer_field": "value",
+      "qid_label_fields": [
+        "statement_property_label",
+        "subject",
+        "value"
+      ],
+      "question_template": "What does Wikidata list as the {statement_property_label} for {subject}?",
+      "statement_property": "P793",
+      "statement_property_label": "significant event"
+    },
+    {
+      "answer_field": "value",
+      "qid_label_fields": [
+        "statement_property_label",
+        "subject",
+        "value"
+      ],
+      "question_template": "What does Wikidata list as the {statement_property_label} for {subject}?",
+      "statement_property": "P856",
+      "statement_property_label": "official website"
+    },
+    {
+      "answer_field": "value",
+      "qid_label_fields": [
+        "statement_property_label",
+        "subject",
+        "value"
+      ],
+      "question_template": "What does Wikidata list as the {statement_property_label} for {subject}?",
+      "statement_property": "description",
+      "statement_property_label": "description"
+    }
+  ]
+}

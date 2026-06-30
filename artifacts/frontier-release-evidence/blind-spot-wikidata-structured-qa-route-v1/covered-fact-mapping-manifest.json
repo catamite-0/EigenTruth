@@ -1,0 +1,62 @@
+{
+  "artifacts": {
+    "blind_spots": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json",
+      "sha256": "5990d22d8547cce21613bdc0c618058ca0f1d6c8766e16363b333595fec4ee5a",
+      "size_bytes": 123816
+    },
+    "covered_fact_mapping_audit": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "blind-spot-covered-fact-mapping.json",
+      "sha256": "68b5ae764f70b4ab3b2a6959c8f3cd58e321922efc742c0c65db6492400cb368",
+      "size_bytes": 203668
+    },
+    "qa_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "wikidata-blind-spot-qa-corpus.json",
+      "sha256": "39afd3d402d79357d97b2bb9d76b0e46fbb1bc09b310e225d3540fbcf4386abf",
+      "size_bytes": 423340
+    },
+    "wikidata_fetch_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../blind-spot-wikidata-evidence-v1/wikidata-evidence-fetch-report.json",
+      "sha256": "e70d7fbdaacc24c8922641e3bd404bb63a7e7cc40f495a375e1260835411c202",
+      "size_bytes": 265775
+    },
+    "wikidata_source_docs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../blind-spot-wikidata-evidence-v1/wikidata-source-docs.jsonl",
+      "sha256": "ccab73bcb869741b2f0a98a8b41ca7a24e1c138b8e5b6bcc36c83b464516fa9d",
+      "size_bytes": 261438
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "answer_entity_collision_count": 5,
+    "candidate_fact_coverage_count": 16,
+    "model": "smollm2-l80",
+    "no_joined_fact_count": 41,
+    "source": "frontier-v4",
+    "status": "observed",
+    "target_count": 89,
+    "workflow": "blind_spot_covered_fact_mapping_audit"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}
