@@ -1,0 +1,3238 @@
+{
+  "candidates": [
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.49756007712932593 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/baseline/recommended/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.49756007712932593,
+        "correct_retention_lower_bound_mean": 0.903968253968254,
+        "empirical_abstention_rate_mean": 0.18597122302158273,
+        "empirical_selective_accuracy_mean": 0.5037635864621983,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.6247411786545575,
+        "supervised_feasibility_empirical_abstention_rate": 0.5,
+        "supervised_feasibility_empirical_selective_accuracy": 0.6294964028776978,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/baseline/recommended/abstention-stability-report.json",
+      "profile": "baseline",
+      "profile_config": {
+        "alpha": 0.1,
+        "best_by": "conditional_correctness_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "baseline",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "qwen05-l80",
+      "signal_group": "recommended",
+      "signals": [
+        "truth_proj"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.49756007712932593,
+        "empirical_abstention_rate_mean": 0.18597122302158273,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.49756007712932593 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/baseline/all/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.49756007712932593,
+        "correct_retention_lower_bound_mean": 0.903968253968254,
+        "empirical_abstention_rate_mean": 0.18597122302158273,
+        "empirical_selective_accuracy_mean": 0.5037635864621983,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.6247411786545575,
+        "supervised_feasibility_empirical_abstention_rate": 0.5,
+        "supervised_feasibility_empirical_selective_accuracy": 0.6294964028776978,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/baseline/all/abstention-stability-report.json",
+      "profile": "baseline",
+      "profile_config": {
+        "alpha": 0.1,
+        "best_by": "conditional_correctness_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "baseline",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "qwen05-l80",
+      "signal_group": "all",
+      "signals": [
+        "maha_last",
+        "truth_proj",
+        "subspace_resid",
+        "disp_euclid",
+        "disp_hse",
+        "nll_answer",
+        "eigenscore",
+        "resid_update_norm"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.49756007712932593,
+        "empirical_abstention_rate_mean": 0.18597122302158273,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.49756007712932593 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/baseline/geometry/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.49756007712932593,
+        "correct_retention_lower_bound_mean": 0.903968253968254,
+        "empirical_abstention_rate_mean": 0.18597122302158273,
+        "empirical_selective_accuracy_mean": 0.5037635864621983,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.6247411786545575,
+        "supervised_feasibility_empirical_abstention_rate": 0.5,
+        "supervised_feasibility_empirical_selective_accuracy": 0.6294964028776978,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/baseline/geometry/abstention-stability-report.json",
+      "profile": "baseline",
+      "profile_config": {
+        "alpha": 0.1,
+        "best_by": "conditional_correctness_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "baseline",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "qwen05-l80",
+      "signal_group": "geometry",
+      "signals": [
+        "maha_last",
+        "truth_proj",
+        "subspace_resid"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.49756007712932593,
+        "empirical_abstention_rate_mean": 0.18597122302158273,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.4576741550523635 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/baseline/uncertainty/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.4576741550523635,
+        "correct_retention_lower_bound_mean": 0.9111111111111111,
+        "empirical_abstention_rate_mean": 0.10827338129496403,
+        "empirical_selective_accuracy_mean": 0.4631985526534489,
+        "recommended_score_name_counts": {
+          "eigenscore": 1,
+          "resid_update_norm": 9
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": null,
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.47346844506033836,
+        "supervised_feasibility_empirical_abstention_rate": 0.381294964028777,
+        "supervised_feasibility_empirical_selective_accuracy": 0.47674418604651164,
+        "supervised_feasibility_score_name": "resid_update_norm",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/baseline/uncertainty/abstention-stability-report.json",
+      "profile": "baseline",
+      "profile_config": {
+        "alpha": 0.1,
+        "best_by": "conditional_correctness_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "baseline",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "qwen05-l80",
+      "signal_group": "uncertainty",
+      "signals": [
+        "disp_euclid",
+        "disp_hse",
+        "nll_answer",
+        "eigenscore",
+        "resid_update_norm"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.49756007712932593,
+        "empirical_abstention_rate_mean": 0.18597122302158273,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.47405373555836566 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p05/recommended/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.47405373555836566,
+        "correct_retention_lower_bound_mean": 0.9380952380952381,
+        "empirical_abstention_rate_mean": 0.11330935251798561,
+        "empirical_selective_accuracy_mean": 0.47978925384044546,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.6247411786545575,
+        "supervised_feasibility_empirical_abstention_rate": 0.5,
+        "supervised_feasibility_empirical_selective_accuracy": 0.6294964028776978,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p05/recommended/abstention-stability-report.json",
+      "profile": "alpha_0p05",
+      "profile_config": {
+        "alpha": 0.05,
+        "best_by": "conditional_correctness_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "alpha_0p05",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "qwen05-l80",
+      "signal_group": "recommended",
+      "signals": [
+        "truth_proj"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.49756007712932593,
+        "empirical_abstention_rate_mean": 0.18597122302158273,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.47405373555836566 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p05/all/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.47405373555836566,
+        "correct_retention_lower_bound_mean": 0.9380952380952381,
+        "empirical_abstention_rate_mean": 0.11330935251798561,
+        "empirical_selective_accuracy_mean": 0.47978925384044546,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.6247411786545575,
+        "supervised_feasibility_empirical_abstention_rate": 0.5,
+        "supervised_feasibility_empirical_selective_accuracy": 0.6294964028776978,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p05/all/abstention-stability-report.json",
+      "profile": "alpha_0p05",
+      "profile_config": {
+        "alpha": 0.05,
+        "best_by": "conditional_correctness_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "alpha_0p05",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "qwen05-l80",
+      "signal_group": "all",
+      "signals": [
+        "maha_last",
+        "truth_proj",
+        "subspace_resid",
+        "disp_euclid",
+        "disp_hse",
+        "nll_answer",
+        "eigenscore",
+        "resid_update_norm"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.49756007712932593,
+        "empirical_abstention_rate_mean": 0.18597122302158273,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.47405373555836566 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p05/geometry/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.47405373555836566,
+        "correct_retention_lower_bound_mean": 0.9380952380952381,
+        "empirical_abstention_rate_mean": 0.11330935251798561,
+        "empirical_selective_accuracy_mean": 0.47978925384044546,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.6247411786545575,
+        "supervised_feasibility_empirical_abstention_rate": 0.5,
+        "supervised_feasibility_empirical_selective_accuracy": 0.6294964028776978,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p05/geometry/abstention-stability-report.json",
+      "profile": "alpha_0p05",
+      "profile_config": {
+        "alpha": 0.05,
+        "best_by": "conditional_correctness_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "alpha_0p05",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "qwen05-l80",
+      "signal_group": "geometry",
+      "signals": [
+        "maha_last",
+        "truth_proj",
+        "subspace_resid"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.49756007712932593,
+        "empirical_abstention_rate_mean": 0.18597122302158273,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.4547158411558465 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p05/uncertainty/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.4547158411558465,
+        "correct_retention_lower_bound_mean": 0.9515873015873015,
+        "empirical_abstention_rate_mean": 0.06258992805755395,
+        "empirical_selective_accuracy_mean": 0.4601128111939019,
+        "recommended_score_name_counts": {
+          "resid_update_norm": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": "resid_update_norm",
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.47346844506033836,
+        "supervised_feasibility_empirical_abstention_rate": 0.381294964028777,
+        "supervised_feasibility_empirical_selective_accuracy": 0.47674418604651164,
+        "supervised_feasibility_score_name": "resid_update_norm",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p05/uncertainty/abstention-stability-report.json",
+      "profile": "alpha_0p05",
+      "profile_config": {
+        "alpha": 0.05,
+        "best_by": "conditional_correctness_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "alpha_0p05",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "qwen05-l80",
+      "signal_group": "uncertainty",
+      "signals": [
+        "disp_euclid",
+        "disp_hse",
+        "nll_answer",
+        "eigenscore",
+        "resid_update_norm"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.49756007712932593,
+        "empirical_abstention_rate_mean": 0.18597122302158273,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.5499843325206569 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p2/recommended/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.5499843325206569,
+        "correct_retention_lower_bound_mean": 0.8198412698412698,
+        "empirical_abstention_rate_mean": 0.3320143884892086,
+        "empirical_selective_accuracy_mean": 0.5573928097592659,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.6247411786545575,
+        "supervised_feasibility_empirical_abstention_rate": 0.5,
+        "supervised_feasibility_empirical_selective_accuracy": 0.6294964028776978,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p2/recommended/abstention-stability-report.json",
+      "profile": "alpha_0p2",
+      "profile_config": {
+        "alpha": 0.2,
+        "best_by": "conditional_correctness_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "alpha_0p2",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "qwen05-l80",
+      "signal_group": "recommended",
+      "signals": [
+        "truth_proj"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.49756007712932593,
+        "empirical_abstention_rate_mean": 0.18597122302158273,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.5499843325206569 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p2/all/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.5499843325206569,
+        "correct_retention_lower_bound_mean": 0.8198412698412698,
+        "empirical_abstention_rate_mean": 0.3320143884892086,
+        "empirical_selective_accuracy_mean": 0.5573928097592659,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.6247411786545575,
+        "supervised_feasibility_empirical_abstention_rate": 0.5,
+        "supervised_feasibility_empirical_selective_accuracy": 0.6294964028776978,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p2/all/abstention-stability-report.json",
+      "profile": "alpha_0p2",
+      "profile_config": {
+        "alpha": 0.2,
+        "best_by": "conditional_correctness_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "alpha_0p2",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "qwen05-l80",
+      "signal_group": "all",
+      "signals": [
+        "maha_last",
+        "truth_proj",
+        "subspace_resid",
+        "disp_euclid",
+        "disp_hse",
+        "nll_answer",
+        "eigenscore",
+        "resid_update_norm"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.49756007712932593,
+        "empirical_abstention_rate_mean": 0.18597122302158273,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.5499843325206569 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p2/geometry/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.5499843325206569,
+        "correct_retention_lower_bound_mean": 0.8198412698412698,
+        "empirical_abstention_rate_mean": 0.3320143884892086,
+        "empirical_selective_accuracy_mean": 0.5573928097592659,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.6247411786545575,
+        "supervised_feasibility_empirical_abstention_rate": 0.5,
+        "supervised_feasibility_empirical_selective_accuracy": 0.6294964028776978,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p2/geometry/abstention-stability-report.json",
+      "profile": "alpha_0p2",
+      "profile_config": {
+        "alpha": 0.2,
+        "best_by": "conditional_correctness_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "alpha_0p2",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "qwen05-l80",
+      "signal_group": "geometry",
+      "signals": [
+        "maha_last",
+        "truth_proj",
+        "subspace_resid"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.49756007712932593,
+        "empirical_abstention_rate_mean": 0.18597122302158273,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.4616539529714966 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p2/uncertainty/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.4616539529714966,
+        "correct_retention_lower_bound_mean": 0.8285714285714286,
+        "empirical_abstention_rate_mean": 0.19676258992805756,
+        "empirical_selective_accuracy_mean": 0.46743283397623403,
+        "recommended_score_name_counts": {
+          "eigenscore": 2,
+          "resid_update_norm": 8
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": null,
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.47346844506033836,
+        "supervised_feasibility_empirical_abstention_rate": 0.381294964028777,
+        "supervised_feasibility_empirical_selective_accuracy": 0.47674418604651164,
+        "supervised_feasibility_score_name": "resid_update_norm",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p2/uncertainty/abstention-stability-report.json",
+      "profile": "alpha_0p2",
+      "profile_config": {
+        "alpha": 0.2,
+        "best_by": "conditional_correctness_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "alpha_0p2",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "qwen05-l80",
+      "signal_group": "uncertainty",
+      "signals": [
+        "disp_euclid",
+        "disp_hse",
+        "nll_answer",
+        "eigenscore",
+        "resid_update_norm"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.49756007712932593,
+        "empirical_abstention_rate_mean": 0.18597122302158273,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.49756007712932593 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/selective_accuracy/recommended/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.49756007712932593,
+        "correct_retention_lower_bound_mean": 0.903968253968254,
+        "empirical_abstention_rate_mean": 0.18597122302158273,
+        "empirical_selective_accuracy_mean": 0.5037635864621983,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.6247411786545575,
+        "supervised_feasibility_empirical_abstention_rate": 0.5,
+        "supervised_feasibility_empirical_selective_accuracy": 0.6294964028776978,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/selective_accuracy/recommended/abstention-stability-report.json",
+      "profile": "selective_accuracy",
+      "profile_config": {
+        "alpha": 0.1,
+        "best_by": "empirical_selective_accuracy",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "selective_accuracy",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "qwen05-l80",
+      "signal_group": "recommended",
+      "signals": [
+        "truth_proj"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.49756007712932593,
+        "empirical_abstention_rate_mean": 0.18597122302158273,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.49756007712932593 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/selective_accuracy/all/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.49756007712932593,
+        "correct_retention_lower_bound_mean": 0.903968253968254,
+        "empirical_abstention_rate_mean": 0.18597122302158273,
+        "empirical_selective_accuracy_mean": 0.5037635864621983,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.6247411786545575,
+        "supervised_feasibility_empirical_abstention_rate": 0.5,
+        "supervised_feasibility_empirical_selective_accuracy": 0.6294964028776978,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/selective_accuracy/all/abstention-stability-report.json",
+      "profile": "selective_accuracy",
+      "profile_config": {
+        "alpha": 0.1,
+        "best_by": "empirical_selective_accuracy",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "selective_accuracy",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "qwen05-l80",
+      "signal_group": "all",
+      "signals": [
+        "maha_last",
+        "truth_proj",
+        "subspace_resid",
+        "disp_euclid",
+        "disp_hse",
+        "nll_answer",
+        "eigenscore",
+        "resid_update_norm"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.49756007712932593,
+        "empirical_abstention_rate_mean": 0.18597122302158273,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.49756007712932593 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/selective_accuracy/geometry/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.49756007712932593,
+        "correct_retention_lower_bound_mean": 0.903968253968254,
+        "empirical_abstention_rate_mean": 0.18597122302158273,
+        "empirical_selective_accuracy_mean": 0.5037635864621983,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.6247411786545575,
+        "supervised_feasibility_empirical_abstention_rate": 0.5,
+        "supervised_feasibility_empirical_selective_accuracy": 0.6294964028776978,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/selective_accuracy/geometry/abstention-stability-report.json",
+      "profile": "selective_accuracy",
+      "profile_config": {
+        "alpha": 0.1,
+        "best_by": "empirical_selective_accuracy",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "selective_accuracy",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "qwen05-l80",
+      "signal_group": "geometry",
+      "signals": [
+        "maha_last",
+        "truth_proj",
+        "subspace_resid"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.49756007712932593,
+        "empirical_abstention_rate_mean": 0.18597122302158273,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.4576741550523635 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/selective_accuracy/uncertainty/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.4576741550523635,
+        "correct_retention_lower_bound_mean": 0.9111111111111111,
+        "empirical_abstention_rate_mean": 0.10827338129496403,
+        "empirical_selective_accuracy_mean": 0.4631985526534489,
+        "recommended_score_name_counts": {
+          "eigenscore": 1,
+          "resid_update_norm": 9
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": null,
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.47346844506033836,
+        "supervised_feasibility_empirical_abstention_rate": 0.381294964028777,
+        "supervised_feasibility_empirical_selective_accuracy": 0.47674418604651164,
+        "supervised_feasibility_score_name": "resid_update_norm",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/selective_accuracy/uncertainty/abstention-stability-report.json",
+      "profile": "selective_accuracy",
+      "profile_config": {
+        "alpha": 0.1,
+        "best_by": "empirical_selective_accuracy",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "selective_accuracy",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "qwen05-l80",
+      "signal_group": "uncertainty",
+      "signals": [
+        "disp_euclid",
+        "disp_hse",
+        "nll_answer",
+        "eigenscore",
+        "resid_update_norm"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.49756007712932593,
+        "empirical_abstention_rate_mean": 0.18597122302158273,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.49756007712932593 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/retention/recommended/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.49756007712932593,
+        "correct_retention_lower_bound_mean": 0.903968253968254,
+        "empirical_abstention_rate_mean": 0.18597122302158273,
+        "empirical_selective_accuracy_mean": 0.5037635864621983,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.6247411786545575,
+        "supervised_feasibility_empirical_abstention_rate": 0.5,
+        "supervised_feasibility_empirical_selective_accuracy": 0.6294964028776978,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/retention/recommended/abstention-stability-report.json",
+      "profile": "retention",
+      "profile_config": {
+        "alpha": 0.1,
+        "best_by": "correct_retention_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "retention",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "qwen05-l80",
+      "signal_group": "recommended",
+      "signals": [
+        "truth_proj"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.49756007712932593,
+        "empirical_abstention_rate_mean": 0.18597122302158273,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.4619674686141522 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/retention/all/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.4619674686141522,
+        "correct_retention_lower_bound_mean": 0.942063492063492,
+        "empirical_abstention_rate_mean": 0.08597122302158273,
+        "empirical_selective_accuracy_mean": 0.4674997873718986,
+        "recommended_score_name_counts": {
+          "disp_hse": 2,
+          "eigenscore": 1,
+          "maha_last": 1,
+          "nll_answer": 1,
+          "resid_update_norm": 2,
+          "subspace_resid": 1,
+          "truth_proj": 2
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": null,
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.6247411786545575,
+        "supervised_feasibility_empirical_abstention_rate": 0.5,
+        "supervised_feasibility_empirical_selective_accuracy": 0.6294964028776978,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/retention/all/abstention-stability-report.json",
+      "profile": "retention",
+      "profile_config": {
+        "alpha": 0.1,
+        "best_by": "correct_retention_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "retention",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "qwen05-l80",
+      "signal_group": "all",
+      "signals": [
+        "maha_last",
+        "truth_proj",
+        "subspace_resid",
+        "disp_euclid",
+        "disp_hse",
+        "nll_answer",
+        "eigenscore",
+        "resid_update_norm"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.49756007712932593,
+        "empirical_abstention_rate_mean": 0.18597122302158273,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.4834341628239159 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/retention/geometry/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.4834341628239159,
+        "correct_retention_lower_bound_mean": 0.923015873015873,
+        "empirical_abstention_rate_mean": 0.1435251798561151,
+        "empirical_selective_accuracy_mean": 0.4893567319084006,
+        "recommended_score_name_counts": {
+          "maha_last": 2,
+          "subspace_resid": 2,
+          "truth_proj": 6
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": null,
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.6247411786545575,
+        "supervised_feasibility_empirical_abstention_rate": 0.5,
+        "supervised_feasibility_empirical_selective_accuracy": 0.6294964028776978,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/retention/geometry/abstention-stability-report.json",
+      "profile": "retention",
+      "profile_config": {
+        "alpha": 0.1,
+        "best_by": "correct_retention_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "retention",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "qwen05-l80",
+      "signal_group": "geometry",
+      "signals": [
+        "maha_last",
+        "truth_proj",
+        "subspace_resid"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.49756007712932593,
+        "empirical_abstention_rate_mean": 0.18597122302158273,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.45014532884986946 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/retention/uncertainty/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.45014532884986946,
+        "correct_retention_lower_bound_mean": 0.9380952380952381,
+        "empirical_abstention_rate_mean": 0.06654676258992806,
+        "empirical_selective_accuracy_mean": 0.45549598239177796,
+        "recommended_score_name_counts": {
+          "disp_hse": 2,
+          "eigenscore": 3,
+          "nll_answer": 3,
+          "resid_update_norm": 2
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": null,
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.47346844506033836,
+        "supervised_feasibility_empirical_abstention_rate": 0.381294964028777,
+        "supervised_feasibility_empirical_selective_accuracy": 0.47674418604651164,
+        "supervised_feasibility_score_name": "resid_update_norm",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/retention/uncertainty/abstention-stability-report.json",
+      "profile": "retention",
+      "profile_config": {
+        "alpha": 0.1,
+        "best_by": "correct_retention_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "retention",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "qwen05-l80",
+      "signal_group": "uncertainty",
+      "signals": [
+        "disp_euclid",
+        "disp_hse",
+        "nll_answer",
+        "eigenscore",
+        "resid_update_norm"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.49756007712932593,
+        "empirical_abstention_rate_mean": 0.18597122302158273,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.4845096335353289 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/baseline/recommended/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.4845096335353289,
+        "correct_retention_lower_bound_mean": 0.9007936507936508,
+        "empirical_abstention_rate_mean": 0.16726618705035973,
+        "empirical_selective_accuracy_mean": 0.49050178668751165,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.58919252567196,
+        "supervised_feasibility_empirical_abstention_rate": 0.4910071942446043,
+        "supervised_feasibility_empirical_selective_accuracy": 0.5936395759717314,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/baseline/recommended/abstention-stability-report.json",
+      "profile": "baseline",
+      "profile_config": {
+        "alpha": 0.1,
+        "best_by": "conditional_correctness_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "baseline",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "smollm2-l80",
+      "signal_group": "recommended",
+      "signals": [
+        "truth_proj"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.4845096335353289,
+        "empirical_abstention_rate_mean": 0.16726618705035973,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.4845096335353289 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/baseline/all/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.4845096335353289,
+        "correct_retention_lower_bound_mean": 0.9007936507936508,
+        "empirical_abstention_rate_mean": 0.16726618705035973,
+        "empirical_selective_accuracy_mean": 0.49050178668751165,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.58919252567196,
+        "supervised_feasibility_empirical_abstention_rate": 0.4910071942446043,
+        "supervised_feasibility_empirical_selective_accuracy": 0.5936395759717314,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/baseline/all/abstention-stability-report.json",
+      "profile": "baseline",
+      "profile_config": {
+        "alpha": 0.1,
+        "best_by": "conditional_correctness_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "baseline",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "smollm2-l80",
+      "signal_group": "all",
+      "signals": [
+        "maha_last",
+        "truth_proj",
+        "subspace_resid",
+        "disp_euclid",
+        "disp_hse",
+        "nll_answer",
+        "eigenscore",
+        "resid_update_norm"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.4845096335353289,
+        "empirical_abstention_rate_mean": 0.16726618705035973,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.4845096335353289 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/baseline/geometry/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.4845096335353289,
+        "correct_retention_lower_bound_mean": 0.9007936507936508,
+        "empirical_abstention_rate_mean": 0.16726618705035973,
+        "empirical_selective_accuracy_mean": 0.49050178668751165,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.58919252567196,
+        "supervised_feasibility_empirical_abstention_rate": 0.4910071942446043,
+        "supervised_feasibility_empirical_selective_accuracy": 0.5936395759717314,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/baseline/geometry/abstention-stability-report.json",
+      "profile": "baseline",
+      "profile_config": {
+        "alpha": 0.1,
+        "best_by": "conditional_correctness_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "baseline",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "smollm2-l80",
+      "signal_group": "geometry",
+      "signals": [
+        "maha_last",
+        "truth_proj",
+        "subspace_resid"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.4845096335353289,
+        "empirical_abstention_rate_mean": 0.16726618705035973,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.44764024355445564 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/baseline/uncertainty/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.44764024355445564,
+        "correct_retention_lower_bound_mean": 0.9253968253968253,
+        "empirical_abstention_rate_mean": 0.07410071942446042,
+        "empirical_selective_accuracy_mean": 0.45297572934653674,
+        "recommended_score_name_counts": {
+          "disp_euclid": 1,
+          "eigenscore": 2,
+          "nll_answer": 1,
+          "resid_update_norm": 6
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": null,
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.47989858746830855,
+        "supervised_feasibility_empirical_abstention_rate": 0.40827338129496404,
+        "supervised_feasibility_empirical_selective_accuracy": 0.48328267477203646,
+        "supervised_feasibility_score_name": "eigenscore",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/baseline/uncertainty/abstention-stability-report.json",
+      "profile": "baseline",
+      "profile_config": {
+        "alpha": 0.1,
+        "best_by": "conditional_correctness_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "baseline",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "smollm2-l80",
+      "signal_group": "uncertainty",
+      "signals": [
+        "disp_euclid",
+        "disp_hse",
+        "nll_answer",
+        "eigenscore",
+        "resid_update_norm"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.4845096335353289,
+        "empirical_abstention_rate_mean": 0.16726618705035973,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.46147774734737224 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p05/recommended/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.46147774734737224,
+        "correct_retention_lower_bound_mean": 0.9452380952380952,
+        "empirical_abstention_rate_mean": 0.08237410071942446,
+        "empirical_selective_accuracy_mean": 0.46699721745929007,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.58919252567196,
+        "supervised_feasibility_empirical_abstention_rate": 0.4910071942446043,
+        "supervised_feasibility_empirical_selective_accuracy": 0.5936395759717314,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p05/recommended/abstention-stability-report.json",
+      "profile": "alpha_0p05",
+      "profile_config": {
+        "alpha": 0.05,
+        "best_by": "conditional_correctness_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "alpha_0p05",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "smollm2-l80",
+      "signal_group": "recommended",
+      "signals": [
+        "truth_proj"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.4845096335353289,
+        "empirical_abstention_rate_mean": 0.16726618705035973,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.4639460529352692 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p05/all/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.4639460529352692,
+        "correct_retention_lower_bound_mean": 0.9452380952380952,
+        "empirical_abstention_rate_mean": 0.08741007194244604,
+        "empirical_selective_accuracy_mean": 0.4695021525143706,
+        "recommended_score_name_counts": {
+          "maha_last": 6,
+          "truth_proj": 4
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": null,
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.58919252567196,
+        "supervised_feasibility_empirical_abstention_rate": 0.4910071942446043,
+        "supervised_feasibility_empirical_selective_accuracy": 0.5936395759717314,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p05/all/abstention-stability-report.json",
+      "profile": "alpha_0p05",
+      "profile_config": {
+        "alpha": 0.05,
+        "best_by": "conditional_correctness_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "alpha_0p05",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "smollm2-l80",
+      "signal_group": "all",
+      "signals": [
+        "maha_last",
+        "truth_proj",
+        "subspace_resid",
+        "disp_euclid",
+        "disp_hse",
+        "nll_answer",
+        "eigenscore",
+        "resid_update_norm"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.4845096335353289,
+        "empirical_abstention_rate_mean": 0.16726618705035973,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.4639460529352692 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p05/geometry/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.4639460529352692,
+        "correct_retention_lower_bound_mean": 0.9452380952380952,
+        "empirical_abstention_rate_mean": 0.08741007194244604,
+        "empirical_selective_accuracy_mean": 0.4695021525143706,
+        "recommended_score_name_counts": {
+          "maha_last": 6,
+          "truth_proj": 4
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": null,
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.58919252567196,
+        "supervised_feasibility_empirical_abstention_rate": 0.4910071942446043,
+        "supervised_feasibility_empirical_selective_accuracy": 0.5936395759717314,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p05/geometry/abstention-stability-report.json",
+      "profile": "alpha_0p05",
+      "profile_config": {
+        "alpha": 0.05,
+        "best_by": "conditional_correctness_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "alpha_0p05",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "smollm2-l80",
+      "signal_group": "geometry",
+      "signals": [
+        "maha_last",
+        "truth_proj",
+        "subspace_resid"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.4845096335353289,
+        "empirical_abstention_rate_mean": 0.16726618705035973,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.4474365084778036 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p05/uncertainty/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.4474365084778036,
+        "correct_retention_lower_bound_mean": 0.961111111111111,
+        "empirical_abstention_rate_mean": 0.03776978417266187,
+        "empirical_selective_accuracy_mean": 0.45270241439604825,
+        "recommended_score_name_counts": {
+          "disp_euclid": 1,
+          "disp_hse": 1,
+          "eigenscore": 2,
+          "nll_answer": 1,
+          "resid_update_norm": 5
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": null,
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.47989858746830855,
+        "supervised_feasibility_empirical_abstention_rate": 0.40827338129496404,
+        "supervised_feasibility_empirical_selective_accuracy": 0.48328267477203646,
+        "supervised_feasibility_score_name": "eigenscore",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p05/uncertainty/abstention-stability-report.json",
+      "profile": "alpha_0p05",
+      "profile_config": {
+        "alpha": 0.05,
+        "best_by": "conditional_correctness_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "alpha_0p05",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "smollm2-l80",
+      "signal_group": "uncertainty",
+      "signals": [
+        "disp_euclid",
+        "disp_hse",
+        "nll_answer",
+        "eigenscore",
+        "resid_update_norm"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.4845096335353289,
+        "empirical_abstention_rate_mean": 0.16726618705035973,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.5193207730809899 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p2/recommended/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.5193207730809899,
+        "correct_retention_lower_bound_mean": 0.8285714285714285,
+        "empirical_abstention_rate_mean": 0.28561151079136693,
+        "empirical_selective_accuracy_mean": 0.5261272296374279,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.58919252567196,
+        "supervised_feasibility_empirical_abstention_rate": 0.4910071942446043,
+        "supervised_feasibility_empirical_selective_accuracy": 0.5936395759717314,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p2/recommended/abstention-stability-report.json",
+      "profile": "alpha_0p2",
+      "profile_config": {
+        "alpha": 0.2,
+        "best_by": "conditional_correctness_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "alpha_0p2",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "smollm2-l80",
+      "signal_group": "recommended",
+      "signals": [
+        "truth_proj"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.4845096335353289,
+        "empirical_abstention_rate_mean": 0.16726618705035973,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.5193207730809899 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p2/all/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.5193207730809899,
+        "correct_retention_lower_bound_mean": 0.8285714285714285,
+        "empirical_abstention_rate_mean": 0.28561151079136693,
+        "empirical_selective_accuracy_mean": 0.5261272296374279,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.58919252567196,
+        "supervised_feasibility_empirical_abstention_rate": 0.4910071942446043,
+        "supervised_feasibility_empirical_selective_accuracy": 0.5936395759717314,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p2/all/abstention-stability-report.json",
+      "profile": "alpha_0p2",
+      "profile_config": {
+        "alpha": 0.2,
+        "best_by": "conditional_correctness_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "alpha_0p2",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "smollm2-l80",
+      "signal_group": "all",
+      "signals": [
+        "maha_last",
+        "truth_proj",
+        "subspace_resid",
+        "disp_euclid",
+        "disp_hse",
+        "nll_answer",
+        "eigenscore",
+        "resid_update_norm"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.4845096335353289,
+        "empirical_abstention_rate_mean": 0.16726618705035973,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.5193207730809899 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p2/geometry/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.5193207730809899,
+        "correct_retention_lower_bound_mean": 0.8285714285714285,
+        "empirical_abstention_rate_mean": 0.28561151079136693,
+        "empirical_selective_accuracy_mean": 0.5261272296374279,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.58919252567196,
+        "supervised_feasibility_empirical_abstention_rate": 0.4910071942446043,
+        "supervised_feasibility_empirical_selective_accuracy": 0.5936395759717314,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p2/geometry/abstention-stability-report.json",
+      "profile": "alpha_0p2",
+      "profile_config": {
+        "alpha": 0.2,
+        "best_by": "conditional_correctness_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "alpha_0p2",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "smollm2-l80",
+      "signal_group": "geometry",
+      "signals": [
+        "maha_last",
+        "truth_proj",
+        "subspace_resid"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.4845096335353289,
+        "empirical_abstention_rate_mean": 0.16726618705035973,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.4596777920453743 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p2/uncertainty/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.4596777920453743,
+        "correct_retention_lower_bound_mean": 0.8087301587301587,
+        "empirical_abstention_rate_mean": 0.21258992805755397,
+        "empirical_selective_accuracy_mean": 0.46547676355574785,
+        "recommended_score_name_counts": {
+          "eigenscore": 7,
+          "resid_update_norm": 3
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": null,
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.47989858746830855,
+        "supervised_feasibility_empirical_abstention_rate": 0.40827338129496404,
+        "supervised_feasibility_empirical_selective_accuracy": 0.48328267477203646,
+        "supervised_feasibility_score_name": "eigenscore",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p2/uncertainty/abstention-stability-report.json",
+      "profile": "alpha_0p2",
+      "profile_config": {
+        "alpha": 0.2,
+        "best_by": "conditional_correctness_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "alpha_0p2",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "smollm2-l80",
+      "signal_group": "uncertainty",
+      "signals": [
+        "disp_euclid",
+        "disp_hse",
+        "nll_answer",
+        "eigenscore",
+        "resid_update_norm"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.4845096335353289,
+        "empirical_abstention_rate_mean": 0.16726618705035973,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.4845096335353289 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/selective_accuracy/recommended/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.4845096335353289,
+        "correct_retention_lower_bound_mean": 0.9007936507936508,
+        "empirical_abstention_rate_mean": 0.16726618705035973,
+        "empirical_selective_accuracy_mean": 0.49050178668751165,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.58919252567196,
+        "supervised_feasibility_empirical_abstention_rate": 0.4910071942446043,
+        "supervised_feasibility_empirical_selective_accuracy": 0.5936395759717314,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/selective_accuracy/recommended/abstention-stability-report.json",
+      "profile": "selective_accuracy",
+      "profile_config": {
+        "alpha": 0.1,
+        "best_by": "empirical_selective_accuracy",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "selective_accuracy",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "smollm2-l80",
+      "signal_group": "recommended",
+      "signals": [
+        "truth_proj"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.4845096335353289,
+        "empirical_abstention_rate_mean": 0.16726618705035973,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.4845096335353289 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/selective_accuracy/all/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.4845096335353289,
+        "correct_retention_lower_bound_mean": 0.9007936507936508,
+        "empirical_abstention_rate_mean": 0.16726618705035973,
+        "empirical_selective_accuracy_mean": 0.49050178668751165,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.58919252567196,
+        "supervised_feasibility_empirical_abstention_rate": 0.4910071942446043,
+        "supervised_feasibility_empirical_selective_accuracy": 0.5936395759717314,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/selective_accuracy/all/abstention-stability-report.json",
+      "profile": "selective_accuracy",
+      "profile_config": {
+        "alpha": 0.1,
+        "best_by": "empirical_selective_accuracy",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "selective_accuracy",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "smollm2-l80",
+      "signal_group": "all",
+      "signals": [
+        "maha_last",
+        "truth_proj",
+        "subspace_resid",
+        "disp_euclid",
+        "disp_hse",
+        "nll_answer",
+        "eigenscore",
+        "resid_update_norm"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.4845096335353289,
+        "empirical_abstention_rate_mean": 0.16726618705035973,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.4845096335353289 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/selective_accuracy/geometry/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.4845096335353289,
+        "correct_retention_lower_bound_mean": 0.9007936507936508,
+        "empirical_abstention_rate_mean": 0.16726618705035973,
+        "empirical_selective_accuracy_mean": 0.49050178668751165,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.58919252567196,
+        "supervised_feasibility_empirical_abstention_rate": 0.4910071942446043,
+        "supervised_feasibility_empirical_selective_accuracy": 0.5936395759717314,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/selective_accuracy/geometry/abstention-stability-report.json",
+      "profile": "selective_accuracy",
+      "profile_config": {
+        "alpha": 0.1,
+        "best_by": "empirical_selective_accuracy",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "selective_accuracy",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "smollm2-l80",
+      "signal_group": "geometry",
+      "signals": [
+        "maha_last",
+        "truth_proj",
+        "subspace_resid"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.4845096335353289,
+        "empirical_abstention_rate_mean": 0.16726618705035973,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.44764024355445564 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/selective_accuracy/uncertainty/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.44764024355445564,
+        "correct_retention_lower_bound_mean": 0.9253968253968253,
+        "empirical_abstention_rate_mean": 0.07410071942446042,
+        "empirical_selective_accuracy_mean": 0.45297572934653674,
+        "recommended_score_name_counts": {
+          "disp_euclid": 1,
+          "eigenscore": 2,
+          "nll_answer": 1,
+          "resid_update_norm": 6
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": null,
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.47989858746830855,
+        "supervised_feasibility_empirical_abstention_rate": 0.40827338129496404,
+        "supervised_feasibility_empirical_selective_accuracy": 0.48328267477203646,
+        "supervised_feasibility_score_name": "eigenscore",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/selective_accuracy/uncertainty/abstention-stability-report.json",
+      "profile": "selective_accuracy",
+      "profile_config": {
+        "alpha": 0.1,
+        "best_by": "empirical_selective_accuracy",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "selective_accuracy",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "smollm2-l80",
+      "signal_group": "uncertainty",
+      "signals": [
+        "disp_euclid",
+        "disp_hse",
+        "nll_answer",
+        "eigenscore",
+        "resid_update_norm"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.4845096335353289,
+        "empirical_abstention_rate_mean": 0.16726618705035973,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.4845096335353289 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/retention/recommended/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.4845096335353289,
+        "correct_retention_lower_bound_mean": 0.9007936507936508,
+        "empirical_abstention_rate_mean": 0.16726618705035973,
+        "empirical_selective_accuracy_mean": 0.49050178668751165,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.58919252567196,
+        "supervised_feasibility_empirical_abstention_rate": 0.4910071942446043,
+        "supervised_feasibility_empirical_selective_accuracy": 0.5936395759717314,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/retention/recommended/abstention-stability-report.json",
+      "profile": "retention",
+      "profile_config": {
+        "alpha": 0.1,
+        "best_by": "correct_retention_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "retention",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "smollm2-l80",
+      "signal_group": "recommended",
+      "signals": [
+        "truth_proj"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.4845096335353289,
+        "empirical_abstention_rate_mean": 0.16726618705035973,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.4459250483783702 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/retention/all/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.4459250483783702,
+        "correct_retention_lower_bound_mean": 0.942063492063492,
+        "empirical_abstention_rate_mean": 0.053597122302158275,
+        "empirical_selective_accuracy_mean": 0.4512019630121472,
+        "recommended_score_name_counts": {
+          "disp_euclid": 1,
+          "disp_hse": 1,
+          "eigenscore": 1,
+          "maha_last": 1,
+          "nll_answer": 4,
+          "resid_update_norm": 1,
+          "subspace_resid": 1
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": null,
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.58919252567196,
+        "supervised_feasibility_empirical_abstention_rate": 0.4910071942446043,
+        "supervised_feasibility_empirical_selective_accuracy": 0.5936395759717314,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/retention/all/abstention-stability-report.json",
+      "profile": "retention",
+      "profile_config": {
+        "alpha": 0.1,
+        "best_by": "correct_retention_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "retention",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "smollm2-l80",
+      "signal_group": "all",
+      "signals": [
+        "maha_last",
+        "truth_proj",
+        "subspace_resid",
+        "disp_euclid",
+        "disp_hse",
+        "nll_answer",
+        "eigenscore",
+        "resid_update_norm"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.4845096335353289,
+        "empirical_abstention_rate_mean": 0.16726618705035973,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.4693494417200325 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/retention/geometry/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.4693494417200325,
+        "correct_retention_lower_bound_mean": 0.9119047619047619,
+        "empirical_abstention_rate_mean": 0.129136690647482,
+        "empirical_selective_accuracy_mean": 0.47506419012854006,
+        "recommended_score_name_counts": {
+          "maha_last": 1,
+          "subspace_resid": 4,
+          "truth_proj": 5
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": null,
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.58919252567196,
+        "supervised_feasibility_empirical_abstention_rate": 0.4910071942446043,
+        "supervised_feasibility_empirical_selective_accuracy": 0.5936395759717314,
+        "supervised_feasibility_score_name": "truth_proj",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/retention/geometry/abstention-stability-report.json",
+      "profile": "retention",
+      "profile_config": {
+        "alpha": 0.1,
+        "best_by": "correct_retention_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "retention",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "smollm2-l80",
+      "signal_group": "geometry",
+      "signals": [
+        "maha_last",
+        "truth_proj",
+        "subspace_resid"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.4845096335353289,
+        "empirical_abstention_rate_mean": 0.16726618705035973,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    },
+    {
+      "blocking_reasons": [
+        {
+          "gate": "conditional_correctness",
+          "reason": "conditional_correctness_lower_bound_mean 0.4445728782183537 is below 0.8."
+        },
+        {
+          "gate": "seed_stability",
+          "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_status": "ready",
+      "config_check": {
+        "matches": true,
+        "mismatches": []
+      },
+      "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/retention/uncertainty/abstention-stability-report.json",
+      "metrics": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound_mean": 0.4445728782183537,
+        "correct_retention_lower_bound_mean": 0.9357142857142857,
+        "empirical_abstention_rate_mean": 0.057194244604316546,
+        "empirical_selective_accuracy_mean": 0.4498402802035204,
+        "recommended_score_name_counts": {
+          "disp_euclid": 1,
+          "disp_hse": 1,
+          "eigenscore": 1,
+          "nll_answer": 4,
+          "resid_update_norm": 3
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "release_gate_pass_seed_rate": 0.0,
+        "seed_count": 10,
+        "stable_recommended_score_name": null,
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.47989858746830855,
+        "supervised_feasibility_empirical_abstention_rate": 0.40827338129496404,
+        "supervised_feasibility_empirical_selective_accuracy": 0.48328267477203646,
+        "supervised_feasibility_score_name": "eigenscore",
+        "supervised_feasibility_target_passed": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/retention/uncertainty/abstention-stability-report.json",
+      "profile": "retention",
+      "profile_config": {
+        "alpha": 0.1,
+        "best_by": "correct_retention_lower_bound",
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "profile": "retention",
+        "promotion_eligible": true
+      },
+      "promotion_eligible_profile": true,
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "abstention_stability",
+      "run": "smollm2-l80",
+      "signal_group": "uncertainty",
+      "signals": [
+        "disp_euclid",
+        "disp_hse",
+        "nll_answer",
+        "eigenscore",
+        "resid_update_norm"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.4845096335353289,
+        "empirical_abstention_rate_mean": 0.16726618705035973,
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "stable_recommended_score_name": "truth_proj",
+        "supervised_feasibility_conditional_correctness_lower_bound": null,
+        "supervised_feasibility_score_name": null,
+        "supervised_feasibility_target_passed": null
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json"
+    }
+  ],
+  "config": {
+    "max_abstention_rate": 0.5,
+    "min_conditional_correctness_lower_bound": 0.8,
+    "min_pass_seed_rate": 1.0,
+    "require_all_reports": true
+  },
+  "gate": {
+    "blocking_reasons": [
+      {
+        "gate": "promotion_candidate",
+        "reason": "No abstention rerun candidate satisfies release thresholds."
+      }
+    ],
+    "passed": false,
+    "promotion_ready": false,
+    "require_all_reports": true
+  },
+  "metadata": {},
+  "paths": {
+    "artifact_manifest": "artifacts/frontier-release-evidence/abstention-rerun-rollup-v1/artifact-manifest.json",
+    "report": "artifacts/frontier-release-evidence/abstention-rerun-rollup-v1/frontier-abstention-rerun-rollup.json"
+  },
+  "recommended_candidate": {
+    "blocking_reasons": [
+      {
+        "gate": "conditional_correctness",
+        "reason": "conditional_correctness_lower_bound_mean 0.5499843325206569 is below 0.8."
+      },
+      {
+        "gate": "seed_stability",
+        "reason": "release_gate_pass_seed_rate 0.0 is below 1.0."
+      }
+    ],
+    "candidate_status": "blocked",
+    "expected_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p2/recommended/abstention-stability-report.json",
+    "metrics": {
+      "all_release_gates_passed": false,
+      "conditional_correctness_lower_bound_mean": 0.5499843325206569,
+      "correct_retention_lower_bound_mean": 0.8198412698412698,
+      "empirical_abstention_rate_mean": 0.3320143884892086,
+      "empirical_selective_accuracy_mean": 0.5573928097592659,
+      "recommended_score_name_counts": {
+        "truth_proj": 10
+      },
+      "release_gate_block_seed_count": 10,
+      "release_gate_pass_seed_count": 0,
+      "release_gate_pass_seed_rate": 0.0,
+      "seed_count": 10,
+      "stable_recommended_score_name": "truth_proj",
+      "supervised_feasibility_conditional_correctness_lower_bound": 0.6247411786545575,
+      "supervised_feasibility_empirical_abstention_rate": 0.5,
+      "supervised_feasibility_empirical_selective_accuracy": 0.6294964028776978,
+      "supervised_feasibility_score_name": "truth_proj",
+      "supervised_feasibility_target_passed": false
+    },
+    "observed_report_path": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p2/recommended/abstention-stability-report.json",
+    "profile": "alpha_0p2",
+    "promotion_eligible_profile": true,
+    "promotion_ready": false,
+    "run": "qwen05-l80",
+    "signal_group": "recommended",
+    "signals": [
+      "truth_proj"
+    ]
+  },
+  "schema_version": 1,
+  "source": {
+    "explicit_reports": [],
+    "observed_reports": [
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/baseline/recommended/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/baseline/all/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/baseline/geometry/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/baseline/uncertainty/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p05/recommended/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p05/all/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p05/geometry/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p05/uncertainty/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p2/recommended/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p2/all/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p2/geometry/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p2/uncertainty/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/selective_accuracy/recommended/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/selective_accuracy/all/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/selective_accuracy/geometry/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/selective_accuracy/uncertainty/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/retention/recommended/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/retention/all/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/retention/geometry/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/retention/uncertainty/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/baseline/recommended/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/baseline/all/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/baseline/geometry/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/baseline/uncertainty/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p05/recommended/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p05/all/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p05/geometry/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p05/uncertainty/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p2/recommended/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p2/all/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p2/geometry/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p2/uncertainty/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/selective_accuracy/recommended/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/selective_accuracy/all/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/selective_accuracy/geometry/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/selective_accuracy/uncertainty/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/retention/recommended/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/retention/all/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/retention/geometry/abstention-stability-report.json",
+      "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/smollm2-l80/retention/uncertainty/abstention-stability-report.json"
+    ],
+    "queue": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/frontier-abstention-rerun-queue.json",
+    "queue_workflow": "frontier_abstention_evidence_rerun_queue"
+  },
+  "status": "blocked",
+  "summary": {
+    "blocked_candidate_count": 40,
+    "candidate_count": 40,
+    "expected_entry_count": 40,
+    "invalid_report_count": 0,
+    "missing_report_count": 0,
+    "observed_report_count": 40,
+    "passing_candidate_count": 0,
+    "profiles": [
+      "alpha_0p05",
+      "alpha_0p2",
+      "baseline",
+      "retention",
+      "selective_accuracy"
+    ],
+    "promotion_eligible_passing_candidate_count": 0,
+    "queue_entry_count": 40,
+    "queue_status": "ready",
+    "queue_workflow": "frontier_abstention_evidence_rerun_queue",
+    "runs": [
+      "qwen05-l80",
+      "smollm2-l80"
+    ],
+    "signal_groups": [
+      "all",
+      "geometry",
+      "recommended",
+      "uncertainty"
+    ]
+  },
+  "workflow": "frontier_abstention_evidence_rerun_rollup"
+}

@@ -1649,6 +1649,56 @@ def test_frontier_detectability_evidence_rerun_queue_builds_blind_spot_audit(tmp
     assert record.metadata["blocked_run_count"] == 1
 
 
+def test_frontier_detectability_evidence_rerun_queue_can_append_taxonomy_reruns(tmp_path):
+    taxonomy_path = tmp_path / "smol-detectability.json"
+    score_path = tmp_path / "smol-scores.manifest.json"
+    source = tmp_path / "frontier-release-evidence.json"
+    queue_path = tmp_path / "detectability-rerun-queue.json"
+    taxonomy_path.write_text(
+        json.dumps(_detectability_taxonomy_payload(score_path)),
+        encoding="utf-8",
+    )
+    source.write_text(
+        json.dumps(_frontier_release_detectability_payload(taxonomy_path)),
+        encoding="utf-8",
+    )
+
+    payload = build_frontier_detectability_evidence_rerun_queue(
+        source=source,
+        json_path=queue_path,
+        output_dir=tmp_path / "detectability-reruns",
+        score_paths=(f"smol={score_path}",),
+        include_taxonomy_reruns=True,
+        taxonomy_signal_pairs=("disp_hse:nll_answer",),
+        python_executable="python",
+    )
+
+    blind_spot, taxonomy = payload["entries"]
+    command = taxonomy["command"]
+
+    assert payload["summary"]["blocked_run_count"] == 1
+    assert payload["summary"]["entry_count"] == 2
+    assert payload["summary"]["blind_spot_analysis_count"] == 1
+    assert payload["summary"]["taxonomy_rerun_count"] == 1
+    assert blind_spot["command_kind"] == "blind_spot_analysis"
+    assert taxonomy["command_kind"] == "taxonomy_report"
+    assert taxonomy["taxonomy_config"] == {
+        "consistency_signal": "disp_hse",
+        "confidence_signal": "nll_answer",
+        "consistency_direction": "lower",
+        "confidence_direction": "lower",
+    }
+    assert command[command.index("--consistency-signal") + 1] == "disp_hse"
+    assert command[command.index("--confidence-signal") + 1] == "nll_answer"
+    metadata_values = [
+        command[index + 1]
+        for index, value in enumerate(command)
+        if value == "--metadata"
+    ]
+    assert "run_name=smol" in metadata_values
+    assert "taxonomy_pair=disp_hse-nll_answer-lower-lower" in metadata_values
+
+
 def test_frontier_detectability_evidence_rerun_rollup_completes_blind_spot_audit(tmp_path):
     taxonomy_path = tmp_path / "smol-detectability.json"
     source = tmp_path / "frontier-release-evidence.json"
@@ -1723,6 +1773,12 @@ def test_frontier_detectability_evidence_rerun_rollup_promotes_taxonomy_rerun(tm
                     "command_kind": "taxonomy_report",
                     "source_report": None,
                     "source_score_dump": str(tmp_path / "smol-scores.manifest.json"),
+                    "taxonomy_config": {
+                        "consistency_signal": "disp_hse",
+                        "confidence_signal": "nll_answer",
+                        "consistency_direction": "lower",
+                        "confidence_direction": "lower",
+                    },
                     "command_status": "ready",
                     "missing_inputs": (),
                     "command": (
@@ -1758,6 +1814,73 @@ def test_frontier_detectability_evidence_rerun_rollup_promotes_taxonomy_rerun(tm
     assert payload["summary"]["promotion_ready_count"] == 1
     assert payload["recommended_candidate"]["run"] == "smol"
     assert payload["recommended_candidate"]["metrics"]["entrenched_false_rate"] == 0.1
+    assert payload["recommended_candidate"]["taxonomy_config"]["consistency_signal"] == "disp_hse"
+
+
+def test_frontier_detectability_rollup_promotes_when_one_taxonomy_candidate_passes(tmp_path):
+    queue_path = tmp_path / "detectability-rerun-queue.json"
+    blocked_report_path = tmp_path / "detectability-reruns/smol/base/detectability-taxonomy-report.json"
+    passing_report_path = tmp_path / "detectability-reruns/smol/disp/detectability-taxonomy-report.json"
+    rollup_path = tmp_path / "detectability-rerun-rollup.json"
+    entries = []
+    for signal, report_path in (
+        ("eigenscore", blocked_report_path),
+        ("disp_hse", passing_report_path),
+    ):
+        entries.append({
+            "run": "smol",
+            "command_kind": "taxonomy_report",
+            "source_report": None,
+            "source_score_dump": str(tmp_path / "smol-scores.manifest.json"),
+            "taxonomy_config": {
+                "consistency_signal": signal,
+                "confidence_signal": "nll_answer",
+                "consistency_direction": "lower",
+                "confidence_direction": "lower",
+            },
+            "command_status": "ready",
+            "missing_inputs": (),
+            "command": (
+                "python",
+                "benchmarks/eval_detectability_taxonomy.py",
+                "--json",
+                str(report_path),
+            ),
+        })
+    queue_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "frontier_detectability_evidence_rerun_queue",
+            "status": "ready",
+            "entries": entries,
+        }),
+        encoding="utf-8",
+    )
+    blocked_report_path.parent.mkdir(parents=True, exist_ok=True)
+    passing_report_path.parent.mkdir(parents=True, exist_ok=True)
+    blocked_report_path.write_text(
+        json.dumps(_detectability_taxonomy_rerun_report(entrenched_false_rate=0.4)),
+        encoding="utf-8",
+    )
+    passing_report_path.write_text(
+        json.dumps(_detectability_taxonomy_rerun_report(entrenched_false_rate=0.1)),
+        encoding="utf-8",
+    )
+
+    payload = rollup_frontier_detectability_evidence_reruns(
+        queue_path=queue_path,
+        report_json_path=rollup_path,
+        max_entrenched_false_rate=0.25,
+        require_all_reports=True,
+    )
+
+    assert payload["status"] == "promote"
+    assert payload["gate"]["passed"] is True
+    assert payload["gate"]["promotion_ready"] is True
+    assert payload["gate"]["blocking_reasons"] == ()
+    assert payload["summary"]["blocked_candidate_count"] == 1
+    assert payload["summary"]["promotion_ready_count"] == 1
+    assert payload["recommended_candidate"]["taxonomy_config"]["consistency_signal"] == "disp_hse"
 
 
 def test_plan_release_evidence_gaps_can_emit_detectability_rerun_queue(tmp_path):
@@ -2333,7 +2456,16 @@ def _detectability_taxonomy_rerun_report(*, entrenched_false_rate):
             "n_total": 20,
             "n_false": 10,
             "cells": {
-                "entrenched": {"count": entrenched_false_count, "rate": entrenched_false_rate},
+                "entrenched": {
+                    "n_false": entrenched_false_count,
+                    "share_of_false": {"estimate": entrenched_false_rate},
+                },
+            },
+            "false_distribution": {
+                "entrenched": {
+                    "count": entrenched_false_count,
+                    "rate": entrenched_false_rate,
+                },
             },
             "blind_spot": {"n_false": entrenched_false_count},
         },

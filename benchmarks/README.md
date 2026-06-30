@@ -5329,6 +5329,15 @@ to false `entrenched` rows. If no taxonomy report is available, pass
 `--scores`, `--consistency-signal`, and `--confidence-signal` to emit
 `eval_detectability_taxonomy.py` rerun commands instead.
 
+When a reachable taxonomy report exists but the blocked gate should be retested
+under alternate DECK axes, add score dumps plus `--include-taxonomy-reruns` and
+one or more `--detectability-taxonomy-pair consistency:confidence` values. Pair
+directions default to the healthy direction implied by `DEFAULT_SCORE_DIRECTIONS`
+and can be overridden as `consistency:confidence:consistency_direction:confidence_direction`.
+For example, `--detectability-taxonomy-pair disp_hse:nll_answer` appends a
+semantic-dispersion consistency axis with answer-NLL confidence while preserving
+the blind-spot audit entry.
+
 After the detectability queue has produced child reports, roll them up before
 feeding the evidence back into release review:
 

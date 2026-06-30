@@ -15,6 +15,7 @@ if str(ROOT) not in sys.path:
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from eigentruth.calibration import DEFAULT_SCORE_DIRECTIONS  # noqa: E402
 from eigentruth.json_utils import strict_json_dumps  # noqa: E402
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
 
@@ -35,6 +36,8 @@ def build_frontier_detectability_evidence_rerun_queue(
     confidence_signal: str | None = None,
     consistency_direction: str = "higher",
     confidence_direction: str = "higher",
+    include_taxonomy_reruns: bool = False,
+    taxonomy_signal_pairs: Sequence[Any] = (),
     cell: str = "entrenched",
     false_only: bool = True,
     max_records: int = 100,
@@ -51,6 +54,14 @@ def build_frontier_detectability_evidence_rerun_queue(
         raise ValueError("confidence_direction must be one of: higher, lower.")
     if int(max_records) < 0:
         raise ValueError("max_records must be >= 0.")
+    taxonomy_pairs = _resolve_taxonomy_signal_pairs(
+        taxonomy_signal_pairs,
+        consistency_signal=consistency_signal,
+        confidence_signal=confidence_signal,
+        consistency_direction=consistency_direction,
+        confidence_direction=confidence_direction,
+        include_taxonomy_reruns=include_taxonomy_reruns,
+    )
     source_path = Path(source)
     output_path = None if json_path is None else Path(json_path)
     manifest_path = None if artifact_manifest_path is None else Path(artifact_manifest_path)
@@ -74,27 +85,35 @@ def build_frontier_detectability_evidence_rerun_queue(
         max_records=max_records,
         python_executable=python_executable,
     )
+    if taxonomy_pairs and score_paths and _detectability_track_requested(payload, default_payload):
+        entries = tuple(entries) + _entries_from_score_paths(
+            score_paths,
+            rerun_root=rerun_root,
+            taxonomy_pairs=taxonomy_pairs,
+            selected_run_names=blocked_run_names,
+            python_executable=python_executable,
+        )
     if not entries and _detectability_track_requested(payload, default_payload):
         entries = _entries_from_score_paths(
             score_paths,
             rerun_root=rerun_root,
-            consistency_signal=consistency_signal,
-            confidence_signal=confidence_signal,
-            consistency_direction=consistency_direction,
-            confidence_direction=confidence_direction,
+            taxonomy_pairs=taxonomy_pairs,
+            selected_run_names=blocked_run_names,
             python_executable=python_executable,
         )
         if not entries:
             entries = (_missing_inputs_entry(rerun_root=rerun_root, score_paths=score_paths),)
 
     command_count = sum(1 for entry in entries if entry["command_status"] == "ready")
+    entry_run_names = _entry_run_names(entries)
     output = {
         "schema_version": 1,
         "workflow": WORKFLOW,
         "status": "ready" if entries else "empty",
         "source": str(source_path),
         "summary": {
-            "blocked_run_count": len(entries),
+            "blocked_run_count": len(entry_run_names),
+            "entry_count": len(entries),
             "blind_spot_analysis_count": sum(
                 1 for entry in entries if entry["command_kind"] == "blind_spot_analysis"
             ),
@@ -112,6 +131,8 @@ def build_frontier_detectability_evidence_rerun_queue(
             "confidence_signal": confidence_signal,
             "consistency_direction": consistency_direction,
             "confidence_direction": confidence_direction,
+            "include_taxonomy_reruns": bool(include_taxonomy_reruns),
+            "taxonomy_signal_pairs": taxonomy_pairs,
             "cell": cell,
             "false_only": bool(false_only),
             "max_records": int(max_records),
@@ -158,6 +179,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         confidence_signal=args.confidence_signal,
         consistency_direction=args.consistency_direction,
         confidence_direction=args.confidence_direction,
+        include_taxonomy_reruns=bool(args.include_taxonomy_reruns),
+        taxonomy_signal_pairs=tuple(args.taxonomy_pair or ()),
         cell=args.cell,
         false_only=not args.include_true,
         max_records=int(args.max_records),
@@ -187,6 +210,20 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--confidence-signal", default=None)
     parser.add_argument("--consistency-direction", choices=("higher", "lower"), default="higher")
     parser.add_argument("--confidence-direction", choices=("higher", "lower"), default="higher")
+    parser.add_argument(
+        "--include-taxonomy-reruns",
+        action="store_true",
+        help="also append taxonomy rerun commands for blocked runs when scores are provided",
+    )
+    parser.add_argument(
+        "--taxonomy-pair",
+        action="append",
+        default=[],
+        help=(
+            "taxonomy rerun pair as consistency:confidence or "
+            "consistency:confidence:consistency_direction:confidence_direction; repeatable"
+        ),
+    )
     parser.add_argument("--cell", default="entrenched")
     parser.add_argument("--include-true", action="store_true")
     parser.add_argument("--max-records", type=int, default=100)
@@ -248,48 +285,160 @@ def _entries_from_score_paths(
     score_paths: Sequence[str | Path],
     *,
     rerun_root: Path,
+    taxonomy_pairs: Sequence[Mapping[str, Any]],
+    selected_run_names: Sequence[str],
+    python_executable: str,
+) -> tuple[dict[str, Any], ...]:
+    if not score_paths or not taxonomy_pairs:
+        return ()
+    selected = set(_unique_strings(selected_run_names))
+    entries = []
+    for raw_score_path in score_paths:
+        run_name, score_path = _parse_named_path(str(raw_score_path))
+        if selected and run_name not in selected:
+            continue
+        for pair in taxonomy_pairs:
+            consistency_signal = str(pair["consistency_signal"])
+            confidence_signal = str(pair["confidence_signal"])
+            consistency_direction = str(pair["consistency_direction"])
+            confidence_direction = str(pair["confidence_direction"])
+            pair_slug = _taxonomy_pair_slug(pair)
+            output_dir = (
+                rerun_root / _slug(run_name)
+                if len(taxonomy_pairs) == 1
+                else rerun_root / _slug(run_name) / pair_slug
+            )
+            command = (
+                python_executable,
+                "benchmarks/eval_detectability_taxonomy.py",
+                "--scores",
+                score_path,
+                "--consistency-signal",
+                consistency_signal,
+                "--confidence-signal",
+                confidence_signal,
+                "--consistency-direction",
+                consistency_direction,
+                "--confidence-direction",
+                confidence_direction,
+                "--metadata",
+                f"run_name={run_name}",
+                "--metadata",
+                f"taxonomy_pair={pair_slug}",
+                "--json",
+                str(output_dir / "detectability-taxonomy-report.json"),
+            )
+            entries.append({
+                "run": run_name,
+                "command_kind": "taxonomy_report",
+                "source_report": None,
+                "source_score_dump": score_path,
+                "rerun_output_dir": str(output_dir),
+                "taxonomy_config": dict(pair),
+                "command_status": "ready",
+                "missing_inputs": (),
+                "command": command,
+                "dry_run_command": None,
+            })
+    return tuple(entries)
+
+
+def _resolve_taxonomy_signal_pairs(
+    raw_pairs: Sequence[Any],
+    *,
     consistency_signal: str | None,
     confidence_signal: str | None,
     consistency_direction: str,
     confidence_direction: str,
-    python_executable: str,
-) -> tuple[dict[str, Any], ...]:
-    if not score_paths or not consistency_signal or not confidence_signal:
-        return ()
-    entries = []
-    for raw_score_path in score_paths:
-        run_name, score_path = _parse_named_path(str(raw_score_path))
-        output_dir = rerun_root / _slug(run_name)
-        command = (
-            python_executable,
-            "benchmarks/eval_detectability_taxonomy.py",
-            "--scores",
-            score_path,
-            "--consistency-signal",
-            consistency_signal,
-            "--confidence-signal",
-            confidence_signal,
-            "--consistency-direction",
-            consistency_direction,
-            "--confidence-direction",
-            confidence_direction,
-            "--metadata",
-            f"run_name={run_name}",
-            "--json",
-            str(output_dir / "detectability-taxonomy-report.json"),
-        )
-        entries.append({
-            "run": run_name,
-            "command_kind": "taxonomy_report",
-            "source_report": None,
-            "source_score_dump": score_path,
-            "rerun_output_dir": str(output_dir),
-            "command_status": "ready",
-            "missing_inputs": (),
-            "command": command,
-            "dry_run_command": None,
+    include_taxonomy_reruns: bool,
+) -> tuple[dict[str, str], ...]:
+    pairs = [_parse_taxonomy_pair(value) for value in raw_pairs]
+    if not pairs and consistency_signal and confidence_signal:
+        pairs.append({
+            "consistency_signal": consistency_signal,
+            "confidence_signal": confidence_signal,
+            "consistency_direction": consistency_direction,
+            "confidence_direction": confidence_direction,
         })
-    return tuple(entries)
+    if not pairs:
+        return ()
+    return tuple(_with_default_taxonomy_directions(pair) for pair in pairs)
+
+
+def _parse_taxonomy_pair(value: Any) -> dict[str, str]:
+    if isinstance(value, Mapping):
+        pair = {
+            "consistency_signal": _required_pair_text(value.get("consistency_signal"), "consistency_signal"),
+            "confidence_signal": _required_pair_text(value.get("confidence_signal"), "confidence_signal"),
+            "consistency_direction": _optional_pair_direction(value.get("consistency_direction")),
+            "confidence_direction": _optional_pair_direction(value.get("confidence_direction")),
+        }
+        return {key: item for key, item in pair.items() if item is not None}
+    text = str(value).strip()
+    if not text:
+        raise ValueError("taxonomy pair cannot be empty.")
+    separator = "," if "," in text else ":"
+    parts = [part.strip() for part in text.split(separator)]
+    if len(parts) not in {2, 4}:
+        raise ValueError(
+            "taxonomy pair must be consistency:confidence or "
+            "consistency:confidence:consistency_direction:confidence_direction."
+        )
+    pair = {
+        "consistency_signal": _required_pair_text(parts[0], "consistency_signal"),
+        "confidence_signal": _required_pair_text(parts[1], "confidence_signal"),
+    }
+    if len(parts) == 4:
+        pair["consistency_direction"] = _required_pair_direction(parts[2], "consistency_direction")
+        pair["confidence_direction"] = _required_pair_direction(parts[3], "confidence_direction")
+    return pair
+
+
+def _with_default_taxonomy_directions(pair: Mapping[str, str]) -> dict[str, str]:
+    consistency_signal = _required_pair_text(pair.get("consistency_signal"), "consistency_signal")
+    confidence_signal = _required_pair_text(pair.get("confidence_signal"), "confidence_signal")
+    if consistency_signal == confidence_signal:
+        raise ValueError("taxonomy consistency and confidence signals must differ.")
+    consistency_direction = pair.get("consistency_direction") or _health_direction_for_signal(consistency_signal)
+    confidence_direction = pair.get("confidence_direction") or _health_direction_for_signal(confidence_signal)
+    return {
+        "consistency_signal": consistency_signal,
+        "confidence_signal": confidence_signal,
+        "consistency_direction": _required_pair_direction(consistency_direction, "consistency_direction"),
+        "confidence_direction": _required_pair_direction(confidence_direction, "confidence_direction"),
+    }
+
+
+def _health_direction_for_signal(signal: str) -> str:
+    anomaly_direction = DEFAULT_SCORE_DIRECTIONS.get(signal, "higher")
+    return "lower" if anomaly_direction == "higher" else "higher"
+
+
+def _taxonomy_pair_slug(pair: Mapping[str, Any]) -> str:
+    return _slug(
+        f"{pair.get('consistency_signal')}-{pair.get('confidence_signal')}-"
+        f"{pair.get('consistency_direction')}-{pair.get('confidence_direction')}"
+    )
+
+
+def _required_pair_text(value: Any, name: str) -> str:
+    text = _optional_str(value)
+    if text is None:
+        raise ValueError(f"{name} is required.")
+    return text
+
+
+def _optional_pair_direction(value: Any) -> str | None:
+    if value is None:
+        return None
+    return _required_pair_direction(value, "direction")
+
+
+def _required_pair_direction(value: Any, name: str) -> str:
+    text = _required_pair_text(value, name)
+    if text not in {"higher", "lower"}:
+        raise ValueError(f"{name} must be one of: higher, lower.")
+    return text
 
 
 def _missing_inputs_entry(*, rerun_root: Path, score_paths: Sequence[str | Path]) -> dict[str, Any]:
@@ -308,6 +457,10 @@ def _missing_inputs_entry(*, rerun_root: Path, score_paths: Sequence[str | Path]
         "command": None,
         "dry_run_command": None,
     }
+
+
+def _entry_run_names(entries: Sequence[Mapping[str, Any]]) -> tuple[str, ...]:
+    return _unique_strings(entry.get("run") for entry in entries if entry.get("run"))
 
 
 def _blocked_detectability_run_names(payload: Mapping[str, Any]) -> tuple[str, ...]:
@@ -427,6 +580,7 @@ def _write_artifact_manifest(
             "status": payload.get("status"),
             "source": str(source_path),
             "blocked_run_count": summary.get("blocked_run_count"),
+            "entry_count": summary.get("entry_count"),
             "command_count": summary.get("command_count"),
             "missing_command_count": summary.get("missing_command_count"),
         },
@@ -456,6 +610,7 @@ def _record_registry(
             "status": payload.get("status"),
             "source": payload.get("source"),
             "blocked_run_count": summary.get("blocked_run_count"),
+            "entry_count": summary.get("entry_count"),
             "command_count": summary.get("command_count"),
             "missing_command_count": summary.get("missing_command_count"),
             "artifact_manifest": None if manifest_path is None else str(manifest_path),

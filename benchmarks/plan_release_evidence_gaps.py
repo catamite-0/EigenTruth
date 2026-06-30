@@ -119,6 +119,8 @@ def build_release_evidence_gap_plan(
     detectability_confidence_signal: str | None = None,
     detectability_consistency_direction: str = "higher",
     detectability_confidence_direction: str = "higher",
+    detectability_include_taxonomy_reruns: bool = False,
+    detectability_taxonomy_pairs: Sequence[str] = (),
     detectability_cell: str = "entrenched",
     detectability_max_records: int = 100,
     frontier_rerun_rollup_completion_json_path: str | Path | None = None,
@@ -242,6 +244,8 @@ def build_release_evidence_gap_plan(
         detectability_confidence_signal=detectability_confidence_signal,
         detectability_consistency_direction=detectability_consistency_direction,
         detectability_confidence_direction=detectability_confidence_direction,
+        detectability_include_taxonomy_reruns=detectability_include_taxonomy_reruns,
+        detectability_taxonomy_pairs=detectability_taxonomy_pairs,
         detectability_cell=detectability_cell,
         detectability_max_records=detectability_max_records,
         frontier_rerun_rollup_completion_json_path=(
@@ -343,6 +347,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         detectability_confidence_signal=args.detectability_confidence_signal,
         detectability_consistency_direction=args.detectability_consistency_direction,
         detectability_confidence_direction=args.detectability_confidence_direction,
+        detectability_include_taxonomy_reruns=bool(args.detectability_include_taxonomy_reruns),
+        detectability_taxonomy_pairs=tuple(args.detectability_taxonomy_pair or ()),
         detectability_cell=args.detectability_cell,
         detectability_max_records=args.detectability_max_records,
         frontier_rerun_rollup_completion_json_path=(
@@ -528,6 +534,20 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--detectability-confidence-signal", default=None)
     parser.add_argument("--detectability-consistency-direction", choices=("higher", "lower"), default="higher")
     parser.add_argument("--detectability-confidence-direction", choices=("higher", "lower"), default="higher")
+    parser.add_argument(
+        "--detectability-include-taxonomy-reruns",
+        action="store_true",
+        help="append taxonomy rerun commands to the derived detectability queue",
+    )
+    parser.add_argument(
+        "--detectability-taxonomy-pair",
+        action="append",
+        default=[],
+        help=(
+            "detectability taxonomy rerun pair as consistency:confidence or "
+            "consistency:confidence:consistency_direction:confidence_direction; repeatable"
+        ),
+    )
     parser.add_argument("--detectability-cell", default="entrenched")
     parser.add_argument("--detectability-max-records", type=int, default=100)
     parser.add_argument(
@@ -619,6 +639,8 @@ def _build_derived_artifacts(
     detectability_confidence_signal: str | None,
     detectability_consistency_direction: str,
     detectability_confidence_direction: str,
+    detectability_include_taxonomy_reruns: bool,
+    detectability_taxonomy_pairs: Sequence[str],
     detectability_cell: str,
     detectability_max_records: int,
     frontier_rerun_rollup_completion_json_path: str | Path | None,
@@ -774,6 +796,8 @@ def _build_derived_artifacts(
             confidence_signal=detectability_confidence_signal,
             consistency_direction=detectability_consistency_direction,
             confidence_direction=detectability_confidence_direction,
+            include_taxonomy_reruns=detectability_include_taxonomy_reruns,
+            taxonomy_signal_pairs=detectability_taxonomy_pairs,
             cell=detectability_cell,
             max_records=detectability_max_records,
             python_executable=python_executable,
@@ -786,6 +810,7 @@ def _build_derived_artifacts(
             else str(detectability_rerun_artifact_manifest_path),
             "status": detectability_payload["status"],
             "blocked_run_count": summary["blocked_run_count"],
+            "entry_count": summary["entry_count"],
             "command_count": summary["command_count"],
             "missing_command_count": summary["missing_command_count"],
         }

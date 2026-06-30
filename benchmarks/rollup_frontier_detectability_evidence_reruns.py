@@ -214,6 +214,7 @@ def _candidate_base(entry: Mapping[str, Any], *, expected_path: str | None) -> d
         "command_status": entry.get("command_status"),
         "source_report": entry.get("source_report"),
         "source_score_dump": entry.get("source_score_dump"),
+        "taxonomy_config": _mapping(entry.get("taxonomy_config")),
         "expected_report_path": expected_path,
     }
 
@@ -222,12 +223,22 @@ def _candidate_metrics(*, command_kind: str, report: Mapping[str, Any]) -> dict[
     if command_kind == "taxonomy_report":
         taxonomy = _mapping(report.get("report"))
         entrenched = _mapping(_nested(taxonomy, "cells", "entrenched"))
+        false_distribution = _mapping(_nested(taxonomy, "false_distribution", "entrenched"))
         blind_spot = _mapping(taxonomy.get("blind_spot"))
+        share_of_false = _mapping(entrenched.get("share_of_false"))
         return {
             "n_total": _optional_int(taxonomy.get("n_total")),
             "n_false": _optional_int(taxonomy.get("n_false")),
-            "entrenched_false_rate": _optional_float(entrenched.get("rate")),
-            "entrenched_false_count": _optional_int(entrenched.get("count")),
+            "entrenched_false_rate": _first_float(
+                false_distribution.get("rate"),
+                share_of_false.get("estimate"),
+                entrenched.get("rate"),
+            ),
+            "entrenched_false_count": _first_int(
+                false_distribution.get("count"),
+                entrenched.get("n_false"),
+                entrenched.get("count"),
+            ),
             "blind_spot_false_count": _optional_int(blind_spot.get("n_false")),
         }
     if command_kind == "blind_spot_analysis":
@@ -331,6 +342,8 @@ def _gate(
     require_all_reports: bool,
 ) -> dict[str, Any]:
     blocking: list[dict[str, Any]] = []
+    promotion_ready = bool(summary.get("promotion_ready_count"))
+    audit_ready = bool(summary.get("audit_ready_count"))
     if not candidates:
         blocking.append({
             "gate": "queue",
@@ -346,18 +359,17 @@ def _gate(
                     "expected_report_path": candidate.get("expected_report_path"),
                     "reason": f"Candidate report status is {candidate['candidate_status']}.",
                 })
-    for candidate in candidates:
-        if candidate["candidate_status"] == "blocked":
-            for reason in _mapping_sequence(candidate.get("blocking_reasons", ())):
-                blocking.append({
-                    "gate": reason.get("gate"),
-                    "run": candidate.get("run"),
-                    "command_kind": candidate.get("command_kind"),
-                    "reason": reason.get("reason"),
-                })
+    if not promotion_ready:
+        for candidate in candidates:
+            if candidate["candidate_status"] == "blocked":
+                for reason in _mapping_sequence(candidate.get("blocking_reasons", ())):
+                    blocking.append({
+                        "gate": reason.get("gate"),
+                        "run": candidate.get("run"),
+                        "command_kind": candidate.get("command_kind"),
+                        "reason": reason.get("reason"),
+                    })
     passed = not blocking and bool(candidates)
-    promotion_ready = bool(summary.get("promotion_ready_count"))
-    audit_ready = bool(summary.get("audit_ready_count"))
     return {
         "passed": passed,
         "promotion_ready": promotion_ready,
@@ -379,6 +391,7 @@ def _recommended_candidate(candidates: Sequence[Mapping[str, Any]]) -> dict[str,
         "audit_ready": best.get("audit_ready"),
         "expected_report_path": best.get("expected_report_path"),
         "observed_report_path": best.get("observed_report_path"),
+        "taxonomy_config": best.get("taxonomy_config"),
         "metrics": best.get("metrics"),
         "blocking_reasons": best.get("blocking_reasons"),
     }
@@ -575,11 +588,27 @@ def _optional_float(value: Any) -> float | None:
     return parsed if math.isfinite(parsed) else None
 
 
+def _first_float(*values: Any) -> float | None:
+    for value in values:
+        parsed = _optional_float(value)
+        if parsed is not None:
+            return parsed
+    return None
+
+
 def _optional_int(value: Any) -> int | None:
     try:
         return None if value is None else int(value)
     except (TypeError, ValueError):
         return None
+
+
+def _first_int(*values: Any) -> int | None:
+    for value in values:
+        parsed = _optional_int(value)
+        if parsed is not None:
+            return parsed
+    return None
 
 
 def _rank_float(value: Any, *, missing: float = 0.0) -> float:

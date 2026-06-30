@@ -1,0 +1,64 @@
+{
+  "artifacts": {
+    "detectability_rerun_report_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../detectability-taxonomy-rerun-queue-v2/reruns/smollm2-l80/blind-spots.json",
+      "sha256": "d4e4cac478ce6cd3edddd58f9ae7de8791f91881dae1a0e7e9363a3bd887277f",
+      "size_bytes": 130790
+    },
+    "detectability_rerun_report_2": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../detectability-taxonomy-rerun-queue-v2/reruns/smollm2-l80/eigenscore-nll_answer-lower-lower/detectability-taxonomy-report.json",
+      "sha256": "d76c6f265e7343f954ebfc7c8204114639ce764756fcbc877ca6b704f35b6e05",
+      "size_bytes": 12773
+    },
+    "detectability_rerun_report_3": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../detectability-taxonomy-rerun-queue-v2/reruns/smollm2-l80/disp_hse-nll_answer-lower-lower/detectability-taxonomy-report.json",
+      "sha256": "dbaf21990f9aef001e58fa8dc7192577e00bf4f9a776c904b8f81feca7a5ed1f",
+      "size_bytes": 12758
+    },
+    "frontier_detectability_evidence_rerun_queue": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../detectability-taxonomy-rerun-queue-v2/frontier-detectability-rerun-queue.json",
+      "sha256": "a5c9af3794bb820f740ee1bf872c371fc8cf7d91a8ba6be6bd5af00fcf73950c",
+      "size_bytes": 5953
+    },
+    "frontier_detectability_evidence_rerun_rollup": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-detectability-rerun-rollup.json",
+      "sha256": "08567a93e12c1acee066ba80a6b4963ee935f0565cc2c7767abb4dfd3874f3f8",
+      "size_bytes": 7568
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "audit_ready": true,
+    "audit_ready_count": 1,
+    "candidate_count": 3,
+    "missing_report_count": 0,
+    "passed": true,
+    "promotion_ready": true,
+    "promotion_ready_count": 1,
+    "runner": "rollup_frontier_detectability_evidence_reruns",
+    "status": "promote",
+    "workflow": "frontier_detectability_evidence_rerun_rollup"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

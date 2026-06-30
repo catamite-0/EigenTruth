@@ -1,0 +1,37 @@
+{
+  "artifacts": {
+    "frontier_detectability_evidence_rerun_queue": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-detectability-rerun-queue.json",
+      "sha256": "a5c9af3794bb820f740ee1bf872c371fc8cf7d91a8ba6be6bd5af00fcf73950c",
+      "size_bytes": 5953
+    },
+    "source": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../frontier-release-evidence-refreshed.json",
+      "sha256": "7415f3d34ea65b1601df47c4faa9a34fd83d02f9b8048df2219410738d2d681a",
+      "size_bytes": 21390
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "blocked_run_count": 1,
+    "command_count": 3,
+    "entry_count": 3,
+    "missing_command_count": 0,
+    "runner": "plan_frontier_detectability_evidence_reruns",
+    "source": "artifacts/frontier-release-evidence/frontier-release-evidence-refreshed.json",
+    "status": "ready"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  }
+}

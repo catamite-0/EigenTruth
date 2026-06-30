@@ -1,0 +1,54 @@
+{
+  "artifacts": {
+    "abstention_stability_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "abstention-stability-report.json",
+      "sha256": "98380834302c5643ce4a44add0b4fcdfbedd3cb497d50d51113c3a1d18f555c6",
+      "size_bytes": 73786
+    },
+    "input_score_records.qwen05-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../../../../truthfulqa-frontier-qwen-smollm2-l80/qwen05-l80/scores.manifest.records.jsonl",
+      "sha256": "2a5ef4fe89528a557989cac73ef0049e02092e4034cca60f14d7d715c2fbd60a",
+      "size_bytes": 861209
+    },
+    "input_scores.qwen05-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../../../../truthfulqa-frontier-qwen-smollm2-l80/qwen05-l80/scores.manifest.json",
+      "sha256": "2dd8b2b555ce201828ab884d82cc8c8bc01155a254b79256e1ee9e8a1888c056",
+      "size_bytes": 3320
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "alpha": 0.1,
+    "best_by": "conditional_correctness_lower_bound",
+    "runner": "eval_abstention_stability",
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "status": "complete"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

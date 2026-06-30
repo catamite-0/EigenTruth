@@ -1,0 +1,188 @@
+{
+  "candidates": [
+    {
+      "audit_ready": true,
+      "blocking_reasons": [],
+      "candidate_status": "audit_ready",
+      "command_kind": "blind_spot_analysis",
+      "command_status": "ready",
+      "expected_report_path": "artifacts/frontier-release-evidence/detectability-taxonomy-rerun-queue-v2/reruns/smollm2-l80/blind-spots.json",
+      "metrics": {
+        "assignment_check_passed": true,
+        "cell": "entrenched",
+        "cell_false_counts": {
+          "confabulation": 0,
+          "drift": 216,
+          "entrenched": 89,
+          "knotted": 1
+        },
+        "emitted_record_count": 89,
+        "expected_selected_record_count": 89,
+        "false_only": true,
+        "feature_counts": {
+          "has_named_entity_hint": 70,
+          "has_negation": 10,
+          "has_number": 11,
+          "is_time_sensitive": 4
+        },
+        "question_type_counts": {
+          "causal": 2,
+          "choice": 8,
+          "definition": 39,
+          "location": 5,
+          "method": 7,
+          "other": 10,
+          "person": 13,
+          "quantity": 3,
+          "temporal": 2
+        },
+        "selected_record_count": 89,
+        "truncated": false
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/detectability-taxonomy-rerun-queue-v2/reruns/smollm2-l80/blind-spots.json",
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "detectability_blind_spot_analysis",
+      "run": "smollm2-l80",
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/detectability-taxonomy-report.json",
+      "source_score_dump": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json",
+      "taxonomy_config": {}
+    },
+    {
+      "audit_ready": false,
+      "blocking_reasons": [
+        {
+          "gate": "entrenched_false_rate",
+          "reason": "entrenched_false_rate 0.2908496732026144 exceeds 0.25."
+        }
+      ],
+      "candidate_status": "blocked",
+      "command_kind": "taxonomy_report",
+      "command_status": "ready",
+      "expected_report_path": "artifacts/frontier-release-evidence/detectability-taxonomy-rerun-queue-v2/reruns/smollm2-l80/eigenscore-nll_answer-lower-lower/detectability-taxonomy-report.json",
+      "metrics": {
+        "blind_spot_false_count": 89,
+        "entrenched_false_count": 89,
+        "entrenched_false_rate": 0.2908496732026144,
+        "n_false": 306,
+        "n_total": 556
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/detectability-taxonomy-rerun-queue-v2/reruns/smollm2-l80/eigenscore-nll_answer-lower-lower/detectability-taxonomy-report.json",
+      "promotion_ready": false,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "detectability_taxonomy",
+      "run": "smollm2-l80",
+      "source_report": null,
+      "source_score_dump": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json",
+      "taxonomy_config": {
+        "confidence_direction": "lower",
+        "confidence_signal": "nll_answer",
+        "consistency_direction": "lower",
+        "consistency_signal": "eigenscore"
+      }
+    },
+    {
+      "audit_ready": false,
+      "blocking_reasons": [],
+      "candidate_status": "promotion_ready",
+      "command_kind": "taxonomy_report",
+      "command_status": "ready",
+      "expected_report_path": "artifacts/frontier-release-evidence/detectability-taxonomy-rerun-queue-v2/reruns/smollm2-l80/disp_hse-nll_answer-lower-lower/detectability-taxonomy-report.json",
+      "metrics": {
+        "blind_spot_false_count": 25,
+        "entrenched_false_count": 25,
+        "entrenched_false_rate": 0.08169934640522876,
+        "n_false": 306,
+        "n_total": 556
+      },
+      "observed_report_path": "artifacts/frontier-release-evidence/detectability-taxonomy-rerun-queue-v2/reruns/smollm2-l80/disp_hse-nll_answer-lower-lower/detectability-taxonomy-report.json",
+      "promotion_ready": true,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "detectability_taxonomy",
+      "run": "smollm2-l80",
+      "source_report": null,
+      "source_score_dump": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json",
+      "taxonomy_config": {
+        "confidence_direction": "lower",
+        "confidence_signal": "nll_answer",
+        "consistency_direction": "lower",
+        "consistency_signal": "disp_hse"
+      }
+    }
+  ],
+  "config": {
+    "max_entrenched_false_rate": 0.25,
+    "require_all_reports": true
+  },
+  "gate": {
+    "audit_ready": true,
+    "blocking_reasons": [],
+    "passed": true,
+    "promotion_ready": true,
+    "require_all_reports": true
+  },
+  "metadata": {},
+  "paths": {
+    "artifact_manifest": "artifacts/frontier-release-evidence/detectability-taxonomy-rerun-rollup-v2/artifact-manifest.json",
+    "report": "artifacts/frontier-release-evidence/detectability-taxonomy-rerun-rollup-v2/frontier-detectability-rerun-rollup.json"
+  },
+  "recommended_candidate": {
+    "audit_ready": false,
+    "blocking_reasons": [],
+    "candidate_status": "promotion_ready",
+    "command_kind": "taxonomy_report",
+    "expected_report_path": "artifacts/frontier-release-evidence/detectability-taxonomy-rerun-queue-v2/reruns/smollm2-l80/disp_hse-nll_answer-lower-lower/detectability-taxonomy-report.json",
+    "metrics": {
+      "blind_spot_false_count": 25,
+      "entrenched_false_count": 25,
+      "entrenched_false_rate": 0.08169934640522876,
+      "n_false": 306,
+      "n_total": 556
+    },
+    "observed_report_path": "artifacts/frontier-release-evidence/detectability-taxonomy-rerun-queue-v2/reruns/smollm2-l80/disp_hse-nll_answer-lower-lower/detectability-taxonomy-report.json",
+    "promotion_ready": true,
+    "run": "smollm2-l80",
+    "taxonomy_config": {
+      "confidence_direction": "lower",
+      "confidence_signal": "nll_answer",
+      "consistency_direction": "lower",
+      "consistency_signal": "disp_hse"
+    }
+  },
+  "schema_version": 1,
+  "source": {
+    "explicit_reports": [],
+    "observed_reports": [
+      "artifacts/frontier-release-evidence/detectability-taxonomy-rerun-queue-v2/reruns/smollm2-l80/blind-spots.json",
+      "artifacts/frontier-release-evidence/detectability-taxonomy-rerun-queue-v2/reruns/smollm2-l80/eigenscore-nll_answer-lower-lower/detectability-taxonomy-report.json",
+      "artifacts/frontier-release-evidence/detectability-taxonomy-rerun-queue-v2/reruns/smollm2-l80/disp_hse-nll_answer-lower-lower/detectability-taxonomy-report.json"
+    ],
+    "queue": "artifacts/frontier-release-evidence/detectability-taxonomy-rerun-queue-v2/frontier-detectability-rerun-queue.json",
+    "queue_workflow": "frontier_detectability_evidence_rerun_queue"
+  },
+  "status": "promote",
+  "summary": {
+    "audit_ready_count": 1,
+    "blind_spot_analysis_count": 1,
+    "blocked_candidate_count": 1,
+    "candidate_count": 3,
+    "expected_entry_count": 3,
+    "invalid_report_count": 0,
+    "missing_report_count": 0,
+    "observed_report_count": 3,
+    "promotion_ready_count": 1,
+    "queue_entry_count": 3,
+    "queue_status": "ready",
+    "queue_workflow": "frontier_detectability_evidence_rerun_queue",
+    "runs": [
+      "smollm2-l80",
+      "smollm2-l80",
+      "smollm2-l80"
+    ],
+    "taxonomy_candidate_count": 2
+  },
+  "workflow": "frontier_detectability_evidence_rerun_rollup"
+}

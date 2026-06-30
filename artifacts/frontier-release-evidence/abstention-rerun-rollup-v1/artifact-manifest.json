@@ -1,0 +1,358 @@
+{
+  "artifacts": {
+    "abstention_rerun_report_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/qwen05-l80/baseline/recommended/abstention-stability-report.json",
+      "sha256": "98380834302c5643ce4a44add0b4fcdfbedd3cb497d50d51113c3a1d18f555c6",
+      "size_bytes": 73786
+    },
+    "abstention_rerun_report_10": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p2/all/abstention-stability-report.json",
+      "sha256": "9d39959e250a17f0acb82e059e52b1eb4f97af08c8122d2db554fb102018ac5a",
+      "size_bytes": 169208
+    },
+    "abstention_rerun_report_11": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p2/geometry/abstention-stability-report.json",
+      "sha256": "7388e26023b888a4a821cabd4b5e3c43fab5b3fb49810063ff5f6c1dc4e554f7",
+      "size_bytes": 100944
+    },
+    "abstention_rerun_report_12": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p2/uncertainty/abstention-stability-report.json",
+      "sha256": "3c58138eaa867b47b3c849873d1f48c293a20921995b09e54d262f5195ef1dcf",
+      "size_bytes": 128977
+    },
+    "abstention_rerun_report_13": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/qwen05-l80/selective_accuracy/recommended/abstention-stability-report.json",
+      "sha256": "0d82e25d84fd8d0dc9dd1345443567517e702620fcc2ed1beee95a38d9da1982",
+      "size_bytes": 73515
+    },
+    "abstention_rerun_report_14": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/qwen05-l80/selective_accuracy/all/abstention-stability-report.json",
+      "sha256": "9e834197ba4a46b439fd53a2fe02308198e9a523beedf21cc0c6e0c5bd396491",
+      "size_bytes": 167918
+    },
+    "abstention_rerun_report_15": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/qwen05-l80/selective_accuracy/geometry/abstention-stability-report.json",
+      "sha256": "a99f7fba3efc98630ca02739470345cd99126643f597d9965587b87a0f800bcc",
+      "size_bytes": 100464
+    },
+    "abstention_rerun_report_16": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/qwen05-l80/selective_accuracy/uncertainty/abstention-stability-report.json",
+      "sha256": "c23e8f42bf54bcd5aa1ab9bd8308a8158e4d1e162225fa8ed30b3f78268de4cb",
+      "size_bytes": 128174
+    },
+    "abstention_rerun_report_17": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/qwen05-l80/retention/recommended/abstention-stability-report.json",
+      "sha256": "e9b6e6fe0bdec418d746db4b250bf9a164aadae68954059ea14201b5c2eda195",
+      "size_bytes": 73522
+    },
+    "abstention_rerun_report_18": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/qwen05-l80/retention/all/abstention-stability-report.json",
+      "sha256": "0b272caea1c3b94ccf7f9b49c1556e94d72974675338eea7519c18d3e9b087e0",
+      "size_bytes": 168390
+    },
+    "abstention_rerun_report_19": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/qwen05-l80/retention/geometry/abstention-stability-report.json",
+      "sha256": "6f1e19de7bb6378affc06714ae5a4f0888fc9a90e3137e9c53a15ec160cc7648",
+      "size_bytes": 100538
+    },
+    "abstention_rerun_report_2": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/qwen05-l80/baseline/all/abstention-stability-report.json",
+      "sha256": "03bbb95f46e66c2a421a48406a9179d6bb7421394cc52d13393445e42094e274",
+      "size_bytes": 169241
+    },
+    "abstention_rerun_report_20": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/qwen05-l80/retention/uncertainty/abstention-stability-report.json",
+      "sha256": "4351a3147d8a12901c15e1bbe05cfdeb9819f9c61345a8323d13049198749e15",
+      "size_bytes": 127926
+    },
+    "abstention_rerun_report_21": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/smollm2-l80/baseline/recommended/abstention-stability-report.json",
+      "sha256": "4efb30d0a81cb7ac9a755ded0655c0cf53a37ea80c0cb9ded000d76150635cee",
+      "size_bytes": 74034
+    },
+    "abstention_rerun_report_22": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/smollm2-l80/baseline/all/abstention-stability-report.json",
+      "sha256": "51450ddc3bf391ed8095ae1904b8e0c582a902817c1d50f89c2bc7922b51029a",
+      "size_bytes": 169616
+    },
+    "abstention_rerun_report_23": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/smollm2-l80/baseline/geometry/abstention-stability-report.json",
+      "sha256": "ac216a078063e3b2b27ea7ccd87cce87153039d5da986875e46f89aa7f61780b",
+      "size_bytes": 101348
+    },
+    "abstention_rerun_report_24": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/smollm2-l80/baseline/uncertainty/abstention-stability-report.json",
+      "sha256": "2180637398842b0c379a63727cb151902b6c8cbdb93d919da578102ed35d41ba",
+      "size_bytes": 129044
+    },
+    "abstention_rerun_report_25": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p05/recommended/abstention-stability-report.json",
+      "sha256": "0c829e610156b2e8b88da130446f345f3cbed9450c37bf6e25344f1dcf002d27",
+      "size_bytes": 74143
+    },
+    "abstention_rerun_report_26": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p05/all/abstention-stability-report.json",
+      "sha256": "0bf85f6cfb3c8cb5878801dde8052925bf9c6d0a52175d912e3468954d3cb713",
+      "size_bytes": 169638
+    },
+    "abstention_rerun_report_27": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p05/geometry/abstention-stability-report.json",
+      "sha256": "4383e50a43577cacec0c2699025560d979422c3c99d99f22735e90182e8eff01",
+      "size_bytes": 101354
+    },
+    "abstention_rerun_report_28": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p05/uncertainty/abstention-stability-report.json",
+      "sha256": "ab641862e61e66270c600fd30771813bfc5076ac1671ae20af77c6d86244baf2",
+      "size_bytes": 129056
+    },
+    "abstention_rerun_report_29": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p2/recommended/abstention-stability-report.json",
+      "sha256": "f91d4fe9a5cc11f77b8df5811824e16eed125cabae61c82b420837e458210301",
+      "size_bytes": 73893
+    },
+    "abstention_rerun_report_3": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/qwen05-l80/baseline/geometry/abstention-stability-report.json",
+      "sha256": "df3458661b0cd665f056e0e51ecf45393a60baa42acb5ade40ed0ee1c603c6c2",
+      "size_bytes": 101041
+    },
+    "abstention_rerun_report_30": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p2/all/abstention-stability-report.json",
+      "sha256": "90e2769232234065a903fe00320215c40f232b126009f49647575bd18a71fda2",
+      "size_bytes": 169463
+    },
+    "abstention_rerun_report_31": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p2/geometry/abstention-stability-report.json",
+      "sha256": "7a5e9475b51ff6a0a8998297196473cdb99ed11b5354aeb5217a7ca6cbbb58e3",
+      "size_bytes": 101211
+    },
+    "abstention_rerun_report_32": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/smollm2-l80/alpha_0p2/uncertainty/abstention-stability-report.json",
+      "sha256": "eee2c5d8c69e7a32f1414e4370d5094f4f0023145c8559a94d9c7561cd586ce1",
+      "size_bytes": 128804
+    },
+    "abstention_rerun_report_33": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/smollm2-l80/selective_accuracy/recommended/abstention-stability-report.json",
+      "sha256": "bb4f2736550db3d08806c6fe208600e2a5bee83f4121ccae7c9f19a405a10528",
+      "size_bytes": 73779
+    },
+    "abstention_rerun_report_34": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/smollm2-l80/selective_accuracy/all/abstention-stability-report.json",
+      "sha256": "f9f4b54c7f74df50ee861464129016c7171f3891b55df2de2b9556ddc96183f6",
+      "size_bytes": 168349
+    },
+    "abstention_rerun_report_35": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/smollm2-l80/selective_accuracy/geometry/abstention-stability-report.json",
+      "sha256": "b4337c89f0e78d28ab19b86fcdb3889daa8387c4004ae0e1ea261b6395a2fec7",
+      "size_bytes": 100811
+    },
+    "abstention_rerun_report_36": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/smollm2-l80/selective_accuracy/uncertainty/abstention-stability-report.json",
+      "sha256": "ab823bb42a32de9b701aa549fe23e7002e5ad1768f899d59bfba04eb26591389",
+      "size_bytes": 128187
+    },
+    "abstention_rerun_report_37": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/smollm2-l80/retention/recommended/abstention-stability-report.json",
+      "sha256": "581a2fa577f89d4d67be0727366c218b7de422b19865835249e59ae2f1658857",
+      "size_bytes": 73774
+    },
+    "abstention_rerun_report_38": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/smollm2-l80/retention/all/abstention-stability-report.json",
+      "sha256": "ea85b15884f238bbcd8787c639cd1219a81d3f5234cdddb18a7ca7fc18854f47",
+      "size_bytes": 168688
+    },
+    "abstention_rerun_report_39": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/smollm2-l80/retention/geometry/abstention-stability-report.json",
+      "sha256": "24e6688458ab2a3d9c78062940145fa56b256cd1134a93512a2ceb26523643a4",
+      "size_bytes": 100949
+    },
+    "abstention_rerun_report_4": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/qwen05-l80/baseline/uncertainty/abstention-stability-report.json",
+      "sha256": "d51df41b342047694ce5ec1f7f281474b2530374310d7bb3083102619965b4f8",
+      "size_bytes": 129043
+    },
+    "abstention_rerun_report_40": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/smollm2-l80/retention/uncertainty/abstention-stability-report.json",
+      "sha256": "9e05d3ce42f951b216f9231b8114b58a7196b555eadb8371c9139ad7ef552403",
+      "size_bytes": 128151
+    },
+    "abstention_rerun_report_5": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p05/recommended/abstention-stability-report.json",
+      "sha256": "6683f4b341c39a973c1675536ad1f837729c55a0336dc8c3ef81f22866dce3c6",
+      "size_bytes": 73993
+    },
+    "abstention_rerun_report_6": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p05/all/abstention-stability-report.json",
+      "sha256": "b853992f5ca09f6fe995363baee25e81f13be34d0c3f3cbf5a1bf7fea520ecdb",
+      "size_bytes": 169570
+    },
+    "abstention_rerun_report_7": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p05/geometry/abstention-stability-report.json",
+      "sha256": "689752c496a323d91411910e105e31eaa521a0b94a2fd839e38d756c3430da06",
+      "size_bytes": 101228
+    },
+    "abstention_rerun_report_8": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p05/uncertainty/abstention-stability-report.json",
+      "sha256": "edeb084145236a6ab6732b703b07d8d93a0aa8861abda8cdab0ab587a0c1e9a0",
+      "size_bytes": 129188
+    },
+    "abstention_rerun_report_9": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p2/recommended/abstention-stability-report.json",
+      "sha256": "2577cca8d0b05f75a18c3882898c8256e74c2128df0af3cecdd16dc6bcc2984a",
+      "size_bytes": 73693
+    },
+    "frontier_abstention_evidence_rerun_queue": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v1/frontier-abstention-rerun-queue.json",
+      "sha256": "4b8ce125fd9fbd7aaf541e46e7ca394d83600c78c0e56d45e02e3fb8adeb5132",
+      "size_bytes": 96111
+    },
+    "frontier_abstention_evidence_rerun_rollup": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-abstention-rerun-rollup.json",
+      "sha256": "d8dcdf53d31498e85049c8071659ec040ab9bfd2f729f01ef464fa1902fed03a",
+      "size_bytes": 140094
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "candidate_count": 40,
+    "missing_report_count": 0,
+    "passed": false,
+    "passing_candidate_count": 0,
+    "promotion_ready": false,
+    "runner": "rollup_frontier_abstention_evidence_reruns",
+    "status": "blocked",
+    "workflow": "frontier_abstention_evidence_rerun_rollup"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 42,
+    "directory_count": 0,
+    "file_count": 42,
+    "missing_count": 0
+  }
+}

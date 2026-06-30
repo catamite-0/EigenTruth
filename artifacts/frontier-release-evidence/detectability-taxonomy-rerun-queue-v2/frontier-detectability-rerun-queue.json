@@ -1,0 +1,147 @@
+{
+  "config": {
+    "cell": "entrenched",
+    "confidence_direction": "higher",
+    "confidence_signal": null,
+    "consistency_direction": "higher",
+    "consistency_signal": null,
+    "false_only": true,
+    "include_taxonomy_reruns": true,
+    "max_records": 100,
+    "python_executable": ".venv/bin/python",
+    "scores": [
+      "smollm2-l80=artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json",
+      "qwen05-l80=artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/qwen05-l80/scores.manifest.json"
+    ],
+    "taxonomy_signal_pairs": [
+      {
+        "confidence_direction": "lower",
+        "confidence_signal": "nll_answer",
+        "consistency_direction": "lower",
+        "consistency_signal": "eigenscore"
+      },
+      {
+        "confidence_direction": "lower",
+        "confidence_signal": "nll_answer",
+        "consistency_direction": "lower",
+        "consistency_signal": "disp_hse"
+      }
+    ]
+  },
+  "entries": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "benchmarks/analyze_detectability_blind_spots.py",
+        "--taxonomy-report",
+        "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/detectability-taxonomy-report.json",
+        "--cell",
+        "entrenched",
+        "--max-records",
+        "100",
+        "--json",
+        "artifacts/frontier-release-evidence/detectability-taxonomy-rerun-queue-v2/reruns/smollm2-l80/blind-spots.json",
+        "--artifact-manifest",
+        "artifacts/frontier-release-evidence/detectability-taxonomy-rerun-queue-v2/reruns/smollm2-l80/artifact-manifest.json",
+        "--scores",
+        "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json"
+      ],
+      "command_kind": "blind_spot_analysis",
+      "command_status": "ready",
+      "dry_run_command": null,
+      "missing_inputs": [],
+      "rerun_output_dir": "artifacts/frontier-release-evidence/detectability-taxonomy-rerun-queue-v2/reruns/smollm2-l80",
+      "run": "smollm2-l80",
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/detectability-taxonomy-report.json",
+      "source_score_dump": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "benchmarks/eval_detectability_taxonomy.py",
+        "--scores",
+        "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json",
+        "--consistency-signal",
+        "eigenscore",
+        "--confidence-signal",
+        "nll_answer",
+        "--consistency-direction",
+        "lower",
+        "--confidence-direction",
+        "lower",
+        "--metadata",
+        "run_name=smollm2-l80",
+        "--metadata",
+        "taxonomy_pair=eigenscore-nll_answer-lower-lower",
+        "--json",
+        "artifacts/frontier-release-evidence/detectability-taxonomy-rerun-queue-v2/reruns/smollm2-l80/eigenscore-nll_answer-lower-lower/detectability-taxonomy-report.json"
+      ],
+      "command_kind": "taxonomy_report",
+      "command_status": "ready",
+      "dry_run_command": null,
+      "missing_inputs": [],
+      "rerun_output_dir": "artifacts/frontier-release-evidence/detectability-taxonomy-rerun-queue-v2/reruns/smollm2-l80/eigenscore-nll_answer-lower-lower",
+      "run": "smollm2-l80",
+      "source_report": null,
+      "source_score_dump": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json",
+      "taxonomy_config": {
+        "confidence_direction": "lower",
+        "confidence_signal": "nll_answer",
+        "consistency_direction": "lower",
+        "consistency_signal": "eigenscore"
+      }
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "benchmarks/eval_detectability_taxonomy.py",
+        "--scores",
+        "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json",
+        "--consistency-signal",
+        "disp_hse",
+        "--confidence-signal",
+        "nll_answer",
+        "--consistency-direction",
+        "lower",
+        "--confidence-direction",
+        "lower",
+        "--metadata",
+        "run_name=smollm2-l80",
+        "--metadata",
+        "taxonomy_pair=disp_hse-nll_answer-lower-lower",
+        "--json",
+        "artifacts/frontier-release-evidence/detectability-taxonomy-rerun-queue-v2/reruns/smollm2-l80/disp_hse-nll_answer-lower-lower/detectability-taxonomy-report.json"
+      ],
+      "command_kind": "taxonomy_report",
+      "command_status": "ready",
+      "dry_run_command": null,
+      "missing_inputs": [],
+      "rerun_output_dir": "artifacts/frontier-release-evidence/detectability-taxonomy-rerun-queue-v2/reruns/smollm2-l80/disp_hse-nll_answer-lower-lower",
+      "run": "smollm2-l80",
+      "source_report": null,
+      "source_score_dump": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json",
+      "taxonomy_config": {
+        "confidence_direction": "lower",
+        "confidence_signal": "nll_answer",
+        "consistency_direction": "lower",
+        "consistency_signal": "disp_hse"
+      }
+    }
+  ],
+  "paths": {
+    "artifact_manifest": "artifacts/frontier-release-evidence/detectability-taxonomy-rerun-queue-v2/artifact-manifest.json",
+    "rerun_queue": "artifacts/frontier-release-evidence/detectability-taxonomy-rerun-queue-v2/frontier-detectability-rerun-queue.json"
+  },
+  "schema_version": 1,
+  "source": "artifacts/frontier-release-evidence/frontier-release-evidence-refreshed.json",
+  "status": "ready",
+  "summary": {
+    "blind_spot_analysis_count": 1,
+    "blocked_run_count": 1,
+    "command_count": 3,
+    "entry_count": 3,
+    "missing_command_count": 0,
+    "taxonomy_rerun_count": 2
+  },
+  "workflow": "frontier_detectability_evidence_rerun_queue"
+}
