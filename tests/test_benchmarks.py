@@ -229,6 +229,124 @@ def test_eval_counterfactual_verification_builds_structured_qa_probes_from_verif
     assert report_path.exists()
 
 
+def test_counterfactual_probe_handoff_builds_eval_records_from_collection_corpus(tmp_path):
+    module = importlib.import_module("benchmarks.build_counterfactual_probe_handoff")
+    eval_module = importlib.import_module("benchmarks.eval_counterfactual_verification")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    collection_path = tmp_path / "collection-corpus.json"
+    output_dir = tmp_path / "counterfactual-handoff"
+    registry_path = tmp_path / "registry.json"
+    collection_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "blind_spot_evidence_collection_corpus",
+            "status": "ready_for_collection",
+            "requests": {
+                "counterfactual_probe": [
+                    {
+                        "request_id": "cf:record-1:1",
+                        "target_id": "record-1",
+                        "request_type": "counterfactual_probe",
+                        "question": "Who founded Alpha Labs?",
+                        "model_answer": "Alice.",
+                        "probe_type": "entity_swap",
+                        "entity_candidates": ["Alice", "Bob"],
+                        "probe_instruction": "Swap the answer entity.",
+                        "usage": "route_robustness_probe",
+                    },
+                    {
+                        "request_id": "cf:record-2:1",
+                        "target_id": "record-2",
+                        "request_type": "counterfactual_probe",
+                        "question": "How many moons does Alpha have?",
+                        "model_answer": "Alpha has 2 moons.",
+                        "probe_type": "quantity",
+                        "probe_instruction": "Perturb the count.",
+                        "usage": "route_robustness_probe",
+                    },
+                    {
+                        "request_id": "cf:record-3:1",
+                        "target_id": "record-3",
+                        "request_type": "counterfactual_probe",
+                        "question": "What is Alpha?",
+                        "model_answer": "A company.",
+                        "probe_type": "entity_swap",
+                        "probe_instruction": "Needs an external generator.",
+                        "usage": "route_robustness_probe",
+                    },
+                ],
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        collection_corpus_path=collection_path,
+        output_dir=output_dir,
+        registry_path=registry_path,
+        name="counterfactual-handoff-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    report_path = output_dir / "counterfactual-probe-handoff.json"
+    claims_path = output_dir / "counterfactual-claims.jsonl"
+    probes_path = output_dir / "counterfactual-probe-records.jsonl"
+    pending_path = output_dir / "pending-counterfactual-probe-requests.jsonl"
+    manifest_path = output_dir / "artifact-manifest.json"
+    probe_rows = [
+        json.loads(line)
+        for line in probes_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    eval_report_path = tmp_path / "counterfactual-eval.json"
+    eval_payload = eval_module.run_counterfactual_verification_eval(
+        probes_path,
+        verifier_name="in_memory",
+        output_path=eval_report_path,
+    )
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:counterfactual-handoff-unit:0.1"
+    )
+
+    assert payload["status"] == "partial"
+    assert payload["summary"]["request_count"] == 3
+    assert payload["summary"]["claim_count"] == 3
+    assert payload["summary"]["probe_record_count"] == 2
+    assert payload["summary"]["pending_generation_count"] == 1
+    assert payload["summary"]["generated_probe_type_counts"] == {"entity_swap": 1, "quantity": 1}
+    assert report_path.exists()
+    assert claims_path.exists()
+    assert pending_path.exists()
+    assert probe_rows[0]["metadata"]["not_verifier_evidence"] is True
+    assert probe_rows[0]["metadata"]["source_request_id"] == "cf:record-1:1"
+    assert eval_payload["report"]["summary"]["record_count"] == 2
+    assert eval_payload["report"]["summary"]["pass_rate"] == pytest.approx(1.0)
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "counterfactual_probe_handoff"
+    assert record.metadata["probe_record_count"] == 2
+    assert record.metadata["pending_generation_count"] == 1
+    assert record.metadata["suite"] == "unit"
+
+
+def test_counterfactual_probe_handoff_rejects_label_fields():
+    module = importlib.import_module("benchmarks.build_counterfactual_probe_handoff")
+
+    with pytest.raises(ValueError, match="reserved label fields"):
+        module.build_counterfactual_probe_handoff(
+            requests=(
+                {
+                    "request_id": "cf:bad:1",
+                    "request_type": "counterfactual_probe",
+                    "question": "Who founded Alpha?",
+                    "model_answer": "Alice.",
+                    "probe_type": "entity_swap",
+                    "label": 1,
+                },
+            )
+        )
+
+
 def test_eval_pre_generation_probe_trains_and_saves_artifact(tmp_path):
     module = importlib.import_module("benchmarks.eval_pre_generation_probe")
     from eigentruth.calibration import CalibrationArtifact

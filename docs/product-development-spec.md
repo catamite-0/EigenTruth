@@ -470,7 +470,11 @@ For product features:
   those counts in the summary, manifest, and registry metadata. The queue is
   manifest and registry backed, but remains source-discovery, probe-generation,
   or rule-authoring input until external documents or verifier probes are
-  ingested and provenance-audited.
+  ingested and provenance-audited. `build_counterfactual_probe_handoff.py`
+  now lowers those counterfactual rows into non-evidence claim JSONL, generated
+  probe records for `eval_counterfactual_verification.py --records`, and a
+  pending-generation sidecar for requests that need an external or human probe
+  generator instead of silently turning weak perturbations into evidence.
 - The rule branch of that unresolved queue is now first-class work, not an
   orphan count: `build_unresolved_world_model_rule_stubs.py` emits `6`
   sanitized rule stubs from the queue, records that `model_answer`,

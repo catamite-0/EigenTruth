@@ -66,6 +66,34 @@ same flag on `run_release_candidate_registry_workflow.py`; registry-backed runs
 can pass `--counterfactual-verification-registry` and
 `--counterfactual-verification-key`.
 
+## `build_counterfactual_probe_handoff.py`
+
+Compiles `counterfactual_probe` rows from a blind-spot collection corpus,
+unresolved queue report, or adapter-request JSONL into three non-evidence
+handoff files: `counterfactual-claims.jsonl`, generated
+`counterfactual-probe-records.jsonl`, and
+`pending-counterfactual-probe-requests.jsonl` for rows that need an external or
+human generator. The generated probe records are directly consumable by
+`eval_counterfactual_verification.py --records`, but they remain audit fixtures
+until a verifier report and release gate pass.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-counterfactual-probe-handoff
+
+python benchmarks/build_counterfactual_probe_handoff.py \
+  --collection-corpus artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-evidence-collection-corpus/blind-spot-evidence-collection-corpus.json \
+  --output-dir "$OUT" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-counterfactual-probe-handoff \
+  --version 0.1
+```
+
+On the current SmolLM2 L80 collection corpus, a local smoke run sees `29`
+counterfactual requests and auto-generates `27` probe records
+(`21` entity swaps, `3` quantity probes, and `3` negation probes), leaving `2`
+requests in the pending-generation sidecar. The command is intentionally a
+handoff bridge: it does not verify the probes or claim route-quality evidence.
+
 ## `eval_truthfulqa.py`
 
 Tests whether hidden-state geometry separates **true** from **false** statements on
@@ -1673,7 +1701,11 @@ calculator rule-authoring requests; refreshed runs include available
 manifest, and registry metadata. With the default batch size, the registered
 request set materializes as `5` execution batches. `20` queued targets have
 no joined facts and `7` have only generic fact joins. Its manifest verifies
-recursively.
+recursively. The counterfactual branch can be lowered with
+`build_counterfactual_probe_handoff.py` before running
+`eval_counterfactual_verification.py --records`; rows that cannot be generated
+heuristically stay in a pending-generation JSONL rather than becoming silent
+pseudo-evidence.
 
 ## `build_unresolved_world_model_rule_stubs.py`
 
