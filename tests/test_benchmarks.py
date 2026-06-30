@@ -4743,6 +4743,111 @@ def test_compare_frontier_release_evidence_blocks_failed_citation_batch_rollup(t
     )
 
 
+def test_compare_frontier_release_evidence_promotes_with_frontier_rerun_rollup(tmp_path):
+    module = importlib.import_module("benchmarks.compare_frontier_release_evidence")
+    verifier_path = tmp_path / "verifier-stability.json"
+    abstention_path = tmp_path / "abstention-stability.json"
+    rerun_rollup_path = _write_synthetic_frontier_rerun_rollup_report(
+        tmp_path / "abstention-rerun-rollup",
+        workflow="frontier_abstention_evidence_rerun_rollup",
+        track="abstention",
+        promotion_ready=True,
+    )
+    verifier_path.write_text(
+        json.dumps(_synthetic_verifier_stability_payload()),
+        encoding="utf-8",
+    )
+    abstention_path.write_text(
+        json.dumps(_synthetic_abstention_stability_payload(pass_seed_count=0, correctness_mean=0.5)),
+        encoding="utf-8",
+    )
+
+    payload = module.compare_frontier_release_evidence(
+        verifier_stability_report_path=verifier_path,
+        abstention_stability_report_path=abstention_path,
+        frontier_rerun_rollup_report_paths=(rerun_rollup_path,),
+    )
+
+    assert payload["decision"]["status"] == "promote"
+    assert payload["decision"]["base_abstention_track_status"] == "blocked"
+    assert payload["decision"]["abstention_track_status"] == "promote"
+    assert payload["decision"]["frontier_rerun_rollup_track_status"] == "promote"
+    assert payload["decision"]["frontier_rerun_rollup_promoted_tracks"] == ("abstention",)
+    assert payload["evidence_summary"]["frontier_rerun_rollup_report_count"] == 1
+    assert payload["evidence_summary"]["frontier_rerun_rollup_tracks"] == ("abstention",)
+    assert payload["evidence_summary"]["frontier_rerun_rollup_candidate_count"] == 1
+    assert not any("abstention_stability.synthetic" in reason for reason in payload["decision"]["blocking_reasons"])
+    assert payload["frontier_rerun_rollup_decisions"][0]["metrics"]["promotion_ready"] is True
+
+
+def test_compare_frontier_release_evidence_blocks_failed_frontier_rerun_rollup(tmp_path):
+    registry_module = importlib.import_module("eigentruth.registry")
+    verifier_path = tmp_path / "verifier-stability.json"
+    abstention_path = tmp_path / "abstention-stability.json"
+    rerun_rollup_path = _write_synthetic_frontier_rerun_rollup_report(
+        tmp_path / "detectability-rerun-rollup",
+        workflow="frontier_detectability_evidence_rerun_rollup",
+        track="detectability",
+        promotion_ready=False,
+    )
+    output_path = tmp_path / "frontier-release-evidence" / "report.json"
+    manifest_path = tmp_path / "frontier-release-evidence" / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    verifier_path.write_text(
+        json.dumps(_synthetic_verifier_stability_payload()),
+        encoding="utf-8",
+    )
+    abstention_path.write_text(
+        json.dumps(_synthetic_abstention_stability_payload(pass_seed_count=3, correctness_mean=0.86)),
+        encoding="utf-8",
+    )
+
+    subprocess.run(
+        [
+            sys.executable,
+            "benchmarks/compare_frontier_release_evidence.py",
+            "--verifier-stability-report",
+            str(verifier_path),
+            "--abstention-stability-report",
+            str(abstention_path),
+            "--frontier-rerun-rollup-report",
+            str(rerun_rollup_path),
+            "--json",
+            str(output_path),
+            "--artifact-manifest",
+            str(manifest_path),
+            "--registry",
+            str(registry_path),
+            "--name",
+            "synthetic-frontier-release-evidence-rerun",
+            "--version",
+            "0.1",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get("report:synthetic-frontier-release-evidence-rerun:0.1")
+
+    assert payload["decision"]["status"] == "blocked"
+    assert payload["decision"]["frontier_rerun_rollup_track_status"] == "blocked"
+    assert payload["evidence_summary"]["frontier_rerun_rollup_blocked_names"] == [
+        "frontier-rerun-rollup",
+    ]
+    assert any(
+        "frontier_rerun_rollup.frontier-rerun-rollup.gate.promotion_ready is not true"
+        in reason
+        for reason in payload["decision"]["blocking_reasons"]
+    )
+    assert manifest["artifacts"]["frontier_rerun_rollup_report_0"]["exists"] is True
+    assert manifest["metadata"]["frontier_rerun_rollup_track_status"] == "blocked"
+    assert record.metadata["frontier_rerun_rollup_track_status"] == "blocked"
+    assert record.metadata["frontier_rerun_rollup_missing_report_count"] == 1
+
+
 def test_plan_frontier_multiple_testing_reruns_builds_cell_command(tmp_path):
     module = importlib.import_module("benchmarks.plan_frontier_multiple_testing_reruns")
     registry_module = importlib.import_module("eigentruth.registry")
@@ -5301,6 +5406,65 @@ def _write_synthetic_citation_batch_rollup_report(
         root=output_dir,
         metadata={
             "runner": "rollup_citation_search_batch_evidence",
+            "promotion_ready": promotion_ready,
+        },
+    )
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return report_path
+
+
+def _write_synthetic_frontier_rerun_rollup_report(
+    output_dir: Path,
+    *,
+    workflow: str,
+    track: str,
+    promotion_ready: bool,
+) -> Path:
+    from eigentruth.registry import build_artifact_manifest
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    report_path = output_dir / "frontier-rerun-rollup.json"
+    manifest_path = output_dir / "artifact-manifest.json"
+    gate_blocking_reasons = ()
+    if not promotion_ready:
+        gate_blocking_reasons = (
+            {
+                "gate": "report_coverage",
+                "track": track,
+                "reason": "Synthetic rerun rollup is missing a required child report.",
+            },
+        )
+    payload = {
+        "schema_version": 1,
+        "workflow": workflow,
+        "status": "promote" if promotion_ready else "blocked",
+        "gate": {
+            "passed": promotion_ready,
+            "promotion_ready": promotion_ready,
+            "blocking_reasons": gate_blocking_reasons,
+        },
+        "summary": {
+            "candidate_count": 1,
+            "observed_report_count": 1 if promotion_ready else 0,
+            "missing_report_count": 0 if promotion_ready else 1,
+            "invalid_report_count": 0,
+            "blocked_candidate_count": 0 if promotion_ready else 1,
+            "promotion_ready_count": 1 if promotion_ready else 0,
+            "tracks": (track,),
+        },
+        "paths": {
+            "report": str(report_path),
+            "artifact_manifest": str(manifest_path),
+        },
+        "metadata": {"name": "frontier-rerun-rollup"},
+    }
+    report_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest = build_artifact_manifest(
+        {"frontier_rerun_rollup_report": report_path},
+        root=output_dir,
+        metadata={
+            "runner": "rollup_frontier_reruns",
+            "workflow": workflow,
             "promotion_ready": promotion_ready,
         },
     )

@@ -1224,7 +1224,11 @@ any provided track misses its configured seed-rate, metric, or blind-spot
 threshold. It can also consume citation/source-family batch evidence rollups:
 when a `--citation-batch-rollup-report` is supplied, every expected batch must
 be observed exactly once, child evidence gates must be promotion-ready, and
-child manifests must have passed inside the rollup.
+child manifests must have passed inside the rollup. Completed frontier rerun
+rollups can be supplied with repeatable `--frontier-rerun-rollup-report`; each
+rollup must be `status=promote`, `gate.passed=true`, `gate.promotion_ready=true`,
+and include an artifact manifest before it can clear a previously blocked
+release-evidence track.
 
 ```bash
 OUT=artifacts/truthfulqa-frontier-qwen-smollm2-l80-release-evidence
@@ -1236,6 +1240,7 @@ python benchmarks/compare_frontier_release_evidence.py \
   --detectability-taxonomy-report artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/qwen05-l80/detectability-taxonomy-report.json \
   --detectability-taxonomy-report artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/detectability-taxonomy-report.json \
   --citation-batch-rollup-report artifacts/truthfulqa-frontier-smollm2-l80-citation-batch-rollup/citation-batch-rollup.json \
+  --frontier-rerun-rollup-report artifacts/frontier-release-evidence/abstention-rerun-rollup.json \
   --max-detectability-entrenched-false-rate 0.25 \
   --json "$OUT/frontier-release-evidence.json" \
   --artifact-manifest "$OUT/artifact-manifest.json" \
@@ -1262,6 +1267,14 @@ observed, missing, duplicate, and unexpected batch counts in the release report,
 registry metadata, and artifact manifest. A rollup with missing expected
 batches, duplicate batches, unsupported child workflows, failed child gates, or
 failed child-manifest verification blocks the frontier release verdict.
+When `--frontier-rerun-rollup-report` is supplied, the comparator records a
+`frontier_rerun_rollup_track_status` and fingerprints the rollup report plus
+its manifest. This is the intended handoff path for
+`rollup_frontier_stability_evidence_reruns.py`,
+`rollup_frontier_abstention_evidence_reruns.py`,
+`rollup_frontier_detectability_evidence_reruns.py`, and
+`rollup_frontier_multiple_testing_reruns.py`; blocked, empty, or
+manifest-less rerun rollups fail closed.
 Product runtime baselines also aggregate that citation-batch track from
 promotion-contract trace metadata; `compare_product_runtime_baselines.py` can
 gate the track promote rate, require a rollup count, and fail closed on missing,
@@ -5224,6 +5237,20 @@ The rollup checks each completed child report's top-level
 `multiple_testing_gate.cells`. A candidate promotes only when the family-wise
 gate passes, the queued cell passes, and that cell records both report and
 calibration artifact paths.
+
+Feed promoted rerun rollups back into the final release-evidence comparison
+with repeatable `--frontier-rerun-rollup-report` arguments:
+
+```bash
+python benchmarks/compare_frontier_release_evidence.py \
+  --verifier-stability-report artifacts/frontier/verifier-stability-report.json \
+  --abstention-stability-report artifacts/frontier/abstention-stability-report.json \
+  --frontier-rerun-rollup-report artifacts/frontier-release-evidence/stability-rerun-rollup.json \
+  --frontier-rerun-rollup-report artifacts/frontier-release-evidence/abstention-rerun-rollup.json \
+  --frontier-rerun-rollup-report artifacts/frontier-release-evidence/detectability-rerun-rollup.json \
+  --frontier-rerun-rollup-report artifacts/frontier-release-evidence/multiple-testing-rerun-rollup.json \
+  --json artifacts/frontier-release-evidence/frontier-release-evidence-refreshed.json
+```
 
 Before rerunning product-runtime drift gates, audit the deployable promotion
 contract for the exact evidence handoff fields expected by `frontier_audit`:

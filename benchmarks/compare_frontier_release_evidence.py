@@ -25,6 +25,12 @@ DEFAULT_MIN_ABSTENTION_PASS_SEED_RATE = 1.0
 DEFAULT_MIN_ABSTENTION_CONDITIONAL_CORRECTNESS_LOWER_BOUND_MEAN = 0.8
 DEFAULT_MAX_ABSTENTION_RATE_MEAN = 0.5
 DEFAULT_MAX_DETECTABILITY_ENTRENCHED_FALSE_RATE = 0.25
+FRONTIER_RERUN_ROLLUP_WORKFLOWS = {
+    "frontier_stability_evidence_rerun_rollup": "stability",
+    "frontier_abstention_evidence_rerun_rollup": "abstention",
+    "frontier_detectability_evidence_rerun_rollup": "detectability",
+    "frontier_multiple_testing_rerun_rollup": "multiple_testing",
+}
 
 
 def compare_frontier_release_evidence(
@@ -34,6 +40,7 @@ def compare_frontier_release_evidence(
     detectability_taxonomy_report_paths: Sequence[str | Path] = (),
     frontier_workflow_report_paths: Sequence[str | Path] = (),
     citation_batch_rollup_report_paths: Sequence[str | Path] = (),
+    frontier_rerun_rollup_report_paths: Sequence[str | Path] = (),
     max_verified_false_alarm_mean: float = DEFAULT_MAX_VERIFIED_FALSE_ALARM_MEAN,
     min_verified_detection_mean: float = DEFAULT_MIN_VERIFIED_DETECTION_MEAN,
     min_verifier_delta_detection_mean: float = DEFAULT_MIN_VERIFIER_DELTA_DETECTION_MEAN,
@@ -61,6 +68,10 @@ def compare_frontier_release_evidence(
     citation_batch_rollup_paths = tuple(Path(path) for path in citation_batch_rollup_report_paths)
     citation_batch_rollup_reports = tuple(
         (path, _load_json_object(path)) for path in citation_batch_rollup_paths
+    )
+    frontier_rerun_rollup_paths = tuple(Path(path) for path in frontier_rerun_rollup_report_paths)
+    frontier_rerun_rollup_reports = tuple(
+        (path, _load_json_object(path)) for path in frontier_rerun_rollup_paths
     )
     config = {
         "max_verified_false_alarm_mean": _unit_float(
@@ -138,6 +149,10 @@ def compare_frontier_release_evidence(
         )
         for path, report in citation_batch_rollup_reports
     )
+    frontier_rerun_rollup_inputs = tuple(
+        _frontier_rerun_rollup_input_summary(path=path, report=report)
+        for path, report in frontier_rerun_rollup_reports
+    )
 
     input_blocking_reasons = tuple(verifier_input["blocking_reasons"]) + tuple(
         abstention_input["blocking_reasons"]
@@ -152,6 +167,10 @@ def compare_frontier_release_evidence(
     ) + tuple(
         reason
         for item in citation_batch_rollup_inputs
+        for reason in item["blocking_reasons"]
+    ) + tuple(
+        reason
+        for item in frontier_rerun_rollup_inputs
         for reason in item["blocking_reasons"]
     )
     run_decisions = []
@@ -173,9 +192,9 @@ def compare_frontier_release_evidence(
             )
         )
 
-    verifier_track_status = _track_status(run_decisions, "verifier_decision")
-    abstention_track_status = _track_status(run_decisions, "abstention_decision")
-    detectability_track_status = (
+    base_verifier_track_status = _track_status(run_decisions, "verifier_decision")
+    base_abstention_track_status = _track_status(run_decisions, "abstention_decision")
+    base_detectability_track_status = (
         _track_status(run_decisions, "detectability_decision")
         if detectability_reports
         else "not_required"
@@ -183,17 +202,71 @@ def compare_frontier_release_evidence(
     multiple_testing_decisions = _frontier_workflow_multiple_testing_decisions(
         frontier_workflow_reports
     )
-    multiple_testing_track_status = _multiple_testing_track_status(multiple_testing_decisions)
+    base_multiple_testing_track_status = _multiple_testing_track_status(
+        multiple_testing_decisions
+    )
     citation_batch_decisions = _citation_batch_rollup_decisions(
         citation_batch_rollup_reports
     )
     citation_batch_track_status = _citation_batch_track_status(citation_batch_decisions)
+    frontier_rerun_rollup_decisions = _frontier_rerun_rollup_decisions(
+        frontier_rerun_rollup_reports
+    )
+    frontier_rerun_rollup_track_status = _frontier_rerun_rollup_track_status(
+        frontier_rerun_rollup_decisions
+    )
+    frontier_rerun_rollup_promoted_tracks = _frontier_rerun_rollup_promoted_tracks(
+        frontier_rerun_rollup_decisions
+    )
+    verifier_track_status = _effective_track_status(
+        base_verifier_track_status,
+        frontier_rerun_rollup_promoted_tracks,
+        "verifier",
+    )
+    abstention_track_status = _effective_track_status(
+        base_abstention_track_status,
+        frontier_rerun_rollup_promoted_tracks,
+        "abstention",
+    )
+    detectability_track_status = _effective_track_status(
+        base_detectability_track_status,
+        frontier_rerun_rollup_promoted_tracks,
+        "detectability",
+    )
+    multiple_testing_track_status = _effective_track_status(
+        base_multiple_testing_track_status,
+        frontier_rerun_rollup_promoted_tracks,
+        "multiple_testing",
+    )
     blocking_reasons = list(input_blocking_reasons)
     for decision in run_decisions:
-        blocking_reasons.extend(decision["blocking_reasons"])
+        _extend_direct_track_blocking(
+            blocking_reasons,
+            decision,
+            key="verifier_decision",
+            track="verifier",
+            promoted_tracks=frontier_rerun_rollup_promoted_tracks,
+        )
+        _extend_direct_track_blocking(
+            blocking_reasons,
+            decision,
+            key="abstention_decision",
+            track="abstention",
+            promoted_tracks=frontier_rerun_rollup_promoted_tracks,
+        )
+        _extend_direct_track_blocking(
+            blocking_reasons,
+            decision,
+            key="detectability_decision",
+            track="detectability",
+            promoted_tracks=frontier_rerun_rollup_promoted_tracks,
+        )
     for decision in multiple_testing_decisions:
-        blocking_reasons.extend(decision["blocking_reasons"])
+        if "multiple_testing" not in frontier_rerun_rollup_promoted_tracks:
+            blocking_reasons.extend(decision["blocking_reasons"])
     for decision in citation_batch_decisions:
+        blocking_reasons.extend(decision["blocking_reasons"])
+    for decision in frontier_rerun_rollup_decisions:
         blocking_reasons.extend(decision["blocking_reasons"])
     status = (
         "promote"
@@ -203,6 +276,7 @@ def compare_frontier_release_evidence(
         and detectability_track_status in {"promote", "not_required"}
         and multiple_testing_track_status in {"promote", "not_required"}
         and citation_batch_track_status in {"promote", "not_required"}
+        and frontier_rerun_rollup_track_status in {"promote", "not_required"}
         else "blocked"
     )
     return {
@@ -216,6 +290,7 @@ def compare_frontier_release_evidence(
             "detectability_taxonomy_reports": detectability_inputs,
             "frontier_workflow_reports": frontier_workflow_inputs,
             "citation_batch_rollup_reports": citation_batch_rollup_inputs,
+            "frontier_rerun_rollup_reports": frontier_rerun_rollup_inputs,
         },
         "evidence_summary": {
             "run_count": len(run_decisions),
@@ -227,8 +302,17 @@ def compare_frontier_release_evidence(
             "detectability_report_count": len(detectability_reports),
             "frontier_workflow_report_count": len(frontier_workflow_reports),
             "citation_batch_rollup_report_count": len(citation_batch_rollup_reports),
+            "frontier_rerun_rollup_report_count": len(frontier_rerun_rollup_reports),
             **_multiple_testing_evidence_summary(multiple_testing_decisions),
             **_citation_batch_evidence_summary(citation_batch_decisions),
+            **_frontier_rerun_rollup_evidence_summary(frontier_rerun_rollup_decisions),
+            "base_verifier_track_status": base_verifier_track_status,
+            "base_abstention_track_status": base_abstention_track_status,
+            "base_detectability_track_status": base_detectability_track_status,
+            "base_multiple_testing_track_status": base_multiple_testing_track_status,
+            "frontier_rerun_rollup_promoted_tracks": tuple(sorted(
+                frontier_rerun_rollup_promoted_tracks
+            )),
             "verifier_signal": verifier.get("config", {}).get("signal")
             if isinstance(verifier.get("config"), Mapping)
             else None,
@@ -239,6 +323,7 @@ def compare_frontier_release_evidence(
         "run_decisions": run_decisions,
         "multiple_testing_decisions": multiple_testing_decisions,
         "citation_batch_decisions": citation_batch_decisions,
+        "frontier_rerun_rollup_decisions": frontier_rerun_rollup_decisions,
         "decision": {
             "status": status,
             "verifier_track_status": verifier_track_status,
@@ -246,6 +331,14 @@ def compare_frontier_release_evidence(
             "detectability_track_status": detectability_track_status,
             "multiple_testing_track_status": multiple_testing_track_status,
             "citation_batch_track_status": citation_batch_track_status,
+            "frontier_rerun_rollup_track_status": frontier_rerun_rollup_track_status,
+            "base_verifier_track_status": base_verifier_track_status,
+            "base_abstention_track_status": base_abstention_track_status,
+            "base_detectability_track_status": base_detectability_track_status,
+            "base_multiple_testing_track_status": base_multiple_testing_track_status,
+            "frontier_rerun_rollup_promoted_tracks": tuple(sorted(
+                frontier_rerun_rollup_promoted_tracks
+            )),
             "blocking_reasons": tuple(blocking_reasons),
         },
         "notes": tuple(str(note) for note in notes),
@@ -914,6 +1007,234 @@ def _citation_batch_evidence_summary(
     }
 
 
+def _frontier_rerun_rollup_decisions(
+    reports: Sequence[tuple[Path, Mapping[str, Any]]],
+) -> tuple[dict[str, Any], ...]:
+    return tuple(
+        _frontier_rerun_rollup_decision(path=path, report=report)
+        for path, report in reports
+    )
+
+
+def _frontier_rerun_rollup_decision(
+    *,
+    path: Path,
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    name = _frontier_rerun_rollup_report_name(path, report)
+    workflow = report.get("workflow")
+    track = FRONTIER_RERUN_ROLLUP_WORKFLOWS.get(str(workflow))
+    gate = _mapping(report.get("gate"))
+    summary = _mapping(report.get("summary"))
+    paths = _mapping(report.get("paths"))
+    candidate_count = _non_negative_int(summary.get("candidate_count"))
+    if candidate_count is None:
+        candidate_count = len(_mapping_sequence(report.get("candidates", ())))
+    metrics = {
+        "workflow": workflow,
+        "track": track,
+        "status": report.get("status"),
+        "gate_passed": gate.get("passed"),
+        "promotion_ready": gate.get("promotion_ready"),
+        "audit_ready": gate.get("audit_ready"),
+        "artifact_manifest": paths.get("artifact_manifest"),
+        "candidate_count": candidate_count,
+        "observed_report_count": _non_negative_int(summary.get("observed_report_count")),
+        "missing_report_count": _non_negative_int(summary.get("missing_report_count")),
+        "invalid_report_count": _non_negative_int(summary.get("invalid_report_count")),
+        "blocked_candidate_count": _non_negative_int(summary.get("blocked_candidate_count")),
+        "promotion_ready_count": _non_negative_int(summary.get("promotion_ready_count")),
+        "passing_candidate_count": _non_negative_int(summary.get("passing_candidate_count")),
+        "audit_ready_count": _non_negative_int(summary.get("audit_ready_count")),
+        "tracks": _string_tuple(summary.get("tracks")),
+        "track_statuses": _mapping(summary.get("track_statuses")),
+        "runs": _string_tuple(summary.get("runs")),
+        "cells": _string_tuple(summary.get("cells")),
+    }
+    blocking_reasons: list[str] = []
+    if track is None:
+        blocking_reasons.append(
+            f"frontier_rerun_rollup.{name}.workflow {workflow!r} is unsupported"
+        )
+    if report.get("status") != "promote":
+        blocking_reasons.append(
+            f"frontier_rerun_rollup.{name}.status is {report.get('status')!r}, expected 'promote'"
+        )
+    if gate.get("passed") is not True:
+        blocking_reasons.append(f"frontier_rerun_rollup.{name}.gate.passed is not true")
+    if gate.get("promotion_ready") is not True:
+        blocking_reasons.append(
+            f"frontier_rerun_rollup.{name}.gate.promotion_ready is not true"
+        )
+    if not paths.get("artifact_manifest"):
+        blocking_reasons.append(
+            f"frontier_rerun_rollup.{name}.paths.artifact_manifest is missing"
+        )
+    if candidate_count is None or candidate_count < 1:
+        blocking_reasons.append(
+            f"frontier_rerun_rollup.{name}.summary.candidate_count is missing or zero"
+        )
+    for reason in _frontier_rerun_rollup_gate_reasons(gate.get("blocking_reasons")):
+        blocking_reasons.append(f"frontier_rerun_rollup.{name}.{reason}")
+    return _track_decision(
+        "frontier_rerun_rollup",
+        name,
+        metrics,
+        (),
+        tuple(dict.fromkeys(blocking_reasons)),
+    )
+
+
+def _frontier_rerun_rollup_report_name(path: Path, report: Mapping[str, Any]) -> str:
+    metadata = _mapping(report.get("metadata"))
+    for payload in (report, metadata):
+        for key in ("name", "run_name"):
+            value = payload.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+    return path.stem
+
+
+def _frontier_rerun_rollup_gate_reasons(value: Any) -> tuple[str, ...]:
+    reasons: list[str] = []
+    for item in _mapping_sequence(value):
+        reason = item.get("reason")
+        gate = item.get("gate")
+        run = item.get("run")
+        cell = item.get("cell")
+        track = item.get("track")
+        parts = []
+        if gate:
+            parts.append(f"gate={gate}")
+        if track:
+            parts.append(f"track={track}")
+        if run:
+            parts.append(f"run={run}")
+        if cell:
+            parts.append(f"cell={cell}")
+        if reason:
+            parts.append(str(reason))
+        if parts:
+            reasons.append(" ".join(parts))
+    return tuple(reasons)
+
+
+def _frontier_rerun_rollup_track_status(
+    decisions: Sequence[Mapping[str, Any]],
+) -> str:
+    if not decisions:
+        return "not_required"
+    statuses = {str(decision.get("status")) for decision in decisions}
+    return "promote" if statuses == {"promote"} else "blocked"
+
+
+def _frontier_rerun_rollup_promoted_tracks(
+    decisions: Sequence[Mapping[str, Any]],
+) -> set[str]:
+    promoted: set[str] = set()
+    for decision in decisions:
+        if decision.get("status") != "promote":
+            continue
+        metrics = _mapping(decision.get("metrics"))
+        rollup_track = metrics.get("track")
+        if rollup_track == "stability":
+            track_statuses = _mapping(metrics.get("track_statuses"))
+            for child_track, status in track_statuses.items():
+                if status == "promote":
+                    release_track = _release_track_from_rerun_track(child_track)
+                    if release_track:
+                        promoted.add(release_track)
+            if not track_statuses:
+                for child_track in _string_tuple(metrics.get("tracks")):
+                    release_track = _release_track_from_rerun_track(child_track)
+                    if release_track:
+                        promoted.add(release_track)
+        else:
+            release_track = _release_track_from_rerun_track(rollup_track)
+            if release_track:
+                promoted.add(release_track)
+    return promoted
+
+
+def _release_track_from_rerun_track(value: Any) -> str | None:
+    text = str(value or "")
+    if text in {"verifier", "verifier_stability"}:
+        return "verifier"
+    if text in {"abstention", "abstention_stability"}:
+        return "abstention"
+    if text in {"detectability", "detectability_taxonomy"}:
+        return "detectability"
+    if text in {"multiple_testing", "truthfulqa_frontier_workflow"}:
+        return "multiple_testing"
+    return None
+
+
+def _effective_track_status(
+    base_status: str,
+    promoted_tracks: set[str],
+    track: str,
+) -> str:
+    return "promote" if track in promoted_tracks else base_status
+
+
+def _extend_direct_track_blocking(
+    blocking_reasons: list[str],
+    decision: Mapping[str, Any],
+    *,
+    key: str,
+    track: str,
+    promoted_tracks: set[str],
+) -> None:
+    if track in promoted_tracks:
+        return
+    blocking_reasons.extend(_mapping(decision.get(key)).get("blocking_reasons", ()))
+
+
+def _frontier_rerun_rollup_evidence_summary(
+    decisions: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    names = []
+    blocked = []
+    workflows: set[str] = set()
+    tracks: set[str] = set()
+    totals = {
+        "frontier_rerun_rollup_candidate_count": 0,
+        "frontier_rerun_rollup_observed_report_count": 0,
+        "frontier_rerun_rollup_missing_report_count": 0,
+        "frontier_rerun_rollup_invalid_report_count": 0,
+        "frontier_rerun_rollup_blocked_candidate_count": 0,
+        "frontier_rerun_rollup_promotion_ready_count": 0,
+    }
+    for decision in decisions:
+        name = str(decision.get("name") or "")
+        names.append(name)
+        if decision.get("status") != "promote":
+            blocked.append(name)
+        metrics = _mapping(decision.get("metrics"))
+        workflow = metrics.get("workflow")
+        track = metrics.get("track")
+        if isinstance(workflow, str) and workflow:
+            workflows.add(workflow)
+        if isinstance(track, str) and track:
+            tracks.add(track)
+        for key, metric_key in (
+            ("frontier_rerun_rollup_candidate_count", "candidate_count"),
+            ("frontier_rerun_rollup_observed_report_count", "observed_report_count"),
+            ("frontier_rerun_rollup_missing_report_count", "missing_report_count"),
+            ("frontier_rerun_rollup_invalid_report_count", "invalid_report_count"),
+            ("frontier_rerun_rollup_blocked_candidate_count", "blocked_candidate_count"),
+            ("frontier_rerun_rollup_promotion_ready_count", "promotion_ready_count"),
+        ):
+            totals[key] += _non_negative_int(metrics.get(metric_key)) or 0
+    return {
+        "frontier_rerun_rollup_names": tuple(name for name in names if name),
+        "frontier_rerun_rollup_blocked_names": tuple(name for name in blocked if name),
+        "frontier_rerun_rollup_workflows": tuple(sorted(workflows)),
+        "frontier_rerun_rollup_tracks": tuple(sorted(tracks)),
+        **totals,
+    }
+
+
 def _track_decision(
     track: str,
     name: str,
@@ -976,6 +1297,32 @@ def _input_summary(
         "status": status,
         "artifact_manifest": paths.get("artifact_manifest"),
         "artifact_manifest_summary": _mapping(payload.get("artifact_manifest_summary")),
+        "blocking_reasons": tuple(blocking_reasons),
+    }
+
+
+def _frontier_rerun_rollup_input_summary(
+    *,
+    path: Path,
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    workflow = report.get("workflow")
+    status = report.get("status")
+    paths = _mapping(report.get("paths"))
+    blocking_reasons = []
+    if str(workflow) not in FRONTIER_RERUN_ROLLUP_WORKFLOWS:
+        blocking_reasons.append(f"{path} workflow {workflow!r} is not a supported rerun rollup")
+    if status not in {"promote", "blocked", "complete", "empty"}:
+        blocking_reasons.append(
+            f"{path} status {status!r} is not a supported rerun rollup status"
+        )
+    return {
+        "path": str(path),
+        "workflow": workflow,
+        "track": FRONTIER_RERUN_ROLLUP_WORKFLOWS.get(str(workflow)),
+        "status": status,
+        "artifact_manifest": paths.get("artifact_manifest"),
+        "artifact_manifest_summary": _mapping(report.get("artifact_manifest_summary")),
         "blocking_reasons": tuple(blocking_reasons),
     }
 
@@ -1180,6 +1527,10 @@ def _write_artifact_manifest(
         item for item in inputs.get("citation_batch_rollup_reports", ())
         if isinstance(item, Mapping)
     )
+    frontier_rerun_rollup_inputs = tuple(
+        item for item in inputs.get("frontier_rerun_rollup_reports", ())
+        if isinstance(item, Mapping)
+    )
     artifacts: dict[str, str | Path | None] = {
         "frontier_release_evidence_report": report_path,
         "verifier_stability_report": verifier_input.get("path"),
@@ -1198,6 +1549,11 @@ def _write_artifact_manifest(
     for index, rollup_input in enumerate(citation_batch_rollup_inputs):
         artifacts[f"citation_batch_rollup_report_{index}"] = rollup_input.get("path")
         artifacts[f"citation_batch_rollup_manifest_{index}"] = rollup_input.get(
+            "artifact_manifest"
+        )
+    for index, rollup_input in enumerate(frontier_rerun_rollup_inputs):
+        artifacts[f"frontier_rerun_rollup_report_{index}"] = rollup_input.get("path")
+        artifacts[f"frontier_rerun_rollup_manifest_{index}"] = rollup_input.get(
             "artifact_manifest"
         )
     manifest = context.build_artifact_manifest(
@@ -1226,6 +1582,16 @@ def _write_artifact_manifest(
                 payload.get("decision", {}).get("citation_batch_track_status")
                 if isinstance(payload.get("decision"), Mapping)
                 else None
+            ),
+            "frontier_rerun_rollup_track_status": (
+                payload.get("decision", {}).get("frontier_rerun_rollup_track_status")
+                if isinstance(payload.get("decision"), Mapping)
+                else None
+            ),
+            "frontier_rerun_rollup_promoted_tracks": (
+                tuple(payload.get("decision", {}).get("frontier_rerun_rollup_promoted_tracks", ()))
+                if isinstance(payload.get("decision"), Mapping)
+                else ()
             ),
         },
         max_workers=max_workers,
@@ -1278,6 +1644,14 @@ def _record_registry(
         "detectability_track_status": decision.get("detectability_track_status"),
         "multiple_testing_track_status": decision.get("multiple_testing_track_status"),
         "citation_batch_track_status": decision.get("citation_batch_track_status"),
+        "frontier_rerun_rollup_track_status": decision.get("frontier_rerun_rollup_track_status"),
+        "base_verifier_track_status": decision.get("base_verifier_track_status"),
+        "base_abstention_track_status": decision.get("base_abstention_track_status"),
+        "base_detectability_track_status": decision.get("base_detectability_track_status"),
+        "base_multiple_testing_track_status": decision.get("base_multiple_testing_track_status"),
+        "frontier_rerun_rollup_promoted_tracks": tuple(
+            decision.get("frontier_rerun_rollup_promoted_tracks", ())
+        ),
         "blocking_reasons": tuple(decision.get("blocking_reasons", ())),
         "run_names": tuple(evidence_summary.get("run_names", ())),
         "verifier_signal": evidence_summary.get("verifier_signal"),
@@ -1293,6 +1667,30 @@ def _record_registry(
         "citation_batch_rollup_count": evidence_summary.get("citation_batch_rollup_count"),
         "citation_batch_promotion_ready_count": evidence_summary.get(
             "citation_batch_promotion_ready_count"
+        ),
+        "frontier_rerun_rollup_report_count": evidence_summary.get(
+            "frontier_rerun_rollup_report_count"
+        ),
+        "frontier_rerun_rollup_names": tuple(
+            evidence_summary.get("frontier_rerun_rollup_names", ())
+        ),
+        "frontier_rerun_rollup_workflows": tuple(
+            evidence_summary.get("frontier_rerun_rollup_workflows", ())
+        ),
+        "frontier_rerun_rollup_tracks": tuple(
+            evidence_summary.get("frontier_rerun_rollup_tracks", ())
+        ),
+        "frontier_rerun_rollup_candidate_count": evidence_summary.get(
+            "frontier_rerun_rollup_candidate_count"
+        ),
+        "frontier_rerun_rollup_missing_report_count": evidence_summary.get(
+            "frontier_rerun_rollup_missing_report_count"
+        ),
+        "frontier_rerun_rollup_invalid_report_count": evidence_summary.get(
+            "frontier_rerun_rollup_invalid_report_count"
+        ),
+        "frontier_rerun_rollup_blocked_candidate_count": evidence_summary.get(
+            "frontier_rerun_rollup_blocked_candidate_count"
         ),
         "citation_batch_expected_batch_count": evidence_summary.get(
             "citation_batch_expected_batch_count"
@@ -1399,6 +1797,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         detectability_taxonomy_report_paths=tuple(args.detectability_taxonomy_report or ()),
         frontier_workflow_report_paths=tuple(args.frontier_workflow_report or ()),
         citation_batch_rollup_report_paths=tuple(args.citation_batch_rollup_report or ()),
+        frontier_rerun_rollup_report_paths=tuple(args.frontier_rerun_rollup_report or ()),
         max_verified_false_alarm_mean=args.max_verified_false_alarm_mean,
         min_verified_detection_mean=args.min_verified_detection_mean,
         min_verifier_delta_detection_mean=args.min_verifier_delta_detection_mean,
@@ -1513,6 +1912,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--detectability-taxonomy-report", action="append", default=[])
     parser.add_argument("--frontier-workflow-report", action="append", default=[])
     parser.add_argument("--citation-batch-rollup-report", action="append", default=[])
+    parser.add_argument("--frontier-rerun-rollup-report", action="append", default=[])
     parser.add_argument("--json", required=True)
     parser.add_argument("--artifact-manifest", default=None)
     parser.add_argument("--verification-report", default=None)
