@@ -239,6 +239,106 @@ def test_evidence_gap_plan_maps_frontier_release_evidence_report_tracks():
     )
 
 
+def test_evidence_gap_plan_maps_frontier_rerun_rollup_blocker():
+    plan = plan_evidence_gaps_from_release_candidate({
+        "schema_version": 1,
+        "workflow": "frontier_release_evidence_comparison",
+        "status": "complete",
+        "decision": {
+            "status": "blocked",
+            "verifier_track_status": "promote",
+            "abstention_track_status": "promote",
+            "frontier_rerun_rollup_track_status": "blocked",
+            "blocking_reasons": (),
+        },
+        "evidence_summary": {
+            "frontier_rerun_rollup_names": ("frontier-abstention-rerun-rollup",),
+            "frontier_rerun_rollup_blocked_names": (
+                "frontier-abstention-rerun-rollup",
+            ),
+            "frontier_rerun_rollup_workflows": (
+                "frontier_abstention_evidence_rerun_rollup",
+            ),
+            "frontier_rerun_rollup_tracks": ("abstention",),
+            "frontier_rerun_rollup_candidate_count": 2,
+            "frontier_rerun_rollup_observed_report_count": 1,
+            "frontier_rerun_rollup_missing_report_count": 1,
+            "frontier_rerun_rollup_invalid_report_count": 0,
+            "frontier_rerun_rollup_blocked_candidate_count": 1,
+            "frontier_rerun_rollup_promotion_ready_count": 0,
+        },
+        "frontier_rerun_rollup_decisions": (
+            {
+                "name": "frontier-abstention-rerun-rollup",
+                "status": "blocked",
+                "metrics": {
+                    "workflow": "frontier_abstention_evidence_rerun_rollup",
+                    "track": "abstention",
+                    "candidate_count": 2,
+                    "observed_report_count": 1,
+                    "missing_report_count": 1,
+                    "invalid_report_count": 0,
+                    "blocked_candidate_count": 1,
+                    "promotion_ready_count": 0,
+                },
+                "blocking_reasons": (
+                    "frontier_rerun_rollup.frontier-abstention-rerun-rollup."
+                    "summary.missing_report_count 1 is non-zero",
+                ),
+            },
+        ),
+    })
+
+    payload = plan.to_dict()
+    actions = {action["action_id"]: action for action in payload["actions"]}
+    gap = payload["gaps"][0]
+    metadata = gap["metadata"]
+
+    assert payload["status"] == "needs_evidence"
+    assert payload["summary"]["gap_count"] == 1
+    assert payload["summary"]["gates"] == {"frontier_rerun_rollup_evidence": 1}
+    assert payload["summary"]["root_causes"] == {"evidence_coverage": 1}
+    assert payload["summary"]["research_axes"] == {"frontier_rerun_validation": 1}
+    assert payload["summary"]["top_action_ids"] == (
+        "complete_frontier_rerun_rollup_evidence",
+    )
+    assert gap["gate"] == "frontier_rerun_rollup_evidence"
+    assert gap["recommended_action_ids"] == (
+        "complete_frontier_rerun_rollup_evidence",
+    )
+    assert metadata["evidence_kind"] == "frontier_rerun_rollup_evidence"
+    assert metadata["frontier_rerun_rollup_blocked_names"] == (
+        "frontier-abstention-rerun-rollup",
+    )
+    assert metadata["frontier_rerun_rollup_missing_report_count"] == 1
+    assert metadata["frontier_rerun_rollup_blocked_rollups"] == (
+        {
+            "name": "frontier-abstention-rerun-rollup",
+            "status": "blocked",
+            "workflow": "frontier_abstention_evidence_rerun_rollup",
+            "track": "abstention",
+            "candidate_count": 2,
+            "observed_report_count": 1,
+            "missing_report_count": 1,
+            "invalid_report_count": 0,
+            "blocked_candidate_count": 1,
+            "promotion_ready_count": 0,
+            "blocking_reasons": (
+                "frontier_rerun_rollup.frontier-abstention-rerun-rollup."
+                "summary.missing_report_count 1 is non-zero",
+            ),
+        },
+    )
+    assert actions["complete_frontier_rerun_rollup_evidence"]["evidence_routes"] == (
+        "frontier_rerun_rollup",
+        "frontier_release_evidence",
+        "verifier_stability",
+        "abstention_stability",
+        "detectability_taxonomy",
+        "multiple_testing_gate",
+    )
+
+
 def test_evidence_gap_plan_maps_product_runtime_world_model_blockers():
     plan = plan_evidence_gaps_from_release_candidate({
         "workflow": "release_candidate_comparison",

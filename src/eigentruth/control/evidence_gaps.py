@@ -338,6 +338,7 @@ def _frontier_release_evidence_blocking_records(
     abstention_metadata = _frontier_abstention_metadata(payload)
     multiple_testing_metadata = _frontier_multiple_testing_metadata(payload)
     citation_batch_metadata = _frontier_citation_batch_metadata(payload)
+    frontier_rerun_rollup_metadata = _frontier_rerun_rollup_metadata(payload)
     records: list[dict[str, Any]] = []
     used_indices: set[int] = set()
     track_specs = (
@@ -379,6 +380,20 @@ def _frontier_release_evidence_blocking_records(
                 "unresolved evidence batch",
             ),
         ),
+        (
+            "frontier_rerun_rollup_evidence",
+            "frontier_rerun_rollup_track_status",
+            (
+                "frontier_rerun_rollup",
+                "frontier rerun rollup",
+                "frontier-rerun-rollup",
+                "frontier_stability_evidence_rerun_rollup",
+                "frontier_abstention_evidence_rerun_rollup",
+                "frontier_detectability_evidence_rerun_rollup",
+                "frontier_multiple_testing_rerun_rollup",
+                "rerun rollup",
+            ),
+        ),
     )
     for gate, status_key, patterns in track_specs:
         status = _optional_str(decision.get(status_key))
@@ -403,6 +418,8 @@ def _frontier_release_evidence_blocking_records(
             record["metadata"] = multiple_testing_metadata
         if gate == "citation_batch_evidence" and citation_batch_metadata:
             record["metadata"] = citation_batch_metadata
+        if gate == "frontier_rerun_rollup_evidence" and frontier_rerun_rollup_metadata:
+            record["metadata"] = frontier_rerun_rollup_metadata
         records.append(record)
     remaining_reasons = tuple(
         reason for index, reason in enumerate(raw_reasons) if index not in used_indices
@@ -424,7 +441,12 @@ def _frontier_release_evidence_blocking_records(
 
 def _nested_frontier_blocking_reasons(payload: Mapping[str, Any]) -> tuple[str, ...]:
     reasons: list[str] = []
-    for key in ("run_decisions", "multiple_testing_decisions", "citation_batch_decisions"):
+    for key in (
+        "run_decisions",
+        "multiple_testing_decisions",
+        "citation_batch_decisions",
+        "frontier_rerun_rollup_decisions",
+    ):
         for item in _mapping_sequence(payload.get(key, ())):
             reasons.extend(_string_tuple(item.get("blocking_reasons", ())))
             for nested_key in (
@@ -460,6 +482,76 @@ def _frontier_abstention_metadata(payload: Mapping[str, Any]) -> dict[str, Any]:
     if not blocked_runs:
         return {}
     return {"abstention_blocked_runs": tuple(blocked_runs)}
+
+
+def _frontier_rerun_rollup_metadata(payload: Mapping[str, Any]) -> dict[str, Any]:
+    evidence_summary = _mapping(payload.get("evidence_summary"))
+    blocked_rollups: list[dict[str, Any]] = []
+    for decision in _mapping_sequence(payload.get("frontier_rerun_rollup_decisions", ())):
+        if decision.get("status") == "promote":
+            continue
+        metrics = _mapping(decision.get("metrics"))
+        blocked_rollups.append(
+            _frontier_rerun_rollup_decision_metadata(decision, metrics=metrics)
+        )
+    metadata = {
+        "frontier_rerun_rollup_names": _string_tuple(
+            evidence_summary.get("frontier_rerun_rollup_names", ())
+        ),
+        "frontier_rerun_rollup_blocked_names": _string_tuple(
+            evidence_summary.get("frontier_rerun_rollup_blocked_names", ())
+        ),
+        "frontier_rerun_rollup_workflows": _string_tuple(
+            evidence_summary.get("frontier_rerun_rollup_workflows", ())
+        ),
+        "frontier_rerun_rollup_tracks": _string_tuple(
+            evidence_summary.get("frontier_rerun_rollup_tracks", ())
+        ),
+        "frontier_rerun_rollup_candidate_count": evidence_summary.get(
+            "frontier_rerun_rollup_candidate_count"
+        ),
+        "frontier_rerun_rollup_observed_report_count": evidence_summary.get(
+            "frontier_rerun_rollup_observed_report_count"
+        ),
+        "frontier_rerun_rollup_missing_report_count": evidence_summary.get(
+            "frontier_rerun_rollup_missing_report_count"
+        ),
+        "frontier_rerun_rollup_invalid_report_count": evidence_summary.get(
+            "frontier_rerun_rollup_invalid_report_count"
+        ),
+        "frontier_rerun_rollup_blocked_candidate_count": evidence_summary.get(
+            "frontier_rerun_rollup_blocked_candidate_count"
+        ),
+        "frontier_rerun_rollup_promotion_ready_count": evidence_summary.get(
+            "frontier_rerun_rollup_promotion_ready_count"
+        ),
+        "frontier_rerun_rollup_blocked_rollups": tuple(blocked_rollups),
+    }
+    return {
+        key: value
+        for key, value in metadata.items()
+        if value is not None and value != () and value != []
+    }
+
+
+def _frontier_rerun_rollup_decision_metadata(
+    decision: Mapping[str, Any],
+    *,
+    metrics: Mapping[str, Any],
+) -> dict[str, Any]:
+    return {
+        "name": _optional_str(decision.get("name")) or "",
+        "status": _optional_str(decision.get("status")) or "blocked",
+        "workflow": _optional_str(metrics.get("workflow")),
+        "track": _optional_str(metrics.get("track")),
+        "candidate_count": metrics.get("candidate_count"),
+        "observed_report_count": metrics.get("observed_report_count"),
+        "missing_report_count": metrics.get("missing_report_count"),
+        "invalid_report_count": metrics.get("invalid_report_count"),
+        "blocked_candidate_count": metrics.get("blocked_candidate_count"),
+        "promotion_ready_count": metrics.get("promotion_ready_count"),
+        "blocking_reasons": _string_tuple(decision.get("blocking_reasons", ())),
+    }
 
 
 def _frontier_citation_batch_metadata(payload: Mapping[str, Any]) -> dict[str, Any]:
@@ -622,6 +714,21 @@ def _classify_gap(
     text = f"{gate} {reason}".lower()
     if _is_product_runtime_world_model_evidence(gate, text, missing_metrics):
         return _kind("product_runtime_world_model_evidence", "world_model", "runtime_drift")
+    if (
+        gate == "frontier_rerun_rollup_evidence"
+        or "frontier_rerun_rollup" in text
+        or "frontier rerun rollup" in text
+        or "frontier-rerun-rollup" in text
+        or "frontier_stability_evidence_rerun_rollup" in text
+        or "frontier_abstention_evidence_rerun_rollup" in text
+        or "frontier_detectability_evidence_rerun_rollup" in text
+        or "frontier_multiple_testing_rerun_rollup" in text
+    ):
+        return _kind(
+            "frontier_rerun_rollup_evidence",
+            "evidence_coverage",
+            "frontier_rerun_validation",
+        )
     if (
         "multiple_testing" in text
         or "multiple-testing" in text
@@ -792,6 +899,34 @@ def _action_template(kind: Mapping[str, str], *, gate: str, reason: str) -> Evid
                 "benchmarks/run_source_family_citation_search_workflow.py --batch-id ...",
                 "benchmarks/rollup_citation_search_batch_evidence.py --queue ... --batch-report ...",
                 "benchmarks/compare_frontier_release_evidence.py --citation-batch-rollup-report ...",
+            ),
+        )
+    if evidence_kind == "frontier_rerun_rollup_evidence":
+        return EvidenceGapAction(
+            action_id="complete_frontier_rerun_rollup_evidence",
+            title="Complete frontier rerun-rollup evidence",
+            action_type="workflow",
+            priority=90,
+            rationale=(
+                "The frontier release has targeted rerun evidence, but the rerun rollup "
+                "is missing, invalid, or still blocked; complete the per-track reruns and "
+                "feed the promotion-ready rollup back into the frontier release comparator."
+            ),
+            evidence_routes=(
+                "frontier_rerun_rollup",
+                "frontier_release_evidence",
+                "verifier_stability",
+                "abstention_stability",
+                "detectability_taxonomy",
+                "multiple_testing_gate",
+            ),
+            suggested_commands=(
+                "benchmarks/plan_frontier_stability_evidence_reruns.py",
+                "benchmarks/plan_frontier_abstention_evidence_reruns.py",
+                "benchmarks/plan_frontier_detectability_evidence_reruns.py",
+                "benchmarks/plan_frontier_multiple_testing_reruns.py",
+                "benchmarks/rollup_frontier_*_reruns.py --queue ... --report-json ...",
+                "benchmarks/compare_frontier_release_evidence.py --frontier-rerun-rollup-report ...",
             ),
         )
     if evidence_kind == "abstention_stability":
