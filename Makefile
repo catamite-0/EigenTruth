@@ -29,6 +29,7 @@ perf-check:
 	$(PYTHON) benchmarks/concept_registry_smoke.py
 	$(PYTHON) benchmarks/triple_extraction_smoke.py
 	$(PYTHON) benchmarks/performance_baseline_smoke.py
+	$(PYTHON) benchmarks/product_promotion_contract_smoke.py
 	$(PYTHON) benchmarks/product_trace_replay_smoke.py
 	$(PYTHON) benchmarks/release_candidate_registry_smoke.py
 
