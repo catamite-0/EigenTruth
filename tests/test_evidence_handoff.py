@@ -75,6 +75,111 @@ def test_promotion_contract_evidence_audit_can_require_subset():
     assert len(audit.missing_metrics) == 8
 
 
+def test_promotion_contract_evidence_audit_can_require_optional_runtime_groups():
+    audit = audit_product_promotion_contract_evidence(
+        {
+            "workflow": "product_promotion_contract",
+            "source_status": "promote",
+            "model_id": "tiny",
+        },
+        required_groups=(
+            "claim_risk_localization",
+            "trajectory_audit",
+            "evidence_handoff",
+            "world_model",
+        ),
+    )
+    payload = audit.to_dict()
+
+    assert payload["status"] == "blocked"
+    assert payload["required_groups"] == (
+        "claim_risk_localization",
+        "trajectory_audit",
+        "evidence_handoff",
+        "world_model",
+    )
+    assert payload["summary"]["expected_metric_count"] == 91
+    assert payload["summary"]["missing_metric_count"] == 26
+    assert payload["summary"]["groups"]["claim_risk_localization"] == "blocked"
+    assert payload["summary"]["groups"]["trajectory_audit"] == "blocked"
+    assert payload["summary"]["groups"]["evidence_handoff"] == "blocked"
+    assert payload["summary"]["groups"]["world_model"] == "blocked"
+    assert payload["recommended_action_ids"] == (
+        "rerun_product_trace_claim_risk_localization_evidence",
+        "rerun_product_trace_trajectory_audit_evidence",
+        "refresh_product_promotion_evidence_handoff",
+        "rerun_product_trace_world_model_evidence",
+    )
+    assert "claim_risk_localization.coverage_rate" in payload["missing_metrics"]
+    assert "trajectory_audit.error_rate" in payload["missing_metrics"]
+    assert "promotion_contract.evidence_handoff.promoted_group_rate.mean" in (
+        payload["missing_metrics"]
+    )
+    assert "world_model.trace_gap_rate" in payload["missing_metrics"]
+
+
+def test_promotion_contract_evidence_audit_passes_optional_runtime_groups():
+    audit = audit_product_promotion_contract_evidence(
+        _complete_contract_with_optional_runtime_groups(),
+        required_groups=(
+            "claim_factuality",
+            "claim_risk_localization",
+            "trajectory_audit",
+            "evidence_handoff",
+            "world_model",
+            "context_sensitivity",
+            "counterfactual_robustness",
+        ),
+    )
+    payload = audit.to_dict()
+
+    assert payload["status"] == "promote"
+    assert payload["summary"]["expected_metric_count"] == 113
+    assert payload["summary"]["missing_metric_count"] == 0
+    assert payload["recommended_action_ids"] == ()
+    assert payload["summary"]["groups"]["claim_factuality"] == "promote"
+    assert payload["summary"]["groups"]["claim_risk_localization"] == "promote"
+    assert payload["summary"]["groups"]["trajectory_audit"] == "promote"
+    assert payload["summary"]["groups"]["evidence_handoff"] == "promote"
+    assert payload["summary"]["groups"]["world_model"] == "promote"
+    assert payload["summary"]["groups"]["context_sensitivity"] == "promote"
+    assert payload["summary"]["groups"]["counterfactual_robustness"] == "promote"
+
+
+def test_promotion_contract_evidence_audit_reads_exported_runtime_current_metadata():
+    audit = audit_product_promotion_contract_evidence(
+        {
+            "workflow": "product_promotion_contract",
+            "source_status": "promote",
+            "model_id": "tiny",
+            "metadata": {
+                "product_runtime_drift_claim_risk_localization_coverage_rate_current": 1.0,
+                "product_runtime_drift_claim_risk_localization_high_risk_claim_count_current": 1,
+                "product_runtime_drift_claim_risk_localization_medium_or_high_risk_claim_count_current": 2,
+                "product_runtime_drift_claim_risk_localization_entity_candidate_observation_count_current": 4,
+                "product_runtime_drift_claim_risk_localization_unique_entity_candidate_count_current": 3,
+                "product_runtime_drift_claim_risk_localization_high_risk_entity_candidate_count_current": 1,
+                "product_runtime_drift_claim_risk_localization_medium_or_high_entity_candidate_count_current": 2,
+            },
+        },
+        required_groups=("claim_risk_localization",),
+    )
+    payload = audit.to_dict()
+    claim_risk = next(
+        group
+        for group in payload["groups"]
+        if group["group"] == "claim_risk_localization"
+    )
+
+    assert payload["status"] == "promote"
+    assert payload["missing_metrics"] == ()
+    assert claim_risk["status"] == "promote"
+    assert claim_risk["metrics"][0]["source_path"] == (
+        "metadata",
+        "product_runtime_drift_claim_risk_localization_coverage_rate_current",
+    )
+
+
 def test_product_promotion_evidence_audit_cli_helper_writes_and_registers(tmp_path):
     contract = tmp_path / "contract.json"
     output = tmp_path / "handoff-audit.json"
@@ -411,6 +516,75 @@ def _complete_contract():
             "product_trace_action_execution_request_id_mismatch_rate": 0.0,
         },
     }
+
+
+def _complete_contract_with_optional_runtime_groups():
+    contract = _complete_contract()
+    contract.update({
+        "claim_factuality_probe_comparison": {
+            "coverage_rate": 1.0,
+            "manifest_verified_rate": 1.0,
+            "model_count": 2,
+            "run_count": 3,
+            "redline_pass_rate": 1.0,
+            "best_test_label_auroc": 0.82,
+            "best_test_selective_accuracy": 0.91,
+            "best_test_selective_coverage": 0.78,
+            "best_redline_auroc": 0.74,
+            "best_redline_margin": 0.08,
+        },
+        "claim_risk_localization": {
+            "coverage_rate": 1.0,
+            "high_risk_claim_count": 1,
+            "medium_or_high_risk_claim_count": 2,
+            "entity_candidate_observation_count": 4,
+            "unique_entity_candidate_count": 3,
+            "high_risk_entity_candidate_count": 1,
+            "medium_or_high_entity_candidate_count": 2,
+        },
+        "trajectory_audit": {
+            "failed_trace_rate": 0.0,
+            "error_rate": 0.0,
+            "factual_rate": 0.0,
+            "referential_rate": 0.0,
+            "logical_rate": 0.0,
+            "procedural_rate": 0.0,
+            "scope_rate": 0.0,
+        },
+        "evidence_handoff": {
+            "coverage_rate": 1.0,
+            "manifest_verified_rate": 1.0,
+            "present_metric_rate": 1.0,
+            "missing_metric_rate": 0.0,
+            "missing_metric_count": 0,
+            "blocked_group_count": 0,
+            "promoted_group_rate": 1.0,
+        },
+        "world_model": {
+            "participating_trace_rate": 1.0,
+            "coverage_rate": 1.0,
+            "conflict_rate": 0.0,
+            "low_agreement_rate": 0.0,
+            "trace_gap_rate": 0.0,
+        },
+        "context_sensitivity": {
+            "participating_trace_rate": 1.0,
+            "coverage_rate": 1.0,
+            "flagged_result_rate": 0.0,
+            "trace_gap_rate": 0.0,
+            "max_flagged_rate": 0.0,
+            "max_context_sensitivity_ratio": 1.0,
+        },
+        "counterfactual_robustness": {
+            "participating_trace_rate": 1.0,
+            "coverage_rate": 1.0,
+            "pass_rate": 1.0,
+            "flip_success_rate": 1.0,
+            "false_invariance_rate": 0.0,
+            "trace_gap_rate": 0.0,
+        },
+    })
+    return contract
 
 
 def _pre_generation_comparison_report():

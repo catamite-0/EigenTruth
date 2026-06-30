@@ -24,13 +24,32 @@ _ALL_GROUPS = (
     "frontier_release_evidence",
 )
 
+_OPTIONAL_RUNTIME_GROUPS = (
+    "claim_factuality",
+    "claim_risk_localization",
+    "trajectory_audit",
+    "evidence_handoff",
+    "world_model",
+    "context_sensitivity",
+    "counterfactual_robustness",
+)
+
+_KNOWN_GROUPS = _ALL_GROUPS + _OPTIONAL_RUNTIME_GROUPS
+
 _ACTION_IDS = {
     "promotion": "export_promotion_contract_runtime_evidence",
     "pre_generation": "run_pre_generation_probe_comparison",
+    "claim_factuality": "rerun_claim_factuality_probe_comparison",
+    "claim_risk_localization": "rerun_product_trace_claim_risk_localization_evidence",
     "counterfactual": "run_counterfactual_verifier_audit",
     "triple_audit": "add_trace_level_triple_audit",
     "covered_fact_property": "refresh_covered_fact_property_routes",
     "action_gate": "rerun_product_trace_action_gates",
+    "trajectory_audit": "rerun_product_trace_trajectory_audit_evidence",
+    "evidence_handoff": "refresh_product_promotion_evidence_handoff",
+    "world_model": "rerun_product_trace_world_model_evidence",
+    "context_sensitivity": "rerun_product_trace_context_sensitivity_evidence",
+    "counterfactual_robustness": "rerun_product_trace_counterfactual_robustness_evidence",
     "frontier_release_evidence": "run_frontier_release_evidence_comparison",
 }
 
@@ -221,7 +240,10 @@ def audit_product_promotion_contract_evidence(
     """Audit whether a promotion contract carries runtime-drift evidence fields."""
     payload = _payload_mapping(contract)
     required = _required_groups(required_groups)
-    groups = tuple(_audit_group(group, payload=payload, required=group in set(required)) for group in _ALL_GROUPS)
+    groups = tuple(
+        _audit_group(group, payload=payload, required=group in set(required))
+        for group in _groups_to_audit(required)
+    )
     blocked = any(group.status == "blocked" for group in groups if group.group in set(required))
     return ProductPromotionEvidenceAudit(
         status="blocked" if blocked else "promote",
@@ -412,11 +434,19 @@ def _required_groups(groups: Sequence[str] | None) -> tuple[str, ...]:
         name = str(group).strip()
         if not name:
             continue
-        if name not in _ALL_GROUPS:
+        if name not in _KNOWN_GROUPS:
             raise ValueError(f"unknown evidence group: {name!r}")
         if name not in parsed:
             parsed.append(name)
     return tuple(parsed)
+
+
+def _groups_to_audit(required_groups: Sequence[str]) -> tuple[str, ...]:
+    groups = list(_ALL_GROUPS)
+    for group in required_groups:
+        if group not in groups:
+            groups.append(group)
+    return tuple(groups)
 
 
 def _metric(
@@ -1217,6 +1247,34 @@ def _metadata_value(
     return _first_present((metadata.get(key), ("metadata", key)))
 
 
+def _runtime_evidence_value(
+    payload: Mapping[str, Any],
+    *,
+    evidence_key: str,
+    nested_group: str | None = None,
+    nested_prefix: str | None = None,
+) -> tuple[Any, tuple[str, ...]]:
+    metadata = _metadata(payload)
+    candidates: list[tuple[Any, Sequence[str]]] = []
+    if nested_group is not None and nested_prefix is not None:
+        group = _mapping(payload.get(nested_group))
+        if evidence_key.startswith(f"{nested_prefix}_"):
+            nested_key = evidence_key.removeprefix(f"{nested_prefix}_")
+            candidates.append((group.get(nested_key), (nested_group, nested_key)))
+    candidates.extend((
+        (metadata.get(evidence_key), ("metadata", evidence_key)),
+        (
+            metadata.get(f"product_runtime_drift_{evidence_key}_current"),
+            ("metadata", f"product_runtime_drift_{evidence_key}_current"),
+        ),
+        (
+            metadata.get(f"promotion_contract_product_runtime_drift_{evidence_key}_current"),
+            ("metadata", f"promotion_contract_product_runtime_drift_{evidence_key}_current"),
+        ),
+    ))
+    return _first_present(*candidates)
+
+
 def _contract_coverage(payload: Mapping[str, Any]) -> ProductPromotionEvidenceMetric:
     metadata = _metadata(payload)
     value = 1.0 if payload.get("workflow") == "product_promotion_contract" else None
@@ -1292,6 +1350,32 @@ def _pre_generation_metric(metric_suffix: str, key: str, *, bool_rate: bool = Fa
             group="pre_generation",
             metric=f"promotion_contract.pre_generation_probe_comparison.{metric_suffix}",
             evidence_key=f"pre_generation_probe_comparison_{key}",
+            value=value,
+            source_path=path,
+        )
+
+    return build
+
+
+def _runtime_evidence_metric(
+    *,
+    group: str,
+    metric: str,
+    evidence_key: str,
+    nested_group: str | None = None,
+    nested_prefix: str | None = None,
+):
+    def build(payload: Mapping[str, Any]) -> ProductPromotionEvidenceMetric:
+        value, path = _runtime_evidence_value(
+            payload,
+            evidence_key=evidence_key,
+            nested_group=nested_group,
+            nested_prefix=nested_prefix,
+        )
+        return _metric(
+            group=group,
+            metric=metric,
+            evidence_key=evidence_key,
             value=value,
             source_path=path,
         )
@@ -1471,6 +1555,176 @@ def _frontier_release_evidence_metric(metric_suffix: str, key: str, *metadata_ke
     return build
 
 
+def _runtime_evidence_group_builders(
+    group: str,
+    fields: Sequence[tuple[str, str]],
+    *,
+    nested_group: str | None = None,
+    nested_prefix: str | None = None,
+) -> tuple[Any, ...]:
+    return tuple(
+        _runtime_evidence_metric(
+            group=group,
+            metric=metric,
+            evidence_key=evidence_key,
+            nested_group=nested_group,
+            nested_prefix=nested_prefix,
+        )
+        for metric, evidence_key in fields
+    )
+
+
+_CLAIM_FACTUALITY_EVIDENCE_FIELDS = (
+    (
+        "promotion_contract.claim_factuality_probe_comparison.coverage_rate",
+        "claim_factuality_probe_comparison_coverage_rate",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.manifest_verified_rate",
+        "claim_factuality_probe_comparison_manifest_verified_rate",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.model_count.mean",
+        "claim_factuality_probe_comparison_model_count",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.run_count.mean",
+        "claim_factuality_probe_comparison_run_count",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.redline_pass_rate",
+        "claim_factuality_probe_comparison_redline_pass_rate",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.best_test_label_auroc.mean",
+        "claim_factuality_probe_comparison_best_test_label_auroc",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.best_test_selective_accuracy.mean",
+        "claim_factuality_probe_comparison_best_test_selective_accuracy",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.best_test_selective_coverage.mean",
+        "claim_factuality_probe_comparison_best_test_selective_coverage",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.best_redline_auroc.mean",
+        "claim_factuality_probe_comparison_best_redline_auroc",
+    ),
+    (
+        "promotion_contract.claim_factuality_probe_comparison.best_redline_margin.mean",
+        "claim_factuality_probe_comparison_best_redline_margin",
+    ),
+)
+
+_CLAIM_RISK_LOCALIZATION_EVIDENCE_FIELDS = (
+    ("claim_risk_localization.coverage_rate", "claim_risk_localization_coverage_rate"),
+    (
+        "claim_risk_localization.high_risk_claim_count",
+        "claim_risk_localization_high_risk_claim_count",
+    ),
+    (
+        "claim_risk_localization.medium_or_high_risk_claim_count",
+        "claim_risk_localization_medium_or_high_risk_claim_count",
+    ),
+    (
+        "claim_risk_localization.entity_candidate_observation_count",
+        "claim_risk_localization_entity_candidate_observation_count",
+    ),
+    (
+        "claim_risk_localization.unique_entity_candidate_count",
+        "claim_risk_localization_unique_entity_candidate_count",
+    ),
+    (
+        "claim_risk_localization.high_risk_entity_candidate_count",
+        "claim_risk_localization_high_risk_entity_candidate_count",
+    ),
+    (
+        "claim_risk_localization.medium_or_high_entity_candidate_count",
+        "claim_risk_localization_medium_or_high_entity_candidate_count",
+    ),
+)
+
+_TRAJECTORY_AUDIT_EVIDENCE_FIELDS = (
+    ("trajectory_audit.failed_trace_rate", "product_trace_trajectory_audit_failed_trace_rate"),
+    ("trajectory_audit.error_rate", "product_trace_trajectory_audit_error_rate"),
+    ("trajectory_audit.factual_rate", "product_trace_trajectory_audit_factual_rate"),
+    ("trajectory_audit.referential_rate", "product_trace_trajectory_audit_referential_rate"),
+    ("trajectory_audit.logical_rate", "product_trace_trajectory_audit_logical_rate"),
+    ("trajectory_audit.procedural_rate", "product_trace_trajectory_audit_procedural_rate"),
+    ("trajectory_audit.scope_rate", "product_trace_trajectory_audit_scope_rate"),
+)
+
+_EVIDENCE_HANDOFF_EVIDENCE_FIELDS = (
+    ("promotion_contract.evidence_handoff.coverage_rate", "evidence_handoff_coverage_rate"),
+    (
+        "promotion_contract.evidence_handoff.manifest_verified_rate",
+        "evidence_handoff_manifest_verified_rate",
+    ),
+    (
+        "promotion_contract.evidence_handoff.present_metric_rate.mean",
+        "evidence_handoff_present_metric_rate",
+    ),
+    (
+        "promotion_contract.evidence_handoff.missing_metric_rate.mean",
+        "evidence_handoff_missing_metric_rate",
+    ),
+    (
+        "promotion_contract.evidence_handoff.missing_metric_count.mean",
+        "evidence_handoff_missing_metric_count",
+    ),
+    (
+        "promotion_contract.evidence_handoff.blocked_group_count.mean",
+        "evidence_handoff_blocked_group_count",
+    ),
+    (
+        "promotion_contract.evidence_handoff.promoted_group_rate.mean",
+        "evidence_handoff_promoted_group_rate",
+    ),
+)
+
+_WORLD_MODEL_EVIDENCE_FIELDS = (
+    ("world_model.participating_trace_rate", "world_model_participating_trace_rate"),
+    ("world_model.coverage_rate", "world_model_coverage_rate"),
+    ("world_model.conflict_rate", "world_model_conflict_rate"),
+    ("world_model.low_agreement_rate", "world_model_low_agreement_rate"),
+    ("world_model.trace_gap_rate", "world_model_trace_gap_rate"),
+)
+
+_CONTEXT_SENSITIVITY_EVIDENCE_FIELDS = (
+    (
+        "context_sensitivity.participating_trace_rate",
+        "context_sensitivity_participating_trace_rate",
+    ),
+    ("context_sensitivity.coverage_rate", "context_sensitivity_coverage_rate"),
+    ("context_sensitivity.flagged_result_rate", "context_sensitivity_flagged_result_rate"),
+    ("context_sensitivity.trace_gap_rate", "context_sensitivity_trace_gap_rate"),
+    ("context_sensitivity.max_flagged_rate", "context_sensitivity_max_flagged_rate"),
+    (
+        "context_sensitivity.max_context_sensitivity_ratio",
+        "context_sensitivity_max_context_sensitivity_ratio",
+    ),
+)
+
+_COUNTERFACTUAL_ROBUSTNESS_EVIDENCE_FIELDS = (
+    (
+        "counterfactual_robustness.participating_trace_rate",
+        "counterfactual_robustness_participating_trace_rate",
+    ),
+    ("counterfactual_robustness.coverage_rate", "counterfactual_robustness_coverage_rate"),
+    ("counterfactual_robustness.pass_rate", "counterfactual_robustness_pass_rate"),
+    (
+        "counterfactual_robustness.flip_success_rate",
+        "counterfactual_robustness_flip_success_rate",
+    ),
+    (
+        "counterfactual_robustness.false_invariance_rate",
+        "counterfactual_robustness_false_invariance_rate",
+    ),
+    ("counterfactual_robustness.trace_gap_rate", "counterfactual_robustness_trace_gap_rate"),
+)
+
+
 _GROUP_BUILDERS = {
     "promotion": (
         _contract_coverage,
@@ -1487,6 +1741,18 @@ _GROUP_BUILDERS = {
         _pre_generation_metric("best_test_label_auroc.mean", "best_test_label_auroc"),
         _pre_generation_metric("best_redline_auroc.mean", "best_redline_auroc"),
         _pre_generation_metric("best_redline_margin.mean", "best_redline_margin"),
+    ),
+    "claim_factuality": _runtime_evidence_group_builders(
+        "claim_factuality",
+        _CLAIM_FACTUALITY_EVIDENCE_FIELDS,
+        nested_group="claim_factuality_probe_comparison",
+        nested_prefix="claim_factuality_probe_comparison",
+    ),
+    "claim_risk_localization": _runtime_evidence_group_builders(
+        "claim_risk_localization",
+        _CLAIM_RISK_LOCALIZATION_EVIDENCE_FIELDS,
+        nested_group="claim_risk_localization",
+        nested_prefix="claim_risk_localization",
     ),
     "counterfactual": (
         _counterfactual_coverage,
@@ -1548,6 +1814,36 @@ _GROUP_BUILDERS = {
             "action_execution_gate.request_id_mismatch_rate.mean",
             "product_trace_action_execution_request_id_mismatch_rate",
         ),
+    ),
+    "trajectory_audit": _runtime_evidence_group_builders(
+        "trajectory_audit",
+        _TRAJECTORY_AUDIT_EVIDENCE_FIELDS,
+        nested_group="trajectory_audit",
+        nested_prefix="product_trace_trajectory_audit",
+    ),
+    "evidence_handoff": _runtime_evidence_group_builders(
+        "evidence_handoff",
+        _EVIDENCE_HANDOFF_EVIDENCE_FIELDS,
+        nested_group="evidence_handoff",
+        nested_prefix="evidence_handoff",
+    ),
+    "world_model": _runtime_evidence_group_builders(
+        "world_model",
+        _WORLD_MODEL_EVIDENCE_FIELDS,
+        nested_group="world_model",
+        nested_prefix="world_model",
+    ),
+    "context_sensitivity": _runtime_evidence_group_builders(
+        "context_sensitivity",
+        _CONTEXT_SENSITIVITY_EVIDENCE_FIELDS,
+        nested_group="context_sensitivity",
+        nested_prefix="context_sensitivity",
+    ),
+    "counterfactual_robustness": _runtime_evidence_group_builders(
+        "counterfactual_robustness",
+        _COUNTERFACTUAL_ROBUSTNESS_EVIDENCE_FIELDS,
+        nested_group="counterfactual_robustness",
+        nested_prefix="counterfactual_robustness",
     ),
     "frontier_release_evidence": (
         _frontier_release_evidence_coverage,

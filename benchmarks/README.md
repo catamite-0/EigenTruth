@@ -5385,10 +5385,16 @@ python benchmarks/audit_product_promotion_contract_evidence.py \
 ```
 
 The audit writes `workflow=product_promotion_evidence_handoff_audit` with the
-same promotion, pre-generation, counterfactual, triple-audit, covered-fact, and
-action-gate metric names used by release drift blockers. Treat it as
-pre-flight evidence hygiene: it explains why a contract will not satisfy a
-runtime-drift gate, but it does not itself satisfy the gate.
+same promotion, pre-generation, counterfactual, triple-audit, covered-fact,
+action-gate, and frontier-release evidence metric names used by release drift
+blockers. Its default group set is kept compatible with existing promotion
+contracts; stricter runs can explicitly pass `--required-groups` entries such as
+`claim_factuality`, `claim_risk_localization`, `trajectory_audit`,
+`evidence_handoff`, `world_model`, `context_sensitivity`, or
+`counterfactual_robustness` when those runtime-drift gates are part of the
+release policy. Treat it as pre-flight evidence hygiene: it explains why a
+contract will not satisfy a runtime-drift gate, but it does not itself satisfy
+the gate.
 
 After the audit, export an evidence-enriched contract from explicit local child
 reports:
