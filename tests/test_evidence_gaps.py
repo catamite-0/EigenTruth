@@ -28,12 +28,58 @@ from eigentruth.control import (
 from eigentruth.json_utils import strict_json_dumps
 from eigentruth.registry import ArtifactRegistry
 
+_MULTIPLE_TESTING_RERUN_COMMANDS = (
+    "benchmarks/plan_frontier_multiple_testing_reruns.py --source ... --json ...",
+    "benchmarks/run_truthfulqa_frontier_workflow.py --multiple-testing-signals ...",
+    "benchmarks/rollup_frontier_multiple_testing_reruns.py --queue ... --json ...",
+    "benchmarks/compare_frontier_release_evidence.py --frontier-rerun-rollup-report ...",
+)
+
 _ABSTENTION_RERUN_COMMANDS = (
     "benchmarks/plan_frontier_abstention_evidence_reruns.py --source ... --json ...",
     "benchmarks/eval_abstention_stability.py --json ...",
     "benchmarks/rollup_frontier_abstention_evidence_reruns.py --queue ... --json ...",
     "benchmarks/compare_frontier_release_evidence.py --frontier-rerun-rollup-report ...",
 )
+
+
+def _assert_multiple_testing_rerun_rollup_action(action):
+    assert action["evidence_routes"] == (
+        "truthfulqa_frontier_workflow",
+        "multiple_testing_gate",
+        "frontier_release_evidence",
+    )
+    assert action["suggested_commands"] == _MULTIPLE_TESTING_RERUN_COMMANDS
+    assert action["metadata"]["planner_script"] == (
+        "benchmarks/plan_frontier_multiple_testing_reruns.py"
+    )
+    assert action["metadata"]["child_workflow_script"] == (
+        "benchmarks/run_truthfulqa_frontier_workflow.py"
+    )
+    assert action["metadata"]["rollup_script"] == (
+        "benchmarks/rollup_frontier_multiple_testing_reruns.py"
+    )
+    assert action["metadata"]["release_gate_script"] == (
+        "benchmarks/compare_frontier_release_evidence.py"
+    )
+    assert action["metadata"]["rerun_queue_workflow"] == (
+        "frontier_multiple_testing_rerun_queue"
+    )
+    assert action["metadata"]["child_workflow"] == "truthfulqa_frontier_workflow"
+    assert action["metadata"]["rollup_workflow"] == (
+        "frontier_multiple_testing_rerun_rollup"
+    )
+    assert action["metadata"]["derived_artifact_key"] == (
+        "frontier_multiple_testing_rerun_queue"
+    )
+    assert action["metadata"]["rollup_track"] == "multiple_testing"
+    assert action["metadata"]["release_gate_track"] == "frontier_rerun_rollup"
+    assert action["metadata"]["risk_control_method"] == "multiple_testing_conformal"
+    assert action["metadata"]["closure_outputs"] == (
+        "frontier_multiple_testing_rerun_queue",
+        "frontier_multiple_testing_rerun_rollup",
+        "frontier_release_evidence_comparison",
+    )
 
 
 def _assert_abstention_rerun_rollup_action(action):
@@ -158,10 +204,8 @@ def test_evidence_gap_plan_maps_multiple_testing_frontier_blocker():
     assert gaps[0]["root_cause"] == "model"
     assert gaps[0]["metadata"]["evidence_kind"] == "frontier_multiple_testing"
     assert gaps[0]["recommended_action_ids"] == ("rerun_frontier_multiple_testing_gate",)
-    assert actions["rerun_frontier_multiple_testing_gate"]["evidence_routes"] == (
-        "truthfulqa_frontier_workflow",
-        "multiple_testing_gate",
-        "frontier_release_evidence",
+    _assert_multiple_testing_rerun_rollup_action(
+        actions["rerun_frontier_multiple_testing_gate"]
     )
 
 
@@ -304,6 +348,9 @@ def test_evidence_gap_plan_maps_frontier_release_evidence_report_tracks():
             "report": "synthetic-l2/multiple-testing-report.json",
             "calibration": "synthetic-l2/multiple-testing-calibration.json",
         },
+    )
+    _assert_multiple_testing_rerun_rollup_action(
+        actions["rerun_frontier_multiple_testing_gate"]
     )
     _assert_abstention_rerun_rollup_action(
         actions["improve_abstention_participation_gate"]

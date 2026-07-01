@@ -1128,9 +1128,35 @@ def _action_template(kind: Mapping[str, str], *, gate: str, reason: str) -> Evid
                 "frontier_release_evidence",
             ),
             suggested_commands=(
+                "benchmarks/plan_frontier_multiple_testing_reruns.py --source ... --json ...",
                 "benchmarks/run_truthfulqa_frontier_workflow.py --multiple-testing-signals ...",
-                "benchmarks/compare_frontier_release_evidence.py --frontier-workflow-report ...",
+                "benchmarks/rollup_frontier_multiple_testing_reruns.py --queue ... --json ...",
+                "benchmarks/compare_frontier_release_evidence.py --frontier-rerun-rollup-report ...",
             ),
+            metadata={
+                "planner_script": "benchmarks/plan_frontier_multiple_testing_reruns.py",
+                "child_workflow_script": "benchmarks/run_truthfulqa_frontier_workflow.py",
+                "rollup_script": "benchmarks/rollup_frontier_multiple_testing_reruns.py",
+                "release_gate_script": "benchmarks/compare_frontier_release_evidence.py",
+                "rerun_queue_workflow": "frontier_multiple_testing_rerun_queue",
+                "child_workflow": "truthfulqa_frontier_workflow",
+                "rollup_workflow": "frontier_multiple_testing_rerun_rollup",
+                "derived_artifact_key": "frontier_multiple_testing_rerun_queue",
+                "derived_artifact_kind": "frontier_multiple_testing_rerun_queue",
+                "rollup_track": "multiple_testing",
+                "release_gate_track": "frontier_rerun_rollup",
+                "queue_entry_report_kind": "truthfulqa_frontier_workflow",
+                "risk_control_method": "multiple_testing_conformal",
+                "required_inputs": (
+                    "frontier_release_report_or_evidence_gap_plan",
+                    "frontier_workflow_report_with_multiple_testing_config",
+                ),
+                "closure_outputs": (
+                    "frontier_multiple_testing_rerun_queue",
+                    "frontier_multiple_testing_rerun_rollup",
+                    "frontier_release_evidence_comparison",
+                ),
+            },
         )
     if evidence_kind == "citation_batch_evidence":
         return EvidenceGapAction(
