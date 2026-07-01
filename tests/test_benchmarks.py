@@ -9407,6 +9407,66 @@ def test_eval_verifier_ensemble_uses_retrieval_structured_qa_hits(tmp_path):
     assert quality["false_refuted_rate"] == pytest.approx(1.0)
 
 
+def test_eval_verifier_ensemble_reports_semantic_text_cache_hits(tmp_path):
+    verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    scores_path = tmp_path / "scores.json"
+    fixture_path = tmp_path / "claims.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 0, 1],
+            "scores": {"truth_proj": [0.1, 0.2, 0.9]},
+        }),
+        encoding="utf-8",
+    )
+    fixture_path.write_text(
+        json.dumps({
+            "records": [
+                {
+                    "claim": "Paris is the capital of France.",
+                    "claim_id": "c1",
+                    "claim_metadata": {"source_index": 1},
+                    "initial_evidence": ["Paris is the capital of France."],
+                },
+                {
+                    "claim": "  PARIS   is the capital of France!  ",
+                    "claim_id": "c2",
+                    "claim_metadata": {"source_index": 2},
+                    "initial_evidence": ["Paris is the capital of France."],
+                },
+                {
+                    "claim": "Paris is the capital of France",
+                    "claim_id": "c3",
+                    "claim_metadata": {"source_index": 3},
+                    "initial_evidence": ["Paris is the capital of France."],
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = verifier.build_verifier_ensemble_report(
+        [("synthetic", scores_path)],
+        signal="truth_proj",
+        claims_path=fixture_path,
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+    )
+
+    run = payload["runs"][0]
+    groundedness_stats = run["cache_stats"]["groundedness_verifiers"]
+    assert payload["verifier_cache_key_modes"]["groundedness_verifiers"] == "semantic"
+    assert payload["verifier"]["cache_key_mode"] == "semantic"
+    assert run["verifier_cache_key_modes"]["groundedness_verifiers"] == "semantic"
+    assert groundedness_stats["cache_key_mode"] == "semantic"
+    assert groundedness_stats["instances"] == 1
+    assert groundedness_stats["requests"] == 3
+    assert groundedness_stats["misses"] == 1
+    assert groundedness_stats["hits"] == 2
+    assert groundedness_stats["hit_rate"] == pytest.approx(2 / 3)
+
+
 def test_local_retrieval_workflow_can_gate_retrieval_structured_qa(tmp_path):
     module = importlib.import_module("benchmarks.run_local_retrieval_route_workflow")
     scores_path = tmp_path / "scores.json"
@@ -10953,8 +11013,11 @@ def test_eval_verifier_ensemble_uses_structured_qa_corpus(tmp_path):
     route_impact = alpha["route_control_impact"]["structured_qa"]
 
     assert payload["qa_verifier"]["enabled"] is True
+    assert payload["qa_verifier"]["cache_key_mode"] == "semantic"
     assert run["qa"]["decided_records"] == 6
     assert run["cache_stats"]["qa_verifier"]["requests"] == 6
+    assert run["cache_stats"]["qa_verifier"]["cache_key_mode"] == "semantic"
+    assert run["verifier_cache_key_modes"]["qa_verifier"] == "semantic"
     assert routes["selected_counts"] == {"structured_qa": 6}
     assert routes["by_route"]["structured_qa"]["rates"]["supported"] == pytest.approx(4 / 6)
     assert routes["by_route"]["structured_qa"]["rates"]["refuted"] == pytest.approx(2 / 6)

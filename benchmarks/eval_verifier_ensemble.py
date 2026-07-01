@@ -68,7 +68,18 @@ from eigentruth.verify.features import flag_value_enabled
 
 ALPHAS = (0.05, 0.10, 0.20)
 TOLERANCE = 0.03
+_EXACT_VERIFIER_CACHE_KEY_MODE = "exact"
 _TEXT_VERIFIER_CACHE_KEY_MODE = "semantic"
+_VERIFIER_CACHE_KEY_MODES = {
+    "qa_verifier": _TEXT_VERIFIER_CACHE_KEY_MODE,
+    "fact_verifier": _TEXT_VERIFIER_CACHE_KEY_MODE,
+    "groundedness_verifiers": _TEXT_VERIFIER_CACHE_KEY_MODE,
+    "triple_evidence_verifiers": _TEXT_VERIFIER_CACHE_KEY_MODE,
+    "retrieval_qa_verifiers": _TEXT_VERIFIER_CACHE_KEY_MODE,
+    "selfcheck_verifiers": _TEXT_VERIFIER_CACHE_KEY_MODE,
+    "state_verifier": _EXACT_VERIFIER_CACHE_KEY_MODE,
+    "transition_verifier": _EXACT_VERIFIER_CACHE_KEY_MODE,
+}
 
 
 @dataclass(frozen=True)
@@ -165,6 +176,23 @@ def _load_fact_verifier(path: Path | None) -> StructuredFactVerifier | None:
     if not isinstance(payload, Mapping):
         raise ValueError("fact corpus must be a JSON object or list.")
     return StructuredFactVerifier.from_corpus(payload)
+
+
+def _cache_stats_with_key_mode(stats: Mapping[str, Any], cache_key_mode: str) -> dict[str, Any]:
+    payload = dict(stats)
+    payload["cache_key_mode"] = cache_key_mode
+    return payload
+
+
+def _cache_key_modes_from_stats(cache_stats: Mapping[str, Any]) -> dict[str, str]:
+    modes = {}
+    for name, stats in cache_stats.items():
+        if not isinstance(stats, Mapping):
+            continue
+        mode = stats.get("cache_key_mode")
+        if mode is not None:
+            modes[str(name)] = str(mode)
+    return modes
 
 
 def _load_world_model_rules(raw: Any, *, field_name: str) -> tuple[Mapping[str, Any], ...]:
@@ -1020,21 +1048,53 @@ def _verify_records(
             "metadata": _record_metadata(record, stage_payload),
         })
     if cache_stats is not None:
-        qa_stats = {} if qa_runner is None else qa_runner.stats.to_dict()
-        fact_stats = {} if fact_runner is None else fact_runner.stats.to_dict()
-        state_stats = {} if state_runner is None else state_runner.stats.to_dict()
-        transition_stats = {} if transition_runner is None else transition_runner.stats.to_dict()
-        groundedness_stats = combine_cache_stats(
-            *(runner.stats.to_dict() for runner in groundedness_runners.values())
+        qa_stats = (
+            {}
+            if qa_runner is None
+            else _cache_stats_with_key_mode(
+                qa_runner.stats.to_dict(),
+                _TEXT_VERIFIER_CACHE_KEY_MODE,
+            )
         )
-        triple_evidence_stats = combine_cache_stats(
-            *(runner.stats.to_dict() for runner in triple_evidence_runners.values())
+        fact_stats = (
+            {}
+            if fact_runner is None
+            else _cache_stats_with_key_mode(
+                fact_runner.stats.to_dict(),
+                _TEXT_VERIFIER_CACHE_KEY_MODE,
+            )
         )
-        retrieval_qa_stats = combine_cache_stats(
-            *(runner.stats.to_dict() for runner in retrieval_qa_runners.values())
+        state_stats = (
+            {}
+            if state_runner is None
+            else _cache_stats_with_key_mode(
+                state_runner.stats.to_dict(),
+                _EXACT_VERIFIER_CACHE_KEY_MODE,
+            )
         )
-        selfcheck_stats = combine_cache_stats(
-            *(runner.stats.to_dict() for runner in selfcheck_runners.values())
+        transition_stats = (
+            {}
+            if transition_runner is None
+            else _cache_stats_with_key_mode(
+                transition_runner.stats.to_dict(),
+                _EXACT_VERIFIER_CACHE_KEY_MODE,
+            )
+        )
+        groundedness_stats = _cache_stats_with_key_mode(
+            combine_cache_stats(*(runner.stats.to_dict() for runner in groundedness_runners.values())),
+            _TEXT_VERIFIER_CACHE_KEY_MODE,
+        )
+        triple_evidence_stats = _cache_stats_with_key_mode(
+            combine_cache_stats(*(runner.stats.to_dict() for runner in triple_evidence_runners.values())),
+            _TEXT_VERIFIER_CACHE_KEY_MODE,
+        )
+        retrieval_qa_stats = _cache_stats_with_key_mode(
+            combine_cache_stats(*(runner.stats.to_dict() for runner in retrieval_qa_runners.values())),
+            _TEXT_VERIFIER_CACHE_KEY_MODE,
+        )
+        selfcheck_stats = _cache_stats_with_key_mode(
+            combine_cache_stats(*(runner.stats.to_dict() for runner in selfcheck_runners.values())),
+            _TEXT_VERIFIER_CACHE_KEY_MODE,
         )
         retriever_stats = combine_cache_stats(*(retriever.stats.to_dict() for retriever in retrievers.values()))
         cache_stats.update({
@@ -1967,7 +2027,7 @@ def _verification_trace_cache_key(
     material = {
         "schema_version": 1,
         "cache_type": "verifier_ensemble_verified_records",
-        "builder": "eval_verifier_ensemble:verified_records:v4",
+        "builder": "eval_verifier_ensemble:verified_records:v5",
         "name": name,
         "signal": signal,
         "score_dump": _path_fingerprint(score_path),
@@ -1986,6 +2046,7 @@ def _verification_trace_cache_key(
         "verifier": {
             "min_overlap": float(verifier_min_overlap),
         },
+        "verifier_cache_key_modes": dict(_VERIFIER_CACHE_KEY_MODES),
         "retriever": {
             "type": "InMemoryRetriever",
             "min_overlap": float(retriever_min_overlap),
@@ -2414,7 +2475,7 @@ def build_verifier_ensemble_report(
                             "cache_stats": dict(run_cache_stats),
                         },
                         metadata={
-                            "builder": "eval_verifier_ensemble:verified_records:v4",
+                            "builder": "eval_verifier_ensemble:verified_records:v5",
                             "name": name,
                             "signal": signal,
                             "material": trace_material,
@@ -2467,6 +2528,7 @@ def build_verifier_ensemble_report(
                 "config": dump["config"],
                 "signal": signal,
                 "direction": resolved_direction,
+                "verifier_cache_key_modes": _cache_key_modes_from_stats(run_cache_stats),
                 "n_total": int(labels.numel()),
                 "n_true": int((labels == 0).sum().item()),
                 "n_false": int((labels == 1).sum().item()),
@@ -2627,6 +2689,7 @@ def build_verifier_ensemble_report(
         "verifier": {
             "type": "GroundednessVerifier",
             "min_overlap": verifier_min_overlap,
+            "cache_key_mode": _TEXT_VERIFIER_CACHE_KEY_MODE,
         },
         "selfcheck_verifier": {
             "type": "SelfConsistencyVerifier",
@@ -2637,22 +2700,26 @@ def build_verifier_ensemble_report(
             "refute_threshold": selfcheck_refute_threshold,
             "early_stop": bool(selfcheck_early_stop),
             "max_samples": selfcheck_max_samples,
+            "cache_key_mode": _TEXT_VERIFIER_CACHE_KEY_MODE,
         },
         "triple_evidence_verifier": {
             "type": "TripleEvidenceVerifier",
             "enabled": any_triple_evidence_enabled,
             "requested": bool(enable_triple_evidence),
             "min_slot_coverage": float(triple_min_slot_coverage),
+            "cache_key_mode": _TEXT_VERIFIER_CACHE_KEY_MODE,
         },
         "qa_verifier": {
             "type": "QuestionAnswerVerifier",
             "enabled": qa_verifier is not None,
             "corpus_path": None if qa_corpus_path is None else str(qa_corpus_path),
+            "cache_key_mode": _TEXT_VERIFIER_CACHE_KEY_MODE,
         },
         "fact_verifier": {
             "type": "StructuredFactVerifier",
             "enabled": any_fact_enabled,
             "corpus_path": None if fact_corpus_path is None else str(fact_corpus_path),
+            "cache_key_mode": _TEXT_VERIFIER_CACHE_KEY_MODE,
         },
         "retrieval_qa_verifier": {
             "type": "QuestionAnswerVerifier",
@@ -2662,6 +2729,7 @@ def build_verifier_ensemble_report(
                 if isinstance(run.get("retrieval_qa"), Mapping)
             ),
             "source": "retrieval_hits",
+            "cache_key_mode": _TEXT_VERIFIER_CACHE_KEY_MODE,
         },
         "state_verifier": {
             "type": "StructuredStateVerifier",
@@ -2669,6 +2737,7 @@ def build_verifier_ensemble_report(
             "state_path": None if state_path is None else str(state_path),
             "fixture_has_state": bool(fixture_state),
             "global_checks": len(global_state_checks),
+            "cache_key_mode": _EXACT_VERIFIER_CACHE_KEY_MODE,
         },
         "transition_verifier": {
             "type": "StateTransitionVerifier",
@@ -2684,6 +2753,7 @@ def build_verifier_ensemble_report(
             "state_path": None if state_path is None else str(state_path),
             "fixture_has_state": bool(fixture_state),
             "global_transitions": len(global_state_transitions),
+            "cache_key_mode": _EXACT_VERIFIER_CACHE_KEY_MODE,
         },
         "retriever": {
             "type": "InMemoryRetriever",
@@ -2694,6 +2764,7 @@ def build_verifier_ensemble_report(
             "enabled": trace_cache is not None,
             "path": None if trace_cache is None else str(trace_cache.path),
         },
+        "verifier_cache_key_modes": dict(_VERIFIER_CACHE_KEY_MODES),
         "score_dump_cache": score_dump_cache_summary(score_dump_metadata_cache),
         "staged_verification": {
             "enabled": stage_policy is not None,
