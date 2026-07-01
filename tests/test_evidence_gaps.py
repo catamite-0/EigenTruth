@@ -80,6 +80,28 @@ _PRE_GENERATION_PROBE_COMMANDS = (
     "--json ... --artifact-manifest ...",
 )
 
+_WORLD_MODEL_RUNTIME_EVIDENCE_COMMANDS = (
+    "benchmarks/run_world_model_signal_calibration_workflow.py "
+    "--output-dir ... --registry ... --registry-name ... --registry-version ...",
+    "benchmarks/enrich_product_trace_runtime_evidence.py "
+    "--trace-glob ... --output-dir ... --report ... --artifact-manifest ... "
+    "--min-world-model-participating-trace-rate ... "
+    "--min-world-model-coverage-rate ... --max-world-model-trace-gap-rate ...",
+    "benchmarks/run_product_trace_replay_workflow.py "
+    "--trace-glob ... --promotion-contract ... "
+    "--min-runtime-drift-world-model-participating-trace-rate ... "
+    "--min-runtime-drift-world-model-coverage-rate ... "
+    "--max-runtime-drift-world-model-trace-gap-rate-increase ...",
+    "benchmarks/run_product_runtime_baseline.py "
+    "--trace ... --promotion-contract ... --json ... --artifact-manifest ...",
+    "benchmarks/compare_product_runtime_baselines.py "
+    "--current ... --baseline ... "
+    "--min-world-model-participating-trace-rate ... "
+    "--min-world-model-coverage-rate ... "
+    "--max-world-model-trace-gap-rate-increase ... "
+    "--json ... --artifact-manifest ...",
+)
+
 
 def _assert_multiple_testing_rerun_rollup_action(action):
     assert action["evidence_routes"] == (
@@ -302,6 +324,68 @@ def _assert_pre_generation_probe_comparison_action(action):
     assert action["metadata"]["closure_outputs"] == (
         "pre_generation_probe_workflow_comparison",
         "product_promotion_contract",
+        "product_runtime_baseline",
+        "product_runtime_drift_comparison",
+    )
+
+
+def _assert_world_model_runtime_evidence_action(action):
+    assert action["evidence_routes"] == (
+        "world_model_signal_calibration",
+        "product_trace_runtime_evidence",
+        "product_trace_replay",
+        "product_runtime_baseline",
+        "product_runtime_drift",
+        "world_model_evidence",
+    )
+    assert action["suggested_commands"] == _WORLD_MODEL_RUNTIME_EVIDENCE_COMMANDS
+    assert action["metadata"]["signal_workflow_script"] == (
+        "benchmarks/run_world_model_signal_calibration_workflow.py"
+    )
+    assert action["metadata"]["trace_enrichment_script"] == (
+        "benchmarks/enrich_product_trace_runtime_evidence.py"
+    )
+    assert action["metadata"]["trace_replay_script"] == (
+        "benchmarks/run_product_trace_replay_workflow.py"
+    )
+    assert action["metadata"]["runtime_baseline_script"] == (
+        "benchmarks/run_product_runtime_baseline.py"
+    )
+    assert action["metadata"]["runtime_drift_script"] == (
+        "benchmarks/compare_product_runtime_baselines.py"
+    )
+    assert action["metadata"]["signal_workflow"] == (
+        "world_model_signal_calibration_workflow"
+    )
+    assert action["metadata"]["trace_enrichment_workflow"] == (
+        "product_trace_runtime_evidence_enrichment"
+    )
+    assert action["metadata"]["trace_replay_workflow"] == "product_trace_replay_workflow"
+    assert action["metadata"]["runtime_baseline_workflow"] == "product_runtime_baseline"
+    assert action["metadata"]["runtime_drift_workflow"] == "product_runtime_drift_comparison"
+    assert action["metadata"]["risk_control_method"] == "state_transition_world_model"
+    assert action["metadata"]["required_trace_metrics"] == (
+        "world_model.participating_trace_rate",
+        "world_model.coverage_rate",
+        "world_model.conflict_rate",
+        "world_model.low_agreement_rate",
+        "world_model.trace_gap_rate",
+    )
+    assert action["metadata"]["default_gate_thresholds"] == {
+        "min_world_model_participating_trace_rate": 1.0,
+        "min_world_model_coverage_rate": 1.0,
+        "max_world_model_trace_gap_rate_increase": 0.0,
+    }
+    assert action["metadata"]["required_inputs"] == (
+        "world_model_rules_or_state_transition_fixture",
+        "product_trace_corpus",
+        "promotion_contract_or_release_candidate",
+        "baseline_product_runtime_report",
+    )
+    assert action["metadata"]["closure_outputs"] == (
+        "world_model_signal_calibration_workflow",
+        "product_trace_runtime_evidence_enrichment",
+        "product_trace_replay_workflow",
         "product_runtime_baseline",
         "product_runtime_drift_comparison",
     )
@@ -794,10 +878,8 @@ def test_evidence_gap_plan_maps_product_runtime_world_model_blockers():
     assert payload["summary"]["top_action_ids"] == (
         "rerun_product_trace_world_model_evidence",
     )
-    assert actions["rerun_product_trace_world_model_evidence"]["evidence_routes"] == (
-        "product_trace_replay",
-        "product_runtime_drift",
-        "world_model_evidence",
+    _assert_world_model_runtime_evidence_action(
+        actions["rerun_product_trace_world_model_evidence"]
     )
     for gap in payload["gaps"]:
         assert gap["metadata"]["evidence_kind"] == "product_runtime_world_model_evidence"
