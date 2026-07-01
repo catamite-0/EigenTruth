@@ -6721,6 +6721,26 @@ required inputs carry that exact input name, such as
 now carries input and placeholder review records with those suggestions, but its
 actual `inputs` and `command_template_values` remain deliberately empty so
 feeding it directly to the binder remains `needs_inputs`.
+Optionally stage the purely mechanical suggestions into partial commands before
+review:
+
+```bash
+python benchmarks/stage_frontier_research_queue_binding_suggestions.py \
+  --scaffold artifacts/frontier-research-queue-binding-scaffold.json \
+  --bindings-json artifacts/frontier-research-queue-staged-command-bindings.json \
+  --artifact-manifest artifacts/frontier-research-queue-staged-command-bindings-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-staged-command-bindings \
+  --version 0.1
+```
+
+The staging step copies only suggestions that do not carry
+`review_required=true` into `bound_commands`. Required source-backed inputs,
+upstream child-output references, and placeholders without safe suggestions
+remain as `...`, and every entry keeps `review_status=needs_review`; the binder
+still reports remaining input/placeholder gaps where present, and the runner
+still blocks real execution until a reviewer supplies the remaining values and
+marks the entry reviewed or approved.
 After review, fill either ordered `command_template_values` or full
 `bound_commands` through that sidecar:
 

@@ -188,6 +188,7 @@ def _scaffold_entry(
         "command_status": str(entry.get("command_status") or "unknown"),
         "evidence_routes": _string_tuple(entry.get("evidence_routes", ())),
         "source_gap_ids": _string_tuple(entry.get("source_gap_ids", ())),
+        "command_templates": command_templates,
         "required_inputs": required_inputs,
         "command_requirements": command_requirements,
         "placeholder_records": tuple(placeholder_records),

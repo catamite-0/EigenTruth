@@ -32407,6 +32407,118 @@ def test_frontier_research_queue_binding_scaffold_knows_promotion_metric_command
     )
 
 
+def test_frontier_research_queue_binding_suggestion_stager_partially_binds_safe_values(
+    tmp_path,
+):
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    scaffold_module = importlib.import_module(
+        "benchmarks.scaffold_frontier_research_queue_bindings"
+    )
+    stage_module = importlib.import_module(
+        "benchmarks.stage_frontier_research_queue_binding_suggestions"
+    )
+    bind_module = importlib.import_module(
+        "benchmarks.bind_frontier_research_queue_command_plan"
+    )
+    registry_module = importlib.import_module("eigentruth.registry")
+    plan_path = tmp_path / "frontier-research-command-plan.json"
+    scaffold_path = tmp_path / "frontier-research-binding-scaffold.json"
+    staged_bindings_path = tmp_path / "frontier-research-staged-bindings.json"
+    staged_manifest_path = tmp_path / "frontier-research-staged-bindings-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    plan_module.build_frontier_research_queue_command_plan(
+        source={
+            "workflow": "evidence_gap_plan",
+            "actions": (
+                {
+                    "action_id": "stage_safe_frontier_bindings",
+                    "suggested_commands": (
+                        "benchmarks/run_source_family_citation_search_workflow.py "
+                        "--queue artifacts/queue.json "
+                        "--source-catalog artifacts/catalog.jsonl "
+                        "--scores artifacts/scores.json "
+                        "--blind-spots artifacts/blind-spots.json "
+                        "--output-dir ... --workflow-report ... "
+                        "--artifact-manifest ... --registry ... --name ... --version ...",
+                        "benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py "
+                        "--input-tasks artifacts/rule-input-tasks.jsonl "
+                        "--numeric-bindings ... --output-dir ... --json ... "
+                        "--rule-inputs-jsonl ... --artifact-manifest ... "
+                        "--registry ... --name ... --version ...",
+                    ),
+                    "metadata": {
+                        "required_inputs": ("source_backed_numeric_bindings",),
+                        "closure_outputs": (
+                            "citation_workflow_report",
+                            "numeric_rule_fill_report",
+                        ),
+                    },
+                },
+            ),
+        },
+        json_path=plan_path,
+    )
+    scaffold = scaffold_module.scaffold_frontier_research_queue_bindings(
+        command_plan=plan_path,
+        json_path=scaffold_path,
+        registry_output_path=tmp_path / "review-registry.json",
+    )
+
+    staged = stage_module.stage_frontier_research_queue_binding_suggestions(
+        scaffold=scaffold_path,
+        bindings_json_path=staged_bindings_path,
+        artifact_manifest_path=staged_manifest_path,
+        registry_path=registry_path,
+        name="frontier-research-staged-bindings",
+        version="0.1",
+    )
+    bound = bind_module.build_frontier_research_queue_bound_command_plan(
+        command_plan=plan_path,
+        bindings=staged_bindings_path,
+    )
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:frontier-research-staged-bindings:0.1"
+    )
+
+    binding = staged["bindings"]["stage_safe_frontier_bindings"]
+    assert scaffold["entries"][0]["command_templates"][0].startswith(
+        "benchmarks/run_source_family_citation_search_workflow.py"
+    )
+    assert staged["workflow"] == "frontier_research_queue_command_bindings"
+    assert staged["generated_by"] == "frontier_research_queue_binding_suggestion_staging"
+    assert staged["status"] == "needs_review"
+    assert staged["inputs"] == {}
+    assert staged["staging_summary"]["placeholder_count"] == 14
+    assert staged["staging_summary"]["staged_placeholder_count"] == 13
+    assert staged["staging_summary"]["remaining_placeholder_count"] == 1
+    assert staged["staging_summary"]["review_required_placeholder_count"] == 1
+    assert binding["review_status"] == "needs_review"
+    assert binding["command_template_values"] == ()
+    assert "..." not in binding["bound_commands"][0]
+    assert "--output-dir artifacts/stage-safe-frontier-bindings/command-1" in (
+        binding["bound_commands"][0]
+    )
+    assert "--numeric-bindings ..." in binding["bound_commands"][1]
+    assert "--output-dir artifacts/stage-safe-frontier-bindings/command-2" in (
+        binding["bound_commands"][1]
+    )
+    assert binding["placeholder_reviews"][6]["stage_status"] == "needs_review"
+    assert binding["placeholder_reviews"][7]["stage_status"] == "staged"
+    assert bound["status"] == "needs_inputs"
+    assert bound["entries"][0]["binding_review_status"] == "needs_review"
+    assert bound["summary"]["bound_placeholder_count"] == 0
+    assert bound["summary"]["unbound_placeholder_count"] == 1
+    assert bound["entries"][0]["unbound_inputs"] == (
+        "source_backed_numeric_bindings",
+        "bound_command_template_values",
+    )
+    assert registry_module.load_and_verify_artifact_manifest(staged_manifest_path).passed is True
+    assert record.metadata["workflow"] == (
+        "frontier_research_queue_binding_suggestion_staging"
+    )
+    assert record.metadata["staged_placeholder_count"] == 13
+
+
 def test_frontier_research_queue_bound_plan_requires_runtime_baseline_flag(tmp_path):
     plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
     bind_module = importlib.import_module(
