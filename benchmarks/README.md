@@ -4727,12 +4727,21 @@ python benchmarks/run_verifier_signal_fusion_workflow.py \
   --output-dir artifacts/tiny_fact_selfcheck_signal_fusion \
   --enable-fact-selfcheck \
   --fact-selfcheck-min-samples 2 \
+  --fact-selfcheck-gate \
   --keep-signals truth_proj,subspace_resid,eigenscore \
   --fusion-signals truth_proj,subspace_resid,eigenscore,fact_selfcheck_refute_rate,fact_selfcheck_uncovered_rate,fact_selfcheck_disagreement \
   --geometry-signals truth_proj,subspace_resid,eigenscore \
   --uncertainty-signals fact_selfcheck_refute_rate,fact_selfcheck_uncovered_rate,fact_selfcheck_disagreement \
   --alphas 0.05,0.1,0.2
 ```
+
+`--fact-selfcheck-gate` is a promotion gate, not a verifier requirement. It
+adds `fact_selfcheck_evidence_gate` to the workflow report and manifest
+metadata, blocking promotion when fact-level samples have too few executed
+records, too few supported/refuted decisions, too many `not_applicable` rows,
+or too little claim/sample triple coverage. Leave it off for exploratory
+debugging runs; turn it on when the artifact is meant to support a release or
+baseline comparison.
 
 When the question is whether sampled responses are useful as calibrated
 diagnostic signals by themselves, `build_selfcheck_signal_score_dump.py` skips
@@ -7884,7 +7893,9 @@ sampler provides aligned self-consistency responses. Add
 `--enable-fact-selfcheck` when those responses also carry extractable
 fact triples or sample-level `triples` metadata; the workflow tries fact-level
 consistency before the sentence-overlap selfcheck fallback and carries
-`fact_selfcheck_*` score columns into the same fusion report.
+`fact_selfcheck_*` score columns into the same fusion report. Add
+`--fact-selfcheck-gate` when weak fact-level sample coverage should block
+promotion instead of only appearing as diagnostics.
 
 The workflow is intentionally post-hoc and dependency-free. It is the preferred
 entry point when testing whether local retrieval and self-consistency evidence

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 import time
 from contextlib import contextmanager
@@ -119,6 +120,12 @@ class VerifierSignalFusionWorkflowConfig:
     fact_selfcheck_support_threshold: float | None = None
     fact_selfcheck_refute_threshold: float | None = None
     fact_selfcheck_max_samples: int | None = None
+    fact_selfcheck_gate: bool = False
+    fact_selfcheck_gate_min_executed_rate: float = 0.50
+    fact_selfcheck_gate_min_decided_rate: float = 0.50
+    fact_selfcheck_gate_max_not_applicable_rate: float = 0.25
+    fact_selfcheck_gate_min_claim_triples_per_record: float = 0.50
+    fact_selfcheck_gate_min_sample_triples_per_record: float = 1.00
     staged_verification: bool = False
     staged_alpha: float = 0.10
     min_world_model_confidence: float = 0.0
@@ -188,6 +195,19 @@ class VerifierSignalFusionWorkflowConfig:
             and self.fact_selfcheck_max_samples < self.fact_selfcheck_min_samples
         ):
             raise ValueError("fact_selfcheck_max_samples must be >= fact_selfcheck_min_samples when both are set.")
+        if not isinstance(self.fact_selfcheck_gate, bool):
+            raise ValueError("fact_selfcheck_gate must be a bool.")
+        for name in (
+            "fact_selfcheck_gate_min_executed_rate",
+            "fact_selfcheck_gate_min_decided_rate",
+            "fact_selfcheck_gate_max_not_applicable_rate",
+        ):
+            object.__setattr__(self, name, _unit_interval(getattr(self, name), name=name))
+        for name in (
+            "fact_selfcheck_gate_min_claim_triples_per_record",
+            "fact_selfcheck_gate_min_sample_triples_per_record",
+        ):
+            object.__setattr__(self, name, _non_negative_float(getattr(self, name), name=name))
         if self.retriever_backend not in RETRIEVER_BACKENDS:
             raise ValueError(f"retriever_backend must be one of: {', '.join(RETRIEVER_BACKENDS)}.")
         if self.retriever_backend == "memory" and self.retriever_index_path is not None:
@@ -293,6 +313,7 @@ def run_verifier_signal_fusion_workflow(
         )
     with _profile_phase(profile, "write_verifier_report"):
         _write_json(config.verifier_report_path, verifier_report, compact=config.compact_json)
+    fact_selfcheck_gate = _fact_selfcheck_evidence_gate(config, verifier_report)
 
     enhanced_score_dumps: list[tuple[str, Path]] = []
     enhanced_reports: dict[str, str] = {}
@@ -359,6 +380,7 @@ def run_verifier_signal_fusion_workflow(
         verifier_report=verifier_report,
         score_ensemble_report=score_ensemble_report,
         geometry_artifacts=geometry_artifacts,
+        fact_selfcheck_gate=fact_selfcheck_gate,
         profile=profile,
         total_seconds=time.perf_counter() - started,
     )
@@ -400,6 +422,7 @@ def run_verifier_signal_fusion_workflow(
         "claims_summary": None if claims_fixture is None else claims_fixture.get("summary"),
         "verifier_summary": _verifier_summary(verifier_report),
         "fact_selfcheck_summary": verifier_report.get("fact_selfcheck_verifier"),
+        "fact_selfcheck_evidence_gate": fact_selfcheck_gate,
         "fusion_summary": _fusion_summary(score_ensemble_report),
         "manifest_summary": manifest.get("summary"),
         "manifest_verification": manifest_verification,
@@ -666,6 +689,7 @@ def _manifest_metadata(
     verifier_report: Mapping[str, Any],
     score_ensemble_report: Mapping[str, Any],
     geometry_artifacts: Mapping[str, str],
+    fact_selfcheck_gate: Mapping[str, Any],
     profile: Mapping[str, float],
     total_seconds: float,
 ) -> dict[str, Any]:
@@ -685,6 +709,7 @@ def _manifest_metadata(
         "claims_summary": claims_summary,
         "verifier_summary": verifier_summary,
         "fact_selfcheck_summary": verifier_report.get("fact_selfcheck_verifier"),
+        "fact_selfcheck_evidence_gate": dict(fact_selfcheck_gate),
         "fusion_summary": fusion_summary,
         "geometry_artifact_count": len(geometry_artifacts),
         "uses_non_oracle_local_corpus": bool(config.corpus_paths),
@@ -703,6 +728,221 @@ def _manifest_metadata(
         "profile": dict(profile),
         "total_seconds": float(total_seconds),
     }
+
+
+def _fact_selfcheck_gate_config(config: VerifierSignalFusionWorkflowConfig) -> dict[str, Any]:
+    return {
+        "enabled": bool(config.fact_selfcheck_gate),
+        "min_executed_rate": float(config.fact_selfcheck_gate_min_executed_rate),
+        "min_decided_rate": float(config.fact_selfcheck_gate_min_decided_rate),
+        "max_not_applicable_rate": float(config.fact_selfcheck_gate_max_not_applicable_rate),
+        "min_claim_triples_per_record": float(config.fact_selfcheck_gate_min_claim_triples_per_record),
+        "min_sample_triples_per_record": float(config.fact_selfcheck_gate_min_sample_triples_per_record),
+    }
+
+
+def _fact_selfcheck_evidence_gate(
+    config: VerifierSignalFusionWorkflowConfig,
+    verifier_report: Mapping[str, Any],
+) -> dict[str, Any]:
+    thresholds = _fact_selfcheck_gate_config(config)
+    if not config.fact_selfcheck_gate:
+        return {
+            "schema_version": 1,
+            "report_type": "fact_selfcheck_evidence_gate",
+            "enabled": False,
+            "status": "disabled",
+            "passed": None,
+            "thresholds": thresholds,
+            "runs": {},
+            "failed_runs": [],
+            "blocking_reasons": [],
+            "recommendation": "enable fact_selfcheck_gate when fact-level sampling evidence should block promotion",
+        }
+
+    runs = {}
+    failed_runs = []
+    blocking_reasons = []
+    for run in verifier_report.get("runs", ()):
+        if not isinstance(run, Mapping):
+            continue
+        run_name = str(run.get("name", "unnamed"))
+        run_report = _fact_selfcheck_run_gate(run_name, run, thresholds)
+        runs[run_name] = run_report
+        if not run_report["passed"]:
+            failed_runs.append(run_name)
+            blocking_reasons.extend(
+                f"{run_name}.{failure['metric']} {failure['rule']} failed: "
+                f"value={failure['value']!r}, threshold={failure['threshold']!r}"
+                for failure in run_report["failures"]
+            )
+    if not runs:
+        blocking_reasons.append("verifier report did not contain any runs")
+
+    passed = bool(runs) and not failed_runs
+    return {
+        "schema_version": 1,
+        "report_type": "fact_selfcheck_evidence_gate",
+        "enabled": True,
+        "status": "promote" if passed else "blocked",
+        "passed": passed,
+        "thresholds": thresholds,
+        "runs": runs,
+        "failed_runs": failed_runs,
+        "blocking_reasons": blocking_reasons,
+        "recommendation": (
+            "fact-level selfcheck evidence has enough structured sample coverage for calibrated replay"
+            if passed else
+            "collect aligned sampled responses with claim/sample triples before promoting fact-selfcheck signals"
+        ),
+    }
+
+
+def _fact_selfcheck_run_gate(
+    run_name: str,
+    run: Mapping[str, Any],
+    thresholds: Mapping[str, Any],
+) -> dict[str, Any]:
+    summary = _mapping(run.get("fact_selfcheck_verifier"))
+    n_total = int(_number(run.get("n_total"), default=0.0))
+    executed = int(_number(summary.get("executed_records"), default=0.0))
+    decided = int(_number(summary.get("decided_records"), default=0.0))
+    not_applicable = int(_number(summary.get("not_applicable_records"), default=0.0))
+    claim_triples = int(_number(summary.get("claim_triple_count"), default=0.0))
+    sample_triples = int(_number(summary.get("sample_triple_count"), default=0.0))
+    executed_rate = _safe_ratio(executed, n_total)
+    decided_rate = _safe_ratio(decided, n_total)
+    decided_given_executed_rate = _safe_ratio(decided, executed)
+    not_applicable_rate = _safe_ratio(not_applicable, n_total)
+    claim_triples_per_record = _safe_ratio(claim_triples, n_total)
+    sample_triples_per_record = _safe_ratio(sample_triples, n_total)
+
+    failures = []
+    if not summary.get("requested"):
+        failures.append(_gate_failure("requested", False, True, "value is true"))
+    if not summary.get("enabled"):
+        failures.append(_gate_failure("enabled", False, True, "value is true"))
+    if n_total <= 0:
+        failures.append(_gate_failure("n_total", n_total, 1, "value >= threshold"))
+    _add_threshold_failure(
+        failures,
+        "executed_rate",
+        executed_rate,
+        float(thresholds["min_executed_rate"]),
+        rule="value >= threshold",
+    )
+    _add_threshold_failure(
+        failures,
+        "decided_rate",
+        decided_rate,
+        float(thresholds["min_decided_rate"]),
+        rule="value >= threshold",
+    )
+    _add_threshold_failure(
+        failures,
+        "not_applicable_rate",
+        not_applicable_rate,
+        float(thresholds["max_not_applicable_rate"]),
+        rule="value <= threshold",
+        upper_bound=True,
+    )
+    _add_threshold_failure(
+        failures,
+        "claim_triples_per_record",
+        claim_triples_per_record,
+        float(thresholds["min_claim_triples_per_record"]),
+        rule="value >= threshold",
+    )
+    _add_threshold_failure(
+        failures,
+        "sample_triples_per_record",
+        sample_triples_per_record,
+        float(thresholds["min_sample_triples_per_record"]),
+        rule="value >= threshold",
+    )
+    return {
+        "name": run_name,
+        "passed": not failures,
+        "status": "pass" if not failures else "fail",
+        "failures": failures,
+        "n_total": n_total,
+        "executed_records": executed,
+        "decided_records": decided,
+        "not_applicable_records": not_applicable,
+        "claim_triple_count": claim_triples,
+        "sample_triple_count": sample_triples,
+        "executed_rate": executed_rate,
+        "decided_rate": decided_rate,
+        "decided_given_executed_rate": decided_given_executed_rate,
+        "not_applicable_rate": not_applicable_rate,
+        "claim_triples_per_record": claim_triples_per_record,
+        "sample_triples_per_record": sample_triples_per_record,
+    }
+
+
+def _add_threshold_failure(
+    failures: list[dict[str, Any]],
+    metric: str,
+    value: float,
+    threshold: float,
+    *,
+    rule: str,
+    upper_bound: bool = False,
+) -> None:
+    failed = value > threshold if upper_bound else value < threshold
+    if failed:
+        failures.append(_gate_failure(metric, value, threshold, rule))
+
+
+def _gate_failure(metric: str, value: Any, threshold: Any, rule: str) -> dict[str, Any]:
+    return {"metric": metric, "value": value, "threshold": threshold, "rule": rule}
+
+
+def _safe_ratio(numerator: int | float, denominator: int | float) -> float:
+    denominator = float(denominator)
+    if denominator <= 0.0:
+        return 0.0
+    return float(numerator) / denominator
+
+
+def _number(value: Any, *, default: Any) -> float:
+    if isinstance(value, bool):
+        return float(default)
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return float(default)
+    return numeric if math.isfinite(numeric) else float(default)
+
+
+def _mapping(value: Any) -> Mapping[str, Any]:
+    return value if isinstance(value, Mapping) else {}
+
+
+def _unit_interval(value: Any, *, name: str) -> float:
+    numeric = _finite_float(value, name=name)
+    if not (0.0 <= numeric <= 1.0):
+        raise ValueError(f"{name} must be in [0, 1].")
+    return numeric
+
+
+def _non_negative_float(value: Any, *, name: str) -> float:
+    numeric = _finite_float(value, name=name)
+    if numeric < 0.0:
+        raise ValueError(f"{name} must be >= 0.")
+    return numeric
+
+
+def _finite_float(value: Any, *, name: str) -> float:
+    if isinstance(value, bool):
+        raise ValueError(f"{name} must be a finite number, not bool.")
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite number.") from exc
+    if not math.isfinite(numeric):
+        raise ValueError(f"{name} must be finite.")
+    return numeric
 
 
 def _verifier_summary(report: Mapping[str, Any]) -> dict[str, Any]:
@@ -790,6 +1030,7 @@ def _config_payload(config: VerifierSignalFusionWorkflowConfig) -> dict[str, Any
             "refute_threshold": config.fact_selfcheck_refute_threshold,
             "max_samples": config.fact_selfcheck_max_samples,
         },
+        "fact_selfcheck_gate": _fact_selfcheck_gate_config(config),
         "staged_verification": bool(config.staged_verification),
         "staged_alpha": float(config.staged_alpha),
         "min_world_model_confidence": float(config.min_world_model_confidence),
@@ -932,6 +1173,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         fact_selfcheck_support_threshold=args.fact_selfcheck_support_threshold,
         fact_selfcheck_refute_threshold=args.fact_selfcheck_refute_threshold,
         fact_selfcheck_max_samples=args.fact_selfcheck_max_samples,
+        fact_selfcheck_gate=bool(args.fact_selfcheck_gate),
+        fact_selfcheck_gate_min_executed_rate=args.fact_selfcheck_gate_min_executed_rate,
+        fact_selfcheck_gate_min_decided_rate=args.fact_selfcheck_gate_min_decided_rate,
+        fact_selfcheck_gate_max_not_applicable_rate=args.fact_selfcheck_gate_max_not_applicable_rate,
+        fact_selfcheck_gate_min_claim_triples_per_record=args.fact_selfcheck_gate_min_claim_triples_per_record,
+        fact_selfcheck_gate_min_sample_triples_per_record=args.fact_selfcheck_gate_min_sample_triples_per_record,
         staged_verification=args.staged_verification,
         staged_alpha=args.staged_alpha,
         min_world_model_confidence=args.min_world_model_confidence,
@@ -1012,6 +1259,13 @@ def main() -> None:
                         help="optional fact-level refute threshold; defaults to --selfcheck-refute-threshold")
     parser.add_argument("--fact-selfcheck-max-samples", type=int, default=None,
                         help="optional fact-level sample cap; defaults to --selfcheck-max-samples")
+    parser.add_argument("--fact-selfcheck-gate", action="store_true",
+                        help="block workflow promotion when fact-level sample/triple coverage is too weak")
+    parser.add_argument("--fact-selfcheck-gate-min-executed-rate", type=float, default=0.50)
+    parser.add_argument("--fact-selfcheck-gate-min-decided-rate", type=float, default=0.50)
+    parser.add_argument("--fact-selfcheck-gate-max-not-applicable-rate", type=float, default=0.25)
+    parser.add_argument("--fact-selfcheck-gate-min-claim-triples-per-record", type=float, default=0.50)
+    parser.add_argument("--fact-selfcheck-gate-min-sample-triples-per-record", type=float, default=1.00)
     parser.add_argument("--staged-verification", action="store_true")
     parser.add_argument("--staged-alpha", type=float, default=0.10)
     parser.add_argument("--min-world-model-confidence", type=float, default=0.0)

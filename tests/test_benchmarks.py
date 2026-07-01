@@ -51386,6 +51386,7 @@ def test_run_verifier_signal_fusion_workflow_enables_fact_selfcheck_signals(tmp_
             best_alpha=0.2,
             enable_fact_selfcheck=True,
             fact_selfcheck_min_samples=2,
+            fact_selfcheck_gate=True,
             fusion_signals=(
                 "truth_proj",
                 "subspace_resid",
@@ -51421,7 +51422,11 @@ def test_run_verifier_signal_fusion_workflow_enables_fact_selfcheck_signals(tmp_
     ]
 
     assert payload["config"]["fact_selfcheck"]["enabled"] is True
+    assert payload["config"]["fact_selfcheck_gate"]["enabled"] is True
     assert payload["fact_selfcheck_summary"]["enabled"] is True
+    assert payload["fact_selfcheck_evidence_gate"]["passed"] is True
+    assert payload["fact_selfcheck_evidence_gate"]["status"] == "promote"
+    assert payload["fact_selfcheck_evidence_gate"]["runs"]["synthetic"]["decided_rate"] == pytest.approx(1.0)
     assert payload["claims_summary"]["records_with_samples"] == len(labels)
     assert claims["records"][0]["claim_triples"] == [triple("Entity0", "status", "true")]
     assert verifier_report["runs"][0]["fact_selfcheck_verifier"]["executed_records"] == len(labels)
@@ -51430,6 +51435,85 @@ def test_run_verifier_signal_fusion_workflow_enables_fact_selfcheck_signals(tmp_
     assert enhanced.scores["fact_selfcheck_refute_rate"][-1] == pytest.approx(1.0)
     assert verified_records[0]["record"]["route"]["selected_verifier"] == "FactSelfConsistencyVerifier"
     assert (output_dir / "synthetic-geometry-fusion-artifact.json").exists()
+
+
+def test_run_verifier_signal_fusion_workflow_blocks_weak_fact_selfcheck_evidence(tmp_path):
+    module = importlib.import_module("benchmarks.run_verifier_signal_fusion_workflow")
+
+    scores_path = tmp_path / "scores.json"
+    samples_path = tmp_path / "samples.json"
+    output_dir = tmp_path / "workflow"
+    labels = [0] * 12 + [1] * 8
+    statements = []
+    sample_rows = []
+    truth_proj = []
+    for idx, label in enumerate(labels):
+        statements.append({
+            "claim_id": f"c{idx}",
+            "question": f"Can record {idx} be resolved?",
+            "answer": f"Opaque record {idx}.",
+            "text": f"Opaque record {idx}.",
+        })
+        sample_rows.append([
+            f"unstructured sample {idx}-a",
+            f"unstructured sample {idx}-b",
+        ])
+        truth_proj.append(float(idx % 3 if label == 0 else 8 + idx % 3))
+
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -4},
+            "labels": labels,
+            "scores": {"truth_proj": truth_proj},
+            "statements": statements,
+        }),
+        encoding="utf-8",
+    )
+    samples_path.write_text(json.dumps(sample_rows), encoding="utf-8")
+
+    payload = module.run_verifier_signal_fusion_workflow(
+        module.VerifierSignalFusionWorkflowConfig(
+            score_dumps=(("synthetic", scores_path),),
+            output_dir=output_dir,
+            sample_paths=(samples_path,),
+            signal="truth_proj",
+            alphas=(0.2,),
+            repeats=2,
+            seed=0,
+            best_alpha=0.2,
+            enable_fact_selfcheck=True,
+            fact_selfcheck_gate=True,
+            fact_selfcheck_gate_min_executed_rate=1.0,
+            fact_selfcheck_gate_min_decided_rate=0.9,
+            fact_selfcheck_gate_max_not_applicable_rate=0.1,
+            fact_selfcheck_gate_min_claim_triples_per_record=0.5,
+            fact_selfcheck_gate_min_sample_triples_per_record=1.0,
+            fusion_signals=("truth_proj", "fact_selfcheck_not_applicable"),
+            methods=("mean_rank",),
+            geometry_signals=(),
+            uncertainty_signals=(),
+            include_label_metadata=False,
+        )
+    )
+    gate = payload["fact_selfcheck_evidence_gate"]
+    run_gate = gate["runs"]["synthetic"]
+
+    assert gate["passed"] is False
+    assert gate["status"] == "blocked"
+    assert "synthetic" in gate["failed_runs"]
+    assert run_gate["executed_rate"] == pytest.approx(1.0)
+    assert run_gate["decided_rate"] == pytest.approx(0.0)
+    assert run_gate["not_applicable_rate"] == pytest.approx(1.0)
+    assert run_gate["claim_triples_per_record"] == pytest.approx(0.0)
+    assert {
+        failure["metric"]
+        for failure in run_gate["failures"]
+    } >= {
+        "decided_rate",
+        "not_applicable_rate",
+        "claim_triples_per_record",
+        "sample_triples_per_record",
+    }
 
 
 def test_world_model_signal_calibration_workflow_builds_manifest_and_registry(tmp_path):
