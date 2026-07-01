@@ -1359,7 +1359,10 @@ Added the first monitor-first tool-selection audit layer:
   into a review scaffold plus deliberately empty bindings skeleton. On the
   current default refreshed queue it surfaces `53` ordered placeholders and
   `10` required inputs, with safe suggestions for outputs/manifests/registry
-  metadata while keeping direct binder output at `needs_inputs`.
+  metadata and shared command-requirement summaries while keeping direct binder
+  output at `needs_inputs`. The abstention participation scaffold now surfaces
+  the missing `--scores`/`--signal-groups` planner flags and missing
+  `--scores`/`--signals` stability-eval flags before binding review.
 - `bind_frontier_research_queue_command_plan.py` and
   `run_frontier_research_queue_bound_command_plan.py` add the next handoff
   layer: reviewed bindings can turn that queue into a ready bound plan, and the

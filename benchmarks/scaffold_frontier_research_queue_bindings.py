@@ -16,6 +16,9 @@ if str(ROOT) not in sys.path:
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from benchmarks.frontier_research_command_requirements import (  # noqa: E402
+    frontier_command_requirement_summary,
+)
 from eigentruth.json_utils import strict_json_dumps  # noqa: E402
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
 
@@ -128,6 +131,7 @@ def scaffold_frontier_research_queue_bindings(
                 "required_input_count": summary["required_input_count"],
                 "placeholder_count": summary["placeholder_count"],
                 "suggested_binding_count": summary["suggested_binding_count"],
+                "command_requirement_issue_count": summary["command_requirement_issue_count"],
                 "manifest_summary": {} if manifest is None else manifest.get("summary", {}),
                 **dict(metadata or {}),
             },
@@ -144,6 +148,15 @@ def _scaffold_entry(
     action_id = str(entry.get("action_id") or entry.get("entry_id") or "frontier-action")
     planned_outputs = tuple(_mapping_sequence(entry.get("planned_outputs", ())))
     command_templates = _string_tuple(entry.get("command_templates", ()))
+    required_input_names = _string_tuple(entry.get("required_inputs", ()))
+    command_requirements = tuple(
+        frontier_command_requirement_summary(
+            command,
+            index=command_index,
+            required_inputs=required_input_names,
+        )
+        for command_index, command in enumerate(command_templates, start=1)
+    )
     placeholder_records = []
     output_index = 0
     for command_index, command in enumerate(command_templates, start=1):
@@ -163,8 +176,9 @@ def _scaffold_entry(
             "status": "unbound",
             "suggested_binding": _input_suggestion(name),
         }
-        for name in _string_tuple(entry.get("required_inputs", ()))
+        for name in required_input_names
     )
+    command_requirement_issue_count = _command_requirement_issue_count(command_requirements)
     return {
         "entry_id": str(entry.get("entry_id") or action_id),
         "action_id": action_id,
@@ -174,6 +188,7 @@ def _scaffold_entry(
         "evidence_routes": _string_tuple(entry.get("evidence_routes", ())),
         "source_gap_ids": _string_tuple(entry.get("source_gap_ids", ())),
         "required_inputs": required_inputs,
+        "command_requirements": command_requirements,
         "placeholder_records": tuple(placeholder_records),
         "binding_summary": {
             "required_input_count": len(required_inputs),
@@ -182,6 +197,7 @@ def _scaffold_entry(
             "suggested_binding_count": sum(
                 1 for record in placeholder_records if record.get("suggested_binding")
             ),
+            "command_requirement_issue_count": command_requirement_issue_count,
         },
     }
 
@@ -309,6 +325,12 @@ def _bindings_sidecar(
                 "required_inputs": tuple(
                     item["name"] for item in _mapping_sequence(entry.get("required_inputs", ()))
                 ),
+                "command_requirements": tuple(
+                    _mapping_sequence(entry.get("command_requirements", ()))
+                ),
+                "command_requirement_issue_count": _int_or_zero(
+                    _nested(entry, "binding_summary", "command_requirement_issue_count")
+                ),
                 "placeholder_count": _int_or_zero(
                     _nested(entry, "binding_summary", "placeholder_count")
                 ),
@@ -331,6 +353,10 @@ def _summary(entries: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         ),
         "suggested_binding_count": sum(
             _int_or_zero(_nested(entry, "binding_summary", "suggested_binding_count"))
+            for entry in entries
+        ),
+        "command_requirement_issue_count": sum(
+            _int_or_zero(_nested(entry, "binding_summary", "command_requirement_issue_count"))
             for entry in entries
         ),
         "action_ids": tuple(str(entry.get("action_id") or "") for entry in entries),
@@ -373,6 +399,11 @@ def _write_manifest(
             "required_input_count": _nested(payload, "summary", "required_input_count"),
             "placeholder_count": _nested(payload, "summary", "placeholder_count"),
             "suggested_binding_count": _nested(payload, "summary", "suggested_binding_count"),
+            "command_requirement_issue_count": _nested(
+                payload,
+                "summary",
+                "command_requirement_issue_count",
+            ),
             **dict(metadata),
         },
     )
@@ -394,6 +425,14 @@ def _mapping_sequence(value: Any) -> tuple[Mapping[str, Any], ...]:
     if not isinstance(value, Sequence) or isinstance(value, (str, bytes, bytearray)):
         return ()
     return tuple(item for item in value if isinstance(item, Mapping))
+
+
+def _command_requirement_issue_count(requirements: Sequence[Mapping[str, Any]]) -> int:
+    count = 0
+    for requirement in requirements:
+        count += len(_string_tuple(requirement.get("missing_required_flags")))
+        count += len(_mapping_sequence(requirement.get("missing_required_input_flags")))
+    return count
 
 
 def _string_tuple(value: Any) -> tuple[str, ...]:

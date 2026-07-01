@@ -31822,6 +31822,70 @@ def test_frontier_research_queue_binding_scaffold_keeps_values_unbound(tmp_path)
     assert record.metadata["placeholder_count"] == 6
 
 
+def test_frontier_research_queue_binding_scaffold_reports_command_requirements(tmp_path):
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    scaffold_module = importlib.import_module(
+        "benchmarks.scaffold_frontier_research_queue_bindings"
+    )
+    plan_path = tmp_path / "frontier-research-command-plan.json"
+    bindings_path = tmp_path / "frontier-research-command-bindings.json"
+    plan_module.build_frontier_research_queue_command_plan(
+        source={
+            "workflow": "evidence_gap_plan",
+            "actions": (
+                {
+                    "action_id": "improve_abstention_participation_gate",
+                    "suggested_commands": (
+                        "benchmarks/plan_frontier_abstention_evidence_reruns.py "
+                        "--source ... --json ...",
+                        "benchmarks/eval_abstention_stability.py --json ...",
+                        "benchmarks/rollup_frontier_abstention_evidence_reruns.py "
+                        "--queue ... --json ...",
+                    ),
+                    "metadata": {
+                        "required_inputs": (
+                            "frontier_release_report_or_evidence_gap_plan",
+                            "abstention_score_dump_paths",
+                            "abstention_signal_groups",
+                        ),
+                        "closure_outputs": (
+                            "abstention_rerun_queue",
+                            "abstention_stability_report",
+                            "abstention_rerun_rollup",
+                        ),
+                    },
+                },
+            ),
+        },
+        json_path=plan_path,
+    )
+
+    scaffold = scaffold_module.scaffold_frontier_research_queue_bindings(
+        command_plan=plan_path,
+        bindings_json_path=bindings_path,
+    )
+
+    requirements = scaffold["entries"][0]["command_requirements"]
+    bindings = json.loads(bindings_path.read_text(encoding="utf-8"))
+    binding = bindings["bindings"]["improve_abstention_participation_gate"]
+
+    assert scaffold["summary"]["command_requirement_issue_count"] == 4
+    assert scaffold["entries"][0]["binding_summary"]["command_requirement_issue_count"] == 4
+    assert requirements[0]["script"] == "benchmarks/plan_frontier_abstention_evidence_reruns.py"
+    assert requirements[0]["missing_required_input_flags"] == (
+        {"input": "abstention_score_dump_paths", "flag": "--scores"},
+        {"input": "abstention_signal_groups", "flag": "--signal-groups"},
+    )
+    assert requirements[1]["script"] == "benchmarks/eval_abstention_stability.py"
+    assert requirements[1]["missing_required_flags"] == ("--scores", "--signals")
+    assert requirements[2]["status"] == "ready"
+    assert binding["command_requirement_issue_count"] == 4
+    assert binding["command_requirements"][0]["missing_required_input_flags"] == [
+        {"input": "abstention_score_dump_paths", "flag": "--scores"},
+        {"input": "abstention_signal_groups", "flag": "--signal-groups"},
+    ]
+
+
 def _frontier_status_release_candidate() -> dict[str, Any]:
     return {
         "workflow": "release_candidate_comparison",

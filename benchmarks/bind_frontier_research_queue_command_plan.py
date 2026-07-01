@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import shlex
 import sys
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -32,16 +31,14 @@ from benchmarks.bind_runtime_drift_completion_plan import (  # noqa: E402
 from benchmarks.bind_runtime_drift_completion_plan import (  # noqa: E402
     _bound_summary as _base_bound_summary,
 )
+from benchmarks.frontier_research_command_requirements import (  # noqa: E402
+    validate_frontier_bound_commands,
+)
 from eigentruth.json_utils import strict_json_dumps  # noqa: E402
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
 
 COMMAND_PLAN_WORKFLOW = "frontier_research_queue_command_plan"
 WORKFLOW = "frontier_research_queue_bound_command_plan"
-REQUIRED_COMMAND_FLAGS = {
-    "benchmarks/eval_abstention_stability.py": ("--scores", "--signals", "--json"),
-    "benchmarks/plan_frontier_abstention_evidence_reruns.py": ("--source",),
-    "benchmarks/rollup_frontier_abstention_evidence_reruns.py": ("--queue", "--json"),
-}
 
 
 def build_frontier_research_queue_bound_command_plan(
@@ -158,7 +155,7 @@ def _bind_frontier_entry(
     bound["source_gap_ids"] = _string_tuple(entry.get("source_gap_ids", ()))
     if planned_outputs:
         bound["planned_outputs"] = planned_outputs
-    validation = _bound_command_validation(
+    validation = validate_frontier_bound_commands(
         _string_tuple(bound.get("bound_commands", ())),
         required_inputs=_string_tuple(entry.get("required_inputs", ())),
     )
@@ -192,95 +189,6 @@ def _frontier_bound_summary(entries: Sequence[Mapping[str, Any]]) -> dict[str, A
         for entry in entries
     )
     return summary
-
-
-def _bound_command_validation(
-    commands: Sequence[str],
-    *,
-    required_inputs: Sequence[str],
-) -> dict[str, Any]:
-    issues = []
-    for index, command in enumerate(commands, start=1):
-        issues.extend(_command_validation_issues(command, index=index))
-        issues.extend(
-            _required_input_command_issues(
-                command,
-                index=index,
-                required_inputs=required_inputs,
-            )
-        )
-    return {
-        "issue_count": len(issues),
-        "issues": tuple(issues),
-    }
-
-
-def _command_validation_issues(command: str, *, index: int) -> tuple[dict[str, Any], ...]:
-    if "..." in command:
-        return ()
-    try:
-        argv = tuple(shlex.split(command))
-    except ValueError:
-        return ()
-    script = _command_script(argv)
-    if script is None:
-        return ()
-    required_flags = REQUIRED_COMMAND_FLAGS.get(script)
-    if not required_flags:
-        return ()
-    missing = tuple(flag for flag in required_flags if flag not in argv)
-    if not missing:
-        return ()
-    return ({
-        "command_index": index,
-        "script": script,
-        "issue": "missing_required_cli_flags",
-        "missing_flags": missing,
-    },)
-
-
-def _required_input_command_issues(
-    command: str,
-    *,
-    index: int,
-    required_inputs: Sequence[str],
-) -> tuple[dict[str, Any], ...]:
-    if "..." in command or not required_inputs:
-        return ()
-    try:
-        argv = tuple(shlex.split(command))
-    except ValueError:
-        return ()
-    script = _command_script(argv)
-    if script != "benchmarks/plan_frontier_abstention_evidence_reruns.py":
-        return ()
-    required = set(required_inputs)
-    missing = []
-    if "abstention_score_dump_paths" in required and "--scores" not in argv:
-        missing.append("--scores")
-    if "abstention_signal_groups" in required and "--signal-groups" not in argv:
-        missing.append("--signal-groups")
-    if not missing:
-        return ()
-    return ({
-        "command_index": index,
-        "script": script,
-        "issue": "required_input_not_bound_to_command_flags",
-        "required_inputs": tuple(
-            item
-            for item in ("abstention_score_dump_paths", "abstention_signal_groups")
-            if item in required
-        ),
-        "missing_flags": tuple(missing),
-    },)
-
-
-def _command_script(argv: Sequence[str]) -> str | None:
-    for item in argv:
-        text = str(item)
-        if text.endswith(".py"):
-            return text
-    return None
 
 
 def _workflow_keys(metadata: Mapping[str, Any]) -> dict[str, str]:
