@@ -9,6 +9,7 @@ import shlex
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -39,6 +40,7 @@ def run_runtime_drift_bound_command_plan(
     python_executable: str = sys.executable,
     command_timeout_seconds: float | None = None,
     stop_on_failure: bool = True,
+    workers: int = 1,
     compact_json: bool = False,
     metadata: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -51,6 +53,9 @@ def run_runtime_drift_bound_command_plan(
         raise ValueError("dry_run must be a bool.")
     if not isinstance(stop_on_failure, bool):
         raise ValueError("stop_on_failure must be a bool.")
+    worker_count = _worker_count(workers)
+    if worker_count > 1 and stop_on_failure:
+        raise ValueError("workers > 1 requires stop_on_failure=False.")
     if artifact_manifest_path is not None and json_path is None:
         raise ValueError("artifact_manifest_path requires json_path.")
     if registry_path is not None and (not name or not version):
@@ -61,19 +66,15 @@ def run_runtime_drift_bound_command_plan(
         raise ValueError(f"bound_command_plan must have workflow={BOUND_PLAN_WORKFLOW!r}.")
     working_dir = Path(cwd) if cwd is not None else ROOT
     entries = tuple(_mapping_sequence(plan.get("entries", ())))
-    executed_entries = []
-    stop_requested = False
-    for entry in entries:
-        report_entry, stop_requested = _run_entry(
-            entry,
-            dry_run=dry_run,
-            cwd=working_dir,
-            python_executable=python_executable,
-            timeout=timeout,
-            stop_on_failure=stop_on_failure,
-            skip_remaining=stop_requested,
-        )
-        executed_entries.append(report_entry)
+    executed_entries = _run_entries(
+        entries,
+        dry_run=dry_run,
+        cwd=working_dir,
+        python_executable=python_executable,
+        timeout=timeout,
+        stop_on_failure=stop_on_failure,
+        workers=worker_count,
+    )
     summary = _summary(executed_entries)
     status = _status(summary=summary, dry_run=dry_run)
     output_path = None if json_path is None else Path(json_path)
@@ -98,6 +99,8 @@ def run_runtime_drift_bound_command_plan(
             "python_executable": str(python_executable),
             "command_timeout_seconds": timeout,
             "stop_on_failure": bool(stop_on_failure),
+            "workers": worker_count,
+            "execution_mode": "parallel" if worker_count > 1 else "sequential",
         },
         "entries": tuple(executed_entries),
         "metadata": dict(metadata or {}),
@@ -133,11 +136,97 @@ def run_runtime_drift_bound_command_plan(
                 "failed_count": summary["failed_count"],
                 "skipped_count": summary["skipped_count"],
                 "invalid_command_count": summary["invalid_command_count"],
+                "workers": worker_count,
+                "execution_mode": "parallel" if worker_count > 1 else "sequential",
                 "manifest_summary": {} if manifest is None else manifest.get("summary", {}),
                 **dict(metadata or {}),
             },
         ).save_json()
     return payload
+
+
+def _run_entries(
+    entries: Sequence[Mapping[str, Any]],
+    *,
+    dry_run: bool,
+    cwd: Path,
+    python_executable: str,
+    timeout: float | None,
+    stop_on_failure: bool,
+    workers: int,
+) -> tuple[dict[str, Any], ...]:
+    if workers <= 1:
+        return _run_entries_sequential(
+            entries,
+            dry_run=dry_run,
+            cwd=cwd,
+            python_executable=python_executable,
+            timeout=timeout,
+            stop_on_failure=stop_on_failure,
+        )
+    return _run_entries_parallel(
+        entries,
+        dry_run=dry_run,
+        cwd=cwd,
+        python_executable=python_executable,
+        timeout=timeout,
+        workers=workers,
+    )
+
+
+def _run_entries_sequential(
+    entries: Sequence[Mapping[str, Any]],
+    *,
+    dry_run: bool,
+    cwd: Path,
+    python_executable: str,
+    timeout: float | None,
+    stop_on_failure: bool,
+) -> tuple[dict[str, Any], ...]:
+    executed_entries = []
+    stop_requested = False
+    for entry in entries:
+        report_entry, stop_requested = _run_entry(
+            entry,
+            dry_run=dry_run,
+            cwd=cwd,
+            python_executable=python_executable,
+            timeout=timeout,
+            stop_on_failure=stop_on_failure,
+            skip_remaining=stop_requested,
+        )
+        executed_entries.append(report_entry)
+    return tuple(executed_entries)
+
+
+def _run_entries_parallel(
+    entries: Sequence[Mapping[str, Any]],
+    *,
+    dry_run: bool,
+    cwd: Path,
+    python_executable: str,
+    timeout: float | None,
+    workers: int,
+) -> tuple[dict[str, Any], ...]:
+    results: list[dict[str, Any] | None] = [None] * len(entries)
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        futures = {
+            executor.submit(
+                _run_entry,
+                entry,
+                dry_run=dry_run,
+                cwd=cwd,
+                python_executable=python_executable,
+                timeout=timeout,
+                stop_on_failure=False,
+                skip_remaining=False,
+            ): index
+            for index, entry in enumerate(entries)
+        }
+        for future in as_completed(futures):
+            index = futures[future]
+            results[index] = future.result()[0]
+    return tuple(result for result in results if result is not None)
 
 
 def _run_entry(
@@ -350,6 +439,8 @@ def _write_manifest(
             "executed_count": _nested_value(payload, "summary", "executed_count"),
             "failed_count": _nested_value(payload, "summary", "failed_count"),
             "invalid_command_count": _nested_value(payload, "summary", "invalid_command_count"),
+            "workers": _nested_value(payload, "config", "workers"),
+            "execution_mode": _nested_value(payload, "config", "execution_mode"),
             **dict(metadata),
         },
     )
@@ -373,6 +464,22 @@ def _timeout(value: float | None) -> float | None:
     parsed = float(value)
     if not math.isfinite(parsed) or parsed <= 0.0:
         raise ValueError("command_timeout_seconds must be positive and finite when set.")
+    return parsed
+
+
+def _worker_count(value: int) -> int:
+    if isinstance(value, bool):
+        raise ValueError("workers must be a positive integer.")
+    if isinstance(value, float) and not value.is_integer():
+        raise ValueError("workers must be a positive integer.")
+    if isinstance(value, str) and not value.strip().lstrip("+").isdigit():
+        raise ValueError("workers must be a positive integer.")
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("workers must be a positive integer.") from exc
+    if parsed < 1:
+        raise ValueError("workers must be a positive integer.")
     return parsed
 
 
@@ -422,6 +529,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--python", default=sys.executable, help="Python executable for .py commands")
     parser.add_argument("--command-timeout-seconds", type=float, default=None)
     parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        help="bounded parallel workers for independent entries; requires --continue-on-failure",
+    )
+    parser.add_argument(
         "--continue-on-failure",
         action="store_true",
         help="continue after a command failure instead of skipping remaining commands",
@@ -443,6 +556,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         python_executable=args.python,
         command_timeout_seconds=args.command_timeout_seconds,
         stop_on_failure=not bool(args.continue_on_failure),
+        workers=args.workers,
         compact_json=bool(args.compact_json),
     )
     if args.json is None:

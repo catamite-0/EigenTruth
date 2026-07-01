@@ -5962,7 +5962,10 @@ Once the bound plan is ready, `run_runtime_drift_bound_command_plan.py` turns it
 into an auditable run report. By default it is a dry-run: commands are parsed,
 Python benchmark scripts are normalized to the configured interpreter, expected
 outputs are summarized, and optional manifest/registry records are written, but
-no runtime evidence is generated until a reviewed caller adds `--execute`:
+no runtime evidence is generated until a reviewed caller adds `--execute`. For
+reviewed independent entries, add `--workers N --continue-on-failure` to execute
+several runtime-drift evidence tasks concurrently while preserving per-entry
+command order:
 
 ```bash
 python benchmarks/run_runtime_drift_bound_command_plan.py \

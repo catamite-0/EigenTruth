@@ -1240,8 +1240,10 @@ Added the first monitor-first tool-selection audit layer:
   can now convert the ready bound plan into a manifest/registry-backed
   `runtime_drift_bound_command_run_report`; it defaults to dry-run command
   parsing and expected-output summaries, with actual execution requiring an
-  explicit `--execute`. This preserves the fail-closed distinction between a
-  work plan, an execution report, and completed runtime evidence.
+  explicit `--execute`. Reviewed independent entries can use
+  `--workers N --continue-on-failure` for bounded parallel execution while
+  preserving per-entry command order. This preserves the fail-closed distinction
+  between a work plan, an execution report, and completed runtime evidence.
 - `ProductPromotionEvidenceAudit` now audits a deployable promotion contract
   before runtime-drift replay. `benchmarks/audit_product_promotion_contract_evidence.py`
   checks the exact `frontier_audit` evidence groups expected by drift gates:

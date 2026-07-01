@@ -1,6 +1,8 @@
 """Tests for release-evidence gap planning."""
 
 import json
+import shlex
+import sys
 from pathlib import Path
 
 from benchmarks.bind_runtime_drift_completion_plan import build_runtime_drift_bound_command_plan
@@ -2618,6 +2620,8 @@ def test_run_runtime_drift_bound_command_plan_dry_runs_ready_plan(tmp_path):
     assert saved["summary"] == payload["summary"]
     assert payload["status"] == "dry_run"
     assert payload["config"]["dry_run"] is True
+    assert payload["config"]["workers"] == 1
+    assert payload["config"]["execution_mode"] == "sequential"
     assert payload["summary"]["entry_count"] == 1
     assert payload["summary"]["command_count"] == 1
     assert payload["summary"]["dry_run_count"] == 1
@@ -2637,8 +2641,12 @@ def test_run_runtime_drift_bound_command_plan_dry_runs_ready_plan(tmp_path):
     assert manifest["artifacts"]["runtime_drift_bound_command_run_report"]["exists"] is True
     assert manifest["artifacts"]["runtime_drift_bound_command_plan"]["exists"] is True
     assert manifest["metadata"]["dry_run"] is True
+    assert manifest["metadata"]["workers"] == 1
+    assert manifest["metadata"]["execution_mode"] == "sequential"
     assert record.metadata["workflow"] == "runtime_drift_bound_command_run_report"
     assert record.metadata["dry_run"] is True
+    assert record.metadata["workers"] == 1
+    assert record.metadata["execution_mode"] == "sequential"
     assert record.metadata["dry_run_count"] == 1
     assert record.metadata["succeeded_count"] == 0
 
@@ -2668,6 +2676,84 @@ def test_run_runtime_drift_bound_command_plan_blocks_unbound_placeholder():
     assert payload["entries"][0]["execution_status"] == "failed"
     assert command["status"] == "invalid_command"
     assert command["error"] == "unbound_placeholder"
+
+
+def test_run_runtime_drift_bound_command_plan_parallel_executes_independent_entries(tmp_path):
+    script_path = tmp_path / "write_marker.py"
+    first_output = tmp_path / "first.txt"
+    second_output = tmp_path / "second.txt"
+    script_path.write_text(
+        "import sys\n"
+        "from pathlib import Path\n"
+        "Path(sys.argv[1]).write_text(sys.argv[2], encoding='utf-8')\n",
+        encoding="utf-8",
+    )
+
+    payload = run_runtime_drift_bound_command_plan(
+        bound_command_plan={
+            "schema_version": 1,
+            "workflow": "runtime_drift_evidence_bound_command_plan",
+            "status": "ready",
+            "entries": [
+                {
+                    "entry_id": "runtime-drift-0001",
+                    "action_id": "write_first",
+                    "title": "Write first marker",
+                    "command_status": "ready",
+                    "bound_commands": (
+                        f"{shlex.quote(str(script_path))} {shlex.quote(str(first_output))} first",
+                    ),
+                },
+                {
+                    "entry_id": "runtime-drift-0002",
+                    "action_id": "write_second",
+                    "title": "Write second marker",
+                    "command_status": "ready",
+                    "bound_commands": (
+                        f"{shlex.quote(str(script_path))} {shlex.quote(str(second_output))} second",
+                    ),
+                },
+            ],
+        },
+        dry_run=False,
+        stop_on_failure=False,
+        workers=2,
+        cwd=tmp_path,
+        python_executable=sys.executable,
+    )
+
+    first_command = payload["entries"][0]["commands"][0]
+    second_command = payload["entries"][1]["commands"][0]
+    assert payload["status"] == "succeeded"
+    assert payload["config"]["workers"] == 2
+    assert payload["config"]["execution_mode"] == "parallel"
+    assert payload["summary"]["entry_count"] == 2
+    assert payload["summary"]["command_count"] == 2
+    assert payload["summary"]["executed_count"] == 2
+    assert payload["summary"]["succeeded_count"] == 2
+    assert first_command["status"] == "succeeded"
+    assert second_command["status"] == "succeeded"
+    assert first_command["argv"][0] == sys.executable
+    assert second_command["argv"][0] == sys.executable
+    assert first_output.read_text(encoding="utf-8") == "first"
+    assert second_output.read_text(encoding="utf-8") == "second"
+
+
+def test_run_runtime_drift_bound_command_plan_parallel_requires_continue_on_failure():
+    try:
+        run_runtime_drift_bound_command_plan(
+            bound_command_plan={
+                "schema_version": 1,
+                "workflow": "runtime_drift_evidence_bound_command_plan",
+                "status": "ready",
+                "entries": (),
+            },
+            workers=2,
+        )
+    except ValueError as exc:
+        assert "workers > 1 requires stop_on_failure=False" in str(exc)
+    else:  # pragma: no cover - defensive assertion branch
+        raise AssertionError("workers > 1 should reject default fail-fast semantics")
 
 
 def test_evidence_gap_plan_maps_product_runtime_world_model_blockers():
