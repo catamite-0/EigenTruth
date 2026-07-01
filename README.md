@@ -310,11 +310,11 @@ release candidate v13
 contract preserves the selected cache-only runtime recommendation
 (`recommended_runtime_seconds=0.191662`). The current receipt-aware frontier
 handoff is
-`artifacts/smollm2_product_promotion_evidence_handoff_v1_9_frontier_v6/`:
+`artifacts/smollm2_product_promotion_evidence_handoff_v1_9_frontier_v7/`:
 it records the verifier-fusion abstention release evidence plus runtime-baseline
 action-receipt and receipt-claim-support evidence, with `77/77` required
 metrics present and `evidence_handoff_status=promote`. v1.6 remains useful for
-older development smoke runs, but v1.9/v6 is the current local frontier-audit
+older development smoke runs, but v1.9/v7 is the current local frontier-audit
 handoff.
 Use `benchmarks/audit_frontier_artifact_references.py` to fail-closed on the
 current docs' active frontier references when checking whether the v6 release
@@ -627,7 +627,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `run_triple_extraction_fixture_workflow.py` | Builds generated triple-extraction fixtures, evaluates rule-based/regex/composite extractors plus optional external prediction files, writes per-extractor reports plus subgroup gates and an artifact manifest for release evidence. |
 | `run_triple_extraction_fixture_matrix.py` | Runs generated triple-extraction fixture workflows across multiple structured-fact corpora, including optional per-corpus external prediction files, requiring cross-corpus promotion, predicate diversity, and optional adversarial subgroup gates before extractor templates are treated as release evidence. |
 | `triple_extraction_smoke.py` | Runs the bundled labeled triple-extraction fixture through rule-based, regex-with-fallback, and composite extractors, gating that configurable templates improve exact F1 without adding learned extractor dependencies. |
-| `product_promotion_contract_smoke.py` | Verifies the current default v1.9 product promotion contract, sibling manifests, legacy enriched `65/65` evidence handoff, frontier release evidence, runtime-drift metadata, and registry record without loading a model; refreshed handoff exports now require `77/77` receipt-aware evidence metrics. |
+| `product_promotion_contract_smoke.py` | Verifies the current default v1.9 product promotion contract, sibling manifests, receipt-aware v1.9/v7 `77/77` evidence handoff, frontier release evidence, runtime-drift metadata, and registry record without loading a model; the legacy `65/65` handoff remains available by overriding `--evidence-handoff-manifest` and thresholds. |
 | `frontier_release_evidence_smoke.py` | Verifies the active product contract's promoted frontier release-evidence report, rerun-promoted detectability/multiple-testing tracks, optional input-manifest gates, and release-evidence manifest without loading a model. |
 | `frontier_artifact_reference_smoke.py` | Runs the active frontier artifact-reference audit over repository docs, verifying referenced v6/v1.9 artifacts and manifests are present and require no repair actions without touching the real release registry. |
 | `build_frontier_status_report.py` | Builds a read-only frontier status snapshot from a release candidate, ProductPromotionContract, and optional evidence-gap plan, separating productized promoted evidence from research queues, optionally refreshing stale research queues from their source report, recording queue lifecycle/source-alignment status so superseded historical gaps are not confused with current blockers, and optionally writing manifest/registry metadata. |
@@ -1047,7 +1047,7 @@ evidence rates and maximum final false-accept / false-accept-delta thresholds.
 | `eval_pre_generation_text_baselines.py` | 直接基于 pre-generation records 评估低成本 question/answer 文本红线 baseline，按特征选择最佳方向，用长度、重叠、否定、数字计数控制检查 probe 结论。 |
 | `compare_trajectory_sweeps.py` | 对多个 forced-answer trajectory sweep report 做对比，并在 trajectory 信号进入 release evidence 前应用 fail-closed gate。 |
 | `concept_registry_smoke.py` | 保存两个 synthetic `ConceptArtifact`，登记到本地 registry，把两个 probe 同时挂到一个 toy model，并写出带 manifest 的多 concept 诊断报告。 |
-| `product_promotion_contract_smoke.py` | 无需加载模型，校验当前默认 v1.9 product promotion contract、相邻 manifest、旧版 `65/65` enriched evidence handoff、frontier release evidence、runtime-drift metadata 和 registry record；刷新后的 handoff export 现在要求 `77/77` receipt-aware evidence metrics。 |
+| `product_promotion_contract_smoke.py` | 无需加载模型，校验当前默认 v1.9 product promotion contract、相邻 manifest、receipt-aware v1.9/v7 `77/77` evidence handoff、frontier release evidence、runtime-drift metadata 和 registry record；旧版 `65/65` handoff 可通过覆盖 `--evidence-handoff-manifest` 和阈值继续验证。 |
 | `frontier_release_evidence_smoke.py` | 无需加载模型，校验 active product contract 指向的 promoted frontier release-evidence report、rerun-promoted detectability/multiple-testing tracks、可选 input-manifest gates 和 release-evidence manifest。 |
 | `frontier_artifact_reference_smoke.py` | 在仓库文档上运行 active frontier artifact-reference audit，确认被引用的 v6/v1.9 artifact 与 manifest 都存在且无需 repair action，同时不写真实 release registry。 |
 | `build_frontier_status_report.py` | 从 release candidate、ProductPromotionContract 和可选 evidence-gap plan 生成只读 frontier 状态快照，区分已产品化 promoted evidence 与 research queue，可选择从源报告刷新陈旧 research queue，并记录 queue lifecycle/source-alignment，让已被当前 promoted release 覆盖的历史 gap 不再被误读成当前 blocker；可写 manifest/registry metadata。 |

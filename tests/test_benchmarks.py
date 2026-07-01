@@ -31477,7 +31477,7 @@ def test_performance_baseline_smoke_writes_registered_baseline(tmp_path):
     ] == "promote"
 
 
-def test_product_promotion_contract_smoke_verifies_default_handoff():
+def test_product_promotion_contract_smoke_verifies_default_current_handoff():
     module = importlib.import_module("benchmarks.product_promotion_contract_smoke")
 
     payload = module.build_product_promotion_contract_smoke()
@@ -31486,8 +31486,12 @@ def test_product_promotion_contract_smoke_verifies_default_handoff():
     assert payload["registry_key"] == module.EXPECTED_REGISTRY_KEY
     assert payload["promotion_summary_status"] == "promote"
     assert payload["recommended_runtime_seconds"] == pytest.approx(0.191662)
+    assert payload["evidence_handoff_manifest"].endswith(
+        "smollm2_product_promotion_evidence_handoff_v1_9_frontier_v7/artifact-manifest.json"
+    )
     assert payload["evidence_handoff_status"] == "promote"
-    assert payload["evidence_handoff_present_metric_count"] >= 65
+    assert payload["evidence_handoff_expected_metric_count"] == 77
+    assert payload["evidence_handoff_present_metric_count"] >= 77
     assert payload["evidence_handoff_missing_metric_count"] == 0
     assert payload["frontier_release_evidence_decision_status"] == "promote"
     assert payload["product_runtime_drift_status"] == "promote"
@@ -31499,6 +31503,24 @@ def test_product_promotion_contract_smoke_verifies_default_handoff():
         "promotion_contract_evidence_handoff_available": True,
         "promotion_contract_frontier_release_evidence_available": True,
     }
+
+
+def test_product_promotion_contract_smoke_allows_explicit_legacy_handoff():
+    module = importlib.import_module("benchmarks.product_promotion_contract_smoke")
+
+    payload = module.build_product_promotion_contract_smoke(
+        evidence_handoff_manifest_path=module.LEGACY_EVIDENCE_HANDOFF_MANIFEST_PATH,
+        min_present_metric_count=65,
+        required_handoff_groups=module.LEGACY_REQUIRED_HANDOFF_GROUPS,
+    )
+
+    assert payload["status"] == "pass"
+    assert payload["evidence_handoff_manifest"].endswith(
+        "smollm2_product_promotion_contract_v1_9/evidence-handoff-artifact-manifest.json"
+    )
+    assert payload["evidence_handoff_expected_metric_count"] == 65
+    assert payload["evidence_handoff_present_metric_count"] == 65
+    assert payload["evidence_handoff_missing_metric_count"] == 0
 
 
 def test_product_promotion_contract_smoke_fails_closed_on_missing_registry_record(tmp_path):

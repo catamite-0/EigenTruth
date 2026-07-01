@@ -10234,8 +10234,9 @@ python benchmarks/run_registry_baseline_workflow.py \
 `benchmarks/frontier_artifact_reference_smoke.py`,
 `benchmarks/product_trace_replay_smoke.py`, and
 `benchmarks/release_candidate_registry_smoke.py`. These use fixed synthetic profile
-payloads plus the checked-in v1.9 product handoff and active frontier doc
-references to verify that direct gates, cache-profile gates, worker-count sweep
+payloads plus the checked-in v1.9 product handoff, the active v1.9/v7
+receipt-aware `77/77` evidence handoff, and active frontier doc references to
+verify that direct gates, cache-profile gates, worker-count sweep
 decisions, INSIDE sampling sample-efficiency gates, registry-backed baselines,
 the default promotion contract/evidence-handoff path, active frontier artifact
 references, promoted frontier release-evidence report tracks, ProductTrace
