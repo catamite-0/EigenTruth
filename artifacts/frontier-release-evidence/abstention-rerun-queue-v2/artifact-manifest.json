@@ -1,0 +1,36 @@
+{
+  "artifacts": {
+    "frontier_abstention_evidence_rerun_queue": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-abstention-rerun-queue.json",
+      "sha256": "256c0668673e876d43a1fc5769a3df85984723048c270556d382109f392615b0",
+      "size_bytes": 8416
+    },
+    "source": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../frontier-release-evidence-verifier-fusion-abstention-v3.json",
+      "sha256": "1c49e26ae24a8c1045a6befeaa66360ee87015b41bb12f7c914914c56705ef40",
+      "size_bytes": 23523
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "blocked_run_count": 2,
+    "command_count": 2,
+    "missing_command_count": 0,
+    "runner": "plan_frontier_abstention_evidence_reruns",
+    "source": "artifacts/frontier-release-evidence/frontier-release-evidence-verifier-fusion-abstention-v3.json",
+    "status": "ready"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  }
+}

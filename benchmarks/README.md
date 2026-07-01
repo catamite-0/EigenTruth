@@ -1323,11 +1323,15 @@ python benchmarks/eval_abstention_stability.py \
 seed-calibration split score quantile so the candidate targets a bounded total
 abstention rate before held-out evaluation. The release gate is still evaluated
 against `--max-abstention-rate`; `--abstention-budget-target-rate` is an
-optional safety margin for the threshold policy. The current local-retrieval
-fusion artifact (`frontier-release-evidence-verifier-fusion-abstention-v3`)
-stabilizes on `geometry_uncertainty_fusion:noisy_or` and clears mean
+optional safety margin for the threshold policy. The fixed-budget
+local-retrieval fusion artifact
+(`frontier-release-evidence-verifier-fusion-abstention-v3`) stabilizes on
+`geometry_uncertainty_fusion:noisy_or` and clears mean
 conditional-correctness/abstention gates, but remains blocked by strict 10/10
-seed pass-rate: qwen05-l80 passes 7/10 seeds and smollm2-l80 passes 5/10.
+seed pass-rate: qwen05-l80 passes 7/10 seeds and smollm2-l80 passes 5/10. The
+gate-budget sweep rollup in
+`artifacts/frontier-release-evidence/abstention-rerun-rollup-v3/frontier-abstention-rerun-rollup.json`
+then promotes the same two l80 runs under explicit budget-profile evidence.
 
 When fixed budget targets are unstable, pass
 `--abstention-budget-target-rates` to evaluate an explicit profile sweep. Each
@@ -1354,13 +1358,14 @@ python benchmarks/eval_abstention_stability.py \
   --json artifacts/frontier-release-evidence/verifier-fusion-abstention-stability-v2/local-retrieval-fusion-abstention-stability-alpha-0p2-budget-target-sweep.json
 ```
 
-The budget-target sweep release artifact
-`frontier-release-evidence-budget-target-sweep-v4` promotes all frontier tracks:
-both qwen05-l80 and smollm2-l80 pass 10/10 abstention seeds with the same
-geometry/verifier `noisy_or` fusion family. The selected budget target varies by
-seed and remains visible in each recommended candidate name, so this evidence
-should be treated as an explicit profile-sweep policy rather than a hidden fixed
-threshold.
+The checked-in budget-target sweep release artifact
+`artifacts/frontier-release-evidence/frontier-release-evidence-verifier-fusion-abstention-v4.json`
+promotes all frontier tracks: both qwen05-l80 and smollm2-l80 pass 10/10
+abstention seeds with the same geometry/verifier `noisy_or` fusion family, while
+the multiple-testing and detectability tracks are also cleared through verified
+rerun rollups. The selected budget target varies by seed and remains visible in
+each recommended candidate name, so this evidence should be treated as an
+explicit profile-sweep policy rather than a hidden fixed threshold.
 
 ## `compare_frontier_release_evidence.py`
 
@@ -1388,7 +1393,9 @@ python benchmarks/compare_frontier_release_evidence.py \
   --detectability-taxonomy-report artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/qwen05-l80/detectability-taxonomy-report.json \
   --detectability-taxonomy-report artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/detectability-taxonomy-report.json \
   --citation-batch-rollup-report artifacts/truthfulqa-frontier-smollm2-l80-citation-batch-rollup/citation-batch-rollup.json \
-  --frontier-rerun-rollup-report artifacts/frontier-release-evidence/abstention-rerun-rollup.json \
+  --frontier-rerun-rollup-report artifacts/frontier-multiple-testing-rerun-rollup-v1/frontier-rerun-rollup.json \
+  --frontier-rerun-rollup-report artifacts/frontier-release-evidence/detectability-taxonomy-rerun-rollup-v2/frontier-detectability-rerun-rollup.json \
+  --frontier-rerun-rollup-report artifacts/frontier-release-evidence/abstention-rerun-rollup-v3/frontier-abstention-rerun-rollup.json \
   --max-detectability-entrenched-false-rate 0.25 \
   --json "$OUT/frontier-release-evidence.json" \
   --artifact-manifest "$OUT/artifact-manifest.json" \
@@ -1398,10 +1405,12 @@ python benchmarks/compare_frontier_release_evidence.py \
   --version 0.1
 ```
 
-The current l80 evidence promotes the verifier-stability track but blocks the
-abstention-stability track, so the combined release verdict is blocked. This is
-the expected posture until participation-gate evidence clears the conservative
-conditional-correctness lower-bound gate.
+The current checked-in l80 release evidence promotes the verifier-stability
+track directly and promotes the multiple-testing, detectability, and abstention
+tracks through verified rerun rollups. The combined verdict in
+`artifacts/frontier-release-evidence/frontier-release-evidence-verifier-fusion-abstention-v4.json`
+is therefore `promote`, with base-track blocked statuses preserved separately
+for auditability.
 When `--frontier-workflow-report` is supplied, the comparator also gates the
 frontier workflow's family-wise multiple-testing evidence. Summary counts alone
 are not sufficient: the report must include a `multiple_testing_gate.cells` list
