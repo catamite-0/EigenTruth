@@ -6884,7 +6884,8 @@ python benchmarks/run_frontier_research_queue_rule_adapter_promotion_workflow.py
   --artifact-manifest artifacts/frontier-research-queue-rule-adapter-promotion-workflow/artifact-manifest.json \
   --registry artifacts/local-release-registry.json \
   --name frontier-research-queue-rule-adapter-promotion-workflow \
-  --version 0.1
+  --version 0.1 \
+  --build-handoff
 
 python benchmarks/run_frontier_research_queue_rule_adapter_promotion_workflow.py \
   --input-fill-result-rollup artifacts/frontier-research-queue-input-fill-result-rollup/frontier-input-fill-result-rollup.json \
@@ -6894,14 +6895,17 @@ python benchmarks/run_frontier_research_queue_rule_adapter_promotion_workflow.py
   --registry artifacts/local-release-registry.json \
   --name frontier-research-queue-rule-adapter-promotion-workflow \
   --version 0.1 \
-  --execute
+  --execute \
+  --build-handoff
 ```
 
 This workflow consumes only the rollup's `combined-rule-inputs.jsonl` and
 `rule_stubs` path, fails closed if either side is missing or empty, and writes
-separate rule-adapter and rule-promotion subdirectories. A top-level `promote`
-status means the deterministic adapter ran and the candidate promotion gate
-passed; the workflow report itself is still not verifier evidence.
+separate rule-adapter, rule-promotion, and optional rule-candidate handoff
+subdirectories. With `--build-handoff`, a top-level `promote` status means the
+deterministic adapter ran, the candidate promotion gate passed, and the
+ProductTrace/action-result handoff promoted; the workflow report itself is
+still not verifier evidence.
 
 Then dry-run the bound plan before any explicit execution:
 

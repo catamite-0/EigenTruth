@@ -1479,8 +1479,10 @@ Added the first monitor-first tool-selection audit layer:
   rollup to the deterministic adapter/promotion pair without weakening the
   gates. It defaults to a plan-only dry run, requires materialized rule stubs and
   a nonempty combined rule-input sidecar, and only with `--execute` runs the
-  existing rule-authoring adapter followed by the candidate promotion gate. The
-  top-level report returns `promote` only when the promotion gate passes.
+  existing rule-authoring adapter followed by the candidate promotion gate.
+  Optional `--build-handoff` adds the ProductTrace/action-result handoff after
+  promotion passes; in that mode the top-level report returns `promote` only when
+  the handoff report also promotes.
 - The binder now validates known frontier benchmark commands against required
   CLI flags. A directly filled abstention template is kept `needs_inputs` when
   `plan_frontier_abstention_evidence_reruns.py` omits the action-required

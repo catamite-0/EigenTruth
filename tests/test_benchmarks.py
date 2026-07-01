@@ -33572,6 +33572,7 @@ def test_frontier_research_queue_rule_adapter_promotion_workflow_dry_run_plans_o
         registry_path=registry_path,
         name="frontier-rule-adapter-promotion-workflow",
         version="0.1",
+        build_handoff=True,
     )
     record = registry_module.ArtifactRegistry.load_json(registry_path).get(
         "report:frontier-rule-adapter-promotion-workflow:0.1"
@@ -33582,9 +33583,15 @@ def test_frontier_research_queue_rule_adapter_promotion_workflow_dry_run_plans_o
     assert payload["preflight"]["status"] == "ready"
     assert payload["summary"]["executed"] is False
     assert payload["summary"]["combined_rule_input_count"] == 1
+    assert payload["summary"]["build_handoff"] is True
+    assert payload["summary"]["handoff_status"] is None
     assert payload["planned_commands"][0]["workflow"] == "world_model_rule_authoring_adapter"
     assert payload["planned_commands"][1]["workflow"] == "world_model_rule_candidate_promotion_gate"
+    assert payload["planned_commands"][2]["workflow"] == "world_model_rule_candidate_handoff"
     assert (tmp_path / "workflow" / "rule-adapter" / "world-model-rule-authoring-adapter.json").exists() is False
+    assert (
+        tmp_path / "workflow" / "rule-candidate-handoff" / "world-model-rule-candidate-handoff.json"
+    ).exists() is False
     assert registry_module.load_and_verify_artifact_manifest(
         tmp_path / "workflow" / "artifact-manifest.json"
     ).passed is True
@@ -33658,6 +33665,7 @@ def test_frontier_research_queue_rule_adapter_promotion_workflow_executes_and_pr
         name="frontier-rule-adapter-promotion-workflow",
         version="0.2",
         execute=True,
+        build_handoff=True,
         metadata={"suite": "unit"},
     )
     promoted_rows = [
@@ -33671,6 +33679,24 @@ def test_frontier_research_queue_rule_adapter_promotion_workflow_executes_and_pr
         (output_dir / "rule-adapter" / "world-model-rule-authoring-adapter.json")
         .read_text(encoding="utf-8")
     )
+    handoff_report = json.loads(
+        (output_dir / "rule-candidate-handoff" / "world-model-rule-candidate-handoff.json")
+        .read_text(encoding="utf-8")
+    )
+    handoff_traces = [
+        json.loads(line)
+        for line in (output_dir / "rule-candidate-handoff" / "product-traces.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+        if line.strip()
+    ]
+    handoff_action_results = [
+        json.loads(line)
+        for line in (output_dir / "rule-candidate-handoff" / "action-results.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+        if line.strip()
+    ]
     record = registry_module.ArtifactRegistry.load_json(registry_path).get(
         "report:frontier-rule-adapter-promotion-workflow:0.2"
     )
@@ -33679,9 +33705,17 @@ def test_frontier_research_queue_rule_adapter_promotion_workflow_executes_and_pr
     assert payload["summary"]["executed"] is True
     assert payload["summary"]["adapter_status"] == "observed"
     assert payload["summary"]["promotion_status"] == "promote"
+    assert payload["summary"]["handoff_status"] == "promote"
     assert payload["summary"]["promoted_count"] == 1
+    assert payload["summary"]["handoff_trace_count"] == 1
+    assert payload["summary"]["handoff_action_result_count"] == 1
     assert payload["summary"]["pending_count"] == 0
     assert adapter_report["summary"]["executed_count"] == 1
+    assert handoff_report["status"] == "promote"
+    assert handoff_report["summary"]["trace_count"] == 1
+    assert handoff_traces[0]["risk_decision"]["action"] == "abstain"
+    assert handoff_traces[0]["risk_decision"]["risk_level"] == "high"
+    assert handoff_action_results[0]["status"] == "dry_run"
     assert promoted_rows[0]["request_id"] == "rule:record-1:1"
     assert promoted_rows[0]["status"] == "refuted"
     assert promoted_rows[0]["source_citation"] == "wikidata:Q478214:P112:Q1903673"
@@ -33690,6 +33724,7 @@ def test_frontier_research_queue_rule_adapter_promotion_workflow_executes_and_pr
     ).passed is True
     assert record.metadata["status"] == "promote"
     assert record.metadata["promoted_count"] == 1
+    assert record.metadata["handoff_trace_count"] == 1
 
 
 def test_frontier_research_queue_bound_plan_requires_runtime_baseline_flag(tmp_path):
