@@ -5938,7 +5938,25 @@ python benchmarks/plan_release_evidence_gaps.py \
 The saved gap plan records the derived runtime-drift completion path under
 `derived_artifacts.runtime_drift_evidence_completion_plan`. Use that plan to
 bind concrete trace, promotion-contract, child-report, and baseline paths before
-running the underlying product-trace replay/runtime-baseline workflows.
+running the underlying product-trace replay/runtime-baseline workflows. The
+binding step is explicit and still does not execute commands:
+
+```bash
+python benchmarks/bind_runtime_drift_completion_plan.py \
+  --completion-plan artifacts/frontier-audit-release-candidate-v4/runtime-drift-completion-plan.json \
+  --bindings artifacts/frontier-audit-release-candidate-v4/runtime-drift-bindings.json \
+  --json artifacts/frontier-audit-release-candidate-v4/runtime-drift-bound-commands.json \
+  --artifact-manifest artifacts/frontier-audit-release-candidate-v4/runtime-drift-bound-commands-manifest.json \
+  --registry artifacts/release-registry.json \
+  --name frontier-audit-runtime-drift-bound-commands \
+  --version 0.1
+```
+
+The bindings sidecar may provide top-level `inputs` shared by actions and
+per-action `command_template_values` to replace each `...` placeholder in order,
+or explicit `bound_commands` for a reviewed command override. The output is
+`ready` only when all required inputs are present and no command placeholders
+remain.
 
 If the same source includes frontier multiple-testing blocked cells and points
 back to the originating `truthfulqa_frontier_workflow` report, the gap planner

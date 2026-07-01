@@ -1231,10 +1231,13 @@ Added the first monitor-first tool-selection audit layer:
   script names into one reviewable handoff queue. Each entry now also carries
   machine-readable `binding_hints`: input placeholders, whether command
   templates still need binding, and planned output artifact paths under the
-  bound output directory. Entries remain
-  `needs_inputs` until concrete trace, contract, child-report, and baseline
-  paths are bound, preserving the fail-closed distinction between a work plan
-  and completed runtime evidence.
+  bound output directory. `benchmarks/bind_runtime_drift_completion_plan.py`
+  now consumes that completion plan plus a reviewed bindings sidecar and emits a
+  `runtime_drift_evidence_bound_command_plan` with concrete commands only when
+  all required inputs and ordered command-template placeholders are bound.
+  Entries remain `needs_inputs` until concrete trace, contract, child-report,
+  and baseline paths are bound, preserving the fail-closed distinction between
+  a work plan and completed runtime evidence.
 - `ProductPromotionEvidenceAudit` now audits a deployable promotion contract
   before runtime-drift replay. `benchmarks/audit_product_promotion_contract_evidence.py`
   checks the exact `frontier_audit` evidence groups expected by drift gates:

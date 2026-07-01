@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+from benchmarks.bind_runtime_drift_completion_plan import build_runtime_drift_bound_command_plan
 from benchmarks.plan_citation_batch_evidence_reruns import build_citation_batch_evidence_rerun_queue
 from benchmarks.plan_frontier_abstention_evidence_reruns import build_frontier_abstention_evidence_rerun_queue
 from benchmarks.plan_frontier_detectability_evidence_reruns import build_frontier_detectability_evidence_rerun_queue
@@ -34,6 +35,13 @@ _MULTIPLE_TESTING_RERUN_COMMANDS = (
     "benchmarks/rollup_frontier_multiple_testing_reruns.py --queue ... --json ...",
     "benchmarks/compare_frontier_release_evidence.py --frontier-rerun-rollup-report ...",
 )
+
+
+def _placeholder_values(command_templates, prefix: Path):
+    return tuple(
+        str(prefix.with_name(f"{prefix.name}-{index}"))
+        for index in range(sum(str(command).count("...") for command in command_templates))
+    )
 
 _ABSTENTION_RERUN_COMMANDS = (
     "benchmarks/plan_frontier_abstention_evidence_reruns.py --source ... --json ...",
@@ -2370,6 +2378,187 @@ def test_plan_release_evidence_gaps_can_emit_runtime_drift_completion_plan(
     assert completion_record.metadata["command_template_count"] == derived["command_template_count"]
     assert completion_record.metadata["expected_output_count"] == derived["expected_output_count"]
     assert "product_runtime_drift" in completion_record.metadata["routes"]
+
+
+def test_bind_runtime_drift_completion_plan_writes_ready_bound_commands(tmp_path):
+    source = tmp_path / "release-candidate-comparison.json"
+    completion_path = tmp_path / "runtime-drift-completion.json"
+    bindings_path = tmp_path / "runtime-drift-bindings.json"
+    bound_path = tmp_path / "runtime-drift-bound-commands.json"
+    manifest_path = tmp_path / "runtime-drift-bound-commands-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    source.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "release_candidate_comparison",
+            "decision": {
+                "status": "blocked",
+                "blocking_reasons": [
+                    {
+                        "gate": "product_runtime_drift",
+                        "status": "blocked",
+                        "reasons": (
+                            "product runtime drift world-model evidence metrics are incomplete: "
+                            "world_model.participating_trace_rate, world_model.trace_gap_rate",
+                            "product runtime drift evidence-handoff evidence metrics are incomplete: "
+                            "promotion_contract.evidence_handoff.coverage_rate",
+                        ),
+                    }
+                ],
+            },
+        }),
+        encoding="utf-8",
+    )
+    completion = build_release_evidence_gap_plan(
+        source=source,
+        runtime_drift_completion_json_path=completion_path,
+        runtime_drift_completion_output_dir=tmp_path / "runtime-drift-completion",
+    )["derived_artifacts"]["runtime_drift_evidence_completion_plan"]
+    completion_payload = json.loads(Path(completion["path"]).read_text(encoding="utf-8"))
+    entries = {entry["action_id"]: entry for entry in completion_payload["entries"]}
+    world_model_values = _placeholder_values(
+        entries["rerun_product_trace_world_model_evidence"]["command_templates"],
+        tmp_path / "world-model-binding",
+    )
+    handoff_values = _placeholder_values(
+        entries["refresh_product_promotion_evidence_handoff"]["command_templates"],
+        tmp_path / "handoff-binding",
+    )
+    bindings_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "runtime_drift_completion_bindings",
+            "inputs": {
+                "baseline_product_runtime_report": str(tmp_path / "baseline.json"),
+                "product_trace_corpus": str(tmp_path / "traces" / "*.json"),
+            },
+            "entries": {
+                "rerun_product_trace_world_model_evidence": {
+                    "inputs": {
+                        "world_model_rules_or_state_transition_fixture": str(
+                            tmp_path / "world-model-fixture.json"
+                        ),
+                        "promotion_contract_or_release_candidate": str(
+                            tmp_path / "promotion-contract.json"
+                        ),
+                    },
+                    "command_template_values": world_model_values,
+                },
+                "refresh_product_promotion_evidence_handoff": {
+                    "inputs": {
+                        "product_promotion_contract_source": str(
+                            tmp_path / "promotion-contract.json"
+                        ),
+                        "frontier_and_runtime_child_evidence_reports": [
+                            str(tmp_path / "pre-generation.json"),
+                            str(tmp_path / "counterfactual.json"),
+                        ],
+                        "artifact_manifests_for_child_evidence": [
+                            str(tmp_path / "pre-generation-manifest.json"),
+                            str(tmp_path / "counterfactual-manifest.json"),
+                        ],
+                    },
+                    "command_template_values": handoff_values,
+                },
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    payload = build_runtime_drift_bound_command_plan(
+        completion_plan=completion_path,
+        bindings=bindings_path,
+        json_path=bound_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="runtime-drift-bound-commands",
+        version="0.1",
+    )
+
+    saved = json.loads(bound_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    registry = ArtifactRegistry.load_json(registry_path)
+    record = registry.get("report:runtime-drift-bound-commands:0.1")
+    bound_entries = {entry["action_id"]: entry for entry in payload["entries"]}
+    world_model_entry = bound_entries["rerun_product_trace_world_model_evidence"]
+    handoff_entry = bound_entries["refresh_product_promotion_evidence_handoff"]
+
+    assert saved["workflow"] == payload["workflow"]
+    assert saved["summary"] == payload["summary"]
+    assert payload["workflow"] == "runtime_drift_evidence_bound_command_plan"
+    assert payload["status"] == "ready"
+    assert payload["summary"]["entry_count"] == 2
+    assert payload["summary"]["ready_entry_count"] == 2
+    assert payload["summary"]["unbound_placeholder_count"] == 0
+    assert payload["summary"]["missing_input_count"] == 0
+    assert payload["summary"]["expected_output_count"] == completion_payload["summary"][
+        "expected_output_count"
+    ]
+    assert all("..." not in command for command in world_model_entry["bound_commands"])
+    assert all("..." not in command for command in handoff_entry["bound_commands"])
+    assert str(tmp_path / "world-model-binding-0") in world_model_entry["bound_commands"][0]
+    assert world_model_entry["command_status"] == "ready"
+    assert handoff_entry["command_status"] == "ready"
+    assert world_model_entry["unbound_inputs"] == ()
+    assert handoff_entry["unbound_inputs"] == ()
+    assert manifest["artifacts"]["runtime_drift_bound_command_plan"]["exists"] is True
+    assert manifest["artifacts"]["completion_plan"]["exists"] is True
+    assert manifest["artifacts"]["bindings"]["exists"] is True
+    assert record.metadata["workflow"] == "runtime_drift_evidence_bound_command_plan"
+    assert record.metadata["status"] == "ready"
+    assert record.metadata["ready_entry_count"] == 2
+    assert record.metadata["unbound_placeholder_count"] == 0
+
+
+def test_bind_runtime_drift_completion_plan_fails_closed_on_missing_values():
+    completion = {
+        "schema_version": 1,
+        "workflow": "runtime_drift_evidence_completion_plan",
+        "status": "needs_inputs",
+        "entries": [
+            {
+                "entry_id": "runtime-drift-0001",
+                "action_id": "demo_runtime_action",
+                "title": "Demo runtime action",
+                "command_status": "needs_inputs",
+                "command_templates": ("benchmarks/demo.py --input ... --json ...",),
+                "binding_hints": {
+                    "input_bindings": (
+                        {"name": "demo_input", "required": True, "status": "unbound"},
+                        {
+                            "name": "bound_command_template_values",
+                            "required": True,
+                            "status": "unbound",
+                        },
+                    ),
+                    "output_bindings": (
+                        {"name": "demo_report", "path": "demo-report.json", "status": "planned"},
+                    ),
+                },
+            }
+        ],
+    }
+
+    payload = build_runtime_drift_bound_command_plan(
+        completion_plan=completion,
+        bindings={
+            "entries": {
+                "demo_runtime_action": {
+                    "inputs": {"demo_input": "fixture.json"},
+                    "command_template_values": ["fixture.json"],
+                }
+            }
+        },
+    )
+
+    entry = payload["entries"][0]
+    assert payload["status"] == "needs_inputs"
+    assert payload["summary"]["ready_entry_count"] == 0
+    assert payload["summary"]["unbound_placeholder_count"] == 1
+    assert payload["summary"]["missing_input_count"] == 1
+    assert entry["command_status"] == "needs_inputs"
+    assert entry["unbound_inputs"] == ("bound_command_template_values",)
+    assert entry["bound_commands"] == ("benchmarks/demo.py --input fixture.json --json ...",)
 
 
 def test_evidence_gap_plan_maps_product_runtime_world_model_blockers():
