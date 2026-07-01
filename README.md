@@ -50,6 +50,7 @@ EigenTruth wraps a decoder-only language model with PyTorch hooks. It can:
 - export compact product promotion summaries from release-candidate evidence for deployment handoff review
 - compile risk decisions into structured action requests and dry-run execution results
 - attach local HMAC action receipts to executed tool/action results and summarize receipt coverage in product traces
+- audit whether final-answer language expresses enough uncertainty for observed trace risk, then gate overconfident high-risk outputs in runtime drift reports
 - optionally apply experimental activation steering when a configured threshold is exceeded
 
 EigenTruth 通过 PyTorch hook 包装 decoder-only 语言模型。它可以：
@@ -1091,6 +1092,13 @@ evidence rates and maximum final false-accept / false-accept-delta thresholds.
 | `run_product_trace_replay_workflow.py` | 端到端执行 raw trace handoff：脱敏 trace corpus、runtime-pair index、产品 runtime baseline、可选 action-audit release gate（缺失 retrieval action、未覆盖 planned retrieval query、畸形或异常 action payload）、可选 action-execution alignment gate（缺失、异常或 request-id 不匹配的 action result）、selector replay、可选 product-runtime drift/policy/promotion-evidence/pre-generation-risk/pre-generation-probe/counterfactual-verifier/evidence-handoff/world-model/context-sensitivity/counterfactual-robustness/claim-risk-localization/evidence-graph-consistency/citation-integrity/evidence-quality drift、covered-fact property drift 与 product-trace action-gate drift gate、顶层 runtime `optimization` 摘要、可选推荐 runtime policy artifact、递归 manifest、可选 manifest verification、可选 manifest fingerprint cache 复用、可选 whole-corpus cache 复用、可选 corpus source-cache 复用、可选 runtime trace-record cache 复用、可选 runtime trace-scan 并行、可选 selector trace-input cache 复用、phase timing/cache summary 和可注册 workflow report。 |
 | `run_product_runtime_profile_sweep.py` | 在 `latency`、`balanced`、`audit` 和请求级 `auto` selection modes 下运行确定性 calibrated-control demo 场景，写入或复用 trace，携带 promotion contract/profile 生效后的 control-default 汇总如 `max_verifier_route_attempts`，可缓存每个 profile 的 trace records 以重复调 budget/SLO，生成每个 mode 的 baseline，应用可选聚合 SLO 门禁，并推荐最低成本的未阻断 mode。 |
 | `run_release_efficiency_report.py` | 将 product runtime profile sweep 和可选 quality/release reports 汇总成可注册 efficiency handoff，集中展示每个 profile 的 runtime、verifier、cache、trace 复用和 route fanout 证据。 |
+
+Product runtime baselines also include trace-level metacognition/verbal-uncertainty
+alignment: `ProductTrace.metacognition_summary()` compares final-answer
+uncertainty cues with risk/verifier/diagnostic evidence, while
+`compare_product_runtime_baselines.py` and `run_product_trace_replay_workflow.py`
+can fail closed on coverage, pass-rate, overconfident-risk, and miscalibration
+drift.
 | `run_runtime_profile_selector_tuning.py` | 通过同一套 SLO gate 比较多个 `RuntimeProfileSelectorPolicy` JSON 候选，运行 auto-profile sweep，并推荐成本最低的 promoted selector。 |
 | `run_runtime_profile_selector_replay.py` | 在已保存的 `ProductTrace` 上回放多个 `RuntimeProfileSelectorPolicy` JSON 候选，不重跑 demo 即可通过 trace scan 或 corpus runtime-pair index 估算 profile 成本、分布、配对 observed runtime 和 selected-vs-original runtime delta，可缓存最小 trace replay input 以便重复策略 sweep，并登记成本最低的 promoted selector。 |
 | `run_adapter_readiness_workflow.py` | 将 adapter-family 质量门槛，包括可选 retrieval 和 strict triple-evidence audit family、cache-profile 性能门槛和可选 INSIDE sampling / trigger-budget gate 合并为最终 readiness decision、runtime recommendation 和可注册 manifest。 |

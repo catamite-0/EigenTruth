@@ -9051,7 +9051,11 @@ handoffs are likewise aggregated with coverage, report/manifest presence,
 manifest verification, pass counts, run-count quality, failed runs, and blocking
 reasons in the report, manifest, and registry metadata. Retrieval
 evidence-quality summaries are also aggregated into coverage, pass/failure, and
-provenance-freshness rates for report, manifest, and registry metadata. The output includes
+provenance-freshness rates for report, manifest, and registry metadata.
+Metacognition summaries compare final-answer verbal uncertainty cues with
+trace-level risk/verifier/diagnostic evidence and aggregate coverage, pass rate,
+overconfident-risk rate, and miscalibration summaries for the same report,
+manifest, and registry outputs. The output includes
 `optimization.hotspots`,
 `optimization.recommendations`, and `optimization.policy_hints`, turning the
 baseline into an actionable performance pass over slow phases/routes, low cache
@@ -9256,6 +9260,13 @@ consistency, numeric drift, cross-claim retrieval-hit drift, and error-rate
 drift. When ProductTrace retrieval action results include evidence-quality
 summaries, the comparison can gate trace/result coverage, pass rate, failure
 rate, stale evidence, untrusted sources, and missing-source or timestamp drift.
+When ProductTrace metacognition summaries are present, the comparison can also
+gate trace coverage, pass rate, overconfident-risk rate increase, and
+miscalibration-score mean increase using
+`--min-product-trace-metacognition-trace-coverage-rate`,
+`--min-product-trace-metacognition-pass-rate`,
+`--max-product-trace-metacognition-overconfident-risk-rate-increase`, and
+`--max-product-trace-metacognition-miscalibration-score-mean-increase`.
 Release candidates can require that evidence explicitly with
 `compare_release_candidates.py --require-product-runtime-drift-evidence-quality-evidence`
 or the matching `run_release_candidate_registry_workflow.py` flag.
@@ -9665,7 +9676,8 @@ report and registry metadata, can save the runtime baseline's recommended
 `ProductRuntimeBudgetPolicy` artifact for later gates, can run the current
 runtime baseline through action-audit, action-execution alignment, or
 product-runtime drift/policy gates, including evidence-graph consistency and
-evidence-quality gates when configured, and registers one workflow report.
+evidence-quality and metacognition gates when configured, and registers one
+workflow report.
 Add `--verify-manifest` to write a separate recursive verification
 report and register `manifest_verification:<name>-verification:<version>` next
 to the workflow report. Add `--fingerprint-cache` when repeating local checks,

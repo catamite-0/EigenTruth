@@ -30,6 +30,7 @@ EigenTruth should move from hallucination detection alone toward calibrated part
 - Single-decode first-token confidence work (arXiv:2605.05166) points to a cheap baseline before multi-sample routes: top-k entropy at the first answer-token prediction can be logged from the same forced-answer pass and compared against internal geometry, INSIDE/selfcheck, and verifier signals.
 - Detecting Representational Inconsistencies for Factual Truthfulness (arXiv:2601.14210, 2026) reinforces the single-decode internal-probe route: intermediate layers can expose confidence/truthfulness signals that are not visible in the final output. This supports keeping layer/score sweeps, residual-update profiles, and hidden-evidence selection as first-class artifacts instead of collapsing everything into post-hoc text verification.
 - High-certainty hallucination work such as CHOKE / "LLMs Hallucinate with Certainty Despite Knowing the Answer" (arXiv:2502.12964, EMNLP Findings 2025) is a warning against entropy-only or confidence-only product gates. EigenTruth should continue requiring independent verifier, retrieval, counterfactual, or world-model evidence for release promotion, and should treat certainty signals as one calibrated axis rather than proof of factuality.
+- Verbal-uncertainty calibration work such as "Calibrating Verbal Uncertainty as a Linear Feature to Reduce Hallucinations" (arXiv:2503.14477) and metacognition-position papers argue that models can be internally uncertain while answering in overly confident language. EigenTruth should therefore audit not only whether a trace is risky, but whether the final answer honestly exposes that risk to the user. The dependency-free product version is a trace-level alignment check between risk/verifier/diagnostic evidence and final-answer uncertainty cues; it is not a substitute for semantic uncertainty sampling.
 - DECK (arXiv:2606.02289) reframes hallucination errors by detectability signature rather than content type, splitting errors along inter-sample consistency and token-level confidence into Drift, Entrenched, Confabulation, and Knotted. This directly fits EigenTruth's score-dump posture: consistency signals, white-box confidence signals, and independent verifier/world-model routes should be evaluated for complementary blind spots, not only aggregate AUROC.
 - Global-Local Uncertainty / GLU (arXiv:2606.09875) argues that token-level local entropy and hidden-state global geometry can be near-orthogonal and recover different failure regimes. This supports keeping score-dump fusion and detectability reports axis-aware, so geometry, confidence, self-consistency, and verifier evidence are not collapsed into one uninterpretable scalar too early.
 - Counterfactual Probing for Hallucination Detection and Mitigation (arXiv:2508.01862) supports adding perturbation sensitivity audits: robust verifiers should change status on entity, temporal, quantitative, or logical counterfactuals instead of staying invariant to false variants.
@@ -41,6 +42,25 @@ EigenTruth should move from hallucination detection alone toward calibrated part
 - Anytime-Valid Conformal Risk Control (arXiv:2602.04364) points toward risk control under ongoing streams and optional stopping. EigenTruth's current lightweight implementation is deliberately narrower: an accepted-error Bernoulli e-process monitor over labeled feedback, plus the existing finite prefix alpha-spending monitor. It is an online drift alarm for a fixed deployed threshold, not a full anytime-valid CRC optimizer.
 
 ## Implemented This Continuation
+
+Added metacognitive / verbal-uncertainty alignment audits:
+
+- `VerbalUncertaintySignal`, `MetacognitionAuditReport`,
+  `verbal_uncertainty_signal(...)`, and
+  `audit_metacognitive_alignment(...)` compare final-answer uncertainty cues
+  against trace risk evidence from `RiskDecision`, verifier results,
+  diagnostics, and final-answer state.
+- `ProductTrace.metacognition_summary()` and bounded
+  `summaries.metacognition` make the signal available to replay, registry, and
+  product-runtime telemetry without binding to a specific LLM or verifier.
+- `product_runtime_metrics(...)`, `run_product_runtime_baseline.py`,
+  `compare_product_runtime_baselines.py`, and
+  `run_product_trace_replay_workflow.py` now expose coverage, pass rate,
+  overconfident-risk rate, and miscalibration drift gates.
+- This closes a lightweight version of the current metacognition research
+  direction: high-risk traces that answer confidently are treated as release
+  evidence failures, while high-risk abstentions or uncertainty-exposing
+  non-answers can pass this particular audit.
 
 Added an anytime-valid feedback risk monitor for evidence acquisition:
 

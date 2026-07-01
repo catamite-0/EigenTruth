@@ -1298,6 +1298,37 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         "evidence_quality_status_counts": dict(
             _mapping(metrics.get("evidence_quality_status_counts"))
         ),
+        "metacognition_summary": dict(_mapping(metrics.get("metacognition_summary"))),
+        "metacognition_available": bool(metrics.get("metacognition_available")),
+        "metacognition_source": metrics.get("metacognition_source"),
+        "metacognition_status": metrics.get("metacognition_status"),
+        "metacognition_passed": metrics.get("metacognition_passed"),
+        "metacognition_text_available": metrics.get("metacognition_text_available"),
+        "metacognition_risk_proxy": metrics.get("metacognition_risk_proxy"),
+        "metacognition_verbal_uncertainty_score": metrics.get(
+            "metacognition_verbal_uncertainty_score"
+        ),
+        "metacognition_expressed_confidence_score": metrics.get(
+            "metacognition_expressed_confidence_score"
+        ),
+        "metacognition_miscalibration_score": metrics.get(
+            "metacognition_miscalibration_score"
+        ),
+        "metacognition_overconfident_risk": metrics.get(
+            "metacognition_overconfident_risk"
+        ),
+        "metacognition_overcautious_uncertainty": metrics.get(
+            "metacognition_overcautious_uncertainty"
+        ),
+        "metacognition_uncertainty_cue_count": metrics.get(
+            "metacognition_uncertainty_cue_count"
+        ),
+        "metacognition_certainty_cue_count": metrics.get(
+            "metacognition_certainty_cue_count"
+        ),
+        "metacognition_reason_counts": dict(
+            _mapping(metrics.get("metacognition_reason_counts"))
+        ),
         "action_receipts_summary": dict(_mapping(metrics.get("action_receipts_summary"))),
         "action_receipts_available": bool(metrics.get("action_receipts_available")),
         "action_receipts_source": metrics.get("action_receipts_source"),
@@ -1992,6 +2023,7 @@ def _aggregate_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "pre_generation_risk": _aggregate_pre_generation_risk(metrics),
         "action_execution": _aggregate_action_execution(metrics),
         "evidence_quality": _aggregate_evidence_quality(metrics),
+        "metacognition": _aggregate_metacognition(metrics),
         "action_receipts": _aggregate_action_receipts(metrics),
         "receipt_claim_support": _aggregate_receipt_claim_support(metrics),
         "action_audit": _aggregate_action_audit(metrics),
@@ -2980,6 +3012,62 @@ def _aggregate_evidence_quality(metrics: Sequence[Mapping[str, Any]]) -> dict[st
         ),
         "per_trace_coverage_rate": _numeric_summary(
             item.get("evidence_quality_coverage_rate") for item in metrics
+        ),
+        "summary_observations": sum(1 for summary in summaries if summary),
+    }
+
+
+def _aggregate_metacognition(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    summaries = [_mapping(item.get("metacognition_summary")) for item in metrics]
+    n_traces = len(metrics)
+    available_count = sum(1 for item in metrics if item.get("metacognition_available") is True)
+    passed_count = sum(1 for item in metrics if item.get("metacognition_passed") is True)
+    failed_count = sum(1 for item in metrics if item.get("metacognition_passed") is False)
+    overconfident_count = sum(
+        1 for item in metrics if item.get("metacognition_overconfident_risk") is True
+    )
+    overcautious_count = sum(
+        1 for item in metrics if item.get("metacognition_overcautious_uncertainty") is True
+    )
+    reason_counts: dict[str, int] = {}
+    status_counts: dict[str, int] = {}
+    for item in metrics:
+        _merge_counts(reason_counts, _mapping(item.get("metacognition_reason_counts")))
+        status = item.get("metacognition_status")
+        if status is not None:
+            status_key = str(status)
+            status_counts[status_key] = status_counts.get(status_key, 0) + 1
+    return {
+        "source_trace_count": n_traces,
+        "available_trace_count": available_count,
+        "missing_trace_count": n_traces - available_count,
+        "trace_coverage_rate": _safe_div(available_count, n_traces),
+        "source_counts": _counts(item.get("metacognition_source") for item in metrics),
+        "status_counts": status_counts,
+        "reason_counts": reason_counts,
+        "passed_trace_count": passed_count,
+        "failed_trace_count": failed_count,
+        "pass_rate": _safe_div(passed_count, available_count),
+        "failure_rate": _safe_div(failed_count, available_count),
+        "overconfident_risk_count": overconfident_count,
+        "overconfident_risk_rate": _safe_div(overconfident_count, available_count),
+        "overcautious_uncertainty_count": overcautious_count,
+        "overcautious_uncertainty_rate": _safe_div(overcautious_count, available_count),
+        "risk_proxy": _numeric_summary(item.get("metacognition_risk_proxy") for item in metrics),
+        "verbal_uncertainty_score": _numeric_summary(
+            item.get("metacognition_verbal_uncertainty_score") for item in metrics
+        ),
+        "expressed_confidence_score": _numeric_summary(
+            item.get("metacognition_expressed_confidence_score") for item in metrics
+        ),
+        "miscalibration_score": _numeric_summary(
+            item.get("metacognition_miscalibration_score") for item in metrics
+        ),
+        "uncertainty_cue_count": _numeric_summary(
+            item.get("metacognition_uncertainty_cue_count") for item in metrics
+        ),
+        "certainty_cue_count": _numeric_summary(
+            item.get("metacognition_certainty_cue_count") for item in metrics
         ),
         "summary_observations": sum(1 for summary in summaries if summary),
     }
@@ -5860,6 +5948,7 @@ def _write_artifact_manifest(
     provenance_metadata = _provenance_flat_metadata(report)
     citation_integrity_metadata = _citation_integrity_flat_metadata(report)
     evidence_quality_metadata = _evidence_quality_flat_metadata(report)
+    metacognition_metadata = _metacognition_flat_metadata(report)
     promotion_contract_drift_metadata = _promotion_contract_runtime_drift_flat_metadata(report)
     promotion_contract_trace_replay_metadata = _promotion_contract_trace_replay_flat_metadata(
         report
@@ -5923,6 +6012,7 @@ def _write_artifact_manifest(
             **provenance_metadata,
             **citation_integrity_metadata,
             **evidence_quality_metadata,
+            **metacognition_metadata,
             **promotion_contract_drift_metadata,
             **promotion_contract_trace_replay_metadata,
             **promotion_contract_external_evidence_metadata,
@@ -5961,6 +6051,7 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
     provenance_metadata = _provenance_flat_metadata(report)
     citation_integrity_metadata = _citation_integrity_flat_metadata(report)
     evidence_quality_metadata = _evidence_quality_flat_metadata(report)
+    metacognition_metadata = _metacognition_flat_metadata(report)
     promotion_contract_drift_metadata = _promotion_contract_runtime_drift_flat_metadata(report)
     promotion_contract_trace_replay_metadata = _promotion_contract_trace_replay_flat_metadata(
         report
@@ -6029,6 +6120,7 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
             **provenance_metadata,
             **citation_integrity_metadata,
             **evidence_quality_metadata,
+            **metacognition_metadata,
             **promotion_contract_drift_metadata,
             **promotion_contract_trace_replay_metadata,
             **promotion_contract_external_evidence_metadata,
@@ -6250,6 +6342,56 @@ def _evidence_quality_flat_metadata(report: Mapping[str, Any]) -> dict[str, Any]
         "evidence_quality_source_counts": dict(_mapping(evidence.get("source_counts"))),
         "evidence_quality_status_counts": dict(_mapping(evidence.get("status_counts"))),
         "evidence_quality_reason_counts": dict(_mapping(evidence.get("reason_counts"))),
+    }
+
+
+def _metacognition_flat_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    metacognition = _mapping(_nested(report, "summary", "metacognition"))
+    if not metacognition:
+        return {}
+    return {
+        "metacognition_source_trace_count": metacognition.get("source_trace_count"),
+        "metacognition_available_trace_count": metacognition.get("available_trace_count"),
+        "metacognition_missing_trace_count": metacognition.get("missing_trace_count"),
+        "metacognition_trace_coverage_rate": metacognition.get("trace_coverage_rate"),
+        "metacognition_passed_trace_count": metacognition.get("passed_trace_count"),
+        "metacognition_failed_trace_count": metacognition.get("failed_trace_count"),
+        "metacognition_pass_rate": metacognition.get("pass_rate"),
+        "metacognition_failure_rate": metacognition.get("failure_rate"),
+        "metacognition_overconfident_risk_count": metacognition.get(
+            "overconfident_risk_count"
+        ),
+        "metacognition_overconfident_risk_rate": metacognition.get(
+            "overconfident_risk_rate"
+        ),
+        "metacognition_overcautious_uncertainty_count": metacognition.get(
+            "overcautious_uncertainty_count"
+        ),
+        "metacognition_overcautious_uncertainty_rate": metacognition.get(
+            "overcautious_uncertainty_rate"
+        ),
+        "metacognition_risk_proxy_mean": _nested(
+            metacognition,
+            "risk_proxy",
+            "mean",
+        ),
+        "metacognition_verbal_uncertainty_score_mean": _nested(
+            metacognition,
+            "verbal_uncertainty_score",
+            "mean",
+        ),
+        "metacognition_expressed_confidence_score_mean": _nested(
+            metacognition,
+            "expressed_confidence_score",
+            "mean",
+        ),
+        "metacognition_miscalibration_score_mean": _nested(
+            metacognition,
+            "miscalibration_score",
+            "mean",
+        ),
+        "metacognition_status_counts": dict(_mapping(metacognition.get("status_counts"))),
+        "metacognition_reason_counts": dict(_mapping(metacognition.get("reason_counts"))),
     }
 
 

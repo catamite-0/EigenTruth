@@ -9,6 +9,7 @@ from typing import Any, Mapping, Optional, Sequence
 from eigentruth.control.action_audit import audit_action_requests
 from eigentruth.control.actions import ActionRequest, ActionResult
 from eigentruth.control.finalization import FinalAnswer
+from eigentruth.control.metacognition import audit_metacognitive_alignment
 from eigentruth.control.policy import ControlAction, RiskDecision
 from eigentruth.control.provenance import audit_evidence_graph_consistency, audit_trace_provenance
 from eigentruth.control.receipt_audit import audit_receipt_claim_support
@@ -262,6 +263,12 @@ class ProductTrace:
             "evidence_quality": _evidence_quality_summary_from_action_results(
                 prepared.action_results,
             ),
+            "metacognition": _metacognition_summary_from_payload(
+                diagnostics=prepared.diagnostics,
+                verification_results=prepared.verification_results,
+                risk_decision=prepared.risk_decision,
+                final_answer=prepared.final_answer,
+            ),
             "receipt_claim_support": _receipt_claim_support_summary_from_payload(
                 claims=prepared.claims,
                 action_results=prepared.action_results,
@@ -402,6 +409,17 @@ class ProductTrace:
         """Summarize retrieval evidence freshness/provenance checks."""
         return _evidence_quality_summary_from_action_results(
             tuple(_action_result_to_dict(result) for result in self.action_results)
+        )
+
+    def metacognition_summary(self) -> dict[str, Any]:
+        """Summarize alignment between expressed uncertainty and trace risk."""
+        return _metacognition_summary_from_payload(
+            diagnostics=_to_jsonable(self.diagnostics),
+            verification_results=tuple(
+                _verification_result_to_dict(result) for result in self.verification_results
+            ),
+            risk_decision=_risk_decision_to_dict(self.risk_decision),
+            final_answer=_final_answer_to_dict(self.final_answer),
         )
 
     def receipt_claim_support_summary(self) -> dict[str, Any]:
@@ -666,6 +684,21 @@ def _evidence_quality_summaries_from_action_result(
         if quality:
             query_summaries.append(quality)
     return tuple(query_summaries)
+
+
+def _metacognition_summary_from_payload(
+    *,
+    diagnostics: Mapping[str, Any] | Any,
+    verification_results: Sequence[Mapping[str, Any]],
+    risk_decision: Mapping[str, Any] | None,
+    final_answer: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    return audit_metacognitive_alignment(
+        diagnostics=_mapping(diagnostics),
+        verification_results=tuple(_mapping(result) for result in verification_results),
+        risk_decision=_mapping(risk_decision),
+        final_answer=_mapping(final_answer),
+    ).summary()
 
 
 def _evidence_quality_status(

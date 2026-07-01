@@ -525,6 +525,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
         metrics.update(_cache_metrics(trace))
         metrics.update(_action_execution_metrics(trace))
         metrics.update(_evidence_quality_metrics(trace))
+        metrics.update(_metacognition_metrics(trace))
         metrics.update(_action_receipt_metrics(trace))
         metrics.update(_receipt_claim_support_metrics(trace))
         metrics.update(_action_audit_metrics(trace))
@@ -576,6 +577,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
     metrics.update(_cache_metrics(trace))
     metrics.update(_action_execution_metrics(trace))
     metrics.update(_evidence_quality_metrics(trace))
+    metrics.update(_metacognition_metrics(trace))
     metrics.update(_action_receipt_metrics(trace))
     metrics.update(_receipt_claim_support_metrics(trace))
     metrics.update(_action_audit_metrics(trace))
@@ -1012,6 +1014,56 @@ def _evidence_quality_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[s
         ),
         "evidence_quality_reason_counts": _int_mapping(reason_counts),
         "evidence_quality_status_counts": _int_mapping(summary.get("status_counts")),
+    }
+
+
+def _metacognition_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:
+    if isinstance(trace, ProductTrace):
+        summary = trace.metacognition_summary()
+        source = "full_trace"
+    else:
+        payload = dict(trace)
+        summary = _mapping(_mapping(payload.get("summaries")).get("metacognition"))
+        if summary:
+            source = "bounded_summary"
+        else:
+            summary = ProductTrace(
+                diagnostics=_mapping(payload.get("diagnostics")),
+                verification_results=tuple(_sequence(payload.get("verification_results", ()))),
+                risk_decision=_mapping(payload.get("risk_decision")),
+                final_answer=_mapping(payload.get("final_answer")),
+            ).metacognition_summary()
+            source = "full_trace"
+    return {
+        "metacognition_available": bool(summary.get("available")),
+        "metacognition_source": source,
+        "metacognition_summary": summary,
+        "metacognition_status": summary.get("status"),
+        "metacognition_passed": _optional_bool(summary.get("passed")),
+        "metacognition_text_available": _optional_bool(summary.get("text_available")),
+        "metacognition_risk_proxy": _finite_float(summary.get("risk_proxy")),
+        "metacognition_verbal_uncertainty_score": _finite_float(
+            summary.get("verbal_uncertainty_score")
+        ),
+        "metacognition_expressed_confidence_score": _finite_float(
+            summary.get("expressed_confidence_score")
+        ),
+        "metacognition_miscalibration_score": _finite_float(
+            summary.get("miscalibration_score")
+        ),
+        "metacognition_overconfident_risk": _optional_bool(
+            summary.get("overconfident_risk")
+        ),
+        "metacognition_overcautious_uncertainty": _optional_bool(
+            summary.get("overcautious_uncertainty")
+        ),
+        "metacognition_uncertainty_cue_count": (
+            _finite_float(summary.get("uncertainty_cue_count")) or 0.0
+        ),
+        "metacognition_certainty_cue_count": (
+            _finite_float(summary.get("certainty_cue_count")) or 0.0
+        ),
+        "metacognition_reason_counts": _int_mapping(summary.get("reason_counts")),
     }
 
 

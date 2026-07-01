@@ -45335,6 +45335,64 @@ def _write_evidence_quality_product_runtime_trace(
     path.write_text(json.dumps(trace.to_dict()), encoding="utf-8")
 
 
+def _write_metacognition_product_runtime_trace(
+    path: Path,
+    *,
+    request_id: str,
+    answer_text: str | None,
+    risk_level: str = "high",
+    decision_action: str = "abstain",
+    final_status: str = "answered",
+    final_action: str = "accept",
+    answerable: bool = True,
+    verification_status: str = "refuted",
+    diagnostics: Mapping[str, Any] | None = None,
+) -> None:
+    from eigentruth.control import (
+        ControlAction,
+        FinalAnswer,
+        FinalAnswerStatus,
+        ProductTrace,
+        RiskDecision,
+        RiskLevel,
+        RuntimeTrace,
+    )
+    from eigentruth.verify import VerificationResult, VerificationStatus
+
+    risk_decision = RiskDecision(
+        action=ControlAction(decision_action),
+        risk_level=RiskLevel(risk_level),
+        confidence=0.9,
+        reason="metacognition fixture",
+    )
+    final_answer = None
+    if answer_text is not None:
+        final_answer = FinalAnswer(
+            status=FinalAnswerStatus(final_status),
+            text=answer_text,
+            answerable=answerable,
+            action=ControlAction(final_action),
+            risk_level=RiskLevel(risk_level),
+            confidence=0.9,
+            reason="metacognition fixture",
+        )
+    trace = ProductTrace(
+        request_id=request_id,
+        diagnostics=dict(diagnostics or {"semantic_entropy": 0.85}),
+        verification_results=(
+            VerificationResult(
+                status=VerificationStatus(verification_status),
+                confidence=0.9,
+                evidence=("fixture",),
+            ),
+        ),
+        risk_decision=risk_decision,
+        final_answer=final_answer,
+        runtime_trace=RuntimeTrace(total_seconds=0.02, phases=()),
+    )
+    path.write_text(json.dumps(trace.to_dict()), encoding="utf-8")
+
+
 def test_run_product_runtime_baseline_aggregates_evidence_quality(tmp_path):
     module = importlib.import_module("benchmarks.run_product_runtime_baseline")
     registry_module = importlib.import_module("eigentruth.registry")
@@ -45399,6 +45457,70 @@ def test_run_product_runtime_baseline_aggregates_evidence_quality(tmp_path):
     assert payload["traces"][1]["metrics"]["evidence_quality_available"] is False
     assert manifest["metadata"]["evidence_quality_failure_rate"] == pytest.approx(0.5)
     assert record.metadata["evidence_quality_stale_evidence_rate"] == pytest.approx(0.5)
+
+
+def test_run_product_runtime_baseline_aggregates_metacognition(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    registry_module = importlib.import_module("eigentruth.registry")
+    overconfident_trace = tmp_path / "overconfident.json"
+    uncertain_trace = tmp_path / "uncertain.json"
+    missing_trace = tmp_path / "missing.json"
+    report_path = tmp_path / "baseline.json"
+    manifest_path = tmp_path / "manifest.json"
+    registry_path = tmp_path / "registry.json"
+    _write_metacognition_product_runtime_trace(
+        overconfident_trace,
+        request_id="overconfident",
+        answer_text="The claim is definitely true.",
+    )
+    _write_metacognition_product_runtime_trace(
+        uncertain_trace,
+        request_id="uncertain",
+        answer_text="I don't know; there is not enough evidence to answer reliably.",
+        final_status="abstained",
+        final_action="abstain",
+        answerable=False,
+        verification_status="insufficient_evidence",
+    )
+    _write_metacognition_product_runtime_trace(
+        missing_trace,
+        request_id="missing",
+        answer_text=None,
+    )
+
+    payload = module.build_product_runtime_baseline(
+        module.ProductRuntimeBaselineConfig(
+            trace_paths=(overconfident_trace, uncertain_trace, missing_trace),
+            report_path=report_path,
+            artifact_manifest_path=manifest_path,
+            registry_path=registry_path,
+            name="runtime-metacognition",
+            version="0.1",
+        )
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "product_runtime_baseline:runtime-metacognition:0.1"
+    )
+
+    metacognition = payload["summary"]["metacognition"]
+    assert metacognition["source_trace_count"] == 3
+    assert metacognition["available_trace_count"] == 2
+    assert metacognition["missing_trace_count"] == 1
+    assert metacognition["trace_coverage_rate"] == pytest.approx(2 / 3)
+    assert metacognition["passed_trace_count"] == 1
+    assert metacognition["failed_trace_count"] == 1
+    assert metacognition["pass_rate"] == pytest.approx(0.5)
+    assert metacognition["overconfident_risk_count"] == 1
+    assert metacognition["overconfident_risk_rate"] == pytest.approx(0.5)
+    assert metacognition["reason_counts"]["high_risk_low_verbal_uncertainty"] == 1
+    assert metacognition["reason_counts"]["missing_final_answer_text"] == 1
+    assert payload["traces"][0]["metrics"]["metacognition_overconfident_risk"] is True
+    assert payload["traces"][1]["metrics"]["metacognition_passed"] is True
+    assert payload["traces"][2]["metrics"]["metacognition_available"] is False
+    assert manifest["metadata"]["metacognition_trace_coverage_rate"] == pytest.approx(2 / 3)
+    assert manifest["metadata"]["metacognition_pass_rate"] == pytest.approx(0.5)
+    assert record.metadata["metacognition_overconfident_risk_rate"] == pytest.approx(0.5)
 
 
 def test_run_product_runtime_baseline_aggregates_action_receipts(tmp_path):
@@ -45821,6 +45943,90 @@ def test_compare_product_runtime_baselines_gates_evidence_quality_drift(tmp_path
     assert record.metadata[
         "product_trace_evidence_quality_untrusted_source_rate_current"
     ] == pytest.approx(0.5)
+
+
+def test_compare_product_runtime_baselines_gates_metacognition_drift(tmp_path):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    registry_module = importlib.import_module("eigentruth.registry")
+    baseline_trace = tmp_path / "baseline-metacognition.json"
+    current_trace = tmp_path / "current-metacognition.json"
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    drift_report = tmp_path / "drift.json"
+    manifest_path = tmp_path / "manifest.json"
+    registry_path = tmp_path / "registry.json"
+    _write_metacognition_product_runtime_trace(
+        baseline_trace,
+        request_id="baseline-metacognition",
+        answer_text="I don't know; there is not enough evidence to answer reliably.",
+        final_status="abstained",
+        final_action="abstain",
+        answerable=False,
+        verification_status="insufficient_evidence",
+    )
+    _write_metacognition_product_runtime_trace(
+        current_trace,
+        request_id="current-metacognition",
+        answer_text="The claim is definitely true.",
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=baseline_report,
+        )
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(current_trace,),
+            report_path=current_report,
+        )
+    )
+
+    payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        report_path=drift_report,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="runtime-drift-metacognition",
+        version="0.1",
+        min_product_trace_metacognition_trace_coverage_rate=1.0,
+        min_product_trace_metacognition_pass_rate=0.9,
+        max_product_trace_metacognition_overconfident_risk_rate_increase=0.0,
+        max_product_trace_metacognition_miscalibration_score_mean_increase=0.0,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "product_runtime_drift_report:runtime-drift-metacognition:0.1"
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["blocked_metric_count"] == 3
+    assert _metric_by_name(payload, "metacognition.trace_coverage_rate")[
+        "status"
+    ] == "pass"
+    assert _metric_by_name(payload, "metacognition.pass_rate")[
+        "status"
+    ] == "blocked"
+    assert _metric_by_name(payload, "metacognition.overconfident_risk_rate")[
+        "absolute_delta"
+    ] == pytest.approx(1.0)
+    assert _metric_by_name(payload, "metacognition.miscalibration_score.mean")[
+        "status"
+    ] == "blocked"
+    assert payload["config"][
+        "max_product_trace_metacognition_overconfident_risk_rate_increase"
+    ] == pytest.approx(0.0)
+    assert manifest["metadata"][
+        "product_trace_metacognition_blocked_metric_count"
+    ] == 3
+    assert manifest["metadata"][
+        "product_trace_metacognition_overconfident_risk_rate_current"
+    ] == pytest.approx(1.0)
+    assert record.metadata[
+        "product_trace_metacognition_miscalibration_score_mean_status"
+    ] == "blocked"
 
 
 def test_compare_product_runtime_baselines_gates_action_receipts(tmp_path):
@@ -49097,6 +49303,116 @@ def test_product_trace_replay_workflow_applies_evidence_quality_runtime_drift_ga
     assert drift_record.metadata["product_trace_evidence_quality_blocked_metric_count"] == 6
     assert drift_record.metadata[
         "product_trace_evidence_quality_missing_source_rate_status"
+    ] == "blocked"
+
+
+def test_product_trace_replay_workflow_applies_metacognition_runtime_drift_gate(
+    tmp_path,
+):
+    module = importlib.import_module("benchmarks.run_product_trace_replay_workflow")
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    tuning_module = importlib.import_module("benchmarks.run_runtime_profile_selector_tuning")
+    registry_module = importlib.import_module("eigentruth.registry")
+    output_dir = tmp_path / "workflow"
+    registry_path = tmp_path / "registry.json"
+    prior_baseline_path = tmp_path / "prior-product-runtime-baseline.json"
+    traces_dir = tmp_path / "input-traces"
+    traces_dir.mkdir()
+    baseline_trace = tmp_path / "baseline-metacognition.json"
+    current_trace = traces_dir / "current-metacognition.json"
+    _write_metacognition_product_runtime_trace(
+        baseline_trace,
+        request_id="baseline-metacognition",
+        answer_text="I don't know; there is not enough evidence to answer reliably.",
+        final_status="abstained",
+        final_action="abstain",
+        answerable=False,
+        verification_status="insufficient_evidence",
+    )
+    _write_metacognition_product_runtime_trace(
+        current_trace,
+        request_id="current-metacognition",
+        answer_text="The claim is definitely true.",
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=prior_baseline_path,
+        )
+    )
+
+    payload = module.run_product_trace_replay_workflow(
+        module.ProductTraceReplayWorkflowConfig(
+            trace_paths=(current_trace,),
+            output_dir=output_dir,
+            candidates=(
+                tuning_module.RuntimeProfileSelectorCandidate(
+                    name="default",
+                    policy={},
+                ),
+            ),
+            runtime_drift_baseline_path=prior_baseline_path,
+            min_runtime_drift_product_trace_metacognition_trace_coverage_rate=1.0,
+            min_runtime_drift_product_trace_metacognition_pass_rate=0.9,
+            max_runtime_drift_product_trace_metacognition_overconfident_risk_rate_increase=0.0,
+            max_runtime_drift_product_trace_metacognition_miscalibration_score_mean_increase=0.0,
+            registry_path=registry_path,
+            name="trace-replay-metacognition-drift",
+            version="0.1",
+            require_runtime_trace=True,
+        )
+    )
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    drift_report = json.loads(
+        Path(payload["paths"]["runtime_drift_report"]).read_text(encoding="utf-8")
+    )
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get("report:trace-replay-metacognition-drift:0.1")
+    drift_record = registry.get(
+        "product_runtime_drift_report:trace-replay-metacognition-drift-runtime-drift:0.1"
+    )
+    metacognition_statuses = {
+        metric["metric"]: metric["status"]
+        for metric in drift_report["metrics"]
+        if metric["metric"].startswith("metacognition.")
+    }
+
+    assert payload["runtime_drift"]["status"] == "blocked"
+    assert payload["runtime_drift"]["product_trace_metacognition_metric_count"] == 4
+    assert (
+        payload["runtime_drift"]["product_trace_metacognition_blocked_metric_count"]
+        == 3
+    )
+    assert payload["config"]["runtime_drift_gates"][
+        "min_product_trace_metacognition_pass_rate"
+    ] == pytest.approx(0.9)
+    assert payload["config"]["runtime_drift_gates"][
+        "max_product_trace_metacognition_overconfident_risk_rate_increase"
+    ] == pytest.approx(0.0)
+    assert len(metacognition_statuses) == 4
+    assert metacognition_statuses["metacognition.trace_coverage_rate"] == "pass"
+    assert metacognition_statuses["metacognition.pass_rate"] == "blocked"
+    assert metacognition_statuses["metacognition.overconfident_risk_rate"] == "blocked"
+    assert (
+        manifest["metadata"]["runtime_drift_product_trace_metacognition_metric_count"]
+        == 4
+    )
+    assert (
+        manifest["metadata"][
+            "runtime_drift_product_trace_metacognition_blocked_metric_count"
+        ]
+        == 3
+    )
+    assert record.metadata["runtime_drift_product_trace_metacognition_metric_count"] == 4
+    assert (
+        record.metadata[
+            "runtime_drift_product_trace_metacognition_blocked_metric_count"
+        ]
+        == 3
+    )
+    assert drift_record.metadata["product_trace_metacognition_blocked_metric_count"] == 3
+    assert drift_record.metadata[
+        "product_trace_metacognition_overconfident_risk_rate_status"
     ] == "blocked"
 
 

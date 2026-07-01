@@ -74,6 +74,12 @@ from eigentruth.control.loop import (
     evidence_bundle_from_action_results,
     run_verification_loop,
 )
+from eigentruth.control.metacognition import (
+    MetacognitionAuditReport,
+    VerbalUncertaintySignal,
+    audit_metacognitive_alignment,
+    verbal_uncertainty_signal,
+)
 from eigentruth.control.policy import ControlAction, RiskDecision, RiskLevel
 from eigentruth.control.promotion import (
     LoadedProductPromotionContract,
@@ -183,6 +189,7 @@ __all__ = [
     "InMemoryActionExecutionLedger",
     "JsonActionExecutionLedger",
     "LearnedPreGenerationRiskEstimate",
+    "MetacognitionAuditReport",
     "PolicyGuardedActionExecutor",
     "PlanAwareCorrectionPolicy",
     "ParticipationGateConfig",
@@ -230,10 +237,12 @@ __all__ = [
     "TrajectoryAuditIssue",
     "TrajectoryAuditReport",
     "TrajectoryHallucinationType",
+    "VerbalUncertaintySignal",
     "VerificationStageDecision",
     "VerificationLoopResult",
     "audit_action_requests",
     "audit_evidence_graph_consistency",
+    "audit_metacognitive_alignment",
     "audit_product_trace_trajectory",
     "audit_trace_provenance",
     "build_trace_provenance_graph",
@@ -265,5 +274,6 @@ __all__ = [
     "select_pre_generation_profile",
     "select_runtime_profile",
     "verify_action_receipt",
+    "verbal_uncertainty_signal",
     "write_feedback_jsonl",
 ]

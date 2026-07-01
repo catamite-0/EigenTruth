@@ -1460,6 +1460,93 @@ def test_product_trace_evidence_quality_summary_feeds_runtime_metrics():
     assert bounded_metrics["evidence_quality_failure_rate"] == pytest.approx(0.5)
 
 
+def test_product_trace_metacognition_flags_overconfident_high_risk_answer():
+    trace = ProductTrace(
+        diagnostics={"semantic_entropy": 0.88},
+        verification_results=(
+            VerificationResult(
+                status=VerificationStatus.REFUTED,
+                confidence=0.92,
+                evidence=("fact-check",),
+            ),
+        ),
+        risk_decision=RiskDecision(
+            action=ControlAction.ABSTAIN,
+            risk_level=RiskLevel.HIGH,
+            confidence=0.95,
+            reason="claim was refuted",
+        ),
+        final_answer=FinalAnswer(
+            status=FinalAnswerStatus.ANSWERED,
+            text="The claim is definitely true.",
+            answerable=True,
+            action=ControlAction.ACCEPT,
+            risk_level=RiskLevel.HIGH,
+            confidence=0.95,
+            reason="draft answer",
+        ),
+    )
+
+    summary = trace.metacognition_summary()
+    bounded = trace.to_bounded_dict()
+    metrics = product_runtime_metrics(trace)
+    bounded_metrics = product_runtime_metrics(bounded)
+
+    assert summary["available"] is True
+    assert summary["status"] == "fail"
+    assert summary["passed"] is False
+    assert summary["overconfident_risk"] is True
+    assert summary["risk_proxy"] >= 0.9
+    assert summary["verbal_uncertainty_score"] <= 0.35
+    assert "high_risk_low_verbal_uncertainty" in summary["reasons"]
+    assert bounded["summaries"]["metacognition"]["status"] == "fail"
+    assert metrics["metacognition_available"] is True
+    assert metrics["metacognition_source"] == "full_trace"
+    assert metrics["metacognition_passed"] is False
+    assert metrics["metacognition_overconfident_risk"] is True
+    assert bounded_metrics["metacognition_source"] == "bounded_summary"
+    assert bounded_metrics["metacognition_overconfident_risk"] is True
+    json.dumps(bounded)
+
+
+def test_product_trace_metacognition_accepts_uncertain_high_risk_non_answer():
+    trace = ProductTrace(
+        verification_results=(
+            VerificationResult(
+                status=VerificationStatus.INSUFFICIENT_EVIDENCE,
+                confidence=0.9,
+                evidence=(),
+            ),
+        ),
+        risk_decision=RiskDecision(
+            action=ControlAction.ABSTAIN,
+            risk_level=RiskLevel.HIGH,
+            confidence=0.9,
+            reason="insufficient evidence",
+        ),
+        final_answer=FinalAnswer(
+            status=FinalAnswerStatus.ABSTAINED,
+            text="I don't know; there is not enough evidence to answer reliably.",
+            answerable=False,
+            action=ControlAction.ABSTAIN,
+            risk_level=RiskLevel.HIGH,
+            confidence=0.9,
+            reason="insufficient evidence",
+        ),
+    )
+
+    summary = trace.metacognition_summary()
+    metrics = product_runtime_metrics(trace)
+
+    assert summary["available"] is True
+    assert summary["status"] == "pass"
+    assert summary["passed"] is True
+    assert summary["overconfident_risk"] is False
+    assert summary["verbal_uncertainty_score"] >= 0.65
+    assert metrics["metacognition_passed"] is True
+    assert metrics["metacognition_overconfident_risk"] is False
+
+
 def test_product_trace_action_execution_summary_handles_many_request_ids():
     actions = tuple(
         ActionRequest(
