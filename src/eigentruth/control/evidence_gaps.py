@@ -1432,11 +1432,135 @@ def _action_template(kind: Mapping[str, str], *, gate: str, reason: str) -> Evid
             action_type="workflow",
             priority=87,
             rationale=(
-                "Agent-style hallucinations include fabricated, missing, or malformed tool "
-                "actions; release evidence should carry action-audit and execution alignment rates."
+                "Tool-use hallucinations include fabricated, missing, malformed, and "
+                "misaligned actions; release evidence should tie replayed traces to "
+                "action-audit, execution-alignment, and runtime-drift gates."
             ),
-            evidence_routes=("product_trace_replay", "action_audit", "action_execution"),
-            suggested_commands=("benchmarks/run_product_trace_replay_workflow.py",),
+            evidence_routes=(
+                "product_trace_replay",
+                "action_audit",
+                "action_execution",
+                "product_runtime_baseline",
+                "product_runtime_drift",
+                "tool_use_evidence",
+            ),
+            suggested_commands=(
+                "benchmarks/run_product_trace_replay_workflow.py "
+                "--trace-glob ... --promotion-contract ... "
+                "--max-action-audit-error-rate ... "
+                "--max-action-audit-missing-retrieval-rate ... "
+                "--max-action-audit-missing-plan-retrieval-query-rate ... "
+                "--max-action-audit-malformed-payload-rate ... "
+                "--max-action-audit-unexpected-action-rate ... "
+                "--max-action-audit-unknown-claim-id-rate ... "
+                "--max-action-execution-missing-result-rate ... "
+                "--max-action-execution-unexpected-result-rate ... "
+                "--max-action-execution-request-id-mismatch-rate ... "
+                "--max-runtime-drift-product-trace-action-audit-error-rate-increase ... "
+                "--max-runtime-drift-product-trace-action-audit-missing-retrieval-action-rate-increase ... "
+                "--max-runtime-drift-product-trace-action-audit-missing-plan-retrieval-query-rate-increase ... "
+                "--max-runtime-drift-product-trace-action-audit-malformed-payload-rate-increase ... "
+                "--max-runtime-drift-product-trace-action-audit-unexpected-action-rate-increase ... "
+                "--max-runtime-drift-product-trace-action-audit-unknown-claim-id-rate-increase ... "
+                "--max-runtime-drift-product-trace-action-execution-alignment-failed-trace-rate-increase ... "
+                "--max-runtime-drift-product-trace-action-execution-missing-result-rate-increase ... "
+                "--max-runtime-drift-product-trace-action-execution-unexpected-result-rate-increase ... "
+                "--max-runtime-drift-product-trace-action-execution-request-id-mismatch-rate-increase ...",
+                "benchmarks/run_product_runtime_baseline.py "
+                "--trace ... --promotion-contract ... --json ... --artifact-manifest ...",
+                "benchmarks/compare_product_runtime_baselines.py "
+                "--current ... --baseline ... "
+                "--max-product-trace-action-audit-error-rate-increase ... "
+                "--max-product-trace-action-audit-missing-retrieval-action-rate-increase ... "
+                "--max-product-trace-action-audit-missing-plan-retrieval-query-rate-increase ... "
+                "--max-product-trace-action-audit-malformed-payload-rate-increase ... "
+                "--max-product-trace-action-audit-unexpected-action-rate-increase ... "
+                "--max-product-trace-action-audit-unknown-claim-id-rate-increase ... "
+                "--max-product-trace-action-execution-alignment-failed-trace-rate-increase ... "
+                "--max-product-trace-action-execution-missing-result-rate-increase ... "
+                "--max-product-trace-action-execution-unexpected-result-rate-increase ... "
+                "--max-product-trace-action-execution-request-id-mismatch-rate-increase ... "
+                "--json ... --artifact-manifest ...",
+            ),
+            metadata={
+                "action_audit_api": "eigentruth.control.audit_action_requests",
+                "action_execution_summary_api": (
+                    "eigentruth.control.ProductTrace.action_execution_summary"
+                ),
+                "trace_replay_script": "benchmarks/run_product_trace_replay_workflow.py",
+                "runtime_baseline_script": "benchmarks/run_product_runtime_baseline.py",
+                "runtime_drift_script": "benchmarks/compare_product_runtime_baselines.py",
+                "trace_replay_workflow": "product_trace_replay_workflow",
+                "action_audit_gate_workflow": "product_trace_action_audit_gate",
+                "action_execution_gate_workflow": "product_trace_action_execution_gate",
+                "runtime_baseline_workflow": "product_runtime_baseline",
+                "runtime_drift_workflow": "product_runtime_drift_comparison",
+                "risk_control_method": "tool_use_action_audit",
+                "tool_use_failure_modes": (
+                    "fabricated_action",
+                    "missing_required_action",
+                    "malformed_payload",
+                    "unexpected_action",
+                    "unknown_claim_reference",
+                    "missing_action_result",
+                    "unexpected_action_result",
+                    "request_id_mismatch",
+                    "execution_alignment_failure",
+                ),
+                "required_trace_metrics": (
+                    "action_audit.error_rate",
+                    "action_audit.missing_retrieval_action_rate",
+                    "action_audit.missing_plan_retrieval_query_rate",
+                    "action_audit.malformed_payload_rate",
+                    "action_audit.unexpected_action_rate",
+                    "action_audit.unknown_claim_id_rate",
+                    "action_execution.alignment_failed_trace_rate",
+                    "action_execution.missing_result_rate",
+                    "action_execution.unexpected_result_rate",
+                    "action_execution.request_id_mismatch_rate",
+                ),
+                "default_gate_thresholds": {
+                    "max_action_audit_error_rate": 0.0,
+                    "max_action_audit_missing_retrieval_rate": 0.0,
+                    "max_action_audit_missing_plan_retrieval_query_rate": 0.0,
+                    "max_action_audit_malformed_payload_rate": 0.0,
+                    "max_action_audit_unexpected_action_rate": 0.0,
+                    "max_action_audit_unknown_claim_id_rate": 0.0,
+                    "max_action_execution_missing_result_rate": 0.0,
+                    "max_action_execution_unexpected_result_rate": 0.0,
+                    "max_action_execution_request_id_mismatch_rate": 0.0,
+                    "max_product_trace_action_audit_error_rate_increase": 0.0,
+                    "max_product_trace_action_audit_missing_retrieval_action_rate_increase": (
+                        0.0
+                    ),
+                    "max_product_trace_action_audit_missing_plan_retrieval_query_rate_increase": (
+                        0.0
+                    ),
+                    "max_product_trace_action_audit_malformed_payload_rate_increase": 0.0,
+                    "max_product_trace_action_audit_unexpected_action_rate_increase": 0.0,
+                    "max_product_trace_action_audit_unknown_claim_id_rate_increase": 0.0,
+                    "max_product_trace_action_execution_alignment_failed_trace_rate_increase": (
+                        0.0
+                    ),
+                    "max_product_trace_action_execution_missing_result_rate_increase": 0.0,
+                    "max_product_trace_action_execution_unexpected_result_rate_increase": 0.0,
+                    "max_product_trace_action_execution_request_id_mismatch_rate_increase": (
+                        0.0
+                    ),
+                },
+                "required_inputs": (
+                    "full_product_trace_corpus",
+                    "promotion_contract_or_release_candidate",
+                    "baseline_product_runtime_report",
+                ),
+                "closure_outputs": (
+                    "product_trace_replay_workflow",
+                    "product_trace_action_audit_gate",
+                    "product_trace_action_execution_gate",
+                    "product_runtime_baseline",
+                    "product_runtime_drift_comparison",
+                ),
+            },
         )
     if evidence_kind == "product_runtime_world_model_evidence":
         return EvidenceGapAction(
