@@ -52,6 +52,14 @@ _CITATION_BATCH_RERUN_COMMANDS = (
     "benchmarks/compare_frontier_release_evidence.py --citation-batch-rollup-report ...",
 )
 
+_DETECTABILITY_RERUN_COMMANDS = (
+    "benchmarks/plan_frontier_detectability_evidence_reruns.py --source ... --json ...",
+    "benchmarks/analyze_detectability_blind_spots.py --taxonomy-report ... --json ...",
+    "benchmarks/eval_detectability_taxonomy.py --scores ... --json ...",
+    "benchmarks/rollup_frontier_detectability_evidence_reruns.py --queue ... --json ...",
+    "benchmarks/compare_frontier_release_evidence.py --frontier-rerun-rollup-report ...",
+)
+
 
 def _assert_multiple_testing_rerun_rollup_action(action):
     assert action["evidence_routes"] == (
@@ -175,6 +183,54 @@ def _assert_citation_batch_rerun_rollup_action(action):
     assert action["metadata"]["closure_outputs"] == (
         "citation_batch_evidence_rerun_queue",
         "citation_search_batch_evidence_rollup",
+        "frontier_release_evidence_comparison",
+    )
+
+
+def _assert_detectability_rerun_rollup_action(action):
+    assert action["evidence_routes"] == (
+        "detectability_taxonomy",
+        "blind_spot_audit",
+        "frontier_release_evidence",
+    )
+    assert action["suggested_commands"] == _DETECTABILITY_RERUN_COMMANDS
+    assert action["metadata"]["planner_script"] == (
+        "benchmarks/plan_frontier_detectability_evidence_reruns.py"
+    )
+    assert action["metadata"]["blind_spot_analysis_script"] == (
+        "benchmarks/analyze_detectability_blind_spots.py"
+    )
+    assert action["metadata"]["taxonomy_rerun_script"] == (
+        "benchmarks/eval_detectability_taxonomy.py"
+    )
+    assert action["metadata"]["rollup_script"] == (
+        "benchmarks/rollup_frontier_detectability_evidence_reruns.py"
+    )
+    assert action["metadata"]["release_gate_script"] == (
+        "benchmarks/compare_frontier_release_evidence.py"
+    )
+    assert action["metadata"]["rerun_queue_workflow"] == (
+        "frontier_detectability_evidence_rerun_queue"
+    )
+    assert action["metadata"]["blind_spot_workflow"] == "detectability_blind_spot_analysis"
+    assert action["metadata"]["taxonomy_workflow"] == "detectability_taxonomy"
+    assert action["metadata"]["rollup_workflow"] == (
+        "frontier_detectability_evidence_rerun_rollup"
+    )
+    assert action["metadata"]["derived_artifact_key"] == (
+        "frontier_detectability_evidence_rerun_queue"
+    )
+    assert action["metadata"]["rollup_track"] == "detectability"
+    assert action["metadata"]["release_gate_track"] == "frontier_rerun_rollup"
+    assert action["metadata"]["risk_control_method"] == "detectability_taxonomy"
+    assert action["metadata"]["default_blind_spot_cell"] == "entrenched"
+    assert action["metadata"]["queue_entry_report_kinds"] == (
+        "detectability_blind_spot_analysis",
+        "detectability_taxonomy",
+    )
+    assert action["metadata"]["closure_outputs"] == (
+        "frontier_detectability_evidence_rerun_queue",
+        "frontier_detectability_evidence_rerun_rollup",
         "frontier_release_evidence_comparison",
     )
 
@@ -419,6 +475,9 @@ def test_evidence_gap_plan_maps_frontier_release_evidence_report_tracks():
     )
     _assert_citation_batch_rerun_rollup_action(
         actions["complete_citation_batch_evidence_rollup"]
+    )
+    _assert_detectability_rerun_rollup_action(
+        actions["audit_detectability_blind_spots"]
     )
 
 

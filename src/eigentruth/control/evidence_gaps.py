@@ -1314,11 +1314,50 @@ def _action_template(kind: Mapping[str, str], *, gate: str, reason: str) -> Evid
                 "High-confidence/high-consistency false records need explicit blind-spot "
                 "analysis before output-level uncertainty signals are trusted."
             ),
-            evidence_routes=("detectability_taxonomy", "blind_spot_audit"),
-            suggested_commands=(
-                "benchmarks/eval_detectability_taxonomy.py",
-                "benchmarks/analyze_detectability_blind_spots.py",
+            evidence_routes=(
+                "detectability_taxonomy",
+                "blind_spot_audit",
+                "frontier_release_evidence",
             ),
+            suggested_commands=(
+                "benchmarks/plan_frontier_detectability_evidence_reruns.py --source ... --json ...",
+                "benchmarks/analyze_detectability_blind_spots.py --taxonomy-report ... --json ...",
+                "benchmarks/eval_detectability_taxonomy.py --scores ... --json ...",
+                "benchmarks/rollup_frontier_detectability_evidence_reruns.py --queue ... --json ...",
+                "benchmarks/compare_frontier_release_evidence.py --frontier-rerun-rollup-report ...",
+            ),
+            metadata={
+                "planner_script": "benchmarks/plan_frontier_detectability_evidence_reruns.py",
+                "blind_spot_analysis_script": "benchmarks/analyze_detectability_blind_spots.py",
+                "taxonomy_rerun_script": "benchmarks/eval_detectability_taxonomy.py",
+                "rollup_script": "benchmarks/rollup_frontier_detectability_evidence_reruns.py",
+                "release_gate_script": "benchmarks/compare_frontier_release_evidence.py",
+                "rerun_queue_workflow": "frontier_detectability_evidence_rerun_queue",
+                "blind_spot_workflow": "detectability_blind_spot_analysis",
+                "taxonomy_workflow": "detectability_taxonomy",
+                "rollup_workflow": "frontier_detectability_evidence_rerun_rollup",
+                "derived_artifact_key": "frontier_detectability_evidence_rerun_queue",
+                "derived_artifact_kind": "frontier_detectability_evidence_rerun_queue",
+                "rollup_track": "detectability",
+                "release_gate_track": "frontier_rerun_rollup",
+                "queue_entry_report_kinds": (
+                    "detectability_blind_spot_analysis",
+                    "detectability_taxonomy",
+                ),
+                "risk_control_method": "detectability_taxonomy",
+                "default_blind_spot_cell": "entrenched",
+                "required_inputs": (
+                    "frontier_release_report_or_evidence_gap_plan",
+                    "detectability_taxonomy_report_or_score_dump",
+                    "consistency_signal",
+                    "confidence_signal",
+                ),
+                "closure_outputs": (
+                    "frontier_detectability_evidence_rerun_queue",
+                    "frontier_detectability_evidence_rerun_rollup",
+                    "frontier_release_evidence_comparison",
+                ),
+            },
         )
     if evidence_kind == "counterfactual_verification":
         return EvidenceGapAction(
