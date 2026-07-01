@@ -1236,8 +1236,12 @@ Added the first monitor-first tool-selection audit layer:
   `runtime_drift_evidence_bound_command_plan` with concrete commands only when
   all required inputs and ordered command-template placeholders are bound.
   Entries remain `needs_inputs` until concrete trace, contract, child-report,
-  and baseline paths are bound, preserving the fail-closed distinction between
-  a work plan and completed runtime evidence.
+  and baseline paths are bound. `benchmarks/run_runtime_drift_bound_command_plan.py`
+  can now convert the ready bound plan into a manifest/registry-backed
+  `runtime_drift_bound_command_run_report`; it defaults to dry-run command
+  parsing and expected-output summaries, with actual execution requiring an
+  explicit `--execute`. This preserves the fail-closed distinction between a
+  work plan, an execution report, and completed runtime evidence.
 - `ProductPromotionEvidenceAudit` now audits a deployable promotion contract
   before runtime-drift replay. `benchmarks/audit_product_promotion_contract_evidence.py`
   checks the exact `frontier_audit` evidence groups expected by drift gates:

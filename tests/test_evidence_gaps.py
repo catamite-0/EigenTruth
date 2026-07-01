@@ -22,6 +22,9 @@ from benchmarks.rollup_frontier_multiple_testing_reruns import (
 from benchmarks.rollup_frontier_stability_evidence_reruns import (
     rollup_frontier_stability_evidence_reruns,
 )
+from benchmarks.run_runtime_drift_bound_command_plan import (
+    run_runtime_drift_bound_command_plan,
+)
 from eigentruth.control import (
     EvidenceGapPlan,
     plan_evidence_gaps_from_release_candidate,
@@ -2559,6 +2562,112 @@ def test_bind_runtime_drift_completion_plan_fails_closed_on_missing_values():
     assert entry["command_status"] == "needs_inputs"
     assert entry["unbound_inputs"] == ("bound_command_template_values",)
     assert entry["bound_commands"] == ("benchmarks/demo.py --input fixture.json --json ...",)
+
+
+def test_run_runtime_drift_bound_command_plan_dry_runs_ready_plan(tmp_path):
+    bound_plan_path = tmp_path / "runtime-drift-bound-commands.json"
+    report_path = tmp_path / "runtime-drift-bound-command-run.json"
+    manifest_path = tmp_path / "runtime-drift-bound-command-run-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    bound_plan_path.write_text(
+        strict_json_dumps({
+            "schema_version": 1,
+            "workflow": "runtime_drift_evidence_bound_command_plan",
+            "status": "ready",
+            "entries": [
+                {
+                    "entry_id": "runtime-drift-0001",
+                    "action_id": "demo_runtime_action",
+                    "title": "Demo runtime action",
+                    "command_status": "ready",
+                    "bound_commands": (
+                        "benchmarks/demo_runtime.py --input fixture.json --json report.json",
+                    ),
+                    "planned_outputs": (
+                        {
+                            "name": "demo_report",
+                            "path": str(tmp_path / "report.json"),
+                            "status": "planned",
+                        },
+                    ),
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = run_runtime_drift_bound_command_plan(
+        bound_command_plan=bound_plan_path,
+        json_path=report_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="runtime-drift-bound-command-run",
+        version="0.1",
+        cwd=tmp_path,
+        python_executable="/python",
+    )
+
+    saved = json.loads(report_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = ArtifactRegistry.load_json(registry_path).get(
+        "report:runtime-drift-bound-command-run:0.1"
+    )
+    command = payload["entries"][0]["commands"][0]
+
+    assert saved["workflow"] == "runtime_drift_bound_command_run_report"
+    assert saved["summary"] == payload["summary"]
+    assert payload["status"] == "dry_run"
+    assert payload["config"]["dry_run"] is True
+    assert payload["summary"]["entry_count"] == 1
+    assert payload["summary"]["command_count"] == 1
+    assert payload["summary"]["dry_run_count"] == 1
+    assert payload["summary"]["executed_count"] == 0
+    assert payload["summary"]["expected_output_count"] == 1
+    assert payload["entries"][0]["execution_status"] == "dry_run"
+    assert command["status"] == "dry_run"
+    assert command["argv"] == (
+        "/python",
+        "benchmarks/demo_runtime.py",
+        "--input",
+        "fixture.json",
+        "--json",
+        "report.json",
+    )
+    assert command["returncode"] is None
+    assert manifest["artifacts"]["runtime_drift_bound_command_run_report"]["exists"] is True
+    assert manifest["artifacts"]["runtime_drift_bound_command_plan"]["exists"] is True
+    assert manifest["metadata"]["dry_run"] is True
+    assert record.metadata["workflow"] == "runtime_drift_bound_command_run_report"
+    assert record.metadata["dry_run"] is True
+    assert record.metadata["dry_run_count"] == 1
+    assert record.metadata["succeeded_count"] == 0
+
+
+def test_run_runtime_drift_bound_command_plan_blocks_unbound_placeholder():
+    payload = run_runtime_drift_bound_command_plan(
+        bound_command_plan={
+            "schema_version": 1,
+            "workflow": "runtime_drift_evidence_bound_command_plan",
+            "status": "ready",
+            "entries": [
+                {
+                    "entry_id": "runtime-drift-0001",
+                    "action_id": "demo_runtime_action",
+                    "title": "Demo runtime action",
+                    "command_status": "ready",
+                    "bound_commands": ("benchmarks/demo_runtime.py --json ...",),
+                }
+            ],
+        }
+    )
+
+    command = payload["entries"][0]["commands"][0]
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["invalid_command_count"] == 1
+    assert payload["summary"]["dry_run_count"] == 0
+    assert payload["entries"][0]["execution_status"] == "failed"
+    assert command["status"] == "invalid_command"
+    assert command["error"] == "unbound_placeholder"
 
 
 def test_evidence_gap_plan_maps_product_runtime_world_model_blockers():

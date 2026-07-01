@@ -5958,6 +5958,22 @@ or explicit `bound_commands` for a reviewed command override. The output is
 `ready` only when all required inputs are present and no command placeholders
 remain.
 
+Once the bound plan is ready, `run_runtime_drift_bound_command_plan.py` turns it
+into an auditable run report. By default it is a dry-run: commands are parsed,
+Python benchmark scripts are normalized to the configured interpreter, expected
+outputs are summarized, and optional manifest/registry records are written, but
+no runtime evidence is generated until a reviewed caller adds `--execute`:
+
+```bash
+python benchmarks/run_runtime_drift_bound_command_plan.py \
+  --bound-command-plan artifacts/frontier-audit-release-candidate-v4/runtime-drift-bound-commands.json \
+  --json artifacts/frontier-audit-release-candidate-v4/runtime-drift-bound-command-run.json \
+  --artifact-manifest artifacts/frontier-audit-release-candidate-v4/runtime-drift-bound-command-run-manifest.json \
+  --registry artifacts/release-registry.json \
+  --name frontier-audit-runtime-drift-bound-command-run \
+  --version 0.1
+```
+
 If the same source includes frontier multiple-testing blocked cells and points
 back to the originating `truthfulqa_frontier_workflow` report, the gap planner
 can also emit the executable per-cell rerun queue in the same pass:
