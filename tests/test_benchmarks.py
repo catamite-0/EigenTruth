@@ -31601,6 +31601,8 @@ def test_frontier_research_queue_bound_plan_dry_run_roundtrip(tmp_path):
     assert bound["workflow"] == "frontier_research_queue_bound_command_plan"
     assert bound["status"] == "ready"
     assert bound["summary"]["ready_entry_count"] == 1
+    assert bound["summary"]["review_required_entry_count"] == 1
+    assert bound["entries"][0]["binding_review_status"] == "untracked"
     assert bound["summary"]["unbound_placeholder_count"] == 0
     assert bound["summary"]["source_gap_ids"] == ("gap-1",)
     assert bound["entries"][0]["bound_inputs"]["frontier_release_report"]["path"] == (
@@ -31609,7 +31611,9 @@ def test_frontier_research_queue_bound_plan_dry_run_roundtrip(tmp_path):
     assert "..." not in bound["entries"][0]["bound_commands"][0]
     assert run_report["workflow"] == "frontier_research_queue_bound_command_run_report"
     assert run_report["status"] == "dry_run"
+    assert run_report["config"]["require_reviewed_bindings"] is False
     assert run_report["summary"]["dry_run_count"] == 1
+    assert run_report["summary"]["binding_not_reviewed_count"] == 0
     assert run_report["summary"]["executed_count"] == 0
     assert command["status"] == "dry_run"
     assert command["argv"][1] == "benchmarks/eval_abstention_stability.py"
@@ -31620,10 +31624,96 @@ def test_frontier_research_queue_bound_plan_dry_run_roundtrip(tmp_path):
         "exists"
     ] is True
     assert bound_record.metadata["workflow"] == "frontier_research_queue_bound_command_plan"
+    assert bound_record.metadata["review_required_entry_count"] == 1
     assert run_record.metadata["workflow"] == (
         "frontier_research_queue_bound_command_run_report"
     )
     assert run_record.metadata["dry_run"] is True
+
+
+def test_frontier_research_queue_execute_requires_reviewed_bindings(tmp_path):
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    bind_module = importlib.import_module(
+        "benchmarks.bind_frontier_research_queue_command_plan"
+    )
+    run_module = importlib.import_module(
+        "benchmarks.run_frontier_research_queue_bound_command_plan"
+    )
+    plan_path = tmp_path / "frontier-research-command-plan.json"
+    bindings_path = tmp_path / "frontier-research-command-bindings.json"
+    command = f"{sys.executable} -c \"print('reviewed frontier command')\""
+    plan_module.build_frontier_research_queue_command_plan(
+        source={
+            "workflow": "evidence_gap_plan",
+            "actions": (
+                {
+                    "action_id": "execute_review_gate",
+                    "suggested_commands": ("python -c ...",),
+                    "metadata": {"required_inputs": (), "closure_outputs": ()},
+                },
+            ),
+        },
+        json_path=plan_path,
+    )
+    bindings_path.write_text(
+        json.dumps({
+            "bindings": {
+                "execute_review_gate": {
+                    "review_status": "needs_review",
+                    "bound_commands": (command,),
+                },
+            },
+        }),
+        encoding="utf-8",
+    )
+    unreviewed_bound = bind_module.build_frontier_research_queue_bound_command_plan(
+        command_plan=plan_path,
+        bindings=bindings_path,
+    )
+    unreviewed_run = run_module.run_frontier_research_queue_bound_command_plan(
+        bound_command_plan=unreviewed_bound,
+        dry_run=False,
+    )
+
+    assert unreviewed_bound["status"] == "ready"
+    assert unreviewed_bound["entries"][0]["binding_review_status"] == "needs_review"
+    assert unreviewed_bound["summary"]["review_required_entry_count"] == 1
+    assert unreviewed_run["status"] == "needs_inputs"
+    assert unreviewed_run["summary"]["binding_not_reviewed_count"] == 1
+    assert unreviewed_run["summary"]["executed_count"] == 0
+    assert unreviewed_run["entries"][0]["execution_block_reason"] == "binding_not_reviewed"
+    assert unreviewed_run["entries"][0]["commands"][0]["skip_reason"] == (
+        "binding_not_reviewed"
+    )
+
+    bindings_path.write_text(
+        json.dumps({
+            "bindings": {
+                "execute_review_gate": {
+                    "review_status": "approved",
+                    "bound_commands": (command,),
+                },
+            },
+        }),
+        encoding="utf-8",
+    )
+    approved_bound = bind_module.build_frontier_research_queue_bound_command_plan(
+        command_plan=plan_path,
+        bindings=bindings_path,
+    )
+    approved_run = run_module.run_frontier_research_queue_bound_command_plan(
+        bound_command_plan=approved_bound,
+        dry_run=False,
+    )
+
+    assert approved_bound["entries"][0]["binding_review_status"] == "approved"
+    assert approved_bound["summary"]["review_required_entry_count"] == 0
+    assert approved_run["status"] == "succeeded"
+    assert approved_run["summary"]["executed_count"] == 1
+    assert approved_run["summary"]["binding_not_reviewed_count"] == 0
+    assert approved_run["entries"][0]["commands"][0]["stdout"] == (
+        "reviewed frontier command\n"
+    )
 
 
 def test_frontier_research_queue_bound_plan_blocks_incomplete_known_command(tmp_path):

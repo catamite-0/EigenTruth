@@ -30,6 +30,7 @@ from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noq
 
 BOUND_PLAN_WORKFLOW = "frontier_research_queue_bound_command_plan"
 WORKFLOW = "frontier_research_queue_bound_command_run_report"
+APPROVED_REVIEW_STATUSES = ("approved", "reviewed")
 
 
 def run_frontier_research_queue_bound_command_plan(
@@ -46,6 +47,7 @@ def run_frontier_research_queue_bound_command_plan(
     command_timeout_seconds: float | None = None,
     stop_on_failure: bool = True,
     workers: int = 1,
+    require_reviewed_bindings: bool | None = None,
     compact_json: bool = False,
     metadata: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -58,6 +60,9 @@ def run_frontier_research_queue_bound_command_plan(
         raise ValueError("dry_run must be a bool.")
     if not isinstance(stop_on_failure, bool):
         raise ValueError("stop_on_failure must be a bool.")
+    if require_reviewed_bindings is not None and not isinstance(require_reviewed_bindings, bool):
+        raise ValueError("require_reviewed_bindings must be a bool when set.")
+    review_required = (not dry_run) if require_reviewed_bindings is None else require_reviewed_bindings
     worker_count = _worker_count(workers)
     if worker_count > 1 and stop_on_failure:
         raise ValueError("workers > 1 requires stop_on_failure=False.")
@@ -74,7 +79,10 @@ def run_frontier_research_queue_bound_command_plan(
     if registry_path is not None and output_path is None and source_path is None:
         raise ValueError("registry_path requires json_path when bound_command_plan is in-memory.")
     working_dir = Path(cwd) if cwd is not None else ROOT
-    entries = tuple(_mapping_sequence(plan.get("entries", ())))
+    entries = _review_gated_entries(
+        _mapping_sequence(plan.get("entries", ())),
+        require_reviewed_bindings=review_required,
+    )
     executed_entries = _run_entries(
         entries,
         dry_run=dry_run,
@@ -84,7 +92,7 @@ def run_frontier_research_queue_bound_command_plan(
         stop_on_failure=stop_on_failure,
         workers=worker_count,
     )
-    summary = _summary(executed_entries)
+    summary = _frontier_run_summary(_summary(executed_entries), executed_entries)
     status = _status(summary=summary, dry_run=dry_run)
     payload = {
         "schema_version": 1,
@@ -108,6 +116,8 @@ def run_frontier_research_queue_bound_command_plan(
             "stop_on_failure": bool(stop_on_failure),
             "workers": worker_count,
             "execution_mode": "parallel" if worker_count > 1 else "sequential",
+            "require_reviewed_bindings": review_required,
+            "approved_review_statuses": APPROVED_REVIEW_STATUSES,
         },
         "entries": tuple(executed_entries),
         "metadata": dict(metadata or {}),
@@ -143,6 +153,7 @@ def run_frontier_research_queue_bound_command_plan(
                 "failed_count": summary["failed_count"],
                 "skipped_count": summary["skipped_count"],
                 "invalid_command_count": summary["invalid_command_count"],
+                "binding_not_reviewed_count": summary["binding_not_reviewed_count"],
                 "workers": worker_count,
                 "execution_mode": "parallel" if worker_count > 1 else "sequential",
                 "manifest_summary": {} if manifest is None else manifest.get("summary", {}),
@@ -150,6 +161,39 @@ def run_frontier_research_queue_bound_command_plan(
             },
         ).save_json()
     return payload
+
+
+def _review_gated_entries(
+    entries: Sequence[Mapping[str, Any]],
+    *,
+    require_reviewed_bindings: bool,
+) -> tuple[Mapping[str, Any], ...]:
+    if not require_reviewed_bindings:
+        return tuple(entries)
+    gated = []
+    for entry in entries:
+        review_status = str(entry.get("binding_review_status") or "untracked").strip().lower()
+        if review_status in APPROVED_REVIEW_STATUSES:
+            gated.append(entry)
+            continue
+        copy = dict(entry)
+        copy["command_status"] = "needs_review"
+        copy["execution_block_reason"] = "binding_not_reviewed"
+        copy["binding_review_required"] = True
+        copy["binding_review_status"] = review_status or "untracked"
+        gated.append(copy)
+    return tuple(gated)
+
+
+def _frontier_run_summary(
+    summary: Mapping[str, Any],
+    entries: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    result = dict(summary)
+    result["binding_not_reviewed_count"] = sum(
+        1 for entry in entries if entry.get("execution_block_reason") == "binding_not_reviewed"
+    )
+    return result
 
 
 def _write_manifest(
@@ -179,8 +223,18 @@ def _write_manifest(
             "executed_count": _nested_value(payload, "summary", "executed_count"),
             "failed_count": _nested_value(payload, "summary", "failed_count"),
             "invalid_command_count": _nested_value(payload, "summary", "invalid_command_count"),
+            "binding_not_reviewed_count": _nested_value(
+                payload,
+                "summary",
+                "binding_not_reviewed_count",
+            ),
             "workers": _nested_value(payload, "config", "workers"),
             "execution_mode": _nested_value(payload, "config", "execution_mode"),
+            "require_reviewed_bindings": _nested_value(
+                payload,
+                "config",
+                "require_reviewed_bindings",
+            ),
             **dict(metadata),
         },
     )
@@ -211,6 +265,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="continue after a command failure instead of skipping remaining commands",
     )
+    parser.add_argument(
+        "--allow-unreviewed-bindings",
+        action="store_true",
+        help="allow --execute to run entries whose binding review_status is not approved/reviewed",
+    )
     parser.add_argument("--compact-json", action="store_true", help="write compact JSON")
     return parser
 
@@ -229,6 +288,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         command_timeout_seconds=args.command_timeout_seconds,
         stop_on_failure=not bool(args.continue_on_failure),
         workers=args.workers,
+        require_reviewed_bindings=bool(args.execute) and not bool(args.allow_unreviewed_bindings),
         compact_json=bool(args.compact_json),
     )
     if args.json is None:

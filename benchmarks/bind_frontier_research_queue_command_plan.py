@@ -39,6 +39,7 @@ from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noq
 
 COMMAND_PLAN_WORKFLOW = "frontier_research_queue_command_plan"
 WORKFLOW = "frontier_research_queue_bound_command_plan"
+APPROVED_REVIEW_STATUSES = ("approved", "reviewed")
 
 
 def build_frontier_research_queue_bound_command_plan(
@@ -135,6 +136,8 @@ def build_frontier_research_queue_bound_command_plan(
                 "command_count": summary["command_count"],
                 "unbound_placeholder_count": summary["unbound_placeholder_count"],
                 "missing_input_count": summary["missing_input_count"],
+                "review_required_entry_count": summary["review_required_entry_count"],
+                "binding_review_status_counts": summary["binding_review_status_counts"],
                 "manifest_summary": {} if manifest is None else manifest.get("summary", {}),
                 **dict(metadata or {}),
             },
@@ -169,6 +172,9 @@ def _bind_frontier_entry(
         "source_required_input_count": len(_string_tuple(entry.get("required_inputs", ()))),
         "source_planned_output_count": len(_mapping_sequence(entry.get("planned_outputs", ()))),
     }
+    review_status = _binding_review_status(entry_bindings)
+    bound["binding_review_status"] = review_status
+    bound["binding_review_required"] = review_status not in APPROVED_REVIEW_STATUSES
     bound["command_validation"] = validation
     return bound
 
@@ -176,19 +182,31 @@ def _bind_frontier_entry(
 def _frontier_bound_summary(entries: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     summary = dict(_base_bound_summary(entries))
     route_counts: dict[str, int] = {}
+    review_status_counts: dict[str, int] = {}
     source_gap_ids: list[str] = []
     for entry in entries:
         for route in _string_tuple(entry.get("evidence_routes", ())):
             route_counts[route] = route_counts.get(route, 0) + 1
+        review_status = str(entry.get("binding_review_status") or "unknown")
+        review_status_counts[review_status] = review_status_counts.get(review_status, 0) + 1
         source_gap_ids.extend(_string_tuple(entry.get("source_gap_ids", ())))
     summary["action_ids"] = tuple(str(entry.get("action_id") or "") for entry in entries)
     summary["evidence_route_counts"] = dict(sorted(route_counts.items()))
     summary["source_gap_ids"] = tuple(dict.fromkeys(source_gap_ids))
+    summary["binding_review_status_counts"] = dict(sorted(review_status_counts.items()))
+    summary["review_required_entry_count"] = sum(
+        1 for entry in entries if entry.get("binding_review_required") is True
+    )
     summary["command_validation_issue_count"] = sum(
         _int_or_zero(_mapping(entry.get("command_validation")).get("issue_count"))
         for entry in entries
     )
     return summary
+
+
+def _binding_review_status(entry_bindings: Mapping[str, Any]) -> str:
+    status = str(entry_bindings.get("review_status") or "").strip().lower()
+    return status or "untracked"
 
 
 def _workflow_keys(metadata: Mapping[str, Any]) -> dict[str, str]:
@@ -239,6 +257,11 @@ def _write_manifest(
                 "unbound_placeholder_count",
             ),
             "missing_input_count": _nested_value(payload, "summary", "missing_input_count"),
+            "review_required_entry_count": _nested_value(
+                payload,
+                "summary",
+                "review_required_entry_count",
+            ),
             **dict(metadata),
         },
     )

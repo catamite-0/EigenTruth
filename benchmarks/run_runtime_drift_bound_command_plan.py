@@ -241,6 +241,7 @@ def _run_entry(
 ) -> tuple[dict[str, Any], bool]:
     action_id = str(entry.get("action_id") or entry.get("entry_id") or "runtime-drift-action")
     entry_ready = str(entry.get("command_status") or "unknown") == "ready"
+    block_reason = str(entry.get("execution_block_reason") or "entry_not_ready")
     command_reports = []
     stop_requested = skip_remaining
     for index, command in enumerate(_string_tuple(entry.get("bound_commands", ())), start=1):
@@ -248,7 +249,7 @@ def _run_entry(
             command_reports.append(_skipped_command(command, index=index, reason="prior_command_failed"))
             continue
         if not entry_ready:
-            command_reports.append(_skipped_command(command, index=index, reason="entry_not_ready"))
+            command_reports.append(_skipped_command(command, index=index, reason=block_reason))
             continue
         report = _run_command(
             command,
@@ -262,7 +263,7 @@ def _run_entry(
         if stop_on_failure and report["status"] in {"failed", "timed_out", "invalid_command"}:
             stop_requested = True
     entry_status = _entry_status(entry_ready=entry_ready, command_reports=command_reports)
-    return {
+    result = {
         "entry_id": str(entry.get("entry_id") or action_id),
         "action_id": action_id,
         "title": str(entry.get("title") or action_id),
@@ -271,7 +272,10 @@ def _run_entry(
         "evidence_routes": _string_tuple(entry.get("evidence_routes", ())),
         "planned_outputs": tuple(_mapping_sequence(entry.get("planned_outputs", ()))),
         "commands": tuple(command_reports),
-    }, stop_requested
+    }
+    if not entry_ready and block_reason != "entry_not_ready":
+        result["execution_block_reason"] = block_reason
+    return result, stop_requested
 
 
 def _run_command(

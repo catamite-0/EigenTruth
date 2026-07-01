@@ -6639,8 +6639,11 @@ python benchmarks/run_frontier_research_queue_bound_command_plan.py \
 ```
 
 The runner defaults to `dry_run` and only parses commands/expected outputs.
-`--execute` is required to run child workflows, and the run report itself is an
-execution audit artifact rather than release evidence.
+`--execute` is required to run child workflows, and frontier execution now
+fails closed unless each bound entry carries `review_status` of `approved` or
+`reviewed` in the bindings sidecar. Use `--allow-unreviewed-bindings` only for
+local debugging. The run report itself is an execution audit artifact rather
+than release evidence.
 For known frontier benchmark scripts, the binder also fails closed when a bound
 command is syntactically filled but still misses required CLI flags, such as an
 `eval_abstention_stability.py --json ...` template without `--scores` and
