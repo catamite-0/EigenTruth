@@ -49976,6 +49976,183 @@ def test_product_trace_replay_workflow_applies_world_model_runtime_drift_gate(tm
     assert drift_record.metadata["world_model_conflict_rate_status"] == "pass"
 
 
+def test_product_trace_replay_workflow_applies_world_model_action_gate_runtime_drift_gate(
+    tmp_path,
+):
+    module = importlib.import_module("benchmarks.run_product_trace_replay_workflow")
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    tuning_module = importlib.import_module("benchmarks.run_runtime_profile_selector_tuning")
+    registry_module = importlib.import_module("eigentruth.registry")
+    output_dir = tmp_path / "workflow"
+    traces_dir = tmp_path / "input-traces"
+    traces_dir.mkdir()
+    registry_path = tmp_path / "registry.json"
+    prior_baseline_path = tmp_path / "prior-baseline.json"
+
+    def action_gate_trace(path: Path, *, request_id: str) -> None:
+        pass_request_id = f"{request_id}-action-pass"
+        block_request_id = f"{request_id}-action-block"
+        path.write_text(
+            json.dumps({
+                "request_id": request_id,
+                "risk_decision": {
+                    "action": "execute_tool",
+                    "risk_level": "low",
+                    "confidence": 0.95,
+                    "reason": "world model action gate passed",
+                },
+                "actions": [
+                    {
+                        "action": "execute_tool",
+                        "reason": "reserve inventory",
+                        "payload": {"tool_name": "reserve_inventory", "claim_ids": ["c1"]},
+                        "request_id": pass_request_id,
+                    },
+                    {
+                        "action": "execute_tool",
+                        "reason": "charge payment",
+                        "payload": {"tool_name": "charge_payment", "claim_ids": ["c1"]},
+                        "request_id": block_request_id,
+                    },
+                ],
+                "action_results": [
+                    {
+                        "action": "execute_tool",
+                        "status": "succeeded",
+                        "output": {"reservation_id": "dry-run"},
+                        "metadata": {
+                            "side_effects": False,
+                            "world_model_gate": {
+                                "available": True,
+                                "passed": True,
+                                "blocked": False,
+                                "status": "passed",
+                                "decision_rule": "prediction_and_postconditions_passed",
+                                "prediction_confidence": 0.95,
+                                "agreement_rate": 1.0,
+                                "counts_by_code": {},
+                            },
+                        },
+                        "request_id": pass_request_id,
+                    },
+                    {
+                        "action": "execute_tool",
+                        "status": "skipped",
+                        "output": {"blocked": True},
+                        "metadata": {
+                            "side_effects": False,
+                            "world_model_gate": {
+                                "available": True,
+                                "passed": False,
+                                "blocked": True,
+                                "status": "blocked",
+                                "decision_rule": "blocked_postcondition_refuted",
+                                "prediction_confidence": 0.90,
+                                "agreement_rate": 1.0,
+                                "counts_by_code": {"postcondition_refuted": 1},
+                            },
+                        },
+                        "request_id": block_request_id,
+                    },
+                ],
+                "claims": [
+                    {
+                        "claim_id": "c1",
+                        "text": "The order can be reserved.",
+                        "metadata": {},
+                    }
+                ],
+                "runtime_trace": {"total_seconds": 0.10, "phases": []},
+                "verification_results": [
+                    {
+                        "status": "supported",
+                        "metadata": {
+                            "selected_route": "world_model",
+                            "total_duration_seconds": 0.0,
+                            "selected_route_duration_seconds": 0.0,
+                            "attempted_route_count": 1,
+                            "used_retrieval": False,
+                        },
+                    }
+                ],
+                "metadata": {"runtime_profile": "latency"},
+            }),
+            encoding="utf-8",
+        )
+
+    baseline_trace = tmp_path / "baseline-trace.json"
+    current_trace = traces_dir / "current-trace.json"
+    action_gate_trace(baseline_trace, request_id="baseline")
+    action_gate_trace(current_trace, request_id="current")
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=prior_baseline_path,
+        )
+    )
+
+    payload = module.run_product_trace_replay_workflow(
+        module.ProductTraceReplayWorkflowConfig(
+            trace_paths=(current_trace,),
+            output_dir=output_dir,
+            candidates=(
+                tuning_module.RuntimeProfileSelectorCandidate(
+                    name="default",
+                    policy={},
+                ),
+            ),
+            runtime_drift_baseline_path=prior_baseline_path,
+            min_runtime_drift_world_model_action_gate_coverage_rate=1.0,
+            min_runtime_drift_world_model_action_gate_pass_rate=0.5,
+            max_runtime_drift_world_model_action_gate_blocked_rate_increase=0.0,
+            max_runtime_drift_world_model_action_gate_side_effect_block_violation_rate_increase=0.0,
+            max_runtime_drift_world_model_action_gate_low_prediction_confidence_rate_increase=0.0,
+            max_runtime_drift_world_model_action_gate_low_agreement_rate_increase=0.0,
+            max_runtime_drift_world_model_action_gate_no_rule_matched_rate_increase=0.0,
+            max_runtime_drift_world_model_action_gate_postcondition_refuted_rate_increase=0.0,
+            max_runtime_drift_world_model_action_gate_postcondition_insufficient_evidence_rate_increase=0.0,
+            max_runtime_drift_world_model_action_gate_postcondition_error_rate_increase=0.0,
+            registry_path=registry_path,
+            name="trace-replay-world-model-action-gate-drift",
+            version="0.1",
+            require_runtime_trace=True,
+        )
+    )
+    drift_report = json.loads(Path(payload["paths"]["runtime_drift_report"]).read_text(encoding="utf-8"))
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get("report:trace-replay-world-model-action-gate-drift:0.1")
+    drift_record = registry.get(
+        "product_runtime_drift_report:trace-replay-world-model-action-gate-drift-runtime-drift:0.1"
+    )
+    action_gate_statuses = {
+        metric["metric"]: metric["status"]
+        for metric in drift_report["metrics"]
+        if metric["metric"].startswith("world_model_action_gate.")
+    }
+
+    assert payload["runtime_drift"]["status"] == "promote"
+    assert payload["runtime_drift"]["world_model_action_gate_metric_count"] == 10
+    assert payload["runtime_drift"]["world_model_action_gate_blocked_metric_count"] == 0
+    assert payload["config"]["runtime_drift_gates"][
+        "min_world_model_action_gate_coverage_rate"
+    ] == pytest.approx(1.0)
+    assert payload["config"]["runtime_drift_gates"][
+        "max_world_model_action_gate_postcondition_error_rate_increase"
+    ] == pytest.approx(0.0)
+    assert len(action_gate_statuses) == 10
+    assert set(action_gate_statuses.values()) == {"pass"}
+    assert manifest["metadata"]["runtime_drift_world_model_action_gate_metric_count"] == 10
+    assert (
+        manifest["metadata"]["runtime_drift_world_model_action_gate_blocked_metric_count"]
+        == 0
+    )
+    assert record.metadata["runtime_drift_world_model_action_gate_metric_count"] == 10
+    assert record.metadata["runtime_drift_world_model_action_gate_blocked_metric_count"] == 0
+    assert drift_record.metadata["world_model_action_gate_blocked_metric_count"] == 0
+    assert drift_record.metadata["world_model_action_gate_postcondition_refuted_rate_status"] == "pass"
+
+
 def test_product_trace_replay_workflow_applies_counterfactual_robustness_runtime_drift_gate(
     tmp_path,
 ):

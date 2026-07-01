@@ -9687,8 +9687,8 @@ report and registry metadata, can save the runtime baseline's recommended
 `ProductRuntimeBudgetPolicy` artifact for later gates, can run the current
 runtime baseline through action-audit, action-execution alignment, or
 product-runtime drift/policy gates, including evidence-graph consistency and
-evidence-quality and metacognition gates when configured, and registers one
-workflow report.
+evidence-quality, metacognition, and world-model guarded-action gates when
+configured, and registers one workflow report.
 Add `--verify-manifest` to write a separate recursive verification
 report and register `manifest_verification:<name>-verification:<version>` next
 to the workflow report. Add `--fingerprint-cache` when repeating local checks,
@@ -9703,6 +9703,10 @@ observed baseline's candidate budget thresholds, and
 the workflow should immediately validate the current runtime baseline against
 the previous promoted baseline/policy gate. The runtime-drift pass-through also
 accepts pre-generation risk telemetry gates such as
+`--min-runtime-drift-world-model-action-gate-coverage-rate`,
+`--min-runtime-drift-world-model-action-gate-pass-rate`, and
+`--max-runtime-drift-world-model-action-gate-postcondition-refuted-rate-increase`
+when the replay should emit world-model guarded-action release evidence, plus
 `--min-runtime-drift-pre-generation-risk-coverage-rate`,
 `--min-runtime-drift-pre-generation-learned-risk-coverage-rate`,
 `--max-runtime-drift-pre-generation-audit-profile-rate-increase`,
