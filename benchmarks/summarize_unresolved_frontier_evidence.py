@@ -254,18 +254,52 @@ def _citation_lane(workflows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     rows = []
     status_counts: Counter[str] = Counter()
     provenance_pass_count = 0
+    provenance_failed_count = 0
+    provenance_status_counts: Counter[str] = Counter()
     comparison_pass_count = 0
+    comparison_failed_count = 0
+    comparison_status_counts: Counter[str] = Counter()
+    query_sweep_no_passing_strategy_count = 0
     max_source_docs = 0
     blocking_reasons: Counter[str] = Counter()
     for index, workflow in enumerate(workflows, start=1):
         status = str(workflow.get("status") or "unknown")
         status_counts[status] += 1
-        evidence = _mapping(workflow.get("evidence_summary"))
+        evidence = _mapping(workflow.get("evidence_summary")) or _mapping(workflow.get("summary"))
         gate = _mapping(workflow.get("gate"))
-        if evidence.get("provenance_passed") is True:
+        provenance_passed_rows = _int(evidence.get("provenance_passed_count"))
+        provenance_failed_rows = _int(evidence.get("provenance_failed_count"))
+        if provenance_passed_rows:
+            provenance_pass_count += provenance_passed_rows
+        elif evidence.get("provenance_passed") is True:
             provenance_pass_count += 1
-        if evidence.get("comparison_passed") is True:
+        if provenance_failed_rows:
+            provenance_failed_count += provenance_failed_rows
+        elif evidence.get("provenance_passed") is False:
+            provenance_failed_count += 1
+        provenance_status_counts.update(_int_mapping(evidence.get("provenance_status_counts")))
+        if not evidence.get("provenance_status_counts") and evidence.get("provenance_status"):
+            provenance_status_counts[str(evidence.get("provenance_status"))] += 1
+        comparison_passed_rows = _int(evidence.get("comparison_passed_count"))
+        comparison_failed_rows = _int(evidence.get("comparison_failed_count"))
+        if comparison_passed_rows:
+            comparison_pass_count += comparison_passed_rows
+        elif evidence.get("comparison_passed") is True:
             comparison_pass_count += 1
+        if comparison_failed_rows:
+            comparison_failed_count += comparison_failed_rows
+        elif evidence.get("comparison_passed") is False:
+            comparison_failed_count += 1
+        comparison_status_counts.update(_int_mapping(evidence.get("comparison_status_counts")))
+        if not evidence.get("comparison_status_counts") and evidence.get("comparison_status"):
+            comparison_status_counts[str(evidence.get("comparison_status"))] += 1
+        no_passing_value = evidence.get("query_sweep_no_passing_strategy_count")
+        no_passing_rows = _int(no_passing_value)
+        query_sweep_no_passing_strategy_count += no_passing_rows
+        if no_passing_value is None and evidence.get("query_sweep_best_strategy") and not evidence.get(
+            "query_sweep_best_passing_strategy"
+        ):
+            query_sweep_no_passing_strategy_count += 1
         max_source_docs = max(max_source_docs, _int(evidence.get("source_document_count")))
         for item in _mapping_sequence(gate.get("blocking_reasons")):
             reason = str(item.get("gate") or item.get("reason") or "unknown")
@@ -278,8 +312,13 @@ def _citation_lane(workflows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
             "promotion_ready": gate.get("promotion_ready"),
             "adapter_request_count": _int(evidence.get("adapter_request_count")),
             "source_document_count": _int(evidence.get("source_document_count")),
+            "provenance_passed_count": provenance_passed_rows,
+            "provenance_failed_count": provenance_failed_rows,
             "provenance_status": evidence.get("provenance_status"),
+            "comparison_passed_count": comparison_passed_rows,
+            "comparison_failed_count": comparison_failed_rows,
             "comparison_status": evidence.get("comparison_status"),
+            "query_sweep_no_passing_strategy_count": no_passing_rows,
             "query_sweep_best_strategy": evidence.get("query_sweep_best_strategy"),
             "query_sweep_best_passing_strategy": evidence.get(
                 "query_sweep_best_passing_strategy"
@@ -299,7 +338,12 @@ def _citation_lane(workflows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "workflow_count": len(rows),
         "status_counts": dict(sorted(status_counts.items())),
         "provenance_pass_count": provenance_pass_count,
+        "provenance_failed_count": provenance_failed_count,
+        "provenance_status_counts": dict(sorted(provenance_status_counts.items())),
         "comparison_pass_count": comparison_pass_count,
+        "comparison_failed_count": comparison_failed_count,
+        "comparison_status_counts": dict(sorted(comparison_status_counts.items())),
+        "query_sweep_no_passing_strategy_count": query_sweep_no_passing_strategy_count,
         "max_source_document_count": max_source_docs,
         "blocking_reason_counts": dict(sorted(blocking_reasons.items())),
         "workflows": tuple(rows),

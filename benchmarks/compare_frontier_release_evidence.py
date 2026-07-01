@@ -887,6 +887,39 @@ def _citation_batch_rollup_decision(
         ),
         "source_document_count": _non_negative_int(summary.get("source_document_count")),
         "corpus_document_count": _non_negative_int(summary.get("corpus_document_count")),
+        "provenance_present_count": _non_negative_int(
+            summary.get("provenance_present_count")
+        ),
+        "provenance_passed_count": _non_negative_int(summary.get("provenance_passed_count")),
+        "provenance_failed_count": _non_negative_int(summary.get("provenance_failed_count")),
+        "provenance_status_counts": _string_int_mapping(
+            summary.get("provenance_status_counts")
+        ),
+        "evidence_class_counts": _string_int_mapping(summary.get("evidence_class_counts")),
+        "query_sweep_present_count": _non_negative_int(
+            summary.get("query_sweep_present_count")
+        ),
+        "query_sweep_best_strategy_counts": _string_int_mapping(
+            summary.get("query_sweep_best_strategy_counts")
+        ),
+        "query_sweep_best_passing_strategy_counts": _string_int_mapping(
+            summary.get("query_sweep_best_passing_strategy_counts")
+        ),
+        "query_sweep_no_passing_strategy_count": _non_negative_int(
+            summary.get("query_sweep_no_passing_strategy_count")
+        ),
+        "query_sweep_best_passing_blind_refuted_count_sum": _non_negative_int(
+            summary.get("query_sweep_best_passing_blind_refuted_count_sum")
+        ),
+        "query_sweep_best_passing_blind_refuted_count_max": _non_negative_int(
+            summary.get("query_sweep_best_passing_blind_refuted_count_max")
+        ),
+        "comparison_present_count": _non_negative_int(
+            summary.get("comparison_present_count")
+        ),
+        "comparison_passed_count": _non_negative_int(summary.get("comparison_passed_count")),
+        "comparison_failed_count": _non_negative_int(summary.get("comparison_failed_count")),
+        "comparison_status_counts": _string_int_mapping(summary.get("comparison_status_counts")),
         "expected_batch_ids": _string_tuple(summary.get("expected_batch_ids")),
         "observed_batch_ids": _string_tuple(summary.get("observed_batch_ids")),
         "missing_expected_batch_ids": _string_tuple(
@@ -1020,8 +1053,23 @@ def _citation_batch_evidence_summary(
         "citation_batch_adapter_gate_failed_count": 0,
         "citation_batch_source_document_count": 0,
         "citation_batch_corpus_document_count": 0,
+        "citation_batch_provenance_present_count": 0,
+        "citation_batch_provenance_passed_count": 0,
+        "citation_batch_provenance_failed_count": 0,
+        "citation_batch_query_sweep_present_count": 0,
+        "citation_batch_query_sweep_no_passing_strategy_count": 0,
+        "citation_batch_query_sweep_best_passing_blind_refuted_count_sum": 0,
+        "citation_batch_comparison_present_count": 0,
+        "citation_batch_comparison_passed_count": 0,
+        "citation_batch_comparison_failed_count": 0,
     }
     adapter_gate_status_counts: dict[str, int] = {}
+    provenance_status_counts: dict[str, int] = {}
+    evidence_class_counts: dict[str, int] = {}
+    query_sweep_best_strategy_counts: dict[str, int] = {}
+    query_sweep_best_passing_strategy_counts: dict[str, int] = {}
+    comparison_status_counts: dict[str, int] = {}
+    max_blind_refuted_count: int | None = None
     for decision in decisions:
         name = str(decision.get("name") or "")
         rollup_names.append(name)
@@ -1044,12 +1092,62 @@ def _citation_batch_evidence_summary(
             ("citation_batch_adapter_gate_failed_count", "adapter_gate_failed_count"),
             ("citation_batch_source_document_count", "source_document_count"),
             ("citation_batch_corpus_document_count", "corpus_document_count"),
+            ("citation_batch_provenance_present_count", "provenance_present_count"),
+            ("citation_batch_provenance_passed_count", "provenance_passed_count"),
+            ("citation_batch_provenance_failed_count", "provenance_failed_count"),
+            ("citation_batch_query_sweep_present_count", "query_sweep_present_count"),
+            (
+                "citation_batch_query_sweep_no_passing_strategy_count",
+                "query_sweep_no_passing_strategy_count",
+            ),
+            (
+                "citation_batch_query_sweep_best_passing_blind_refuted_count_sum",
+                "query_sweep_best_passing_blind_refuted_count_sum",
+            ),
+            ("citation_batch_comparison_present_count", "comparison_present_count"),
+            ("citation_batch_comparison_passed_count", "comparison_passed_count"),
+            ("citation_batch_comparison_failed_count", "comparison_failed_count"),
         ):
             totals[key] += _non_negative_int(metrics.get(metric_key)) or 0
+        max_value = _non_negative_int(
+            metrics.get("query_sweep_best_passing_blind_refuted_count_max")
+        )
+        if max_value is not None:
+            max_blind_refuted_count = (
+                max_value
+                if max_blind_refuted_count is None
+                else max(max_blind_refuted_count, max_value)
+            )
         for status, count in _string_int_mapping(
             metrics.get("adapter_gate_status_counts")
         ).items():
             adapter_gate_status_counts[status] = adapter_gate_status_counts.get(status, 0) + count
+        for status, count in _string_int_mapping(
+            metrics.get("provenance_status_counts")
+        ).items():
+            provenance_status_counts[status] = provenance_status_counts.get(status, 0) + count
+        for evidence_class, count in _string_int_mapping(
+            metrics.get("evidence_class_counts")
+        ).items():
+            evidence_class_counts[evidence_class] = (
+                evidence_class_counts.get(evidence_class, 0) + count
+            )
+        for strategy, count in _string_int_mapping(
+            metrics.get("query_sweep_best_strategy_counts")
+        ).items():
+            query_sweep_best_strategy_counts[strategy] = (
+                query_sweep_best_strategy_counts.get(strategy, 0) + count
+            )
+        for strategy, count in _string_int_mapping(
+            metrics.get("query_sweep_best_passing_strategy_counts")
+        ).items():
+            query_sweep_best_passing_strategy_counts[strategy] = (
+                query_sweep_best_passing_strategy_counts.get(strategy, 0) + count
+            )
+        for status, count in _string_int_mapping(
+            metrics.get("comparison_status_counts")
+        ).items():
+            comparison_status_counts[status] = comparison_status_counts.get(status, 0) + count
         expected_batch_ids.update(_string_tuple(metrics.get("expected_batch_ids")))
         observed_batch_ids.update(_string_tuple(metrics.get("observed_batch_ids")))
         for batch_id in _string_tuple(metrics.get("missing_expected_batch_ids")):
@@ -1072,6 +1170,22 @@ def _citation_batch_evidence_summary(
         "citation_batch_unexpected_batches": tuple(unexpected_batch_rows),
         "citation_batch_adapter_gate_status_counts": dict(
             sorted(adapter_gate_status_counts.items())
+        ),
+        "citation_batch_provenance_status_counts": dict(
+            sorted(provenance_status_counts.items())
+        ),
+        "citation_batch_evidence_class_counts": dict(sorted(evidence_class_counts.items())),
+        "citation_batch_query_sweep_best_strategy_counts": dict(
+            sorted(query_sweep_best_strategy_counts.items())
+        ),
+        "citation_batch_query_sweep_best_passing_strategy_counts": dict(
+            sorted(query_sweep_best_passing_strategy_counts.items())
+        ),
+        "citation_batch_query_sweep_best_passing_blind_refuted_count_max": (
+            max_blind_refuted_count
+        ),
+        "citation_batch_comparison_status_counts": dict(
+            sorted(comparison_status_counts.items())
         ),
         **totals,
     }
@@ -1822,6 +1936,15 @@ def _write_artifact_manifest(
             "citation_batch_adapter_gate_status_counts": evidence_summary.get(
                 "citation_batch_adapter_gate_status_counts"
             ),
+            "citation_batch_provenance_failed_count": evidence_summary.get(
+                "citation_batch_provenance_failed_count"
+            ),
+            "citation_batch_query_sweep_no_passing_strategy_count": evidence_summary.get(
+                "citation_batch_query_sweep_no_passing_strategy_count"
+            ),
+            "citation_batch_comparison_failed_count": evidence_summary.get(
+                "citation_batch_comparison_failed_count"
+            ),
         },
         max_workers=max_workers,
     )
@@ -1959,6 +2082,59 @@ def _record_registry(
         ),
         "citation_batch_adapter_gate_status_counts": dict(
             _mapping(evidence_summary.get("citation_batch_adapter_gate_status_counts"))
+        ),
+        "citation_batch_provenance_present_count": evidence_summary.get(
+            "citation_batch_provenance_present_count"
+        ),
+        "citation_batch_provenance_passed_count": evidence_summary.get(
+            "citation_batch_provenance_passed_count"
+        ),
+        "citation_batch_provenance_failed_count": evidence_summary.get(
+            "citation_batch_provenance_failed_count"
+        ),
+        "citation_batch_provenance_status_counts": dict(
+            _mapping(evidence_summary.get("citation_batch_provenance_status_counts"))
+        ),
+        "citation_batch_evidence_class_counts": dict(
+            _mapping(evidence_summary.get("citation_batch_evidence_class_counts"))
+        ),
+        "citation_batch_query_sweep_present_count": evidence_summary.get(
+            "citation_batch_query_sweep_present_count"
+        ),
+        "citation_batch_query_sweep_no_passing_strategy_count": evidence_summary.get(
+            "citation_batch_query_sweep_no_passing_strategy_count"
+        ),
+        "citation_batch_query_sweep_best_strategy_counts": dict(
+            _mapping(evidence_summary.get("citation_batch_query_sweep_best_strategy_counts"))
+        ),
+        "citation_batch_query_sweep_best_passing_strategy_counts": dict(
+            _mapping(
+                evidence_summary.get(
+                    "citation_batch_query_sweep_best_passing_strategy_counts"
+                )
+            )
+        ),
+        "citation_batch_query_sweep_best_passing_blind_refuted_count_sum": (
+            evidence_summary.get(
+                "citation_batch_query_sweep_best_passing_blind_refuted_count_sum"
+            )
+        ),
+        "citation_batch_query_sweep_best_passing_blind_refuted_count_max": (
+            evidence_summary.get(
+                "citation_batch_query_sweep_best_passing_blind_refuted_count_max"
+            )
+        ),
+        "citation_batch_comparison_present_count": evidence_summary.get(
+            "citation_batch_comparison_present_count"
+        ),
+        "citation_batch_comparison_passed_count": evidence_summary.get(
+            "citation_batch_comparison_passed_count"
+        ),
+        "citation_batch_comparison_failed_count": evidence_summary.get(
+            "citation_batch_comparison_failed_count"
+        ),
+        "citation_batch_comparison_status_counts": dict(
+            _mapping(evidence_summary.get("citation_batch_comparison_status_counts"))
         ),
         "citation_batch_expected_batch_ids": tuple(
             evidence_summary.get("citation_batch_expected_batch_ids", ())

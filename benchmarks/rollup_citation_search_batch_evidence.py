@@ -132,6 +132,13 @@ def rollup_citation_search_batch_evidence(
             "blocked_report_count": summary["blocked_report_count"],
             "adapter_gate_failed_count": summary["adapter_gate_failed_count"],
             "child_manifest_failed_count": summary["child_manifest_failed_count"],
+            "provenance_passed_count": summary["provenance_passed_count"],
+            "provenance_failed_count": summary["provenance_failed_count"],
+            "query_sweep_no_passing_strategy_count": summary[
+                "query_sweep_no_passing_strategy_count"
+            ],
+            "comparison_passed_count": summary["comparison_passed_count"],
+            "comparison_failed_count": summary["comparison_failed_count"],
             "max_workers": workers,
             **dict(metadata or {}),
         },
@@ -156,6 +163,13 @@ def rollup_citation_search_batch_evidence(
                 "blocked_report_count": summary["blocked_report_count"],
                 "adapter_gate_failed_count": summary["adapter_gate_failed_count"],
                 "child_manifest_failed_count": summary["child_manifest_failed_count"],
+                "provenance_passed_count": summary["provenance_passed_count"],
+                "provenance_failed_count": summary["provenance_failed_count"],
+                "query_sweep_no_passing_strategy_count": summary[
+                    "query_sweep_no_passing_strategy_count"
+                ],
+                "comparison_passed_count": summary["comparison_passed_count"],
+                "comparison_failed_count": summary["comparison_failed_count"],
                 "artifact_manifest": str(manifest_path),
                 "max_workers": workers,
                 **dict(metadata or {}),
@@ -213,6 +227,7 @@ def _normalize_child_report(
     status = str(report.get("status") or "")
     gate = _mapping(report.get("gate"))
     adapter_gate = _mapping(report.get("adapter_gate"))
+    evidence = _mapping(report.get("evidence_summary")) or _mapping(report.get("summary"))
     adapter_gate_present = bool(adapter_gate)
     adapter_gate_blocking_reasons = _sequence(adapter_gate.get("blocking_reasons", ()))
     manifest_path = _nested(report, "paths", "artifact_manifest")
@@ -266,6 +281,21 @@ def _normalize_child_report(
             ("evidence_summary", "corpus_document_count"),
             ("summary", "corpus_document_count"),
         ),
+        "provenance_status": _optional_string(evidence.get("provenance_status")),
+        "provenance_passed": _optional_bool(evidence.get("provenance_passed")),
+        "evidence_class": _optional_string(evidence.get("evidence_class")),
+        "query_sweep_best_strategy": _optional_string(evidence.get("query_sweep_best_strategy")),
+        "query_sweep_best_passing_strategy": _optional_string(
+            evidence.get("query_sweep_best_passing_strategy")
+        ),
+        "query_sweep_best_passing_blind_refuted_count": _optional_int(
+            evidence.get("query_sweep_best_passing_blind_refuted_count")
+        ),
+        "comparison_status": _optional_string(evidence.get("comparison_status")),
+        "comparison_passed": _optional_bool(evidence.get("comparison_passed")),
+        "recommended_external_strategy": _optional_string(
+            evidence.get("recommended_external_strategy")
+        ),
         "child_artifact_manifest": None if manifest_path is None else str(manifest_path),
         "child_manifest_verification": manifest_verification,
         "child_manifest_passed": (
@@ -292,6 +322,37 @@ def _summary(rows: Sequence[Mapping[str, Any]], *, expected_batch_ids: Sequence[
         str(row.get("adapter_gate_status") or "")
         for row in rows
         if bool(row.get("adapter_gate_present"))
+    )
+    provenance_status_counts = Counter(
+        str(row.get("provenance_status") or "")
+        for row in rows
+        if row.get("provenance_status")
+    )
+    evidence_class_counts = Counter(
+        str(row.get("evidence_class") or "")
+        for row in rows
+        if row.get("evidence_class")
+    )
+    query_strategy_counts = Counter(
+        str(row.get("query_sweep_best_strategy") or "")
+        for row in rows
+        if row.get("query_sweep_best_strategy")
+    )
+    query_passing_strategy_counts = Counter(
+        str(row.get("query_sweep_best_passing_strategy") or "")
+        for row in rows
+        if row.get("query_sweep_best_passing_strategy")
+    )
+    comparison_status_counts = Counter(
+        str(row.get("comparison_status") or "")
+        for row in rows
+        if row.get("comparison_status")
+    )
+    blind_refuted_counts = tuple(
+        count
+        for row in rows
+        if (count := _optional_int(row.get("query_sweep_best_passing_blind_refuted_count")))
+        is not None
     )
     return {
         "report_count": len(rows),
@@ -327,6 +388,48 @@ def _summary(rows: Sequence[Mapping[str, Any]], *, expected_batch_ids: Sequence[
         "adapter_result_count": sum(_int_or_zero(row.get("adapter_result_count")) for row in rows),
         "source_document_count": sum(_int_or_zero(row.get("source_document_count")) for row in rows),
         "corpus_document_count": sum(_int_or_zero(row.get("corpus_document_count")) for row in rows),
+        "provenance_present_count": sum(
+            1 for row in rows if row.get("provenance_passed") is not None
+        ),
+        "provenance_passed_count": sum(
+            1 for row in rows if row.get("provenance_passed") is True
+        ),
+        "provenance_failed_count": sum(
+            1 for row in rows if row.get("provenance_passed") is False
+        ),
+        "provenance_status_counts": _sorted_counter(provenance_status_counts),
+        "evidence_class_counts": _sorted_counter(evidence_class_counts),
+        "query_sweep_present_count": sum(
+            1
+            for row in rows
+            if row.get("query_sweep_best_strategy")
+            or row.get("query_sweep_best_passing_strategy")
+            or row.get("query_sweep_best_passing_blind_refuted_count") is not None
+        ),
+        "query_sweep_best_strategy_counts": _sorted_counter(query_strategy_counts),
+        "query_sweep_best_passing_strategy_counts": _sorted_counter(
+            query_passing_strategy_counts
+        ),
+        "query_sweep_no_passing_strategy_count": sum(
+            1
+            for row in rows
+            if row.get("query_sweep_best_strategy")
+            and not row.get("query_sweep_best_passing_strategy")
+        ),
+        "query_sweep_best_passing_blind_refuted_count_sum": sum(blind_refuted_counts),
+        "query_sweep_best_passing_blind_refuted_count_max": (
+            max(blind_refuted_counts) if blind_refuted_counts else None
+        ),
+        "comparison_present_count": sum(
+            1 for row in rows if row.get("comparison_passed") is not None
+        ),
+        "comparison_passed_count": sum(
+            1 for row in rows if row.get("comparison_passed") is True
+        ),
+        "comparison_failed_count": sum(
+            1 for row in rows if row.get("comparison_passed") is False
+        ),
+        "comparison_status_counts": _sorted_counter(comparison_status_counts),
     }
 
 
@@ -517,6 +620,19 @@ def _optional_int(value: Any) -> int | None:
         return None if value is None else int(value)
     except (TypeError, ValueError):
         return None
+
+
+def _optional_bool(value: Any) -> bool | None:
+    if isinstance(value, bool):
+        return value
+    return None
+
+
+def _optional_string(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
 
 
 def _optional_float(value: Any) -> float | None:

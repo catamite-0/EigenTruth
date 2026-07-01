@@ -2790,7 +2790,11 @@ smokes.
 When a child source-family workflow exposes `adapter_gate`, the rollup preserves
 adapter coverage/status counts and blocks with `child_adapter_gate` if that
 adapter gate failed, so partial catalog runs remain visible at release-evidence
-level.
+level. It also aggregates child evidence summaries for provenance status,
+evidence class, best query-sweep strategies, passing-strategy blind-spot
+refutation counts, and controlled-vs-external comparison status so the release
+evidence report can explain whether citation/search is blocked by source
+provenance, lexical alignment, or comparison failure.
 
 ```bash
 python benchmarks/rollup_citation_search_batch_evidence.py \

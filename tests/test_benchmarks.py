@@ -5334,6 +5334,22 @@ def test_compare_frontier_release_evidence_blocks_failed_citation_batch_rollup(t
             "adapter_gate_failed_count": 1,
             "adapter_gate_status_counts": {"partial": 1},
         },
+        citation_evidence_summary={
+            "provenance_present_count": 1,
+            "provenance_passed_count": 0,
+            "provenance_failed_count": 1,
+            "provenance_status_counts": {"blocked": 1},
+            "query_sweep_present_count": 1,
+            "query_sweep_best_strategy_counts": {"question_overlap_0p65": 1},
+            "query_sweep_best_passing_strategy_counts": {},
+            "query_sweep_no_passing_strategy_count": 1,
+            "query_sweep_best_passing_blind_refuted_count_sum": 0,
+            "query_sweep_best_passing_blind_refuted_count_max": 0,
+            "comparison_present_count": 1,
+            "comparison_passed_count": 0,
+            "comparison_failed_count": 1,
+            "comparison_status_counts": {"blocked": 1},
+        },
     )
     verifier_path.write_text(
         json.dumps(_synthetic_verifier_stability_payload()),
@@ -5357,6 +5373,15 @@ def test_compare_frontier_release_evidence_blocks_failed_citation_batch_rollup(t
     assert payload["evidence_summary"]["citation_batch_adapter_gate_failed_count"] == 1
     assert payload["evidence_summary"]["citation_batch_adapter_gate_status_counts"] == {
         "partial": 1,
+    }
+    assert payload["evidence_summary"]["citation_batch_provenance_failed_count"] == 1
+    assert payload["evidence_summary"]["citation_batch_query_sweep_no_passing_strategy_count"] == 1
+    assert payload["evidence_summary"]["citation_batch_comparison_failed_count"] == 1
+    assert payload["evidence_summary"]["citation_batch_provenance_status_counts"] == {
+        "blocked": 1,
+    }
+    assert payload["evidence_summary"]["citation_batch_comparison_status_counts"] == {
+        "blocked": 1,
     }
     assert payload["evidence_summary"]["citation_batch_missing_expected_batches"] == (
         {"rollup": "citation-batch-rollup", "batch_id": "unresolved-evidence-batch-0002"},
@@ -5743,6 +5768,23 @@ def test_compare_frontier_release_evidence_manifest_includes_detectability_taxon
             "adapter_gate_failed_count": 0,
             "adapter_gate_status_counts": {"complete": 2},
         },
+        citation_evidence_summary={
+            "provenance_present_count": 2,
+            "provenance_passed_count": 2,
+            "provenance_failed_count": 0,
+            "provenance_status_counts": {"pass": 2},
+            "evidence_class_counts": {"external_candidate": 2},
+            "query_sweep_present_count": 2,
+            "query_sweep_best_strategy_counts": {"question_overlap_0p65": 2},
+            "query_sweep_best_passing_strategy_counts": {"question_overlap_0p65": 2},
+            "query_sweep_no_passing_strategy_count": 0,
+            "query_sweep_best_passing_blind_refuted_count_sum": 7,
+            "query_sweep_best_passing_blind_refuted_count_max": 4,
+            "comparison_present_count": 2,
+            "comparison_passed_count": 2,
+            "comparison_failed_count": 0,
+            "comparison_status_counts": {"pass": 2},
+        },
     )
     output_path = tmp_path / "frontier-release-evidence" / "report.json"
     manifest_path = tmp_path / "frontier-release-evidence" / "artifact-manifest.json"
@@ -5807,6 +5849,9 @@ def test_compare_frontier_release_evidence_manifest_includes_detectability_taxon
     assert manifest["metadata"]["citation_batch_track_status"] == "promote"
     assert manifest["metadata"]["citation_batch_adapter_gate_failed_count"] == 0
     assert manifest["metadata"]["citation_batch_adapter_gate_status_counts"] == {"complete": 2}
+    assert manifest["metadata"]["citation_batch_provenance_failed_count"] == 0
+    assert manifest["metadata"]["citation_batch_query_sweep_no_passing_strategy_count"] == 0
+    assert manifest["metadata"]["citation_batch_comparison_failed_count"] == 0
     record = registry.get("report:synthetic-frontier-release-evidence:0.2")
     assert record.metadata["detectability_track_status"] == "promote"
     assert record.metadata["citation_batch_track_status"] == "promote"
@@ -5818,6 +5863,12 @@ def test_compare_frontier_release_evidence_manifest_includes_detectability_taxon
     assert record.metadata["citation_batch_adapter_gate_passed_count"] == 2
     assert record.metadata["citation_batch_adapter_gate_failed_count"] == 0
     assert record.metadata["citation_batch_adapter_gate_status_counts"] == {"complete": 2}
+    assert record.metadata["citation_batch_provenance_passed_count"] == 2
+    assert record.metadata["citation_batch_provenance_failed_count"] == 0
+    assert record.metadata["citation_batch_query_sweep_best_passing_blind_refuted_count_sum"] == 7
+    assert record.metadata["citation_batch_query_sweep_best_passing_blind_refuted_count_max"] == 4
+    assert record.metadata["citation_batch_comparison_passed_count"] == 2
+    assert record.metadata["citation_batch_comparison_failed_count"] == 0
 
 
 def _synthetic_verifier_stability_payload() -> dict[str, object]:
@@ -6014,6 +6065,7 @@ def _write_synthetic_citation_batch_rollup_report(
     expected_batch_ids: Sequence[str],
     observed_batch_ids: Sequence[str],
     adapter_gate_summary: Mapping[str, Any] | None = None,
+    citation_evidence_summary: Mapping[str, Any] | None = None,
 ) -> Path:
     from eigentruth.registry import build_artifact_manifest
 
@@ -6063,6 +6115,7 @@ def _write_synthetic_citation_batch_rollup_report(
             "source_document_count": len(observed),
             "corpus_document_count": len(observed),
             **dict(adapter_gate_summary or {}),
+            **dict(citation_evidence_summary or {}),
         },
         "paths": {
             "report": str(report_path),
@@ -52154,6 +52207,29 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
             "query_sweep_best_passing_blind_refuted_count": None,
         },
     }
+    citation_rollup = {
+        "workflow": "citation_search_batch_evidence_rollup",
+        "status": "blocked",
+        "gate": {
+            "passed": False,
+            "promotion_ready": False,
+            "blocking_reasons": [{"gate": "query_sweep", "reason": "One batch has no strategy"}],
+        },
+        "summary": {
+            "adapter_request_count": 2,
+            "source_document_count": 5,
+            "provenance_passed_count": 1,
+            "provenance_failed_count": 1,
+            "provenance_status_counts": {"pass": 1, "blocked": 1},
+            "comparison_passed_count": 0,
+            "comparison_failed_count": 1,
+            "comparison_status_counts": {"blocked": 1},
+            "query_sweep_no_passing_strategy_count": 1,
+            "query_sweep_best_strategy": "question_overlap_0p65",
+            "query_sweep_best_passing_strategy": None,
+            "query_sweep_best_passing_blind_refuted_count": 0,
+        },
+    }
     rule_plan = {
         "workflow": "world_model_rule_input_collection_plan",
         "status": "ready_for_input_collection",
@@ -52183,7 +52259,7 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
 
     payload = module.summarize_unresolved_frontier_evidence(
         unresolved_queue=queue,
-        citation_workflows=(citation,),
+        citation_workflows=(citation, citation_rollup),
         source_family_coverage_audits=(missing_coverage, covered_coverage),
         rule_input_plan=rule_plan,
         rule_promotion_reports=(promotion,),
@@ -52199,8 +52275,19 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     assert payload["lanes"]["source_family_acquisition"]["covered_audit_count"] == 1
     assert payload["lanes"]["source_family_acquisition"]["best_missing_target_family_count"] == 0
     assert payload["lanes"]["citation_evidence"]["status"] == "blocked"
-    assert payload["lanes"]["citation_evidence"]["provenance_pass_count"] == 1
-    assert payload["lanes"]["citation_evidence"]["blocking_reason_counts"] == {"query_sweep": 1}
+    assert payload["lanes"]["citation_evidence"]["workflow_count"] == 2
+    assert payload["lanes"]["citation_evidence"]["provenance_pass_count"] == 2
+    assert payload["lanes"]["citation_evidence"]["provenance_failed_count"] == 1
+    assert payload["lanes"]["citation_evidence"]["provenance_status_counts"] == {
+        "blocked": 1,
+        "pass": 2,
+    }
+    assert payload["lanes"]["citation_evidence"]["comparison_failed_count"] == 2
+    assert payload["lanes"]["citation_evidence"]["comparison_status_counts"] == {
+        "blocked": 2,
+    }
+    assert payload["lanes"]["citation_evidence"]["query_sweep_no_passing_strategy_count"] == 2
+    assert payload["lanes"]["citation_evidence"]["blocking_reason_counts"] == {"query_sweep": 2}
     assert payload["lanes"]["world_model_rules"]["status"] == "partial"
     assert payload["lanes"]["world_model_rules"]["task_count"] == 5
     assert payload["lanes"]["world_model_rules"]["promoted_count"] == 2
@@ -52214,6 +52301,7 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
 
     queue_path = tmp_path / "queue.json"
     citation_path = tmp_path / "citation.json"
+    citation_rollup_path = tmp_path / "citation-rollup.json"
     missing_coverage_path = tmp_path / "coverage-missing.json"
     covered_coverage_path = tmp_path / "coverage-covered.json"
     rule_plan_path = tmp_path / "rule-plan.json"
@@ -52225,6 +52313,7 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     for path, data in (
         (queue_path, queue),
         (citation_path, citation),
+        (citation_rollup_path, citation_rollup),
         (missing_coverage_path, missing_coverage),
         (covered_coverage_path, covered_coverage),
         (rule_plan_path, rule_plan),
@@ -52235,7 +52324,7 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
 
     saved = module.run(
         unresolved_queue_path=queue_path,
-        citation_workflow_paths=(citation_path,),
+        citation_workflow_paths=(citation_path, citation_rollup_path),
         source_family_coverage_audit_paths=(missing_coverage_path, covered_coverage_path),
         rule_input_plan_path=rule_plan_path,
         rule_promotion_report_paths=(promotion_path,),
@@ -55035,6 +55124,15 @@ def test_citation_search_batch_evidence_rollup_promotes_complete_batches(tmp_pat
                     "selected_batch_ids": [batch_id],
                     "source_document_count": source_docs,
                     "corpus_document_count": source_docs,
+                    "provenance_status": "pass",
+                    "provenance_passed": True,
+                    "evidence_class": "external_candidate",
+                    "query_sweep_best_strategy": "question_overlap_0p65",
+                    "query_sweep_best_passing_strategy": "question_overlap_0p65",
+                    "query_sweep_best_passing_blind_refuted_count": source_docs,
+                    "comparison_status": "pass",
+                    "comparison_passed": True,
+                    "recommended_external_strategy": "question_overlap_0p65",
                 },
                 "paths": {"artifact_manifest": str(child_manifest)},
         }
@@ -55104,6 +55202,27 @@ def test_citation_search_batch_evidence_rollup_promotes_complete_batches(tmp_pat
     assert payload["summary"]["child_manifest_passed_count"] == 2
     assert payload["batch_reports"][1]["adapter_gate_passed"] is True
     assert payload["batch_reports"][1]["adapter_gate_request_coverage"] == pytest.approx(1.0)
+    assert payload["summary"]["provenance_present_count"] == 2
+    assert payload["summary"]["provenance_passed_count"] == 2
+    assert payload["summary"]["provenance_failed_count"] == 0
+    assert payload["summary"]["provenance_status_counts"] == {"pass": 2}
+    assert payload["summary"]["evidence_class_counts"] == {"external_candidate": 2}
+    assert payload["summary"]["query_sweep_present_count"] == 2
+    assert payload["summary"]["query_sweep_best_strategy_counts"] == {
+        "question_overlap_0p65": 2
+    }
+    assert payload["summary"]["query_sweep_best_passing_strategy_counts"] == {
+        "question_overlap_0p65": 2
+    }
+    assert payload["summary"]["query_sweep_no_passing_strategy_count"] == 0
+    assert payload["summary"]["query_sweep_best_passing_blind_refuted_count_sum"] == 5
+    assert payload["summary"]["query_sweep_best_passing_blind_refuted_count_max"] == 3
+    assert payload["summary"]["comparison_present_count"] == 2
+    assert payload["summary"]["comparison_passed_count"] == 2
+    assert payload["summary"]["comparison_failed_count"] == 0
+    assert payload["summary"]["comparison_status_counts"] == {"pass": 2}
+    assert payload["batch_reports"][0]["provenance_passed"] is True
+    assert payload["batch_reports"][0]["query_sweep_best_passing_blind_refuted_count"] == 2
     assert payload["summary"]["workflow_counts"] == {
         "external_citation_search_adapter_workflow": 1,
         "source_family_citation_search_workflow": 1,
@@ -55113,6 +55232,9 @@ def test_citation_search_batch_evidence_rollup_promotes_complete_batches(tmp_pat
     assert record.metadata["promotion_ready"] is True
     assert record.metadata["observed_batch_count"] == 2
     assert record.metadata["adapter_gate_failed_count"] == 0
+    assert record.metadata["provenance_passed_count"] == 2
+    assert record.metadata["query_sweep_no_passing_strategy_count"] == 0
+    assert record.metadata["comparison_failed_count"] == 0
     assert record.metadata["max_workers"] == 2
     assert record.metadata["suite"] == "unit"
 
