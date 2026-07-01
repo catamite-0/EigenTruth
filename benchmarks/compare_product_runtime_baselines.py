@@ -545,6 +545,32 @@ _PRODUCT_TRACE_PROVENANCE_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
         "product_trace_provenance_final_answer_evidence_reference_rate",
     ),
 )
+_PRODUCT_TRACE_CITATION_INTEGRITY_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
+    (
+        "citation_integrity.participating_trace_rate",
+        "product_trace_citation_integrity_participating_trace_rate",
+    ),
+    (
+        "citation_integrity.coverage_rate",
+        "product_trace_citation_integrity_coverage_rate",
+    ),
+    (
+        "citation_integrity.mismatch_rate",
+        "product_trace_citation_integrity_mismatch_rate",
+    ),
+    (
+        "citation_integrity.unresolved_rate",
+        "product_trace_citation_integrity_unresolved_rate",
+    ),
+    (
+        "citation_integrity.issue_rate",
+        "product_trace_citation_integrity_issue_rate",
+    ),
+    (
+        "citation_integrity.trace_gap_rate",
+        "product_trace_citation_integrity_trace_gap_rate",
+    ),
+)
 _PRODUCT_TRACE_ACTION_GATE_METRIC_SPECS: tuple[tuple[str, tuple[str, ...], str], ...] = (
     (
         "promotion_contract.product_trace_replay.action_audit_gate.error_rate.mean",
@@ -761,6 +787,46 @@ _PRODUCT_TRACE_PROVENANCE_INCREASE_METRIC_SPECS: tuple[
         "provenance.error_rate",
         ("provenance", "error_rate"),
         "max_product_trace_provenance_error_rate_increase",
+    ),
+)
+_PRODUCT_TRACE_CITATION_INTEGRITY_MIN_METRIC_SPECS: tuple[
+    tuple[str, tuple[str, ...], str],
+    ...
+] = (
+    (
+        "citation_integrity.participating_trace_rate",
+        ("citation_integrity", "participating_trace_rate"),
+        "min_product_trace_citation_integrity_participating_trace_rate",
+    ),
+    (
+        "citation_integrity.coverage_rate",
+        ("citation_integrity", "coverage_rate"),
+        "min_product_trace_citation_integrity_coverage_rate",
+    ),
+)
+_PRODUCT_TRACE_CITATION_INTEGRITY_INCREASE_METRIC_SPECS: tuple[
+    tuple[str, tuple[str, ...], str],
+    ...
+] = (
+    (
+        "citation_integrity.mismatch_rate",
+        ("citation_integrity", "mismatch_rate"),
+        "max_product_trace_citation_integrity_mismatch_rate_increase",
+    ),
+    (
+        "citation_integrity.unresolved_rate",
+        ("citation_integrity", "unresolved_rate"),
+        "max_product_trace_citation_integrity_unresolved_rate_increase",
+    ),
+    (
+        "citation_integrity.issue_rate",
+        ("citation_integrity", "issue_rate"),
+        "max_product_trace_citation_integrity_issue_rate_increase",
+    ),
+    (
+        "citation_integrity.trace_gap_rate",
+        ("citation_integrity", "trace_gap_rate"),
+        "max_product_trace_citation_integrity_trace_gap_rate_increase",
     ),
 )
 _WORLD_MODEL_MIN_METRIC_SPECS: tuple[tuple[str, tuple[str, ...], str], ...] = (
@@ -1128,6 +1194,14 @@ def compare_product_runtime_baselines(
     min_product_trace_provenance_final_answer_evidence_reference_rate: (
         float | None
     ) = None,
+    min_product_trace_citation_integrity_participating_trace_rate: (
+        float | None
+    ) = None,
+    min_product_trace_citation_integrity_coverage_rate: float | None = None,
+    max_product_trace_citation_integrity_mismatch_rate_increase: float | None = None,
+    max_product_trace_citation_integrity_unresolved_rate_increase: float | None = None,
+    max_product_trace_citation_integrity_issue_rate_increase: float | None = None,
+    max_product_trace_citation_integrity_trace_gap_rate_increase: float | None = None,
     min_current_trace_count: int | None = None,
     metadata: Mapping[str, Any] | None = None,
     compact_json: bool = False,
@@ -1646,6 +1720,32 @@ def compare_product_runtime_baselines(
                 min_product_trace_provenance_final_answer_evidence_reference_rate
             )
         ),
+        "min_product_trace_citation_integrity_participating_trace_rate": (
+            _optional_rate_float(
+                min_product_trace_citation_integrity_participating_trace_rate
+            )
+        ),
+        "min_product_trace_citation_integrity_coverage_rate": _optional_rate_float(
+            min_product_trace_citation_integrity_coverage_rate
+        ),
+        "max_product_trace_citation_integrity_mismatch_rate_increase": (
+            _optional_rate_float(
+                max_product_trace_citation_integrity_mismatch_rate_increase
+            )
+        ),
+        "max_product_trace_citation_integrity_unresolved_rate_increase": (
+            _optional_rate_float(
+                max_product_trace_citation_integrity_unresolved_rate_increase
+            )
+        ),
+        "max_product_trace_citation_integrity_issue_rate_increase": (
+            _optional_rate_float(max_product_trace_citation_integrity_issue_rate_increase)
+        ),
+        "max_product_trace_citation_integrity_trace_gap_rate_increase": (
+            _optional_rate_float(
+                max_product_trace_citation_integrity_trace_gap_rate_increase
+            )
+        ),
         "min_current_trace_count": _optional_non_negative_int(min_current_trace_count),
     }
     metrics = _comparison_metrics(
@@ -1901,6 +2001,13 @@ def _comparison_metrics(
     )
     metrics.extend(_product_trace_trajectory_audit_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_product_trace_provenance_metrics(baseline_summary, current_summary, gates=gates))
+    metrics.extend(
+        _product_trace_citation_integrity_metrics(
+            baseline_summary,
+            current_summary,
+            gates=gates,
+        )
+    )
     metrics.extend(_world_model_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_context_sensitivity_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_counterfactual_robustness_metrics(baseline_summary, current_summary, gates=gates))
@@ -2906,6 +3013,49 @@ def _product_trace_provenance_gate_enabled(gates: Mapping[str, Any]) -> bool:
     )
 
 
+def _product_trace_citation_integrity_metrics(
+    baseline_summary: Mapping[str, Any],
+    current_summary: Mapping[str, Any],
+    *,
+    gates: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    if not _product_trace_citation_integrity_gate_enabled(gates):
+        return []
+    metrics = [
+        _min_current_metric(
+            metric_name,
+            _nested_float(baseline_summary, metric_path),
+            _nested_float(current_summary, metric_path),
+            gates.get(gate_key),
+        )
+        for metric_name, metric_path, gate_key in (
+            _PRODUCT_TRACE_CITATION_INTEGRITY_MIN_METRIC_SPECS
+        )
+    ]
+    metrics.extend(
+        _delta_metric(
+            metric_name,
+            _nested_float(baseline_summary, metric_path),
+            _nested_float(current_summary, metric_path),
+            gates.get(gate_key),
+        )
+        for metric_name, metric_path, gate_key in (
+            _PRODUCT_TRACE_CITATION_INTEGRITY_INCREASE_METRIC_SPECS
+        )
+    )
+    return metrics
+
+
+def _product_trace_citation_integrity_gate_enabled(gates: Mapping[str, Any]) -> bool:
+    return any(
+        gates.get(gate_key) is not None
+        for _, _, gate_key in (
+            _PRODUCT_TRACE_CITATION_INTEGRITY_MIN_METRIC_SPECS
+            + _PRODUCT_TRACE_CITATION_INTEGRITY_INCREASE_METRIC_SPECS
+        )
+    )
+
+
 def _world_model_metrics(
     baseline_summary: Mapping[str, Any],
     current_summary: Mapping[str, Any],
@@ -3711,6 +3861,7 @@ def _drift_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
         **_product_trace_receipt_claim_support_metadata(report),
         **_product_trace_trajectory_audit_metadata(report),
         **_product_trace_provenance_metadata(report),
+        **_product_trace_citation_integrity_metadata(report),
     }
 
 
@@ -4013,6 +4164,25 @@ def _product_trace_provenance_metadata(report: Mapping[str, Any]) -> dict[str, A
         metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
         if metric is not None and metric.get("status") == "blocked":
             metadata["product_trace_provenance_blocked_metric_count"] += 1
+    return metadata
+
+
+def _product_trace_citation_integrity_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    metrics = _metrics_by_name(report.get("metrics"))
+    metadata: dict[str, Any] = {
+        "product_trace_citation_integrity_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _PRODUCT_TRACE_CITATION_INTEGRITY_METADATA_FIELDS:
+        metric = metrics.get(metric_name)
+        metadata[f"{prefix}_baseline"] = _finite_float(
+            None if metric is None else metric.get("baseline")
+        )
+        metadata[f"{prefix}_current"] = _finite_float(
+            None if metric is None else metric.get("current")
+        )
+        metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is not None and metric.get("status") == "blocked":
+            metadata["product_trace_citation_integrity_blocked_metric_count"] += 1
     return metadata
 
 
@@ -4573,6 +4743,24 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         min_product_trace_provenance_final_answer_evidence_reference_rate=(
             args.min_product_trace_provenance_final_answer_evidence_reference_rate
         ),
+        min_product_trace_citation_integrity_participating_trace_rate=(
+            args.min_product_trace_citation_integrity_participating_trace_rate
+        ),
+        min_product_trace_citation_integrity_coverage_rate=(
+            args.min_product_trace_citation_integrity_coverage_rate
+        ),
+        max_product_trace_citation_integrity_mismatch_rate_increase=(
+            args.max_product_trace_citation_integrity_mismatch_rate_increase
+        ),
+        max_product_trace_citation_integrity_unresolved_rate_increase=(
+            args.max_product_trace_citation_integrity_unresolved_rate_increase
+        ),
+        max_product_trace_citation_integrity_issue_rate_increase=(
+            args.max_product_trace_citation_integrity_issue_rate_increase
+        ),
+        max_product_trace_citation_integrity_trace_gap_rate_increase=(
+            args.max_product_trace_citation_integrity_trace_gap_rate_increase
+        ),
         min_current_trace_count=args.min_current_trace_count,
         metadata=_parse_metadata(args.metadata or ()),
         compact_json=bool(args.compact_json),
@@ -5076,6 +5264,36 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument(
         "--min-product-trace-provenance-final-answer-evidence-reference-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-product-trace-citation-integrity-participating-trace-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-product-trace-citation-integrity-coverage-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-citation-integrity-mismatch-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-citation-integrity-unresolved-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-citation-integrity-issue-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-citation-integrity-trace-gap-rate-increase",
         type=float,
         default=None,
     )

@@ -41395,7 +41395,12 @@ def _write_provenance_product_runtime_trace(
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
-def _write_citation_product_runtime_trace(path: Path, *, request_id: str) -> None:
+def _write_citation_product_runtime_trace(
+    path: Path,
+    *,
+    request_id: str,
+    faulty: bool = True,
+) -> None:
     from eigentruth.control import ProductTrace, RuntimeTrace
     from eigentruth.verify import CitationRecord, CitationVerifier, Claim
 
@@ -41411,23 +41416,45 @@ def _write_citation_product_runtime_trace(path: Path, *, request_id: str) -> Non
             ),
         )
     )
-    claims = (
-        Claim(
-            text="The method was reported in the selective prediction literature.",
-            claim_id="c1",
-            metadata={
-                "citation": {
-                    "citation_id": "smith2026",
-                    "year": 2025,
-                    "title": "Geometry calibrated abstention",
+    if faulty:
+        claims = (
+            Claim(
+                text="The method was reported in the selective prediction literature.",
+                claim_id="c1",
+                metadata={
+                    "citation": {
+                        "citation_id": "smith2026",
+                        "year": 2025,
+                        "title": "Geometry calibrated abstention",
+                    },
                 },
-            },
-        ),
-        Claim(
-            text="A related result appears in [missing2026].",
-            claim_id="c2",
-        ),
-    )
+            ),
+            Claim(
+                text="A related result appears in [missing2026].",
+                claim_id="c2",
+            ),
+        )
+    else:
+        claims = (
+            Claim(
+                text="The method was reported in the selective prediction literature.",
+                claim_id="c1",
+                metadata={
+                    "citation": {
+                        "citation_id": "smith2026",
+                        "year": 2026,
+                        "title": (
+                            "Geometry-Calibrated Conformal Abstention for "
+                            "Language Models"
+                        ),
+                    },
+                },
+            ),
+            Claim(
+                text="A related result appears in [smith2026].",
+                claim_id="c2",
+            ),
+        )
     trace = ProductTrace(
         request_id=request_id,
         claims=claims,
@@ -41660,6 +41687,95 @@ def test_run_product_runtime_baseline_aggregates_citation_integrity(tmp_path):
     assert manifest["metadata"]["citation_integrity_issue_rate"] == pytest.approx(1.0)
     assert manifest["metadata"]["citation_integrity_mismatch_rate"] == pytest.approx(0.5)
     assert record.metadata["citation_integrity_unresolved_rate"] == pytest.approx(0.5)
+
+
+def test_compare_product_runtime_baselines_gates_citation_integrity_drift(tmp_path):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    registry_module = importlib.import_module("eigentruth.registry")
+    baseline_trace = tmp_path / "baseline-citation.json"
+    current_trace = tmp_path / "current-citation.json"
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    drift_report = tmp_path / "drift.json"
+    manifest_path = tmp_path / "manifest.json"
+    registry_path = tmp_path / "registry.json"
+    _write_citation_product_runtime_trace(
+        baseline_trace,
+        request_id="baseline-citation",
+        faulty=False,
+    )
+    _write_citation_product_runtime_trace(
+        current_trace,
+        request_id="current-citation",
+        faulty=True,
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=baseline_report,
+        )
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(current_trace,),
+            report_path=current_report,
+        )
+    )
+
+    payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        report_path=drift_report,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="runtime-drift-citation",
+        version="0.1",
+        min_product_trace_citation_integrity_participating_trace_rate=1.0,
+        min_product_trace_citation_integrity_coverage_rate=1.0,
+        max_product_trace_citation_integrity_mismatch_rate_increase=0.0,
+        max_product_trace_citation_integrity_unresolved_rate_increase=0.0,
+        max_product_trace_citation_integrity_issue_rate_increase=0.0,
+        max_product_trace_citation_integrity_trace_gap_rate_increase=0.0,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "product_runtime_drift_report:runtime-drift-citation:0.1"
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["blocked_metric_count"] == 3
+    assert _metric_by_name(
+        payload,
+        "citation_integrity.participating_trace_rate",
+    )["status"] == "pass"
+    assert _metric_by_name(payload, "citation_integrity.coverage_rate")[
+        "status"
+    ] == "pass"
+    assert _metric_by_name(payload, "citation_integrity.mismatch_rate")[
+        "absolute_delta"
+    ] == pytest.approx(0.5)
+    assert _metric_by_name(payload, "citation_integrity.unresolved_rate")[
+        "status"
+    ] == "blocked"
+    assert _metric_by_name(payload, "citation_integrity.issue_rate")[
+        "current"
+    ] == pytest.approx(1.0)
+    assert _metric_by_name(payload, "citation_integrity.trace_gap_rate")[
+        "status"
+    ] == "pass"
+    assert payload["config"][
+        "max_product_trace_citation_integrity_issue_rate_increase"
+    ] == pytest.approx(0.0)
+    assert manifest["metadata"][
+        "product_trace_citation_integrity_blocked_metric_count"
+    ] == 3
+    assert manifest["metadata"][
+        "product_trace_citation_integrity_mismatch_rate_current"
+    ] == pytest.approx(0.5)
+    assert record.metadata[
+        "product_trace_citation_integrity_unresolved_rate_current"
+    ] == pytest.approx(0.5)
 
 
 def test_compare_product_runtime_baselines_gates_action_receipts(tmp_path):
