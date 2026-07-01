@@ -72,7 +72,12 @@ from eigentruth.verify.search_planning import (
     plan_source_families,
     sanitize_search_query,
 )
-from eigentruth.verify.selfcheck import SelfConsistencyVerifier
+from eigentruth.verify.selfcheck import (
+    FactSelfConsistencyReport,
+    FactSelfConsistencyTripleReport,
+    FactSelfConsistencyVerifier,
+    SelfConsistencyVerifier,
+)
 from eigentruth.verify.triples import (
     ClaimTriple,
     ClaimTripleExtractor,
@@ -114,6 +119,9 @@ __all__ = [
     "CounterfactualVerificationReport",
     "EvidenceDocument",
     "EvidenceQualityPolicy",
+    "FactSelfConsistencyReport",
+    "FactSelfConsistencyTripleReport",
+    "FactSelfConsistencyVerifier",
     "GroundednessVerifier",
     "InMemoryVerifier",
     "JsonTraceCache",

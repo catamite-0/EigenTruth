@@ -90,6 +90,7 @@ from eigentruth.verify import (
     CounterfactualVerificationAuditor,
     EvidenceDocument,
     EvidenceQualityPolicy,
+    FactSelfConsistencyVerifier,
     GroundednessVerifier,
     InMemoryVerifier,
     JsonTraceCache,
@@ -1636,6 +1637,97 @@ def test_self_consistency_sample_budget_status_reports_fixed_threshold_outcome()
     assert status["remaining_samples"] == 3
     assert status["refute_count"] == 2
     assert status["refute_rate_lower_bound"] == pytest.approx(0.40)
+
+
+def test_fact_self_consistency_verifier_supports_claim_triples_across_samples():
+    verifier = FactSelfConsistencyVerifier(
+        samples=(
+            {"text": "Paris is the capital of France.", "source": "sample-1"},
+            {"text": "France's capital is Paris.", "source": "sample-2"},
+            {"text": "The capital of France is Paris.", "source": "sample-3"},
+        ),
+        support_threshold=0.60,
+    )
+    claim = extract_claims("Paris is the capital of France.")[0]
+
+    result = verifier.verify(claim)
+
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["verifier"] == "fact_self_consistency"
+    assert result.metadata["decision_rule"] == "fact_support_rate"
+    assert result.metadata["triple_count"] == 1
+    assert result.metadata["supported_triple_count"] == 1
+    assert result.metadata["fact_selfcheck"]["triple_reports"][0]["support_rate"] == pytest.approx(1.0)
+    assert result.metadata["fact_selfcheck"]["triple_reports"][0]["decisions"][0]["reason"] == "exact_triple_match"
+    assert result.evidence[0].startswith("sample-1:")
+
+
+def test_fact_self_consistency_verifier_refutes_conflicting_fact_triples():
+    verifier = FactSelfConsistencyVerifier(
+        samples=(
+            "Lyon is the capital of France.",
+            "The capital of France is Lyon.",
+            "France's capital is Lyon.",
+        ),
+        refute_threshold=0.50,
+    )
+    claim = extract_claims("Paris is the capital of France.")[0]
+
+    result = verifier.verify(claim)
+
+    assert result.status is VerificationStatus.REFUTED
+    assert result.metadata["decision_rule"] == "fact_refute_rate"
+    triple_report = result.metadata["fact_selfcheck"]["triple_reports"][0]
+    assert triple_report["refute_count"] == 3
+    assert triple_report["refute_rate"] == pytest.approx(1.0)
+    assert triple_report["decisions"][0]["reason"] == "subject_predicate_object_conflict"
+    assert "Lyon" in result.evidence[0]
+
+
+def test_fact_self_consistency_verifier_uses_context_and_metadata_triples():
+    triple = {"subject": "AlphaCorp", "predicate": "has", "object": "12 offices"}
+    claim = Claim(
+        "AlphaCorp office count is recorded in the local ledger.",
+        claim_id="claim-1",
+        metadata={"claim_triples": [triple]},
+    )
+    verifier = FactSelfConsistencyVerifier(samples=(), min_samples=1, support_threshold=1.0)
+
+    missing = verifier.verify(claim)
+    result = verifier.verify(
+        claim,
+        context={
+            "fact_selfcheck_samples": [
+                {
+                    "text": "opaque local sample",
+                    "source": "ledger-sample",
+                    "claim_triples": [triple],
+                }
+            ]
+        },
+    )
+
+    assert missing.status is VerificationStatus.NOT_APPLICABLE
+    assert missing.metadata["decision_rule"] == "too_few_samples"
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["sample_count"] == 1
+    assert result.metadata["sample_triple_count"] == 1
+    assert result.metadata["fact_selfcheck"]["triple_reports"][0]["triple"]["subject"] == "AlphaCorp"
+
+
+def test_fact_self_consistency_verifier_is_not_applicable_without_claim_triples():
+    verifier = FactSelfConsistencyVerifier(
+        samples=("opaque sample text", "another opaque sample"),
+        min_samples=2,
+    )
+    claim = Claim("opaque claim text", claim_id="opaque")
+
+    result = verifier.verify(claim)
+
+    assert result.status is VerificationStatus.NOT_APPLICABLE
+    assert result.confidence == pytest.approx(1.0)
+    assert result.metadata["decision_rule"] == "no_claim_triples"
+    assert result.metadata["triple_count"] == 0
 
 
 def test_cached_verifier_reuses_identical_claim_context_results():
