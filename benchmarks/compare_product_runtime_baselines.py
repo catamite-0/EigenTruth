@@ -567,6 +567,26 @@ _PRODUCT_TRACE_PROVENANCE_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
         "provenance.final_answer_evidence_reference_rate",
         "product_trace_provenance_final_answer_evidence_reference_rate",
     ),
+    (
+        "evidence_graph_consistency.consistency_coverage_rate",
+        "product_trace_evidence_graph_consistency_coverage_rate",
+    ),
+    (
+        "evidence_graph_consistency.supported_claim_consistency_rate",
+        "product_trace_evidence_graph_consistency_supported_claim_consistency_rate",
+    ),
+    (
+        "evidence_graph_consistency.missing_number_rate",
+        "product_trace_evidence_graph_consistency_missing_number_rate",
+    ),
+    (
+        "evidence_graph_consistency.cross_claim_retrieval_hit_rate",
+        "product_trace_evidence_graph_consistency_cross_claim_hit_rate",
+    ),
+    (
+        "evidence_graph_consistency.error_rate",
+        "product_trace_evidence_graph_consistency_error_rate",
+    ),
 )
 _PRODUCT_TRACE_CITATION_INTEGRITY_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
     (
@@ -791,6 +811,16 @@ _PRODUCT_TRACE_PROVENANCE_MIN_METRIC_SPECS: tuple[
         ("provenance", "final_answer_evidence_reference_rate"),
         "min_product_trace_provenance_final_answer_evidence_reference_rate",
     ),
+    (
+        "evidence_graph_consistency.consistency_coverage_rate",
+        ("evidence_graph_consistency", "consistency_coverage_rate"),
+        "min_product_trace_evidence_graph_consistency_coverage_rate",
+    ),
+    (
+        "evidence_graph_consistency.supported_claim_consistency_rate",
+        ("evidence_graph_consistency", "supported_claim_consistency_rate"),
+        "min_product_trace_evidence_graph_consistency_supported_claim_consistency_rate",
+    ),
 )
 _PRODUCT_TRACE_PROVENANCE_INCREASE_METRIC_SPECS: tuple[
     tuple[str, tuple[str, ...], str],
@@ -810,6 +840,21 @@ _PRODUCT_TRACE_PROVENANCE_INCREASE_METRIC_SPECS: tuple[
         "provenance.error_rate",
         ("provenance", "error_rate"),
         "max_product_trace_provenance_error_rate_increase",
+    ),
+    (
+        "evidence_graph_consistency.missing_number_rate",
+        ("evidence_graph_consistency", "missing_number_rate"),
+        "max_product_trace_evidence_graph_consistency_missing_number_rate_increase",
+    ),
+    (
+        "evidence_graph_consistency.cross_claim_retrieval_hit_rate",
+        ("evidence_graph_consistency", "cross_claim_retrieval_hit_rate"),
+        "max_product_trace_evidence_graph_consistency_cross_claim_hit_rate_increase",
+    ),
+    (
+        "evidence_graph_consistency.error_rate",
+        ("evidence_graph_consistency", "error_rate"),
+        "max_product_trace_evidence_graph_consistency_error_rate_increase",
     ),
 )
 _PRODUCT_TRACE_CITATION_INTEGRITY_MIN_METRIC_SPECS: tuple[
@@ -1223,6 +1268,17 @@ def compare_product_runtime_baselines(
     min_product_trace_provenance_final_answer_evidence_reference_rate: (
         float | None
     ) = None,
+    min_product_trace_evidence_graph_consistency_coverage_rate: float | None = None,
+    min_product_trace_evidence_graph_consistency_supported_claim_consistency_rate: (
+        float | None
+    ) = None,
+    max_product_trace_evidence_graph_consistency_missing_number_rate_increase: (
+        float | None
+    ) = None,
+    max_product_trace_evidence_graph_consistency_cross_claim_hit_rate_increase: (
+        float | None
+    ) = None,
+    max_product_trace_evidence_graph_consistency_error_rate_increase: float | None = None,
     min_product_trace_citation_integrity_participating_trace_rate: (
         float | None
     ) = None,
@@ -1767,6 +1823,31 @@ def compare_product_runtime_baselines(
         "min_product_trace_provenance_final_answer_evidence_reference_rate": (
             _optional_rate_float(
                 min_product_trace_provenance_final_answer_evidence_reference_rate
+            )
+        ),
+        "min_product_trace_evidence_graph_consistency_coverage_rate": (
+            _optional_rate_float(
+                min_product_trace_evidence_graph_consistency_coverage_rate
+            )
+        ),
+        "min_product_trace_evidence_graph_consistency_supported_claim_consistency_rate": (
+            _optional_rate_float(
+                min_product_trace_evidence_graph_consistency_supported_claim_consistency_rate
+            )
+        ),
+        "max_product_trace_evidence_graph_consistency_missing_number_rate_increase": (
+            _optional_rate_float(
+                max_product_trace_evidence_graph_consistency_missing_number_rate_increase
+            )
+        ),
+        "max_product_trace_evidence_graph_consistency_cross_claim_hit_rate_increase": (
+            _optional_rate_float(
+                max_product_trace_evidence_graph_consistency_cross_claim_hit_rate_increase
+            )
+        ),
+        "max_product_trace_evidence_graph_consistency_error_rate_increase": (
+            _optional_rate_float(
+                max_product_trace_evidence_graph_consistency_error_rate_increase
             )
         ),
         "min_product_trace_citation_integrity_participating_trace_rate": (
@@ -4903,6 +4984,21 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         min_product_trace_provenance_final_answer_evidence_reference_rate=(
             args.min_product_trace_provenance_final_answer_evidence_reference_rate
         ),
+        min_product_trace_evidence_graph_consistency_coverage_rate=(
+            args.min_product_trace_evidence_graph_consistency_coverage_rate
+        ),
+        min_product_trace_evidence_graph_consistency_supported_claim_consistency_rate=(
+            args.min_product_trace_evidence_graph_consistency_supported_claim_consistency_rate
+        ),
+        max_product_trace_evidence_graph_consistency_missing_number_rate_increase=(
+            args.max_product_trace_evidence_graph_consistency_missing_number_rate_increase
+        ),
+        max_product_trace_evidence_graph_consistency_cross_claim_hit_rate_increase=(
+            args.max_product_trace_evidence_graph_consistency_cross_claim_hit_rate_increase
+        ),
+        max_product_trace_evidence_graph_consistency_error_rate_increase=(
+            args.max_product_trace_evidence_graph_consistency_error_rate_increase
+        ),
         min_product_trace_citation_integrity_participating_trace_rate=(
             args.min_product_trace_citation_integrity_participating_trace_rate
         ),
@@ -5450,6 +5546,31 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument(
         "--min-product-trace-provenance-final-answer-evidence-reference-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-product-trace-evidence-graph-consistency-coverage-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-product-trace-evidence-graph-consistency-supported-claim-consistency-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-evidence-graph-consistency-missing-number-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-evidence-graph-consistency-cross-claim-hit-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-evidence-graph-consistency-error-rate-increase",
         type=float,
         default=None,
     )

@@ -378,6 +378,26 @@ _PRODUCT_RUNTIME_DRIFT_PROVENANCE_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] =
         "provenance.final_answer_evidence_reference_rate",
         "product_trace_provenance_final_answer_evidence_reference_rate",
     ),
+    (
+        "evidence_graph_consistency.consistency_coverage_rate",
+        "product_trace_evidence_graph_consistency_coverage_rate",
+    ),
+    (
+        "evidence_graph_consistency.supported_claim_consistency_rate",
+        "product_trace_evidence_graph_consistency_supported_claim_consistency_rate",
+    ),
+    (
+        "evidence_graph_consistency.missing_number_rate",
+        "product_trace_evidence_graph_consistency_missing_number_rate",
+    ),
+    (
+        "evidence_graph_consistency.cross_claim_retrieval_hit_rate",
+        "product_trace_evidence_graph_consistency_cross_claim_hit_rate",
+    ),
+    (
+        "evidence_graph_consistency.error_rate",
+        "product_trace_evidence_graph_consistency_error_rate",
+    ),
 )
 _PRODUCT_RUNTIME_DRIFT_CITATION_INTEGRITY_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = (
     (

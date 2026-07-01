@@ -9234,6 +9234,10 @@ coverage, manifest verification, record count, pass rate, false-invariance
 rate, flip-success drift, fact-selfcheck gate coverage, manifest/pass rate,
 run-count, failed-run, executed/decided/not-applicable, and fact-density drift,
 trace-level triple/slot-audit coverage, and trace-count drift. When ProductTrace
+provenance summaries are present, the same comparison can gate structural
+provenance coverage plus evidence-graph consistency coverage, supported-claim
+consistency, numeric drift, cross-claim retrieval-hit drift, and error-rate
+drift. When ProductTrace
 action results carry action receipts, the
 same comparison can gate receipt coverage plus missing, invalid,
 fingerprint-mismatch, and unsigned receipt rates. When claims or final answers
@@ -9391,7 +9395,9 @@ The promoted release-candidate runtime drift refresh is
 It compares receipt-enriched baseline/current reports built with the v1.9/v7
 handoff, promotes with `119` compared metrics and `0` blockers, and carries
 both `action_receipts.*` and `receipt_claim_support.*` metrics for the final
-`frontier_audit` gate.
+`frontier_audit` gate. Newer provenance-evidence refreshes also include
+`evidence_graph_consistency.*` drift metrics under the release provenance
+evidence group.
 
 Replay the enriched traces through `run_product_runtime_baseline.py` with
 `--trace-scan-workers` when the trace set is large enough to benefit from
@@ -9636,7 +9642,8 @@ summaries for local performance tuning, lifts the runtime baseline
 report and registry metadata, can save the runtime baseline's recommended
 `ProductRuntimeBudgetPolicy` artifact for later gates, can run the current
 runtime baseline through action-audit, action-execution alignment, or
-product-runtime drift/policy gates, and registers one workflow report.
+product-runtime drift/policy gates, including evidence-graph consistency gates
+when configured, and registers one workflow report.
 Add `--verify-manifest` to write a separate recursive verification
 report and register `manifest_verification:<name>-verification:<version>` next
 to the workflow report. Add `--fingerprint-cache` when repeating local checks,

@@ -19903,13 +19903,16 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         "summary"
     ]
     assert provenance_summary["provenance_evidence_required"] is True
-    assert provenance_summary["provenance_evidence_metric_count"] == 6
+    assert provenance_summary["provenance_evidence_metric_count"] == 11
     assert provenance_summary["provenance_evidence_blocked_metric_count"] == 0
     assert provenance_summary["product_trace_provenance_coverage_rate_current"] == (
         pytest.approx(1.0)
     )
     assert provenance_summary[
         "product_trace_provenance_supported_claim_evidence_coverage_status"
+    ] == "pass"
+    assert provenance_summary[
+        "product_trace_evidence_graph_consistency_supported_claim_consistency_rate_status"
     ] == "pass"
     assert missing_provenance["decision"]["status"] == "blocked"
     assert missing_provenance["product_runtime_drift_gate"]["summary"][
@@ -19921,6 +19924,11 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         "provenance.unsupported_supported_claim_rate",
         "provenance.error_rate",
         "provenance.final_answer_evidence_reference_rate",
+        "evidence_graph_consistency.consistency_coverage_rate",
+        "evidence_graph_consistency.supported_claim_consistency_rate",
+        "evidence_graph_consistency.missing_number_rate",
+        "evidence_graph_consistency.cross_claim_retrieval_hit_rate",
+        "evidence_graph_consistency.error_rate",
     )
     assert any(
         "provenance evidence metrics are incomplete" in reason
@@ -22094,7 +22102,7 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     ] == 8
     assert frontier_payload["product_runtime_drift_gate"]["summary"][
         "provenance_evidence_metric_count"
-    ] == 6
+    ] == 11
     assert frontier_payload["product_runtime_drift_gate"]["summary"][
         "citation_integrity_evidence_metric_count"
     ] == 6
@@ -24695,7 +24703,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["product_runtime_drift_provenance_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_citation_integrity_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_evidence_handoff_evidence_required"] is True
-    assert manifest["metadata"]["product_runtime_drift_compared_metric_count"] == 78
+    assert manifest["metadata"]["product_runtime_drift_compared_metric_count"] == 83
     assert manifest["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
     assert manifest["metadata"]["product_runtime_drift_promotion_evidence_metric_count"] == 4
     assert manifest["metadata"]["product_runtime_drift_promotion_evidence_blocked_metric_count"] == 0
@@ -24719,7 +24727,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         manifest["metadata"]["product_runtime_drift_trajectory_audit_evidence_blocked_metric_count"]
         == 0
     )
-    assert manifest["metadata"]["product_runtime_drift_provenance_evidence_metric_count"] == 6
+    assert manifest["metadata"]["product_runtime_drift_provenance_evidence_metric_count"] == 11
     assert manifest["metadata"]["product_runtime_drift_provenance_evidence_blocked_metric_count"] == 0
     assert manifest["metadata"]["product_runtime_drift_citation_integrity_evidence_metric_count"] == 6
     assert (
@@ -25188,7 +25196,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["product_runtime_drift_action_gate_evidence_blocked_metric_count"] == 0
     assert record.metadata["product_runtime_drift_trajectory_audit_evidence_metric_count"] == 8
     assert record.metadata["product_runtime_drift_trajectory_audit_evidence_blocked_metric_count"] == 0
-    assert record.metadata["product_runtime_drift_provenance_evidence_metric_count"] == 6
+    assert record.metadata["product_runtime_drift_provenance_evidence_metric_count"] == 11
     assert record.metadata["product_runtime_drift_provenance_evidence_blocked_metric_count"] == 0
     assert record.metadata["product_runtime_drift_citation_integrity_evidence_metric_count"] == 6
     assert record.metadata["product_runtime_drift_citation_integrity_evidence_blocked_metric_count"] == 0
@@ -29392,6 +29400,57 @@ def _write_product_runtime_drift_report(
                     if provenance_blocked
                     else None
                 ),
+            },
+            {
+                "metric": "evidence_graph_consistency.consistency_coverage_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "evidence_graph_consistency.supported_claim_consistency_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "threshold": 0.95,
+                "reason": None,
+            },
+            {
+                "metric": "evidence_graph_consistency.missing_number_rate",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 0.05,
+                "reason": None,
+            },
+            {
+                "metric": "evidence_graph_consistency.cross_claim_retrieval_hit_rate",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 0.05,
+                "reason": None,
+            },
+            {
+                "metric": "evidence_graph_consistency.error_rate",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 0.05,
+                "reason": None,
             },
         ])
     if citation_integrity_evidence:
@@ -45485,6 +45544,110 @@ def test_compare_product_runtime_baselines_gates_trace_provenance(tmp_path):
         "product_trace_provenance_supported_claim_evidence_coverage_current"
     ] == pytest.approx(0.5)
     assert record.metadata["product_trace_provenance_blocked_metric_count"] == 5
+
+
+def test_compare_product_runtime_baselines_gates_evidence_graph_consistency(tmp_path):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    registry_module = importlib.import_module("eigentruth.registry")
+    baseline_trace_a = tmp_path / "baseline-evidence-a.json"
+    baseline_trace_b = tmp_path / "baseline-evidence-b.json"
+    current_trace_a = tmp_path / "current-evidence-a.json"
+    current_trace_b = tmp_path / "current-evidence-b.json"
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    drift_report = tmp_path / "drift.json"
+    manifest_path = tmp_path / "manifest.json"
+    registry_path = tmp_path / "registry.json"
+
+    for path, request_id in (
+        (baseline_trace_a, "baseline-evidence-a"),
+        (baseline_trace_b, "baseline-evidence-b"),
+        (current_trace_a, "current-evidence-a"),
+    ):
+        path.write_text(
+            json.dumps(
+                _product_runtime_evidence_graph_trace(
+                    request_id=request_id,
+                    claim_text="Orion Labs shipped 10 satellites in 2025.",
+                    evidence_text="Orion Labs shipped 10 satellites in 2025.",
+                ),
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+    current_trace_b.write_text(
+        json.dumps(
+            _product_runtime_evidence_graph_trace(
+                request_id="current-evidence-b",
+                claim_text="Orion Labs shipped 20 satellites in 2025.",
+                evidence_text="Orion Labs shipped 10 satellites in 2025.",
+            ),
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace_a, baseline_trace_b),
+            report_path=baseline_report,
+        )
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(current_trace_a, current_trace_b),
+            report_path=current_report,
+        )
+    )
+
+    payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        report_path=drift_report,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="runtime-drift-evidence-graph",
+        version="0.1",
+        min_product_trace_evidence_graph_consistency_coverage_rate=1.0,
+        min_product_trace_evidence_graph_consistency_supported_claim_consistency_rate=1.0,
+        max_product_trace_evidence_graph_consistency_missing_number_rate_increase=0.0,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "product_runtime_drift_report:runtime-drift-evidence-graph:0.1"
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["blocked_metric_count"] == 2
+    assert _metric_by_name(
+        payload,
+        "evidence_graph_consistency.consistency_coverage_rate",
+    )["status"] == "pass"
+    consistency_metric = _metric_by_name(
+        payload,
+        "evidence_graph_consistency.supported_claim_consistency_rate",
+    )
+    assert consistency_metric["status"] == "blocked"
+    assert consistency_metric["current"] == pytest.approx(0.5)
+    missing_number_metric = _metric_by_name(
+        payload,
+        "evidence_graph_consistency.missing_number_rate",
+    )
+    assert missing_number_metric["status"] == "blocked"
+    assert missing_number_metric["absolute_delta"] == pytest.approx(0.5)
+    assert payload["config"][
+        "min_product_trace_evidence_graph_consistency_supported_claim_consistency_rate"
+    ] == pytest.approx(1.0)
+    assert manifest["metadata"][
+        "product_trace_evidence_graph_consistency_supported_claim_consistency_rate_current"
+    ] == pytest.approx(0.5)
+    assert manifest["metadata"]["product_trace_provenance_blocked_metric_count"] == 2
+    assert record.metadata["product_trace_provenance_blocked_metric_count"] == 2
 
 
 def _promotion_evidence_handoff_metadata(

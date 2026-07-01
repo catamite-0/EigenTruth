@@ -54,8 +54,10 @@ representation-observability toolkit spanning **training and inference**.
   `EvidenceGraphConsistencyReport`, `ProductTrace.summaries.evidence_graph_consistency`,
   and `product_runtime_metrics()` consistency counters.
 - **Cost:** low. **Status:** implemented as a monitor-first evidence-graph sanity
-  check; semantic entailment, learned EGC features, and network retrieval remain
-  optional adapter work.
+  check; product-runtime drift and release-candidate provenance-evidence gates
+  can now require consistency coverage, supported-claim consistency, numeric
+  drift, cross-claim hit, and error-rate metrics. Semantic entailment, learned
+  EGC features, and network retrieval remain optional adapter work.
 
 ## Phase 0 — Finish in-flight work
 

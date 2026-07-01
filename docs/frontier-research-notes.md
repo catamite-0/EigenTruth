@@ -141,6 +141,7 @@ Added lightweight evidence-graph consistency:
 - Numeric drift such as `2003` vs `2004` is error-level because it is cheap and high precision; low keyword/entity overlap is warning-level because paraphrase and aliasing need stronger verifier routes.
 - Cross-claim retrieval hits are error-level when a supported claim cites a hit explicitly tagged for another claim.
 - `ProductTrace.to_bounded_dict()` now carries `summaries.evidence_graph_consistency`, and `product_runtime_metrics(...)` exposes consistency coverage, consistency rate, missing-number/entity counts, cross-claim hit counts, and bounded-summary replay support.
+- `compare_product_runtime_baselines.py` and `run_product_trace_replay_workflow.py` can now fail closed on evidence-graph consistency coverage drops, supported-claim consistency drops, numeric drift, cross-claim retrieval-hit drift, and error-rate drift. `compare_release_candidates.py --require-product-runtime-drift-provenance-evidence` includes those metrics in the final provenance evidence group.
 - This is the local EigenTruth bridge toward Evidence Graph Consistency style RAG/agent auditing: it catches stale or miswired support edges while leaving real entailment to verifier, triple-evidence, citation, retrieval, or world-model adapters.
 
 Added DECK-style detectability taxonomy reports:

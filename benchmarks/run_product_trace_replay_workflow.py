@@ -232,6 +232,21 @@ class ProductTraceReplayWorkflowConfig:
     min_runtime_drift_product_trace_provenance_final_answer_evidence_reference_rate: (
         float | None
     ) = None
+    min_runtime_drift_product_trace_evidence_graph_consistency_coverage_rate: (
+        float | None
+    ) = None
+    min_runtime_drift_product_trace_evidence_graph_consistency_supported_claim_consistency_rate: (
+        float | None
+    ) = None
+    max_runtime_drift_product_trace_evidence_graph_consistency_missing_number_rate_increase: (
+        float | None
+    ) = None
+    max_runtime_drift_product_trace_evidence_graph_consistency_cross_claim_hit_rate_increase: (
+        float | None
+    ) = None
+    max_runtime_drift_product_trace_evidence_graph_consistency_error_rate_increase: (
+        float | None
+    ) = None
     min_runtime_drift_product_trace_citation_integrity_participating_trace_rate: (
         float | None
     ) = None
@@ -435,6 +450,11 @@ class ProductTraceReplayWorkflowConfig:
                 self.max_runtime_drift_product_trace_provenance_unsupported_supported_claim_rate_increase,
                 self.max_runtime_drift_product_trace_provenance_error_rate_increase,
                 self.min_runtime_drift_product_trace_provenance_final_answer_evidence_reference_rate,
+                self.min_runtime_drift_product_trace_evidence_graph_consistency_coverage_rate,
+                self.min_runtime_drift_product_trace_evidence_graph_consistency_supported_claim_consistency_rate,
+                self.max_runtime_drift_product_trace_evidence_graph_consistency_missing_number_rate_increase,
+                self.max_runtime_drift_product_trace_evidence_graph_consistency_cross_claim_hit_rate_increase,
+                self.max_runtime_drift_product_trace_evidence_graph_consistency_error_rate_increase,
                 self.min_runtime_drift_product_trace_citation_integrity_participating_trace_rate,
                 self.min_runtime_drift_product_trace_citation_integrity_coverage_rate,
                 self.max_runtime_drift_product_trace_citation_integrity_mismatch_rate_increase,
@@ -1657,6 +1677,11 @@ def _runtime_drift_configured(config: ProductTraceReplayWorkflowConfig) -> bool:
             config.max_runtime_drift_product_trace_provenance_unsupported_supported_claim_rate_increase,
             config.max_runtime_drift_product_trace_provenance_error_rate_increase,
             config.min_runtime_drift_product_trace_provenance_final_answer_evidence_reference_rate,
+            config.min_runtime_drift_product_trace_evidence_graph_consistency_coverage_rate,
+            config.min_runtime_drift_product_trace_evidence_graph_consistency_supported_claim_consistency_rate,
+            config.max_runtime_drift_product_trace_evidence_graph_consistency_missing_number_rate_increase,
+            config.max_runtime_drift_product_trace_evidence_graph_consistency_cross_claim_hit_rate_increase,
+            config.max_runtime_drift_product_trace_evidence_graph_consistency_error_rate_increase,
             config.min_runtime_drift_product_trace_citation_integrity_participating_trace_rate,
             config.min_runtime_drift_product_trace_citation_integrity_coverage_rate,
             config.max_runtime_drift_product_trace_citation_integrity_mismatch_rate_increase,
@@ -2017,6 +2042,21 @@ def _runtime_drift_gate_config(config: ProductTraceReplayWorkflowConfig) -> dict
         "min_product_trace_provenance_final_answer_evidence_reference_rate": (
             config.min_runtime_drift_product_trace_provenance_final_answer_evidence_reference_rate
         ),
+        "min_product_trace_evidence_graph_consistency_coverage_rate": (
+            config.min_runtime_drift_product_trace_evidence_graph_consistency_coverage_rate
+        ),
+        "min_product_trace_evidence_graph_consistency_supported_claim_consistency_rate": (
+            config.min_runtime_drift_product_trace_evidence_graph_consistency_supported_claim_consistency_rate
+        ),
+        "max_product_trace_evidence_graph_consistency_missing_number_rate_increase": (
+            config.max_runtime_drift_product_trace_evidence_graph_consistency_missing_number_rate_increase
+        ),
+        "max_product_trace_evidence_graph_consistency_cross_claim_hit_rate_increase": (
+            config.max_runtime_drift_product_trace_evidence_graph_consistency_cross_claim_hit_rate_increase
+        ),
+        "max_product_trace_evidence_graph_consistency_error_rate_increase": (
+            config.max_runtime_drift_product_trace_evidence_graph_consistency_error_rate_increase
+        ),
         "min_product_trace_citation_integrity_participating_trace_rate": (
             config.min_runtime_drift_product_trace_citation_integrity_participating_trace_rate
         ),
@@ -2366,6 +2406,9 @@ def _runtime_drift_summary(runtime_drift: Mapping[str, Any]) -> dict[str, Any]:
     )
     product_trace_trajectory_audit = _product_trace_trajectory_audit_metric_summary(runtime_drift)
     product_trace_provenance = _product_trace_provenance_metric_summary(runtime_drift)
+    product_trace_evidence_graph_consistency = (
+        _product_trace_evidence_graph_consistency_metric_summary(runtime_drift)
+    )
     product_trace_citation_integrity = (
         _product_trace_citation_integrity_metric_summary(runtime_drift)
     )
@@ -2408,6 +2451,12 @@ def _runtime_drift_summary(runtime_drift: Mapping[str, Any]) -> dict[str, Any]:
         "product_trace_provenance_metric_count": product_trace_provenance["metric_count"],
         "product_trace_provenance_blocked_metric_count": (
             product_trace_provenance["blocked_metric_count"]
+        ),
+        "product_trace_evidence_graph_consistency_metric_count": (
+            product_trace_evidence_graph_consistency["metric_count"]
+        ),
+        "product_trace_evidence_graph_consistency_blocked_metric_count": (
+            product_trace_evidence_graph_consistency["blocked_metric_count"]
         ),
         "product_trace_citation_integrity_metric_count": (
             product_trace_citation_integrity["metric_count"]
@@ -2651,6 +2700,22 @@ def _product_trace_provenance_metric_summary(runtime_drift: Mapping[str, Any]) -
         _mapping(metric)
         for metric in _sequence(runtime_drift.get("metrics"))
         if str(_mapping(metric).get("metric") or "").startswith("provenance.")
+    )
+    return {
+        "metric_count": len(metrics),
+        "blocked_metric_count": sum(1 for metric in metrics if metric.get("status") == "blocked"),
+    }
+
+
+def _product_trace_evidence_graph_consistency_metric_summary(
+    runtime_drift: Mapping[str, Any],
+) -> dict[str, int]:
+    metrics = tuple(
+        _mapping(metric)
+        for metric in _sequence(runtime_drift.get("metrics"))
+        if str(_mapping(metric).get("metric") or "").startswith(
+            "evidence_graph_consistency."
+        )
     )
     return {
         "metric_count": len(metrics),
@@ -3091,6 +3156,16 @@ def _write_artifact_manifest(
                 "runtime_drift",
                 "product_trace_provenance_blocked_metric_count",
             ),
+            "runtime_drift_product_trace_evidence_graph_consistency_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "product_trace_evidence_graph_consistency_metric_count",
+            ),
+            "runtime_drift_product_trace_evidence_graph_consistency_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "product_trace_evidence_graph_consistency_blocked_metric_count",
+            ),
             "runtime_drift_product_trace_citation_integrity_metric_count": _nested(
                 report,
                 "runtime_drift",
@@ -3477,6 +3552,16 @@ def _record_registry(
                 report,
                 "runtime_drift",
                 "product_trace_provenance_blocked_metric_count",
+            ),
+            "runtime_drift_product_trace_evidence_graph_consistency_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "product_trace_evidence_graph_consistency_metric_count",
+            ),
+            "runtime_drift_product_trace_evidence_graph_consistency_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "product_trace_evidence_graph_consistency_blocked_metric_count",
             ),
             "runtime_drift_product_trace_citation_integrity_metric_count": _nested(
                 report,
@@ -4262,6 +4347,21 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
         min_runtime_drift_product_trace_provenance_final_answer_evidence_reference_rate=(
             args.min_runtime_drift_product_trace_provenance_final_answer_evidence_reference_rate
         ),
+        min_runtime_drift_product_trace_evidence_graph_consistency_coverage_rate=(
+            args.min_runtime_drift_product_trace_evidence_graph_consistency_coverage_rate
+        ),
+        min_runtime_drift_product_trace_evidence_graph_consistency_supported_claim_consistency_rate=(
+            args.min_runtime_drift_product_trace_evidence_graph_consistency_supported_claim_consistency_rate
+        ),
+        max_runtime_drift_product_trace_evidence_graph_consistency_missing_number_rate_increase=(
+            args.max_runtime_drift_product_trace_evidence_graph_consistency_missing_number_rate_increase
+        ),
+        max_runtime_drift_product_trace_evidence_graph_consistency_cross_claim_hit_rate_increase=(
+            args.max_runtime_drift_product_trace_evidence_graph_consistency_cross_claim_hit_rate_increase
+        ),
+        max_runtime_drift_product_trace_evidence_graph_consistency_error_rate_increase=(
+            args.max_runtime_drift_product_trace_evidence_graph_consistency_error_rate_increase
+        ),
         min_runtime_drift_product_trace_citation_integrity_participating_trace_rate=(
             args.min_runtime_drift_product_trace_citation_integrity_participating_trace_rate
         ),
@@ -4805,6 +4905,31 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument(
         "--min-runtime-drift-product-trace-provenance-final-answer-evidence-reference-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-runtime-drift-product-trace-evidence-graph-consistency-coverage-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-runtime-drift-product-trace-evidence-graph-consistency-supported-claim-consistency-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-product-trace-evidence-graph-consistency-missing-number-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-product-trace-evidence-graph-consistency-cross-claim-hit-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-product-trace-evidence-graph-consistency-error-rate-increase",
         type=float,
         default=None,
     )

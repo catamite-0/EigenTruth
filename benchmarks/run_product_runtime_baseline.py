@@ -128,6 +128,11 @@ _PRODUCT_RUNTIME_DRIFT_PROVENANCE_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "product_trace_provenance_unsupported_supported_claim_rate",
     "product_trace_provenance_error_rate",
     "product_trace_provenance_final_answer_evidence_reference_rate",
+    "product_trace_evidence_graph_consistency_coverage_rate",
+    "product_trace_evidence_graph_consistency_supported_claim_consistency_rate",
+    "product_trace_evidence_graph_consistency_missing_number_rate",
+    "product_trace_evidence_graph_consistency_cross_claim_hit_rate",
+    "product_trace_evidence_graph_consistency_error_rate",
 )
 _PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "evidence_handoff_coverage_rate",
