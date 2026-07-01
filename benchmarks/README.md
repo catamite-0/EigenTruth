@@ -6873,6 +6873,36 @@ and promotion-gate markers, and writes a combined adapter input plus any
 remaining unfilled rows. The downstream adapter command in the rollup is still a
 hint only; adapter execution and rule-candidate promotion remain separate gates.
 
+Dry-run the combined rule-input sidecar through the adapter/promotion handoff,
+then add `--execute` only after the rollup is adapter-ready:
+
+```bash
+python benchmarks/run_frontier_research_queue_rule_adapter_promotion_workflow.py \
+  --input-fill-result-rollup artifacts/frontier-research-queue-input-fill-result-rollup/frontier-input-fill-result-rollup.json \
+  --output-dir artifacts/frontier-research-queue-rule-adapter-promotion-workflow \
+  --json artifacts/frontier-research-queue-rule-adapter-promotion-workflow/frontier-rule-adapter-promotion-workflow.json \
+  --artifact-manifest artifacts/frontier-research-queue-rule-adapter-promotion-workflow/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-rule-adapter-promotion-workflow \
+  --version 0.1
+
+python benchmarks/run_frontier_research_queue_rule_adapter_promotion_workflow.py \
+  --input-fill-result-rollup artifacts/frontier-research-queue-input-fill-result-rollup/frontier-input-fill-result-rollup.json \
+  --output-dir artifacts/frontier-research-queue-rule-adapter-promotion-workflow \
+  --json artifacts/frontier-research-queue-rule-adapter-promotion-workflow/frontier-rule-adapter-promotion-workflow.json \
+  --artifact-manifest artifacts/frontier-research-queue-rule-adapter-promotion-workflow/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-rule-adapter-promotion-workflow \
+  --version 0.1 \
+  --execute
+```
+
+This workflow consumes only the rollup's `combined-rule-inputs.jsonl` and
+`rule_stubs` path, fails closed if either side is missing or empty, and writes
+separate rule-adapter and rule-promotion subdirectories. A top-level `promote`
+status means the deterministic adapter ran and the candidate promotion gate
+passed; the workflow report itself is still not verifier evidence.
+
 Then dry-run the bound plan before any explicit execution:
 
 ```bash

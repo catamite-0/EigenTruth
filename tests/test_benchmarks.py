@@ -33515,6 +33515,183 @@ def test_frontier_research_queue_input_fill_result_rollup_blocks_missing_outputs
     assert row["status"] == "blocked"
 
 
+def test_frontier_research_queue_rule_adapter_promotion_workflow_dry_run_plans_only(
+    tmp_path,
+):
+    workflow_module = importlib.import_module(
+        "benchmarks.run_frontier_research_queue_rule_adapter_promotion_workflow"
+    )
+    registry_module = importlib.import_module("eigentruth.registry")
+    rule_stubs_path = tmp_path / "rule-stubs.jsonl"
+    rule_inputs_path = tmp_path / "combined-rule-inputs.jsonl"
+    registry_path = tmp_path / "registry.json"
+    rule_stubs_path.write_text(
+        json.dumps({
+            "request_id": "rule:record-1:1",
+            "target_id": "record-1",
+            "request_type": "world_model_or_calculator_rule",
+            "rule_family": "entity_disambiguation",
+            "question": "Who first started Tesla Motors?",
+            "required_inputs": ("subject_entity", "answer_entity", "expected_entity", "requested_role"),
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    rule_inputs_path.write_text(
+        json.dumps({
+            "request_id": "rule:record-1:1",
+            "target_id": "record-1",
+            "rule_family": "entity_disambiguation",
+            "subject_entity": "Tesla",
+            "answer_entity": "Elon Musk",
+            "expected_entity": "Martin Eberhard",
+            "requested_role": "founder",
+            "source_citation": "wikidata:Q478214:P112:Q1903673",
+            "not_verifier_evidence": True,
+            "candidate_results_require_promotion_gate": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = workflow_module.run_frontier_research_queue_rule_adapter_promotion_workflow(
+        input_fill_result_rollup={
+            "workflow": "frontier_research_queue_input_fill_result_rollup",
+            "status": "ready_for_adapter",
+            "summary": {
+                "combined_rule_input_count": 1,
+                "combined_unfilled_task_count": 0,
+                "duplicate_request_id_count": 0,
+            },
+            "paths": {
+                "combined_rule_inputs": str(rule_inputs_path),
+                "rule_stubs": str(rule_stubs_path),
+            },
+        },
+        output_dir=tmp_path / "workflow",
+        registry_path=registry_path,
+        name="frontier-rule-adapter-promotion-workflow",
+        version="0.1",
+    )
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:frontier-rule-adapter-promotion-workflow:0.1"
+    )
+
+    assert payload["workflow"] == "frontier_research_queue_rule_adapter_promotion_workflow"
+    assert payload["status"] == "dry_run"
+    assert payload["preflight"]["status"] == "ready"
+    assert payload["summary"]["executed"] is False
+    assert payload["summary"]["combined_rule_input_count"] == 1
+    assert payload["planned_commands"][0]["workflow"] == "world_model_rule_authoring_adapter"
+    assert payload["planned_commands"][1]["workflow"] == "world_model_rule_candidate_promotion_gate"
+    assert (tmp_path / "workflow" / "rule-adapter" / "world-model-rule-authoring-adapter.json").exists() is False
+    assert registry_module.load_and_verify_artifact_manifest(
+        tmp_path / "workflow" / "artifact-manifest.json"
+    ).passed is True
+    assert record.metadata["status"] == "dry_run"
+    assert record.metadata["promoted_count"] == 0
+
+
+def test_frontier_research_queue_rule_adapter_promotion_workflow_executes_and_promotes(
+    tmp_path,
+):
+    workflow_module = importlib.import_module(
+        "benchmarks.run_frontier_research_queue_rule_adapter_promotion_workflow"
+    )
+    registry_module = importlib.import_module("eigentruth.registry")
+    rule_stubs_path = tmp_path / "rule-stubs.jsonl"
+    rule_inputs_path = tmp_path / "combined-rule-inputs.jsonl"
+    rollup_path = tmp_path / "frontier-input-fill-result-rollup.json"
+    registry_path = tmp_path / "registry.json"
+    output_dir = tmp_path / "workflow"
+    rule_stubs_path.write_text(
+        json.dumps({
+            "request_id": "rule:record-1:1",
+            "target_id": "record-1",
+            "request_type": "world_model_or_calculator_rule",
+            "rule_family": "entity_disambiguation",
+            "question": "Who first started Tesla Motors?",
+            "required_inputs": ("subject_entity", "answer_entity", "expected_entity", "requested_role"),
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    rule_inputs_path.write_text(
+        json.dumps({
+            "request_id": "rule:record-1:1",
+            "target_id": "record-1",
+            "rule_family": "entity_disambiguation",
+            "subject_entity": "Tesla",
+            "answer_entity": "Elon Musk",
+            "expected_entity": "Martin Eberhard",
+            "requested_role": "founder",
+            "source_citation": "wikidata:Q478214:P112:Q1903673",
+            "source_url": "https://www.wikidata.org/wiki/Q478214",
+            "not_verifier_evidence": True,
+            "candidate_results_require_promotion_gate": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    rollup_path.write_text(
+        json.dumps({
+            "workflow": "frontier_research_queue_input_fill_result_rollup",
+            "status": "partial",
+            "summary": {
+                "combined_rule_input_count": 1,
+                "combined_unfilled_task_count": 2,
+                "duplicate_request_id_count": 0,
+            },
+            "paths": {
+                "combined_rule_inputs": str(rule_inputs_path),
+                "rule_stubs": str(rule_stubs_path),
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    payload = workflow_module.run_frontier_research_queue_rule_adapter_promotion_workflow(
+        input_fill_result_rollup=rollup_path,
+        output_dir=output_dir,
+        registry_path=registry_path,
+        name="frontier-rule-adapter-promotion-workflow",
+        version="0.2",
+        execute=True,
+        metadata={"suite": "unit"},
+    )
+    promoted_rows = [
+        json.loads(line)
+        for line in (output_dir / "rule-promotion" / "promoted-rule-candidates.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+        if line.strip()
+    ]
+    adapter_report = json.loads(
+        (output_dir / "rule-adapter" / "world-model-rule-authoring-adapter.json")
+        .read_text(encoding="utf-8")
+    )
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:frontier-rule-adapter-promotion-workflow:0.2"
+    )
+
+    assert payload["status"] == "promote"
+    assert payload["summary"]["executed"] is True
+    assert payload["summary"]["adapter_status"] == "observed"
+    assert payload["summary"]["promotion_status"] == "promote"
+    assert payload["summary"]["promoted_count"] == 1
+    assert payload["summary"]["pending_count"] == 0
+    assert adapter_report["summary"]["executed_count"] == 1
+    assert promoted_rows[0]["request_id"] == "rule:record-1:1"
+    assert promoted_rows[0]["status"] == "refuted"
+    assert promoted_rows[0]["source_citation"] == "wikidata:Q478214:P112:Q1903673"
+    assert registry_module.load_and_verify_artifact_manifest(
+        output_dir / "artifact-manifest.json"
+    ).passed is True
+    assert record.metadata["status"] == "promote"
+    assert record.metadata["promoted_count"] == 1
+
+
 def test_frontier_research_queue_bound_plan_requires_runtime_baseline_flag(tmp_path):
     plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
     bind_module = importlib.import_module(

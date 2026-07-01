@@ -1475,6 +1475,12 @@ Added the first monitor-first tool-selection audit layer:
   separate queue. The rollup blocks missing fill outputs, duplicate request ids,
   or rule inputs that lost their non-evidence / promotion-gate markers, and it
   emits only a downstream adapter command hint rather than executing the adapter.
+- `run_frontier_research_queue_rule_adapter_promotion_workflow.py` connects that
+  rollup to the deterministic adapter/promotion pair without weakening the
+  gates. It defaults to a plan-only dry run, requires materialized rule stubs and
+  a nonempty combined rule-input sidecar, and only with `--execute` runs the
+  existing rule-authoring adapter followed by the candidate promotion gate. The
+  top-level report returns `promote` only when the promotion gate passes.
 - The binder now validates known frontier benchmark commands against required
   CLI flags. A directly filled abstention template is kept `needs_inputs` when
   `plan_frontier_abstention_evidence_reruns.py` omits the action-required
