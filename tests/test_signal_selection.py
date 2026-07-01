@@ -9,6 +9,7 @@ from eigentruth.eval import (
     SignalSelectionReport,
     select_signals_from_fusion_ablation_matrix,
 )
+from eigentruth.registry import ArtifactRegistry, load_and_verify_artifact_manifest
 
 
 def _candidate(
@@ -170,6 +171,8 @@ def test_build_selected_fusion_artifacts_cli_writes_per_run_artifacts(tmp_path):
     selection_path = tmp_path / "selection.json"
     output_dir = tmp_path / "artifacts"
     report_path = tmp_path / "build-report.json"
+    manifest_path = output_dir / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
     gpt2_scores = tmp_path / "gpt2-scores.json"
     smollm2_scores = tmp_path / "smollm2-scores.json"
     selection.save_json(selection_path)
@@ -200,14 +203,23 @@ def test_build_selected_fusion_artifacts_cli_writes_per_run_artifacts(tmp_path):
         max_high_confidence_accepted_false_rate=0.0,
         created_at=None,
         commit_sha=None,
+        artifact_manifest=str(manifest_path),
+        registry=str(registry_path),
+        name="selected-fusion-unit",
+        version="0.1",
+        metadata=["suite=unit"],
         quiet=True,
     ))
     saved = json.loads(report_path.read_text(encoding="utf-8"))
     gpt2_artifact = RankScoreFusionArtifact.load_json(output_dir / "gpt2-selected-fusion-artifact.json")
     smollm2_artifact = RankScoreFusionArtifact.load_json(output_dir / "smollm2-selected-fusion-artifact.json")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = ArtifactRegistry.load_json(registry_path).get("report:selected-fusion-unit:0.1")
 
     assert saved == payload
     assert payload["workflow"] == "selected_fusion_artifact_build"
+    assert payload["artifact_manifest_path"] == str(manifest_path)
+    assert payload["metadata"] == {"suite": "unit"}
     assert gpt2_artifact.signal_names() == ("truth_proj", "subspace_resid", "trajectory_convergence")
     assert smollm2_artifact.signal_names() == ("truth_proj", "subspace_resid")
     assert gpt2_artifact.method == "mean_rank"
@@ -228,3 +240,16 @@ def test_build_selected_fusion_artifacts_cli_writes_per_run_artifacts(tmp_path):
     assert payload["runs"][0]["confidence_error_at_artifact_threshold"][
         "n_high_confidence_accepted_false"
     ] == 0
+    assert manifest["metadata"]["workflow"] == "selected_fusion_artifact_build"
+    assert manifest["metadata"]["run_count"] == 2
+    assert manifest["metadata"]["release_gate_promote_count"] == 2
+    assert manifest["metadata"]["all_release_gates_promoted"] is True
+    assert manifest["metadata"]["suite"] == "unit"
+    assert "selected_fusion_artifact.gpt2" in manifest["artifacts"]
+    assert "score_dump.smollm2" in manifest["artifacts"]
+    assert load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "selected_fusion_artifact_build"
+    assert record.metadata["artifact_manifest"] == str(manifest_path)
+    assert record.metadata["confidence_audit_enabled"] is True
+    assert record.metadata["release_gate_blocked_count"] == 0
+    assert record.metadata["suite"] == "unit"

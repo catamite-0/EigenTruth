@@ -27,6 +27,7 @@ from eigentruth.eval import (  # noqa: E402
 )
 from eigentruth.eval.metrics import confidence_error_report, roc_auc  # noqa: E402
 from eigentruth.json_utils import strict_json_dumps  # noqa: E402
+from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
 
 _SAFE_NAME_RE = re.compile(r"[^A-Za-z0-9_.-]+")
 _TOLERANCE = 0.03
@@ -179,6 +180,20 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     selection_path = Path(args.selection_report)
     selection = SignalSelectionReport.load_json(selection_path)
     score_dumps = dict(_parse_named_path(value) for value in args.scores)
+    metadata = _parse_metadata(getattr(args, "metadata", ()))
+    manifest_path = (
+        None
+        if getattr(args, "artifact_manifest", None) is None
+        else Path(args.artifact_manifest)
+    )
+    registry_path = None if getattr(args, "registry", None) is None else Path(args.registry)
+    if registry_path is not None and (
+        not getattr(args, "name", None) or not getattr(args, "version", None)
+    ):
+        raise ValueError("registry requires name and version.")
+    report_path = None if args.json is None else Path(args.json)
+    if report_path is None and (manifest_path is not None or registry_path is not None):
+        report_path = Path(args.output_dir) / "selected-fusion-artifact-build-report.json"
     payload = build_selected_fusion_artifacts(
         selection,
         score_dumps,
@@ -194,11 +209,42 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         commit_sha=args.commit_sha,
     )
     payload["selection_report_path"] = str(selection_path)
+    if report_path is not None:
+        payload["build_report_path"] = str(report_path)
+    if manifest_path is not None:
+        payload["artifact_manifest_path"] = str(manifest_path)
+    if metadata:
+        payload["metadata"] = metadata
     payload = json.loads(strict_json_dumps(payload))
-    if args.json is not None:
-        output = Path(args.json)
-        output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(strict_json_dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    if report_path is not None:
+        _write_json(report_path, payload)
+    if manifest_path is not None:
+        assert report_path is not None
+        _write_json(
+            manifest_path,
+            build_artifact_manifest(
+                _manifest_artifacts(
+                    payload,
+                    report_path=report_path,
+                    selection_path=selection_path,
+                    score_dumps=score_dumps,
+                ),
+                root=manifest_path.parent,
+                metadata=_summary_metadata(payload, artifact_manifest_path=manifest_path, metadata=metadata),
+            ),
+        )
+    if registry_path is not None:
+        assert report_path is not None
+        ArtifactRegistry.load_json(registry_path).record_report(
+            name=str(args.name),
+            version=str(args.version),
+            path=report_path,
+            metadata=_summary_metadata(
+                payload,
+                artifact_manifest_path=manifest_path,
+                metadata=metadata,
+            ),
+        ).save_json()
     if not args.quiet:
         for run_payload in payload["runs"]:
             print(
@@ -229,6 +275,16 @@ def main(argv: list[str] | None = None) -> None:
                         help="maximum high-confidence accepted false rate allowed by the release gate")
     parser.add_argument("--created-at", default=None)
     parser.add_argument("--commit-sha", default=None)
+    parser.add_argument("--artifact-manifest", default=None,
+                        help="optional artifact manifest path for the build report, artifacts, and inputs")
+    parser.add_argument("--registry", default=None,
+                        help="optional ArtifactRegistry JSON path for recording the build report")
+    parser.add_argument("--name", default=None,
+                        help="registry report name; required with --registry")
+    parser.add_argument("--version", default=None,
+                        help="registry report version; required with --registry")
+    parser.add_argument("--metadata", action="append", default=[],
+                        help="metadata key=value pair to include in report, manifest, and registry; repeatable")
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args(argv)
     run(args)
@@ -327,6 +383,87 @@ def _nested_rate(report: Mapping[str, Any], key: str) -> float | None:
     if isinstance(value, Mapping):
         value = value.get("estimate")
     return _optional_float(value)
+
+
+def _manifest_artifacts(
+    payload: Mapping[str, Any],
+    *,
+    report_path: Path,
+    selection_path: Path,
+    score_dumps: Mapping[str, Path],
+) -> dict[str, Path]:
+    artifacts: dict[str, Path] = {
+        "selected_fusion_artifact_build_report": report_path,
+        "selection_report": selection_path,
+    }
+    for run_payload in payload.get("runs", ()):
+        if not isinstance(run_payload, Mapping):
+            continue
+        run_name = _safe_name(str(run_payload.get("run_name") or "run"))
+        artifacts[f"selected_fusion_artifact.{run_name}"] = Path(str(run_payload["artifact_path"]))
+        score_path = score_dumps.get(str(run_payload.get("run_name")))
+        if score_path is not None:
+            artifacts[f"score_dump.{run_name}"] = score_path
+    return artifacts
+
+
+def _summary_metadata(
+    payload: Mapping[str, Any],
+    *,
+    artifact_manifest_path: Path | None,
+    metadata: Mapping[str, Any],
+) -> dict[str, Any]:
+    runs = tuple(item for item in payload.get("runs", ()) if isinstance(item, Mapping))
+    gate_runs = tuple(item for item in runs if isinstance(item.get("release_gate"), Mapping))
+    promoted_gates = sum(1 for item in gate_runs if item["release_gate"].get("status") == "promote")
+    blocked_gates = sum(1 for item in gate_runs if item["release_gate"].get("status") == "blocked")
+    confidence_audit = payload.get("confidence_audit")
+    summary = {
+        "workflow": payload.get("workflow"),
+        "status": payload.get("status"),
+        "selection_workflow": payload.get("selection_workflow"),
+        "selection_status": payload.get("selection_status"),
+        "run_count": len(runs),
+        "artifact_count": len(payload.get("artifacts", {}) or {}),
+        "confidence_audit_enabled": (
+            confidence_audit.get("enabled") if isinstance(confidence_audit, Mapping) else None
+        ),
+        "confidence_signal": (
+            confidence_audit.get("confidence_signal") if isinstance(confidence_audit, Mapping) else None
+        ),
+        "confidence_direction": (
+            confidence_audit.get("confidence_direction") if isinstance(confidence_audit, Mapping) else None
+        ),
+        "release_gate_count": len(gate_runs),
+        "release_gate_promote_count": promoted_gates,
+        "release_gate_blocked_count": blocked_gates,
+        "all_release_gates_promoted": (
+            None if not gate_runs else promoted_gates == len(gate_runs)
+        ),
+        **dict(metadata),
+    }
+    if artifact_manifest_path is not None:
+        summary["artifact_manifest"] = str(artifact_manifest_path)
+    return summary
+
+
+def _write_json(path: str | Path, payload: Mapping[str, Any]) -> None:
+    output = Path(path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(strict_json_dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _parse_metadata(values: Sequence[str] | None) -> dict[str, str]:
+    metadata: dict[str, str] = {}
+    for value in values or ():
+        if "=" not in value:
+            raise ValueError(f"metadata must be KEY=VALUE, got {value!r}.")
+        key, item = value.split("=", 1)
+        key = key.strip()
+        if not key:
+            raise ValueError("metadata key cannot be empty.")
+        metadata[key] = item
+    return metadata
 
 
 def _optional_float(value: Any) -> float | None:

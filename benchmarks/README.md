@@ -9687,6 +9687,10 @@ python benchmarks/build_selected_fusion_artifacts.py \
   --confidence-signal nll_answer \
   --max-high-confidence-accepted-false-rate 0.0 \
   --json artifacts/e7-truthfulqa-trajectory-multimodel/selected-fusion-artifact-build-report.json \
+  --artifact-manifest artifacts/e7-truthfulqa-trajectory-multimodel/selected-fusion-artifact-manifest.json \
+  --registry artifacts/local-readiness-registry.json \
+  --name e7-truthfulqa-trajectory-selected-fusion-artifacts \
+  --version 0.1 \
   --quiet
 ```
 
@@ -9696,7 +9700,10 @@ The committed build report writes `gpt2-selected-fusion-artifact.json` with
 `mean_rank` and alpha 0.1. When a confidence signal is provided, the build report
 also stores a selected-artifact release gate so runtime recommendation and
 performance workflows can block promotion if the artifact accepts high-confidence
-false answers. A runtime recommendation can consume this build report with
+false answers. The optional artifact manifest fingerprints the build report,
+per-run fusion artifacts, source selection report, and source score dumps, while
+the optional registry entry records release-gate counts and confidence-audit
+configuration. A runtime recommendation can consume this build report with
 `--selected-fusion-artifact-report`; because this report has one artifact per
 trajectory source run, provide `--selected-fusion-run gpt2` or
 `--selected-fusion-run smollm2` explicitly.
