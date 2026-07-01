@@ -1228,7 +1228,10 @@ Added the first monitor-first tool-selection audit layer:
   `runtime_drift_evidence_completion_plan` alongside the root-cause gap plan.
   The derived artifact collects product-runtime drift and promotion-handoff
   action templates, required inputs, missing metrics, closure outputs, and
-  script names into one reviewable handoff queue. Entries remain
+  script names into one reviewable handoff queue. Each entry now also carries
+  machine-readable `binding_hints`: input placeholders, whether command
+  templates still need binding, and planned output artifact paths under the
+  bound output directory. Entries remain
   `needs_inputs` until concrete trace, contract, child-report, and baseline
   paths are bound, preserving the fail-closed distinction between a work plan
   and completed runtime evidence.

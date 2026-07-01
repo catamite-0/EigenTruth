@@ -2308,6 +2308,15 @@ def test_plan_release_evidence_gaps_can_emit_runtime_drift_completion_plan(
     entries = {entry["action_id"]: entry for entry in completion["entries"]}
     world_model_entry = entries["rerun_product_trace_world_model_evidence"]
     handoff_entry = entries["refresh_product_promotion_evidence_handoff"]
+    world_model_hints = world_model_entry["binding_hints"]
+    handoff_hints = handoff_entry["binding_hints"]
+    world_model_input_names = {
+        item["name"] for item in world_model_hints["input_bindings"]
+    }
+    handoff_input_names = {item["name"] for item in handoff_hints["input_bindings"]}
+    world_model_output_names = {
+        item["name"] for item in world_model_hints["output_bindings"]
+    }
 
     assert saved["derived_artifacts"] == payload["derived_artifacts"]
     assert derived["path"] == str(completion_path)
@@ -2318,15 +2327,37 @@ def test_plan_release_evidence_gaps_can_emit_runtime_drift_completion_plan(
         len(_WORLD_MODEL_RUNTIME_EVIDENCE_COMMANDS)
         + len(_EVIDENCE_HANDOFF_RUNTIME_EVIDENCE_COMMANDS)
     )
+    assert derived["expected_output_count"] == completion["summary"]["expected_output_count"]
     assert completion["workflow"] == "runtime_drift_evidence_completion_plan"
     assert completion["status"] == "needs_inputs"
     assert completion["summary"]["command_status_counts"] == {"needs_inputs": 2}
+    assert completion["summary"]["expected_output_count"] == (
+        len(world_model_hints["output_bindings"]) + len(handoff_hints["output_bindings"])
+    )
     assert tuple(world_model_entry["command_templates"]) == _WORLD_MODEL_RUNTIME_EVIDENCE_COMMANDS
     assert tuple(handoff_entry["command_templates"]) == _EVIDENCE_HANDOFF_RUNTIME_EVIDENCE_COMMANDS
     assert world_model_entry["command_status"] == "needs_inputs"
     assert handoff_entry["command_status"] == "needs_inputs"
     assert "bound_command_template_values" in world_model_entry["missing_inputs"]
     assert "baseline_product_runtime_report" in handoff_entry["missing_inputs"]
+    assert world_model_hints["command_templates_need_binding"] is True
+    assert handoff_hints["command_templates_need_binding"] is True
+    assert "world_model_rules_or_state_transition_fixture" in world_model_input_names
+    assert "bound_command_template_values" in world_model_input_names
+    assert "baseline_product_runtime_report" in handoff_input_names
+    assert "world_model_signal_calibration_workflow" in world_model_output_names
+    assert {
+        item["path"]
+        for item in world_model_hints["output_bindings"]
+        if item["name"] == "world_model_signal_calibration_workflow"
+    } == {
+        str(
+            tmp_path
+            / "runtime-drift-completion"
+            / "rerun-product-trace-world-model-evidence"
+            / "world-model-signal-calibration-workflow.json"
+        )
+    }
     assert "world_model.participating_trace_rate" in world_model_entry["missing_metrics"]
     assert "promotion_contract.evidence_handoff.coverage_rate" in handoff_entry["missing_metrics"]
     assert "benchmarks/run_product_runtime_baseline.py" in world_model_entry["scripts"]
@@ -2337,6 +2368,7 @@ def test_plan_release_evidence_gaps_can_emit_runtime_drift_completion_plan(
     assert completion_record.metadata["workflow"] == "runtime_drift_evidence_completion_plan"
     assert completion_record.metadata["entry_count"] == 2
     assert completion_record.metadata["command_template_count"] == derived["command_template_count"]
+    assert completion_record.metadata["expected_output_count"] == derived["expected_output_count"]
     assert "product_runtime_drift" in completion_record.metadata["routes"]
 
 

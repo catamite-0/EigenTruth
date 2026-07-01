@@ -965,6 +965,7 @@ def _build_derived_artifacts(
             "entry_count": summary["entry_count"],
             "command_template_count": summary["command_template_count"],
             "missing_input_count": summary["missing_input_count"],
+            "expected_output_count": summary["expected_output_count"],
         }
     return derived
 
@@ -1073,6 +1074,7 @@ def build_runtime_drift_evidence_completion_plan(
                 "entry_count": summary["entry_count"],
                 "command_template_count": summary["command_template_count"],
                 "missing_input_count": summary["missing_input_count"],
+                "expected_output_count": summary["expected_output_count"],
                 "routes": summary["routes"],
                 "manifest_summary": {} if manifest is None else manifest.get("summary", {}),
                 **dict(metadata or {}),
@@ -1151,6 +1153,7 @@ def _runtime_drift_completion_entry(
     required_metrics = _runtime_drift_required_metrics(metadata)
     closure_outputs = _string_tuple(metadata.get("closure_outputs", ()))
     routes = _string_tuple(action.get("evidence_routes", ()))
+    bound_output_dir = completion_root / _slug(action_id)
     return {
         "entry_id": f"runtime-drift-{index:04d}",
         "action_id": action_id,
@@ -1167,12 +1170,54 @@ def _runtime_drift_completion_entry(
         "closure_outputs": closure_outputs,
         "scripts": _runtime_drift_scripts(metadata, command_templates),
         "command_templates": command_templates,
-        "bound_output_dir": str(completion_root / _slug(action_id)),
+        "bound_output_dir": str(bound_output_dir),
+        "binding_hints": _runtime_drift_binding_hints(
+            action_id=action_id,
+            bound_output_dir=bound_output_dir,
+            required_inputs=required_inputs,
+            missing_inputs=missing_inputs,
+            closure_outputs=closure_outputs,
+            command_templates=command_templates,
+        ),
         "metadata": {
             "risk_control_method": metadata.get("risk_control_method"),
             "default_gate_thresholds": metadata.get("default_gate_thresholds", {}),
             "workflow_keys": _runtime_drift_workflow_keys(metadata),
         },
+    }
+
+
+def _runtime_drift_binding_hints(
+    *,
+    action_id: str,
+    bound_output_dir: Path,
+    required_inputs: Sequence[str],
+    missing_inputs: Sequence[str],
+    closure_outputs: Sequence[str],
+    command_templates: Sequence[str],
+) -> dict[str, Any]:
+    input_names = tuple(dict.fromkeys((*required_inputs, *missing_inputs)))
+    return {
+        "action_id": action_id,
+        "bound_output_dir": str(bound_output_dir),
+        "command_templates_need_binding": any("..." in command for command in command_templates),
+        "input_bindings": tuple(
+            {
+                "name": name,
+                "placeholder": "..." if name == "bound_command_template_values" else f"<{name}>",
+                "required": True,
+                "status": "unbound",
+            }
+            for name in input_names
+        ),
+        "output_bindings": tuple(
+            {
+                "name": output,
+                "path": str(bound_output_dir / f"{_slug(output)}.json"),
+                "status": "planned",
+            }
+            for output in closure_outputs
+        ),
     }
 
 
@@ -1263,6 +1308,10 @@ def _runtime_drift_completion_summary(
         "route_counts": dict(sorted(route_counts.items())),
         "missing_metric_count": sum(
             len(_string_tuple(entry.get("missing_metrics", ()))) for entry in entries
+        ),
+        "expected_output_count": sum(
+            len(_mapping_sequence(_mapping(entry.get("binding_hints")).get("output_bindings", ())))
+            for entry in entries
         ),
     }
 
