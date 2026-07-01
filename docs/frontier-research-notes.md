@@ -124,6 +124,7 @@ Added trace-level product trajectory audit:
 - `ProductTrace.to_bounded_dict()` now carries a compact `summaries.trajectory_audit` block, and `product_runtime_metrics(...)` exposes full-trace or bounded-summary trajectory counts for runtime baselines.
 - `TrajectoryAuditReport.summary()` and runtime metrics expose `cascade_count` / `trajectory_audit_cascade_count`, so product baselines can distinguish ordinary structural issues from cascading-evidence propagation.
 - Runtime baselines now aggregate trajectory-audit failed-trace/error rates plus factual/referential/logical/procedural/scope counts into reports, manifests, and registry metadata, and `compare_product_runtime_baselines.py` can fail closed on taxonomy-rate drift when explicit gates are configured.
+- Trace-provenance summaries now roll up into runtime baselines, product runtime drift gates, replay workflow metadata, and an optional release-candidate requirement via `--require-product-runtime-drift-provenance-evidence`, covering claim/evidence/action-result/final-answer graph coverage plus missing-reference and unsupported-supported-claim rates.
 - This is a monitor-first structural audit, not a learned trajectory detector: it gives agent/tool workflows a stable evidence schema while future internal-representation or learned trace classifiers remain optional adapters.
 
 Added trace-level evidence provenance graphs:

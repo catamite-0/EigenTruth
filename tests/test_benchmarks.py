@@ -18780,6 +18780,12 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         blocked_metric_count=0,
         trajectory_audit_evidence=True,
     )
+    provenance_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "provenance-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        provenance_evidence=True,
+    )
     evidence_handoff_drift_report = _write_product_runtime_drift_report(
         tmp_path / "evidence-handoff-runtime-drift",
         status="promote",
@@ -18830,6 +18836,13 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         blocked_metric_count=0,
         trajectory_audit_evidence=True,
         trajectory_audit_blocked=True,
+    )
+    blocked_provenance_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "blocked-provenance-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        provenance_evidence=True,
+        provenance_blocked=True,
     )
     blocked_evidence_handoff_drift_report = _write_product_runtime_drift_report(
         tmp_path / "blocked-evidence-handoff-runtime-drift",
@@ -19187,6 +19200,39 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         min_false_refuted_rate=0.99,
         product_runtime_drift_report_path=blocked_trajectory_audit_drift_report,
         require_product_runtime_drift_trajectory_audit_evidence=True,
+    )
+    provenance = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=provenance_drift_report,
+        require_product_runtime_drift_provenance_evidence=True,
+    )
+    missing_provenance = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=missing_evidence_drift_report,
+        require_product_runtime_drift_provenance_evidence=True,
+    )
+    blocked_provenance = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=blocked_provenance_drift_report,
+        require_product_runtime_drift_provenance_evidence=True,
     )
     evidence_handoff = module.compare_release_candidates(
         readiness_registry_path=registry_path,
@@ -19724,6 +19770,43 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
     assert any(
         "trajectory-audit evidence blocked 1 metric" in reason
         for reason in blocked_trajectory_audit["decision"]["blocking_reasons"][0]["reasons"]
+    )
+    assert provenance["decision"]["status"] == "promote"
+    assert provenance["config"]["require_product_runtime_drift_provenance_evidence"] is True
+    provenance_summary = provenance["release_candidate"]["product_runtime_drift"][
+        "summary"
+    ]
+    assert provenance_summary["provenance_evidence_required"] is True
+    assert provenance_summary["provenance_evidence_metric_count"] == 6
+    assert provenance_summary["provenance_evidence_blocked_metric_count"] == 0
+    assert provenance_summary["product_trace_provenance_coverage_rate_current"] == (
+        pytest.approx(1.0)
+    )
+    assert provenance_summary[
+        "product_trace_provenance_supported_claim_evidence_coverage_status"
+    ] == "pass"
+    assert missing_provenance["decision"]["status"] == "blocked"
+    assert missing_provenance["product_runtime_drift_gate"]["summary"][
+        "provenance_evidence_missing_metrics"
+    ] == (
+        "provenance.coverage_rate",
+        "provenance.supported_claim_evidence_coverage",
+        "provenance.missing_reference_rate",
+        "provenance.unsupported_supported_claim_rate",
+        "provenance.error_rate",
+        "provenance.final_answer_evidence_reference_rate",
+    )
+    assert any(
+        "provenance evidence metrics are incomplete" in reason
+        for reason in missing_provenance["decision"]["blocking_reasons"][0]["reasons"]
+    )
+    assert blocked_provenance["decision"]["status"] == "blocked"
+    assert blocked_provenance["product_runtime_drift_gate"]["summary"][
+        "provenance_evidence_blocked_metric_count"
+    ] == 5
+    assert any(
+        "provenance evidence blocked 5 metric" in reason
+        for reason in blocked_provenance["decision"]["blocking_reasons"][0]["reasons"]
     )
     assert evidence_handoff["decision"]["status"] == "promote"
     assert evidence_handoff["config"][
@@ -27832,6 +27915,8 @@ def _write_product_runtime_drift_report(
     receipt_claim_support_blocked=False,
     trajectory_audit_evidence=False,
     trajectory_audit_blocked=False,
+    provenance_evidence=False,
+    provenance_blocked=False,
     evidence_handoff_evidence=False,
     evidence_handoff_blocked=False,
     world_model_evidence=False,
@@ -28870,6 +28955,93 @@ def _write_product_runtime_drift_report(
                 "absolute_increase": 0.0,
                 "threshold": 0.05,
                 "reason": None,
+            },
+        ])
+    if provenance_evidence:
+        provenance_error_status = "blocked" if provenance_blocked else "pass"
+        provenance_error_current = 0.25 if provenance_blocked else 0.0
+        provenance_support_status = "blocked" if provenance_blocked else "pass"
+        provenance_support_current = 0.5 if provenance_blocked else 1.0
+        metrics.extend([
+            {
+                "metric": "provenance.coverage_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "provenance.supported_claim_evidence_coverage",
+                "status": provenance_support_status,
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": provenance_support_current,
+                "threshold": 0.95,
+                "reason": (
+                    "provenance.supported_claim_evidence_coverage below gate"
+                    if provenance_blocked
+                    else None
+                ),
+            },
+            {
+                "metric": "provenance.missing_reference_rate",
+                "status": provenance_error_status,
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": provenance_error_current,
+                "absolute_delta": provenance_error_current,
+                "absolute_increase": provenance_error_current,
+                "threshold": 0.05,
+                "reason": (
+                    "provenance.missing_reference_rate above gate"
+                    if provenance_blocked
+                    else None
+                ),
+            },
+            {
+                "metric": "provenance.unsupported_supported_claim_rate",
+                "status": provenance_error_status,
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": provenance_error_current,
+                "absolute_delta": provenance_error_current,
+                "absolute_increase": provenance_error_current,
+                "threshold": 0.05,
+                "reason": (
+                    "provenance.unsupported_supported_claim_rate above gate"
+                    if provenance_blocked
+                    else None
+                ),
+            },
+            {
+                "metric": "provenance.error_rate",
+                "status": provenance_error_status,
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": provenance_error_current,
+                "absolute_delta": provenance_error_current,
+                "absolute_increase": provenance_error_current,
+                "threshold": 0.05,
+                "reason": (
+                    "provenance.error_rate above gate"
+                    if provenance_blocked
+                    else None
+                ),
+            },
+            {
+                "metric": "provenance.final_answer_evidence_reference_rate",
+                "status": provenance_support_status,
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": provenance_support_current,
+                "threshold": 0.95,
+                "reason": (
+                    "provenance.final_answer_evidence_reference_rate below gate"
+                    if provenance_blocked
+                    else None
+                ),
             },
         ])
     if evidence_handoff_evidence:
@@ -41136,6 +41308,93 @@ def _write_receipted_product_runtime_trace(
     path.write_text(json.dumps(trace.to_dict()), encoding="utf-8")
 
 
+def _write_provenance_product_runtime_trace(
+    path: Path,
+    *,
+    request_id: str,
+    supported: bool,
+    missing_action_reference: bool = False,
+) -> None:
+    action_request_id = f"{request_id}-retrieve"
+    claims = [{"claim_id": "c1", "text": "Mars has two moons."}]
+    action_result = {
+        "action": "retrieve",
+        "status": "succeeded",
+        "request_id": action_request_id,
+        "output": {
+            "hits": [
+                {
+                    "text": "NASA records Phobos and Deimos as moons of Mars.",
+                    "source": "external:nasa",
+                    "claim_id": "c1",
+                    "score": 0.98,
+                }
+            ]
+        },
+    }
+    if supported:
+        verification_result = {
+            "status": "supported",
+            "claim_id": "c1",
+            "evidence": [
+                {
+                    "text": "NASA records Phobos and Deimos.",
+                    "request_id": action_request_id,
+                }
+            ],
+        }
+        final_answer_evidence = [
+            {
+                "text": "NASA records Phobos and Deimos.",
+                "claim_id": "c1",
+                "request_id": action_request_id,
+            }
+        ]
+        action_results = [action_result]
+    else:
+        missing_request_id = f"{request_id}-missing"
+        verification_result = {"status": "supported", "claim_id": "c1"}
+        final_answer_evidence = [
+            {
+                "text": "unsupported evidence item",
+                "request_id": missing_request_id if missing_action_reference else action_request_id,
+            }
+        ]
+        action_results = [] if missing_action_reference else [action_result]
+    payload = {
+        "request_id": request_id,
+        "risk_decision": {
+            "action": "accept",
+            "risk_level": "low",
+            "confidence": 0.95,
+            "reason": "fixture",
+        },
+        "claims": claims,
+        "actions": [
+            {
+                "action": "retrieve",
+                "reason": "ground claim",
+                "request_id": action_request_id,
+                "payload": {"claim_ids": ["c1"]},
+            }
+        ],
+        "action_results": action_results,
+        "verification_results": [verification_result],
+        "final_answer": {
+            "status": "answered",
+            "text": "Mars has two moons.",
+            "answerable": True,
+            "action": "accept",
+            "risk_level": "low",
+            "confidence": 0.95,
+            "reason": "fixture",
+            "evidence": final_answer_evidence,
+        },
+        "runtime_trace": {"total_seconds": 0.01, "phases": []},
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
 def test_run_product_runtime_baseline_aggregates_action_receipts(tmp_path):
     module = importlib.import_module("benchmarks.run_product_runtime_baseline")
     signed_trace = tmp_path / "signed.json"
@@ -41240,6 +41499,64 @@ def test_run_product_runtime_baseline_aggregates_receipt_claim_support(tmp_path)
     assert payload["traces"][2]["metrics"][
         "receipt_claim_support_unreceipted_reference_count"
     ] == 2.0
+
+
+def test_run_product_runtime_baseline_aggregates_trace_provenance(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    registry_module = importlib.import_module("eigentruth.registry")
+    good_trace = tmp_path / "good.json"
+    missing_trace = tmp_path / "missing.json"
+    report_path = tmp_path / "baseline.json"
+    manifest_path = tmp_path / "manifest.json"
+    registry_path = tmp_path / "registry.json"
+    _write_provenance_product_runtime_trace(
+        good_trace,
+        request_id="good",
+        supported=True,
+    )
+    _write_provenance_product_runtime_trace(
+        missing_trace,
+        request_id="missing",
+        supported=False,
+        missing_action_reference=True,
+    )
+
+    payload = module.build_product_runtime_baseline(
+        module.ProductRuntimeBaselineConfig(
+            trace_paths=(good_trace, missing_trace),
+            report_path=report_path,
+            artifact_manifest_path=manifest_path,
+            registry_path=registry_path,
+            name="runtime-provenance",
+            version="0.1",
+        )
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "product_runtime_baseline:runtime-provenance:0.1"
+    )
+
+    provenance = payload["summary"]["provenance"]
+    assert provenance["available_trace_count"] == 2
+    assert provenance["passed_trace_count"] == 1
+    assert provenance["failed_trace_count"] == 1
+    assert provenance["supported_claim_count"] == pytest.approx(2.0)
+    assert provenance["supported_claim_with_evidence_count"] == pytest.approx(1.0)
+    assert provenance["supported_claim_evidence_coverage"] == pytest.approx(0.5)
+    assert provenance["unsupported_supported_claim_rate"] == pytest.approx(0.5)
+    assert provenance["missing_reference_count"] == pytest.approx(1.0)
+    assert provenance["missing_reference_rate"] == pytest.approx(0.25)
+    assert provenance["final_answer_evidence_reference_rate"] == pytest.approx(0.5)
+    assert provenance["error_rate"] == pytest.approx(0.5)
+    assert provenance["counts_by_code"]["missing_referenced_action_result"] == 1
+    assert provenance["counts_by_code"]["supported_claim_without_evidence"] == 1
+    assert payload["traces"][0]["metrics"]["provenance_passed"] is True
+    assert payload["traces"][1]["metrics"]["provenance_error_count"] == 1.0
+    assert manifest["metadata"]["provenance_supported_claim_evidence_coverage"] == (
+        pytest.approx(0.5)
+    )
+    assert manifest["metadata"]["provenance_missing_reference_rate"] == pytest.approx(0.25)
+    assert record.metadata["provenance_error_rate"] == pytest.approx(0.5)
 
 
 def test_compare_product_runtime_baselines_gates_action_receipts(tmp_path):
@@ -41430,6 +41747,98 @@ def test_compare_product_runtime_baselines_gates_receipt_claim_support(tmp_path)
         "product_trace_receipt_claim_support_unsupported_reference_rate_current"
     ] == pytest.approx(2 / 3)
     assert record.metadata["product_trace_receipt_claim_support_blocked_metric_count"] == 4
+
+
+def test_compare_product_runtime_baselines_gates_trace_provenance(tmp_path):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    registry_module = importlib.import_module("eigentruth.registry")
+    baseline_trace_a = tmp_path / "baseline-a.json"
+    baseline_trace_b = tmp_path / "baseline-b.json"
+    current_trace_a = tmp_path / "current-a.json"
+    current_trace_b = tmp_path / "current-b.json"
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    drift_report = tmp_path / "drift.json"
+    manifest_path = tmp_path / "manifest.json"
+    registry_path = tmp_path / "registry.json"
+    for path, request_id in (
+        (baseline_trace_a, "baseline-a"),
+        (baseline_trace_b, "baseline-b"),
+        (current_trace_a, "current-a"),
+    ):
+        _write_provenance_product_runtime_trace(
+            path,
+            request_id=request_id,
+            supported=True,
+        )
+    _write_provenance_product_runtime_trace(
+        current_trace_b,
+        request_id="current-b",
+        supported=False,
+        missing_action_reference=True,
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace_a, baseline_trace_b),
+            report_path=baseline_report,
+        )
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(current_trace_a, current_trace_b),
+            report_path=current_report,
+        )
+    )
+
+    payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        report_path=drift_report,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="runtime-drift-provenance",
+        version="0.1",
+        min_product_trace_provenance_coverage_rate=1.0,
+        min_product_trace_provenance_supported_claim_evidence_coverage=0.9,
+        max_product_trace_provenance_missing_reference_rate_increase=0.0,
+        max_product_trace_provenance_unsupported_supported_claim_rate_increase=0.0,
+        max_product_trace_provenance_error_rate_increase=0.0,
+        min_product_trace_provenance_final_answer_evidence_reference_rate=0.9,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "product_runtime_drift_report:runtime-drift-provenance:0.1"
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["blocked_metric_count"] == 5
+    assert _metric_by_name(payload, "provenance.coverage_rate")["status"] == "pass"
+    assert _metric_by_name(
+        payload,
+        "provenance.supported_claim_evidence_coverage",
+    )["status"] == "blocked"
+    assert _metric_by_name(payload, "provenance.missing_reference_rate")[
+        "absolute_delta"
+    ] == pytest.approx(0.25)
+    assert _metric_by_name(payload, "provenance.unsupported_supported_claim_rate")[
+        "status"
+    ] == "blocked"
+    assert _metric_by_name(payload, "provenance.error_rate")["current"] == (
+        pytest.approx(0.5)
+    )
+    assert _metric_by_name(
+        payload,
+        "provenance.final_answer_evidence_reference_rate",
+    )["status"] == "blocked"
+    assert payload["config"]["min_product_trace_provenance_coverage_rate"] == (
+        pytest.approx(1.0)
+    )
+    assert manifest["metadata"]["product_trace_provenance_blocked_metric_count"] == 5
+    assert manifest["metadata"][
+        "product_trace_provenance_supported_claim_evidence_coverage_current"
+    ] == pytest.approx(0.5)
+    assert record.metadata["product_trace_provenance_blocked_metric_count"] == 5
 
 
 def _promotion_evidence_handoff_metadata(
@@ -43807,6 +44216,80 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert drift_record.metadata["counterfactual_verification_blocked_metric_count"] == 0
     assert drift_record.metadata["evidence_handoff_blocked_metric_count"] == 0
     assert drift_record.metadata["fact_selfcheck_gate_blocked_metric_count"] == 0
+
+
+def test_product_trace_replay_workflow_applies_provenance_runtime_drift_gate(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_trace_replay_workflow")
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    tuning_module = importlib.import_module("benchmarks.run_runtime_profile_selector_tuning")
+    registry_module = importlib.import_module("eigentruth.registry")
+    output_dir = tmp_path / "workflow"
+    registry_path = tmp_path / "registry.json"
+    prior_baseline_path = tmp_path / "prior-product-runtime-baseline.json"
+    traces_dir = tmp_path / "input-traces"
+    traces_dir.mkdir()
+    trace_paths = []
+    for index in range(2):
+        trace_path = traces_dir / f"trace-{index}.json"
+        _write_provenance_product_runtime_trace(
+            trace_path,
+            request_id=f"provenance-{index}",
+            supported=True,
+        )
+        trace_paths.append(trace_path)
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=tuple(trace_paths),
+            report_path=prior_baseline_path,
+        )
+    )
+
+    payload = module.run_product_trace_replay_workflow(
+        module.ProductTraceReplayWorkflowConfig(
+            trace_paths=tuple(trace_paths),
+            output_dir=output_dir,
+            candidates=(
+                tuning_module.RuntimeProfileSelectorCandidate(
+                    name="default",
+                    policy={},
+                ),
+            ),
+            runtime_drift_baseline_path=prior_baseline_path,
+            min_runtime_drift_product_trace_provenance_coverage_rate=1.0,
+            min_runtime_drift_product_trace_provenance_supported_claim_evidence_coverage=1.0,
+            max_runtime_drift_product_trace_provenance_missing_reference_rate_increase=0.0,
+            max_runtime_drift_product_trace_provenance_unsupported_supported_claim_rate_increase=0.0,
+            max_runtime_drift_product_trace_provenance_error_rate_increase=0.0,
+            min_runtime_drift_product_trace_provenance_final_answer_evidence_reference_rate=1.0,
+            registry_path=registry_path,
+            name="trace-replay-provenance-drift",
+            version="0.1",
+            require_runtime_trace=True,
+        )
+    )
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:trace-replay-provenance-drift:0.1"
+    )
+    drift_report = json.loads(Path(payload["paths"]["runtime_drift_report"]).read_text(encoding="utf-8"))
+
+    assert payload["runtime_drift"]["status"] == "promote"
+    assert payload["runtime_drift"]["product_trace_provenance_metric_count"] == 6
+    assert payload["runtime_drift"]["product_trace_provenance_blocked_metric_count"] == 0
+    assert payload["config"]["runtime_drift_gates"][
+        "min_product_trace_provenance_supported_claim_evidence_coverage"
+    ] == pytest.approx(1.0)
+    provenance_statuses = {
+        metric["metric"]: metric["status"]
+        for metric in drift_report["metrics"]
+        if metric["metric"].startswith("provenance.")
+    }
+    assert len(provenance_statuses) == 6
+    assert set(provenance_statuses.values()) == {"pass"}
+    assert manifest["metadata"]["runtime_drift_product_trace_provenance_metric_count"] == 6
+    assert manifest["metadata"]["runtime_drift_product_trace_provenance_blocked_metric_count"] == 0
+    assert record.metadata["runtime_drift_product_trace_provenance_metric_count"] == 6
+    assert record.metadata["runtime_drift_product_trace_provenance_blocked_metric_count"] == 0
 
 
 def test_product_trace_replay_workflow_applies_world_model_runtime_drift_gate(tmp_path):

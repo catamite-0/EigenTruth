@@ -99,6 +99,14 @@ PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_KEYS: tuple[str, ...] = (
     "product_trace_trajectory_audit_scope_rate",
     "product_trace_trajectory_audit_cascade_rate",
 )
+PRODUCT_RUNTIME_DRIFT_PROVENANCE_EVIDENCE_KEYS: tuple[str, ...] = (
+    "product_trace_provenance_coverage_rate",
+    "product_trace_provenance_supported_claim_evidence_coverage",
+    "product_trace_provenance_missing_reference_rate",
+    "product_trace_provenance_unsupported_supported_claim_rate",
+    "product_trace_provenance_error_rate",
+    "product_trace_provenance_final_answer_evidence_reference_rate",
+)
 PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS: tuple[str, ...] = (
     "evidence_handoff_coverage_rate",
     "evidence_handoff_manifest_verified_rate",
@@ -172,6 +180,7 @@ PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS: dict[str, tuple[str, ...]] = {
         PRODUCT_RUNTIME_DRIFT_RECEIPT_CLAIM_SUPPORT_EVIDENCE_KEYS
     ),
     "trajectory_audit": PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_KEYS,
+    "provenance": PRODUCT_RUNTIME_DRIFT_PROVENANCE_EVIDENCE_KEYS,
     "evidence_handoff": PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS,
     "world_model": PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_KEYS,
     "context_sensitivity": PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_KEYS,

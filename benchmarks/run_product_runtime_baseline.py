@@ -110,6 +110,14 @@ _PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "product_trace_trajectory_audit_scope_rate",
     "product_trace_trajectory_audit_cascade_rate",
 )
+_PRODUCT_RUNTIME_DRIFT_PROVENANCE_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "product_trace_provenance_coverage_rate",
+    "product_trace_provenance_supported_claim_evidence_coverage",
+    "product_trace_provenance_missing_reference_rate",
+    "product_trace_provenance_unsupported_supported_claim_rate",
+    "product_trace_provenance_error_rate",
+    "product_trace_provenance_final_answer_evidence_reference_rate",
+)
 _PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "evidence_handoff_coverage_rate",
     "evidence_handoff_manifest_verified_rate",
@@ -183,6 +191,7 @@ _PROMOTION_CONTRACT_PRODUCT_RUNTIME_DRIFT_FIELDS: tuple[str, ...] = (
     "promotion_contract_product_runtime_drift_action_receipts_evidence_required",
     "promotion_contract_product_runtime_drift_receipt_claim_support_evidence_required",
     "promotion_contract_product_runtime_drift_trajectory_audit_evidence_required",
+    "promotion_contract_product_runtime_drift_provenance_evidence_required",
     "promotion_contract_product_runtime_drift_evidence_handoff_evidence_required",
     "promotion_contract_product_runtime_drift_world_model_evidence_required",
     "promotion_contract_product_runtime_drift_context_sensitivity_evidence_required",
@@ -208,6 +217,8 @@ _PROMOTION_CONTRACT_PRODUCT_RUNTIME_DRIFT_FIELDS: tuple[str, ...] = (
     "promotion_contract_product_runtime_drift_receipt_claim_support_evidence_blocked_metric_count",
     "promotion_contract_product_runtime_drift_trajectory_audit_evidence_metric_count",
     "promotion_contract_product_runtime_drift_trajectory_audit_evidence_blocked_metric_count",
+    "promotion_contract_product_runtime_drift_provenance_evidence_metric_count",
+    "promotion_contract_product_runtime_drift_provenance_evidence_blocked_metric_count",
     "promotion_contract_product_runtime_drift_evidence_handoff_evidence_metric_count",
     "promotion_contract_product_runtime_drift_evidence_handoff_evidence_blocked_metric_count",
     "promotion_contract_product_runtime_drift_world_model_evidence_metric_count",
@@ -1237,6 +1248,45 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         "trajectory_audit_logical_count": metrics.get("trajectory_audit_logical_count"),
         "trajectory_audit_procedural_count": metrics.get("trajectory_audit_procedural_count"),
         "trajectory_audit_scope_count": metrics.get("trajectory_audit_scope_count"),
+        "provenance_summary": dict(_mapping(metrics.get("provenance_summary"))),
+        "provenance_available": bool(metrics.get("provenance_available")),
+        "provenance_source": metrics.get("provenance_source"),
+        "provenance_passed": metrics.get("provenance_passed"),
+        "provenance_node_count": metrics.get("provenance_node_count"),
+        "provenance_edge_count": metrics.get("provenance_edge_count"),
+        "provenance_claim_count": metrics.get("provenance_claim_count"),
+        "provenance_supported_claim_count": metrics.get("provenance_supported_claim_count"),
+        "provenance_supported_claim_with_evidence_count": metrics.get(
+            "provenance_supported_claim_with_evidence_count"
+        ),
+        "provenance_unsupported_supported_claim_count": metrics.get(
+            "provenance_unsupported_supported_claim_count"
+        ),
+        "provenance_supported_claim_evidence_coverage": metrics.get(
+            "provenance_supported_claim_evidence_coverage"
+        ),
+        "provenance_retrieval_hit_count": metrics.get("provenance_retrieval_hit_count"),
+        "provenance_source_count": metrics.get("provenance_source_count"),
+        "provenance_final_answer_evidence_count": metrics.get(
+            "provenance_final_answer_evidence_count"
+        ),
+        "provenance_final_answer_claim_reference_count": metrics.get(
+            "provenance_final_answer_claim_reference_count"
+        ),
+        "provenance_final_answer_evidence_reference_rate": metrics.get(
+            "provenance_final_answer_evidence_reference_rate"
+        ),
+        "provenance_missing_reference_count": metrics.get("provenance_missing_reference_count"),
+        "provenance_issue_count": metrics.get("provenance_issue_count"),
+        "provenance_error_count": metrics.get("provenance_error_count"),
+        "provenance_warning_count": metrics.get("provenance_warning_count"),
+        "provenance_counts_by_code": dict(_mapping(metrics.get("provenance_counts_by_code"))),
+        "provenance_counts_by_node_type": dict(
+            _mapping(metrics.get("provenance_counts_by_node_type"))
+        ),
+        "provenance_counts_by_relation": dict(
+            _mapping(metrics.get("provenance_counts_by_relation"))
+        ),
         "triple_coverage_summary": dict(_mapping(metrics.get("triple_coverage_summary"))),
         "triple_coverage_source": metrics.get("triple_coverage_source"),
         "triple_claim_count": metrics.get("triple_claim_count"),
@@ -1619,6 +1669,10 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         for suffix in ("baseline", "current", "status"):
             field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
             compact[field_name] = metrics.get(field_name)
+    for prefix in _PRODUCT_RUNTIME_DRIFT_PROVENANCE_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
+            compact[field_name] = metrics.get(field_name)
     for prefix in _PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
@@ -1692,6 +1746,7 @@ def _aggregate_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "receipt_claim_support": _aggregate_receipt_claim_support(metrics),
         "action_audit": _aggregate_action_audit(metrics),
         "trajectory_audit": _aggregate_trajectory_audit(metrics),
+        "provenance": _aggregate_provenance(metrics),
         "claim_risk_localization": _aggregate_claim_risk_localization(metrics),
         "triple_coverage": _aggregate_triple_coverage(metrics),
         "world_model": _aggregate_world_model(metrics),
@@ -1839,6 +1894,28 @@ def _optimization_report(
                 "procedural_rate",
             ),
             "trajectory_audit_cascade_rate": _nested(summary, "trajectory_audit", "cascade_rate"),
+            "provenance_coverage_rate": _nested(summary, "provenance", "coverage_rate"),
+            "provenance_supported_claim_evidence_coverage": _nested(
+                summary,
+                "provenance",
+                "supported_claim_evidence_coverage",
+            ),
+            "provenance_missing_reference_rate": _nested(
+                summary,
+                "provenance",
+                "missing_reference_rate",
+            ),
+            "provenance_unsupported_supported_claim_rate": _nested(
+                summary,
+                "provenance",
+                "unsupported_supported_claim_rate",
+            ),
+            "provenance_error_rate": _nested(summary, "provenance", "error_rate"),
+            "provenance_final_answer_evidence_reference_rate": _nested(
+                summary,
+                "provenance",
+                "final_answer_evidence_reference_rate",
+            ),
             "slowest_phase": None if not phase_hotspots else phase_hotspots[0]["phase"],
             "slowest_route": None if not route_hotspots else route_hotspots[0]["route"],
             "budget_enabled": budget.get("enabled"),
@@ -2799,6 +2876,101 @@ def _aggregate_trajectory_audit(metrics: Sequence[Mapping[str, Any]]) -> dict[st
         ),
         "per_trace_cascade_count": _numeric_summary(
             item.get("trajectory_audit_cascade_count") for item in metrics
+        ),
+        "summary_observations": sum(1 for summary in summaries if summary),
+    }
+
+
+def _aggregate_provenance(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    summaries = [_mapping(item.get("provenance_summary")) for item in metrics]
+    n_traces = len(metrics)
+    available_count = sum(1 for item in metrics if item.get("provenance_available") is True)
+    passed_count = sum(1 for item in metrics if item.get("provenance_passed") is True)
+    failed_count = sum(1 for item in metrics if item.get("provenance_passed") is False)
+    counts_by_code: dict[str, int] = {}
+    counts_by_node_type: dict[str, int] = {}
+    counts_by_relation: dict[str, int] = {}
+    for summary in summaries:
+        _merge_counts(counts_by_code, _mapping(summary.get("counts_by_code")))
+        _merge_counts(counts_by_node_type, _mapping(summary.get("counts_by_node_type")))
+        _merge_counts(counts_by_relation, _mapping(summary.get("counts_by_relation")))
+    node_count = _sum_float(metrics, "provenance_node_count") or 0.0
+    edge_count = _sum_float(metrics, "provenance_edge_count") or 0.0
+    claim_count = _sum_float(metrics, "provenance_claim_count") or 0.0
+    supported_claim_count = _sum_float(metrics, "provenance_supported_claim_count") or 0.0
+    supported_claim_with_evidence_count = (
+        _sum_float(metrics, "provenance_supported_claim_with_evidence_count") or 0.0
+    )
+    unsupported_supported_claim_count = (
+        _sum_float(metrics, "provenance_unsupported_supported_claim_count") or 0.0
+    )
+    retrieval_hit_count = _sum_float(metrics, "provenance_retrieval_hit_count") or 0.0
+    source_count = _sum_float(metrics, "provenance_source_count") or 0.0
+    final_answer_evidence_count = (
+        _sum_float(metrics, "provenance_final_answer_evidence_count") or 0.0
+    )
+    final_answer_claim_reference_count = (
+        _sum_float(metrics, "provenance_final_answer_claim_reference_count") or 0.0
+    )
+    missing_reference_count = _sum_float(metrics, "provenance_missing_reference_count") or 0.0
+    issue_count = _sum_float(metrics, "provenance_issue_count") or 0.0
+    error_count = _sum_float(metrics, "provenance_error_count") or 0.0
+    warning_count = _sum_float(metrics, "provenance_warning_count") or 0.0
+    reference_opportunity_count = supported_claim_count + final_answer_evidence_count
+    return {
+        "source_trace_count": n_traces,
+        "available_trace_count": available_count,
+        "missing_trace_count": n_traces - available_count,
+        "coverage_rate": _safe_div(available_count, n_traces),
+        "passed_trace_count": passed_count,
+        "failed_trace_count": failed_count,
+        "passed_trace_rate": _safe_div(passed_count, available_count),
+        "failed_trace_rate": _safe_div(failed_count, available_count),
+        "source_counts": _counts(item.get("provenance_source") for item in metrics),
+        "node_count": node_count,
+        "edge_count": edge_count,
+        "claim_count": claim_count,
+        "supported_claim_count": supported_claim_count,
+        "supported_claim_with_evidence_count": supported_claim_with_evidence_count,
+        "unsupported_supported_claim_count": unsupported_supported_claim_count,
+        "supported_claim_evidence_coverage": _safe_div(
+            supported_claim_with_evidence_count,
+            supported_claim_count,
+        ),
+        "unsupported_supported_claim_rate": _safe_div(
+            unsupported_supported_claim_count,
+            supported_claim_count,
+        ),
+        "retrieval_hit_count": retrieval_hit_count,
+        "retrieval_hit_rate": _safe_div(retrieval_hit_count, n_traces),
+        "source_count": source_count,
+        "source_rate": _safe_div(source_count, n_traces),
+        "final_answer_evidence_count": final_answer_evidence_count,
+        "final_answer_claim_reference_count": final_answer_claim_reference_count,
+        "final_answer_evidence_reference_rate": _safe_div(
+            final_answer_claim_reference_count,
+            final_answer_evidence_count,
+        ),
+        "missing_reference_count": missing_reference_count,
+        "missing_reference_rate": _safe_div(
+            missing_reference_count,
+            reference_opportunity_count,
+        ),
+        "reference_opportunity_count": reference_opportunity_count,
+        "issue_count": issue_count,
+        "error_count": error_count,
+        "warning_count": warning_count,
+        "issue_rate": _safe_div(issue_count, n_traces),
+        "error_rate": _safe_div(error_count, n_traces),
+        "warning_rate": _safe_div(warning_count, n_traces),
+        "counts_by_code": counts_by_code,
+        "counts_by_node_type": counts_by_node_type,
+        "counts_by_relation": counts_by_relation,
+        "per_trace_issue_count": _numeric_summary(
+            item.get("provenance_issue_count") for item in metrics
+        ),
+        "per_trace_missing_reference_count": _numeric_summary(
+            item.get("provenance_missing_reference_count") for item in metrics
         ),
         "summary_observations": sum(1 for summary in summaries if summary),
     }
@@ -4483,6 +4655,12 @@ def _aggregate_promotion_contract_product_runtime_drift(
             )
             for item in metrics
         ),
+        "provenance_evidence_required_counts": _counts(
+            item.get(
+                "promotion_contract_product_runtime_drift_provenance_evidence_required"
+            )
+            for item in metrics
+        ),
         "evidence_handoff_evidence_required_counts": _counts(
             item.get("promotion_contract_product_runtime_drift_evidence_handoff_evidence_required")
             for item in metrics
@@ -4619,6 +4797,18 @@ def _aggregate_promotion_contract_product_runtime_drift(
             )
             for item in metrics
         ),
+        "provenance_evidence_metric_count": _numeric_summary(
+            item.get(
+                "promotion_contract_product_runtime_drift_provenance_evidence_metric_count"
+            )
+            for item in metrics
+        ),
+        "provenance_evidence_blocked_metric_count": _numeric_summary(
+            item.get(
+                "promotion_contract_product_runtime_drift_provenance_evidence_blocked_metric_count"
+            )
+            for item in metrics
+        ),
         "evidence_handoff_evidence_metric_count": _numeric_summary(
             item.get(
                 "promotion_contract_product_runtime_drift_evidence_handoff_evidence_metric_count"
@@ -4716,6 +4906,10 @@ def _aggregate_promotion_contract_product_runtime_drift(
         "trajectory_audit_evidence": _aggregate_product_runtime_drift_evidence(
             metrics,
             prefixes=_PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_PREFIXES,
+        ),
+        "provenance_evidence": _aggregate_product_runtime_drift_evidence(
+            metrics,
+            prefixes=_PRODUCT_RUNTIME_DRIFT_PROVENANCE_EVIDENCE_PREFIXES,
         ),
         "evidence_handoff_evidence": _aggregate_product_runtime_drift_evidence(
             metrics,
@@ -5012,6 +5206,7 @@ def _write_artifact_manifest(
     artifacts: Mapping[str, str | Path | None] | None = None,
 ) -> dict[str, Any]:
     trajectory_audit_metadata = _trajectory_audit_flat_metadata(report)
+    provenance_metadata = _provenance_flat_metadata(report)
     promotion_contract_drift_metadata = _promotion_contract_runtime_drift_flat_metadata(report)
     promotion_contract_trace_replay_metadata = _promotion_contract_trace_replay_flat_metadata(
         report
@@ -5072,6 +5267,7 @@ def _write_artifact_manifest(
             "budget_passed": _mapping(report.get("budget")).get("passed"),
             "compact_json": config.compact_json,
             **trajectory_audit_metadata,
+            **provenance_metadata,
             **promotion_contract_drift_metadata,
             **promotion_contract_trace_replay_metadata,
             **promotion_contract_external_evidence_metadata,
@@ -5107,6 +5303,7 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
     if config.registry_path is None:
         return
     trajectory_audit_metadata = _trajectory_audit_flat_metadata(report)
+    provenance_metadata = _provenance_flat_metadata(report)
     promotion_contract_drift_metadata = _promotion_contract_runtime_drift_flat_metadata(report)
     promotion_contract_trace_replay_metadata = _promotion_contract_trace_replay_flat_metadata(
         report
@@ -5172,6 +5369,7 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
             "failed_count": _mapping(report.get("budget")).get("failed_count"),
             "compact_json": config.compact_json,
             **trajectory_audit_metadata,
+            **provenance_metadata,
             **promotion_contract_drift_metadata,
             **promotion_contract_trace_replay_metadata,
             **promotion_contract_external_evidence_metadata,
@@ -5243,6 +5441,66 @@ def _trajectory_audit_flat_metadata(report: Mapping[str, Any]) -> dict[str, Any]
     }
 
 
+def _provenance_flat_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    provenance = _mapping(_nested(report, "summary", "provenance"))
+    if not provenance:
+        return {}
+    return {
+        "provenance_available_trace_count": provenance.get("available_trace_count"),
+        "provenance_missing_trace_count": provenance.get("missing_trace_count"),
+        "provenance_coverage_rate": provenance.get("coverage_rate"),
+        "provenance_passed_trace_count": provenance.get("passed_trace_count"),
+        "provenance_failed_trace_count": provenance.get("failed_trace_count"),
+        "provenance_passed_trace_rate": provenance.get("passed_trace_rate"),
+        "provenance_failed_trace_rate": provenance.get("failed_trace_rate"),
+        "provenance_node_count": provenance.get("node_count"),
+        "provenance_edge_count": provenance.get("edge_count"),
+        "provenance_claim_count": provenance.get("claim_count"),
+        "provenance_supported_claim_count": provenance.get("supported_claim_count"),
+        "provenance_supported_claim_with_evidence_count": (
+            provenance.get("supported_claim_with_evidence_count")
+        ),
+        "provenance_supported_claim_evidence_coverage": (
+            provenance.get("supported_claim_evidence_coverage")
+        ),
+        "provenance_unsupported_supported_claim_count": (
+            provenance.get("unsupported_supported_claim_count")
+        ),
+        "provenance_unsupported_supported_claim_rate": (
+            provenance.get("unsupported_supported_claim_rate")
+        ),
+        "provenance_retrieval_hit_count": provenance.get("retrieval_hit_count"),
+        "provenance_retrieval_hit_rate": provenance.get("retrieval_hit_rate"),
+        "provenance_source_count": provenance.get("source_count"),
+        "provenance_source_rate": provenance.get("source_rate"),
+        "provenance_final_answer_evidence_count": (
+            provenance.get("final_answer_evidence_count")
+        ),
+        "provenance_final_answer_claim_reference_count": (
+            provenance.get("final_answer_claim_reference_count")
+        ),
+        "provenance_final_answer_evidence_reference_rate": (
+            provenance.get("final_answer_evidence_reference_rate")
+        ),
+        "provenance_missing_reference_count": provenance.get("missing_reference_count"),
+        "provenance_missing_reference_rate": provenance.get("missing_reference_rate"),
+        "provenance_reference_opportunity_count": provenance.get("reference_opportunity_count"),
+        "provenance_issue_count": provenance.get("issue_count"),
+        "provenance_error_count": provenance.get("error_count"),
+        "provenance_warning_count": provenance.get("warning_count"),
+        "provenance_issue_rate": provenance.get("issue_rate"),
+        "provenance_error_rate": provenance.get("error_rate"),
+        "provenance_warning_rate": provenance.get("warning_rate"),
+        "provenance_counts_by_code": dict(_mapping(provenance.get("counts_by_code"))),
+        "provenance_counts_by_node_type": dict(
+            _mapping(provenance.get("counts_by_node_type"))
+        ),
+        "provenance_counts_by_relation": dict(
+            _mapping(provenance.get("counts_by_relation"))
+        ),
+    }
+
+
 def _promotion_contract_runtime_drift_flat_metadata(
     report: Mapping[str, Any],
 ) -> dict[str, Any]:
@@ -5296,6 +5554,9 @@ def _promotion_contract_runtime_drift_flat_metadata(
         ),
         "promotion_contract_product_runtime_drift_trajectory_audit_evidence_required_counts": dict(
             _mapping(drift.get("trajectory_audit_evidence_required_counts"))
+        ),
+        "promotion_contract_product_runtime_drift_provenance_evidence_required_counts": dict(
+            _mapping(drift.get("provenance_evidence_required_counts"))
         ),
         "promotion_contract_product_runtime_drift_evidence_handoff_evidence_required_counts": dict(
             _mapping(drift.get("evidence_handoff_evidence_required_counts"))
@@ -5412,6 +5673,16 @@ def _promotion_contract_runtime_drift_flat_metadata(
             "trajectory_audit_evidence_blocked_metric_count",
             "mean",
         ),
+        "promotion_contract_product_runtime_drift_provenance_evidence_metric_count_mean": _nested(
+            drift,
+            "provenance_evidence_metric_count",
+            "mean",
+        ),
+        "promotion_contract_product_runtime_drift_provenance_evidence_blocked_metric_count_mean": _nested(
+            drift,
+            "provenance_evidence_blocked_metric_count",
+            "mean",
+        ),
         "promotion_contract_product_runtime_drift_evidence_handoff_evidence_metric_count_mean": _nested(
             drift,
             "evidence_handoff_evidence_metric_count",
@@ -5524,6 +5795,12 @@ def _promotion_contract_runtime_drift_flat_metadata(
         _product_runtime_drift_evidence_flat_metadata(
             _mapping(drift.get("trajectory_audit_evidence")),
             prefixes=_PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_PREFIXES,
+        )
+    )
+    metadata.update(
+        _product_runtime_drift_evidence_flat_metadata(
+            _mapping(drift.get("provenance_evidence")),
+            prefixes=_PRODUCT_RUNTIME_DRIFT_PROVENANCE_EVIDENCE_PREFIXES,
         )
     )
     metadata.update(
