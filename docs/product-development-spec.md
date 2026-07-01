@@ -580,14 +580,17 @@ For product features:
   JSONL, reruns the handoff ingestion, audits the resulting corpus as
   external-candidate provenance, runs the blind-spot query sweep, and can
   compare controlled versus external sweeps. It is intentionally fail-closed:
-  snippets that pass provenance still block if they do not refute blind spots
-  under the configured verifier/query gates.
+  snippets that pass provenance still block if adapter results do not cover the
+  selected citation/search requests or if they do not refute blind spots under
+  the configured verifier/query gates. The default adapter request-coverage
+  gate is `1.0`, and reports preserve missing request ids for rerun planning.
 - The command boundary is now explicit:
   `run_external_citation_search_adapter_workflow.py` writes sanitized request
   JSONL, invokes a local external citation/search command with `{input}` and
   `{output}` placeholders, then automatically runs the same fail-closed evidence
   workflow. This is the preferred next adapter entry point because command
-  output cannot bypass provenance, query-sweep, or controlled-comparison gates.
+  output cannot bypass adapter-coverage, provenance, query-sweep, or
+  controlled-comparison gates.
 - A first real adapter run is registered:
   `run_wikipedia_citation_search_adapter.py` uses MediaWiki/Wikipedia search
   with query de-duplication, optional alternate-query fallback, rate limiting,

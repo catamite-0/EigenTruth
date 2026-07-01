@@ -2507,7 +2507,9 @@ variants from the question, and writes safe `alternate_queries` for adapters
 that support fallback search. If an external adapter later writes JSONL results
 keyed by `request_id`, the same workflow can normalize those results into
 source documents plus an `external_evidence_candidate` retrieval corpus for
-provenance audit.
+provenance audit. The return-side summary records expected, matched, and
+missing adapter request ids, so partial external-search runs remain visible
+before any route-quality gate is considered.
 
 ```bash
 OUT=artifacts/truthfulqa-frontier-smollm2-l80-citation-search-adapter-handoff
@@ -2586,7 +2588,11 @@ JSONL results. It reuses the citation-search handoff ingestion, then runs
 `audit_retrieval_corpus_provenance.py`, `sweep_blind_spot_retrieval_queries.py`,
 and, when controlled sweep reports are supplied, `compare_blind_spot_query_sweeps.py`.
 The workflow is fail-closed: returned snippets can pass provenance while still
-being blocked by the blind-spot query sweep or controlled-vs-external comparison.
+being blocked by adapter request coverage, the blind-spot query sweep, or
+controlled-vs-external comparison. By default `--min-adapter-request-coverage`
+is `1.0`, so every selected citation/search request must produce at least one
+normalized source document unless the threshold is explicitly relaxed for a
+diagnostic replay.
 
 ```bash
 OUT=artifacts/truthfulqa-frontier-smollm2-l80-citation-search-evidence-workflow
@@ -4200,7 +4206,9 @@ path the adapter must write. Returned snippets still have to pass provenance,
 blind-spot query, and controlled-vs-external gates before any route decision is
 promoted. Passing `--batch-id` keeps the preflight request JSONL and downstream
 evidence gate aligned to the same unresolved evidence batch, which is the
-preferred path for long-running external search jobs.
+preferred path for long-running external search jobs. The wrapper forwards
+`--min-adapter-request-coverage` into the evidence workflow and records missing
+request counts in the workflow manifest/registry metadata.
 
 ## `eval_verifier_ensemble.py`
 

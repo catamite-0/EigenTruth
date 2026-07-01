@@ -87,6 +87,7 @@ def run(
     min_external_blind_refuted_rate: float = 0.50,
     max_controlled_verified_false_alarm: float = 0.05,
     max_external_verified_false_alarm: float = 0.05,
+    min_adapter_request_coverage: float = 1.0,
     max_exact_answer_copy_rate: float = 0.80,
     max_claim_id_link_rate: float = 0.0,
     max_label_metadata_rate: float = 0.0,
@@ -96,6 +97,8 @@ def run(
     """Run the handoff-to-evidence gate workflow."""
     if registry_path is not None and (not name or not version):
         raise ValueError("registry_path requires name and version.")
+    if not (0.0 <= float(min_adapter_request_coverage) <= 1.0):
+        raise ValueError("min_adapter_request_coverage must be between 0 and 1.")
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
     paths = _paths(output)
@@ -181,6 +184,7 @@ def run(
         query_sweep_report=query_sweep_report,
         comparison_report=comparison_report,
         controlled_sweep_paths=controlled_sweep_paths,
+        min_adapter_request_coverage=float(min_adapter_request_coverage),
     )
     report = {
         "schema_version": 1,
@@ -217,6 +221,7 @@ def run(
             "min_external_blind_refuted_rate": float(min_external_blind_refuted_rate),
             "max_controlled_verified_false_alarm": float(max_controlled_verified_false_alarm),
             "max_external_verified_false_alarm": float(max_external_verified_false_alarm),
+            "min_adapter_request_coverage": float(min_adapter_request_coverage),
             "max_exact_answer_copy_rate": float(max_exact_answer_copy_rate),
             "max_claim_id_link_rate": float(max_claim_id_link_rate),
             "max_label_metadata_rate": float(max_label_metadata_rate),
@@ -265,6 +270,16 @@ def run(
             "selected_batch_count": _nested_int(handoff, "summary", "selected_batch_count"),
             "selected_batch_ids": _nested(handoff, "summary", "selected_batch_ids"),
             "adapter_request_count": _nested_int(handoff, "summary", "adapter_request_count"),
+            "adapter_result_request_coverage": _nested(
+                handoff,
+                "summary",
+                "adapter_result_request_coverage",
+            ),
+            "adapter_result_missing_request_count": _nested_int(
+                handoff,
+                "summary",
+                "adapter_result_missing_request_count",
+            ),
             "source_document_count": _nested_int(handoff, "summary", "source_document_count"),
             "corpus_document_count": _nested_int(handoff, "summary", "corpus_document_count"),
             **dict(metadata or {}),
@@ -287,6 +302,16 @@ def run(
                 "selected_batch_count": _nested_int(handoff, "summary", "selected_batch_count"),
                 "selected_batch_ids": _nested(handoff, "summary", "selected_batch_ids"),
                 "adapter_request_count": _nested_int(handoff, "summary", "adapter_request_count"),
+                "adapter_result_request_coverage": _nested(
+                    handoff,
+                    "summary",
+                    "adapter_result_request_coverage",
+                ),
+                "adapter_result_missing_request_count": _nested_int(
+                    handoff,
+                    "summary",
+                    "adapter_result_missing_request_count",
+                ),
                 "source_document_count": _nested_int(handoff, "summary", "source_document_count"),
                 "corpus_document_count": _nested_int(handoff, "summary", "corpus_document_count"),
                 "provenance_status": None if provenance_report is None else provenance_report.get("status"),
@@ -323,8 +348,31 @@ def _gate(
     query_sweep_report: Mapping[str, Any] | None,
     comparison_report: Mapping[str, Any] | None,
     controlled_sweep_paths: Sequence[str | Path],
+    min_adapter_request_coverage: float,
 ) -> dict[str, Any]:
     blocking: list[dict[str, Any]] = []
+    request_coverage = _optional_float(_nested(handoff, "summary", "adapter_result_request_coverage"))
+    if request_coverage is None:
+        request_coverage = 0.0
+    if request_coverage < min_adapter_request_coverage:
+        blocking.append({
+            "gate": "adapter_request_coverage",
+            "reason": (
+                "Adapter results covered "
+                f"{request_coverage:.3f} of selected citation/search requests, "
+                f"below required {min_adapter_request_coverage:.3f}."
+            ),
+            "missing_request_count": _nested_int(
+                handoff,
+                "summary",
+                "adapter_result_missing_request_count",
+            ),
+            "missing_request_ids": _nested(
+                handoff,
+                "summary",
+                "adapter_result_missing_request_ids",
+            ),
+        })
     if _nested_int(handoff, "summary", "source_document_count") == 0:
         blocking.append({
             "gate": "adapter_results",
@@ -386,6 +434,36 @@ def _summary(
             "selected_batch_source_request_count",
         ),
         "adapter_request_count": _nested_int(handoff, "summary", "adapter_request_count"),
+        "adapter_result_expected_request_count": _nested_int(
+            handoff,
+            "summary",
+            "adapter_result_expected_request_count",
+        ),
+        "adapter_result_matched_request_count": _nested_int(
+            handoff,
+            "summary",
+            "adapter_result_matched_request_count",
+        ),
+        "adapter_result_missing_request_count": _nested_int(
+            handoff,
+            "summary",
+            "adapter_result_missing_request_count",
+        ),
+        "adapter_result_missing_request_ids": _nested(
+            handoff,
+            "summary",
+            "adapter_result_missing_request_ids",
+        ),
+        "adapter_result_request_coverage": _nested(
+            handoff,
+            "summary",
+            "adapter_result_request_coverage",
+        ),
+        "adapter_result_unknown_request_count": _nested_int(
+            handoff,
+            "summary",
+            "adapter_result_unknown_request_count",
+        ),
         "source_document_count": _nested_int(handoff, "summary", "source_document_count"),
         "corpus_document_count": _nested_int(handoff, "summary", "corpus_document_count"),
         "provenance_status": None if provenance_report is None else provenance_report.get("status"),
@@ -499,6 +577,13 @@ def _nested_int(payload: Mapping[str, Any], *keys: str) -> int | None:
         return None
 
 
+def _optional_float(value: Any) -> float | None:
+    try:
+        return None if value is None else float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _parse_metadata(values: Sequence[str]) -> dict[str, str]:
     metadata: dict[str, str] = {}
     for value in values:
@@ -569,6 +654,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--min-external-blind-refuted-rate", type=float, default=0.50)
     parser.add_argument("--max-controlled-verified-false-alarm", type=float, default=0.05)
     parser.add_argument("--max-external-verified-false-alarm", type=float, default=0.05)
+    parser.add_argument("--min-adapter-request-coverage", type=float, default=1.0)
     parser.add_argument("--max-exact-answer-copy-rate", type=float, default=0.80)
     parser.add_argument("--max-claim-id-link-rate", type=float, default=0.0)
     parser.add_argument("--max-label-metadata-rate", type=float, default=0.0)
@@ -609,6 +695,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         min_external_blind_refuted_rate=args.min_external_blind_refuted_rate,
         max_controlled_verified_false_alarm=args.max_controlled_verified_false_alarm,
         max_external_verified_false_alarm=args.max_external_verified_false_alarm,
+        min_adapter_request_coverage=args.min_adapter_request_coverage,
         max_exact_answer_copy_rate=args.max_exact_answer_copy_rate,
         max_claim_id_link_rate=args.max_claim_id_link_rate,
         max_label_metadata_rate=args.max_label_metadata_rate,

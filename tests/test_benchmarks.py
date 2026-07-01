@@ -51582,6 +51582,141 @@ def test_citation_search_evidence_workflow_runs_gates_and_blocks_unsupported_res
     assert record.metadata["suite"] == "unit"
 
 
+def test_citation_search_evidence_workflow_blocks_partial_adapter_result_coverage(tmp_path):
+    module = importlib.import_module("benchmarks.run_citation_search_evidence_workflow")
+    handoff_module = importlib.import_module("benchmarks.build_citation_search_adapter_handoff")
+
+    queue_path = tmp_path / "unresolved-evidence-queue.json"
+    results_path = tmp_path / "adapter-results.jsonl"
+    scores_path = tmp_path / "scores.json"
+    blind_spots_path = tmp_path / "blind-spots.json"
+    output_dir = tmp_path / "citation-search-evidence"
+    queue_requests = [
+        {
+            "queue_id": "queue:alpha:external_citation:1",
+            "source_request_id": "cite:alpha:1",
+            "target_id": "alpha",
+            "record_index": 1,
+            "adapter_family": "external_citation_search",
+            "request_type": "external_citation",
+            "priority": "high",
+            "question_type": "definition",
+            "question": "What is Alpha?",
+            "model_answer": "Wrong A1",
+            "query": "What is Alpha? Wrong A1",
+            "requires_timestamp": False,
+            "usage": "source_discovery_only",
+        },
+        {
+            "queue_id": "queue:beta:external_citation:1",
+            "source_request_id": "cite:beta:1",
+            "target_id": "beta",
+            "record_index": 2,
+            "adapter_family": "external_citation_search",
+            "request_type": "external_citation",
+            "priority": "high",
+            "question_type": "person",
+            "question": "Who founded Beta?",
+            "model_answer": "Wrong B",
+            "query": "Who founded Beta? Wrong B",
+            "requires_timestamp": False,
+            "usage": "source_discovery_only",
+        },
+    ]
+    queue_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "unresolved_blind_spot_evidence_queue",
+            "status": "ready_for_adapter_execution",
+            "summary": {"target_count": 2, "adapter_request_count": 2},
+            "adapter_requests": queue_requests,
+        }),
+        encoding="utf-8",
+    )
+    results_path.write_text(
+        json.dumps({
+            "request_id": handoff_module._adapter_request_id(queue_requests[0]),
+            "results": [
+                {
+                    "title": "Alpha reference",
+                    "snippet": "What is Alpha? A1",
+                    "url": "https://example.org/alpha",
+                    "provider": "unit-search",
+                    "rank": 1,
+                }
+            ],
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 1, 1, 0],
+            "scores": {"truth_proj": [0.1, 0.9, 0.8, 0.2]},
+            "statements": [
+                {"question": "What is Alpha?", "answer": "A1", "text": "What is Alpha? A1"},
+                {"question": "What is Alpha?", "answer": "Wrong A1", "text": "What is Alpha? Wrong A1"},
+                {"question": "Who founded Beta?", "answer": "Wrong B", "text": "Who founded Beta? Wrong B"},
+                {"question": "Who founded Beta?", "answer": "B2", "text": "Who founded Beta? B2"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    blind_spots_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "detectability_blind_spot_analysis",
+            "records": [
+                {
+                    "record_index": 1,
+                    "label": 1,
+                    "question_type": "definition",
+                    "features": {},
+                    "question": "What is Alpha?",
+                    "answer": "Wrong A1",
+                    "text": "What is Alpha? Wrong A1",
+                },
+                {
+                    "record_index": 2,
+                    "label": 1,
+                    "question_type": "person",
+                    "features": {},
+                    "question": "Who founded Beta?",
+                    "answer": "Wrong B",
+                    "text": "Who founded Beta? Wrong B",
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        queue_report_path=queue_path,
+        adapter_results_path=results_path,
+        scores_path=scores_path,
+        blind_spots_path=blind_spots_path,
+        output_dir=output_dir,
+        query_fields=("question_answer",),
+        retriever_min_overlaps=(0.5,),
+        retrieval_limit=2,
+        alpha=0.2,
+        max_verified_false_alarm=0.0,
+        min_blind_refuted_rate=0.0,
+    )
+    reason_gates = {item["gate"] for item in payload["gate"]["blocking_reasons"]}
+
+    assert payload["status"] == "blocked"
+    assert "adapter_request_coverage" in reason_gates
+    assert payload["summary"]["adapter_result_expected_request_count"] == 2
+    assert payload["summary"]["adapter_result_matched_request_count"] == 1
+    assert payload["summary"]["adapter_result_missing_request_count"] == 1
+    assert payload["summary"]["adapter_result_request_coverage"] == pytest.approx(0.5)
+    missing_id = handoff_module._adapter_request_id(queue_requests[1])
+    assert payload["summary"]["adapter_result_missing_request_ids"] == (missing_id,)
+    assert payload["gate"]["blocking_reasons"][0]["missing_request_count"] == 1
+
+
 def test_citation_search_evidence_workflow_passes_batch_ids_to_handoff(tmp_path):
     module = importlib.import_module("benchmarks.run_citation_search_evidence_workflow")
     registry_module = importlib.import_module("eigentruth.registry")

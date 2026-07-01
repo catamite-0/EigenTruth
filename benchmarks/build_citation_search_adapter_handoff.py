@@ -423,12 +423,15 @@ def _source_documents_from_results(
 ) -> tuple[tuple[dict[str, Any], ...], dict[str, Any]]:
     documents: list[dict[str, Any]] = []
     unknown_results = 0
+    unknown_result_ids: set[str] = set()
     skipped_empty = 0
     seen_per_request: Counter[str] = Counter()
     for item in adapter_results:
         request_id = _result_request_id(item)
         if request_id not in request_by_id:
             unknown_results += 1
+            if request_id:
+                unknown_result_ids.add(request_id)
             continue
         results = _result_items(item)
         for result in results:
@@ -440,11 +443,25 @@ def _source_documents_from_results(
                 continue
             documents.append(document)
             seen_per_request[request_id] += 1
+    request_ids = set(request_by_id)
+    matched_request_ids = set(seen_per_request)
+    missing_request_ids = tuple(sorted(request_ids - matched_request_ids))
+    expected_request_count = len(request_by_id)
+    matched_request_count = len(matched_request_ids)
     return tuple(documents), {
+        "expected_request_count": expected_request_count,
         "input_result_count": len(adapter_results),
         "unknown_request_result_count": unknown_results,
+        "unknown_request_result_ids": tuple(sorted(unknown_result_ids)),
         "skipped_empty_result_count": skipped_empty,
-        "matched_request_count": len(seen_per_request),
+        "matched_request_count": matched_request_count,
+        "missing_request_count": len(missing_request_ids),
+        "missing_request_ids": missing_request_ids,
+        "request_coverage": (
+            1.0
+            if expected_request_count == 0
+            else matched_request_count / float(expected_request_count)
+        ),
         "result_documents_by_request": dict(sorted(seen_per_request.items())),
     }
 
@@ -542,6 +559,12 @@ def _summary(
         "adapter_request_count": len(adapter_requests),
         "source_document_count": len(source_documents),
         "corpus_document_count": len(source_documents),
+        "adapter_result_expected_request_count": result_summary.get("expected_request_count", 0),
+        "adapter_result_matched_request_count": result_summary.get("matched_request_count", 0),
+        "adapter_result_missing_request_count": result_summary.get("missing_request_count", 0),
+        "adapter_result_missing_request_ids": tuple(result_summary.get("missing_request_ids", ())),
+        "adapter_result_request_coverage": result_summary.get("request_coverage", 1.0),
+        "adapter_result_unknown_request_count": result_summary.get("unknown_request_result_count", 0),
         "priority_counts": _sorted_counter(priority_counts),
         "question_type_counts": _sorted_counter(question_type_counts),
         "source_family_counts": _sorted_counter(source_family_counts),

@@ -69,6 +69,7 @@ def run_external_citation_search_adapter_workflow(
     source_kind: str = DEFAULT_SOURCE_KIND,
     command_timeout_seconds: float | None = None,
     target_route: str = DEFAULT_TARGET_ROUTE,
+    min_adapter_request_coverage: float = 1.0,
     evidence_metadata: Mapping[str, Any] | None = None,
     compact_json: bool = False,
     fail_on_blocked: bool = False,
@@ -76,6 +77,8 @@ def run_external_citation_search_adapter_workflow(
     """Run an external search command and gate the returned evidence."""
     if registry_path is not None and (not name or not version):
         raise ValueError("registry_path requires name and version.")
+    if not (0.0 <= float(min_adapter_request_coverage) <= 1.0):
+        raise ValueError("min_adapter_request_coverage must be between 0 and 1.")
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
     request_jsonl = Path(request_jsonl_path or output / "external-citation-search-requests.jsonl")
@@ -129,6 +132,7 @@ def run_external_citation_search_adapter_workflow(
         corpus_name=corpus_name,
         source_kind=source_kind,
         target_route=target_route,
+        min_adapter_request_coverage=min_adapter_request_coverage,
         metadata={**dict(evidence_metadata or {}), "source_workflow": WORKFLOW},
         compact_json=compact_json,
     )
@@ -158,6 +162,7 @@ def run_external_citation_search_adapter_workflow(
             "source_kind": source_kind,
             "command_timeout_seconds": command_timeout_seconds,
             "target_route": target_route,
+            "min_adapter_request_coverage": float(min_adapter_request_coverage),
         },
         "paths": {
             "requests": str(request_jsonl),
@@ -203,6 +208,12 @@ def run_external_citation_search_adapter_workflow(
             "selected_batch_count": payload["request_summary"].get("selected_batch_count"),
             "selected_batch_ids": payload["request_summary"].get("selected_batch_ids"),
             "adapter_request_count": payload["request_summary"].get("adapter_request_count"),
+            "adapter_result_request_coverage": payload["evidence_summary"].get(
+                "adapter_result_request_coverage"
+            ),
+            "adapter_result_missing_request_count": payload["evidence_summary"].get(
+                "adapter_result_missing_request_count"
+            ),
             "source_document_count": payload["evidence_summary"].get("source_document_count"),
             "corpus_document_count": payload["evidence_summary"].get("corpus_document_count"),
             **dict(evidence_metadata or {}),
@@ -224,6 +235,12 @@ def run_external_citation_search_adapter_workflow(
                 "selected_batch_count": payload["request_summary"].get("selected_batch_count"),
                 "selected_batch_ids": payload["request_summary"].get("selected_batch_ids"),
                 "adapter_request_count": payload["request_summary"].get("adapter_request_count"),
+                "adapter_result_request_coverage": payload["evidence_summary"].get(
+                    "adapter_result_request_coverage"
+                ),
+                "adapter_result_missing_request_count": payload["evidence_summary"].get(
+                    "adapter_result_missing_request_count"
+                ),
                 "source_document_count": payload["evidence_summary"].get("source_document_count"),
                 "corpus_document_count": payload["evidence_summary"].get("corpus_document_count"),
                 "artifact_manifest": str(manifest_path),
@@ -359,6 +376,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--source-kind", default=DEFAULT_SOURCE_KIND)
     parser.add_argument("--command-timeout-seconds", type=float, default=None)
     parser.add_argument("--target-route", default=DEFAULT_TARGET_ROUTE)
+    parser.add_argument("--min-adapter-request-coverage", type=float, default=1.0)
     parser.add_argument("--metadata", action="append", default=[])
     parser.add_argument("--compact-json", action="store_true")
     parser.add_argument("--fail-on-blocked", action="store_true")
@@ -386,6 +404,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         source_kind=args.source_kind,
         command_timeout_seconds=args.command_timeout_seconds,
         target_route=args.target_route,
+        min_adapter_request_coverage=args.min_adapter_request_coverage,
         evidence_metadata=_parse_metadata(args.metadata or ()),
         compact_json=bool(args.compact_json),
         fail_on_blocked=bool(args.fail_on_blocked),

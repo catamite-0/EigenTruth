@@ -821,12 +821,15 @@ Added the first monitor-first tool-selection audit layer:
 - `run_citation_search_evidence_workflow.py` now closes the return-side gate:
   local adapter-result JSONL can be ingested, provenance-audited, swept against
   the blind spots, and compared against controlled query-sweep evidence in one
-  fail-closed workflow. This preserves the frontier distinction between
-  collected snippets and route-quality evidence.
+  fail-closed workflow. The gate also checks selected adapter request coverage
+  by default, so a partial search run with missing request ids cannot look like
+  complete route-quality evidence. This preserves the frontier distinction
+  between collected snippets and route-quality evidence.
 - `run_external_citation_search_adapter_workflow.py` adds the local command
   boundary on top of that gate: it writes sanitized `{input}` request JSONL,
   requires the adapter to write `{output}` result JSONL, and then runs the
-  return-side evidence workflow before any promotion metadata is recorded.
+  return-side evidence workflow, including adapter-coverage checks, before any
+  promotion metadata is recorded.
 - `run_wikipedia_citation_search_adapter.py` is the first real external search
   command behind that boundary. The SmolLM2 L80 run collected `504` Wikipedia
   result documents for `168/176` requests and passed provenance, but refuted
