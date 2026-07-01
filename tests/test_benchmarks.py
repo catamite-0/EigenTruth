@@ -31482,6 +31482,37 @@ def test_frontier_research_queue_command_plan_requires_saved_path_for_in_memory_
         )
 
 
+def test_frontier_research_queue_command_plan_cli_filters_action_ids(tmp_path):
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    source_path = tmp_path / "evidence-gap-plan.json"
+    output_path = tmp_path / "frontier-research-command-plan.json"
+    source_path.write_text(
+        json.dumps({
+            "workflow": "evidence_gap_plan",
+            "actions": (
+                {"action_id": "keep", "suggested_commands": ("cmd ...",)},
+                {"action_id": "drop", "suggested_commands": ("cmd ...",)},
+            ),
+        }),
+        encoding="utf-8",
+    )
+
+    args = plan_module.build_parser().parse_args((
+        "--source",
+        str(source_path),
+        "--include-action-id",
+        "keep",
+        "--json",
+        str(output_path),
+    ))
+    payload = plan_module.run(args)
+
+    assert payload["summary"]["action_ids"] == ("keep",)
+    assert json.loads(output_path.read_text(encoding="utf-8"))["summary"]["action_ids"] == [
+        "keep"
+    ]
+
+
 def test_frontier_research_queue_bound_plan_dry_run_roundtrip(tmp_path):
     plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
     bind_module = importlib.import_module(
@@ -31512,7 +31543,7 @@ def test_frontier_research_queue_bound_plan_dry_run_roundtrip(tmp_path):
                     "source_gap_ids": ("gap-1",),
                     "suggested_commands": (
                         "benchmarks/eval_abstention_stability.py "
-                        "--scores ... --signal ... --json ...",
+                        "--scores ... --signals ... --json ...",
                     ),
                     "metadata": {
                         "required_inputs": ("frontier_release_report",),
@@ -31593,6 +31624,118 @@ def test_frontier_research_queue_bound_plan_dry_run_roundtrip(tmp_path):
         "frontier_research_queue_bound_command_run_report"
     )
     assert run_record.metadata["dry_run"] is True
+
+
+def test_frontier_research_queue_bound_plan_blocks_incomplete_known_command(tmp_path):
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    bind_module = importlib.import_module(
+        "benchmarks.bind_frontier_research_queue_command_plan"
+    )
+    plan_path = tmp_path / "frontier-research-command-plan.json"
+    bindings_path = tmp_path / "frontier-research-command-bindings.json"
+    plan_module.build_frontier_research_queue_command_plan(
+        source={
+            "workflow": "evidence_gap_plan",
+            "actions": (
+                {
+                    "action_id": "incomplete_eval_template",
+                    "suggested_commands": (
+                        "benchmarks/eval_abstention_stability.py --json ...",
+                    ),
+                    "metadata": {"required_inputs": (), "closure_outputs": ("report",)},
+                },
+            ),
+        },
+        json_path=plan_path,
+    )
+    bindings_path.write_text(
+        json.dumps({
+            "bindings": {
+                "incomplete_eval_template": {
+                    "command_template_values": ({"path": "artifacts/report.json"},),
+                },
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    bound = bind_module.build_frontier_research_queue_bound_command_plan(
+        command_plan=plan_path,
+        bindings=bindings_path,
+    )
+
+    entry = bound["entries"][0]
+    issue = entry["command_validation"]["issues"][0]
+    assert bound["status"] == "needs_inputs"
+    assert bound["summary"]["command_validation_issue_count"] == 1
+    assert entry["command_status"] == "needs_inputs"
+    assert entry["unbound_inputs"] == ("valid_bound_commands",)
+    assert issue["script"] == "benchmarks/eval_abstention_stability.py"
+    assert issue["missing_flags"] == ("--scores", "--signals")
+
+
+def test_frontier_research_queue_bound_plan_requires_action_inputs_in_planner_command(
+    tmp_path,
+):
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    bind_module = importlib.import_module(
+        "benchmarks.bind_frontier_research_queue_command_plan"
+    )
+    plan_path = tmp_path / "frontier-research-command-plan.json"
+    bindings_path = tmp_path / "frontier-research-command-bindings.json"
+    plan_module.build_frontier_research_queue_command_plan(
+        source={
+            "workflow": "evidence_gap_plan",
+            "actions": (
+                {
+                    "action_id": "abstention_planner",
+                    "suggested_commands": (
+                        "benchmarks/plan_frontier_abstention_evidence_reruns.py "
+                        "--source ... --json ...",
+                    ),
+                    "metadata": {
+                        "required_inputs": (
+                            "frontier_release_report_or_evidence_gap_plan",
+                            "abstention_score_dump_paths",
+                            "abstention_signal_groups",
+                        ),
+                        "closure_outputs": ("abstention_rerun_queue",),
+                    },
+                },
+            ),
+        },
+        json_path=plan_path,
+    )
+    bindings_path.write_text(
+        json.dumps({
+            "inputs": {
+                "frontier_release_report_or_evidence_gap_plan": {
+                    "path": "artifacts/evidence-gap-plan.json",
+                },
+                "abstention_score_dump_paths": ("qwen=artifacts/qwen-scores.json",),
+                "abstention_signal_groups": ("recommended",),
+            },
+            "bindings": {
+                "abstention_planner": {
+                    "command_template_values": (
+                        {"path": "artifacts/evidence-gap-plan.json"},
+                        {"path": "artifacts/queue.json"},
+                    ),
+                },
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    bound = bind_module.build_frontier_research_queue_bound_command_plan(
+        command_plan=plan_path,
+        bindings=bindings_path,
+    )
+
+    issue = bound["entries"][0]["command_validation"]["issues"][0]
+    assert bound["status"] == "needs_inputs"
+    assert issue["issue"] == "required_input_not_bound_to_command_flags"
+    assert issue["missing_flags"] == ("--scores", "--signal-groups")
 
 
 def test_frontier_research_queue_binding_scaffold_keeps_values_unbound(tmp_path):

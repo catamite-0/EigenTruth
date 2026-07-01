@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import shlex
 import sys
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -36,6 +37,11 @@ from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noq
 
 COMMAND_PLAN_WORKFLOW = "frontier_research_queue_command_plan"
 WORKFLOW = "frontier_research_queue_bound_command_plan"
+REQUIRED_COMMAND_FLAGS = {
+    "benchmarks/eval_abstention_stability.py": ("--scores", "--signals", "--json"),
+    "benchmarks/plan_frontier_abstention_evidence_reruns.py": ("--source",),
+    "benchmarks/rollup_frontier_abstention_evidence_reruns.py": ("--queue", "--json"),
+}
 
 
 def build_frontier_research_queue_bound_command_plan(
@@ -152,11 +158,21 @@ def _bind_frontier_entry(
     bound["source_gap_ids"] = _string_tuple(entry.get("source_gap_ids", ()))
     if planned_outputs:
         bound["planned_outputs"] = planned_outputs
+    validation = _bound_command_validation(
+        _string_tuple(bound.get("bound_commands", ())),
+        required_inputs=_string_tuple(entry.get("required_inputs", ())),
+    )
+    if validation["issue_count"]:
+        bound["command_status"] = "needs_inputs"
+        bound["unbound_inputs"] = tuple(
+            dict.fromkeys((*_string_tuple(bound.get("unbound_inputs", ())), "valid_bound_commands"))
+        )
     bound["metadata"] = {
         "workflow_keys": _workflow_keys(metadata),
         "source_required_input_count": len(_string_tuple(entry.get("required_inputs", ()))),
         "source_planned_output_count": len(_mapping_sequence(entry.get("planned_outputs", ()))),
     }
+    bound["command_validation"] = validation
     return bound
 
 
@@ -171,7 +187,100 @@ def _frontier_bound_summary(entries: Sequence[Mapping[str, Any]]) -> dict[str, A
     summary["action_ids"] = tuple(str(entry.get("action_id") or "") for entry in entries)
     summary["evidence_route_counts"] = dict(sorted(route_counts.items()))
     summary["source_gap_ids"] = tuple(dict.fromkeys(source_gap_ids))
+    summary["command_validation_issue_count"] = sum(
+        _int_or_zero(_mapping(entry.get("command_validation")).get("issue_count"))
+        for entry in entries
+    )
     return summary
+
+
+def _bound_command_validation(
+    commands: Sequence[str],
+    *,
+    required_inputs: Sequence[str],
+) -> dict[str, Any]:
+    issues = []
+    for index, command in enumerate(commands, start=1):
+        issues.extend(_command_validation_issues(command, index=index))
+        issues.extend(
+            _required_input_command_issues(
+                command,
+                index=index,
+                required_inputs=required_inputs,
+            )
+        )
+    return {
+        "issue_count": len(issues),
+        "issues": tuple(issues),
+    }
+
+
+def _command_validation_issues(command: str, *, index: int) -> tuple[dict[str, Any], ...]:
+    if "..." in command:
+        return ()
+    try:
+        argv = tuple(shlex.split(command))
+    except ValueError:
+        return ()
+    script = _command_script(argv)
+    if script is None:
+        return ()
+    required_flags = REQUIRED_COMMAND_FLAGS.get(script)
+    if not required_flags:
+        return ()
+    missing = tuple(flag for flag in required_flags if flag not in argv)
+    if not missing:
+        return ()
+    return ({
+        "command_index": index,
+        "script": script,
+        "issue": "missing_required_cli_flags",
+        "missing_flags": missing,
+    },)
+
+
+def _required_input_command_issues(
+    command: str,
+    *,
+    index: int,
+    required_inputs: Sequence[str],
+) -> tuple[dict[str, Any], ...]:
+    if "..." in command or not required_inputs:
+        return ()
+    try:
+        argv = tuple(shlex.split(command))
+    except ValueError:
+        return ()
+    script = _command_script(argv)
+    if script != "benchmarks/plan_frontier_abstention_evidence_reruns.py":
+        return ()
+    required = set(required_inputs)
+    missing = []
+    if "abstention_score_dump_paths" in required and "--scores" not in argv:
+        missing.append("--scores")
+    if "abstention_signal_groups" in required and "--signal-groups" not in argv:
+        missing.append("--signal-groups")
+    if not missing:
+        return ()
+    return ({
+        "command_index": index,
+        "script": script,
+        "issue": "required_input_not_bound_to_command_flags",
+        "required_inputs": tuple(
+            item
+            for item in ("abstention_score_dump_paths", "abstention_signal_groups")
+            if item in required
+        ),
+        "missing_flags": tuple(missing),
+    },)
+
+
+def _command_script(argv: Sequence[str]) -> str | None:
+    for item in argv:
+        text = str(item)
+        if text.endswith(".py"):
+            return text
+    return None
 
 
 def _workflow_keys(metadata: Mapping[str, Any]) -> dict[str, str]:

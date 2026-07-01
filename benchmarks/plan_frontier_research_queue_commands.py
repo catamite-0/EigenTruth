@@ -418,8 +418,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--name", default=None, help="registry record name")
     parser.add_argument("--version", default=None, help="registry record version")
     parser.add_argument("--output-dir", default=None, help="planned output directory root")
-    parser.add_argument("--include-action-id", action="append", default=())
-    parser.add_argument("--exclude-action-id", action="append", default=())
+    parser.add_argument("--include-action-id", action="append", default=[])
+    parser.add_argument("--exclude-action-id", action="append", default=[])
     parser.add_argument("--compact-json", action="store_true", help="write compact JSON")
     return parser
 

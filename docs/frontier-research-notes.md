@@ -1367,6 +1367,13 @@ Added the first monitor-first tool-selection audit layer:
   `--execute` child workflow run. This closes the research queue into an
   auditable experiment contract without promoting the contract or dry-run report
   as verifier evidence.
+- The binder now validates known frontier benchmark commands against required
+  CLI flags. A directly filled abstention template is kept `needs_inputs` when
+  `plan_frontier_abstention_evidence_reruns.py` omits the action-required
+  `--scores`/`--signal-groups`, or when `eval_abstention_stability.py` omits
+  `--scores`/`--signals`. A reviewed planner-only binding over the current
+  frontier release evidence successfully executes the no-model planner and
+  generates a ready rerun queue with `2` blocked runs and `6` commands.
 
 ## Next Research-to-Code Candidates
 
