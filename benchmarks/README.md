@@ -649,7 +649,12 @@ Trains and evaluates the torch-only pre-generation soft-target attention probe f
 local token-level hidden-state records. This is the benchmark-side handoff for
 frontier soft-target attention probing: it consumes saved prompt hidden states and
 empirical error-rate targets, then writes train/test risk metrics and optionally saves
-an `AttentionSoftTargetProbeArtifact`.
+an `AttentionSoftTargetProbeArtifact`. At product runtime,
+`LearnedPreGenerationRiskEstimate.from_probe(...)` can score one prompt from a
+saved probe artifact and pass the JSON-ready estimate to
+`select_pre_generation_profile(..., learned_risk=...)`; the estimate is recorded
+by default and only changes the selected runtime profile when
+`PreGenerationRiskPolicy(route_on_learned_risk=True)` is set.
 
 ```bash
 python benchmarks/eval_pre_generation_probe.py \

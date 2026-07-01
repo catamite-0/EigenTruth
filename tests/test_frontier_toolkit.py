@@ -51,6 +51,7 @@ from eigentruth.control import (
     DefaultCorrectionPolicy,
     DryRunActionExecutor,
     InMemoryActionExecutionLedger,
+    LearnedPreGenerationRiskEstimate,
     ParticipationGateConfig,
     PlanAwareCorrectionPolicy,
     PolicyGuardedActionExecutor,
@@ -69,7 +70,7 @@ from eigentruth.control import (
     select_pre_generation_profile,
     select_runtime_profile,
 )
-from eigentruth.core import TruthSubspace
+from eigentruth.core import AttentionSoftTargetProbeArtifact, TruthSubspace
 from eigentruth.eval.conformal import (
     conformal_abstention_comparison_report,
     conformal_abstention_report,
@@ -523,6 +524,86 @@ def test_soft_pre_generation_risk_config_roundtrip_and_validation():
         SoftPreGenerationRiskConfig.from_mapping({"route_on_soft_risk": "maybe"})
     with pytest.raises(ValueError, match="feature_weights.has_question"):
         SoftPreGenerationRiskConfig(feature_weights={"has_question": float("nan")})
+
+
+def test_learned_pre_generation_risk_records_without_changing_default_route():
+    learned = LearnedPreGenerationRiskEstimate(
+        score=2.0,
+        probability=0.88,
+        risk_level="high",
+        source="unit_probe",
+        layer_idx=3,
+        attention_summary={"max_index": 1, "max_weight": 0.7},
+    )
+
+    assessment = select_pre_generation_profile(
+        "Explain calibration intuitively.",
+        learned_risk=learned,
+    )
+
+    assert assessment.selected_profile == "latency"
+    assert assessment.risk_level == "low"
+    assert assessment.learned_risk["source"] == "unit_probe"
+    assert assessment.learned_risk["risk_level"] == "high"
+    assert assessment.to_dict()["learned_risk"]["attention_summary"]["max_index"] == 1
+
+
+def test_learned_pre_generation_risk_can_route_when_configured():
+    policy = PreGenerationRiskPolicy.from_mapping({
+        "route_on_learned_risk": "yes",
+        "soft_risk_config": None,
+    })
+
+    high = select_pre_generation_profile(
+        "Explain calibration intuitively.",
+        learned_risk={"score": 2.0, "probability": 0.88, "risk_level": "high"},
+        risk_policy=policy,
+    )
+    medium = select_pre_generation_profile(
+        "Explain calibration intuitively.",
+        learned_risk={"score": 0.0, "probability": 0.50, "risk_level": "medium"},
+        risk_policy=policy.to_dict(),
+    )
+
+    assert policy.to_dict()["route_on_learned_risk"] is True
+    assert high.selected_profile == "audit"
+    assert high.risk_level == "high"
+    assert high.reason == "learned pre-generation risk estimate exceeded high threshold"
+    assert medium.selected_profile == "balanced"
+    assert medium.risk_level == "medium"
+    assert medium.reason == "learned pre-generation risk estimate exceeded medium threshold"
+    with pytest.raises(ValueError, match="route_on_learned_risk"):
+        PreGenerationRiskPolicy.from_mapping({"route_on_learned_risk": "maybe"})
+
+
+def test_learned_pre_generation_risk_can_score_attention_probe_artifact():
+    artifact = AttentionSoftTargetProbeArtifact(
+        query=torch.tensor([5.0, 0.0]),
+        classifier_weight=torch.tensor([4.0, 0.0]),
+        bias=-0.5,
+        layer_idx=2,
+    )
+    hidden = torch.tensor([[[1.0, 0.0], [0.0, 0.0]]])
+
+    learned = LearnedPreGenerationRiskEstimate.from_probe(
+        artifact,
+        hidden,
+        high_threshold=0.80,
+        metadata={"artifact": "unit"},
+    )
+    assessment = select_pre_generation_profile(
+        "Explain calibration intuitively.",
+        learned_risk=learned,
+        risk_policy=PreGenerationRiskPolicy(route_on_learned_risk=True, soft_risk_config=None),
+    )
+
+    assert learned.layer_idx == 2
+    assert learned.probability > 0.80
+    assert learned.risk_level == "high"
+    assert learned.attention_summary["token_count"] == 2
+    assert learned.attention_summary["max_index"] == 0
+    assert assessment.selected_profile == "audit"
+    assert assessment.learned_risk["metadata"] == {"artifact": "unit"}
 
 
 def test_risk_controller_accepts_and_routes_threshold_exceedance():

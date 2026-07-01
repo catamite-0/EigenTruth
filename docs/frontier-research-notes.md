@@ -174,9 +174,10 @@ Added hidden-state soft-target attention probe artifacts:
 Added soft pre-generation risk estimates:
 
 - `SoftPreGenerationRiskConfig` computes a dependency-free probability-style risk estimate from prompt features and caller metadata before generation.
+- `LearnedPreGenerationRiskEstimate.from_probe(...)` bridges saved `AttentionSoftTargetProbeArtifact` objects into the same product pre-generation assessment boundary, recording a JSON-ready score, probability, risk level, source, layer, optional attention summary, and metadata for one prompt.
 - `PreGenerationRiskAssessment` now records the soft risk score, probability, risk level, thresholds, and feature/metadata contribution traces.
-- The default policy records the estimate without changing the existing hard-rule profile route; `route_on_soft_risk=true` can explicitly upgrade low hard-rule prompts into `balanced` or `audit`.
-- This is the product-control shell for the pre-generation soft-target direction: it makes risk-estimation traces and routing semantics stable now, while learned hidden-state attention probes remain a future optional adapter with a separate training/dependency boundary.
+- The default policy records both transparent soft estimates and learned probe estimates without changing the existing hard-rule profile route; `route_on_soft_risk=true` or `route_on_learned_risk=true` can explicitly upgrade low hard-rule prompts into `balanced` or `audit`.
+- This is the product-control shell for the pre-generation soft-target direction: it makes risk-estimation traces and routing semantics stable now, while detector-quality claims still require calibrated larger-model runs and release evidence.
 
 Added budget-aware adaptive verification planning:
 

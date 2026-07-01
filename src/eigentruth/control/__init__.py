@@ -122,6 +122,7 @@ from eigentruth.control.runtime_budget import (
 from eigentruth.control.runtime_profiles import (
     RUNTIME_PROFILE_NAMES,
     RUNTIME_PROFILES,
+    LearnedPreGenerationRiskEstimate,
     PreGenerationRiskAssessment,
     PreGenerationRiskPolicy,
     RuntimeProfile,
@@ -174,6 +175,7 @@ __all__ = [
     "FinalAnswerStatus",
     "InMemoryActionExecutionLedger",
     "JsonActionExecutionLedger",
+    "LearnedPreGenerationRiskEstimate",
     "PolicyGuardedActionExecutor",
     "PlanAwareCorrectionPolicy",
     "ParticipationGateConfig",
