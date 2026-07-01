@@ -1693,9 +1693,9 @@ converts that blocked fill report shape into a non-evidence subject-binding
 collection request, so the next pass is explicit review plus
 `--subject-bindings`, not relaxed inference.
 
-`benchmarks/run_world_model_rule_authoring_adapter.py` now also executes the
-unresolved temporal rule lane when explicit timestamp inputs are supplied. The
-registered `record-326` replay at
+`benchmarks/fill_world_model_rule_inputs_from_temporal_bindings.py` now fills
+the unresolved temporal rule lane from reviewed source-backed timestamp
+bindings before adapter execution. The registered `record-326` replay at
 `artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-adapter/`
 observes one supported `temporal_consistency` candidate from `claim_time`,
 `source_time`, `retrieved_at`, and `source_citation`; the paired promotion gate

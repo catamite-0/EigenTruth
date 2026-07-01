@@ -1094,14 +1094,16 @@ Added the first monitor-first tool-selection audit layer:
   because no reviewed subject sidecar is registered; even a source-backed World
   Bank USA population value is not enough to fill "the country" without that
   explicit subject binding.
-- `run_world_model_rule_authoring_adapter.py` now also executes
-  `temporal_consistency` rules when explicit `claim_time`, `source_time`,
-  `retrieved_at`, and `source_citation` inputs are supplied. The registered
-  unresolved `record-326` replay observes one supported timestamp-order
-  candidate, and `promote_world_model_rule_candidates.py` promotes it with the
-  same source citation and temporal metadata. This is a narrow freshness/order
-  proof, not a claim that the food-affordability content is true; content-level
-  correction still needs citation or structured-evidence handoff.
+- `fill_world_model_rule_inputs_from_temporal_bindings.py` closes the temporal
+  input boundary before adapter execution. It fills `temporal_consistency` rows
+  only when explicit source-backed `claim_time`, `source_time`, `retrieved_at`,
+  `source_citation`, review status, and non-evidence markers are supplied. The
+  registered unresolved `record-326` replay then observes one supported
+  timestamp-order candidate, and `promote_world_model_rule_candidates.py`
+  promotes it with the same source citation and temporal metadata. This is a
+  narrow freshness/order proof, not a claim that the food-affordability content
+  is true; content-level correction still needs citation or structured-evidence
+  handoff.
 - The same adapter now has a conservative `mechanism_consistency` shell for
   causal/procedural rows. Supplying `mechanism`, `precondition`, and
   `source_citation` executes a candidate, but promotion requires an explicit
@@ -1339,10 +1341,12 @@ Added the first monitor-first tool-selection audit layer:
    the numeric subject-binding bridge is now executable as
    blocked-fill-report -> subject-binding plan -> reviewed sidecar -> numeric
    fill; the remaining work is materializing reviewed sidecars for ambiguous
-   questions such as `record-190`. Temporal work needs richer content/citation
-   mapping or source-backed temporal fills. The causal/procedural mechanism
-   queue is now fully filled, promoted, aggregated into a release-gate bundle,
-   and manifest-verified (`9/9`), so the next mechanism work is full
+   questions such as `record-190`. The temporal fill boundary is now executable,
+   so the remaining temporal work is materializing richer source-backed
+   timestamp/citation sidecars and pairing them with content-level evidence. The
+   causal/procedural mechanism queue is now fully filled, promoted, aggregated
+   into a release-gate bundle, and manifest-verified (`9/9`), so the next
+   mechanism work is full
    `frontier_audit` release-candidate materialization rather than more typed
    input collection. The complete source-backed replay now proves local-catalog
    coverage is not enough (`0/88` mapped).

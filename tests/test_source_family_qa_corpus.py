@@ -4170,6 +4170,160 @@ def test_world_model_rule_temporal_consistency_executes_and_promotes_candidate(t
     assert promoted["rule_input"]["retrieved_at"] == "2026-06-28T15:51:33+00:00"
 
 
+def test_world_model_rule_temporal_binding_fill_executes_and_promotes_candidate(tmp_path):
+    fill_module = importlib.import_module("benchmarks.fill_world_model_rule_inputs_from_temporal_bindings")
+    adapter_module = importlib.import_module("benchmarks.run_world_model_rule_authoring_adapter")
+    promotion_module = importlib.import_module("benchmarks.promote_world_model_rule_candidates")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    tasks_path = tmp_path / "rule-input-tasks.jsonl"
+    bindings_path = tmp_path / "source-backed-temporal-bindings.jsonl"
+    stubs_path = tmp_path / "world-model-rule-stubs.jsonl"
+    fill_output = tmp_path / "fill"
+    adapter_output = tmp_path / "adapter"
+    promotion_output = tmp_path / "promotion"
+    registry_path = tmp_path / "registry.json"
+    tasks_path.write_text(
+        json.dumps({
+            "task_id": "rule-input-task-0001",
+            "source_request_id": "rule:record-326:1",
+            "target_id": "record-326",
+            "rule_family": "temporal_consistency",
+            "collection_family": "temporal_snapshot_rule_input_collection",
+            "question": "What happened to the affordability of food in America in recent decades?",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    bindings_path.write_text(
+        json.dumps({
+            "binding_id": "temporal-binding-record-326",
+            "request_id": "rule:record-326:1",
+            "target_id": "record-326",
+            "claim_time": "2026-06-10",
+            "source_time": "2026-06-10",
+            "retrieved_at": "2026-06-28T15:51:33+00:00",
+            "source_citation": "https://www.pbs.org/newshour/economy/food-affordability",
+            "source_url": "https://www.pbs.org/newshour/economy/food-affordability",
+            "source_title": "PBS NewsHour food affordability",
+            "source_family": "news",
+            "provider": "pbs_newshour",
+            "claim_time_source": "candidate_claim_timestamp",
+            "source_time_source": "article_published_at",
+            "retrieved_at_source": "retrieval_log",
+            "review_status": "ready",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    stubs_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "source_family_structured_qa_lane_batch_workflow",
+            "request_id": "rule:record-326:1",
+            "target_id": "record-326",
+            "request_type": "world_model_or_calculator_rule",
+            "rule_family": "temporal_consistency",
+            "required_inputs": ["claim_time", "source_time", "retrieved_at", "source_citation"],
+            "question": "What happened to the affordability of food in America in recent decades?",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    fill_payload = fill_module.run(
+        input_tasks_path=tasks_path,
+        temporal_bindings_path=bindings_path,
+        output_dir=fill_output,
+        registry_path=registry_path,
+        name="temporal-binding-fill-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    filled = [
+        json.loads(line)
+        for line in (fill_output / "rule-inputs.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    adapter_payload = adapter_module.run_world_model_rule_authoring_adapter(
+        rule_stubs_path=stubs_path,
+        rule_inputs_path=fill_output / "rule-inputs.jsonl",
+        output_dir=adapter_output,
+        metadata={"suite": "unit"},
+    )
+    promotion_payload = promotion_module.run(
+        rule_results_path=adapter_output / "world-model-rule-results.jsonl",
+        rule_inputs_path=fill_output / "rule-inputs.jsonl",
+        adapter_report_path=adapter_output / "world-model-rule-authoring-adapter.json",
+        output_dir=promotion_output,
+        metadata={"suite": "unit"},
+    )
+    promoted = [
+        json.loads(line)
+        for line in (promotion_output / "promoted-rule-candidates.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+    assert fill_payload["status"] == "filled"
+    assert fill_payload["summary"]["filled_input_count"] == 1
+    assert filled[0]["temporal_relation"] == "source_time_at_or_after_claim_time_and_not_after_retrieval"
+    assert filled[0]["source_fact_type"] == "temporal_snapshot"
+    assert filled[0]["provenance"]["claim_time_source"] == "candidate_claim_timestamp"
+    assert adapter_payload["status"] == "observed"
+    assert adapter_payload["summary"]["candidate_supported_count"] == 1
+    assert promotion_payload["status"] == "promote"
+    assert promotion_payload["summary"]["promoted_count"] == 1
+    assert promoted[0]["rule_family"] == "temporal_consistency"
+    assert promoted[0]["rule_input"]["claim_time"] == "2026-06-10"
+    assert promoted[0]["rule_input"]["retrieved_at"] == "2026-06-28T15:51:33+00:00"
+    assert promoted[0]["rule_input"]["source_fact_type"] == "temporal_snapshot"
+    assert registry_module.load_and_verify_artifact_manifest(fill_output / "artifact-manifest.json").passed is True
+
+
+def test_world_model_rule_temporal_binding_fill_blocks_invalid_binding():
+    module = importlib.import_module("benchmarks.fill_world_model_rule_inputs_from_temporal_bindings")
+
+    payload = module.fill_world_model_rule_inputs_from_temporal_bindings(
+        input_tasks=[
+            {
+                "task_id": "rule-input-task-0001",
+                "source_request_id": "rule:record-326:1",
+                "target_id": "record-326",
+                "rule_family": "temporal_consistency",
+                "collection_family": "temporal_snapshot_rule_input_collection",
+                "question": "What happened to the affordability of food in America in recent decades?",
+                "not_verifier_evidence": True,
+            }
+        ],
+        temporal_bindings=[
+            {
+                "binding_id": "temporal-binding-record-326",
+                "request_id": "rule:record-326:1",
+                "target_id": "record-326",
+                "claim_time": "not-a-date",
+                "source_time": "2026-06-10",
+                "retrieved_at": "2026-06-28T15:51:33+00:00",
+                "review_status": "needs_review",
+                "not_verifier_evidence": False,
+            }
+        ],
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["filled_input_count"] == 0
+    assert payload["summary"]["unfilled_reason_counts"] == {"invalid_temporal_binding": 1}
+    assert payload["summary"]["invalid_binding_failure_counts"] == {
+        "binding_not_marked_non_evidence": 1,
+        "binding_requires_review": 1,
+        "invalid_claim_time": 1,
+        "missing_source_citation": 1,
+    }
+    assert payload["unfilled_tasks"][0]["reason"] == "invalid_temporal_binding"
+
+
 def test_world_model_rule_temporal_consistency_blocks_future_source_time(tmp_path):
     adapter_module = importlib.import_module("benchmarks.run_world_model_rule_authoring_adapter")
     promotion_module = importlib.import_module("benchmarks.promote_world_model_rule_candidates")
