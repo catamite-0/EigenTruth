@@ -2128,14 +2128,210 @@ def _action_template(kind: Mapping[str, str], *, gate: str, reason: str) -> Evid
             ),
             evidence_routes=(
                 "frontier_release_evidence",
+                "frontier_release_evidence_comparison",
                 "product_promotion_contract",
+                "product_promotion_evidence_handoff",
+                "evidence_handoff_audit",
+                "product_runtime_baseline",
                 "product_runtime_drift",
+                "frontier_release_evidence_promotion_metrics",
             ),
             suggested_commands=(
-                "benchmarks/export_product_promotion_contract_evidence_handoff.py --frontier-release-evidence ...",
-                "benchmarks/run_product_runtime_baseline.py",
-                "benchmarks/compare_product_runtime_baselines.py",
+                "benchmarks/compare_frontier_release_evidence.py "
+                "--verifier-stability-report ... --abstention-stability-report ... "
+                "--detectability-taxonomy-report ... --frontier-workflow-report ... "
+                "--citation-batch-rollup-report ... --frontier-rerun-rollup-report ... "
+                "--json ... --artifact-manifest ... --registry ... --name ... --version ...",
+                "benchmarks/export_product_promotion_contract_evidence_handoff.py "
+                "--contract ... --json ... --audit-json ... "
+                "--frontier-release-evidence ... --artifact-manifest ... "
+                "--registry ... --name ... --version ...",
+                "benchmarks/run_product_runtime_baseline.py "
+                "--trace ... --promotion-contract ... --json ... --artifact-manifest ...",
+                "benchmarks/compare_product_runtime_baselines.py "
+                "--current ... --baseline ... "
+                "--min-frontier-release-evidence-coverage ... "
+                "--min-frontier-release-evidence-report-present-rate ... "
+                "--min-frontier-release-evidence-manifest-present-rate ... "
+                "--min-frontier-release-evidence-status-promote-rate ... "
+                "--min-frontier-release-evidence-decision-promote-rate ... "
+                "--min-frontier-release-evidence-verifier-track-promote-rate ... "
+                "--min-frontier-release-evidence-abstention-track-promote-rate ... "
+                "--min-frontier-release-evidence-citation-batch-track-promote-rate ... "
+                "--min-frontier-release-evidence-frontier-rerun-rollup-track-promote-rate ... "
+                "--min-frontier-release-evidence-run-count ... "
+                "--min-frontier-release-evidence-frontier-rerun-rollup-report-count ... "
+                "--min-frontier-release-evidence-frontier-rerun-rollup-candidate-count ... "
+                "--max-frontier-release-evidence-frontier-rerun-rollup-missing-report-count ... "
+                "--max-frontier-release-evidence-frontier-rerun-rollup-invalid-report-count ... "
+                "--max-frontier-release-evidence-frontier-rerun-rollup-blocked-candidate-count ... "
+                "--min-frontier-release-evidence-frontier-rerun-rollup-promotion-ready-count ... "
+                "--min-frontier-release-evidence-citation-batch-rollup-count ... "
+                "--max-frontier-release-evidence-citation-batch-missing-expected-batch-count ... "
+                "--max-frontier-release-evidence-citation-batch-duplicate-batch-count ... "
+                "--max-frontier-release-evidence-citation-batch-unexpected-batch-count ... "
+                "--json ... --artifact-manifest ...",
             ),
+            metadata={
+                "frontier_release_evidence_script": (
+                    "benchmarks/compare_frontier_release_evidence.py"
+                ),
+                "evidence_handoff_script": (
+                    "benchmarks/export_product_promotion_contract_evidence_handoff.py"
+                ),
+                "runtime_baseline_script": "benchmarks/run_product_runtime_baseline.py",
+                "runtime_drift_script": "benchmarks/compare_product_runtime_baselines.py",
+                "evidence_audit_api": (
+                    "eigentruth.control.audit_product_promotion_contract_evidence"
+                ),
+                "frontier_release_evidence_workflow": (
+                    "frontier_release_evidence_comparison"
+                ),
+                "evidence_handoff_workflow": "product_promotion_evidence_handoff_export",
+                "evidence_audit_workflow": "product_promotion_evidence_handoff_audit",
+                "runtime_baseline_workflow": "product_runtime_baseline",
+                "runtime_drift_workflow": "product_runtime_drift_comparison",
+                "risk_control_method": "frontier_release_evidence_provenance",
+                "required_release_tracks": (
+                    "verifier_stability",
+                    "abstention_stability",
+                ),
+                "optional_release_tracks": (
+                    "detectability_taxonomy",
+                    "multiple_testing_frontier_workflow",
+                    "citation_batch_rollup",
+                    "frontier_rerun_rollup",
+                ),
+                "required_runtime_metrics": (
+                    "promotion_contract.frontier_release_evidence.coverage_rate",
+                    "promotion_contract.frontier_release_evidence.report_present_rate",
+                    "promotion_contract.frontier_release_evidence.manifest_present_rate",
+                    "promotion_contract.frontier_release_evidence.status_promote_rate",
+                    "promotion_contract.frontier_release_evidence.decision_promote_rate",
+                    "promotion_contract.frontier_release_evidence.verifier_track_promote_rate",
+                    "promotion_contract.frontier_release_evidence.abstention_track_promote_rate",
+                    "promotion_contract.frontier_release_evidence.citation_batch_track_promote_rate",
+                    (
+                        "promotion_contract.frontier_release_evidence."
+                        "frontier_rerun_rollup_track_promote_rate"
+                    ),
+                    "promotion_contract.frontier_release_evidence.run_count.mean",
+                    (
+                        "promotion_contract.frontier_release_evidence."
+                        "frontier_rerun_rollup_report_count.mean"
+                    ),
+                    (
+                        "promotion_contract.frontier_release_evidence."
+                        "frontier_rerun_rollup_candidate_count.mean"
+                    ),
+                    (
+                        "promotion_contract.frontier_release_evidence."
+                        "frontier_rerun_rollup_missing_report_count.mean"
+                    ),
+                    (
+                        "promotion_contract.frontier_release_evidence."
+                        "frontier_rerun_rollup_invalid_report_count.mean"
+                    ),
+                    (
+                        "promotion_contract.frontier_release_evidence."
+                        "frontier_rerun_rollup_blocked_candidate_count.mean"
+                    ),
+                    (
+                        "promotion_contract.frontier_release_evidence."
+                        "frontier_rerun_rollup_promotion_ready_count.mean"
+                    ),
+                    (
+                        "promotion_contract.frontier_release_evidence."
+                        "citation_batch_rollup_count.mean"
+                    ),
+                    (
+                        "promotion_contract.frontier_release_evidence."
+                        "citation_batch_missing_expected_batch_count.mean"
+                    ),
+                    (
+                        "promotion_contract.frontier_release_evidence."
+                        "citation_batch_duplicate_batch_count.mean"
+                    ),
+                    (
+                        "promotion_contract.frontier_release_evidence."
+                        "citation_batch_unexpected_batch_count.mean"
+                    ),
+                ),
+                "observed_track_metrics": (
+                    "promotion_contract.frontier_release_evidence.multiple_testing_track_status_counts",
+                    "promotion_contract.frontier_release_evidence.multiple_testing_track_promote_rate",
+                    "promotion_contract.frontier_release_evidence.base_detectability_track_status_counts",
+                    "promotion_contract.frontier_release_evidence.base_multiple_testing_track_status_counts",
+                ),
+                "default_gate_thresholds": {
+                    "min_frontier_release_evidence_coverage": 1.0,
+                    "min_frontier_release_evidence_report_present_rate": 1.0,
+                    "min_frontier_release_evidence_manifest_present_rate": 1.0,
+                    "min_frontier_release_evidence_status_promote_rate": 1.0,
+                    "min_frontier_release_evidence_decision_promote_rate": 1.0,
+                    "min_frontier_release_evidence_verifier_track_promote_rate": 1.0,
+                    "min_frontier_release_evidence_abstention_track_promote_rate": 1.0,
+                    "min_frontier_release_evidence_citation_batch_track_promote_rate": 1.0,
+                    (
+                        "min_frontier_release_evidence_"
+                        "frontier_rerun_rollup_track_promote_rate"
+                    ): 1.0,
+                    "min_frontier_release_evidence_run_count": 1.0,
+                    (
+                        "min_frontier_release_evidence_"
+                        "frontier_rerun_rollup_report_count"
+                    ): 1.0,
+                    (
+                        "min_frontier_release_evidence_"
+                        "frontier_rerun_rollup_candidate_count"
+                    ): 1.0,
+                    (
+                        "max_frontier_release_evidence_"
+                        "frontier_rerun_rollup_missing_report_count"
+                    ): 0.0,
+                    (
+                        "max_frontier_release_evidence_"
+                        "frontier_rerun_rollup_invalid_report_count"
+                    ): 0.0,
+                    (
+                        "max_frontier_release_evidence_"
+                        "frontier_rerun_rollup_blocked_candidate_count"
+                    ): 0.0,
+                    (
+                        "min_frontier_release_evidence_"
+                        "frontier_rerun_rollup_promotion_ready_count"
+                    ): 1.0,
+                    "min_frontier_release_evidence_citation_batch_rollup_count": 1.0,
+                    (
+                        "max_frontier_release_evidence_"
+                        "citation_batch_missing_expected_batch_count"
+                    ): 0.0,
+                    (
+                        "max_frontier_release_evidence_"
+                        "citation_batch_duplicate_batch_count"
+                    ): 0.0,
+                    (
+                        "max_frontier_release_evidence_"
+                        "citation_batch_unexpected_batch_count"
+                    ): 0.0,
+                },
+                "required_inputs": (
+                    "verifier_stability_report",
+                    "abstention_stability_report",
+                    "frontier_release_child_reports",
+                    "frontier_release_child_manifests",
+                    "product_promotion_contract_source",
+                    "product_trace_corpus",
+                    "baseline_product_runtime_report",
+                ),
+                "closure_outputs": (
+                    "frontier_release_evidence_comparison",
+                    "product_promotion_evidence_handoff_export",
+                    "product_promotion_evidence_handoff_audit",
+                    "product_runtime_baseline",
+                    "product_runtime_drift_comparison",
+                ),
+            },
         )
     if evidence_kind == "triple_audit":
         return EvidenceGapAction(
