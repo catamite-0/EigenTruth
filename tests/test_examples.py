@@ -688,6 +688,62 @@ def test_calibrated_control_demo_pre_generation_profile_records_and_applies():
     assert payload["metadata"]["staged_verification_enabled"] is False
 
 
+def test_calibrated_control_demo_can_route_on_learned_pre_generation_risk(tmp_path):
+    demo = importlib.import_module("examples.calibrated_control_demo")
+    artifact = demo.default_artifact()
+    policy_path = tmp_path / "pre-generation-policy.json"
+    learned_risk_path = tmp_path / "learned-risk.json"
+    policy_path.write_text(
+        json.dumps({"route_on_learned_risk": True, "soft_risk_config": None}),
+        encoding="utf-8",
+    )
+    learned_risk_path.write_text(
+        json.dumps({
+            "score": 2.0,
+            "probability": 0.88,
+            "risk_level": "high",
+            "source": "unit_pre_generation_probe",
+            "layer_idx": 2,
+        }),
+        encoding="utf-8",
+    )
+
+    payload = demo.run(
+        SimpleNamespace(
+            artifact=None,
+            diagnostics=json.dumps(demo.low_diagnostics_for_artifact(artifact)),
+            text="Explain calibration intuitively.",
+            facts=None,
+            evidence=None,
+            refutations=None,
+            retrieval_evidence=None,
+            enable_calculator=False,
+            calculator_context=None,
+            runtime_profile=None,
+            runtime_profile_selector_policy=None,
+            pre_generation_profile="auto",
+            pre_generation_risk_policy=str(policy_path),
+            pre_generation_metadata=None,
+            pre_generation_learned_risk=str(learned_risk_path),
+            staged_verification=None,
+            runtime_trace=True,
+            request_id="pre-generation-learned-risk",
+            output=None,
+            registry=None,
+        )
+    )
+
+    assessment = payload["metadata"]["pre_generation_risk_assessment"]
+
+    assert payload["metadata"]["runtime_profile"] == "audit"
+    assert payload["metadata"]["runtime_profile_source"] == "pre_generation"
+    assert payload["metadata"]["pre_generation_risk_policy"]["route_on_learned_risk"] is True
+    assert assessment["selected_profile"] == "audit"
+    assert assessment["reason"] == "learned pre-generation risk estimate exceeded high threshold"
+    assert assessment["learned_risk"]["source"] == "unit_pre_generation_probe"
+    assert assessment["learned_risk"]["layer_idx"] == 2
+
+
 def test_calibrated_control_demo_uses_promotion_contract_release_efficiency_profile(tmp_path):
     demo = importlib.import_module("examples.calibrated_control_demo")
     from eigentruth.control import ProductPromotionContract

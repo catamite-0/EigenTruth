@@ -107,6 +107,12 @@ python examples/calibrated_control_demo.py \
   --pre-generation-metadata '{"requires_current_facts": true}' \
   --text "The latest BTC price today is 100 dollars." \
   --diagnostics '{"truth_proj": 0.0}'
+python examples/calibrated_control_demo.py \
+  --pre-generation-profile auto \
+  --pre-generation-risk-policy artifacts/pre-generation-risk-policy.json \
+  --pre-generation-learned-risk artifacts/learned-pre-generation-risk.json \
+  --text "Explain calibration intuitively." \
+  --diagnostics '{"truth_proj": 0.0}'
 ```
 
 The balanced profile enables staged verification but still verifies diagnostic
@@ -122,7 +128,11 @@ verification, using prompt features and optional `--pre-generation-metadata`;
 its assessment is recorded in `metadata.pre_generation_risk_assessment`, and
 `metadata.runtime_profile_source` shows whether the effective runtime profile
 came from pre-generation routing, post-diagnostic auto routing, or an explicit
-profile. When no explicit or pre-generation profile is selected, a
+profile. A saved `LearnedPreGenerationRiskEstimate.to_dict()` payload can be
+passed with `--pre-generation-learned-risk` as an inline JSON object, a JSON
+file path, or `@path`; by default it is recorded only, and it changes the
+selected runtime profile only when the supplied `PreGenerationRiskPolicy`
+enables `route_on_learned_risk`. When no explicit or pre-generation profile is selected, a
 `ProductPromotionContract` with promoted release-efficiency evidence supplies
 the default runtime profile; the trace records this as
 `metadata.runtime_profile_source="promotion_contract_release_efficiency"`.

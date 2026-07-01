@@ -185,6 +185,19 @@ def parse_json_mapping(value: str, *, name: str) -> dict[str, Any]:
     return parsed
 
 
+def parse_json_mapping_or_path(value: str, *, name: str) -> dict[str, Any]:
+    """Parse a JSON object from an inline value or local file path."""
+    raw = str(value).strip()
+    if raw.startswith("@"):
+        text = Path(raw[1:]).read_text(encoding="utf-8")
+    elif raw.startswith("{"):
+        text = raw
+    else:
+        path = Path(raw)
+        text = path.read_text(encoding="utf-8") if path.exists() else raw
+    return parse_json_mapping(text, name=name)
+
+
 def parse_json_sequence(value: str, *, name: str) -> list[Any]:
     """Parse a JSON list from a CLI argument."""
     parsed = json.loads(value)
@@ -939,6 +952,14 @@ def resolve_pre_generation_assessment(
         if getattr(args, "pre_generation_metadata", None) is None
         else parse_json_mapping(args.pre_generation_metadata, name="--pre-generation-metadata")
     )
+    learned_risk = (
+        None
+        if getattr(args, "pre_generation_learned_risk", None) is None
+        else parse_json_mapping_or_path(
+            args.pre_generation_learned_risk,
+            name="--pre-generation-learned-risk",
+        )
+    )
     policy = load_pre_generation_risk_policy(getattr(args, "pre_generation_risk_policy", None))
     if requested in (None, "off"):
         return None, policy, metadata
@@ -948,6 +969,7 @@ def resolve_pre_generation_assessment(
         select_pre_generation_profile(
             getattr(args, "text", ""),
             metadata=metadata,
+            learned_risk=learned_risk,
             risk_policy=policy,
         ),
         policy,
@@ -1432,6 +1454,9 @@ def main() -> None:
                         help="optional PreGenerationRiskPolicy JSON path for --pre-generation-profile auto")
     parser.add_argument("--pre-generation-metadata", default=None,
                         help="optional JSON object of caller risk flags for pre-generation routing")
+    parser.add_argument("--pre-generation-learned-risk", default=None,
+                        help=("optional learned pre-generation risk JSON object or JSON file path for "
+                              "--pre-generation-profile auto"))
     parser.add_argument("--staged-verification", dest="staged_verification", action="store_true",
                         default=None,
                         help="force staged verification even without a runtime profile")
