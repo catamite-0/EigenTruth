@@ -2149,8 +2149,145 @@ def _action_template(kind: Mapping[str, str], *, gate: str, reason: str) -> Evid
                 "Structured fact routes need per-property record/source/quality metrics "
                 "so the release can show exactly which predicates are gated."
             ),
-            evidence_routes=("structured_fact", "covered_fact_property"),
-            suggested_commands=("benchmarks/run_wikidata_structured_qa_route_workflow.py",),
+            evidence_routes=(
+                "wikidata_structured_qa_route_workflow",
+                "route_baseline",
+                "external_evidence_baseline",
+                "product_promotion_contract",
+                "product_trace_replay",
+                "product_runtime_baseline",
+                "product_runtime_drift",
+                "covered_fact_property",
+            ),
+            suggested_commands=(
+                "benchmarks/run_wikidata_structured_qa_route_workflow.py "
+                "--qa-corpus ... --route structured_fact "
+                "--fact-claim-style paraphrase_robustness "
+                "--output-dir ... --json ... --artifact-manifest ...",
+                "benchmarks/compare_route_baselines.py "
+                "--registry ... --baseline-key ... "
+                "--min-covered-fact-properties ... "
+                "--min-covered-fact-property-records ... "
+                "--min-covered-fact-property-source-documents ... "
+                "--min-covered-fact-property-decision-accuracy ... "
+                "--max-covered-fact-property-false-supported-rate ... "
+                "--min-covered-fact-property-false-refuted-rate ... --json ...",
+                "benchmarks/compare_external_evidence_baselines.py "
+                "--route-registry ... --route-baseline-key ... "
+                "--require-covered-facts-route "
+                "--min-covered-fact-records ... "
+                "--min-covered-fact-source-documents ... "
+                "--min-covered-fact-properties ... "
+                "--min-covered-fact-property-records ... "
+                "--min-covered-fact-property-source-documents ... "
+                "--min-covered-fact-property-decision-accuracy ... "
+                "--max-covered-fact-property-false-supported-rate ... "
+                "--min-covered-fact-property-false-refuted-rate ... --json ...",
+                "benchmarks/export_product_promotion_contract_evidence_handoff.py "
+                "--contract ... --json ... --audit-json ... "
+                "--covered-fact-property-metrics ... --artifact-manifest ... "
+                "--registry ... --name ... --version ...",
+                "benchmarks/run_product_trace_replay_workflow.py "
+                "--trace-glob ... --promotion-contract ... "
+                "--runtime-drift-covered-fact-property-scope recommended_route "
+                "--min-runtime-drift-covered-fact-property-metric-count ... "
+                "--min-runtime-drift-covered-fact-min-records ... "
+                "--min-runtime-drift-covered-fact-min-source-documents ... "
+                "--max-runtime-drift-covered-fact-min-decision-accuracy-drop ... "
+                "--max-runtime-drift-covered-fact-max-false-supported-rate-increase ... "
+                "--max-runtime-drift-covered-fact-min-false-refuted-rate-drop ...",
+                "benchmarks/run_product_runtime_baseline.py "
+                "--trace ... --promotion-contract ... --json ... --artifact-manifest ...",
+                "benchmarks/compare_product_runtime_baselines.py "
+                "--current ... --baseline ... "
+                "--promotion-contract-covered-fact-property-scope recommended_route "
+                "--min-promotion-contract-covered-fact-property-metric-count ... "
+                "--min-promotion-contract-covered-fact-min-records ... "
+                "--min-promotion-contract-covered-fact-min-source-documents ... "
+                "--max-promotion-contract-covered-fact-min-decision-accuracy-drop ... "
+                "--max-promotion-contract-covered-fact-max-false-supported-rate-increase ... "
+                "--max-promotion-contract-covered-fact-min-false-refuted-rate-drop ... "
+                "--json ... --artifact-manifest ...",
+            ),
+            metadata={
+                "structured_route_script": (
+                    "benchmarks/run_wikidata_structured_qa_route_workflow.py"
+                ),
+                "route_baseline_script": "benchmarks/compare_route_baselines.py",
+                "external_evidence_baseline_script": (
+                    "benchmarks/compare_external_evidence_baselines.py"
+                ),
+                "evidence_handoff_script": (
+                    "benchmarks/export_product_promotion_contract_evidence_handoff.py"
+                ),
+                "trace_replay_script": "benchmarks/run_product_trace_replay_workflow.py",
+                "runtime_baseline_script": "benchmarks/run_product_runtime_baseline.py",
+                "runtime_drift_script": "benchmarks/compare_product_runtime_baselines.py",
+                "structured_route_workflow": "wikidata_structured_qa_route_workflow",
+                "route_baseline_workflow": "route_baseline_comparison",
+                "external_evidence_baseline_workflow": "external_evidence_baseline_comparison",
+                "evidence_handoff_workflow": "product_promotion_evidence_handoff_export",
+                "trace_replay_workflow": "product_trace_replay_workflow",
+                "runtime_baseline_workflow": "product_runtime_baseline",
+                "runtime_drift_workflow": "product_runtime_drift_comparison",
+                "risk_control_method": "structured_fact_property_gate",
+                "fact_granularity": ("entity", "property", "source_document"),
+                "recommended_property_scope": "recommended_route",
+                "required_route_metrics": (
+                    "covered_fact_properties",
+                    "covered_fact_property.records",
+                    "covered_fact_property.source_documents",
+                    "covered_fact_property.decision_accuracy",
+                    "covered_fact_property.false_supported_rate",
+                    "covered_fact_property.false_refuted_rate",
+                ),
+                "required_runtime_metrics": (
+                    "promotion_contract.covered_fact_properties."
+                    "recommended_route_property_metrics.property_metric_count.mean",
+                    "promotion_contract.covered_fact_properties."
+                    "recommended_route_property_metrics.min_records.mean",
+                    "promotion_contract.covered_fact_properties."
+                    "recommended_route_property_metrics.min_source_documents.mean",
+                    "promotion_contract.covered_fact_properties."
+                    "recommended_route_property_metrics.min_decision_accuracy.mean",
+                    "promotion_contract.covered_fact_properties."
+                    "recommended_route_property_metrics.max_false_supported_rate.mean",
+                    "promotion_contract.covered_fact_properties."
+                    "recommended_route_property_metrics.min_false_refuted_rate.mean",
+                ),
+                "default_gate_thresholds": {
+                    "min_covered_fact_properties": 1,
+                    "min_covered_fact_property_records": 1,
+                    "min_covered_fact_property_source_documents": 1,
+                    "min_covered_fact_property_decision_accuracy": 1.0,
+                    "max_covered_fact_property_false_supported_rate": 0.0,
+                    "min_covered_fact_property_false_refuted_rate": 1.0,
+                    "min_promotion_contract_covered_fact_property_metric_count": 1.0,
+                    "min_promotion_contract_covered_fact_min_records": 1.0,
+                    "min_promotion_contract_covered_fact_min_source_documents": 1.0,
+                    "max_promotion_contract_covered_fact_min_decision_accuracy_drop": 0.0,
+                    "max_promotion_contract_covered_fact_max_false_supported_rate_increase": (
+                        0.0
+                    ),
+                    "max_promotion_contract_covered_fact_min_false_refuted_rate_drop": 0.0,
+                },
+                "required_inputs": (
+                    "wikidata_or_structured_fact_qa_corpus",
+                    "artifact_registry_with_route_baseline",
+                    "product_promotion_contract_source",
+                    "product_trace_corpus",
+                    "baseline_product_runtime_report",
+                ),
+                "closure_outputs": (
+                    "wikidata_structured_qa_route_workflow",
+                    "route_baseline_comparison",
+                    "external_evidence_baseline_comparison",
+                    "product_promotion_evidence_handoff_export",
+                    "product_trace_replay_workflow",
+                    "product_runtime_baseline",
+                    "product_runtime_drift_comparison",
+                ),
+            },
         )
     if evidence_kind == "promotion_contract":
         return EvidenceGapAction(
