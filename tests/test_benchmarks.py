@@ -4683,6 +4683,10 @@ def test_eval_abstention_stability_builds_seed_summary_and_registry(tmp_path):
     assert run["stability"]["stable_recommended_score_name"] == "uncertainty_good"
     assert run["stability"]["release_gate_pass_seed_count"] == 3
     assert run["stability"]["all_release_gates_passed"] is True
+    assert run["stability"]["candidate_gate_summary"][
+        "seed_with_any_passing_candidate_count"
+    ] == 3
+    assert run["seed_runs"][0]["candidate_gate_summary"]["recommended_passed"] is True
     assert run["supervised_feasibility_frontier"]["uses_labels"] is True
     assert run["supervised_feasibility_frontier"]["promotion_eligible"] is False
     assert run["supervised_feasibility_frontier"]["target_passed"] is True
@@ -4838,6 +4842,63 @@ def test_eval_abstention_stability_can_rank_gate_passing_candidates_first():
 
     assert default.recommended.score_name == "blocked_high_correctness"
     assert gate_aware.recommended.score_name == "passing_lower_correctness"
+
+
+def test_eval_abstention_stability_reports_missed_gate_passing_candidates():
+    module = importlib.import_module("benchmarks.eval_abstention_stability")
+
+    blocked = {
+        "rank": 1,
+        "score_name": "blocked_high_correctness",
+        "conditional_correctness_lower_bound": 0.95,
+        "empirical_abstention_rate": 0.6,
+        "empirical_selective_accuracy": 1.0,
+        "correct_retention_lower_bound": 0.9,
+    }
+    passing = {
+        "rank": 2,
+        "score_name": "passing_lower_correctness",
+        "conditional_correctness_lower_bound": 0.85,
+        "empirical_abstention_rate": 0.4,
+        "empirical_selective_accuracy": 5 / 6,
+        "correct_retention_lower_bound": 0.8,
+    }
+    seed_summary = module._candidate_gate_summary(
+        (blocked, passing),
+        blocked,
+        {
+            "passed": False,
+            "blocking_reasons": [
+                "empirical_abstention_rate 0.6 exceeds maximum 0.5",
+            ],
+        },
+        min_conditional_correctness_lower_bound=0.8,
+        max_abstention_rate=0.5,
+    )
+    stability = module._summarize_seed_entries((
+        {
+            "seed": 0,
+            "recommended": blocked,
+            "release_gate": {"passed": False},
+            "candidate_gate_summary": seed_summary,
+        },
+    ))
+
+    assert seed_summary["any_candidate_passed"] is True
+    assert seed_summary["recommended_passed"] is False
+    assert seed_summary["recommended_missed_passing_candidate"] is True
+    assert seed_summary["best_passing_candidate"]["score_name"] == (
+        "passing_lower_correctness"
+    )
+    assert seed_summary["recommended_blocking_reason_codes"] == [
+        "empirical_abstention_rate"
+    ]
+    assert stability["candidate_gate_summary"][
+        "recommended_missed_passing_candidate_count"
+    ] == 1
+    assert stability["candidate_gate_summary"]["best_passing_score_name_counts"] == {
+        "passing_lower_correctness": 1,
+    }
 
 
 def test_eval_abstention_stability_budget_target_sweep_names_candidates(tmp_path):

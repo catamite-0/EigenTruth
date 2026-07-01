@@ -650,6 +650,128 @@ def _candidate_summary(candidate: Mapping[str, Any] | None) -> dict[str, Any] | 
     }
 
 
+def _candidate_float(candidate: Mapping[str, Any], metric: str) -> float | None:
+    value = candidate.get(metric)
+    if value is None:
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if math.isfinite(parsed) else None
+
+
+def _candidate_blocking_reason_codes(
+    candidate: Mapping[str, Any],
+    *,
+    min_conditional_correctness_lower_bound: float,
+    max_abstention_rate: float,
+) -> tuple[str, ...]:
+    reasons = []
+    conditional_correctness = _candidate_float(
+        candidate,
+        "conditional_correctness_lower_bound",
+    )
+    abstention_rate = _candidate_float(candidate, "empirical_abstention_rate")
+    if (
+        conditional_correctness is None
+        or conditional_correctness < min_conditional_correctness_lower_bound
+    ):
+        reasons.append("conditional_correctness_lower_bound")
+    if abstention_rate is None or abstention_rate > max_abstention_rate:
+        reasons.append("empirical_abstention_rate")
+    return tuple(reasons)
+
+
+def _candidate_release_gate_passed(
+    candidate: Mapping[str, Any],
+    *,
+    min_conditional_correctness_lower_bound: float,
+    max_abstention_rate: float,
+) -> bool:
+    return not _candidate_blocking_reason_codes(
+        candidate,
+        min_conditional_correctness_lower_bound=min_conditional_correctness_lower_bound,
+        max_abstention_rate=max_abstention_rate,
+    )
+
+
+def _candidate_gate_sort_key(candidate: Mapping[str, Any]) -> tuple[float, float, float, float, int, str]:
+    rank = candidate.get("rank")
+    try:
+        parsed_rank = int(rank)
+    except (TypeError, ValueError):
+        parsed_rank = 1_000_000
+    return (
+        -_sortable_value(_candidate_float(candidate, "conditional_correctness_lower_bound")),
+        -_sortable_value(_candidate_float(candidate, "empirical_selective_accuracy")),
+        -_sortable_value(_candidate_float(candidate, "correct_retention_lower_bound")),
+        _sortable_value(_candidate_float(candidate, "empirical_abstention_rate")),
+        parsed_rank,
+        str(candidate.get("score_name", "")),
+    )
+
+
+def _candidate_gate_summary(
+    candidates: Sequence[Mapping[str, Any] | None],
+    recommended: Mapping[str, Any] | None,
+    release_gate: Mapping[str, Any],
+    *,
+    min_conditional_correctness_lower_bound: float,
+    max_abstention_rate: float,
+) -> dict[str, Any]:
+    candidate_list = tuple(candidate for candidate in candidates if isinstance(candidate, Mapping))
+    passing_candidates = tuple(
+        candidate
+        for candidate in candidate_list
+        if _candidate_release_gate_passed(
+            candidate,
+            min_conditional_correctness_lower_bound=min_conditional_correctness_lower_bound,
+            max_abstention_rate=max_abstention_rate,
+        )
+    )
+    blocking_reason_counts: Counter[str] = Counter()
+    for candidate in candidate_list:
+        blocking_reason_counts.update(
+            _candidate_blocking_reason_codes(
+                candidate,
+                min_conditional_correctness_lower_bound=(
+                    min_conditional_correctness_lower_bound
+                ),
+                max_abstention_rate=max_abstention_rate,
+            )
+        )
+    recommended_passed = bool(release_gate.get("passed") is True)
+    recommended_reason_codes = (
+        ()
+        if recommended is None
+        else _candidate_blocking_reason_codes(
+            recommended,
+            min_conditional_correctness_lower_bound=(
+                min_conditional_correctness_lower_bound
+            ),
+            max_abstention_rate=max_abstention_rate,
+        )
+    )
+    best_passing_candidate = (
+        None if not passing_candidates else sorted(passing_candidates, key=_candidate_gate_sort_key)[0]
+    )
+    return {
+        "candidate_count": len(candidate_list),
+        "passing_candidate_count": len(passing_candidates),
+        "blocked_candidate_count": len(candidate_list) - len(passing_candidates),
+        "any_candidate_passed": bool(passing_candidates),
+        "recommended_passed": recommended_passed,
+        "recommended_missed_passing_candidate": (
+            not recommended_passed and bool(passing_candidates)
+        ),
+        "recommended_blocking_reasons": list(release_gate.get("blocking_reasons", ())),
+        "recommended_blocking_reason_codes": list(recommended_reason_codes),
+        "candidate_blocking_reason_counts": dict(sorted(blocking_reason_counts.items())),
+        "best_passing_candidate": best_passing_candidate,
+    }
+
+
 def _report_summary(report: ConformalAbstentionReport) -> dict[str, Any]:
     return {
         "score_name": report.score_name,
@@ -842,6 +964,57 @@ def _recommended_counts(seed_entries: Sequence[Mapping[str, Any]]) -> dict[str, 
     return dict(sorted(counter.items()))
 
 
+def _candidate_gate_stability_summary(
+    seed_entries: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    seed_with_any_passing_candidate_count = 0
+    recommended_pass_seed_count = 0
+    recommended_missed_passing_candidate_count = 0
+    recommended_reason_counts: Counter[str] = Counter()
+    candidate_reason_counts: Counter[str] = Counter()
+    best_passing_counts: Counter[str] = Counter()
+    for entry in seed_entries:
+        summary = entry.get("candidate_gate_summary")
+        if not isinstance(summary, Mapping):
+            continue
+        if summary.get("any_candidate_passed") is True:
+            seed_with_any_passing_candidate_count += 1
+        if summary.get("recommended_passed") is True:
+            recommended_pass_seed_count += 1
+        if summary.get("recommended_missed_passing_candidate") is True:
+            recommended_missed_passing_candidate_count += 1
+        recommended_reason_counts.update(
+            str(reason) for reason in summary.get("recommended_blocking_reason_codes", ())
+        )
+        raw_candidate_reasons = summary.get("candidate_blocking_reason_counts", {})
+        if isinstance(raw_candidate_reasons, Mapping):
+            for reason, count in raw_candidate_reasons.items():
+                candidate_reason_counts[str(reason)] += int(count)
+        best_passing_candidate = summary.get("best_passing_candidate")
+        if isinstance(best_passing_candidate, Mapping):
+            best_passing_counts[str(best_passing_candidate.get("score_name", "<missing>"))] += 1
+    seed_count = len(seed_entries)
+    return {
+        "seed_with_any_passing_candidate_count": seed_with_any_passing_candidate_count,
+        "seed_without_passing_candidate_count": (
+            seed_count - seed_with_any_passing_candidate_count
+        ),
+        "all_seeds_have_passing_candidate": (
+            seed_with_any_passing_candidate_count == seed_count
+        ),
+        "recommended_pass_seed_count": recommended_pass_seed_count,
+        "recommended_block_seed_count": seed_count - recommended_pass_seed_count,
+        "recommended_missed_passing_candidate_count": (
+            recommended_missed_passing_candidate_count
+        ),
+        "recommended_blocking_reason_counts": dict(
+            sorted(recommended_reason_counts.items())
+        ),
+        "candidate_blocking_reason_counts": dict(sorted(candidate_reason_counts.items())),
+        "best_passing_score_name_counts": dict(sorted(best_passing_counts.items())),
+    }
+
+
 def _summarize_seed_entries(seed_entries: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     recommended_counts = _recommended_counts(seed_entries)
     stable_score = None
@@ -862,6 +1035,7 @@ def _summarize_seed_entries(seed_entries: Sequence[Mapping[str, Any]]) -> dict[s
         "release_gate_pass_seed_count": release_pass_count,
         "release_gate_block_seed_count": len(seed_entries) - release_pass_count,
         "all_release_gates_passed": release_pass_count == len(seed_entries),
+        "candidate_gate_summary": _candidate_gate_stability_summary(seed_entries),
         "conditional_correctness_lower_bound": _float_stats(
             _metric_values(seed_entries, "recommended", "conditional_correctness_lower_bound")
         ),
@@ -1007,6 +1181,15 @@ def build_abstention_stability_report(
                     for candidate in comparison_payload.get("candidates", ())
                 ],
             }
+            entry["candidate_gate_summary"] = _candidate_gate_summary(
+                entry["candidates"],
+                entry["recommended"],
+                gate,
+                min_conditional_correctness_lower_bound=(
+                    min_conditional_correctness_lower_bound
+                ),
+                max_abstention_rate=max_abstention_rate,
+            )
             seed_run_map[name].append(entry)
             compact_runs.append({"name": name, **entry})
         seed_reports.append({"seed": int(seed), "runs": compact_runs})
@@ -1171,6 +1354,7 @@ def _registry_run_summaries(payload: Mapping[str, Any]) -> list[dict[str, Any]]:
             "release_gate_pass_seed_count": stability.get("release_gate_pass_seed_count"),
             "release_gate_block_seed_count": stability.get("release_gate_block_seed_count"),
             "all_release_gates_passed": stability.get("all_release_gates_passed"),
+            "candidate_gate_summary": stability.get("candidate_gate_summary"),
             "conditional_correctness_lower_bound_mean": (
                 correctness.get("mean") if isinstance(correctness, Mapping) else None
             ),
