@@ -41,7 +41,15 @@ from eigentruth.verify.counterfactual import (
     audit_counterfactual_verification,
     generate_counterfactual_probes,
 )
-from eigentruth.verify.groundedness import EvidenceDocument, EvidenceQualityPolicy, GroundednessVerifier
+from eigentruth.verify.groundedness import (
+    EvidenceDocument,
+    EvidenceQualityAssessment,
+    EvidenceQualityPolicy,
+    EvidenceQualitySummary,
+    GroundednessVerifier,
+    assess_evidence_quality,
+    summarize_evidence_quality,
+)
 from eigentruth.verify.localization import (
     ClaimRiskLocalizationReport,
     ClaimRiskSpan,
@@ -118,7 +126,9 @@ __all__ = [
     "CounterfactualVerificationAuditor",
     "CounterfactualVerificationReport",
     "EvidenceDocument",
+    "EvidenceQualityAssessment",
     "EvidenceQualityPolicy",
+    "EvidenceQualitySummary",
     "FactSelfConsistencyReport",
     "FactSelfConsistencyTripleReport",
     "FactSelfConsistencyVerifier",
@@ -150,6 +160,7 @@ __all__ = [
     "SourceFamilyPlan",
     "apply_claim_coherence",
     "audit_counterfactual_verification",
+    "assess_evidence_quality",
     "generate_counterfactual_probes",
     "audit_claim_triples",
     "claim_entity_candidates",
@@ -174,5 +185,6 @@ __all__ = [
     "plan_source_families",
     "sanitize_search_query",
     "stable_cache_key",
+    "summarize_evidence_quality",
     "verifier_cache_key",
 ]

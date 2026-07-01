@@ -91,6 +91,7 @@ from eigentruth.verify import (
     CounterfactualVerificationAuditor,
     EvidenceDocument,
     EvidenceQualityPolicy,
+    EvidenceQualitySummary,
     FactSelfConsistencyVerifier,
     GroundednessVerifier,
     InMemoryVerifier,
@@ -125,6 +126,7 @@ from eigentruth.verify import (
     plan_citation_search_query,
     plan_source_families,
     sanitize_search_query,
+    summarize_evidence_quality,
 )
 
 
@@ -4293,3 +4295,94 @@ def test_evidence_quality_policy_from_dict_strict_bool_parser():
         EvidenceQualityPolicy.from_dict({"max_age_days": True})
     with pytest.raises(ValueError, match="max_age_days"):
         EvidenceQualityPolicy(max_age_days=1.5)
+
+
+def test_evidence_quality_summary_counts_freshness_and_provenance_failures():
+    summary = summarize_evidence_quality(
+        (
+            {
+                "text": "As of 2026, AlphaCorp has 10 offices.",
+                "source": "official.gov/company-registry",
+                "metadata": {"published_at": "2026-06-20"},
+            },
+            {
+                "text": "As of 2026, AlphaCorp has 10 offices.",
+                "source": "blog.example/archive",
+                "metadata": {"published_at": "2025-01-01"},
+            },
+        ),
+        policy=EvidenceQualityPolicy(
+            max_age_days=30,
+            reference_time="2026-06-25",
+            require_source=True,
+            trusted_sources=("official.gov",),
+            require_trusted_source=True,
+        ),
+        features={"is_time_sensitive": True},
+    )
+
+    assert isinstance(summary, EvidenceQualitySummary)
+    assert summary.status == "fail"
+    assert summary.document_count == 2
+    assert summary.applied_count == 2
+    assert summary.passed_count == 1
+    assert summary.failed_count == 1
+    assert summary.pass_rate == pytest.approx(0.5)
+    assert summary.failure_rate == pytest.approx(0.5)
+    assert summary.reason_counts["stale_evidence"] == 1
+    assert summary.reason_counts["untrusted_source"] == 1
+    json.dumps(summary.to_dict(), allow_nan=False)
+
+
+def test_retrieval_action_executor_records_optional_evidence_quality_summary():
+    executor = RetrievalActionExecutor(
+        InMemoryRetriever(
+            (
+                {
+                    "text": "As of 2026, AlphaCorp has 10 offices.",
+                    "source": "official.gov/company-registry",
+                    "metadata": {"published_at": "2026-06-20"},
+                },
+                {
+                    "text": "As of 2026, AlphaCorp has 10 offices.",
+                    "source": "blog.example/archive",
+                    "metadata": {"published_at": "2025-01-01"},
+                },
+            ),
+            min_overlap=0.2,
+        ),
+        evidence_quality_policy={
+            "max_age_days": 30,
+            "reference_time": "2026-06-25",
+            "require_source": True,
+            "trusted_sources": ("official.gov",),
+            "require_trusted_source": True,
+        },
+    )
+    request = ActionRequest(
+        action=ControlAction.RETRIEVE,
+        reason="quality-audit",
+        payload={
+            "limit": 2,
+            "retrieval_targets": (
+                {
+                    "text": "As of 2026, AlphaCorp has 10 offices.",
+                    "claim_id": "c1",
+                    "metadata": {"features": {"is_time_sensitive": True}},
+                },
+            ),
+        },
+    )
+
+    result = executor.execute(request)
+
+    assert result.status is ActionExecutionStatus.SUCCEEDED
+    assert result.output["evidence_quality"]["status"] == "fail"
+    assert result.output["evidence_quality"]["document_count"] == 2
+    assert result.output["evidence_quality"]["failed_count"] == 1
+    assert result.output["evidence_quality"]["reason_counts"]["stale_evidence"] == 1
+    by_query = result.output["hits_by_query"][0]["evidence_quality"]
+    assert by_query["failed_count"] == 1
+    assert by_query["assessments"][0]["passed"] is True
+    assert by_query["assessments"][1]["passed"] is False
+    json.dumps(result.to_dict(), allow_nan=False)

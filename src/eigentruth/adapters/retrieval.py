@@ -21,6 +21,12 @@ from eigentruth.control.actions import (
     DryRunActionExecutor,
 )
 from eigentruth.control.policy import ControlAction
+from eigentruth.verify.groundedness import (
+    EvidenceQualityAssessment,
+    EvidenceQualityPolicy,
+    EvidenceQualitySummary,
+    summarize_evidence_quality,
+)
 
 _TOKEN_RE = re.compile(r"[a-z0-9]+|[\u4e00-\u9fff]+")
 _FTS_SCHEMA_VERSION = "1"
@@ -464,6 +470,7 @@ class RetrievalActionExecutor:
     retriever: Retriever
     fallback_executor: ActionExecutor = field(default_factory=DryRunActionExecutor)
     limit: int = 5
+    evidence_quality_policy: EvidenceQualityPolicy | Mapping[str, Any] | None = None
 
     def execute(
         self,
@@ -493,6 +500,7 @@ class RetrievalActionExecutor:
         hits_by_query = []
         all_hits = []
         errors = []
+        quality_assessments: list[EvidenceQualityAssessment] = []
         for query in queries:
             try:
                 hits = tuple(self.retriever.retrieve(query, limit=limit))
@@ -506,18 +514,33 @@ class RetrievalActionExecutor:
                 hits_by_query.append({"query": query.to_dict(), "hits": (), "error": error})
                 continue
             hit_dicts = tuple(hit.to_dict() for hit in hits)
-            hits_by_query.append({"query": query.to_dict(), "hits": hit_dicts})
+            query_result: dict[str, Any] = {"query": query.to_dict(), "hits": hit_dicts}
+            quality_summary = _quality_summary_for_query(
+                hits,
+                query=query,
+                policy=self.evidence_quality_policy,
+            )
+            if quality_summary is not None:
+                query_result["evidence_quality"] = quality_summary.to_dict()
+                quality_assessments.extend(quality_summary.assessments)
+            hits_by_query.append(query_result)
             all_hits.extend(hit_dicts)
+        output: dict[str, Any] = {
+            "queries": tuple(query.to_dict() for query in queries),
+            "hits": tuple(all_hits),
+            "hits_by_query": tuple(hits_by_query),
+            "errors": tuple(errors),
+        }
+        if self.evidence_quality_policy is not None:
+            output["evidence_quality"] = EvidenceQualitySummary.from_assessments(
+                tuple(quality_assessments),
+                document_count=len(all_hits),
+            ).to_dict()
 
         return ActionResult(
             action=request.action,
             status=ActionExecutionStatus.FAILED if errors else ActionExecutionStatus.SUCCEEDED,
-            output={
-                "queries": tuple(query.to_dict() for query in queries),
-                "hits": tuple(all_hits),
-                "hits_by_query": tuple(hits_by_query),
-                "errors": tuple(errors),
-            },
+            output=output,
             metadata={
                 "executor": type(self).__name__,
                 "retriever": type(self.retriever).__name__,
@@ -537,6 +560,39 @@ class RetrievalActionExecutor:
     ) -> tuple[ActionResult, ...]:
         """Execute multiple action requests."""
         return tuple(self.execute(request, context=context) for request in requests)
+
+
+def _quality_summary_for_query(
+    hits: Sequence[RetrievalHit],
+    *,
+    query: RetrievalQuery,
+    policy: EvidenceQualityPolicy | Mapping[str, Any] | None,
+) -> EvidenceQualitySummary | None:
+    if policy is None:
+        return None
+    return summarize_evidence_quality(
+        tuple(hit.to_dict() for hit in hits),
+        policy=policy,
+        features=_quality_features_from_query(query),
+    )
+
+
+def _quality_features_from_query(query: RetrievalQuery) -> Mapping[str, Any]:
+    metadata = dict(query.metadata)
+    features = metadata.get("features", metadata.get("claim_features", {}))
+    if not isinstance(features, Mapping):
+        features = {}
+    target = metadata.get("target")
+    if isinstance(target, Mapping):
+        target_features = target.get("features", target.get("claim_features", {}))
+        if isinstance(target_features, Mapping) and target_features:
+            return target_features
+        target_metadata = target.get("metadata", {})
+        if isinstance(target_metadata, Mapping):
+            target_metadata_features = target_metadata.get("features", target_metadata.get("claim_features", {}))
+            if isinstance(target_metadata_features, Mapping):
+                return target_metadata_features
+    return features if isinstance(features, Mapping) else {}
 
 
 def _coerce_hit(value: RetrievalHit | Mapping[str, Any] | str) -> RetrievalHit:

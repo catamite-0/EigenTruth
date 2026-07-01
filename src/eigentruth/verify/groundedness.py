@@ -160,6 +160,100 @@ class EvidenceQualityAssessment:
         }
 
 
+@dataclass(frozen=True)
+class EvidenceQualitySummary:
+    """Aggregate quality assessment for a set of evidence snippets."""
+
+    document_count: int
+    applied_count: int
+    passed_count: int
+    failed_count: int
+    reason_counts: Mapping[str, int] = field(default_factory=dict)
+    assessments: Sequence[EvidenceQualityAssessment] = ()
+
+    def __post_init__(self) -> None:
+        document_count = _coerce_non_negative_int(self.document_count, name="document_count")
+        applied_count = _coerce_non_negative_int(self.applied_count, name="applied_count")
+        passed_count = _coerce_non_negative_int(self.passed_count, name="passed_count")
+        failed_count = _coerce_non_negative_int(self.failed_count, name="failed_count")
+        if passed_count + failed_count != applied_count:
+            raise ValueError("passed_count plus failed_count must equal applied_count.")
+        if applied_count > document_count:
+            raise ValueError("applied_count cannot exceed document_count.")
+        reason_counts = {
+            str(reason): _coerce_non_negative_int(count, name=f"reason_counts[{reason!r}]")
+            for reason, count in self.reason_counts.items()
+        }
+        object.__setattr__(self, "document_count", document_count)
+        object.__setattr__(self, "applied_count", applied_count)
+        object.__setattr__(self, "passed_count", passed_count)
+        object.__setattr__(self, "failed_count", failed_count)
+        object.__setattr__(self, "reason_counts", reason_counts)
+        object.__setattr__(self, "assessments", tuple(self.assessments))
+
+    @classmethod
+    def from_assessments(
+        cls,
+        assessments: Sequence[EvidenceQualityAssessment],
+        *,
+        document_count: int | None = None,
+    ) -> "EvidenceQualitySummary":
+        """Build a summary from per-document assessments."""
+        assessments = tuple(assessments)
+        applied = tuple(item for item in assessments if item.applied)
+        reason_counts: dict[str, int] = {}
+        for item in applied:
+            for reason in item.reasons:
+                reason_counts[reason] = reason_counts.get(reason, 0) + 1
+        return cls(
+            document_count=len(assessments) if document_count is None else document_count,
+            applied_count=len(applied),
+            passed_count=sum(1 for item in applied if item.passed),
+            failed_count=sum(1 for item in applied if not item.passed),
+            reason_counts=reason_counts,
+            assessments=assessments,
+        )
+
+    @property
+    def status(self) -> str:
+        """Return a compact status for release and trace summaries."""
+        if self.document_count == 0:
+            return "empty"
+        if self.applied_count == 0:
+            return "not_applied"
+        if self.failed_count:
+            return "fail"
+        return "pass"
+
+    @property
+    def pass_rate(self) -> float:
+        """Return the pass rate across policy-applied evidence snippets."""
+        if self.applied_count == 0:
+            return 1.0
+        return self.passed_count / self.applied_count
+
+    @property
+    def failure_rate(self) -> float:
+        """Return the failure rate across policy-applied evidence snippets."""
+        if self.applied_count == 0:
+            return 0.0
+        return self.failed_count / self.applied_count
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable representation."""
+        return {
+            "status": self.status,
+            "document_count": self.document_count,
+            "applied_count": self.applied_count,
+            "passed_count": self.passed_count,
+            "failed_count": self.failed_count,
+            "pass_rate": self.pass_rate,
+            "failure_rate": self.failure_rate,
+            "reason_counts": dict(self.reason_counts),
+            "assessments": tuple(item.to_dict() for item in self.assessments),
+        }
+
+
 class _DocumentMatch(NamedTuple):
     document: EvidenceDocument
     overlap: float
@@ -172,6 +266,49 @@ class _IndexedEvidenceDocument(NamedTuple):
     tokens: tuple[str, ...]
     key: str
     negated: bool
+
+
+def assess_evidence_quality(
+    document: EvidenceDocument | Mapping[str, Any] | str,
+    *,
+    policy: EvidenceQualityPolicy | Mapping[str, Any] | None,
+    claim: Claim | None = None,
+    features: Mapping[str, Any] | None = None,
+) -> EvidenceQualityAssessment:
+    """Assess one evidence snippet against a freshness/provenance policy."""
+    feature_flags = _quality_features(claim=claim, features=features)
+    return _assess_evidence_quality(
+        _coerce_evidence(document),
+        features=feature_flags,
+        policy=_coerce_evidence_quality_policy(policy),
+    )
+
+
+def summarize_evidence_quality(
+    evidence: (
+        EvidenceDocument
+        | Mapping[str, Any]
+        | str
+        | Sequence[EvidenceDocument | Mapping[str, Any] | str]
+    ),
+    *,
+    policy: EvidenceQualityPolicy | Mapping[str, Any] | None,
+    claim: Claim | None = None,
+    features: Mapping[str, Any] | None = None,
+) -> EvidenceQualitySummary:
+    """Assess a batch of evidence snippets and return aggregate quality metrics."""
+    documents = tuple(_coerce_evidence(item) for item in _evidence_sequence(evidence))
+    feature_flags = _quality_features(claim=claim, features=features)
+    quality_policy = _coerce_evidence_quality_policy(policy)
+    assessments = tuple(
+        _assess_evidence_quality(
+            document,
+            features=feature_flags,
+            policy=quality_policy,
+        )
+        for document in documents
+    )
+    return EvidenceQualitySummary.from_assessments(assessments, document_count=len(documents))
 
 
 @dataclass(frozen=True)
@@ -317,6 +454,18 @@ def _claim_features(claim: Claim) -> dict[str, bool]:
     if not isinstance(raw_features, Mapping):
         return {}
     return normalized_feature_flags(raw_features)
+
+
+def _quality_features(
+    *,
+    claim: Claim | None,
+    features: Mapping[str, Any] | None,
+) -> dict[str, bool]:
+    if features is not None:
+        return normalized_feature_flags(features)
+    if claim is None:
+        return {}
+    return _claim_features(claim)
 
 
 def _coerce_evidence(value: EvidenceDocument | Mapping[str, Any] | str) -> EvidenceDocument:
@@ -580,6 +729,16 @@ def _as_sequence(value: Any) -> Sequence[EvidenceDocument | Mapping[str, Any] | 
     if isinstance(value, Sequence):
         return value
     raise ValueError("context evidence must be a string or sequence.")
+
+
+def _evidence_sequence(
+    value: EvidenceDocument | Mapping[str, Any] | str | Sequence[EvidenceDocument | Mapping[str, Any] | str],
+) -> Sequence[EvidenceDocument | Mapping[str, Any] | str]:
+    if isinstance(value, (EvidenceDocument, str, Mapping)):
+        return (value,)
+    if isinstance(value, Sequence):
+        return value
+    raise ValueError("evidence must be a snippet or sequence of snippets.")
 
 
 def _as_mapping(value: Any, *, name: str) -> Mapping[str, Sequence[str] | str]:
