@@ -31267,6 +31267,208 @@ def test_frontier_release_evidence_smoke_fails_closed_on_blocked_report(tmp_path
         )
 
 
+def test_frontier_status_report_summarizes_productized_and_research_queue(tmp_path):
+    module = importlib.import_module("benchmarks.build_frontier_status_report")
+    registry_module = importlib.import_module("eigentruth.registry")
+    release_path = tmp_path / "release-candidate.json"
+    contract_path = tmp_path / "product-contract.json"
+    gap_path = tmp_path / "evidence-gap-plan.json"
+    report_path = tmp_path / "frontier-status.json"
+    manifest_path = tmp_path / "frontier-status-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    release_path.write_text(json.dumps(_frontier_status_release_candidate()), encoding="utf-8")
+    contract_path.write_text(json.dumps(_frontier_status_product_contract()), encoding="utf-8")
+    gap_path.write_text(json.dumps(_frontier_status_gap_plan()), encoding="utf-8")
+
+    payload = module.build_frontier_status_report(
+        release_candidate=release_path,
+        product_contract=contract_path,
+        evidence_gap_plan=gap_path,
+        json_path=report_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="frontier-status-unit",
+        version="0.1",
+    )
+
+    saved = json.loads(report_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get("report:frontier-status-unit:0.1")
+
+    assert payload["status"] == "promote"
+    assert saved["workflow"] == "frontier_status_report"
+    assert saved["status"] == payload["status"]
+    assert payload["productized_status"]["blocking_reasons"] == ()
+    assert payload["productized_status"]["release_candidate"]["status"] == "promote"
+    assert payload["productized_status"]["release_candidate"]["model"] == "unit-model"
+    assert payload["productized_status"]["release_candidate"]["gate_statuses"]["readiness"] == "promote"
+    assert payload["productized_status"]["product_contract"]["required_evidence_group_count"] == 2
+    assert payload["productized_status"]["product_contract"]["blocked_evidence_group_count"] == 0
+    assert payload["research_queue"]["status"] == "needs_evidence"
+    assert payload["research_queue"]["action_count"] == 1
+    assert payload["research_queue"]["actions"][0]["action_id"] == "collect_more_evidence"
+    assert payload["research_queue"]["actions"][0]["suggested_command_count"] == 1
+    assert manifest["artifacts"]["frontier_status_report"]["exists"] is True
+    assert manifest["artifacts"]["release_candidate"]["exists"] is True
+    assert manifest["artifacts"]["product_contract"]["exists"] is True
+    assert manifest["artifacts"]["evidence_gap_plan"]["exists"] is True
+    assert record.metadata["workflow"] == "frontier_status_report"
+    assert record.metadata["status"] == "promote"
+    assert record.metadata["research_action_count"] == 1
+
+
+def test_frontier_status_report_marks_blocked_release_as_needs_evidence():
+    module = importlib.import_module("benchmarks.build_frontier_status_report")
+    release = _frontier_status_release_candidate()
+    release["decision"]["status"] = "blocked"
+    release["decision"]["readiness_status"] = "blocked"
+    release["decision"]["blocking_reasons"] = ("readiness blocked",)
+
+    payload = module.build_frontier_status_report(
+        release_candidate=release,
+        product_contract=_frontier_status_product_contract(),
+    )
+
+    assert payload["status"] == "needs_evidence"
+    assert "release candidate status is 'blocked'" in payload["productized_status"]["blocking_reasons"]
+    assert "release candidate has blocked gates" in payload["productized_status"]["blocking_reasons"]
+    assert payload["research_queue"]["status"] == "not_provided"
+
+
+def _frontier_status_release_candidate() -> dict[str, Any]:
+    return {
+        "workflow": "release_candidate_comparison",
+        "config": {"release_policy_profile": "frontier_audit"},
+        "release_candidate": {"name": "unit-frontier"},
+        "decision": {
+            "status": "promote",
+            "blocking_reasons": (),
+            "recommended_model": "unit-model",
+            "recommended_route": "structured_qa",
+            "recommended_readiness_record": "benchmark_manifest:unit-readiness:0.1",
+            "recommended_performance_baseline_record": "performance_baseline:unit:0.1",
+            "recommended_product_runtime_drift_report": "artifacts/unit-runtime-drift.json",
+            "recommended_frontier_release_evidence_report": "artifacts/unit-frontier-release.json",
+            "required_adapter_routes": ("structured_state", "state_transition", "triple_evidence"),
+            "required_route_baseline_records": ("benchmark_manifest:route:0.1",),
+            "readiness_status": "promote",
+            "performance_status": "promote",
+            "product_runtime_drift_status": "promote",
+            "frontier_release_evidence_status": "promote",
+            "adapter_family_status": "promote",
+        },
+        "readiness_baseline_comparison": {
+            "decision": {
+                "recommended_best_quality_signal": {"name": "truth_proj", "auroc": 0.82}
+            }
+        },
+        "frontier_release_evidence_gate": {
+            "status": "promote",
+            "decision_status": "promote",
+            "report_path": "artifacts/unit-frontier-release.json",
+            "manifest_path": "artifacts/unit-frontier-manifest.json",
+            "run_names": ("qwen", "smollm2"),
+            "frontier_rerun_rollup_promoted_tracks": ("detectability", "multiple_testing"),
+            "input_manifest_verified_count": 7,
+            "input_manifest_required_count": 7,
+        },
+        "product_runtime_drift_gate": {
+            "decision_status": "promote",
+            "report_path": "artifacts/unit-runtime-drift.json",
+            "manifest_path": "artifacts/unit-runtime-drift-manifest.json",
+            "metrics": ({"metric": "total_seconds.mean", "status": "pass"},),
+        },
+    }
+
+
+def _frontier_status_product_contract() -> dict[str, Any]:
+    return {
+        "workflow": "product_promotion_contract",
+        "source_status": "promote",
+        "model_id": "unit-model",
+        "runtime": {
+            "layer": -12,
+            "batch_size": 4,
+            "max_workers": 2,
+            "hidden_state_capture": "outputs",
+            "prefix_kv_cache": False,
+        },
+        "metadata": {"recommended_runtime_seconds": 0.19},
+        "summary": {
+            "available_gate_count": 4,
+            "promoted_gate_count": 4,
+            "blocking_gate_count": 0,
+            "gate_statuses": {
+                "source": "promote",
+                "readiness": "promote",
+                "frontier_release_evidence": "promote",
+                "product_runtime_drift": "promote",
+            },
+            "evidence_groups": {
+                "frontier_release_evidence": {
+                    "required": True,
+                    "metric_count": 3,
+                    "blocked_metric_count": 0,
+                },
+                "world_model": {
+                    "required": True,
+                    "metric_count": 2,
+                    "blocked_metric_count": 0,
+                },
+                "claim_factuality": {
+                    "required": False,
+                    "metric_count": 0,
+                    "blocked_metric_count": 0,
+                },
+            },
+        },
+        "frontier_release_evidence": {
+            "decision_status": "promote",
+            "report_path": "artifacts/unit-frontier-release.json",
+            "run_names": ("qwen", "smollm2"),
+            "frontier_rerun_rollup_promoted_tracks": ("detectability",),
+        },
+    }
+
+
+def _frontier_status_gap_plan() -> dict[str, Any]:
+    return {
+        "workflow": "evidence_gap_plan",
+        "status": "needs_evidence",
+        "source_status": "blocked",
+        "summary": {
+            "gap_count": 1,
+            "action_count": 1,
+            "missing_metric_count": 2,
+            "gates": {"frontier_release_evidence": 1},
+            "research_axes": {"release_gate": 1},
+            "root_causes": {"missing_evidence": 1},
+            "top_action_ids": ("collect_more_evidence",),
+        },
+        "actions": [
+            {
+                "action_id": "collect_more_evidence",
+                "title": "Collect more evidence",
+                "action_type": "rerun",
+                "priority": 10,
+                "evidence_routes": ("frontier_release_evidence",),
+                "suggested_commands": ("python benchmarks/example.py --json out.json",),
+            }
+        ],
+        "gaps": [
+            {
+                "gap_id": "gap-001",
+                "gate": "frontier_release_evidence",
+                "status": "blocked",
+                "root_cause": "missing_evidence",
+                "missing_metrics": ("abstention", "decision"),
+                "recommended_action_ids": ("collect_more_evidence",),
+            }
+        ],
+    }
+
+
 def test_frontier_artifact_reference_smoke_verifies_active_docs(tmp_path):
     module = importlib.import_module("benchmarks.frontier_artifact_reference_smoke")
     registry_module = importlib.import_module("eigentruth.registry")

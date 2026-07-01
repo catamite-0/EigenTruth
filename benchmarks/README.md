@@ -6551,6 +6551,21 @@ action-receipt and receipt-claim-support groups, and the v15 manifest verifies
 recursively. The older v13/v1.6 chain remains useful as the `65/65` pre-receipt
 boundary regression artifact.
 
+Build a single read-only status snapshot from the promoted release candidate,
+active product contract, and latest evidence-gap plan:
+
+```bash
+python benchmarks/build_frontier_status_report.py \
+  --json artifacts/frontier-status-report.json \
+  --artifact-manifest artifacts/frontier-status-report-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-status-report \
+  --version 0.1
+```
+
+The report separates `productized_status` from `research_queue`, so historical
+gap plans do not downgrade the current promoted release.
+
 Active v1.9 product contract export:
 
 The promoted v13 replay has been exported as the active v1.9 product handoff

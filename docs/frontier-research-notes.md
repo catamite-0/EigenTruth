@@ -1344,6 +1344,10 @@ Added the first monitor-first tool-selection audit layer:
   runtime drift evidence gates as well, so strict frontier release candidates
   fail closed unless graph provenance and citation metadata evidence survive
   into the product-runtime drift report and registered release metadata.
+- `build_frontier_status_report.py` now gives this lane a read-only handoff
+  dashboard artifact: active v15 release/product-contract evidence is reported
+  under `productized_status`, while older evidence-gap plans remain visible as
+  `research_queue` and do not downgrade the current promoted chain.
 
 ## Next Research-to-Code Candidates
 
