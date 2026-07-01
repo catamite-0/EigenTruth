@@ -31808,10 +31808,19 @@ def test_frontier_research_queue_binding_scaffold_keeps_values_unbound(tmp_path)
     assert placeholders[2]["suggested_binding"]["source"] == "derived_manifest_path"
     assert saved_bindings["workflow"] == "frontier_research_queue_command_bindings"
     assert saved_bindings["status"] == "needs_review"
+    assert saved_bindings["review_summary"]["placeholder_count"] == 6
+    assert saved_bindings["review_summary"]["review_required_placeholder_count"] == 1
     assert saved_bindings["inputs"] == {}
-    assert saved_bindings["bindings"]["refresh_frontier_fixture"][
-        "command_template_values"
-    ] == []
+    binding = saved_bindings["bindings"]["refresh_frontier_fixture"]
+    assert binding["command_template_values"] == []
+    assert binding["input_reviews"][0]["name"] == "verifier_stability_report"
+    assert binding["placeholder_reviews"][0]["flag"] == "--verifier-stability-report"
+    assert binding["placeholder_reviews"][0]["suggested_binding"]["input_name"] == (
+        "verifier_stability_report"
+    )
+    assert binding["placeholder_reviews"][1]["suggested_binding"]["source"] == (
+        "planned_output"
+    )
     assert bound["status"] == "needs_inputs"
     assert bound["summary"]["unbound_placeholder_count"] == 6
     assert manifest["artifacts"]["frontier_research_queue_binding_scaffold"][
@@ -31894,6 +31903,12 @@ def test_frontier_research_queue_binding_scaffold_reports_command_requirements(t
         {"input": "abstention_score_dump_paths", "flag": "--scores"},
         {"input": "abstention_signal_groups", "flag": "--signal-groups"},
     ]
+    assert binding["input_reviews"][0]["name"] == (
+        "frontier_release_report_or_evidence_gap_plan"
+    )
+    assert binding["placeholder_reviews"][0]["suggested_binding"]["input_name"] == (
+        "frontier_release_report_or_evidence_gap_plan"
+    )
     assert placeholders[0]["flag"] == "--source"
     assert placeholders[0]["suggested_binding"] == {
         "review_required": True,

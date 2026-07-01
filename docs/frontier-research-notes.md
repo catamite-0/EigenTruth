@@ -1369,7 +1369,9 @@ Added the first monitor-first tool-selection audit layer:
   four known commands now scaffold as command-requirement ready, and direct
   placeholder hints map flags back to exact required inputs such as
   `product_promotion_contract_source`, `product_trace_corpus`, and
-  `baseline_product_runtime_report`.
+  `baseline_product_runtime_report`. The bindings sidecar now includes those
+  input and placeholder review records while leaving actual `inputs` and
+  `command_template_values` empty until human review.
 - `bind_frontier_research_queue_command_plan.py` and
   `run_frontier_research_queue_bound_command_plan.py` add the next handoff
   layer: reviewed bindings can turn that queue into a ready bound plan, and the

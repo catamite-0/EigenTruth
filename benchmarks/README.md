@@ -6609,8 +6609,9 @@ refresh scripts before binding review. Placeholders whose flags map directly to
 required inputs carry that exact input name, such as
 `--contract -> product_promotion_contract_source` or
 `--baseline -> baseline_product_runtime_report`. The generated bindings sidecar
-is deliberately empty so feeding it directly to the binder remains
-`needs_inputs`.
+now carries input and placeholder review records with those suggestions, but its
+actual `inputs` and `command_template_values` remain deliberately empty so
+feeding it directly to the binder remains `needs_inputs`.
 After review, fill either ordered `command_template_values` or full
 `bound_commands` through that sidecar:
 

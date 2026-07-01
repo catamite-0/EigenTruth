@@ -339,6 +339,7 @@ def _bindings_sidecar(
             "command_plan": None if command_plan_path is None else str(command_plan_path),
             "command_plan_status": command_plan_payload.get("status"),
         },
+        "review_summary": _sidecar_review_summary(entries),
         "inputs": {},
         "bindings": {
             str(entry.get("action_id")): {
@@ -356,10 +357,63 @@ def _bindings_sidecar(
                 "placeholder_count": _int_or_zero(
                     _nested(entry, "binding_summary", "placeholder_count")
                 ),
+                "input_reviews": tuple(
+                    _sidecar_input_review(item)
+                    for item in _mapping_sequence(entry.get("required_inputs", ()))
+                ),
+                "placeholder_reviews": tuple(
+                    _sidecar_placeholder_review(item)
+                    for item in _mapping_sequence(entry.get("placeholder_records", ()))
+                ),
             }
             for entry in entries
             if str(entry.get("action_id") or "")
         },
+    }
+
+
+def _sidecar_review_summary(entries: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    placeholder_records = tuple(
+        record
+        for entry in entries
+        for record in _mapping_sequence(entry.get("placeholder_records", ()))
+    )
+    input_reviews = tuple(
+        item
+        for entry in entries
+        for item in _mapping_sequence(entry.get("required_inputs", ()))
+    )
+    return {
+        "entry_count": len(entries),
+        "required_input_count": len(input_reviews),
+        "placeholder_count": len(placeholder_records),
+        "suggested_placeholder_count": sum(
+            1 for record in placeholder_records if _mapping(record.get("suggested_binding"))
+        ),
+        "review_required_placeholder_count": sum(
+            1
+            for record in placeholder_records
+            if _mapping(record.get("suggested_binding")).get("review_required") is True
+        ),
+    }
+
+
+def _sidecar_input_review(item: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "name": str(item.get("name") or ""),
+        "status": str(item.get("status") or "unbound"),
+        "suggested_binding": _mapping(item.get("suggested_binding")),
+    }
+
+
+def _sidecar_placeholder_review(item: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "command_index": _int_or_zero(item.get("command_index")),
+        "placeholder_index": _int_or_zero(item.get("placeholder_index")),
+        "flag": item.get("flag"),
+        "status": str(item.get("status") or "unbound"),
+        "suggested_binding": _mapping(item.get("suggested_binding")),
+        "context": _mapping(item.get("context")),
     }
 
 
@@ -447,6 +501,10 @@ def _mapping_sequence(value: Any) -> tuple[Mapping[str, Any], ...]:
     if not isinstance(value, Sequence) or isinstance(value, (str, bytes, bytearray)):
         return ()
     return tuple(item for item in value if isinstance(item, Mapping))
+
+
+def _mapping(value: Any) -> Mapping[str, Any]:
+    return value if isinstance(value, Mapping) else {}
 
 
 def _command_requirement_issue_count(requirements: Sequence[Mapping[str, Any]]) -> int:
