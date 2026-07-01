@@ -1304,6 +1304,10 @@ Added the first monitor-first tool-selection audit layer:
   runtime drift evidence. Strict frontier releases must keep receipt coverage,
   invalid/fingerprint/unsigned receipt rates, and explicit claim-to-receipt
   reference support visible at the release boundary.
+- `frontier_audit` now defaults the trace-provenance and citation-integrity
+  runtime drift evidence gates as well, so strict frontier release candidates
+  fail closed unless graph provenance and citation metadata evidence survive
+  into the product-runtime drift report and registered release metadata.
 
 ## Next Research-to-Code Candidates
 

@@ -345,13 +345,13 @@ The current local frontier-audit release is
 `benchmark_manifest:smollm2-l8-frontier-audit-release-candidate:0.15` at
 `artifacts/frontier-audit-release-candidate-v15/`; it consumes v5 frontier
 release evidence with required input manifests, the v1.9/v7 evidence handoff,
-and v1.16 product-runtime drift with action-receipt and receipt-claim-support
-gates.
+and v1.16 product-runtime drift with action-receipt, receipt-claim-support,
+trace-provenance, and citation-integrity gates.
 The `frontier_audit` release policy also now requires product-runtime drift
 reports to carry trace-level context-sensitivity participation, coverage,
 flagged-rate, trace-gap, max-flagged-rate, and max-ratio evidence beside the
-world-model, counterfactual-robustness, action-receipt, and
-receipt-claim-support drift evidence.
+world-model, counterfactual-robustness, action-receipt,
+receipt-claim-support, trace-provenance, and citation-integrity drift evidence.
 The current registered product runtime profile sweep
 `report:smollm2-product-runtime-profile-sweep:0.1` verifies that `latency`,
 `balanced`, `audit`, and request-level `auto` selection all pass the strict product
@@ -781,16 +781,15 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `run_release_gate_overhead_baseline.py` | Aggregates one or more release-candidate registry workflow JSON reports into a release-gate overhead baseline with total/phase timing summaries, artifact fingerprint/JSON cache hit-rate summaries, hotspot recommendations, optional timing/fingerprint-cache/JSON-cache gates, and optional `report:*:*` registry recording. |
 
 `frontier_audit` now also defaults
-`--require-product-runtime-drift-action-receipts-evidence` and
-`--require-product-runtime-drift-receipt-claim-support-evidence`, so strict
-frontier releases must preserve receipt coverage and explicit claim-to-receipt
-support evidence through the product-runtime drift handoff.
-`compare_release_candidates.py --require-product-runtime-drift-provenance-evidence`
-and `--require-product-runtime-drift-citation-integrity-evidence` can fail
-closed unless the product-runtime drift report preserves trace-provenance and
-citation-integrity evidence. `run_release_candidate_registry_workflow.py`
-exposes the same opt-in final-gate flags and carries their required state,
-metric counts, and per-metric baseline/current/status metadata into the release
+`--require-product-runtime-drift-action-receipts-evidence`,
+`--require-product-runtime-drift-receipt-claim-support-evidence`,
+`--require-product-runtime-drift-provenance-evidence`, and
+`--require-product-runtime-drift-citation-integrity-evidence`, so strict
+frontier releases must preserve receipt coverage, explicit claim-to-receipt
+support, graph provenance, and citation metadata evidence through the
+product-runtime drift handoff. `run_release_candidate_registry_workflow.py`
+exposes the same final-gate flags and carries their required state, metric
+counts, and per-metric baseline/current/status metadata into the release
 manifest and registered candidate record, so graph provenance and citation
 metadata drift cannot disappear between replay and final release promotion.
 `frontier_audit` also defaults `--require-frontier-release-input-manifests`, so
@@ -1058,10 +1057,12 @@ evidence rates and maximum final false-accept / false-accept-delta thresholds.
 | `run_release_gate_overhead_baseline.py` | 将一个或多个 release-candidate registry workflow JSON 汇总成 release-gate overhead baseline，输出总耗时/phase timing、artifact fingerprint/JSON cache 命中率、热点建议、可选 timing/fingerprint-cache/JSON-cache gate，并可登记 `report:*:*` registry record。 |
 
 `frontier_audit` 现在也默认启用
-`--require-product-runtime-drift-action-receipts-evidence` 和
-`--require-product-runtime-drift-receipt-claim-support-evidence`，因此严格
-frontier release 必须把 action receipt 覆盖率与显式 claim-to-receipt 支撑证据
-保留到 product-runtime drift handoff。
+`--require-product-runtime-drift-action-receipts-evidence`、
+`--require-product-runtime-drift-receipt-claim-support-evidence`、
+`--require-product-runtime-drift-provenance-evidence` 和
+`--require-product-runtime-drift-citation-integrity-evidence`，因此严格
+frontier release 必须把 action receipt 覆盖率、显式 claim-to-receipt 支撑证据、
+trace graph provenance 与 citation metadata 证据保留到 product-runtime drift handoff。
 `frontier_audit` 也默认启用
 `--require-frontier-release-input-manifests`，因此下游 release candidate 只有在
 源 frontier release-evidence report 使用 `--require-input-manifests` 生成且所有

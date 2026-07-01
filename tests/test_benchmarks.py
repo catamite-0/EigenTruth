@@ -21713,6 +21713,8 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         action_receipts_evidence=True,
         receipt_claim_support_evidence=True,
         trajectory_audit_evidence=True,
+        provenance_evidence=True,
+        citation_integrity_evidence=True,
         evidence_handoff_evidence=True,
         world_model_evidence=True,
         context_sensitivity_evidence=True,
@@ -21848,6 +21850,11 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         is True
     )
     assert frontier_payload["config"]["require_product_runtime_drift_trajectory_audit_evidence"] is True
+    assert frontier_payload["config"]["require_product_runtime_drift_provenance_evidence"] is True
+    assert (
+        frontier_payload["config"]["require_product_runtime_drift_citation_integrity_evidence"]
+        is True
+    )
     assert frontier_payload["config"]["require_product_runtime_drift_evidence_handoff_evidence"] is True
     assert frontier_payload["config"]["require_product_runtime_drift_world_model_evidence"] is True
     assert (
@@ -21922,6 +21929,15 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         "require_product_runtime_drift_trajectory_audit_evidence"
     ] is True
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
+        "require_product_runtime_drift_provenance_evidence"
+    ] is True
+    assert (
+        frontier_payload["config"]["release_policy_profile_applied_defaults"][
+            "require_product_runtime_drift_citation_integrity_evidence"
+        ]
+        is True
+    )
+    assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
         "require_product_runtime_drift_evidence_handoff_evidence"
     ] is True
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
@@ -21988,6 +22004,12 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     assert frontier_payload["product_runtime_drift_gate"]["summary"][
         "trajectory_audit_evidence_metric_count"
     ] == 8
+    assert frontier_payload["product_runtime_drift_gate"]["summary"][
+        "provenance_evidence_metric_count"
+    ] == 6
+    assert frontier_payload["product_runtime_drift_gate"]["summary"][
+        "citation_integrity_evidence_metric_count"
+    ] == 6
     assert frontier_payload["product_runtime_drift_gate"]["summary"][
         "evidence_handoff_evidence_metric_count"
     ] == 7
@@ -23401,6 +23423,8 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     assert frontier_profile_config.require_product_runtime_drift_action_receipts_evidence is True
     assert frontier_profile_config.require_product_runtime_drift_receipt_claim_support_evidence is True
     assert frontier_profile_config.require_product_runtime_drift_trajectory_audit_evidence is True
+    assert frontier_profile_config.require_product_runtime_drift_provenance_evidence is True
+    assert frontier_profile_config.require_product_runtime_drift_citation_integrity_evidence is True
     assert frontier_profile_config.require_product_runtime_drift_evidence_handoff_evidence is True
     assert (
         frontier_profile_config.require_product_runtime_drift_counterfactual_robustness_evidence
@@ -23462,6 +23486,12 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     ] is True
     assert frontier_profile_config.release_policy_profile_applied_defaults[
         "require_product_runtime_drift_trajectory_audit_evidence"
+    ] is True
+    assert frontier_profile_config.release_policy_profile_applied_defaults[
+        "require_product_runtime_drift_provenance_evidence"
+    ] is True
+    assert frontier_profile_config.release_policy_profile_applied_defaults[
+        "require_product_runtime_drift_citation_integrity_evidence"
     ] is True
     assert frontier_profile_config.release_policy_profile_applied_defaults[
         "require_product_runtime_drift_evidence_handoff_evidence"
