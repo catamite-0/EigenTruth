@@ -12610,6 +12610,7 @@ def test_run_adapter_promotion_registry_workflow_registers_promoted_route(tmp_pa
                 min_staged_verified_detection=0.85,
                 max_staged_delta_false_alarm=0.0,
                 min_staged_delta_detection=0.0,
+                required_cache_key_modes={"state_verifier": "exact"},
                 artifact_manifest_path=manifest_path,
             ),
             registry_path=registry_path,
@@ -12634,15 +12635,28 @@ def test_run_adapter_promotion_registry_workflow_registers_promoted_route(tmp_pa
     assert record.metadata["route_promotion_status"] == "promote"
     assert record.metadata["recommended_route"] == "structured_state"
     assert record.metadata["recommended_decision_accuracy"] == pytest.approx(1.0)
+    assert record.metadata["required_cache_key_modes"] == {"state_verifier": "exact"}
+    assert record.metadata["cache_key_modes"]["state_verifier"]["modes"] == ["exact"]
     assert record.metadata["staged_skip_rate"] == pytest.approx(0.6)
     assert record.metadata["staged_verified_false_alarm"] == pytest.approx(0.05)
     assert record.metadata["staged_delta_detection"] == pytest.approx(0.2)
     assert record.metadata["scope"] == "unit"
 
-    baseline = compare_module.compare_route_baselines(registry_path=registry_path)
+    baseline = compare_module.compare_route_baselines(
+        registry_path=registry_path,
+        required_cache_key_modes={"state_verifier": "exact"},
+    )
     assert baseline["decision"]["status"] == "promote"
     assert baseline["decision"]["recommended_record"] == "benchmark_manifest:route-baseline:0.6"
     assert baseline["decision"]["recommended_route"] == "structured_state"
+    assert baseline["leaderboard"][0]["cache_key_mode_audit"]["passed"] is True
+
+    blocked = compare_module.compare_route_baselines(
+        registry_path=registry_path,
+        required_cache_key_modes={"state_verifier": "semantic"},
+    )
+    assert blocked["decision"]["status"] == "blocked"
+    assert "cache_key_mode_audit" in blocked["decision"]["blocking_reasons"][0]
 
 
 def test_run_local_retrieval_route_workflow_registers_retrieval_baseline(tmp_path):
@@ -13068,33 +13082,37 @@ def _write_route_baseline_manifest(
     claims_payload: dict[str, Any] | None = None,
     stress_manifest_path: Path | None = None,
     retrieval_provenance_filter: dict[str, Any] | None = None,
+    cache_key_modes: Mapping[str, Any] | None = None,
 ) -> Path:
     from eigentruth.registry import build_artifact_manifest
 
     route_report_path = tmp_path / f"{name}-route-comparison.json"
     manifest_path = tmp_path / f"{name}-artifact-manifest.json"
+    route_report_payload = {
+        "schema_version": 1,
+        "promotion_decision": {"status": "promote", "recommended_route": route},
+        "by_route": {
+            route: {
+                "selected": selected,
+                "decision_accuracy": decision_accuracy,
+                "false_supported_rate": false_supported_rate,
+                "false_refuted_rate": false_refuted_rate,
+                "verified_false_alarm": 0.0,
+                "verified_detection": false_refuted_rate,
+                "mean_duration_seconds": mean_duration_seconds,
+                "p95_duration_seconds": p99_duration_seconds,
+                "p99_duration_seconds": p99_duration_seconds,
+                "max_duration_seconds": p99_duration_seconds,
+                "mean_attempted_route_count": mean_attempted_route_count,
+                "retrieval_use_rate": retrieval_use_rate,
+                "invalid_metric_counts": invalid_metric_counts or {},
+            }
+        },
+    }
+    if cache_key_modes is not None:
+        route_report_payload["cache_summary"] = {"cache_key_modes": dict(cache_key_modes)}
     route_report_path.write_text(
-        json.dumps({
-            "schema_version": 1,
-            "promotion_decision": {"status": "promote", "recommended_route": route},
-            "by_route": {
-                route: {
-                    "selected": selected,
-                    "decision_accuracy": decision_accuracy,
-                    "false_supported_rate": false_supported_rate,
-                    "false_refuted_rate": false_refuted_rate,
-                    "verified_false_alarm": 0.0,
-                    "verified_detection": false_refuted_rate,
-                    "mean_duration_seconds": mean_duration_seconds,
-                    "p95_duration_seconds": p99_duration_seconds,
-                    "p99_duration_seconds": p99_duration_seconds,
-                    "max_duration_seconds": p99_duration_seconds,
-                    "mean_attempted_route_count": mean_attempted_route_count,
-                    "retrieval_use_rate": retrieval_use_rate,
-                    "invalid_metric_counts": invalid_metric_counts or {},
-                }
-            },
-        }),
+        json.dumps(route_report_payload),
         encoding="utf-8",
     )
     artifacts = {"route_comparison_report": route_report_path}
@@ -13120,6 +13138,7 @@ def _write_route_baseline_manifest(
         "verifier_trace_cache_hit_count": verifier_trace_cache_hit_count,
         "verifier_trace_cache_run_count": verifier_trace_cache_run_count,
         "retrieval_provenance_filter": retrieval_provenance_filter,
+        "cache_key_modes": None if cache_key_modes is None else dict(cache_key_modes),
     }
     metadata.update({
         key: value
@@ -14267,6 +14286,106 @@ def test_compare_route_baselines_recommends_registered_route_manifest(tmp_path):
     assert gated["decision"]["recommended_record"] == "benchmark_manifest:fast-route:0.1"
     assert gated["leaderboard"][0]["p99_duration_seconds"] == pytest.approx(0.02)
     assert gated["leaderboard"][1]["gate"]["passed"] is False
+
+
+def test_compare_route_baselines_gates_cache_key_modes(tmp_path):
+    module = importlib.import_module("benchmarks.compare_route_baselines")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    manifest_path = _write_route_baseline_manifest(
+        tmp_path,
+        name="semantic-cache",
+        route="structured_qa",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+        cache_key_modes={
+            "qa_verifier": {
+                "modes": ["semantic"],
+                "mode_counts": {"semantic": 1},
+                "run_count": 1,
+                "missing_runs": 0,
+            }
+        },
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="semantic-cache-route",
+        path=manifest_path,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+
+    passing = module.compare_route_baselines(
+        registry_path=registry_path,
+        required_cache_key_modes={"qa_verifier": "semantic"},
+    )
+    failing = module.compare_route_baselines(
+        registry_path=registry_path,
+        required_cache_key_modes={"qa_verifier": "exact"},
+    )
+    missing = module.compare_route_baselines(
+        registry_path=registry_path,
+        required_cache_key_modes={"state_verifier": "exact"},
+    )
+
+    assert passing["decision"]["status"] == "promote"
+    assert passing["config"]["required_cache_key_modes"] == {"qa_verifier": "semantic"}
+    assert passing["leaderboard"][0]["cache_key_mode_audit"]["passed"] is True
+    assert passing["leaderboard"][0]["cache_key_modes"]["qa_verifier"]["modes"] == ("semantic",)
+    assert failing["decision"]["status"] == "blocked"
+    assert "qa_verifier cache_key_mode" in failing["decision"]["blocking_reasons"][0]
+    assert missing["decision"]["status"] == "blocked"
+    assert "state_verifier cache_key_mode" in missing["decision"]["blocking_reasons"][0]
+
+
+def test_compare_route_baselines_cli_gates_cache_key_modes(tmp_path):
+    module = importlib.import_module("benchmarks.compare_route_baselines")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    output_path = tmp_path / "route-baseline-comparison.json"
+    manifest_path = _write_route_baseline_manifest(
+        tmp_path,
+        name="semantic-cache-cli",
+        route="structured_qa",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+        cache_key_modes={
+            "qa_verifier": {
+                "modes": ["semantic"],
+                "mode_counts": {"semantic": 1},
+                "run_count": 1,
+                "missing_runs": 0,
+            }
+        },
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="semantic-cache-cli-route",
+        path=manifest_path,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+
+    module.main([
+        "--registry",
+        str(registry_path),
+        "--json",
+        str(output_path),
+        "--require-cache-key-mode",
+        "qa_verifier=semantic",
+        "--fail-on-blocked",
+    ])
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+
+    assert payload["decision"]["status"] == "promote"
+    assert payload["config"]["required_cache_key_modes"] == {"qa_verifier": "semantic"}
+    assert payload["leaderboard"][0]["cache_key_mode_audit"]["passed"] is True
 
 
 def test_compare_route_baselines_accepts_covered_fact_route_summary(tmp_path):

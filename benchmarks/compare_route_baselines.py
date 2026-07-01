@@ -16,6 +16,10 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from benchmarks import artifact_json_cache as _artifact_json_cache  # noqa: E402
+from benchmarks.compare_verifier_routes import (  # noqa: E402
+    _normalize_required_cache_key_modes,
+    _parse_cache_key_mode_requirement,
+)
 from benchmarks.runtime_budget_policy import (  # noqa: E402
     RuntimeBudgetPolicy,
     evaluate_runtime_budget,
@@ -56,6 +60,7 @@ def compare_route_baselines(
     max_retrieval_hit_count: float | None = None,
     min_claims_cache_hit_rate: float | None = None,
     min_verifier_trace_cache_hit_rate: float | None = None,
+    required_cache_key_modes: Mapping[str, str] | None = None,
     min_covered_fact_properties: int | None = None,
     min_covered_fact_property_records: int | None = None,
     min_covered_fact_property_source_documents: int | None = None,
@@ -85,6 +90,7 @@ def compare_route_baselines(
     cache = verification_context.fingerprint_cache
     payload_cache = verification_context.json_cache
     payload_cache_stats = verification_context.json_cache_stats
+    required_cache_key_modes = _normalize_required_cache_key_modes(required_cache_key_modes)
     registry = ArtifactRegistry.load_json(registry_path)
     records = _select_records(registry, baseline_keys=baseline_keys)
     rows = [
@@ -107,6 +113,7 @@ def compare_route_baselines(
             max_retrieval_hit_count=max_retrieval_hit_count,
             min_claims_cache_hit_rate=min_claims_cache_hit_rate,
             min_verifier_trace_cache_hit_rate=min_verifier_trace_cache_hit_rate,
+            required_cache_key_modes=required_cache_key_modes,
             min_covered_fact_properties=min_covered_fact_properties,
             min_covered_fact_property_records=min_covered_fact_property_records,
             min_covered_fact_property_source_documents=min_covered_fact_property_source_documents,
@@ -154,6 +161,7 @@ def compare_route_baselines(
             "max_retrieval_hit_count": max_retrieval_hit_count,
             "min_claims_cache_hit_rate": min_claims_cache_hit_rate,
             "min_verifier_trace_cache_hit_rate": min_verifier_trace_cache_hit_rate,
+            "required_cache_key_modes": dict(required_cache_key_modes),
             "min_covered_fact_properties": min_covered_fact_properties,
             "min_covered_fact_property_records": min_covered_fact_property_records,
             "min_covered_fact_property_source_documents": min_covered_fact_property_source_documents,
@@ -242,6 +250,7 @@ def _route_baseline_row(
     max_retrieval_hit_count: float | None,
     min_claims_cache_hit_rate: float | None,
     min_verifier_trace_cache_hit_rate: float | None,
+    required_cache_key_modes: Mapping[str, str],
     min_covered_fact_properties: int | None,
     min_covered_fact_property_records: int | None,
     min_covered_fact_property_source_documents: int | None,
@@ -383,6 +392,11 @@ def _route_baseline_row(
         json_cache=json_cache,
         json_cache_stats=json_cache_stats,
     )
+    cache_key_mode_audit = _cache_key_mode_audit(
+        route_comparison,
+        manifest_metadata,
+        required_cache_key_modes=required_cache_key_modes,
+    )
     gate = _gate(
         verification=verification,
         allow_unverified=allow_unverified,
@@ -427,6 +441,7 @@ def _route_baseline_row(
             min_retrieval_filter_score=min_retrieval_filter_score,
         ),
         retrieval_stress_audit=retrieval_stress_audit,
+        cache_key_mode_audit=cache_key_mode_audit,
     )
     runtime_metrics = dict(runtime_budget.get("metrics") or {})
     return {
@@ -464,6 +479,8 @@ def _route_baseline_row(
         "evidence_audit": gate["evidence_audit"],
         "retrieval_provenance_audit": gate["retrieval_provenance_audit"],
         "retrieval_stress_audit": gate["retrieval_stress_audit"],
+        "cache_key_mode_audit": gate["cache_key_mode_audit"],
+        "cache_key_modes": cache_key_mode_audit["observed_cache_key_modes"],
     }
 
 
@@ -564,6 +581,7 @@ def _gate(
     evidence_audit: Mapping[str, Any],
     retrieval_provenance_audit: Mapping[str, Any],
     retrieval_stress_audit: Mapping[str, Any],
+    cache_key_mode_audit: Mapping[str, Any],
 ) -> dict[str, Any]:
     failures = []
     if manifest_error is not None:
@@ -702,12 +720,18 @@ def _gate(
             f"retrieval_stress_audit: {reason}"
             for reason in retrieval_stress_audit.get("blocking_reasons", ())
         )
+    if cache_key_mode_audit.get("enabled") and not cache_key_mode_audit.get("passed"):
+        failures.extend(
+            f"cache_key_mode_audit: {reason}"
+            for reason in cache_key_mode_audit.get("blocking_reasons", ())
+        )
     return {
         "passed": not failures,
         "blocking_reasons": failures,
         "evidence_audit": dict(evidence_audit),
         "retrieval_provenance_audit": dict(retrieval_provenance_audit),
         "retrieval_stress_audit": dict(retrieval_stress_audit),
+        "cache_key_mode_audit": dict(cache_key_mode_audit),
     }
 
 
@@ -731,6 +755,91 @@ def _covered_fact_property_gate_enabled(
             min_covered_fact_property_false_refuted_rate,
         )
     )
+
+
+def _cache_key_mode_audit(
+    route_comparison: Mapping[str, Any],
+    manifest_metadata: Mapping[str, Any],
+    *,
+    required_cache_key_modes: Mapping[str, str],
+) -> dict[str, Any]:
+    observed = _cache_key_modes_from_route_baseline(route_comparison, manifest_metadata)
+    failures: list[str] = []
+    for name, required_mode in required_cache_key_modes.items():
+        summary = _mapping(observed.get(name))
+        modes = tuple(str(mode) for mode in _sequence_or_empty(summary.get("modes")))
+        missing_runs = _int_or_none(summary.get("missing_runs"))
+        if modes != (required_mode,) or (missing_runs is not None and missing_runs > 0):
+            observed_text = "missing" if not modes else ",".join(modes)
+            failures.append(
+                f"{name} cache_key_mode is {observed_text!r}, expected {required_mode!r}"
+            )
+    return {
+        "enabled": bool(required_cache_key_modes),
+        "passed": not failures,
+        "blocking_reasons": failures,
+        "required_cache_key_modes": dict(required_cache_key_modes),
+        "observed_cache_key_modes": observed,
+    }
+
+
+def _cache_key_modes_from_route_baseline(
+    route_comparison: Mapping[str, Any],
+    manifest_metadata: Mapping[str, Any],
+) -> dict[str, dict[str, Any]]:
+    observed: dict[str, dict[str, Any]] = {}
+    cache_summary = _mapping(route_comparison.get("cache_summary"))
+    for source in (
+        _mapping(manifest_metadata.get("cache_key_modes")),
+        _mapping(manifest_metadata.get("verifier_cache_key_modes")),
+        _mapping(cache_summary.get("cache_key_modes")),
+    ):
+        for name, summary in _normalize_cache_key_mode_summary(source).items():
+            observed[name] = summary
+    return observed
+
+
+def _normalize_cache_key_mode_summary(value: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
+    normalized: dict[str, dict[str, Any]] = {}
+    for name, payload in value.items():
+        name_text = str(name).strip()
+        if not name_text:
+            continue
+        if isinstance(payload, str):
+            mode = payload.strip().lower()
+            if mode:
+                normalized[name_text] = {
+                    "modes": (mode,),
+                    "mode_counts": {mode: 1},
+                    "run_count": 1,
+                    "missing_runs": 0,
+                }
+            continue
+        if not isinstance(payload, Mapping):
+            continue
+        raw_modes = payload.get("modes")
+        if isinstance(raw_modes, str):
+            modes = (raw_modes.strip().lower(),)
+        else:
+            modes = tuple(
+                str(mode).strip().lower()
+                for mode in _sequence_or_empty(raw_modes)
+                if str(mode).strip()
+            )
+        if not modes:
+            for key in ("mode", "cache_key_mode"):
+                mode = payload.get(key)
+                if isinstance(mode, str) and mode.strip():
+                    modes = (mode.strip().lower(),)
+                    break
+        mode_counts = _mapping(payload.get("mode_counts"))
+        normalized[name_text] = {
+            "modes": tuple(sorted(set(modes))),
+            "mode_counts": dict(sorted((str(key), value) for key, value in mode_counts.items())),
+            "run_count": _int_or_none(payload.get("run_count")),
+            "missing_runs": _int_or_none(payload.get("missing_runs")),
+        }
+    return normalized
 
 
 def _derive_covered_fact_property_metrics_from_artifacts(
@@ -1525,6 +1634,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_retrieval_hit_count=args.max_retrieval_hit_count,
         min_claims_cache_hit_rate=args.min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=args.min_verifier_trace_cache_hit_rate,
+        required_cache_key_modes=dict(
+            _parse_cache_key_mode_requirement(value)
+            for value in args.require_cache_key_mode
+        ),
         min_covered_fact_properties=args.min_covered_fact_properties,
         min_covered_fact_property_records=args.min_covered_fact_property_records,
         min_covered_fact_property_source_documents=args.min_covered_fact_property_source_documents,
@@ -1632,6 +1745,12 @@ def main(argv: Sequence[str] | None = None) -> None:
         value,
         flag="--min-verifier-trace-cache-hit-rate",
     ), default=None)
+    parser.add_argument(
+        "--require-cache-key-mode",
+        action="append",
+        default=[],
+        help="require a verifier cache mode recorded by the route baseline, formatted as verifier=mode",
+    )
     parser.add_argument("--min-covered-fact-properties", type=lambda value: _parse_non_negative_int(
         value,
         flag="--min-covered-fact-properties",

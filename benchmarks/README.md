@@ -5043,6 +5043,7 @@ python benchmarks/run_adapter_promotion_registry_workflow.py \
   --max-mean-duration-seconds 0.05 \
   --max-p99-duration-seconds 0.20 \
   --max-mean-attempted-route-count 1.5 \
+  --require-cache-key-mode qa_verifier=semantic \
   --json artifacts/qwen05_adapter_promotion_registry_workflow.json \
   --fail-on-blocked
 ```
@@ -5073,6 +5074,7 @@ python benchmarks/compare_route_baselines.py \
   --max-retrieval-hit-count 1000 \
   --min-claims-cache-hit-rate 0.9 \
   --min-verifier-trace-cache-hit-rate 0.9 \
+  --require-cache-key-mode qa_verifier=semantic \
   --require-non-oracle-evidence \
   --require-retrieval-provenance-filter \
   --required-retrieval-source-prefix external: \
@@ -5095,6 +5097,9 @@ quality/cost ordering. Optional runtime-budget flags read
 `runtime_total_seconds`, `runtime_n_retrieval_hits`, claims-cache metadata, and
 verifier-trace-cache metadata from the route manifest or registry record; when a
 threshold is configured, missing or non-finite evidence blocks that baseline.
+`--require-cache-key-mode verifier=mode` checks recorded route-comparison,
+manifest, or registry metadata and blocks old or mismatched baselines when a
+release expects a specific `semantic` or `exact` verifier cache-key mode.
 Use `--require-retrieval-provenance-filter` when a retrieval route should prove
 that untrusted hits were gated before verifier handoff. Optional
 `--required-retrieval-source-prefix`, `--required-retrieval-metadata`, and
