@@ -1201,10 +1201,34 @@ def _action_template(kind: Mapping[str, str], *, gate: str, reason: str) -> Evid
                 "frontier_release_evidence",
             ),
             suggested_commands=(
-                "benchmarks/plan_frontier_abstention_evidence_reruns.py",
-                "benchmarks/eval_abstention_stability.py",
-                "benchmarks/eval_conformal.py --save-abstention-release-gate ...",
+                "benchmarks/plan_frontier_abstention_evidence_reruns.py --source ... --json ...",
+                "benchmarks/eval_abstention_stability.py --json ...",
+                "benchmarks/rollup_frontier_abstention_evidence_reruns.py --queue ... --json ...",
+                "benchmarks/compare_frontier_release_evidence.py --frontier-rerun-rollup-report ...",
             ),
+            metadata={
+                "planner_script": "benchmarks/plan_frontier_abstention_evidence_reruns.py",
+                "child_benchmark_script": "benchmarks/eval_abstention_stability.py",
+                "rollup_script": "benchmarks/rollup_frontier_abstention_evidence_reruns.py",
+                "release_gate_script": "benchmarks/compare_frontier_release_evidence.py",
+                "rerun_queue_workflow": "frontier_abstention_evidence_rerun_queue",
+                "rollup_workflow": "frontier_abstention_evidence_rerun_rollup",
+                "derived_artifact_key": "abstention_rerun_queue",
+                "derived_artifact_kind": "frontier_abstention_rerun_queue",
+                "rollup_track": "abstention",
+                "release_gate_track": "frontier_rerun_rollup",
+                "queue_entry_report_kind": "abstention_stability",
+                "required_inputs": (
+                    "frontier_release_report_or_evidence_gap_plan",
+                    "abstention_score_dump_paths",
+                    "abstention_signal_groups",
+                ),
+                "closure_outputs": (
+                    "abstention_rerun_queue",
+                    "abstention_rerun_rollup",
+                    "frontier_release_evidence_comparison",
+                ),
+            },
         )
     if evidence_kind == "verifier_stability":
         return EvidenceGapAction(

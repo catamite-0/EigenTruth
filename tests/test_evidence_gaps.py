@@ -28,6 +28,48 @@ from eigentruth.control import (
 from eigentruth.json_utils import strict_json_dumps
 from eigentruth.registry import ArtifactRegistry
 
+_ABSTENTION_RERUN_COMMANDS = (
+    "benchmarks/plan_frontier_abstention_evidence_reruns.py --source ... --json ...",
+    "benchmarks/eval_abstention_stability.py --json ...",
+    "benchmarks/rollup_frontier_abstention_evidence_reruns.py --queue ... --json ...",
+    "benchmarks/compare_frontier_release_evidence.py --frontier-rerun-rollup-report ...",
+)
+
+
+def _assert_abstention_rerun_rollup_action(action):
+    assert action["evidence_routes"] == (
+        "abstention_stability",
+        "participation_gate",
+        "frontier_release_evidence",
+    )
+    assert action["suggested_commands"] == _ABSTENTION_RERUN_COMMANDS
+    assert action["metadata"]["planner_script"] == (
+        "benchmarks/plan_frontier_abstention_evidence_reruns.py"
+    )
+    assert action["metadata"]["child_benchmark_script"] == (
+        "benchmarks/eval_abstention_stability.py"
+    )
+    assert action["metadata"]["rollup_script"] == (
+        "benchmarks/rollup_frontier_abstention_evidence_reruns.py"
+    )
+    assert action["metadata"]["release_gate_script"] == (
+        "benchmarks/compare_frontier_release_evidence.py"
+    )
+    assert action["metadata"]["rerun_queue_workflow"] == (
+        "frontier_abstention_evidence_rerun_queue"
+    )
+    assert action["metadata"]["rollup_workflow"] == (
+        "frontier_abstention_evidence_rerun_rollup"
+    )
+    assert action["metadata"]["derived_artifact_key"] == "abstention_rerun_queue"
+    assert action["metadata"]["rollup_track"] == "abstention"
+    assert action["metadata"]["release_gate_track"] == "frontier_rerun_rollup"
+    assert action["metadata"]["closure_outputs"] == (
+        "abstention_rerun_queue",
+        "abstention_rerun_rollup",
+        "frontier_release_evidence_comparison",
+    )
+
 
 def test_evidence_gap_plan_maps_release_blockers_to_frontier_actions():
     plan = plan_evidence_gaps_from_release_candidate(
@@ -155,10 +197,8 @@ def test_evidence_gap_plan_maps_release_candidate_frontier_abstention_blocker():
     assert gaps[0]["root_cause"] == "model"
     assert gaps[0]["metadata"]["evidence_kind"] == "abstention_stability"
     assert gaps[0]["recommended_action_ids"] == ("improve_abstention_participation_gate",)
-    assert actions["improve_abstention_participation_gate"]["evidence_routes"] == (
-        "abstention_stability",
-        "participation_gate",
-        "frontier_release_evidence",
+    _assert_abstention_rerun_rollup_action(
+        actions["improve_abstention_participation_gate"]
     )
 
 
@@ -265,10 +305,8 @@ def test_evidence_gap_plan_maps_frontier_release_evidence_report_tracks():
             "calibration": "synthetic-l2/multiple-testing-calibration.json",
         },
     )
-    assert actions["improve_abstention_participation_gate"]["evidence_routes"] == (
-        "abstention_stability",
-        "participation_gate",
-        "frontier_release_evidence",
+    _assert_abstention_rerun_rollup_action(
+        actions["improve_abstention_participation_gate"]
     )
     assert actions["complete_citation_batch_evidence_rollup"]["evidence_routes"] == (
         "unresolved_evidence_queue",
