@@ -2147,6 +2147,28 @@ def _verification_result_to_dict(result: VerificationResult | Mapping[str, Any])
     return dict(_to_jsonable(result))
 
 
+_FRONTIER_RELEASE_CITATION_BATCH_BOUNDED_METADATA_KEYS = tuple(
+    f"promotion_contract_frontier_release_evidence_{field_name}"
+    for field_name in (
+        "citation_batch_provenance_present_count",
+        "citation_batch_provenance_passed_count",
+        "citation_batch_provenance_failed_count",
+        "citation_batch_provenance_status_counts",
+        "citation_batch_evidence_class_counts",
+        "citation_batch_query_sweep_present_count",
+        "citation_batch_query_sweep_no_passing_strategy_count",
+        "citation_batch_query_sweep_best_strategy_counts",
+        "citation_batch_query_sweep_best_passing_strategy_counts",
+        "citation_batch_query_sweep_best_passing_blind_refuted_count_sum",
+        "citation_batch_query_sweep_best_passing_blind_refuted_count_max",
+        "citation_batch_comparison_present_count",
+        "citation_batch_comparison_passed_count",
+        "citation_batch_comparison_failed_count",
+        "citation_batch_comparison_status_counts",
+    )
+)
+
+
 DEFAULT_BOUNDED_TRACE_METADATA_KEYS = (
     "artifact_model_id",
     "artifact_source",
@@ -2205,6 +2227,7 @@ DEFAULT_BOUNDED_TRACE_METADATA_KEYS = (
     "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_passed_count",
     "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_failed_count",
     "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_status_counts",
+    *_FRONTIER_RELEASE_CITATION_BATCH_BOUNDED_METADATA_KEYS,
     "promotion_contract_frontier_release_evidence_run_count",
     "promotion_contract_frontier_release_evidence_run_names",
     "external_evidence_baseline_comparison_report",

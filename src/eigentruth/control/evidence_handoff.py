@@ -39,6 +39,24 @@ _OPTIONAL_RUNTIME_GROUPS = (
 
 _KNOWN_GROUPS = _ALL_GROUPS + _OPTIONAL_RUNTIME_GROUPS
 
+_FRONTIER_RELEASE_CITATION_BATCH_EVIDENCE_FIELDS = (
+    "citation_batch_provenance_present_count",
+    "citation_batch_provenance_passed_count",
+    "citation_batch_provenance_failed_count",
+    "citation_batch_provenance_status_counts",
+    "citation_batch_evidence_class_counts",
+    "citation_batch_query_sweep_present_count",
+    "citation_batch_query_sweep_no_passing_strategy_count",
+    "citation_batch_query_sweep_best_strategy_counts",
+    "citation_batch_query_sweep_best_passing_strategy_counts",
+    "citation_batch_query_sweep_best_passing_blind_refuted_count_sum",
+    "citation_batch_query_sweep_best_passing_blind_refuted_count_max",
+    "citation_batch_comparison_present_count",
+    "citation_batch_comparison_passed_count",
+    "citation_batch_comparison_failed_count",
+    "citation_batch_comparison_status_counts",
+)
+
 _ACTION_IDS = {
     "promotion": "export_promotion_contract_runtime_evidence",
     "pre_generation": "run_pre_generation_probe_comparison",
@@ -1261,6 +1279,10 @@ def _frontier_release_evidence_handoff_from_report(
             "citation_batch_adapter_gate_status_counts": summary.get(
                 "citation_batch_adapter_gate_status_counts"
             ),
+            **{
+                field_name: summary.get(field_name)
+                for field_name in _FRONTIER_RELEASE_CITATION_BATCH_EVIDENCE_FIELDS
+            },
             "run_names": tuple(summary.get("run_names") or ()),
             "blocking_reasons": blocking_reasons,
         }
@@ -1353,6 +1375,10 @@ def _frontier_release_evidence_flat_metadata(
             "frontier_release_evidence_citation_batch_adapter_gate_status_counts": (
                 evidence.get("citation_batch_adapter_gate_status_counts")
             ),
+            **{
+                f"frontier_release_evidence_{field_name}": evidence.get(field_name)
+                for field_name in _FRONTIER_RELEASE_CITATION_BATCH_EVIDENCE_FIELDS
+            },
             "frontier_release_evidence_run_names": evidence.get("run_names"),
             "frontier_release_evidence_blocking_reasons": evidence.get("blocking_reasons"),
         }

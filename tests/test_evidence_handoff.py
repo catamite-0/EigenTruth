@@ -303,6 +303,14 @@ def test_product_promotion_evidence_handoff_export_fills_explicit_sources():
     assert contract["metadata"]["frontier_release_evidence_citation_batch_rollup_count"] == 0
     assert contract["metadata"]["frontier_release_evidence_citation_batch_adapter_gate_failed_count"] == 0
     assert contract["metadata"]["frontier_release_evidence_citation_batch_adapter_gate_status_counts"] == {}
+    assert contract["metadata"]["frontier_release_evidence_citation_batch_provenance_failed_count"] == 0
+    assert (
+        contract["metadata"][
+            "frontier_release_evidence_citation_batch_query_sweep_no_passing_strategy_count"
+        ]
+        == 0
+    )
+    assert contract["metadata"]["frontier_release_evidence_citation_batch_comparison_failed_count"] == 0
     assert contract["metadata"]["evidence_handoff_coverage_rate"] == 1.0
     assert contract["metadata"]["evidence_handoff_status"] == "promote"
     assert contract["metadata"]["evidence_handoff_missing_metric_count"] == 0.0
@@ -1134,6 +1142,21 @@ def _frontier_release_evidence_report():
             "citation_batch_adapter_gate_passed_count": 0,
             "citation_batch_adapter_gate_failed_count": 0,
             "citation_batch_adapter_gate_status_counts": {},
+            "citation_batch_provenance_present_count": 0,
+            "citation_batch_provenance_passed_count": 0,
+            "citation_batch_provenance_failed_count": 0,
+            "citation_batch_provenance_status_counts": {},
+            "citation_batch_evidence_class_counts": {},
+            "citation_batch_query_sweep_present_count": 0,
+            "citation_batch_query_sweep_no_passing_strategy_count": 0,
+            "citation_batch_query_sweep_best_strategy_counts": {},
+            "citation_batch_query_sweep_best_passing_strategy_counts": {},
+            "citation_batch_query_sweep_best_passing_blind_refuted_count_sum": 0,
+            "citation_batch_query_sweep_best_passing_blind_refuted_count_max": 0,
+            "citation_batch_comparison_present_count": 0,
+            "citation_batch_comparison_passed_count": 0,
+            "citation_batch_comparison_failed_count": 0,
+            "citation_batch_comparison_status_counts": {},
         },
     }
 

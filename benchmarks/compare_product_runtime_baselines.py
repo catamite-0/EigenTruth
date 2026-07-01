@@ -335,6 +335,29 @@ _FRONTIER_RELEASE_EVIDENCE_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
         "frontier_release_evidence_citation_batch_unexpected_batch_count",
     ),
 )
+_FRONTIER_RELEASE_CITATION_BATCH_NUMERIC_FIELDS: tuple[str, ...] = (
+    "citation_batch_provenance_present_count",
+    "citation_batch_provenance_passed_count",
+    "citation_batch_provenance_failed_count",
+    "citation_batch_query_sweep_present_count",
+    "citation_batch_query_sweep_no_passing_strategy_count",
+    "citation_batch_query_sweep_best_passing_blind_refuted_count_sum",
+    "citation_batch_query_sweep_best_passing_blind_refuted_count_max",
+    "citation_batch_comparison_present_count",
+    "citation_batch_comparison_passed_count",
+    "citation_batch_comparison_failed_count",
+)
+_FRONTIER_RELEASE_CITATION_BATCH_METADATA_FIELDS: tuple[tuple[str, str], ...] = tuple(
+    (
+        f"promotion_contract.frontier_release_evidence.{field_name}.mean",
+        f"frontier_release_evidence_{field_name}",
+    )
+    for field_name in _FRONTIER_RELEASE_CITATION_BATCH_NUMERIC_FIELDS
+)
+_FRONTIER_RELEASE_EVIDENCE_METADATA_FIELDS = (
+    *_FRONTIER_RELEASE_EVIDENCE_METADATA_FIELDS,
+    *_FRONTIER_RELEASE_CITATION_BATCH_METADATA_FIELDS,
+)
 
 _TRIPLE_COVERAGE_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
     ("triple_coverage.claim_triple_coverage_rate", "triple_claim_coverage_rate"),
@@ -2885,6 +2908,15 @@ def _frontier_release_evidence_metrics(
             gates.get(
                 "max_frontier_release_evidence_citation_batch_unexpected_batch_count"
             ),
+        ),
+        *(
+            _min_current_metric(
+                f"promotion_contract.frontier_release_evidence.{field_name}.mean",
+                _nested_float(baseline, (field_name, "mean")),
+                _nested_float(current, (field_name, "mean")),
+                None,
+            )
+            for field_name in _FRONTIER_RELEASE_CITATION_BATCH_NUMERIC_FIELDS
         ),
     ]
 

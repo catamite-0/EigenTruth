@@ -1435,9 +1435,13 @@ When `--citation-batch-rollup-report` is supplied, the comparator adds a
 `citation_batch_track_status` to the release decision and records expected,
 observed, missing, duplicate, and unexpected batch counts in the release report,
 registry metadata, and artifact manifest, along with child adapter-gate
-present/pass/fail counts and status distributions when available. A rollup with missing expected
-batches, duplicate batches, unsupported child workflows, failed child gates, or
-failed child-manifest verification blocks the frontier release verdict.
+present/pass/fail counts and status distributions when available. The same
+release summary carries child provenance pass/fail counts, evidence-class
+counts, query-sweep strategy distributions, no-passing-strategy counts, and
+controlled-vs-external comparison pass/fail counts so product handoff/runtime
+baselines can keep the blocked citation lane diagnosable. A rollup with missing
+expected batches, duplicate batches, unsupported child workflows, failed child
+gates, or failed child-manifest verification blocks the frontier release verdict.
 When `--frontier-rerun-rollup-report` is supplied, the comparator records a
 `frontier_rerun_rollup_track_status` and fingerprints the rollup report plus
 its manifest. This is the intended handoff path for
@@ -6567,7 +6571,11 @@ checks. Runtime traces that load the contract carry the same view as
 `promotion_contract_promotion_summary`; when a frontier release-evidence report
 was supplied to the release candidate, they also carry
 `promotion_contract_frontier_release_evidence` plus headline
-`promotion_contract_frontier_release_evidence_*` metrics. `product_runtime_metrics()`
+`promotion_contract_frontier_release_evidence_*` metrics. Citation-batch
+provenance, query-sweep, and controlled-vs-external comparison aggregates are
+also preserved as runtime metadata so product baselines can show whether a
+frontier citation lane failed because evidence was missing, no query strategy
+passed, or external comparison stayed blocked. `product_runtime_metrics()`
 exposes both field families for baselines and SLO reports.
 
 When the release candidate was gated by

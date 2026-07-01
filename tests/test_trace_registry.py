@@ -556,6 +556,11 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
                 "abstention",
             ],
             "promotion_contract_frontier_release_evidence_run_count": 2,
+            "promotion_contract_frontier_release_evidence_citation_batch_provenance_failed_count": 0,
+            "promotion_contract_frontier_release_evidence_citation_batch_query_sweep_no_passing_strategy_count": 0,
+            "promotion_contract_frontier_release_evidence_citation_batch_comparison_status_counts": {
+                "pass": 2,
+            },
             "external_evidence_baseline_comparison_source": "registry",
             "external_evidence_baseline_comparison_status": "promote",
             "external_evidence_baseline_comparison_decision_status": "promote",
@@ -666,6 +671,15 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
         "_omitted_keys": 5,
     }
     assert payload["metadata"]["promotion_contract_frontier_release_evidence_run_count"] == 2
+    assert (
+        payload["metadata"][
+            "promotion_contract_frontier_release_evidence_citation_batch_provenance_failed_count"
+        ]
+        == 0
+    )
+    assert payload["metadata"][
+        "promotion_contract_frontier_release_evidence_citation_batch_comparison_status_counts"
+    ] == {"pass": 2}
     assert payload["metadata"]["promotion_contract_triple_extraction_fixture_matrix"] == {
         "status": "promote",
         "distinct_predicate_count": 6,
@@ -708,6 +722,12 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
     assert metrics[
         "promotion_contract_frontier_release_evidence_run_count"
     ] == pytest.approx(2.0)
+    assert metrics[
+        "promotion_contract_frontier_release_evidence_citation_batch_query_sweep_no_passing_strategy_count"
+    ] == pytest.approx(0.0)
+    assert metrics[
+        "promotion_contract_frontier_release_evidence_citation_batch_comparison_status_counts"
+    ] == {"pass": 2}
     assert metrics[
         "promotion_contract_external_evidence_baseline_comparison_source"
     ] == "registry"
@@ -4180,6 +4200,25 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
             "citation_batch_adapter_gate_passed_count": 2,
             "citation_batch_adapter_gate_failed_count": 0,
             "citation_batch_adapter_gate_status_counts": {"complete": 2},
+            "citation_batch_provenance_present_count": 2,
+            "citation_batch_provenance_passed_count": 2,
+            "citation_batch_provenance_failed_count": 0,
+            "citation_batch_provenance_status_counts": {"pass": 2},
+            "citation_batch_evidence_class_counts": {"external_candidate": 2},
+            "citation_batch_query_sweep_present_count": 2,
+            "citation_batch_query_sweep_no_passing_strategy_count": 0,
+            "citation_batch_query_sweep_best_strategy_counts": {
+                "question_answer_0p65": 2,
+            },
+            "citation_batch_query_sweep_best_passing_strategy_counts": {
+                "question_answer_0p65": 2,
+            },
+            "citation_batch_query_sweep_best_passing_blind_refuted_count_sum": 7,
+            "citation_batch_query_sweep_best_passing_blind_refuted_count_max": 4,
+            "citation_batch_comparison_present_count": 2,
+            "citation_batch_comparison_passed_count": 2,
+            "citation_batch_comparison_failed_count": 0,
+            "citation_batch_comparison_status_counts": {"pass": 2},
             "run_names": ["verifier-stability", "abstention-stability"],
         },
         control_defaults={"max_verifier_route_attempts": 3},
@@ -4334,6 +4373,15 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert metadata[
         "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_status_counts"
     ] == {"complete": 2}
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_citation_batch_provenance_passed_count"
+    ] == 2
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_citation_batch_query_sweep_best_passing_blind_refuted_count_sum"
+    ] == 7
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_citation_batch_comparison_status_counts"
+    ] == {"pass": 2}
     assert metadata["promotion_contract_runtime"] == {"layer": -2}
     assert metadata["promotion_contract_verifier_route"] == {
         "route": "structured_qa",
@@ -4419,6 +4467,15 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert runtime_metrics[
         "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_status_counts"
     ] == {"complete": 2}
+    assert runtime_metrics[
+        "promotion_contract_frontier_release_evidence_citation_batch_provenance_passed_count"
+    ] == pytest.approx(2.0)
+    assert runtime_metrics[
+        "promotion_contract_frontier_release_evidence_citation_batch_query_sweep_best_passing_blind_refuted_count_max"
+    ] == pytest.approx(4.0)
+    assert runtime_metrics[
+        "promotion_contract_frontier_release_evidence_citation_batch_comparison_status_counts"
+    ] == {"pass": 2}
     assert runtime_metrics[
         "promotion_contract_frontier_release_evidence_run_count"
     ] == pytest.approx(2.0)

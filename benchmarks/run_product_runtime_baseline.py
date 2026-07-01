@@ -190,6 +190,35 @@ _PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "frontier_release_evidence_citation_batch_duplicate_batch_count",
     "frontier_release_evidence_citation_batch_unexpected_batch_count",
 )
+_FRONTIER_RELEASE_CITATION_BATCH_EVIDENCE_FIELDS: tuple[str, ...] = (
+    "citation_batch_provenance_present_count",
+    "citation_batch_provenance_passed_count",
+    "citation_batch_provenance_failed_count",
+    "citation_batch_provenance_status_counts",
+    "citation_batch_evidence_class_counts",
+    "citation_batch_query_sweep_present_count",
+    "citation_batch_query_sweep_no_passing_strategy_count",
+    "citation_batch_query_sweep_best_strategy_counts",
+    "citation_batch_query_sweep_best_passing_strategy_counts",
+    "citation_batch_query_sweep_best_passing_blind_refuted_count_sum",
+    "citation_batch_query_sweep_best_passing_blind_refuted_count_max",
+    "citation_batch_comparison_present_count",
+    "citation_batch_comparison_passed_count",
+    "citation_batch_comparison_failed_count",
+    "citation_batch_comparison_status_counts",
+)
+_FRONTIER_RELEASE_CITATION_BATCH_MAPPING_FIELDS: tuple[str, ...] = (
+    "citation_batch_provenance_status_counts",
+    "citation_batch_evidence_class_counts",
+    "citation_batch_query_sweep_best_strategy_counts",
+    "citation_batch_query_sweep_best_passing_strategy_counts",
+    "citation_batch_comparison_status_counts",
+)
+_FRONTIER_RELEASE_CITATION_BATCH_NUMERIC_FIELDS: tuple[str, ...] = tuple(
+    field_name
+    for field_name in _FRONTIER_RELEASE_CITATION_BATCH_EVIDENCE_FIELDS
+    if field_name not in _FRONTIER_RELEASE_CITATION_BATCH_MAPPING_FIELDS
+)
 _PROMOTION_CONTRACT_PRODUCT_RUNTIME_DRIFT_FIELDS: tuple[str, ...] = (
     "promotion_contract_product_runtime_drift_available",
     "promotion_contract_product_runtime_drift_status",
@@ -419,6 +448,10 @@ _PROMOTION_CONTRACT_FRONTIER_RELEASE_EVIDENCE_FIELDS: tuple[str, ...] = (
     "promotion_contract_frontier_release_evidence_citation_batch_missing_expected_batch_count",
     "promotion_contract_frontier_release_evidence_citation_batch_duplicate_batch_count",
     "promotion_contract_frontier_release_evidence_citation_batch_unexpected_batch_count",
+    *(
+        f"promotion_contract_frontier_release_evidence_{field_name}"
+        for field_name in _FRONTIER_RELEASE_CITATION_BATCH_EVIDENCE_FIELDS
+    ),
     "promotion_contract_frontier_release_evidence_run_count",
     "promotion_contract_frontier_release_evidence_run_names",
 )
@@ -4564,6 +4597,20 @@ def _aggregate_promotion_contract_frontier_release_evidence(
             )
             for item in metrics
         ),
+        **{
+            field_name: _numeric_summary(
+                item.get(f"promotion_contract_frontier_release_evidence_{field_name}")
+                for item in metrics
+            )
+            for field_name in _FRONTIER_RELEASE_CITATION_BATCH_NUMERIC_FIELDS
+        },
+        **{
+            field_name: _sum_mapping_counts(
+                item.get(f"promotion_contract_frontier_release_evidence_{field_name}")
+                for item in metrics
+            )
+            for field_name in _FRONTIER_RELEASE_CITATION_BATCH_MAPPING_FIELDS
+        },
         "run_names": _counts_from_sequence_items(
             item.get("promotion_contract_frontier_release_evidence_run_names")
             for item in metrics
@@ -7151,6 +7198,20 @@ def _promotion_contract_frontier_release_evidence_flat_metadata(
             "citation_batch_unexpected_batch_count",
             "mean",
         ),
+        **{
+            f"promotion_contract_frontier_release_evidence_{field_name}_mean": _nested(
+                evidence,
+                field_name,
+                "mean",
+            )
+            for field_name in _FRONTIER_RELEASE_CITATION_BATCH_NUMERIC_FIELDS
+        },
+        **{
+            f"promotion_contract_frontier_release_evidence_{field_name}": dict(
+                _mapping(evidence.get(field_name))
+            )
+            for field_name in _FRONTIER_RELEASE_CITATION_BATCH_MAPPING_FIELDS
+        },
         "promotion_contract_frontier_release_evidence_run_names": dict(
             _mapping(evidence.get("run_names"))
         ),
@@ -7474,6 +7535,21 @@ def _counts_from_mapping_keys(values: Sequence[Any] | Any) -> dict[str, int]:
                 continue
             counts[text] = counts.get(text, 0) + 1
     return counts
+
+
+def _sum_mapping_counts(values: Sequence[Any] | Any) -> dict[str, int | float]:
+    counts: dict[str, float] = {}
+    for value in values:
+        for key, count in _mapping(value).items():
+            text = _optional_string(key)
+            numeric = _finite_float(count)
+            if text is None or numeric is None:
+                continue
+            counts[text] = counts.get(text, 0.0) + numeric
+    return {
+        key: int(value) if float(value).is_integer() else value
+        for key, value in counts.items()
+    }
 
 
 def _counts_from_group_statuses(values: Sequence[Any] | Any) -> dict[str, dict[str, int]]:

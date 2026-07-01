@@ -54,6 +54,36 @@ _PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_KEYS
 )
 
+_FRONTIER_RELEASE_CITATION_BATCH_EVIDENCE_FIELDS = (
+    "citation_batch_provenance_present_count",
+    "citation_batch_provenance_passed_count",
+    "citation_batch_provenance_failed_count",
+    "citation_batch_provenance_status_counts",
+    "citation_batch_evidence_class_counts",
+    "citation_batch_query_sweep_present_count",
+    "citation_batch_query_sweep_no_passing_strategy_count",
+    "citation_batch_query_sweep_best_strategy_counts",
+    "citation_batch_query_sweep_best_passing_strategy_counts",
+    "citation_batch_query_sweep_best_passing_blind_refuted_count_sum",
+    "citation_batch_query_sweep_best_passing_blind_refuted_count_max",
+    "citation_batch_comparison_present_count",
+    "citation_batch_comparison_passed_count",
+    "citation_batch_comparison_failed_count",
+    "citation_batch_comparison_status_counts",
+)
+_FRONTIER_RELEASE_CITATION_BATCH_MAPPING_FIELDS = (
+    "citation_batch_provenance_status_counts",
+    "citation_batch_evidence_class_counts",
+    "citation_batch_query_sweep_best_strategy_counts",
+    "citation_batch_query_sweep_best_passing_strategy_counts",
+    "citation_batch_comparison_status_counts",
+)
+_FRONTIER_RELEASE_CITATION_BATCH_NUMERIC_FIELDS = tuple(
+    field_name
+    for field_name in _FRONTIER_RELEASE_CITATION_BATCH_EVIDENCE_FIELDS
+    if field_name not in _FRONTIER_RELEASE_CITATION_BATCH_MAPPING_FIELDS
+)
+
 
 @dataclass(frozen=True)
 class ProductRuntimeBudgetPolicy:
@@ -2001,6 +2031,14 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
                 _mapping(frontier_release_evidence.get("citation_batch_adapter_gate_status_counts"))
             )
             or None,
+            **{
+                field_name: _finite_float(frontier_release_evidence.get(field_name))
+                for field_name in _FRONTIER_RELEASE_CITATION_BATCH_NUMERIC_FIELDS
+            },
+            **{
+                field_name: dict(_mapping(frontier_release_evidence.get(field_name))) or None
+                for field_name in _FRONTIER_RELEASE_CITATION_BATCH_MAPPING_FIELDS
+            },
             "run_count": float(len(frontier_release_evidence_run_names))
             if frontier_release_evidence_run_names
             else None,
@@ -2915,6 +2953,12 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_status_counts": (
             frontier_release_evidence_summary.get("citation_batch_adapter_gate_status_counts")
         ),
+        **{
+            f"promotion_contract_frontier_release_evidence_{field_name}": (
+                frontier_release_evidence_summary.get(field_name)
+            )
+            for field_name in _FRONTIER_RELEASE_CITATION_BATCH_EVIDENCE_FIELDS
+        },
         "promotion_contract_frontier_release_evidence_run_count": _finite_float(
             frontier_release_evidence_summary.get("run_count")
         ),
@@ -4604,6 +4648,10 @@ def _frontier_release_evidence_from_flat_metadata(
         "citation_batch_adapter_gate_status_counts": value(
             "citation_batch_adapter_gate_status_counts"
         ),
+        **{
+            field_name: value(field_name)
+            for field_name in _FRONTIER_RELEASE_CITATION_BATCH_EVIDENCE_FIELDS
+        },
         "run_names": value("run_names"),
         "blocking_reasons": value("blocking_reasons"),
     }

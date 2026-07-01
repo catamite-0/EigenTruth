@@ -99,6 +99,24 @@ _PROMOTION_CONTRACT_GATE_STATUS_KEYS = (
     ("uncertainty_escalation", "uncertainty_escalation_workflow_status"),
 )
 
+_FRONTIER_RELEASE_CITATION_BATCH_EVIDENCE_FIELDS = (
+    "citation_batch_provenance_present_count",
+    "citation_batch_provenance_passed_count",
+    "citation_batch_provenance_failed_count",
+    "citation_batch_provenance_status_counts",
+    "citation_batch_evidence_class_counts",
+    "citation_batch_query_sweep_present_count",
+    "citation_batch_query_sweep_no_passing_strategy_count",
+    "citation_batch_query_sweep_best_strategy_counts",
+    "citation_batch_query_sweep_best_passing_strategy_counts",
+    "citation_batch_query_sweep_best_passing_blind_refuted_count_sum",
+    "citation_batch_query_sweep_best_passing_blind_refuted_count_max",
+    "citation_batch_comparison_present_count",
+    "citation_batch_comparison_passed_count",
+    "citation_batch_comparison_failed_count",
+    "citation_batch_comparison_status_counts",
+)
+
 _PRODUCT_RUNTIME_DRIFT_GROUP_SUMMARY_KEYS = (
     ("promotion", "promotion"),
     ("pre_generation", "pre_generation"),
@@ -5571,6 +5589,15 @@ def _promotion_contract_frontier_release_evidence_metadata(
                 ),
             )
         ),
+        **{
+            f"promotion_contract_frontier_release_evidence_{field_name}": (
+                _first_present(
+                    evidence.get(field_name),
+                    metadata.get(f"frontier_release_evidence_{field_name}"),
+                )
+            )
+            for field_name in _FRONTIER_RELEASE_CITATION_BATCH_EVIDENCE_FIELDS
+        },
         "promotion_contract_frontier_release_evidence_run_names": _first_present(
             evidence.get("run_names"),
             metadata.get("frontier_release_evidence_run_names"),

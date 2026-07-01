@@ -43744,6 +43744,15 @@ def test_compare_product_runtime_baselines_gates_frontier_release_evidence_drift
             frontier_rerun_rollup_promoted_tracks=(),
             citation_batch_observed_batch_count=1,
             citation_batch_missing_expected_batch_count=1,
+            citation_batch_provenance_passed_count=1,
+            citation_batch_provenance_failed_count=1,
+            citation_batch_provenance_status_counts={"pass": 1, "blocked": 1},
+            citation_batch_query_sweep_no_passing_strategy_count=1,
+            citation_batch_query_sweep_best_passing_blind_refuted_count_sum=2,
+            citation_batch_query_sweep_best_passing_blind_refuted_count_max=2,
+            citation_batch_comparison_passed_count=1,
+            citation_batch_comparison_failed_count=1,
+            citation_batch_comparison_status_counts={"pass": 1, "blocked": 1},
             run_names=("verifier-stability",),
             manifest_present=False,
         ),
@@ -43798,7 +43807,7 @@ def test_compare_product_runtime_baselines_gates_frontier_release_evidence_drift
 
     assert payload["status"] == "blocked"
     assert payload["summary"]["blocked_metric_count"] == 13
-    assert payload["summary"]["compared_metric_count"] == 39
+    assert payload["summary"]["compared_metric_count"] == 49
     assert _metric_by_name(
         payload,
         "promotion_contract.frontier_release_evidence.coverage_rate",
@@ -43851,6 +43860,20 @@ def test_compare_product_runtime_baselines_gates_frontier_release_evidence_drift
         payload,
         "promotion_contract.frontier_release_evidence.citation_batch_observed_batch_count.mean",
     )["current"] == pytest.approx(1.0)
+    provenance_failed_metric = _metric_by_name(
+        payload,
+        "promotion_contract.frontier_release_evidence.citation_batch_provenance_failed_count.mean",
+    )
+    assert provenance_failed_metric["status"] == "observed"
+    assert provenance_failed_metric["current"] == pytest.approx(1.0)
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.frontier_release_evidence.citation_batch_query_sweep_no_passing_strategy_count.mean",
+    )["current"] == pytest.approx(1.0)
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.frontier_release_evidence.citation_batch_comparison_failed_count.mean",
+    )["current"] == pytest.approx(1.0)
     assert _metric_by_name(
         payload,
         "promotion_contract.frontier_release_evidence.run_count.mean",
@@ -43878,6 +43901,12 @@ def test_compare_product_runtime_baselines_gates_frontier_release_evidence_drift
     assert manifest["metadata"][
         "frontier_release_evidence_citation_batch_observed_batch_count_status"
     ] == "observed"
+    assert manifest["metadata"][
+        "frontier_release_evidence_citation_batch_provenance_failed_count_current"
+    ] == pytest.approx(1.0)
+    assert manifest["metadata"][
+        "frontier_release_evidence_citation_batch_query_sweep_no_passing_strategy_count_status"
+    ] == "observed"
     assert record.metadata["frontier_release_evidence_blocked_metric_count"] == 13
     assert record.metadata["frontier_release_evidence_run_count_current"] == pytest.approx(
         1.0
@@ -43893,6 +43922,9 @@ def test_compare_product_runtime_baselines_gates_frontier_release_evidence_drift
     ] == "blocked"
     assert record.metadata[
         "frontier_release_evidence_citation_batch_observed_batch_count_current"
+    ] == pytest.approx(1.0)
+    assert record.metadata[
+        "frontier_release_evidence_citation_batch_comparison_failed_count_current"
     ] == pytest.approx(1.0)
 
 
@@ -45763,6 +45795,21 @@ def _promotion_frontier_release_evidence_metadata(
     citation_batch_missing_expected_batch_count: int = 0,
     citation_batch_duplicate_batch_count: int = 0,
     citation_batch_unexpected_batch_count: int = 0,
+    citation_batch_provenance_present_count: int = 2,
+    citation_batch_provenance_passed_count: int = 2,
+    citation_batch_provenance_failed_count: int = 0,
+    citation_batch_provenance_status_counts: Mapping[str, int] | None = None,
+    citation_batch_evidence_class_counts: Mapping[str, int] | None = None,
+    citation_batch_query_sweep_present_count: int = 2,
+    citation_batch_query_sweep_no_passing_strategy_count: int = 0,
+    citation_batch_query_sweep_best_strategy_counts: Mapping[str, int] | None = None,
+    citation_batch_query_sweep_best_passing_strategy_counts: Mapping[str, int] | None = None,
+    citation_batch_query_sweep_best_passing_blind_refuted_count_sum: int = 7,
+    citation_batch_query_sweep_best_passing_blind_refuted_count_max: int = 4,
+    citation_batch_comparison_present_count: int = 2,
+    citation_batch_comparison_passed_count: int = 2,
+    citation_batch_comparison_failed_count: int = 0,
+    citation_batch_comparison_status_counts: Mapping[str, int] | None = None,
 ) -> dict[str, Any]:
     return {
         "promotion_contract_frontier_release_evidence_available": True,
@@ -45852,6 +45899,60 @@ def _promotion_frontier_release_evidence_metadata(
         ),
         "promotion_contract_frontier_release_evidence_citation_batch_unexpected_batch_count": (
             citation_batch_unexpected_batch_count
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_provenance_present_count": (
+            citation_batch_provenance_present_count
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_provenance_passed_count": (
+            citation_batch_provenance_passed_count
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_provenance_failed_count": (
+            citation_batch_provenance_failed_count
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_provenance_status_counts": (
+            dict(citation_batch_provenance_status_counts or {"pass": 2})
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_evidence_class_counts": (
+            dict(citation_batch_evidence_class_counts or {"external_candidate": 2})
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_query_sweep_present_count": (
+            citation_batch_query_sweep_present_count
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_query_sweep_no_passing_strategy_count": (
+            citation_batch_query_sweep_no_passing_strategy_count
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_query_sweep_best_strategy_counts": (
+            dict(citation_batch_query_sweep_best_strategy_counts or {"question_answer_0p65": 2})
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_query_sweep_best_passing_strategy_counts": (
+            dict(
+                citation_batch_query_sweep_best_passing_strategy_counts
+                or {"question_answer_0p65": 2}
+            )
+        ),
+        (
+            "promotion_contract_frontier_release_evidence_"
+            "citation_batch_query_sweep_best_passing_blind_refuted_count_sum"
+        ): (
+            citation_batch_query_sweep_best_passing_blind_refuted_count_sum
+        ),
+        (
+            "promotion_contract_frontier_release_evidence_"
+            "citation_batch_query_sweep_best_passing_blind_refuted_count_max"
+        ): (
+            citation_batch_query_sweep_best_passing_blind_refuted_count_max
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_comparison_present_count": (
+            citation_batch_comparison_present_count
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_comparison_passed_count": (
+            citation_batch_comparison_passed_count
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_comparison_failed_count": (
+            citation_batch_comparison_failed_count
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_comparison_status_counts": (
+            dict(citation_batch_comparison_status_counts or {"pass": 2})
         ),
         "promotion_contract_frontier_release_evidence_run_count": len(run_names),
         "promotion_contract_frontier_release_evidence_run_names": tuple(run_names),
