@@ -1414,6 +1414,8 @@ def test_source_family_structured_qa_fact_collection_workflow_executes_local_cat
     assert payload["status"] == "ready_for_fact_mapping"
     assert payload["summary"]["source_backed_request_count"] == 4
     assert payload["summary"]["request_with_results_count"] == 4
+    assert payload["summary"]["request_without_results_count"] == 0
+    assert payload["summary"]["request_result_coverage"] == pytest.approx(1.0)
     assert payload["summary"]["adapter_result_count"] == 4
     assert payload["summary"]["structured_qa_document_count"] == 1
     assert payload["summary"]["structured_qa_candidate_document_count"] == 4
@@ -1429,6 +1431,7 @@ def test_source_family_structured_qa_fact_collection_workflow_executes_local_cat
     assert all("label" not in request for request in adapter_requests)
     assert registry_module.load_and_verify_artifact_manifest(output_dir / "artifact-manifest.json").passed is True
     assert record.metadata["workflow"] == "source_family_structured_qa_fact_collection_workflow"
+    assert record.metadata["request_result_coverage"] == pytest.approx(1.0)
     assert record.metadata["structured_qa_document_count"] == 1
     assert record.metadata["suite"] == "unit"
 
@@ -2160,6 +2163,9 @@ def test_source_family_structured_qa_lane_batch_workflow_replays_selected_batch(
     assert payload["summary"]["batch_count"] == 1
     assert payload["summary"]["target_count"] == 1
     assert payload["summary"]["source_backed_request_count"] == 1
+    assert payload["summary"]["request_with_results_count"] == 1
+    assert payload["summary"]["request_without_results_count"] == 0
+    assert payload["summary"]["request_result_coverage"] == pytest.approx(1.0)
     assert payload["summary"]["adapter_result_count"] == 1
     assert payload["summary"]["closure_route_counts"] == {"entity_disambiguation": 1}
     assert batch_collection["summary"]["closure_route_counts"] == {"entity_disambiguation": 1}
@@ -2178,6 +2184,128 @@ def test_source_family_structured_qa_lane_batch_workflow_replays_selected_batch(
     assert registry_module.load_and_verify_artifact_manifest(output_dir / "artifact-manifest.json").passed is True
     assert registry_record is not None
     assert registry_record.metadata["source_backed_request_count"] == 1
+    assert registry_record.metadata["request_result_coverage"] == pytest.approx(1.0)
+
+
+def test_source_family_structured_qa_lane_batch_workflow_blocks_partial_request_result_coverage(tmp_path):
+    module = importlib.import_module("benchmarks.run_source_family_structured_qa_lane_batch_workflow")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    lane_queue_path = tmp_path / "lane-execution-queue.json"
+    collection_path = tmp_path / "fact-collection-corpus.json"
+    catalog_path = tmp_path / "source-catalog.jsonl"
+    output_dir = tmp_path / "lane-batch"
+    registry_path = tmp_path / "registry.json"
+    lane_queue_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "source_family_structured_qa_lane_execution_queue",
+            "status": "ready_for_adapter_execution",
+            "execution_batches": [
+                {
+                    "batch_id": "sfqa-lane-batch-0001",
+                    "next_lane": "answer_collision_audit",
+                    "lane_status": "blocked_needs_disambiguation",
+                    "request_type": "source_family_fact_disambiguation",
+                    "adapter_family": "source_family_fact_disambiguation",
+                    "target_ids": ["record-3", "record-4"],
+                    "source_request_ids": ["disambig:record-3:1", "disambig:record-4:1"],
+                    "not_verifier_evidence": True,
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
+    collection_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "source_family_structured_qa_fact_collection_corpus",
+            "status": "ready_for_collection",
+            "summary": {"target_count": 2, "total_request_count": 2},
+            "targets": [
+                {
+                    "target_id": "record-3",
+                    "question": "Who is Gamma?",
+                    "answer": "Gamma",
+                    "question_type": "definition",
+                    "priority": "high",
+                },
+                {
+                    "target_id": "record-4",
+                    "question": "Who is Delta?",
+                    "answer": "Delta",
+                    "question_type": "definition",
+                    "priority": "high",
+                },
+            ],
+            "requests": {
+                "source_family_fact_disambiguation": [
+                    {
+                        "target_id": "record-3",
+                        "request_id": "disambig:record-3:1",
+                        "request_type": "source_family_fact_disambiguation",
+                        "query": "Gamma disambiguation",
+                        "question": "Who is Gamma?",
+                        "question_type": "definition",
+                        "priority": "high",
+                    },
+                    {
+                        "target_id": "record-4",
+                        "request_id": "disambig:record-4:1",
+                        "request_type": "source_family_fact_disambiguation",
+                        "query": "Delta disambiguation",
+                        "question": "Who is Delta?",
+                        "question_type": "definition",
+                        "priority": "high",
+                    },
+                ],
+            },
+        }),
+        encoding="utf-8",
+    )
+    catalog_path.write_text(
+        json.dumps({
+            "text": "Gamma disambiguation identifies Gamma as a separate company and entity.",
+            "title": "Gamma entity note",
+            "source": "unit:gamma",
+            "provider": "unit_catalog",
+            "source_family": "reference",
+            "metadata": {"provider": "unit_catalog"},
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = module.run_source_family_structured_qa_lane_batch_workflow(
+        lane_queue_path=lane_queue_path,
+        collection_corpus_path=collection_path,
+        source_catalog_paths=(catalog_path,),
+        output_dir=output_dir,
+        batch_ids=("sfqa-lane-batch-0001",),
+        registry_path=registry_path,
+        name="source-family-lane-batch-partial-unit",
+        version="0.1",
+        adapter_min_text_overlap=0.75,
+        metadata={"suite": "unit"},
+    )
+    registry_record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:source-family-lane-batch-partial-unit:0.1"
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["source_backed_request_count"] == 2
+    assert payload["summary"]["request_with_results_count"] == 1
+    assert payload["summary"]["request_without_results_count"] == 1
+    assert payload["summary"]["request_without_results_ids"] == ("disambig:record-4:1",)
+    assert payload["summary"]["request_result_coverage"] == pytest.approx(0.5)
+    assert payload["summary"]["adapter_result_count"] == 1
+    assert payload["summary"]["child_status"] == "blocked"
+    assert payload["child_workflow_summary"]["request_without_results_ids"] == ("disambig:record-4:1",)
+    assert registry_module.load_and_verify_artifact_manifest(output_dir / "artifact-manifest.json").passed is True
+    assert registry_record is not None
+    assert registry_record.metadata["status"] == "blocked"
+    assert registry_record.metadata["request_without_results_count"] == 1
+    assert registry_record.metadata["request_result_coverage"] == pytest.approx(0.5)
 
 
 def test_source_family_structured_qa_lane_batch_workflow_emits_rule_only_batch(tmp_path):
@@ -2271,6 +2399,8 @@ def test_source_family_structured_qa_lane_batch_workflow_emits_rule_only_batch(t
     assert payload["paths"]["child_workflow_report"] is None
     assert payload["summary"]["source_backed_request_count"] == 0
     assert payload["summary"]["adapter_result_count"] == 0
+    assert payload["summary"]["request_without_results_count"] == 0
+    assert payload["summary"]["request_result_coverage"] == pytest.approx(1.0)
     assert payload["summary"]["structured_qa_document_count"] == 0
     assert payload["summary"]["rule_stub_count"] == 1
     assert payload["summary"]["request_type_counts"] == {"world_model_or_calculator_rule": 1}

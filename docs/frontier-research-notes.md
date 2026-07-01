@@ -1020,6 +1020,9 @@ Added the first monitor-first tool-selection audit layer:
   into a structured QA corpus. The registered SmolLM2 l80 workflow returns
   `2334` candidate adapter results for `778/778` source-backed requests, keeps
   `28` world-model/calculator rule stubs, and yields `70` candidate QA facts.
+  The workflow now gates source-backed execution on request-result coverage by
+  default, so a partial local-catalog replay records missing request ids and
+  remains `blocked` instead of advancing silently.
   The follow-up covered-fact route audit promotes on `140` balanced records, and
   the claim-mapping audit recovers `1/89` structured QA correction candidate
   from the previous `0/89`: the Tesla founder blind spot maps to Wikidata `P112`
@@ -1054,6 +1057,9 @@ Added the first monitor-first tool-selection audit layer:
   promotes (`18/18` balanced records correct), but unresolved-claim mapping
   remains `0/88`. This is evidence that the queue can execute reproducibly and
   that disambiguation alone is insufficient for correction handoff.
+  Batch-level reports inherit the same request-result coverage gate, exposing
+  partial source-backed batch execution as a blocked state with missing request
+  ids.
 - `build_unresolved_world_model_rule_stubs.py` now closes the deterministic
   branch of the separate unresolved queue: it extracts `6/6`
   world-model/calculator requests from the `182`-request queue, emits sanitized

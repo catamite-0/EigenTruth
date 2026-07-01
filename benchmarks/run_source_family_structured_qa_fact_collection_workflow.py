@@ -76,6 +76,7 @@ def run_source_family_structured_qa_fact_collection_workflow(
     adapter_max_query_variants: int = 3,
     adapter_min_text_overlap: float = 0.05,
     adapter_diversify_source_families: bool = True,
+    min_request_result_coverage: float = 1.0,
     default_source_family: str = DEFAULT_SOURCE_FAMILY,
     keep_qid_values: bool = False,
     metadata: Mapping[str, Any] | None = None,
@@ -95,6 +96,8 @@ def run_source_family_structured_qa_fact_collection_workflow(
         raise ValueError("adapter_max_query_variants must be positive.")
     if not (0.0 <= adapter_min_text_overlap <= 1.0):
         raise ValueError("adapter_min_text_overlap must be in [0, 1].")
+    if not (0.0 <= min_request_result_coverage <= 1.0):
+        raise ValueError("min_request_result_coverage must be in [0, 1].")
 
     collection = _load_collection(collection_corpus_path)
     selected_request_types = _normalize_request_types(request_types)
@@ -177,7 +180,7 @@ def run_source_family_structured_qa_fact_collection_workflow(
         qa_payload=qa_payload,
         selected_request_types=selected_request_types,
     )
-    status = _status(summary)
+    status = _status(summary, min_request_result_coverage=min_request_result_coverage)
     payload: dict[str, Any] = {
         "schema_version": 1,
         "workflow": WORKFLOW,
@@ -199,6 +202,7 @@ def run_source_family_structured_qa_fact_collection_workflow(
             "adapter_max_query_variants": int(adapter_max_query_variants),
             "adapter_min_text_overlap": float(adapter_min_text_overlap),
             "adapter_diversify_source_families": bool(adapter_diversify_source_families),
+            "min_request_result_coverage": float(min_request_result_coverage),
             "default_source_family": str(default_source_family),
             "keep_qid_values": bool(keep_qid_values),
         },
@@ -243,6 +247,9 @@ def run_source_family_structured_qa_fact_collection_workflow(
             "status": status,
             "source_backed_request_count": summary["source_backed_request_count"],
             "request_with_results_count": summary["request_with_results_count"],
+            "request_without_results_count": summary["request_without_results_count"],
+            "request_result_coverage": summary["request_result_coverage"],
+            "min_request_result_coverage": float(min_request_result_coverage),
             "adapter_result_count": summary["adapter_result_count"],
             "structured_qa_document_count": summary["structured_qa_document_count"],
             "rule_stub_count": summary["rule_stub_count"],
@@ -261,6 +268,9 @@ def run_source_family_structured_qa_fact_collection_workflow(
                 "status": status,
                 "source_backed_request_count": summary["source_backed_request_count"],
                 "request_with_results_count": summary["request_with_results_count"],
+                "request_without_results_count": summary["request_without_results_count"],
+                "request_result_coverage": summary["request_result_coverage"],
+                "min_request_result_coverage": float(min_request_result_coverage),
                 "adapter_result_count": summary["adapter_result_count"],
                 "structured_qa_document_count": summary["structured_qa_document_count"],
                 "rule_stub_count": summary["rule_stub_count"],
@@ -445,6 +455,14 @@ def _summary(
         request_type: int(adapter_summaries.get(request_type, {}).get("request_count", 0))
         for request_type in selected_request_types
     }
+    source_backed_request_count = sum(selected_counts.values())
+    request_with_results_count = sum(1 for count in row_counts if count > 0)
+    request_without_results_ids = tuple(
+        _clean(row.get("request_id"))
+        for row, count in zip(combined_rows, row_counts)
+        if count == 0 and _clean(row.get("request_id"))
+    )
+    request_without_results_count = max(0, source_backed_request_count - request_with_results_count)
     return {
         "collection_target_count": _nested_int(collection, "summary", "target_count"),
         "collection_total_request_count": _nested_int(collection, "summary", "total_request_count"),
@@ -455,9 +473,16 @@ def _summary(
             (int(summary.get("source_document_count", 0)) for summary in adapter_summaries.values()),
             default=0,
         ),
-        "source_backed_request_count": sum(selected_counts.values()),
+        "source_backed_request_count": source_backed_request_count,
         "adapter_row_count": len(combined_rows),
-        "request_with_results_count": sum(1 for count in row_counts if count > 0),
+        "request_with_results_count": request_with_results_count,
+        "request_without_results_count": request_without_results_count,
+        "request_without_results_ids": request_without_results_ids,
+        "request_result_coverage": (
+            1.0
+            if source_backed_request_count == 0
+            else request_with_results_count / source_backed_request_count
+        ),
         "adapter_result_count": sum(row_counts),
         "adapter_error_count": sum(1 for row in combined_rows if row.get("error")),
         "result_provider_counts": _sorted_counter(Counter(_clean(result.get("provider")) for result in result_docs)),
@@ -474,7 +499,9 @@ def _summary(
     }
 
 
-def _status(summary: Mapping[str, Any]) -> str:
+def _status(summary: Mapping[str, Any], *, min_request_result_coverage: float) -> str:
+    if float(summary.get("request_result_coverage", 0.0)) < float(min_request_result_coverage):
+        return "blocked"
     if int(summary.get("structured_qa_document_count", 0)) > 0:
         return "ready_for_fact_mapping"
     if int(summary.get("adapter_result_count", 0)) > 0 or int(summary.get("rule_stub_count", 0)) > 0:
@@ -608,6 +635,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--adapter-max-query-variants", type=int, default=3)
     parser.add_argument("--adapter-min-text-overlap", type=float, default=0.05)
     parser.add_argument("--no-adapter-diversify-source-families", action="store_true")
+    parser.add_argument("--min-request-result-coverage", type=float, default=1.0)
     parser.add_argument("--default-source-family", default=DEFAULT_SOURCE_FAMILY)
     parser.add_argument("--keep-qid-values", action="store_true")
     parser.add_argument("--metadata", action="append", default=[])
@@ -633,6 +661,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         adapter_max_query_variants=args.adapter_max_query_variants,
         adapter_min_text_overlap=args.adapter_min_text_overlap,
         adapter_diversify_source_families=not bool(args.no_adapter_diversify_source_families),
+        min_request_result_coverage=args.min_request_result_coverage,
         default_source_family=args.default_source_family,
         keep_qid_values=bool(args.keep_qid_values),
         metadata=_parse_metadata(args.metadata or ()),
@@ -644,6 +673,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         "source_family_structured_qa_fact_collection_workflow_ok "
         f"status={payload['status']} "
         f"requests={summary['source_backed_request_count']} "
+        f"coverage={summary['request_result_coverage']:.3f} "
         f"results={summary['adapter_result_count']} "
         f"qa_docs={summary['structured_qa_document_count']} "
         f"rules={summary['rule_stub_count']}"

@@ -3298,6 +3298,12 @@ world-model/calculator tasks as rule-authoring stubs. The output is still a
 candidate evidence bundle; route quality and claim mapping must be rerun before
 any correction handoff.
 
+Source-backed requests are gated by request-result coverage before the workflow
+can become `ready_for_fact_mapping`: by default `--min-request-result-coverage`
+is `1.0`, so any request with no adapter result leaves the report `blocked` and
+records `request_without_results_ids`. Lower the threshold only for explicit
+debugging runs.
+
 ```bash
 OUT=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-workflow
 
@@ -3646,6 +3652,10 @@ records respectively), but both claim-mapping audits remain blocked with `0/88`
 covered matches and `0/88` mapped correction candidates. This establishes the
 current local-catalog coverage ceiling: the source-backed facts are internally
 verifiable but still do not answer the unresolved TruthfulQA claim intents.
+Lane batch reports now inherit the same default 100% request-result coverage
+gate from the child fact-collection workflow, so a partially matched
+source-backed batch stays `blocked` and lists the missing request ids instead of
+silently advancing to downstream mapping.
 
 Rule-only batches are now executable as non-evidence rule-authoring artifacts:
 

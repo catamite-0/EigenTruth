@@ -168,6 +168,8 @@ def run_source_family_citation_search_adapter(
                 "request_count": summary["request_count"],
                 "source_document_count": summary["source_document_count"],
                 "request_with_results_count": summary["request_with_results_count"],
+                "request_without_results_count": summary["request_without_results_count"],
+                "request_coverage": summary["request_coverage"],
                 "result_count": summary["result_count"],
                 **dict(metadata or {}),
             },
@@ -185,6 +187,8 @@ def run_source_family_citation_search_adapter(
                 "request_count": summary["request_count"],
                 "source_document_count": summary["source_document_count"],
                 "request_with_results_count": summary["request_with_results_count"],
+                "request_without_results_count": summary["request_without_results_count"],
+                "request_coverage": summary["request_coverage"],
                 "result_count": summary["result_count"],
                 "artifact_manifest": payload.get("artifact_manifest"),
                 **dict(metadata or {}),
@@ -505,6 +509,13 @@ def _summary(
     catalog: Sequence[SourceCatalogDocument],
 ) -> dict[str, Any]:
     result_counts = [len(_result_items(row.get("results"))) for row in rows]
+    request_count = len(rows)
+    request_with_results_count = sum(1 for count in result_counts if count > 0)
+    request_without_results_ids = tuple(
+        _clean(row.get("request_id"))
+        for row, count in zip(rows, result_counts)
+        if count == 0 and _clean(row.get("request_id"))
+    )
     families = Counter(document.source_family for document in catalog)
     result_families = Counter(
         str(result.get("source_family"))
@@ -520,10 +531,13 @@ def _summary(
         if result.get("provider")
     )
     return {
-        "request_count": len(rows),
+        "request_count": request_count,
         "source_document_count": len(catalog),
         "request_error_count": sum(1 for row in rows if row.get("error")),
-        "request_with_results_count": sum(1 for count in result_counts if count > 0),
+        "request_with_results_count": request_with_results_count,
+        "request_without_results_count": sum(1 for count in result_counts if count == 0),
+        "request_without_results_ids": request_without_results_ids,
+        "request_coverage": 1.0 if request_count == 0 else request_with_results_count / request_count,
         "result_count": sum(result_counts),
         "catalog_source_family_counts": _sorted_counter(families),
         "result_source_family_counts": _sorted_counter(result_families),
@@ -759,6 +773,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         f"requests={summary['request_count']} "
         f"source_docs={summary['source_document_count']} "
         f"with_results={summary['request_with_results_count']} "
+        f"coverage={summary['request_coverage']:.3f} "
         f"results={summary['result_count']} "
         f"errors={summary['request_error_count']}"
     )

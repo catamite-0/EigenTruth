@@ -62,6 +62,7 @@ def run_source_family_structured_qa_lane_batch_workflow(
     adapter_max_query_variants: int = 3,
     adapter_min_text_overlap: float = 0.05,
     adapter_diversify_source_families: bool = True,
+    min_request_result_coverage: float = 1.0,
     default_source_family: str = "reference",
     keep_qid_values: bool = False,
     metadata: Mapping[str, Any] | None = None,
@@ -74,6 +75,8 @@ def run_source_family_structured_qa_lane_batch_workflow(
     selected_batch_ids = tuple(dict.fromkeys(str(item).strip() for item in batch_ids if str(item).strip()))
     if not selected_batch_ids:
         raise ValueError("at least one batch id is required.")
+    if not (0.0 <= min_request_result_coverage <= 1.0):
+        raise ValueError("min_request_result_coverage must be in [0, 1].")
 
     lane_queue = _load_lane_queue(lane_queue_path)
     collection = _load_collection(collection_corpus_path)
@@ -116,6 +119,7 @@ def run_source_family_structured_qa_lane_batch_workflow(
             adapter_max_query_variants=adapter_max_query_variants,
             adapter_min_text_overlap=adapter_min_text_overlap,
             adapter_diversify_source_families=adapter_diversify_source_families,
+            min_request_result_coverage=min_request_result_coverage,
             default_source_family=default_source_family,
             keep_qid_values=keep_qid_values,
             metadata={
@@ -169,6 +173,7 @@ def run_source_family_structured_qa_lane_batch_workflow(
             "adapter_max_query_variants": int(adapter_max_query_variants),
             "adapter_min_text_overlap": float(adapter_min_text_overlap),
             "adapter_diversify_source_families": bool(adapter_diversify_source_families),
+            "min_request_result_coverage": float(min_request_result_coverage),
             "default_source_family": str(default_source_family),
             "keep_qid_values": bool(keep_qid_values),
         },
@@ -208,6 +213,10 @@ def run_source_family_structured_qa_lane_batch_workflow(
             "batch_count": summary["batch_count"],
             "target_count": summary["target_count"],
             "source_backed_request_count": summary["source_backed_request_count"],
+            "request_with_results_count": summary["request_with_results_count"],
+            "request_without_results_count": summary["request_without_results_count"],
+            "request_result_coverage": summary["request_result_coverage"],
+            "min_request_result_coverage": float(min_request_result_coverage),
             "adapter_result_count": summary["adapter_result_count"],
             "structured_qa_document_count": summary["structured_qa_document_count"],
             "rule_stub_count": summary["rule_stub_count"],
@@ -227,6 +236,10 @@ def run_source_family_structured_qa_lane_batch_workflow(
                 "batch_count": summary["batch_count"],
                 "target_count": summary["target_count"],
                 "source_backed_request_count": summary["source_backed_request_count"],
+                "request_with_results_count": summary["request_with_results_count"],
+                "request_without_results_count": summary["request_without_results_count"],
+                "request_result_coverage": summary["request_result_coverage"],
+                "min_request_result_coverage": float(min_request_result_coverage),
                 "adapter_result_count": summary["adapter_result_count"],
                 "structured_qa_document_count": summary["structured_qa_document_count"],
                 "rule_stub_count": summary["rule_stub_count"],
@@ -403,6 +416,9 @@ def _summary(
         "total_request_count": _nested_int(batch_collection, "summary", "total_request_count") or 0,
         "source_backed_request_count": int(child_summary.get("source_backed_request_count", 0)),
         "request_with_results_count": int(child_summary.get("request_with_results_count", 0)),
+        "request_without_results_count": int(child_summary.get("request_without_results_count", 0)),
+        "request_without_results_ids": _string_sequence(child_summary.get("request_without_results_ids", ())),
+        "request_result_coverage": float(child_summary.get("request_result_coverage", 1.0)),
         "adapter_result_count": int(child_summary.get("adapter_result_count", 0)),
         "structured_qa_document_count": int(child_summary.get("structured_qa_document_count", 0)),
         "rule_stub_count": max(int(child_summary.get("rule_stub_count", 0)), len(rule_stubs)),
@@ -660,6 +676,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--adapter-max-query-variants", type=int, default=3)
     parser.add_argument("--adapter-min-text-overlap", type=float, default=0.05)
     parser.add_argument("--no-adapter-diversify-source-families", action="store_true")
+    parser.add_argument("--min-request-result-coverage", type=float, default=1.0)
     parser.add_argument("--default-source-family", default="reference")
     parser.add_argument("--keep-qid-values", action="store_true")
     parser.add_argument("--metadata", action="append", default=[])
@@ -682,6 +699,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         adapter_max_query_variants=args.adapter_max_query_variants,
         adapter_min_text_overlap=args.adapter_min_text_overlap,
         adapter_diversify_source_families=not bool(args.no_adapter_diversify_source_families),
+        min_request_result_coverage=args.min_request_result_coverage,
         default_source_family=args.default_source_family,
         keep_qid_values=bool(args.keep_qid_values),
         metadata=_parse_metadata(args.metadata or ()),
@@ -695,6 +713,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         f"batches={summary['batch_count']} "
         f"targets={summary['target_count']} "
         f"requests={summary['source_backed_request_count']} "
+        f"coverage={summary['request_result_coverage']:.3f} "
         f"results={summary['adapter_result_count']} "
         f"qa_docs={summary['structured_qa_document_count']} "
         f"rules={summary['rule_stub_count']}"
