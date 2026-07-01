@@ -172,6 +172,56 @@ _EVIDENCE_HANDOFF_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
         "evidence_handoff_promoted_group_rate",
     ),
 )
+_FACT_SELFCHECK_GATE_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
+    (
+        "promotion_contract.fact_selfcheck_gate.coverage_rate",
+        "fact_selfcheck_gate_coverage_rate",
+    ),
+    (
+        "promotion_contract.fact_selfcheck_gate.report_present_rate",
+        "fact_selfcheck_gate_report_present_rate",
+    ),
+    (
+        "promotion_contract.fact_selfcheck_gate.manifest_present_rate",
+        "fact_selfcheck_gate_manifest_present_rate",
+    ),
+    (
+        "promotion_contract.fact_selfcheck_gate.manifest_verified_rate",
+        "fact_selfcheck_gate_manifest_verified_rate",
+    ),
+    (
+        "promotion_contract.fact_selfcheck_gate.passed_rate",
+        "fact_selfcheck_gate_passed_rate",
+    ),
+    (
+        "promotion_contract.fact_selfcheck_gate.run_count.mean",
+        "fact_selfcheck_gate_run_count",
+    ),
+    (
+        "promotion_contract.fact_selfcheck_gate.failed_run_count.mean",
+        "fact_selfcheck_gate_failed_run_count",
+    ),
+    (
+        "promotion_contract.fact_selfcheck_gate.min_executed_rate.mean",
+        "fact_selfcheck_gate_min_executed_rate",
+    ),
+    (
+        "promotion_contract.fact_selfcheck_gate.min_decided_rate.mean",
+        "fact_selfcheck_gate_min_decided_rate",
+    ),
+    (
+        "promotion_contract.fact_selfcheck_gate.max_not_applicable_rate.mean",
+        "fact_selfcheck_gate_max_not_applicable_rate",
+    ),
+    (
+        "promotion_contract.fact_selfcheck_gate.min_claim_triples_per_record.mean",
+        "fact_selfcheck_gate_min_claim_triples_per_record",
+    ),
+    (
+        "promotion_contract.fact_selfcheck_gate.min_sample_triples_per_record.mean",
+        "fact_selfcheck_gate_min_sample_triples_per_record",
+    ),
+)
 _FRONTIER_RELEASE_EVIDENCE_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
     (
         "promotion_contract.frontier_release_evidence.coverage_rate",
@@ -858,6 +908,18 @@ def compare_product_runtime_baselines(
     max_evidence_handoff_missing_metric_count: float | None = None,
     max_evidence_handoff_blocked_group_count: float | None = None,
     min_evidence_handoff_promoted_group_rate: float | None = None,
+    min_fact_selfcheck_gate_coverage: float | None = None,
+    min_fact_selfcheck_gate_report_present_rate: float | None = None,
+    min_fact_selfcheck_gate_manifest_present_rate: float | None = None,
+    min_fact_selfcheck_gate_manifest_verified_rate: float | None = None,
+    min_fact_selfcheck_gate_passed_rate: float | None = None,
+    min_fact_selfcheck_gate_run_count: float | None = None,
+    max_fact_selfcheck_gate_failed_run_count: float | None = None,
+    min_fact_selfcheck_gate_min_executed_rate: float | None = None,
+    min_fact_selfcheck_gate_min_decided_rate: float | None = None,
+    max_fact_selfcheck_gate_max_not_applicable_rate: float | None = None,
+    min_fact_selfcheck_gate_min_claim_triples_per_record: float | None = None,
+    min_fact_selfcheck_gate_min_sample_triples_per_record: float | None = None,
     min_frontier_release_evidence_coverage: float | None = None,
     min_frontier_release_evidence_report_present_rate: float | None = None,
     min_frontier_release_evidence_manifest_present_rate: float | None = None,
@@ -1128,6 +1190,42 @@ def compare_product_runtime_baselines(
         ),
         "min_evidence_handoff_promoted_group_rate": _optional_rate_float(
             min_evidence_handoff_promoted_group_rate
+        ),
+        "min_fact_selfcheck_gate_coverage": _optional_rate_float(
+            min_fact_selfcheck_gate_coverage
+        ),
+        "min_fact_selfcheck_gate_report_present_rate": _optional_rate_float(
+            min_fact_selfcheck_gate_report_present_rate
+        ),
+        "min_fact_selfcheck_gate_manifest_present_rate": _optional_rate_float(
+            min_fact_selfcheck_gate_manifest_present_rate
+        ),
+        "min_fact_selfcheck_gate_manifest_verified_rate": _optional_rate_float(
+            min_fact_selfcheck_gate_manifest_verified_rate
+        ),
+        "min_fact_selfcheck_gate_passed_rate": _optional_rate_float(
+            min_fact_selfcheck_gate_passed_rate
+        ),
+        "min_fact_selfcheck_gate_run_count": _optional_non_negative_float(
+            min_fact_selfcheck_gate_run_count
+        ),
+        "max_fact_selfcheck_gate_failed_run_count": _optional_non_negative_float(
+            max_fact_selfcheck_gate_failed_run_count
+        ),
+        "min_fact_selfcheck_gate_min_executed_rate": _optional_rate_float(
+            min_fact_selfcheck_gate_min_executed_rate
+        ),
+        "min_fact_selfcheck_gate_min_decided_rate": _optional_rate_float(
+            min_fact_selfcheck_gate_min_decided_rate
+        ),
+        "max_fact_selfcheck_gate_max_not_applicable_rate": _optional_rate_float(
+            max_fact_selfcheck_gate_max_not_applicable_rate
+        ),
+        "min_fact_selfcheck_gate_min_claim_triples_per_record": _optional_non_negative_float(
+            min_fact_selfcheck_gate_min_claim_triples_per_record
+        ),
+        "min_fact_selfcheck_gate_min_sample_triples_per_record": _optional_non_negative_float(
+            min_fact_selfcheck_gate_min_sample_triples_per_record
         ),
         "min_frontier_release_evidence_coverage": _optional_rate_float(
             min_frontier_release_evidence_coverage
@@ -1704,6 +1802,7 @@ def _comparison_metrics(
     metrics.extend(_claim_factuality_probe_comparison_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_counterfactual_verification_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_evidence_handoff_metrics(baseline_summary, current_summary, gates=gates))
+    metrics.extend(_fact_selfcheck_gate_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(
         _frontier_release_evidence_metrics(baseline_summary, current_summary, gates=gates)
     )
@@ -2043,6 +2142,112 @@ def _evidence_handoff_gate_enabled(gates: Mapping[str, Any]) -> bool:
             "max_evidence_handoff_missing_metric_count",
             "max_evidence_handoff_blocked_group_count",
             "min_evidence_handoff_promoted_group_rate",
+        )
+    )
+
+
+def _fact_selfcheck_gate_metrics(
+    baseline_summary: Mapping[str, Any],
+    current_summary: Mapping[str, Any],
+    *,
+    gates: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    if not _fact_selfcheck_gate_enabled(gates):
+        return []
+    baseline = _mapping(_nested_value(baseline_summary, ("promotion_contract", "fact_selfcheck_gate")))
+    current = _mapping(_nested_value(current_summary, ("promotion_contract", "fact_selfcheck_gate")))
+    return [
+        _min_current_metric(
+            "promotion_contract.fact_selfcheck_gate.coverage_rate",
+            _finite_float(baseline.get("coverage_rate")),
+            _finite_float(current.get("coverage_rate")),
+            gates.get("min_fact_selfcheck_gate_coverage"),
+        ),
+        _min_current_metric(
+            "promotion_contract.fact_selfcheck_gate.report_present_rate",
+            _finite_float(baseline.get("report_present_rate")),
+            _finite_float(current.get("report_present_rate")),
+            gates.get("min_fact_selfcheck_gate_report_present_rate"),
+        ),
+        _min_current_metric(
+            "promotion_contract.fact_selfcheck_gate.manifest_present_rate",
+            _finite_float(baseline.get("manifest_present_rate")),
+            _finite_float(current.get("manifest_present_rate")),
+            gates.get("min_fact_selfcheck_gate_manifest_present_rate"),
+        ),
+        _min_current_metric(
+            "promotion_contract.fact_selfcheck_gate.manifest_verified_rate",
+            _manifest_verified_rate(baseline),
+            _manifest_verified_rate(current),
+            gates.get("min_fact_selfcheck_gate_manifest_verified_rate"),
+        ),
+        _min_current_metric(
+            "promotion_contract.fact_selfcheck_gate.passed_rate",
+            _finite_float(baseline.get("passed_rate")),
+            _finite_float(current.get("passed_rate")),
+            gates.get("min_fact_selfcheck_gate_passed_rate"),
+        ),
+        _min_current_metric(
+            "promotion_contract.fact_selfcheck_gate.run_count.mean",
+            _nested_float(baseline, ("run_count", "mean")),
+            _nested_float(current, ("run_count", "mean")),
+            gates.get("min_fact_selfcheck_gate_run_count"),
+        ),
+        _max_current_metric(
+            "promotion_contract.fact_selfcheck_gate.failed_run_count.mean",
+            _nested_float(baseline, ("failed_run_count", "mean")),
+            _nested_float(current, ("failed_run_count", "mean")),
+            gates.get("max_fact_selfcheck_gate_failed_run_count"),
+        ),
+        _min_current_metric(
+            "promotion_contract.fact_selfcheck_gate.min_executed_rate.mean",
+            _nested_float(baseline, ("min_executed_rate", "mean")),
+            _nested_float(current, ("min_executed_rate", "mean")),
+            gates.get("min_fact_selfcheck_gate_min_executed_rate"),
+        ),
+        _min_current_metric(
+            "promotion_contract.fact_selfcheck_gate.min_decided_rate.mean",
+            _nested_float(baseline, ("min_decided_rate", "mean")),
+            _nested_float(current, ("min_decided_rate", "mean")),
+            gates.get("min_fact_selfcheck_gate_min_decided_rate"),
+        ),
+        _max_current_metric(
+            "promotion_contract.fact_selfcheck_gate.max_not_applicable_rate.mean",
+            _nested_float(baseline, ("max_not_applicable_rate", "mean")),
+            _nested_float(current, ("max_not_applicable_rate", "mean")),
+            gates.get("max_fact_selfcheck_gate_max_not_applicable_rate"),
+        ),
+        _min_current_metric(
+            "promotion_contract.fact_selfcheck_gate.min_claim_triples_per_record.mean",
+            _nested_float(baseline, ("min_claim_triples_per_record", "mean")),
+            _nested_float(current, ("min_claim_triples_per_record", "mean")),
+            gates.get("min_fact_selfcheck_gate_min_claim_triples_per_record"),
+        ),
+        _min_current_metric(
+            "promotion_contract.fact_selfcheck_gate.min_sample_triples_per_record.mean",
+            _nested_float(baseline, ("min_sample_triples_per_record", "mean")),
+            _nested_float(current, ("min_sample_triples_per_record", "mean")),
+            gates.get("min_fact_selfcheck_gate_min_sample_triples_per_record"),
+        ),
+    ]
+
+
+def _fact_selfcheck_gate_enabled(gates: Mapping[str, Any]) -> bool:
+    return any(
+        gates.get(key) is not None
+        for key in (
+            "min_fact_selfcheck_gate_coverage",
+            "min_fact_selfcheck_gate_report_present_rate",
+            "min_fact_selfcheck_gate_manifest_present_rate",
+            "min_fact_selfcheck_gate_manifest_verified_rate",
+            "min_fact_selfcheck_gate_passed_rate",
+            "min_fact_selfcheck_gate_run_count",
+            "max_fact_selfcheck_gate_failed_run_count",
+            "min_fact_selfcheck_gate_min_executed_rate",
+            "min_fact_selfcheck_gate_min_decided_rate",
+            "max_fact_selfcheck_gate_max_not_applicable_rate",
+            "min_fact_selfcheck_gate_min_claim_triples_per_record",
+            "min_fact_selfcheck_gate_min_sample_triples_per_record",
         )
     )
 
@@ -3345,6 +3550,7 @@ def _drift_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
         **_claim_factuality_probe_comparison_metadata(report),
         **_counterfactual_verification_metadata(report),
         **_evidence_handoff_metadata(report),
+        **_fact_selfcheck_gate_metadata(report),
         **_frontier_release_evidence_metadata(report),
         **_covered_fact_property_metadata(report),
         **_triple_coverage_metadata(report),
@@ -3435,6 +3641,21 @@ def _evidence_handoff_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
         metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
         if metric is not None and metric.get("status") == "blocked":
             metadata["evidence_handoff_blocked_metric_count"] += 1
+    return metadata
+
+
+def _fact_selfcheck_gate_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    metrics = _metrics_by_name(report.get("metrics"))
+    metadata: dict[str, Any] = {
+        "fact_selfcheck_gate_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _FACT_SELFCHECK_GATE_METADATA_FIELDS:
+        metric = metrics.get(metric_name)
+        metadata[f"{prefix}_baseline"] = _finite_float(None if metric is None else metric.get("baseline"))
+        metadata[f"{prefix}_current"] = _finite_float(None if metric is None else metric.get("current"))
+        metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is not None and metric.get("status") == "blocked":
+            metadata["fact_selfcheck_gate_blocked_metric_count"] += 1
     return metadata
 
 
@@ -3882,6 +4103,36 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         min_evidence_handoff_promoted_group_rate=(
             args.min_evidence_handoff_promoted_group_rate
         ),
+        min_fact_selfcheck_gate_coverage=args.min_fact_selfcheck_gate_coverage,
+        min_fact_selfcheck_gate_report_present_rate=(
+            args.min_fact_selfcheck_gate_report_present_rate
+        ),
+        min_fact_selfcheck_gate_manifest_present_rate=(
+            args.min_fact_selfcheck_gate_manifest_present_rate
+        ),
+        min_fact_selfcheck_gate_manifest_verified_rate=(
+            args.min_fact_selfcheck_gate_manifest_verified_rate
+        ),
+        min_fact_selfcheck_gate_passed_rate=args.min_fact_selfcheck_gate_passed_rate,
+        min_fact_selfcheck_gate_run_count=args.min_fact_selfcheck_gate_run_count,
+        max_fact_selfcheck_gate_failed_run_count=(
+            args.max_fact_selfcheck_gate_failed_run_count
+        ),
+        min_fact_selfcheck_gate_min_executed_rate=(
+            args.min_fact_selfcheck_gate_min_executed_rate
+        ),
+        min_fact_selfcheck_gate_min_decided_rate=(
+            args.min_fact_selfcheck_gate_min_decided_rate
+        ),
+        max_fact_selfcheck_gate_max_not_applicable_rate=(
+            args.max_fact_selfcheck_gate_max_not_applicable_rate
+        ),
+        min_fact_selfcheck_gate_min_claim_triples_per_record=(
+            args.min_fact_selfcheck_gate_min_claim_triples_per_record
+        ),
+        min_fact_selfcheck_gate_min_sample_triples_per_record=(
+            args.min_fact_selfcheck_gate_min_sample_triples_per_record
+        ),
         min_frontier_release_evidence_coverage=(
             args.min_frontier_release_evidence_coverage
         ),
@@ -4260,6 +4511,18 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-evidence-handoff-missing-metric-count", type=float, default=None)
     parser.add_argument("--max-evidence-handoff-blocked-group-count", type=float, default=None)
     parser.add_argument("--min-evidence-handoff-promoted-group-rate", type=float, default=None)
+    parser.add_argument("--min-fact-selfcheck-gate-coverage", type=float, default=None)
+    parser.add_argument("--min-fact-selfcheck-gate-report-present-rate", type=float, default=None)
+    parser.add_argument("--min-fact-selfcheck-gate-manifest-present-rate", type=float, default=None)
+    parser.add_argument("--min-fact-selfcheck-gate-manifest-verified-rate", type=float, default=None)
+    parser.add_argument("--min-fact-selfcheck-gate-passed-rate", type=float, default=None)
+    parser.add_argument("--min-fact-selfcheck-gate-run-count", type=float, default=None)
+    parser.add_argument("--max-fact-selfcheck-gate-failed-run-count", type=float, default=None)
+    parser.add_argument("--min-fact-selfcheck-gate-min-executed-rate", type=float, default=None)
+    parser.add_argument("--min-fact-selfcheck-gate-min-decided-rate", type=float, default=None)
+    parser.add_argument("--max-fact-selfcheck-gate-max-not-applicable-rate", type=float, default=None)
+    parser.add_argument("--min-fact-selfcheck-gate-min-claim-triples-per-record", type=float, default=None)
+    parser.add_argument("--min-fact-selfcheck-gate-min-sample-triples-per-record", type=float, default=None)
     parser.add_argument("--min-frontier-release-evidence-coverage", type=float, default=None)
     parser.add_argument(
         "--min-frontier-release-evidence-report-present-rate",

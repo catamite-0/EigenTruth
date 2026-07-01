@@ -40098,6 +40098,154 @@ def test_compare_product_runtime_baselines_gates_frontier_release_evidence_drift
     ] == pytest.approx(1.0)
 
 
+def test_compare_product_runtime_baselines_gates_fact_selfcheck_gate_drift(tmp_path):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    registry_module = importlib.import_module("eigentruth.registry")
+    baseline_trace = tmp_path / "baseline-trace.json"
+    current_trace = tmp_path / "current-trace.json"
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    drift_report = tmp_path / "drift.json"
+    manifest_path = tmp_path / "drift-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    _write_product_runtime_trace(
+        baseline_trace,
+        request_id="baseline",
+        total_seconds=0.10,
+        route_seconds=0.02,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=1,
+        cache_misses=0,
+        metadata={
+            "fact_selfcheck_gate_report": "fact-baseline.json",
+            "fact_selfcheck_gate_manifest": "fact-baseline-manifest.json",
+            "fact_selfcheck_gate_source": "runtime_evidence_bundle",
+            "fact_selfcheck_gate_manifest_verified": True,
+            "fact_selfcheck_gate_workflow": "verifier_signal_fusion_workflow",
+            "fact_selfcheck_gate_status": "promote",
+            "fact_selfcheck_gate_gate_status": "promote",
+            "fact_selfcheck_gate_enabled": True,
+            "fact_selfcheck_gate_passed": True,
+            "fact_selfcheck_gate_run_count": 2,
+            "fact_selfcheck_gate_failed_run_count": 0,
+            "fact_selfcheck_gate_min_executed_rate": 0.98,
+            "fact_selfcheck_gate_min_decided_rate": 0.90,
+            "fact_selfcheck_gate_max_not_applicable_rate": 0.02,
+            "fact_selfcheck_gate_min_claim_triples_per_record": 1.0,
+            "fact_selfcheck_gate_min_sample_triples_per_record": 2.0,
+        },
+    )
+    _write_product_runtime_trace(
+        current_trace,
+        request_id="current",
+        total_seconds=0.10,
+        route_seconds=0.02,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=1,
+        cache_misses=0,
+        metadata={
+            "promotion_contract_fact_selfcheck_gate_report": "fact-current.json",
+            "promotion_contract_fact_selfcheck_gate_manifest": "fact-current-manifest.json",
+            "promotion_contract_fact_selfcheck_gate_source": "runtime_evidence_bundle",
+            "promotion_contract_fact_selfcheck_gate_manifest_verified": False,
+            "promotion_contract_fact_selfcheck_gate_workflow": "verifier_signal_fusion_workflow",
+            "promotion_contract_fact_selfcheck_gate_status": "blocked",
+            "promotion_contract_fact_selfcheck_gate_gate_status": "blocked",
+            "promotion_contract_fact_selfcheck_gate_enabled": True,
+            "promotion_contract_fact_selfcheck_gate_passed": False,
+            "promotion_contract_fact_selfcheck_gate_run_count": 1,
+            "promotion_contract_fact_selfcheck_gate_failed_run_count": 1,
+            "promotion_contract_fact_selfcheck_gate_min_executed_rate": 0.75,
+            "promotion_contract_fact_selfcheck_gate_min_decided_rate": 0.50,
+            "promotion_contract_fact_selfcheck_gate_max_not_applicable_rate": 0.40,
+            "promotion_contract_fact_selfcheck_gate_min_claim_triples_per_record": 0.4,
+            "promotion_contract_fact_selfcheck_gate_min_sample_triples_per_record": 0.7,
+            "promotion_contract_fact_selfcheck_gate_failed_runs": ("fact-current",),
+            "promotion_contract_fact_selfcheck_gate_blocking_reasons": ("low_decided_rate",),
+        },
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=baseline_report,
+        )
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(current_trace,),
+            report_path=current_report,
+        )
+    )
+
+    payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        report_path=drift_report,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="runtime-drift-fact-selfcheck",
+        version="0.1",
+        min_fact_selfcheck_gate_coverage=1.0,
+        min_fact_selfcheck_gate_report_present_rate=1.0,
+        min_fact_selfcheck_gate_manifest_present_rate=1.0,
+        min_fact_selfcheck_gate_manifest_verified_rate=1.0,
+        min_fact_selfcheck_gate_passed_rate=1.0,
+        min_fact_selfcheck_gate_run_count=2,
+        max_fact_selfcheck_gate_failed_run_count=0,
+        min_fact_selfcheck_gate_min_executed_rate=0.90,
+        min_fact_selfcheck_gate_min_decided_rate=0.80,
+        max_fact_selfcheck_gate_max_not_applicable_rate=0.10,
+        min_fact_selfcheck_gate_min_claim_triples_per_record=0.5,
+        min_fact_selfcheck_gate_min_sample_triples_per_record=1.0,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get("product_runtime_drift_report:runtime-drift-fact-selfcheck:0.1")
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["blocked_metric_count"] == 9
+    assert payload["summary"]["compared_metric_count"] == 29
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.fact_selfcheck_gate.coverage_rate",
+    )["status"] == "pass"
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.fact_selfcheck_gate.manifest_verified_rate",
+    )["current"] == pytest.approx(0.0)
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.fact_selfcheck_gate.passed_rate",
+    )["status"] == "blocked"
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.fact_selfcheck_gate.failed_run_count.mean",
+    )["current"] == pytest.approx(1.0)
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.fact_selfcheck_gate.max_not_applicable_rate.mean",
+    )["status"] == "blocked"
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.fact_selfcheck_gate.min_sample_triples_per_record.mean",
+    )["current"] == pytest.approx(0.7)
+    assert manifest["metadata"]["fact_selfcheck_gate_blocked_metric_count"] == 9
+    assert manifest["metadata"]["fact_selfcheck_gate_coverage_rate_status"] == "pass"
+    assert manifest["metadata"]["fact_selfcheck_gate_manifest_verified_rate_current"] == (
+        pytest.approx(0.0)
+    )
+    assert manifest["metadata"]["fact_selfcheck_gate_run_count_status"] == "blocked"
+    assert manifest["metadata"]["fact_selfcheck_gate_max_not_applicable_rate_status"] == "blocked"
+    assert record.metadata["fact_selfcheck_gate_blocked_metric_count"] == 9
+    assert record.metadata["fact_selfcheck_gate_failed_run_count_status"] == "blocked"
+    assert record.metadata["fact_selfcheck_gate_min_claim_triples_per_record_current"] == (
+        pytest.approx(0.4)
+    )
+
+
 def test_compare_product_runtime_baselines_gates_covered_fact_property_drift(tmp_path):
     baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
     compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
@@ -43074,6 +43222,24 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
             "covered_fact_property": "promote",
         },
     )
+    fact_selfcheck_gate_rollup = {
+        "fact_selfcheck_gate_report": "fact-selfcheck-gate.json",
+        "fact_selfcheck_gate_manifest": "fact-selfcheck-gate-manifest.json",
+        "fact_selfcheck_gate_source": "runtime_evidence_bundle",
+        "fact_selfcheck_gate_manifest_verified": True,
+        "fact_selfcheck_gate_workflow": "verifier_signal_fusion_workflow",
+        "fact_selfcheck_gate_status": "promote",
+        "fact_selfcheck_gate_gate_status": "promote",
+        "fact_selfcheck_gate_enabled": True,
+        "fact_selfcheck_gate_passed": True,
+        "fact_selfcheck_gate_run_count": 2,
+        "fact_selfcheck_gate_failed_run_count": 0,
+        "fact_selfcheck_gate_min_executed_rate": 0.95,
+        "fact_selfcheck_gate_min_decided_rate": 0.90,
+        "fact_selfcheck_gate_max_not_applicable_rate": 0.05,
+        "fact_selfcheck_gate_min_claim_triples_per_record": 1.0,
+        "fact_selfcheck_gate_min_sample_triples_per_record": 2.0,
+    }
     from eigentruth.control import (
         ActionExecutionStatus,
         ActionReceiptSigner,
@@ -43151,6 +43317,7 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
                 **pre_generation_probe_comparison_rollup,
                 **counterfactual_verification_rollup,
                 **evidence_handoff_rollup,
+                **fact_selfcheck_gate_rollup,
             },
             "runtime_trace": {"total_seconds": 0.10, "phases": []},
         },
@@ -43176,6 +43343,7 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
                 **pre_generation_probe_comparison_rollup,
                 **counterfactual_verification_rollup,
                 **evidence_handoff_rollup,
+                **fact_selfcheck_gate_rollup,
             },
             "runtime_trace": {"total_seconds": 0.20, "phases": []},
         },
@@ -43253,6 +43421,16 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
             max_runtime_drift_evidence_handoff_missing_metric_count=0,
             max_runtime_drift_evidence_handoff_blocked_group_count=0,
             min_runtime_drift_evidence_handoff_promoted_group_rate=1.0,
+            min_runtime_drift_fact_selfcheck_gate_coverage=1.0,
+            min_runtime_drift_fact_selfcheck_gate_manifest_verified_rate=1.0,
+            min_runtime_drift_fact_selfcheck_gate_passed_rate=1.0,
+            min_runtime_drift_fact_selfcheck_gate_run_count=2,
+            max_runtime_drift_fact_selfcheck_gate_failed_run_count=0,
+            min_runtime_drift_fact_selfcheck_gate_min_executed_rate=0.90,
+            min_runtime_drift_fact_selfcheck_gate_min_decided_rate=0.85,
+            max_runtime_drift_fact_selfcheck_gate_max_not_applicable_rate=0.10,
+            min_runtime_drift_fact_selfcheck_gate_min_claim_triples_per_record=1.0,
+            min_runtime_drift_fact_selfcheck_gate_min_sample_triples_per_record=2.0,
             min_runtime_drift_current_trace_count=2,
             registry_path=registry_path,
             name="trace-replay-with-drift",
@@ -43289,6 +43467,8 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert payload["runtime_drift"]["counterfactual_verification_blocked_metric_count"] == 0
     assert payload["runtime_drift"]["evidence_handoff_metric_count"] == 7
     assert payload["runtime_drift"]["evidence_handoff_blocked_metric_count"] == 0
+    assert payload["runtime_drift"]["fact_selfcheck_gate_metric_count"] == 12
+    assert payload["runtime_drift"]["fact_selfcheck_gate_blocked_metric_count"] == 0
     assert payload["runtime_drift"]["runtime_budget_policy_path"] == str(drift_policy_path)
     assert payload["paths"]["runtime_drift_manifest"] is not None
     assert payload["config"]["runtime_drift_baseline"] == str(prior_baseline_path)
@@ -43331,6 +43511,12 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert payload["config"]["runtime_drift_gates"]["max_evidence_handoff_blocked_group_count"] == (
         pytest.approx(0.0)
     )
+    assert payload["config"]["runtime_drift_gates"][
+        "min_fact_selfcheck_gate_manifest_verified_rate"
+    ] == pytest.approx(1.0)
+    assert payload["config"]["runtime_drift_gates"][
+        "max_fact_selfcheck_gate_failed_run_count"
+    ] == pytest.approx(0.0)
     assert drift_report["config"]["min_promotion_contract_coverage"] == pytest.approx(0.0)
     assert drift_report["config"]["min_promotion_contract_covered_fact_property_metric_count"] == (
         pytest.approx(2.0)
@@ -43367,6 +43553,10 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
         pytest.approx(1.0)
     )
     assert drift_report["config"]["max_evidence_handoff_missing_metric_count"] == pytest.approx(0.0)
+    assert drift_report["config"]["min_fact_selfcheck_gate_passed_rate"] == pytest.approx(1.0)
+    assert drift_report["config"]["min_fact_selfcheck_gate_min_decided_rate"] == (
+        pytest.approx(0.85)
+    )
     covered_fact_statuses = {
         metric["metric"]: metric["status"]
         for metric in drift_report["metrics"]
@@ -43448,6 +43638,19 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert evidence_handoff_statuses[
         "promotion_contract.evidence_handoff.manifest_verified_rate"
     ] == "pass"
+    fact_selfcheck_statuses = {
+        metric["metric"]: metric["status"]
+        for metric in drift_report["metrics"]
+        if metric["metric"].startswith("promotion_contract.fact_selfcheck_gate.")
+    }
+    assert len(fact_selfcheck_statuses) == 12
+    assert set(fact_selfcheck_statuses.values()) <= {"observed", "pass"}
+    assert fact_selfcheck_statuses[
+        "promotion_contract.fact_selfcheck_gate.manifest_verified_rate"
+    ] == "pass"
+    assert fact_selfcheck_statuses[
+        "promotion_contract.fact_selfcheck_gate.failed_run_count.mean"
+    ] == "pass"
     assert drift_report["runtime_budget_policy_gate"]["policy_metadata"] == {
         "source": "unit-test-runtime-drift"
     }
@@ -43472,6 +43675,8 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert manifest["metadata"]["runtime_drift_counterfactual_verification_blocked_metric_count"] == 0
     assert manifest["metadata"]["runtime_drift_evidence_handoff_metric_count"] == 7
     assert manifest["metadata"]["runtime_drift_evidence_handoff_blocked_metric_count"] == 0
+    assert manifest["metadata"]["runtime_drift_fact_selfcheck_gate_metric_count"] == 12
+    assert manifest["metadata"]["runtime_drift_fact_selfcheck_gate_blocked_metric_count"] == 0
     assert record.metadata["runtime_drift_status"] == "promote"
     assert record.metadata["runtime_drift_budget_policy_passed"] is True
     assert record.metadata["runtime_drift_covered_fact_property_metric_count"] == 6
@@ -43489,6 +43694,8 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert record.metadata["runtime_drift_counterfactual_verification_blocked_metric_count"] == 0
     assert record.metadata["runtime_drift_evidence_handoff_metric_count"] == 7
     assert record.metadata["runtime_drift_evidence_handoff_blocked_metric_count"] == 0
+    assert record.metadata["runtime_drift_fact_selfcheck_gate_metric_count"] == 12
+    assert record.metadata["runtime_drift_fact_selfcheck_gate_blocked_metric_count"] == 0
     assert drift_record.path == payload["paths"]["runtime_drift_report"]
     assert drift_record.metadata["workflow"] == "compare_product_runtime_baselines"
     assert drift_record.metadata["runtime_budget_policy_passed"] is True
@@ -43499,6 +43706,7 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert drift_record.metadata["pre_generation_probe_comparison_blocked_metric_count"] == 0
     assert drift_record.metadata["counterfactual_verification_blocked_metric_count"] == 0
     assert drift_record.metadata["evidence_handoff_blocked_metric_count"] == 0
+    assert drift_record.metadata["fact_selfcheck_gate_blocked_metric_count"] == 0
 
 
 def test_product_trace_replay_workflow_applies_world_model_runtime_drift_gate(tmp_path):

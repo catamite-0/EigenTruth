@@ -8708,8 +8708,10 @@ triple-extraction fixture-matrix coverage/quality drift, claim factuality probe
 comparison coverage, manifest-verification, redline, AUROC,
 selective-accuracy, and selective-coverage drift, counterfactual verifier-audit
 coverage, manifest verification, record count, pass rate, false-invariance
-rate, flip-success drift, trace-level triple/slot-audit coverage, and
-trace-count drift. When ProductTrace action results carry action receipts, the
+rate, flip-success drift, fact-selfcheck gate coverage, manifest/pass rate,
+run-count, failed-run, executed/decided/not-applicable, and fact-density drift,
+trace-level triple/slot-audit coverage, and trace-count drift. When ProductTrace
+action results carry action receipts, the
 same comparison can gate receipt coverage plus missing, invalid,
 fingerprint-mismatch, and unsigned receipt rates. When claims or final answers
 explicitly reference action request ids or receipt fingerprints, it can also
@@ -9149,6 +9151,16 @@ claim factuality probe comparison gates such as
 `--min-runtime-drift-claim-factuality-probe-comparison-manifest-verified-rate`,
 `--min-runtime-drift-claim-factuality-probe-comparison-redline-pass-rate`, and
 `--max-runtime-drift-claim-factuality-probe-comparison-best-*-drop`,
+fact-selfcheck gate checks such as
+`--min-runtime-drift-fact-selfcheck-gate-coverage`,
+`--min-runtime-drift-fact-selfcheck-gate-manifest-verified-rate`,
+`--min-runtime-drift-fact-selfcheck-gate-passed-rate`,
+`--min-runtime-drift-fact-selfcheck-gate-run-count`,
+`--max-runtime-drift-fact-selfcheck-gate-failed-run-count`,
+`--min-runtime-drift-fact-selfcheck-gate-min-executed-rate`,
+`--min-runtime-drift-fact-selfcheck-gate-min-decided-rate`,
+`--max-runtime-drift-fact-selfcheck-gate-max-not-applicable-rate`, and the
+claim/sample triple-density gates,
 `--min-runtime-drift-triple-extraction-fixture-matrix-coverage`, the two
 `--max-runtime-drift-triple-extraction-fixture-matrix-mean-*` drop gates, and
 covered-fact property gates such as

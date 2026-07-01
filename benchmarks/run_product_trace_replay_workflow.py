@@ -113,6 +113,18 @@ class ProductTraceReplayWorkflowConfig:
     max_runtime_drift_evidence_handoff_missing_metric_count: float | None = None
     max_runtime_drift_evidence_handoff_blocked_group_count: float | None = None
     min_runtime_drift_evidence_handoff_promoted_group_rate: float | None = None
+    min_runtime_drift_fact_selfcheck_gate_coverage: float | None = None
+    min_runtime_drift_fact_selfcheck_gate_report_present_rate: float | None = None
+    min_runtime_drift_fact_selfcheck_gate_manifest_present_rate: float | None = None
+    min_runtime_drift_fact_selfcheck_gate_manifest_verified_rate: float | None = None
+    min_runtime_drift_fact_selfcheck_gate_passed_rate: float | None = None
+    min_runtime_drift_fact_selfcheck_gate_run_count: float | None = None
+    max_runtime_drift_fact_selfcheck_gate_failed_run_count: float | None = None
+    min_runtime_drift_fact_selfcheck_gate_min_executed_rate: float | None = None
+    min_runtime_drift_fact_selfcheck_gate_min_decided_rate: float | None = None
+    max_runtime_drift_fact_selfcheck_gate_max_not_applicable_rate: float | None = None
+    min_runtime_drift_fact_selfcheck_gate_min_claim_triples_per_record: float | None = None
+    min_runtime_drift_fact_selfcheck_gate_min_sample_triples_per_record: float | None = None
     min_runtime_drift_triple_extraction_fixture_matrix_coverage: float | None = None
     max_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_drop: float | None = None
     max_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_drop: float | None = None
@@ -300,6 +312,18 @@ class ProductTraceReplayWorkflowConfig:
                 self.max_runtime_drift_evidence_handoff_missing_metric_count,
                 self.max_runtime_drift_evidence_handoff_blocked_group_count,
                 self.min_runtime_drift_evidence_handoff_promoted_group_rate,
+                self.min_runtime_drift_fact_selfcheck_gate_coverage,
+                self.min_runtime_drift_fact_selfcheck_gate_report_present_rate,
+                self.min_runtime_drift_fact_selfcheck_gate_manifest_present_rate,
+                self.min_runtime_drift_fact_selfcheck_gate_manifest_verified_rate,
+                self.min_runtime_drift_fact_selfcheck_gate_passed_rate,
+                self.min_runtime_drift_fact_selfcheck_gate_run_count,
+                self.max_runtime_drift_fact_selfcheck_gate_failed_run_count,
+                self.min_runtime_drift_fact_selfcheck_gate_min_executed_rate,
+                self.min_runtime_drift_fact_selfcheck_gate_min_decided_rate,
+                self.max_runtime_drift_fact_selfcheck_gate_max_not_applicable_rate,
+                self.min_runtime_drift_fact_selfcheck_gate_min_claim_triples_per_record,
+                self.min_runtime_drift_fact_selfcheck_gate_min_sample_triples_per_record,
                 self.min_runtime_drift_triple_extraction_fixture_matrix_coverage,
                 self.max_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_drop,
                 self.max_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_drop,
@@ -1491,6 +1515,18 @@ def _runtime_drift_configured(config: ProductTraceReplayWorkflowConfig) -> bool:
             config.max_runtime_drift_evidence_handoff_missing_metric_count,
             config.max_runtime_drift_evidence_handoff_blocked_group_count,
             config.min_runtime_drift_evidence_handoff_promoted_group_rate,
+            config.min_runtime_drift_fact_selfcheck_gate_coverage,
+            config.min_runtime_drift_fact_selfcheck_gate_report_present_rate,
+            config.min_runtime_drift_fact_selfcheck_gate_manifest_present_rate,
+            config.min_runtime_drift_fact_selfcheck_gate_manifest_verified_rate,
+            config.min_runtime_drift_fact_selfcheck_gate_passed_rate,
+            config.min_runtime_drift_fact_selfcheck_gate_run_count,
+            config.max_runtime_drift_fact_selfcheck_gate_failed_run_count,
+            config.min_runtime_drift_fact_selfcheck_gate_min_executed_rate,
+            config.min_runtime_drift_fact_selfcheck_gate_min_decided_rate,
+            config.max_runtime_drift_fact_selfcheck_gate_max_not_applicable_rate,
+            config.min_runtime_drift_fact_selfcheck_gate_min_claim_triples_per_record,
+            config.min_runtime_drift_fact_selfcheck_gate_min_sample_triples_per_record,
             config.min_runtime_drift_triple_extraction_fixture_matrix_coverage,
             config.max_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_drop,
             config.max_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_drop,
@@ -1658,6 +1694,38 @@ def _runtime_drift_gate_config(config: ProductTraceReplayWorkflowConfig) -> dict
         ),
         "min_evidence_handoff_promoted_group_rate": (
             config.min_runtime_drift_evidence_handoff_promoted_group_rate
+        ),
+        "min_fact_selfcheck_gate_coverage": config.min_runtime_drift_fact_selfcheck_gate_coverage,
+        "min_fact_selfcheck_gate_report_present_rate": (
+            config.min_runtime_drift_fact_selfcheck_gate_report_present_rate
+        ),
+        "min_fact_selfcheck_gate_manifest_present_rate": (
+            config.min_runtime_drift_fact_selfcheck_gate_manifest_present_rate
+        ),
+        "min_fact_selfcheck_gate_manifest_verified_rate": (
+            config.min_runtime_drift_fact_selfcheck_gate_manifest_verified_rate
+        ),
+        "min_fact_selfcheck_gate_passed_rate": (
+            config.min_runtime_drift_fact_selfcheck_gate_passed_rate
+        ),
+        "min_fact_selfcheck_gate_run_count": config.min_runtime_drift_fact_selfcheck_gate_run_count,
+        "max_fact_selfcheck_gate_failed_run_count": (
+            config.max_runtime_drift_fact_selfcheck_gate_failed_run_count
+        ),
+        "min_fact_selfcheck_gate_min_executed_rate": (
+            config.min_runtime_drift_fact_selfcheck_gate_min_executed_rate
+        ),
+        "min_fact_selfcheck_gate_min_decided_rate": (
+            config.min_runtime_drift_fact_selfcheck_gate_min_decided_rate
+        ),
+        "max_fact_selfcheck_gate_max_not_applicable_rate": (
+            config.max_runtime_drift_fact_selfcheck_gate_max_not_applicable_rate
+        ),
+        "min_fact_selfcheck_gate_min_claim_triples_per_record": (
+            config.min_runtime_drift_fact_selfcheck_gate_min_claim_triples_per_record
+        ),
+        "min_fact_selfcheck_gate_min_sample_triples_per_record": (
+            config.min_runtime_drift_fact_selfcheck_gate_min_sample_triples_per_record
         ),
         "min_triple_extraction_fixture_matrix_coverage": (
             config.min_runtime_drift_triple_extraction_fixture_matrix_coverage
@@ -2170,6 +2238,7 @@ def _runtime_drift_summary(runtime_drift: Mapping[str, Any]) -> dict[str, Any]:
     claim_factuality_probe_comparison = _claim_factuality_probe_comparison_metric_summary(runtime_drift)
     counterfactual_verification = _counterfactual_verification_metric_summary(runtime_drift)
     evidence_handoff = _evidence_handoff_metric_summary(runtime_drift)
+    fact_selfcheck_gate = _fact_selfcheck_gate_metric_summary(runtime_drift)
     context_sensitivity = _context_sensitivity_metric_summary(runtime_drift)
     counterfactual_robustness = _counterfactual_robustness_metric_summary(runtime_drift)
     claim_risk_localization = _claim_risk_localization_metric_summary(runtime_drift)
@@ -2229,6 +2298,8 @@ def _runtime_drift_summary(runtime_drift: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "evidence_handoff_metric_count": evidence_handoff["metric_count"],
         "evidence_handoff_blocked_metric_count": evidence_handoff["blocked_metric_count"],
+        "fact_selfcheck_gate_metric_count": fact_selfcheck_gate["metric_count"],
+        "fact_selfcheck_gate_blocked_metric_count": fact_selfcheck_gate["blocked_metric_count"],
         "baseline_path": _nested(runtime_drift, "baseline", "path"),
         "current_path": _nested(runtime_drift, "current", "path"),
         "report_path": _nested(runtime_drift, "paths", "report"),
@@ -2300,6 +2371,20 @@ def _evidence_handoff_metric_summary(runtime_drift: Mapping[str, Any]) -> dict[s
         for metric in _sequence(runtime_drift.get("metrics"))
         if str(_mapping(metric).get("metric") or "").startswith(
             "promotion_contract.evidence_handoff."
+        )
+    )
+    return {
+        "metric_count": len(metrics),
+        "blocked_metric_count": sum(1 for metric in metrics if metric.get("status") == "blocked"),
+    }
+
+
+def _fact_selfcheck_gate_metric_summary(runtime_drift: Mapping[str, Any]) -> dict[str, int]:
+    metrics = tuple(
+        _mapping(metric)
+        for metric in _sequence(runtime_drift.get("metrics"))
+        if str(_mapping(metric).get("metric") or "").startswith(
+            "promotion_contract.fact_selfcheck_gate."
         )
     )
     return {
@@ -2887,6 +2972,16 @@ def _write_artifact_manifest(
                 "runtime_drift",
                 "evidence_handoff_blocked_metric_count",
             ),
+            "runtime_drift_fact_selfcheck_gate_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "fact_selfcheck_gate_metric_count",
+            ),
+            "runtime_drift_fact_selfcheck_gate_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "fact_selfcheck_gate_blocked_metric_count",
+            ),
             "runtime_drift_report": _nested(report, "paths", "runtime_drift_report"),
             "runtime_drift_artifact_manifest": _nested(report, "paths", "runtime_drift_manifest"),
             "compact_json": config.compact_json,
@@ -3233,6 +3328,16 @@ def _record_registry(
                 report,
                 "runtime_drift",
                 "evidence_handoff_blocked_metric_count",
+            ),
+            "runtime_drift_fact_selfcheck_gate_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "fact_selfcheck_gate_metric_count",
+            ),
+            "runtime_drift_fact_selfcheck_gate_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "fact_selfcheck_gate_blocked_metric_count",
             ),
             "runtime_drift_report": _nested(report, "paths", "runtime_drift_report"),
             "runtime_drift_artifact_manifest": _nested(report, "paths", "runtime_drift_manifest"),
@@ -3657,6 +3762,42 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
         min_runtime_drift_evidence_handoff_promoted_group_rate=(
             args.min_runtime_drift_evidence_handoff_promoted_group_rate
         ),
+        min_runtime_drift_fact_selfcheck_gate_coverage=(
+            args.min_runtime_drift_fact_selfcheck_gate_coverage
+        ),
+        min_runtime_drift_fact_selfcheck_gate_report_present_rate=(
+            args.min_runtime_drift_fact_selfcheck_gate_report_present_rate
+        ),
+        min_runtime_drift_fact_selfcheck_gate_manifest_present_rate=(
+            args.min_runtime_drift_fact_selfcheck_gate_manifest_present_rate
+        ),
+        min_runtime_drift_fact_selfcheck_gate_manifest_verified_rate=(
+            args.min_runtime_drift_fact_selfcheck_gate_manifest_verified_rate
+        ),
+        min_runtime_drift_fact_selfcheck_gate_passed_rate=(
+            args.min_runtime_drift_fact_selfcheck_gate_passed_rate
+        ),
+        min_runtime_drift_fact_selfcheck_gate_run_count=(
+            args.min_runtime_drift_fact_selfcheck_gate_run_count
+        ),
+        max_runtime_drift_fact_selfcheck_gate_failed_run_count=(
+            args.max_runtime_drift_fact_selfcheck_gate_failed_run_count
+        ),
+        min_runtime_drift_fact_selfcheck_gate_min_executed_rate=(
+            args.min_runtime_drift_fact_selfcheck_gate_min_executed_rate
+        ),
+        min_runtime_drift_fact_selfcheck_gate_min_decided_rate=(
+            args.min_runtime_drift_fact_selfcheck_gate_min_decided_rate
+        ),
+        max_runtime_drift_fact_selfcheck_gate_max_not_applicable_rate=(
+            args.max_runtime_drift_fact_selfcheck_gate_max_not_applicable_rate
+        ),
+        min_runtime_drift_fact_selfcheck_gate_min_claim_triples_per_record=(
+            args.min_runtime_drift_fact_selfcheck_gate_min_claim_triples_per_record
+        ),
+        min_runtime_drift_fact_selfcheck_gate_min_sample_triples_per_record=(
+            args.min_runtime_drift_fact_selfcheck_gate_min_sample_triples_per_record
+        ),
         min_runtime_drift_triple_extraction_fixture_matrix_coverage=(
             args.min_runtime_drift_triple_extraction_fixture_matrix_coverage
         ),
@@ -4041,6 +4182,26 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-runtime-drift-evidence-handoff-missing-metric-count", type=float, default=None)
     parser.add_argument("--max-runtime-drift-evidence-handoff-blocked-group-count", type=float, default=None)
     parser.add_argument("--min-runtime-drift-evidence-handoff-promoted-group-rate", type=float, default=None)
+    parser.add_argument("--min-runtime-drift-fact-selfcheck-gate-coverage", type=float, default=None)
+    parser.add_argument("--min-runtime-drift-fact-selfcheck-gate-report-present-rate", type=float, default=None)
+    parser.add_argument("--min-runtime-drift-fact-selfcheck-gate-manifest-present-rate", type=float, default=None)
+    parser.add_argument("--min-runtime-drift-fact-selfcheck-gate-manifest-verified-rate", type=float, default=None)
+    parser.add_argument("--min-runtime-drift-fact-selfcheck-gate-passed-rate", type=float, default=None)
+    parser.add_argument("--min-runtime-drift-fact-selfcheck-gate-run-count", type=float, default=None)
+    parser.add_argument("--max-runtime-drift-fact-selfcheck-gate-failed-run-count", type=float, default=None)
+    parser.add_argument("--min-runtime-drift-fact-selfcheck-gate-min-executed-rate", type=float, default=None)
+    parser.add_argument("--min-runtime-drift-fact-selfcheck-gate-min-decided-rate", type=float, default=None)
+    parser.add_argument("--max-runtime-drift-fact-selfcheck-gate-max-not-applicable-rate", type=float, default=None)
+    parser.add_argument(
+        "--min-runtime-drift-fact-selfcheck-gate-min-claim-triples-per-record",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-runtime-drift-fact-selfcheck-gate-min-sample-triples-per-record",
+        type=float,
+        default=None,
+    )
     parser.add_argument("--min-runtime-drift-triple-extraction-fixture-matrix-coverage", type=float, default=None)
     parser.add_argument(
         "--max-runtime-drift-triple-extraction-fixture-matrix-mean-best-f1-drop",
