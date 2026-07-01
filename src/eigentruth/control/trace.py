@@ -10,7 +10,7 @@ from eigentruth.control.action_audit import audit_action_requests
 from eigentruth.control.actions import ActionRequest, ActionResult
 from eigentruth.control.finalization import FinalAnswer
 from eigentruth.control.policy import ControlAction, RiskDecision
-from eigentruth.control.provenance import audit_trace_provenance
+from eigentruth.control.provenance import audit_evidence_graph_consistency, audit_trace_provenance
 from eigentruth.control.receipt_audit import audit_receipt_claim_support
 from eigentruth.control.receipts import action_receipt_summary_from_results
 from eigentruth.json_utils import to_jsonable
@@ -288,6 +288,12 @@ class ProductTrace:
                 action_results=prepared.action_results,
                 final_answer=prepared.final_answer,
             ),
+            "evidence_graph_consistency": _evidence_graph_consistency_summary_from_payload(
+                request_id=self.request_id,
+                claims=prepared.claims,
+                verification_results=prepared.verification_results,
+                action_results=prepared.action_results,
+            ),
             "verification_route": _verification_route_summary_from_results(
                 prepared.verification_results,
             ),
@@ -410,6 +416,10 @@ class ProductTrace:
     def provenance_summary(self) -> dict[str, Any]:
         """Summarize trace evidence/execution provenance graph coverage."""
         return audit_trace_provenance(self).summary()
+
+    def evidence_graph_consistency_summary(self) -> dict[str, Any]:
+        """Summarize lightweight content consistency for supported-claim evidence."""
+        return audit_evidence_graph_consistency(self).summary()
 
     def verification_route_summary(self) -> dict[str, Any]:
         """Summarize verifier route choices recorded in result metadata."""
@@ -764,6 +774,21 @@ def _provenance_summary_from_payload(
         "actions": tuple(actions),
         "action_results": tuple(action_results),
         "final_answer": final_answer,
+    }).summary()
+
+
+def _evidence_graph_consistency_summary_from_payload(
+    *,
+    request_id: str | None,
+    claims: Sequence[Mapping[str, Any]],
+    verification_results: Sequence[Mapping[str, Any]],
+    action_results: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    return audit_evidence_graph_consistency({
+        "request_id": request_id,
+        "claims": tuple(claims),
+        "verification_results": tuple(verification_results),
+        "action_results": tuple(action_results),
     }).summary()
 
 

@@ -134,6 +134,15 @@ Added trace-level evidence provenance graphs:
 - `ProductTrace.to_bounded_dict()` carries a compact `summaries.provenance` block, and `product_runtime_metrics(...)` exposes provenance coverage, missing-reference counts, graph size, retrieval-hit/source counts, and final-answer evidence-reference rates for runtime telemetry.
 - This is structural provenance, not semantic entailment: it proves the support path is present and locally auditable, while verifier, retrieval, receipt, triple-evidence, world-model, or future semantic-provenance adapters decide whether the evidence content is true.
 
+Added lightweight evidence-graph consistency:
+
+- `EvidenceGraphConsistencyPolicy`, `EvidenceGraphConsistencyRecord`, `EvidenceGraphConsistencyReport`, and `audit_evidence_graph_consistency(...)` add a dependency-free content-consistency layer on top of trace provenance.
+- The audit evaluates supported verification results against linked local evidence and referenced retrieval hits, comparing claim keywords, numeric facts, and entity-like tokens.
+- Numeric drift such as `2003` vs `2004` is error-level because it is cheap and high precision; low keyword/entity overlap is warning-level because paraphrase and aliasing need stronger verifier routes.
+- Cross-claim retrieval hits are error-level when a supported claim cites a hit explicitly tagged for another claim.
+- `ProductTrace.to_bounded_dict()` now carries `summaries.evidence_graph_consistency`, and `product_runtime_metrics(...)` exposes consistency coverage, consistency rate, missing-number/entity counts, cross-claim hit counts, and bounded-summary replay support.
+- This is the local EigenTruth bridge toward Evidence Graph Consistency style RAG/agent auditing: it catches stale or miswired support edges while leaving real entailment to verifier, triple-evidence, citation, retrieval, or world-model adapters.
+
 Added DECK-style detectability taxonomy reports:
 
 - `youden_j_threshold(...)` computes a dependency-free Youden's J split for a score axis where either higher or lower raw scores can mean healthier behavior.

@@ -42,6 +42,21 @@ representation-observability toolkit spanning **training and inference**.
 - **Deliverable:** `eigentruth.control.trajectory_audit`, `ProductTrace.summaries.trajectory_audit`, and `product_runtime_metrics()` trajectory counters.
 - **Cost:** low. **Status:** implemented as a structural monitor-first audit; learned trajectory classifiers and real tool-selection representation probes remain future adapters.
 
+### E2-evidence-graph-consistency. Provenance content sanity
+- **Question:** Can EigenTruth catch stale, cross-wired, or numerically inconsistent
+  evidence links before adding a learned semantic provenance model?
+- **Method:** Reuse ProductTrace provenance links, then compare supported claims
+  against linked local evidence/retrieval hits using claim keyword, numeric, and
+  entity-like token coverage.
+- **Accept:** Dependency-free public API, bounded trace summary, runtime metrics,
+  and unit tests for matching evidence plus numeric-conflict failure.
+- **Deliverable:** `audit_evidence_graph_consistency(...)`,
+  `EvidenceGraphConsistencyReport`, `ProductTrace.summaries.evidence_graph_consistency`,
+  and `product_runtime_metrics()` consistency counters.
+- **Cost:** low. **Status:** implemented as a monitor-first evidence-graph sanity
+  check; semantic entailment, learned EGC features, and network retrieval remain
+  optional adapter work.
+
 ## Phase 0 — Finish in-flight work
 
 ### E0. Linear direction vs Mahalanobis + layer sweep (real data)

@@ -1359,6 +1359,59 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         "provenance_counts_by_relation": dict(
             _mapping(metrics.get("provenance_counts_by_relation"))
         ),
+        "evidence_graph_consistency_summary": dict(
+            _mapping(metrics.get("evidence_graph_consistency_summary"))
+        ),
+        "evidence_graph_consistency_available": bool(
+            metrics.get("evidence_graph_consistency_available")
+        ),
+        "evidence_graph_consistency_source": metrics.get("evidence_graph_consistency_source"),
+        "evidence_graph_consistency_passed": metrics.get("evidence_graph_consistency_passed"),
+        "evidence_graph_consistency_supported_claim_count": metrics.get(
+            "evidence_graph_consistency_supported_claim_count"
+        ),
+        "evidence_graph_consistency_record_count": metrics.get(
+            "evidence_graph_consistency_record_count"
+        ),
+        "evidence_graph_consistency_evaluated_supported_claim_count": metrics.get(
+            "evidence_graph_consistency_evaluated_supported_claim_count"
+        ),
+        "evidence_graph_consistency_consistent_supported_claim_count": metrics.get(
+            "evidence_graph_consistency_consistent_supported_claim_count"
+        ),
+        "evidence_graph_consistency_inconsistent_supported_claim_count": metrics.get(
+            "evidence_graph_consistency_inconsistent_supported_claim_count"
+        ),
+        "evidence_graph_consistency_insufficient_evidence_count": metrics.get(
+            "evidence_graph_consistency_insufficient_evidence_count"
+        ),
+        "evidence_graph_consistency_coverage_rate": metrics.get(
+            "evidence_graph_consistency_coverage_rate"
+        ),
+        "evidence_graph_consistency_supported_claim_consistency_rate": metrics.get(
+            "evidence_graph_consistency_supported_claim_consistency_rate"
+        ),
+        "evidence_graph_consistency_missing_number_count": metrics.get(
+            "evidence_graph_consistency_missing_number_count"
+        ),
+        "evidence_graph_consistency_missing_entity_count": metrics.get(
+            "evidence_graph_consistency_missing_entity_count"
+        ),
+        "evidence_graph_consistency_cross_claim_retrieval_hit_count": metrics.get(
+            "evidence_graph_consistency_cross_claim_retrieval_hit_count"
+        ),
+        "evidence_graph_consistency_error_count": metrics.get(
+            "evidence_graph_consistency_error_count"
+        ),
+        "evidence_graph_consistency_warning_count": metrics.get(
+            "evidence_graph_consistency_warning_count"
+        ),
+        "evidence_graph_consistency_counts_by_status": dict(
+            _mapping(metrics.get("evidence_graph_consistency_counts_by_status"))
+        ),
+        "evidence_graph_consistency_counts_by_code": dict(
+            _mapping(metrics.get("evidence_graph_consistency_counts_by_code"))
+        ),
         "triple_coverage_summary": dict(_mapping(metrics.get("triple_coverage_summary"))),
         "triple_coverage_source": metrics.get("triple_coverage_source"),
         "triple_claim_count": metrics.get("triple_claim_count"),
@@ -1869,6 +1922,7 @@ def _aggregate_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "action_audit": _aggregate_action_audit(metrics),
         "trajectory_audit": _aggregate_trajectory_audit(metrics),
         "provenance": _aggregate_provenance(metrics),
+        "evidence_graph_consistency": _aggregate_evidence_graph_consistency(metrics),
         "claim_risk_localization": _aggregate_claim_risk_localization(metrics),
         "triple_coverage": _aggregate_triple_coverage(metrics),
         "world_model": _aggregate_world_model(metrics),
@@ -3183,6 +3237,118 @@ def _aggregate_provenance(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any
         "per_trace_missing_reference_count": _numeric_summary(
             item.get("provenance_missing_reference_count") for item in metrics
         ),
+        "summary_observations": sum(1 for summary in summaries if summary),
+    }
+
+
+def _aggregate_evidence_graph_consistency(
+    metrics: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    summaries = [
+        _mapping(item.get("evidence_graph_consistency_summary"))
+        for item in metrics
+    ]
+    n_traces = len(metrics)
+    available_count = sum(
+        1 for item in metrics if item.get("evidence_graph_consistency_available") is True
+    )
+    passed_count = sum(
+        1 for item in metrics if item.get("evidence_graph_consistency_passed") is True
+    )
+    failed_count = sum(
+        1 for item in metrics if item.get("evidence_graph_consistency_passed") is False
+    )
+    counts_by_status: dict[str, int] = {}
+    counts_by_code: dict[str, int] = {}
+    for summary in summaries:
+        _merge_counts(counts_by_status, _mapping(summary.get("counts_by_status")))
+        _merge_counts(counts_by_code, _mapping(summary.get("counts_by_code")))
+    supported_claim_count = (
+        _sum_float(metrics, "evidence_graph_consistency_supported_claim_count") or 0.0
+    )
+    evaluated_supported_claim_count = (
+        _sum_float(metrics, "evidence_graph_consistency_evaluated_supported_claim_count") or 0.0
+    )
+    consistent_supported_claim_count = (
+        _sum_float(metrics, "evidence_graph_consistency_consistent_supported_claim_count") or 0.0
+    )
+    inconsistent_supported_claim_count = (
+        _sum_float(metrics, "evidence_graph_consistency_inconsistent_supported_claim_count") or 0.0
+    )
+    insufficient_evidence_count = (
+        _sum_float(metrics, "evidence_graph_consistency_insufficient_evidence_count") or 0.0
+    )
+    missing_number_count = (
+        _sum_float(metrics, "evidence_graph_consistency_missing_number_count") or 0.0
+    )
+    missing_entity_count = (
+        _sum_float(metrics, "evidence_graph_consistency_missing_entity_count") or 0.0
+    )
+    cross_claim_retrieval_hit_count = (
+        _sum_float(metrics, "evidence_graph_consistency_cross_claim_retrieval_hit_count") or 0.0
+    )
+    error_count = _sum_float(metrics, "evidence_graph_consistency_error_count") or 0.0
+    warning_count = _sum_float(metrics, "evidence_graph_consistency_warning_count") or 0.0
+    return {
+        "source_trace_count": n_traces,
+        "available_trace_count": available_count,
+        "missing_trace_count": n_traces - available_count,
+        "coverage_rate": _safe_div(available_count, n_traces),
+        "passed_trace_count": passed_count,
+        "failed_trace_count": failed_count,
+        "passed_trace_rate": _safe_div(passed_count, available_count),
+        "failed_trace_rate": _safe_div(failed_count, available_count),
+        "source_counts": _counts(
+            item.get("evidence_graph_consistency_source") for item in metrics
+        ),
+        "supported_claim_count": supported_claim_count,
+        "evaluated_supported_claim_count": evaluated_supported_claim_count,
+        "consistent_supported_claim_count": consistent_supported_claim_count,
+        "inconsistent_supported_claim_count": inconsistent_supported_claim_count,
+        "insufficient_evidence_count": insufficient_evidence_count,
+        "consistency_coverage_rate": _safe_div(
+            evaluated_supported_claim_count,
+            supported_claim_count,
+        ),
+        "supported_claim_consistency_rate": _safe_div(
+            consistent_supported_claim_count,
+            evaluated_supported_claim_count,
+        ),
+        "inconsistent_supported_claim_rate": _safe_div(
+            inconsistent_supported_claim_count,
+            evaluated_supported_claim_count,
+        ),
+        "insufficient_evidence_rate": _safe_div(
+            insufficient_evidence_count,
+            supported_claim_count,
+        ),
+        "missing_number_count": missing_number_count,
+        "missing_number_rate": _safe_div(missing_number_count, supported_claim_count),
+        "missing_entity_count": missing_entity_count,
+        "missing_entity_rate": _safe_div(missing_entity_count, supported_claim_count),
+        "cross_claim_retrieval_hit_count": cross_claim_retrieval_hit_count,
+        "cross_claim_retrieval_hit_rate": _safe_div(
+            cross_claim_retrieval_hit_count,
+            supported_claim_count,
+        ),
+        "error_count": error_count,
+        "warning_count": warning_count,
+        "error_rate": _safe_div(error_count, n_traces),
+        "warning_rate": _safe_div(warning_count, n_traces),
+        "keyword_overlap_mean": _numeric_summary(
+            item.get("evidence_graph_consistency_keyword_overlap_mean") for item in metrics
+        ),
+        "keyword_overlap_min": _numeric_summary(
+            item.get("evidence_graph_consistency_keyword_overlap_min") for item in metrics
+        ),
+        "number_recall_mean": _numeric_summary(
+            item.get("evidence_graph_consistency_number_recall_mean") for item in metrics
+        ),
+        "entity_recall_mean": _numeric_summary(
+            item.get("evidence_graph_consistency_entity_recall_mean") for item in metrics
+        ),
+        "counts_by_status": counts_by_status,
+        "counts_by_code": counts_by_code,
         "summary_observations": sum(1 for summary in summaries if summary),
     }
 

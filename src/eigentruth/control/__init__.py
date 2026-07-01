@@ -87,11 +87,15 @@ from eigentruth.control.promotion import (
     product_runtime_budget_policy_from_release_candidate,
 )
 from eigentruth.control.provenance import (
+    EvidenceGraphConsistencyPolicy,
+    EvidenceGraphConsistencyRecord,
+    EvidenceGraphConsistencyReport,
     TraceProvenanceEdge,
     TraceProvenanceGraph,
     TraceProvenanceIssue,
     TraceProvenanceNode,
     TraceProvenanceReport,
+    audit_evidence_graph_consistency,
     audit_trace_provenance,
     build_trace_provenance_graph,
 )
@@ -170,6 +174,9 @@ __all__ = [
     "EvidenceGap",
     "EvidenceGapAction",
     "EvidenceGapPlan",
+    "EvidenceGraphConsistencyPolicy",
+    "EvidenceGraphConsistencyRecord",
+    "EvidenceGraphConsistencyReport",
     "FeedbackOutcome",
     "FinalAnswer",
     "FinalAnswerStatus",
@@ -226,6 +233,7 @@ __all__ = [
     "VerificationStageDecision",
     "VerificationLoopResult",
     "audit_action_requests",
+    "audit_evidence_graph_consistency",
     "audit_product_trace_trajectory",
     "audit_trace_provenance",
     "build_trace_provenance_graph",

@@ -40014,6 +40014,49 @@ def test_run_product_runtime_baseline_aggregates_trajectory_audit(tmp_path):
     assert record.metadata["trajectory_audit_logical_rate"] == pytest.approx(0.5)
 
 
+def test_run_product_runtime_baseline_aggregates_evidence_graph_consistency(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    clean_trace = tmp_path / "evidence-graph-clean.json"
+    drift_trace = tmp_path / "evidence-graph-drift.json"
+    report_path = tmp_path / "product-runtime-baseline.json"
+    clean_trace.write_text(
+        json.dumps(_product_runtime_evidence_graph_trace(
+            request_id="clean",
+            claim_text="Tesla was founded in 2003 by Martin Eberhard.",
+            evidence_text="Tesla was founded in 2003 by Martin Eberhard.",
+        )),
+        encoding="utf-8",
+    )
+    drift_trace.write_text(
+        json.dumps(_product_runtime_evidence_graph_trace(
+            request_id="drift",
+            claim_text="Tesla was founded in 2003 by Martin Eberhard.",
+            evidence_text="Tesla was founded in 2004 by Elon Musk.",
+        )),
+        encoding="utf-8",
+    )
+
+    payload = module.build_product_runtime_baseline(
+        module.ProductRuntimeBaselineConfig(
+            trace_paths=(clean_trace, drift_trace),
+            report_path=report_path,
+        )
+    )
+    consistency = payload["summary"]["evidence_graph_consistency"]
+
+    assert consistency["available_trace_count"] == 2
+    assert consistency["passed_trace_count"] == 1
+    assert consistency["failed_trace_count"] == 1
+    assert consistency["supported_claim_count"] == pytest.approx(2.0)
+    assert consistency["consistent_supported_claim_count"] == pytest.approx(1.0)
+    assert consistency["inconsistent_supported_claim_count"] == pytest.approx(1.0)
+    assert consistency["supported_claim_consistency_rate"] == pytest.approx(0.5)
+    assert consistency["missing_number_count"] == pytest.approx(1.0)
+    assert consistency["counts_by_code"]["missing_claim_number"] == 1
+    assert payload["traces"][0]["metrics"]["evidence_graph_consistency_passed"] is True
+    assert payload["traces"][1]["metrics"]["evidence_graph_consistency_passed"] is False
+
+
 def test_run_product_runtime_baseline_aggregates_claim_risk_entities(tmp_path):
     module = importlib.import_module("benchmarks.run_product_runtime_baseline")
     trace_a = tmp_path / "claim-risk-trace-a.json"
@@ -45667,6 +45710,57 @@ def _product_runtime_trajectory_trace(
             "followup": {"requires_followup": False},
         },
         "metadata": {"cache": {"verifier": {"hits": 1, "misses": 0}}},
+    }
+
+
+def _product_runtime_evidence_graph_trace(
+    *,
+    request_id: str,
+    claim_text: str,
+    evidence_text: str,
+) -> dict[str, Any]:
+    return {
+        "request_id": request_id,
+        "runtime_trace": {"total_seconds": 0.10, "phases": []},
+        "claims": [
+            {
+                "claim_id": "c1",
+                "text": claim_text,
+                "metadata": {},
+            }
+        ],
+        "verification_results": [
+            {
+                "status": "supported",
+                "confidence": 0.95,
+                "metadata": {"claim_id": "c1", "action_request_id": f"{request_id}-retrieve"},
+            }
+        ],
+        "actions": [
+            {
+                "action": "retrieve",
+                "reason": "fetch evidence",
+                "payload": {"claim_ids": ["c1"]},
+                "request_id": f"{request_id}-retrieve",
+            }
+        ],
+        "action_results": [
+            {
+                "action": "retrieve",
+                "status": "succeeded",
+                "output": {
+                    "hits": [
+                        {
+                            "claim_id": "c1",
+                            "source": "company-registry",
+                            "text": evidence_text,
+                        }
+                    ]
+                },
+                "request_id": f"{request_id}-retrieve",
+            }
+        ],
+        "metadata": {},
     }
 
 

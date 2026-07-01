@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+import re
 from dataclasses import dataclass, field
 from typing import Any, Mapping, Sequence
 
@@ -303,6 +305,277 @@ class TraceProvenanceReport:
         )
 
 
+@dataclass(frozen=True)
+class EvidenceGraphConsistencyPolicy:
+    """Lightweight content checks for trace evidence links.
+
+    The policy is intentionally lexical and dependency-free. It is a provenance
+    consistency audit, not a semantic entailment model.
+    """
+
+    min_keyword_overlap: float = 0.2
+    min_number_recall: float = 1.0
+    min_entity_recall: float = 0.5
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "min_keyword_overlap",
+            _rate_float(self.min_keyword_overlap, name="min_keyword_overlap"),
+        )
+        object.__setattr__(
+            self,
+            "min_number_recall",
+            _rate_float(self.min_number_recall, name="min_number_recall"),
+        )
+        object.__setattr__(
+            self,
+            "min_entity_recall",
+            _rate_float(self.min_entity_recall, name="min_entity_recall"),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-ready policy payload."""
+        return {
+            "min_keyword_overlap": self.min_keyword_overlap,
+            "min_number_recall": self.min_number_recall,
+            "min_entity_recall": self.min_entity_recall,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "EvidenceGraphConsistencyPolicy":
+        """Build a policy from a JSON-like mapping."""
+        return cls(
+            min_keyword_overlap=float(data.get("min_keyword_overlap", 0.2)),
+            min_number_recall=float(data.get("min_number_recall", 1.0)),
+            min_entity_recall=float(data.get("min_entity_recall", 0.5)),
+        )
+
+
+@dataclass(frozen=True)
+class EvidenceGraphConsistencyRecord:
+    """One supported-claim/evidence content-consistency audit row."""
+
+    claim_id: str
+    verification_result_index: int
+    status: str
+    evidence_count: int
+    keyword_overlap: float | None = None
+    number_recall: float | None = None
+    entity_recall: float | None = None
+    missing_numbers: Sequence[str] = ()
+    missing_entities: Sequence[str] = ()
+    claim_keywords: Sequence[str] = ()
+    evidence_keywords: Sequence[str] = ()
+    claim_numbers: Sequence[str] = ()
+    evidence_numbers: Sequence[str] = ()
+    claim_entities: Sequence[str] = ()
+    evidence_entities: Sequence[str] = ()
+    issue_codes: Sequence[str] = ()
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        claim_id = str(self.claim_id).strip()
+        status = str(self.status).strip()
+        if not claim_id:
+            raise ValueError("evidence graph consistency claim_id must be non-empty.")
+        if not status:
+            raise ValueError("evidence graph consistency status must be non-empty.")
+        verification_result_index = int(self.verification_result_index)
+        evidence_count = int(self.evidence_count)
+        if verification_result_index < 0:
+            raise ValueError("verification_result_index must be non-negative.")
+        if evidence_count < 0:
+            raise ValueError("evidence_count must be non-negative.")
+        object.__setattr__(self, "claim_id", claim_id)
+        object.__setattr__(self, "verification_result_index", verification_result_index)
+        object.__setattr__(self, "status", status)
+        object.__setattr__(self, "evidence_count", evidence_count)
+        object.__setattr__(self, "missing_numbers", _string_tuple(self.missing_numbers))
+        object.__setattr__(self, "missing_entities", _string_tuple(self.missing_entities))
+        object.__setattr__(self, "claim_keywords", _string_tuple(self.claim_keywords))
+        object.__setattr__(self, "evidence_keywords", _string_tuple(self.evidence_keywords))
+        object.__setattr__(self, "claim_numbers", _string_tuple(self.claim_numbers))
+        object.__setattr__(self, "evidence_numbers", _string_tuple(self.evidence_numbers))
+        object.__setattr__(self, "claim_entities", _string_tuple(self.claim_entities))
+        object.__setattr__(self, "evidence_entities", _string_tuple(self.evidence_entities))
+        object.__setattr__(self, "issue_codes", _string_tuple(self.issue_codes))
+        object.__setattr__(self, "metadata", dict(self.metadata))
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-ready consistency record."""
+        return {
+            "claim_id": self.claim_id,
+            "verification_result_index": self.verification_result_index,
+            "status": self.status,
+            "evidence_count": self.evidence_count,
+            "keyword_overlap": self.keyword_overlap,
+            "number_recall": self.number_recall,
+            "entity_recall": self.entity_recall,
+            "missing_numbers": tuple(self.missing_numbers),
+            "missing_entities": tuple(self.missing_entities),
+            "claim_keywords": tuple(self.claim_keywords),
+            "evidence_keywords": tuple(self.evidence_keywords),
+            "claim_numbers": tuple(self.claim_numbers),
+            "evidence_numbers": tuple(self.evidence_numbers),
+            "claim_entities": tuple(self.claim_entities),
+            "evidence_entities": tuple(self.evidence_entities),
+            "issue_codes": tuple(self.issue_codes),
+            "metadata": to_jsonable(dict(self.metadata)),
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "EvidenceGraphConsistencyRecord":
+        """Build a consistency record from a JSON-like mapping."""
+        return cls(
+            claim_id=str(data["claim_id"]),
+            verification_result_index=int(data["verification_result_index"]),
+            status=str(data["status"]),
+            evidence_count=int(data["evidence_count"]),
+            keyword_overlap=_optional_float(data.get("keyword_overlap")),
+            number_recall=_optional_float(data.get("number_recall")),
+            entity_recall=_optional_float(data.get("entity_recall")),
+            missing_numbers=tuple(_sequence(data.get("missing_numbers", ()))),
+            missing_entities=tuple(_sequence(data.get("missing_entities", ()))),
+            claim_keywords=tuple(_sequence(data.get("claim_keywords", ()))),
+            evidence_keywords=tuple(_sequence(data.get("evidence_keywords", ()))),
+            claim_numbers=tuple(_sequence(data.get("claim_numbers", ()))),
+            evidence_numbers=tuple(_sequence(data.get("evidence_numbers", ()))),
+            claim_entities=tuple(_sequence(data.get("claim_entities", ()))),
+            evidence_entities=tuple(_sequence(data.get("evidence_entities", ()))),
+            issue_codes=tuple(_sequence(data.get("issue_codes", ()))),
+            metadata=dict(_mapping(data.get("metadata"))),
+        )
+
+
+@dataclass(frozen=True)
+class EvidenceGraphConsistencyReport:
+    """JSON-ready evidence graph consistency report for one trace."""
+
+    trace_id: str | None = None
+    policy: EvidenceGraphConsistencyPolicy | Mapping[str, Any] = field(
+        default_factory=EvidenceGraphConsistencyPolicy
+    )
+    records: Sequence[EvidenceGraphConsistencyRecord | Mapping[str, Any]] = ()
+    issues: Sequence[TraceProvenanceIssue | Mapping[str, Any]] = ()
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        trace_id = None if self.trace_id is None else str(self.trace_id).strip() or None
+        policy = self.policy if isinstance(self.policy, EvidenceGraphConsistencyPolicy) else (
+            EvidenceGraphConsistencyPolicy.from_dict(self.policy)
+        )
+        records = tuple(
+            record
+            if isinstance(record, EvidenceGraphConsistencyRecord)
+            else EvidenceGraphConsistencyRecord.from_dict(record)
+            for record in self.records
+        )
+        issues = tuple(
+            issue if isinstance(issue, TraceProvenanceIssue) else TraceProvenanceIssue.from_dict(issue)
+            for issue in self.issues
+        )
+        object.__setattr__(self, "trace_id", trace_id)
+        object.__setattr__(self, "policy", policy)
+        object.__setattr__(self, "records", records)
+        object.__setattr__(self, "issues", issues)
+        object.__setattr__(self, "metadata", dict(self.metadata))
+
+    @property
+    def passed(self) -> bool:
+        """Return whether no error-level consistency issue was found."""
+        return not any(issue.severity is ActionAuditSeverity.ERROR for issue in self.issues)
+
+    def summary(self) -> dict[str, Any]:
+        """Return compact evidence graph consistency telemetry."""
+        counts_by_status: dict[str, int] = {}
+        counts_by_code: dict[str, int] = {}
+        counts_by_severity: dict[str, int] = {}
+        keyword_overlaps = [
+            record.keyword_overlap
+            for record in self.records
+            if record.keyword_overlap is not None
+        ]
+        number_recalls = [
+            record.number_recall for record in self.records if record.number_recall is not None
+        ]
+        entity_recalls = [
+            record.entity_recall for record in self.records if record.entity_recall is not None
+        ]
+        for record in self.records:
+            counts_by_status[record.status] = counts_by_status.get(record.status, 0) + 1
+        for issue in self.issues:
+            counts_by_code[issue.code] = counts_by_code.get(issue.code, 0) + 1
+            severity = issue.severity.value
+            counts_by_severity[severity] = counts_by_severity.get(severity, 0) + 1
+        supported_claim_count = int(self.metadata.get("supported_claim_count", len(self.records)))
+        evaluated_count = sum(
+            1 for record in self.records if record.status != "insufficient_evidence"
+        )
+        consistent_count = counts_by_status.get("consistent", 0)
+        inconsistent_count = counts_by_status.get("inconsistent", 0)
+        insufficient_count = counts_by_status.get("insufficient_evidence", 0)
+        return {
+            "available": True,
+            "passed": self.passed,
+            "trace_id": self.trace_id,
+            "policy": self.policy.to_dict(),
+            "supported_claim_count": supported_claim_count,
+            "record_count": len(self.records),
+            "evaluated_supported_claim_count": evaluated_count,
+            "consistent_supported_claim_count": consistent_count,
+            "inconsistent_supported_claim_count": inconsistent_count,
+            "insufficient_evidence_count": insufficient_count,
+            "consistency_coverage_rate": _safe_div(evaluated_count, supported_claim_count),
+            "supported_claim_consistency_rate": _safe_div(
+                consistent_count,
+                evaluated_count,
+            ),
+            "keyword_overlap_mean": _mean(keyword_overlaps),
+            "keyword_overlap_min": _minimum(keyword_overlaps),
+            "number_recall_mean": _mean(number_recalls),
+            "entity_recall_mean": _mean(entity_recalls),
+            "low_keyword_overlap_count": counts_by_code.get("low_keyword_overlap", 0),
+            "missing_number_count": counts_by_code.get("missing_claim_number", 0),
+            "missing_entity_count": counts_by_code.get("missing_claim_entity", 0),
+            "cross_claim_retrieval_hit_count": counts_by_code.get(
+                "referenced_cross_claim_retrieval_hit",
+                0,
+            ),
+            "issue_count": len(self.issues),
+            "error_count": counts_by_severity.get(ActionAuditSeverity.ERROR.value, 0),
+            "warning_count": counts_by_severity.get(ActionAuditSeverity.WARNING.value, 0),
+            "info_count": counts_by_severity.get(ActionAuditSeverity.INFO.value, 0),
+            "counts_by_status": counts_by_status,
+            "counts_by_code": counts_by_code,
+            "counts_by_severity": counts_by_severity,
+            "top_records": tuple(record.to_dict() for record in self.records[:8]),
+            "top_issues": tuple(issue.to_dict() for issue in self.issues[:8]),
+        }
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-ready report payload."""
+        return {
+            "trace_id": self.trace_id,
+            "policy": self.policy.to_dict(),
+            "records": tuple(record.to_dict() for record in self.records),
+            "issues": tuple(issue.to_dict() for issue in self.issues),
+            "metadata": to_jsonable(dict(self.metadata)),
+            "summary": self.summary(),
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "EvidenceGraphConsistencyReport":
+        """Build a report from a JSON-like mapping."""
+        return cls(
+            trace_id=None if data.get("trace_id") is None else str(data["trace_id"]),
+            policy=_mapping(data.get("policy")),
+            records=tuple(_sequence(data.get("records", ()))),
+            issues=tuple(_sequence(data.get("issues", ()))),
+            metadata=dict(_mapping(data.get("metadata"))),
+        )
+
+
 def build_trace_provenance_graph(trace: Any) -> TraceProvenanceGraph:
     """Build a typed provenance graph from a ProductTrace-like payload."""
     payload = _trace_payload(trace)
@@ -592,6 +865,208 @@ def audit_trace_provenance(trace: Any) -> TraceProvenanceReport:
     )
 
 
+def audit_evidence_graph_consistency(
+    trace: Any,
+    *,
+    policy: EvidenceGraphConsistencyPolicy | Mapping[str, Any] | None = None,
+) -> EvidenceGraphConsistencyReport:
+    """Audit whether supported-claim evidence is content-consistent with claims.
+
+    This check sits on top of trace provenance. It uses simple lexical,
+    number, and entity-token coverage over explicitly linked local evidence and
+    retrieval hits. It catches stale or cross-wired evidence references without
+    claiming semantic entailment.
+    """
+    payload = _trace_payload(trace)
+    policy_obj = (
+        EvidenceGraphConsistencyPolicy()
+        if policy is None
+        else policy
+        if isinstance(policy, EvidenceGraphConsistencyPolicy)
+        else EvidenceGraphConsistencyPolicy.from_dict(policy)
+    )
+    claims = tuple(_mapping(item) for item in _sequence(payload.get("claims", ())) if isinstance(item, Mapping))
+    verification_results = tuple(
+        _mapping(item) for item in _sequence(payload.get("verification_results", ())) if isinstance(item, Mapping)
+    )
+    action_results = tuple(
+        _mapping(item) for item in _sequence(payload.get("action_results", ())) if isinstance(item, Mapping)
+    )
+    claim_ids = tuple(_claim_node_id(claim, index)[0] for index, claim in enumerate(claims))
+    claim_by_id = {
+        claim_id: claim
+        for index, claim in enumerate(claims)
+        for claim_id, _node_id in (_claim_node_id(claim, index),)
+    }
+    action_result_by_request_id = {
+        request_id: result
+        for result in action_results
+        if (request_id := _optional_string(result.get("request_id"))) is not None
+    }
+    records: list[EvidenceGraphConsistencyRecord] = []
+    issues: list[TraceProvenanceIssue] = []
+    supported_claim_count = 0
+    for index, result in enumerate(verification_results):
+        if str(result.get("status", "")).strip() != "supported":
+            continue
+        supported_claim_count += 1
+        claim_id = _verification_result_claim_id(result, index=index, claim_ids=claim_ids)
+        claim = claim_by_id.get(claim_id, {})
+        claim_text = _text_from_payload(claim) or _optional_string(result.get("claim")) or ""
+        evidence_items = list(_evidence_texts_from_verification_result(result))
+        cross_claim_hit_count = 0
+        request_ids = _referenced_request_ids(result)
+        for request_id in request_ids:
+            action_result = action_result_by_request_id.get(request_id)
+            if action_result is None:
+                continue
+            for hit_text, hit_claim_id in _retrieval_hit_texts(action_result):
+                if hit_claim_id is not None and hit_claim_id != claim_id:
+                    cross_claim_hit_count += 1
+                    issues.append(TraceProvenanceIssue(
+                        code="referenced_cross_claim_retrieval_hit",
+                        severity=ActionAuditSeverity.ERROR,
+                        message="supported verification result cites a retrieval hit linked to a different claim",
+                        node_id=f"verification_result:{index}",
+                        claim_ids=(claim_id,),
+                        metadata={
+                            "request_id": request_id,
+                            "hit_claim_id": hit_claim_id,
+                        },
+                    ))
+                evidence_items.append(hit_text)
+        record, record_issues = _consistency_record_for_claim(
+            claim_id=claim_id,
+            verification_result_index=index,
+            claim_text=claim_text,
+            evidence_items=tuple(evidence_items),
+            policy=policy_obj,
+            metadata={
+                "request_ids": request_ids,
+                "cross_claim_hit_count": cross_claim_hit_count,
+            },
+        )
+        records.append(record)
+        issues.extend(record_issues)
+    return EvidenceGraphConsistencyReport(
+        trace_id=_optional_string(payload.get("request_id")),
+        policy=policy_obj,
+        records=tuple(records),
+        issues=tuple(issues),
+        metadata={
+            "audit_version": 1,
+            "supported_claim_count": supported_claim_count,
+            "claim_count": len(claims),
+            "verification_result_count": len(verification_results),
+        },
+    )
+
+
+def _consistency_record_for_claim(
+    *,
+    claim_id: str,
+    verification_result_index: int,
+    claim_text: str,
+    evidence_items: Sequence[str],
+    policy: EvidenceGraphConsistencyPolicy,
+    metadata: Mapping[str, Any],
+) -> tuple[EvidenceGraphConsistencyRecord, tuple[TraceProvenanceIssue, ...]]:
+    evidence_texts = tuple(text.strip() for text in evidence_items if text.strip())
+    claim_features = _TextEvidenceFeatures.from_text(claim_text)
+    evidence_features = _TextEvidenceFeatures.from_text("\n".join(evidence_texts))
+    issue_codes: list[str] = []
+    issues: list[TraceProvenanceIssue] = []
+    if not evidence_texts:
+        issue_codes.append("no_local_evidence_text")
+        issues.append(TraceProvenanceIssue(
+            code="no_local_evidence_text",
+            severity=ActionAuditSeverity.WARNING,
+            message="supported claim has no local evidence text to compare",
+            node_id=f"verification_result:{verification_result_index}",
+            claim_ids=(claim_id,),
+            metadata={"source": "evidence_graph_consistency"},
+        ))
+        return EvidenceGraphConsistencyRecord(
+            claim_id=claim_id,
+            verification_result_index=verification_result_index,
+            status="insufficient_evidence",
+            evidence_count=0,
+            claim_keywords=claim_features.keywords,
+            claim_numbers=claim_features.numbers,
+            claim_entities=claim_features.entities,
+            issue_codes=tuple(issue_codes),
+            metadata=dict(metadata),
+        ), tuple(issues)
+
+    keyword_overlap = _recall(claim_features.keywords, evidence_features.keywords)
+    number_recall = _recall(claim_features.numbers, evidence_features.numbers)
+    entity_recall = _recall(claim_features.entities, evidence_features.entities)
+    missing_numbers = _missing_items(claim_features.numbers, evidence_features.numbers)
+    missing_entities = _missing_items(claim_features.entities, evidence_features.entities)
+
+    if keyword_overlap is not None and keyword_overlap < policy.min_keyword_overlap:
+        issue_codes.append("low_keyword_overlap")
+        issues.append(TraceProvenanceIssue(
+            code="low_keyword_overlap",
+            severity=ActionAuditSeverity.WARNING,
+            message="supported claim evidence has low keyword overlap with the claim",
+            node_id=f"verification_result:{verification_result_index}",
+            claim_ids=(claim_id,),
+            metadata={
+                "keyword_overlap": keyword_overlap,
+                "min_keyword_overlap": policy.min_keyword_overlap,
+            },
+        ))
+    if number_recall is not None and number_recall < policy.min_number_recall:
+        issue_codes.append("missing_claim_number")
+        issues.append(TraceProvenanceIssue(
+            code="missing_claim_number",
+            severity=ActionAuditSeverity.ERROR,
+            message="supported claim evidence is missing one or more numeric facts from the claim",
+            node_id=f"verification_result:{verification_result_index}",
+            claim_ids=(claim_id,),
+            metadata={
+                "number_recall": number_recall,
+                "min_number_recall": policy.min_number_recall,
+                "missing_numbers": missing_numbers,
+            },
+        ))
+    if entity_recall is not None and entity_recall < policy.min_entity_recall:
+        issue_codes.append("missing_claim_entity")
+        issues.append(TraceProvenanceIssue(
+            code="missing_claim_entity",
+            severity=ActionAuditSeverity.WARNING,
+            message="supported claim evidence is missing one or more entity-like tokens from the claim",
+            node_id=f"verification_result:{verification_result_index}",
+            claim_ids=(claim_id,),
+            metadata={
+                "entity_recall": entity_recall,
+                "min_entity_recall": policy.min_entity_recall,
+                "missing_entities": missing_entities,
+            },
+        ))
+    status = "consistent" if not issue_codes else "inconsistent"
+    return EvidenceGraphConsistencyRecord(
+        claim_id=claim_id,
+        verification_result_index=verification_result_index,
+        status=status,
+        evidence_count=len(evidence_texts),
+        keyword_overlap=keyword_overlap,
+        number_recall=number_recall,
+        entity_recall=entity_recall,
+        missing_numbers=missing_numbers,
+        missing_entities=missing_entities,
+        claim_keywords=claim_features.keywords,
+        evidence_keywords=evidence_features.keywords,
+        claim_numbers=claim_features.numbers,
+        evidence_numbers=evidence_features.numbers,
+        claim_entities=claim_features.entities,
+        evidence_entities=evidence_features.entities,
+        issue_codes=tuple(issue_codes),
+        metadata=dict(metadata),
+    ), tuple(issues)
+
+
 class _TraceProvenanceBuilder:
     def __init__(self, *, trace_id: str | None) -> None:
         self.trace_id = trace_id
@@ -832,6 +1307,216 @@ def _safe_div(numerator: int | float, denominator: int | float) -> float | None:
     if denominator == 0:
         return None
     return float(numerator) / float(denominator)
+
+
+@dataclass(frozen=True)
+class _TextEvidenceFeatures:
+    keywords: tuple[str, ...] = ()
+    numbers: tuple[str, ...] = ()
+    entities: tuple[str, ...] = ()
+
+    @classmethod
+    def from_text(cls, text: str) -> "_TextEvidenceFeatures":
+        return cls(
+            keywords=_keyword_tokens(text),
+            numbers=_number_tokens(text),
+            entities=_entity_tokens(text),
+        )
+
+
+def _evidence_texts_from_verification_result(result: Mapping[str, Any]) -> tuple[str, ...]:
+    evidence_texts: list[str] = []
+    for evidence in _sequence(result.get("evidence", ())):
+        text = _text_from_payload(evidence)
+        if text is not None:
+            evidence_texts.append(text)
+    metadata = _mapping(result.get("metadata"))
+    for key in ("evidence", "evidence_text", "evidence_texts", "source_text", "source_texts"):
+        value = metadata.get(key)
+        if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+            for item in _sequence(value):
+                text = _text_from_payload(item)
+                if text is not None:
+                    evidence_texts.append(text)
+        elif key in metadata:
+            text = _text_from_payload(metadata.get(key))
+            if text is not None:
+                evidence_texts.append(text)
+    return tuple(dict.fromkeys(evidence_texts))
+
+
+def _retrieval_hit_texts(action_result: Mapping[str, Any]) -> tuple[tuple[str, str | None], ...]:
+    hits: list[tuple[str, str | None]] = []
+    output = _mapping(action_result.get("output"))
+    for hit in _retrieval_hits_from_output(output):
+        text = _text_from_payload(hit)
+        if text is None:
+            continue
+        hit_claim_id = _optional_string(_mapping(hit).get("claim_id"))
+        hits.append((text, hit_claim_id))
+    return tuple(hits)
+
+
+def _retrieval_hits_from_output(output: Mapping[str, Any]) -> tuple[Mapping[str, Any], ...]:
+    hits: list[Mapping[str, Any]] = []
+    for hit in _sequence(output.get("hits", ())):
+        if isinstance(hit, Mapping):
+            hits.append(_mapping(hit))
+    for query_result in _sequence(output.get("hits_by_query", ())):
+        query_mapping = _mapping(query_result)
+        for hit in _sequence(query_mapping.get("hits", ())):
+            if isinstance(hit, Mapping):
+                hits.append(_mapping(hit))
+    return tuple(hits)
+
+
+def _text_from_payload(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value.strip() or None
+    if isinstance(value, Mapping):
+        for key in ("text", "content", "snippet", "title", "source_text", "claim_text"):
+            text = _optional_string(value.get(key))
+            if text is not None:
+                return text
+    return _optional_string(value)
+
+
+def _keyword_tokens(text: str) -> tuple[str, ...]:
+    tokens: list[str] = []
+    for match in _WORD_RE.finditer(text):
+        token = match.group(0).lower().strip("_-'")
+        if len(token) < 3 or token in _STOPWORDS or _NUMBER_RE.fullmatch(token):
+            continue
+        tokens.append(token)
+    return tuple(dict.fromkeys(tokens))
+
+
+def _number_tokens(text: str) -> tuple[str, ...]:
+    tokens: list[str] = []
+    for match in _NUMBER_RE.finditer(text):
+        token = match.group(0).replace(",", "").strip()
+        if token:
+            tokens.append(token)
+    return tuple(dict.fromkeys(tokens))
+
+
+def _entity_tokens(text: str) -> tuple[str, ...]:
+    entities: list[str] = []
+    for match in _WORD_RE.finditer(text):
+        raw = match.group(0).strip("_-'")
+        if len(raw) < 2:
+            continue
+        lowered = raw.lower()
+        if lowered in _STOPWORDS or _NUMBER_RE.fullmatch(raw):
+            continue
+        if raw[0].isupper() or raw.isupper():
+            entities.append(lowered)
+    return tuple(dict.fromkeys(entities))
+
+
+def _recall(reference: Sequence[str], observed: Sequence[str]) -> float | None:
+    reference_set = set(reference)
+    if not reference_set:
+        return None
+    observed_set = set(observed)
+    return len(reference_set & observed_set) / len(reference_set)
+
+
+def _missing_items(reference: Sequence[str], observed: Sequence[str]) -> tuple[str, ...]:
+    observed_set = set(observed)
+    return tuple(item for item in reference if item not in observed_set)
+
+
+def _mean(values: Sequence[float]) -> float | None:
+    if not values:
+        return None
+    return sum(float(value) for value in values) / len(values)
+
+
+def _minimum(values: Sequence[float]) -> float | None:
+    if not values:
+        return None
+    return min(float(value) for value in values)
+
+
+def _rate_float(value: Any, *, name: str) -> float:
+    result = float(value)
+    if not math.isfinite(result) or not 0.0 <= result <= 1.0:
+        raise ValueError(f"{name} must be finite and in [0, 1].")
+    return result
+
+
+def _optional_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    return float(value)
+
+
+def _string_tuple(values: Sequence[Any]) -> tuple[str, ...]:
+    return tuple(str(value) for value in values)
+
+
+_WORD_RE = re.compile(r"[A-Za-z][A-Za-z0-9_'’-]*")
+_NUMBER_RE = re.compile(r"(?<![A-Za-z0-9_])-?\d+(?:,\d{3})*(?:\.\d+)?%?")
+_STOPWORDS = {
+    "about",
+    "after",
+    "again",
+    "against",
+    "also",
+    "and",
+    "are",
+    "because",
+    "been",
+    "before",
+    "being",
+    "between",
+    "both",
+    "but",
+    "can",
+    "did",
+    "does",
+    "for",
+    "from",
+    "had",
+    "has",
+    "have",
+    "her",
+    "his",
+    "into",
+    "its",
+    "more",
+    "not",
+    "off",
+    "onto",
+    "our",
+    "out",
+    "over",
+    "she",
+    "that",
+    "the",
+    "their",
+    "them",
+    "then",
+    "there",
+    "these",
+    "they",
+    "this",
+    "those",
+    "through",
+    "was",
+    "were",
+    "when",
+    "where",
+    "which",
+    "while",
+    "who",
+    "with",
+    "you",
+    "your",
+}
 
 
 _REQUEST_ID_KEYS = {

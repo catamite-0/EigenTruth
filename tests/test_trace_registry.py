@@ -29,6 +29,7 @@ from eigentruth.control import (
     RuntimePhaseTiming,
     RuntimeTrace,
     TraceEvent,
+    audit_evidence_graph_consistency,
     audit_trace_provenance,
     evaluate_product_runtime_budget,
     first_existing_product_promotion_contract_path,
@@ -1645,6 +1646,101 @@ def test_product_trace_provenance_flags_missing_action_reference():
     assert metrics["provenance_source"] == "bounded_summary"
     assert metrics["provenance_missing_reference_count"] == pytest.approx(2.0)
     assert metrics["provenance_unsupported_supported_claim_count"] == pytest.approx(1.0)
+
+
+def test_product_trace_evidence_graph_consistency_accepts_matching_retrieval_hit():
+    trace = ProductTrace(
+        request_id="trace-evidence-graph-pass",
+        claims=(
+            {
+                "claim_id": "c1",
+                "text": "Tesla was founded in 2003 by Martin Eberhard.",
+            },
+        ),
+        verification_results=(
+            VerificationResult(
+                VerificationStatus.SUPPORTED,
+                confidence=0.93,
+                metadata={"claim_id": "c1", "action_request_id": "retrieve-1"},
+            ),
+        ),
+        action_results=(
+            ActionResult(
+                action=ControlAction.RETRIEVE,
+                status=ActionExecutionStatus.SUCCEEDED,
+                request_id="retrieve-1",
+                output={
+                    "hits": (
+                        {
+                            "claim_id": "c1",
+                            "source": "company-registry",
+                            "text": "Tesla was founded in 2003 by Martin Eberhard.",
+                        },
+                    ),
+                },
+            ),
+        ),
+    )
+
+    report = audit_evidence_graph_consistency(trace)
+    summary = trace.evidence_graph_consistency_summary()
+    bounded = trace.to_bounded_dict()
+    metrics = product_runtime_metrics(trace)
+
+    assert report.passed is True
+    assert summary["supported_claim_consistency_rate"] == pytest.approx(1.0)
+    assert summary["number_recall_mean"] == pytest.approx(1.0)
+    assert summary["entity_recall_mean"] == pytest.approx(1.0)
+    assert bounded["summaries"]["evidence_graph_consistency"]["passed"] is True
+    assert metrics["evidence_graph_consistency_source"] == "full_trace"
+    assert metrics["evidence_graph_consistency_supported_claim_consistency_rate"] == pytest.approx(1.0)
+
+
+def test_product_trace_evidence_graph_consistency_flags_numeric_conflict():
+    trace = ProductTrace(
+        request_id="trace-evidence-graph-fail",
+        claims=(
+            {
+                "claim_id": "c1",
+                "text": "Tesla was founded in 2003 by Martin Eberhard.",
+            },
+        ),
+        verification_results=(
+            VerificationResult(
+                VerificationStatus.SUPPORTED,
+                confidence=0.93,
+                metadata={"claim_id": "c1", "action_request_id": "retrieve-1"},
+            ),
+        ),
+        action_results=(
+            ActionResult(
+                action=ControlAction.RETRIEVE,
+                status=ActionExecutionStatus.SUCCEEDED,
+                request_id="retrieve-1",
+                output={
+                    "hits": (
+                        {
+                            "claim_id": "c1",
+                            "source": "company-registry",
+                            "text": "Tesla was founded in 2004 by Elon Musk.",
+                        },
+                    ),
+                },
+            ),
+        ),
+    )
+
+    summary = trace.evidence_graph_consistency_summary()
+    bounded_metrics = product_runtime_metrics(trace.to_bounded_dict())
+
+    assert summary["passed"] is False
+    assert summary["counts_by_status"] == {"inconsistent": 1}
+    assert summary["counts_by_code"]["missing_claim_number"] == 1
+    assert summary["missing_number_count"] == 1
+    assert summary["top_records"][0]["missing_numbers"] == ("2003",)
+    assert bounded_metrics["evidence_graph_consistency_source"] == "bounded_summary"
+    assert bounded_metrics["evidence_graph_consistency_passed"] is False
+    assert bounded_metrics["evidence_graph_consistency_missing_number_count"] == pytest.approx(1.0)
 
 
 def test_product_trace_runtime_summary_counts_phase_timings():

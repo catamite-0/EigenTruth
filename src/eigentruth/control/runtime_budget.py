@@ -499,6 +499,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
         metrics.update(_action_audit_metrics(trace))
         metrics.update(_trajectory_audit_metrics(trace))
         metrics.update(_provenance_metrics(trace))
+        metrics.update(_evidence_graph_consistency_metrics(trace))
         metrics.update(_route_cost_metrics(trace))
         metrics.update(_pre_generation_risk_metrics(trace))
         metrics.update(_verification_stage_metrics(trace))
@@ -548,6 +549,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
     metrics.update(_action_audit_metrics(trace))
     metrics.update(_trajectory_audit_metrics(trace))
     metrics.update(_provenance_metrics(trace))
+    metrics.update(_evidence_graph_consistency_metrics(trace))
     metrics.update(_route_cost_metrics(trace))
     metrics.update(_pre_generation_risk_metrics(trace))
     metrics.update(_verification_stage_metrics(trace))
@@ -816,6 +818,81 @@ def _provenance_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, An
         "provenance_counts_by_code": _mapping(summary.get("counts_by_code")),
         "provenance_counts_by_node_type": _mapping(summary.get("counts_by_node_type")),
         "provenance_counts_by_relation": _mapping(summary.get("counts_by_relation")),
+    }
+
+
+def _evidence_graph_consistency_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:
+    from eigentruth.control.provenance import audit_evidence_graph_consistency
+
+    if isinstance(trace, ProductTrace):
+        summary = trace.evidence_graph_consistency_summary()
+        source = "full_trace"
+    else:
+        payload = dict(trace)
+        summary = _mapping(_mapping(payload.get("summaries")).get("evidence_graph_consistency"))
+        if summary:
+            source = "bounded_summary"
+        else:
+            summary = audit_evidence_graph_consistency(payload).summary()
+            source = "full_trace"
+    return {
+        "evidence_graph_consistency_available": bool(summary.get("available")),
+        "evidence_graph_consistency_source": source,
+        "evidence_graph_consistency_summary": summary,
+        "evidence_graph_consistency_passed": _optional_bool(summary.get("passed")),
+        "evidence_graph_consistency_supported_claim_count": (
+            _finite_float(summary.get("supported_claim_count")) or 0.0
+        ),
+        "evidence_graph_consistency_record_count": _finite_float(summary.get("record_count")) or 0.0,
+        "evidence_graph_consistency_evaluated_supported_claim_count": (
+            _finite_float(summary.get("evaluated_supported_claim_count")) or 0.0
+        ),
+        "evidence_graph_consistency_consistent_supported_claim_count": (
+            _finite_float(summary.get("consistent_supported_claim_count")) or 0.0
+        ),
+        "evidence_graph_consistency_inconsistent_supported_claim_count": (
+            _finite_float(summary.get("inconsistent_supported_claim_count")) or 0.0
+        ),
+        "evidence_graph_consistency_insufficient_evidence_count": (
+            _finite_float(summary.get("insufficient_evidence_count")) or 0.0
+        ),
+        "evidence_graph_consistency_coverage_rate": _finite_float(
+            summary.get("consistency_coverage_rate")
+        ),
+        "evidence_graph_consistency_supported_claim_consistency_rate": _finite_float(
+            summary.get("supported_claim_consistency_rate")
+        ),
+        "evidence_graph_consistency_keyword_overlap_mean": _finite_float(
+            summary.get("keyword_overlap_mean")
+        ),
+        "evidence_graph_consistency_keyword_overlap_min": _finite_float(
+            summary.get("keyword_overlap_min")
+        ),
+        "evidence_graph_consistency_number_recall_mean": _finite_float(
+            summary.get("number_recall_mean")
+        ),
+        "evidence_graph_consistency_entity_recall_mean": _finite_float(
+            summary.get("entity_recall_mean")
+        ),
+        "evidence_graph_consistency_low_keyword_overlap_count": (
+            _finite_float(summary.get("low_keyword_overlap_count")) or 0.0
+        ),
+        "evidence_graph_consistency_missing_number_count": (
+            _finite_float(summary.get("missing_number_count")) or 0.0
+        ),
+        "evidence_graph_consistency_missing_entity_count": (
+            _finite_float(summary.get("missing_entity_count")) or 0.0
+        ),
+        "evidence_graph_consistency_cross_claim_retrieval_hit_count": (
+            _finite_float(summary.get("cross_claim_retrieval_hit_count")) or 0.0
+        ),
+        "evidence_graph_consistency_issue_count": _finite_float(summary.get("issue_count")) or 0.0,
+        "evidence_graph_consistency_error_count": _finite_float(summary.get("error_count")) or 0.0,
+        "evidence_graph_consistency_warning_count": (
+            _finite_float(summary.get("warning_count")) or 0.0
+        ),
+        "evidence_graph_consistency_counts_by_status": _mapping(summary.get("counts_by_status")),
+        "evidence_graph_consistency_counts_by_code": _mapping(summary.get("counts_by_code")),
     }
 
 

@@ -9021,8 +9021,9 @@ Use `run_product_runtime_baseline.py` for the product-control side of the same
 performance story: aggregate saved `ProductTrace` JSON files, summarize request
 phase timings, route costs, cache hit rates, retrieval use, staged-verification
 skip savings, verification-scope counts, triggered-only partial skip savings,
-triple/slot-audit coverage, promotion-contract covered-fact property scope and
-per-property quality rollups, and optionally apply a
+triple/slot-audit coverage, trace-provenance coverage, evidence-graph
+consistency rates over linked support evidence, promotion-contract covered-fact
+property scope and per-property quality rollups, and optionally apply a
 `ProductRuntimeBudgetPolicy` or promoted
 `ProductPromotionContract` budget. It also aggregates promotion-contract
 external-evidence baseline-comparison handoff coverage, source/status counts,
