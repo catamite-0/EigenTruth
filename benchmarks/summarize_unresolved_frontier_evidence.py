@@ -1,0 +1,627 @@
+"""Summarize unresolved frontier evidence lanes into one read-only report.
+
+This report is a coordination artifact. It aggregates unresolved blind-spot
+queues, citation/source-family workflow outcomes, source-family coverage audits,
+world-model rule-input plans, rule-candidate promotion gates, and optional
+mechanism handoff bundles. It does not promote verifier evidence or close a
+release gate by itself.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from collections import Counter
+from pathlib import Path
+from typing import Any, Mapping, Sequence
+
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+from eigentruth.json_utils import strict_json_dumps  # noqa: E402
+from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
+
+WORKFLOW = "unresolved_frontier_evidence_summary"
+
+
+def summarize_unresolved_frontier_evidence(
+    *,
+    unresolved_queue: Mapping[str, Any] | None = None,
+    citation_workflows: Sequence[Mapping[str, Any]] = (),
+    source_family_coverage_audits: Sequence[Mapping[str, Any]] = (),
+    rule_input_plan: Mapping[str, Any] | None = None,
+    rule_promotion_reports: Sequence[Mapping[str, Any]] = (),
+    mechanism_handoff_bundle: Mapping[str, Any] | None = None,
+    metadata: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Return a JSON-ready read-only summary of unresolved frontier evidence."""
+    queue_lane = _queue_lane(unresolved_queue)
+    source_lane = _source_family_coverage_lane(source_family_coverage_audits)
+    citation_lane = _citation_lane(citation_workflows)
+    rule_lane = _world_model_rule_lane(
+        rule_input_plan=rule_input_plan,
+        rule_promotion_reports=rule_promotion_reports,
+        mechanism_handoff_bundle=mechanism_handoff_bundle,
+    )
+    lanes = {
+        "unresolved_queue": queue_lane,
+        "source_family_acquisition": source_lane,
+        "citation_evidence": citation_lane,
+        "world_model_rules": rule_lane,
+    }
+    next_actions = _next_actions(lanes)
+    summary = _summary(lanes)
+    status = "promote" if not next_actions else "needs_evidence"
+    return {
+        "schema_version": 1,
+        "workflow": WORKFLOW,
+        "status": status,
+        "scope": (
+            "Read-only closure summary for unresolved frontier blind-spot "
+            "evidence lanes. Source discovery, rule-input rows, and adapter "
+            "matches remain non-evidence until their downstream gates promote."
+        ),
+        "summary": summary,
+        "lanes": lanes,
+        "next_actions": tuple(next_actions),
+        "metadata": dict(metadata or {}),
+    }
+
+
+def run(
+    *,
+    unresolved_queue_path: str | Path | None = None,
+    citation_workflow_paths: Sequence[str | Path] = (),
+    source_family_coverage_audit_paths: Sequence[str | Path] = (),
+    rule_input_plan_path: str | Path | None = None,
+    rule_promotion_report_paths: Sequence[str | Path] = (),
+    mechanism_handoff_bundle_path: str | Path | None = None,
+    json_path: str | Path | None = None,
+    artifact_manifest_path: str | Path | None = None,
+    registry_path: str | Path | None = None,
+    name: str | None = None,
+    version: str | None = None,
+    metadata: Mapping[str, Any] | None = None,
+    compact_json: bool = False,
+) -> dict[str, Any]:
+    """Build, write, manifest, and optionally register the summary report."""
+    if artifact_manifest_path is not None and json_path is None:
+        raise ValueError("artifact_manifest_path requires json_path.")
+    if registry_path is not None and (not name or not version):
+        raise ValueError("registry_path requires name and version.")
+    if registry_path is not None and json_path is None:
+        raise ValueError("registry_path requires json_path.")
+
+    unresolved_queue = _load_optional_mapping(unresolved_queue_path)
+    citation_workflows = tuple(_load_mapping(path) for path in citation_workflow_paths)
+    coverage_audits = tuple(_load_mapping(path) for path in source_family_coverage_audit_paths)
+    rule_input_plan = _load_optional_mapping(rule_input_plan_path)
+    rule_promotion_reports = tuple(_load_mapping(path) for path in rule_promotion_report_paths)
+    mechanism_bundle = _load_optional_mapping(mechanism_handoff_bundle_path)
+
+    payload = summarize_unresolved_frontier_evidence(
+        unresolved_queue=unresolved_queue,
+        citation_workflows=citation_workflows,
+        source_family_coverage_audits=coverage_audits,
+        rule_input_plan=rule_input_plan,
+        rule_promotion_reports=rule_promotion_reports,
+        mechanism_handoff_bundle=mechanism_bundle,
+        metadata=metadata,
+    )
+    payload = dict(payload)
+    payload["paths"] = {
+        "summary_report": None if json_path is None else str(json_path),
+        "artifact_manifest": None
+        if artifact_manifest_path is None
+        else str(artifact_manifest_path),
+        "unresolved_queue": None if unresolved_queue_path is None else str(unresolved_queue_path),
+        "citation_workflows": tuple(str(path) for path in citation_workflow_paths),
+        "source_family_coverage_audits": tuple(
+            str(path) for path in source_family_coverage_audit_paths
+        ),
+        "rule_input_plan": None if rule_input_plan_path is None else str(rule_input_plan_path),
+        "rule_promotion_reports": tuple(str(path) for path in rule_promotion_report_paths),
+        "mechanism_handoff_bundle": None
+        if mechanism_handoff_bundle_path is None
+        else str(mechanism_handoff_bundle_path),
+    }
+
+    output_path = None if json_path is None else Path(json_path)
+    manifest_path = None if artifact_manifest_path is None else Path(artifact_manifest_path)
+    if output_path is not None:
+        _write_json(output_path, payload, compact=compact_json)
+    manifest = None
+    if manifest_path is not None:
+        manifest = _write_manifest(
+            manifest_path=manifest_path,
+            output_path=output_path,
+            unresolved_queue_path=unresolved_queue_path,
+            citation_workflow_paths=citation_workflow_paths,
+            source_family_coverage_audit_paths=source_family_coverage_audit_paths,
+            rule_input_plan_path=rule_input_plan_path,
+            rule_promotion_report_paths=rule_promotion_report_paths,
+            mechanism_handoff_bundle_path=mechanism_handoff_bundle_path,
+            payload=payload,
+            metadata=metadata or {},
+            compact=compact_json,
+        )
+    if registry_path is not None:
+        assert name is not None and version is not None
+        ArtifactRegistry.load_json(registry_path).record_report(
+            name=name,
+            version=version,
+            path=output_path,
+            metadata={
+                "workflow": WORKFLOW,
+                "status": payload["status"],
+                "unresolved_target_count": payload["summary"]["unresolved_target_count"],
+                "citation_status": payload["lanes"]["citation_evidence"]["status"],
+                "source_family_acquisition_status": payload["lanes"][
+                    "source_family_acquisition"
+                ]["status"],
+                "world_model_rule_status": payload["lanes"]["world_model_rules"]["status"],
+                "next_action_count": len(payload["next_actions"]),
+                "manifest_summary": {} if manifest is None else manifest.get("summary", {}),
+                **dict(metadata or {}),
+            },
+        ).save_json()
+    return payload
+
+
+def _queue_lane(payload: Mapping[str, Any] | None) -> dict[str, Any]:
+    if not payload:
+        return {
+            "status": "missing",
+            "workflow": None,
+            "target_count": 0,
+            "adapter_request_count": 0,
+            "request_type_counts": {},
+            "adapter_family_counts": {},
+            "batch_count": 0,
+            "evidence_status_counts": {},
+            "label_usage": {"requests_are_verifier_evidence": False},
+        }
+    summary = _mapping(payload.get("summary"))
+    return {
+        "status": str(payload.get("status") or "unknown"),
+        "workflow": payload.get("workflow"),
+        "target_count": _int(summary.get("target_count")),
+        "adapter_request_count": _int(summary.get("adapter_request_count")),
+        "request_type_counts": _int_mapping(summary.get("request_type_counts")),
+        "adapter_family_counts": _int_mapping(summary.get("adapter_family_counts")),
+        "batch_count": _int(summary.get("batch_count")),
+        "evidence_status_counts": _int_mapping(summary.get("evidence_status_counts")),
+        "label_usage": dict(_mapping(payload.get("label_usage"))),
+    }
+
+
+def _source_family_coverage_lane(audits: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    rows = []
+    covered_count = 0
+    best_missing: int | None = None
+    covered_families: Counter[str] = Counter()
+    missing_families: Counter[str] = Counter()
+    for index, audit in enumerate(audits, start=1):
+        summary = _mapping(audit.get("summary"))
+        status = str(audit.get("status") or "unknown")
+        missing_count = _int(summary.get("request_missing_target_family_count"))
+        if status == "covered":
+            covered_count += 1
+        best_missing = missing_count if best_missing is None else min(best_missing, missing_count)
+        covered_families.update(_int_mapping(summary.get("covered_target_source_family_counts")))
+        missing_families.update(_int_mapping(summary.get("missing_target_source_family_counts")))
+        rows.append({
+            "index": index,
+            "workflow": audit.get("workflow"),
+            "status": status,
+            "request_count": _int(summary.get("request_count")),
+            "request_with_results_count": _int(summary.get("request_with_results_count")),
+            "request_with_target_family_count": _int(
+                summary.get("request_with_target_family_count")
+            ),
+            "request_missing_target_family_count": missing_count,
+            "acquisition_plan_count": _int(summary.get("acquisition_plan_count")),
+            "covered_target_source_family_counts": _int_mapping(
+                summary.get("covered_target_source_family_counts")
+            ),
+            "missing_target_source_family_counts": _int_mapping(
+                summary.get("missing_target_source_family_counts")
+            ),
+        })
+    if not rows:
+        status = "missing"
+    elif covered_count:
+        status = "covered"
+    else:
+        status = "needs_catalog_expansion"
+    return {
+        "status": status,
+        "audit_count": len(rows),
+        "covered_audit_count": covered_count,
+        "best_missing_target_family_count": best_missing,
+        "covered_target_source_family_counts": dict(sorted(covered_families.items())),
+        "missing_target_source_family_counts": dict(sorted(missing_families.items())),
+        "audits": tuple(rows),
+    }
+
+
+def _citation_lane(workflows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    rows = []
+    status_counts: Counter[str] = Counter()
+    provenance_pass_count = 0
+    comparison_pass_count = 0
+    max_source_docs = 0
+    blocking_reasons: Counter[str] = Counter()
+    for index, workflow in enumerate(workflows, start=1):
+        status = str(workflow.get("status") or "unknown")
+        status_counts[status] += 1
+        evidence = _mapping(workflow.get("evidence_summary"))
+        gate = _mapping(workflow.get("gate"))
+        if evidence.get("provenance_passed") is True:
+            provenance_pass_count += 1
+        if evidence.get("comparison_passed") is True:
+            comparison_pass_count += 1
+        max_source_docs = max(max_source_docs, _int(evidence.get("source_document_count")))
+        for item in _mapping_sequence(gate.get("blocking_reasons")):
+            reason = str(item.get("gate") or item.get("reason") or "unknown")
+            blocking_reasons[reason] += 1
+        rows.append({
+            "index": index,
+            "workflow": workflow.get("workflow"),
+            "status": status,
+            "gate_passed": gate.get("passed"),
+            "promotion_ready": gate.get("promotion_ready"),
+            "adapter_request_count": _int(evidence.get("adapter_request_count")),
+            "source_document_count": _int(evidence.get("source_document_count")),
+            "provenance_status": evidence.get("provenance_status"),
+            "comparison_status": evidence.get("comparison_status"),
+            "query_sweep_best_strategy": evidence.get("query_sweep_best_strategy"),
+            "query_sweep_best_passing_strategy": evidence.get(
+                "query_sweep_best_passing_strategy"
+            ),
+            "query_sweep_best_passing_blind_refuted_count": evidence.get(
+                "query_sweep_best_passing_blind_refuted_count"
+            ),
+        })
+    if not rows:
+        status = "missing"
+    elif any(row["status"] == "promote" or row["gate_passed"] is True for row in rows):
+        status = "promote"
+    else:
+        status = "blocked"
+    return {
+        "status": status,
+        "workflow_count": len(rows),
+        "status_counts": dict(sorted(status_counts.items())),
+        "provenance_pass_count": provenance_pass_count,
+        "comparison_pass_count": comparison_pass_count,
+        "max_source_document_count": max_source_docs,
+        "blocking_reason_counts": dict(sorted(blocking_reasons.items())),
+        "workflows": tuple(rows),
+    }
+
+
+def _world_model_rule_lane(
+    *,
+    rule_input_plan: Mapping[str, Any] | None,
+    rule_promotion_reports: Sequence[Mapping[str, Any]],
+    mechanism_handoff_bundle: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    plan_summary = _mapping(None if rule_input_plan is None else rule_input_plan.get("summary"))
+    task_count = _int(plan_summary.get("task_count"))
+    rule_family_counts = _int_mapping(plan_summary.get("rule_family_counts"))
+    missing_input_counts = _int_mapping(plan_summary.get("missing_input_counts"))
+    promotion_rows = []
+    promoted_count = 0
+    blocked_count = 0
+    pending_count = 0
+    promoted_rule_families: Counter[str] = Counter()
+    status_counts: Counter[str] = Counter()
+    for index, report in enumerate(rule_promotion_reports, start=1):
+        summary = _mapping(report.get("summary"))
+        status = str(report.get("status") or "unknown")
+        status_counts[status] += 1
+        promoted = _int(summary.get("promoted_count"))
+        blocked = _int(summary.get("blocked_count"))
+        pending = _int(summary.get("pending_count"))
+        promoted_count += promoted
+        blocked_count += blocked
+        pending_count += pending
+        promoted_rule_families.update(_int_mapping(summary.get("promoted_rule_family_counts")))
+        promotion_rows.append({
+            "index": index,
+            "workflow": report.get("workflow"),
+            "status": status,
+            "promoted_count": promoted,
+            "blocked_count": blocked,
+            "pending_count": pending,
+            "executed_count": _int(summary.get("executed_count")),
+            "promoted_rule_family_counts": _int_mapping(
+                summary.get("promoted_rule_family_counts")
+            ),
+            "status_counts": _int_mapping(summary.get("status_counts")),
+        })
+    bundle_summary = _mapping(
+        None if mechanism_handoff_bundle is None else mechanism_handoff_bundle.get("summary")
+    )
+    bundle_status = None if mechanism_handoff_bundle is None else mechanism_handoff_bundle.get("status")
+    mechanism_trace_count = _int(bundle_summary.get("trace_count"))
+    mechanism_target_count = _int(bundle_summary.get("target_count"))
+    if rule_input_plan is None and not promotion_rows and mechanism_handoff_bundle is None:
+        status = "missing"
+    elif task_count and promoted_count < task_count:
+        status = "partial"
+    elif blocked_count:
+        status = "blocked"
+    elif pending_count:
+        status = "needs_inputs"
+    elif bundle_status not in {None, "promote"}:
+        status = "blocked"
+    else:
+        status = "promote"
+    return {
+        "status": status,
+        "rule_input_plan_status": None if rule_input_plan is None else rule_input_plan.get("status"),
+        "task_count": task_count,
+        "rule_family_counts": rule_family_counts,
+        "missing_input_counts": missing_input_counts,
+        "promotion_report_count": len(promotion_rows),
+        "promotion_status_counts": dict(sorted(status_counts.items())),
+        "promoted_count": promoted_count,
+        "blocked_count": blocked_count,
+        "pending_count": pending_count,
+        "promoted_rule_family_counts": dict(sorted(promoted_rule_families.items())),
+        "mechanism_handoff_bundle_status": bundle_status,
+        "mechanism_handoff_trace_count": mechanism_trace_count,
+        "mechanism_handoff_target_count": mechanism_target_count,
+        "promotion_reports": tuple(promotion_rows),
+    }
+
+
+def _next_actions(lanes: Mapping[str, Mapping[str, Any]]) -> list[dict[str, Any]]:
+    actions: list[dict[str, Any]] = []
+    source = lanes["source_family_acquisition"]
+    citation = lanes["citation_evidence"]
+    rules = lanes["world_model_rules"]
+    queue = lanes["unresolved_queue"]
+    if source.get("status") != "covered":
+        actions.append({
+            "action_id": "complete_source_family_catalog_acquisition",
+            "priority": 90,
+            "lane": "source_family_acquisition",
+            "reason": "source-family coverage is not complete for unresolved citation requests",
+        })
+    if source.get("status") == "covered" and citation.get("status") != "promote":
+        actions.append({
+            "action_id": "improve_unresolved_citation_alignment",
+            "priority": 88,
+            "lane": "citation_evidence",
+            "reason": (
+                "source acquisition is covered but citation/search evidence gates "
+                "still do not promote; inspect query alignment, claim mapping, or "
+                "route thresholds before release use"
+            ),
+        })
+    if rules.get("status") in {"partial", "needs_inputs", "blocked", "missing"}:
+        actions.append({
+            "action_id": "fill_and_promote_remaining_world_model_rules",
+            "priority": 85,
+            "lane": "world_model_rules",
+            "reason": "world-model/calculator rule inputs are not fully promoted",
+            "missing_input_counts": rules.get("missing_input_counts", {}),
+        })
+    if _int(queue.get("target_count")) and not actions:
+        actions.append({
+            "action_id": "verify_unresolved_targets_are_closed",
+            "priority": 70,
+            "lane": "unresolved_queue",
+            "reason": "unresolved targets remain in the source queue even though lane gates passed",
+        })
+    return actions
+
+
+def _summary(lanes: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+    lane_statuses = {name: str(lane.get("status") or "unknown") for name, lane in lanes.items()}
+    return {
+        "unresolved_target_count": _int(lanes["unresolved_queue"].get("target_count")),
+        "adapter_request_count": _int(lanes["unresolved_queue"].get("adapter_request_count")),
+        "citation_workflow_count": _int(lanes["citation_evidence"].get("workflow_count")),
+        "citation_provenance_pass_count": _int(
+            lanes["citation_evidence"].get("provenance_pass_count")
+        ),
+        "source_family_coverage_audit_count": _int(
+            lanes["source_family_acquisition"].get("audit_count")
+        ),
+        "world_model_rule_task_count": _int(lanes["world_model_rules"].get("task_count")),
+        "world_model_rule_promoted_count": _int(
+            lanes["world_model_rules"].get("promoted_count")
+        ),
+        "mechanism_handoff_trace_count": _int(
+            lanes["world_model_rules"].get("mechanism_handoff_trace_count")
+        ),
+        "lane_statuses": lane_statuses,
+        "blocked_lane_count": sum(
+            1 for status in lane_statuses.values() if status in {"blocked", "partial"}
+        ),
+        "missing_lane_count": sum(1 for status in lane_statuses.values() if status == "missing"),
+        "covered_or_promoted_lane_count": sum(
+            1 for status in lane_statuses.values() if status in {"covered", "promote"}
+        ),
+    }
+
+
+def _write_manifest(
+    *,
+    manifest_path: Path,
+    output_path: Path | None,
+    unresolved_queue_path: str | Path | None,
+    citation_workflow_paths: Sequence[str | Path],
+    source_family_coverage_audit_paths: Sequence[str | Path],
+    rule_input_plan_path: str | Path | None,
+    rule_promotion_report_paths: Sequence[str | Path],
+    mechanism_handoff_bundle_path: str | Path | None,
+    payload: Mapping[str, Any],
+    metadata: Mapping[str, Any],
+    compact: bool,
+) -> Mapping[str, Any]:
+    artifacts: dict[str, str | Path | None] = {
+        "unresolved_frontier_evidence_summary": output_path,
+        "unresolved_queue": unresolved_queue_path,
+        "rule_input_plan": rule_input_plan_path,
+        "mechanism_handoff_bundle": mechanism_handoff_bundle_path,
+    }
+    artifacts.update(
+        {f"citation_workflow_{idx}": path for idx, path in enumerate(citation_workflow_paths, start=1)}
+    )
+    artifacts.update({
+        f"source_family_coverage_audit_{idx}": path
+        for idx, path in enumerate(source_family_coverage_audit_paths, start=1)
+    })
+    artifacts.update({
+        f"rule_promotion_report_{idx}": path
+        for idx, path in enumerate(rule_promotion_report_paths, start=1)
+    })
+    manifest = build_artifact_manifest(
+        {name: Path(path) for name, path in artifacts.items() if path is not None},
+        root=manifest_path.parent,
+        metadata={
+            "workflow": WORKFLOW,
+            "status": payload.get("status"),
+            "unresolved_target_count": _nested(payload, "summary", "unresolved_target_count"),
+            "citation_status": _nested(payload, "lanes", "citation_evidence", "status"),
+            "source_family_acquisition_status": _nested(
+                payload, "lanes", "source_family_acquisition", "status"
+            ),
+            "world_model_rule_status": _nested(payload, "lanes", "world_model_rules", "status"),
+            "next_action_count": len(_sequence(payload.get("next_actions"))),
+            **dict(metadata),
+        },
+    )
+    _write_json(manifest_path, manifest, compact=compact)
+    return manifest
+
+
+def _load_optional_mapping(path: str | Path | None) -> dict[str, Any] | None:
+    if path is None:
+        return None
+    return _load_mapping(path)
+
+
+def _load_mapping(path: str | Path) -> dict[str, Any]:
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(payload, Mapping):
+        raise ValueError(f"{path} must contain a JSON object.")
+    return dict(payload)
+
+
+def _mapping(value: Any) -> Mapping[str, Any]:
+    return value if isinstance(value, Mapping) else {}
+
+
+def _mapping_sequence(value: Any) -> tuple[Mapping[str, Any], ...]:
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return tuple(item for item in value if isinstance(item, Mapping))
+    return ()
+
+
+def _sequence(value: Any) -> tuple[Any, ...]:
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return tuple(value)
+    return ()
+
+
+def _int_mapping(value: Any) -> dict[str, int]:
+    return {
+        str(key): _int(item)
+        for key, item in _mapping(value).items()
+        if str(key)
+    }
+
+
+def _int(value: Any) -> int:
+    if isinstance(value, bool):
+        return 0
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _nested(payload: Mapping[str, Any], *keys: str) -> Any:
+    current: Any = payload
+    for key in keys:
+        if not isinstance(current, Mapping):
+            return None
+        current = current.get(key)
+    return current
+
+
+def _write_json(path: str | Path, payload: Mapping[str, Any], *, compact: bool) -> None:
+    output = Path(path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    if compact:
+        text = strict_json_dumps(payload, sort_keys=True, separators=(",", ":")) + "\n"
+    else:
+        text = strict_json_dumps(payload, indent=2, sort_keys=True) + "\n"
+    output.write_text(text, encoding="utf-8")
+
+
+def _parse_metadata(values: Sequence[str]) -> dict[str, str]:
+    metadata: dict[str, str] = {}
+    for value in values:
+        if "=" not in value:
+            raise ValueError(f"metadata must be KEY=VALUE, got {value!r}.")
+        key, item = value.split("=", 1)
+        key = key.strip()
+        if not key:
+            raise ValueError("metadata key cannot be empty.")
+        metadata[key] = item
+    return metadata
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--unresolved-queue", default=None)
+    parser.add_argument("--citation-workflow", action="append", default=[])
+    parser.add_argument("--source-family-coverage-audit", action="append", default=[])
+    parser.add_argument("--rule-input-plan", default=None)
+    parser.add_argument("--rule-promotion-report", action="append", default=[])
+    parser.add_argument("--mechanism-handoff-bundle", default=None)
+    parser.add_argument("--json", default=None, help="optional output JSON path")
+    parser.add_argument("--artifact-manifest", default=None, help="optional artifact manifest path")
+    parser.add_argument("--registry", default=None, help="optional local artifact registry JSON")
+    parser.add_argument("--name", default=None, help="registry record name")
+    parser.add_argument("--version", default=None, help="registry record version")
+    parser.add_argument("--metadata", action="append", default=[], help="extra metadata as KEY=VALUE")
+    parser.add_argument("--compact-json", action="store_true", help="write compact JSON")
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> None:
+    args = build_parser().parse_args(argv)
+    payload = run(
+        unresolved_queue_path=args.unresolved_queue,
+        citation_workflow_paths=tuple(args.citation_workflow or ()),
+        source_family_coverage_audit_paths=tuple(args.source_family_coverage_audit or ()),
+        rule_input_plan_path=args.rule_input_plan,
+        rule_promotion_report_paths=tuple(args.rule_promotion_report or ()),
+        mechanism_handoff_bundle_path=args.mechanism_handoff_bundle,
+        json_path=args.json,
+        artifact_manifest_path=args.artifact_manifest,
+        registry_path=args.registry,
+        name=args.name,
+        version=args.version,
+        metadata=_parse_metadata(args.metadata or ()),
+        compact_json=bool(args.compact_json),
+    )
+    if args.json is None:
+        print(strict_json_dumps(payload, indent=2, sort_keys=True))
+
+
+if __name__ == "__main__":  # pragma: no cover
+    main()

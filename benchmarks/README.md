@@ -4089,6 +4089,42 @@ passed to release candidate comparison with `--mechanism-handoff-evidence-bundle
 or by registry key; `frontier_audit` defaults to
 `report:truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle:0.1`.
 
+## `summarize_unresolved_frontier_evidence.py`
+
+Aggregates the unresolved frontier lanes into one read-only closure summary. It
+does not run adapters, promote verifier evidence, or close a release gate; it
+combines queue counts, citation/source-family gate status, source acquisition
+coverage, world-model rule-input/promotion status, mechanism handoff coverage,
+and the next concrete actions.
+
+```bash
+OUT=artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1
+
+python benchmarks/summarize_unresolved_frontier_evidence.py \
+  --unresolved-queue artifacts/frontier-release-evidence/unresolved-blind-spot-evidence-queue-v1/unresolved-evidence-queue.json \
+  --source-family-coverage-audit artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-coverage-audit-v1/source-family-coverage-audit.json \
+  --citation-workflow artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/source-family-citation-search-workflow.json \
+  --rule-input-plan artifacts/frontier-release-evidence/unresolved-world-model-rule-input-collection-plan-v1/rule-input-collection-plan.json \
+  --rule-promotion-report artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-promotion-gate/world-model-rule-candidate-promotion-gate.json \
+  --rule-promotion-report artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-promotion-gate/world-model-rule-candidate-promotion-gate.json \
+  --rule-promotion-report artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-promotion-gate/world-model-rule-candidate-promotion-gate.json \
+  --mechanism-handoff-bundle artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle/mechanism-handoff-evidence-bundle.json \
+  --json "$OUT/unresolved-frontier-evidence-summary.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-frontier-evidence-summary \
+  --version 0.1 \
+  --metadata source=frontier-v4 \
+  --metadata model=smollm2-l80
+```
+
+For the current frontier-v4 unresolved lane, the expected summary is
+`needs_evidence`: source-family acquisition is covered, citation evidence remains
+blocked because external query alignment still does not promote, and
+world-model rules are partial because the mechanism bundle promotes the
+`9/9` causal/procedural tasks while the broader `26`-task rule-input plan still
+contains numeric and temporal rows that need explicit source-backed inputs.
+
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:
 

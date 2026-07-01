@@ -49738,6 +49738,202 @@ def test_unresolved_blind_spot_evidence_queue_filters_resolved_property_slot(tmp
     assert record.metadata["suite"] == "unit"
 
 
+def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
+    module = importlib.import_module("benchmarks.summarize_unresolved_frontier_evidence")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    queue = {
+        "workflow": "unresolved_blind_spot_evidence_queue",
+        "status": "ready_for_adapter_execution",
+        "summary": {
+            "target_count": 3,
+            "adapter_request_count": 6,
+            "batch_count": 2,
+            "request_type_counts": {
+                "external_citation": 4,
+                "world_model_or_calculator_rule": 2,
+            },
+            "adapter_family_counts": {
+                "external_citation_search": 4,
+                "world_model_rule_authoring": 2,
+            },
+            "evidence_status_counts": {"generic_fact_only": 1, "no_joined_facts": 2},
+        },
+        "label_usage": {"requests_are_verifier_evidence": False},
+    }
+    missing_coverage = {
+        "workflow": "source_family_coverage_audit",
+        "status": "needs_catalog_expansion",
+        "summary": {
+            "request_count": 4,
+            "request_with_results_count": 3,
+            "request_with_target_family_count": 2,
+            "request_missing_target_family_count": 2,
+            "acquisition_plan_count": 2,
+            "covered_target_source_family_counts": {"reference": 2},
+            "missing_target_source_family_counts": {"news": 1, "official": 1},
+        },
+    }
+    covered_coverage = {
+        "workflow": "source_family_coverage_audit",
+        "status": "covered",
+        "summary": {
+            "request_count": 4,
+            "request_with_results_count": 4,
+            "request_with_target_family_count": 4,
+            "request_missing_target_family_count": 0,
+            "acquisition_plan_count": 0,
+            "covered_target_source_family_counts": {"news": 2, "official": 2},
+            "missing_target_source_family_counts": {},
+        },
+    }
+    citation = {
+        "workflow": "source_family_citation_search_workflow",
+        "status": "blocked",
+        "gate": {
+            "passed": False,
+            "promotion_ready": False,
+            "blocking_reasons": [{"gate": "query_sweep", "reason": "No strategy passed"}],
+        },
+        "evidence_summary": {
+            "adapter_request_count": 4,
+            "source_document_count": 12,
+            "provenance_passed": True,
+            "provenance_status": "pass",
+            "comparison_passed": False,
+            "comparison_status": "blocked",
+            "query_sweep_best_strategy": "question_overlap_0p65",
+            "query_sweep_best_passing_strategy": None,
+            "query_sweep_best_passing_blind_refuted_count": None,
+        },
+    }
+    rule_plan = {
+        "workflow": "world_model_rule_input_collection_plan",
+        "status": "ready_for_input_collection",
+        "summary": {
+            "task_count": 5,
+            "rule_family_counts": {"causal_or_procedural": 2, "quantity_or_arithmetic": 3},
+            "missing_input_counts": {"numeric_value": 3, "source_citation": 1},
+        },
+    }
+    promotion = {
+        "workflow": "world_model_rule_candidate_promotion_gate",
+        "status": "promote",
+        "summary": {
+            "promoted_count": 2,
+            "blocked_count": 0,
+            "pending_count": 1,
+            "executed_count": 2,
+            "promoted_rule_family_counts": {"causal_or_procedural": 2},
+            "status_counts": {"supported": 2},
+        },
+    }
+    bundle = {
+        "workflow": "mechanism_handoff_evidence_bundle",
+        "status": "promote",
+        "summary": {"trace_count": 2, "target_count": 2},
+    }
+
+    payload = module.summarize_unresolved_frontier_evidence(
+        unresolved_queue=queue,
+        citation_workflows=(citation,),
+        source_family_coverage_audits=(missing_coverage, covered_coverage),
+        rule_input_plan=rule_plan,
+        rule_promotion_reports=(promotion,),
+        mechanism_handoff_bundle=bundle,
+        metadata={"suite": "unit"},
+    )
+
+    assert payload["workflow"] == "unresolved_frontier_evidence_summary"
+    assert payload["status"] == "needs_evidence"
+    assert payload["summary"]["unresolved_target_count"] == 3
+    assert payload["summary"]["adapter_request_count"] == 6
+    assert payload["lanes"]["source_family_acquisition"]["status"] == "covered"
+    assert payload["lanes"]["source_family_acquisition"]["covered_audit_count"] == 1
+    assert payload["lanes"]["source_family_acquisition"]["best_missing_target_family_count"] == 0
+    assert payload["lanes"]["citation_evidence"]["status"] == "blocked"
+    assert payload["lanes"]["citation_evidence"]["provenance_pass_count"] == 1
+    assert payload["lanes"]["citation_evidence"]["blocking_reason_counts"] == {"query_sweep": 1}
+    assert payload["lanes"]["world_model_rules"]["status"] == "partial"
+    assert payload["lanes"]["world_model_rules"]["task_count"] == 5
+    assert payload["lanes"]["world_model_rules"]["promoted_count"] == 2
+    assert payload["lanes"]["world_model_rules"]["pending_count"] == 1
+    action_ids = {action["action_id"] for action in payload["next_actions"]}
+    assert "improve_unresolved_citation_alignment" in action_ids
+    assert "fill_and_promote_remaining_world_model_rules" in action_ids
+    assert payload["lanes"]["unresolved_queue"]["label_usage"] == {
+        "requests_are_verifier_evidence": False
+    }
+
+    queue_path = tmp_path / "queue.json"
+    citation_path = tmp_path / "citation.json"
+    missing_coverage_path = tmp_path / "coverage-missing.json"
+    covered_coverage_path = tmp_path / "coverage-covered.json"
+    rule_plan_path = tmp_path / "rule-plan.json"
+    promotion_path = tmp_path / "promotion.json"
+    bundle_path = tmp_path / "bundle.json"
+    report_path = tmp_path / "summary.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    for path, data in (
+        (queue_path, queue),
+        (citation_path, citation),
+        (missing_coverage_path, missing_coverage),
+        (covered_coverage_path, covered_coverage),
+        (rule_plan_path, rule_plan),
+        (promotion_path, promotion),
+        (bundle_path, bundle),
+    ):
+        path.write_text(json.dumps(data), encoding="utf-8")
+
+    saved = module.run(
+        unresolved_queue_path=queue_path,
+        citation_workflow_paths=(citation_path,),
+        source_family_coverage_audit_paths=(missing_coverage_path, covered_coverage_path),
+        rule_input_plan_path=rule_plan_path,
+        rule_promotion_report_paths=(promotion_path,),
+        mechanism_handoff_bundle_path=bundle_path,
+        json_path=report_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="unresolved-summary-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:unresolved-summary-unit:0.1"
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert saved["status"] == "needs_evidence"
+    assert json.loads(report_path.read_text(encoding="utf-8"))["workflow"] == (
+        "unresolved_frontier_evidence_summary"
+    )
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert manifest["metadata"]["citation_status"] == "blocked"
+    assert manifest["metadata"]["source_family_acquisition_status"] == "covered"
+    assert manifest["metadata"]["world_model_rule_status"] == "partial"
+    assert record.metadata["workflow"] == "unresolved_frontier_evidence_summary"
+    assert record.metadata["unresolved_target_count"] == 3
+    assert record.metadata["citation_status"] == "blocked"
+    assert record.metadata["source_family_acquisition_status"] == "covered"
+    assert record.metadata["world_model_rule_status"] == "partial"
+    assert record.metadata["next_action_count"] == 2
+    assert record.metadata["suite"] == "unit"
+
+    cli_report_path = tmp_path / "cli-summary.json"
+    module.main([
+        "--json",
+        str(cli_report_path),
+        "--metadata",
+        "source=cli",
+        "--metadata",
+        "model=unit",
+    ])
+    cli_payload = json.loads(cli_report_path.read_text(encoding="utf-8"))
+    assert cli_payload["metadata"] == {"model": "unit", "source": "cli"}
+
+
 def test_citation_search_adapter_handoff_sanitizes_requests_and_ingests_results(tmp_path):
     module = importlib.import_module("benchmarks.build_citation_search_adapter_handoff")
     registry_module = importlib.import_module("eigentruth.registry")
