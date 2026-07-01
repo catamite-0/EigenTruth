@@ -500,6 +500,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
         metrics.update(_trajectory_audit_metrics(trace))
         metrics.update(_provenance_metrics(trace))
         metrics.update(_route_cost_metrics(trace))
+        metrics.update(_pre_generation_risk_metrics(trace))
         metrics.update(_verification_stage_metrics(trace))
         metrics.update(_verification_plan_metrics(trace))
         metrics.update(_claim_risk_localization_metrics(trace))
@@ -548,6 +549,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
     metrics.update(_trajectory_audit_metrics(trace))
     metrics.update(_provenance_metrics(trace))
     metrics.update(_route_cost_metrics(trace))
+    metrics.update(_pre_generation_risk_metrics(trace))
     metrics.update(_verification_stage_metrics(trace))
     metrics.update(_verification_plan_metrics(trace))
     metrics.update(_claim_risk_localization_metrics(trace))
@@ -621,6 +623,58 @@ def _cache_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:
         "cache_summary": summary,
         "named_cache_hit_rates": named_hit_rates,
         "raw_named_cache_hit_rates": raw_named_hit_rates,
+    }
+
+
+def _pre_generation_risk_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:
+    if isinstance(trace, ProductTrace):
+        summary = trace.pre_generation_risk_summary()
+        source = "full_trace"
+    else:
+        payload = dict(trace)
+        summary = _mapping(_mapping(payload.get("summaries")).get("pre_generation_risk"))
+        if summary:
+            source = "bounded_summary"
+        else:
+            metadata = payload.get("metadata", {})
+            summary = ProductTrace(
+                metadata=metadata if isinstance(metadata, Mapping) else {},
+            ).pre_generation_risk_summary()
+            source = "full_trace"
+    return {
+        "pre_generation_risk_available": bool(summary.get("available")),
+        "pre_generation_risk_source": source,
+        "pre_generation_risk_summary": summary,
+        "pre_generation_profile_requested": summary.get("requested"),
+        "pre_generation_selected_profile": summary.get("selected_profile"),
+        "pre_generation_risk_level": summary.get("risk_level"),
+        "pre_generation_runtime_profile_source": summary.get("runtime_profile_source"),
+        "pre_generation_used_for_runtime_profile": _optional_bool(summary.get("used_for_runtime_profile")),
+        "pre_generation_triggered_feature_count": _finite_float(
+            summary.get("triggered_feature_count")
+        ) or 0.0,
+        "pre_generation_triggered_metadata_count": _finite_float(
+            summary.get("triggered_metadata_count")
+        ) or 0.0,
+        "pre_generation_soft_risk_available": bool(summary.get("soft_risk_available")),
+        "pre_generation_soft_risk_score": _finite_float(summary.get("soft_risk_score")),
+        "pre_generation_soft_risk_probability": _finite_float(summary.get("soft_risk_probability")),
+        "pre_generation_soft_risk_level": summary.get("soft_risk_level"),
+        "pre_generation_soft_risk_routed": _optional_bool(summary.get("soft_risk_routed")),
+        "pre_generation_route_on_soft_risk": _optional_bool(summary.get("route_on_soft_risk")),
+        "pre_generation_learned_risk_available": bool(summary.get("learned_risk_available")),
+        "pre_generation_learned_risk_score": _finite_float(summary.get("learned_risk_score")),
+        "pre_generation_learned_risk_probability": _finite_float(
+            summary.get("learned_risk_probability")
+        ),
+        "pre_generation_learned_risk_level": summary.get("learned_risk_level"),
+        "pre_generation_learned_risk_source_name": summary.get("learned_risk_source"),
+        "pre_generation_learned_risk_layer_idx": _finite_float(summary.get("learned_risk_layer_idx")),
+        "pre_generation_learned_risk_routed": _optional_bool(summary.get("learned_risk_routed")),
+        "pre_generation_route_on_learned_risk": _optional_bool(summary.get("route_on_learned_risk")),
+        "pre_generation_learned_attention_max_weight": _finite_float(
+            summary.get("learned_attention_max_weight")
+        ),
     }
 
 

@@ -1699,6 +1699,81 @@ def test_product_trace_cache_summary_aggregates_named_cache_stats():
     json.dumps(summary)
 
 
+def test_product_trace_pre_generation_risk_summary_feeds_runtime_metrics():
+    trace = ProductTrace(
+        metadata={
+            "pre_generation_profile_requested": "auto",
+            "runtime_profile_source": "pre_generation",
+            "pre_generation_risk_policy": {
+                "route_on_learned_risk": True,
+                "soft_risk_config": {"route_on_soft_risk": False},
+            },
+            "pre_generation_risk_assessment": {
+                "selected_profile": "audit",
+                "risk_level": "high",
+                "reason": "learned pre-generation risk estimate exceeded high threshold",
+                "triggered_features": ("question_mark", "answer_length"),
+                "triggered_metadata": ("domain",),
+                "soft_risk": {
+                    "score": -1.0,
+                    "probability": 0.25,
+                    "risk_level": "low",
+                },
+                "learned_risk": {
+                    "score": 2.0,
+                    "probability": 0.88,
+                    "risk_level": "high",
+                    "source": "unit_probe",
+                    "layer_idx": 2,
+                    "attention_summary": {"max_weight": 0.7},
+                },
+            },
+        },
+    )
+
+    summary = trace.pre_generation_risk_summary()
+    bounded = trace.to_bounded_dict()
+    metrics = product_runtime_metrics(trace)
+    bounded_metrics = product_runtime_metrics(bounded)
+
+    assert summary["available"] is True
+    assert summary["selected_profile"] == "audit"
+    assert summary["used_for_runtime_profile"] is True
+    assert summary["triggered_feature_count"] == 2
+    assert summary["triggered_metadata_count"] == 1
+    assert summary["soft_risk_available"] is True
+    assert summary["soft_risk_routed"] is False
+    assert summary["route_on_soft_risk"] is False
+    assert summary["learned_risk_available"] is True
+    assert summary["learned_risk_probability"] == pytest.approx(0.88)
+    assert summary["learned_risk_source"] == "unit_probe"
+    assert summary["learned_risk_layer_idx"] == 2
+    assert summary["learned_risk_routed"] is True
+    assert summary["route_on_learned_risk"] is True
+    assert summary["learned_attention_max_weight"] == pytest.approx(0.7)
+
+    bounded_summary = bounded["summaries"]["pre_generation_risk"]
+    assert bounded_summary["learned_risk_source"] == "unit_probe"
+    assert bounded_summary["learned_risk_routed"] is True
+
+    assert metrics["pre_generation_risk_source"] == "full_trace"
+    assert metrics["pre_generation_learned_risk_available"] is True
+    assert metrics["pre_generation_learned_risk_probability"] == pytest.approx(0.88)
+    assert metrics["pre_generation_learned_risk_source_name"] == "unit_probe"
+    assert metrics["pre_generation_learned_risk_layer_idx"] == pytest.approx(2.0)
+    assert metrics["pre_generation_learned_risk_routed"] is True
+    assert metrics["pre_generation_route_on_learned_risk"] is True
+    assert metrics["pre_generation_soft_risk_routed"] is False
+    assert metrics["pre_generation_route_on_soft_risk"] is False
+
+    assert bounded_metrics["pre_generation_risk_source"] == "bounded_summary"
+    assert bounded_metrics["pre_generation_selected_profile"] == "audit"
+    assert bounded_metrics["pre_generation_learned_risk_probability"] == pytest.approx(0.88)
+    assert bounded_metrics["pre_generation_learned_risk_source_name"] == "unit_probe"
+    json.dumps(summary)
+    json.dumps(bounded)
+
+
 def test_product_trace_verification_stage_summary_counts_saved_claims():
     claims = extract_claims("Paris is the capital of France. Lyon is in France.")
     trace = ProductTrace(

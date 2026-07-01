@@ -309,6 +309,9 @@ class ProductTrace:
             ),
             "runtime": _runtime_summary_from_payload(prepared.runtime_trace),
             "cache": _cache_summary_from_metadata(prepared.metadata),
+            "pre_generation_risk": _pre_generation_risk_summary_from_metadata(
+                prepared.metadata,
+            ),
             "verification_stage": _verification_stage_summary_from_payload(
                 events=prepared.events,
                 metadata=prepared.metadata,
@@ -453,6 +456,11 @@ class ProductTrace:
         """Return aggregate cache hit/miss statistics from trace metadata."""
         metadata = self.metadata if isinstance(self.metadata, Mapping) else {}
         return _cache_summary_from_metadata(metadata)
+
+    def pre_generation_risk_summary(self) -> dict[str, Any]:
+        """Summarize pre-generation routing and learned-risk metadata."""
+        metadata = self.metadata if isinstance(self.metadata, Mapping) else {}
+        return _pre_generation_risk_summary_from_metadata(metadata)
 
     def verification_stage_summary(self) -> dict[str, Any]:
         """Summarize staged-verification skip decisions from trace events."""
@@ -1627,6 +1635,48 @@ def _cache_summary_from_metadata(metadata: Any) -> dict[str, Any]:
         "total_caches": len(caches),
         "aggregate": aggregate,
         "caches": caches,
+    }
+
+
+def _pre_generation_risk_summary_from_metadata(metadata: Any) -> dict[str, Any]:
+    metadata_payload = metadata if isinstance(metadata, Mapping) else {}
+    assessment = _mapping(metadata_payload.get("pre_generation_risk_assessment"))
+    policy = _mapping(metadata_payload.get("pre_generation_risk_policy"))
+    soft_risk = _mapping(assessment.get("soft_risk"))
+    learned_risk = _mapping(assessment.get("learned_risk"))
+    runtime_profile_source = metadata_payload.get("runtime_profile_source")
+    reason = assessment.get("reason")
+    used_for_runtime_profile = runtime_profile_source == "pre_generation"
+    soft_reason = "soft pre-generation risk estimate" in str(reason or "")
+    learned_reason = "learned pre-generation risk estimate" in str(reason or "")
+    soft_config = _mapping(policy.get("soft_risk_config"))
+    return {
+        "available": bool(assessment),
+        "requested": metadata_payload.get("pre_generation_profile_requested"),
+        "selected_profile": assessment.get("selected_profile"),
+        "risk_level": assessment.get("risk_level"),
+        "reason": reason,
+        "runtime_profile_source": runtime_profile_source,
+        "used_for_runtime_profile": used_for_runtime_profile,
+        "triggered_feature_count": len(_as_sequence(assessment.get("triggered_features", ()))),
+        "triggered_metadata_count": len(_as_sequence(assessment.get("triggered_metadata", ()))),
+        "soft_risk_available": bool(soft_risk),
+        "soft_risk_score": _finite_float(soft_risk.get("score")),
+        "soft_risk_probability": _finite_float(soft_risk.get("probability")),
+        "soft_risk_level": soft_risk.get("risk_level"),
+        "soft_risk_routed": bool(used_for_runtime_profile and soft_reason),
+        "route_on_soft_risk": _optional_bool(soft_config.get("route_on_soft_risk")),
+        "learned_risk_available": bool(learned_risk),
+        "learned_risk_score": _finite_float(learned_risk.get("score")),
+        "learned_risk_probability": _finite_float(learned_risk.get("probability")),
+        "learned_risk_level": learned_risk.get("risk_level"),
+        "learned_risk_source": learned_risk.get("source"),
+        "learned_risk_layer_idx": learned_risk.get("layer_idx"),
+        "learned_risk_routed": bool(used_for_runtime_profile and learned_reason),
+        "route_on_learned_risk": _optional_bool(policy.get("route_on_learned_risk")),
+        "learned_attention_max_weight": _finite_float(
+            _mapping(learned_risk.get("attention_summary")).get("max_weight")
+        ),
     }
 
 
