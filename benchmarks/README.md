@@ -4125,6 +4125,24 @@ world-model rules are partial because the mechanism bundle promotes the
 `9/9` causal/procedural tasks while the broader `26`-task rule-input plan still
 contains numeric and temporal rows that need explicit source-backed inputs.
 
+The same summary can feed the generic frontier command-plan handoff:
+
+```bash
+python benchmarks/plan_frontier_research_queue_commands.py \
+  --source "$OUT/unresolved-frontier-evidence-summary.json" \
+  --json "$OUT/unresolved-frontier-command-plan.json" \
+  --artifact-manifest "$OUT/unresolved-frontier-command-plan-manifest.json" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-frontier-command-plan \
+  --version 0.1
+```
+
+For unresolved summaries, the planner synthesizes reviewable command templates
+for citation query-mode replays plus numeric/temporal world-model rule
+fill/adapter/promotion chains. The templates keep output paths, registry keys,
+and source-backed binding sidecars as `...` placeholders, so the follow-up
+scaffold/bind/run steps still require review before anything executes.
+
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:
 

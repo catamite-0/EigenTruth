@@ -20,6 +20,40 @@ REQUIRED_COMMAND_FLAGS = {
     ),
     "benchmarks/plan_frontier_abstention_evidence_reruns.py": ("--source",),
     "benchmarks/run_product_runtime_baseline.py": ("--trace", "--json"),
+    "benchmarks/run_source_family_citation_search_workflow.py": (
+        "--queue",
+        "--source-catalog",
+        "--scores",
+        "--blind-spots",
+        "--output-dir",
+        "--workflow-report",
+        "--artifact-manifest",
+    ),
+    "benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py": (
+        "--input-tasks",
+        "--numeric-bindings",
+        "--output-dir",
+        "--json",
+    ),
+    "benchmarks/fill_world_model_rule_inputs_from_temporal_bindings.py": (
+        "--input-tasks",
+        "--temporal-bindings",
+        "--output-dir",
+        "--json",
+    ),
+    "benchmarks/run_world_model_rule_authoring_adapter.py": (
+        "--rule-stubs",
+        "--rule-inputs",
+        "--output-dir",
+        "--json",
+    ),
+    "benchmarks/promote_world_model_rule_candidates.py": (
+        "--rule-results",
+        "--rule-inputs",
+        "--adapter-report",
+        "--output-dir",
+        "--json",
+    ),
     "benchmarks/rollup_frontier_abstention_evidence_reruns.py": ("--queue", "--json"),
 }
 
@@ -42,6 +76,13 @@ REQUIRED_INPUT_FLAGS = {
     "benchmarks/run_product_runtime_baseline.py": {
         "product_trace_corpus": "--trace",
         "product_promotion_contract_source": "--promotion-contract",
+    },
+    "benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py": {
+        "source_backed_numeric_bindings": "--numeric-bindings",
+        "source_backed_subject_bindings": "--subject-bindings",
+    },
+    "benchmarks/fill_world_model_rule_inputs_from_temporal_bindings.py": {
+        "source_backed_temporal_bindings": "--temporal-bindings",
     },
 }
 

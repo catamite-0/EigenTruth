@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
 import sys
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -19,7 +20,12 @@ from eigentruth.json_utils import strict_json_dumps  # noqa: E402
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
 
 WORKFLOW = "frontier_research_queue_command_plan"
-SUPPORTED_SOURCE_WORKFLOWS = frozenset({"frontier_status_report", "evidence_gap_plan"})
+SUPPORTED_SOURCE_WORKFLOWS = frozenset({
+    "frontier_status_report",
+    "evidence_gap_plan",
+    "unresolved_frontier_evidence_summary",
+})
+UNRESOLVED_SUMMARY_WORKFLOW = "unresolved_frontier_evidence_summary"
 
 
 def build_frontier_research_queue_command_plan(
@@ -50,7 +56,8 @@ def build_frontier_research_queue_command_plan(
     workflow = source_payload.get("workflow")
     if workflow not in SUPPORTED_SOURCE_WORKFLOWS:
         raise ValueError(
-            "source must have workflow 'frontier_status_report' or 'evidence_gap_plan'."
+            "source must have workflow 'frontier_status_report', 'evidence_gap_plan', "
+            "or 'unresolved_frontier_evidence_summary'."
         )
 
     output_path = None if json_path is None else Path(json_path)
@@ -61,7 +68,7 @@ def build_frontier_research_queue_command_plan(
     actions = ()
     if not only_active_research_queue or _is_active_research_queue(source_payload):
         actions = _filtered_actions(
-            _source_actions(source_payload),
+            _source_actions(source_payload, source_path=source_path),
             include_action_ids=include_action_ids,
             exclude_action_ids=exclude_action_ids,
         )
@@ -142,10 +149,374 @@ def build_frontier_research_queue_command_plan(
     return payload
 
 
-def _source_actions(payload: Mapping[str, Any]) -> tuple[Mapping[str, Any], ...]:
+def _source_actions(
+    payload: Mapping[str, Any],
+    *,
+    source_path: Path | None,
+) -> tuple[Mapping[str, Any], ...]:
     if payload.get("workflow") == "frontier_status_report":
         return tuple(_mapping_sequence(_nested(payload, "research_queue", "actions")))
+    if payload.get("workflow") == UNRESOLVED_SUMMARY_WORKFLOW:
+        return _unresolved_summary_actions(payload, source_path=source_path)
     return tuple(_mapping_sequence(payload.get("actions", ())))
+
+
+def _unresolved_summary_actions(
+    payload: Mapping[str, Any],
+    *,
+    source_path: Path | None,
+) -> tuple[Mapping[str, Any], ...]:
+    actions = []
+    for action in _mapping_sequence(payload.get("next_actions", ())):
+        action_id = str(action.get("action_id") or "")
+        if action_id == "improve_unresolved_citation_alignment":
+            actions.append(_unresolved_citation_alignment_action(payload, action, source_path=source_path))
+        elif action_id == "fill_and_promote_remaining_world_model_rules":
+            actions.append(_unresolved_world_model_rules_action(payload, action, source_path=source_path))
+        else:
+            actions.append(_generic_unresolved_summary_action(action))
+    return tuple(actions)
+
+
+def _unresolved_citation_alignment_action(
+    payload: Mapping[str, Any],
+    action: Mapping[str, Any],
+    *,
+    source_path: Path | None,
+) -> Mapping[str, Any]:
+    command_templates: list[str] = []
+    workflow_paths = _string_tuple(_nested(payload, "paths", "citation_workflows"))
+    for workflow_path in workflow_paths:
+        command_templates.extend(
+            _citation_alignment_commands(workflow_path, payload=payload, source_path=source_path)
+        )
+    return {
+        **dict(action),
+        "title": "Rerun unresolved citation alignment candidates",
+        "action_type": "workflow_plan",
+        "evidence_routes": ("citation_evidence", "source_family_acquisition"),
+        "suggested_commands": tuple(command_templates),
+        "metadata": {
+            "required_inputs": (),
+            "closure_outputs": (
+                "unresolved_citation_alignment_workflow_report",
+                "unresolved_citation_alignment_artifact_manifest",
+            ),
+            "source_summary_workflow": UNRESOLVED_SUMMARY_WORKFLOW,
+            "source_citation_workflow_count": len(workflow_paths),
+            "reason": str(action.get("reason") or ""),
+        },
+    }
+
+
+def _citation_alignment_commands(
+    workflow_path_value: str,
+    *,
+    payload: Mapping[str, Any],
+    source_path: Path | None,
+) -> tuple[str, ...]:
+    workflow_path = _resolve_path(workflow_path_value, base=source_path)
+    workflow = _load_optional_json(workflow_path)
+    workflow_paths = _mapping(workflow.get("paths"))
+    manifest_path = _resolve_path(workflow_paths.get("artifact_manifest"), base=workflow_path)
+    manifest = _load_optional_json(manifest_path)
+    artifacts = _mapping(manifest.get("artifacts"))
+    queue = _artifact_path(artifacts, "queue_report", base=manifest_path) or _resolve_path(
+        _nested(payload, "paths", "unresolved_queue"),
+        base=source_path,
+    )
+    scores = _artifact_path(artifacts, "scores", base=manifest_path)
+    blind_spots = _artifact_path(artifacts, "blind_spots", base=manifest_path)
+    source_catalogs = tuple(
+        path
+        for _, path in sorted(
+            (
+                (key, _artifact_path(artifacts, key, base=manifest_path))
+                for key in artifacts
+                if str(key).startswith("source_catalog_")
+            ),
+            key=lambda item: item[0],
+        )
+        if path is not None
+    )
+    controlled_sweeps = tuple(
+        path
+        for _, path in sorted(
+            (
+                (key, _artifact_path(artifacts, key, base=manifest_path))
+                for key in artifacts
+                if str(key).startswith("controlled_sweep_")
+            ),
+            key=lambda item: item[0],
+        )
+        if path is not None
+    )
+    if not (queue and scores and blind_spots and source_catalogs):
+        return ()
+    config = _mapping(workflow.get("config"))
+    current_mode = str(config.get("query_mode") or "claim_entity")
+    candidate_modes = tuple(
+        mode
+        for mode in ("question_and_query", "queue_query", "question", "claim_entity")
+        if mode != current_mode
+    )[:3]
+    if not candidate_modes:
+        candidate_modes = (current_mode,)
+    commands = []
+    for mode in candidate_modes:
+        parts = [
+            "python",
+            "benchmarks/run_source_family_citation_search_workflow.py",
+            "--queue",
+            str(queue),
+        ]
+        for catalog in source_catalogs:
+            parts.extend(("--source-catalog", str(catalog)))
+        parts.extend(("--scores", str(scores), "--blind-spots", str(blind_spots)))
+        for controlled_sweep in controlled_sweeps:
+            parts.extend(("--controlled-sweep", str(controlled_sweep)))
+        parts.extend((
+            "--output-dir",
+            "...",
+            "--workflow-report",
+            "...",
+            "--artifact-manifest",
+            "...",
+            "--registry",
+            "...",
+            "--name",
+            "...",
+            "--version",
+            "...",
+            "--query-mode",
+            mode,
+            "--target-route",
+            str(config.get("target_route") or "retrieval_groundedness"),
+            "--query-fields",
+            ",".join(_string_tuple(config.get("query_fields"))) or "question,question_answer",
+            "--retriever-min-overlaps",
+            ",".join(str(item) for item in _sequence(config.get("retriever_min_overlaps")))
+            or "0.95,0.8,0.65,0.5",
+            "--metadata",
+            "closure_action=improve_unresolved_citation_alignment",
+        ))
+        if config.get("adapter_diversify_source_families") is True:
+            parts.append("--adapter-diversify-source-families")
+        commands.append(_shell_join(parts))
+    return tuple(commands)
+
+
+def _unresolved_world_model_rules_action(
+    payload: Mapping[str, Any],
+    action: Mapping[str, Any],
+    *,
+    source_path: Path | None,
+) -> Mapping[str, Any]:
+    rule_plan_path = _resolve_path(_nested(payload, "paths", "rule_input_plan"), base=source_path)
+    rule_plan = _load_optional_json(rule_plan_path)
+    rule_paths = _mapping(rule_plan.get("paths"))
+    input_tasks = _resolve_path(rule_paths.get("input_tasks"), base=rule_plan_path)
+    input_requests = _resolve_path(rule_paths.get("input_requests"), base=rule_plan_path)
+    commands = _world_model_rule_commands(input_tasks=input_tasks, input_requests=input_requests)
+    return {
+        **dict(action),
+        "title": "Fill and promote remaining deterministic world-model rules",
+        "action_type": "workflow_plan",
+        "evidence_routes": ("world_model_rules",),
+        "suggested_commands": commands,
+        "metadata": {
+            "required_inputs": (
+                "source_backed_numeric_bindings",
+                "source_backed_temporal_bindings",
+            ),
+            "closure_outputs": (
+                "numeric_rule_fill_report",
+                "numeric_rule_adapter_report",
+                "numeric_rule_promotion_report",
+                "temporal_rule_fill_report",
+                "temporal_rule_adapter_report",
+                "temporal_rule_promotion_report",
+            ),
+            "source_summary_workflow": UNRESOLVED_SUMMARY_WORKFLOW,
+            "rule_input_plan": None if rule_plan_path is None else str(rule_plan_path),
+            "reason": str(action.get("reason") or ""),
+            "missing_input_counts": dict(_mapping(action.get("missing_input_counts"))),
+        },
+    }
+
+
+def _world_model_rule_commands(
+    *,
+    input_tasks: Path | None,
+    input_requests: Path | None,
+) -> tuple[str, ...]:
+    if input_tasks is None or input_requests is None:
+        return ()
+    return (
+        _shell_join((
+            "python",
+            "benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py",
+            "--input-tasks",
+            str(input_tasks),
+            "--numeric-bindings",
+            "...",
+            "--subject-bindings",
+            "...",
+            "--output-dir",
+            "...",
+            "--json",
+            "...",
+            "--rule-inputs-jsonl",
+            "...",
+            "--artifact-manifest",
+            "...",
+            "--registry",
+            "...",
+            "--name",
+            "...",
+            "--version",
+            "...",
+            "--metadata",
+            "closure_action=fill_and_promote_remaining_world_model_rules",
+        )),
+        _shell_join((
+            "python",
+            "benchmarks/run_world_model_rule_authoring_adapter.py",
+            "--rule-stubs",
+            str(input_requests),
+            "--rule-inputs",
+            "...",
+            "--output-dir",
+            "...",
+            "--json",
+            "...",
+            "--rule-results-jsonl",
+            "...",
+            "--artifact-manifest",
+            "...",
+            "--registry",
+            "...",
+            "--name",
+            "...",
+            "--version",
+            "...",
+            "--metadata",
+            "closure_lane=numeric_rules",
+        )),
+        _shell_join((
+            "python",
+            "benchmarks/promote_world_model_rule_candidates.py",
+            "--rule-results",
+            "...",
+            "--rule-inputs",
+            "...",
+            "--adapter-report",
+            "...",
+            "--output-dir",
+            "...",
+            "--json",
+            "...",
+            "--artifact-manifest",
+            "...",
+            "--registry",
+            "...",
+            "--name",
+            "...",
+            "--version",
+            "...",
+            "--metadata",
+            "closure_lane=numeric_rules",
+        )),
+        _shell_join((
+            "python",
+            "benchmarks/fill_world_model_rule_inputs_from_temporal_bindings.py",
+            "--input-tasks",
+            str(input_tasks),
+            "--temporal-bindings",
+            "...",
+            "--output-dir",
+            "...",
+            "--json",
+            "...",
+            "--rule-inputs-jsonl",
+            "...",
+            "--artifact-manifest",
+            "...",
+            "--registry",
+            "...",
+            "--name",
+            "...",
+            "--version",
+            "...",
+            "--metadata",
+            "closure_action=fill_and_promote_remaining_world_model_rules",
+        )),
+        _shell_join((
+            "python",
+            "benchmarks/run_world_model_rule_authoring_adapter.py",
+            "--rule-stubs",
+            str(input_requests),
+            "--rule-inputs",
+            "...",
+            "--output-dir",
+            "...",
+            "--json",
+            "...",
+            "--rule-results-jsonl",
+            "...",
+            "--artifact-manifest",
+            "...",
+            "--registry",
+            "...",
+            "--name",
+            "...",
+            "--version",
+            "...",
+            "--metadata",
+            "closure_lane=temporal_rules",
+        )),
+        _shell_join((
+            "python",
+            "benchmarks/promote_world_model_rule_candidates.py",
+            "--rule-results",
+            "...",
+            "--rule-inputs",
+            "...",
+            "--adapter-report",
+            "...",
+            "--output-dir",
+            "...",
+            "--json",
+            "...",
+            "--artifact-manifest",
+            "...",
+            "--registry",
+            "...",
+            "--name",
+            "...",
+            "--version",
+            "...",
+            "--metadata",
+            "closure_lane=temporal_rules",
+        )),
+    )
+
+
+def _generic_unresolved_summary_action(action: Mapping[str, Any]) -> Mapping[str, Any]:
+    action_id = str(action.get("action_id") or "unresolved_frontier_action")
+    return {
+        **dict(action),
+        "title": action_id,
+        "action_type": "workflow_plan",
+        "evidence_routes": (str(action.get("lane") or "unresolved_frontier"),),
+        "suggested_commands": (),
+        "metadata": {
+            "required_inputs": (),
+            "closure_outputs": (),
+            "source_summary_workflow": UNRESOLVED_SUMMARY_WORKFLOW,
+            "reason": str(action.get("reason") or ""),
+        },
+    }
 
 
 def _is_active_research_queue(payload: Mapping[str, Any]) -> bool:
@@ -374,6 +745,40 @@ def _load_mapping_source(source: str | Path | Mapping[str, Any]) -> tuple[Path |
     return path, dict(payload)
 
 
+def _load_optional_json(path: Path | None) -> Mapping[str, Any]:
+    if path is None or not path.exists():
+        return {}
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    return payload if isinstance(payload, Mapping) else {}
+
+
+def _artifact_path(
+    artifacts: Mapping[str, Any],
+    key: str,
+    *,
+    base: Path | None,
+) -> Path | None:
+    entry = _mapping(artifacts.get(key))
+    return _resolve_path(entry.get("path"), base=base)
+
+
+def _resolve_path(value: Any, *, base: Path | None) -> Path | None:
+    if value is None:
+        return None
+    text = str(value)
+    if not text:
+        return None
+    candidate = Path(text)
+    if candidate.is_absolute():
+        return candidate
+    if candidate.exists():
+        return candidate
+    if base is None:
+        return candidate
+    root = base.parent if base.suffix else base
+    return root / candidate
+
+
 def _mapping_sequence(value: Any) -> tuple[Mapping[str, Any], ...]:
     if not isinstance(value, Sequence) or isinstance(value, (str, bytes, bytearray)):
         return ()
@@ -392,6 +797,12 @@ def _string_tuple(value: Any) -> tuple[str, ...]:
     if not isinstance(value, Sequence):
         return (str(value),) if str(value) else ()
     return tuple(str(item) for item in value if str(item))
+
+
+def _sequence(value: Any) -> tuple[Any, ...]:
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return tuple(value)
+    return ()
 
 
 def _nested(payload: Mapping[str, Any], *keys: str) -> Any:
@@ -417,6 +828,10 @@ def _slug(value: str) -> str:
     while "--" in slug:
         slug = slug.replace("--", "-")
     return slug or "item"
+
+
+def _shell_join(parts: Sequence[Any]) -> str:
+    return " ".join(shlex.quote(str(part)) for part in parts if str(part))
 
 
 def _write_json(path: str | Path, payload: Mapping[str, Any], *, compact: bool) -> None:

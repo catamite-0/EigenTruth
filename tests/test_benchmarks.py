@@ -31605,6 +31605,176 @@ def test_frontier_research_queue_command_plan_cli_filters_action_ids(tmp_path):
     ]
 
 
+def test_frontier_research_queue_command_plan_accepts_unresolved_summary(tmp_path):
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    requirements_module = importlib.import_module("benchmarks.frontier_research_command_requirements")
+    registry_module = importlib.import_module("eigentruth.registry")
+    summary_path = tmp_path / "unresolved-summary.json"
+    plan_path = tmp_path / "frontier-research-command-plan.json"
+    manifest_path = tmp_path / "frontier-research-command-plan-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    citation_dir = tmp_path / "citation"
+    citation_dir.mkdir()
+    citation_workflow_path = citation_dir / "source-family-citation-search-workflow.json"
+    citation_manifest_path = citation_dir / "artifact-manifest.json"
+    rule_dir = tmp_path / "rules"
+    rule_dir.mkdir()
+    rule_plan_path = rule_dir / "rule-input-collection-plan.json"
+    queue_path = tmp_path / "queue" / "unresolved-evidence-queue.json"
+    queue_path.parent.mkdir()
+    queue_path.write_text("{}", encoding="utf-8")
+    citation_workflow_path.write_text(
+        json.dumps({
+            "workflow": "source_family_citation_search_workflow",
+            "status": "blocked",
+            "config": {
+                "query_mode": "claim_entity",
+                "query_fields": ["question", "question_answer"],
+                "retriever_min_overlaps": [0.95, 0.65],
+                "target_route": "retrieval_groundedness",
+                "adapter_diversify_source_families": True,
+            },
+            "paths": {"artifact_manifest": "artifact-manifest.json"},
+        }),
+        encoding="utf-8",
+    )
+    citation_manifest_path.write_text(
+        json.dumps({
+            "artifacts": {
+                "queue_report": {"path": "../queue/unresolved-evidence-queue.json"},
+                "source_catalog_1": {"path": "../catalog/wikidata.jsonl"},
+                "source_catalog_2": {"path": "../catalog/news.jsonl"},
+                "scores": {"path": "../scores/scores.manifest.json"},
+                "blind_spots": {"path": "../blind-spots.json"},
+                "controlled_sweep_1": {"path": "../controlled-sweep.json"},
+            }
+        }),
+        encoding="utf-8",
+    )
+    rule_plan_path.write_text(
+        json.dumps({
+            "workflow": "world_model_rule_input_collection_plan",
+            "status": "ready_for_input_collection",
+            "summary": {
+                "task_count": 4,
+                "rule_family_counts": {
+                    "quantity_or_arithmetic": 2,
+                    "temporal_consistency": 2,
+                },
+            },
+            "paths": {
+                "input_tasks": "rule-input-tasks.jsonl",
+                "input_requests": "world-model-rule-input-requests.jsonl",
+            },
+        }),
+        encoding="utf-8",
+    )
+    summary_path.write_text(
+        json.dumps({
+            "workflow": "unresolved_frontier_evidence_summary",
+            "status": "needs_evidence",
+            "paths": {
+                "unresolved_queue": str(queue_path),
+                "citation_workflows": [str(citation_workflow_path)],
+                "rule_input_plan": str(rule_plan_path),
+            },
+            "next_actions": [
+                {
+                    "action_id": "improve_unresolved_citation_alignment",
+                    "lane": "citation_evidence",
+                    "priority": 88,
+                    "reason": "citation gate blocked",
+                },
+                {
+                    "action_id": "fill_and_promote_remaining_world_model_rules",
+                    "lane": "world_model_rules",
+                    "priority": 85,
+                    "reason": "rule inputs missing",
+                    "missing_input_counts": {"numeric_value": 2, "source_citation": 2},
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = plan_module.build_frontier_research_queue_command_plan(
+        source=summary_path,
+        json_path=plan_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="unresolved-frontier-command-plan",
+        version="0.1",
+    )
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:unresolved-frontier-command-plan:0.1"
+    )
+    citation_entry = payload["entries"][0]
+    rule_entry = payload["entries"][1]
+
+    assert payload["status"] == "needs_inputs"
+    assert payload["source"]["workflow"] == "unresolved_frontier_evidence_summary"
+    assert payload["summary"]["entry_count"] == 2
+    assert payload["summary"]["command_count"] == 9
+    assert payload["summary"]["missing_command_template_count"] == 0
+    assert payload["summary"]["action_ids"] == (
+        "improve_unresolved_citation_alignment",
+        "fill_and_promote_remaining_world_model_rules",
+    )
+    assert citation_entry["command_status"] == "needs_inputs"
+    assert citation_entry["missing_inputs"] == ("bound_command_template_values",)
+    assert len(citation_entry["command_templates"]) == 3
+    assert "--query-mode question_and_query" in citation_entry["command_templates"][0]
+    assert "--source-catalog" in citation_entry["command_templates"][0]
+    assert "--controlled-sweep" in citation_entry["command_templates"][0]
+    assert rule_entry["command_status"] == "needs_inputs"
+    assert rule_entry["missing_inputs"] == (
+        "source_backed_numeric_bindings",
+        "source_backed_temporal_bindings",
+        "bound_command_template_values",
+    )
+    assert len(rule_entry["command_templates"]) == 6
+    assert "fill_world_model_rule_inputs_from_numeric_bindings.py" in (
+        rule_entry["command_templates"][0]
+    )
+    assert "fill_world_model_rule_inputs_from_temporal_bindings.py" in (
+        rule_entry["command_templates"][3]
+    )
+    citation_requirements = requirements_module.frontier_command_requirement_summary(
+        citation_entry["command_templates"][0],
+        index=1,
+        required_inputs=citation_entry["required_inputs"],
+    )
+    numeric_requirements = requirements_module.frontier_command_requirement_summary(
+        rule_entry["command_templates"][0],
+        index=1,
+        required_inputs=rule_entry["required_inputs"],
+    )
+    temporal_requirements = requirements_module.frontier_command_requirement_summary(
+        rule_entry["command_templates"][3],
+        index=4,
+        required_inputs=rule_entry["required_inputs"],
+    )
+    assert citation_requirements["script"] == (
+        "benchmarks/run_source_family_citation_search_workflow.py"
+    )
+    assert citation_requirements["status"] == "ready"
+    assert numeric_requirements["script"] == (
+        "benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py"
+    )
+    assert numeric_requirements["status"] == "ready"
+    assert temporal_requirements["script"] == (
+        "benchmarks/fill_world_model_rule_inputs_from_temporal_bindings.py"
+    )
+    assert temporal_requirements["status"] == "ready"
+    assert json.loads(plan_path.read_text(encoding="utf-8"))["workflow"] == (
+        "frontier_research_queue_command_plan"
+    )
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "frontier_research_queue_command_plan"
+    assert record.metadata["source_workflow"] == "unresolved_frontier_evidence_summary"
+    assert record.metadata["entry_count"] == 2
+
+
 def test_frontier_research_queue_bound_plan_dry_run_roundtrip(tmp_path):
     plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
     bind_module = importlib.import_module(

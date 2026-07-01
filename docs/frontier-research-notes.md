@@ -1389,7 +1389,11 @@ Added the first monitor-first tool-selection audit layer:
   placeholders/required inputs, keeping execution explicit and reviewable.
   Callers that want only current-release blockers can opt into
   `--only-active-research-queue`, which returns an empty plan for closed or
-  superseded historical queues instead of converting them into runnable work.
+  superseded historical queues instead of converting them into runnable work. It
+  now also accepts `unresolved_frontier_evidence_summary` reports and lowers
+  blocked citation alignment plus partial world-model rule lanes into the same
+  reviewable command-plan format, with source-backed binding values still left
+  as placeholders.
 - `scaffold_frontier_research_queue_bindings.py` now turns that command plan
   into a review scaffold plus deliberately empty bindings skeleton. On the
   current default refreshed queue it surfaces `53` ordered placeholders and
