@@ -45,7 +45,9 @@ SOURCE_BACKED_CONTRACTS: dict[str, dict[str, Any]] = {
         "required_binding_fields": (
             "request_id",
             "target_id",
-            "numeric_value",
+            "subject_entity",
+            "candidate_numeric_value",
+            "source_numeric_value",
             "unit",
             "reference_time",
             "source_citation",
@@ -55,7 +57,9 @@ SOURCE_BACKED_CONTRACTS: dict[str, dict[str, Any]] = {
         "binding_skeleton": {
             "request_id": "",
             "target_id": "",
-            "numeric_value": "",
+            "subject_entity": "",
+            "candidate_numeric_value": "",
+            "source_numeric_value": "",
             "unit": "",
             "reference_time": "",
             "source_citation": "",

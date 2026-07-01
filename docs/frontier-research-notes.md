@@ -1445,6 +1445,16 @@ Added the first monitor-first tool-selection audit layer:
   source-backed rule-input collection requests, one missing-template review
   request, and one remaining command-template placeholder review request, with
   no evidence ingestion or binding approval.
+- `scaffold_frontier_research_queue_input_bindings.py` turns that preflight
+  into editable sidecar skeletons. When the request exposes a reachable
+  `--input-tasks` path, it expands each matching rule-input task into a blank
+  source-backed binding row, strips reserved label/model-answer fields, keeps
+  `review_status=needs_review`, and emits downstream fill-command hints. The
+  current unresolved smoke expands the two source-backed requests into 17
+  editable rows: 12 numeric and 5 temporal, plus the two review requests above.
+  Replaying those empty sidecars through the existing numeric and temporal fill
+  bridges remains blocked with `filled=0`, because required values, citations,
+  and review approval are intentionally absent.
 - The binder now validates known frontier benchmark commands against required
   CLI flags. A directly filled abstention template is kept `needs_inputs` when
   `plan_frontier_abstention_evidence_reruns.py` omits the action-required

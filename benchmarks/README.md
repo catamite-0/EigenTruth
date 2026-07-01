@@ -6784,6 +6784,29 @@ requests, and actions that still lack command templates are surfaced as
 missing-template review requests. It does not approve bindings, execute
 commands, fetch evidence, or satisfy release gates.
 
+To prepare editable source-backed binding sidecars from that preflight:
+
+```bash
+python benchmarks/scaffold_frontier_research_queue_input_bindings.py \
+  --input-collection-plan artifacts/frontier-research-queue-input-collection-plan.json \
+  --output-dir artifacts/frontier-research-queue-input-binding-scaffold \
+  --json artifacts/frontier-research-queue-input-binding-scaffold/frontier-input-binding-scaffold.json \
+  --artifact-manifest artifacts/frontier-research-queue-input-binding-scaffold/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-input-binding-scaffold \
+  --version 0.1
+```
+
+When the preflight exposes a reachable `--input-tasks` path, the scaffold
+expands source-backed requests into one empty JSONL skeleton per rule-input
+task, for example `source-backed-numeric-bindings.jsonl` and
+`source-backed-temporal-bindings.jsonl`. Rows are deliberately written with
+`review_status=needs_review`, blank source/citation/value fields, and
+`not_verifier_evidence=true`; after an external collector or reviewer fills and
+approves them, the generated downstream command hints show which existing
+`fill_world_model_rule_inputs_from_*_bindings.py` bridge can consume the
+sidecar.
+
 Then dry-run the bound plan before any explicit execution:
 
 ```bash
