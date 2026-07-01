@@ -6136,12 +6136,14 @@ same promotion, pre-generation, counterfactual, triple-audit, covered-fact,
 action-gate, and frontier-release evidence metric names used by release drift
 blockers. Its default group set is kept compatible with existing promotion
 contracts; stricter runs can explicitly pass `--required-groups` entries such as
-`claim_factuality`, `claim_risk_localization`, `trajectory_audit`,
-`evidence_handoff`, `world_model`, `context_sensitivity`, or
-`counterfactual_robustness` when those runtime-drift gates are part of the
-release policy. Treat it as pre-flight evidence hygiene: it explains why a
-contract will not satisfy a runtime-drift gate, but it does not itself satisfy
-the gate.
+`claim_factuality`, `claim_risk_localization`, `fact_selfcheck_gate`,
+`trajectory_audit`, `evidence_handoff`, `world_model`, `context_sensitivity`,
+or `counterfactual_robustness` when those runtime-drift gates are part of the
+release policy. `fact_selfcheck_gate` is strict: a required handoff must carry a
+manifest-verified `verifier_signal_fusion_workflow` report whose
+`fact_selfcheck_evidence_gate` promoted with no failed runs. Treat the audit as
+pre-flight evidence hygiene: it explains why a contract will not satisfy a
+runtime-drift gate, but it does not itself satisfy the gate.
 
 After the audit, export an evidence-enriched contract from explicit local child
 reports:
@@ -6155,6 +6157,7 @@ python benchmarks/export_product_promotion_contract_evidence_handoff.py \
   --triple-extraction-fixture-matrix artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/triple-extraction-fixture-matrix.json \
   --counterfactual-verification artifacts/smollm2_product_counterfactual_structured_qa_audit_v0/counterfactual-verification-report.json \
   --product-trace-replay-workflow artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/product-trace-replay-workflow.json \
+  --fact-selfcheck-signal-fusion artifacts/tiny_fact_selfcheck_signal_fusion/verifier-signal-fusion-workflow.json \
   --triple-audit-enrichment artifacts/smollm2_product_trace_triple_audit_enrichment_v1/product-trace-triple-audit-enrichment.json \
   --runtime-baseline artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/runtime-baseline/product-runtime-baseline.json \
   --covered-fact-property-metrics artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-route/structured-qa-route-summary.json \
@@ -6166,8 +6169,11 @@ python benchmarks/export_product_promotion_contract_evidence_handoff.py \
 ```
 
 The exporter only copies evidence from supplied reports; it does not invent
-trace-level triple-audit results. `--frontier-release-evidence` should point to
-the refreshed frontier release-evidence verdict when the handoff is being used
+trace-level triple-audit results or fact-level sample consistency coverage.
+`--fact-selfcheck-signal-fusion` should point to a workflow report produced with
+`--enable-fact-selfcheck --fact-selfcheck-gate` when `fact_selfcheck_gate` is a
+required group. `--frontier-release-evidence` should point to the refreshed
+frontier release-evidence verdict when the handoff is being used
 for current `frontier_audit` drift evidence. `--required-groups` applies the
 same strict handoff group set to both the enriched contract audit and the
 manifest/registry metadata, so a stricter frontier pass can preserve exactly
@@ -6464,6 +6470,7 @@ python benchmarks/export_product_promotion_contract_evidence_handoff.py \
   --triple-extraction-fixture-matrix artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/triple-extraction-fixture-matrix.json \
   --counterfactual-verification artifacts/smollm2_product_counterfactual_blind_spot_wikidata_structured_qa_audit_v1/counterfactual-verification-report.json \
   --product-trace-replay-workflow artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/product-trace-replay-workflow.json \
+  --fact-selfcheck-signal-fusion artifacts/tiny_fact_selfcheck_signal_fusion/verifier-signal-fusion-workflow.json \
   --frontier-release-evidence artifacts/frontier-release-evidence/frontier-release-evidence-budget-target-sweep-v4.json \
   --triple-audit-enrichment artifacts/smollm2_product_trace_triple_audit_enrichment_v1/product-trace-triple-audit-enrichment.json \
   --runtime-baseline artifacts/smollm2_product_runtime_drift_v1_10_trace_evidence/runtime-baseline/product-runtime-baseline.json \

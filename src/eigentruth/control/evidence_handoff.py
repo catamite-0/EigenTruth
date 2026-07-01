@@ -29,6 +29,7 @@ _ALL_GROUPS = (
 _OPTIONAL_RUNTIME_GROUPS = (
     "claim_factuality",
     "claim_risk_localization",
+    "fact_selfcheck_gate",
     "trajectory_audit",
     "evidence_handoff",
     "world_model",
@@ -43,6 +44,7 @@ _ACTION_IDS = {
     "pre_generation": "run_pre_generation_probe_comparison",
     "claim_factuality": "rerun_claim_factuality_probe_comparison",
     "claim_risk_localization": "rerun_product_trace_claim_risk_localization_evidence",
+    "fact_selfcheck_gate": "run_fact_selfcheck_signal_fusion_evidence",
     "counterfactual": "run_counterfactual_verifier_audit",
     "triple_audit": "add_trace_level_triple_audit",
     "covered_fact_property": "refresh_covered_fact_property_routes",
@@ -271,6 +273,8 @@ def enrich_product_promotion_contract_evidence(
     counterfactual_verification_path: str | None = None,
     product_trace_replay_workflow: Mapping[str, Any] | None = None,
     product_trace_replay_workflow_path: str | None = None,
+    fact_selfcheck_signal_fusion: Mapping[str, Any] | None = None,
+    fact_selfcheck_signal_fusion_path: str | None = None,
     frontier_release_evidence: Mapping[str, Any] | None = None,
     frontier_release_evidence_path: str | None = None,
     triple_audit_enrichment: Mapping[str, Any] | None = None,
@@ -345,6 +349,16 @@ def enrich_product_promotion_contract_evidence(
         if _mapping(product_trace.get("receipt_claim_support")):
             filled_groups.append("receipt_claim_support")
         export_metadata["sources"]["product_trace_replay_workflow"] = product_trace_replay_workflow_path
+
+    fact_selfcheck_gate = _fact_selfcheck_gate_handoff_from_report(
+        fact_selfcheck_signal_fusion,
+        path=fact_selfcheck_signal_fusion_path,
+    )
+    if fact_selfcheck_gate:
+        _merge_nested(payload, "fact_selfcheck_gate", fact_selfcheck_gate)
+        _merge_metadata(payload, _fact_selfcheck_gate_flat_metadata(fact_selfcheck_gate))
+        filled_groups.append("fact_selfcheck_gate")
+        export_metadata["sources"]["fact_selfcheck_signal_fusion"] = fact_selfcheck_signal_fusion_path
 
     frontier_evidence = _frontier_release_evidence_handoff_from_report(
         frontier_release_evidence,
@@ -1041,6 +1055,110 @@ def _action_gate_flat_metadata(workflow: Mapping[str, Any]) -> dict[str, Any]:
             "product_trace_receipt_claim_support_unsigned_reference_rate": _float_or_none(
                 receipt_claim_support.get("unsigned_reference_rate")
             ),
+        }
+    )
+
+
+def _fact_selfcheck_gate_handoff_from_report(
+    report: Mapping[str, Any] | None,
+    *,
+    path: str | None,
+) -> dict[str, Any]:
+    if not report:
+        return {}
+    gate = _mapping(report.get("fact_selfcheck_evidence_gate"))
+    if not gate:
+        return {}
+    runs = tuple(_mapping(item) for item in _mapping(gate.get("runs")).values() if isinstance(item, Mapping))
+    failed_runs = tuple(str(item) for item in gate.get("failed_runs") or ())
+    blocking_reasons = tuple(str(item) for item in gate.get("blocking_reasons") or ())
+    status = "promote"
+    if (
+        report.get("workflow") != "verifier_signal_fusion_workflow"
+        or gate.get("enabled") is not True
+        or gate.get("status") != "promote"
+        or gate.get("passed") is not True
+        or failed_runs
+        or blocking_reasons
+    ):
+        status = "blocked"
+    return _drop_none_values(
+        {
+            "report_path": path or report.get("workflow_report_path"),
+            "manifest_path": _nested(report, "paths", "artifact_manifest") or report.get("artifact_manifest_path"),
+            "manifest_verified": _fact_selfcheck_gate_manifest_verified(report),
+            "source": "file" if path is not None else None,
+            "workflow": report.get("workflow"),
+            "status": status,
+            "gate_status": gate.get("status"),
+            "gate_enabled": gate.get("enabled"),
+            "gate_passed": gate.get("passed"),
+            "run_count": len(runs),
+            "failed_run_count": len(failed_runs),
+            "failed_runs": failed_runs,
+            "blocking_reasons": blocking_reasons,
+            "min_executed_rate": _min_run_metric(runs, "executed_rate"),
+            "min_decided_rate": _min_run_metric(runs, "decided_rate"),
+            "max_not_applicable_rate": _max_run_metric(runs, "not_applicable_rate"),
+            "min_claim_triples_per_record": _min_run_metric(runs, "claim_triples_per_record"),
+            "min_sample_triples_per_record": _min_run_metric(runs, "sample_triples_per_record"),
+            "thresholds": dict(_mapping(gate.get("thresholds"))),
+        }
+    )
+
+
+def _fact_selfcheck_gate_manifest_verified(report: Mapping[str, Any]) -> bool | None:
+    value = _manifest_verified_from_report(report)
+    if value is not None:
+        return value
+    manifest_verification = _mapping(report.get("manifest_verification"))
+    passed = manifest_verification.get("passed")
+    if isinstance(passed, bool):
+        return passed
+    summary = _mapping(report.get("manifest_summary"))
+    missing_count = _float_or_none(summary.get("missing_count"))
+    if missing_count is not None:
+        return missing_count == 0.0
+    return None
+
+
+def _min_run_metric(runs: Sequence[Mapping[str, Any]], key: str) -> float | None:
+    values = [_float_or_none(run.get(key)) for run in runs]
+    finite = [value for value in values if value is not None]
+    return min(finite) if finite else None
+
+
+def _max_run_metric(runs: Sequence[Mapping[str, Any]], key: str) -> float | None:
+    values = [_float_or_none(run.get(key)) for run in runs]
+    finite = [value for value in values if value is not None]
+    return max(finite) if finite else None
+
+
+def _fact_selfcheck_gate_flat_metadata(gate: Mapping[str, Any]) -> dict[str, Any]:
+    return _drop_none_values(
+        {
+            "fact_selfcheck_gate_report": gate.get("report_path"),
+            "fact_selfcheck_gate_manifest": gate.get("manifest_path"),
+            "fact_selfcheck_gate_source": gate.get("source"),
+            "fact_selfcheck_gate_manifest_verified": gate.get("manifest_verified"),
+            "fact_selfcheck_gate_workflow": gate.get("workflow"),
+            "fact_selfcheck_gate_status": gate.get("status"),
+            "fact_selfcheck_gate_gate_status": gate.get("gate_status"),
+            "fact_selfcheck_gate_enabled": gate.get("gate_enabled"),
+            "fact_selfcheck_gate_passed": gate.get("gate_passed"),
+            "fact_selfcheck_gate_run_count": gate.get("run_count"),
+            "fact_selfcheck_gate_failed_run_count": gate.get("failed_run_count"),
+            "fact_selfcheck_gate_min_executed_rate": gate.get("min_executed_rate"),
+            "fact_selfcheck_gate_min_decided_rate": gate.get("min_decided_rate"),
+            "fact_selfcheck_gate_max_not_applicable_rate": gate.get("max_not_applicable_rate"),
+            "fact_selfcheck_gate_min_claim_triples_per_record": gate.get(
+                "min_claim_triples_per_record"
+            ),
+            "fact_selfcheck_gate_min_sample_triples_per_record": gate.get(
+                "min_sample_triples_per_record"
+            ),
+            "fact_selfcheck_gate_failed_runs": gate.get("failed_runs"),
+            "fact_selfcheck_gate_blocking_reasons": gate.get("blocking_reasons"),
         }
     )
 
@@ -1809,6 +1927,107 @@ def _runtime_evidence_group_builders(
     )
 
 
+def _fact_selfcheck_gate_value(
+    payload: Mapping[str, Any],
+    key: str,
+) -> tuple[Any, tuple[str, ...]]:
+    group = _mapping(payload.get("fact_selfcheck_gate"))
+    metadata = _metadata(payload)
+    return _first_present(
+        (group.get(key), ("fact_selfcheck_gate", key)),
+        (metadata.get(f"fact_selfcheck_gate_{key}"), ("metadata", f"fact_selfcheck_gate_{key}")),
+        (
+            metadata.get(f"product_runtime_drift_fact_selfcheck_gate_{key}_current"),
+            ("metadata", f"product_runtime_drift_fact_selfcheck_gate_{key}_current"),
+        ),
+        (
+            metadata.get(f"promotion_contract_product_runtime_drift_fact_selfcheck_gate_{key}_current"),
+            ("metadata", f"promotion_contract_product_runtime_drift_fact_selfcheck_gate_{key}_current"),
+        ),
+    )
+
+
+def _fact_selfcheck_gate_coverage(payload: Mapping[str, Any]) -> ProductPromotionEvidenceMetric:
+    value, path = _coverage_from_group(payload, "fact_selfcheck_gate")
+    return _metric(
+        group="fact_selfcheck_gate",
+        metric="fact_selfcheck_gate.coverage_rate",
+        evidence_key="fact_selfcheck_gate_coverage_rate",
+        value=value,
+        source_path=path,
+    )
+
+
+def _fact_selfcheck_gate_manifest(payload: Mapping[str, Any]) -> ProductPromotionEvidenceMetric:
+    value, path = _fact_selfcheck_gate_value(payload, "manifest_verified")
+    if isinstance(value, bool):
+        value = 1.0 if value else None
+    elif _float_or_none(value) != 1.0:
+        value = None
+    return _metric(
+        group="fact_selfcheck_gate",
+        metric="fact_selfcheck_gate.manifest_verified_rate",
+        evidence_key="fact_selfcheck_gate_manifest_verified_rate",
+        value=value,
+        source_path=path if value is not None else (),
+    )
+
+
+def _fact_selfcheck_gate_status_metric(payload: Mapping[str, Any]) -> ProductPromotionEvidenceMetric:
+    value, path = _fact_selfcheck_gate_value(payload, "status")
+    if value != "promote":
+        value = None
+        path = ()
+    return _metric(
+        group="fact_selfcheck_gate",
+        metric="fact_selfcheck_gate.status",
+        evidence_key="fact_selfcheck_gate_status",
+        value=value,
+        source_path=path,
+    )
+
+
+def _fact_selfcheck_gate_passed(payload: Mapping[str, Any]) -> ProductPromotionEvidenceMetric:
+    value, path = _fact_selfcheck_gate_value(payload, "passed")
+    if value is None:
+        value, path = _fact_selfcheck_gate_value(payload, "gate_passed")
+    value = 1.0 if value is True else None
+    return _metric(
+        group="fact_selfcheck_gate",
+        metric="fact_selfcheck_gate.passed_rate",
+        evidence_key="fact_selfcheck_gate_passed_rate",
+        value=value,
+        source_path=path if value is not None else (),
+    )
+
+
+def _fact_selfcheck_gate_failed_run_count(payload: Mapping[str, Any]) -> ProductPromotionEvidenceMetric:
+    value, path = _fact_selfcheck_gate_value(payload, "failed_run_count")
+    numeric = _float_or_none(value)
+    value = 0.0 if numeric == 0.0 else None
+    return _metric(
+        group="fact_selfcheck_gate",
+        metric="fact_selfcheck_gate.failed_run_count",
+        evidence_key="fact_selfcheck_gate_failed_run_count",
+        value=value,
+        source_path=path if value is not None else (),
+    )
+
+
+def _fact_selfcheck_gate_metric(metric_suffix: str, key: str):
+    def build(payload: Mapping[str, Any]) -> ProductPromotionEvidenceMetric:
+        value, path = _fact_selfcheck_gate_value(payload, key)
+        return _metric(
+            group="fact_selfcheck_gate",
+            metric=f"fact_selfcheck_gate.{metric_suffix}",
+            evidence_key=f"fact_selfcheck_gate_{key}",
+            value=value,
+            source_path=path,
+        )
+
+    return build
+
+
 _CLAIM_FACTUALITY_EVIDENCE_FIELDS = (
     (
         "promotion_contract.claim_factuality_probe_comparison.coverage_rate",
@@ -2039,6 +2258,25 @@ _GROUP_BUILDERS = {
         _CLAIM_RISK_LOCALIZATION_EVIDENCE_FIELDS,
         nested_group="claim_risk_localization",
         nested_prefix="claim_risk_localization",
+    ),
+    "fact_selfcheck_gate": (
+        _fact_selfcheck_gate_coverage,
+        _fact_selfcheck_gate_manifest,
+        _fact_selfcheck_gate_status_metric,
+        _fact_selfcheck_gate_passed,
+        _fact_selfcheck_gate_metric("run_count.mean", "run_count"),
+        _fact_selfcheck_gate_failed_run_count,
+        _fact_selfcheck_gate_metric("min_executed_rate", "min_executed_rate"),
+        _fact_selfcheck_gate_metric("min_decided_rate", "min_decided_rate"),
+        _fact_selfcheck_gate_metric("max_not_applicable_rate", "max_not_applicable_rate"),
+        _fact_selfcheck_gate_metric(
+            "min_claim_triples_per_record",
+            "min_claim_triples_per_record",
+        ),
+        _fact_selfcheck_gate_metric(
+            "min_sample_triples_per_record",
+            "min_sample_triples_per_record",
+        ),
     ),
     "counterfactual": (
         _counterfactual_coverage,

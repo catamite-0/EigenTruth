@@ -127,6 +127,27 @@ def test_promotion_contract_evidence_audit_can_require_optional_runtime_groups()
     assert "world_model.trace_gap_rate" in payload["missing_metrics"]
 
 
+def test_promotion_contract_evidence_audit_can_require_fact_selfcheck_gate():
+    audit = audit_product_promotion_contract_evidence(
+        {
+            "workflow": "product_promotion_contract",
+            "source_status": "promote",
+            "model_id": "tiny",
+        },
+        required_groups=("fact_selfcheck_gate",),
+    )
+    payload = audit.to_dict()
+
+    assert payload["status"] == "blocked"
+    assert payload["required_groups"] == ("fact_selfcheck_gate",)
+    assert payload["summary"]["expected_metric_count"] == 88
+    assert payload["summary"]["missing_metric_count"] == 11
+    assert payload["summary"]["groups"]["fact_selfcheck_gate"] == "blocked"
+    assert payload["recommended_action_ids"] == ("run_fact_selfcheck_signal_fusion_evidence",)
+    assert "fact_selfcheck_gate.status" in payload["missing_metrics"]
+    assert "fact_selfcheck_gate.passed_rate" in payload["missing_metrics"]
+
+
 def test_promotion_contract_evidence_audit_passes_optional_runtime_groups():
     audit = audit_product_promotion_contract_evidence(
         _complete_contract_with_optional_runtime_groups(),
@@ -153,6 +174,20 @@ def test_promotion_contract_evidence_audit_passes_optional_runtime_groups():
     assert payload["summary"]["groups"]["world_model"] == "promote"
     assert payload["summary"]["groups"]["context_sensitivity"] == "promote"
     assert payload["summary"]["groups"]["counterfactual_robustness"] == "promote"
+
+
+def test_promotion_contract_evidence_audit_passes_fact_selfcheck_gate_group():
+    audit = audit_product_promotion_contract_evidence(
+        _complete_contract_with_fact_selfcheck_gate(),
+        required_groups=("fact_selfcheck_gate",),
+    )
+    payload = audit.to_dict()
+
+    assert payload["status"] == "promote"
+    assert payload["summary"]["expected_metric_count"] == 88
+    assert payload["summary"]["missing_metric_count"] == 0
+    assert payload["summary"]["groups"]["fact_selfcheck_gate"] == "promote"
+    assert payload["recommended_action_ids"] == ()
 
 
 def test_promotion_contract_evidence_audit_reads_exported_runtime_current_metadata():
@@ -300,6 +335,60 @@ def test_product_promotion_evidence_handoff_uses_separate_runtime_receipt_summar
     assert contract["product_trace_replay_workflow"]["receipt_claim_support"]["source"] == "runtime_baseline"
     assert contract["metadata"]["product_trace_action_receipts_coverage_rate"] == 1.0
     assert contract["metadata"]["product_trace_receipt_claim_support_reference_support_rate"] == 1.0
+
+
+def test_product_promotion_evidence_handoff_fills_fact_selfcheck_gate():
+    result = enrich_product_promotion_contract_evidence(
+        {
+            "workflow": "product_promotion_contract",
+            "source_status": "promote",
+            "model_id": "tiny",
+        },
+        fact_selfcheck_signal_fusion=_fact_selfcheck_signal_fusion_report(),
+        fact_selfcheck_signal_fusion_path="fact-selfcheck-workflow.json",
+        required_groups=("fact_selfcheck_gate",),
+    )
+    payload = result.to_dict()
+    contract = payload["contract"]
+
+    assert payload["after_audit"]["status"] == "promote"
+    assert payload["filled_groups"] == ("fact_selfcheck_gate",)
+    assert payload["metadata"]["sources"]["fact_selfcheck_signal_fusion"] == (
+        "fact-selfcheck-workflow.json"
+    )
+    assert contract["fact_selfcheck_gate"]["status"] == "promote"
+    assert contract["fact_selfcheck_gate"]["manifest_verified"] is True
+    assert contract["fact_selfcheck_gate"]["run_count"] == 2
+    assert contract["fact_selfcheck_gate"]["failed_run_count"] == 0
+    assert contract["fact_selfcheck_gate"]["min_executed_rate"] == 0.9
+    assert contract["fact_selfcheck_gate"]["min_decided_rate"] == 0.8
+    assert contract["fact_selfcheck_gate"]["max_not_applicable_rate"] == 0.05
+    assert contract["metadata"]["fact_selfcheck_gate_report"] == "fact-selfcheck-workflow.json"
+    assert contract["metadata"]["fact_selfcheck_gate_status"] == "promote"
+    assert contract["metadata"]["fact_selfcheck_gate_passed"] is True
+
+
+def test_product_promotion_evidence_handoff_blocks_failed_fact_selfcheck_gate():
+    result = enrich_product_promotion_contract_evidence(
+        {
+            "workflow": "product_promotion_contract",
+            "source_status": "promote",
+            "model_id": "tiny",
+        },
+        fact_selfcheck_signal_fusion=_fact_selfcheck_signal_fusion_report(passed=False),
+        required_groups=("fact_selfcheck_gate",),
+    )
+    payload = result.to_dict()
+    group = next(
+        item for item in payload["after_audit"]["groups"] if item["group"] == "fact_selfcheck_gate"
+    )
+
+    assert payload["after_audit"]["status"] == "blocked"
+    assert "fact_selfcheck_gate" in payload["filled_groups"]
+    assert group["status"] == "blocked"
+    assert "fact_selfcheck_gate.status" in payload["after_audit"]["missing_metrics"]
+    assert "fact_selfcheck_gate.passed_rate" in payload["after_audit"]["missing_metrics"]
+    assert "fact_selfcheck_gate.failed_run_count" in payload["after_audit"]["missing_metrics"]
 
 
 def test_product_promotion_evidence_handoff_accepts_triple_audit_enrichment_report():
@@ -612,6 +701,50 @@ def test_product_promotion_evidence_handoff_cli_parses_required_groups(tmp_path)
     assert audit_payload["summary"]["missing_metric_count"] == 0
 
 
+def test_product_promotion_evidence_handoff_cli_accepts_fact_selfcheck_gate(tmp_path):
+    contract = tmp_path / "contract.json"
+    fact_workflow = tmp_path / "fact-selfcheck-workflow.json"
+    output = tmp_path / "contract-enriched.json"
+    audit = tmp_path / "contract-enriched-audit.json"
+    contract.write_text(
+        json.dumps(
+            {
+                "workflow": "product_promotion_contract",
+                "source_status": "promote",
+                "model_id": "tiny",
+            }
+        ),
+        encoding="utf-8",
+    )
+    fact_workflow.write_text(
+        json.dumps(_fact_selfcheck_signal_fusion_report()),
+        encoding="utf-8",
+    )
+
+    export_product_promotion_contract_evidence_handoff_main(
+        [
+            "--contract",
+            str(contract),
+            "--json",
+            str(output),
+            "--audit-json",
+            str(audit),
+            "--fact-selfcheck-signal-fusion",
+            str(fact_workflow),
+            "--required-groups",
+            "fact_selfcheck_gate",
+        ]
+    )
+    output_payload = json.loads(output.read_text(encoding="utf-8"))
+    audit_payload = json.loads(audit.read_text(encoding="utf-8"))
+
+    assert output.exists()
+    assert audit_payload["status"] == "promote"
+    assert audit_payload["required_groups"] == ["fact_selfcheck_gate"]
+    assert audit_payload["summary"]["groups"]["fact_selfcheck_gate"] == "promote"
+    assert output_payload["metadata"]["fact_selfcheck_gate_report"] == str(fact_workflow)
+
+
 def _complete_contract():
     return {
         "workflow": "product_promotion_contract",
@@ -787,6 +920,29 @@ def _complete_contract_with_optional_runtime_groups():
     return contract
 
 
+def _complete_contract_with_fact_selfcheck_gate():
+    contract = _complete_contract()
+    contract["fact_selfcheck_gate"] = {
+        "report_path": "fact-selfcheck-workflow.json",
+        "manifest_path": "fact-selfcheck-artifact-manifest.json",
+        "manifest_verified": True,
+        "source": "registry",
+        "workflow": "verifier_signal_fusion_workflow",
+        "status": "promote",
+        "gate_status": "promote",
+        "gate_enabled": True,
+        "gate_passed": True,
+        "run_count": 2,
+        "failed_run_count": 0,
+        "min_executed_rate": 0.9,
+        "min_decided_rate": 0.8,
+        "max_not_applicable_rate": 0.05,
+        "min_claim_triples_per_record": 1.0,
+        "min_sample_triples_per_record": 2.0,
+    }
+    return contract
+
+
 def _pre_generation_comparison_report():
     return {
         "workflow": "pre_generation_probe_workflow_comparison",
@@ -887,6 +1043,51 @@ def _product_trace_replay_workflow():
                     "unsigned_reference_rate": 0.0,
                 },
             }
+        },
+    }
+
+
+def _fact_selfcheck_signal_fusion_report(*, passed: bool = True):
+    failed_runs = [] if passed else ["synthetic-b"]
+    blocking_reasons = [] if passed else ["synthetic-b.decided_rate value >= threshold failed"]
+    return {
+        "schema_version": 1,
+        "workflow": "verifier_signal_fusion_workflow",
+        "artifact_manifest_path": "fact-selfcheck/artifact-manifest.json",
+        "manifest_verification": {"passed": True},
+        "fact_selfcheck_evidence_gate": {
+            "schema_version": 1,
+            "report_type": "fact_selfcheck_evidence_gate",
+            "enabled": True,
+            "status": "promote" if passed else "blocked",
+            "passed": passed,
+            "thresholds": {
+                "min_executed_rate": 0.5,
+                "min_decided_rate": 0.5,
+                "max_not_applicable_rate": 0.25,
+                "min_claim_triples_per_record": 0.5,
+                "min_sample_triples_per_record": 1.0,
+            },
+            "runs": {
+                "synthetic-a": {
+                    "passed": True,
+                    "executed_rate": 1.0,
+                    "decided_rate": 1.0,
+                    "not_applicable_rate": 0.0,
+                    "claim_triples_per_record": 1.2,
+                    "sample_triples_per_record": 2.4,
+                },
+                "synthetic-b": {
+                    "passed": passed,
+                    "executed_rate": 0.9,
+                    "decided_rate": 0.8 if passed else 0.0,
+                    "not_applicable_rate": 0.05 if passed else 1.0,
+                    "claim_triples_per_record": 1.0 if passed else 0.0,
+                    "sample_triples_per_record": 2.0 if passed else 0.0,
+                },
+            },
+            "failed_runs": failed_runs,
+            "blocking_reasons": blocking_reasons,
         },
     }
 

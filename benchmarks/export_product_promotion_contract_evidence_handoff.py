@@ -27,6 +27,7 @@ def export_product_promotion_contract_evidence_handoff(
     triple_extraction_fixture_matrix: str | Path | None = None,
     counterfactual_verification: str | Path | None = None,
     product_trace_replay_workflow: str | Path | None = None,
+    fact_selfcheck_signal_fusion: str | Path | None = None,
     frontier_release_evidence: str | Path | None = None,
     triple_audit_enrichment: str | Path | None = None,
     runtime_baseline: str | Path | None = None,
@@ -50,6 +51,7 @@ def export_product_promotion_contract_evidence_handoff(
     matrix_path = _optional_path(triple_extraction_fixture_matrix)
     counterfactual_path = _optional_path(counterfactual_verification)
     workflow_path = _optional_path(product_trace_replay_workflow)
+    fact_selfcheck_path = _optional_path(fact_selfcheck_signal_fusion)
     frontier_path = _optional_path(frontier_release_evidence)
     triple_audit_path = _optional_path(triple_audit_enrichment)
     runtime_path = _optional_path(runtime_baseline)
@@ -64,6 +66,8 @@ def export_product_promotion_contract_evidence_handoff(
         counterfactual_verification_path=_path_str(counterfactual_path),
         product_trace_replay_workflow=_load_optional_object(workflow_path),
         product_trace_replay_workflow_path=_path_str(workflow_path),
+        fact_selfcheck_signal_fusion=_load_optional_object(fact_selfcheck_path),
+        fact_selfcheck_signal_fusion_path=_path_str(fact_selfcheck_path),
         frontier_release_evidence=_load_optional_object(frontier_path),
         frontier_release_evidence_path=_path_str(frontier_path),
         triple_audit_enrichment=_load_optional_object(triple_audit_path),
@@ -106,6 +110,7 @@ def export_product_promotion_contract_evidence_handoff(
             "triple_extraction_fixture_matrix": matrix_path,
             "counterfactual_verification": counterfactual_path,
             "product_trace_replay_workflow": workflow_path,
+            "fact_selfcheck_signal_fusion": fact_selfcheck_path,
             "frontier_release_evidence": frontier_path,
             "triple_audit_enrichment": triple_audit_path,
             "runtime_baseline": runtime_path,
@@ -256,6 +261,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--triple-extraction-fixture-matrix", default=None)
     parser.add_argument("--counterfactual-verification", default=None)
     parser.add_argument("--product-trace-replay-workflow", default=None)
+    parser.add_argument("--fact-selfcheck-signal-fusion", default=None)
     parser.add_argument("--frontier-release-evidence", default=None)
     parser.add_argument("--triple-audit-enrichment", default=None)
     parser.add_argument("--runtime-baseline", default=None)
@@ -287,6 +293,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         triple_extraction_fixture_matrix=args.triple_extraction_fixture_matrix,
         counterfactual_verification=args.counterfactual_verification,
         product_trace_replay_workflow=args.product_trace_replay_workflow,
+        fact_selfcheck_signal_fusion=args.fact_selfcheck_signal_fusion,
         frontier_release_evidence=args.frontier_release_evidence,
         triple_audit_enrichment=args.triple_audit_enrichment,
         runtime_baseline=args.runtime_baseline,
