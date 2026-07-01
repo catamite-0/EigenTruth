@@ -4905,6 +4905,7 @@ def test_world_model_rule_candidate_promotion_gate_promotes_source_backed_candid
     )
 
     assert payload["status"] == "promote"
+    assert payload["summary"]["adapter_report_gate"] == "pass"
     assert payload["summary"]["promoted_count"] == 1
     assert payload["summary"]["pending_count"] == 1
     assert payload["summary"]["blocked_count"] == 0
@@ -4917,6 +4918,64 @@ def test_world_model_rule_candidate_promotion_gate_promotes_source_backed_candid
     assert registry_module.load_and_verify_artifact_manifest(output_dir / "artifact-manifest.json").passed is True
     assert registry_record is not None
     assert registry_record.metadata["status"] == "promote"
+    assert registry_record.metadata["adapter_report_gate"] == "pass"
+
+
+def test_world_model_rule_candidate_promotion_gate_blocks_blocked_adapter_report():
+    module = importlib.import_module("benchmarks.promote_world_model_rule_candidates")
+
+    payload = module.promote_world_model_rule_candidates(
+        rule_results=[
+            {
+                "request_id": "rule:record-1:1",
+                "target_id": "record-1",
+                "rule_family": "entity_disambiguation",
+                "status": "refuted",
+                "confidence": 0.95,
+                "missing_inputs": [],
+                "authored_rule": {"adapter": "entity_role_disambiguation"},
+                "metadata": {"candidate_results_require_promotion_gate": True},
+                "evidence": [
+                    "entity_role: answer_entity=Elon Musk; expected_entity=Martin Eberhard; "
+                    "source_citation=wikidata:Q478214:P112:Q1903673"
+                ],
+                "not_verifier_evidence": True,
+            }
+        ],
+        rule_inputs=[
+            {
+                "request_id": "rule:record-1:1",
+                "target_id": "record-1",
+                "rule_family": "entity_disambiguation",
+                "subject_entity": "Tesla",
+                "answer_entity": "Elon Musk",
+                "expected_entity": "Martin Eberhard",
+                "requested_role": "founder",
+                "source_citation": "wikidata:Q478214:P112:Q1903673",
+                "not_verifier_evidence": True,
+                "candidate_results_require_promotion_gate": True,
+            }
+        ],
+        adapter_report={
+            "workflow": "world_model_rule_authoring_adapter",
+            "status": "blocked",
+            "summary": {
+                "stub_result_coverage": 0.5,
+                "skipped_source_stub_ids": ("citation:record-1:1",),
+            },
+        },
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["adapter_report_gate"] == "fail"
+    assert payload["summary"]["adapter_report_failures"] == (
+        "adapter_report_status_not_promotable",
+        "adapter_stub_result_coverage_below_one",
+    )
+    assert payload["summary"]["promoted_count"] == 0
+    assert payload["summary"]["blocked_count"] == 1
+    assert payload["blocked_candidates"][0]["reason"] == "adapter_report_gate_failed"
+    assert payload["promoted_candidates"] == ()
 
 
 def test_world_model_rule_candidate_promotion_gate_blocks_missing_citation(tmp_path):

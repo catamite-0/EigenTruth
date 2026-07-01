@@ -702,7 +702,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `plan_world_model_rule_temporal_bindings.py` | Turns blocked temporal-fill reports into non-evidence timestamp/citation binding collection requests without inferring dates or source freshness. |
 | `fill_world_model_rule_inputs_from_temporal_bindings.py` | Fills temporal-consistency rule inputs from source-backed claim/source/retrieval timestamps and citations, leaving timestamp candidates behind the adapter and promotion gate. |
 | `fill_world_model_rule_inputs_from_mechanism_bindings.py` | Fills causal/procedural mechanism rule inputs from explicit source-backed mechanism bindings, requiring `mechanism_status` before adapter execution. |
-| `promote_world_model_rule_candidates.py` | Fail-closed promotion gate for deterministic rule candidates; validates explicit rule inputs, confidence, source citation, and candidate metadata while leaving pending input rows queued. |
+| `promote_world_model_rule_candidates.py` | Fail-closed promotion gate for deterministic rule candidates; validates explicit rule inputs, confidence, source citation, candidate metadata, and adapter-report readiness while leaving pending input rows queued. |
 | `build_world_model_rule_candidate_handoff.py` | Converts promoted deterministic rule candidates into target-specific ProductTrace/action-result handoffs, preserving source-citation provenance and failing closed on unpromoted or malformed candidates. |
 | `build_mechanism_handoff_evidence_bundle.py` | Aggregates promoted mechanism rule-candidate handoff reports into one release-gate bundle with target coverage, supported/refuted/action/source-family counts, recursive artifact manifest, and optional registry record. |
 | `build_source_family_structured_qa_correction_handoff.py` | Converts promoted source-family `mapped_qa_fact_candidate` rows into a target-specific structured-QA correction corpus plus ProductTrace/action-result JSONL, fail-closing unless the upstream covered-fact route was promoted. |
@@ -837,7 +837,7 @@ evidence rates and maximum final false-accept / false-accept-delta thresholds.
 | `plan_world_model_rule_temporal_bindings.py` | Builds non-evidence temporal-binding collection requests from blocked temporal-fill reports. |
 | `fill_world_model_rule_inputs_from_temporal_bindings.py` | Fills temporal rule inputs from reviewed source-backed timestamp bindings while keeping the result candidate-only until adapter execution and promotion. |
 | `fill_world_model_rule_inputs_from_mechanism_bindings.py` | Fills causal/procedural mechanism rule inputs from source-backed bindings, but blocks missing or invalid mechanism status. |
-| `promote_world_model_rule_candidates.py` | Promotion-gates deterministic rule candidates before downstream handoff. |
+| `promote_world_model_rule_candidates.py` | Promotion-gates deterministic rule candidates before downstream handoff, including adapter-report status and coverage checks when a report is supplied. |
 | `build_world_model_rule_candidate_handoff.py` | Turns promoted deterministic rule candidates into ProductTrace/action-result handoffs with source-citation provenance. |
 | `build_mechanism_handoff_evidence_bundle.py` | Bundles promoted mechanism handoffs into a manifest-verified release-gate artifact with coverage/action/verification summaries. |
 | `build_source_family_structured_qa_correction_handoff.py` | Turns promoted source-family mapped QA facts into target-specific correction ProductTrace/action-result handoffs while fail-closing unpromoted route inputs. |
@@ -985,7 +985,7 @@ evidence rates and maximum final false-accept / false-accept-delta thresholds.
 | `plan_world_model_rule_temporal_bindings.py` | 从 blocked temporal-fill report 生成 timestamp/citation binding 采集请求；只规划，不推断时间，也不生成 verifier evidence。 |
 | `fill_world_model_rule_inputs_from_temporal_bindings.py` | 从 source-backed `claim_time`/`source_time`/`retrieved_at` 与 citation 填充 temporal rule input；结果仍需 adapter 执行与 promotion gate。 |
 | `fill_world_model_rule_inputs_from_mechanism_bindings.py` | 从 source-backed mechanism binding 填充 causal/procedural rule input；缺少或无法识别 `mechanism_status` 时阻塞。 |
-| `promote_world_model_rule_candidates.py` | 对 deterministic rule candidate 做 fail-closed promotion gate，检查显式 rule input、confidence、source citation 与 candidate metadata。 |
+| `promote_world_model_rule_candidates.py` | 对 deterministic rule candidate 做 fail-closed promotion gate，检查显式 rule input、confidence、source citation、candidate metadata 与 adapter report readiness。 |
 | `build_world_model_rule_candidate_handoff.py` | 将已 promoted deterministic rule candidate 转成目标特定 ProductTrace/action-result handoff，保留 source citation provenance，并对未 promoted 或 malformed candidate fail-closed。 |
 | `build_mechanism_handoff_evidence_bundle.py` | 将多个 promoted mechanism handoff 汇总成可递归验证的 release-gate artifact，记录 target coverage、support/refute/action/source-family 统计和 registry record。 |
 | `build_source_family_structured_qa_correction_handoff.py` | 将已 promoted source-family `mapped_qa_fact_candidate` 行转换成目标特定 structured-QA correction corpus 与 ProductTrace/action-result JSONL；若上游 covered-fact route 未 promoted 则 fail-closed。 |
@@ -1122,7 +1122,7 @@ false-accept-delta 上限。
 | `plan_world_model_rule_temporal_bindings.py` | 将缺少或未审核 timestamp/citation 的 temporal fill 阻塞行降为显式 temporal-binding worklist。 |
 | `fill_world_model_rule_inputs_from_temporal_bindings.py` | 从 source-backed temporal binding 填充时间一致性 rule input；缺少 timestamp、citation、review 或 non-evidence 标记时阻塞。 |
 | `fill_world_model_rule_inputs_from_mechanism_bindings.py` | 从 source-backed mechanism binding 填充 causal/procedural rule input；机制状态缺失或模糊时阻塞。 |
-| `promote_world_model_rule_candidates.py` | 在下游 handoff 前对 deterministic rule candidate 做 promotion gate。 |
+| `promote_world_model_rule_candidates.py` | 在下游 handoff 前对 deterministic rule candidate 做 promotion gate，并在提供 adapter report 时检查其状态与覆盖率。 |
 | `build_world_model_rule_candidate_handoff.py` | 将 promoted deterministic rule candidate 接入 ProductTrace/action-result handoff，并保留 source-citation provenance。 |
 | `build_mechanism_handoff_evidence_bundle.py` | 汇总 promoted mechanism handoff，并输出可注册、可验证、可供 release gate 消费的 coverage/action/verification bundle。 |
 | `build_source_family_structured_qa_correction_handoff.py` | 将已 promoted source-family mapped QA fact 转成目标特定 correction ProductTrace/action-result handoff，并对未 promoted route 输入 fail-closed。 |

@@ -3799,7 +3799,10 @@ The registered promotion gate is `promote`: `1` source-backed entity-role
 candidate passes with `0` blocked candidates and `36` pending input rows. The
 gate checks that the candidate is executed, promotable, high-confidence, still
 marked as candidate-only, backed by explicit rule inputs, and carries the same
-source citation in both the input and adapter evidence.
+source citation in both the input and adapter evidence. When an adapter report
+is supplied, the gate also fails closed on blocked/empty adapter status or
+stub-result coverage below `1.0`, so a partial adapter execution cannot promote
+its surviving candidate subset.
 
 Build the ProductTrace-visible handoff from promoted rule candidates:
 

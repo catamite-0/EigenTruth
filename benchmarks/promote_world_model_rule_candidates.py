@@ -49,6 +49,7 @@ def promote_world_model_rule_candidates(
     promoted: list[dict[str, Any]] = []
     blocked: list[dict[str, Any]] = []
     pending: list[dict[str, Any]] = []
+    adapter_report_failures = _adapter_report_failures(adapter_report)
     for result in rule_results:
         status = str(result.get("status") or "")
         request_id = str(result.get("request_id") or "")
@@ -57,6 +58,15 @@ def promote_world_model_rule_candidates(
             continue
         if status not in EXECUTED_STATUSES:
             blocked.append(_blocked(result, reason="unknown_status"))
+            continue
+        if adapter_report_failures:
+            blocked.append(
+                _blocked(
+                    result,
+                    reason="adapter_report_gate_failed",
+                    failures=adapter_report_failures,
+                )
+            )
             continue
         failures = _candidate_failures(
             result,
@@ -74,6 +84,7 @@ def promote_world_model_rule_candidates(
         blocked=blocked,
         pending=pending,
         adapter_report=adapter_report,
+        adapter_report_failures=adapter_report_failures,
     )
     return {
         "schema_version": 1,
@@ -184,6 +195,7 @@ def run(
             "promoted_count": payload["summary"]["promoted_count"],
             "blocked_count": payload["summary"]["blocked_count"],
             "pending_count": payload["summary"]["pending_count"],
+            "adapter_report_gate": payload["summary"]["adapter_report_gate"],
             **dict(metadata or {}),
         },
     )
@@ -200,6 +212,7 @@ def run(
                 "promoted_count": payload["summary"]["promoted_count"],
                 "blocked_count": payload["summary"]["blocked_count"],
                 "pending_count": payload["summary"]["pending_count"],
+                "adapter_report_gate": payload["summary"]["adapter_report_gate"],
                 "artifact_manifest": str(manifest_path),
                 **dict(metadata or {}),
             },
@@ -255,6 +268,22 @@ def _candidate_failures(
             for key in ("mechanism", "precondition", "mechanism_status"):
                 if not str(rule_input.get(key) or "").strip():
                     failures.append(f"missing_{key}")
+    return tuple(failures)
+
+
+def _adapter_report_failures(adapter_report: Mapping[str, Any] | None) -> tuple[str, ...]:
+    if adapter_report is None:
+        return ()
+    failures: list[str] = []
+    if adapter_report.get("workflow") != SOURCE_WORKFLOW:
+        failures.append("adapter_report_workflow_mismatch")
+    status = str(adapter_report.get("status") or "")
+    if status in {"blocked", "empty"}:
+        failures.append("adapter_report_status_not_promotable")
+    summary = _mapping(adapter_report.get("summary"))
+    stub_result_coverage = _float(summary.get("stub_result_coverage"))
+    if stub_result_coverage is not None and stub_result_coverage < 1.0:
+        failures.append("adapter_stub_result_coverage_below_one")
     return tuple(failures)
 
 
@@ -337,6 +366,7 @@ def _summary(
     blocked: Sequence[Mapping[str, Any]],
     pending: Sequence[Mapping[str, Any]],
     adapter_report: Mapping[str, Any] | None,
+    adapter_report_failures: Sequence[str] = (),
 ) -> dict[str, Any]:
     status_counts = Counter(str(row.get("status") or "") for row in rule_results)
     family_counts = Counter(str(row.get("rule_family") or "") for row in promoted)
@@ -352,6 +382,12 @@ def _summary(
         "blocked_reason_counts": _sorted_counter(blocked_reasons),
         "promoted_request_ids": tuple(str(row.get("request_id") or "") for row in promoted),
         "adapter_report_status": None if adapter_report is None else adapter_report.get("status"),
+        "adapter_report_gate": (
+            "not_provided"
+            if adapter_report is None
+            else ("fail" if adapter_report_failures else "pass")
+        ),
+        "adapter_report_failures": tuple(str(item) for item in adapter_report_failures),
     }
 
 

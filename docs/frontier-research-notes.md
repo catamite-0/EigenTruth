@@ -1071,6 +1071,9 @@ Added the first monitor-first tool-selection audit layer:
   The rule-authoring adapter now exposes a source-stub result coverage gate, so
   mixed or partially skipped source files remain blocked before any typed input
   plan is built.
+  `promote_world_model_rule_candidates.py` now propagates that boundary by
+  failing closed when a supplied adapter report is blocked or has incomplete
+  stub-result coverage.
 - `audit_world_model_rule_input_plan.py` adds a pre-execution quality gate for
   that worklist. The registered unresolved-rule audit is `needs_requeue`: it
   finds `4` person/place/entity questions incorrectly headed into the numeric
