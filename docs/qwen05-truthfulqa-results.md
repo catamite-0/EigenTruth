@@ -1695,7 +1695,10 @@ collection request, so the next pass is explicit review plus
 
 `benchmarks/fill_world_model_rule_inputs_from_temporal_bindings.py` now fills
 the unresolved temporal rule lane from reviewed source-backed timestamp
-bindings before adapter execution. The registered `record-326` replay at
+bindings before adapter execution, and
+`benchmarks/plan_world_model_rule_temporal_bindings.py` turns blocked temporal
+fill reports into non-evidence timestamp/citation collection requests. The
+registered `record-326` replay at
 `artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-adapter/`
 observes one supported `temporal_consistency` candidate from `claim_time`,
 `source_time`, `retrieved_at`, and `source_citation`; the paired promotion gate

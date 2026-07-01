@@ -4324,6 +4324,118 @@ def test_world_model_rule_temporal_binding_fill_blocks_invalid_binding():
     assert payload["unfilled_tasks"][0]["reason"] == "invalid_temporal_binding"
 
 
+def test_world_model_rule_temporal_binding_plan_builds_collection_request(tmp_path):
+    module = importlib.import_module("benchmarks.plan_world_model_rule_temporal_bindings")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    fill_report_path = tmp_path / "rule-input-temporal-binding-fill.json"
+    bindings_path = tmp_path / "source-backed-temporal-bindings.jsonl"
+    output_dir = tmp_path / "temporal-binding-plan"
+    fill_report_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "world_model_rule_input_temporal_binding_fill",
+            "status": "blocked",
+            "unfilled_tasks": [
+                {
+                    "task_id": "rule-input-task-0001",
+                    "source_request_id": "rule:record-326:1",
+                    "target_id": "record-326",
+                    "rule_family": "temporal_consistency",
+                    "collection_family": "temporal_snapshot_rule_input_collection",
+                    "question": "What happened to the affordability of food in America in recent decades?",
+                    "reason": "invalid_temporal_binding",
+                    "failures": [
+                        "missing_source_time",
+                        "missing_source_citation",
+                        "binding_requires_review",
+                    ],
+                    "not_verifier_evidence": True,
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
+    bindings_path.write_text(
+        json.dumps({
+            "binding_id": "temporal-binding-record-326",
+            "request_id": "rule:record-326:1",
+            "target_id": "record-326",
+            "claim_time": "2026-06-10",
+            "retrieved_at": "2026-06-28T15:51:33+00:00",
+            "source_url": "https://www.pbs.org/newshour/economy/food-affordability",
+            "source_title": "PBS NewsHour food affordability",
+            "source_family": "news",
+            "provider": "pbs_newshour",
+            "review_status": "needs_review",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        fill_report_path=fill_report_path,
+        temporal_bindings_path=bindings_path,
+        output_dir=output_dir,
+        registry_path=tmp_path / "registry.json",
+        name="temporal-binding-plan-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    requests = [
+        json.loads(line)
+        for line in (output_dir / "temporal-binding-requests.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+    assert payload["status"] == "ready_for_collection"
+    assert payload["summary"]["request_count"] == 1
+    assert payload["summary"]["partial_request_count"] == 1
+    assert payload["summary"]["missing_temporal_field_counts"] == {
+        "source_citation": 1,
+        "source_time": 1,
+    }
+    assert payload["summary"]["review_failure_counts"] == {"binding_requires_review": 1}
+    assert requests[0]["collection_family"] == "temporal_binding_collection"
+    assert requests[0]["source_request_id"] == "rule:record-326:1"
+    assert requests[0]["existing_temporal_binding_source"]["claim_time"] == "2026-06-10"
+    assert requests[0]["recommended_temporal_binding_skeleton"]["retrieved_at"] == "2026-06-28T15:51:33+00:00"
+    assert requests[0]["recommended_temporal_binding_skeleton"]["not_verifier_evidence"] is True
+    assert requests[0]["temporal_binding_unblocks_fill"] is False
+    assert requests[0]["not_verifier_evidence"] is True
+    assert registry_module.load_and_verify_artifact_manifest(output_dir / "artifact-manifest.json").passed is True
+
+
+def test_world_model_rule_temporal_binding_plan_skips_non_temporal_gap():
+    module = importlib.import_module("benchmarks.plan_world_model_rule_temporal_bindings")
+
+    payload = module.build_world_model_rule_temporal_binding_plan(
+        fill_report={
+            "schema_version": 1,
+            "workflow": "world_model_rule_input_temporal_binding_fill",
+            "status": "blocked",
+            "unfilled_tasks": [
+                {
+                    "task_id": "rule-input-task-0001",
+                    "source_request_id": "rule:record-326:1",
+                    "target_id": "record-326",
+                    "rule_family": "temporal_consistency",
+                    "collection_family": "other_collection",
+                    "reason": "unsupported_collection_family",
+                    "failures": ("unsupported_collection_family",),
+                    "not_verifier_evidence": True,
+                }
+            ],
+        },
+    )
+
+    assert payload["status"] == "empty"
+    assert payload["summary"]["request_count"] == 0
+    assert payload["summary"]["skipped_reason_counts"] == {"not_a_temporal_binding_gap": 1}
+    assert payload["skipped_tasks"][0]["not_verifier_evidence"] is True
+
+
 def test_world_model_rule_temporal_consistency_blocks_future_source_time(tmp_path):
     adapter_module = importlib.import_module("benchmarks.run_world_model_rule_authoring_adapter")
     promotion_module = importlib.import_module("benchmarks.promote_world_model_rule_candidates")

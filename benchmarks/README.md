@@ -3890,8 +3890,17 @@ before the minimal source-timestamp consistency adapter and promotion gate:
 
 ```bash
 TEMPORAL_FILL=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-binding-fill
+TEMPORAL_PLAN=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-binding-plan
 TEMPORAL_ADAPTER=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-adapter
 TEMPORAL_PROMOTION=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-promotion-gate
+
+python benchmarks/plan_world_model_rule_temporal_bindings.py \
+  --fill-report "$TEMPORAL_FILL/rule-input-temporal-binding-fill.json" \
+  --temporal-bindings "$TEMPORAL_FILL/source-backed-temporal-bindings.jsonl" \
+  --output-dir "$TEMPORAL_PLAN" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-binding-plan \
+  --version 0.1
 
 python benchmarks/fill_world_model_rule_inputs_from_temporal_bindings.py \
   --input-tasks "$TEMPORAL_FILL/record-326-temporal-rule-input-task.jsonl" \
@@ -3919,16 +3928,19 @@ python benchmarks/promote_world_model_rule_candidates.py \
   --version 0.1
 ```
 
-The temporal binding fill is intentionally narrow: it requires explicit
-`claim_time`, `source_time`, `retrieved_at`, `source_citation`, a ready review
-status, and `not_verifier_evidence=true`, then leaves the filled row as an
-adapter input. The registered temporal replay remains `observed -> promote`:
-`1/1` temporal stub executes as `supported`, and the promotion gate promotes the
-single `record-326` candidate with `0` blocked and `0` pending. This proves only
-the timestamp/freshness/order contract and manifest-backed promotion wiring; it
-does not prove the food-affordability content itself. Content truth still
-requires citation or structured evidence handoff before ProductTrace or release
-gates should act on the claim.
+When the fill report blocks on missing, invalid, incomplete, or unreviewed
+timestamp metadata, `plan_world_model_rule_temporal_bindings.py` turns the
+blocked rows into non-evidence `temporal_binding_collection` requests. The fill
+step remains intentionally narrow: it requires explicit `claim_time`,
+`source_time`, `retrieved_at`, `source_citation`, a ready review status, and
+`not_verifier_evidence=true`, then leaves the filled row as an adapter input.
+The registered temporal replay remains `observed -> promote`: `1/1` temporal
+stub executes as `supported`, and the promotion gate promotes the single
+`record-326` candidate with `0` blocked and `0` pending. This proves only the
+timestamp/freshness/order contract and manifest-backed promotion wiring; it does
+not prove the food-affordability content itself. Content truth still requires
+citation or structured evidence handoff before ProductTrace or release gates
+should act on the claim.
 
 The causal/procedural lane now has the same conservative execution boundary for
 mechanism-style claims. When a separate rule-input file supplies `mechanism`,

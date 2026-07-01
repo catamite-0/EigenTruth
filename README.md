@@ -694,6 +694,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `fill_world_model_rule_inputs_from_correction_handoff.py` | Fills a conservative subset of typed rule inputs from promoted source-family correction handoffs and ProductTrace claim bindings, then leaves filled rows as candidate-only adapter inputs. |
 | `plan_world_model_rule_numeric_subject_bindings.py` | Turns blocked numeric-fill reports with `missing_subject_entity` into non-evidence subject-binding collection requests, preserving source citation context without guessing the subject. |
 | `fill_world_model_rule_inputs_from_numeric_bindings.py` | Fills explicit numeric/calculator rule inputs from source-backed numeric bindings and optional reviewed subject-binding sidecars, fail-closing unresolved or conflicting subjects before adapter execution. |
+| `plan_world_model_rule_temporal_bindings.py` | Turns blocked temporal-fill reports into non-evidence timestamp/citation binding collection requests without inferring dates or source freshness. |
 | `fill_world_model_rule_inputs_from_temporal_bindings.py` | Fills temporal-consistency rule inputs from source-backed claim/source/retrieval timestamps and citations, leaving timestamp candidates behind the adapter and promotion gate. |
 | `fill_world_model_rule_inputs_from_mechanism_bindings.py` | Fills causal/procedural mechanism rule inputs from explicit source-backed mechanism bindings, requiring `mechanism_status` before adapter execution. |
 | `promote_world_model_rule_candidates.py` | Fail-closed promotion gate for deterministic rule candidates; validates explicit rule inputs, confidence, source citation, and candidate metadata while leaving pending input rows queued. |
@@ -827,6 +828,7 @@ evidence rates and maximum final false-accept / false-accept-delta thresholds.
 | `fill_world_model_rule_inputs_from_correction_handoff.py` | Fills a conservative subset of typed rule inputs from promoted correction handoffs and ProductTrace claim bindings. |
 | `plan_world_model_rule_numeric_subject_bindings.py` | Builds non-evidence subject-binding collection requests from blocked numeric-fill reports. |
 | `fill_world_model_rule_inputs_from_numeric_bindings.py` | Fills numeric/calculator rule inputs from source-backed bindings plus optional reviewed subject sidecars, while blocking unresolved or conflicting subjects. |
+| `plan_world_model_rule_temporal_bindings.py` | Builds non-evidence temporal-binding collection requests from blocked temporal-fill reports. |
 | `fill_world_model_rule_inputs_from_temporal_bindings.py` | Fills temporal rule inputs from reviewed source-backed timestamp bindings while keeping the result candidate-only until adapter execution and promotion. |
 | `fill_world_model_rule_inputs_from_mechanism_bindings.py` | Fills causal/procedural mechanism rule inputs from source-backed bindings, but blocks missing or invalid mechanism status. |
 | `promote_world_model_rule_candidates.py` | Promotion-gates deterministic rule candidates before downstream handoff. |
@@ -974,6 +976,7 @@ evidence rates and maximum final false-accept / false-accept-delta thresholds.
 | `fill_world_model_rule_inputs_from_correction_handoff.py` | 从已 promoted source-family correction handoff 和 ProductTrace claim binding 中保守填充部分 typed rule inputs，填充结果仍只是候选 adapter 输入。 |
 | `plan_world_model_rule_numeric_subject_bindings.py` | 从 blocked numeric-fill report 生成 subject-binding 采集请求；只规划，不猜主语，也不生成 verifier evidence。 |
 | `fill_world_model_rule_inputs_from_numeric_bindings.py` | 从 source-backed numeric binding 和可选已审核 subject sidecar 填充 calculator rule input；subject 冲突或未解决时 fail-closed。 |
+| `plan_world_model_rule_temporal_bindings.py` | 从 blocked temporal-fill report 生成 timestamp/citation binding 采集请求；只规划，不推断时间，也不生成 verifier evidence。 |
 | `fill_world_model_rule_inputs_from_temporal_bindings.py` | 从 source-backed `claim_time`/`source_time`/`retrieved_at` 与 citation 填充 temporal rule input；结果仍需 adapter 执行与 promotion gate。 |
 | `fill_world_model_rule_inputs_from_mechanism_bindings.py` | 从 source-backed mechanism binding 填充 causal/procedural rule input；缺少或无法识别 `mechanism_status` 时阻塞。 |
 | `promote_world_model_rule_candidates.py` | 对 deterministic rule candidate 做 fail-closed promotion gate，检查显式 rule input、confidence、source citation 与 candidate metadata。 |
@@ -1104,6 +1107,7 @@ false-accept-delta 上限。
 | `fill_world_model_rule_inputs_from_correction_handoff.py` | 从 promoted correction handoff 与 ProductTrace claim binding 中保守填充一部分 typed rule inputs。 |
 | `plan_world_model_rule_numeric_subject_bindings.py` | 将缺少 subject 的 numeric fill 阻塞行降为显式 subject-binding worklist。 |
 | `fill_world_model_rule_inputs_from_numeric_bindings.py` | 从 source-backed numeric binding 填充 calculator rule input；subject 不明确时可接已审核 sidecar，否则阻塞而不是猜测。 |
+| `plan_world_model_rule_temporal_bindings.py` | 将缺少或未审核 timestamp/citation 的 temporal fill 阻塞行降为显式 temporal-binding worklist。 |
 | `fill_world_model_rule_inputs_from_temporal_bindings.py` | 从 source-backed temporal binding 填充时间一致性 rule input；缺少 timestamp、citation、review 或 non-evidence 标记时阻塞。 |
 | `fill_world_model_rule_inputs_from_mechanism_bindings.py` | 从 source-backed mechanism binding 填充 causal/procedural rule input；机制状态缺失或模糊时阻塞。 |
 | `promote_world_model_rule_candidates.py` | 在下游 handoff 前对 deterministic rule candidate 做 promotion gate。 |

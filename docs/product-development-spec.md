@@ -521,14 +521,17 @@ For product features:
   blocked report into a non-evidence subject-binding worklist that can be
   reviewed before rerunning the numeric fill with `--subject-bindings`.
   `fill_world_model_rule_inputs_from_temporal_bindings.py` adds the sibling
-  temporal input-fill boundary. It requires reviewed source-backed `claim_time`,
-  `source_time`, `retrieved_at`, `source_citation`, and `not_verifier_evidence`
-  before adapter execution. The registered `record-326` temporal replay then
-  observes one supported source-timestamp candidate, and the promotion gate
-  promotes it with the temporal metadata preserved. This still only validates
-  freshness/order of the source snapshot; it does not make a ProductTrace-visible
-  content correction until a citation or structured-evidence route proves the
-  claim content.
+  temporal input-fill boundary, and
+  `plan_world_model_rule_temporal_bindings.py` turns blocked temporal-fill
+  reports into non-evidence timestamp/citation collection requests. The fill
+  still requires reviewed source-backed `claim_time`, `source_time`,
+  `retrieved_at`, `source_citation`, and `not_verifier_evidence` before adapter
+  execution. The registered `record-326` temporal replay then observes one
+  supported source-timestamp candidate, and the promotion gate promotes it with
+  the temporal metadata preserved. This still only validates freshness/order of
+  the source snapshot; it does not make a ProductTrace-visible content
+  correction until a citation or structured-evidence route proves the claim
+  content.
   `run_world_model_rule_authoring_adapter.py` also has a conservative
   `mechanism_consistency` shell for causal/procedural tasks. It can observe a
   source-backed mechanism only when `mechanism`, `precondition`, and
