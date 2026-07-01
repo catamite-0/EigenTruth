@@ -152,6 +152,49 @@ _CONTEXT_SENSITIVITY_RUNTIME_EVIDENCE_COMMANDS = (
     "--json ... --artifact-manifest ...",
 )
 
+_CLAIM_FACTUALITY_RUNTIME_EVIDENCE_COMMANDS = (
+    "benchmarks/run_claim_factuality_probe_workflow.py "
+    "--records ... --output-dir ... --json ... --artifact-manifest ... "
+    "--registry ... --register-name ... --register-version ... "
+    "--claim-factuality-layers ... --sweep-layers ... --best-by ... "
+    "--conformal-alpha ... --baseline-signals ...",
+    "benchmarks/compare_claim_factuality_probe_workflows.py "
+    "--workflow-report MODEL=... --json ... --artifact-manifest ... "
+    "--registry ... --register-name ... --register-version ... "
+    "--min-model-count ... --min-record-count ... "
+    "--min-test-label-auroc ... --min-redline-auroc-margin ...",
+    "benchmarks/export_product_promotion_contract.py "
+    "--source ... --output ... --artifact-manifest ... "
+    "--registry ... --name ... --version ...",
+    "benchmarks/run_product_trace_replay_workflow.py "
+    "--trace-glob ... --promotion-contract ... "
+    "--min-runtime-drift-claim-factuality-probe-comparison-coverage ... "
+    "--min-runtime-drift-claim-factuality-probe-comparison-manifest-verified-rate ... "
+    "--min-runtime-drift-claim-factuality-probe-comparison-model-count ... "
+    "--min-runtime-drift-claim-factuality-probe-comparison-run-count ... "
+    "--min-runtime-drift-claim-factuality-probe-comparison-redline-pass-rate ... "
+    "--max-runtime-drift-claim-factuality-probe-comparison-best-test-label-auroc-drop ... "
+    "--max-runtime-drift-claim-factuality-probe-comparison-best-test-selective-accuracy-drop ... "
+    "--max-runtime-drift-claim-factuality-probe-comparison-best-test-selective-coverage-drop ... "
+    "--max-runtime-drift-claim-factuality-probe-comparison-best-redline-auroc-drop ... "
+    "--max-runtime-drift-claim-factuality-probe-comparison-best-redline-margin-drop ...",
+    "benchmarks/run_product_runtime_baseline.py "
+    "--trace ... --promotion-contract ... --json ... --artifact-manifest ...",
+    "benchmarks/compare_product_runtime_baselines.py "
+    "--current ... --baseline ... "
+    "--min-claim-factuality-probe-comparison-coverage ... "
+    "--min-claim-factuality-probe-comparison-manifest-verified-rate ... "
+    "--min-claim-factuality-probe-comparison-model-count ... "
+    "--min-claim-factuality-probe-comparison-run-count ... "
+    "--min-claim-factuality-probe-comparison-redline-pass-rate ... "
+    "--max-claim-factuality-probe-comparison-best-test-label-auroc-drop ... "
+    "--max-claim-factuality-probe-comparison-best-test-selective-accuracy-drop ... "
+    "--max-claim-factuality-probe-comparison-best-test-selective-coverage-drop ... "
+    "--max-claim-factuality-probe-comparison-best-redline-auroc-drop ... "
+    "--max-claim-factuality-probe-comparison-best-redline-margin-drop ... "
+    "--json ... --artifact-manifest ...",
+)
+
 _COUNTERFACTUAL_ROBUSTNESS_RUNTIME_EVIDENCE_COMMANDS = (
     "benchmarks/eval_counterfactual_verification.py "
     "--verified-records ... --verifier ... --fact-corpus ... "
@@ -623,6 +666,99 @@ def _assert_pre_generation_probe_comparison_action(action):
     assert action["metadata"]["closure_outputs"] == (
         "pre_generation_probe_workflow_comparison",
         "product_promotion_contract",
+        "product_runtime_baseline",
+        "product_runtime_drift_comparison",
+    )
+
+
+def _assert_claim_factuality_runtime_evidence_action(action):
+    assert action["evidence_routes"] == (
+        "claim_factuality_probe_workflow",
+        "claim_factuality_probe_comparison",
+        "product_promotion_contract",
+        "product_trace_replay",
+        "product_runtime_baseline",
+        "product_runtime_drift",
+        "claim_factuality_evidence",
+    )
+    assert action["suggested_commands"] == _CLAIM_FACTUALITY_RUNTIME_EVIDENCE_COMMANDS
+    assert action["metadata"]["workflow_script"] == (
+        "benchmarks/run_claim_factuality_probe_workflow.py"
+    )
+    assert action["metadata"]["comparison_script"] == (
+        "benchmarks/compare_claim_factuality_probe_workflows.py"
+    )
+    assert action["metadata"]["promotion_contract_script"] == (
+        "benchmarks/export_product_promotion_contract.py"
+    )
+    assert action["metadata"]["trace_replay_script"] == (
+        "benchmarks/run_product_trace_replay_workflow.py"
+    )
+    assert action["metadata"]["runtime_baseline_script"] == (
+        "benchmarks/run_product_runtime_baseline.py"
+    )
+    assert action["metadata"]["runtime_drift_script"] == (
+        "benchmarks/compare_product_runtime_baselines.py"
+    )
+    assert action["metadata"]["workflow"] == "claim_factuality_probe_workflow"
+    assert action["metadata"]["comparison_workflow"] == (
+        "claim_factuality_probe_workflow_comparison"
+    )
+    assert action["metadata"]["handoff_artifact_kind"] == "product_promotion_contract"
+    assert action["metadata"]["trace_replay_workflow"] == "product_trace_replay_workflow"
+    assert action["metadata"]["runtime_baseline_workflow"] == "product_runtime_baseline"
+    assert action["metadata"]["runtime_drift_workflow"] == "product_runtime_drift_comparison"
+    assert action["metadata"]["risk_control_method"] == (
+        "claim_hidden_state_factuality_probe"
+    )
+    assert action["metadata"]["required_probe_artifacts"] == (
+        "ClaimFactualityProbeArtifact",
+        "CalibrationArtifact",
+        "claim_factuality_text_redline_report",
+    )
+    assert action["metadata"]["required_runtime_metrics"] == (
+        "promotion_contract.claim_factuality_probe_comparison.coverage_rate",
+        "promotion_contract.claim_factuality_probe_comparison.manifest_verified_rate",
+        "promotion_contract.claim_factuality_probe_comparison.model_count.mean",
+        "promotion_contract.claim_factuality_probe_comparison.run_count.mean",
+        "promotion_contract.claim_factuality_probe_comparison.redline_pass_rate",
+        "promotion_contract.claim_factuality_probe_comparison.best_test_label_auroc.mean",
+        (
+            "promotion_contract.claim_factuality_probe_comparison."
+            "best_test_selective_accuracy.mean"
+        ),
+        (
+            "promotion_contract.claim_factuality_probe_comparison."
+            "best_test_selective_coverage.mean"
+        ),
+        "promotion_contract.claim_factuality_probe_comparison.best_redline_auroc.mean",
+        "promotion_contract.claim_factuality_probe_comparison.best_redline_margin.mean",
+    )
+    assert action["metadata"]["default_gate_thresholds"] == {
+        "min_claim_factuality_probe_comparison_coverage": 1.0,
+        "min_claim_factuality_probe_comparison_manifest_verified_rate": 1.0,
+        "min_claim_factuality_probe_comparison_model_count": 2.0,
+        "min_claim_factuality_probe_comparison_run_count": 2.0,
+        "min_claim_factuality_probe_comparison_redline_pass_rate": 1.0,
+        "max_claim_factuality_probe_comparison_best_test_label_auroc_drop": 0.02,
+        "max_claim_factuality_probe_comparison_best_test_selective_accuracy_drop": 0.02,
+        "max_claim_factuality_probe_comparison_best_test_selective_coverage_drop": 0.02,
+        "max_claim_factuality_probe_comparison_best_redline_auroc_drop": 0.02,
+        "max_claim_factuality_probe_comparison_best_redline_margin_drop": 0.02,
+    }
+    assert action["metadata"]["required_inputs"] == (
+        "claim_factuality_hidden_state_records_or_truthfulqa_export",
+        "claim_factuality_probe_workflow_reports",
+        "claim_factuality_text_redline_reports",
+        "release_candidate_or_product_contract_source",
+        "product_trace_corpus",
+        "baseline_product_runtime_report",
+    )
+    assert action["metadata"]["closure_outputs"] == (
+        "claim_factuality_probe_workflow",
+        "claim_factuality_probe_workflow_comparison",
+        "product_promotion_contract",
+        "product_trace_replay_workflow",
         "product_runtime_baseline",
         "product_runtime_drift_comparison",
     )
@@ -2113,14 +2249,15 @@ def test_evidence_gap_plan_maps_product_runtime_claim_level_blockers():
     ]["recommended_action_ids"] == (
         "rerun_product_trace_claim_risk_localization_evidence",
     )
-    assert actions["rerun_claim_factuality_probe_comparison"]["evidence_routes"] == (
-        "claim_factuality_probe_comparison",
-        "product_runtime_drift",
+    _assert_claim_factuality_runtime_evidence_action(
+        actions["rerun_claim_factuality_probe_comparison"]
     )
     _assert_claim_risk_localization_runtime_evidence_action(
         actions["rerun_product_trace_claim_risk_localization_evidence"]
     )
     assert payload["gaps"][2]["missing_metrics"] == ()
+    strict_json_dumps(payload, sort_keys=True)
+    assert EvidenceGapPlan.from_dict(payload).to_dict() == payload
 
 
 def test_evidence_gap_plan_maps_product_runtime_trace_and_handoff_blockers():
