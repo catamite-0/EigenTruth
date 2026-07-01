@@ -1068,6 +1068,9 @@ Added the first monitor-first tool-selection audit layer:
   existing rule-authoring adapter plus input planner. The resulting chain is
   `ready_for_rule_authoring -> needs_inputs -> ready_for_input_collection`,
   with `6` typed tasks across `2` batches (`5` numeric, `1` temporal snapshot).
+  The rule-authoring adapter now exposes a source-stub result coverage gate, so
+  mixed or partially skipped source files remain blocked before any typed input
+  plan is built.
 - `audit_world_model_rule_input_plan.py` adds a pre-execution quality gate for
   that worklist. The registered unresolved-rule audit is `needs_requeue`: it
   finds `4` person/place/entity questions incorrectly headed into the numeric

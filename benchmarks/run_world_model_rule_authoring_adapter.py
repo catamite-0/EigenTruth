@@ -89,8 +89,14 @@ def run_world_model_rule_authoring_adapter(
     manifest_path = Path(artifact_manifest_path or output / "artifact-manifest.json")
 
     raw_stubs = _load_jsonl_mappings(rule_stubs_path)
-    stubs = tuple(_normalize_rule_stub(stub) for stub in raw_stubs if _is_rule_stub(stub))
-    skipped_non_rule_stub_count = len(raw_stubs) - len(stubs)
+    stubs: list[dict[str, Any]] = []
+    skipped_source_stub_ids: list[str] = []
+    for ordinal, stub in enumerate(raw_stubs, start=1):
+        if _is_rule_stub(stub):
+            stubs.append(_normalize_rule_stub(stub))
+        else:
+            skipped_source_stub_ids.append(_source_row_id(stub, ordinal=ordinal))
+    skipped_non_rule_stub_count = len(skipped_source_stub_ids)
     rule_inputs = _load_rule_inputs(rule_inputs_path)
     results = tuple(_evaluate_stub(stub, rule_inputs.get(str(stub.get("request_id") or ""))) for stub in stubs)
     input_requests = tuple(_input_request(result) for result in results if result["status"] == "needs_inputs")
@@ -102,6 +108,7 @@ def run_world_model_rule_authoring_adapter(
         input_requests=input_requests,
         source_stub_count=len(raw_stubs),
         skipped_non_rule_stub_count=skipped_non_rule_stub_count,
+        skipped_source_stub_ids=skipped_source_stub_ids,
     )
     payload = {
         "schema_version": 1,
@@ -147,7 +154,10 @@ def run_world_model_rule_authoring_adapter(
         metadata={
             "workflow": WORKFLOW,
             "status": payload["status"],
+            "source_stub_count": summary["source_stub_count"],
             "stub_count": summary["stub_count"],
+            "skipped_non_rule_stub_count": summary["skipped_non_rule_stub_count"],
+            "stub_result_coverage": summary["stub_result_coverage"],
             "executed_count": summary["executed_count"],
             "needs_input_count": summary["needs_input_count"],
             "input_request_count": summary["input_request_count"],
@@ -164,7 +174,10 @@ def run_world_model_rule_authoring_adapter(
             metadata={
                 "workflow": WORKFLOW,
                 "status": payload["status"],
+                "source_stub_count": summary["source_stub_count"],
                 "stub_count": summary["stub_count"],
+                "skipped_non_rule_stub_count": summary["skipped_non_rule_stub_count"],
+                "stub_result_coverage": summary["stub_result_coverage"],
                 "executed_count": summary["executed_count"],
                 "needs_input_count": summary["needs_input_count"],
                 "input_request_count": summary["input_request_count"],
@@ -372,6 +385,7 @@ def _summary(
     input_requests: Sequence[Mapping[str, Any]],
     source_stub_count: int | None = None,
     skipped_non_rule_stub_count: int = 0,
+    skipped_source_stub_ids: Sequence[str] = (),
 ) -> dict[str, Any]:
     status_counts = Counter(str(row.get("status") or "") for row in results)
     family_counts = Counter(str(row.get("rule_family") or "") for row in results)
@@ -381,11 +395,16 @@ def _summary(
         for item in _string_sequence(row.get("missing_inputs", ())):
             missing_counts[item] += 1
     executed_count = sum(count for status, count in status_counts.items() if status in EXECUTED_STATUSES)
+    source_count = len(results) if source_stub_count is None else int(source_stub_count)
+    skipped_count = int(skipped_non_rule_stub_count)
+    stub_count = len(results)
     return {
-        "source_stub_count": len(results) if source_stub_count is None else int(source_stub_count),
-        "skipped_non_rule_stub_count": int(skipped_non_rule_stub_count),
-        "stub_count": len(results),
-        "result_count": len(results),
+        "source_stub_count": source_count,
+        "skipped_non_rule_stub_count": skipped_count,
+        "stub_count": stub_count,
+        "result_count": stub_count,
+        "stub_result_coverage": 1.0 if source_count == 0 else stub_count / source_count,
+        "skipped_source_stub_ids": tuple(str(item) for item in skipped_source_stub_ids if str(item)),
         "executed_count": executed_count,
         "needs_input_count": int(status_counts.get("needs_inputs", 0)),
         "input_request_count": len(input_requests),
@@ -403,6 +422,8 @@ def _summary(
 
 
 def _status(summary: Mapping[str, Any]) -> str:
+    if float(summary.get("stub_result_coverage", 0.0)) < 1.0:
+        return "blocked"
     if int(summary.get("stub_count", 0)) == 0:
         return "empty"
     if int(summary.get("executed_count", 0)) == 0:
@@ -676,6 +697,14 @@ def _stub_request_id(stub: Mapping[str, Any]) -> str:
     return ""
 
 
+def _source_row_id(row: Mapping[str, Any], *, ordinal: int) -> str:
+    for key in ("request_id", "source_request_id", "queue_id"):
+        value = _clean(row.get(key))
+        if value:
+            return value
+    return f"source-row-{ordinal}"
+
+
 def _load_rule_inputs(path: str | Path | None) -> dict[str, Mapping[str, Any]]:
     if path is None:
         return {}
@@ -809,6 +838,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         "world_model_rule_authoring_adapter_ok "
         f"status={payload['status']} "
         f"stubs={summary['stub_count']} "
+        f"coverage={summary['stub_result_coverage']:.3f} "
         f"executed={summary['executed_count']} "
         f"needs_inputs={summary['needs_input_count']}"
     )

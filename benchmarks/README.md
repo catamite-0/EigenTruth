@@ -3707,6 +3707,10 @@ request split is `12` calculator checks, `12` entity-role disambiguation checks,
 This gives the next pass a concrete input-collection contract while preserving
 the rule-stub boundary: no answer/model-answer/label fields are copied, and no
 rule result is promoted as verifier evidence.
+The adapter also enforces source-stub result coverage: the intended input is
+the sanitized `world-model-rule-stubs.jsonl`; mixed unresolved queues or other
+files that contain non-rule rows remain `blocked` and report
+`skipped_source_stub_ids` rather than silently executing a partial subset.
 
 Compile those requests into typed input-collection batches before execution:
 

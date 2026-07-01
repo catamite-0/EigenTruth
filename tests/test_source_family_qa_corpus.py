@@ -2614,7 +2614,10 @@ def test_world_model_rule_authoring_adapter_requests_missing_inputs(tmp_path):
     )
 
     assert payload["status"] == "needs_inputs"
+    assert payload["summary"]["source_stub_count"] == 1
     assert payload["summary"]["stub_count"] == 1
+    assert payload["summary"]["skipped_non_rule_stub_count"] == 0
+    assert payload["summary"]["stub_result_coverage"] == pytest.approx(1.0)
     assert payload["summary"]["executed_count"] == 0
     assert payload["summary"]["needs_input_count"] == 1
     assert payload["summary"]["adapter_counts"] == {"calculator": 1}
@@ -2624,6 +2627,7 @@ def test_world_model_rule_authoring_adapter_requests_missing_inputs(tmp_path):
     assert registry_module.load_and_verify_artifact_manifest(output_dir / "artifact-manifest.json").passed is True
     assert registry_record is not None
     assert registry_record.metadata["status"] == "needs_inputs"
+    assert registry_record.metadata["stub_result_coverage"] == pytest.approx(1.0)
     assert registry_record.metadata["input_request_count"] == 1
 
 
@@ -2683,10 +2687,12 @@ def test_world_model_rule_authoring_adapter_accepts_mixed_unresolved_queue_rows(
         if line.strip()
     ]
 
-    assert payload["status"] == "needs_inputs"
+    assert payload["status"] == "blocked"
     assert payload["summary"]["source_stub_count"] == 2
     assert payload["summary"]["skipped_non_rule_stub_count"] == 1
+    assert payload["summary"]["skipped_source_stub_ids"] == ("citation:record-1:1",)
     assert payload["summary"]["stub_count"] == 1
+    assert payload["summary"]["stub_result_coverage"] == pytest.approx(0.5)
     assert results[0]["request_id"] == "rule:record-2:1"
     assert results[0]["rule_family"] == "temporal_consistency"
     assert results[0]["gap_type"] == "no_joined_facts"
@@ -2746,6 +2752,8 @@ def test_world_model_rule_authoring_adapter_executes_explicit_calculator_input(t
     input_requests = (output_dir / "world-model-rule-input-requests.jsonl").read_text(encoding="utf-8").strip()
 
     assert payload["status"] == "observed"
+    assert payload["summary"]["source_stub_count"] == 1
+    assert payload["summary"]["stub_result_coverage"] == pytest.approx(1.0)
     assert payload["summary"]["executed_count"] == 1
     assert payload["summary"]["candidate_refuted_count"] == 1
     assert payload["summary"]["needs_input_count"] == 0
