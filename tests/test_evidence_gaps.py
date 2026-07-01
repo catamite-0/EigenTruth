@@ -249,6 +249,36 @@ _ACTION_GATE_RUNTIME_EVIDENCE_COMMANDS = (
     "--json ... --artifact-manifest ...",
 )
 
+_TRIPLE_AUDIT_RUNTIME_EVIDENCE_COMMANDS = (
+    "benchmarks/run_triple_extraction_fixture_matrix.py "
+    "--corpus NAME=... --output-dir ... --artifact-manifest ...",
+    "benchmarks/enrich_product_trace_triple_audit.py "
+    "--trace-glob ... --evidence-corpus ... --output-dir ... "
+    "--registry ... --name ... --version ... "
+    "--min-audit-claim-coverage ... --min-audit-pass-rate ... "
+    "--min-slot-coverage-rate ...",
+    "benchmarks/export_product_promotion_contract_evidence_handoff.py "
+    "--contract ... --json ... --audit-json ... "
+    "--triple-extraction-fixture-matrix ... "
+    "--triple-audit-enrichment ... --artifact-manifest ... "
+    "--registry ... --name ... --version ...",
+    "benchmarks/run_product_trace_replay_workflow.py "
+    "--trace-glob ... --promotion-contract ... "
+    "--min-runtime-drift-triple-claim-coverage ... "
+    "--min-runtime-drift-triple-audit-claim-coverage ... "
+    "--min-runtime-drift-triple-audit-pass-rate ... "
+    "--min-runtime-drift-triple-slot-coverage ...",
+    "benchmarks/run_product_runtime_baseline.py "
+    "--trace ... --promotion-contract ... --json ... --artifact-manifest ...",
+    "benchmarks/compare_product_runtime_baselines.py "
+    "--current ... --baseline ... "
+    "--min-triple-claim-coverage ... "
+    "--min-triple-audit-claim-coverage ... "
+    "--min-triple-audit-pass-rate ... "
+    "--min-triple-slot-coverage ... "
+    "--json ... --artifact-manifest ...",
+)
+
 
 def _assert_multiple_testing_rerun_rollup_action(action):
     assert action["evidence_routes"] == (
@@ -894,6 +924,91 @@ def _assert_action_gate_runtime_evidence_action(action):
         "product_trace_replay_workflow",
         "product_trace_action_audit_gate",
         "product_trace_action_execution_gate",
+        "product_runtime_baseline",
+        "product_runtime_drift_comparison",
+    )
+
+
+def _assert_triple_audit_runtime_evidence_action(action):
+    assert action["evidence_routes"] == (
+        "triple_extraction_fixture_matrix",
+        "product_trace_triple_audit_enrichment",
+        "product_promotion_contract",
+        "product_trace_replay",
+        "product_runtime_baseline",
+        "product_runtime_drift",
+        "triple_audit_evidence",
+    )
+    assert action["suggested_commands"] == _TRIPLE_AUDIT_RUNTIME_EVIDENCE_COMMANDS
+    assert action["metadata"]["triple_extraction_matrix_script"] == (
+        "benchmarks/run_triple_extraction_fixture_matrix.py"
+    )
+    assert action["metadata"]["trace_enrichment_script"] == (
+        "benchmarks/enrich_product_trace_triple_audit.py"
+    )
+    assert action["metadata"]["evidence_handoff_script"] == (
+        "benchmarks/export_product_promotion_contract_evidence_handoff.py"
+    )
+    assert action["metadata"]["trace_replay_script"] == (
+        "benchmarks/run_product_trace_replay_workflow.py"
+    )
+    assert action["metadata"]["runtime_baseline_script"] == (
+        "benchmarks/run_product_runtime_baseline.py"
+    )
+    assert action["metadata"]["runtime_drift_script"] == (
+        "benchmarks/compare_product_runtime_baselines.py"
+    )
+    assert action["metadata"]["claim_triple_extraction_api"] == (
+        "eigentruth.verify.extract_claim_triples"
+    )
+    assert action["metadata"]["claim_triple_audit_api"] == (
+        "eigentruth.verify.audit_claim_triples"
+    )
+    assert action["metadata"]["trace_summary_api"] == (
+        "eigentruth.control.ProductTrace.triple_coverage_summary"
+    )
+    assert action["metadata"]["triple_extraction_matrix_workflow"] == (
+        "triple_extraction_fixture_matrix"
+    )
+    assert action["metadata"]["trace_enrichment_workflow"] == (
+        "product_trace_triple_audit_enrichment"
+    )
+    assert action["metadata"]["evidence_handoff_workflow"] == (
+        "product_promotion_evidence_handoff_export"
+    )
+    assert action["metadata"]["trace_replay_workflow"] == "product_trace_replay_workflow"
+    assert action["metadata"]["runtime_baseline_workflow"] == "product_runtime_baseline"
+    assert action["metadata"]["runtime_drift_workflow"] == "product_runtime_drift_comparison"
+    assert action["metadata"]["risk_control_method"] == "fact_level_triple_audit"
+    assert action["metadata"]["fact_granularity"] == (
+        "claim_triple",
+        "slot",
+        "predicate",
+    )
+    assert action["metadata"]["required_trace_metrics"] == (
+        "triple_coverage.claim_triple_coverage_rate",
+        "triple_coverage.audit_claim_coverage_rate",
+        "triple_coverage.audit_pass_rate",
+        "triple_coverage.slot_coverage_rate",
+    )
+    assert action["metadata"]["default_gate_thresholds"] == {
+        "min_triple_claim_coverage": 1.0,
+        "min_triple_audit_claim_coverage": 1.0,
+        "min_triple_audit_pass_rate": 1.0,
+        "min_triple_slot_coverage": 1.0,
+    }
+    assert action["metadata"]["required_inputs"] == (
+        "structured_fact_corpora",
+        "full_product_trace_corpus",
+        "local_evidence_corpus",
+        "promotion_contract_or_release_candidate",
+        "baseline_product_runtime_report",
+    )
+    assert action["metadata"]["closure_outputs"] == (
+        "triple_extraction_fixture_matrix",
+        "product_trace_triple_audit_enrichment",
+        "product_promotion_evidence_handoff_export",
+        "product_trace_replay_workflow",
         "product_runtime_baseline",
         "product_runtime_drift_comparison",
     )
@@ -1575,6 +1690,52 @@ def test_evidence_gap_plan_maps_product_runtime_trace_and_handoff_blockers():
         "evidence_handoff",
         "product_runtime_drift",
     )
+
+
+def test_evidence_gap_plan_maps_product_runtime_triple_audit_blockers():
+    plan = plan_evidence_gaps_from_release_candidate({
+        "workflow": "release_candidate_comparison",
+        "decision": {
+            "status": "blocked",
+            "blocking_reasons": [
+                {
+                    "gate": "product_runtime_drift",
+                    "status": "blocked",
+                    "reasons": (
+                        "product runtime drift triple audit evidence metrics are incomplete: "
+                        "triple_coverage.claim_triple_coverage_rate, "
+                        "triple_coverage.audit_pass_rate",
+                        "product runtime drift triple audit evidence blocked 1 metric(s)",
+                    ),
+                }
+            ],
+        },
+    })
+
+    payload = plan.to_dict()
+    actions = {action["action_id"]: action for action in payload["actions"]}
+    gaps = payload["gaps"]
+
+    assert payload["status"] == "needs_evidence"
+    assert payload["summary"]["gap_count"] == 2
+    assert payload["summary"]["action_count"] == 1
+    assert payload["summary"]["missing_metric_count"] == 2
+    assert payload["summary"]["root_causes"] == {"evidence_coverage": 2}
+    assert payload["summary"]["research_axes"] == {"fact_level": 2}
+    assert payload["summary"]["top_action_ids"] == ("add_trace_level_triple_audit",)
+    _assert_triple_audit_runtime_evidence_action(
+        actions["add_trace_level_triple_audit"]
+    )
+    for gap in gaps:
+        assert gap["metadata"]["evidence_kind"] == "triple_audit"
+        assert gap["recommended_action_ids"] == ("add_trace_level_triple_audit",)
+    assert gaps[0]["missing_metrics"] == (
+        "triple_coverage.claim_triple_coverage_rate",
+        "triple_coverage.audit_pass_rate",
+    )
+    assert gaps[1]["missing_metrics"] == ()
+    strict_json_dumps(payload, sort_keys=True)
+    assert EvidenceGapPlan.from_dict(payload).to_dict() == payload
 
 
 def test_evidence_gap_plan_maps_product_runtime_frontier_release_metrics():

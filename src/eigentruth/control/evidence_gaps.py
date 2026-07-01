@@ -2046,11 +2046,98 @@ def _action_template(kind: Mapping[str, str], *, gate: str, reason: str) -> Evid
                 "Fact-level verification needs extracted triples, claim coverage, slot "
                 "coverage, and pass rates rather than only sentence-level groundedness."
             ),
-            evidence_routes=("triple_evidence", "product_runtime_drift"),
-            suggested_commands=(
-                "benchmarks/run_triple_extraction_fixture_matrix.py",
-                "benchmarks/run_product_runtime_baseline.py",
+            evidence_routes=(
+                "triple_extraction_fixture_matrix",
+                "product_trace_triple_audit_enrichment",
+                "product_promotion_contract",
+                "product_trace_replay",
+                "product_runtime_baseline",
+                "product_runtime_drift",
+                "triple_audit_evidence",
             ),
+            suggested_commands=(
+                "benchmarks/run_triple_extraction_fixture_matrix.py "
+                "--corpus NAME=... --output-dir ... --artifact-manifest ...",
+                "benchmarks/enrich_product_trace_triple_audit.py "
+                "--trace-glob ... --evidence-corpus ... --output-dir ... "
+                "--registry ... --name ... --version ... "
+                "--min-audit-claim-coverage ... --min-audit-pass-rate ... "
+                "--min-slot-coverage-rate ...",
+                "benchmarks/export_product_promotion_contract_evidence_handoff.py "
+                "--contract ... --json ... --audit-json ... "
+                "--triple-extraction-fixture-matrix ... "
+                "--triple-audit-enrichment ... --artifact-manifest ... "
+                "--registry ... --name ... --version ...",
+                "benchmarks/run_product_trace_replay_workflow.py "
+                "--trace-glob ... --promotion-contract ... "
+                "--min-runtime-drift-triple-claim-coverage ... "
+                "--min-runtime-drift-triple-audit-claim-coverage ... "
+                "--min-runtime-drift-triple-audit-pass-rate ... "
+                "--min-runtime-drift-triple-slot-coverage ...",
+                "benchmarks/run_product_runtime_baseline.py "
+                "--trace ... --promotion-contract ... --json ... --artifact-manifest ...",
+                "benchmarks/compare_product_runtime_baselines.py "
+                "--current ... --baseline ... "
+                "--min-triple-claim-coverage ... "
+                "--min-triple-audit-claim-coverage ... "
+                "--min-triple-audit-pass-rate ... "
+                "--min-triple-slot-coverage ... "
+                "--json ... --artifact-manifest ...",
+            ),
+            metadata={
+                "triple_extraction_matrix_script": (
+                    "benchmarks/run_triple_extraction_fixture_matrix.py"
+                ),
+                "trace_enrichment_script": (
+                    "benchmarks/enrich_product_trace_triple_audit.py"
+                ),
+                "evidence_handoff_script": (
+                    "benchmarks/export_product_promotion_contract_evidence_handoff.py"
+                ),
+                "trace_replay_script": "benchmarks/run_product_trace_replay_workflow.py",
+                "runtime_baseline_script": "benchmarks/run_product_runtime_baseline.py",
+                "runtime_drift_script": "benchmarks/compare_product_runtime_baselines.py",
+                "claim_triple_extraction_api": "eigentruth.verify.extract_claim_triples",
+                "claim_triple_audit_api": "eigentruth.verify.audit_claim_triples",
+                "trace_summary_api": (
+                    "eigentruth.control.ProductTrace.triple_coverage_summary"
+                ),
+                "triple_extraction_matrix_workflow": "triple_extraction_fixture_matrix",
+                "trace_enrichment_workflow": "product_trace_triple_audit_enrichment",
+                "evidence_handoff_workflow": "product_promotion_evidence_handoff_export",
+                "trace_replay_workflow": "product_trace_replay_workflow",
+                "runtime_baseline_workflow": "product_runtime_baseline",
+                "runtime_drift_workflow": "product_runtime_drift_comparison",
+                "risk_control_method": "fact_level_triple_audit",
+                "fact_granularity": ("claim_triple", "slot", "predicate"),
+                "required_trace_metrics": (
+                    "triple_coverage.claim_triple_coverage_rate",
+                    "triple_coverage.audit_claim_coverage_rate",
+                    "triple_coverage.audit_pass_rate",
+                    "triple_coverage.slot_coverage_rate",
+                ),
+                "default_gate_thresholds": {
+                    "min_triple_claim_coverage": 1.0,
+                    "min_triple_audit_claim_coverage": 1.0,
+                    "min_triple_audit_pass_rate": 1.0,
+                    "min_triple_slot_coverage": 1.0,
+                },
+                "required_inputs": (
+                    "structured_fact_corpora",
+                    "full_product_trace_corpus",
+                    "local_evidence_corpus",
+                    "promotion_contract_or_release_candidate",
+                    "baseline_product_runtime_report",
+                ),
+                "closure_outputs": (
+                    "triple_extraction_fixture_matrix",
+                    "product_trace_triple_audit_enrichment",
+                    "product_promotion_evidence_handoff_export",
+                    "product_trace_replay_workflow",
+                    "product_runtime_baseline",
+                    "product_runtime_drift_comparison",
+                ),
+            },
         )
     if evidence_kind == "covered_fact_property":
         return EvidenceGapAction(
