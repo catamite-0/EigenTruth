@@ -143,6 +143,17 @@ PRODUCT_RUNTIME_DRIFT_CITATION_INTEGRITY_EVIDENCE_KEYS: tuple[str, ...] = (
     "product_trace_citation_integrity_issue_rate",
     "product_trace_citation_integrity_trace_gap_rate",
 )
+PRODUCT_RUNTIME_DRIFT_EVIDENCE_QUALITY_EVIDENCE_KEYS: tuple[str, ...] = (
+    "product_trace_evidence_quality_trace_coverage_rate",
+    "product_trace_evidence_quality_coverage_rate",
+    "product_trace_evidence_quality_pass_rate",
+    "product_trace_evidence_quality_failure_rate",
+    "product_trace_evidence_quality_failed_result_rate",
+    "product_trace_evidence_quality_stale_evidence_rate",
+    "product_trace_evidence_quality_untrusted_source_rate",
+    "product_trace_evidence_quality_missing_source_rate",
+    "product_trace_evidence_quality_missing_timestamp_rate",
+)
 PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS: tuple[str, ...] = (
     "evidence_handoff_coverage_rate",
     "evidence_handoff_manifest_verified_rate",
@@ -219,6 +230,7 @@ PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS: dict[str, tuple[str, ...]] = {
     "trajectory_audit": PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_KEYS,
     "provenance": PRODUCT_RUNTIME_DRIFT_PROVENANCE_EVIDENCE_KEYS,
     "citation_integrity": PRODUCT_RUNTIME_DRIFT_CITATION_INTEGRITY_EVIDENCE_KEYS,
+    "evidence_quality": PRODUCT_RUNTIME_DRIFT_EVIDENCE_QUALITY_EVIDENCE_KEYS,
     "evidence_handoff": PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS,
     "world_model": PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_KEYS,
     "context_sensitivity": PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_KEYS,
