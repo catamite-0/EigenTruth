@@ -208,6 +208,9 @@ def _apply_release_policy_profile_to_config(
             "require_product_runtime_drift_frontier_release_evidence": (
                 config.require_product_runtime_drift_frontier_release_evidence
             ),
+            "require_frontier_release_input_manifests": (
+                config.require_frontier_release_input_manifests
+            ),
             "require_product_trace_action_audit_gate": config.require_product_trace_action_audit_gate,
             "require_product_trace_action_execution_gate": (
                 config.require_product_trace_action_execution_gate
@@ -300,6 +303,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     frontier_release_evidence_path: Path | None = None
     frontier_release_evidence_registry_path: Path | None = None
     frontier_release_evidence_key: str | None = None
+    require_frontier_release_input_manifests: bool = False
     world_model_signal_workflow_path: Path | None = None
     world_model_signal_workflow_registry_path: Path | None = None
     world_model_signal_workflow_key: str | None = None
@@ -884,6 +888,9 @@ def run_release_candidate_registry_workflow(
         frontier_release_evidence_path=config.frontier_release_evidence_path,
         frontier_release_evidence_registry_path=config.frontier_release_evidence_registry_path,
         frontier_release_evidence_key=config.frontier_release_evidence_key,
+        require_frontier_release_input_manifests=(
+            config.require_frontier_release_input_manifests
+        ),
         world_model_signal_workflow_path=config.world_model_signal_workflow_path,
         world_model_signal_workflow_registry_path=config.world_model_signal_workflow_registry_path,
         world_model_signal_workflow_key=config.world_model_signal_workflow_key,
@@ -1193,6 +1200,9 @@ def run_release_candidate_registry_workflow(
             ),
             "require_product_runtime_drift_frontier_release_evidence": (
                 config.require_product_runtime_drift_frontier_release_evidence
+            ),
+            "require_frontier_release_input_manifests": (
+                config.require_frontier_release_input_manifests
             ),
             "release_efficiency_report": (
                 None
@@ -3005,6 +3015,27 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "frontier_release_evidence_citation_batch_unexpected_batch_count": (
             frontier_release_evidence.get("citation_batch_unexpected_batch_count")
         ),
+        "frontier_release_evidence_require_input_manifests": (
+            frontier_release_evidence.get("require_input_manifests")
+        ),
+        "frontier_release_evidence_input_manifest_required": (
+            frontier_release_evidence.get("input_manifest_required")
+        ),
+        "frontier_release_evidence_input_manifest_required_count": (
+            frontier_release_evidence.get("input_manifest_required_count")
+        ),
+        "frontier_release_evidence_input_manifest_verified_count": (
+            frontier_release_evidence.get("input_manifest_verified_count")
+        ),
+        "frontier_release_evidence_input_manifest_failed_count": (
+            frontier_release_evidence.get("input_manifest_failed_count")
+        ),
+        "frontier_release_evidence_input_manifest_missing_count": (
+            frontier_release_evidence.get("input_manifest_missing_count")
+        ),
+        "frontier_release_evidence_input_manifest_failure_count": (
+            frontier_release_evidence.get("input_manifest_failure_count")
+        ),
         "world_model_signal_workflow_report": world_model_signal_workflow.get("report_path"),
         "world_model_signal_workflow_manifest": (
             manifests.get("world_model_signal_workflow_manifest")
@@ -3538,6 +3569,9 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
             else Path(args.frontier_release_evidence_registry)
         ),
         frontier_release_evidence_key=args.frontier_release_evidence_key,
+        require_frontier_release_input_manifests=bool(
+            args.require_frontier_release_input_manifests
+        ),
         world_model_signal_workflow_path=(
             None
             if args.world_model_signal_workflow is None
@@ -3974,6 +4008,9 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "defaults to --readiness-registry")
     parser.add_argument("--frontier-release-evidence-key", default=None,
                         help="optional report:<name>:<version> registry key for frontier release evidence")
+    parser.add_argument("--require-frontier-release-input-manifests", action="store_true",
+                        help="require frontier release evidence to prove all input artifact manifests "
+                             "were required and verified")
     parser.add_argument("--world-model-signal-workflow", default=None,
                         help="optional world-model signal calibration workflow report that must pass its "
                              "conflict/trace-gap release gate")

@@ -560,6 +560,7 @@ def compare_release_candidates(
     frontier_release_evidence_path: str | Path | None = None,
     frontier_release_evidence_registry_path: str | Path | None = None,
     frontier_release_evidence_key: str | None = None,
+    require_frontier_release_input_manifests: bool = False,
     world_model_signal_workflow_path: str | Path | None = None,
     world_model_signal_workflow_registry_path: str | Path | None = None,
     world_model_signal_workflow_key: str | None = None,
@@ -816,6 +817,9 @@ def compare_release_candidates(
                 "require_product_runtime_drift_frontier_release_evidence": (
                     require_product_runtime_drift_frontier_release_evidence
                 ),
+                "require_frontier_release_input_manifests": (
+                    require_frontier_release_input_manifests
+                ),
                 "require_product_trace_action_audit_gate": require_product_trace_action_audit_gate,
                 "require_product_trace_action_execution_gate": (
                     require_product_trace_action_execution_gate
@@ -979,6 +983,9 @@ def compare_release_candidates(
             "require_product_runtime_drift_frontier_release_evidence",
             False,
         )
+    )
+    require_frontier_release_input_manifests = bool(
+        release_policy_values.get("require_frontier_release_input_manifests", False)
     )
     require_product_trace_action_audit_gate = bool(
         release_policy_values["require_product_trace_action_audit_gate"]
@@ -1642,6 +1649,7 @@ def compare_release_candidates(
     )
     frontier_release_evidence = _frontier_release_evidence_gate(
         frontier_release_evidence_source=frontier_release_evidence_source,
+        require_input_manifests=require_frontier_release_input_manifests,
         recursive=recursive,
         allow_unverified=allow_unverified,
         manifest_fingerprint_workers=manifest_fingerprint_workers,
@@ -1841,6 +1849,9 @@ def compare_release_candidates(
             ),
             "require_product_runtime_drift_frontier_release_evidence": bool(
                 require_product_runtime_drift_frontier_release_evidence
+            ),
+            "require_frontier_release_input_manifests": bool(
+                require_frontier_release_input_manifests
             ),
             "require_product_trace_action_audit_gate": bool(
                 require_product_trace_action_audit_gate
@@ -5812,6 +5823,7 @@ def _resolve_claim_factuality_probe_comparison_source(
 def _frontier_release_evidence_gate(
     *,
     frontier_release_evidence_source: Mapping[str, Any] | None,
+    require_input_manifests: bool,
     recursive: bool,
     allow_unverified: bool,
     manifest_fingerprint_workers: int,
@@ -5837,6 +5849,7 @@ def _frontier_release_evidence_gate(
         manifest_path=manifest_path,
         verification=verification,
         allow_unverified=allow_unverified,
+        require_input_manifests=require_input_manifests,
     )
     return {
         "schema_version": 1,
@@ -5903,6 +5916,13 @@ def _frontier_release_evidence_gate(
         "citation_batch_unexpected_batch_count": summary.get(
             "citation_batch_unexpected_batch_count"
         ),
+        "require_input_manifests": bool(require_input_manifests),
+        "input_manifest_required": summary.get("input_manifest_required"),
+        "input_manifest_required_count": summary.get("input_manifest_required_count"),
+        "input_manifest_verified_count": summary.get("input_manifest_verified_count"),
+        "input_manifest_failed_count": summary.get("input_manifest_failed_count"),
+        "input_manifest_missing_count": summary.get("input_manifest_missing_count"),
+        "input_manifest_failure_count": summary.get("input_manifest_failure_count"),
         "blocking_reasons": tuple(decision.get("blocking_reasons", ())),
         "verification": verification,
         "gate": gate,
@@ -5916,6 +5936,7 @@ def _frontier_release_evidence_report_gate(
     manifest_path: Path | None,
     verification: Mapping[str, Any],
     allow_unverified: bool,
+    require_input_manifests: bool,
 ) -> dict[str, Any]:
     failures = []
     if report_error is not None:
@@ -5962,10 +5983,56 @@ def _frontier_release_evidence_report_gate(
         failures.append("frontier release evidence run count is missing")
     elif run_count < 1:
         failures.append("frontier release evidence run count is zero")
+    if require_input_manifests:
+        failures.extend(_frontier_release_input_manifest_failures(summary))
     return {
         "passed": not failures,
         "blocking_reasons": failures,
     }
+
+
+def _frontier_release_input_manifest_failures(
+    summary: Mapping[str, Any],
+) -> list[str]:
+    failures: list[str] = []
+    required = summary.get("input_manifest_required")
+    required_count = _float_or_none(summary.get("input_manifest_required_count"))
+    verified_count = _float_or_none(summary.get("input_manifest_verified_count"))
+    failed_count = _float_or_none(summary.get("input_manifest_failed_count"))
+    missing_count = _float_or_none(summary.get("input_manifest_missing_count"))
+    failure_count = _float_or_none(summary.get("input_manifest_failure_count"))
+    if required is not True:
+        failures.append(
+            "frontier release evidence input manifests were not required by the source report"
+        )
+    if required_count is None or required_count < 1:
+        failures.append("frontier release evidence input manifest required count is missing or zero")
+    if verified_count is None:
+        failures.append("frontier release evidence input manifest verified count is missing")
+    if required_count is not None and verified_count is not None and verified_count != required_count:
+        failures.append(
+            "frontier release evidence input manifest verified count "
+            f"{verified_count:g} does not match required count {required_count:g}"
+        )
+    if missing_count is None:
+        failures.append("frontier release evidence input manifest missing count is missing")
+    elif missing_count > 0:
+        failures.append(
+            f"frontier release evidence input manifest missing count {missing_count:g} is non-zero"
+        )
+    if failed_count is None:
+        failures.append("frontier release evidence input manifest failed count is missing")
+    elif failed_count > 0:
+        failures.append(
+            f"frontier release evidence input manifest failed count {failed_count:g} is non-zero"
+        )
+    if failure_count is None:
+        failures.append("frontier release evidence input manifest failure count is missing")
+    elif failure_count > 0:
+        failures.append(
+            f"frontier release evidence input manifest failure count {failure_count:g} is non-zero"
+        )
+    return failures
 
 
 def _frontier_release_evidence_manifest_path(
@@ -9108,6 +9175,27 @@ def _candidate_with_gates(
             "citation_batch_unexpected_batch_count": frontier_release_evidence.get(
                 "citation_batch_unexpected_batch_count"
             ),
+            "require_input_manifests": frontier_release_evidence.get(
+                "require_input_manifests"
+            ),
+            "input_manifest_required": frontier_release_evidence.get(
+                "input_manifest_required"
+            ),
+            "input_manifest_required_count": frontier_release_evidence.get(
+                "input_manifest_required_count"
+            ),
+            "input_manifest_verified_count": frontier_release_evidence.get(
+                "input_manifest_verified_count"
+            ),
+            "input_manifest_failed_count": frontier_release_evidence.get(
+                "input_manifest_failed_count"
+            ),
+            "input_manifest_missing_count": frontier_release_evidence.get(
+                "input_manifest_missing_count"
+            ),
+            "input_manifest_failure_count": frontier_release_evidence.get(
+                "input_manifest_failure_count"
+            ),
             "run_names": tuple(frontier_release_evidence.get("run_names", ())),
             "blocking_reasons": tuple(frontier_release_evidence.get("blocking_reasons", ())),
         }
@@ -9673,6 +9761,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         frontier_release_evidence_path=args.frontier_release_evidence,
         frontier_release_evidence_registry_path=args.frontier_release_evidence_registry,
         frontier_release_evidence_key=args.frontier_release_evidence_key,
+        require_frontier_release_input_manifests=bool(
+            args.require_frontier_release_input_manifests
+        ),
         world_model_signal_workflow_path=args.world_model_signal_workflow,
         world_model_signal_workflow_registry_path=args.world_model_signal_workflow_registry,
         world_model_signal_workflow_key=args.world_model_signal_workflow_key,
@@ -10008,6 +10099,9 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "defaults to --readiness-registry")
     parser.add_argument("--frontier-release-evidence-key", default=None,
                         help="optional report:<name>:<version> registry key for frontier release evidence")
+    parser.add_argument("--require-frontier-release-input-manifests", action="store_true",
+                        help="require the frontier release-evidence report to prove all input "
+                             "artifact manifests were required and verified")
     parser.add_argument("--world-model-signal-workflow", default=None,
                         help="optional world-model signal calibration workflow report that must pass its "
                              "conflict/trace-gap release gate")

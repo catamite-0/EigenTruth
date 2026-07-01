@@ -5062,6 +5062,101 @@ def test_compare_frontier_release_evidence_promotes_when_both_tracks_pass(tmp_pa
     ] == pytest.approx(0.9)
 
 
+def test_compare_frontier_release_evidence_requires_verified_input_manifests(tmp_path):
+    module = importlib.import_module("benchmarks.compare_frontier_release_evidence")
+    verifier_path = _write_synthetic_report_with_manifest(
+        tmp_path / "verifier" / "verifier-stability.json",
+        _synthetic_verifier_stability_payload(),
+        artifact_name="verifier_stability_report",
+    )
+    abstention_path = _write_synthetic_report_with_manifest(
+        tmp_path / "abstention" / "abstention-stability.json",
+        _synthetic_abstention_stability_payload(pass_seed_count=3, correctness_mean=0.86),
+        artifact_name="abstention_stability_report",
+    )
+
+    payload = module.compare_frontier_release_evidence(
+        verifier_stability_report_path=verifier_path,
+        abstention_stability_report_path=abstention_path,
+        require_input_manifests=True,
+    )
+
+    assert payload["decision"]["status"] == "promote"
+    assert payload["config"]["require_input_manifests"] is True
+    assert payload["evidence_summary"]["input_manifest_required_count"] == 2
+    assert payload["evidence_summary"]["input_manifest_verified_count"] == 2
+    assert payload["evidence_summary"]["input_manifest_failed_count"] == 0
+    assert payload["inputs"]["verifier_stability_report"]["artifact_manifest_verification"][
+        "passed"
+    ] is True
+    assert payload["inputs"]["abstention_stability_report"]["artifact_manifest_verification"][
+        "passed"
+    ] is True
+
+
+def test_compare_frontier_release_evidence_blocks_missing_required_input_manifest(tmp_path):
+    module = importlib.import_module("benchmarks.compare_frontier_release_evidence")
+    verifier_path = tmp_path / "verifier-stability.json"
+    abstention_path = tmp_path / "abstention-stability.json"
+    verifier_path.write_text(
+        json.dumps(_synthetic_verifier_stability_payload()),
+        encoding="utf-8",
+    )
+    abstention_path.write_text(
+        json.dumps(_synthetic_abstention_stability_payload(pass_seed_count=3, correctness_mean=0.86)),
+        encoding="utf-8",
+    )
+
+    payload = module.compare_frontier_release_evidence(
+        verifier_stability_report_path=verifier_path,
+        abstention_stability_report_path=abstention_path,
+        require_input_manifests=True,
+    )
+
+    assert payload["decision"]["status"] == "blocked"
+    assert payload["evidence_summary"]["input_manifest_required_count"] == 2
+    assert payload["evidence_summary"]["input_manifest_missing_count"] == 2
+    assert any("paths.artifact_manifest is required but missing" in reason
+               for reason in payload["decision"]["blocking_reasons"])
+
+
+def test_compare_frontier_release_evidence_blocks_input_manifest_drift(tmp_path):
+    module = importlib.import_module("benchmarks.compare_frontier_release_evidence")
+    verifier_path = _write_synthetic_report_with_manifest(
+        tmp_path / "verifier" / "verifier-stability.json",
+        _synthetic_verifier_stability_payload(),
+        artifact_name="verifier_stability_report",
+    )
+    abstention_path = _write_synthetic_report_with_manifest(
+        tmp_path / "abstention" / "abstention-stability.json",
+        _synthetic_abstention_stability_payload(pass_seed_count=3, correctness_mean=0.86),
+        artifact_name="abstention_stability_report",
+    )
+    verifier_payload = json.loads(verifier_path.read_text(encoding="utf-8"))
+    verifier_payload["metadata"] = {"tampered": True}
+    verifier_path.write_text(
+        json.dumps(verifier_payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    payload = module.compare_frontier_release_evidence(
+        verifier_stability_report_path=verifier_path,
+        abstention_stability_report_path=abstention_path,
+        require_input_manifests=True,
+    )
+
+    verifier_summary = payload["inputs"]["verifier_stability_report"][
+        "artifact_manifest_verification"
+    ]
+    assert payload["decision"]["status"] == "blocked"
+    assert verifier_summary["passed"] is False
+    assert verifier_summary["failure_count"] >= 1
+    assert payload["evidence_summary"]["input_manifest_failed_count"] == 1
+    assert payload["evidence_summary"]["input_manifest_failure_count"] >= 1
+    assert any("artifact_manifest" in reason and "verification failed" in reason
+               for reason in payload["decision"]["blocking_reasons"])
+
+
 def test_compare_frontier_release_evidence_promotes_with_multiple_testing_track(tmp_path):
     module = importlib.import_module("benchmarks.compare_frontier_release_evidence")
     verifier_path = tmp_path / "verifier-stability.json"
@@ -5753,6 +5848,36 @@ def _synthetic_detectability_taxonomy_payload(
             },
         },
     }
+
+
+def _write_synthetic_report_with_manifest(
+    path: Path,
+    payload: Mapping[str, Any],
+    *,
+    artifact_name: str,
+) -> Path:
+    from eigentruth.registry import build_artifact_manifest
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path = path.parent / "artifact-manifest.json"
+    report_payload = dict(payload)
+    paths = dict(report_payload.get("paths") or {})
+    paths["artifact_manifest"] = str(manifest_path)
+    report_payload["paths"] = paths
+    path.write_text(
+        json.dumps(report_payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    manifest = build_artifact_manifest(
+        {artifact_name: path},
+        root=path.parent,
+        metadata={"runner": "synthetic_input_manifest"},
+    )
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return path
 
 
 def _write_synthetic_frontier_workflow_report(
@@ -13620,6 +13745,12 @@ def _write_frontier_release_evidence_report(
     abstention_track_status: str,
     multiple_testing_track_status: str | None = None,
     citation_batch_track_status: str | None = None,
+    input_manifest_required: bool | None = None,
+    input_manifest_required_count: int = 2,
+    input_manifest_verified_count: int | None = None,
+    input_manifest_failed_count: int = 0,
+    input_manifest_missing_count: int = 0,
+    input_manifest_failure_count: int = 0,
 ) -> Path:
     from eigentruth.registry import build_artifact_manifest
 
@@ -13651,6 +13782,44 @@ def _write_frontier_release_evidence_report(
         decision["multiple_testing_track_status"] = multiple_testing_track_status
     if citation_batch_track_status is not None:
         decision["citation_batch_track_status"] = citation_batch_track_status
+    evidence_summary = {
+        "run_count": 1,
+        "run_names": ["synthetic"],
+        "verifier_signal": "truth_proj",
+        "abstention_signals": ["truth_proj"],
+        "citation_batch_rollup_count": 1
+        if citation_batch_track_status is not None
+        else 0,
+        "citation_batch_expected_batch_count": 2
+        if citation_batch_track_status is not None
+        else 0,
+        "citation_batch_observed_batch_count": 2
+        if citation_batch_track_status == "promote"
+        else 1 if citation_batch_track_status is not None else 0,
+        "citation_batch_missing_expected_batch_count": 0
+        if citation_batch_track_status == "promote"
+        else 1 if citation_batch_track_status is not None else 0,
+        "frontier_rerun_rollup_report_count": 0,
+        "frontier_rerun_rollup_candidate_count": 0,
+        "frontier_rerun_rollup_missing_report_count": 0,
+        "frontier_rerun_rollup_invalid_report_count": 0,
+        "frontier_rerun_rollup_blocked_candidate_count": 0,
+        "frontier_rerun_rollup_promotion_ready_count": 0,
+    }
+    if input_manifest_required is not None:
+        verified_count = (
+            input_manifest_required_count
+            if input_manifest_verified_count is None
+            else input_manifest_verified_count
+        )
+        evidence_summary.update({
+            "input_manifest_required": input_manifest_required,
+            "input_manifest_required_count": input_manifest_required_count,
+            "input_manifest_verified_count": verified_count,
+            "input_manifest_failed_count": input_manifest_failed_count,
+            "input_manifest_missing_count": input_manifest_missing_count,
+            "input_manifest_failure_count": input_manifest_failure_count,
+        })
     payload = {
         "schema_version": 1,
         "workflow": "frontier_release_evidence_comparison",
@@ -13660,30 +13829,7 @@ def _write_frontier_release_evidence_report(
             "artifact_manifest": str(manifest_path),
         },
         "decision": decision,
-        "evidence_summary": {
-            "run_count": 1,
-            "run_names": ["synthetic"],
-            "verifier_signal": "truth_proj",
-            "abstention_signals": ["truth_proj"],
-            "citation_batch_rollup_count": 1
-            if citation_batch_track_status is not None
-            else 0,
-            "citation_batch_expected_batch_count": 2
-            if citation_batch_track_status is not None
-            else 0,
-            "citation_batch_observed_batch_count": 2
-            if citation_batch_track_status == "promote"
-            else 1 if citation_batch_track_status is not None else 0,
-            "citation_batch_missing_expected_batch_count": 0
-            if citation_batch_track_status == "promote"
-            else 1 if citation_batch_track_status is not None else 0,
-            "frontier_rerun_rollup_report_count": 0,
-            "frontier_rerun_rollup_candidate_count": 0,
-            "frontier_rerun_rollup_missing_report_count": 0,
-            "frontier_rerun_rollup_invalid_report_count": 0,
-            "frontier_rerun_rollup_blocked_candidate_count": 0,
-            "frontier_rerun_rollup_promotion_ready_count": 0,
-        },
+        "evidence_summary": evidence_summary,
     }
     report_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     manifest = build_artifact_manifest(
@@ -17217,6 +17363,27 @@ def test_compare_release_candidates_gates_frontier_release_evidence(tmp_path):
         multiple_testing_track_status="promote",
         citation_batch_track_status="promote",
     )
+    input_manifest_evidence_path = _write_frontier_release_evidence_report(
+        tmp_path / "frontier-input-manifest-promote",
+        status="promote",
+        verifier_track_status="promote",
+        abstention_track_status="promote",
+        multiple_testing_track_status="promote",
+        citation_batch_track_status="promote",
+        input_manifest_required=True,
+    )
+    input_manifest_failed_evidence_path = _write_frontier_release_evidence_report(
+        tmp_path / "frontier-input-manifest-blocked",
+        status="promote",
+        verifier_track_status="promote",
+        abstention_track_status="promote",
+        multiple_testing_track_status="promote",
+        citation_batch_track_status="promote",
+        input_manifest_required=True,
+        input_manifest_verified_count=1,
+        input_manifest_failed_count=1,
+        input_manifest_failure_count=1,
+    )
     multiple_testing_blocked_evidence_path = _write_frontier_release_evidence_report(
         tmp_path / "frontier-multiple-testing-blocked",
         status="promote",
@@ -17245,6 +17412,39 @@ def test_compare_release_candidates_gates_frontier_release_evidence(tmp_path):
     promoted = module.compare_release_candidates(
         readiness_registry_path=registry_path,
         frontier_release_evidence_path=promoted_evidence_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+    legacy_input_manifest_blocked = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        frontier_release_evidence_path=promoted_evidence_path,
+        require_frontier_release_input_manifests=True,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+    input_manifest_promoted = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        frontier_release_evidence_path=input_manifest_evidence_path,
+        require_frontier_release_input_manifests=True,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+    input_manifest_blocked = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        frontier_release_evidence_path=input_manifest_failed_evidence_path,
+        require_frontier_release_input_manifests=True,
         min_best_quality_auroc=0.70,
         max_uncached_forward_seconds=20.0,
         min_selected=4,
@@ -17290,6 +17490,28 @@ def test_compare_release_candidates_gates_frontier_release_evidence(tmp_path):
         "citation_batch_expected_batch_count"
     ] == 2
     assert "frontier_release_evidence_manifest" in promoted["release_candidate"]["manifests"]
+    assert legacy_input_manifest_blocked["decision"]["status"] == "blocked"
+    assert legacy_input_manifest_blocked["frontier_release_evidence_gate"]["gate"][
+        "passed"
+    ] is False
+    assert any(
+        "input manifests were not required" in reason
+        for reason in legacy_input_manifest_blocked["frontier_release_evidence_gate"]["gate"][
+            "blocking_reasons"
+        ]
+    )
+    assert input_manifest_promoted["decision"]["status"] == "promote"
+    assert input_manifest_promoted["config"]["require_frontier_release_input_manifests"] is True
+    assert input_manifest_promoted["release_candidate"]["frontier_release_evidence"][
+        "input_manifest_verified_count"
+    ] == 2
+    assert input_manifest_blocked["decision"]["status"] == "blocked"
+    assert any(
+        "input manifest failed count" in reason
+        for reason in input_manifest_blocked["frontier_release_evidence_gate"]["gate"][
+            "blocking_reasons"
+        ]
+    )
     assert multiple_testing_blocked["decision"]["status"] == "blocked"
     assert multiple_testing_blocked["frontier_release_evidence_gate"]["gate"]["passed"] is False
     assert any(
@@ -21273,6 +21495,7 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         is True
     )
     assert frontier_payload["config"]["require_product_runtime_drift_frontier_release_evidence"] is True
+    assert frontier_payload["config"]["require_frontier_release_input_manifests"] is True
     assert frontier_payload["config"]["require_product_trace_action_audit_gate"] is True
     assert frontier_payload["config"]["require_product_trace_action_execution_gate"] is True
     assert frontier_payload["config"]["external_evidence_baseline_comparison_key"] == (
@@ -21350,6 +21573,9 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     )
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
         "require_product_runtime_drift_frontier_release_evidence"
+    ] is True
+    assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
+        "require_frontier_release_input_manifests"
     ] is True
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
         "require_product_trace_action_audit_gate"
@@ -22813,6 +23039,7 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
         is True
     )
     assert frontier_profile_config.require_product_runtime_drift_frontier_release_evidence is True
+    assert frontier_profile_config.require_frontier_release_input_manifests is True
     assert frontier_profile_config.require_product_trace_action_audit_gate is True
     assert frontier_profile_config.require_product_trace_action_execution_gate is True
     assert frontier_profile_config.external_evidence_baseline_comparison_key == (
@@ -22876,6 +23103,9 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     ] is True
     assert frontier_profile_config.release_policy_profile_applied_defaults[
         "require_product_runtime_drift_frontier_release_evidence"
+    ] is True
+    assert frontier_profile_config.release_policy_profile_applied_defaults[
+        "require_frontier_release_input_manifests"
     ] is True
     assert frontier_profile_config.release_policy_profile_applied_defaults[
         "require_product_trace_action_audit_gate"

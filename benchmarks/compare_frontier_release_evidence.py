@@ -52,9 +52,13 @@ def compare_frontier_release_evidence(
     ),
     max_abstention_rate_mean: float = DEFAULT_MAX_ABSTENTION_RATE_MEAN,
     max_detectability_entrenched_false_rate: float = DEFAULT_MAX_DETECTABILITY_ENTRENCHED_FALSE_RATE,
+    require_input_manifests: bool = False,
+    input_manifest_recursive: bool = True,
+    manifest_fingerprint_workers: int = 1,
     notes: Sequence[str] = (),
 ) -> dict[str, Any]:
     """Return a release verdict from verifier and abstention stability reports."""
+    context = ArtifactVerificationContext() if require_input_manifests else None
     verifier_path = Path(verifier_stability_report_path)
     abstention_path = Path(abstention_stability_report_path)
     detectability_paths = tuple(Path(path) for path in detectability_taxonomy_report_paths)
@@ -110,6 +114,8 @@ def compare_frontier_release_evidence(
             max_detectability_entrenched_false_rate,
             name="max_detectability_entrenched_false_rate",
         ),
+        "require_input_manifests": bool(require_input_manifests),
+        "input_manifest_recursive": bool(input_manifest_recursive),
     }
     verifier_runs = _runs_by_name(verifier)
     abstention_runs = _runs_by_name(abstention)
@@ -118,17 +124,29 @@ def compare_frontier_release_evidence(
         verifier,
         path=verifier_path,
         expected_workflow="verifier_stability",
+        require_manifest=require_input_manifests,
+        context=context,
+        recursive=input_manifest_recursive,
+        max_workers=manifest_fingerprint_workers,
     )
     abstention_input = _input_summary(
         abstention,
         path=abstention_path,
         expected_workflow="abstention_stability",
+        require_manifest=require_input_manifests,
+        context=context,
+        recursive=input_manifest_recursive,
+        max_workers=manifest_fingerprint_workers,
     )
     detectability_inputs = tuple(
         _input_summary(
             report,
             path=path,
             expected_workflow="detectability_taxonomy",
+            require_manifest=require_input_manifests,
+            context=context,
+            recursive=input_manifest_recursive,
+            max_workers=manifest_fingerprint_workers,
         )
         for path, report in detectability_reports
     )
@@ -137,6 +155,10 @@ def compare_frontier_release_evidence(
             report,
             path=path,
             expected_workflow="truthfulqa_frontier_workflow",
+            require_manifest=require_input_manifests,
+            context=context,
+            recursive=input_manifest_recursive,
+            max_workers=manifest_fingerprint_workers,
         )
         for path, report in frontier_workflow_reports
     )
@@ -146,12 +168,33 @@ def compare_frontier_release_evidence(
             path=path,
             expected_workflow="citation_search_batch_evidence_rollup",
             expected_statuses=("promote",),
+            require_manifest=require_input_manifests,
+            context=context,
+            recursive=input_manifest_recursive,
+            max_workers=manifest_fingerprint_workers,
         )
         for path, report in citation_batch_rollup_reports
     )
     frontier_rerun_rollup_inputs = tuple(
-        _frontier_rerun_rollup_input_summary(path=path, report=report)
+        _frontier_rerun_rollup_input_summary(
+            path=path,
+            report=report,
+            require_manifest=require_input_manifests,
+            context=context,
+            recursive=input_manifest_recursive,
+            max_workers=manifest_fingerprint_workers,
+        )
         for path, report in frontier_rerun_rollup_reports
+    )
+    input_manifest_summary = _input_manifest_evidence_summary(
+        (
+            verifier_input,
+            abstention_input,
+            *detectability_inputs,
+            *frontier_workflow_inputs,
+            *citation_batch_rollup_inputs,
+            *frontier_rerun_rollup_inputs,
+        )
     )
 
     input_blocking_reasons = tuple(verifier_input["blocking_reasons"]) + tuple(
@@ -303,6 +346,7 @@ def compare_frontier_release_evidence(
             "frontier_workflow_report_count": len(frontier_workflow_reports),
             "citation_batch_rollup_report_count": len(citation_batch_rollup_reports),
             "frontier_rerun_rollup_report_count": len(frontier_rerun_rollup_reports),
+            **input_manifest_summary,
             **_multiple_testing_evidence_summary(multiple_testing_decisions),
             **_citation_batch_evidence_summary(citation_batch_decisions),
             **_frontier_rerun_rollup_evidence_summary(frontier_rerun_rollup_decisions),
@@ -1281,22 +1325,37 @@ def _input_summary(
     path: Path,
     expected_workflow: str,
     expected_statuses: Sequence[str] = ("complete",),
+    require_manifest: bool = False,
+    context: ArtifactVerificationContext | None = None,
+    recursive: bool = True,
+    max_workers: int = 1,
 ) -> dict[str, Any]:
     workflow = payload.get("workflow")
     status = payload.get("status")
     paths = _mapping(payload.get("paths"))
+    manifest_value = paths.get("artifact_manifest")
+    manifest_verification = _input_manifest_verification_summary(
+        path=path,
+        manifest_value=manifest_value,
+        require_manifest=require_manifest,
+        context=context,
+        recursive=recursive,
+        max_workers=max_workers,
+    )
     blocking_reasons = []
     if workflow != expected_workflow:
         blocking_reasons.append(f"{path} workflow {workflow!r} is not {expected_workflow!r}")
     if status not in expected_statuses:
         expected = ", ".join(repr(item) for item in expected_statuses)
         blocking_reasons.append(f"{path} status {status!r} is not one of {expected}")
+    blocking_reasons.extend(manifest_verification["blocking_reasons"])
     return {
         "path": str(path),
         "workflow": workflow,
         "status": status,
-        "artifact_manifest": paths.get("artifact_manifest"),
+        "artifact_manifest": manifest_value,
         "artifact_manifest_summary": _mapping(payload.get("artifact_manifest_summary")),
+        "artifact_manifest_verification": manifest_verification,
         "blocking_reasons": tuple(blocking_reasons),
     }
 
@@ -1305,10 +1364,23 @@ def _frontier_rerun_rollup_input_summary(
     *,
     path: Path,
     report: Mapping[str, Any],
+    require_manifest: bool = False,
+    context: ArtifactVerificationContext | None = None,
+    recursive: bool = True,
+    max_workers: int = 1,
 ) -> dict[str, Any]:
     workflow = report.get("workflow")
     status = report.get("status")
     paths = _mapping(report.get("paths"))
+    manifest_value = paths.get("artifact_manifest")
+    manifest_verification = _input_manifest_verification_summary(
+        path=path,
+        manifest_value=manifest_value,
+        require_manifest=require_manifest,
+        context=context,
+        recursive=recursive,
+        max_workers=max_workers,
+    )
     blocking_reasons = []
     if str(workflow) not in FRONTIER_RERUN_ROLLUP_WORKFLOWS:
         blocking_reasons.append(f"{path} workflow {workflow!r} is not a supported rerun rollup")
@@ -1316,14 +1388,122 @@ def _frontier_rerun_rollup_input_summary(
         blocking_reasons.append(
             f"{path} status {status!r} is not a supported rerun rollup status"
         )
+    blocking_reasons.extend(manifest_verification["blocking_reasons"])
     return {
         "path": str(path),
         "workflow": workflow,
         "track": FRONTIER_RERUN_ROLLUP_WORKFLOWS.get(str(workflow)),
         "status": status,
-        "artifact_manifest": paths.get("artifact_manifest"),
+        "artifact_manifest": manifest_value,
         "artifact_manifest_summary": _mapping(report.get("artifact_manifest_summary")),
+        "artifact_manifest_verification": manifest_verification,
         "blocking_reasons": tuple(blocking_reasons),
+    }
+
+
+def _input_manifest_verification_summary(
+    *,
+    path: Path,
+    manifest_value: Any,
+    require_manifest: bool,
+    context: ArtifactVerificationContext | None,
+    recursive: bool,
+    max_workers: int,
+) -> dict[str, Any]:
+    summary: dict[str, Any] = {
+        "required": bool(require_manifest),
+        "path": None if manifest_value is None else str(manifest_value),
+        "resolved_path": None,
+        "passed": None,
+        "checked": None,
+        "failure_count": None,
+        "nested_failure_count": None,
+        "recursive": bool(recursive),
+        "blocking_reasons": (),
+    }
+    if not require_manifest:
+        return summary
+    if not manifest_value:
+        reason = f"{path} paths.artifact_manifest is required but missing"
+        summary["blocking_reasons"] = (reason,)
+        return summary
+    manifest_path = _resolve_input_manifest_path(manifest_value, report_path=path)
+    summary["resolved_path"] = str(manifest_path)
+    verifier = context or ArtifactVerificationContext()
+    try:
+        verification = verifier.load_and_verify_artifact_manifest(
+            manifest_path,
+            recursive=recursive,
+            max_workers=max_workers,
+        )
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        reason = f"{path} artifact_manifest {manifest_path} could not be verified: {exc}"
+        summary.update({
+            "passed": False,
+            "checked": 0,
+            "failure_count": 1,
+            "nested_failure_count": 0,
+            "blocking_reasons": (reason,),
+        })
+        return summary
+    payload = verification.to_dict()
+    failure_count = len(tuple(payload.get("failures", ())))
+    nested_failure_count = _nested_manifest_failure_count(payload.get("nested", ()))
+    summary.update({
+        "passed": bool(payload.get("passed")),
+        "checked": payload.get("checked"),
+        "failure_count": failure_count,
+        "nested_failure_count": nested_failure_count,
+    })
+    if payload.get("passed") is not True:
+        reason = (
+            f"{path} artifact_manifest {manifest_path} verification failed "
+            f"with {failure_count + nested_failure_count} failures"
+        )
+        summary["blocking_reasons"] = (reason,)
+    return summary
+
+
+def _resolve_input_manifest_path(value: Any, *, report_path: Path) -> Path:
+    manifest_path = Path(str(value))
+    if manifest_path.is_absolute() or manifest_path.exists():
+        return manifest_path
+    sibling_path = report_path.parent / manifest_path
+    if sibling_path.exists():
+        return sibling_path
+    return manifest_path
+
+
+def _nested_manifest_failure_count(value: Any) -> int:
+    total = 0
+    for item in _mapping_sequence(value):
+        total += len(tuple(item.get("failures", ())))
+        total += _nested_manifest_failure_count(item.get("nested", ()))
+    return total
+
+
+def _input_manifest_evidence_summary(
+    inputs: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    verifications = tuple(
+        _mapping(input_summary.get("artifact_manifest_verification"))
+        for input_summary in inputs
+    )
+    required = tuple(item for item in verifications if item.get("required") is True)
+    return {
+        "input_manifest_required": bool(required),
+        "input_manifest_required_count": len(required),
+        "input_manifest_verified_count": sum(1 for item in required if item.get("passed") is True),
+        "input_manifest_failed_count": sum(1 for item in required if item.get("passed") is False),
+        "input_manifest_missing_count": sum(
+            1 for item in required
+            if item.get("path") in {None, ""}
+        ),
+        "input_manifest_failure_count": sum(
+            (_non_negative_int(item.get("failure_count")) or 0)
+            + (_non_negative_int(item.get("nested_failure_count")) or 0)
+            for item in required
+        ),
     }
 
 
@@ -1668,6 +1848,12 @@ def _record_registry(
         "citation_batch_promotion_ready_count": evidence_summary.get(
             "citation_batch_promotion_ready_count"
         ),
+        "input_manifest_required": evidence_summary.get("input_manifest_required"),
+        "input_manifest_required_count": evidence_summary.get("input_manifest_required_count"),
+        "input_manifest_verified_count": evidence_summary.get("input_manifest_verified_count"),
+        "input_manifest_failed_count": evidence_summary.get("input_manifest_failed_count"),
+        "input_manifest_missing_count": evidence_summary.get("input_manifest_missing_count"),
+        "input_manifest_failure_count": evidence_summary.get("input_manifest_failure_count"),
         "frontier_rerun_rollup_report_count": evidence_summary.get(
             "frontier_rerun_rollup_report_count"
         ),
@@ -1809,6 +1995,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         ),
         max_abstention_rate_mean=args.max_abstention_rate_mean,
         max_detectability_entrenched_false_rate=args.max_detectability_entrenched_false_rate,
+        require_input_manifests=args.require_input_manifests,
+        input_manifest_recursive=not args.no_recursive,
+        manifest_fingerprint_workers=args.manifest_fingerprint_workers,
         notes=args.note,
     )
     if manifest_path is not None:
@@ -1938,6 +2127,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-detectability-entrenched-false-rate", type=float,
                         default=DEFAULT_MAX_DETECTABILITY_ENTRENCHED_FALSE_RATE)
     parser.add_argument("--manifest-fingerprint-workers", type=int, default=1)
+    parser.add_argument("--require-input-manifests", action="store_true",
+                        help="fail closed unless every input report declares an artifact manifest that verifies")
     parser.add_argument("--no-recursive", action="store_true")
     parser.add_argument("--note", action="append", default=[])
     run(parser.parse_args(argv))

@@ -1382,6 +1382,11 @@ rollups can be supplied with repeatable `--frontier-rerun-rollup-report`; each
 rollup must be `status=promote`, `gate.passed=true`, `gate.promotion_ready=true`,
 and include an artifact manifest before it can clear a previously blocked
 release-evidence track.
+Add `--require-input-manifests` for release/audit runs that should fail closed
+unless every input report declares an artifact manifest and that manifest
+verifies against the current local files. The report records per-input
+`artifact_manifest_verification` summaries plus aggregate `input_manifest_*`
+counters for registry and handoff audits.
 
 ```bash
 OUT=artifacts/truthfulqa-frontier-qwen-smollm2-l80-release-evidence
@@ -1397,6 +1402,7 @@ python benchmarks/compare_frontier_release_evidence.py \
   --frontier-rerun-rollup-report artifacts/frontier-release-evidence/detectability-taxonomy-rerun-rollup-v2/frontier-detectability-rerun-rollup.json \
   --frontier-rerun-rollup-report artifacts/frontier-release-evidence/abstention-rerun-rollup-v3/frontier-abstention-rerun-rollup.json \
   --max-detectability-entrenched-false-rate 0.25 \
+  --require-input-manifests \
   --json "$OUT/frontier-release-evidence.json" \
   --artifact-manifest "$OUT/artifact-manifest.json" \
   --verification-report "$OUT/manifest-verification.json" \
@@ -5531,6 +5537,7 @@ and defaults `--require-product-runtime-drift-promotion-evidence`,
   `--require-product-runtime-drift-world-model-evidence`,
   `--require-product-runtime-drift-context-sensitivity-evidence`,
   `--require-product-runtime-drift-frontier-release-evidence`,
+  `--require-frontier-release-input-manifests`,
 `--require-product-trace-action-audit-gate`, and
 `--require-product-trace-action-execution-gate`; it also defaults to the
 registered covered-facts external-evidence handoff, registered triple-extraction
@@ -5545,9 +5552,9 @@ coverage/manifest/metric-gap evidence, trace-level world-model
 participation/coverage/conflict/low-agreement/trace-gap evidence,
 trace-level context-sensitivity participation/coverage/flagged-rate/trace-gap
 and max-ratio evidence, frontier release-evidence status/decision/track rates
-plus citation-batch and rerun-rollup counts, the product-trace replay workflow
-lacks promoted action-audit/action-execution child gates, or registered
-frontier evidence handoffs are absent.
+plus citation-batch and rerun-rollup counts, frontier release-evidence input
+manifest verification, promoted product-trace replay action-audit/action-execution
+child gates, or registered frontier evidence handoffs.
 Add `--require-product-runtime-drift-claim-factuality-evidence` when a release
 must additionally prove that claim factuality probe comparison evidence survived
 the product-runtime handoff; it is opt-in so existing `frontier_audit` checks keep
@@ -5634,6 +5641,10 @@ Add `--require-product-runtime-drift-frontier-release-evidence` when the release
 must also require frontier release-evidence status/decision/track rates,
 citation-batch rollup counts, and rerun-rollup track/candidate counts from that
 drift report.
+Add `--require-frontier-release-input-manifests` when the final candidate must
+also prove that its source frontier release-evidence report was generated with
+`--require-input-manifests` and that all referenced input manifests still verify
+against local files. The `frontier_audit` profile enables this gate by default.
 Add `--release-efficiency-report` when the final candidate must also prove that
 the product runtime profile sweep has a promoted efficiency handoff. The gate
 verifies the release-efficiency manifest, requires `workflow=release_efficiency_report`

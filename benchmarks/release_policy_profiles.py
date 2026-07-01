@@ -70,6 +70,7 @@ RELEASE_POLICY_PROFILES: Mapping[str, Mapping[str, Any]] = {
         "require_product_runtime_drift_context_sensitivity_evidence": True,
         "require_product_runtime_drift_counterfactual_robustness_evidence": True,
         "require_product_runtime_drift_frontier_release_evidence": True,
+        "require_frontier_release_input_manifests": True,
         "require_product_trace_action_audit_gate": True,
         "require_product_trace_action_execution_gate": True,
         "external_evidence_baseline_comparison_key": (
