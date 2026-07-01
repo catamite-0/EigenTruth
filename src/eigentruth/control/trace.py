@@ -263,6 +263,9 @@ class ProductTrace:
             "evidence_quality": _evidence_quality_summary_from_action_results(
                 prepared.action_results,
             ),
+            "world_model_action_gate": _world_model_action_gate_summary_from_action_results(
+                prepared.action_results,
+            ),
             "metacognition": _metacognition_summary_from_payload(
                 diagnostics=prepared.diagnostics,
                 verification_results=prepared.verification_results,
@@ -408,6 +411,12 @@ class ProductTrace:
     def evidence_quality_summary(self) -> dict[str, Any]:
         """Summarize retrieval evidence freshness/provenance checks."""
         return _evidence_quality_summary_from_action_results(
+            tuple(_action_result_to_dict(result) for result in self.action_results)
+        )
+
+    def world_model_action_gate_summary(self) -> dict[str, Any]:
+        """Summarize pre-action world-model gates attached to action results."""
+        return _world_model_action_gate_summary_from_action_results(
             tuple(_action_result_to_dict(result) for result in self.action_results)
         )
 
@@ -684,6 +693,86 @@ def _evidence_quality_summaries_from_action_result(
         if quality:
             query_summaries.append(quality)
     return tuple(query_summaries)
+
+
+def _world_model_action_gate_summary_from_action_results(
+    results: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    result_count = len(results)
+    checked_result_count = 0
+    passed_count = 0
+    blocked_count = 0
+    side_effect_block_violation_count = 0
+    prediction_confidences: list[float] = []
+    counts_by_status: dict[str, int] = {}
+    counts_by_decision_rule: dict[str, int] = {}
+    counts_by_code: dict[str, int] = {}
+    counts_by_action: dict[str, int] = {}
+
+    for result in results:
+        gate = _world_model_gate_summary_from_action_result(result)
+        if not gate:
+            continue
+        checked_result_count += 1
+        _increment_count(counts_by_action, result.get("action"))
+        status = gate.get("status")
+        _increment_count(counts_by_status, status)
+        _increment_count(counts_by_decision_rule, gate.get("decision_rule"))
+        _merge_counts(counts_by_code, _mapping(gate.get("counts_by_code")))
+        confidence = _finite_float(gate.get("prediction_confidence"))
+        if confidence is not None:
+            prediction_confidences.append(confidence)
+        blocked = _optional_bool(gate.get("blocked"))
+        if blocked is None:
+            blocked = str(status) in {"blocked", "error"}
+        passed = _optional_bool(gate.get("passed"))
+        if passed is None:
+            passed = str(status) == "passed"
+        if blocked:
+            blocked_count += 1
+            metadata = _mapping(result.get("metadata"))
+            if bool(metadata.get("side_effects", False)) or bool(metadata.get("possible_side_effects", False)):
+                side_effect_block_violation_count += 1
+        if passed:
+            passed_count += 1
+
+    return {
+        "available": checked_result_count > 0,
+        "result_count": result_count,
+        "checked_result_count": checked_result_count,
+        "coverage_rate": _safe_div(checked_result_count, result_count),
+        "passed_count": passed_count,
+        "blocked_count": blocked_count,
+        "pass_rate": _safe_div(passed_count, checked_result_count),
+        "blocked_rate": _safe_div(blocked_count, checked_result_count),
+        "side_effect_block_violation_count": side_effect_block_violation_count,
+        "prediction_confidence_mean": _mean_or_none(prediction_confidences),
+        "prediction_confidence_min": min(prediction_confidences) if prediction_confidences else None,
+        "low_prediction_confidence_count": counts_by_code.get("low_prediction_confidence", 0),
+        "low_agreement_count": counts_by_code.get("low_agreement", 0),
+        "no_rule_matched_count": counts_by_code.get("no_rule_matched", 0),
+        "postcondition_refuted_count": counts_by_code.get("postcondition_refuted", 0),
+        "postcondition_insufficient_evidence_count": counts_by_code.get(
+            "postcondition_insufficient_evidence",
+            0,
+        ),
+        "postcondition_error_count": counts_by_code.get("postcondition_error", 0),
+        "counts_by_status": dict(sorted(counts_by_status.items())),
+        "counts_by_decision_rule": dict(sorted(counts_by_decision_rule.items())),
+        "counts_by_code": dict(sorted(counts_by_code.items())),
+        "counts_by_action": dict(sorted(counts_by_action.items())),
+    }
+
+
+def _world_model_gate_summary_from_action_result(result: Mapping[str, Any]) -> dict[str, Any]:
+    metadata_gate = _mapping(_mapping(result.get("metadata")).get("world_model_gate"))
+    output_gate = _mapping(_mapping(result.get("output")).get("world_model_gate"))
+    output_summary = _mapping(output_gate.get("summary"))
+    if output_summary:
+        merged = dict(output_summary)
+        merged.update(metadata_gate)
+        return merged
+    return metadata_gate
 
 
 def _metacognition_summary_from_payload(

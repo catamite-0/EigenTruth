@@ -1405,6 +1405,73 @@ def test_product_trace_action_execution_summary_flags_result_alignment_gaps():
     assert bounded["summaries"]["action_execution"]["missing_result_count"] == 1
 
 
+def test_product_trace_world_model_action_gate_summary_feeds_runtime_metrics():
+    passed_gate = {
+        "available": True,
+        "passed": True,
+        "blocked": False,
+        "status": "passed",
+        "decision_rule": "prediction_and_postconditions_passed",
+        "prediction_confidence": 0.9,
+        "counts_by_code": {},
+    }
+    blocked_gate = {
+        "available": True,
+        "passed": False,
+        "blocked": True,
+        "status": "blocked",
+        "decision_rule": "blocked_postcondition_refuted",
+        "prediction_confidence": 0.8,
+        "counts_by_code": {"postcondition_refuted": 1},
+    }
+    trace = ProductTrace(
+        action_results=(
+            ActionResult(
+                action=ControlAction.EXECUTE_TOOL,
+                status=ActionExecutionStatus.SUCCEEDED,
+                request_id="tool-1",
+                metadata={"world_model_gate": passed_gate, "side_effects": True},
+            ),
+            ActionResult(
+                action=ControlAction.EXECUTE_TOOL,
+                status=ActionExecutionStatus.SKIPPED,
+                request_id="tool-2",
+                output={"world_model_gate": {"summary": blocked_gate}},
+                metadata={"side_effects": False},
+            ),
+            ActionResult(
+                action=ControlAction.RETRIEVE,
+                status=ActionExecutionStatus.SUCCEEDED,
+                request_id="retrieve-1",
+            ),
+        ),
+    )
+
+    summary = trace.world_model_action_gate_summary()
+    bounded = trace.to_bounded_dict()
+    full_metrics = product_runtime_metrics(trace)
+    bounded_metrics = product_runtime_metrics(bounded)
+
+    assert summary["available"] is True
+    assert summary["result_count"] == 3
+    assert summary["checked_result_count"] == 2
+    assert summary["coverage_rate"] == pytest.approx(2 / 3)
+    assert summary["passed_count"] == 1
+    assert summary["blocked_count"] == 1
+    assert summary["pass_rate"] == pytest.approx(0.5)
+    assert summary["blocked_rate"] == pytest.approx(0.5)
+    assert summary["postcondition_refuted_count"] == 1
+    assert summary["side_effect_block_violation_count"] == 0
+    assert bounded["summaries"]["world_model_action_gate"]["checked_result_count"] == 2
+    assert full_metrics["world_model_action_gate_source"] == "full_trace"
+    assert full_metrics["world_model_action_gate_available"] is True
+    assert full_metrics["world_model_action_gate_coverage_rate"] == pytest.approx(2 / 3)
+    assert full_metrics["world_model_action_gate_postcondition_refuted_count"] == pytest.approx(1.0)
+    assert full_metrics["world_model_action_gate_prediction_confidence_min"] == pytest.approx(0.8)
+    assert bounded_metrics["world_model_action_gate_source"] == "bounded_summary"
+    assert bounded_metrics["world_model_action_gate_blocked_rate"] == pytest.approx(0.5)
+
+
 def test_product_trace_evidence_quality_summary_feeds_runtime_metrics():
     trace = ProductTrace(
         action_results=(

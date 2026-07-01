@@ -524,6 +524,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
         }
         metrics.update(_cache_metrics(trace))
         metrics.update(_action_execution_metrics(trace))
+        metrics.update(_world_model_action_gate_metrics(trace))
         metrics.update(_evidence_quality_metrics(trace))
         metrics.update(_metacognition_metrics(trace))
         metrics.update(_action_receipt_metrics(trace))
@@ -576,6 +577,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
     }
     metrics.update(_cache_metrics(trace))
     metrics.update(_action_execution_metrics(trace))
+    metrics.update(_world_model_action_gate_metrics(trace))
     metrics.update(_evidence_quality_metrics(trace))
     metrics.update(_metacognition_metrics(trace))
     metrics.update(_action_receipt_metrics(trace))
@@ -963,6 +965,70 @@ def _action_execution_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[s
             summary.get("request_id_mismatch_count")
         ) or 0.0,
         "action_execution_alignment_available": bool(alignment.get("available")),
+    }
+
+
+def _world_model_action_gate_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:
+    if isinstance(trace, ProductTrace):
+        summary = trace.world_model_action_gate_summary()
+        source = "full_trace"
+    else:
+        payload = dict(trace)
+        summary = _mapping(_mapping(payload.get("summaries")).get("world_model_action_gate"))
+        if summary:
+            source = "bounded_summary"
+        else:
+            summary = ProductTrace(
+                action_results=tuple(_sequence(payload.get("action_results", ()))),
+            ).world_model_action_gate_summary()
+            source = "full_trace"
+    counts_by_code = _mapping(summary.get("counts_by_code"))
+    return {
+        "world_model_action_gate_available": bool(summary.get("available")),
+        "world_model_action_gate_source": source,
+        "world_model_action_gate_summary": summary,
+        "world_model_action_gate_result_count": _finite_float(summary.get("result_count")) or 0.0,
+        "world_model_action_gate_checked_result_count": (
+            _finite_float(summary.get("checked_result_count")) or 0.0
+        ),
+        "world_model_action_gate_coverage_rate": _finite_float(summary.get("coverage_rate")),
+        "world_model_action_gate_passed_count": _finite_float(summary.get("passed_count")) or 0.0,
+        "world_model_action_gate_blocked_count": _finite_float(summary.get("blocked_count")) or 0.0,
+        "world_model_action_gate_pass_rate": _finite_float(summary.get("pass_rate")),
+        "world_model_action_gate_blocked_rate": _finite_float(summary.get("blocked_rate")),
+        "world_model_action_gate_side_effect_block_violation_count": (
+            _finite_float(summary.get("side_effect_block_violation_count")) or 0.0
+        ),
+        "world_model_action_gate_prediction_confidence_mean": _finite_float(
+            summary.get("prediction_confidence_mean")
+        ),
+        "world_model_action_gate_prediction_confidence_min": _finite_float(
+            summary.get("prediction_confidence_min")
+        ),
+        "world_model_action_gate_low_prediction_confidence_count": (
+            _finite_float(summary.get("low_prediction_confidence_count")) or 0.0
+        ),
+        "world_model_action_gate_low_agreement_count": (
+            _finite_float(summary.get("low_agreement_count")) or 0.0
+        ),
+        "world_model_action_gate_no_rule_matched_count": (
+            _finite_float(summary.get("no_rule_matched_count")) or 0.0
+        ),
+        "world_model_action_gate_postcondition_refuted_count": (
+            _finite_float(summary.get("postcondition_refuted_count")) or 0.0
+        ),
+        "world_model_action_gate_postcondition_insufficient_evidence_count": (
+            _finite_float(summary.get("postcondition_insufficient_evidence_count")) or 0.0
+        ),
+        "world_model_action_gate_postcondition_error_count": (
+            _finite_float(summary.get("postcondition_error_count")) or 0.0
+        ),
+        "world_model_action_gate_counts_by_status": _int_mapping(summary.get("counts_by_status")),
+        "world_model_action_gate_counts_by_decision_rule": _int_mapping(
+            summary.get("counts_by_decision_rule")
+        ),
+        "world_model_action_gate_counts_by_code": _int_mapping(counts_by_code),
+        "world_model_action_gate_counts_by_action": _int_mapping(summary.get("counts_by_action")),
     }
 
 

@@ -152,6 +152,16 @@ from eigentruth.control.trajectory_audit import (
     TrajectoryHallucinationType,
     audit_product_trace_trajectory,
 )
+from eigentruth.control.world_model_gate import (
+    WorldModelActionGateIssue,
+    WorldModelActionGatePolicy,
+    WorldModelActionGateReport,
+    WorldModelActionGateSeverity,
+    WorldModelActionGateStatus,
+    WorldModelActionTransition,
+    WorldModelGuardedActionExecutor,
+    audit_world_model_action_gate,
+)
 
 __all__ = [
     "ActionExecutionStatus",
@@ -240,11 +250,19 @@ __all__ = [
     "VerbalUncertaintySignal",
     "VerificationStageDecision",
     "VerificationLoopResult",
+    "WorldModelActionGateIssue",
+    "WorldModelActionGatePolicy",
+    "WorldModelActionGateReport",
+    "WorldModelActionGateSeverity",
+    "WorldModelActionGateStatus",
+    "WorldModelActionTransition",
+    "WorldModelGuardedActionExecutor",
     "audit_action_requests",
     "audit_evidence_graph_consistency",
     "audit_metacognitive_alignment",
     "audit_product_trace_trajectory",
     "audit_trace_provenance",
+    "audit_world_model_action_gate",
     "build_trace_provenance_graph",
     "audit_product_promotion_contract_evidence",
     "audit_receipt_claim_support",

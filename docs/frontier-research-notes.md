@@ -24,6 +24,7 @@ EigenTruth should move from hallucination detection alone toward calibrated part
 - CiteCheck (arXiv:2605.27700) shows that citation hallucinations often appear as small metadata drift rather than fully fabricated references. This supports a separate citation-integrity route before broad retrieval: DOI, arXiv id, URL, author/year, title, and local reference labels should be checked against a trusted citation catalog instead of treated as ordinary lexical groundedness.
 - Internal Representations as Indicators of Hallucinations in Agent Tool Selection (arXiv:2601.05214) frames agent hallucination as incorrect tool selection, malformed parameters, and tool bypass. This supports keeping tool-route intent explicit in `ClaimVerificationPlan` instead of only checking final text.
 - World-Model-Augmented Web Agents with Action Correction (arXiv:2602.15384) uses consequence simulation and action correction before risky actions. This supports EigenTruth's world-model route as a post-draft verifier and pre-action correction adapter rather than a core dependency. The product-side implementation now exposes `ProductTrace.world_model_summary()` and bounded `summaries.world_model` fields so world-model evidence can be audited by adapter/reference, conflict path, low agreement, and trace-gap rates instead of only appearing as benchmark score columns.
+- Grounded Iterative Language Planning (arXiv:2606.27806, 2026) strengthens the same product-control position: a parameterized world-model backbone can supply valid actions, predicted state deltas, risk, and value, while the LLM drafts flexible actions and is revised when the two disagree. EigenTruth's dependency-free analog is a pre-action world-model gate over `ActionRequest` payloads: simulate, check postconditions, and block/correct before dispatch rather than treating action hallucination as a final-answer-only problem.
 - TokenHD (arXiv:2605.12384) and related span/token-level work point toward finer localization of hallucinations. EigenTruth's current lightweight equivalent is claim-level risk localization, route budgeting, and trace evidence; learned token-level detectors remain out of scope until the dependency and training boundary is explicit.
 - Pre-generation hallucination detection with soft targets (arXiv:2606.21917) reinforces the current layer/sweep direction: hallucination risk is better treated as a probability estimated from internal representations than as a single hard decoded label.
 - Entropy Alone is Insufficient for Safe Selective Prediction in LLMs (arXiv:2603.21172) and the UQ-as-clustering critique (arXiv:2605.19220) both argue against relying on entropy/self-consistency alone. EigenTruth should keep combining internal geometry with correctness/verifier/world-model evidence and deployment-facing selective metrics.
@@ -61,6 +62,25 @@ Added metacognitive / verbal-uncertainty alignment audits:
   direction: high-risk traces that answer confidently are treated as release
   evidence failures, while high-risk abstentions or uncertainty-exposing
   non-answers can pass this particular audit.
+
+Added pre-action world-model action gates:
+
+- `WorldModelActionGatePolicy`, `WorldModelActionTransition`,
+  `WorldModelActionGateReport`, and `audit_world_model_action_gate(...)`
+  simulate a planned `ActionRequest` through a `WorldModelAdapter`, then check
+  predicted-state postconditions before executor dispatch.
+- `WorldModelGuardedActionExecutor` wraps any existing executor and fails
+  closed with `ActionExecutionStatus.SKIPPED` when the world model reports low
+  confidence, low ensemble agreement, no matching rule, or a refuted
+  postcondition. The wrapped action is not called in those cases.
+- Blocked actions return a JSON-ready correction request, preserving the
+  monitor-first control boundary: the gate supplies an auditable reason to
+  clarify, abstain, or revise, but it does not bind EigenTruth to a learned
+  simulator, database, network tool, or rewrite LLM.
+- This is the local bridge toward action-correction and grounded iterative
+  planning research: LLM creativity remains in drafting actions and language,
+  while state-changing action dispatch gets an explicit predicted-consequence
+  check.
 
 Added an anytime-valid feedback risk monitor for evidence acquisition:
 
