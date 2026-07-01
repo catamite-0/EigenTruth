@@ -52366,6 +52366,7 @@ def test_citation_search_batch_evidence_rollup_promotes_complete_batches(tmp_pat
         adapter_requests: int,
         source_docs: int,
         adapter_results: int = 0,
+        adapter_gate: dict[str, object] | None = None,
     ) -> None:
         dependency = path.with_suffix(".input.json")
         child_manifest = path.with_suffix(".manifest.json")
@@ -52380,8 +52381,7 @@ def test_citation_search_batch_evidence_rollup_promotes_complete_batches(tmp_pat
             ),
             encoding="utf-8",
         )
-        path.write_text(
-            json.dumps({
+        payload = {
                 "schema_version": 1,
                 "workflow": workflow,
                 "status": "promote",
@@ -52402,9 +52402,10 @@ def test_citation_search_batch_evidence_rollup_promotes_complete_batches(tmp_pat
                     "corpus_document_count": source_docs,
                 },
                 "paths": {"artifact_manifest": str(child_manifest)},
-            }),
-            encoding="utf-8",
-        )
+        }
+        if adapter_gate is not None:
+            payload["adapter_gate"] = adapter_gate
+        path.write_text(json.dumps(payload), encoding="utf-8")
 
     child_one = tmp_path / "batch-0001.json"
     child_two = tmp_path / "batch-0002.json"
@@ -52422,6 +52423,13 @@ def test_citation_search_batch_evidence_rollup_promotes_complete_batches(tmp_pat
         adapter_requests=3,
         source_docs=3,
         adapter_results=3,
+        adapter_gate={
+            "passed": True,
+            "status": "complete",
+            "request_coverage": 1.0,
+            "min_request_coverage": 1.0,
+            "blocking_reasons": [],
+        },
     )
 
     payload = module.rollup_citation_search_batch_evidence(
@@ -52454,7 +52462,13 @@ def test_citation_search_batch_evidence_rollup_promotes_complete_batches(tmp_pat
     assert payload["summary"]["adapter_request_count"] == 5
     assert payload["summary"]["source_document_count"] == 5
     assert payload["summary"]["adapter_result_count"] == 3
+    assert payload["summary"]["adapter_gate_present_count"] == 1
+    assert payload["summary"]["adapter_gate_passed_count"] == 1
+    assert payload["summary"]["adapter_gate_failed_count"] == 0
+    assert payload["summary"]["adapter_gate_status_counts"] == {"complete": 1}
     assert payload["summary"]["child_manifest_passed_count"] == 2
+    assert payload["batch_reports"][1]["adapter_gate_passed"] is True
+    assert payload["batch_reports"][1]["adapter_gate_request_coverage"] == pytest.approx(1.0)
     assert payload["summary"]["workflow_counts"] == {
         "external_citation_search_adapter_workflow": 1,
         "source_family_citation_search_workflow": 1,
@@ -52463,8 +52477,81 @@ def test_citation_search_batch_evidence_rollup_promotes_complete_batches(tmp_pat
     assert record.metadata["workflow"] == "citation_search_batch_evidence_rollup"
     assert record.metadata["promotion_ready"] is True
     assert record.metadata["observed_batch_count"] == 2
+    assert record.metadata["adapter_gate_failed_count"] == 0
     assert record.metadata["max_workers"] == 2
     assert record.metadata["suite"] == "unit"
+
+
+def test_citation_search_batch_evidence_rollup_blocks_failed_child_adapter_gate(tmp_path):
+    module = importlib.import_module("benchmarks.rollup_citation_search_batch_evidence")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    child_path = tmp_path / "source-family-batch.json"
+    child_dependency = tmp_path / "source-family-batch.input.json"
+    child_manifest = tmp_path / "source-family-batch.manifest.json"
+    report_path = tmp_path / "citation-batch-rollup.json"
+    child_dependency.write_text("{}", encoding="utf-8")
+    child_manifest.write_text(
+        json.dumps(registry_module.build_artifact_manifest({"dependency": child_dependency}, root=tmp_path)),
+        encoding="utf-8",
+    )
+    child_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "source_family_citation_search_workflow",
+            "status": "blocked",
+            "gate": {
+                "passed": False,
+                "promotion_ready": False,
+                "adapter_gate_passed": False,
+                "evidence_gate_passed": True,
+                "blocking_reasons": [{
+                    "gate": "adapter_request_coverage",
+                    "reason": "partial adapter coverage",
+                }],
+            },
+            "adapter_gate": {
+                "passed": False,
+                "status": "partial",
+                "request_coverage": 0.5,
+                "min_request_coverage": 1.0,
+                "blocking_reasons": [{
+                    "gate": "adapter_request_coverage",
+                    "reason": "partial adapter coverage",
+                }],
+            },
+            "request_summary": {
+                "selected_batch_count": 1,
+                "selected_batch_ids": ["unresolved-evidence-batch-0001"],
+                "adapter_request_count": 2,
+            },
+            "adapter_summary": {"result_count": 1},
+            "evidence_summary": {
+                "selected_batch_ids": ["unresolved-evidence-batch-0001"],
+                "source_document_count": 1,
+                "corpus_document_count": 1,
+            },
+            "paths": {"artifact_manifest": str(child_manifest)},
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.rollup_citation_search_batch_evidence(
+        report_paths=(child_path,),
+        expected_batch_ids=("unresolved-evidence-batch-0001",),
+        report_json_path=report_path,
+    )
+    reason_gates = {reason["gate"] for reason in payload["gate"]["blocking_reasons"]}
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["adapter_gate_present_count"] == 1
+    assert payload["summary"]["adapter_gate_passed_count"] == 0
+    assert payload["summary"]["adapter_gate_failed_count"] == 1
+    assert payload["summary"]["adapter_gate_status_counts"] == {"partial": 1}
+    assert payload["batch_reports"][0]["adapter_gate_status"] == "partial"
+    assert payload["batch_reports"][0]["adapter_gate_request_coverage"] == pytest.approx(0.5)
+    assert "child_gate" in reason_gates
+    assert "child_adapter_gate" in reason_gates
 
 
 def test_citation_search_batch_evidence_rollup_blocks_missing_expected_batch(tmp_path):

@@ -130,6 +130,7 @@ def rollup_citation_search_batch_evidence(
             "observed_batch_count": summary["observed_batch_count"],
             "missing_expected_batch_count": summary["missing_expected_batch_count"],
             "blocked_report_count": summary["blocked_report_count"],
+            "adapter_gate_failed_count": summary["adapter_gate_failed_count"],
             "child_manifest_failed_count": summary["child_manifest_failed_count"],
             "max_workers": workers,
             **dict(metadata or {}),
@@ -153,6 +154,7 @@ def rollup_citation_search_batch_evidence(
                 "observed_batch_count": summary["observed_batch_count"],
                 "missing_expected_batch_count": summary["missing_expected_batch_count"],
                 "blocked_report_count": summary["blocked_report_count"],
+                "adapter_gate_failed_count": summary["adapter_gate_failed_count"],
                 "child_manifest_failed_count": summary["child_manifest_failed_count"],
                 "artifact_manifest": str(manifest_path),
                 "max_workers": workers,
@@ -210,6 +212,9 @@ def _normalize_child_report(
     workflow = str(report.get("workflow") or "")
     status = str(report.get("status") or "")
     gate = _mapping(report.get("gate"))
+    adapter_gate = _mapping(report.get("adapter_gate"))
+    adapter_gate_present = bool(adapter_gate)
+    adapter_gate_blocking_reasons = _sequence(adapter_gate.get("blocking_reasons", ()))
     manifest_path = _nested(report, "paths", "artifact_manifest")
     manifest_verification = None
     manifest_error = None
@@ -233,6 +238,16 @@ def _normalize_child_report(
         "gate_passed": bool(gate.get("passed")),
         "promotion_ready": bool(gate.get("promotion_ready")),
         "blocking_reason_count": len(_sequence(gate.get("blocking_reasons", ()))),
+        "adapter_gate_present": adapter_gate_present,
+        "adapter_gate_passed": None if not adapter_gate_present else bool(adapter_gate.get("passed")),
+        "adapter_gate_status": None if not adapter_gate_present else str(adapter_gate.get("status") or ""),
+        "adapter_gate_request_coverage": (
+            None if not adapter_gate_present else _optional_float(adapter_gate.get("request_coverage"))
+        ),
+        "adapter_gate_min_request_coverage": (
+            None if not adapter_gate_present else _optional_float(adapter_gate.get("min_request_coverage"))
+        ),
+        "adapter_gate_blocking_reason_count": len(adapter_gate_blocking_reasons),
         "selected_batch_ids": batch_ids,
         "selected_batch_count": len(batch_ids),
         "adapter_request_count": _count_value(
@@ -273,6 +288,11 @@ def _summary(rows: Sequence[Mapping[str, Any]], *, expected_batch_ids: Sequence[
     observed_set = set(unique_observed)
     status_counts = Counter(str(row.get("status") or "") for row in rows)
     workflow_counts = Counter(str(row.get("workflow") or "") for row in rows)
+    adapter_gate_status_counts = Counter(
+        str(row.get("adapter_gate_status") or "")
+        for row in rows
+        if bool(row.get("adapter_gate_present"))
+    )
     return {
         "report_count": len(rows),
         "workflow_counts": _sorted_counter(workflow_counts),
@@ -281,6 +301,10 @@ def _summary(rows: Sequence[Mapping[str, Any]], *, expected_batch_ids: Sequence[
         "blocked_report_count": sum(1 for row in rows if row.get("status") == "blocked"),
         "gate_passed_count": sum(1 for row in rows if bool(row.get("gate_passed"))),
         "promotion_ready_count": sum(1 for row in rows if bool(row.get("promotion_ready"))),
+        "adapter_gate_present_count": sum(1 for row in rows if bool(row.get("adapter_gate_present"))),
+        "adapter_gate_status_counts": _sorted_counter(adapter_gate_status_counts),
+        "adapter_gate_passed_count": sum(1 for row in rows if row.get("adapter_gate_passed") is True),
+        "adapter_gate_failed_count": sum(1 for row in rows if row.get("adapter_gate_passed") is False),
         "child_manifest_passed_count": sum(1 for row in rows if row.get("child_manifest_passed") is True),
         "child_manifest_failed_count": sum(
             1
@@ -326,6 +350,16 @@ def _gate(
                 "gate": "child_gate",
                 "path": path,
                 "reason": f"Child workflow status is {row.get('status')!r} and gate_passed is false.",
+            })
+        if row.get("adapter_gate_passed") is False:
+            blocking.append({
+                "gate": "child_adapter_gate",
+                "path": path,
+                "reason": (
+                    "Child source-family adapter gate did not pass "
+                    f"(status={row.get('adapter_gate_status')!r}, "
+                    f"coverage={row.get('adapter_gate_request_coverage')!r})."
+                ),
             })
         if require_child_manifests:
             if row.get("child_manifest_error"):
@@ -481,6 +515,13 @@ def _string_sequence(value: Any) -> tuple[str, ...]:
 def _optional_int(value: Any) -> int | None:
     try:
         return None if value is None else int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _optional_float(value: Any) -> float | None:
+    try:
+        return None if value is None else float(value)
     except (TypeError, ValueError):
         return None
 

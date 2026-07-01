@@ -2777,6 +2777,10 @@ workflow's artifact manifest before marking the rollup as passed or promotion
 ready. Use `--max-workers` to read and verify many child reports with bounded
 parallelism; the default remains `1` for deterministic low-overhead local
 smokes.
+When a child source-family workflow exposes `adapter_gate`, the rollup preserves
+adapter coverage/status counts and blocks with `child_adapter_gate` if that
+adapter gate failed, so partial catalog runs remain visible at release-evidence
+level.
 
 ```bash
 python benchmarks/rollup_citation_search_batch_evidence.py \
@@ -2794,7 +2798,8 @@ python benchmarks/rollup_citation_search_batch_evidence.py \
 Use `--expected-batch-id` to roll up a planned subset, or
 `--expected-request-type any` when citation and rule-authoring batch reports
 should be checked together. Missing, duplicate, unexpected, unsupported, or
-manifest-failing child reports block the rollup.
+manifest-failing child reports block the rollup, as do explicit failed child
+adapter gates.
 
 ## `run_citation_batch_rollup_worker_sweep.py`
 

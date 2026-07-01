@@ -874,8 +874,11 @@ Added the first monitor-first tool-selection audit layer:
   gates. The adapter report now exposes its own request-coverage `status`/gate,
   and the outer workflow records that gate in manifests and registry metadata so
   partial catalog runs cannot look promotion-ready just because a downstream
-  evidence report exists. Its registered synthetic smoke artifact consumes `2`
-  unresolved citation requests and returns `2` adapter results, passes
+  evidence report exists. Batch rollups now carry the same child adapter-gate
+  status/coverage counts and block explicitly on `child_adapter_gate`, so the
+  release-evidence layer keeps the adapter root cause visible. Its registered
+  synthetic smoke artifact consumes `2` unresolved citation requests and returns `2`
+  adapter results, passes
   provenance, and remains blocked by query/comparison gates. This is the right
   fail-closed posture for official-source catalog integration: real source
   catalogs can be dropped in without creating a bypass around release evidence
