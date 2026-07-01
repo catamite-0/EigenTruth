@@ -328,7 +328,10 @@ def _action_summary(action: Mapping[str, Any]) -> dict[str, Any]:
         "action_type": action.get("action_type"),
         "priority": action.get("priority"),
         "evidence_routes": tuple(action.get("evidence_routes") or ()),
+        "source_gap_ids": tuple(action.get("source_gap_ids") or ()),
+        "suggested_commands": tuple(action.get("suggested_commands") or ()),
         "suggested_command_count": len(_sequence(action.get("suggested_commands"))),
+        "metadata": dict(_mapping(action.get("metadata"))),
     }
 
 

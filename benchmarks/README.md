@@ -6569,6 +6569,23 @@ gap plans do not downgrade the current promoted release. With
 `--refresh-research-queue`, the report recomputes the queue from the gap plan's
 `source_path` using the current `EvidenceGapPlan` mapper, which keeps stale
 planning artifacts visible while surfacing the newest executable action ids.
+Lower that refreshed queue into a non-executing command plan before binding any
+local paths or running child workflows:
+
+```bash
+python benchmarks/plan_frontier_research_queue_commands.py \
+  --source artifacts/frontier-status-report.json \
+  --json artifacts/frontier-research-queue-command-plan.json \
+  --artifact-manifest artifacts/frontier-research-queue-command-plan-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-command-plan \
+  --version 0.1
+```
+
+The command plan records action ids, command templates, placeholder counts,
+required inputs, and planned outputs. It is still a planning artifact; commands
+remain unbound and unexecuted until a reviewed caller supplies concrete local
+paths.
 
 Active v1.9 product contract export:
 

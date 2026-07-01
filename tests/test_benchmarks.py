@@ -31392,6 +31392,96 @@ def test_frontier_status_report_can_refresh_research_queue_from_source_path(tmp_
     assert payload["research_queue"]["gaps"][0]["research_axis"] == "participation_calibration"
 
 
+def test_frontier_research_queue_command_plan_uses_refreshed_status_report(tmp_path):
+    status_module = importlib.import_module("benchmarks.build_frontier_status_report")
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    registry_module = importlib.import_module("eigentruth.registry")
+    source_path = tmp_path / "blocked-frontier-release-evidence.json"
+    status_path = tmp_path / "frontier-status.json"
+    plan_path = tmp_path / "frontier-research-command-plan.json"
+    manifest_path = tmp_path / "frontier-research-command-plan-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    gap_plan = _frontier_status_gap_plan()
+    gap_plan["source_path"] = str(source_path)
+    source_path.write_text(
+        json.dumps({
+            "workflow": "frontier_release_evidence_comparison",
+            "decision": {
+                "status": "blocked",
+                "abstention_track_status": "blocked",
+                "blocking_reasons": (
+                    "abstention_track_status is blocked by participation-gate instability",
+                ),
+            },
+        }),
+        encoding="utf-8",
+    )
+    status_module.build_frontier_status_report(
+        release_candidate=_frontier_status_release_candidate(),
+        product_contract=_frontier_status_product_contract(),
+        evidence_gap_plan=gap_plan,
+        refresh_research_queue=True,
+        json_path=status_path,
+    )
+
+    payload = plan_module.build_frontier_research_queue_command_plan(
+        source=status_path,
+        json_path=plan_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="frontier-research-command-plan",
+        version="0.1",
+    )
+
+    saved = json.loads(plan_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:frontier-research-command-plan:0.1"
+    )
+    entry = payload["entries"][0]
+
+    assert saved["workflow"] == "frontier_research_queue_command_plan"
+    assert payload["status"] == "needs_inputs"
+    assert payload["source"]["workflow"] == "frontier_status_report"
+    assert payload["source"]["research_refresh_status"] == "refreshed"
+    assert payload["summary"]["entry_count"] == 1
+    assert payload["summary"]["command_count"] == 4
+    assert payload["summary"]["placeholder_count"] == 6
+    assert payload["summary"]["missing_input_count"] == 4
+    assert payload["summary"]["action_ids"] == ("improve_abstention_participation_gate",)
+    assert entry["command_status"] == "needs_inputs"
+    assert entry["missing_inputs"] == (
+        "frontier_release_report_or_evidence_gap_plan",
+        "abstention_score_dump_paths",
+        "abstention_signal_groups",
+        "bound_command_template_values",
+    )
+    assert entry["binding_hints"]["command_templates_need_binding"] is True
+    assert len(entry["planned_outputs"]) == 3
+    assert manifest["artifacts"]["frontier_research_queue_command_plan"]["exists"] is True
+    assert manifest["artifacts"]["source"]["exists"] is True
+    assert record.metadata["workflow"] == "frontier_research_queue_command_plan"
+    assert record.metadata["status"] == "needs_inputs"
+    assert record.metadata["entry_count"] == 1
+
+
+def test_frontier_research_queue_command_plan_requires_saved_path_for_in_memory_registry(
+    tmp_path,
+):
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+
+    with pytest.raises(ValueError, match="registry_path requires json_path"):
+        plan_module.build_frontier_research_queue_command_plan(
+            source={
+                "workflow": "evidence_gap_plan",
+                "actions": (),
+            },
+            registry_path=tmp_path / "registry.json",
+            name="frontier-research-command-plan",
+            version="0.1",
+        )
+
+
 def _frontier_status_release_candidate() -> dict[str, Any]:
     return {
         "workflow": "release_candidate_comparison",

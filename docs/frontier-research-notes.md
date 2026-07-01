@@ -1351,6 +1351,10 @@ Added the first monitor-first tool-selection audit layer:
   can also refresh that queue from the gap plan's source report, so old manual
   triage artifacts surface the current action ids for abstention participation
   and frontier-release metric refresh without being mistaken for new evidence.
+- `plan_frontier_research_queue_commands.py` lowers that refreshed queue into a
+  manifest/registry-ready command plan. On the current default refreshed status
+  it records the two frontier actions, eight command templates, and all unbound
+  placeholders/required inputs, keeping execution explicit and reviewable.
 
 ## Next Research-to-Code Candidates
 
