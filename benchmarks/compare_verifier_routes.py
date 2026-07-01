@@ -27,6 +27,36 @@ def _parse_named_path(value: str) -> tuple[str, Path]:
     return name, Path(path)
 
 
+def _parse_cache_key_mode_requirement(value: str) -> tuple[str, str]:
+    if "=" not in value:
+        raise ValueError("--require-cache-key-mode must be formatted as verifier=mode.")
+    name, mode = value.split("=", 1)
+    name = name.strip()
+    mode = mode.strip().lower()
+    if not name:
+        raise ValueError("--require-cache-key-mode verifier name cannot be empty.")
+    if mode not in {"exact", "semantic"}:
+        raise ValueError("--require-cache-key-mode mode must be one of: exact, semantic.")
+    return name, mode
+
+
+def _normalize_required_cache_key_modes(value: Mapping[str, str] | None) -> dict[str, str]:
+    if value is None:
+        return {}
+    if not isinstance(value, Mapping):
+        raise ValueError("required_cache_key_modes must be a mapping.")
+    requirements = {}
+    for name, mode in value.items():
+        key = str(name).strip()
+        mode_text = str(mode).strip().lower()
+        if not key:
+            raise ValueError("required_cache_key_modes names cannot be empty.")
+        if mode_text not in {"exact", "semantic"}:
+            raise ValueError("required_cache_key_modes values must be one of: exact, semantic.")
+        requirements[key] = mode_text
+    return requirements
+
+
 def _alpha_payload(run: Mapping[str, Any], alpha: float) -> Mapping[str, Any]:
     alphas = run.get("alphas", {})
     if not isinstance(alphas, Mapping):
@@ -271,6 +301,7 @@ def _cache_record(
         "run": str(run.get("name", report_name)),
         "source": str(source),
         "has_cache_stats": isinstance(stats, Mapping) and bool(stats),
+        "cache_key_modes": _cache_key_modes_from_run(run),
         "size": _as_int_or_none(total.get("size")),
         "hits": hits,
         "misses": misses,
@@ -560,6 +591,27 @@ def _aggregate_cache_summary(cache_records: Sequence[Mapping[str, Any]]) -> dict
     misses = sum(int(row.get("misses") or 0) for row in present)
     size = sum(int(row.get("size") or 0) for row in present)
     requests = hits + misses
+    mode_counts: dict[str, dict[str, int]] = {}
+    for row in cache_records:
+        modes = row.get("cache_key_modes", {})
+        if not isinstance(modes, Mapping):
+            continue
+        for name, mode in modes.items():
+            mode_text = str(mode)
+            if not mode_text:
+                continue
+            name_text = str(name)
+            counts = mode_counts.setdefault(name_text, {})
+            counts[mode_text] = counts.get(mode_text, 0) + 1
+    cache_key_modes = {
+        name: {
+            "modes": tuple(sorted(counts)),
+            "mode_counts": dict(sorted(counts.items())),
+            "run_count": sum(counts.values()),
+            "missing_runs": max(0, len(cache_records) - sum(counts.values())),
+        }
+        for name, counts in sorted(mode_counts.items())
+    }
     return {
         "n_runs": len(cache_records),
         "n_runs_with_cache_stats": len(present),
@@ -570,6 +622,7 @@ def _aggregate_cache_summary(cache_records: Sequence[Mapping[str, Any]]) -> dict
             "requests": requests,
             "hit_rate": None if requests == 0 else hits / requests,
         },
+        "cache_key_modes": cache_key_modes,
         "runs": [dict(row) for row in cache_records],
     }
 
@@ -829,12 +882,15 @@ def _thresholds_enabled(
     max_mean_attempted_route_count: float | None,
     max_retrieval_use_rate: float | None,
     min_cache_hit_rate: float | None,
+    required_cache_key_modes: Mapping[str, str] | None,
     min_staged_skip_rate: float | None,
     max_staged_verified_false_alarm: float | None,
     min_staged_verified_detection: float | None,
     max_staged_delta_false_alarm: float | None,
     min_staged_delta_detection: float | None,
 ) -> bool:
+    if required_cache_key_modes:
+        return True
     return any(
         value is not None
         for value in (
@@ -898,6 +954,29 @@ def _check_min_metric(
     return None
 
 
+def _cache_key_modes_from_run(run: Mapping[str, Any]) -> dict[str, str]:
+    modes = {}
+    reported_modes = run.get("verifier_cache_key_modes", {})
+    if isinstance(reported_modes, Mapping):
+        for name, mode in reported_modes.items():
+            mode_text = str(mode).strip().lower()
+            if mode_text:
+                modes[str(name)] = mode_text
+
+    stats = run.get("cache_stats", {})
+    if isinstance(stats, Mapping):
+        for name, payload in stats.items():
+            if not isinstance(payload, Mapping):
+                continue
+            mode = payload.get("cache_key_mode")
+            if mode is None:
+                continue
+            mode_text = str(mode).strip().lower()
+            if mode_text:
+                modes[str(name)] = mode_text
+    return modes
+
+
 def _check_max_metric(
     *,
     route: str,
@@ -959,6 +1038,7 @@ def build_route_quality_gate(
     max_mean_attempted_route_count: float | None = None,
     max_retrieval_use_rate: float | None = None,
     min_cache_hit_rate: float | None = None,
+    required_cache_key_modes: Mapping[str, str] | None = None,
     min_staged_skip_rate: float | None = None,
     max_staged_verified_false_alarm: float | None = None,
     min_staged_verified_detection: float | None = None,
@@ -983,6 +1063,7 @@ def build_route_quality_gate(
     )
     max_retrieval_use_rate = _validated_limit("max_retrieval_use_rate", max_retrieval_use_rate)
     min_cache_hit_rate = _validated_limit("min_cache_hit_rate", min_cache_hit_rate)
+    required_cache_key_modes = _normalize_required_cache_key_modes(required_cache_key_modes)
     min_staged_skip_rate = _validated_limit("min_staged_skip_rate", min_staged_skip_rate)
     max_staged_verified_false_alarm = _validated_limit(
         "max_staged_verified_false_alarm",
@@ -1013,6 +1094,7 @@ def build_route_quality_gate(
         max_mean_attempted_route_count=max_mean_attempted_route_count,
         max_retrieval_use_rate=max_retrieval_use_rate,
         min_cache_hit_rate=min_cache_hit_rate,
+        required_cache_key_modes=required_cache_key_modes,
         min_staged_skip_rate=min_staged_skip_rate,
         max_staged_verified_false_alarm=max_staged_verified_false_alarm,
         min_staged_verified_detection=min_staged_verified_detection,
@@ -1101,6 +1183,30 @@ def build_route_quality_gate(
             failure["reason"] = "aggregate report cache hit rate is missing or below threshold"
             failures.append(failure)
 
+    if required_cache_key_modes:
+        cache_key_modes = {}
+        if isinstance(cache_summary, Mapping):
+            raw_modes = cache_summary.get("cache_key_modes", {})
+            if isinstance(raw_modes, Mapping):
+                cache_key_modes = raw_modes
+        for name, required_mode in required_cache_key_modes.items():
+            observed_summary = cache_key_modes.get(name)
+            observed_modes = ()
+            missing_runs = None
+            if isinstance(observed_summary, Mapping):
+                observed_modes = tuple(str(mode) for mode in observed_summary.get("modes", ()))
+                missing_runs = _as_int_or_none(observed_summary.get("missing_runs"))
+            if observed_modes != (required_mode,) or (missing_runs is not None and missing_runs > 0):
+                failures.append({
+                    "route": None,
+                    "metric": f"cache_key_mode.{name}",
+                    "limit_type": "equals",
+                    "limit": required_mode,
+                    "value": None if not observed_modes else list(observed_modes),
+                    "missing_runs": missing_runs,
+                    "reason": "cache key mode is missing or differs from the required verifier mode",
+                })
+
     staged_limits = (
         ("staged_skip_rate", min_staged_skip_rate, _check_min_metric),
         ("staged_verified_false_alarm", max_staged_verified_false_alarm, _check_max_metric),
@@ -1158,6 +1264,7 @@ def build_route_quality_gate(
             "max_mean_attempted_route_count": max_mean_attempted_route_count,
             "max_retrieval_use_rate": max_retrieval_use_rate,
             "min_cache_hit_rate": min_cache_hit_rate,
+            "required_cache_key_modes": dict(required_cache_key_modes),
             "min_staged_skip_rate": min_staged_skip_rate,
             "max_staged_verified_false_alarm": max_staged_verified_false_alarm,
             "min_staged_verified_detection": min_staged_verified_detection,
@@ -1307,6 +1414,7 @@ def build_route_comparison_report(
     max_mean_attempted_route_count: float | None = None,
     max_retrieval_use_rate: float | None = None,
     min_cache_hit_rate: float | None = None,
+    required_cache_key_modes: Mapping[str, str] | None = None,
     min_staged_skip_rate: float | None = None,
     max_staged_verified_false_alarm: float | None = None,
     min_staged_verified_detection: float | None = None,
@@ -1345,6 +1453,7 @@ def build_route_comparison_report(
         max_mean_attempted_route_count=max_mean_attempted_route_count,
         max_retrieval_use_rate=max_retrieval_use_rate,
         min_cache_hit_rate=min_cache_hit_rate,
+        required_cache_key_modes=required_cache_key_modes,
         min_staged_skip_rate=min_staged_skip_rate,
         max_staged_verified_false_alarm=max_staged_verified_false_alarm,
         min_staged_verified_detection=min_staged_verified_detection,
@@ -1394,6 +1503,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_mean_attempted_route_count=args.max_mean_attempted_route_count,
         max_retrieval_use_rate=args.max_retrieval_use_rate,
         min_cache_hit_rate=args.min_cache_hit_rate,
+        required_cache_key_modes=dict(
+            _parse_cache_key_mode_requirement(value)
+            for value in args.require_cache_key_mode
+        ),
         min_staged_skip_rate=args.min_staged_skip_rate,
         max_staged_verified_false_alarm=args.max_staged_verified_false_alarm,
         min_staged_verified_detection=args.min_staged_verified_detection,
@@ -1448,6 +1561,8 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="fail gate when retrieval_use_rate exceeds this value")
     parser.add_argument("--min-cache-hit-rate", type=float, default=None,
                         help="fail gate when aggregate report cache hit rate is below this value")
+    parser.add_argument("--require-cache-key-mode", action="append", default=[],
+                        help="fail gate unless a verifier cache uses the requested mode, formatted as verifier=mode")
     parser.add_argument("--min-staged-skip-rate", type=float, default=None,
                         help="fail gate when staged verification aggregate skip_rate is below this value")
     parser.add_argument("--max-staged-verified-false-alarm", type=float, default=None,

@@ -11905,6 +11905,90 @@ def test_compare_verifier_routes_builds_cost_aware_quality_gate(tmp_path):
     assert cache_failing["promotion_decision"]["status"] == "blocked_by_gate"
 
 
+def test_compare_verifier_routes_gates_cache_key_modes(tmp_path):
+    module = importlib.import_module("benchmarks.compare_verifier_routes")
+    report_path = tmp_path / "route-cache-modes.json"
+    report_path.write_text(
+        json.dumps({
+            "runs": [
+                {
+                    "name": "cache-modes",
+                    "verifier_cache_key_modes": {
+                        "qa_verifier": "semantic",
+                        "state_verifier": "exact",
+                    },
+                    "route_quality": {
+                        "structured_qa": {
+                            "selected": 4,
+                            "n_true": 2,
+                            "n_false": 2,
+                            "label_status_matrix": {
+                                "true": {"supported": 2, "refuted": 0, "insufficient_evidence": 0},
+                                "false": {"supported": 0, "refuted": 2, "insufficient_evidence": 0},
+                            },
+                            "false_refuted_rate": 1.0,
+                            "false_supported_rate": 0.0,
+                            "decision_accuracy": 1.0,
+                        },
+                    },
+                    "cache_stats": {
+                        "qa_verifier": {
+                            "size": 2,
+                            "hits": 2,
+                            "misses": 2,
+                            "requests": 4,
+                            "hit_rate": 0.5,
+                            "cache_key_mode": "semantic",
+                        },
+                        "state_verifier": {
+                            "size": 1,
+                            "hits": 0,
+                            "misses": 1,
+                            "requests": 1,
+                            "hit_rate": 0.0,
+                            "cache_key_mode": "exact",
+                        },
+                        "total": {"size": 3, "hits": 2, "misses": 3, "requests": 5, "hit_rate": 0.4},
+                    },
+                    "alphas": {"0.1": {"route_control_impact": {}}},
+                }
+            ]
+        }),
+        encoding="utf-8",
+    )
+
+    passing = module.build_route_comparison_report(
+        [("cache-modes", report_path)],
+        gate_routes=("structured_qa",),
+        required_cache_key_modes={"qa_verifier": "semantic", "state_verifier": "exact"},
+    )
+    failing = module.build_route_comparison_report(
+        [("cache-modes", report_path)],
+        gate_routes=("structured_qa",),
+        required_cache_key_modes={"qa_verifier": "exact"},
+    )
+    missing = module.build_route_comparison_report(
+        [("cache-modes", report_path)],
+        gate_routes=("structured_qa",),
+        required_cache_key_modes={"groundedness_verifiers": "semantic"},
+    )
+
+    modes = passing["cache_summary"]["cache_key_modes"]
+    assert modes["qa_verifier"]["modes"] == ("semantic",)
+    assert modes["qa_verifier"]["missing_runs"] == 0
+    assert passing["quality_gate"]["passed"] is True
+    assert passing["quality_gate"]["config"]["required_cache_key_modes"] == {
+        "qa_verifier": "semantic",
+        "state_verifier": "exact",
+    }
+    assert failing["quality_gate"]["passed"] is False
+    assert failing["quality_gate"]["failures"][0]["metric"] == "cache_key_mode.qa_verifier"
+    assert failing["quality_gate"]["failures"][0]["value"] == ["semantic"]
+    assert missing["quality_gate"]["passed"] is False
+    assert missing["quality_gate"]["failures"][0]["metric"] == "cache_key_mode.groundedness_verifiers"
+    assert missing["quality_gate"]["failures"][0]["value"] is None
+
+
 def test_compare_verifier_routes_builds_staged_verification_gate(tmp_path):
     module = importlib.import_module("benchmarks.compare_verifier_routes")
     report_path = tmp_path / "staged-route.json"
@@ -12253,6 +12337,9 @@ def _write_adapter_promotion_route_report(path: Path, *, staged: bool = False) -
     }
     run = {
         "name": "routes",
+        "verifier_cache_key_modes": {
+            "state_verifier": "exact",
+        },
         "route_quality": {
             "structured_state": {
                 "selected": 4,
@@ -12279,6 +12366,14 @@ def _write_adapter_promotion_route_report(path: Path, *, staged: bool = False) -
             }
         },
         "cache_stats": {
+            "state_verifier": {
+                "size": 2,
+                "hits": 7,
+                "misses": 1,
+                "requests": 8,
+                "hit_rate": 0.875,
+                "cache_key_mode": "exact",
+            },
             "total": {"size": 2, "hits": 7, "misses": 1, "requests": 8, "hit_rate": 0.875}
         },
         "alphas": {"0.1": alpha_payload},
@@ -12462,6 +12557,7 @@ def test_run_adapter_promotion_workflow_writes_artifact_manifest(tmp_path):
             min_staged_verified_detection=0.85,
             max_staged_delta_false_alarm=0.0,
             min_staged_delta_detection=0.0,
+            required_cache_key_modes={"state_verifier": "exact"},
             artifact_manifest_path=manifest_path,
         )
     )
@@ -12471,6 +12567,8 @@ def test_run_adapter_promotion_workflow_writes_artifact_manifest(tmp_path):
     assert manifest["metadata"]["runner"] == "run_adapter_promotion_workflow"
     assert manifest["metadata"]["promotion_status"] == "promote"
     assert manifest["metadata"]["recommended_route"] == "structured_state"
+    assert manifest["metadata"]["required_cache_key_modes"] == {"state_verifier": "exact"}
+    assert manifest["metadata"]["cache_key_modes"]["state_verifier"]["modes"] == ["exact"]
     assert manifest["metadata"]["staged_skip_rate"] == pytest.approx(0.6)
     assert manifest["metadata"]["staged_verified_detection"] == pytest.approx(0.9)
     assert payload["route_comparison"]["quality_gate"]["config"]["min_staged_skip_rate"] == pytest.approx(0.5)
