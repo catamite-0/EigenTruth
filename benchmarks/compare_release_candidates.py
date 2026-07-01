@@ -346,6 +346,17 @@ _PRODUCT_RUNTIME_DRIFT_PROVENANCE_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] =
         "product_trace_provenance_final_answer_evidence_reference_rate",
     ),
 )
+_PRODUCT_RUNTIME_DRIFT_CITATION_INTEGRITY_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = (
+    (
+        "citation_integrity.participating_trace_rate",
+        "product_trace_citation_integrity_participating_trace_rate",
+    ),
+    ("citation_integrity.coverage_rate", "product_trace_citation_integrity_coverage_rate"),
+    ("citation_integrity.mismatch_rate", "product_trace_citation_integrity_mismatch_rate"),
+    ("citation_integrity.unresolved_rate", "product_trace_citation_integrity_unresolved_rate"),
+    ("citation_integrity.issue_rate", "product_trace_citation_integrity_issue_rate"),
+    ("citation_integrity.trace_gap_rate", "product_trace_citation_integrity_trace_gap_rate"),
+)
 _PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = (
     (
         "promotion_contract.evidence_handoff.coverage_rate",
@@ -561,6 +572,7 @@ def compare_release_candidates(
     require_product_runtime_drift_receipt_claim_support_evidence: bool = False,
     require_product_runtime_drift_trajectory_audit_evidence: bool = False,
     require_product_runtime_drift_provenance_evidence: bool = False,
+    require_product_runtime_drift_citation_integrity_evidence: bool = False,
     require_product_runtime_drift_evidence_handoff_evidence: bool = False,
     require_product_runtime_drift_world_model_evidence: bool = False,
     require_product_runtime_drift_context_sensitivity_evidence: bool = False,
@@ -824,6 +836,9 @@ def compare_release_candidates(
                 "require_product_runtime_drift_provenance_evidence": (
                     require_product_runtime_drift_provenance_evidence
                 ),
+                "require_product_runtime_drift_citation_integrity_evidence": (
+                    require_product_runtime_drift_citation_integrity_evidence
+                ),
                 "require_product_runtime_drift_evidence_handoff_evidence": (
                     require_product_runtime_drift_evidence_handoff_evidence
                 ),
@@ -984,6 +999,12 @@ def compare_release_candidates(
     )
     require_product_runtime_drift_provenance_evidence = bool(
         release_policy_values.get("require_product_runtime_drift_provenance_evidence", False)
+    )
+    require_product_runtime_drift_citation_integrity_evidence = bool(
+        release_policy_values.get(
+            "require_product_runtime_drift_citation_integrity_evidence",
+            False,
+        )
     )
     require_product_runtime_drift_evidence_handoff_evidence = bool(
         release_policy_values["require_product_runtime_drift_evidence_handoff_evidence"]
@@ -1590,6 +1611,9 @@ def compare_release_candidates(
             require_product_runtime_drift_trajectory_audit_evidence
         ),
         require_provenance_evidence=require_product_runtime_drift_provenance_evidence,
+        require_citation_integrity_evidence=(
+            require_product_runtime_drift_citation_integrity_evidence
+        ),
         require_evidence_handoff_evidence=(
             require_product_runtime_drift_evidence_handoff_evidence
         ),
@@ -1863,6 +1887,9 @@ def compare_release_candidates(
             ),
             "require_product_runtime_drift_provenance_evidence": bool(
                 require_product_runtime_drift_provenance_evidence
+            ),
+            "require_product_runtime_drift_citation_integrity_evidence": bool(
+                require_product_runtime_drift_citation_integrity_evidence
             ),
             "require_product_runtime_drift_evidence_handoff_evidence": bool(
                 require_product_runtime_drift_evidence_handoff_evidence
@@ -6867,6 +6894,7 @@ def _product_runtime_drift_gate(
     require_receipt_claim_support_evidence: bool,
     require_trajectory_audit_evidence: bool,
     require_provenance_evidence: bool,
+    require_citation_integrity_evidence: bool,
     require_evidence_handoff_evidence: bool,
     require_world_model_evidence: bool,
     require_context_sensitivity_evidence: bool,
@@ -6891,6 +6919,7 @@ def _product_runtime_drift_gate(
             or require_receipt_claim_support_evidence
             or require_trajectory_audit_evidence
             or require_provenance_evidence
+            or require_citation_integrity_evidence
             or require_evidence_handoff_evidence
             or require_world_model_evidence
             or require_context_sensitivity_evidence
@@ -7038,6 +7067,17 @@ def _product_runtime_drift_gate(
                         )
                     ) if require_provenance_evidence else (),
                     "provenance_evidence_blocked_metric_count": 0,
+                    "citation_integrity_evidence_required": bool(
+                        require_citation_integrity_evidence
+                    ),
+                    "citation_integrity_evidence_metric_count": 0,
+                    "citation_integrity_evidence_missing_metrics": tuple(
+                        metric_name
+                        for metric_name, _prefix in (
+                            _PRODUCT_RUNTIME_DRIFT_CITATION_INTEGRITY_EVIDENCE_FIELDS
+                        )
+                    ) if require_citation_integrity_evidence else (),
+                    "citation_integrity_evidence_blocked_metric_count": 0,
                     "evidence_handoff_evidence_required": bool(
                         require_evidence_handoff_evidence
                     ),
@@ -7168,6 +7208,12 @@ def _product_runtime_drift_gate(
         metrics,
         required=require_provenance_evidence,
     )
+    citation_integrity_evidence_summary = (
+        _product_runtime_drift_citation_integrity_evidence_summary(
+            metrics,
+            required=require_citation_integrity_evidence,
+        )
+    )
     evidence_handoff_evidence_summary = (
         _product_runtime_drift_evidence_handoff_evidence_summary(
             metrics,
@@ -7229,6 +7275,8 @@ def _product_runtime_drift_gate(
         require_trajectory_audit_evidence=require_trajectory_audit_evidence,
         provenance_evidence_summary=provenance_evidence_summary,
         require_provenance_evidence=require_provenance_evidence,
+        citation_integrity_evidence_summary=citation_integrity_evidence_summary,
+        require_citation_integrity_evidence=require_citation_integrity_evidence,
         evidence_handoff_evidence_summary=evidence_handoff_evidence_summary,
         require_evidence_handoff_evidence=require_evidence_handoff_evidence,
         world_model_evidence_summary=world_model_evidence_summary,
@@ -7273,6 +7321,7 @@ def _product_runtime_drift_gate(
             **receipt_claim_support_evidence_summary,
             **trajectory_audit_evidence_summary,
             **provenance_evidence_summary,
+            **citation_integrity_evidence_summary,
             **evidence_handoff_evidence_summary,
             **world_model_evidence_summary,
             **context_sensitivity_evidence_summary,
@@ -7315,6 +7364,8 @@ def _product_runtime_drift_report_gate(
     require_trajectory_audit_evidence: bool,
     provenance_evidence_summary: Mapping[str, Any],
     require_provenance_evidence: bool,
+    citation_integrity_evidence_summary: Mapping[str, Any],
+    require_citation_integrity_evidence: bool,
     evidence_handoff_evidence_summary: Mapping[str, Any],
     require_evidence_handoff_evidence: bool,
     world_model_evidence_summary: Mapping[str, Any],
@@ -7573,6 +7624,27 @@ def _product_runtime_drift_report_gate(
         if blocked_metric_count is not None and blocked_metric_count > 0:
             failures.append(
                 "product runtime drift provenance evidence blocked "
+                f"{int(blocked_metric_count)} metric(s)"
+            )
+    if require_citation_integrity_evidence:
+        missing_metrics = tuple(
+            citation_integrity_evidence_summary.get(
+                "citation_integrity_evidence_missing_metrics"
+            ) or ()
+        )
+        if missing_metrics:
+            failures.append(
+                "product runtime drift citation-integrity evidence metrics are incomplete: "
+                + ", ".join(str(metric) for metric in missing_metrics)
+            )
+        blocked_metric_count = _float_or_none(
+            citation_integrity_evidence_summary.get(
+                "citation_integrity_evidence_blocked_metric_count"
+            )
+        )
+        if blocked_metric_count is not None and blocked_metric_count > 0:
+            failures.append(
+                "product runtime drift citation-integrity evidence blocked "
                 f"{int(blocked_metric_count)} metric(s)"
             )
     if require_evidence_handoff_evidence:
@@ -8060,6 +8132,19 @@ def _product_runtime_drift_provenance_evidence_summary(
         metrics,
         fields=_PRODUCT_RUNTIME_DRIFT_PROVENANCE_EVIDENCE_FIELDS,
         evidence_prefix="provenance",
+        required=required,
+    )
+
+
+def _product_runtime_drift_citation_integrity_evidence_summary(
+    metrics: Sequence[Mapping[str, Any]],
+    *,
+    required: bool = False,
+) -> dict[str, Any]:
+    return _product_runtime_drift_named_evidence_summary(
+        metrics,
+        fields=_PRODUCT_RUNTIME_DRIFT_CITATION_INTEGRITY_EVIDENCE_FIELDS,
+        evidence_prefix="citation_integrity",
         required=required,
     )
 
@@ -9815,6 +9900,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         require_product_runtime_drift_provenance_evidence=bool(
             args.require_product_runtime_drift_provenance_evidence
         ),
+        require_product_runtime_drift_citation_integrity_evidence=bool(
+            args.require_product_runtime_drift_citation_integrity_evidence
+        ),
         require_product_runtime_drift_evidence_handoff_evidence=bool(
             args.require_product_runtime_drift_evidence_handoff_evidence
         ),
@@ -10133,6 +10221,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--require-product-runtime-drift-provenance-evidence", action="store_true",
                         help="require the product runtime drift report to include trace-provenance "
                              "coverage, support-reference, and missing-evidence drift metrics")
+    parser.add_argument("--require-product-runtime-drift-citation-integrity-evidence",
+                        action="store_true",
+                        help="require the product runtime drift report to include citation-integrity "
+                             "participation, coverage, mismatch, unresolved, issue, and trace-gap metrics")
     parser.add_argument("--require-product-runtime-drift-evidence-handoff-evidence", action="store_true",
                         help="require the product runtime drift report to include promotion-contract "
                              "evidence handoff coverage, manifest, metric completeness, and promoted-group "

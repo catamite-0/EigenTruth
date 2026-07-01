@@ -18786,6 +18786,12 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         blocked_metric_count=0,
         provenance_evidence=True,
     )
+    citation_integrity_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "citation-integrity-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        citation_integrity_evidence=True,
+    )
     evidence_handoff_drift_report = _write_product_runtime_drift_report(
         tmp_path / "evidence-handoff-runtime-drift",
         status="promote",
@@ -18843,6 +18849,13 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         blocked_metric_count=0,
         provenance_evidence=True,
         provenance_blocked=True,
+    )
+    blocked_citation_integrity_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "blocked-citation-integrity-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        citation_integrity_evidence=True,
+        citation_integrity_blocked=True,
     )
     blocked_evidence_handoff_drift_report = _write_product_runtime_drift_report(
         tmp_path / "blocked-evidence-handoff-runtime-drift",
@@ -19233,6 +19246,39 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         min_false_refuted_rate=0.99,
         product_runtime_drift_report_path=blocked_provenance_drift_report,
         require_product_runtime_drift_provenance_evidence=True,
+    )
+    citation_integrity = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=citation_integrity_drift_report,
+        require_product_runtime_drift_citation_integrity_evidence=True,
+    )
+    missing_citation_integrity = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=missing_evidence_drift_report,
+        require_product_runtime_drift_citation_integrity_evidence=True,
+    )
+    blocked_citation_integrity = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=blocked_citation_integrity_drift_report,
+        require_product_runtime_drift_citation_integrity_evidence=True,
     )
     evidence_handoff = module.compare_release_candidates(
         readiness_registry_path=registry_path,
@@ -19807,6 +19853,51 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
     assert any(
         "provenance evidence blocked 5 metric" in reason
         for reason in blocked_provenance["decision"]["blocking_reasons"][0]["reasons"]
+    )
+    assert citation_integrity["decision"]["status"] == "promote"
+    assert citation_integrity["config"][
+        "require_product_runtime_drift_citation_integrity_evidence"
+    ] is True
+    citation_integrity_summary = citation_integrity["release_candidate"][
+        "product_runtime_drift"
+    ]["summary"]
+    assert citation_integrity_summary["citation_integrity_evidence_required"] is True
+    assert citation_integrity_summary["citation_integrity_evidence_metric_count"] == 6
+    assert citation_integrity_summary[
+        "citation_integrity_evidence_blocked_metric_count"
+    ] == 0
+    assert citation_integrity_summary[
+        "product_trace_citation_integrity_coverage_rate_current"
+    ] == pytest.approx(1.0)
+    assert citation_integrity_summary[
+        "product_trace_citation_integrity_mismatch_rate_status"
+    ] == "pass"
+    assert missing_citation_integrity["decision"]["status"] == "blocked"
+    assert missing_citation_integrity["product_runtime_drift_gate"]["summary"][
+        "citation_integrity_evidence_missing_metrics"
+    ] == (
+        "citation_integrity.participating_trace_rate",
+        "citation_integrity.coverage_rate",
+        "citation_integrity.mismatch_rate",
+        "citation_integrity.unresolved_rate",
+        "citation_integrity.issue_rate",
+        "citation_integrity.trace_gap_rate",
+    )
+    assert any(
+        "citation-integrity evidence metrics are incomplete" in reason
+        for reason in missing_citation_integrity["decision"]["blocking_reasons"][0][
+            "reasons"
+        ]
+    )
+    assert blocked_citation_integrity["decision"]["status"] == "blocked"
+    assert blocked_citation_integrity["product_runtime_drift_gate"]["summary"][
+        "citation_integrity_evidence_blocked_metric_count"
+    ] == 4
+    assert any(
+        "citation-integrity evidence blocked 4 metric" in reason
+        for reason in blocked_citation_integrity["decision"]["blocking_reasons"][0][
+            "reasons"
+        ]
     )
     assert evidence_handoff["decision"]["status"] == "promote"
     assert evidence_handoff["config"][
@@ -27917,6 +28008,8 @@ def _write_product_runtime_drift_report(
     trajectory_audit_blocked=False,
     provenance_evidence=False,
     provenance_blocked=False,
+    citation_integrity_evidence=False,
+    citation_integrity_blocked=False,
     evidence_handoff_evidence=False,
     evidence_handoff_blocked=False,
     world_model_evidence=False,
@@ -29040,6 +29133,91 @@ def _write_product_runtime_drift_report(
                 "reason": (
                     "provenance.final_answer_evidence_reference_rate below gate"
                     if provenance_blocked
+                    else None
+                ),
+            },
+        ])
+    if citation_integrity_evidence:
+        citation_issue_status = "blocked" if citation_integrity_blocked else "pass"
+        citation_issue_current = 0.25 if citation_integrity_blocked else 0.0
+        metrics.extend([
+            {
+                "metric": "citation_integrity.participating_trace_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "citation_integrity.coverage_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "citation_integrity.mismatch_rate",
+                "status": citation_issue_status,
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": citation_issue_current,
+                "absolute_delta": citation_issue_current,
+                "absolute_increase": citation_issue_current,
+                "threshold": 0.05,
+                "reason": (
+                    "citation_integrity.mismatch_rate above gate"
+                    if citation_integrity_blocked
+                    else None
+                ),
+            },
+            {
+                "metric": "citation_integrity.unresolved_rate",
+                "status": citation_issue_status,
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": citation_issue_current,
+                "absolute_delta": citation_issue_current,
+                "absolute_increase": citation_issue_current,
+                "threshold": 0.05,
+                "reason": (
+                    "citation_integrity.unresolved_rate above gate"
+                    if citation_integrity_blocked
+                    else None
+                ),
+            },
+            {
+                "metric": "citation_integrity.issue_rate",
+                "status": citation_issue_status,
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": citation_issue_current,
+                "absolute_delta": citation_issue_current,
+                "absolute_increase": citation_issue_current,
+                "threshold": 0.05,
+                "reason": (
+                    "citation_integrity.issue_rate above gate"
+                    if citation_integrity_blocked
+                    else None
+                ),
+            },
+            {
+                "metric": "citation_integrity.trace_gap_rate",
+                "status": citation_issue_status,
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": citation_issue_current,
+                "absolute_delta": citation_issue_current,
+                "absolute_increase": citation_issue_current,
+                "threshold": 0.05,
+                "reason": (
+                    "citation_integrity.trace_gap_rate above gate"
+                    if citation_integrity_blocked
                     else None
                 ),
             },
