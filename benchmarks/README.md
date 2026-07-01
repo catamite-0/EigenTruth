@@ -5962,10 +5962,12 @@ Once the bound plan is ready, `run_runtime_drift_bound_command_plan.py` turns it
 into an auditable run report. By default it is a dry-run: commands are parsed,
 Python benchmark scripts are normalized to the configured interpreter, expected
 outputs are summarized, and optional manifest/registry records are written, but
-no runtime evidence is generated until a reviewed caller adds `--execute`. For
-reviewed independent entries, add `--workers N --continue-on-failure` to execute
-several runtime-drift evidence tasks concurrently while preserving per-entry
-command order:
+no runtime evidence is generated until a reviewed caller adds `--execute`. When
+commands do execute, the run report checks each planned output path after
+successful commands and blocks the report if an expected child artifact was not
+materialized. For reviewed independent entries, add
+`--workers N --continue-on-failure` to execute several runtime-drift evidence
+tasks concurrently while preserving per-entry command order:
 
 ```bash
 python benchmarks/run_runtime_drift_bound_command_plan.py \
@@ -6643,7 +6645,9 @@ The runner defaults to `dry_run` and only parses commands/expected outputs.
 fails closed unless each bound entry carries `review_status` of `approved` or
 `reviewed` in the bindings sidecar. Use `--allow-unreviewed-bindings` only for
 local debugging. The run report itself is an execution audit artifact rather
-than release evidence.
+than release evidence. Successful frontier execution also inherits the planned
+output materialization audit; a command that exits zero but does not write its
+expected child report leaves the run report `blocked`.
 For known frontier benchmark scripts, the binder also fails closed when a bound
 command is syntactically filled but still misses required CLI flags, such as an
 `eval_abstention_stability.py --json ...` template without `--scores` and

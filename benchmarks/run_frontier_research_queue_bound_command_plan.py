@@ -154,6 +154,8 @@ def run_frontier_research_queue_bound_command_plan(
                 "skipped_count": summary["skipped_count"],
                 "invalid_command_count": summary["invalid_command_count"],
                 "binding_not_reviewed_count": summary["binding_not_reviewed_count"],
+                "materialized_output_count": summary["materialized_output_count"],
+                "missing_output_count": summary["missing_output_count"],
                 "workers": worker_count,
                 "execution_mode": "parallel" if worker_count > 1 else "sequential",
                 "manifest_summary": {} if manifest is None else manifest.get("summary", {}),
@@ -228,6 +230,12 @@ def _write_manifest(
                 "summary",
                 "binding_not_reviewed_count",
             ),
+            "materialized_output_count": _nested_value(
+                payload,
+                "summary",
+                "materialized_output_count",
+            ),
+            "missing_output_count": _nested_value(payload, "summary", "missing_output_count"),
             "workers": _nested_value(payload, "config", "workers"),
             "execution_mode": _nested_value(payload, "config", "execution_mode"),
             "require_reviewed_bindings": _nested_value(

@@ -136,6 +136,8 @@ def run_runtime_drift_bound_command_plan(
                 "failed_count": summary["failed_count"],
                 "skipped_count": summary["skipped_count"],
                 "invalid_command_count": summary["invalid_command_count"],
+                "materialized_output_count": summary["materialized_output_count"],
+                "missing_output_count": summary["missing_output_count"],
                 "workers": worker_count,
                 "execution_mode": "parallel" if worker_count > 1 else "sequential",
                 "manifest_summary": {} if manifest is None else manifest.get("summary", {}),
@@ -242,6 +244,7 @@ def _run_entry(
     action_id = str(entry.get("action_id") or entry.get("entry_id") or "runtime-drift-action")
     entry_ready = str(entry.get("command_status") or "unknown") == "ready"
     block_reason = str(entry.get("execution_block_reason") or "entry_not_ready")
+    planned_outputs = tuple(_mapping_sequence(entry.get("planned_outputs", ())))
     command_reports = []
     stop_requested = skip_remaining
     for index, command in enumerate(_string_tuple(entry.get("bound_commands", ())), start=1):
@@ -262,7 +265,16 @@ def _run_entry(
         command_reports.append(report)
         if stop_on_failure and report["status"] in {"failed", "timed_out", "invalid_command"}:
             stop_requested = True
-    entry_status = _entry_status(entry_ready=entry_ready, command_reports=command_reports)
+    expected_outputs = _expected_output_checks(
+        planned_outputs,
+        cwd=cwd,
+        command_reports=command_reports,
+    )
+    entry_status = _entry_status(
+        entry_ready=entry_ready,
+        command_reports=command_reports,
+        expected_outputs=expected_outputs,
+    )
     result = {
         "entry_id": str(entry.get("entry_id") or action_id),
         "action_id": action_id,
@@ -270,7 +282,8 @@ def _run_entry(
         "source_command_status": str(entry.get("command_status") or "unknown"),
         "execution_status": entry_status,
         "evidence_routes": _string_tuple(entry.get("evidence_routes", ())),
-        "planned_outputs": tuple(_mapping_sequence(entry.get("planned_outputs", ()))),
+        "planned_outputs": planned_outputs,
+        "expected_outputs": expected_outputs,
         "commands": tuple(command_reports),
     }
     if not entry_ready and block_reason != "entry_not_ready":
@@ -354,7 +367,54 @@ def _skipped_command(command: str, *, index: int, reason: str) -> dict[str, Any]
     }
 
 
-def _entry_status(*, entry_ready: bool, command_reports: Sequence[Mapping[str, Any]]) -> str:
+def _expected_output_checks(
+    planned_outputs: Sequence[Mapping[str, Any]],
+    *,
+    cwd: Path,
+    command_reports: Sequence[Mapping[str, Any]],
+) -> tuple[dict[str, Any], ...]:
+    if not planned_outputs:
+        return ()
+    command_statuses = tuple(str(command.get("status") or "") for command in command_reports)
+    if command_statuses and all(status == "dry_run" for status in command_statuses):
+        check_status = "planned"
+    elif command_statuses and all(status == "succeeded" for status in command_statuses):
+        check_status = "check"
+    else:
+        check_status = "not_checked"
+    checks = []
+    for output in planned_outputs:
+        path_text = str(output.get("path") or "")
+        resolved = None if not path_text else _resolve_output_path(path_text, cwd=cwd)
+        exists = False if resolved is None else resolved.exists()
+        if not path_text:
+            status = "missing_path"
+        elif check_status == "check":
+            status = "exists" if exists else "missing"
+        else:
+            status = check_status
+        checks.append({
+            "name": str(output.get("name") or ""),
+            "path": path_text,
+            "status": status,
+            "exists": exists,
+        })
+    return tuple(checks)
+
+
+def _resolve_output_path(path: str, *, cwd: Path) -> Path:
+    candidate = Path(path)
+    if candidate.is_absolute():
+        return candidate
+    return cwd / candidate
+
+
+def _entry_status(
+    *,
+    entry_ready: bool,
+    command_reports: Sequence[Mapping[str, Any]],
+    expected_outputs: Sequence[Mapping[str, Any]],
+) -> str:
     statuses = tuple(str(command.get("status") or "unknown") for command in command_reports)
     if not command_reports:
         return "missing_commands" if entry_ready else "skipped_not_ready"
@@ -364,6 +424,8 @@ def _entry_status(*, entry_ready: bool, command_reports: Sequence[Mapping[str, A
         return "failed"
     if all(status == "dry_run" for status in statuses):
         return "dry_run"
+    if any(str(output.get("status") or "") in {"missing", "missing_path"} for output in expected_outputs):
+        return "missing_outputs"
     if all(status == "succeeded" for status in statuses):
         return "succeeded"
     if any(status == "skipped" for status in statuses):
@@ -374,11 +436,13 @@ def _entry_status(*, entry_ready: bool, command_reports: Sequence[Mapping[str, A
 def _summary(entries: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     entry_status_counts: dict[str, int] = {}
     command_status_counts: dict[str, int] = {}
-    expected_output_count = 0
+    output_status_counts: dict[str, int] = {}
     for entry in entries:
         entry_status = str(entry.get("execution_status") or "unknown")
         entry_status_counts[entry_status] = entry_status_counts.get(entry_status, 0) + 1
-        expected_output_count += len(_mapping_sequence(entry.get("planned_outputs", ())))
+        for output in _mapping_sequence(entry.get("expected_outputs", ())):
+            output_status = str(output.get("status") or "unknown")
+            output_status_counts[output_status] = output_status_counts.get(output_status, 0) + 1
         for command in _mapping_sequence(entry.get("commands", ())):
             command_status = str(command.get("status") or "unknown")
             command_status_counts[command_status] = command_status_counts.get(command_status, 0) + 1
@@ -396,9 +460,15 @@ def _summary(entries: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "timed_out_count": command_status_counts.get("timed_out", 0),
         "skipped_count": command_status_counts.get("skipped", 0),
         "invalid_command_count": command_status_counts.get("invalid_command", 0),
-        "expected_output_count": expected_output_count,
+        "expected_output_count": sum(output_status_counts.values()),
+        "materialized_output_count": output_status_counts.get("exists", 0),
+        "missing_output_count": output_status_counts.get("missing", 0)
+        + output_status_counts.get("missing_path", 0),
+        "planned_output_count": output_status_counts.get("planned", 0),
+        "unchecked_output_count": output_status_counts.get("not_checked", 0),
         "entry_status_counts": dict(sorted(entry_status_counts.items())),
         "command_status_counts": dict(sorted(command_status_counts.items())),
+        "output_status_counts": dict(sorted(output_status_counts.items())),
     }
 
 
@@ -408,6 +478,8 @@ def _status(*, summary: Mapping[str, Any], dry_run: bool) -> str:
     if int(summary.get("invalid_command_count", 0)) > 0:
         return "blocked"
     if int(summary.get("failed_count", 0)) > 0 or int(summary.get("timed_out_count", 0)) > 0:
+        return "blocked"
+    if int(summary.get("missing_output_count", 0)) > 0:
         return "blocked"
     if int(summary.get("skipped_count", 0)) > 0:
         return "needs_inputs"
@@ -443,6 +515,12 @@ def _write_manifest(
             "executed_count": _nested_value(payload, "summary", "executed_count"),
             "failed_count": _nested_value(payload, "summary", "failed_count"),
             "invalid_command_count": _nested_value(payload, "summary", "invalid_command_count"),
+            "materialized_output_count": _nested_value(
+                payload,
+                "summary",
+                "materialized_output_count",
+            ),
+            "missing_output_count": _nested_value(payload, "summary", "missing_output_count"),
             "workers": _nested_value(payload, "config", "workers"),
             "execution_mode": _nested_value(payload, "config", "execution_mode"),
             **dict(metadata),

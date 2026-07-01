@@ -1378,9 +1378,11 @@ Added the first monitor-first tool-selection audit layer:
   default runner produces a dry-run execution report before any explicit
   `--execute` child workflow run. Real frontier execution now fails closed for
   entries whose binding `review_status` is not `approved` or `reviewed`, marking
-  skipped commands as `binding_not_reviewed`. This closes the research queue
-  into an auditable experiment contract without promoting the contract, dry-run
-  report, or unreviewed command binding as verifier evidence.
+  skipped commands as `binding_not_reviewed`, and successful executed commands
+  must materialize their planned child output paths. This closes the research
+  queue into an auditable experiment contract without promoting the contract,
+  dry-run report, unreviewed command binding, or missing child output as verifier
+  evidence.
 - The binder now validates known frontier benchmark commands against required
   CLI flags. A directly filled abstention template is kept `needs_inputs` when
   `plan_frontier_abstention_evidence_reruns.py` omits the action-required

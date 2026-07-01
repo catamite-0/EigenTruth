@@ -2627,7 +2627,14 @@ def test_run_runtime_drift_bound_command_plan_dry_runs_ready_plan(tmp_path):
     assert payload["summary"]["dry_run_count"] == 1
     assert payload["summary"]["executed_count"] == 0
     assert payload["summary"]["expected_output_count"] == 1
+    assert payload["summary"]["planned_output_count"] == 1
+    assert payload["summary"]["missing_output_count"] == 0
     assert payload["entries"][0]["execution_status"] == "dry_run"
+    expected_output = payload["entries"][0]["expected_outputs"][0]
+    assert expected_output["exists"] is False
+    assert expected_output["name"] == "demo_report"
+    assert expected_output["path"] == str(tmp_path / "report.json")
+    assert expected_output["status"] == "planned"
     assert command["status"] == "dry_run"
     assert command["argv"] == (
         "/python",
@@ -2649,6 +2656,87 @@ def test_run_runtime_drift_bound_command_plan_dry_runs_ready_plan(tmp_path):
     assert record.metadata["execution_mode"] == "sequential"
     assert record.metadata["dry_run_count"] == 1
     assert record.metadata["succeeded_count"] == 0
+
+
+def test_run_runtime_drift_bound_command_plan_checks_materialized_outputs(tmp_path):
+    script_path = tmp_path / "write_report.py"
+    output_path = tmp_path / "report.json"
+    script_path.write_text(
+        "import sys\n"
+        "from pathlib import Path\n"
+        "Path(sys.argv[1]).write_text('{\"ok\": true}', encoding='utf-8')\n",
+        encoding="utf-8",
+    )
+
+    payload = run_runtime_drift_bound_command_plan(
+        bound_command_plan={
+            "schema_version": 1,
+            "workflow": "runtime_drift_evidence_bound_command_plan",
+            "status": "ready",
+            "entries": [
+                {
+                    "entry_id": "runtime-drift-0001",
+                    "action_id": "write_report",
+                    "title": "Write report",
+                    "command_status": "ready",
+                    "bound_commands": (
+                        f"{shlex.quote(str(script_path))} {shlex.quote(str(output_path))}",
+                    ),
+                    "planned_outputs": (
+                        {"name": "report", "path": str(output_path), "status": "planned"},
+                    ),
+                }
+            ],
+        },
+        dry_run=False,
+        cwd=tmp_path,
+        python_executable=sys.executable,
+    )
+
+    assert payload["status"] == "succeeded"
+    assert payload["summary"]["materialized_output_count"] == 1
+    assert payload["summary"]["missing_output_count"] == 0
+    assert payload["entries"][0]["execution_status"] == "succeeded"
+    assert payload["entries"][0]["expected_outputs"][0]["status"] == "exists"
+    assert output_path.exists()
+
+
+def test_run_runtime_drift_bound_command_plan_blocks_missing_outputs(tmp_path):
+    missing_output = tmp_path / "missing-report.json"
+
+    payload = run_runtime_drift_bound_command_plan(
+        bound_command_plan={
+            "schema_version": 1,
+            "workflow": "runtime_drift_evidence_bound_command_plan",
+            "status": "ready",
+            "entries": [
+                {
+                    "entry_id": "runtime-drift-0001",
+                    "action_id": "missing_report",
+                    "title": "Missing report",
+                    "command_status": "ready",
+                    "bound_commands": (f"{sys.executable} -c \"print('ok')\"",),
+                    "planned_outputs": (
+                        {
+                            "name": "report",
+                            "path": str(missing_output),
+                            "status": "planned",
+                        },
+                    ),
+                }
+            ],
+        },
+        dry_run=False,
+        cwd=tmp_path,
+        python_executable=sys.executable,
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["succeeded_count"] == 1
+    assert payload["summary"]["materialized_output_count"] == 0
+    assert payload["summary"]["missing_output_count"] == 1
+    assert payload["entries"][0]["execution_status"] == "missing_outputs"
+    assert payload["entries"][0]["expected_outputs"][0]["status"] == "missing"
 
 
 def test_run_runtime_drift_bound_command_plan_blocks_unbound_placeholder():
