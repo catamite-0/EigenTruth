@@ -1377,10 +1377,18 @@ Added the first monitor-first tool-selection audit layer:
   can also refresh that queue from the gap plan's source report, so old manual
   triage artifacts surface the current action ids for abstention participation
   and frontier-release metric refresh without being mistaken for new evidence.
+  It now records `research_queue.lifecycle_status` plus source-alignment
+  metadata against the current frontier release-evidence path, so historical
+  blocked queues can be marked `superseded` once a newer promoted release closes
+  the same track.
 - `plan_frontier_research_queue_commands.py` lowers that refreshed queue into a
-  manifest/registry-ready command plan. On the current default refreshed status
-  it records the two frontier actions, eight command templates, and all unbound
+  manifest/registry-ready command plan while preserving the source queue's
+  lifecycle/alignment metadata. On the current default refreshed status it
+  records the two frontier actions, eight command templates, and all unbound
   placeholders/required inputs, keeping execution explicit and reviewable.
+  Callers that want only current-release blockers can opt into
+  `--only-active-research-queue`, which returns an empty plan for closed or
+  superseded historical queues instead of converting them into runnable work.
 - `scaffold_frontier_research_queue_bindings.py` now turns that command plan
   into a review scaffold plus deliberately empty bindings skeleton. On the
   current default refreshed queue it surfaces `53` ordered placeholders and

@@ -33,6 +33,7 @@ def build_frontier_research_queue_command_plan(
     output_dir: str | Path | None = None,
     include_action_ids: Sequence[str] = (),
     exclude_action_ids: Sequence[str] = (),
+    only_active_research_queue: bool = False,
     compact_json: bool = False,
     metadata: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -55,11 +56,15 @@ def build_frontier_research_queue_command_plan(
     output_path = None if json_path is None else Path(json_path)
     manifest_path = None if artifact_manifest_path is None else Path(artifact_manifest_path)
     plan_root = _plan_root(source_path=source_path, output_path=output_path, output_dir=output_dir)
-    actions = _filtered_actions(
-        _source_actions(source_payload),
-        include_action_ids=include_action_ids,
-        exclude_action_ids=exclude_action_ids,
-    )
+    source_lifecycle_status = _nested(source_payload, "research_queue", "lifecycle_status")
+    source_alignment_status = _nested(source_payload, "research_queue", "source_alignment", "status")
+    actions = ()
+    if not only_active_research_queue or _is_active_research_queue(source_payload):
+        actions = _filtered_actions(
+            _source_actions(source_payload),
+            include_action_ids=include_action_ids,
+            exclude_action_ids=exclude_action_ids,
+        )
     entries = tuple(
         _command_entry(action, index=index, plan_root=plan_root)
         for index, action in enumerate(actions, start=1)
@@ -77,6 +82,8 @@ def build_frontier_research_queue_command_plan(
             "research_refresh_status": _nested(
                 source_payload, "research_queue", "refresh_status"
             ),
+            "research_lifecycle_status": source_lifecycle_status,
+            "research_source_alignment_status": source_alignment_status,
         },
         "summary": summary,
         "paths": {
@@ -88,6 +95,7 @@ def build_frontier_research_queue_command_plan(
             "executes_commands": False,
             "include_action_ids": tuple(str(item) for item in include_action_ids if str(item)),
             "exclude_action_ids": tuple(str(item) for item in exclude_action_ids if str(item)),
+            "only_active_research_queue": bool(only_active_research_queue),
         },
         "entries": entries,
         "metadata": dict(metadata or {}),
@@ -117,6 +125,9 @@ def build_frontier_research_queue_command_plan(
                 "status": status,
                 "source_workflow": workflow,
                 "source_path": None if source_path is None else str(source_path),
+                "source_research_lifecycle_status": source_lifecycle_status,
+                "source_research_alignment_status": source_alignment_status,
+                "only_active_research_queue": bool(only_active_research_queue),
                 "entry_count": summary["entry_count"],
                 "ready_entry_count": summary["ready_entry_count"],
                 "needs_input_entry_count": summary["needs_input_entry_count"],
@@ -135,6 +146,15 @@ def _source_actions(payload: Mapping[str, Any]) -> tuple[Mapping[str, Any], ...]
     if payload.get("workflow") == "frontier_status_report":
         return tuple(_mapping_sequence(_nested(payload, "research_queue", "actions")))
     return tuple(_mapping_sequence(payload.get("actions", ())))
+
+
+def _is_active_research_queue(payload: Mapping[str, Any]) -> bool:
+    if payload.get("workflow") != "frontier_status_report":
+        return True
+    research_queue = _mapping(payload.get("research_queue"))
+    if research_queue.get("active") is True:
+        return True
+    return str(research_queue.get("lifecycle_status") or "") in {"active", "current_blocker"}
 
 
 def _filtered_actions(
@@ -420,6 +440,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output-dir", default=None, help="planned output directory root")
     parser.add_argument("--include-action-id", action="append", default=[])
     parser.add_argument("--exclude-action-id", action="append", default=[])
+    parser.add_argument(
+        "--only-active-research-queue",
+        action="store_true",
+        help="when source is a frontier status report, skip closed/superseded research queues",
+    )
     parser.add_argument("--compact-json", action="store_true", help="write compact JSON")
     return parser
 
@@ -435,6 +460,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         output_dir=args.output_dir,
         include_action_ids=tuple(args.include_action_id or ()),
         exclude_action_ids=tuple(args.exclude_action_id or ()),
+        only_active_research_queue=bool(args.only_active_research_queue),
         compact_json=bool(args.compact_json),
     )
     if args.json is None:

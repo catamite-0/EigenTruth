@@ -6613,6 +6613,9 @@ gap plans do not downgrade the current promoted release. With
 `--refresh-research-queue`, the report recomputes the queue from the gap plan's
 `source_path` using the current `EvidenceGapPlan` mapper, which keeps stale
 planning artifacts visible while surfacing the newest executable action ids.
+The `research_queue.lifecycle_status` and `research_queue.source_alignment`
+fields say whether those actions are still active for the current frontier
+release evidence path or have been superseded by a newer promoted release.
 Lower that refreshed queue into a non-executing command plan before binding any
 local paths or running child workflows:
 
@@ -6627,9 +6630,13 @@ python benchmarks/plan_frontier_research_queue_commands.py \
 ```
 
 The command plan records action ids, command templates, placeholder counts,
-required inputs, and planned outputs. It is still a planning artifact; commands
-remain unbound and unexecuted until a reviewed caller supplies concrete local
-paths.
+required inputs, planned outputs, and the source queue lifecycle/alignment
+metadata. It is still a planning artifact; commands remain unbound and
+unexecuted until a reviewed caller supplies concrete local paths.
+When the source is a status report and you only want actions that still belong
+to the current release blocker set, add `--only-active-research-queue`; closed
+or superseded historical queues then produce an empty command plan instead of
+reviewable commands.
 Generate a review scaffold before editing bindings by hand:
 
 ```bash

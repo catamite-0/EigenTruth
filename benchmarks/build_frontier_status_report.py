@@ -86,12 +86,18 @@ def build_frontier_status_report(
         ).to_dict()
         research_queue_payload = refreshed_plan
         research_refresh_status = "refreshed"
+    blockers = _active_blockers(release_summary=release_summary, contract_summary=contract_summary)
     research_queue = _research_queue(
         research_queue_payload,
         refresh_status=research_refresh_status,
         original_payload=None if research_queue_payload is gap_payload else gap_payload,
+        research_source_path=research_source_path,
+        current_frontier_release_evidence_report=release_summary["frontier_release_evidence"].get(
+            "report_path"
+        )
+        or release_summary.get("frontier_release_evidence_report"),
+        productized_blocking_reasons=blockers,
     )
-    blockers = _active_blockers(release_summary=release_summary, contract_summary=contract_summary)
     status = "promote" if not blockers else "needs_evidence"
     output_path = None if json_path is None else Path(json_path)
     manifest_path = None if artifact_manifest_path is None else Path(artifact_manifest_path)
@@ -147,7 +153,15 @@ def build_frontier_status_report(
                 "required_evidence_group_count": contract_summary["required_evidence_group_count"],
                 "blocked_evidence_group_count": contract_summary["blocked_evidence_group_count"],
                 "research_action_count": research_queue["action_count"],
+                "research_active_action_count": research_queue["active_action_count"],
+                "research_superseded_action_count": research_queue[
+                    "superseded_action_count"
+                ],
                 "research_gap_count": research_queue["gap_count"],
+                "research_lifecycle_status": research_queue["lifecycle_status"],
+                "research_source_alignment_status": research_queue["source_alignment"][
+                    "status"
+                ],
                 "research_refresh_status": research_queue["refresh_status"],
                 "manifest_summary": {} if manifest is None else manifest.get("summary", {}),
                 **dict(metadata or {}),
@@ -278,10 +292,15 @@ def _research_queue(
     *,
     refresh_status: str = "not_requested",
     original_payload: Mapping[str, Any] | None = None,
+    research_source_path: Path | None = None,
+    current_frontier_release_evidence_report: Any = None,
+    productized_blocking_reasons: Sequence[str] = (),
 ) -> dict[str, Any]:
     if not payload:
         return {
             "status": "not_provided",
+            "lifecycle_status": "not_provided",
+            "active": False,
             "workflow": None,
             "source_workflow": None,
             "source_path": None,
@@ -291,8 +310,17 @@ def _research_queue(
             "source_status": None,
             "gap_count": 0,
             "action_count": 0,
+            "active_action_count": 0,
+            "superseded_action_count": 0,
             "missing_metric_count": 0,
             "top_action_ids": (),
+            "source_alignment": {
+                "status": "not_applicable",
+                "is_current": None,
+                "research_source_path": None,
+                "current_frontier_release_evidence_report": current_frontier_release_evidence_report,
+                "reason": "no research queue was provided",
+            },
             "actions": (),
             "gaps": (),
         }
@@ -300,25 +328,127 @@ def _research_queue(
     actions = tuple(_action_summary(action) for action in _mapping_sequence(payload.get("actions", ())))
     gaps = tuple(_gap_summary(gap) for gap in _mapping_sequence(payload.get("gaps", ())))
     original_summary = _mapping(original_payload.get("summary")) if original_payload else {}
+    source_path = payload.get("source_path")
+    if source_path is None and research_source_path is not None:
+        source_path = str(research_source_path)
+    source_status = payload.get("source_status") or summary.get("source_decision_status")
+    gap_count = summary.get("gap_count", len(gaps))
+    action_count = summary.get("action_count", len(actions))
+    alignment = _research_source_alignment(
+        source_path=source_path,
+        source_status=source_status,
+        current_frontier_release_evidence_report=current_frontier_release_evidence_report,
+    )
+    lifecycle_status = _research_queue_lifecycle_status(
+        action_count=_int_or_zero(action_count),
+        gap_count=_int_or_zero(gap_count),
+        source_status=source_status,
+        alignment_status=alignment["status"],
+        productized_blocking_reasons=productized_blocking_reasons,
+    )
+    active = lifecycle_status in {"active", "current_blocker"}
+    superseded = lifecycle_status == "superseded"
     return {
         "status": payload.get("status"),
+        "lifecycle_status": lifecycle_status,
+        "active": active,
         "workflow": payload.get("workflow"),
         "source_workflow": payload.get("source_workflow"),
-        "source_path": payload.get("source_path"),
+        "source_path": source_path,
         "refresh_status": refresh_status,
         "original_action_count": original_summary.get("action_count"),
         "original_gap_count": original_summary.get("gap_count"),
-        "source_status": payload.get("source_status") or summary.get("source_decision_status"),
-        "gap_count": summary.get("gap_count", len(gaps)),
-        "action_count": summary.get("action_count", len(actions)),
+        "source_status": source_status,
+        "gap_count": gap_count,
+        "action_count": action_count,
+        "active_action_count": action_count if active else 0,
+        "superseded_action_count": action_count if superseded else 0,
         "missing_metric_count": summary.get("missing_metric_count", 0),
         "gates": dict(_mapping(summary.get("gates"))),
         "research_axes": dict(_mapping(summary.get("research_axes"))),
         "root_causes": dict(_mapping(summary.get("root_causes"))),
         "top_action_ids": tuple(summary.get("top_action_ids") or ()),
+        "source_alignment": alignment,
         "actions": actions,
         "gaps": gaps,
     }
+
+
+def _research_source_alignment(
+    *,
+    source_path: Any,
+    source_status: Any,
+    current_frontier_release_evidence_report: Any,
+) -> dict[str, Any]:
+    source_key = _artifact_path_key(source_path)
+    current_key = _artifact_path_key(current_frontier_release_evidence_report)
+    if source_key is None:
+        if current_key is None:
+            status = "unknown"
+            is_current = None
+            reason = "research queue has no source path and no current frontier evidence path is known"
+        else:
+            status = "unknown"
+            is_current = None
+            reason = "research queue has no source path to compare with current frontier evidence"
+    elif current_key is None:
+        status = "unknown"
+        is_current = None
+        reason = "current frontier evidence path is unavailable"
+    elif source_key == current_key:
+        status = "current"
+        is_current = True
+        reason = "research queue source matches the current frontier evidence report"
+    else:
+        status = "stale"
+        is_current = False
+        reason = "research queue source differs from the current frontier evidence report"
+    return {
+        "status": status,
+        "is_current": is_current,
+        "source_status": None if source_status is None else str(source_status),
+        "research_source_path": None if source_path is None else str(source_path),
+        "current_frontier_release_evidence_report": None
+        if current_frontier_release_evidence_report is None
+        else str(current_frontier_release_evidence_report),
+        "reason": reason,
+    }
+
+
+def _research_queue_lifecycle_status(
+    *,
+    action_count: int,
+    gap_count: int,
+    source_status: Any,
+    alignment_status: str,
+    productized_blocking_reasons: Sequence[str],
+) -> str:
+    if action_count <= 0 and gap_count <= 0:
+        return "empty"
+    if productized_blocking_reasons:
+        return "current_blocker" if alignment_status in {"current", "unknown"} else "stale"
+    if str(source_status or "").lower() == "promote":
+        return "closed"
+    if alignment_status == "stale":
+        return "superseded"
+    if alignment_status == "unknown":
+        return "superseded"
+    return "active"
+
+
+def _artifact_path_key(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value)
+    if not text:
+        return None
+    path = Path(text)
+    if not path.is_absolute():
+        path = ROOT / path
+    try:
+        return path.resolve(strict=False).as_posix()
+    except OSError:
+        return path.as_posix()
 
 
 def _action_summary(action: Mapping[str, Any]) -> dict[str, Any]:
@@ -412,6 +542,18 @@ def _write_manifest(
                 payload, "productized_status", "product_contract", "status"
             ),
             "research_action_count": _nested(payload, "research_queue", "action_count"),
+            "research_active_action_count": _nested(
+                payload, "research_queue", "active_action_count"
+            ),
+            "research_superseded_action_count": _nested(
+                payload, "research_queue", "superseded_action_count"
+            ),
+            "research_lifecycle_status": _nested(
+                payload, "research_queue", "lifecycle_status"
+            ),
+            "research_source_alignment_status": _nested(
+                payload, "research_queue", "source_alignment", "status"
+            ),
             "research_refresh_status": _nested(payload, "research_queue", "refresh_status"),
             **dict(metadata),
         },

@@ -31332,7 +31332,15 @@ def test_frontier_status_report_summarizes_productized_and_research_queue(tmp_pa
     assert payload["productized_status"]["product_contract"]["required_evidence_group_count"] == 2
     assert payload["productized_status"]["product_contract"]["blocked_evidence_group_count"] == 0
     assert payload["research_queue"]["status"] == "needs_evidence"
+    assert payload["research_queue"]["lifecycle_status"] == "superseded"
+    assert payload["research_queue"]["active"] is False
     assert payload["research_queue"]["action_count"] == 1
+    assert payload["research_queue"]["active_action_count"] == 0
+    assert payload["research_queue"]["superseded_action_count"] == 1
+    assert payload["research_queue"]["source_alignment"]["status"] == "unknown"
+    assert payload["research_queue"]["source_alignment"][
+        "current_frontier_release_evidence_report"
+    ] == "artifacts/unit-frontier-release.json"
     assert payload["research_queue"]["actions"][0]["action_id"] == "collect_more_evidence"
     assert payload["research_queue"]["actions"][0]["suggested_command_count"] == 1
     assert manifest["artifacts"]["frontier_status_report"]["exists"] is True
@@ -31342,6 +31350,12 @@ def test_frontier_status_report_summarizes_productized_and_research_queue(tmp_pa
     assert record.metadata["workflow"] == "frontier_status_report"
     assert record.metadata["status"] == "promote"
     assert record.metadata["research_action_count"] == 1
+    assert record.metadata["research_active_action_count"] == 0
+    assert record.metadata["research_superseded_action_count"] == 1
+    assert record.metadata["research_lifecycle_status"] == "superseded"
+    assert record.metadata["research_source_alignment_status"] == "unknown"
+    assert manifest["metadata"]["research_lifecycle_status"] == "superseded"
+    assert manifest["metadata"]["research_source_alignment_status"] == "unknown"
 
 
 def test_frontier_status_report_marks_blocked_release_as_needs_evidence():
@@ -31408,6 +31422,12 @@ def test_frontier_status_report_can_refresh_research_queue_from_source_path(tmp_
     assert payload["status"] == "promote"
     assert payload["paths"]["research_queue_source"] == str(source_path)
     assert payload["research_queue"]["refresh_status"] == "refreshed"
+    assert payload["research_queue"]["lifecycle_status"] == "superseded"
+    assert payload["research_queue"]["active"] is False
+    assert payload["research_queue"]["source_alignment"]["status"] == "stale"
+    assert payload["research_queue"]["source_alignment"]["research_source_path"] == str(
+        source_path
+    )
     assert payload["research_queue"]["workflow"] == "evidence_gap_plan"
     assert payload["research_queue"]["source_workflow"] == "frontier_release_evidence_comparison"
     assert payload["research_queue"]["original_action_count"] == 1
@@ -31470,6 +31490,8 @@ def test_frontier_research_queue_command_plan_uses_refreshed_status_report(tmp_p
     assert payload["status"] == "needs_inputs"
     assert payload["source"]["workflow"] == "frontier_status_report"
     assert payload["source"]["research_refresh_status"] == "refreshed"
+    assert payload["source"]["research_lifecycle_status"] == "superseded"
+    assert payload["source"]["research_source_alignment_status"] == "stale"
     assert payload["summary"]["entry_count"] == 1
     assert payload["summary"]["command_count"] == 4
     assert payload["summary"]["placeholder_count"] == 6
@@ -31488,7 +31510,51 @@ def test_frontier_research_queue_command_plan_uses_refreshed_status_report(tmp_p
     assert manifest["artifacts"]["source"]["exists"] is True
     assert record.metadata["workflow"] == "frontier_research_queue_command_plan"
     assert record.metadata["status"] == "needs_inputs"
+    assert record.metadata["source_research_lifecycle_status"] == "superseded"
+    assert record.metadata["source_research_alignment_status"] == "stale"
     assert record.metadata["entry_count"] == 1
+
+
+def test_frontier_research_queue_command_plan_can_skip_inactive_status_queue(tmp_path):
+    status_module = importlib.import_module("benchmarks.build_frontier_status_report")
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    source_path = tmp_path / "blocked-frontier-release-evidence.json"
+    status_path = tmp_path / "frontier-status.json"
+    gap_plan = _frontier_status_gap_plan()
+    gap_plan["source_path"] = str(source_path)
+    source_path.write_text(
+        json.dumps({
+            "workflow": "frontier_release_evidence_comparison",
+            "decision": {
+                "status": "blocked",
+                "abstention_track_status": "blocked",
+                "blocking_reasons": (
+                    "abstention_track_status is blocked by participation-gate instability",
+                ),
+            },
+        }),
+        encoding="utf-8",
+    )
+    status_module.build_frontier_status_report(
+        release_candidate=_frontier_status_release_candidate(),
+        product_contract=_frontier_status_product_contract(),
+        evidence_gap_plan=gap_plan,
+        refresh_research_queue=True,
+        json_path=status_path,
+    )
+
+    default_plan = plan_module.build_frontier_research_queue_command_plan(source=status_path)
+    active_only_plan = plan_module.build_frontier_research_queue_command_plan(
+        source=status_path,
+        only_active_research_queue=True,
+    )
+
+    assert default_plan["summary"]["entry_count"] == 1
+    assert default_plan["source"]["research_lifecycle_status"] == "superseded"
+    assert active_only_plan["status"] == "empty"
+    assert active_only_plan["summary"]["entry_count"] == 0
+    assert active_only_plan["config"]["only_active_research_queue"] is True
+    assert active_only_plan["source"]["research_lifecycle_status"] == "superseded"
 
 
 def test_frontier_research_queue_command_plan_requires_saved_path_for_in_memory_registry(
