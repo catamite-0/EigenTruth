@@ -5828,9 +5828,10 @@ manifest, requires `status=promote`, and carries baseline/current paths plus
 blocked-metric counts into the release candidate. This connects captured product
 traffic replay back into the same release gate as model, route, and selector
 evidence. Add `--require-product-runtime-drift-pre-generation-evidence` when the
-release must also require pre-generation probe comparison coverage,
-manifest-verification, model/run breadth, redline pass-rate, AUROC, and
-redline-margin metrics from that drift report. Add
+release must also require pre-generation risk telemetry
+(risk coverage, learned-risk coverage/routing/probability, and audit-profile
+rate) plus probe comparison coverage, manifest-verification, model/run breadth,
+redline pass-rate, AUROC, and redline-margin metrics from that drift report. Add
 `--require-product-runtime-drift-claim-factuality-evidence` when the release must
 also require claim factuality probe comparison coverage, manifest-verification,
 model/run breadth, redline pass-rate, AUROC, selective accuracy/coverage, and
@@ -5970,8 +5971,8 @@ covered-facts external-evidence handoff, registered triple-extraction fixture
 matrix, and external-prediction triple-extraction minima unless explicit file
 paths are supplied. The release must carry the strict adapter-family matrix,
 rule-based state-transition world-model evidence, promotion-backed runtime-drift
-evidence, pre-generation runtime-drift evidence, counterfactual verifier-audit
-runtime-drift evidence, trace-level triple-audit
+evidence, pre-generation risk-telemetry/probe-comparison runtime-drift
+evidence, counterfactual verifier-audit runtime-drift evidence, trace-level triple-audit
 evidence, recommended-route covered-fact property/action-gate drift evidence,
 trajectory-audit runtime-drift evidence, trace-level world-model runtime-drift
 evidence, trace-level context-sensitivity runtime-drift evidence, registered

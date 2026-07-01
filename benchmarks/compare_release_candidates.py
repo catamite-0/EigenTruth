@@ -58,7 +58,32 @@ _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = 
         "triple_extraction_fixture_matrix_mean_f1_lift",
     ),
 )
-_PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = (
+_PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_RISK_EVIDENCE_FIELDS: tuple[
+    tuple[str, str],
+    ...
+] = (
+    ("pre_generation_risk.coverage_rate", "pre_generation_risk_coverage_rate"),
+    (
+        "pre_generation_risk.learned_risk_coverage_rate",
+        "pre_generation_learned_risk_coverage_rate",
+    ),
+    (
+        "pre_generation_risk.selected_profile.audit_rate",
+        "pre_generation_audit_profile_rate",
+    ),
+    (
+        "pre_generation_risk.learned_risk_routed_rate",
+        "pre_generation_learned_risk_routed_rate",
+    ),
+    (
+        "pre_generation_risk.learned_risk_probability.mean",
+        "pre_generation_learned_risk_probability_mean",
+    ),
+)
+_PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_PROBE_EVIDENCE_FIELDS: tuple[
+    tuple[str, str],
+    ...
+] = (
     (
         "promotion_contract.pre_generation_probe_comparison.coverage_rate",
         "pre_generation_probe_comparison_coverage_rate",
@@ -91,6 +116,10 @@ _PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_FIELDS: tuple[tuple[str, str], ..
         "promotion_contract.pre_generation_probe_comparison.best_redline_margin.mean",
         "pre_generation_probe_comparison_best_redline_margin",
     ),
+)
+_PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = (
+    _PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_RISK_EVIDENCE_FIELDS
+    + _PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_PROBE_EVIDENCE_FIELDS
 )
 _PRODUCT_RUNTIME_DRIFT_CLAIM_FACTUALITY_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = (
     (

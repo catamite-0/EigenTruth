@@ -28,7 +28,14 @@ _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "triple_extraction_fixture_matrix_mean_best_f1",
     "triple_extraction_fixture_matrix_mean_f1_lift",
 )
-_PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_PREFIXES: tuple[str, ...] = (
+_PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_RISK_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "pre_generation_risk_coverage_rate",
+    "pre_generation_learned_risk_coverage_rate",
+    "pre_generation_audit_profile_rate",
+    "pre_generation_learned_risk_routed_rate",
+    "pre_generation_learned_risk_probability_mean",
+)
+_PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_PROBE_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "pre_generation_probe_comparison_coverage_rate",
     "pre_generation_probe_comparison_manifest_verified_rate",
     "pre_generation_probe_comparison_model_count",
@@ -37,6 +44,10 @@ _PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "pre_generation_probe_comparison_best_test_label_auroc",
     "pre_generation_probe_comparison_best_redline_auroc",
     "pre_generation_probe_comparison_best_redline_margin",
+)
+_PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    _PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_RISK_EVIDENCE_PREFIXES
+    + _PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_PROBE_EVIDENCE_PREFIXES
 )
 _PRODUCT_RUNTIME_DRIFT_CLAIM_FACTUALITY_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "claim_factuality_probe_comparison_coverage_rate",

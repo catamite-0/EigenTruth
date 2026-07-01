@@ -8,7 +8,14 @@ PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_KEYS: tuple[str, ...] = (
     "triple_extraction_fixture_matrix_mean_best_f1",
     "triple_extraction_fixture_matrix_mean_f1_lift",
 )
-PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_KEYS: tuple[str, ...] = (
+PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_RISK_EVIDENCE_KEYS: tuple[str, ...] = (
+    "pre_generation_risk_coverage_rate",
+    "pre_generation_learned_risk_coverage_rate",
+    "pre_generation_audit_profile_rate",
+    "pre_generation_learned_risk_routed_rate",
+    "pre_generation_learned_risk_probability_mean",
+)
+PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_PROBE_EVIDENCE_KEYS: tuple[str, ...] = (
     "pre_generation_probe_comparison_coverage_rate",
     "pre_generation_probe_comparison_manifest_verified_rate",
     "pre_generation_probe_comparison_model_count",
@@ -17,6 +24,10 @@ PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_KEYS: tuple[str, ...] = (
     "pre_generation_probe_comparison_best_test_label_auroc",
     "pre_generation_probe_comparison_best_redline_auroc",
     "pre_generation_probe_comparison_best_redline_margin",
+)
+PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_KEYS: tuple[str, ...] = (
+    PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_RISK_EVIDENCE_KEYS
+    + PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_PROBE_EVIDENCE_KEYS
 )
 PRODUCT_RUNTIME_DRIFT_CLAIM_FACTUALITY_EVIDENCE_KEYS: tuple[str, ...] = (
     "claim_factuality_probe_comparison_coverage_rate",
