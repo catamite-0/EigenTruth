@@ -52,6 +52,9 @@ DEFAULT_FUSION_SIGNALS = (
     "verifier_uncertainty",
     "selfcheck_refute_rate",
     "selfcheck_disagreement",
+    "fact_selfcheck_refute_rate",
+    "fact_selfcheck_uncovered_rate",
+    "fact_selfcheck_disagreement",
 )
 DEFAULT_GEOMETRY_SIGNALS = ("truth_proj", "subspace_resid", "eigenscore")
 DEFAULT_UNCERTAINTY_SIGNALS = (
@@ -60,6 +63,9 @@ DEFAULT_UNCERTAINTY_SIGNALS = (
     "verifier_not_supported",
     "selfcheck_refute_rate",
     "selfcheck_disagreement",
+    "fact_selfcheck_refute_rate",
+    "fact_selfcheck_uncovered_rate",
+    "fact_selfcheck_disagreement",
 )
 
 
@@ -108,6 +114,11 @@ class VerifierSignalFusionWorkflowConfig:
     selfcheck_refute_threshold: float = 0.50
     selfcheck_early_stop: bool = False
     selfcheck_max_samples: int | None = None
+    enable_fact_selfcheck: bool = False
+    fact_selfcheck_min_samples: int | None = None
+    fact_selfcheck_support_threshold: float | None = None
+    fact_selfcheck_refute_threshold: float | None = None
+    fact_selfcheck_max_samples: int | None = None
     staged_verification: bool = False
     staged_alpha: float = 0.10
     min_world_model_confidence: float = 0.0
@@ -153,6 +164,30 @@ class VerifierSignalFusionWorkflowConfig:
             raise ValueError("fusion_signals must contain at least one signal.")
         if bool(self.geometry_signals) != bool(self.uncertainty_signals):
             raise ValueError("geometry_signals and uncertainty_signals must be provided together.")
+        if self.fact_selfcheck_min_samples is not None:
+            min_samples = int(self.fact_selfcheck_min_samples)
+            if min_samples < 1:
+                raise ValueError("fact_selfcheck_min_samples must be >= 1 when set.")
+            object.__setattr__(self, "fact_selfcheck_min_samples", min_samples)
+        for name in ("fact_selfcheck_support_threshold", "fact_selfcheck_refute_threshold"):
+            value = getattr(self, name)
+            if value is None:
+                continue
+            numeric_value = float(value)
+            if not (0.0 <= numeric_value <= 1.0):
+                raise ValueError(f"{name} must be in [0, 1] when set.")
+            object.__setattr__(self, name, numeric_value)
+        if self.fact_selfcheck_max_samples is not None:
+            max_samples = int(self.fact_selfcheck_max_samples)
+            if max_samples < 1:
+                raise ValueError("fact_selfcheck_max_samples must be >= 1 when set.")
+            object.__setattr__(self, "fact_selfcheck_max_samples", max_samples)
+        if (
+            self.fact_selfcheck_min_samples is not None
+            and self.fact_selfcheck_max_samples is not None
+            and self.fact_selfcheck_max_samples < self.fact_selfcheck_min_samples
+        ):
+            raise ValueError("fact_selfcheck_max_samples must be >= fact_selfcheck_min_samples when both are set.")
         if self.retriever_backend not in RETRIEVER_BACKENDS:
             raise ValueError(f"retriever_backend must be one of: {', '.join(RETRIEVER_BACKENDS)}.")
         if self.retriever_backend == "memory" and self.retriever_index_path is not None:
@@ -246,6 +281,11 @@ def run_verifier_signal_fusion_workflow(
             selfcheck_refute_threshold=float(config.selfcheck_refute_threshold),
             selfcheck_early_stop=bool(config.selfcheck_early_stop),
             selfcheck_max_samples=config.selfcheck_max_samples,
+            enable_fact_selfcheck=bool(config.enable_fact_selfcheck),
+            fact_selfcheck_min_samples=config.fact_selfcheck_min_samples,
+            fact_selfcheck_support_threshold=config.fact_selfcheck_support_threshold,
+            fact_selfcheck_refute_threshold=config.fact_selfcheck_refute_threshold,
+            fact_selfcheck_max_samples=config.fact_selfcheck_max_samples,
             staged_verification=bool(config.staged_verification),
             staged_alpha=float(config.staged_alpha),
             min_world_model_confidence=float(config.min_world_model_confidence),
@@ -359,6 +399,7 @@ def run_verifier_signal_fusion_workflow(
         ),
         "claims_summary": None if claims_fixture is None else claims_fixture.get("summary"),
         "verifier_summary": _verifier_summary(verifier_report),
+        "fact_selfcheck_summary": verifier_report.get("fact_selfcheck_verifier"),
         "fusion_summary": _fusion_summary(score_ensemble_report),
         "manifest_summary": manifest.get("summary"),
         "manifest_verification": manifest_verification,
@@ -643,10 +684,12 @@ def _manifest_metadata(
         "claims_fixture_type": None if claims_fixture is None else claims_fixture.get("fixture_type"),
         "claims_summary": claims_summary,
         "verifier_summary": verifier_summary,
+        "fact_selfcheck_summary": verifier_report.get("fact_selfcheck_verifier"),
         "fusion_summary": fusion_summary,
         "geometry_artifact_count": len(geometry_artifacts),
         "uses_non_oracle_local_corpus": bool(config.corpus_paths),
         "uses_selfcheck_samples": bool(config.sample_paths),
+        "uses_fact_selfcheck": bool(config.enable_fact_selfcheck),
         "labels_used_for_retrieval": (
             None
             if claims_fixture is None
@@ -740,6 +783,13 @@ def _config_payload(config: VerifierSignalFusionWorkflowConfig) -> dict[str, Any
         "selfcheck_refute_threshold": float(config.selfcheck_refute_threshold),
         "selfcheck_early_stop": bool(config.selfcheck_early_stop),
         "selfcheck_max_samples": config.selfcheck_max_samples,
+        "fact_selfcheck": {
+            "enabled": bool(config.enable_fact_selfcheck),
+            "min_samples": config.fact_selfcheck_min_samples,
+            "support_threshold": config.fact_selfcheck_support_threshold,
+            "refute_threshold": config.fact_selfcheck_refute_threshold,
+            "max_samples": config.fact_selfcheck_max_samples,
+        },
         "staged_verification": bool(config.staged_verification),
         "staged_alpha": float(config.staged_alpha),
         "min_world_model_confidence": float(config.min_world_model_confidence),
@@ -877,6 +927,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         selfcheck_refute_threshold=args.selfcheck_refute_threshold,
         selfcheck_early_stop=args.selfcheck_early_stop,
         selfcheck_max_samples=args.selfcheck_max_samples,
+        enable_fact_selfcheck=bool(args.enable_fact_selfcheck),
+        fact_selfcheck_min_samples=args.fact_selfcheck_min_samples,
+        fact_selfcheck_support_threshold=args.fact_selfcheck_support_threshold,
+        fact_selfcheck_refute_threshold=args.fact_selfcheck_refute_threshold,
+        fact_selfcheck_max_samples=args.fact_selfcheck_max_samples,
         staged_verification=args.staged_verification,
         staged_alpha=args.staged_alpha,
         min_world_model_confidence=args.min_world_model_confidence,
@@ -944,6 +999,19 @@ def main() -> None:
     parser.add_argument("--selfcheck-refute-threshold", type=float, default=0.50)
     parser.add_argument("--selfcheck-early-stop", action="store_true")
     parser.add_argument("--selfcheck-max-samples", type=int, default=None)
+    parser.add_argument("--enable-fact-selfcheck", action="store_true",
+                        help=(
+                            "route sampled-response fixtures through fact-level self-consistency "
+                            "before sentence selfcheck"
+                        ))
+    parser.add_argument("--fact-selfcheck-min-samples", type=int, default=None,
+                        help="optional fact-level selfcheck minimum samples; defaults to --selfcheck-min-samples")
+    parser.add_argument("--fact-selfcheck-support-threshold", type=float, default=None,
+                        help="optional fact-level support threshold; defaults to --selfcheck-support-threshold")
+    parser.add_argument("--fact-selfcheck-refute-threshold", type=float, default=None,
+                        help="optional fact-level refute threshold; defaults to --selfcheck-refute-threshold")
+    parser.add_argument("--fact-selfcheck-max-samples", type=int, default=None,
+                        help="optional fact-level sample cap; defaults to --selfcheck-max-samples")
     parser.add_argument("--staged-verification", action="store_true")
     parser.add_argument("--staged-alpha", type=float, default=0.10)
     parser.add_argument("--min-world-model-confidence", type=float, default=0.0)

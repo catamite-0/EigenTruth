@@ -4714,6 +4714,25 @@ also be passed to `build_verifier_signal_score_dump.py`, which emits
 `fact_selfcheck_support_rate`, `fact_selfcheck_refute_rate`,
 `fact_selfcheck_disagreement`, `fact_selfcheck_insufficient`,
 `fact_selfcheck_not_applicable`, and `fact_selfcheck_uncovered_rate` columns.
+`run_verifier_signal_fusion_workflow.py --enable-fact-selfcheck` now runs that
+same bridge end to end: generated selfcheck fixtures preserve statement-level
+`claim_triples` / `triples`, external sample records may provide sample-level
+`triples`, and the enhanced score dump/fusion report includes the
+`fact_selfcheck_*` signals without loading a model.
+
+```bash
+python benchmarks/run_verifier_signal_fusion_workflow.py \
+  --scores tiny=artifacts/tiny_scores_with_triples.manifest.json \
+  --samples artifacts/tiny_sampled_fact_triples.json \
+  --output-dir artifacts/tiny_fact_selfcheck_signal_fusion \
+  --enable-fact-selfcheck \
+  --fact-selfcheck-min-samples 2 \
+  --keep-signals truth_proj,subspace_resid,eigenscore \
+  --fusion-signals truth_proj,subspace_resid,eigenscore,fact_selfcheck_refute_rate,fact_selfcheck_uncovered_rate,fact_selfcheck_disagreement \
+  --geometry-signals truth_proj,subspace_resid,eigenscore \
+  --uncertainty-signals fact_selfcheck_refute_rate,fact_selfcheck_uncovered_rate,fact_selfcheck_disagreement \
+  --alphas 0.05,0.1,0.2
+```
 
 When the question is whether sampled responses are useful as calibrated
 diagnostic signals by themselves, `build_selfcheck_signal_score_dump.py` skips
@@ -7861,7 +7880,11 @@ python benchmarks/run_verifier_signal_fusion_workflow.py \
 ```
 
 Add `--samples path/to/sample-records.json` when a score dump or external
-sampler provides aligned self-consistency responses.
+sampler provides aligned self-consistency responses. Add
+`--enable-fact-selfcheck` when those responses also carry extractable
+fact triples or sample-level `triples` metadata; the workflow tries fact-level
+consistency before the sentence-overlap selfcheck fallback and carries
+`fact_selfcheck_*` score columns into the same fusion report.
 
 The workflow is intentionally post-hoc and dependency-free. It is the preferred
 entry point when testing whether local retrieval and self-consistency evidence
