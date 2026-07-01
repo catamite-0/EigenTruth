@@ -1469,6 +1469,12 @@ Added the first monitor-first tool-selection audit layer:
   commands must materialize planned report/manifest outputs. This closes the
   scaffold -> audit -> fill-run segment without promoting rule candidates or
   treating the execution report as verifier evidence.
+- `rollup_frontier_research_queue_input_fill_results.py` closes the next handoff
+  boundary: successful fill reports and rule-input sidecars are combined into
+  one adapter-ready `combined-rule-inputs.jsonl`, while unfilled tasks remain a
+  separate queue. The rollup blocks missing fill outputs, duplicate request ids,
+  or rule inputs that lost their non-evidence / promotion-gate markers, and it
+  emits only a downstream adapter command hint rather than executing the adapter.
 - The binder now validates known frontier benchmark commands against required
   CLI flags. A directly filled abstention template is kept `needs_inputs` when
   `plan_frontier_abstention_evidence_reruns.py` omits the action-required

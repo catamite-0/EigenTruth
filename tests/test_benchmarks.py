@@ -33339,6 +33339,182 @@ def test_frontier_research_queue_input_fill_runner_executes_ready_numeric_fill(
     assert record.metadata["succeeded_count"] == 1
 
 
+def test_frontier_research_queue_input_fill_result_rollup_combines_rule_inputs(
+    tmp_path,
+):
+    rollup_module = importlib.import_module(
+        "benchmarks.rollup_frontier_research_queue_input_fill_results"
+    )
+    registry_module = importlib.import_module("eigentruth.registry")
+    numeric_dir = tmp_path / "numeric-fill"
+    temporal_dir = tmp_path / "temporal-fill"
+    numeric_dir.mkdir()
+    temporal_dir.mkdir()
+    numeric_report = numeric_dir / "rule-input-numeric-binding-fill.json"
+    temporal_report = temporal_dir / "rule-input-temporal-binding-fill.json"
+    numeric_inputs = numeric_dir / "rule-inputs.jsonl"
+    temporal_inputs = temporal_dir / "rule-inputs.jsonl"
+    numeric_unfilled = numeric_dir / "unfilled-rule-input-tasks.jsonl"
+    temporal_unfilled = temporal_dir / "unfilled-rule-input-tasks.jsonl"
+    numeric_report.write_text(
+        json.dumps({
+            "workflow": "world_model_rule_input_numeric_binding_fill",
+            "status": "filled",
+            "summary": {"filled_input_count": 1, "unfilled_task_count": 0},
+        }),
+        encoding="utf-8",
+    )
+    temporal_report.write_text(
+        json.dumps({
+            "workflow": "world_model_rule_input_temporal_binding_fill",
+            "status": "partial",
+            "summary": {"filled_input_count": 1, "unfilled_task_count": 1},
+        }),
+        encoding="utf-8",
+    )
+    numeric_inputs.write_text(
+        json.dumps({
+            "request_id": "rule:record-190:1",
+            "target_id": "record-190",
+            "rule_family": "quantity_or_arithmetic",
+            "source_citation": "worldbank:SP.POP.TOTL:USA:2024",
+            "not_verifier_evidence": True,
+            "candidate_results_require_promotion_gate": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    temporal_inputs.write_text(
+        json.dumps({
+            "request_id": "rule:record-326:1",
+            "target_id": "record-326",
+            "rule_family": "temporal_consistency",
+            "source_citation": "source:temporal",
+            "not_verifier_evidence": True,
+            "candidate_results_require_promotion_gate": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    numeric_unfilled.write_text("", encoding="utf-8")
+    temporal_unfilled.write_text(
+        json.dumps({
+            "request_id": "rule:record-999:1",
+            "target_id": "record-999",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    rule_stubs_path = tmp_path / "rule-stubs.jsonl"
+    rule_stubs_path.write_text("", encoding="utf-8")
+    registry_path = tmp_path / "registry.json"
+
+    payload = rollup_module.rollup_frontier_research_queue_input_fill_results(
+        input_fill_command_run={
+            "workflow": "frontier_research_queue_input_fill_command_run_report",
+            "status": "succeeded",
+            "entries": (
+                {
+                    "entry_id": "numeric",
+                    "action_id": "numeric",
+                    "execution_status": "succeeded",
+                    "commands": ({"status": "succeeded"},),
+                    "expected_outputs": (
+                        {"name": "report", "path": str(numeric_report)},
+                        {"name": "rule_inputs", "path": str(numeric_inputs)},
+                        {"name": "unfilled_tasks", "path": str(numeric_unfilled)},
+                    ),
+                },
+                {
+                    "entry_id": "temporal",
+                    "action_id": "temporal",
+                    "execution_status": "succeeded",
+                    "commands": ({"status": "succeeded"},),
+                    "expected_outputs": (
+                        {"name": "report", "path": str(temporal_report)},
+                        {"name": "rule_inputs", "path": str(temporal_inputs)},
+                        {"name": "unfilled_tasks", "path": str(temporal_unfilled)},
+                    ),
+                },
+            ),
+        },
+        output_dir=tmp_path / "rollup",
+        rule_stubs_path=rule_stubs_path,
+        registry_path=registry_path,
+        name="frontier-input-fill-result-rollup",
+        version="0.1",
+    )
+    combined_inputs = [
+        json.loads(line)
+        for line in (tmp_path / "rollup" / "combined-rule-inputs.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+    ]
+    combined_unfilled = [
+        json.loads(line)
+        for line in (tmp_path / "rollup" / "combined-unfilled-rule-input-tasks.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+    ]
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:frontier-input-fill-result-rollup:0.1"
+    )
+
+    assert payload["workflow"] == "frontier_research_queue_input_fill_result_rollup"
+    assert payload["status"] == "partial"
+    assert payload["summary"]["fill_report_count"] == 2
+    assert payload["summary"]["combined_rule_input_count"] == 2
+    assert payload["summary"]["combined_unfilled_task_count"] == 1
+    assert payload["summary"]["rule_family_counts"] == {
+        "quantity_or_arithmetic": 1,
+        "temporal_consistency": 1,
+    }
+    assert combined_inputs[0]["request_id"] == "rule:record-190:1"
+    assert combined_inputs[1]["request_id"] == "rule:record-326:1"
+    assert combined_unfilled[0]["request_id"] == "rule:record-999:1"
+    assert payload["downstream_adapter_command"]["ready_for_adapter"] is True
+    assert "run_world_model_rule_authoring_adapter.py" in payload["downstream_adapter_command"]["command"]
+    assert registry_module.load_and_verify_artifact_manifest(
+        tmp_path / "rollup" / "artifact-manifest.json"
+    ).passed is True
+    assert record.metadata["combined_rule_input_count"] == 2
+
+
+def test_frontier_research_queue_input_fill_result_rollup_blocks_missing_outputs(
+    tmp_path,
+):
+    rollup_module = importlib.import_module(
+        "benchmarks.rollup_frontier_research_queue_input_fill_results"
+    )
+    payload = rollup_module.rollup_frontier_research_queue_input_fill_results(
+        input_fill_command_run={
+            "workflow": "frontier_research_queue_input_fill_command_run_report",
+            "status": "succeeded",
+            "entries": (
+                {
+                    "entry_id": "numeric",
+                    "action_id": "numeric",
+                    "execution_status": "succeeded",
+                    "commands": ({"status": "succeeded"},),
+                    "expected_outputs": (
+                        {"name": "report", "path": str(tmp_path / "missing-report.json")},
+                        {"name": "rule_inputs", "path": str(tmp_path / "missing-rule-inputs.jsonl")},
+                    ),
+                },
+            ),
+        },
+        output_dir=tmp_path / "rollup",
+    )
+    row = payload["fill_report_rows"][0]
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["blocked_fill_report_count"] == 1
+    assert payload["summary"]["failure_counts"]["report_not_materialized"] == 1
+    assert payload["summary"]["failure_counts"]["rule_inputs_not_materialized"] == 1
+    assert row["status"] == "blocked"
+
+
 def test_frontier_research_queue_bound_plan_requires_runtime_baseline_flag(tmp_path):
     plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
     bind_module = importlib.import_module(

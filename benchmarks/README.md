@@ -6850,6 +6850,29 @@ the run report remains a non-evidence execution artifact. Adapter execution,
 candidate promotion, and ProductTrace handoff still happen in the downstream
 world-model rule chain.
 
+After successful fill execution, roll the materialized fill outputs into one
+rule-input file for the deterministic adapter:
+
+```bash
+python benchmarks/rollup_frontier_research_queue_input_fill_results.py \
+  --input-fill-command-run artifacts/frontier-research-queue-input-fill-command-run.json \
+  --output-dir artifacts/frontier-research-queue-input-fill-result-rollup \
+  --rule-stubs artifacts/world-model-rule-stubs.jsonl \
+  --json artifacts/frontier-research-queue-input-fill-result-rollup/frontier-input-fill-result-rollup.json \
+  --combined-rule-inputs-jsonl artifacts/frontier-research-queue-input-fill-result-rollup/combined-rule-inputs.jsonl \
+  --combined-unfilled-tasks-jsonl artifacts/frontier-research-queue-input-fill-result-rollup/combined-unfilled-rule-input-tasks.jsonl \
+  --artifact-manifest artifacts/frontier-research-queue-input-fill-result-rollup/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-input-fill-result-rollup \
+  --version 0.1
+```
+
+The rollup requires the fill run's report and rule-input sidecars to be
+materialized, blocks duplicate request ids or rule inputs missing non-evidence
+and promotion-gate markers, and writes a combined adapter input plus any
+remaining unfilled rows. The downstream adapter command in the rollup is still a
+hint only; adapter execution and rule-candidate promotion remain separate gates.
+
 Then dry-run the bound plan before any explicit execution:
 
 ```bash
