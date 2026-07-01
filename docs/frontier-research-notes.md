@@ -1362,7 +1362,11 @@ Added the first monitor-first tool-selection audit layer:
   metadata and shared command-requirement summaries while keeping direct binder
   output at `needs_inputs`. The abstention participation scaffold now surfaces
   the missing `--scores`/`--signal-groups` planner flags and missing
-  `--scores`/`--signals` stability-eval flags before binding review.
+  `--scores`/`--signals` stability-eval flags before binding review; after
+  adding frontier-release comparison requirements it also exposes the missing
+  `--verifier-stability-report`/`--abstention-stability-report`/`--json` flags
+  on the final comparison template. The promotion-metrics refresh action's
+  four known commands now scaffold as command-requirement ready.
 - `bind_frontier_research_queue_command_plan.py` and
   `run_frontier_research_queue_bound_command_plan.py` add the next handoff
   layer: reviewed bindings can turn that queue into a ready bound plan, and the

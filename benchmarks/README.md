@@ -6604,8 +6604,9 @@ The scaffold lists each ordered `...` placeholder, required input, suggested
 output/manifest/registry/name/version binding, and known command-specific CLI
 requirements. For example, it will mark an abstention rerun planner template as
 still needing `--scores`/`--signal-groups` when the action requires score dumps
-and signal groups. The generated bindings sidecar is deliberately empty so
-feeding it directly to the binder remains `needs_inputs`.
+and signal groups, and it recognizes the frontier release-evidence promotion
+refresh scripts before binding review. The generated bindings sidecar is
+deliberately empty so feeding it directly to the binder remains `needs_inputs`.
 After review, fill either ordered `command_template_values` or full
 `bound_commands` through that sidecar:
 

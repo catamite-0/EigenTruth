@@ -31841,6 +31841,8 @@ def test_frontier_research_queue_binding_scaffold_reports_command_requirements(t
                         "benchmarks/eval_abstention_stability.py --json ...",
                         "benchmarks/rollup_frontier_abstention_evidence_reruns.py "
                         "--queue ... --json ...",
+                        "benchmarks/compare_frontier_release_evidence.py "
+                        "--frontier-rerun-rollup-report ...",
                     ),
                     "metadata": {
                         "required_inputs": (
@@ -31852,6 +31854,7 @@ def test_frontier_research_queue_binding_scaffold_reports_command_requirements(t
                             "abstention_rerun_queue",
                             "abstention_stability_report",
                             "abstention_rerun_rollup",
+                            "frontier_release_evidence_comparison",
                         ),
                     },
                 },
@@ -31869,8 +31872,8 @@ def test_frontier_research_queue_binding_scaffold_reports_command_requirements(t
     bindings = json.loads(bindings_path.read_text(encoding="utf-8"))
     binding = bindings["bindings"]["improve_abstention_participation_gate"]
 
-    assert scaffold["summary"]["command_requirement_issue_count"] == 4
-    assert scaffold["entries"][0]["binding_summary"]["command_requirement_issue_count"] == 4
+    assert scaffold["summary"]["command_requirement_issue_count"] == 7
+    assert scaffold["entries"][0]["binding_summary"]["command_requirement_issue_count"] == 7
     assert requirements[0]["script"] == "benchmarks/plan_frontier_abstention_evidence_reruns.py"
     assert requirements[0]["missing_required_input_flags"] == (
         {"input": "abstention_score_dump_paths", "flag": "--scores"},
@@ -31879,11 +31882,140 @@ def test_frontier_research_queue_binding_scaffold_reports_command_requirements(t
     assert requirements[1]["script"] == "benchmarks/eval_abstention_stability.py"
     assert requirements[1]["missing_required_flags"] == ("--scores", "--signals")
     assert requirements[2]["status"] == "ready"
-    assert binding["command_requirement_issue_count"] == 4
+    assert requirements[3]["script"] == "benchmarks/compare_frontier_release_evidence.py"
+    assert requirements[3]["missing_required_flags"] == (
+        "--verifier-stability-report",
+        "--abstention-stability-report",
+        "--json",
+    )
+    assert binding["command_requirement_issue_count"] == 7
     assert binding["command_requirements"][0]["missing_required_input_flags"] == [
         {"input": "abstention_score_dump_paths", "flag": "--scores"},
         {"input": "abstention_signal_groups", "flag": "--signal-groups"},
     ]
+
+
+def test_frontier_research_queue_binding_scaffold_knows_promotion_metric_commands(
+    tmp_path,
+):
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    scaffold_module = importlib.import_module(
+        "benchmarks.scaffold_frontier_research_queue_bindings"
+    )
+    plan_path = tmp_path / "frontier-research-command-plan.json"
+    plan_module.build_frontier_research_queue_command_plan(
+        source={
+            "workflow": "evidence_gap_plan",
+            "actions": (
+                {
+                    "action_id": "refresh_frontier_release_evidence_promotion_metrics",
+                    "suggested_commands": (
+                        "benchmarks/compare_frontier_release_evidence.py "
+                        "--verifier-stability-report ... --abstention-stability-report ... "
+                        "--json ...",
+                        "benchmarks/export_product_promotion_contract_evidence_handoff.py "
+                        "--contract ... --json ... --audit-json ...",
+                        "benchmarks/run_product_runtime_baseline.py --trace ... --json ...",
+                        "benchmarks/compare_product_runtime_baselines.py "
+                        "--current ... --baseline ... --json ...",
+                    ),
+                    "metadata": {
+                        "required_inputs": (
+                            "verifier_stability_report",
+                            "abstention_stability_report",
+                            "product_promotion_contract_source",
+                            "product_trace_corpus",
+                            "baseline_product_runtime_report",
+                        ),
+                        "closure_outputs": (
+                            "frontier_release_evidence_comparison",
+                            "product_promotion_evidence_handoff_export",
+                            "product_promotion_evidence_handoff_audit",
+                            "product_runtime_baseline",
+                            "product_runtime_drift_comparison",
+                        ),
+                    },
+                },
+            ),
+        },
+        json_path=plan_path,
+    )
+
+    scaffold = scaffold_module.scaffold_frontier_research_queue_bindings(
+        command_plan=plan_path,
+    )
+
+    requirements = scaffold["entries"][0]["command_requirements"]
+    assert scaffold["summary"]["command_requirement_issue_count"] == 0
+    assert [item["script"] for item in requirements] == [
+        "benchmarks/compare_frontier_release_evidence.py",
+        "benchmarks/export_product_promotion_contract_evidence_handoff.py",
+        "benchmarks/run_product_runtime_baseline.py",
+        "benchmarks/compare_product_runtime_baselines.py",
+    ]
+    assert {item["status"] for item in requirements} == {"ready"}
+    assert requirements[0]["required_input_flags"] == (
+        {"input": "verifier_stability_report", "flag": "--verifier-stability-report"},
+        {"input": "abstention_stability_report", "flag": "--abstention-stability-report"},
+    )
+    assert requirements[3]["required_input_flags"] == (
+        {"input": "baseline_product_runtime_report", "flag": "--baseline"},
+    )
+
+
+def test_frontier_research_queue_bound_plan_requires_runtime_baseline_flag(tmp_path):
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    bind_module = importlib.import_module(
+        "benchmarks.bind_frontier_research_queue_command_plan"
+    )
+    plan_path = tmp_path / "frontier-research-command-plan.json"
+    bindings_path = tmp_path / "frontier-research-command-bindings.json"
+    plan_module.build_frontier_research_queue_command_plan(
+        source={
+            "workflow": "evidence_gap_plan",
+            "actions": (
+                {
+                    "action_id": "runtime_drift_refresh",
+                    "suggested_commands": (
+                        "benchmarks/compare_product_runtime_baselines.py "
+                        "--current ... --json ...",
+                    ),
+                    "metadata": {
+                        "required_inputs": ("baseline_product_runtime_report",),
+                        "closure_outputs": ("product_runtime_drift_comparison",),
+                    },
+                },
+            ),
+        },
+        json_path=plan_path,
+    )
+    bindings_path.write_text(
+        json.dumps({
+            "inputs": {
+                "baseline_product_runtime_report": {"path": "artifacts/baseline.json"},
+            },
+            "bindings": {
+                "runtime_drift_refresh": {
+                    "command_template_values": (
+                        {"path": "artifacts/current.json"},
+                        {"path": "artifacts/drift.json"},
+                    ),
+                },
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    bound = bind_module.build_frontier_research_queue_bound_command_plan(
+        command_plan=plan_path,
+        bindings=bindings_path,
+    )
+
+    issue = bound["entries"][0]["command_validation"]["issues"][0]
+    assert bound["status"] == "needs_inputs"
+    assert issue["script"] == "benchmarks/compare_product_runtime_baselines.py"
+    assert issue["issue"] == "required_input_not_bound_to_command_flags"
+    assert issue["missing_flags"] == ("--baseline",)
 
 
 def _frontier_status_release_candidate() -> dict[str, Any]:

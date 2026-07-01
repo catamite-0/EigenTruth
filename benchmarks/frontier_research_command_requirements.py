@@ -6,15 +6,40 @@ import shlex
 from typing import Any, Mapping, Sequence
 
 REQUIRED_COMMAND_FLAGS = {
+    "benchmarks/compare_frontier_release_evidence.py": (
+        "--verifier-stability-report",
+        "--abstention-stability-report",
+        "--json",
+    ),
+    "benchmarks/compare_product_runtime_baselines.py": ("--current", "--json"),
     "benchmarks/eval_abstention_stability.py": ("--scores", "--signals", "--json"),
+    "benchmarks/export_product_promotion_contract_evidence_handoff.py": (
+        "--contract",
+        "--json",
+        "--audit-json",
+    ),
     "benchmarks/plan_frontier_abstention_evidence_reruns.py": ("--source",),
+    "benchmarks/run_product_runtime_baseline.py": ("--trace", "--json"),
     "benchmarks/rollup_frontier_abstention_evidence_reruns.py": ("--queue", "--json"),
 }
 
 REQUIRED_INPUT_FLAGS = {
+    "benchmarks/compare_frontier_release_evidence.py": {
+        "verifier_stability_report": "--verifier-stability-report",
+        "abstention_stability_report": "--abstention-stability-report",
+    },
+    "benchmarks/compare_product_runtime_baselines.py": {
+        "baseline_product_runtime_report": "--baseline",
+    },
+    "benchmarks/export_product_promotion_contract_evidence_handoff.py": {
+        "product_promotion_contract_source": "--contract",
+    },
     "benchmarks/plan_frontier_abstention_evidence_reruns.py": {
         "abstention_score_dump_paths": "--scores",
         "abstention_signal_groups": "--signal-groups",
+    },
+    "benchmarks/run_product_runtime_baseline.py": {
+        "product_trace_corpus": "--trace",
     },
 }
 
