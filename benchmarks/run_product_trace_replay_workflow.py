@@ -81,6 +81,11 @@ class ProductTraceReplayWorkflowConfig:
     max_runtime_drift_retrieval_use_rate_delta: float | None = None
     max_runtime_drift_cache_hit_rate_drop: float | None = None
     max_runtime_drift_verification_skip_rate_drop: float | None = None
+    min_runtime_drift_pre_generation_risk_coverage_rate: float | None = None
+    min_runtime_drift_pre_generation_learned_risk_coverage_rate: float | None = None
+    max_runtime_drift_pre_generation_audit_profile_rate_increase: float | None = None
+    max_runtime_drift_pre_generation_learned_risk_routed_rate_increase: float | None = None
+    max_runtime_drift_pre_generation_learned_risk_probability_mean_increase: float | None = None
     min_runtime_drift_promotion_contract_coverage: float | None = None
     min_runtime_drift_pre_generation_probe_comparison_coverage: float | None = None
     min_runtime_drift_pre_generation_probe_comparison_manifest_verified_rate: float | None = None
@@ -311,6 +316,11 @@ class ProductTraceReplayWorkflowConfig:
                 self.max_runtime_drift_retrieval_use_rate_delta,
                 self.max_runtime_drift_cache_hit_rate_drop,
                 self.max_runtime_drift_verification_skip_rate_drop,
+                self.min_runtime_drift_pre_generation_risk_coverage_rate,
+                self.min_runtime_drift_pre_generation_learned_risk_coverage_rate,
+                self.max_runtime_drift_pre_generation_audit_profile_rate_increase,
+                self.max_runtime_drift_pre_generation_learned_risk_routed_rate_increase,
+                self.max_runtime_drift_pre_generation_learned_risk_probability_mean_increase,
                 self.min_runtime_drift_promotion_contract_coverage,
                 self.min_runtime_drift_pre_generation_probe_comparison_coverage,
                 self.min_runtime_drift_pre_generation_probe_comparison_manifest_verified_rate,
@@ -1527,6 +1537,11 @@ def _runtime_drift_configured(config: ProductTraceReplayWorkflowConfig) -> bool:
             config.max_runtime_drift_retrieval_use_rate_delta,
             config.max_runtime_drift_cache_hit_rate_drop,
             config.max_runtime_drift_verification_skip_rate_drop,
+            config.min_runtime_drift_pre_generation_risk_coverage_rate,
+            config.min_runtime_drift_pre_generation_learned_risk_coverage_rate,
+            config.max_runtime_drift_pre_generation_audit_profile_rate_increase,
+            config.max_runtime_drift_pre_generation_learned_risk_routed_rate_increase,
+            config.max_runtime_drift_pre_generation_learned_risk_probability_mean_increase,
             config.min_runtime_drift_promotion_contract_coverage,
             config.min_runtime_drift_pre_generation_probe_comparison_coverage,
             config.min_runtime_drift_pre_generation_probe_comparison_manifest_verified_rate,
@@ -1660,6 +1675,21 @@ def _runtime_drift_gate_config(config: ProductTraceReplayWorkflowConfig) -> dict
         "max_retrieval_use_rate_delta": config.max_runtime_drift_retrieval_use_rate_delta,
         "max_cache_hit_rate_drop": config.max_runtime_drift_cache_hit_rate_drop,
         "max_verification_skip_rate_drop": config.max_runtime_drift_verification_skip_rate_drop,
+        "min_pre_generation_risk_coverage_rate": (
+            config.min_runtime_drift_pre_generation_risk_coverage_rate
+        ),
+        "min_pre_generation_learned_risk_coverage_rate": (
+            config.min_runtime_drift_pre_generation_learned_risk_coverage_rate
+        ),
+        "max_pre_generation_audit_profile_rate_increase": (
+            config.max_runtime_drift_pre_generation_audit_profile_rate_increase
+        ),
+        "max_pre_generation_learned_risk_routed_rate_increase": (
+            config.max_runtime_drift_pre_generation_learned_risk_routed_rate_increase
+        ),
+        "max_pre_generation_learned_risk_probability_mean_increase": (
+            config.max_runtime_drift_pre_generation_learned_risk_probability_mean_increase
+        ),
         "min_promotion_contract_coverage": config.min_runtime_drift_promotion_contract_coverage,
         "min_pre_generation_probe_comparison_coverage": (
             config.min_runtime_drift_pre_generation_probe_comparison_coverage
@@ -2342,6 +2372,7 @@ def _runtime_drift_summary(runtime_drift: Mapping[str, Any]) -> dict[str, Any]:
     context_sensitivity = _context_sensitivity_metric_summary(runtime_drift)
     counterfactual_robustness = _counterfactual_robustness_metric_summary(runtime_drift)
     claim_risk_localization = _claim_risk_localization_metric_summary(runtime_drift)
+    pre_generation_risk = _pre_generation_risk_metric_summary(runtime_drift)
     return {
         "status": runtime_drift.get("status"),
         "gate_enabled": summary.get("gate_enabled"),
@@ -2394,6 +2425,10 @@ def _runtime_drift_summary(runtime_drift: Mapping[str, Any]) -> dict[str, Any]:
         "claim_risk_localization_blocked_metric_count": (
             claim_risk_localization["blocked_metric_count"]
         ),
+        "pre_generation_risk_metric_count": pre_generation_risk["metric_count"],
+        "pre_generation_risk_blocked_metric_count": (
+            pre_generation_risk["blocked_metric_count"]
+        ),
         "pre_generation_probe_comparison_metric_count": pre_generation_probe_comparison["metric_count"],
         "pre_generation_probe_comparison_blocked_metric_count": (
             pre_generation_probe_comparison["blocked_metric_count"]
@@ -2440,6 +2475,18 @@ def _pre_generation_probe_comparison_metric_summary(runtime_drift: Mapping[str, 
         if str(_mapping(metric).get("metric") or "").startswith(
             "promotion_contract.pre_generation_probe_comparison."
         )
+    )
+    return {
+        "metric_count": len(metrics),
+        "blocked_metric_count": sum(1 for metric in metrics if metric.get("status") == "blocked"),
+    }
+
+
+def _pre_generation_risk_metric_summary(runtime_drift: Mapping[str, Any]) -> dict[str, int]:
+    metrics = tuple(
+        _mapping(metric)
+        for metric in _sequence(runtime_drift.get("metrics"))
+        if str(_mapping(metric).get("metric") or "").startswith("pre_generation_risk.")
     )
     return {
         "metric_count": len(metrics),
@@ -3088,6 +3135,16 @@ def _write_artifact_manifest(
                 "runtime_drift",
                 "claim_risk_localization_blocked_metric_count",
             ),
+            "runtime_drift_pre_generation_risk_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "pre_generation_risk_metric_count",
+            ),
+            "runtime_drift_pre_generation_risk_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "pre_generation_risk_blocked_metric_count",
+            ),
             "runtime_drift_pre_generation_probe_comparison_metric_count": _nested(
                 report,
                 "runtime_drift",
@@ -3464,6 +3521,16 @@ def _record_registry(
                 report,
                 "runtime_drift",
                 "claim_risk_localization_blocked_metric_count",
+            ),
+            "runtime_drift_pre_generation_risk_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "pre_generation_risk_metric_count",
+            ),
+            "runtime_drift_pre_generation_risk_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "pre_generation_risk_blocked_metric_count",
             ),
             "runtime_drift_pre_generation_probe_comparison_metric_count": _nested(
                 report,
@@ -3844,6 +3911,21 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
         max_runtime_drift_retrieval_use_rate_delta=args.max_runtime_drift_retrieval_use_rate_delta,
         max_runtime_drift_cache_hit_rate_drop=args.max_runtime_drift_cache_hit_rate_drop,
         max_runtime_drift_verification_skip_rate_drop=args.max_runtime_drift_verification_skip_rate_drop,
+        min_runtime_drift_pre_generation_risk_coverage_rate=(
+            args.min_runtime_drift_pre_generation_risk_coverage_rate
+        ),
+        min_runtime_drift_pre_generation_learned_risk_coverage_rate=(
+            args.min_runtime_drift_pre_generation_learned_risk_coverage_rate
+        ),
+        max_runtime_drift_pre_generation_audit_profile_rate_increase=(
+            args.max_runtime_drift_pre_generation_audit_profile_rate_increase
+        ),
+        max_runtime_drift_pre_generation_learned_risk_routed_rate_increase=(
+            args.max_runtime_drift_pre_generation_learned_risk_routed_rate_increase
+        ),
+        max_runtime_drift_pre_generation_learned_risk_probability_mean_increase=(
+            args.max_runtime_drift_pre_generation_learned_risk_probability_mean_increase
+        ),
         min_runtime_drift_promotion_contract_coverage=args.min_runtime_drift_promotion_contract_coverage,
         min_runtime_drift_pre_generation_probe_comparison_coverage=(
             args.min_runtime_drift_pre_generation_probe_comparison_coverage
@@ -4285,6 +4367,27 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-runtime-drift-retrieval-use-rate-delta", type=float, default=None)
     parser.add_argument("--max-runtime-drift-cache-hit-rate-drop", type=float, default=None)
     parser.add_argument("--max-runtime-drift-verification-skip-rate-drop", type=float, default=None)
+    parser.add_argument("--min-runtime-drift-pre-generation-risk-coverage-rate", type=float, default=None)
+    parser.add_argument(
+        "--min-runtime-drift-pre-generation-learned-risk-coverage-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-pre-generation-audit-profile-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-pre-generation-learned-risk-routed-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-pre-generation-learned-risk-probability-mean-increase",
+        type=float,
+        default=None,
+    )
     parser.add_argument("--min-runtime-drift-promotion-contract-coverage", type=float, default=None)
     parser.add_argument("--min-runtime-drift-pre-generation-probe-comparison-coverage", type=float, default=None)
     parser.add_argument(

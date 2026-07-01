@@ -47151,6 +47151,37 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
         "fact_selfcheck_gate_min_claim_triples_per_record": 1.0,
         "fact_selfcheck_gate_min_sample_triples_per_record": 2.0,
     }
+    pre_generation_risk_policy = {
+        "route_on_learned_risk": True,
+        "soft_risk_config": {"route_on_soft_risk": False},
+    }
+
+    def pre_generation_risk_fields(
+        *,
+        selected_profile: str,
+        risk_level: str,
+        probability: float,
+    ) -> dict[str, Any]:
+        return {
+            "runtime_profile_source": "pre_generation",
+            "pre_generation_profile_requested": "auto",
+            "pre_generation_risk_policy": pre_generation_risk_policy,
+            "pre_generation_risk_assessment": {
+                "selected_profile": selected_profile,
+                "risk_level": risk_level,
+                "reason": f"prompt metadata selected {selected_profile} profile",
+                "triggered_features": (),
+                "triggered_metadata": (),
+                "learned_risk": {
+                    "score": probability,
+                    "probability": probability,
+                    "risk_level": risk_level,
+                    "source": "unit_probe",
+                    "layer_idx": 2,
+                    "attention_summary": {"max_weight": probability},
+                },
+            },
+        }
     from eigentruth.control import (
         ActionExecutionStatus,
         ActionReceiptSigner,
@@ -47226,6 +47257,11 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
                 **covered_fact_rollup,
                 **product_trace_action_gate_rollup,
                 **pre_generation_probe_comparison_rollup,
+                **pre_generation_risk_fields(
+                    selected_profile="latency",
+                    risk_level="low",
+                    probability=0.20,
+                ),
                 **counterfactual_verification_rollup,
                 **evidence_handoff_rollup,
                 **fact_selfcheck_gate_rollup,
@@ -47252,6 +47288,11 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
                 **covered_fact_rollup,
                 **product_trace_action_gate_rollup,
                 **pre_generation_probe_comparison_rollup,
+                **pre_generation_risk_fields(
+                    selected_profile="balanced",
+                    risk_level="medium",
+                    probability=0.40,
+                ),
                 **counterfactual_verification_rollup,
                 **evidence_handoff_rollup,
                 **fact_selfcheck_gate_rollup,
@@ -47312,6 +47353,11 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
             max_runtime_drift_product_trace_trajectory_audit_procedural_rate_increase=0.0,
             max_runtime_drift_product_trace_trajectory_audit_scope_rate_increase=0.0,
             max_runtime_drift_product_trace_trajectory_audit_cascade_rate_increase=0.0,
+            min_runtime_drift_pre_generation_risk_coverage_rate=1.0,
+            min_runtime_drift_pre_generation_learned_risk_coverage_rate=1.0,
+            max_runtime_drift_pre_generation_audit_profile_rate_increase=0.0,
+            max_runtime_drift_pre_generation_learned_risk_routed_rate_increase=0.0,
+            max_runtime_drift_pre_generation_learned_risk_probability_mean_increase=0.0,
             min_runtime_drift_pre_generation_probe_comparison_coverage=1.0,
             min_runtime_drift_pre_generation_probe_comparison_manifest_verified_rate=1.0,
             min_runtime_drift_pre_generation_probe_comparison_model_count=2,
@@ -47373,6 +47419,8 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     ] == 0
     assert payload["runtime_drift"]["product_trace_trajectory_audit_metric_count"] == 8
     assert payload["runtime_drift"]["product_trace_trajectory_audit_blocked_metric_count"] == 0
+    assert payload["runtime_drift"]["pre_generation_risk_metric_count"] == 5
+    assert payload["runtime_drift"]["pre_generation_risk_blocked_metric_count"] == 0
     assert payload["runtime_drift"]["pre_generation_probe_comparison_metric_count"] == 8
     assert payload["runtime_drift"]["pre_generation_probe_comparison_blocked_metric_count"] == 0
     assert payload["runtime_drift"]["counterfactual_verification_metric_count"] == 6
@@ -47407,6 +47455,12 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     ] == pytest.approx(0.0)
     assert payload["config"]["runtime_drift_gates"][
         "max_product_trace_trajectory_audit_cascade_rate_increase"
+    ] == pytest.approx(0.0)
+    assert payload["config"]["runtime_drift_gates"][
+        "min_pre_generation_risk_coverage_rate"
+    ] == pytest.approx(1.0)
+    assert payload["config"]["runtime_drift_gates"][
+        "max_pre_generation_learned_risk_probability_mean_increase"
     ] == pytest.approx(0.0)
     assert payload["config"]["runtime_drift_gates"][
         "min_pre_generation_probe_comparison_coverage"
@@ -47454,6 +47508,12 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     ] == pytest.approx(0.0)
     assert drift_report["config"][
         "max_product_trace_trajectory_audit_cascade_rate_increase"
+    ] == pytest.approx(0.0)
+    assert drift_report["config"]["min_pre_generation_learned_risk_coverage_rate"] == (
+        pytest.approx(1.0)
+    )
+    assert drift_report["config"][
+        "max_pre_generation_learned_risk_routed_rate_increase"
     ] == pytest.approx(0.0)
     assert drift_report["config"]["min_pre_generation_probe_comparison_manifest_verified_rate"] == (
         pytest.approx(1.0)
@@ -47526,6 +47586,16 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert len(trajectory_audit_statuses) == 8
     assert set(trajectory_audit_statuses.values()) == {"pass"}
     assert trajectory_audit_statuses["trajectory_audit.error_rate"] == "pass"
+    pre_generation_risk_statuses = {
+        metric["metric"]: metric["status"]
+        for metric in drift_report["metrics"]
+        if metric["metric"].startswith("pre_generation_risk.")
+    }
+    assert len(pre_generation_risk_statuses) == 5
+    assert set(pre_generation_risk_statuses.values()) == {"pass"}
+    assert pre_generation_risk_statuses[
+        "pre_generation_risk.learned_risk_probability.mean"
+    ] == "pass"
     pre_generation_statuses = {
         metric["metric"]: metric["status"]
         for metric in drift_report["metrics"]
@@ -47587,6 +47657,8 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     ] == 0
     assert manifest["metadata"]["runtime_drift_product_trace_trajectory_audit_metric_count"] == 8
     assert manifest["metadata"]["runtime_drift_product_trace_trajectory_audit_blocked_metric_count"] == 0
+    assert manifest["metadata"]["runtime_drift_pre_generation_risk_metric_count"] == 5
+    assert manifest["metadata"]["runtime_drift_pre_generation_risk_blocked_metric_count"] == 0
     assert manifest["metadata"]["runtime_drift_pre_generation_probe_comparison_metric_count"] == 8
     assert manifest["metadata"]["runtime_drift_pre_generation_probe_comparison_blocked_metric_count"] == 0
     assert manifest["metadata"]["runtime_drift_counterfactual_verification_metric_count"] == 6
@@ -47606,6 +47678,8 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     ] == 0
     assert record.metadata["runtime_drift_product_trace_trajectory_audit_metric_count"] == 8
     assert record.metadata["runtime_drift_product_trace_trajectory_audit_blocked_metric_count"] == 0
+    assert record.metadata["runtime_drift_pre_generation_risk_metric_count"] == 5
+    assert record.metadata["runtime_drift_pre_generation_risk_blocked_metric_count"] == 0
     assert record.metadata["runtime_drift_pre_generation_probe_comparison_metric_count"] == 8
     assert record.metadata["runtime_drift_pre_generation_probe_comparison_blocked_metric_count"] == 0
     assert record.metadata["runtime_drift_counterfactual_verification_metric_count"] == 6
@@ -47621,6 +47695,7 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert drift_record.metadata["product_trace_action_gate_blocked_metric_count"] == 0
     assert drift_record.metadata["product_trace_receipt_claim_support_blocked_metric_count"] == 0
     assert drift_record.metadata["product_trace_trajectory_audit_blocked_metric_count"] == 0
+    assert drift_record.metadata["pre_generation_risk_blocked_metric_count"] == 0
     assert drift_record.metadata["pre_generation_probe_comparison_blocked_metric_count"] == 0
     assert drift_record.metadata["counterfactual_verification_blocked_metric_count"] == 0
     assert drift_record.metadata["evidence_handoff_blocked_metric_count"] == 0

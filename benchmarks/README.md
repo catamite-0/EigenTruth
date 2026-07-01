@@ -9643,7 +9643,13 @@ observed baseline's candidate budget thresholds, and
 `--runtime-drift-baseline` plus optional `--runtime-drift-budget-policy` when
 the workflow should immediately validate the current runtime baseline against
 the previous promoted baseline/policy gate. The runtime-drift pass-through also
-accepts world-model gates such as
+accepts pre-generation risk telemetry gates such as
+`--min-runtime-drift-pre-generation-risk-coverage-rate`,
+`--min-runtime-drift-pre-generation-learned-risk-coverage-rate`,
+`--max-runtime-drift-pre-generation-audit-profile-rate-increase`,
+`--max-runtime-drift-pre-generation-learned-risk-routed-rate-increase`, and
+`--max-runtime-drift-pre-generation-learned-risk-probability-mean-increase`,
+world-model gates such as
 `--min-runtime-drift-world-model-participating-trace-rate`,
 `--min-runtime-drift-world-model-coverage-rate`,
 `--max-runtime-drift-world-model-conflict-rate-increase`,
@@ -9718,6 +9724,11 @@ python benchmarks/run_product_trace_replay_workflow.py \
   --max-action-execution-unexpected-result-rate 0.0 \
   --max-action-execution-request-id-mismatch-rate 0.0 \
   --max-runtime-drift-total-seconds-p95-ratio 1.6 \
+  --min-runtime-drift-pre-generation-risk-coverage-rate 1.0 \
+  --min-runtime-drift-pre-generation-learned-risk-coverage-rate 1.0 \
+  --max-runtime-drift-pre-generation-audit-profile-rate-increase 0.0 \
+  --max-runtime-drift-pre-generation-learned-risk-routed-rate-increase 0.0 \
+  --max-runtime-drift-pre-generation-learned-risk-probability-mean-increase 0.02 \
   --min-runtime-drift-world-model-participating-trace-rate 1.0 \
   --min-runtime-drift-world-model-coverage-rate 1.0 \
   --max-runtime-drift-world-model-conflict-rate-increase 0.0 \
