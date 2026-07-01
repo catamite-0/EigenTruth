@@ -9049,7 +9049,9 @@ record-count/pass-rate/false-invariance summaries, and flip-success summaries
 into the same report, manifest, and registry metadata. Fact-selfcheck gate
 handoffs are likewise aggregated with coverage, report/manifest presence,
 manifest verification, pass counts, run-count quality, failed runs, and blocking
-reasons in the report, manifest, and registry metadata. The output includes
+reasons in the report, manifest, and registry metadata. Retrieval
+evidence-quality summaries are also aggregated into coverage, pass/failure, and
+provenance-freshness rates for report, manifest, and registry metadata. The output includes
 `optimization.hotspots`,
 `optimization.recommendations`, and `optimization.policy_hints`, turning the
 baseline into an actionable performance pass over slow phases/routes, low cache
@@ -9251,7 +9253,10 @@ trace-level triple/slot-audit coverage, and trace-count drift. When ProductTrace
 provenance summaries are present, the same comparison can gate structural
 provenance coverage plus evidence-graph consistency coverage, supported-claim
 consistency, numeric drift, cross-claim retrieval-hit drift, and error-rate
-drift. When ProductTrace
+drift. When ProductTrace retrieval action results include evidence-quality
+summaries, the comparison can gate trace/result coverage, pass rate, failure
+rate, stale evidence, untrusted sources, and missing-source or timestamp drift.
+When ProductTrace
 action results carry action receipts, the
 same comparison can gate receipt coverage plus missing, invalid,
 fingerprint-mismatch, and unsigned receipt rates. When claims or final answers

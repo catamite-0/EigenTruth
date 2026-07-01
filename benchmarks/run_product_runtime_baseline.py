@@ -1262,6 +1262,42 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         "action_execution_alignment_available": bool(
             metrics.get("action_execution_alignment_available")
         ),
+        "evidence_quality_summary": dict(_mapping(metrics.get("evidence_quality_summary"))),
+        "evidence_quality_available": bool(metrics.get("evidence_quality_available")),
+        "evidence_quality_source": metrics.get("evidence_quality_source"),
+        "evidence_quality_status": metrics.get("evidence_quality_status"),
+        "evidence_quality_result_count": metrics.get("evidence_quality_result_count"),
+        "evidence_quality_checked_result_count": metrics.get(
+            "evidence_quality_checked_result_count"
+        ),
+        "evidence_quality_coverage_rate": metrics.get("evidence_quality_coverage_rate"),
+        "evidence_quality_document_count": metrics.get("evidence_quality_document_count"),
+        "evidence_quality_applied_count": metrics.get("evidence_quality_applied_count"),
+        "evidence_quality_passed_count": metrics.get("evidence_quality_passed_count"),
+        "evidence_quality_failed_count": metrics.get("evidence_quality_failed_count"),
+        "evidence_quality_failed_result_count": metrics.get(
+            "evidence_quality_failed_result_count"
+        ),
+        "evidence_quality_pass_rate": metrics.get("evidence_quality_pass_rate"),
+        "evidence_quality_failure_rate": metrics.get("evidence_quality_failure_rate"),
+        "evidence_quality_missing_source_count": metrics.get(
+            "evidence_quality_missing_source_count"
+        ),
+        "evidence_quality_untrusted_source_count": metrics.get(
+            "evidence_quality_untrusted_source_count"
+        ),
+        "evidence_quality_stale_evidence_count": metrics.get(
+            "evidence_quality_stale_evidence_count"
+        ),
+        "evidence_quality_missing_timestamp_count": metrics.get(
+            "evidence_quality_missing_timestamp_count"
+        ),
+        "evidence_quality_reason_counts": dict(
+            _mapping(metrics.get("evidence_quality_reason_counts"))
+        ),
+        "evidence_quality_status_counts": dict(
+            _mapping(metrics.get("evidence_quality_status_counts"))
+        ),
         "action_receipts_summary": dict(_mapping(metrics.get("action_receipts_summary"))),
         "action_receipts_available": bool(metrics.get("action_receipts_available")),
         "action_receipts_source": metrics.get("action_receipts_source"),
@@ -1955,6 +1991,7 @@ def _aggregate_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "verification_plan": _aggregate_verification_plan(metrics),
         "pre_generation_risk": _aggregate_pre_generation_risk(metrics),
         "action_execution": _aggregate_action_execution(metrics),
+        "evidence_quality": _aggregate_evidence_quality(metrics),
         "action_receipts": _aggregate_action_receipts(metrics),
         "receipt_claim_support": _aggregate_receipt_claim_support(metrics),
         "action_audit": _aggregate_action_audit(metrics),
@@ -2874,6 +2911,75 @@ def _aggregate_action_execution(metrics: Sequence[Mapping[str, Any]]) -> dict[st
         ),
         "per_trace_missing_result_count": _numeric_summary(
             item.get("action_execution_missing_result_count") for item in metrics
+        ),
+        "summary_observations": sum(1 for summary in summaries if summary),
+    }
+
+
+def _aggregate_evidence_quality(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    summaries = [_mapping(item.get("evidence_quality_summary")) for item in metrics]
+    n_traces = len(metrics)
+    available_count = sum(1 for item in metrics if item.get("evidence_quality_available") is True)
+    result_count = _sum_float(metrics, "evidence_quality_result_count") or 0.0
+    checked_result_count = _sum_float(metrics, "evidence_quality_checked_result_count") or 0.0
+    document_count = _sum_float(metrics, "evidence_quality_document_count") or 0.0
+    applied_count = _sum_float(metrics, "evidence_quality_applied_count") or 0.0
+    passed_count = _sum_float(metrics, "evidence_quality_passed_count") or 0.0
+    failed_count = _sum_float(metrics, "evidence_quality_failed_count") or 0.0
+    failed_result_count = _sum_float(metrics, "evidence_quality_failed_result_count") or 0.0
+    reason_counts: dict[str, int] = {}
+    status_counts: dict[str, int] = {}
+    for item in metrics:
+        _merge_counts(reason_counts, _mapping(item.get("evidence_quality_reason_counts")))
+        _merge_counts(status_counts, _mapping(item.get("evidence_quality_status_counts")))
+    missing_source_count = reason_counts.get("missing_source", 0)
+    untrusted_source_count = reason_counts.get("untrusted_source", 0)
+    stale_evidence_count = reason_counts.get("stale_evidence", 0)
+    missing_timestamp_count = reason_counts.get("missing_timestamp", 0)
+    return {
+        "source_trace_count": n_traces,
+        "available_trace_count": available_count,
+        "missing_trace_count": n_traces - available_count,
+        "trace_coverage_rate": _safe_div(available_count, n_traces),
+        "source_counts": _counts(item.get("evidence_quality_source") for item in metrics),
+        "status_counts": status_counts,
+        "reason_counts": reason_counts,
+        "result_count": result_count,
+        "checked_result_count": checked_result_count,
+        "coverage_rate": _safe_div(checked_result_count, result_count),
+        "document_count": document_count,
+        "applied_count": applied_count,
+        "passed_count": passed_count,
+        "failed_count": failed_count,
+        "failed_result_count": failed_result_count,
+        "failed_result_rate": _safe_div(failed_result_count, checked_result_count),
+        "pass_rate": _safe_div(passed_count, applied_count),
+        "failure_rate": _safe_div(failed_count, applied_count),
+        "missing_source_count": missing_source_count,
+        "missing_source_rate": _safe_div(missing_source_count, applied_count),
+        "untrusted_source_count": untrusted_source_count,
+        "untrusted_source_rate": _safe_div(untrusted_source_count, applied_count),
+        "stale_evidence_count": stale_evidence_count,
+        "stale_evidence_rate": _safe_div(stale_evidence_count, applied_count),
+        "missing_timestamp_count": missing_timestamp_count,
+        "missing_timestamp_rate": _safe_div(missing_timestamp_count, applied_count),
+        "per_trace_result_count": _numeric_summary(
+            item.get("evidence_quality_result_count") for item in metrics
+        ),
+        "per_trace_checked_result_count": _numeric_summary(
+            item.get("evidence_quality_checked_result_count") for item in metrics
+        ),
+        "per_trace_document_count": _numeric_summary(
+            item.get("evidence_quality_document_count") for item in metrics
+        ),
+        "per_trace_failed_count": _numeric_summary(
+            item.get("evidence_quality_failed_count") for item in metrics
+        ),
+        "per_trace_failure_rate": _numeric_summary(
+            item.get("evidence_quality_failure_rate") for item in metrics
+        ),
+        "per_trace_coverage_rate": _numeric_summary(
+            item.get("evidence_quality_coverage_rate") for item in metrics
         ),
         "summary_observations": sum(1 for summary in summaries if summary),
     }
@@ -5753,6 +5859,7 @@ def _write_artifact_manifest(
     trajectory_audit_metadata = _trajectory_audit_flat_metadata(report)
     provenance_metadata = _provenance_flat_metadata(report)
     citation_integrity_metadata = _citation_integrity_flat_metadata(report)
+    evidence_quality_metadata = _evidence_quality_flat_metadata(report)
     promotion_contract_drift_metadata = _promotion_contract_runtime_drift_flat_metadata(report)
     promotion_contract_trace_replay_metadata = _promotion_contract_trace_replay_flat_metadata(
         report
@@ -5815,6 +5922,7 @@ def _write_artifact_manifest(
             **trajectory_audit_metadata,
             **provenance_metadata,
             **citation_integrity_metadata,
+            **evidence_quality_metadata,
             **promotion_contract_drift_metadata,
             **promotion_contract_trace_replay_metadata,
             **promotion_contract_external_evidence_metadata,
@@ -5852,6 +5960,7 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
     trajectory_audit_metadata = _trajectory_audit_flat_metadata(report)
     provenance_metadata = _provenance_flat_metadata(report)
     citation_integrity_metadata = _citation_integrity_flat_metadata(report)
+    evidence_quality_metadata = _evidence_quality_flat_metadata(report)
     promotion_contract_drift_metadata = _promotion_contract_runtime_drift_flat_metadata(report)
     promotion_contract_trace_replay_metadata = _promotion_contract_trace_replay_flat_metadata(
         report
@@ -5919,6 +6028,7 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
             **trajectory_audit_metadata,
             **provenance_metadata,
             **citation_integrity_metadata,
+            **evidence_quality_metadata,
             **promotion_contract_drift_metadata,
             **promotion_contract_trace_replay_metadata,
             **promotion_contract_external_evidence_metadata,
@@ -6106,6 +6216,40 @@ def _citation_integrity_flat_metadata(report: Mapping[str, Any]) -> dict[str, An
         "citation_integrity_mismatch_fields": dict(
             _mapping(citation.get("mismatch_fields"))
         ),
+    }
+
+
+def _evidence_quality_flat_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    evidence = _mapping(_nested(report, "summary", "evidence_quality"))
+    if not evidence:
+        return {}
+    return {
+        "evidence_quality_source_trace_count": evidence.get("source_trace_count"),
+        "evidence_quality_available_trace_count": evidence.get("available_trace_count"),
+        "evidence_quality_missing_trace_count": evidence.get("missing_trace_count"),
+        "evidence_quality_trace_coverage_rate": evidence.get("trace_coverage_rate"),
+        "evidence_quality_result_count": evidence.get("result_count"),
+        "evidence_quality_checked_result_count": evidence.get("checked_result_count"),
+        "evidence_quality_coverage_rate": evidence.get("coverage_rate"),
+        "evidence_quality_document_count": evidence.get("document_count"),
+        "evidence_quality_applied_count": evidence.get("applied_count"),
+        "evidence_quality_passed_count": evidence.get("passed_count"),
+        "evidence_quality_failed_count": evidence.get("failed_count"),
+        "evidence_quality_failed_result_count": evidence.get("failed_result_count"),
+        "evidence_quality_failed_result_rate": evidence.get("failed_result_rate"),
+        "evidence_quality_pass_rate": evidence.get("pass_rate"),
+        "evidence_quality_failure_rate": evidence.get("failure_rate"),
+        "evidence_quality_missing_source_count": evidence.get("missing_source_count"),
+        "evidence_quality_missing_source_rate": evidence.get("missing_source_rate"),
+        "evidence_quality_untrusted_source_count": evidence.get("untrusted_source_count"),
+        "evidence_quality_untrusted_source_rate": evidence.get("untrusted_source_rate"),
+        "evidence_quality_stale_evidence_count": evidence.get("stale_evidence_count"),
+        "evidence_quality_stale_evidence_rate": evidence.get("stale_evidence_rate"),
+        "evidence_quality_missing_timestamp_count": evidence.get("missing_timestamp_count"),
+        "evidence_quality_missing_timestamp_rate": evidence.get("missing_timestamp_rate"),
+        "evidence_quality_source_counts": dict(_mapping(evidence.get("source_counts"))),
+        "evidence_quality_status_counts": dict(_mapping(evidence.get("status_counts"))),
+        "evidence_quality_reason_counts": dict(_mapping(evidence.get("reason_counts"))),
     }
 
 

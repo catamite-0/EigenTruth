@@ -45081,6 +45081,108 @@ def _write_citation_product_runtime_trace(
     path.write_text(json.dumps(trace.to_dict()), encoding="utf-8")
 
 
+def _write_evidence_quality_product_runtime_trace(
+    path: Path,
+    *,
+    request_id: str,
+    quality: Mapping[str, Any] | None,
+) -> None:
+    from eigentruth.control import (
+        ActionExecutionStatus,
+        ActionResult,
+        ControlAction,
+        ProductTrace,
+        RuntimePhaseTiming,
+        RuntimeTrace,
+    )
+
+    output: dict[str, Any] = {"hits": ()}
+    if quality is not None:
+        output["evidence_quality"] = dict(quality)
+    trace = ProductTrace(
+        request_id=request_id,
+        action_results=(
+            ActionResult(
+                action=ControlAction.RETRIEVE,
+                status=ActionExecutionStatus.SUCCEEDED,
+                output=output,
+                request_id=f"{request_id}-retrieve",
+            ),
+        ),
+        runtime_trace=RuntimeTrace(
+            phases=(RuntimePhaseTiming("retrieve", 0.01),),
+            total_seconds=0.02,
+        ),
+    )
+    path.write_text(json.dumps(trace.to_dict()), encoding="utf-8")
+
+
+def test_run_product_runtime_baseline_aggregates_evidence_quality(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    registry_module = importlib.import_module("eigentruth.registry")
+    quality_trace = tmp_path / "quality.json"
+    missing_trace = tmp_path / "missing.json"
+    report_path = tmp_path / "baseline.json"
+    manifest_path = tmp_path / "manifest.json"
+    registry_path = tmp_path / "registry.json"
+    _write_evidence_quality_product_runtime_trace(
+        quality_trace,
+        request_id="quality",
+        quality={
+            "status": "fail",
+            "document_count": 2,
+            "applied_count": 2,
+            "passed_count": 1,
+            "failed_count": 1,
+            "pass_rate": 0.5,
+            "failure_rate": 0.5,
+            "reason_counts": {
+                "stale_evidence": 1,
+                "untrusted_source": 1,
+            },
+        },
+    )
+    _write_evidence_quality_product_runtime_trace(
+        missing_trace,
+        request_id="missing",
+        quality=None,
+    )
+
+    payload = module.build_product_runtime_baseline(
+        module.ProductRuntimeBaselineConfig(
+            trace_paths=(quality_trace, missing_trace),
+            report_path=report_path,
+            artifact_manifest_path=manifest_path,
+            registry_path=registry_path,
+            name="runtime-evidence-quality",
+            version="0.1",
+        )
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "product_runtime_baseline:runtime-evidence-quality:0.1"
+    )
+
+    quality = payload["summary"]["evidence_quality"]
+    assert quality["available_trace_count"] == 1
+    assert quality["missing_trace_count"] == 1
+    assert quality["trace_coverage_rate"] == pytest.approx(0.5)
+    assert quality["result_count"] == pytest.approx(2.0)
+    assert quality["checked_result_count"] == pytest.approx(1.0)
+    assert quality["coverage_rate"] == pytest.approx(0.5)
+    assert quality["document_count"] == pytest.approx(2.0)
+    assert quality["applied_count"] == pytest.approx(2.0)
+    assert quality["failed_count"] == pytest.approx(1.0)
+    assert quality["failure_rate"] == pytest.approx(0.5)
+    assert quality["stale_evidence_rate"] == pytest.approx(0.5)
+    assert quality["untrusted_source_rate"] == pytest.approx(0.5)
+    assert quality["status_counts"] == {"fail": 1}
+    assert payload["traces"][0]["metrics"]["evidence_quality_available"] is True
+    assert payload["traces"][1]["metrics"]["evidence_quality_available"] is False
+    assert manifest["metadata"]["evidence_quality_failure_rate"] == pytest.approx(0.5)
+    assert record.metadata["evidence_quality_stale_evidence_rate"] == pytest.approx(0.5)
+
+
 def test_run_product_runtime_baseline_aggregates_action_receipts(tmp_path):
     module = importlib.import_module("benchmarks.run_product_runtime_baseline")
     signed_trace = tmp_path / "signed.json"
@@ -45391,6 +45493,115 @@ def test_compare_product_runtime_baselines_gates_citation_integrity_drift(tmp_pa
     ] == pytest.approx(0.5)
     assert record.metadata[
         "product_trace_citation_integrity_unresolved_rate_current"
+    ] == pytest.approx(0.5)
+
+
+def test_compare_product_runtime_baselines_gates_evidence_quality_drift(tmp_path):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    registry_module = importlib.import_module("eigentruth.registry")
+    baseline_trace = tmp_path / "baseline-quality.json"
+    current_trace = tmp_path / "current-quality.json"
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    drift_report = tmp_path / "drift.json"
+    manifest_path = tmp_path / "manifest.json"
+    registry_path = tmp_path / "registry.json"
+    _write_evidence_quality_product_runtime_trace(
+        baseline_trace,
+        request_id="baseline-quality",
+        quality={
+            "status": "pass",
+            "document_count": 2,
+            "applied_count": 2,
+            "passed_count": 2,
+            "failed_count": 0,
+            "pass_rate": 1.0,
+            "failure_rate": 0.0,
+            "reason_counts": {},
+        },
+    )
+    _write_evidence_quality_product_runtime_trace(
+        current_trace,
+        request_id="current-quality",
+        quality={
+            "status": "fail",
+            "document_count": 2,
+            "applied_count": 2,
+            "passed_count": 1,
+            "failed_count": 1,
+            "pass_rate": 0.5,
+            "failure_rate": 0.5,
+            "reason_counts": {
+                "stale_evidence": 1,
+                "untrusted_source": 1,
+            },
+        },
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=baseline_report,
+        )
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(current_trace,),
+            report_path=current_report,
+        )
+    )
+
+    payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        report_path=drift_report,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="runtime-drift-evidence-quality",
+        version="0.1",
+        min_product_trace_evidence_quality_trace_coverage_rate=1.0,
+        min_product_trace_evidence_quality_coverage_rate=1.0,
+        min_product_trace_evidence_quality_pass_rate=0.9,
+        max_product_trace_evidence_quality_failure_rate_increase=0.0,
+        max_product_trace_evidence_quality_stale_evidence_rate_increase=0.0,
+        max_product_trace_evidence_quality_untrusted_source_rate_increase=0.0,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "product_runtime_drift_report:runtime-drift-evidence-quality:0.1"
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["blocked_metric_count"] == 4
+    assert _metric_by_name(payload, "evidence_quality.trace_coverage_rate")[
+        "status"
+    ] == "pass"
+    assert _metric_by_name(payload, "evidence_quality.coverage_rate")[
+        "status"
+    ] == "pass"
+    assert _metric_by_name(payload, "evidence_quality.pass_rate")[
+        "status"
+    ] == "blocked"
+    assert _metric_by_name(payload, "evidence_quality.failure_rate")[
+        "absolute_delta"
+    ] == pytest.approx(0.5)
+    assert _metric_by_name(payload, "evidence_quality.stale_evidence_rate")[
+        "status"
+    ] == "blocked"
+    assert _metric_by_name(payload, "evidence_quality.untrusted_source_rate")[
+        "status"
+    ] == "blocked"
+    assert payload["config"][
+        "min_product_trace_evidence_quality_pass_rate"
+    ] == pytest.approx(0.9)
+    assert manifest["metadata"][
+        "product_trace_evidence_quality_blocked_metric_count"
+    ] == 4
+    assert manifest["metadata"][
+        "product_trace_evidence_quality_failure_rate_current"
+    ] == pytest.approx(0.5)
+    assert record.metadata[
+        "product_trace_evidence_quality_untrusted_source_rate_current"
     ] == pytest.approx(0.5)
 
 
