@@ -1716,13 +1716,78 @@ def _action_template(kind: Mapping[str, str], *, gate: str, reason: str) -> Evid
             evidence_routes=(
                 "product_trace_replay",
                 "trajectory_audit",
+                "product_runtime_baseline",
                 "product_runtime_drift",
+                "trajectory_audit_evidence",
             ),
             suggested_commands=(
-                "benchmarks/run_product_trace_replay_workflow.py",
-                "benchmarks/run_product_runtime_baseline.py",
-                "benchmarks/compare_product_runtime_baselines.py",
+                "benchmarks/run_product_trace_replay_workflow.py "
+                "--trace-glob ... --promotion-contract ... "
+                "--max-runtime-drift-product-trace-trajectory-audit-failed-trace-rate-increase ... "
+                "--max-runtime-drift-product-trace-trajectory-audit-error-rate-increase ... "
+                "--max-runtime-drift-product-trace-trajectory-audit-factual-rate-increase ... "
+                "--max-runtime-drift-product-trace-trajectory-audit-referential-rate-increase ... "
+                "--max-runtime-drift-product-trace-trajectory-audit-logical-rate-increase ... "
+                "--max-runtime-drift-product-trace-trajectory-audit-procedural-rate-increase ... "
+                "--max-runtime-drift-product-trace-trajectory-audit-scope-rate-increase ...",
+                "benchmarks/run_product_runtime_baseline.py "
+                "--trace ... --promotion-contract ... --json ... --artifact-manifest ...",
+                "benchmarks/compare_product_runtime_baselines.py "
+                "--current ... --baseline ... "
+                "--max-product-trace-trajectory-audit-failed-trace-rate-increase ... "
+                "--max-product-trace-trajectory-audit-error-rate-increase ... "
+                "--max-product-trace-trajectory-audit-factual-rate-increase ... "
+                "--max-product-trace-trajectory-audit-referential-rate-increase ... "
+                "--max-product-trace-trajectory-audit-logical-rate-increase ... "
+                "--max-product-trace-trajectory-audit-procedural-rate-increase ... "
+                "--max-product-trace-trajectory-audit-scope-rate-increase ... "
+                "--json ... --artifact-manifest ...",
             ),
+            metadata={
+                "trajectory_audit_api": "eigentruth.control.audit_product_trace_trajectory",
+                "trace_replay_script": "benchmarks/run_product_trace_replay_workflow.py",
+                "runtime_baseline_script": "benchmarks/run_product_runtime_baseline.py",
+                "runtime_drift_script": "benchmarks/compare_product_runtime_baselines.py",
+                "trace_replay_workflow": "product_trace_replay_workflow",
+                "runtime_baseline_workflow": "product_runtime_baseline",
+                "runtime_drift_workflow": "product_runtime_drift_comparison",
+                "risk_control_method": "trajectory_level_hallucination_audit",
+                "hallucination_taxonomy": (
+                    "factual",
+                    "referential",
+                    "logical",
+                    "procedural",
+                    "scope",
+                ),
+                "required_trace_metrics": (
+                    "trajectory_audit.failed_trace_rate",
+                    "trajectory_audit.error_rate",
+                    "trajectory_audit.factual_rate",
+                    "trajectory_audit.referential_rate",
+                    "trajectory_audit.logical_rate",
+                    "trajectory_audit.procedural_rate",
+                    "trajectory_audit.scope_rate",
+                ),
+                "default_gate_thresholds": {
+                    "max_product_trace_trajectory_audit_failed_trace_rate_increase": 0.0,
+                    "max_product_trace_trajectory_audit_error_rate_increase": 0.0,
+                    "max_product_trace_trajectory_audit_factual_rate_increase": 0.0,
+                    "max_product_trace_trajectory_audit_referential_rate_increase": 0.0,
+                    "max_product_trace_trajectory_audit_logical_rate_increase": 0.0,
+                    "max_product_trace_trajectory_audit_procedural_rate_increase": 0.0,
+                    "max_product_trace_trajectory_audit_scope_rate_increase": 0.0,
+                },
+                "required_inputs": (
+                    "full_product_trace_corpus",
+                    "promotion_contract_or_release_candidate",
+                    "baseline_product_runtime_report",
+                ),
+                "closure_outputs": (
+                    "product_trace_replay_workflow",
+                    "product_runtime_baseline",
+                    "product_runtime_drift_comparison",
+                ),
+            },
         )
     if evidence_kind == "product_runtime_evidence_handoff_evidence":
         return EvidenceGapAction(
