@@ -1355,6 +1355,11 @@ Added the first monitor-first tool-selection audit layer:
   manifest/registry-ready command plan. On the current default refreshed status
   it records the two frontier actions, eight command templates, and all unbound
   placeholders/required inputs, keeping execution explicit and reviewable.
+- `scaffold_frontier_research_queue_bindings.py` now turns that command plan
+  into a review scaffold plus deliberately empty bindings skeleton. On the
+  current default refreshed queue it surfaces `53` ordered placeholders and
+  `10` required inputs, with safe suggestions for outputs/manifests/registry
+  metadata while keeping direct binder output at `needs_inputs`.
 - `bind_frontier_research_queue_command_plan.py` and
   `run_frontier_research_queue_bound_command_plan.py` add the next handoff
   layer: reviewed bindings can turn that queue into a ready bound plan, and the

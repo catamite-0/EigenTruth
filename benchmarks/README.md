@@ -6586,8 +6586,25 @@ The command plan records action ids, command templates, placeholder counts,
 required inputs, and planned outputs. It is still a planning artifact; commands
 remain unbound and unexecuted until a reviewed caller supplies concrete local
 paths.
-After review, bind either ordered `command_template_values` or full
-`bound_commands` through a sidecar:
+Generate a review scaffold before editing bindings by hand:
+
+```bash
+python benchmarks/scaffold_frontier_research_queue_bindings.py \
+  --command-plan artifacts/frontier-research-queue-command-plan.json \
+  --json artifacts/frontier-research-queue-binding-scaffold.json \
+  --bindings-json artifacts/frontier-research-queue-command-bindings.json \
+  --artifact-manifest artifacts/frontier-research-queue-binding-scaffold-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-binding-scaffold \
+  --version 0.1 \
+  --registry-output-path artifacts/local-release-registry.json
+```
+
+The scaffold lists each ordered `...` placeholder, required input, and suggested
+output/manifest/registry/name/version binding. The generated bindings sidecar is
+deliberately empty so feeding it directly to the binder remains `needs_inputs`.
+After review, fill either ordered `command_template_values` or full
+`bound_commands` through that sidecar:
 
 ```bash
 python benchmarks/bind_frontier_research_queue_command_plan.py \

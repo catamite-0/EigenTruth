@@ -31595,6 +31595,90 @@ def test_frontier_research_queue_bound_plan_dry_run_roundtrip(tmp_path):
     assert run_record.metadata["dry_run"] is True
 
 
+def test_frontier_research_queue_binding_scaffold_keeps_values_unbound(tmp_path):
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    scaffold_module = importlib.import_module(
+        "benchmarks.scaffold_frontier_research_queue_bindings"
+    )
+    bind_module = importlib.import_module(
+        "benchmarks.bind_frontier_research_queue_command_plan"
+    )
+    registry_module = importlib.import_module("eigentruth.registry")
+    plan_path = tmp_path / "frontier-research-command-plan.json"
+    scaffold_path = tmp_path / "frontier-research-binding-scaffold.json"
+    bindings_path = tmp_path / "frontier-research-command-bindings.json"
+    manifest_path = tmp_path / "frontier-research-binding-scaffold-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    plan_module.build_frontier_research_queue_command_plan(
+        source={
+            "workflow": "evidence_gap_plan",
+            "actions": (
+                {
+                    "action_id": "refresh_frontier_fixture",
+                    "suggested_commands": (
+                        "benchmarks/compare_frontier_release_evidence.py "
+                        "--verifier-stability-report ... --json ... "
+                        "--artifact-manifest ... --registry ... --name ... --version ...",
+                    ),
+                    "metadata": {
+                        "required_inputs": ("verifier_stability_report",),
+                        "closure_outputs": ("frontier_release_evidence_comparison",),
+                    },
+                },
+            ),
+        },
+        json_path=plan_path,
+    )
+
+    scaffold = scaffold_module.scaffold_frontier_research_queue_bindings(
+        command_plan=plan_path,
+        json_path=scaffold_path,
+        bindings_json_path=bindings_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="frontier-research-binding-scaffold",
+        version="0.1",
+        registry_output_path=tmp_path / "release-registry.json",
+    )
+    bound = bind_module.build_frontier_research_queue_bound_command_plan(
+        command_plan=plan_path,
+        bindings=bindings_path,
+    )
+
+    saved_bindings = json.loads(bindings_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:frontier-research-binding-scaffold:0.1"
+    )
+    placeholders = scaffold["entries"][0]["placeholder_records"]
+
+    assert scaffold["workflow"] == "frontier_research_queue_binding_scaffold"
+    assert scaffold["status"] == "needs_review"
+    assert scaffold["summary"]["required_input_count"] == 1
+    assert scaffold["summary"]["placeholder_count"] == 6
+    assert scaffold["summary"]["suggested_binding_count"] == 6
+    assert placeholders[0]["flag"] == "--verifier-stability-report"
+    assert placeholders[0]["suggested_binding"]["review_required"] is True
+    assert placeholders[1]["flag"] == "--json"
+    assert placeholders[1]["suggested_binding"]["source"] == "planned_output"
+    assert placeholders[2]["flag"] == "--artifact-manifest"
+    assert placeholders[2]["suggested_binding"]["source"] == "derived_manifest_path"
+    assert saved_bindings["workflow"] == "frontier_research_queue_command_bindings"
+    assert saved_bindings["status"] == "needs_review"
+    assert saved_bindings["inputs"] == {}
+    assert saved_bindings["bindings"]["refresh_frontier_fixture"][
+        "command_template_values"
+    ] == []
+    assert bound["status"] == "needs_inputs"
+    assert bound["summary"]["unbound_placeholder_count"] == 6
+    assert manifest["artifacts"]["frontier_research_queue_binding_scaffold"][
+        "exists"
+    ] is True
+    assert manifest["artifacts"]["bindings_json"]["exists"] is True
+    assert record.metadata["workflow"] == "frontier_research_queue_binding_scaffold"
+    assert record.metadata["placeholder_count"] == 6
+
+
 def _frontier_status_release_candidate() -> dict[str, Any]:
     return {
         "workflow": "release_candidate_comparison",
