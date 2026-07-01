@@ -1640,12 +1640,29 @@ def test_source_family_structured_qa_gap_triage_routes_next_lanes(tmp_path):
     assert by_record[1]["blocked_from_handoff"] is False
     assert by_record[2]["next_lane"] == "answer_support_audit"
     assert by_record[3]["next_lane"] == "answer_collision_audit"
+    assert by_record[3]["primary_closure_route"] == "entity_disambiguation"
+    assert by_record[3]["closure_routes"] == (
+        "entity_disambiguation",
+        "world_model_rule_authoring",
+    )
     assert by_record[3]["world_model_rule_families"] == ("entity_disambiguation",)
     assert by_record[4]["next_lane"] == "richer_property_or_indicator_collection"
+    assert by_record[4]["closure_routes"] == (
+        "property_or_indicator_collection",
+        "world_model_rule_authoring",
+    )
     assert by_record[4]["available_request_counts"]["source_family_structured_fact"] == 1
     assert by_record[5]["next_lane"] == "citation_retrieval_before_handoff"
+    assert by_record[5]["primary_closure_route"] == "citation_evidence_collection"
     assert payload["summary"]["targets_with_external_citation"] == 1
     assert payload["summary"]["targets_with_world_model_or_calculator_rule"] == 2
+    assert payload["summary"]["primary_closure_route_counts"]["entity_disambiguation"] == 1
+    assert payload["summary"]["closure_route_counts"]["world_model_rule_authoring"] == 2
+    assert payload["summary"]["source_gap_type_counts"] == {
+        "answer_entity_collision": 1,
+        "missing_property_or_indicator": 1,
+        "needs_citation_before_fact_promotion": 1,
+    }
     assert registry_record is not None
     assert registry_record.metadata["blocked_count"] == 4
     assert len(target_rows) == 5
@@ -1832,9 +1849,31 @@ def test_source_family_structured_qa_lane_execution_queue_batches_requests(tmp_p
     assert payload["summary"]["request_type_counts"]["external_citation"] == 1
     assert payload["summary"]["request_type_counts"]["source_family_fact_disambiguation"] == 1
     assert payload["summary"]["request_type_counts"]["source_family_structured_fact"] == 1
+    assert payload["summary"]["primary_closure_route_counts"] == {
+        "entity_disambiguation": 1,
+        "property_or_indicator_collection": 1,
+    }
+    assert payload["summary"]["closure_route_counts"] == {
+        "world_model_rule_authoring": 2,
+        "citation_evidence_collection": 1,
+        "entity_disambiguation": 1,
+        "property_or_indicator_collection": 1,
+    }
+    assert payload["summary"]["source_gap_type_counts"] == {
+        "answer_entity_collision": 3,
+        "missing_property_or_indicator": 2,
+    }
     assert {row["target_id"] for row in request_rows} == {"record-3", "record-4"}
     assert all("answer" not in row and "model_answer" not in row for row in request_rows)
+    assert {row["closure_route"] for row in request_rows} == {
+        "citation_evidence_collection",
+        "entity_disambiguation",
+        "property_or_indicator_collection",
+        "world_model_rule_authoring",
+    }
     assert batch_rows[0]["next_lane"] == "answer_collision_audit"
+    assert batch_rows[0]["source_gap_type"] == "answer_entity_collision"
+    assert batch_rows[0]["closure_route"] == "entity_disambiguation"
     assert batch_rows[0]["request_type"] == "source_family_fact_disambiguation"
     assert registry_module.load_and_verify_artifact_manifest(output_dir / "artifact-manifest.json").passed is True
     assert registry_record is not None
@@ -1862,6 +1901,10 @@ def test_source_family_structured_qa_lane_rerun_queue_builds_batch_commands(tmp_
                     "batch_id": "sfqa-lane-batch-0001",
                     "next_lane": "answer_collision_audit",
                     "lane_status": "blocked_needs_disambiguation",
+                    "primary_closure_route": "entity_disambiguation",
+                    "closure_route": "entity_disambiguation",
+                    "source_gap_type": "answer_entity_collision",
+                    "evidence_gap_type": "answer_entity_collision",
                     "request_type": "source_family_fact_disambiguation",
                     "adapter_family": "source_family_fact_disambiguation",
                     "request_count": 3,
@@ -1874,6 +1917,7 @@ def test_source_family_structured_qa_lane_rerun_queue_builds_batch_commands(tmp_
                     "batch_id": "sfqa-lane-batch-0002",
                     "next_lane": "richer_property_or_indicator_collection",
                     "lane_status": "needs_property_collection",
+                    "source_gap_type": "missing_property_or_indicator",
                     "request_type": "world_model_or_calculator_rule",
                     "adapter_family": "world_model_rule_authoring",
                     "request_count": 1,
@@ -1933,8 +1977,18 @@ def test_source_family_structured_qa_lane_rerun_queue_builds_batch_commands(tmp_
     assert payload["summary"]["ready_command_count"] == 2
     assert payload["summary"]["source_backed_batch_count"] == 1
     assert payload["summary"]["rule_only_batch_count"] == 1
+    assert payload["summary"]["closure_route_counts"] == {
+        "entity_disambiguation": 1,
+        "world_model_rule_authoring": 1,
+    }
+    assert payload["summary"]["source_gap_type_counts"] == {
+        "answer_entity_collision": 1,
+        "missing_property_or_indicator": 1,
+    }
     assert entries["sfqa-lane-batch-0001"]["command_status"] == "ready"
     assert entries["sfqa-lane-batch-0001"]["command_kind"] == "source_family_lane_batch"
+    assert entries["sfqa-lane-batch-0001"]["closure_route"] == "entity_disambiguation"
+    assert entries["sfqa-lane-batch-0001"]["source_gap_type"] == "answer_entity_collision"
     assert source_command[:2] == (
         "python",
         "benchmarks/run_source_family_structured_qa_lane_batch_workflow.py",
@@ -1943,6 +1997,7 @@ def test_source_family_structured_qa_lane_rerun_queue_builds_batch_commands(tmp_
     assert source_command[source_command.index("--batch-id") + 1] == "sfqa-lane-batch-0001"
     assert "--compact-json" in source_command
     assert entries["sfqa-lane-batch-0002"]["command_kind"] == "rule_authoring_lane_batch"
+    assert entries["sfqa-lane-batch-0002"]["closure_route"] == "world_model_rule_authoring"
     assert "--source-catalog" not in rule_command
     assert rule_command[rule_command.index("--batch-id") + 1] == "sfqa-lane-batch-0002"
     assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
@@ -1999,7 +2054,9 @@ def test_source_family_structured_qa_lane_rerun_queue_blocks_missing_catalog(tmp
     assert payload["summary"]["ready_command_count"] == 0
     assert payload["summary"]["missing_command_count"] == 1
     assert payload["summary"]["missing_input_role_counts"] == {"source_catalog": 1}
+    assert payload["summary"]["closure_route_counts"] == {"citation_evidence_collection": 1}
     assert entry["command_status"] == "missing_inputs"
+    assert entry["closure_route"] == "citation_evidence_collection"
     assert entry["missing_inputs"] == (
         {"role": "source_catalog", "path": "", "reason": "no_source_catalog_configured"},
     )
@@ -2104,6 +2161,12 @@ def test_source_family_structured_qa_lane_batch_workflow_replays_selected_batch(
     assert payload["summary"]["target_count"] == 1
     assert payload["summary"]["source_backed_request_count"] == 1
     assert payload["summary"]["adapter_result_count"] == 1
+    assert payload["summary"]["closure_route_counts"] == {"entity_disambiguation": 1}
+    assert batch_collection["summary"]["closure_route_counts"] == {"entity_disambiguation": 1}
+    assert (
+        batch_collection["requests"]["source_family_fact_disambiguation"][0]["closure_route"]
+        == "entity_disambiguation"
+    )
     assert batch_collection["summary"]["stripped_reserved_field_counts"] == {
         "answer": 1,
         "model_answer": 1,
@@ -2211,6 +2274,7 @@ def test_source_family_structured_qa_lane_batch_workflow_emits_rule_only_batch(t
     assert payload["summary"]["structured_qa_document_count"] == 0
     assert payload["summary"]["rule_stub_count"] == 1
     assert payload["summary"]["request_type_counts"] == {"world_model_or_calculator_rule": 1}
+    assert payload["summary"]["closure_route_counts"] == {"world_model_rule_authoring": 1}
     assert batch_collection["summary"]["stripped_reserved_field_counts"] == {
         "answer": 1,
         "model_answer": 1,
@@ -2219,6 +2283,7 @@ def test_source_family_structured_qa_lane_batch_workflow_emits_rule_only_batch(t
     assert "answer" not in batch_collection["targets"][0]
     assert "answer" not in batch_collection["requests"]["world_model_or_calculator_rule"][0]
     assert rule_rows[0]["rule_family"] == "quantity_or_arithmetic"
+    assert rule_rows[0]["closure_route"] == "world_model_rule_authoring"
     assert rule_rows[0]["required_inputs"] == ["numeric_value", "unit", "reference_time"]
     assert rule_rows[0]["not_verifier_evidence"] is True
     assert registry_module.load_and_verify_artifact_manifest(output_dir / "artifact-manifest.json").passed is True

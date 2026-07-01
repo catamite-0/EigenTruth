@@ -1032,12 +1032,19 @@ Added the first monitor-first tool-selection audit layer:
   blocked from correction handoff, while preserving available request counts
   by lane: `352` structured-fact, `174` citation, `159` entity-resolution, `41`
   disambiguation, and `38` world-model/calculator-rule requests. This makes the
-  next source-family pass queue-control work rather than a blind replay.
+  next source-family pass queue-control work rather than a blind replay. The
+  triage now also emits closure-route metadata (`primary_closure_route`,
+  `closure_routes`, and `source_gap_type_counts`) so unresolved rows stay
+  separated by the evidence producer needed to close them.
 - `build_source_family_structured_qa_lane_execution_queue.py` now turns that
   triage into the actual execution plan: `87` collection targets, `752`
   answer-free adapter/rule requests, and `29` batches. Batch ordering starts
   with `answer_collision_audit` fact disambiguation, then flows into property,
-  citation, entity, and broader source-family coverage lanes.
+  citation, entity, and broader source-family coverage lanes. Adapter requests,
+  execution batches, batch workflow reports, rule stubs, and rerun plans now
+  preserve or infer `closure_route`, `primary_closure_route`, `source_gap_type`,
+  and `evidence_gap_type`, which gives release/readiness automation a stable
+  route key instead of forcing it to reverse-engineer lane names.
 - `run_source_family_structured_qa_lane_batch_workflow.py` replays the first
   batch (`sfqa-lane-batch-0001`) through the same local source catalogs. It
   returns `36` candidate rows and `9` structured QA facts; the route gate

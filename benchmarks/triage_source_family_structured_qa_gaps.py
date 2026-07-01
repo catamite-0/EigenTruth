@@ -64,6 +64,26 @@ LANE_PRIORITY = {
     "unclassified_gap": 40.0,
 }
 
+CLOSURE_ROUTE_BY_LANE = {
+    "structured_qa_correction_handoff": "structured_qa_correction_handoff",
+    "answer_support_audit": "answer_support_audit",
+    "answer_collision_audit": "entity_disambiguation",
+    "richer_property_or_indicator_collection": "property_or_indicator_collection",
+    "entity_resolution_or_subject_collection": "entity_resolution",
+    "citation_retrieval_before_handoff": "citation_evidence_collection",
+    "source_family_coverage_expansion": "source_family_coverage_expansion",
+    "covered_fact_manual_audit": "manual_audit",
+    "unclassified_gap": "triage",
+}
+
+CLOSURE_ROUTE_BY_REQUEST_TYPE = {
+    "source_family_fact_disambiguation": "entity_disambiguation",
+    "world_model_or_calculator_rule": "world_model_rule_authoring",
+    "source_family_structured_fact": "property_or_indicator_collection",
+    "entity_resolution": "entity_resolution",
+    "external_citation": "citation_evidence_collection",
+}
+
 QUESTION_TYPE_PRIORITY = {
     "quantity": 12.0,
     "temporal": 10.0,
@@ -306,6 +326,12 @@ def _triage_record(
         request_counts=request_counts,
         world_model_rule_families=world_model_rule_families,
     )
+    primary_closure_route = CLOSURE_ROUTE_BY_LANE.get(lane, CLOSURE_ROUTE_BY_LANE["unclassified_gap"])
+    closure_routes = _closure_routes(
+        primary_closure_route=primary_closure_route,
+        request_counts=request_counts,
+        world_model_rule_families=world_model_rule_families,
+    )
     return {
         "target_id": target_id,
         "record_id": record_id,
@@ -318,6 +344,8 @@ def _triage_record(
         "gate_recommendation": record.get("gate_recommendation"),
         "next_lane": lane,
         "lane_status": lane_status,
+        "primary_closure_route": primary_closure_route,
+        "closure_routes": closure_routes,
         "priority_score": priority_score,
         "blocked_from_handoff": lane_status != "handoff_ready",
         "covered_fact_match": bool(record.get("covered_fact_match")),
@@ -352,8 +380,15 @@ def _summary(
 ) -> dict[str, Any]:
     lane_counts = Counter(str(item.get("next_lane")) for item in targets)
     lane_status_counts = Counter(str(item.get("lane_status")) for item in targets)
+    primary_closure_route_counts = Counter(str(item.get("primary_closure_route")) for item in targets)
+    closure_route_counts: Counter[str] = Counter()
     decision_counts = Counter(str(item.get("mapping_decision")) for item in targets)
     question_type_counts = Counter(str(item.get("question_type")) for item in targets)
+    source_gap_type_counts = Counter(
+        str(item.get("source_gap_type") or "")
+        for item in targets
+        if str(item.get("source_gap_type") or "")
+    )
     request_type_counts: Counter[str] = Counter()
     task_type_counts: Counter[str] = Counter()
     world_model_rule_counts: Counter[str] = Counter()
@@ -369,6 +404,7 @@ def _summary(
                 targets_with_world_model_rules += 1
         task_type_counts.update(str(item) for item in _sequence(target.get("collection_task_types")))
         world_model_rule_counts.update(str(item) for item in _sequence(target.get("world_model_rule_families")))
+        closure_route_counts.update(str(item) for item in _sequence(target.get("closure_routes")))
     blocked_count = sum(1 for item in targets if bool(item.get("blocked_from_handoff")))
     top_targets = tuple(
         {
@@ -376,6 +412,8 @@ def _summary(
             "record_index": item.get("record_index"),
             "next_lane": item.get("next_lane"),
             "lane_status": item.get("lane_status"),
+            "primary_closure_route": item.get("primary_closure_route"),
+            "source_gap_type": item.get("source_gap_type"),
             "priority_score": item.get("priority_score"),
             "question_type": item.get("question_type"),
         }
@@ -400,8 +438,11 @@ def _summary(
         ),
         "lane_counts": _sorted_counter(lane_counts),
         "lane_status_counts": _sorted_counter(lane_status_counts),
+        "primary_closure_route_counts": _sorted_counter(primary_closure_route_counts),
+        "closure_route_counts": _sorted_counter(closure_route_counts),
         "mapping_decision_counts": _sorted_counter(decision_counts),
         "question_type_counts": _sorted_counter(question_type_counts),
+        "source_gap_type_counts": _sorted_counter(source_gap_type_counts),
         "available_request_type_counts": _sorted_counter(request_type_counts),
         "collection_task_type_counts": _sorted_counter(task_type_counts),
         "world_model_rule_family_counts": _sorted_counter(world_model_rule_counts),
@@ -450,6 +491,21 @@ def _priority_score(
     if request_counts.get("world_model_or_calculator_rule", 0) or world_model_rule_families:
         score += 7.0
     return score
+
+
+def _closure_routes(
+    *,
+    primary_closure_route: str,
+    request_counts: Mapping[str, int],
+    world_model_rule_families: Sequence[str],
+) -> tuple[str, ...]:
+    routes = [primary_closure_route]
+    for request_type in CLOSURE_ROUTE_BY_REQUEST_TYPE:
+        if (_optional_int(request_counts.get(request_type)) or 0) > 0:
+            routes.append(CLOSURE_ROUTE_BY_REQUEST_TYPE[request_type])
+    if world_model_rule_families:
+        routes.append(CLOSURE_ROUTE_BY_REQUEST_TYPE["world_model_or_calculator_rule"])
+    return tuple(dict.fromkeys(route for route in routes if route))
 
 
 def _request_counts_by_target(requests_payload: Any) -> dict[str, dict[str, int]]:

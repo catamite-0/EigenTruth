@@ -36,6 +36,13 @@ SOURCE_BACKED_REQUEST_TYPES = {
     "source_family_fact_disambiguation",
 }
 RULE_REQUEST_TYPE = "world_model_or_calculator_rule"
+CLOSURE_ROUTE_BY_REQUEST_TYPE = {
+    "source_family_fact_disambiguation": "entity_disambiguation",
+    "world_model_or_calculator_rule": "world_model_rule_authoring",
+    "source_family_structured_fact": "property_or_indicator_collection",
+    "entity_resolution": "entity_resolution",
+    "external_citation": "citation_evidence_collection",
+}
 
 
 def build_source_family_structured_qa_lane_rerun_queue(
@@ -272,6 +279,9 @@ def _queue_entry(
     request_type = str(batch.get("request_type") or "")
     source_backed = request_type in SOURCE_BACKED_REQUEST_TYPES
     rule_only = request_type == RULE_REQUEST_TYPE
+    closure_route = str(batch.get("closure_route") or CLOSURE_ROUTE_BY_REQUEST_TYPE.get(request_type, ""))
+    primary_closure_route = str(batch.get("primary_closure_route") or closure_route)
+    source_gap_type = str(batch.get("source_gap_type") or "")
     output_dir = output_root / _slug(batch_id)
     missing_inputs = _missing_inputs(
         lane_queue_path=lane_queue_path,
@@ -305,6 +315,10 @@ def _queue_entry(
         "missing_inputs": missing_inputs,
         "next_lane": batch.get("next_lane"),
         "lane_status": batch.get("lane_status"),
+        "primary_closure_route": primary_closure_route,
+        "closure_route": closure_route,
+        "source_gap_type": source_gap_type,
+        "evidence_gap_type": str(batch.get("evidence_gap_type") or source_gap_type),
         "request_type": request_type,
         "adapter_family": batch.get("adapter_family"),
         "request_count": _int(batch.get("request_count")),
@@ -397,6 +411,9 @@ def _missing_inputs(
 def _summary(entries: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     statuses = Counter(str(entry.get("command_status") or "") for entry in entries)
     lanes = Counter(str(entry.get("next_lane") or "") for entry in entries)
+    primary_closure_routes = Counter(str(entry.get("primary_closure_route") or "") for entry in entries)
+    closure_routes = Counter(str(entry.get("closure_route") or "") for entry in entries)
+    source_gap_types = Counter(str(entry.get("source_gap_type") or "") for entry in entries)
     request_types = Counter(str(entry.get("request_type") or "") for entry in entries)
     missing_roles = Counter(
         str(missing.get("role") or "unknown")
@@ -411,6 +428,9 @@ def _summary(entries: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "rule_only_batch_count": sum(1 for entry in entries if entry.get("rule_only")),
         "command_status_counts": _sorted_counter(statuses),
         "lane_counts": _sorted_counter(lanes),
+        "primary_closure_route_counts": _sorted_counter(primary_closure_routes),
+        "closure_route_counts": _sorted_counter(closure_routes),
+        "source_gap_type_counts": _sorted_counter(source_gap_types),
         "request_type_counts": _sorted_counter(request_types),
         "missing_input_role_counts": _sorted_counter(missing_roles),
         "missing_input_count": sum(len(_mapping_sequence(entry.get("missing_inputs", ()))) for entry in entries),

@@ -3536,7 +3536,11 @@ Available request counts are preserved by lane (`352` structured-fact, `174`
 citation, `159` entity-resolution, `41` disambiguation, and `38`
 world-model/calculator-rule requests), so the next adapter/rule-authoring pass
 can prioritize the exact failure mode instead of replaying the whole queue
-blindly.
+blindly. New triage artifacts also expose `primary_closure_route`,
+`closure_routes`, and `source_gap_type_counts`, making the next evidence
+producer explicit (`entity_disambiguation`, `property_or_indicator_collection`,
+`citation_evidence_collection`, `entity_resolution`,
+`world_model_rule_authoring`, or broader source-family coverage).
 
 To turn those lanes into executable adapter/rule batches:
 
@@ -3560,11 +3564,17 @@ python benchmarks/build_source_family_structured_qa_lane_execution_queue.py \
 The queue is `ready_for_adapter_execution` with `87` collection targets, `752`
 adapter/rule requests, and `29` lane-aware batches. It intentionally excludes
 the `1` audit-only row and keeps answer/model-answer fields out of adapter
-requests; the first batch is `answer_collision_audit` disambiguation.
+requests; adapter requests and batches retain `closure_route`,
+`primary_closure_route`, `source_gap_type`, and `evidence_gap_type`, so batches
+stay separated by unresolved evidence family instead of only by lane/request
+type. The first batch is `answer_collision_audit` disambiguation.
 
 Build an executable rerun plan before launching batches. The planner preserves
 rule-only batches as runnable without catalogs and marks source-backed batches
-as `missing_inputs` when catalog or prerequisite paths are absent:
+as `missing_inputs` when catalog or prerequisite paths are absent. Rerun entries
+also preserve or infer `closure_route` and `source_gap_type`, allowing an
+operator or automation to execute only citation, entity, property, or
+world-model-rule closure batches:
 
 ```bash
 RERUNS=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-lane-reruns

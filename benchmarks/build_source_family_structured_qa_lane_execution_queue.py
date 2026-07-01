@@ -50,6 +50,24 @@ REQUEST_TYPE_TO_ADAPTER = {
     "entity_resolution": "entity_resolution",
     "external_citation": "external_citation_search",
 }
+CLOSURE_ROUTE_BY_LANE = {
+    "structured_qa_correction_handoff": "structured_qa_correction_handoff",
+    "answer_support_audit": "answer_support_audit",
+    "answer_collision_audit": "entity_disambiguation",
+    "richer_property_or_indicator_collection": "property_or_indicator_collection",
+    "entity_resolution_or_subject_collection": "entity_resolution",
+    "citation_retrieval_before_handoff": "citation_evidence_collection",
+    "source_family_coverage_expansion": "source_family_coverage_expansion",
+    "covered_fact_manual_audit": "manual_audit",
+    "unclassified_gap": "triage",
+}
+CLOSURE_ROUTE_BY_REQUEST_TYPE = {
+    "source_family_fact_disambiguation": "entity_disambiguation",
+    "world_model_or_calculator_rule": "world_model_rule_authoring",
+    "source_family_structured_fact": "property_or_indicator_collection",
+    "entity_resolution": "entity_resolution",
+    "external_citation": "citation_evidence_collection",
+}
 LANE_RANK = {
     "answer_collision_audit": 0,
     "richer_property_or_indicator_collection": 1,
@@ -293,11 +311,22 @@ def run(
 
 
 def _target_entry(target: Mapping[str, Any], *, target_id: str, request_count: int) -> dict[str, Any]:
+    next_lane = str(target.get("next_lane") or "")
+    primary_closure_route = str(
+        target.get("primary_closure_route")
+        or CLOSURE_ROUTE_BY_LANE.get(next_lane)
+        or CLOSURE_ROUTE_BY_LANE["unclassified_gap"]
+    )
     return {
         "target_id": target_id,
         "record_index": _optional_int(target.get("record_index")),
-        "next_lane": str(target.get("next_lane") or ""),
+        "next_lane": next_lane,
         "lane_status": str(target.get("lane_status") or ""),
+        "primary_closure_route": primary_closure_route,
+        "closure_routes": _target_closure_routes(
+            target,
+            primary_closure_route=primary_closure_route,
+        ),
         "priority_score": _optional_float(target.get("priority_score")) or 0.0,
         "blocked_from_handoff": bool(target.get("blocked_from_handoff", True)),
         "mapping_decision": str(target.get("mapping_decision") or ""),
@@ -330,6 +359,10 @@ def _adapter_request(
     request_type = str(request.get("request_type") or "")
     request_id = str(request.get("request_id") or "")
     query = str(request.get("query") or request.get("rule_seed") or "")
+    closure_route = CLOSURE_ROUTE_BY_REQUEST_TYPE.get(
+        request_type,
+        str(target.get("primary_closure_route") or ""),
+    )
     output = {
         "queue_id": f"sfqa-lane:{target['target_id']}:{request_type}:{request_ordinal}",
         "source_request_id": request_id,
@@ -338,6 +371,9 @@ def _adapter_request(
         "record_index": target["record_index"],
         "next_lane": target["next_lane"],
         "lane_status": target["lane_status"],
+        "primary_closure_route": target["primary_closure_route"],
+        "closure_route": closure_route,
+        "closure_routes": target["closure_routes"],
         "adapter_family": REQUEST_TYPE_TO_ADAPTER.get(request_type, request_type),
         "request_type": request_type,
         "priority_score": target["priority_score"],
@@ -345,6 +381,7 @@ def _adapter_request(
         "question": target["question"],
         "query": query,
         "source_gap_type": target["source_gap_type"],
+        "evidence_gap_type": target["source_gap_type"] or target["mapping_decision"],
         "mapping_decision": target["mapping_decision"],
         "requires_timestamp": bool(request.get("requires_timestamp")),
         "rule_family": request.get("rule_family"),
@@ -372,13 +409,23 @@ def _batches(
     *,
     max_requests_per_batch: int,
 ) -> tuple[dict[str, Any], ...]:
-    grouped: defaultdict[tuple[str, str], list[Mapping[str, Any]]] = defaultdict(list)
+    grouped: defaultdict[tuple[str, str, str, str], list[Mapping[str, Any]]] = defaultdict(list)
     for request in adapter_requests:
-        grouped[(str(request.get("next_lane")), str(request.get("request_type")))].append(request)
+        grouped[
+            (
+                str(request.get("next_lane")),
+                str(request.get("source_gap_type") or ""),
+                str(request.get("closure_route") or ""),
+                str(request.get("request_type")),
+            )
+        ].append(request)
 
     batches: list[dict[str, Any]] = []
     ordinal = 1
-    for (lane, request_type), rows in sorted(grouped.items(), key=_batch_group_sort_key):
+    for (lane, source_gap_type, closure_route, request_type), rows in sorted(
+        grouped.items(),
+        key=_batch_group_sort_key,
+    ):
         rows = sorted(rows, key=_queued_request_sort_key)
         for offset in range(0, len(rows), max_requests_per_batch):
             chunk = rows[offset : offset + max_requests_per_batch]
@@ -387,6 +434,10 @@ def _batches(
                 "batch_id": f"sfqa-lane-batch-{ordinal:04d}",
                 "next_lane": lane,
                 "lane_status": str(chunk[0].get("lane_status") or "") if chunk else "",
+                "primary_closure_route": str(chunk[0].get("primary_closure_route") or "") if chunk else "",
+                "closure_route": closure_route,
+                "source_gap_type": source_gap_type,
+                "evidence_gap_type": source_gap_type or str(chunk[0].get("mapping_decision") or "") if chunk else "",
                 "request_type": request_type,
                 "adapter_family": str(chunk[0].get("adapter_family") or request_type) if chunk else request_type,
                 "request_count": len(chunk),
@@ -410,6 +461,21 @@ def _summary(
 ) -> dict[str, Any]:
     lane_counts = Counter(str(item.get("next_lane")) for item in targets)
     lane_status_counts = Counter(str(item.get("lane_status")) for item in targets)
+    primary_closure_route_counts = Counter(
+        str(item.get("primary_closure_route") or "")
+        for item in targets
+        if str(item.get("primary_closure_route") or "")
+    )
+    closure_route_counts = Counter(
+        str(item.get("closure_route") or "")
+        for item in adapter_requests
+        if str(item.get("closure_route") or "")
+    )
+    source_gap_type_counts = Counter(
+        str(item.get("source_gap_type") or "")
+        for item in adapter_requests
+        if str(item.get("source_gap_type") or "")
+    )
     request_type_counts = Counter(str(item.get("request_type")) for item in adapter_requests)
     adapter_counts = Counter(str(item.get("adapter_family")) for item in adapter_requests)
     question_counts = Counter(str(item.get("question_type")) for item in targets)
@@ -420,6 +486,9 @@ def _summary(
         "batch_count": len(batches),
         "lane_counts": _sorted_counter(lane_counts),
         "lane_status_counts": _sorted_counter(lane_status_counts),
+        "primary_closure_route_counts": _sorted_counter(primary_closure_route_counts),
+        "closure_route_counts": _sorted_counter(closure_route_counts),
+        "source_gap_type_counts": _sorted_counter(source_gap_type_counts),
         "request_type_counts": _sorted_counter(request_type_counts),
         "adapter_family_counts": _sorted_counter(adapter_counts),
         "question_type_counts": _sorted_counter(question_counts),
@@ -443,6 +512,8 @@ def _summary(
         else {
             "batch_id": batches[0]["batch_id"],
             "next_lane": batches[0]["next_lane"],
+            "closure_route": batches[0]["closure_route"],
+            "source_gap_type": batches[0]["source_gap_type"],
             "request_type": batches[0]["request_type"],
             "request_count": batches[0]["request_count"],
         },
@@ -508,19 +579,43 @@ def _queued_request_sort_key(item: Mapping[str, Any]) -> tuple[float, int, str]:
     )
 
 
-def _batch_group_sort_key(item: tuple[tuple[str, str], Sequence[Mapping[str, Any]]]) -> tuple[int, int, str, str]:
-    lane, request_type = item[0]
+def _batch_group_sort_key(
+    item: tuple[tuple[str, str, str, str], Sequence[Mapping[str, Any]]],
+) -> tuple[int, int, str, str, str, str]:
+    lane, source_gap_type, closure_route, request_type = item[0]
     request_type_rank = {name: idx for idx, name in enumerate(DEFAULT_REQUEST_TYPES)}
     return (
         LANE_RANK.get(lane, 100),
         request_type_rank.get(request_type, 100),
         lane,
+        source_gap_type,
+        closure_route,
         request_type,
     )
 
 
 def _target_count_for_request_type(rows: Sequence[Mapping[str, Any]], request_type: str) -> int:
     return len({str(item.get("target_id")) for item in rows if item.get("request_type") == request_type})
+
+
+def _target_closure_routes(
+    target: Mapping[str, Any],
+    *,
+    primary_closure_route: str,
+) -> tuple[str, ...]:
+    routes = [primary_closure_route]
+    for item in _sequence(target.get("closure_routes")):
+        route = str(item)
+        if route:
+            routes.append(route)
+    request_counts = target.get("available_request_counts")
+    if isinstance(request_counts, Mapping):
+        for request_type, closure_route in CLOSURE_ROUTE_BY_REQUEST_TYPE.items():
+            if (_optional_int(request_counts.get(request_type)) or 0) > 0:
+                routes.append(closure_route)
+    if _sequence(target.get("world_model_rule_families")):
+        routes.append(CLOSURE_ROUTE_BY_REQUEST_TYPE["world_model_or_calculator_rule"])
+    return tuple(dict.fromkeys(route for route in routes if route))
 
 
 def _skip(target: Mapping[str, Any], *, target_id: str, reason: str) -> dict[str, Any]:

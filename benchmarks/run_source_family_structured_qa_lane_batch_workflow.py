@@ -36,6 +36,13 @@ WORKFLOW = "source_family_structured_qa_lane_batch_workflow"
 LANE_QUEUE_WORKFLOW = "source_family_structured_qa_lane_execution_queue"
 COLLECTION_WORKFLOW = "source_family_structured_qa_fact_collection_corpus"
 RESERVED_REQUEST_FIELDS = {"answer", "model_answer", "label", "labels", "is_false", "score_label"}
+CLOSURE_ROUTE_BY_REQUEST_TYPE = {
+    "source_family_fact_disambiguation": "entity_disambiguation",
+    "world_model_or_calculator_rule": "world_model_rule_authoring",
+    "source_family_structured_fact": "property_or_indicator_collection",
+    "entity_resolution": "entity_resolution",
+    "external_citation": "citation_evidence_collection",
+}
 
 
 def run_source_family_structured_qa_lane_batch_workflow(
@@ -248,6 +255,8 @@ def _batch_collection(
         )
     )
     requests_by_id = _requests_by_id(collection.get("requests", {}))
+    queue_requests_by_id = _queue_requests_by_source_id(lane_queue.get("adapter_requests", ()))
+    batch_by_request_id = _batch_by_source_request_id(selected_batches)
     missing = tuple(request_id for request_id in source_request_ids if request_id not in requests_by_id)
     if missing:
         raise ValueError(f"lane batch references missing collection requests: {', '.join(missing)}")
@@ -267,6 +276,11 @@ def _batch_collection(
         if request_type not in request_buckets:
             continue
         sanitized, stripped = _strip_reserved(request)
+        sanitized = _with_batch_route_metadata(
+            sanitized,
+            queue_request=queue_requests_by_id.get(request_id),
+            batch=batch_by_request_id.get(request_id),
+        )
         stripped_reserved.update(stripped)
         request_buckets[request_type].append(sanitized)
         target_id = str(sanitized.get("target_id") or "")
@@ -281,8 +295,24 @@ def _batch_collection(
         selected_targets.append(sanitized)
 
     request_counts = Counter({key: len(value) for key, value in request_buckets.items() if value})
+    selected_request_rows = tuple(row for rows in request_buckets.values() for row in rows)
     lane_counts = Counter(str(batch.get("next_lane") or "") for batch in selected_batches)
     lane_status_counts = Counter(str(batch.get("lane_status") or "") for batch in selected_batches)
+    primary_closure_route_counts = Counter(
+        str(row.get("primary_closure_route") or "")
+        for row in selected_request_rows
+        if str(row.get("primary_closure_route") or "")
+    )
+    closure_route_counts = Counter(
+        str(row.get("closure_route") or "")
+        for row in selected_request_rows
+        if str(row.get("closure_route") or "")
+    )
+    source_gap_type_counts = Counter(
+        str(row.get("source_gap_type") or "")
+        for row in selected_request_rows
+        if str(row.get("source_gap_type") or "")
+    )
     return {
         "schema_version": 1,
         "workflow": COLLECTION_WORKFLOW,
@@ -314,6 +344,9 @@ def _batch_collection(
             "request_type_counts": _sorted_counter(request_counts),
             "lane_counts": _sorted_counter(lane_counts),
             "lane_status_counts": _sorted_counter(lane_status_counts),
+            "primary_closure_route_counts": _sorted_counter(primary_closure_route_counts),
+            "closure_route_counts": _sorted_counter(closure_route_counts),
+            "source_gap_type_counts": _sorted_counter(source_gap_type_counts),
             "stripped_reserved_field_counts": _sorted_counter(stripped_reserved),
         },
         "targets": tuple(selected_targets),
@@ -341,6 +374,28 @@ def _summary(
                     request_counts[str(request_type)] = count
     lane_counts = Counter(str(batch.get("next_lane") or "") for batch in selected_batches)
     lane_status_counts = Counter(str(batch.get("lane_status") or "") for batch in selected_batches)
+    selected_request_rows = tuple(
+        row
+        for rows in requests_payload.values()
+        if isinstance(rows, Sequence) and not isinstance(rows, (str, bytes, bytearray))
+        for row in rows
+        if isinstance(row, Mapping)
+    ) if isinstance(requests_payload, Mapping) else ()
+    primary_closure_route_counts = Counter(
+        str(row.get("primary_closure_route") or "")
+        for row in selected_request_rows
+        if str(row.get("primary_closure_route") or "")
+    )
+    closure_route_counts = Counter(
+        str(row.get("closure_route") or "")
+        for row in selected_request_rows
+        if str(row.get("closure_route") or "")
+    )
+    source_gap_type_counts = Counter(
+        str(row.get("source_gap_type") or "")
+        for row in selected_request_rows
+        if str(row.get("source_gap_type") or "")
+    )
     return {
         "batch_count": len(selected_batches),
         "batch_ids": tuple(str(batch.get("batch_id") or "") for batch in selected_batches),
@@ -354,6 +409,9 @@ def _summary(
         "request_type_counts": _sorted_counter(request_counts),
         "lane_counts": _sorted_counter(lane_counts),
         "lane_status_counts": _sorted_counter(lane_status_counts),
+        "primary_closure_route_counts": _sorted_counter(primary_closure_route_counts),
+        "closure_route_counts": _sorted_counter(closure_route_counts),
+        "source_gap_type_counts": _sorted_counter(source_gap_type_counts),
         "child_status": None if child_payload is None else child_payload.get("status"),
         "reserved_source_document_field_hits": dict(
             child_summary.get("reserved_source_document_field_hits") or {}
@@ -416,6 +474,66 @@ def _requests_by_id(requests_payload: Any) -> dict[str, Mapping[str, Any]]:
     return output
 
 
+def _queue_requests_by_source_id(rows: Any) -> dict[str, Mapping[str, Any]]:
+    return {
+        str(row.get("source_request_id")): row
+        for row in _mapping_sequence(rows)
+        if str(row.get("source_request_id") or "")
+    }
+
+
+def _batch_by_source_request_id(rows: Sequence[Mapping[str, Any]]) -> dict[str, Mapping[str, Any]]:
+    output: dict[str, Mapping[str, Any]] = {}
+    for batch in rows:
+        for request_id in _string_sequence(batch.get("source_request_ids")):
+            output[request_id] = batch
+    return output
+
+
+def _with_batch_route_metadata(
+    row: Mapping[str, Any],
+    *,
+    queue_request: Mapping[str, Any] | None,
+    batch: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    output = dict(row)
+    request_type = str(output.get("request_type") or "")
+    closure_route = (
+        _first_string(queue_request, "closure_route")
+        or _first_string(batch, "closure_route")
+        or CLOSURE_ROUTE_BY_REQUEST_TYPE.get(request_type, "")
+    )
+    primary_closure_route = (
+        _first_string(queue_request, "primary_closure_route")
+        or _first_string(batch, "primary_closure_route")
+        or closure_route
+    )
+    for key in ("next_lane", "lane_status"):
+        value = _first_string(queue_request, key) or _first_string(batch, key)
+        if value and not output.get(key):
+            output[key] = value
+    source_gap_type = (
+        _first_string(queue_request, "source_gap_type")
+        or _first_string(batch, "source_gap_type")
+        or str(output.get("gap_type") or "")
+    )
+    if primary_closure_route and not output.get("primary_closure_route"):
+        output["primary_closure_route"] = primary_closure_route
+    if closure_route and not output.get("closure_route"):
+        output["closure_route"] = closure_route
+    if source_gap_type and not output.get("source_gap_type"):
+        output["source_gap_type"] = source_gap_type
+    if source_gap_type and not output.get("evidence_gap_type"):
+        output["evidence_gap_type"] = source_gap_type
+    return output
+
+
+def _first_string(row: Mapping[str, Any] | None, key: str) -> str:
+    if not isinstance(row, Mapping):
+        return ""
+    return str(row.get(key) or "")
+
+
 def _strip_reserved(row: Mapping[str, Any]) -> tuple[dict[str, Any], Counter[str]]:
     stripped: Counter[str] = Counter()
     output: dict[str, Any] = {}
@@ -446,7 +564,16 @@ def _rule_stubs(batch_collection: Mapping[str, Any]) -> tuple[dict[str, Any], ..
             "required_inputs": _string_sequence(request.get("required_inputs", ())),
             "question": str(request.get("question") or ""),
             "question_type": str(request.get("question_type") or ""),
-            "gap_type": str(request.get("gap_type") or ""),
+            "gap_type": str(request.get("gap_type") or request.get("source_gap_type") or ""),
+            "source_gap_type": str(request.get("source_gap_type") or request.get("gap_type") or ""),
+            "evidence_gap_type": str(
+                request.get("evidence_gap_type")
+                or request.get("source_gap_type")
+                or request.get("gap_type")
+                or ""
+            ),
+            "primary_closure_route": str(request.get("primary_closure_route") or ""),
+            "closure_route": str(request.get("closure_route") or ""),
             "priority": str(request.get("priority") or ""),
             "not_verifier_evidence": True,
         })
