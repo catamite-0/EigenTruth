@@ -6560,11 +6560,15 @@ python benchmarks/build_frontier_status_report.py \
   --artifact-manifest artifacts/frontier-status-report-manifest.json \
   --registry artifacts/local-release-registry.json \
   --name frontier-status-report \
-  --version 0.1
+  --version 0.1 \
+  --refresh-research-queue
 ```
 
 The report separates `productized_status` from `research_queue`, so historical
-gap plans do not downgrade the current promoted release.
+gap plans do not downgrade the current promoted release. With
+`--refresh-research-queue`, the report recomputes the queue from the gap plan's
+`source_path` using the current `EvidenceGapPlan` mapper, which keeps stale
+planning artifacts visible while surfacing the newest executable action ids.
 
 Active v1.9 product contract export:
 

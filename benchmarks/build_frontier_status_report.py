@@ -15,6 +15,7 @@ if str(ROOT) not in sys.path:
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from eigentruth.control import plan_evidence_gaps_from_release_candidate  # noqa: E402
 from eigentruth.json_utils import strict_json_dumps  # noqa: E402
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
 
@@ -36,6 +37,8 @@ def build_frontier_status_report(
     release_candidate: str | Path | Mapping[str, Any],
     product_contract: str | Path | Mapping[str, Any],
     evidence_gap_plan: str | Path | Mapping[str, Any] | None = None,
+    research_queue_source: str | Path | Mapping[str, Any] | None = None,
+    refresh_research_queue: bool = False,
     json_path: str | Path | None = None,
     artifact_manifest_path: str | Path | None = None,
     registry_path: str | Path | None = None,
@@ -65,7 +68,29 @@ def build_frontier_status_report(
 
     release_summary = _release_summary(release_payload)
     contract_summary = _contract_summary(contract_payload)
-    research_queue = _research_queue(gap_payload)
+    research_source_path = None
+    research_queue_payload = gap_payload
+    research_refresh_status = "not_requested"
+    if refresh_research_queue:
+        research_source_path, research_source_payload = _load_research_queue_source(
+            research_queue_source=research_queue_source,
+            gap_payload=gap_payload,
+            gap_path=gap_path,
+            release_path=release_path,
+            release_payload=release_payload,
+        )
+        refreshed_plan = plan_evidence_gaps_from_release_candidate(
+            research_source_payload,
+            source_path=research_source_path,
+            metadata={"refreshed_from_frontier_status_report": True},
+        ).to_dict()
+        research_queue_payload = refreshed_plan
+        research_refresh_status = "refreshed"
+    research_queue = _research_queue(
+        research_queue_payload,
+        refresh_status=research_refresh_status,
+        original_payload=None if research_queue_payload is gap_payload else gap_payload,
+    )
     blockers = _active_blockers(release_summary=release_summary, contract_summary=contract_summary)
     status = "promote" if not blockers else "needs_evidence"
     output_path = None if json_path is None else Path(json_path)
@@ -86,6 +111,9 @@ def build_frontier_status_report(
             "release_candidate": None if release_path is None else str(release_path),
             "product_contract": None if contract_path is None else str(contract_path),
             "evidence_gap_plan": None if gap_path is None else str(gap_path),
+            "research_queue_source": None
+            if research_source_path is None
+            else str(research_source_path),
         },
         "metadata": dict(metadata or {}),
     }
@@ -99,6 +127,7 @@ def build_frontier_status_report(
             release_path=release_path,
             contract_path=contract_path,
             gap_path=gap_path,
+            research_source_path=research_source_path,
             payload=payload,
             metadata=metadata or {},
             compact=compact_json,
@@ -119,6 +148,7 @@ def build_frontier_status_report(
                 "blocked_evidence_group_count": contract_summary["blocked_evidence_group_count"],
                 "research_action_count": research_queue["action_count"],
                 "research_gap_count": research_queue["gap_count"],
+                "research_refresh_status": research_queue["refresh_status"],
                 "manifest_summary": {} if manifest is None else manifest.get("summary", {}),
                 **dict(metadata or {}),
             },
@@ -243,10 +273,21 @@ def _contract_summary(payload: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def _research_queue(payload: Mapping[str, Any]) -> dict[str, Any]:
+def _research_queue(
+    payload: Mapping[str, Any],
+    *,
+    refresh_status: str = "not_requested",
+    original_payload: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
     if not payload:
         return {
             "status": "not_provided",
+            "workflow": None,
+            "source_workflow": None,
+            "source_path": None,
+            "refresh_status": refresh_status,
+            "original_action_count": None,
+            "original_gap_count": None,
             "source_status": None,
             "gap_count": 0,
             "action_count": 0,
@@ -258,8 +299,15 @@ def _research_queue(payload: Mapping[str, Any]) -> dict[str, Any]:
     summary = _mapping(payload.get("summary"))
     actions = tuple(_action_summary(action) for action in _mapping_sequence(payload.get("actions", ())))
     gaps = tuple(_gap_summary(gap) for gap in _mapping_sequence(payload.get("gaps", ())))
+    original_summary = _mapping(original_payload.get("summary")) if original_payload else {}
     return {
         "status": payload.get("status"),
+        "workflow": payload.get("workflow"),
+        "source_workflow": payload.get("source_workflow"),
+        "source_path": payload.get("source_path"),
+        "refresh_status": refresh_status,
+        "original_action_count": original_summary.get("action_count"),
+        "original_gap_count": original_summary.get("gap_count"),
         "source_status": payload.get("source_status") or summary.get("source_decision_status"),
         "gap_count": summary.get("gap_count", len(gaps)),
         "action_count": summary.get("action_count", len(actions)),
@@ -285,11 +333,14 @@ def _action_summary(action: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _gap_summary(gap: Mapping[str, Any]) -> dict[str, Any]:
+    metadata = _mapping(gap.get("metadata"))
     return {
         "gap_id": gap.get("gap_id"),
         "gate": gap.get("gate"),
         "status": gap.get("status"),
         "root_cause": gap.get("root_cause"),
+        "evidence_kind": metadata.get("evidence_kind"),
+        "research_axis": metadata.get("research_axis"),
         "missing_metric_count": len(_sequence(gap.get("missing_metrics"))),
         "recommended_action_ids": tuple(gap.get("recommended_action_ids") or ()),
     }
@@ -328,6 +379,7 @@ def _write_manifest(
     release_path: Path | None,
     contract_path: Path | None,
     gap_path: Path | None,
+    research_source_path: Path | None,
     payload: Mapping[str, Any],
     metadata: Mapping[str, Any],
     compact: bool,
@@ -339,6 +391,7 @@ def _write_manifest(
             "release_candidate": release_path,
             "product_contract": contract_path,
             "evidence_gap_plan": gap_path,
+            "research_queue_source": research_source_path,
         }.items()
         if path is not None
     }
@@ -356,6 +409,7 @@ def _write_manifest(
                 payload, "productized_status", "product_contract", "status"
             ),
             "research_action_count": _nested(payload, "research_queue", "action_count"),
+            "research_refresh_status": _nested(payload, "research_queue", "refresh_status"),
             **dict(metadata),
         },
     )
@@ -371,6 +425,41 @@ def _load_mapping_source(source: str | Path | Mapping[str, Any]) -> tuple[Path |
     if not isinstance(payload, Mapping):
         raise ValueError(f"{path} must contain a JSON object.")
     return path, dict(payload)
+
+
+def _load_research_queue_source(
+    *,
+    research_queue_source: str | Path | Mapping[str, Any] | None,
+    gap_payload: Mapping[str, Any],
+    gap_path: Path | None,
+    release_path: Path | None,
+    release_payload: Mapping[str, Any],
+) -> tuple[Path | None, dict[str, Any]]:
+    if research_queue_source is not None:
+        return _load_mapping_source(research_queue_source)
+    source_hint = gap_payload.get("source_path")
+    if source_hint is not None:
+        source_path = _resolve_artifact_path(source_hint, relative_to=gap_path)
+        return _load_mapping_source(source_path)
+    if release_path is not None:
+        return release_path, dict(release_payload)
+    return None, dict(release_payload)
+
+
+def _resolve_artifact_path(value: Any, *, relative_to: Path | None) -> Path:
+    path = Path(str(value))
+    candidates = [path]
+    if not path.is_absolute():
+        candidates = []
+        if relative_to is not None:
+            candidates.append(relative_to.parent / path)
+        candidates.append(ROOT / path)
+        candidates.append(Path.cwd() / path)
+        candidates.append(path)
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    raise FileNotFoundError(f"research queue source does not exist: {value}")
 
 
 def _mapping_sequence(value: Any) -> tuple[Mapping[str, Any], ...]:
@@ -423,6 +512,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--product-contract", default=str(DEFAULT_PRODUCT_CONTRACT))
     parser.add_argument("--evidence-gap-plan", default=str(DEFAULT_EVIDENCE_GAP_PLAN))
     parser.add_argument("--no-evidence-gap-plan", action="store_true")
+    parser.add_argument(
+        "--refresh-research-queue",
+        action="store_true",
+        help="recompute the research_queue from the gap plan source path or active release candidate",
+    )
+    parser.add_argument(
+        "--research-queue-source",
+        default=None,
+        help="optional release/frontier report to use when refreshing research_queue",
+    )
     parser.add_argument("--json", default=None, help="optional output JSON path")
     parser.add_argument("--artifact-manifest", default=None, help="optional artifact manifest path")
     parser.add_argument("--registry", default=None, help="optional local artifact registry JSON")
@@ -438,6 +537,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         release_candidate=args.release_candidate,
         product_contract=args.product_contract,
         evidence_gap_plan=evidence_gap_plan,
+        research_queue_source=args.research_queue_source,
+        refresh_research_queue=bool(args.refresh_research_queue),
         json_path=args.json,
         artifact_manifest_path=args.artifact_manifest,
         registry_path=args.registry,

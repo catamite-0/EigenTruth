@@ -1347,7 +1347,10 @@ Added the first monitor-first tool-selection audit layer:
 - `build_frontier_status_report.py` now gives this lane a read-only handoff
   dashboard artifact: active v15 release/product-contract evidence is reported
   under `productized_status`, while older evidence-gap plans remain visible as
-  `research_queue` and do not downgrade the current promoted chain.
+  `research_queue` and do not downgrade the current promoted chain. The report
+  can also refresh that queue from the gap plan's source report, so old manual
+  triage artifacts surface the current action ids for abstention participation
+  and frontier-release metric refresh without being mistaken for new evidence.
 
 ## Next Research-to-Code Candidates
 

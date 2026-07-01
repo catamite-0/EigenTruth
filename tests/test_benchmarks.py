@@ -31336,6 +31336,62 @@ def test_frontier_status_report_marks_blocked_release_as_needs_evidence():
     assert payload["research_queue"]["status"] == "not_provided"
 
 
+def test_frontier_status_report_can_refresh_research_queue_from_source_path(tmp_path):
+    module = importlib.import_module("benchmarks.build_frontier_status_report")
+    source_path = tmp_path / "blocked-frontier-release-evidence.json"
+    gap_plan = _frontier_status_gap_plan()
+    gap_plan["source_path"] = str(source_path)
+    gap_plan["summary"]["action_count"] = 1
+    gap_plan["summary"]["gap_count"] = 1
+    gap_plan["actions"][0]["action_id"] = "inspect_frontier_release_evidence_blocker"
+    gap_plan["actions"][0]["suggested_commands"] = ()
+    source_path.write_text(
+        json.dumps({
+            "workflow": "frontier_release_evidence_comparison",
+            "decision": {
+                "status": "blocked",
+                "abstention_track_status": "blocked",
+                "blocking_reasons": (
+                    "abstention_track_status is blocked by participation-gate instability",
+                ),
+            },
+            "run_decisions": [
+                {
+                    "name": "smollm2-l80",
+                    "abstention_decision": {
+                        "status": "blocked",
+                        "metrics": {
+                            "empirical_abstention_rate_mean": 0.42,
+                            "release_gate_pass_seed_rate": 0.5,
+                            "stable_recommended_score_name": "truth_proj",
+                        },
+                    },
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.build_frontier_status_report(
+        release_candidate=_frontier_status_release_candidate(),
+        product_contract=_frontier_status_product_contract(),
+        evidence_gap_plan=gap_plan,
+        refresh_research_queue=True,
+    )
+
+    assert payload["status"] == "promote"
+    assert payload["paths"]["research_queue_source"] == str(source_path)
+    assert payload["research_queue"]["refresh_status"] == "refreshed"
+    assert payload["research_queue"]["workflow"] == "evidence_gap_plan"
+    assert payload["research_queue"]["source_workflow"] == "frontier_release_evidence_comparison"
+    assert payload["research_queue"]["original_action_count"] == 1
+    assert payload["research_queue"]["action_count"] == 1
+    assert payload["research_queue"]["actions"][0]["action_id"] == "improve_abstention_participation_gate"
+    assert payload["research_queue"]["actions"][0]["suggested_command_count"] == 4
+    assert payload["research_queue"]["gaps"][0]["root_cause"] == "model"
+    assert payload["research_queue"]["gaps"][0]["research_axis"] == "participation_calibration"
+
+
 def _frontier_status_release_candidate() -> dict[str, Any]:
     return {
         "workflow": "release_candidate_comparison",
