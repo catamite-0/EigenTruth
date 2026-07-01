@@ -25,7 +25,10 @@ DEFAULT_RELEASE_CANDIDATE = (
     ROOT / "artifacts" / "frontier-audit-release-candidate-v15" / "frontier-audit-comparison.json"
 )
 DEFAULT_PRODUCT_CONTRACT = (
-    ROOT / "artifacts" / "smollm2_product_promotion_contract_v1_9" / "product-promotion-contract.json"
+    ROOT
+    / "artifacts"
+    / "smollm2_product_promotion_evidence_handoff_v1_9_frontier_v7"
+    / "product-promotion-contract-evidence-handoff.json"
 )
 DEFAULT_EVIDENCE_GAP_PLAN = (
     ROOT / "artifacts" / "frontier-audit-release-candidate-v12" / "evidence-gap-plan.json"

@@ -628,6 +628,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `run_triple_extraction_fixture_matrix.py` | Runs generated triple-extraction fixture workflows across multiple structured-fact corpora, including optional per-corpus external prediction files, requiring cross-corpus promotion, predicate diversity, and optional adversarial subgroup gates before extractor templates are treated as release evidence. |
 | `triple_extraction_smoke.py` | Runs the bundled labeled triple-extraction fixture through rule-based, regex-with-fallback, and composite extractors, gating that configurable templates improve exact F1 without adding learned extractor dependencies. |
 | `product_promotion_contract_smoke.py` | Verifies the current default v1.9 product promotion contract, sibling manifests, receipt-aware v1.9/v7 `77/77` evidence handoff, frontier release evidence, runtime-drift metadata, and registry record without loading a model; the legacy `65/65` handoff remains available by overriding `--evidence-handoff-manifest` and thresholds. |
+| `frontier_status_smoke.py` | Verifies the active v15 frontier status snapshot uses the v1.9/v7 product handoff and v5 frontier evidence, while stale refreshed research queues are marked superseded and emit no active-only command plan. |
 | `frontier_release_evidence_smoke.py` | Verifies the active product contract's promoted frontier release-evidence report, rerun-promoted detectability/multiple-testing tracks, optional input-manifest gates, and release-evidence manifest without loading a model. |
 | `frontier_artifact_reference_smoke.py` | Runs the active frontier artifact-reference audit over repository docs, verifying referenced v6/v1.9 artifacts and manifests are present and require no repair actions without touching the real release registry. |
 | `build_frontier_status_report.py` | Builds a read-only frontier status snapshot from a release candidate, ProductPromotionContract, and optional evidence-gap plan, separating productized promoted evidence from research queues, optionally refreshing stale research queues from their source report, recording queue lifecycle/source-alignment status so superseded historical gaps are not confused with current blockers, and optionally writing manifest/registry metadata. |
@@ -1048,6 +1049,7 @@ evidence rates and maximum final false-accept / false-accept-delta thresholds.
 | `compare_trajectory_sweeps.py` | 对多个 forced-answer trajectory sweep report 做对比，并在 trajectory 信号进入 release evidence 前应用 fail-closed gate。 |
 | `concept_registry_smoke.py` | 保存两个 synthetic `ConceptArtifact`，登记到本地 registry，把两个 probe 同时挂到一个 toy model，并写出带 manifest 的多 concept 诊断报告。 |
 | `product_promotion_contract_smoke.py` | 无需加载模型，校验当前默认 v1.9 product promotion contract、相邻 manifest、receipt-aware v1.9/v7 `77/77` evidence handoff、frontier release evidence、runtime-drift metadata 和 registry record；旧版 `65/65` handoff 可通过覆盖 `--evidence-handoff-manifest` 和阈值继续验证。 |
+| `frontier_status_smoke.py` | 无需加载模型，校验 active v15 frontier status snapshot 使用 v1.9/v7 product handoff 和 v5 frontier evidence，同时确认刷新后的 stale research queue 被标为 superseded，active-only command plan 为空。 |
 | `frontier_release_evidence_smoke.py` | 无需加载模型，校验 active product contract 指向的 promoted frontier release-evidence report、rerun-promoted detectability/multiple-testing tracks、可选 input-manifest gates 和 release-evidence manifest。 |
 | `frontier_artifact_reference_smoke.py` | 在仓库文档上运行 active frontier artifact-reference audit，确认被引用的 v6/v1.9 artifact 与 manifest 都存在且无需 repair action，同时不写真实 release registry。 |
 | `build_frontier_status_report.py` | 从 release candidate、ProductPromotionContract 和可选 evidence-gap plan 生成只读 frontier 状态快照，区分已产品化 promoted evidence 与 research queue，可选择从源报告刷新陈旧 research queue，并记录 queue lifecycle/source-alignment，让已被当前 promoted release 覆盖的历史 gap 不再被误读成当前 blocker；可写 manifest/registry metadata。 |
@@ -1207,7 +1209,7 @@ For local development, the Makefile auto-detects `.venv/bin/python` when present
 ```bash
 make check-fast    # lint + unit tests + dependency consistency
 make check         # check-fast plus deterministic smoke workflows
-make perf-check     # deterministic profile/cache/worker/registry/product-contract/frontier-evidence/ProductTrace smokes; no model load
+make perf-check     # deterministic profile/cache/worker/registry/product/frontier-status/ProductTrace smokes; no model load
 make release-check  # also builds the package
 ```
 

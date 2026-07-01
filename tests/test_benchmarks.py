@@ -31724,6 +31724,29 @@ def test_frontier_status_report_can_refresh_research_queue_from_source_path(tmp_
     assert payload["research_queue"]["gaps"][0]["research_axis"] == "participation_calibration"
 
 
+def test_frontier_status_smoke_verifies_current_defaults():
+    module = importlib.import_module("benchmarks.frontier_status_smoke")
+
+    payload = module.build_frontier_status_smoke()
+
+    assert payload["status"] == "pass"
+    assert payload["frontier_release_evidence_report"].endswith(
+        "frontier-release-evidence-budget-target-sweep-v5.json"
+    )
+    assert payload["product_runtime_drift_report"].endswith(
+        "smollm2_product_runtime_drift_v1_16_receipts_frontier_v5/product-runtime-drift.json"
+    )
+    assert payload["contract_frontier_release_evidence_report"].endswith(
+        "frontier-release-evidence-budget-target-sweep-v5.json"
+    )
+    assert payload["research_lifecycle_status"] == "superseded"
+    assert payload["research_source_alignment_status"] == "stale"
+    assert payload["research_action_count"] >= 1
+    assert payload["research_active_action_count"] == 0
+    assert payload["active_only_command_plan_status"] == "empty"
+    assert payload["active_only_command_count"] == 0
+
+
 def test_frontier_research_queue_command_plan_uses_refreshed_status_report(tmp_path):
     status_module = importlib.import_module("benchmarks.build_frontier_status_report")
     plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")

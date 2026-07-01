@@ -6672,7 +6672,9 @@ recursively. The older v13/v1.6 chain remains useful as the `65/65` pre-receipt
 boundary regression artifact.
 
 Build a single read-only status snapshot from the promoted release candidate,
-active product contract, and latest evidence-gap plan:
+active product contract handoff, and latest evidence-gap plan. The default
+product-contract input is the v1.9/v7 receipt-aware handoff, so the product
+status and v15 release status both point at v5 frontier release evidence:
 
 ```bash
 python benchmarks/build_frontier_status_report.py \
@@ -10230,15 +10232,16 @@ python benchmarks/run_registry_baseline_workflow.py \
 `benchmarks/registry_baseline_smoke.py`, plus
 `benchmarks/performance_baseline_smoke.py`,
 `benchmarks/product_promotion_contract_smoke.py`,
+`benchmarks/frontier_status_smoke.py`,
 `benchmarks/frontier_release_evidence_smoke.py`,
 `benchmarks/frontier_artifact_reference_smoke.py`,
 `benchmarks/product_trace_replay_smoke.py`, and
 `benchmarks/release_candidate_registry_smoke.py`. These use fixed synthetic profile
 payloads plus the checked-in v1.9 product handoff, the active v1.9/v7
-receipt-aware `77/77` evidence handoff, and active frontier doc references to
-verify that direct gates, cache-profile gates, worker-count sweep
+receipt-aware `77/77` evidence handoff, active frontier status, and active
+frontier doc references to verify that direct gates, cache-profile gates, worker-count sweep
 decisions, INSIDE sampling sample-efficiency gates, registry-backed baselines,
-the default promotion contract/evidence-handoff path, active frontier artifact
+the default promotion contract/evidence-handoff path, active frontier status, active frontier artifact
 references, promoted frontier release-evidence report tracks, ProductTrace
 replay, and release gates pass acceptable candidates, reject bounded telemetry
 payloads where full traces are required, and catch expected regressions. They are
