@@ -58,6 +58,20 @@ PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_KEYS: tuple[str, ...] = (
     "counterfactual_verification_false_invariance_rate",
     "counterfactual_verification_flip_success_count",
 )
+PRODUCT_RUNTIME_DRIFT_FACT_SELFCHECK_GATE_EVIDENCE_KEYS: tuple[str, ...] = (
+    "fact_selfcheck_gate_coverage_rate",
+    "fact_selfcheck_gate_report_present_rate",
+    "fact_selfcheck_gate_manifest_present_rate",
+    "fact_selfcheck_gate_manifest_verified_rate",
+    "fact_selfcheck_gate_passed_rate",
+    "fact_selfcheck_gate_run_count",
+    "fact_selfcheck_gate_failed_run_count",
+    "fact_selfcheck_gate_min_executed_rate",
+    "fact_selfcheck_gate_min_decided_rate",
+    "fact_selfcheck_gate_max_not_applicable_rate",
+    "fact_selfcheck_gate_min_claim_triples_per_record",
+    "fact_selfcheck_gate_min_sample_triples_per_record",
+)
 PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_KEYS: tuple[str, ...] = (
     "triple_claim_coverage_rate",
     "triple_audit_claim_coverage_rate",
@@ -154,6 +168,12 @@ PRODUCT_RUNTIME_DRIFT_EVIDENCE_QUALITY_EVIDENCE_KEYS: tuple[str, ...] = (
     "product_trace_evidence_quality_missing_source_rate",
     "product_trace_evidence_quality_missing_timestamp_rate",
 )
+PRODUCT_RUNTIME_DRIFT_METACOGNITION_EVIDENCE_KEYS: tuple[str, ...] = (
+    "product_trace_metacognition_trace_coverage_rate",
+    "product_trace_metacognition_pass_rate",
+    "product_trace_metacognition_overconfident_risk_rate",
+    "product_trace_metacognition_miscalibration_score_mean",
+)
 PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS: tuple[str, ...] = (
     "evidence_handoff_coverage_rate",
     "evidence_handoff_manifest_verified_rate",
@@ -219,6 +239,7 @@ PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS: dict[str, tuple[str, ...]] = {
         PRODUCT_RUNTIME_DRIFT_CLAIM_RISK_LOCALIZATION_EVIDENCE_KEYS
     ),
     "counterfactual": PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_KEYS,
+    "fact_selfcheck_gate": PRODUCT_RUNTIME_DRIFT_FACT_SELFCHECK_GATE_EVIDENCE_KEYS,
     "triple_audit": PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_KEYS,
     "covered_fact_property": PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_KEYS,
     "action_gate": PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_KEYS,
@@ -231,6 +252,7 @@ PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS: dict[str, tuple[str, ...]] = {
     "provenance": PRODUCT_RUNTIME_DRIFT_PROVENANCE_EVIDENCE_KEYS,
     "citation_integrity": PRODUCT_RUNTIME_DRIFT_CITATION_INTEGRITY_EVIDENCE_KEYS,
     "evidence_quality": PRODUCT_RUNTIME_DRIFT_EVIDENCE_QUALITY_EVIDENCE_KEYS,
+    "metacognition": PRODUCT_RUNTIME_DRIFT_METACOGNITION_EVIDENCE_KEYS,
     "evidence_handoff": PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS,
     "world_model": PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_KEYS,
     "context_sensitivity": PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_KEYS,
