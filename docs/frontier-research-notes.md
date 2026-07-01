@@ -1481,8 +1481,10 @@ Added the first monitor-first tool-selection audit layer:
   a nonempty combined rule-input sidecar, and only with `--execute` runs the
   existing rule-authoring adapter followed by the candidate promotion gate.
   Optional `--build-handoff` adds the ProductTrace/action-result handoff after
-  promotion passes; in that mode the top-level report returns `promote` only when
-  the handoff report also promotes.
+  promotion passes, and optional `--build-evidence-bundle` then packages the
+  promoted handoff into a mechanism evidence bundle. In bundle mode the top-level
+  report returns `promote` only when promotion, handoff, and bundle gates all
+  promote.
 - The binder now validates known frontier benchmark commands against required
   CLI flags. A directly filled abstention template is kept `needs_inputs` when
   `plan_frontier_abstention_evidence_reruns.py` omits the action-required

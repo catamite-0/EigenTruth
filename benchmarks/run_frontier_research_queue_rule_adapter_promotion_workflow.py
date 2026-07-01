@@ -2,9 +2,10 @@
 
 This workflow consumes ``frontier_research_queue_input_fill_result_rollup``
 reports. It can materialize the deterministic rule-adapter step, run the
-fail-closed rule-candidate promotion gate, and optionally build the ProductTrace
-handoff. By default it only writes a plan; explicit ``--execute`` is required
-before adapter, promotion, or handoff artifacts are produced.
+fail-closed rule-candidate promotion gate, optionally build the ProductTrace
+handoff, and optionally bundle that handoff as release-gate evidence. By default
+it only writes a plan; explicit ``--execute`` is required before adapter,
+promotion, handoff, or evidence-bundle artifacts are produced.
 """
 
 from __future__ import annotations
@@ -22,6 +23,12 @@ if str(ROOT) not in sys.path:
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from benchmarks.build_mechanism_handoff_evidence_bundle import (  # noqa: E402
+    WORKFLOW as EVIDENCE_BUNDLE_WORKFLOW,
+)
+from benchmarks.build_mechanism_handoff_evidence_bundle import (  # noqa: E402
+    run as run_mechanism_handoff_evidence_bundle,
+)
 from benchmarks.build_world_model_rule_candidate_handoff import (  # noqa: E402
     DEFAULT_ROUTE_NAME as DEFAULT_HANDOFF_ROUTE_NAME,
 )
@@ -65,9 +72,16 @@ def run_frontier_research_queue_rule_adapter_promotion_workflow(
     version: str | None = None,
     execute: bool = False,
     build_handoff: bool = False,
+    build_evidence_bundle: bool = False,
     min_confidence: float = 0.90,
     handoff_route_name: str = DEFAULT_HANDOFF_ROUTE_NAME,
     handoff_verifier_name: str = DEFAULT_HANDOFF_VERIFIER_NAME,
+    bundle_expected_target_count: int | None = None,
+    bundle_min_trace_count: int | None = None,
+    bundle_min_supported_count: int | None = None,
+    bundle_min_refuted_count: int | None = None,
+    bundle_min_source_citation_count: int | None = None,
+    bundle_require_action_execution_alignment: bool = True,
     compact_json: bool = False,
     metadata: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -76,6 +90,10 @@ def run_frontier_research_queue_rule_adapter_promotion_workflow(
         raise ValueError("execute must be a bool.")
     if not isinstance(build_handoff, bool):
         raise ValueError("build_handoff must be a bool.")
+    if not isinstance(build_evidence_bundle, bool):
+        raise ValueError("build_evidence_bundle must be a bool.")
+    if not isinstance(bundle_require_action_execution_alignment, bool):
+        raise ValueError("bundle_require_action_execution_alignment must be a bool.")
     if registry_path is not None and (not name or not version):
         raise ValueError("registry_path requires name and version.")
     source_path, rollup = _load_mapping_source(input_fill_result_rollup)
@@ -93,9 +111,12 @@ def run_frontier_research_queue_rule_adapter_promotion_workflow(
         combined_rule_inputs_path=combined_rule_inputs_path,
     )
     preflight = _preflight(rollup=rollup, paths=paths)
+    if build_evidence_bundle and not build_handoff:
+        preflight = _preflight_with_failure(preflight, "evidence_bundle_requires_handoff")
     adapter_payload: Mapping[str, Any] | None = None
     promotion_payload: Mapping[str, Any] | None = None
     handoff_payload: Mapping[str, Any] | None = None
+    evidence_bundle_payload: Mapping[str, Any] | None = None
     if execute and not preflight["failures"]:
         adapter_payload = run_world_model_rule_authoring_adapter(
             rule_stubs_path=paths["rule_stubs"],
@@ -148,17 +169,43 @@ def run_frontier_research_queue_rule_adapter_promotion_workflow(
                 },
                 compact_json=compact_json,
             )
+            if build_evidence_bundle and _mapping(handoff_payload.get("report")).get("status") == "promote":
+                evidence_bundle_payload = run_mechanism_handoff_evidence_bundle(
+                    handoff_paths=(paths["handoff_report"],),
+                    output_dir=paths["evidence_bundle_output_dir"],
+                    report_json_path=paths["evidence_bundle_report"],
+                    artifact_manifest_path=paths["evidence_bundle_artifact_manifest"],
+                    expected_target_count=bundle_expected_target_count,
+                    min_trace_count=bundle_min_trace_count,
+                    min_supported_count=bundle_min_supported_count,
+                    min_refuted_count=bundle_min_refuted_count,
+                    min_source_citation_count=bundle_min_source_citation_count,
+                    require_action_execution_alignment=bundle_require_action_execution_alignment,
+                    metadata={
+                        "parent_workflow": WORKFLOW,
+                        "source_rollup": None if source_path is None else str(source_path),
+                        **dict(metadata or {}),
+                    },
+                    compact_json=compact_json,
+                )
 
     summary = _summary(
         rollup=rollup,
         preflight=preflight,
         execute=execute,
         build_handoff=build_handoff,
+        build_evidence_bundle=build_evidence_bundle,
         adapter_payload=adapter_payload,
         promotion_payload=promotion_payload,
         handoff_payload=handoff_payload,
+        evidence_bundle_payload=evidence_bundle_payload,
     )
-    status = _status(summary=summary, execute=execute, build_handoff=build_handoff)
+    status = _status(
+        summary=summary,
+        execute=execute,
+        build_handoff=build_handoff,
+        build_evidence_bundle=build_evidence_bundle,
+    )
     payload = {
         "schema_version": 1,
         "workflow": WORKFLOW,
@@ -166,8 +213,8 @@ def run_frontier_research_queue_rule_adapter_promotion_workflow(
         "scope": (
             "Plans or executes deterministic rule-adapter replay plus the "
             "world-model rule-candidate promotion gate, with an optional "
-            "ProductTrace handoff, from a fill-result rollup. This workflow is "
-            "not verifier evidence."
+            "ProductTrace handoff and evidence bundle, from a fill-result "
+            "rollup. This workflow is not verifier evidence."
         ),
         "source": {
             "input_fill_result_rollup": None if source_path is None else str(source_path),
@@ -185,6 +232,7 @@ def run_frontier_research_queue_rule_adapter_promotion_workflow(
             "executes_adapter": bool(execute and not preflight["failures"]),
             "executes_promotion_gate": bool(execute and not preflight["failures"]),
             "build_handoff": bool(build_handoff),
+            "build_evidence_bundle": bool(build_evidence_bundle),
             "executes_handoff": bool(
                 execute
                 and build_handoff
@@ -192,9 +240,20 @@ def run_frontier_research_queue_rule_adapter_promotion_workflow(
                 and promotion_payload is not None
                 and promotion_payload.get("status") == "promote"
             ),
+            "executes_evidence_bundle": bool(
+                execute
+                and build_evidence_bundle
+                and evidence_bundle_payload is not None
+            ),
             "min_confidence": float(min_confidence),
             "handoff_route_name": handoff_route_name,
             "handoff_verifier_name": handoff_verifier_name,
+            "bundle_expected_target_count": bundle_expected_target_count,
+            "bundle_min_trace_count": bundle_min_trace_count,
+            "bundle_min_supported_count": bundle_min_supported_count,
+            "bundle_min_refuted_count": bundle_min_refuted_count,
+            "bundle_min_source_citation_count": bundle_min_source_citation_count,
+            "bundle_require_action_execution_alignment": bool(bundle_require_action_execution_alignment),
             "allowed_rollup_statuses": tuple(sorted(ADAPTER_READY_ROLLUP_STATUSES)),
         },
         "paths": _public_paths(paths, report_path=report_path, manifest_path=manifest_path),
@@ -203,8 +262,15 @@ def run_frontier_research_queue_rule_adapter_promotion_workflow(
             paths=paths,
             min_confidence=min_confidence,
             build_handoff=build_handoff,
+            build_evidence_bundle=build_evidence_bundle,
             handoff_route_name=handoff_route_name,
             handoff_verifier_name=handoff_verifier_name,
+            bundle_expected_target_count=bundle_expected_target_count,
+            bundle_min_trace_count=bundle_min_trace_count,
+            bundle_min_supported_count=bundle_min_supported_count,
+            bundle_min_refuted_count=bundle_min_refuted_count,
+            bundle_min_source_citation_count=bundle_min_source_citation_count,
+            bundle_require_action_execution_alignment=bundle_require_action_execution_alignment,
         ),
         "summary": summary,
         "metadata": dict(metadata or {}),
@@ -217,6 +283,7 @@ def run_frontier_research_queue_rule_adapter_promotion_workflow(
             report_path=report_path,
             execute=execute and not preflight["failures"],
             handoff_executed=handoff_payload is not None,
+            evidence_bundle_executed=evidence_bundle_payload is not None,
         ),
         root=manifest_path.parent,
         metadata={
@@ -224,13 +291,16 @@ def run_frontier_research_queue_rule_adapter_promotion_workflow(
             "status": status,
             "execute": bool(execute),
             "build_handoff": bool(build_handoff),
+            "build_evidence_bundle": bool(build_evidence_bundle),
             "preflight_failure_count": summary["preflight_failure_count"],
             "combined_rule_input_count": summary["combined_rule_input_count"],
             "adapter_status": summary["adapter_status"],
             "promotion_status": summary["promotion_status"],
             "handoff_status": summary["handoff_status"],
+            "evidence_bundle_status": summary["evidence_bundle_status"],
             "promoted_count": summary["promoted_count"],
             "handoff_trace_count": summary["handoff_trace_count"],
+            "evidence_bundle_trace_count": summary["evidence_bundle_trace_count"],
             **dict(metadata or {}),
         },
     )
@@ -247,13 +317,16 @@ def run_frontier_research_queue_rule_adapter_promotion_workflow(
                 "artifact_manifest": str(manifest_path),
                 "execute": bool(execute),
                 "build_handoff": bool(build_handoff),
+                "build_evidence_bundle": bool(build_evidence_bundle),
                 "preflight_failure_count": summary["preflight_failure_count"],
                 "combined_rule_input_count": summary["combined_rule_input_count"],
                 "adapter_status": summary["adapter_status"],
                 "promotion_status": summary["promotion_status"],
                 "handoff_status": summary["handoff_status"],
+                "evidence_bundle_status": summary["evidence_bundle_status"],
                 "promoted_count": summary["promoted_count"],
                 "handoff_trace_count": summary["handoff_trace_count"],
+                "evidence_bundle_trace_count": summary["evidence_bundle_trace_count"],
                 **dict(metadata or {}),
             },
         ).save_json()
@@ -279,6 +352,7 @@ def _workflow_paths(
     adapter_dir = output / "rule-adapter"
     promotion_dir = output / "rule-promotion"
     handoff_dir = output / "rule-candidate-handoff"
+    evidence_bundle_dir = output / "mechanism-handoff-evidence-bundle"
     return {
         "rule_stubs": None if rule_stubs in (None, "") else _resolve_path(rule_stubs, source_root=source_root),
         "combined_rule_inputs": (
@@ -300,6 +374,9 @@ def _workflow_paths(
         "handoff_product_traces": handoff_dir / "product-traces.jsonl",
         "handoff_action_results": handoff_dir / "action-results.jsonl",
         "handoff_artifact_manifest": handoff_dir / "artifact-manifest.json",
+        "evidence_bundle_output_dir": evidence_bundle_dir,
+        "evidence_bundle_report": evidence_bundle_dir / "mechanism-handoff-evidence-bundle.json",
+        "evidence_bundle_artifact_manifest": evidence_bundle_dir / "artifact-manifest.json",
     }
 
 
@@ -338,21 +415,38 @@ def _preflight(*, rollup: Mapping[str, Any], paths: Mapping[str, Path | None]) -
     }
 
 
+def _preflight_with_failure(preflight: Mapping[str, Any], failure: str) -> dict[str, Any]:
+    failures = tuple(dict.fromkeys((*tuple(preflight.get("failures", ())), failure)))
+    return {
+        **dict(preflight),
+        "status": "blocked",
+        "failures": failures,
+    }
+
+
 def _summary(
     *,
     rollup: Mapping[str, Any],
     preflight: Mapping[str, Any],
     execute: bool,
     build_handoff: bool,
+    build_evidence_bundle: bool,
     adapter_payload: Mapping[str, Any] | None,
     promotion_payload: Mapping[str, Any] | None,
     handoff_payload: Mapping[str, Any] | None,
+    evidence_bundle_payload: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
     rollup_summary = _mapping(rollup.get("summary"))
     adapter_summary = _mapping(None if adapter_payload is None else adapter_payload.get("summary"))
     promotion_summary = _mapping(None if promotion_payload is None else promotion_payload.get("summary"))
     handoff_report = _mapping(None if handoff_payload is None else handoff_payload.get("report"))
     handoff_summary = _mapping(handoff_report.get("summary"))
+    evidence_bundle_summary = _mapping(
+        None if evidence_bundle_payload is None else evidence_bundle_payload.get("summary")
+    )
+    evidence_bundle_gate = _mapping(
+        None if evidence_bundle_payload is None else evidence_bundle_payload.get("gate")
+    )
     return {
         "rollup_status": rollup.get("status"),
         "rollup_combined_rule_input_count": _int(rollup_summary.get("combined_rule_input_count")),
@@ -364,6 +458,7 @@ def _summary(
         "dry_run": not execute,
         "executed": bool(execute and preflight.get("status") == "ready"),
         "build_handoff": bool(build_handoff),
+        "build_evidence_bundle": bool(build_evidence_bundle),
         "adapter_workflow": None if adapter_payload is None else adapter_payload.get("workflow"),
         "adapter_status": None if adapter_payload is None else adapter_payload.get("status"),
         "adapter_executed_count": _int(adapter_summary.get("executed_count")),
@@ -380,15 +475,31 @@ def _summary(
         "handoff_trace_count": _int(handoff_summary.get("trace_count")),
         "handoff_action_result_count": _int(handoff_summary.get("action_result_count")),
         "handoff_blocked_candidate_count": _int(handoff_summary.get("blocked_candidate_count")),
+        "evidence_bundle_workflow": (
+            None if evidence_bundle_payload is None else evidence_bundle_payload.get("workflow")
+        ),
+        "evidence_bundle_status": None if evidence_bundle_payload is None else evidence_bundle_payload.get("status"),
+        "evidence_bundle_gate_passed": evidence_bundle_gate.get("passed"),
+        "evidence_bundle_trace_count": _int(evidence_bundle_summary.get("trace_count")),
+        "evidence_bundle_target_count": _int(evidence_bundle_summary.get("target_count")),
+        "evidence_bundle_source_citation_count": _int(evidence_bundle_summary.get("source_citation_count")),
     }
 
 
-def _status(*, summary: Mapping[str, Any], execute: bool, build_handoff: bool) -> str:
+def _status(
+    *,
+    summary: Mapping[str, Any],
+    execute: bool,
+    build_handoff: bool,
+    build_evidence_bundle: bool,
+) -> str:
     if int(summary.get("preflight_failure_count", 0)) > 0:
         return "blocked"
     if not execute:
         return "dry_run"
     if summary.get("promotion_status") == "promote":
+        if build_evidence_bundle:
+            return "promote" if summary.get("evidence_bundle_status") == "promote" else "blocked"
         if build_handoff:
             return "promote" if summary.get("handoff_status") == "promote" else "blocked"
         return "promote"
@@ -402,8 +513,15 @@ def _planned_commands(
     paths: Mapping[str, Path | None],
     min_confidence: float,
     build_handoff: bool,
+    build_evidence_bundle: bool,
     handoff_route_name: str,
     handoff_verifier_name: str,
+    bundle_expected_target_count: int | None,
+    bundle_min_trace_count: int | None,
+    bundle_min_supported_count: int | None,
+    bundle_min_refuted_count: int | None,
+    bundle_min_source_citation_count: int | None,
+    bundle_require_action_execution_alignment: bool,
 ) -> tuple[dict[str, Any], ...]:
     adapter_command = (
         "benchmarks/run_world_model_rule_authoring_adapter.py "
@@ -477,7 +595,34 @@ def _planned_commands(
             ),
             "executes_by_default": False,
         })
+    if build_evidence_bundle:
+        bundle_command = (
+            "benchmarks/build_mechanism_handoff_evidence_bundle.py "
+            f"--handoff {paths['handoff_report']} "
+            f"--output-dir {paths['evidence_bundle_output_dir']} "
+            f"--json {paths['evidence_bundle_report']} "
+            f"--artifact-manifest {paths['evidence_bundle_artifact_manifest']}"
+            f"{_optional_int_flag('--expected-target-count', bundle_expected_target_count)}"
+            f"{_optional_int_flag('--min-trace-count', bundle_min_trace_count)}"
+            f"{_optional_int_flag('--min-supported-count', bundle_min_supported_count)}"
+            f"{_optional_int_flag('--min-refuted-count', bundle_min_refuted_count)}"
+            f"{_optional_int_flag('--min-source-citation-count', bundle_min_source_citation_count)}"
+            f"{'' if bundle_require_action_execution_alignment else ' --allow-action-execution-misalignment'}"
+        )
+        commands.append({
+            "workflow": EVIDENCE_BUNDLE_WORKFLOW,
+            "command": bundle_command,
+            "planned_outputs": (
+                str(paths["evidence_bundle_report"]),
+                str(paths["evidence_bundle_artifact_manifest"]),
+            ),
+            "executes_by_default": False,
+        })
     return tuple(commands)
+
+
+def _optional_int_flag(flag: str, value: int | None) -> str:
+    return "" if value is None else f" {flag} {int(value)}"
 
 
 def _public_paths(
@@ -501,6 +646,7 @@ def _manifest_artifacts(
     report_path: Path,
     execute: bool,
     handoff_executed: bool,
+    evidence_bundle_executed: bool,
 ) -> dict[str, Path | None]:
     artifacts = {
         "frontier_rule_adapter_promotion_workflow": report_path,
@@ -526,6 +672,11 @@ def _manifest_artifacts(
             "rule_candidate_handoff_product_traces": paths.get("handoff_product_traces"),
             "rule_candidate_handoff_action_results": paths.get("handoff_action_results"),
             "rule_candidate_handoff_manifest": paths.get("handoff_artifact_manifest"),
+        })
+    if evidence_bundle_executed:
+        artifacts.update({
+            "mechanism_handoff_evidence_bundle": paths.get("evidence_bundle_report"),
+            "mechanism_handoff_evidence_bundle_manifest": paths.get("evidence_bundle_artifact_manifest"),
         })
     return artifacts
 
@@ -606,9 +757,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--version", default=None)
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--build-handoff", action="store_true")
+    parser.add_argument("--build-evidence-bundle", action="store_true")
     parser.add_argument("--min-confidence", type=float, default=0.90)
     parser.add_argument("--handoff-route-name", default=DEFAULT_HANDOFF_ROUTE_NAME)
     parser.add_argument("--handoff-verifier-name", default=DEFAULT_HANDOFF_VERIFIER_NAME)
+    parser.add_argument("--bundle-expected-target-count", type=int, default=None)
+    parser.add_argument("--bundle-min-trace-count", type=int, default=None)
+    parser.add_argument("--bundle-min-supported-count", type=int, default=None)
+    parser.add_argument("--bundle-min-refuted-count", type=int, default=None)
+    parser.add_argument("--bundle-min-source-citation-count", type=int, default=None)
+    parser.add_argument("--bundle-allow-action-execution-misalignment", action="store_true")
     parser.add_argument("--metadata", action="append", default=[])
     parser.add_argument("--compact-json", action="store_true")
     args = parser.parse_args(argv)
@@ -624,9 +782,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         version=args.version,
         execute=bool(args.execute),
         build_handoff=bool(args.build_handoff),
+        build_evidence_bundle=bool(args.build_evidence_bundle),
         min_confidence=args.min_confidence,
         handoff_route_name=args.handoff_route_name,
         handoff_verifier_name=args.handoff_verifier_name,
+        bundle_expected_target_count=args.bundle_expected_target_count,
+        bundle_min_trace_count=args.bundle_min_trace_count,
+        bundle_min_supported_count=args.bundle_min_supported_count,
+        bundle_min_refuted_count=args.bundle_min_refuted_count,
+        bundle_min_source_citation_count=args.bundle_min_source_citation_count,
+        bundle_require_action_execution_alignment=not args.bundle_allow_action_execution_misalignment,
         metadata=_parse_metadata(args.metadata),
         compact_json=args.compact_json,
     )
