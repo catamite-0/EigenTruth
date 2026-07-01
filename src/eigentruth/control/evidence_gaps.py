@@ -1148,21 +1148,99 @@ def _action_template(kind: Mapping[str, str], *, gate: str, reason: str) -> Evid
             action_type="workflow",
             priority=88,
             rationale=(
-                "Runtime drift gates need trace-level claim-risk localization coverage "
-                "and entity-risk counts so release checks can catch concentrated "
-                "high-risk claim regressions instead of only aggregate verifier drift."
+                "Fine-grained hallucination control needs trace-level span, claim, "
+                "and entity-risk localization coverage so release checks can catch "
+                "concentrated high-risk claim regressions instead of only aggregate "
+                "verifier drift."
             ),
             evidence_routes=(
                 "product_trace_replay",
-                "product_runtime_baseline",
                 "claim_risk_localization",
+                "product_runtime_baseline",
                 "product_runtime_drift",
+                "span_entity_risk_evidence",
             ),
             suggested_commands=(
-                "benchmarks/run_product_trace_replay_workflow.py",
-                "benchmarks/run_product_runtime_baseline.py",
-                "benchmarks/compare_product_runtime_baselines.py",
+                "benchmarks/run_product_trace_replay_workflow.py "
+                "--trace-glob ... --promotion-contract ... "
+                "--min-runtime-drift-claim-risk-localization-coverage-rate ... "
+                "--max-runtime-drift-claim-risk-localization-high-risk-claim-count-increase ... "
+                "--max-runtime-drift-claim-risk-localization-medium-or-high-risk-claim-count-increase ... "
+                "--max-runtime-drift-claim-risk-localization-entity-candidate-observation-count-increase ... "
+                "--max-runtime-drift-claim-risk-localization-unique-entity-candidate-count-increase ... "
+                "--max-runtime-drift-claim-risk-localization-high-risk-entity-candidate-count-increase ... "
+                "--max-runtime-drift-claim-risk-localization-medium-or-high-entity-candidate-count-increase ...",
+                "benchmarks/run_product_runtime_baseline.py "
+                "--trace ... --promotion-contract ... --json ... --artifact-manifest ...",
+                "benchmarks/compare_product_runtime_baselines.py "
+                "--current ... --baseline ... "
+                "--min-claim-risk-localization-coverage-rate ... "
+                "--max-claim-risk-localization-high-risk-claim-count-increase ... "
+                "--max-claim-risk-localization-medium-or-high-risk-claim-count-increase ... "
+                "--max-claim-risk-localization-entity-candidate-observation-count-increase ... "
+                "--max-claim-risk-localization-unique-entity-candidate-count-increase ... "
+                "--max-claim-risk-localization-high-risk-entity-candidate-count-increase ... "
+                "--max-claim-risk-localization-medium-or-high-entity-candidate-count-increase ... "
+                "--json ... --artifact-manifest ...",
             ),
+            metadata={
+                "claim_risk_localization_api": (
+                    "eigentruth.verify.localize_claim_risk_spans"
+                ),
+                "trace_summary_api": (
+                    "eigentruth.control.ProductTrace.claim_risk_localization_summary"
+                ),
+                "trace_replay_script": "benchmarks/run_product_trace_replay_workflow.py",
+                "runtime_baseline_script": "benchmarks/run_product_runtime_baseline.py",
+                "runtime_drift_script": "benchmarks/compare_product_runtime_baselines.py",
+                "trace_replay_workflow": "product_trace_replay_workflow",
+                "runtime_baseline_workflow": "product_runtime_baseline",
+                "runtime_drift_workflow": "product_runtime_drift_comparison",
+                "risk_control_method": "span_entity_claim_risk_localization",
+                "localization_granularity": (
+                    "span",
+                    "claim",
+                    "entity_candidate",
+                ),
+                "required_trace_metrics": (
+                    "claim_risk_localization.coverage_rate",
+                    "claim_risk_localization.high_risk_claim_count",
+                    "claim_risk_localization.medium_or_high_risk_claim_count",
+                    "claim_risk_localization.entity_candidate_observation_count",
+                    "claim_risk_localization.unique_entity_candidate_count",
+                    "claim_risk_localization.high_risk_entity_candidate_count",
+                    "claim_risk_localization.medium_or_high_entity_candidate_count",
+                ),
+                "default_gate_thresholds": {
+                    "min_claim_risk_localization_coverage_rate": 1.0,
+                    "max_claim_risk_localization_high_risk_claim_count_increase": 0.0,
+                    "max_claim_risk_localization_medium_or_high_risk_claim_count_increase": (
+                        0.0
+                    ),
+                    "max_claim_risk_localization_entity_candidate_observation_count_increase": (
+                        0.0
+                    ),
+                    "max_claim_risk_localization_unique_entity_candidate_count_increase": (
+                        0.0
+                    ),
+                    "max_claim_risk_localization_high_risk_entity_candidate_count_increase": (
+                        0.0
+                    ),
+                    "max_claim_risk_localization_medium_or_high_entity_candidate_count_increase": (
+                        0.0
+                    ),
+                },
+                "required_inputs": (
+                    "full_product_trace_corpus",
+                    "promotion_contract_or_release_candidate",
+                    "baseline_product_runtime_report",
+                ),
+                "closure_outputs": (
+                    "product_trace_replay_workflow",
+                    "product_runtime_baseline",
+                    "product_runtime_drift_comparison",
+                ),
+            },
         )
     if evidence_kind == "frontier_multiple_testing":
         return EvidenceGapAction(

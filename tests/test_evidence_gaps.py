@@ -80,6 +80,30 @@ _PRE_GENERATION_PROBE_COMMANDS = (
     "--json ... --artifact-manifest ...",
 )
 
+_CLAIM_RISK_LOCALIZATION_RUNTIME_EVIDENCE_COMMANDS = (
+    "benchmarks/run_product_trace_replay_workflow.py "
+    "--trace-glob ... --promotion-contract ... "
+    "--min-runtime-drift-claim-risk-localization-coverage-rate ... "
+    "--max-runtime-drift-claim-risk-localization-high-risk-claim-count-increase ... "
+    "--max-runtime-drift-claim-risk-localization-medium-or-high-risk-claim-count-increase ... "
+    "--max-runtime-drift-claim-risk-localization-entity-candidate-observation-count-increase ... "
+    "--max-runtime-drift-claim-risk-localization-unique-entity-candidate-count-increase ... "
+    "--max-runtime-drift-claim-risk-localization-high-risk-entity-candidate-count-increase ... "
+    "--max-runtime-drift-claim-risk-localization-medium-or-high-entity-candidate-count-increase ...",
+    "benchmarks/run_product_runtime_baseline.py "
+    "--trace ... --promotion-contract ... --json ... --artifact-manifest ...",
+    "benchmarks/compare_product_runtime_baselines.py "
+    "--current ... --baseline ... "
+    "--min-claim-risk-localization-coverage-rate ... "
+    "--max-claim-risk-localization-high-risk-claim-count-increase ... "
+    "--max-claim-risk-localization-medium-or-high-risk-claim-count-increase ... "
+    "--max-claim-risk-localization-entity-candidate-observation-count-increase ... "
+    "--max-claim-risk-localization-unique-entity-candidate-count-increase ... "
+    "--max-claim-risk-localization-high-risk-entity-candidate-count-increase ... "
+    "--max-claim-risk-localization-medium-or-high-entity-candidate-count-increase ... "
+    "--json ... --artifact-manifest ...",
+)
+
 _WORLD_MODEL_RUNTIME_EVIDENCE_COMMANDS = (
     "benchmarks/run_world_model_signal_calibration_workflow.py "
     "--output-dir ... --registry ... --registry-name ... --registry-version ...",
@@ -447,6 +471,73 @@ def _assert_pre_generation_probe_comparison_action(action):
     assert action["metadata"]["closure_outputs"] == (
         "pre_generation_probe_workflow_comparison",
         "product_promotion_contract",
+        "product_runtime_baseline",
+        "product_runtime_drift_comparison",
+    )
+
+
+def _assert_claim_risk_localization_runtime_evidence_action(action):
+    assert action["evidence_routes"] == (
+        "product_trace_replay",
+        "claim_risk_localization",
+        "product_runtime_baseline",
+        "product_runtime_drift",
+        "span_entity_risk_evidence",
+    )
+    assert action["suggested_commands"] == (
+        _CLAIM_RISK_LOCALIZATION_RUNTIME_EVIDENCE_COMMANDS
+    )
+    assert action["metadata"]["claim_risk_localization_api"] == (
+        "eigentruth.verify.localize_claim_risk_spans"
+    )
+    assert action["metadata"]["trace_summary_api"] == (
+        "eigentruth.control.ProductTrace.claim_risk_localization_summary"
+    )
+    assert action["metadata"]["trace_replay_script"] == (
+        "benchmarks/run_product_trace_replay_workflow.py"
+    )
+    assert action["metadata"]["runtime_baseline_script"] == (
+        "benchmarks/run_product_runtime_baseline.py"
+    )
+    assert action["metadata"]["runtime_drift_script"] == (
+        "benchmarks/compare_product_runtime_baselines.py"
+    )
+    assert action["metadata"]["trace_replay_workflow"] == "product_trace_replay_workflow"
+    assert action["metadata"]["runtime_baseline_workflow"] == "product_runtime_baseline"
+    assert action["metadata"]["runtime_drift_workflow"] == "product_runtime_drift_comparison"
+    assert action["metadata"]["risk_control_method"] == (
+        "span_entity_claim_risk_localization"
+    )
+    assert action["metadata"]["localization_granularity"] == (
+        "span",
+        "claim",
+        "entity_candidate",
+    )
+    assert action["metadata"]["required_trace_metrics"] == (
+        "claim_risk_localization.coverage_rate",
+        "claim_risk_localization.high_risk_claim_count",
+        "claim_risk_localization.medium_or_high_risk_claim_count",
+        "claim_risk_localization.entity_candidate_observation_count",
+        "claim_risk_localization.unique_entity_candidate_count",
+        "claim_risk_localization.high_risk_entity_candidate_count",
+        "claim_risk_localization.medium_or_high_entity_candidate_count",
+    )
+    assert action["metadata"]["default_gate_thresholds"] == {
+        "min_claim_risk_localization_coverage_rate": 1.0,
+        "max_claim_risk_localization_high_risk_claim_count_increase": 0.0,
+        "max_claim_risk_localization_medium_or_high_risk_claim_count_increase": 0.0,
+        "max_claim_risk_localization_entity_candidate_observation_count_increase": 0.0,
+        "max_claim_risk_localization_unique_entity_candidate_count_increase": 0.0,
+        "max_claim_risk_localization_high_risk_entity_candidate_count_increase": 0.0,
+        "max_claim_risk_localization_medium_or_high_entity_candidate_count_increase": 0.0,
+    }
+    assert action["metadata"]["required_inputs"] == (
+        "full_product_trace_corpus",
+        "promotion_contract_or_release_candidate",
+        "baseline_product_runtime_report",
+    )
+    assert action["metadata"]["closure_outputs"] == (
+        "product_trace_replay_workflow",
         "product_runtime_baseline",
         "product_runtime_drift_comparison",
     )
@@ -1422,13 +1513,8 @@ def test_evidence_gap_plan_maps_product_runtime_claim_level_blockers():
         "claim_factuality_probe_comparison",
         "product_runtime_drift",
     )
-    assert actions[
-        "rerun_product_trace_claim_risk_localization_evidence"
-    ]["evidence_routes"] == (
-        "product_trace_replay",
-        "product_runtime_baseline",
-        "claim_risk_localization",
-        "product_runtime_drift",
+    _assert_claim_risk_localization_runtime_evidence_action(
+        actions["rerun_product_trace_claim_risk_localization_evidence"]
     )
     assert payload["gaps"][2]["missing_metrics"] == ()
 
