@@ -29,6 +29,7 @@ from eigentruth.control import (
     RuntimePhaseTiming,
     RuntimeTrace,
     TraceEvent,
+    audit_trace_provenance,
     evaluate_product_runtime_budget,
     first_existing_product_promotion_contract_path,
     load_product_promotion_contract,
@@ -1513,6 +1514,134 @@ def test_product_trace_trajectory_audit_flags_supported_claim_from_empty_retriev
     assert cascade_issue["claim_ids"] == ("c1",)
     assert cascade_issue["metadata"]["request_id"] == "retrieve-1"
     assert metrics["trajectory_audit_counts_by_code"]["supported_claim_from_empty_retrieval"] == 1
+
+
+def test_product_trace_provenance_links_final_answer_to_retrieval_evidence():
+    trace = ProductTrace(
+        request_id="trace-provenance-pass",
+        claims=(
+            {
+                "claim_id": "c1",
+                "text": "Paris is the capital of France.",
+            },
+        ),
+        verification_results=(
+            VerificationResult(
+                VerificationStatus.SUPPORTED,
+                confidence=0.92,
+                evidence=("atlas: Paris is the capital of France.",),
+                metadata={"claim_id": "c1", "action_request_id": "retrieve-1"},
+            ),
+        ),
+        risk_decision=RiskDecision(
+            action=ControlAction.ACCEPT,
+            risk_level=RiskLevel.LOW,
+            confidence=0.91,
+            reason="claim supported",
+        ),
+        actions=(
+            ActionRequest(
+                action=ControlAction.RETRIEVE,
+                reason="retrieve evidence",
+                payload={"claim_ids": ("c1",)},
+                request_id="retrieve-1",
+            ),
+        ),
+        action_results=(
+            ActionResult(
+                action=ControlAction.RETRIEVE,
+                status=ActionExecutionStatus.SUCCEEDED,
+                output={
+                    "hits": (
+                        {
+                            "text": "Paris is the capital of France.",
+                            "source": "atlas",
+                            "claim_id": "c1",
+                        },
+                    ),
+                },
+                request_id="retrieve-1",
+            ),
+        ),
+        final_answer=FinalAnswer(
+            status=FinalAnswerStatus.ANSWERED,
+            text="Paris is the capital of France.",
+            answerable=True,
+            action=ControlAction.ACCEPT,
+            risk_level=RiskLevel.LOW,
+            confidence=0.91,
+            reason="claim supported",
+            evidence=(
+                {
+                    "claim_id": "c1",
+                    "status": "supported",
+                    "request_id": "retrieve-1",
+                },
+            ),
+        ),
+    )
+
+    summary = trace.provenance_summary()
+    bounded = trace.to_bounded_dict()
+    metrics = product_runtime_metrics(trace)
+
+    assert summary["passed"] is True
+    assert summary["supported_claim_evidence_coverage"] == pytest.approx(1.0)
+    assert summary["retrieval_hit_count"] == 1
+    assert summary["source_count"] == 1
+    assert summary["final_answer_evidence_reference_rate"] == pytest.approx(1.0)
+    assert summary["counts_by_relation"]["evidence_for_final_answer"] == 1
+    assert bounded["summaries"]["provenance"]["passed"] is True
+    assert metrics["provenance_supported_claim_evidence_coverage"] == pytest.approx(1.0)
+    assert metrics["provenance_retrieval_hit_count"] == pytest.approx(1.0)
+
+
+def test_product_trace_provenance_flags_missing_action_reference():
+    trace = ProductTrace(
+        request_id="trace-provenance-missing",
+        claims=(
+            {
+                "claim_id": "c1",
+                "text": "The source-backed claim is true.",
+            },
+        ),
+        verification_results=(
+            VerificationResult(
+                VerificationStatus.SUPPORTED,
+                confidence=0.88,
+                metadata={"claim_id": "c1", "action_request_id": "missing-retrieve"},
+            ),
+        ),
+        final_answer=FinalAnswer(
+            status=FinalAnswerStatus.ANSWERED,
+            text="The source-backed claim is true.",
+            answerable=True,
+            action=ControlAction.ACCEPT,
+            risk_level=RiskLevel.LOW,
+            confidence=0.88,
+            reason="claim supported",
+            evidence=(
+                {
+                    "claim_id": "c1",
+                    "status": "supported",
+                    "request_id": "missing-retrieve",
+                },
+            ),
+        ),
+    )
+
+    report = audit_trace_provenance(trace)
+    summary = report.summary()
+    metrics = product_runtime_metrics(trace.to_bounded_dict())
+
+    assert report.passed is False
+    assert summary["supported_claim_evidence_coverage"] == pytest.approx(0.0)
+    assert summary["missing_reference_count"] == 2
+    assert summary["counts_by_code"]["missing_referenced_action_result"] == 2
+    assert summary["counts_by_code"]["supported_claim_without_evidence"] == 1
+    assert metrics["provenance_source"] == "bounded_summary"
+    assert metrics["provenance_missing_reference_count"] == pytest.approx(2.0)
+    assert metrics["provenance_unsupported_supported_claim_count"] == pytest.approx(1.0)
 
 
 def test_product_trace_runtime_summary_counts_phase_timings():

@@ -498,6 +498,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
         metrics.update(_receipt_claim_support_metrics(trace))
         metrics.update(_action_audit_metrics(trace))
         metrics.update(_trajectory_audit_metrics(trace))
+        metrics.update(_provenance_metrics(trace))
         metrics.update(_route_cost_metrics(trace))
         metrics.update(_verification_stage_metrics(trace))
         metrics.update(_verification_plan_metrics(trace))
@@ -544,6 +545,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
     metrics.update(_receipt_claim_support_metrics(trace))
     metrics.update(_action_audit_metrics(trace))
     metrics.update(_trajectory_audit_metrics(trace))
+    metrics.update(_provenance_metrics(trace))
     metrics.update(_route_cost_metrics(trace))
     metrics.update(_verification_stage_metrics(trace))
     metrics.update(_verification_plan_metrics(trace))
@@ -706,6 +708,59 @@ def _trajectory_audit_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[s
             _finite_float(counts_by_type.get(hallucination_type.value)) or 0.0
         )
     return metrics
+
+
+def _provenance_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:
+    from eigentruth.control.provenance import audit_trace_provenance
+
+    if isinstance(trace, ProductTrace):
+        summary = trace.provenance_summary()
+        source = "full_trace"
+    else:
+        payload = dict(trace)
+        summary = _mapping(_mapping(payload.get("summaries")).get("provenance"))
+        if summary:
+            source = "bounded_summary"
+        else:
+            summary = audit_trace_provenance(payload).summary()
+            source = "full_trace"
+    return {
+        "provenance_available": bool(summary.get("available")),
+        "provenance_source": source,
+        "provenance_summary": summary,
+        "provenance_passed": _optional_bool(summary.get("passed")),
+        "provenance_node_count": _finite_float(summary.get("node_count")) or 0.0,
+        "provenance_edge_count": _finite_float(summary.get("edge_count")) or 0.0,
+        "provenance_claim_count": _finite_float(summary.get("claim_count")) or 0.0,
+        "provenance_supported_claim_count": _finite_float(summary.get("supported_claim_count")) or 0.0,
+        "provenance_supported_claim_with_evidence_count": (
+            _finite_float(summary.get("supported_claim_with_evidence_count")) or 0.0
+        ),
+        "provenance_unsupported_supported_claim_count": (
+            _finite_float(summary.get("unsupported_supported_claim_count")) or 0.0
+        ),
+        "provenance_supported_claim_evidence_coverage": _finite_float(
+            summary.get("supported_claim_evidence_coverage")
+        ),
+        "provenance_retrieval_hit_count": _finite_float(summary.get("retrieval_hit_count")) or 0.0,
+        "provenance_source_count": _finite_float(summary.get("source_count")) or 0.0,
+        "provenance_final_answer_evidence_count": (
+            _finite_float(summary.get("final_answer_evidence_count")) or 0.0
+        ),
+        "provenance_final_answer_claim_reference_count": (
+            _finite_float(summary.get("final_answer_claim_reference_count")) or 0.0
+        ),
+        "provenance_final_answer_evidence_reference_rate": _finite_float(
+            summary.get("final_answer_evidence_reference_rate")
+        ),
+        "provenance_missing_reference_count": _finite_float(summary.get("missing_reference_count")) or 0.0,
+        "provenance_issue_count": _finite_float(summary.get("issue_count")) or 0.0,
+        "provenance_error_count": _finite_float(summary.get("error_count")) or 0.0,
+        "provenance_warning_count": _finite_float(summary.get("warning_count")) or 0.0,
+        "provenance_counts_by_code": _mapping(summary.get("counts_by_code")),
+        "provenance_counts_by_node_type": _mapping(summary.get("counts_by_node_type")),
+        "provenance_counts_by_relation": _mapping(summary.get("counts_by_relation")),
+    }
 
 
 def _action_execution_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:

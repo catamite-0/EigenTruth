@@ -14,10 +14,16 @@ from eigentruth.control import (
     RiskDecision,
     RiskLevel,
     SQLiteActionExecutionLedger,
+    TraceProvenanceEdge,
+    TraceProvenanceGraph,
+    TraceProvenanceIssue,
+    TraceProvenanceNode,
+    TraceProvenanceReport,
     TrajectoryAuditIssue,
     TrajectoryAuditReport,
     TrajectoryHallucinationType,
     audit_product_trace_trajectory,
+    audit_trace_provenance,
 )
 from eigentruth.control.runtime_drift_keys import (
     PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_KEYS,
@@ -269,6 +275,30 @@ def test_trajectory_audit_public_api_roundtrip():
 
     assert loaded.summary()["counts_by_type"]["factual"] == 1
     assert callable(audit_product_trace_trajectory)
+
+
+def test_trace_provenance_public_api_roundtrip():
+    node = TraceProvenanceNode("claim:c1", "claim", label="Paris is the capital.")
+    edge = TraceProvenanceEdge("evidence:e1", "claim:c1", "supports")
+    issue = TraceProvenanceIssue(
+        code="supported_claim_without_evidence",
+        severity="warning",
+        message="missing provenance",
+        node_id="claim:c1",
+        claim_ids=("c1",),
+    )
+    graph = TraceProvenanceGraph(trace_id="trace-1", nodes=(node,), edges=(edge,))
+    report = TraceProvenanceReport(
+        trace_id="trace-1",
+        graph=graph,
+        issues=(issue,),
+        metadata={"claim_count": 1, "supported_claim_count": 1},
+    )
+    loaded = TraceProvenanceReport.from_dict(report.to_dict())
+
+    assert loaded.summary()["counts_by_code"]["supported_claim_without_evidence"] == 1
+    assert loaded.graph.nodes[0].node_type == "claim"
+    assert callable(audit_trace_provenance)
 
 
 def test_json_action_execution_ledger_roundtrip(tmp_path):

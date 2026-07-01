@@ -86,6 +86,15 @@ from eigentruth.control.promotion import (
     product_promotion_contract_summary,
     product_runtime_budget_policy_from_release_candidate,
 )
+from eigentruth.control.provenance import (
+    TraceProvenanceEdge,
+    TraceProvenanceGraph,
+    TraceProvenanceIssue,
+    TraceProvenanceNode,
+    TraceProvenanceReport,
+    audit_trace_provenance,
+    build_trace_provenance_graph,
+)
 from eigentruth.control.receipt_audit import (
     ReceiptClaimReference,
     ReceiptClaimSupportIssue,
@@ -204,6 +213,11 @@ __all__ = [
     "RiskDecision",
     "RiskLevel",
     "TraceEvent",
+    "TraceProvenanceEdge",
+    "TraceProvenanceGraph",
+    "TraceProvenanceIssue",
+    "TraceProvenanceNode",
+    "TraceProvenanceReport",
     "TrajectoryAuditIssue",
     "TrajectoryAuditReport",
     "TrajectoryHallucinationType",
@@ -211,6 +225,8 @@ __all__ = [
     "VerificationLoopResult",
     "audit_action_requests",
     "audit_product_trace_trajectory",
+    "audit_trace_provenance",
+    "build_trace_provenance_graph",
     "audit_product_promotion_contract_evidence",
     "audit_receipt_claim_support",
     "action_receipt_summary_from_results",

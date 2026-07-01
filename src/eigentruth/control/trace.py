@@ -10,6 +10,7 @@ from eigentruth.control.action_audit import audit_action_requests
 from eigentruth.control.actions import ActionRequest, ActionResult
 from eigentruth.control.finalization import FinalAnswer
 from eigentruth.control.policy import ControlAction, RiskDecision
+from eigentruth.control.provenance import audit_trace_provenance
 from eigentruth.control.receipt_audit import audit_receipt_claim_support
 from eigentruth.control.receipts import action_receipt_summary_from_results
 from eigentruth.json_utils import to_jsonable
@@ -277,6 +278,15 @@ class ProductTrace:
                 action_results=prepared.action_results,
                 final_answer=prepared.final_answer,
             ),
+            "provenance": _provenance_summary_from_payload(
+                request_id=self.request_id,
+                claims=prepared.claims,
+                verification_results=prepared.verification_results,
+                risk_decision=prepared.risk_decision,
+                actions=prepared.actions,
+                action_results=prepared.action_results,
+                final_answer=prepared.final_answer,
+            ),
             "verification_route": _verification_route_summary_from_results(
                 prepared.verification_results,
             ),
@@ -388,6 +398,10 @@ class ProductTrace:
         from eigentruth.control.trajectory_audit import audit_product_trace_trajectory
 
         return audit_product_trace_trajectory(self).summary()
+
+    def provenance_summary(self) -> dict[str, Any]:
+        """Summarize trace evidence/execution provenance graph coverage."""
+        return audit_trace_provenance(self).summary()
 
     def verification_route_summary(self) -> dict[str, Any]:
         """Summarize verifier route choices recorded in result metadata."""
@@ -704,6 +718,27 @@ def _trajectory_audit_summary_from_payload(
         "request_id": request_id,
         "claims": tuple(claims),
         "verification_plan": verification_plan,
+        "verification_results": tuple(verification_results),
+        "risk_decision": risk_decision,
+        "actions": tuple(actions),
+        "action_results": tuple(action_results),
+        "final_answer": final_answer,
+    }).summary()
+
+
+def _provenance_summary_from_payload(
+    *,
+    request_id: str | None,
+    claims: Sequence[Mapping[str, Any]],
+    verification_results: Sequence[Mapping[str, Any]],
+    risk_decision: Mapping[str, Any] | None,
+    actions: Sequence[Any],
+    action_results: Sequence[Mapping[str, Any]],
+    final_answer: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    return audit_trace_provenance({
+        "request_id": request_id,
+        "claims": tuple(claims),
         "verification_results": tuple(verification_results),
         "risk_decision": risk_decision,
         "actions": tuple(actions),
