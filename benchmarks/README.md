@@ -8370,10 +8370,10 @@ python benchmarks/run_performance_baseline_workflow.py \
 When reusing selected fusion artifacts, add
 `--selected-fusion-artifact-report <build-report.json>` and pass
 `--selected-fusion-run <run_name>` for multi-run reports. The workflow records
-the selected report, selected artifact path, selected run, selected candidate,
-selected-artifact release-gate status, and promoted `selected_fusion_*` signal
-in the runtime recommendation, performance evidence bundle, artifact manifest
-metadata, and registry record.
+the selected build report, selected artifact path, selected-artifact manifest
+path, selected run, selected candidate, selected-artifact release-gate status,
+and promoted `selected_fusion_*` signal in the runtime recommendation,
+performance evidence bundle, artifact manifest metadata, and registry record.
 The current local SmolLM2 l8 selected-fusion handoff uses:
 
 ```bash
@@ -8405,8 +8405,8 @@ with recursive manifest verification
 `manifest_verification:smollm2-l8-read-cache-worker-sweep-selected-fusion-staged-qa-release-candidate-verification:0.3`.
 It reuses the same readiness and `structured_qa` route baselines as the
 score-fusion candidate, but gates against the selected-fusion performance
-baseline and records the selected-fusion run/signal/AUROC/artifact path in the
-release registry.
+baseline and records the selected-fusion run/signal/AUROC/artifact path plus
+selected-artifact manifest path in the release registry.
 The deployable contract for this local handoff is
 `product_promotion_contract:smollm2-l8-selected-fusion-product-promotion-contract:0.3`
 at

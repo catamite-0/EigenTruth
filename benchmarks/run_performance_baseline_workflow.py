@@ -306,6 +306,9 @@ def run_performance_baseline_workflow(config: PerformanceBaselineWorkflowConfig)
             "selected_fusion_artifact_report": None
             if selected_fusion_artifact_report_path is None
             else str(selected_fusion_artifact_report_path),
+            "selected_fusion_artifact_manifest": None
+            if artifacts.get("selected_fusion_artifact_manifest") is None
+            else str(artifacts["selected_fusion_artifact_manifest"]),
             "manifest_verification": (
                 str(config.resolved_verification_report_path) if config.verify_manifest else None
             ),
@@ -693,6 +696,9 @@ def _write_artifact_manifest(
             "selected_fusion_artifact_report": None
             if selected_fusion_artifact_report_path is None
             else str(selected_fusion_artifact_report_path),
+            "selected_fusion_artifact_manifest": _selected_fusion_artifact_manifest_path(
+                selected_fusion_artifact_report
+            ),
             "selected_fusion_artifact_report_enabled": bool(selected_fusion_artifact_report_path),
             "selected_fusion_run": config.selected_fusion_run,
             "recommended_score_fusion": score_fusion or None,
@@ -714,6 +720,7 @@ def _write_artifact_manifest(
             "recommended_selected_fusion_signal": selected_fusion.get("signal_name"),
             "recommended_selected_fusion_auroc": selected_fusion.get("auroc"),
             "recommended_selected_fusion_artifact_path": selected_fusion.get("artifact_path"),
+            "recommended_selected_fusion_artifact_manifest": selected_fusion.get("artifact_manifest"),
             "recommended_selected_fusion_release_gate_status": selected_fusion.get("release_gate_status"),
             "recommended_selected_fusion_release_gate_passed": selected_fusion.get("release_gate_passed"),
             "recommended_selected_fusion_high_confidence_accepted_false_rate": selected_fusion.get(
@@ -775,6 +782,9 @@ def _artifact_paths(
         if score_ensemble_report is None
         else _nested(score_ensemble_report, "runs", 0, "best_fusion_artifact", "path"),
         "selected_fusion_artifact_report": selected_fusion_artifact_report_path,
+        "selected_fusion_artifact_manifest": _selected_fusion_artifact_manifest_path(
+            selected_fusion_artifact_report
+        ),
         "selected_fusion_artifact": _selected_fusion_artifact_path(
             selected_fusion_artifact_report,
             selected_fusion_run=config.selected_fusion_run,
@@ -800,6 +810,22 @@ def _selected_fusion_artifact_path(
         return matches[0].get("artifact_path")
     if len(run_items) == 1:
         return run_items[0].get("artifact_path")
+    return None
+
+
+def _selected_fusion_artifact_manifest_path(
+    report: Mapping[str, Any] | None,
+) -> str | Path | None:
+    if report is None:
+        return None
+    paths = _mapping(report.get("paths"))
+    for value in (
+        report.get("artifact_manifest_path"),
+        report.get("artifact_manifest"),
+        paths.get("artifact_manifest"),
+    ):
+        if value is not None:
+            return value
     return None
 
 
@@ -884,6 +910,7 @@ def _performance_evidence_bundle_summary(
             "selected_fusion_signal": selected_fusion.get("signal_name"),
             "selected_fusion_auroc": selected_fusion.get("auroc"),
             "selected_fusion_artifact_path": selected_fusion.get("artifact_path"),
+            "selected_fusion_artifact_manifest": selected_fusion.get("artifact_manifest"),
             "selected_fusion_release_gate_status": selected_fusion.get("release_gate_status"),
             "selected_fusion_release_gate_passed": selected_fusion.get("release_gate_passed"),
             "selected_fusion_high_confidence_accepted_false_rate": selected_fusion.get(
@@ -946,6 +973,7 @@ def _performance_evidence_bundle_summary(
             "selected_fusion_detection": evidence.get("selected_fusion_detection"),
             "selected_fusion_alpha": evidence.get("selected_fusion_alpha"),
             "selected_fusion_artifact_path": evidence.get("selected_fusion_artifact_path"),
+            "selected_fusion_artifact_manifest": evidence.get("selected_fusion_artifact_manifest"),
             "selected_fusion_release_gate_status": evidence.get("selected_fusion_release_gate_status"),
             "selected_fusion_release_gate_passed": evidence.get("selected_fusion_release_gate_passed"),
             "selected_fusion_high_confidence_accepted_false_rate": evidence.get(
@@ -1014,6 +1042,7 @@ def _record_registry(config: PerformanceBaselineWorkflowConfig, report: Mapping[
             "recommended_selected_fusion_signal": selected_fusion.get("signal_name"),
             "recommended_selected_fusion_auroc": selected_fusion.get("auroc"),
             "recommended_selected_fusion_artifact_path": selected_fusion.get("artifact_path"),
+            "recommended_selected_fusion_artifact_manifest": selected_fusion.get("artifact_manifest"),
             "recommended_selected_fusion_release_gate_status": selected_fusion.get("release_gate_status"),
             "recommended_selected_fusion_release_gate_passed": selected_fusion.get("release_gate_passed"),
             "recommended_selected_fusion_high_confidence_accepted_false_rate": selected_fusion.get(

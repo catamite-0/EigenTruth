@@ -407,13 +407,14 @@ The selected-fusion handoff now has the parallel staged structured-QA release
 gate
 `benchmark_manifest:smollm2-l8-read-cache-worker-sweep-selected-fusion-staged-qa-release-candidate:0.3`,
 which verifies the selected-fusion performance manifest and records selected
-fusion status/run/signal/AUROC/artifact metadata in the release registry.
+fusion status/run/signal/AUROC/artifact path plus selected-artifact manifest
+metadata in the release registry.
 Its compact product handoff is
 `product_promotion_contract:smollm2-l8-selected-fusion-product-promotion-contract:0.3`
 at
 `artifacts/smollm2_l8_selected_fusion_product_promotion_contract_v0_3/product-promotion-contract.json`,
 including the selected-fusion status/run/signal/AUROC/false-alarm/detection and
-artifact path in contract metadata.
+artifact path plus selected-artifact manifest path in contract metadata.
 Profile comparison and matrix reports
 propagate the derived cache-efficiency hit-rate metrics for IO diagnosis.
 Runtime recommendations include cache-tuning advice

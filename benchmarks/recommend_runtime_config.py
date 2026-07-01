@@ -767,11 +767,20 @@ def _selected_fusion_artifact_quality_signal(
 ) -> dict[str, Any]:
     if selected_fusion_artifact_report is None:
         return {"status": "not_configured"}
+    artifact_manifest = _selected_fusion_artifact_manifest_path(selected_fusion_artifact_report)
+    build_report = _optional_path_str(
+        _first_present(
+            selected_fusion_artifact_report.get("build_report_path"),
+            selected_fusion_artifact_report_path,
+        )
+    )
     runs = selected_fusion_artifact_report.get("runs")
     if not isinstance(runs, Sequence) or isinstance(runs, str) or not runs:
         return {
             "status": "no_runs",
             "report": _optional_path_str(selected_fusion_artifact_report_path),
+            "build_report": build_report,
+            "artifact_manifest": artifact_manifest,
         }
     selected, selection_status = _select_selected_fusion_artifact_run(
         runs,
@@ -781,6 +790,8 @@ def _selected_fusion_artifact_quality_signal(
         return {
             "status": selection_status,
             "report": _optional_path_str(selected_fusion_artifact_report_path),
+            "build_report": build_report,
+            "artifact_manifest": artifact_manifest,
             "run_count": len(runs),
             "requested_run": selected_fusion_run,
         }
@@ -797,6 +808,8 @@ def _selected_fusion_artifact_quality_signal(
     return {
         "status": status,
         "report": _optional_path_str(selected_fusion_artifact_report_path),
+        "build_report": build_report,
+        "artifact_manifest": artifact_manifest,
         "run_name": selected.get("run_name"),
         "selected_candidate": selected.get("selected_candidate"),
         "method": method,
@@ -829,6 +842,17 @@ def _selected_fusion_artifact_quality_signal(
         "selection_status": selected_fusion_artifact_report.get("selection_status"),
         "workflow": selected_fusion_artifact_report.get("workflow"),
     }
+
+
+def _selected_fusion_artifact_manifest_path(report: Mapping[str, Any]) -> str | None:
+    paths = _mapping(report.get("paths"))
+    return _optional_path_str(
+        _first_present(
+            report.get("artifact_manifest_path"),
+            report.get("artifact_manifest"),
+            paths.get("artifact_manifest"),
+        )
+    )
 
 
 def _select_selected_fusion_artifact_run(
@@ -1891,6 +1915,8 @@ def _evidence(
             "max_high_confidence_accepted_false_rate"
         ),
         "selected_fusion_artifact_report": _optional_path_str(selected_fusion_artifact_report_path),
+        "selected_fusion_artifact_build_report": selected_fusion.get("build_report"),
+        "selected_fusion_artifact_manifest": selected_fusion.get("artifact_manifest"),
         "selected_fusion_requested_run": selected_fusion_run,
         "selected_fusion_status": selected_fusion.get("status"),
         "selected_fusion_run": selected_fusion.get("run_name"),

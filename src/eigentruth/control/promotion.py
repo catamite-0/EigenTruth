@@ -1017,6 +1017,10 @@ class ProductPromotionContract:
                     performance_evidence_recommendation.get("selected_fusion_artifact_path"),
                     performance_evidence.get("selected_fusion_artifact_path"),
                 ),
+                "performance_selected_fusion_artifact_manifest": _first_present(
+                    performance_evidence_recommendation.get("selected_fusion_artifact_manifest"),
+                    performance_evidence.get("selected_fusion_artifact_manifest"),
+                ),
                 "performance_uncached_total_seconds": (
                     performance_evidence_cost.get("uncached_total_seconds")
                 ),

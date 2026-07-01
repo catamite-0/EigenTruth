@@ -2196,6 +2196,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "performance_selected_fusion_artifact_report": performance_evidence.get(
             "selected_fusion_artifact_report"
         ),
+        "performance_selected_fusion_artifact_manifest": performance_evidence.get(
+            "selected_fusion_artifact_manifest"
+        ),
         "recommended_selected_fusion_status": performance_evidence_recommendation.get(
             "selected_fusion_status"
         ),
@@ -2229,6 +2232,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "recommended_selected_fusion_artifact_path": performance_evidence_recommendation.get(
             "selected_fusion_artifact_path"
+        ),
+        "recommended_selected_fusion_artifact_manifest": (
+            performance_evidence_recommendation.get("selected_fusion_artifact_manifest")
         ),
         "performance_uncached_total_seconds": performance_evidence_cost.get(
             "uncached_total_seconds"

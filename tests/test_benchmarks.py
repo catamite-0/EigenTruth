@@ -23186,9 +23186,19 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         encoding="utf-8",
     )
     selected_fusion_report_path = tmp_path / "selected-fusion-artifact-build-report.json"
+    selected_fusion_manifest_path = tmp_path / "selected-fusion-artifact-manifest.json"
     selected_fusion_report_path.write_text(
         json.dumps(
             {"schema_version": 1, "workflow": "selected_fusion_artifact_build", "status": "complete"},
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    selected_fusion_manifest_path.write_text(
+        json.dumps(
+            {"schema_version": 1, "workflow": "selected_fusion_artifact_build"},
             indent=2,
             sort_keys=True,
         )
@@ -23219,6 +23229,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         selected_fusion_signal="selected_fusion_mean_rank",
         selected_fusion_auroc=0.84,
         selected_fusion_artifact_path="gpt2-selected-fusion-artifact.json",
+        selected_fusion_artifact_manifest=str(selected_fusion_manifest_path),
         covariance_tradeoff={
             "status": "quality_preserved",
             "baseline_cell": "full-cell",
@@ -23512,6 +23523,9 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["performance_selected_fusion_artifact_report"] == str(
         selected_fusion_report_path
     )
+    assert manifest["metadata"]["performance_selected_fusion_artifact_manifest"] == str(
+        selected_fusion_manifest_path
+    )
     assert manifest["metadata"]["recommended_selected_fusion_status"] == "promote"
     assert manifest["metadata"]["recommended_selected_fusion_run"] == "gpt2"
     assert manifest["metadata"]["recommended_selected_fusion_candidate"] == "geometry_trajectory:mean_rank"
@@ -23519,6 +23533,9 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["recommended_selected_fusion_auroc"] == pytest.approx(0.84)
     assert manifest["metadata"]["recommended_selected_fusion_artifact_path"] == (
         "gpt2-selected-fusion-artifact.json"
+    )
+    assert manifest["metadata"]["recommended_selected_fusion_artifact_manifest"] == str(
+        selected_fusion_manifest_path
     )
     assert manifest["metadata"]["performance_uncached_total_seconds"] == pytest.approx(10.0)
     assert manifest["metadata"]["performance_cached_total_ratio"] == pytest.approx(0.5)
@@ -24010,9 +24027,15 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["recommended_score_fusion_auroc"] == pytest.approx(0.88)
     assert record.metadata["recommended_score_fusion_conformal_gate_passed"] is True
     assert record.metadata["performance_selected_fusion_artifact_report"] == str(selected_fusion_report_path)
+    assert record.metadata["performance_selected_fusion_artifact_manifest"] == str(
+        selected_fusion_manifest_path
+    )
     assert record.metadata["recommended_selected_fusion_status"] == "promote"
     assert record.metadata["recommended_selected_fusion_signal"] == "selected_fusion_mean_rank"
     assert record.metadata["recommended_selected_fusion_auroc"] == pytest.approx(0.84)
+    assert record.metadata["recommended_selected_fusion_artifact_manifest"] == str(
+        selected_fusion_manifest_path
+    )
     assert record.metadata["performance_uncached_total_seconds"] == pytest.approx(10.0)
     assert record.metadata["performance_cached_total_ratio"] == pytest.approx(0.5)
     assert record.metadata["performance_cache_only_total_ratio"] == pytest.approx(0.02)
@@ -25189,10 +25212,16 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                         "selected_fusion_artifact_path": (
                             "artifacts/selected/smollm2-selected-fusion-artifact.json"
                         ),
+                        "selected_fusion_artifact_manifest": (
+                            "artifacts/selected/selected-fusion-artifact-manifest.json"
+                        ),
                     },
                     "evidence": {
                         "selected_fusion_artifact_report": (
                             "artifacts/selected/selected-fusion-artifact-build-report.json"
+                        ),
+                        "selected_fusion_artifact_manifest": (
+                            "artifacts/selected/selected-fusion-artifact-manifest.json"
                         ),
                         "selected_fusion_false_alarm": 0.03,
                         "selected_fusion_detection": 0.22,
@@ -25950,6 +25979,9 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["metadata"]["performance_selected_fusion_artifact_path"].endswith(
         "smollm2-selected-fusion-artifact.json"
     )
+    assert contract["metadata"]["performance_selected_fusion_artifact_manifest"].endswith(
+        "selected-fusion-artifact-manifest.json"
+    )
     assert manifest["summary"]["artifact_count"] == 3
     assert manifest["artifacts"]["release_efficiency_report"]["exists"] is True
     assert manifest["metadata"]["promotion_summary_status"] == "promote"
@@ -26225,6 +26257,9 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert record.metadata["performance_selected_fusion_detection"] == pytest.approx(0.22)
     assert record.metadata["performance_selected_fusion_artifact_path"].endswith(
         "smollm2-selected-fusion-artifact.json"
+    )
+    assert record.metadata["performance_selected_fusion_artifact_manifest"].endswith(
+        "selected-fusion-artifact-manifest.json"
     )
     assert record.metadata["release"] == "smollm2-v1.5"
     assert "\n  " not in contract_path.read_text(encoding="utf-8")
@@ -26677,6 +26712,7 @@ def _write_performance_baseline_record(
     score_fusion_high_confidence_accepted_false_rate=None,
     score_fusion_high_confidence_accepted_false_count=None,
     selected_fusion_artifact_report=None,
+    selected_fusion_artifact_manifest=None,
     selected_fusion_status=None,
     selected_fusion_run=None,
     selected_fusion_candidate=None,
@@ -26803,6 +26839,7 @@ def _write_performance_baseline_record(
                 selected_fusion_high_confidence_accepted_false_count
             ),
             "selected_fusion_artifact_path": selected_fusion_artifact_path,
+            "selected_fusion_artifact_manifest": selected_fusion_artifact_manifest,
         },
         "cost": {
             "uncached_total_seconds": uncached_total_seconds,
@@ -26843,6 +26880,7 @@ def _write_performance_baseline_record(
                 selected_fusion_high_confidence_accepted_false_count
             ),
             "selected_fusion_artifact_path": selected_fusion_artifact_path,
+            "selected_fusion_artifact_manifest": selected_fusion_artifact_manifest,
         },
         "score_dump_cache": {
             "enabled": True,
@@ -32772,6 +32810,7 @@ def test_runtime_config_recommendation_uses_gated_score_fusion(tmp_path):
 def test_runtime_config_recommendation_uses_selected_fusion_artifact_report(tmp_path):
     module = importlib.import_module("benchmarks.recommend_runtime_config")
     selected_report_path = tmp_path / "selected-fusion.json"
+    selected_manifest_path = tmp_path / "selected-fusion-artifact-manifest.json"
     matrix_report = {
         "config": {"model": "unit-model", "max_workers": 1},
         "matrix_decision": {
@@ -32795,6 +32834,8 @@ def test_runtime_config_recommendation_uses_selected_fusion_artifact_report(tmp_
     selected_fusion_artifact_report = {
         "workflow": "selected_fusion_artifact_build",
         "selection_status": "complete",
+        "build_report_path": str(selected_report_path),
+        "artifact_manifest_path": str(selected_manifest_path),
         "runs": [
             {
                 "run_name": "gpt2",
@@ -32866,10 +32907,14 @@ def test_runtime_config_recommendation_uses_selected_fusion_artifact_report(tmp_
     assert selected["selected_candidate"] == "geometry_trajectory:mean_rank"
     assert selected["tracked_signal_enabled"] is True
     assert selected["artifact_path"] == "gpt2-selected-fusion-artifact.json"
+    assert selected["build_report"] == str(selected_report_path)
+    assert selected["artifact_manifest"] == str(selected_manifest_path)
     assert selected["release_gate_status"] == "promote"
     assert selected["release_gate_passed"] is True
     assert selected["high_confidence_accepted_false_rate"] == pytest.approx(0.0)
     assert report["evidence"]["selected_fusion_artifact_report"] == str(selected_report_path)
+    assert report["evidence"]["selected_fusion_artifact_build_report"] == str(selected_report_path)
+    assert report["evidence"]["selected_fusion_artifact_manifest"] == str(selected_manifest_path)
     assert report["evidence"]["selected_fusion_requested_run"] == "gpt2"
     assert report["evidence"]["selected_fusion_status"] == "promote"
     assert report["evidence"]["selected_fusion_signal"] == "selected_fusion_mean_rank"
@@ -34101,6 +34146,7 @@ def test_run_performance_baseline_workflow_records_selected_fusion_artifact(tmp_
     registry_module = importlib.import_module("eigentruth.registry")
     matrix_report_path = tmp_path / "cache-profile-matrix-report.json"
     selected_report_path = tmp_path / "selected-fusion-artifact-build-report.json"
+    selected_manifest_path = tmp_path / "selected-fusion-artifact-manifest.json"
     selected_artifact_path = tmp_path / "gpt2-selected-fusion-artifact.json"
     workflow_report_path = tmp_path / "workflow.json"
     verification_report_path = tmp_path / "manifest-verification.json"
@@ -34109,10 +34155,29 @@ def test_run_performance_baseline_workflow_records_selected_fusion_artifact(tmp_
         json.dumps({"artifact_type": "rank_score_fusion", "method": "mean_rank"}),
         encoding="utf-8",
     )
+    selected_manifest_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "digest_algorithm": "sha256",
+                "artifacts": {},
+                "summary": {
+                    "artifact_count": 0,
+                    "directory_count": 0,
+                    "file_count": 0,
+                    "missing_count": 0,
+                },
+                "metadata": {"workflow": "selected_fusion_artifact_build"},
+            }
+        ),
+        encoding="utf-8",
+    )
     selected_report_path.write_text(
         json.dumps({
             "workflow": "selected_fusion_artifact_build",
             "selection_status": "complete",
+            "build_report_path": str(selected_report_path),
+            "artifact_manifest_path": str(selected_manifest_path),
             "runs": [
                 {
                     "run_name": "gpt2",
@@ -34227,9 +34292,12 @@ def test_run_performance_baseline_workflow_records_selected_fusion_artifact(tmp_
     assert selected["run_name"] == "gpt2"
     assert selected["selected_candidate"] == "geometry_trajectory:mean_rank"
     assert selected["artifact_path"] == str(selected_artifact_path)
+    assert selected["build_report"] == str(selected_report_path)
+    assert selected["artifact_manifest"] == str(selected_manifest_path)
     assert selected["release_gate_status"] == "promote"
     assert selected["release_gate_passed"] is True
     assert payload["paths"]["selected_fusion_artifact_report"] == str(selected_report_path)
+    assert payload["paths"]["selected_fusion_artifact_manifest"] == str(selected_manifest_path)
     assert payload["config"]["selected_fusion_artifact_report"] == str(selected_report_path)
     assert payload["config"]["selected_fusion_run"] == "gpt2"
     assert payload["performance_evidence_bundle"]["recommendation"]["selected_fusion_status"] == "promote"
@@ -34242,18 +34310,29 @@ def test_run_performance_baseline_workflow_records_selected_fusion_artifact(tmp_
     assert payload["performance_evidence_bundle"]["recommendation"][
         "selected_fusion_high_confidence_accepted_false_count"
     ] == 0
+    assert payload["performance_evidence_bundle"]["recommendation"][
+        "selected_fusion_artifact_manifest"
+    ] == str(selected_manifest_path)
     assert payload["performance_evidence_bundle"]["evidence"]["selected_fusion_artifact_report"] == (
         str(selected_report_path)
+    )
+    assert payload["performance_evidence_bundle"]["evidence"]["selected_fusion_artifact_manifest"] == (
+        str(selected_manifest_path)
     )
     assert payload["performance_evidence_bundle"]["evidence"]["selected_fusion_false_alarm"] == (
         pytest.approx(0.04)
     )
     assert manifest["artifacts"]["selected_fusion_artifact_report"]["exists"] is True
+    assert manifest["artifacts"]["selected_fusion_artifact_manifest"]["exists"] is True
     assert manifest["artifacts"]["selected_fusion_artifact"]["exists"] is True
+    assert manifest["metadata"]["selected_fusion_artifact_manifest"] == str(selected_manifest_path)
     assert manifest["metadata"]["selected_fusion_artifact_report_enabled"] is True
     assert manifest["metadata"]["selected_fusion_run"] == "gpt2"
     assert manifest["metadata"]["recommended_selected_fusion_status"] == "promote"
     assert manifest["metadata"]["recommended_selected_fusion_signal"] == "selected_fusion_mean_rank"
+    assert manifest["metadata"]["recommended_selected_fusion_artifact_manifest"] == str(
+        selected_manifest_path
+    )
     assert manifest["metadata"]["recommended_selected_fusion_release_gate_passed"] is True
     assert record.metadata["recommended_best_quality_signal"] == "selected_fusion_mean_rank"
     assert record.metadata["recommended_selected_fusion_status"] == "promote"
@@ -34261,6 +34340,9 @@ def test_run_performance_baseline_workflow_records_selected_fusion_artifact(tmp_
     assert record.metadata["recommended_selected_fusion_release_gate_status"] == "promote"
     assert record.metadata["recommended_selected_fusion_high_confidence_accepted_false_count"] == 0
     assert record.metadata["recommended_selected_fusion_artifact_path"] == str(selected_artifact_path)
+    assert record.metadata["recommended_selected_fusion_artifact_manifest"] == str(
+        selected_manifest_path
+    )
 
 
 def test_run_performance_baseline_workflow_dry_run_needs_evidence(tmp_path):

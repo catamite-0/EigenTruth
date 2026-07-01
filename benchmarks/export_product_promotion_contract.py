@@ -255,6 +255,9 @@ def export_product_promotion_contract(
                 "performance_selected_fusion_artifact_path": contract.metadata.get(
                     "performance_selected_fusion_artifact_path"
                 ),
+                "performance_selected_fusion_artifact_manifest": contract.metadata.get(
+                    "performance_selected_fusion_artifact_manifest"
+                ),
                 "product_trace_replay_workflow_report": trace_replay_workflow.get("report_path"),
                 "product_trace_replay_workflow_manifest": trace_replay_workflow.get(
                     "manifest_path"
