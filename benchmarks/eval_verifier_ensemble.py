@@ -56,6 +56,7 @@ from eigentruth.eval.score_dump import (
 from eigentruth.verify import (
     CachedVerifier,
     Claim,
+    FactSelfConsistencyVerifier,
     GroundednessVerifier,
     JsonTraceCache,
     SelfConsistencyVerifier,
@@ -77,6 +78,7 @@ _VERIFIER_CACHE_KEY_MODES = {
     "triple_evidence_verifiers": _TEXT_VERIFIER_CACHE_KEY_MODE,
     "retrieval_qa_verifiers": _TEXT_VERIFIER_CACHE_KEY_MODE,
     "selfcheck_verifiers": _TEXT_VERIFIER_CACHE_KEY_MODE,
+    "fact_selfcheck_verifiers": _TEXT_VERIFIER_CACHE_KEY_MODE,
     "state_verifier": _EXACT_VERIFIER_CACHE_KEY_MODE,
     "transition_verifier": _EXACT_VERIFIER_CACHE_KEY_MODE,
 }
@@ -543,6 +545,7 @@ def _staged_skip_record(
         "qa": None,
         "state": None,
         "transition": None,
+        "fact_selfcheck": None,
         "selfcheck": None,
         "retrieval_hits": (),
         "route": _route_metadata(
@@ -568,6 +571,11 @@ def _verify_records(
     selfcheck_refute_threshold: float,
     selfcheck_early_stop: bool,
     selfcheck_max_samples: int | None,
+    enable_fact_selfcheck: bool = False,
+    fact_selfcheck_min_samples: int | None = None,
+    fact_selfcheck_support_threshold: float | None = None,
+    fact_selfcheck_refute_threshold: float | None = None,
+    fact_selfcheck_max_samples: int | None = None,
     enable_triple_evidence: bool = False,
     triple_min_slot_coverage: float = 1.0,
     qa_verifier: QuestionAnswerVerifier | None = None,
@@ -608,7 +616,24 @@ def _verify_records(
     triple_evidence_runners: dict[str, CachedVerifier] = {}
     retrieval_qa_runners: dict[str, CachedVerifier] = {}
     selfcheck_runners: dict[str, CachedVerifier] = {}
+    fact_selfcheck_runners: dict[str, CachedVerifier] = {}
     retrievers: dict[str, CachedRetriever] = {}
+    resolved_fact_selfcheck_min_samples = (
+        selfcheck_min_samples if fact_selfcheck_min_samples is None else fact_selfcheck_min_samples
+    )
+    resolved_fact_selfcheck_support_threshold = (
+        selfcheck_support_threshold
+        if fact_selfcheck_support_threshold is None
+        else fact_selfcheck_support_threshold
+    )
+    resolved_fact_selfcheck_refute_threshold = (
+        selfcheck_refute_threshold
+        if fact_selfcheck_refute_threshold is None
+        else fact_selfcheck_refute_threshold
+    )
+    resolved_fact_selfcheck_max_samples = (
+        selfcheck_max_samples if fact_selfcheck_max_samples is None else fact_selfcheck_max_samples
+    )
 
     def groundedness_runner(
         evidence: Sequence[Mapping[str, Any] | str],
@@ -693,6 +718,29 @@ def _verify_records(
             selfcheck_runners[key] = runner
         return runner
 
+    def fact_selfcheck_runner(samples: Sequence[Mapping[str, Any] | str]) -> CachedVerifier:
+        key = stable_cache_key({
+            "samples": samples,
+            "min_samples": resolved_fact_selfcheck_min_samples,
+            "support_threshold": resolved_fact_selfcheck_support_threshold,
+            "refute_threshold": resolved_fact_selfcheck_refute_threshold,
+            "max_samples": resolved_fact_selfcheck_max_samples,
+        })
+        runner = fact_selfcheck_runners.get(key)
+        if runner is None:
+            runner = CachedVerifier(
+                FactSelfConsistencyVerifier(
+                    samples=samples,
+                    min_samples=resolved_fact_selfcheck_min_samples,
+                    support_threshold=resolved_fact_selfcheck_support_threshold,
+                    refute_threshold=resolved_fact_selfcheck_refute_threshold,
+                    max_samples=resolved_fact_selfcheck_max_samples,
+                ),
+                cache_key_mode=_TEXT_VERIFIER_CACHE_KEY_MODE,
+            )
+            fact_selfcheck_runners[key] = runner
+        return runner
+
     def retriever_for(documents: Sequence[Mapping[str, Any] | str]) -> CachedRetriever:
         key = stable_cache_key({"documents": documents, "min_overlap": retriever_min_overlap})
         retriever = retrievers.get(key)
@@ -733,6 +781,7 @@ def _verify_records(
         state_result = None
         transition_result = None
         selfcheck_result = None
+        fact_selfcheck_result = None
         retrieval_qa_result = None
         attempted_routes = []
         route_timings: list[dict[str, Any]] = []
@@ -757,6 +806,7 @@ def _verify_records(
                     "qa": _verification_to_dict(qa_result),
                     "state": None,
                     "transition": None,
+                    "fact_selfcheck": None,
                     "selfcheck": None,
                     "retrieval_hits": (),
                     "route": _route_metadata(
@@ -792,6 +842,7 @@ def _verify_records(
                     "fact": _verification_to_dict(fact_result),
                     "state": None,
                     "transition": None,
+                    "fact_selfcheck": None,
                     "selfcheck": None,
                     "retrieval_hits": (),
                     "route": _route_metadata(
@@ -826,6 +877,7 @@ def _verify_records(
                     "qa": None if qa_result is None else _verification_to_dict(qa_result),
                     "state": None,
                     "transition": _verification_to_dict(transition_result),
+                    "fact_selfcheck": None,
                     "selfcheck": None,
                     "retrieval_hits": (),
                     "route": _route_metadata(
@@ -860,6 +912,7 @@ def _verify_records(
                     "qa": None if qa_result is None else _verification_to_dict(qa_result),
                     "state": _verification_to_dict(state_result),
                     "transition": None,
+                    "fact_selfcheck": None,
                     "selfcheck": None,
                     "retrieval_hits": (),
                     "route": _route_metadata(
@@ -895,6 +948,7 @@ def _verify_records(
                     "state": None if state_result is None else _verification_to_dict(state_result),
                     "transition": None,
                     "triple_evidence": _verification_to_dict(triple_result),
+                    "fact_selfcheck": None,
                     "selfcheck": None,
                     "retrieval_hits": (),
                     "route": _route_metadata(
@@ -920,7 +974,29 @@ def _verify_records(
         selected_route = "groundedness"
         selected_verifier = "GroundednessVerifier"
         selected_retrieval_hits: tuple[Mapping[str, Any], ...] = ()
-        if initial.status is VerificationStatus.INSUFFICIENT_EVIDENCE and record.selfcheck_samples:
+        if (
+            initial.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+            and enable_fact_selfcheck
+            and record.selfcheck_samples
+        ):
+            attempted_routes.append("fact_self_consistency")
+            fact_selfcheck_result = _timed_verify(
+                route_timings,
+                route="fact_self_consistency",
+                runner=fact_selfcheck_runner(record.selfcheck_samples),
+                claim=record.claim,
+            )
+            final = fact_selfcheck_result
+            selected_route = "fact_self_consistency"
+            selected_verifier = "FactSelfConsistencyVerifier"
+        if (
+            initial.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+            and final.status in {
+                VerificationStatus.INSUFFICIENT_EVIDENCE,
+                VerificationStatus.NOT_APPLICABLE,
+            }
+            and record.selfcheck_samples
+        ):
             attempted_routes.append("self_consistency")
             selfcheck_result = _timed_verify(
                 route_timings,
@@ -936,8 +1012,7 @@ def _verify_records(
                 VerificationStatus.INSUFFICIENT_EVIDENCE,
                 VerificationStatus.NOT_APPLICABLE,
             }:
-                selected_route = "self_consistency"
-                selected_verifier = "SelfConsistencyVerifier"
+                pass
             else:
                 final = initial if selfcheck_result is None else selfcheck_result
         if final.status in {
@@ -1035,6 +1110,7 @@ def _verify_records(
             "state": None if state_result is None else _verification_to_dict(state_result),
             "transition": None if transition_result is None else _verification_to_dict(transition_result),
             "triple_evidence": None if triple_result is None else _verification_to_dict(triple_result),
+            "fact_selfcheck": None if fact_selfcheck_result is None else _verification_to_dict(fact_selfcheck_result),
             "selfcheck": None if selfcheck_result is None else _verification_to_dict(selfcheck_result),
             "retrieval_qa": None if retrieval_qa_result is None else _verification_to_dict(retrieval_qa_result),
             "retrieval_hits": selected_retrieval_hits,
@@ -1096,6 +1172,10 @@ def _verify_records(
             combine_cache_stats(*(runner.stats.to_dict() for runner in selfcheck_runners.values())),
             _TEXT_VERIFIER_CACHE_KEY_MODE,
         )
+        fact_selfcheck_stats = _cache_stats_with_key_mode(
+            combine_cache_stats(*(runner.stats.to_dict() for runner in fact_selfcheck_runners.values())),
+            _TEXT_VERIFIER_CACHE_KEY_MODE,
+        )
         retriever_stats = combine_cache_stats(*(retriever.stats.to_dict() for retriever in retrievers.values()))
         cache_stats.update({
             "qa_verifier": qa_stats,
@@ -1118,6 +1198,10 @@ def _verify_records(
                 **selfcheck_stats,
                 "instances": len(selfcheck_runners),
             },
+            "fact_selfcheck_verifiers": {
+                **fact_selfcheck_stats,
+                "instances": len(fact_selfcheck_runners),
+            },
             "retrievers": {
                 **retriever_stats,
                 "instances": len(retrievers),
@@ -1130,6 +1214,7 @@ def _verify_records(
                 triple_evidence_stats,
                 retrieval_qa_stats,
                 selfcheck_stats,
+                fact_selfcheck_stats,
                 retriever_stats,
             ),
         })
@@ -1641,6 +1726,58 @@ def _selfcheck_execution_summary(verified_records: Sequence[Mapping[str, Any]]) 
     }
 
 
+def _fact_selfcheck_execution_summary(verified_records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Summarize fact-level self-consistency sample and triple processing."""
+    records_with_fact_selfcheck = 0
+    available_samples = 0
+    considered_samples = 0
+    processed_samples = 0
+    skipped_samples = 0
+    claim_triples = 0
+    sample_triples = 0
+    supported_triples = 0
+    refuted_triples = 0
+    insufficient_triples = 0
+    not_applicable_records = 0
+    for record in verified_records:
+        payload = record.get("fact_selfcheck")
+        if not isinstance(payload, Mapping):
+            continue
+        metadata = payload.get("metadata", {})
+        if not isinstance(metadata, Mapping):
+            metadata = {}
+        records_with_fact_selfcheck += 1
+        considered = _non_negative_int(metadata.get("sample_count"))
+        available = _non_negative_int(metadata.get("available_sample_count"))
+        processed = _non_negative_int(metadata.get("processed_sample_count"))
+        skipped = _non_negative_int(metadata.get("skipped_sample_count"))
+        considered_samples += considered if considered is not None else 0
+        available_samples += available if available is not None else (considered or 0)
+        processed_samples += processed if processed is not None else (considered or 0)
+        skipped_samples += skipped if skipped is not None else 0
+        claim_triples += _non_negative_int(metadata.get("triple_count")) or 0
+        sample_triples += _non_negative_int(metadata.get("sample_triple_count")) or 0
+        supported_triples += _non_negative_int(metadata.get("supported_triple_count")) or 0
+        refuted_triples += _non_negative_int(metadata.get("refuted_triple_count")) or 0
+        insufficient_triples += _non_negative_int(metadata.get("insufficient_triple_count")) or 0
+        if payload.get("status") == VerificationStatus.NOT_APPLICABLE.value:
+            not_applicable_records += 1
+    return {
+        "executed_records": records_with_fact_selfcheck,
+        "not_applicable_records": not_applicable_records,
+        "available_samples": available_samples,
+        "considered_samples": considered_samples,
+        "processed_samples": processed_samples,
+        "skipped_samples": skipped_samples,
+        "processing_rate": _safe_div(processed_samples, considered_samples),
+        "claim_triple_count": claim_triples,
+        "sample_triple_count": sample_triples,
+        "supported_triple_count": supported_triples,
+        "refuted_triple_count": refuted_triples,
+        "insufficient_triple_count": insufficient_triples,
+    }
+
+
 def _staged_verification_summary(
     verified_records: Sequence[Mapping[str, Any]],
     *,
@@ -2016,6 +2153,11 @@ def _verification_trace_cache_key(
     selfcheck_refute_threshold: float,
     selfcheck_early_stop: bool,
     selfcheck_max_samples: int | None,
+    enable_fact_selfcheck: bool,
+    fact_selfcheck_min_samples: int,
+    fact_selfcheck_support_threshold: float,
+    fact_selfcheck_refute_threshold: float,
+    fact_selfcheck_max_samples: int | None,
     enable_triple_evidence: bool,
     triple_min_slot_coverage: float,
     min_world_model_confidence: float,
@@ -2027,7 +2169,7 @@ def _verification_trace_cache_key(
     material = {
         "schema_version": 1,
         "cache_type": "verifier_ensemble_verified_records",
-        "builder": "eval_verifier_ensemble:verified_records:v5",
+        "builder": "eval_verifier_ensemble:verified_records:v6",
         "name": name,
         "signal": signal,
         "score_dump": _path_fingerprint(score_path),
@@ -2060,6 +2202,14 @@ def _verification_trace_cache_key(
             "refute_threshold": float(selfcheck_refute_threshold),
             "early_stop": bool(selfcheck_early_stop),
             "max_samples": selfcheck_max_samples,
+        },
+        "fact_selfcheck_verifier": {
+            "type": "FactSelfConsistencyVerifier",
+            "enabled": bool(enable_fact_selfcheck),
+            "min_samples": int(fact_selfcheck_min_samples),
+            "support_threshold": float(fact_selfcheck_support_threshold),
+            "refute_threshold": float(fact_selfcheck_refute_threshold),
+            "max_samples": fact_selfcheck_max_samples,
         },
         "triple_evidence_verifier": {
             "type": "TripleEvidenceVerifier",
@@ -2234,6 +2384,11 @@ def build_verifier_ensemble_report(
     selfcheck_refute_threshold: float = 0.50,
     selfcheck_early_stop: bool = False,
     selfcheck_max_samples: int | None = None,
+    enable_fact_selfcheck: bool = False,
+    fact_selfcheck_min_samples: int | None = None,
+    fact_selfcheck_support_threshold: float | None = None,
+    fact_selfcheck_refute_threshold: float | None = None,
+    fact_selfcheck_max_samples: int | None = None,
     enable_triple_evidence: bool = False,
     triple_min_slot_coverage: float = 1.0,
     min_world_model_confidence: float = 0.0,
@@ -2273,6 +2428,33 @@ def build_verifier_ensemble_report(
         raise ValueError("selfcheck_refute_threshold must be in [0, 1].")
     if selfcheck_max_samples is not None and selfcheck_max_samples < selfcheck_min_samples:
         raise ValueError("selfcheck_max_samples must be >= selfcheck_min_samples when set.")
+    resolved_fact_selfcheck_min_samples = (
+        selfcheck_min_samples if fact_selfcheck_min_samples is None else int(fact_selfcheck_min_samples)
+    )
+    resolved_fact_selfcheck_support_threshold = (
+        selfcheck_support_threshold
+        if fact_selfcheck_support_threshold is None
+        else float(fact_selfcheck_support_threshold)
+    )
+    resolved_fact_selfcheck_refute_threshold = (
+        selfcheck_refute_threshold
+        if fact_selfcheck_refute_threshold is None
+        else float(fact_selfcheck_refute_threshold)
+    )
+    resolved_fact_selfcheck_max_samples = (
+        selfcheck_max_samples if fact_selfcheck_max_samples is None else int(fact_selfcheck_max_samples)
+    )
+    if resolved_fact_selfcheck_min_samples < 1:
+        raise ValueError("fact_selfcheck_min_samples must be >= 1.")
+    if not (0.0 <= resolved_fact_selfcheck_support_threshold <= 1.0):
+        raise ValueError("fact_selfcheck_support_threshold must be in [0, 1].")
+    if not (0.0 <= resolved_fact_selfcheck_refute_threshold <= 1.0):
+        raise ValueError("fact_selfcheck_refute_threshold must be in [0, 1].")
+    if (
+        resolved_fact_selfcheck_max_samples is not None
+        and resolved_fact_selfcheck_max_samples < resolved_fact_selfcheck_min_samples
+    ):
+        raise ValueError("fact_selfcheck_max_samples must be >= fact_selfcheck_min_samples when set.")
     if not (0.0 <= triple_min_slot_coverage <= 1.0):
         raise ValueError("triple_min_slot_coverage must be in [0, 1].")
     if not (0.0 <= min_world_model_confidence <= 1.0):
@@ -2336,6 +2518,7 @@ def build_verifier_ensemble_report(
     any_state_enabled = False
     any_transition_enabled = False
     any_selfcheck_enabled = False
+    any_fact_selfcheck_enabled = False
     any_triple_evidence_enabled = False
     any_fact_enabled = fact_verifier is not None
     verified_record_counts: dict[str, int] = {}
@@ -2378,6 +2561,8 @@ def build_verifier_ensemble_report(
             any_state_enabled = any_state_enabled or state_enabled
             selfcheck_enabled = any(record.selfcheck_samples for record in records)
             any_selfcheck_enabled = any_selfcheck_enabled or selfcheck_enabled
+            fact_selfcheck_enabled = bool(enable_fact_selfcheck and selfcheck_enabled)
+            any_fact_selfcheck_enabled = any_fact_selfcheck_enabled or fact_selfcheck_enabled
             triple_evidence_enabled = bool(
                 enable_triple_evidence
                 and any(_record_has_triple_evidence(record) for record in records)
@@ -2421,6 +2606,11 @@ def build_verifier_ensemble_report(
                 selfcheck_refute_threshold=selfcheck_refute_threshold,
                 selfcheck_early_stop=selfcheck_early_stop,
                 selfcheck_max_samples=selfcheck_max_samples,
+                enable_fact_selfcheck=bool(enable_fact_selfcheck),
+                fact_selfcheck_min_samples=resolved_fact_selfcheck_min_samples,
+                fact_selfcheck_support_threshold=resolved_fact_selfcheck_support_threshold,
+                fact_selfcheck_refute_threshold=resolved_fact_selfcheck_refute_threshold,
+                fact_selfcheck_max_samples=resolved_fact_selfcheck_max_samples,
                 enable_triple_evidence=bool(enable_triple_evidence),
                 triple_min_slot_coverage=float(triple_min_slot_coverage),
                 min_world_model_confidence=float(min_world_model_confidence),
@@ -2451,6 +2641,11 @@ def build_verifier_ensemble_report(
                     selfcheck_refute_threshold=selfcheck_refute_threshold,
                     selfcheck_early_stop=selfcheck_early_stop,
                     selfcheck_max_samples=selfcheck_max_samples,
+                    enable_fact_selfcheck=bool(enable_fact_selfcheck),
+                    fact_selfcheck_min_samples=resolved_fact_selfcheck_min_samples,
+                    fact_selfcheck_support_threshold=resolved_fact_selfcheck_support_threshold,
+                    fact_selfcheck_refute_threshold=resolved_fact_selfcheck_refute_threshold,
+                    fact_selfcheck_max_samples=resolved_fact_selfcheck_max_samples,
                     enable_triple_evidence=bool(enable_triple_evidence),
                     triple_min_slot_coverage=float(triple_min_slot_coverage),
                     qa_verifier=qa_verifier,
@@ -2475,7 +2670,7 @@ def build_verifier_ensemble_report(
                             "cache_stats": dict(run_cache_stats),
                         },
                         metadata={
-                            "builder": "eval_verifier_ensemble:verified_records:v5",
+                            "builder": "eval_verifier_ensemble:verified_records:v6",
                             "name": name,
                             "signal": signal,
                             "material": trace_material,
@@ -2513,6 +2708,7 @@ def build_verifier_ensemble_report(
                 for alpha in alphas
             }
             selfcheck_execution = _selfcheck_execution_summary(verified_records)
+            fact_selfcheck_execution = _fact_selfcheck_execution_summary(verified_records)
             staged_execution = _staged_verification_summary(
                 verified_records,
                 enabled=stage_policy is not None,
@@ -2621,6 +2817,25 @@ def build_verifier_ensemble_report(
                     ),
                     **selfcheck_execution,
                 },
+                "fact_selfcheck_verifier": {
+                    "type": "FactSelfConsistencyVerifier",
+                    "enabled": fact_selfcheck_enabled,
+                    "requested": bool(enable_fact_selfcheck),
+                    "min_samples": resolved_fact_selfcheck_min_samples,
+                    "support_threshold": resolved_fact_selfcheck_support_threshold,
+                    "refute_threshold": resolved_fact_selfcheck_refute_threshold,
+                    "max_samples": resolved_fact_selfcheck_max_samples,
+                    "records_with_samples": sum(1 for record in records if record.selfcheck_samples),
+                    "decided_records": sum(
+                        1 for record in verified_records
+                        if record.get("fact_selfcheck") is not None
+                        and record["fact_selfcheck"]["status"] in {
+                            VerificationStatus.SUPPORTED.value,
+                            VerificationStatus.REFUTED.value,
+                        }
+                    ),
+                    **fact_selfcheck_execution,
+                },
                 "triple_evidence_verifier": {
                     "type": "TripleEvidenceVerifier",
                     "enabled": triple_evidence_enabled,
@@ -2700,6 +2915,16 @@ def build_verifier_ensemble_report(
             "refute_threshold": selfcheck_refute_threshold,
             "early_stop": bool(selfcheck_early_stop),
             "max_samples": selfcheck_max_samples,
+            "cache_key_mode": _TEXT_VERIFIER_CACHE_KEY_MODE,
+        },
+        "fact_selfcheck_verifier": {
+            "type": "FactSelfConsistencyVerifier",
+            "enabled": any_fact_selfcheck_enabled,
+            "requested": bool(enable_fact_selfcheck),
+            "min_samples": resolved_fact_selfcheck_min_samples,
+            "support_threshold": resolved_fact_selfcheck_support_threshold,
+            "refute_threshold": resolved_fact_selfcheck_refute_threshold,
+            "max_samples": resolved_fact_selfcheck_max_samples,
             "cache_key_mode": _TEXT_VERIFIER_CACHE_KEY_MODE,
         },
         "triple_evidence_verifier": {
@@ -2801,6 +3026,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         selfcheck_refute_threshold=float(getattr(args, "selfcheck_refute_threshold", 0.50)),
         selfcheck_early_stop=bool(getattr(args, "selfcheck_early_stop", False)),
         selfcheck_max_samples=getattr(args, "selfcheck_max_samples", None),
+        enable_fact_selfcheck=bool(getattr(args, "enable_fact_selfcheck", False)),
+        fact_selfcheck_min_samples=getattr(args, "fact_selfcheck_min_samples", None),
+        fact_selfcheck_support_threshold=getattr(args, "fact_selfcheck_support_threshold", None),
+        fact_selfcheck_refute_threshold=getattr(args, "fact_selfcheck_refute_threshold", None),
+        fact_selfcheck_max_samples=getattr(args, "fact_selfcheck_max_samples", None),
         enable_triple_evidence=bool(getattr(args, "enable_triple_evidence", False)),
         triple_min_slot_coverage=float(getattr(args, "triple_min_slot_coverage", 1.0)),
         min_world_model_confidence=float(getattr(args, "min_world_model_confidence", 0.0)),
@@ -2893,6 +3123,16 @@ def main() -> None:
                         help="stop self-consistency sample judging once the final threshold outcome is fixed")
     parser.add_argument("--selfcheck-max-samples", type=int, default=None,
                         help="optional cap on self-consistency samples considered per claim")
+    parser.add_argument("--enable-fact-selfcheck", action="store_true",
+                        help="run fact/triple-level self-consistency before sentence-level selfcheck fallback")
+    parser.add_argument("--fact-selfcheck-min-samples", type=int, default=None,
+                        help="minimum sampled responses for fact-level self-consistency; defaults to selfcheck value")
+    parser.add_argument("--fact-selfcheck-support-threshold", type=float, default=None,
+                        help="fact-level support-rate threshold; defaults to selfcheck support threshold")
+    parser.add_argument("--fact-selfcheck-refute-threshold", type=float, default=None,
+                        help="fact-level refute-rate threshold; defaults to selfcheck refute threshold")
+    parser.add_argument("--fact-selfcheck-max-samples", type=int, default=None,
+                        help="optional cap for fact-level self-consistency samples")
     parser.add_argument("--enable-triple-evidence", action="store_true",
                         help="enable strict subject-predicate-object evidence audits for sensitive factual claims")
     parser.add_argument("--triple-min-slot-coverage", type=float, default=1.0,

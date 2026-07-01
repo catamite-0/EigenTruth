@@ -4698,9 +4698,22 @@ python benchmarks/eval_verifier_ensemble.py \
   --scores tiny=artifacts/tiny_scores_with_samples.json \
   --claims artifacts/tiny_selfcheck_claims.json \
   --signal truth_proj \
+  --enable-fact-selfcheck \
   --selfcheck-early-stop \
   --json artifacts/tiny_selfcheck_verifier_ensemble_report.json
 ```
+
+`--enable-fact-selfcheck` runs `FactSelfConsistencyVerifier` before the
+sentence-overlap selfcheck fallback. It uses the same sampled-response fixture
+boundary, works best when records or samples carry `claim_triples` / `triples`
+metadata, and reports the opt-in `fact_selfcheck_verifier` block plus
+`fact_self_consistency` route metrics. Unsupported or unextractable fact
+triples remain `not_applicable` / `insufficient_evidence` and fall through to
+the existing sentence-level route. Verified-record sidecars from this path can
+also be passed to `build_verifier_signal_score_dump.py`, which emits
+`fact_selfcheck_support_rate`, `fact_selfcheck_refute_rate`,
+`fact_selfcheck_disagreement`, `fact_selfcheck_insufficient`,
+`fact_selfcheck_not_applicable`, and `fact_selfcheck_uncovered_rate` columns.
 
 When the question is whether sampled responses are useful as calibrated
 diagnostic signals by themselves, `build_selfcheck_signal_score_dump.py` skips

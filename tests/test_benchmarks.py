@@ -10347,6 +10347,109 @@ def test_eval_verifier_ensemble_uses_self_consistency_samples(tmp_path):
     assert run["retrieval"]["records_with_hits"] == 0
 
 
+def test_eval_verifier_ensemble_routes_samples_to_fact_selfcheck(tmp_path):
+    verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    scores_path = tmp_path / "scores.json"
+    fixture_path = tmp_path / "claims.json"
+    sidecar_path = tmp_path / "verified-records.jsonl"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 0, 1, 1],
+            "scores": {"truth_proj": [0.1, 0.2, 0.8, 0.9]},
+        }),
+        encoding="utf-8",
+    )
+
+    def triple(subject, predicate, object_value):
+        return {"subject": subject, "predicate": predicate, "object": object_value}
+
+    fixture_path.write_text(
+        json.dumps({
+            "records": [
+                {
+                    "claim": "Paris is the capital of France.",
+                    "claim_triples": [triple("France", "capital_of", "Paris")],
+                    "selfcheck_samples": [
+                        {"response": "sample one", "triples": [triple("France", "capital_of", "Paris")]},
+                        {"response": "sample two", "triples": [triple("France", "capital_of", "Paris")]},
+                    ],
+                },
+                {
+                    "claim": "The euro is the currency of Germany.",
+                    "claim_triples": [triple("Germany", "currency_of", "euro")],
+                    "selfcheck_samples": [
+                        {"response": "sample one", "triples": [triple("Germany", "currency_of", "euro")]},
+                        {"response": "sample two", "triples": [triple("Germany", "currency_of", "euro")]},
+                    ],
+                },
+                {
+                    "claim": "Cheese is the material of the Moon.",
+                    "claim_triples": [triple("Moon", "is", "cheese")],
+                    "selfcheck_samples": [
+                        {"response": "sample one", "triples": [triple("Moon", "is", "rock")]},
+                        {"response": "sample two", "triples": [triple("Moon", "is", "rock")]},
+                    ],
+                },
+                {
+                    "claim": "AlphaCorp has 10 offices in Europe.",
+                    "claim_triples": [triple("AlphaCorp", "has", "10 offices in Europe")],
+                    "selfcheck_samples": [
+                        {"response": "sample one", "triples": [triple("AlphaCorp", "has", "12 offices in Europe")]},
+                        {"response": "sample two", "triples": [triple("AlphaCorp", "has", "12 offices in Europe")]},
+                    ],
+                },
+            ]
+        }),
+        encoding="utf-8",
+    )
+
+    report = verifier.build_verifier_ensemble_report(
+        [("synthetic", scores_path)],
+        signal="truth_proj",
+        claims_path=fixture_path,
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+        enable_fact_selfcheck=True,
+        verified_records_path=sidecar_path,
+    )
+    run = report["runs"][0]
+    quality = run["verification_quality"]
+    route_quality = run["route_quality"]["fact_self_consistency"]
+    sidecar_rows = [
+        json.loads(line)
+        for line in sidecar_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+    assert report["fact_selfcheck_verifier"]["enabled"] is True
+    assert report["fact_selfcheck_verifier"]["requested"] is True
+    assert run["fact_selfcheck_verifier"]["enabled"] is True
+    assert run["fact_selfcheck_verifier"]["records_with_samples"] == 4
+    assert run["fact_selfcheck_verifier"]["executed_records"] == 4
+    assert run["fact_selfcheck_verifier"]["decided_records"] == 4
+    assert run["fact_selfcheck_verifier"]["claim_triple_count"] == 4
+    assert run["fact_selfcheck_verifier"]["sample_triple_count"] == 8
+    assert run["selfcheck_verifier"]["executed_records"] == 0
+    assert run["route_summary"]["selected_counts"] == {"fact_self_consistency": 4}
+    assert run["route_summary"]["attempted_counts"] == {
+        "groundedness": 4,
+        "fact_self_consistency": 4,
+    }
+    assert run["verification_status_counts"]["supported"] == 2
+    assert run["verification_status_counts"]["refuted"] == 2
+    assert quality["decision_accuracy"] == pytest.approx(1.0)
+    assert route_quality["selected"] == 4
+    assert route_quality["true_supported_rate"] == pytest.approx(1.0)
+    assert route_quality["false_refuted_rate"] == pytest.approx(1.0)
+    assert run["cache_stats"]["fact_selfcheck_verifiers"]["requests"] == 4
+    assert run["cache_stats"]["selfcheck_verifiers"]["requests"] == 0
+    assert len(sidecar_rows) == 4
+    assert sidecar_rows[0]["record"]["fact_selfcheck"]["metadata"]["triple_count"] == 1
+    assert sidecar_rows[0]["record"]["route"]["selected_verifier"] == "FactSelfConsistencyVerifier"
+
+
 def test_eval_verifier_ensemble_reports_selfcheck_early_stop_savings(tmp_path):
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
     scores_path = tmp_path / "scores.json"
@@ -50375,6 +50478,110 @@ def test_build_verifier_signal_score_dump_from_verified_records_jsonl(tmp_path):
     assert DEFAULT_SCORE_DIRECTIONS["context_sensitivity_max_shift"] == "higher"
     assert DEFAULT_SCORE_DIRECTIONS["context_sensitivity_mean_shift"] == "higher"
     assert DEFAULT_SCORE_DIRECTIONS["context_sensitivity_max_ratio"] == "higher"
+
+
+def test_build_verifier_signal_score_dump_includes_fact_selfcheck_signals(tmp_path):
+    module = importlib.import_module("benchmarks.build_verifier_signal_score_dump")
+    from eigentruth.calibration import DEFAULT_SCORE_DIRECTIONS
+    from eigentruth.eval.score_dump import load_score_dump
+
+    scores_path = tmp_path / "scores.json"
+    verified_records_path = tmp_path / "verified-records.jsonl"
+    output_path = tmp_path / "enhanced.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -2},
+            "labels": [0, 1],
+            "scores": {"truth_proj": [0.1, 0.9]},
+        }),
+        encoding="utf-8",
+    )
+    records = [
+        {
+            "run": "synthetic",
+            "record_index": 0,
+            "label": 0,
+            "score": 0.1,
+            "record": {
+                "final": {"status": "supported", "confidence": 0.9},
+                "fact_selfcheck": {
+                    "status": "supported",
+                    "confidence": 0.9,
+                    "metadata": {
+                        "triple_count": 1,
+                        "insufficient_triple_count": 0,
+                        "fact_selfcheck": {
+                            "triple_reports": [
+                                {"support_rate": 1.0, "refute_rate": 0.0},
+                            ]
+                        },
+                    },
+                },
+            },
+        },
+        {
+            "run": "synthetic",
+            "record_index": 1,
+            "label": 1,
+            "score": 0.9,
+            "record": {
+                "final": {"status": "refuted", "confidence": 0.8},
+                "fact_selfcheck": {
+                    "status": "refuted",
+                    "confidence": 0.8,
+                    "metadata": {
+                        "triple_count": 2,
+                        "insufficient_triple_count": 1,
+                        "fact_selfcheck": {
+                            "triple_reports": [
+                                {"support_rate": 0.0, "refute_rate": 1.0},
+                                {"support_rate": 0.5, "refute_rate": 0.0},
+                            ]
+                        },
+                    },
+                },
+            },
+        },
+    ]
+    verified_records_path.write_text(
+        "".join(json.dumps(record, sort_keys=True) + "\n" for record in records),
+        encoding="utf-8",
+    )
+
+    module.run(
+        SimpleNamespace(
+            scores=str(scores_path),
+            verified_records_jsonl=str(verified_records_path),
+            run_name="synthetic",
+            keep_signals="truth_proj",
+            verifier_signals=(
+                "fact_selfcheck_support_rate,fact_selfcheck_refute_rate,"
+                "fact_selfcheck_disagreement,fact_selfcheck_insufficient,"
+                "fact_selfcheck_not_applicable,fact_selfcheck_uncovered_rate"
+            ),
+            output=str(output_path),
+            output_format="json",
+            json=None,
+        )
+    )
+    enhanced = load_score_dump(
+        output_path,
+        required_scores=(
+            "fact_selfcheck_support_rate",
+            "fact_selfcheck_refute_rate",
+            "fact_selfcheck_uncovered_rate",
+        ),
+    )
+
+    assert enhanced.scores["fact_selfcheck_support_rate"] == pytest.approx((1.0, 0.0))
+    assert enhanced.scores["fact_selfcheck_refute_rate"] == pytest.approx((0.0, 1.0))
+    assert enhanced.scores["fact_selfcheck_disagreement"] == pytest.approx((0.0, 0.0))
+    assert enhanced.scores["fact_selfcheck_insufficient"] == pytest.approx((0.0, 0.0))
+    assert enhanced.scores["fact_selfcheck_not_applicable"] == pytest.approx((0.0, 0.0))
+    assert enhanced.scores["fact_selfcheck_uncovered_rate"] == pytest.approx((0.0, 0.5))
+    assert DEFAULT_SCORE_DIRECTIONS["fact_selfcheck_support_rate"] == "lower"
+    assert DEFAULT_SCORE_DIRECTIONS["fact_selfcheck_refute_rate"] == "higher"
+    assert DEFAULT_SCORE_DIRECTIONS["fact_selfcheck_uncovered_rate"] == "higher"
 
 
 def test_context_sensitivity_sidecar_enrichment_feeds_verifier_signal_score_dump(tmp_path):

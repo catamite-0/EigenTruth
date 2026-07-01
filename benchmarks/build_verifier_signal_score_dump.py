@@ -28,6 +28,12 @@ DEFAULT_VERIFIER_SIGNALS = (
     "selfcheck_refute_rate",
     "selfcheck_disagreement",
     "selfcheck_insufficient",
+    "fact_selfcheck_support_rate",
+    "fact_selfcheck_refute_rate",
+    "fact_selfcheck_disagreement",
+    "fact_selfcheck_insufficient",
+    "fact_selfcheck_not_applicable",
+    "fact_selfcheck_uncovered_rate",
     "world_model_disagreement",
     "world_model_agreement_gap",
     "world_model_low_agreement",
@@ -171,6 +177,7 @@ def verifier_signal_features(sidecar_record: Mapping[str, Any]) -> dict[str, flo
     support_rate = _unit_interval(selfcheck_metadata.get("support_rate", 0.0), name="selfcheck.support_rate")
     refute_rate = _unit_interval(selfcheck_metadata.get("refute_rate", 0.0), name="selfcheck.refute_rate")
     selfcheck_executed = bool(selfcheck_payload)
+    fact_selfcheck_features = _fact_selfcheck_signal_features(record)
     world_model_features = _world_model_signal_features(record, final)
     context_sensitivity_features = _context_sensitivity_signal_features(sidecar_record, record, final)
     return {
@@ -183,6 +190,7 @@ def verifier_signal_features(sidecar_record: Mapping[str, Any]) -> dict[str, flo
         "selfcheck_refute_rate": refute_rate if selfcheck_executed else 0.0,
         "selfcheck_disagreement": max(0.0, 1.0 - max(support_rate, refute_rate)) if selfcheck_executed else 0.0,
         "selfcheck_insufficient": 1.0 if selfcheck_status == "insufficient_evidence" else 0.0,
+        **fact_selfcheck_features,
         **world_model_features,
         **context_sensitivity_features,
     }
@@ -200,6 +208,20 @@ def verifier_signal_definitions() -> dict[str, str]:
         "selfcheck_refute_rate": "self-consistency refute rate when selfcheck executed, else 0.",
         "selfcheck_disagreement": "1 - max(support_rate, refute_rate) when selfcheck executed, else 0.",
         "selfcheck_insufficient": "1 when selfcheck status is insufficient_evidence, else 0.",
+        "fact_selfcheck_support_rate": (
+            "minimum fact-level support rate across claim triples when fact selfcheck executed, else 0."
+        ),
+        "fact_selfcheck_refute_rate": (
+            "maximum fact-level refute rate across claim triples when fact selfcheck executed, else 0."
+        ),
+        "fact_selfcheck_disagreement": (
+            "1 - max(fact support/refute rate) when fact selfcheck executed, else 0."
+        ),
+        "fact_selfcheck_insufficient": "1 when fact selfcheck status is insufficient_evidence, else 0.",
+        "fact_selfcheck_not_applicable": "1 when fact selfcheck status is not_applicable, else 0.",
+        "fact_selfcheck_uncovered_rate": (
+            "fraction of claim triples left insufficient by fact selfcheck, else 0."
+        ),
         "world_model_disagreement": "1 when world-model prediction metadata reports disagreement, else 0.",
         "world_model_agreement_gap": "1 - world-model agreement_rate when reported, else 0.",
         "world_model_low_agreement": "1 when world-model prediction agreement falls below its threshold, else 0.",
@@ -309,6 +331,58 @@ def _verifier_uncertainty(status: str, confidence: float) -> float:
     if status in {"insufficient_evidence", "not_applicable", ""}:
         return 1.0
     return max(0.0, min(1.0, 1.0 - confidence))
+
+
+def _fact_selfcheck_signal_features(record: Mapping[str, Any]) -> dict[str, float]:
+    defaults = {
+        "fact_selfcheck_support_rate": 0.0,
+        "fact_selfcheck_refute_rate": 0.0,
+        "fact_selfcheck_disagreement": 0.0,
+        "fact_selfcheck_insufficient": 0.0,
+        "fact_selfcheck_not_applicable": 0.0,
+        "fact_selfcheck_uncovered_rate": 0.0,
+    }
+    payload = record.get("fact_selfcheck")
+    if not isinstance(payload, Mapping):
+        return defaults
+
+    status = str(payload.get("status", ""))
+    metadata = _mapping(payload.get("metadata"))
+    report = _mapping(metadata.get("fact_selfcheck"))
+    triple_reports = report.get("triple_reports", ())
+    support_rates = []
+    refute_rates = []
+    if isinstance(triple_reports, Sequence) and not isinstance(triple_reports, (str, bytes, bytearray)):
+        for index, item in enumerate(triple_reports):
+            if not isinstance(item, Mapping):
+                continue
+            support_rates.append(
+                _unit_interval(item.get("support_rate", 0.0), name=f"fact_selfcheck[{index}].support_rate")
+            )
+            refute_rates.append(
+                _unit_interval(item.get("refute_rate", 0.0), name=f"fact_selfcheck[{index}].refute_rate")
+            )
+
+    support_rate = min(support_rates) if support_rates else 0.0
+    refute_rate = max(refute_rates) if refute_rates else 0.0
+    triple_count = _optional_non_negative_float(metadata.get("triple_count"), name="fact_selfcheck.triple_count")
+    insufficient_count = _optional_non_negative_float(
+        metadata.get("insufficient_triple_count"),
+        name="fact_selfcheck.insufficient_triple_count",
+    )
+    if triple_count is None:
+        triple_count = float(len(support_rates))
+    if insufficient_count is None:
+        insufficient_count = 0.0
+    uncovered_rate = 0.0 if triple_count <= 0 else max(0.0, min(1.0, insufficient_count / triple_count))
+    return {
+        "fact_selfcheck_support_rate": support_rate,
+        "fact_selfcheck_refute_rate": refute_rate,
+        "fact_selfcheck_disagreement": max(0.0, 1.0 - max(support_rate, refute_rate)),
+        "fact_selfcheck_insufficient": 1.0 if status == "insufficient_evidence" else 0.0,
+        "fact_selfcheck_not_applicable": 1.0 if status == "not_applicable" else 0.0,
+        "fact_selfcheck_uncovered_rate": uncovered_rate,
+    }
 
 
 def _world_model_signal_features(
@@ -683,6 +757,15 @@ def _optional_finite_float(value: Any) -> float | None:
     except (TypeError, ValueError):
         return None
     return numeric if math.isfinite(numeric) else None
+
+
+def _optional_non_negative_float(value: Any, *, name: str) -> float | None:
+    numeric = _optional_finite_float(value)
+    if numeric is None:
+        return None
+    if numeric < 0:
+        raise ValueError(f"{name} must be non-negative.")
+    return numeric
 
 
 def _unit_interval(value: Any, *, name: str) -> float:
