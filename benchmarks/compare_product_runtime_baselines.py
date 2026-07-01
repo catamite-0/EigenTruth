@@ -111,6 +111,10 @@ _CLAIM_FACTUALITY_PROBE_COMPARISON_METADATA_FIELDS: tuple[tuple[str, str], ...] 
         "claim_factuality_probe_comparison_run_count",
     ),
     (
+        "promotion_contract.claim_factuality_probe_comparison.dataset_count.mean",
+        "claim_factuality_probe_comparison_dataset_count",
+    ),
+    (
         "promotion_contract.claim_factuality_probe_comparison.redline_pass_rate",
         "claim_factuality_probe_comparison_redline_pass_rate",
     ),
@@ -1041,6 +1045,7 @@ def compare_product_runtime_baselines(
     min_claim_factuality_probe_comparison_manifest_verified_rate: float | None = None,
     min_claim_factuality_probe_comparison_model_count: float | None = None,
     min_claim_factuality_probe_comparison_run_count: float | None = None,
+    min_claim_factuality_probe_comparison_dataset_count: float | None = None,
     min_claim_factuality_probe_comparison_redline_pass_rate: float | None = None,
     max_claim_factuality_probe_comparison_best_test_label_auroc_drop: float | None = None,
     max_claim_factuality_probe_comparison_best_test_selective_accuracy_drop: (
@@ -1313,6 +1318,11 @@ def compare_product_runtime_baselines(
         ),
         "min_claim_factuality_probe_comparison_run_count": (
             _optional_non_negative_float(min_claim_factuality_probe_comparison_run_count)
+        ),
+        "min_claim_factuality_probe_comparison_dataset_count": (
+            _optional_non_negative_float(
+                min_claim_factuality_probe_comparison_dataset_count
+            )
         ),
         "min_claim_factuality_probe_comparison_redline_pass_rate": (
             _optional_rate_float(min_claim_factuality_probe_comparison_redline_pass_rate)
@@ -2252,6 +2262,12 @@ def _claim_factuality_probe_comparison_metrics(
             gates.get("min_claim_factuality_probe_comparison_run_count"),
         ),
         _min_current_metric(
+            "promotion_contract.claim_factuality_probe_comparison.dataset_count.mean",
+            _nested_float(baseline, ("dataset_count", "mean")),
+            _nested_float(current, ("dataset_count", "mean")),
+            gates.get("min_claim_factuality_probe_comparison_dataset_count"),
+        ),
+        _min_current_metric(
             "promotion_contract.claim_factuality_probe_comparison.redline_pass_rate",
             _pre_generation_redline_pass_rate(baseline),
             _pre_generation_redline_pass_rate(current),
@@ -2304,6 +2320,7 @@ def _claim_factuality_probe_comparison_gate_enabled(gates: Mapping[str, Any]) ->
             "min_claim_factuality_probe_comparison_manifest_verified_rate",
             "min_claim_factuality_probe_comparison_model_count",
             "min_claim_factuality_probe_comparison_run_count",
+            "min_claim_factuality_probe_comparison_dataset_count",
             "min_claim_factuality_probe_comparison_redline_pass_rate",
             "max_claim_factuality_probe_comparison_best_test_label_auroc_drop",
             "max_claim_factuality_probe_comparison_best_test_selective_accuracy_drop",
@@ -4526,6 +4543,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         min_claim_factuality_probe_comparison_run_count=(
             args.min_claim_factuality_probe_comparison_run_count
         ),
+        min_claim_factuality_probe_comparison_dataset_count=(
+            args.min_claim_factuality_probe_comparison_dataset_count
+        ),
         min_claim_factuality_probe_comparison_redline_pass_rate=(
             args.min_claim_factuality_probe_comparison_redline_pass_rate
         ),
@@ -4990,6 +5010,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument("--min-claim-factuality-probe-comparison-model-count", type=float, default=None)
     parser.add_argument("--min-claim-factuality-probe-comparison-run-count", type=float, default=None)
+    parser.add_argument(
+        "--min-claim-factuality-probe-comparison-dataset-count",
+        type=float,
+        default=None,
+    )
     parser.add_argument(
         "--min-claim-factuality-probe-comparison-redline-pass-rate",
         type=float,

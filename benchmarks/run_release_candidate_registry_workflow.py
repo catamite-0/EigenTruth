@@ -2598,6 +2598,12 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "claim_factuality_probe_comparison_run_count": (
             claim_factuality_probe_comparison.get("run_count")
         ),
+        "claim_factuality_probe_comparison_dataset_count": (
+            claim_factuality_probe_comparison.get("dataset_count")
+        ),
+        "claim_factuality_probe_comparison_datasets": (
+            claim_factuality_probe_comparison.get("datasets")
+        ),
         "claim_factuality_probe_comparison_redline_passed": (
             claim_factuality_probe_comparison.get("redline_passed")
         ),

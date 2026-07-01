@@ -99,6 +99,7 @@ class ProductTraceReplayWorkflowConfig:
     min_runtime_drift_claim_factuality_probe_comparison_manifest_verified_rate: float | None = None
     min_runtime_drift_claim_factuality_probe_comparison_model_count: float | None = None
     min_runtime_drift_claim_factuality_probe_comparison_run_count: float | None = None
+    min_runtime_drift_claim_factuality_probe_comparison_dataset_count: float | None = None
     min_runtime_drift_claim_factuality_probe_comparison_redline_pass_rate: float | None = None
     max_runtime_drift_claim_factuality_probe_comparison_best_test_label_auroc_drop: float | None = None
     max_runtime_drift_claim_factuality_probe_comparison_best_test_selective_accuracy_drop: float | None = None
@@ -334,6 +335,7 @@ class ProductTraceReplayWorkflowConfig:
                 self.min_runtime_drift_claim_factuality_probe_comparison_manifest_verified_rate,
                 self.min_runtime_drift_claim_factuality_probe_comparison_model_count,
                 self.min_runtime_drift_claim_factuality_probe_comparison_run_count,
+                self.min_runtime_drift_claim_factuality_probe_comparison_dataset_count,
                 self.min_runtime_drift_claim_factuality_probe_comparison_redline_pass_rate,
                 self.max_runtime_drift_claim_factuality_probe_comparison_best_test_label_auroc_drop,
                 self.max_runtime_drift_claim_factuality_probe_comparison_best_test_selective_accuracy_drop,
@@ -1555,6 +1557,7 @@ def _runtime_drift_configured(config: ProductTraceReplayWorkflowConfig) -> bool:
             config.min_runtime_drift_claim_factuality_probe_comparison_manifest_verified_rate,
             config.min_runtime_drift_claim_factuality_probe_comparison_model_count,
             config.min_runtime_drift_claim_factuality_probe_comparison_run_count,
+            config.min_runtime_drift_claim_factuality_probe_comparison_dataset_count,
             config.min_runtime_drift_claim_factuality_probe_comparison_redline_pass_rate,
             config.max_runtime_drift_claim_factuality_probe_comparison_best_test_label_auroc_drop,
             config.max_runtime_drift_claim_factuality_probe_comparison_best_test_selective_accuracy_drop,
@@ -1726,6 +1729,9 @@ def _runtime_drift_gate_config(config: ProductTraceReplayWorkflowConfig) -> dict
         ),
         "min_claim_factuality_probe_comparison_run_count": (
             config.min_runtime_drift_claim_factuality_probe_comparison_run_count
+        ),
+        "min_claim_factuality_probe_comparison_dataset_count": (
+            config.min_runtime_drift_claim_factuality_probe_comparison_dataset_count
         ),
         "min_claim_factuality_probe_comparison_redline_pass_rate": (
             config.min_runtime_drift_claim_factuality_probe_comparison_redline_pass_rate
@@ -3963,6 +3969,9 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
         min_runtime_drift_claim_factuality_probe_comparison_run_count=(
             args.min_runtime_drift_claim_factuality_probe_comparison_run_count
         ),
+        min_runtime_drift_claim_factuality_probe_comparison_dataset_count=(
+            args.min_runtime_drift_claim_factuality_probe_comparison_dataset_count
+        ),
         min_runtime_drift_claim_factuality_probe_comparison_redline_pass_rate=(
             args.min_runtime_drift_claim_factuality_probe_comparison_redline_pass_rate
         ),
@@ -4438,6 +4447,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument(
         "--min-runtime-drift-claim-factuality-probe-comparison-run-count",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-runtime-drift-claim-factuality-probe-comparison-dataset-count",
         type=float,
         default=None,
     )

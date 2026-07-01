@@ -35,6 +35,8 @@ class ClaimFactualityProbeWorkflowComparisonConfig:
     register_name: str | None = None
     register_version: str = "0.1"
     min_model_count: int = 2
+    min_dataset_count: int = 1
+    required_datasets: Sequence[str] = ()
     min_record_count: int = 1
     min_test_label_auroc: float = 0.5
     min_redline_auroc_margin: float = 0.0
@@ -63,11 +65,20 @@ class ClaimFactualityProbeWorkflowComparisonConfig:
             object.__setattr__(self, "register_name", register_name)
         object.__setattr__(self, "register_version", str(self.register_version))
         object.__setattr__(self, "min_model_count", int(self.min_model_count))
+        object.__setattr__(self, "min_dataset_count", int(self.min_dataset_count))
+        required_datasets = tuple(
+            _normalize_dataset_name(dataset) for dataset in self.required_datasets
+        )
+        if any(not dataset for dataset in required_datasets):
+            raise ValueError("required_datasets must not contain blank names.")
+        object.__setattr__(self, "required_datasets", required_datasets)
         object.__setattr__(self, "min_record_count", int(self.min_record_count))
         object.__setattr__(self, "min_test_label_auroc", float(self.min_test_label_auroc))
         object.__setattr__(self, "min_redline_auroc_margin", float(self.min_redline_auroc_margin))
         if self.min_model_count < 1:
             raise ValueError("min_model_count must be >=1.")
+        if self.min_dataset_count < 1:
+            raise ValueError("min_dataset_count must be >=1.")
         if self.min_record_count < 1:
             raise ValueError("min_record_count must be >=1.")
         if not (0.0 <= self.min_test_label_auroc <= 1.0):
@@ -86,6 +97,7 @@ def compare_claim_factuality_probe_workflows(
     failures = _gate_failures(config, runs)
     status = "ready" if not failures else "blocked"
     model_names = sorted({str(run["effective_model"]) for run in runs if run.get("effective_model")})
+    datasets = _dataset_coverage(runs)
     leaderboard = _leaderboard(runs)
     registry_record_key = (
         None if config.register_name is None else f"report:{config.register_name}:{config.register_version}"
@@ -101,6 +113,8 @@ def compare_claim_factuality_probe_workflows(
         "status": status,
         "config": {
             "min_model_count": config.min_model_count,
+            "min_dataset_count": config.min_dataset_count,
+            "required_datasets": tuple(config.required_datasets),
             "min_record_count": config.min_record_count,
             "min_test_label_auroc": config.min_test_label_auroc,
             "min_redline_auroc_margin": config.min_redline_auroc_margin,
@@ -114,6 +128,8 @@ def compare_claim_factuality_probe_workflows(
             "ready_run_count": sum(1 for run in runs if run.get("status") == "ready"),
             "model_count": len(model_names),
             "models": model_names,
+            "dataset_count": len(datasets),
+            "datasets": datasets,
             "redline_run_count": sum(1 for run in runs if run.get("redline_available") is True),
             "redline_passed": not any(_is_redline_failure(failure) for failure in failures),
             "best_run": leaderboard[0]["name"] if leaderboard else None,
@@ -121,11 +137,15 @@ def compare_claim_factuality_probe_workflows(
         "runs": runs,
         "leaderboard": leaderboard,
         "evidence_scope": {
-            "claim": "compact multi-run claim factuality probe workflow comparison with text redline gates",
+            "claim": (
+                "compact multi-run claim factuality probe workflow comparison with text redline "
+                "and dataset-transfer gates"
+            ),
             "not_a_claim": "production-quality hallucination detection or long-form factuality correction",
             "notes": (
                 "This report compares saved workflow artifacts. Small synthetic or tiny-model runs should be "
-                "treated as plumbing evidence until larger held-out multi-model and external-domain gates pass."
+                "treated as plumbing evidence until larger held-out multi-model and external-domain gates pass. "
+                "Use min_dataset_count and required_datasets to require distribution-shift coverage."
             ),
         },
         "paths": {
@@ -151,6 +171,8 @@ def compare_claim_factuality_probe_workflows(
                 "status": status,
                 "run_count": len(runs),
                 "model_count": len(model_names),
+                "dataset_count": len(datasets),
+                "datasets": datasets,
                 "redline_passed": payload["promotion_gate"]["redline_passed"],
                 "best_run": payload["promotion_gate"]["best_run"],
             },
@@ -227,11 +249,28 @@ def _gate_failures(
 ) -> list[dict[str, Any]]:
     failures: list[dict[str, Any]] = []
     model_names = {str(run["effective_model"]) for run in runs if run.get("effective_model")}
+    datasets = _dataset_coverage(runs)
     if len(model_names) < config.min_model_count:
         failures.append({
             "gate": "min_model_count",
             "observed": len(model_names),
             "threshold": config.min_model_count,
+        })
+    if len(datasets) < config.min_dataset_count:
+        failures.append({
+            "gate": "min_dataset_count",
+            "observed": len(datasets),
+            "threshold": config.min_dataset_count,
+            "datasets": datasets,
+        })
+    missing_required_datasets = tuple(
+        dataset for dataset in config.required_datasets if dataset not in datasets
+    )
+    if missing_required_datasets:
+        failures.append({
+            "gate": "required_datasets",
+            "observed": datasets,
+            "missing": missing_required_datasets,
         })
     for run in runs:
         name = str(run.get("name"))
@@ -278,6 +317,15 @@ def _gate_failures(
     return failures
 
 
+def _dataset_coverage(runs: Sequence[Mapping[str, Any]]) -> tuple[str, ...]:
+    datasets = {
+        dataset
+        for dataset in (_normalize_dataset_name(run.get("dataset")) for run in runs)
+        if dataset
+    }
+    return tuple(sorted(datasets))
+
+
 def _leaderboard(runs: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
     ranked = sorted(
         runs,
@@ -319,6 +367,8 @@ def _record_registry(
         "status": report.get("status"),
         "run_count": len(tuple(report.get("runs", ()))),
         "model_count": _nested(report, "promotion_gate", "model_count"),
+        "dataset_count": _nested(report, "promotion_gate", "dataset_count"),
+        "datasets": _nested(report, "promotion_gate", "datasets"),
         "best_run": _nested(report, "promotion_gate", "best_run"),
         "redline_passed": _nested(report, "promotion_gate", "redline_passed"),
         "failure_count": len(tuple(_nested(report, "promotion_gate", "failures") or ())),
@@ -356,6 +406,12 @@ def _safe_run_name(value: Any) -> str:
     if not name:
         raise ValueError("workflow report name must be non-empty.")
     return name
+
+
+def _normalize_dataset_name(value: Any) -> str:
+    dataset = str(value or "").strip().casefold().replace("-", "_")
+    dataset = "".join(char if char.isalnum() or char == "_" else "_" for char in dataset)
+    return "_".join(part for part in dataset.split("_") if part)
 
 
 def _write_json(path: str | Path, payload: Mapping[str, Any], *, compact: bool) -> None:
@@ -415,6 +471,8 @@ def _config_from_args(args: argparse.Namespace) -> ClaimFactualityProbeWorkflowC
         register_name=args.register_name,
         register_version=args.register_version,
         min_model_count=args.min_model_count,
+        min_dataset_count=args.min_dataset_count,
+        required_datasets=tuple(args.required_dataset or ()),
         min_record_count=args.min_record_count,
         min_test_label_auroc=args.min_test_label_auroc,
         min_redline_auroc_margin=args.min_redline_auroc_margin,
@@ -440,6 +498,13 @@ def main() -> None:
     parser.add_argument("--register-name", default=None, help="optional registry report/manifest record name")
     parser.add_argument("--register-version", default="0.1")
     parser.add_argument("--min-model-count", type=int, default=2)
+    parser.add_argument("--min-dataset-count", type=int, default=1)
+    parser.add_argument(
+        "--required-dataset",
+        action="append",
+        default=[],
+        help="dataset name that must be represented by at least one workflow report; repeatable",
+    )
     parser.add_argument("--min-record-count", type=int, default=1)
     parser.add_argument("--min-test-label-auroc", type=float, default=0.5)
     parser.add_argument("--min-redline-auroc-margin", type=float, default=0.0)

@@ -2421,6 +2421,20 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
                     contract_metadata.get("claim_factuality_probe_comparison_run_count"),
                 )
             ),
+            "dataset_count": _finite_float(
+                _first_present(
+                    claim_factuality.get("dataset_count"),
+                    metadata.get("claim_factuality_probe_comparison_dataset_count"),
+                    contract_metadata.get(
+                        "claim_factuality_probe_comparison_dataset_count"
+                    ),
+                )
+            ),
+            "datasets": _first_present(
+                claim_factuality.get("datasets"),
+                metadata.get("claim_factuality_probe_comparison_datasets"),
+                contract_metadata.get("claim_factuality_probe_comparison_datasets"),
+            ),
             "redline_passed": _optional_bool(
                 _first_present(
                     claim_factuality.get("redline_passed"),
@@ -3093,6 +3107,12 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         ),
         "promotion_contract_claim_factuality_probe_comparison_run_count": (
             claim_factuality_summary.get("run_count")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_dataset_count": (
+            claim_factuality_summary.get("dataset_count")
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_datasets": (
+            claim_factuality_summary.get("datasets")
         ),
         "promotion_contract_claim_factuality_probe_comparison_redline_passed": (
             claim_factuality_summary.get("redline_passed")
@@ -4633,6 +4653,8 @@ def _claim_factuality_probe_comparison_from_flat_metadata(
         "report_status": metadata.get("claim_factuality_probe_comparison_report_status"),
         "model_count": metadata.get("claim_factuality_probe_comparison_model_count"),
         "run_count": metadata.get("claim_factuality_probe_comparison_run_count"),
+        "dataset_count": metadata.get("claim_factuality_probe_comparison_dataset_count"),
+        "datasets": metadata.get("claim_factuality_probe_comparison_datasets"),
         "redline_passed": metadata.get(
             "claim_factuality_probe_comparison_redline_passed"
         ),

@@ -6578,11 +6578,12 @@ status, and text-redline status so runtime traces can show which external
 evidence handoff was release-gated.
 When the release candidate was gated by a claim factuality probe comparison, the
 compact contract, manifest, and registry metadata retain the comparison report,
-manifest, registry record, workflow/status, model/run counts, redline status,
-best run/model/layer, test-label AUROC, selective accuracy/coverage, conformal
-threshold, and redline margin. `ProductRuntimeEvidenceBundle` can lazily verify
-that comparison manifest and attach the local registry record to runtime trace
-metadata without rerunning claim probes.
+manifest, registry record, workflow/status, model/run/dataset counts, dataset
+names, redline status, best run/model/layer, test-label AUROC, selective
+accuracy/coverage, conformal threshold, and redline margin.
+`ProductRuntimeEvidenceBundle` can lazily verify that comparison manifest and
+attach the local registry record to runtime trace metadata without rerunning
+claim probes.
 When the release candidate was gated by a counterfactual verifier audit, the
 compact contract, manifest, and registry metadata retain the audit report,
 manifest, registry record, workflow, status, record count, pass rate,
@@ -9481,6 +9482,7 @@ python benchmarks/compare_product_runtime_baselines.py \
   --min-claim-factuality-probe-comparison-manifest-verified-rate 1.0 \
   --min-claim-factuality-probe-comparison-model-count 2 \
   --min-claim-factuality-probe-comparison-run-count 2 \
+  --min-claim-factuality-probe-comparison-dataset-count 2 \
   --min-claim-factuality-probe-comparison-redline-pass-rate 1.0 \
   --max-claim-factuality-probe-comparison-best-test-label-auroc-drop 0.02 \
   --max-claim-factuality-probe-comparison-best-test-selective-accuracy-drop 0.02 \
@@ -9676,6 +9678,7 @@ pre-generation probe comparison gates such as
 claim factuality probe comparison gates such as
 `--min-runtime-drift-claim-factuality-probe-comparison-coverage`,
 `--min-runtime-drift-claim-factuality-probe-comparison-manifest-verified-rate`,
+`--min-runtime-drift-claim-factuality-probe-comparison-dataset-count`,
 `--min-runtime-drift-claim-factuality-probe-comparison-redline-pass-rate`, and
 `--max-runtime-drift-claim-factuality-probe-comparison-best-*-drop`,
 fact-selfcheck gate checks such as
@@ -9751,6 +9754,7 @@ python benchmarks/run_product_trace_replay_workflow.py \
   --min-runtime-drift-claim-factuality-probe-comparison-manifest-verified-rate 1.0 \
   --min-runtime-drift-claim-factuality-probe-comparison-model-count 2 \
   --min-runtime-drift-claim-factuality-probe-comparison-run-count 2 \
+  --min-runtime-drift-claim-factuality-probe-comparison-dataset-count 2 \
   --min-runtime-drift-claim-factuality-probe-comparison-redline-pass-rate 1.0 \
   --max-runtime-drift-claim-factuality-probe-comparison-best-test-label-auroc-drop 0.02 \
   --max-runtime-drift-claim-factuality-probe-comparison-best-test-selective-accuracy-drop 0.02 \

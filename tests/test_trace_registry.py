@@ -2952,6 +2952,8 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "report_status": "ready",
                 "model_count": 2,
                 "run_count": 2,
+                "dataset_count": 2,
+                "datasets": ["longfact", "truthfulqa"],
                 "redline_passed": True,
                 "redline_run_count": 2,
                 "best_run": {
@@ -3606,6 +3608,11 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
         "report:claim-factuality-probe-comparison:0.1"
     )
     assert contract.metadata["claim_factuality_probe_comparison_model_count"] == 2
+    assert contract.metadata["claim_factuality_probe_comparison_dataset_count"] == 2
+    assert contract.metadata["claim_factuality_probe_comparison_datasets"] == [
+        "longfact",
+        "truthfulqa",
+    ]
     assert contract.metadata[
         "claim_factuality_probe_comparison_best_test_selective_accuracy"
     ] == 0.91
@@ -4003,6 +4010,8 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
             "report_status": "ready",
             "model_count": 2,
             "run_count": 2,
+            "dataset_count": 2,
+            "datasets": ["longfact", "truthfulqa"],
             "redline_passed": True,
             "redline_run_count": 2,
             "best_run": {
@@ -4385,6 +4394,12 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert runtime_metrics[
         "promotion_contract_claim_factuality_probe_comparison_record"
     ] == "report:claim-factuality-probe-comparison:0.1"
+    assert runtime_metrics[
+        "promotion_contract_claim_factuality_probe_comparison_dataset_count"
+    ] == pytest.approx(2)
+    assert runtime_metrics[
+        "promotion_contract_claim_factuality_probe_comparison_datasets"
+    ] == ["longfact", "truthfulqa"]
     assert runtime_metrics[
         "promotion_contract_claim_factuality_probe_comparison_best_test_selective_accuracy"
     ] == pytest.approx(0.91)

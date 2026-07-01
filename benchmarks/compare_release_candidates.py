@@ -139,6 +139,10 @@ _PRODUCT_RUNTIME_DRIFT_CLAIM_FACTUALITY_EVIDENCE_FIELDS: tuple[tuple[str, str], 
         "claim_factuality_probe_comparison_run_count",
     ),
     (
+        "promotion_contract.claim_factuality_probe_comparison.dataset_count.mean",
+        "claim_factuality_probe_comparison_dataset_count",
+    ),
+    (
         "promotion_contract.claim_factuality_probe_comparison.redline_pass_rate",
         "claim_factuality_probe_comparison_redline_pass_rate",
     ),
@@ -5783,6 +5787,8 @@ def _claim_factuality_probe_comparison_gate(
         "run_count": sum(1 for run in report.get("runs") or () if isinstance(run, Mapping)),
         "model_count": _float_or_none(promotion_gate.get("model_count")),
         "models": tuple(promotion_gate.get("models") or ()),
+        "dataset_count": _float_or_none(promotion_gate.get("dataset_count")),
+        "datasets": tuple(promotion_gate.get("datasets") or ()),
         "redline_passed": promotion_gate.get("redline_passed"),
         "redline_run_count": _float_or_none(promotion_gate.get("redline_run_count")),
         "best_run": {
@@ -9290,6 +9296,8 @@ def _candidate_with_gates(
             "status": claim_factuality_probe_comparison.get("report_status"),
             "model_count": claim_factuality_probe_comparison.get("model_count"),
             "run_count": claim_factuality_probe_comparison.get("run_count"),
+            "dataset_count": claim_factuality_probe_comparison.get("dataset_count"),
+            "datasets": claim_factuality_probe_comparison.get("datasets"),
             "redline_passed": claim_factuality_probe_comparison.get("redline_passed"),
             "redline_run_count": claim_factuality_probe_comparison.get("redline_run_count"),
             "best_run": best_run,

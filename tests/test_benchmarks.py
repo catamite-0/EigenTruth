@@ -1008,9 +1008,9 @@ def test_compare_claim_factuality_probe_workflows_gates_redline_and_registry(tmp
     from eigentruth.registry import ArtifactRegistry
 
     report_paths = {}
-    for name, model, auroc, redline_auroc, layer in (
-        ("smollm2", "HuggingFaceTB/SmolLM2-135M-Instruct", 0.76, 0.65, -12),
-        ("qwen05", "Qwen/Qwen2.5-0.5B-Instruct", 0.84, 0.66, -4),
+    for name, model, dataset, auroc, redline_auroc, layer in (
+        ("smollm2", "HuggingFaceTB/SmolLM2-135M-Instruct", "truthfulqa", 0.76, 0.65, -12),
+        ("qwen05", "Qwen/Qwen2.5-0.5B-Instruct", "longfact", 0.84, 0.66, -4),
     ):
         path = tmp_path / f"{name}-claim-workflow.json"
         path.write_text(
@@ -1019,7 +1019,7 @@ def test_compare_claim_factuality_probe_workflows_gates_redline_and_registry(tmp
                 "status": "ready",
                 "effective_model": model,
                 "records": {
-                    "metadata_dataset": "truthfulqa",
+                    "metadata_dataset": dataset,
                     "metadata_layers": [-12, -8, -4],
                     "metadata_record_grain": "candidate_claim",
                     "record_count": 94,
@@ -1054,6 +1054,7 @@ def test_compare_claim_factuality_probe_workflows_gates_redline_and_registry(tmp
         report_paths[name] = path
     comparison_path = tmp_path / "claim-comparison.json"
     blocked_path = tmp_path / "claim-comparison-blocked.json"
+    missing_dataset_path = tmp_path / "claim-comparison-missing-dataset.json"
     manifest_path = tmp_path / "artifact-manifest.json"
     registry_path = tmp_path / "registry.json"
 
@@ -1065,6 +1066,8 @@ def test_compare_claim_factuality_probe_workflows_gates_redline_and_registry(tmp
             registry_path=registry_path,
             register_name="claim-factuality-comparison",
             min_model_count=2,
+            min_dataset_count=2,
+            required_datasets=("truthfulqa", "longfact"),
             min_record_count=80,
             min_test_label_auroc=0.7,
             min_redline_auroc_margin=0.1,
@@ -1080,6 +1083,18 @@ def test_compare_claim_factuality_probe_workflows_gates_redline_and_registry(tmp
             min_redline_auroc_margin=0.2,
         )
     )
+    missing_dataset = module.compare_claim_factuality_probe_workflows(
+        module.ClaimFactualityProbeWorkflowComparisonConfig(
+            workflow_reports=report_paths,
+            output_path=missing_dataset_path,
+            min_model_count=2,
+            min_dataset_count=3,
+            required_datasets=("truthfulqa", "factscore"),
+            min_record_count=80,
+            min_test_label_auroc=0.7,
+            min_redline_auroc_margin=0.1,
+        )
+    )
     saved = json.loads(comparison_path.read_text(encoding="utf-8"))
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     registry = ArtifactRegistry.load_json(registry_path)
@@ -1092,6 +1107,8 @@ def test_compare_claim_factuality_probe_workflows_gates_redline_and_registry(tmp
     assert payload["promotion_gate"]["model_count"] == 2
     assert payload["promotion_gate"]["redline_passed"] is True
     assert payload["promotion_gate"]["redline_run_count"] == 2
+    assert payload["promotion_gate"]["dataset_count"] == 2
+    assert payload["promotion_gate"]["datasets"] == ("longfact", "truthfulqa")
     assert payload["promotion_gate"]["best_run"] == "qwen05"
     assert payload["leaderboard"][0]["name"] == "qwen05"
     assert payload["leaderboard"][0]["recommended_layer"] == -4
@@ -1100,12 +1117,21 @@ def test_compare_claim_factuality_probe_workflows_gates_redline_and_registry(tmp
     assert saved["artifact_manifest_summary"]["missing_count"] == 0
     assert manifest["metadata"]["workflow"] == "claim_factuality_probe_workflow_comparison"
     assert manifest["metadata"]["status"] == "ready"
+    assert manifest["metadata"]["dataset_count"] == 2
     assert report_record.metadata["best_run"] == "qwen05"
+    assert report_record.metadata["dataset_count"] == 2
+    assert report_record.metadata["datasets"] == ["longfact", "truthfulqa"]
     assert report_record.metadata["redline_passed"] is True
     assert manifest_record.metadata["manifest_summary"]["missing_count"] == 0
     assert blocked["status"] == "blocked"
     assert blocked["promotion_gate"]["redline_passed"] is False
     assert blocked["promotion_gate"]["failures"][0]["gate"] == "min_redline_auroc_margin"
+    assert missing_dataset["status"] == "blocked"
+    assert [failure["gate"] for failure in missing_dataset["promotion_gate"]["failures"][:2]] == [
+        "min_dataset_count",
+        "required_datasets",
+    ]
+    assert missing_dataset["promotion_gate"]["failures"][1]["missing"] == ("factscore",)
 
 
 def test_eval_pre_generation_text_baselines_reports_best_redline(tmp_path):
@@ -13874,6 +13900,7 @@ def _write_claim_factuality_probe_comparison_report(
             "rank": 1,
             "name": "qwen05",
             "effective_model": "Qwen/Qwen2.5-0.5B-Instruct",
+            "dataset": "longfact",
             "record_count": 96,
             "recommended_layer": -4,
             "test_label_auroc": 0.84,
@@ -13888,6 +13915,7 @@ def _write_claim_factuality_probe_comparison_report(
             "rank": 2,
             "name": "smollm2",
             "effective_model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "dataset": "truthfulqa",
             "record_count": 92,
             "recommended_layer": -12,
             "test_label_auroc": 0.82,
@@ -13905,6 +13933,8 @@ def _write_claim_factuality_probe_comparison_report(
         "status": status,
         "config": {
             "min_model_count": 2,
+            "min_dataset_count": 2,
+            "required_datasets": ["longfact", "truthfulqa"],
             "min_record_count": 80,
             "min_test_label_auroc": 0.70,
             "min_redline_auroc_margin": 0.05,
@@ -13918,6 +13948,8 @@ def _write_claim_factuality_probe_comparison_report(
             "ready_run_count": model_count,
             "model_count": model_count,
             "models": [row["effective_model"] for row in leaderboard],
+            "dataset_count": 2 if model_count >= 2 else model_count,
+            "datasets": [row["dataset"] for row in leaderboard],
             "redline_run_count": model_count if redline_passed else 0,
             "redline_passed": redline_passed,
             "best_run": leaderboard[0]["name"] if leaderboard else None,
@@ -13927,6 +13959,7 @@ def _write_claim_factuality_probe_comparison_report(
                 "name": row["name"],
                 "status": "ready",
                 "effective_model": row["effective_model"],
+                "dataset": row["dataset"],
                 "record_count": row["record_count"],
                 "test_label_auroc": row["test_label_auroc"],
                 "redline_margin": row["redline_margin"],
@@ -13948,6 +13981,8 @@ def _write_claim_factuality_probe_comparison_report(
             "workflow": "claim_factuality_probe_workflow_comparison",
             "status": status,
             "model_count": model_count,
+            "dataset_count": 2 if model_count >= 2 else model_count,
+            "datasets": [row["dataset"] for row in leaderboard],
             "redline_passed": redline_passed,
             "best_run": leaderboard[0]["name"] if leaderboard else None,
         },
@@ -18324,10 +18359,14 @@ def test_compare_release_candidates_gates_claim_factuality_probe_comparison(tmp_
     gate = promoted["claim_factuality_probe_comparison_gate"]
     assert gate["gate"]["passed"] is True
     assert gate["redline_passed"] is True
+    assert gate["dataset_count"] == pytest.approx(2)
+    assert gate["datasets"] == ("longfact", "truthfulqa")
     assert gate["best_run"]["model"] == "Qwen/Qwen2.5-0.5B-Instruct"
     assert gate["best_run"]["test_selective_accuracy"] == pytest.approx(0.91)
     candidate = promoted["release_candidate"]["claim_factuality_probe_comparison"]
     assert candidate["model_count"] == pytest.approx(2)
+    assert candidate["dataset_count"] == pytest.approx(2)
+    assert candidate["datasets"] == ("longfact", "truthfulqa")
     assert candidate["best_run"]["name"] == "qwen05"
     assert promoted["release_candidate"]["manifests"][
         "claim_factuality_probe_comparison_manifest"
@@ -19594,8 +19633,11 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         "product_runtime_drift"
     ]["summary"]
     assert claim_factuality_summary["claim_factuality_evidence_required"] is True
-    assert claim_factuality_summary["claim_factuality_evidence_metric_count"] == 10
+    assert claim_factuality_summary["claim_factuality_evidence_metric_count"] == 11
     assert claim_factuality_summary["claim_factuality_evidence_blocked_metric_count"] == 0
+    assert claim_factuality_summary[
+        "claim_factuality_probe_comparison_dataset_count_current"
+    ] == pytest.approx(2.0)
     assert claim_factuality_summary[
         "claim_factuality_probe_comparison_best_test_selective_accuracy_current"
     ] == pytest.approx(0.90)
@@ -19610,6 +19652,7 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         "promotion_contract.claim_factuality_probe_comparison.manifest_verified_rate",
         "promotion_contract.claim_factuality_probe_comparison.model_count.mean",
         "promotion_contract.claim_factuality_probe_comparison.run_count.mean",
+        "promotion_contract.claim_factuality_probe_comparison.dataset_count.mean",
         "promotion_contract.claim_factuality_probe_comparison.redline_pass_rate",
         "promotion_contract.claim_factuality_probe_comparison.best_test_label_auroc.mean",
         "promotion_contract.claim_factuality_probe_comparison.best_test_selective_accuracy.mean",
@@ -22028,7 +22071,7 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     assert frontier_payload["product_runtime_drift_gate"]["summary"]["pre_generation_evidence_metric_count"] == 13
     assert frontier_payload["product_runtime_drift_gate"]["summary"][
         "claim_factuality_evidence_metric_count"
-    ] == 10
+    ] == 11
     assert frontier_payload["product_runtime_drift_gate"]["summary"][
         "claim_risk_localization_evidence_metric_count"
     ] == 7
@@ -24823,6 +24866,11 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         "report:claim-factuality-probe-comparison:0.1"
     )
     assert manifest["metadata"]["claim_factuality_probe_comparison_model_count"] == pytest.approx(2)
+    assert manifest["metadata"]["claim_factuality_probe_comparison_dataset_count"] == pytest.approx(2)
+    assert manifest["metadata"]["claim_factuality_probe_comparison_datasets"] == [
+        "longfact",
+        "truthfulqa",
+    ]
     assert manifest["metadata"]["claim_factuality_probe_comparison_redline_passed"] is True
     assert manifest["metadata"]["claim_factuality_probe_comparison_best_run"] == "qwen05"
     assert manifest["metadata"]["claim_factuality_probe_comparison_best_test_selective_accuracy"] == (
@@ -25264,6 +25312,11 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         "report:claim-factuality-probe-comparison:0.1"
     )
     assert record.metadata["claim_factuality_probe_comparison_model_count"] == pytest.approx(2)
+    assert record.metadata["claim_factuality_probe_comparison_dataset_count"] == pytest.approx(2)
+    assert record.metadata["claim_factuality_probe_comparison_datasets"] == [
+        "longfact",
+        "truthfulqa",
+    ]
     assert record.metadata["claim_factuality_probe_comparison_redline_passed"] is True
     assert record.metadata["claim_factuality_probe_comparison_best_run"] == "qwen05"
     assert record.metadata["claim_factuality_probe_comparison_best_test_selective_accuracy"] == (
@@ -28448,6 +28501,19 @@ def _write_product_runtime_drift_report(
             },
             {
                 "metric": "promotion_contract.claim_factuality_probe_comparison.run_count.mean",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 2.0,
+                "current": 2.0,
+                "absolute_delta": 0.0,
+                "threshold": 2.0,
+                "reason": None,
+            },
+            {
+                "metric": (
+                    "promotion_contract.claim_factuality_probe_comparison."
+                    "dataset_count.mean"
+                ),
                 "status": "pass",
                 "comparison": "min_current",
                 "baseline": 2.0,
@@ -43073,6 +43139,8 @@ def test_compare_product_runtime_baselines_gates_claim_factuality_probe_drift(tm
             "claim_factuality_probe_comparison_manifest_verification": {"passed": True},
             "claim_factuality_probe_comparison_model_count": 2,
             "claim_factuality_probe_comparison_run_count": 2,
+            "claim_factuality_probe_comparison_dataset_count": 2,
+            "claim_factuality_probe_comparison_datasets": ["longfact", "truthfulqa"],
             "claim_factuality_probe_comparison_redline_passed": True,
             "claim_factuality_probe_comparison_redline_run_count": 2,
             "claim_factuality_probe_comparison_best_run": "qwen05",
@@ -43109,6 +43177,8 @@ def test_compare_product_runtime_baselines_gates_claim_factuality_probe_drift(tm
             "claim_factuality_probe_comparison_manifest_verification": {"passed": False},
             "claim_factuality_probe_comparison_model_count": 1,
             "claim_factuality_probe_comparison_run_count": 1,
+            "claim_factuality_probe_comparison_dataset_count": 1,
+            "claim_factuality_probe_comparison_datasets": ["truthfulqa"],
             "claim_factuality_probe_comparison_redline_passed": False,
             "claim_factuality_probe_comparison_redline_run_count": 1,
             "claim_factuality_probe_comparison_best_run": "smollm2",
@@ -43149,6 +43219,7 @@ def test_compare_product_runtime_baselines_gates_claim_factuality_probe_drift(tm
         min_claim_factuality_probe_comparison_manifest_verified_rate=1.0,
         min_claim_factuality_probe_comparison_model_count=2,
         min_claim_factuality_probe_comparison_run_count=2,
+        min_claim_factuality_probe_comparison_dataset_count=2,
         min_claim_factuality_probe_comparison_redline_pass_rate=1.0,
         max_claim_factuality_probe_comparison_best_test_label_auroc_drop=0.05,
         max_claim_factuality_probe_comparison_best_test_selective_accuracy_drop=0.05,
@@ -43161,7 +43232,7 @@ def test_compare_product_runtime_baselines_gates_claim_factuality_probe_drift(tm
     record = registry.get("product_runtime_drift_report:runtime-drift-claim-factuality:0.1")
 
     assert payload["status"] == "blocked"
-    assert payload["summary"]["blocked_metric_count"] == 9
+    assert payload["summary"]["blocked_metric_count"] == 10
     assert _metric_by_name(
         payload,
         "promotion_contract.claim_factuality_probe_comparison.coverage_rate",
@@ -43176,14 +43247,20 @@ def test_compare_product_runtime_baselines_gates_claim_factuality_probe_drift(tm
     )["absolute_drop"] == pytest.approx(0.08)
     assert _metric_by_name(
         payload,
+        "promotion_contract.claim_factuality_probe_comparison.dataset_count.mean",
+    )["status"] == "blocked"
+    assert _metric_by_name(
+        payload,
         "promotion_contract.claim_factuality_probe_comparison.best_redline_margin.mean",
     )["status"] == "blocked"
-    assert manifest["metadata"]["claim_factuality_probe_comparison_blocked_metric_count"] == 9
+    assert manifest["metadata"]["claim_factuality_probe_comparison_blocked_metric_count"] == 10
     assert manifest["metadata"]["claim_factuality_probe_comparison_model_count_current"] == pytest.approx(1.0)
+    assert manifest["metadata"]["claim_factuality_probe_comparison_dataset_count_current"] == pytest.approx(1.0)
+    assert manifest["metadata"]["claim_factuality_probe_comparison_dataset_count_status"] == "blocked"
     assert manifest["metadata"]["claim_factuality_probe_comparison_best_test_selective_coverage_status"] == (
         "blocked"
     )
-    assert record.metadata["claim_factuality_probe_comparison_blocked_metric_count"] == 9
+    assert record.metadata["claim_factuality_probe_comparison_blocked_metric_count"] == 10
     assert record.metadata[
         "claim_factuality_probe_comparison_best_test_label_auroc_current"
     ] == pytest.approx(0.74)

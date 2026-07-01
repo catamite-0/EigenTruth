@@ -320,6 +320,8 @@ _PROMOTION_CONTRACT_CLAIM_FACTUALITY_PROBE_COMPARISON_FIELDS: tuple[str, ...] = 
     "promotion_contract_claim_factuality_probe_comparison_report_status",
     "promotion_contract_claim_factuality_probe_comparison_model_count",
     "promotion_contract_claim_factuality_probe_comparison_run_count",
+    "promotion_contract_claim_factuality_probe_comparison_dataset_count",
+    "promotion_contract_claim_factuality_probe_comparison_datasets",
     "promotion_contract_claim_factuality_probe_comparison_redline_passed",
     "promotion_contract_claim_factuality_probe_comparison_redline_run_count",
     "promotion_contract_claim_factuality_probe_comparison_best_run",
@@ -4622,6 +4624,19 @@ def _aggregate_promotion_contract_claim_factuality_probe_comparison(
             item.get("promotion_contract_claim_factuality_probe_comparison_run_count")
             for item in metrics
         ),
+        "dataset_count": _numeric_summary(
+            item.get(
+                "promotion_contract_claim_factuality_probe_comparison_dataset_count"
+            )
+            for item in metrics
+        ),
+        "dataset_counts": _counts(
+            dataset
+            for item in metrics
+            for dataset in _string_sequence(
+                item.get("promotion_contract_claim_factuality_probe_comparison_datasets")
+            )
+        ),
         "redline_passed_counts": _counts(
             item.get("promotion_contract_claim_factuality_probe_comparison_redline_passed")
             for item in metrics
@@ -6501,6 +6516,14 @@ def _promotion_contract_claim_factuality_probe_comparison_flat_metadata(
             claim_factuality,
             "run_count",
             "mean",
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_dataset_count_mean": _nested(
+            claim_factuality,
+            "dataset_count",
+            "mean",
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_dataset_counts": dict(
+            _mapping(claim_factuality.get("dataset_counts"))
         ),
         "promotion_contract_claim_factuality_probe_comparison_redline_passed_counts": dict(
             _mapping(claim_factuality.get("redline_passed_counts"))

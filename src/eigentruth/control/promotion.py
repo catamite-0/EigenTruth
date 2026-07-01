@@ -3035,6 +3035,10 @@ class ProductRuntimeEvidenceBundle:
                 "model_count"
             ),
             "claim_factuality_probe_comparison_run_count": comparison.get("run_count"),
+            "claim_factuality_probe_comparison_dataset_count": comparison.get(
+                "dataset_count"
+            ),
+            "claim_factuality_probe_comparison_datasets": comparison.get("datasets"),
             "claim_factuality_probe_comparison_redline_passed": comparison.get(
                 "redline_passed"
             ),
@@ -4130,6 +4134,16 @@ def _promotion_contract_claim_factuality_probe_comparison_metadata(
             comparison.get("run_count"),
             metadata.get("claim_factuality_probe_comparison_run_count"),
         ),
+        "promotion_contract_claim_factuality_probe_comparison_dataset_count": (
+            _first_present(
+                comparison.get("dataset_count"),
+                metadata.get("claim_factuality_probe_comparison_dataset_count"),
+            )
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_datasets": _first_present(
+            comparison.get("datasets"),
+            metadata.get("claim_factuality_probe_comparison_datasets"),
+        ),
         "promotion_contract_claim_factuality_probe_comparison_redline_passed": (
             _first_present(
                 comparison.get("redline_passed"),
@@ -4909,6 +4923,8 @@ def _claim_factuality_probe_comparison_metadata(
         "report_status": report_status,
         "model_count": comparison.get("model_count"),
         "run_count": comparison.get("run_count"),
+        "dataset_count": comparison.get("dataset_count"),
+        "datasets": comparison.get("datasets"),
         "redline_passed": comparison.get("redline_passed"),
         "redline_run_count": comparison.get("redline_run_count"),
         "best_run": {
@@ -4942,6 +4958,10 @@ def _claim_factuality_probe_comparison_flat_metadata(
         "claim_factuality_probe_comparison_report_status": comparison.get("report_status"),
         "claim_factuality_probe_comparison_model_count": comparison.get("model_count"),
         "claim_factuality_probe_comparison_run_count": comparison.get("run_count"),
+        "claim_factuality_probe_comparison_dataset_count": comparison.get(
+            "dataset_count"
+        ),
+        "claim_factuality_probe_comparison_datasets": comparison.get("datasets"),
         "claim_factuality_probe_comparison_redline_passed": (
             comparison.get("redline_passed")
         ),
