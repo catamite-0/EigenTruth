@@ -392,6 +392,27 @@ _PROMOTION_CONTRACT_FRONTIER_RELEASE_EVIDENCE_FIELDS: tuple[str, ...] = (
     "promotion_contract_frontier_release_evidence_run_count",
     "promotion_contract_frontier_release_evidence_run_names",
 )
+_PROMOTION_CONTRACT_FACT_SELFCHECK_GATE_FIELDS: tuple[str, ...] = (
+    "promotion_contract_fact_selfcheck_gate_available",
+    "promotion_contract_fact_selfcheck_gate_report",
+    "promotion_contract_fact_selfcheck_gate_manifest",
+    "promotion_contract_fact_selfcheck_gate_source",
+    "promotion_contract_fact_selfcheck_gate_manifest_verified",
+    "promotion_contract_fact_selfcheck_gate_workflow",
+    "promotion_contract_fact_selfcheck_gate_status",
+    "promotion_contract_fact_selfcheck_gate_gate_status",
+    "promotion_contract_fact_selfcheck_gate_enabled",
+    "promotion_contract_fact_selfcheck_gate_passed",
+    "promotion_contract_fact_selfcheck_gate_run_count",
+    "promotion_contract_fact_selfcheck_gate_failed_run_count",
+    "promotion_contract_fact_selfcheck_gate_min_executed_rate",
+    "promotion_contract_fact_selfcheck_gate_min_decided_rate",
+    "promotion_contract_fact_selfcheck_gate_max_not_applicable_rate",
+    "promotion_contract_fact_selfcheck_gate_min_claim_triples_per_record",
+    "promotion_contract_fact_selfcheck_gate_min_sample_triples_per_record",
+    "promotion_contract_fact_selfcheck_gate_failed_runs",
+    "promotion_contract_fact_selfcheck_gate_blocking_reasons",
+)
 _PROMOTION_CONTRACT_COVERED_FACT_ROLLUP_FIELDS: tuple[str, ...] = (
     "promotion_contract_recommended_route_covered_fact_property_metric_count",
     "promotion_contract_recommended_route_covered_fact_min_records",
@@ -1544,6 +1565,15 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
     for field_name in _PROMOTION_CONTRACT_FRONTIER_RELEASE_EVIDENCE_FIELDS:
         value = metrics.get(field_name)
         if field_name == "promotion_contract_frontier_release_evidence_run_names":
+            compact[field_name] = list(_sequence(value))
+        else:
+            compact[field_name] = value
+    for field_name in _PROMOTION_CONTRACT_FACT_SELFCHECK_GATE_FIELDS:
+        value = metrics.get(field_name)
+        if field_name in {
+            "promotion_contract_fact_selfcheck_gate_failed_runs",
+            "promotion_contract_fact_selfcheck_gate_blocking_reasons",
+        }:
             compact[field_name] = list(_sequence(value))
         else:
             compact[field_name] = value
@@ -3359,6 +3389,7 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
     frontier_release_evidence = _aggregate_promotion_contract_frontier_release_evidence(
         metrics
     )
+    fact_selfcheck_gate = _aggregate_promotion_contract_fact_selfcheck_gate(metrics)
     product_trace_replay = _aggregate_promotion_contract_product_trace_replay(metrics)
     product_runtime_drift = _aggregate_promotion_contract_product_runtime_drift(metrics)
     return {
@@ -3414,6 +3445,7 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
         "triple_audit_evidence": triple_audit_evidence,
         "evidence_handoff": evidence_handoff,
         "frontier_release_evidence": frontier_release_evidence,
+        "fact_selfcheck_gate": fact_selfcheck_gate,
         "triple_extraction_fixture_matrix": {
             "available_trace_count": matrix_available_count,
             "missing_trace_count": len(metrics) - matrix_available_count,
@@ -3453,6 +3485,118 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
                 for item in metrics
             ),
         },
+    }
+
+
+def _aggregate_promotion_contract_fact_selfcheck_gate(
+    metrics: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    available_count = sum(
+        1
+        for item in metrics
+        if bool(item.get("promotion_contract_fact_selfcheck_gate_available"))
+    )
+    report_count = sum(
+        1
+        for item in metrics
+        if item.get("promotion_contract_fact_selfcheck_gate_report") is not None
+    )
+    manifest_count = sum(
+        1
+        for item in metrics
+        if item.get("promotion_contract_fact_selfcheck_gate_manifest") is not None
+    )
+    manifest_values = [
+        item.get("promotion_contract_fact_selfcheck_gate_manifest_verified")
+        for item in metrics
+    ]
+    passed_values = [
+        item.get("promotion_contract_fact_selfcheck_gate_passed") for item in metrics
+    ]
+    manifest_observations = sum(value is not None for value in manifest_values)
+    passed_observations = sum(value is not None for value in passed_values)
+    return {
+        "available_trace_count": available_count,
+        "missing_trace_count": len(metrics) - available_count,
+        "coverage_rate": _safe_div(available_count, len(metrics)),
+        "report_present_rate": _safe_div(report_count, len(metrics)),
+        "manifest_present_rate": _safe_div(manifest_count, len(metrics)),
+        "report_counts": _counts(
+            item.get("promotion_contract_fact_selfcheck_gate_report") for item in metrics
+        ),
+        "manifest_counts": _counts(
+            item.get("promotion_contract_fact_selfcheck_gate_manifest")
+            for item in metrics
+        ),
+        "source_counts": _counts(
+            item.get("promotion_contract_fact_selfcheck_gate_source") for item in metrics
+        ),
+        "workflow_counts": _counts(
+            item.get("promotion_contract_fact_selfcheck_gate_workflow") for item in metrics
+        ),
+        "status_counts": _counts(
+            item.get("promotion_contract_fact_selfcheck_gate_status") for item in metrics
+        ),
+        "gate_status_counts": _counts(
+            item.get("promotion_contract_fact_selfcheck_gate_gate_status")
+            for item in metrics
+        ),
+        "enabled_counts": _counts(
+            item.get("promotion_contract_fact_selfcheck_gate_enabled") for item in metrics
+        ),
+        "passed_counts": _counts(passed_values),
+        "manifest_verification_observations": manifest_observations,
+        "manifest_verified_count": sum(value is True for value in manifest_values),
+        "manifest_failed_count": sum(value is False for value in manifest_values),
+        "manifest_unknown_count": len(metrics) - manifest_observations,
+        "passed_observations": passed_observations,
+        "passed_count": sum(value is True for value in passed_values),
+        "failed_count": sum(value is False for value in passed_values),
+        "unknown_passed_count": len(metrics) - passed_observations,
+        "passed_rate": _safe_div(
+            sum(value is True for value in passed_values),
+            passed_observations,
+        ),
+        "run_count": _numeric_summary(
+            item.get("promotion_contract_fact_selfcheck_gate_run_count")
+            for item in metrics
+        ),
+        "failed_run_count": _numeric_summary(
+            item.get("promotion_contract_fact_selfcheck_gate_failed_run_count")
+            for item in metrics
+        ),
+        "min_executed_rate": _numeric_summary(
+            item.get("promotion_contract_fact_selfcheck_gate_min_executed_rate")
+            for item in metrics
+        ),
+        "min_decided_rate": _numeric_summary(
+            item.get("promotion_contract_fact_selfcheck_gate_min_decided_rate")
+            for item in metrics
+        ),
+        "max_not_applicable_rate": _numeric_summary(
+            item.get("promotion_contract_fact_selfcheck_gate_max_not_applicable_rate")
+            for item in metrics
+        ),
+        "min_claim_triples_per_record": _numeric_summary(
+            item.get(
+                "promotion_contract_fact_selfcheck_gate_min_claim_triples_per_record"
+            )
+            for item in metrics
+        ),
+        "min_sample_triples_per_record": _numeric_summary(
+            item.get(
+                "promotion_contract_fact_selfcheck_gate_min_sample_triples_per_record"
+            )
+            for item in metrics
+        ),
+        "failed_runs": _counts_from_sequence_items(
+            item.get("promotion_contract_fact_selfcheck_gate_failed_runs")
+            for item in metrics
+        ),
+        "blocking_reasons": _counts_from_sequence_items(
+            item.get("promotion_contract_fact_selfcheck_gate_blocking_reasons")
+            for item in metrics
+        ),
     }
 
 
@@ -4884,6 +5028,9 @@ def _write_artifact_manifest(
     promotion_contract_frontier_release_evidence_metadata = (
         _promotion_contract_frontier_release_evidence_flat_metadata(report)
     )
+    promotion_contract_fact_selfcheck_gate_metadata = (
+        _promotion_contract_fact_selfcheck_gate_flat_metadata(report)
+    )
     manifest = build_artifact_manifest(
         _artifact_paths(config) if artifacts is None else artifacts,
         root=config.resolved_artifact_manifest_path.parent,
@@ -4925,6 +5072,7 @@ def _write_artifact_manifest(
             **promotion_contract_triple_audit_evidence_metadata,
             **promotion_contract_evidence_handoff_metadata,
             **promotion_contract_frontier_release_evidence_metadata,
+            **promotion_contract_fact_selfcheck_gate_metadata,
             **dict(config.metadata),
         },
     )
@@ -4975,6 +5123,9 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
     promotion_contract_frontier_release_evidence_metadata = (
         _promotion_contract_frontier_release_evidence_flat_metadata(report)
     )
+    promotion_contract_fact_selfcheck_gate_metadata = (
+        _promotion_contract_fact_selfcheck_gate_flat_metadata(report)
+    )
     registry = ArtifactRegistry.load_json(config.registry_path)
     registry.record_product_runtime_baseline(
         name=str(config.name),
@@ -5021,6 +5172,7 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
             **promotion_contract_triple_audit_evidence_metadata,
             **promotion_contract_evidence_handoff_metadata,
             **promotion_contract_frontier_release_evidence_metadata,
+            **promotion_contract_fact_selfcheck_gate_metadata,
             **dict(config.metadata),
         },
     )
@@ -6144,6 +6296,122 @@ def _promotion_contract_frontier_release_evidence_flat_metadata(
         ),
         "promotion_contract_frontier_release_evidence_run_names": dict(
             _mapping(evidence.get("run_names"))
+        ),
+    }
+
+
+def _promotion_contract_fact_selfcheck_gate_flat_metadata(
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    gate = _mapping(
+        _nested(
+            report,
+            "summary",
+            "promotion_contract",
+            "fact_selfcheck_gate",
+        )
+    )
+    if not gate:
+        return {}
+    return {
+        "promotion_contract_fact_selfcheck_gate_available_trace_count": gate.get(
+            "available_trace_count"
+        ),
+        "promotion_contract_fact_selfcheck_gate_missing_trace_count": gate.get(
+            "missing_trace_count"
+        ),
+        "promotion_contract_fact_selfcheck_gate_coverage_rate": gate.get(
+            "coverage_rate"
+        ),
+        "promotion_contract_fact_selfcheck_gate_report_present_rate": gate.get(
+            "report_present_rate"
+        ),
+        "promotion_contract_fact_selfcheck_gate_manifest_present_rate": gate.get(
+            "manifest_present_rate"
+        ),
+        "promotion_contract_fact_selfcheck_gate_report_counts": dict(
+            _mapping(gate.get("report_counts"))
+        ),
+        "promotion_contract_fact_selfcheck_gate_manifest_counts": dict(
+            _mapping(gate.get("manifest_counts"))
+        ),
+        "promotion_contract_fact_selfcheck_gate_source_counts": dict(
+            _mapping(gate.get("source_counts"))
+        ),
+        "promotion_contract_fact_selfcheck_gate_workflow_counts": dict(
+            _mapping(gate.get("workflow_counts"))
+        ),
+        "promotion_contract_fact_selfcheck_gate_status_counts": dict(
+            _mapping(gate.get("status_counts"))
+        ),
+        "promotion_contract_fact_selfcheck_gate_gate_status_counts": dict(
+            _mapping(gate.get("gate_status_counts"))
+        ),
+        "promotion_contract_fact_selfcheck_gate_enabled_counts": dict(
+            _mapping(gate.get("enabled_counts"))
+        ),
+        "promotion_contract_fact_selfcheck_gate_passed_counts": dict(
+            _mapping(gate.get("passed_counts"))
+        ),
+        "promotion_contract_fact_selfcheck_gate_manifest_verified_count": gate.get(
+            "manifest_verified_count"
+        ),
+        "promotion_contract_fact_selfcheck_gate_manifest_failed_count": gate.get(
+            "manifest_failed_count"
+        ),
+        "promotion_contract_fact_selfcheck_gate_manifest_unknown_count": gate.get(
+            "manifest_unknown_count"
+        ),
+        "promotion_contract_fact_selfcheck_gate_passed_count": gate.get("passed_count"),
+        "promotion_contract_fact_selfcheck_gate_failed_count": gate.get("failed_count"),
+        "promotion_contract_fact_selfcheck_gate_unknown_passed_count": gate.get(
+            "unknown_passed_count"
+        ),
+        "promotion_contract_fact_selfcheck_gate_passed_rate": gate.get("passed_rate"),
+        "promotion_contract_fact_selfcheck_gate_run_count_mean": _nested(
+            gate,
+            "run_count",
+            "mean",
+        ),
+        "promotion_contract_fact_selfcheck_gate_failed_run_count_mean": _nested(
+            gate,
+            "failed_run_count",
+            "mean",
+        ),
+        "promotion_contract_fact_selfcheck_gate_min_executed_rate_mean": _nested(
+            gate,
+            "min_executed_rate",
+            "mean",
+        ),
+        "promotion_contract_fact_selfcheck_gate_min_decided_rate_mean": _nested(
+            gate,
+            "min_decided_rate",
+            "mean",
+        ),
+        "promotion_contract_fact_selfcheck_gate_max_not_applicable_rate_mean": _nested(
+            gate,
+            "max_not_applicable_rate",
+            "mean",
+        ),
+        "promotion_contract_fact_selfcheck_gate_min_claim_triples_per_record_mean": (
+            _nested(
+                gate,
+                "min_claim_triples_per_record",
+                "mean",
+            )
+        ),
+        "promotion_contract_fact_selfcheck_gate_min_sample_triples_per_record_mean": (
+            _nested(
+                gate,
+                "min_sample_triples_per_record",
+                "mean",
+            )
+        ),
+        "promotion_contract_fact_selfcheck_gate_failed_runs": dict(
+            _mapping(gate.get("failed_runs"))
+        ),
+        "promotion_contract_fact_selfcheck_gate_blocking_reasons": dict(
+            _mapping(gate.get("blocking_reasons"))
         ),
     }
 

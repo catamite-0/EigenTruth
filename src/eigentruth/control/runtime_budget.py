@@ -1502,6 +1502,14 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         **_frontier_release_evidence_from_flat_metadata(metadata),
         **nested_frontier_release_evidence,
     }
+    nested_fact_selfcheck_gate = _mapping(
+        metadata.get("promotion_contract_fact_selfcheck_gate")
+    )
+    fact_selfcheck_gate = {
+        **_fact_selfcheck_gate_from_flat_metadata(contract_metadata),
+        **_fact_selfcheck_gate_from_flat_metadata(metadata),
+        **nested_fact_selfcheck_gate,
+    }
     promotion_summary = _mapping(metadata.get("promotion_contract_promotion_summary"))
     promotion_summary_runtime = _mapping(promotion_summary.get("runtime"))
     promotion_summary_verifier_route = _mapping(
@@ -1571,6 +1579,7 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         or bool(evidence_handoff.get("available"))
         or bool(triple_audit_evidence.get("available"))
         or bool(frontier_release_evidence)
+        or bool(fact_selfcheck_gate)
     )
     pre_generation_manifest_verification = _mapping(
         _first_present(
@@ -1603,6 +1612,7 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
     frontier_release_evidence_run_names = _sequence(
         frontier_release_evidence.get("run_names")
     )
+    fact_selfcheck_gate_available = bool(fact_selfcheck_gate)
     summary = {
         "available": available,
         "source": source,
@@ -1727,6 +1737,58 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
             "run_names": list(frontier_release_evidence_run_names)
             if frontier_release_evidence_run_names
             else None,
+        },
+        "fact_selfcheck_gate": {
+            "available": fact_selfcheck_gate_available,
+            "report": _optional_string(
+                _first_present(
+                    fact_selfcheck_gate.get("report_path"),
+                    fact_selfcheck_gate.get("report"),
+                )
+            ),
+            "manifest": _optional_string(
+                _first_present(
+                    fact_selfcheck_gate.get("manifest_path"),
+                    fact_selfcheck_gate.get("manifest"),
+                )
+            ),
+            "source": _optional_string(fact_selfcheck_gate.get("source")),
+            "manifest_verified": _optional_bool(
+                fact_selfcheck_gate.get("manifest_verified")
+            ),
+            "workflow": _optional_string(fact_selfcheck_gate.get("workflow")),
+            "status": _optional_string(fact_selfcheck_gate.get("status")),
+            "gate_status": _optional_string(fact_selfcheck_gate.get("gate_status")),
+            "enabled": _optional_bool(fact_selfcheck_gate.get("gate_enabled")),
+            "passed": _optional_bool(
+                _first_present(
+                    fact_selfcheck_gate.get("passed"),
+                    fact_selfcheck_gate.get("gate_passed"),
+                )
+            ),
+            "run_count": _finite_float(fact_selfcheck_gate.get("run_count")),
+            "failed_run_count": _finite_float(
+                fact_selfcheck_gate.get("failed_run_count")
+            ),
+            "min_executed_rate": _finite_float(
+                fact_selfcheck_gate.get("min_executed_rate")
+            ),
+            "min_decided_rate": _finite_float(
+                fact_selfcheck_gate.get("min_decided_rate")
+            ),
+            "max_not_applicable_rate": _finite_float(
+                fact_selfcheck_gate.get("max_not_applicable_rate")
+            ),
+            "min_claim_triples_per_record": _finite_float(
+                fact_selfcheck_gate.get("min_claim_triples_per_record")
+            ),
+            "min_sample_triples_per_record": _finite_float(
+                fact_selfcheck_gate.get("min_sample_triples_per_record")
+            ),
+            "failed_runs": list(_sequence(fact_selfcheck_gate.get("failed_runs"))),
+            "blocking_reasons": list(
+                _sequence(fact_selfcheck_gate.get("blocking_reasons"))
+            ),
         },
         "pathway_intervention_workflow": {
             "available": bool(pathway),
@@ -2439,6 +2501,7 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
     claim_factuality_summary = _mapping(summary["claim_factuality_probe_comparison"])
     counterfactual_summary = _mapping(summary["counterfactual_verification"])
     frontier_release_evidence_summary = _mapping(summary["frontier_release_evidence"])
+    fact_selfcheck_gate_summary = _mapping(summary["fact_selfcheck_gate"])
     product_trace_replay_metrics = _promotion_contract_product_trace_replay_metric_values(
         product_trace_replay
     )
@@ -2561,6 +2624,64 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         ),
         "promotion_contract_frontier_release_evidence_run_names": (
             frontier_release_evidence_summary.get("run_names")
+        ),
+        "promotion_contract_fact_selfcheck_gate": fact_selfcheck_gate or None,
+        "promotion_contract_fact_selfcheck_gate_available": (
+            fact_selfcheck_gate_available
+        ),
+        "promotion_contract_fact_selfcheck_gate_report": (
+            fact_selfcheck_gate_summary.get("report")
+        ),
+        "promotion_contract_fact_selfcheck_gate_manifest": (
+            fact_selfcheck_gate_summary.get("manifest")
+        ),
+        "promotion_contract_fact_selfcheck_gate_source": (
+            fact_selfcheck_gate_summary.get("source")
+        ),
+        "promotion_contract_fact_selfcheck_gate_manifest_verified": (
+            fact_selfcheck_gate_summary.get("manifest_verified")
+        ),
+        "promotion_contract_fact_selfcheck_gate_workflow": (
+            fact_selfcheck_gate_summary.get("workflow")
+        ),
+        "promotion_contract_fact_selfcheck_gate_status": (
+            fact_selfcheck_gate_summary.get("status")
+        ),
+        "promotion_contract_fact_selfcheck_gate_gate_status": (
+            fact_selfcheck_gate_summary.get("gate_status")
+        ),
+        "promotion_contract_fact_selfcheck_gate_enabled": (
+            fact_selfcheck_gate_summary.get("enabled")
+        ),
+        "promotion_contract_fact_selfcheck_gate_passed": (
+            fact_selfcheck_gate_summary.get("passed")
+        ),
+        "promotion_contract_fact_selfcheck_gate_run_count": (
+            fact_selfcheck_gate_summary.get("run_count")
+        ),
+        "promotion_contract_fact_selfcheck_gate_failed_run_count": (
+            fact_selfcheck_gate_summary.get("failed_run_count")
+        ),
+        "promotion_contract_fact_selfcheck_gate_min_executed_rate": (
+            fact_selfcheck_gate_summary.get("min_executed_rate")
+        ),
+        "promotion_contract_fact_selfcheck_gate_min_decided_rate": (
+            fact_selfcheck_gate_summary.get("min_decided_rate")
+        ),
+        "promotion_contract_fact_selfcheck_gate_max_not_applicable_rate": (
+            fact_selfcheck_gate_summary.get("max_not_applicable_rate")
+        ),
+        "promotion_contract_fact_selfcheck_gate_min_claim_triples_per_record": (
+            fact_selfcheck_gate_summary.get("min_claim_triples_per_record")
+        ),
+        "promotion_contract_fact_selfcheck_gate_min_sample_triples_per_record": (
+            fact_selfcheck_gate_summary.get("min_sample_triples_per_record")
+        ),
+        "promotion_contract_fact_selfcheck_gate_failed_runs": (
+            fact_selfcheck_gate_summary.get("failed_runs")
+        ),
+        "promotion_contract_fact_selfcheck_gate_blocking_reasons": (
+            fact_selfcheck_gate_summary.get("blocking_reasons")
         ),
         "promotion_contract_promotion_summary": promotion_summary or None,
         "promotion_contract_promotion_summary_status": _optional_string(
@@ -4173,6 +4294,38 @@ def _frontier_release_evidence_from_flat_metadata(
         "blocking_reasons": value("blocking_reasons"),
     }
     return {key: item for key, item in evidence.items() if item is not None}
+
+
+def _fact_selfcheck_gate_from_flat_metadata(
+    metadata: Mapping[str, Any],
+) -> dict[str, Any]:
+    def value(suffix: str) -> Any:
+        return _first_present(
+            metadata.get(f"fact_selfcheck_gate_{suffix}"),
+            metadata.get(f"promotion_contract_fact_selfcheck_gate_{suffix}"),
+        )
+
+    gate = {
+        "report_path": value("report"),
+        "manifest_path": value("manifest"),
+        "source": value("source"),
+        "manifest_verified": value("manifest_verified"),
+        "workflow": value("workflow"),
+        "status": value("status"),
+        "gate_status": value("gate_status"),
+        "gate_enabled": value("enabled"),
+        "gate_passed": _first_present(value("passed"), value("gate_passed")),
+        "run_count": value("run_count"),
+        "failed_run_count": value("failed_run_count"),
+        "min_executed_rate": value("min_executed_rate"),
+        "min_decided_rate": value("min_decided_rate"),
+        "max_not_applicable_rate": value("max_not_applicable_rate"),
+        "min_claim_triples_per_record": value("min_claim_triples_per_record"),
+        "min_sample_triples_per_record": value("min_sample_triples_per_record"),
+        "failed_runs": value("failed_runs"),
+        "blocking_reasons": value("blocking_reasons"),
+    }
+    return {key: item for key, item in gate.items() if item is not None}
 
 
 def _pre_generation_probe_comparison_from_flat_metadata(

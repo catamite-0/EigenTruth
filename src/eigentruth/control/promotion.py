@@ -145,6 +145,7 @@ class ProductPromotionContract:
     counterfactual_verification: Mapping[str, Any] = field(default_factory=dict)
     release_efficiency: Mapping[str, Any] = field(default_factory=dict)
     frontier_release_evidence: Mapping[str, Any] = field(default_factory=dict)
+    fact_selfcheck_gate: Mapping[str, Any] = field(default_factory=dict)
     metadata: Mapping[str, Any] = field(default_factory=dict)
     schema_version: int = 1
 
@@ -221,6 +222,7 @@ class ProductPromotionContract:
             "frontier_release_evidence",
             dict(self.frontier_release_evidence),
         )
+        object.__setattr__(self, "fact_selfcheck_gate", dict(self.fact_selfcheck_gate))
         object.__setattr__(self, "metadata", dict(self.metadata))
         object.__setattr__(self, "schema_version", int(self.schema_version))
 
@@ -280,6 +282,7 @@ class ProductPromotionContract:
                 frontier_release_evidence=_mapping(
                     payload.get("frontier_release_evidence")
                 ),
+                fact_selfcheck_gate=_mapping(payload.get("fact_selfcheck_gate")),
                 metadata=_mapping(payload.get("metadata")),
             )
         return cls.from_release_candidate_report(payload, require_promoted=require_promoted)
@@ -379,6 +382,7 @@ class ProductPromotionContract:
             ),
             manifests=manifests,
         )
+        fact_selfcheck_gate = _mapping(candidate.get("fact_selfcheck_gate"))
         runtime_cost = _mapping(candidate.get("runtime_cost"))
         product_trace_replay_metadata = _product_trace_replay_workflow_metadata(
             product_trace_replay_workflow,
@@ -478,6 +482,7 @@ class ProductPromotionContract:
             counterfactual_verification=counterfactual_verification,
             release_efficiency=release_efficiency,
             frontier_release_evidence=frontier_release_evidence,
+            fact_selfcheck_gate=fact_selfcheck_gate,
             metadata={
                 "release_candidate_status": status,
                 "readiness_status": decision.get("readiness_status"),
@@ -1311,6 +1316,7 @@ class ProductPromotionContract:
             "counterfactual_verification": dict(self.counterfactual_verification),
             "release_efficiency": dict(self.release_efficiency),
             "frontier_release_evidence": dict(self.frontier_release_evidence),
+            "fact_selfcheck_gate": dict(self.fact_selfcheck_gate),
             "metadata": dict(self.metadata),
             "summary": self.to_summary_dict(),
         }
@@ -3473,6 +3479,7 @@ def product_promotion_contract_metadata(
         "promotion_contract_frontier_release_evidence": dict(
             contract.frontier_release_evidence
         ),
+        "promotion_contract_fact_selfcheck_gate": dict(contract.fact_selfcheck_gate),
         "promotion_contract_metadata": dict(contract.metadata),
         **_promotion_contract_product_trace_replay_metadata(contract),
         **_promotion_contract_product_runtime_drift_metadata(contract),
@@ -3484,8 +3491,73 @@ def product_promotion_contract_metadata(
         **_promotion_contract_pathway_intervention_metadata(contract),
         **_promotion_contract_counterfactual_verification_metadata(contract),
         **_promotion_contract_frontier_release_evidence_metadata(contract),
+        **_promotion_contract_fact_selfcheck_gate_metadata(contract),
         **covered_fact_scope,
     }
+
+
+def _promotion_contract_fact_selfcheck_gate_metadata(
+    contract: ProductPromotionContract,
+) -> dict[str, Any]:
+    metadata = _mapping(contract.metadata)
+    gate = {
+        **{
+            key.removeprefix("fact_selfcheck_gate_"): value
+            for key, value in metadata.items()
+            if key.startswith("fact_selfcheck_gate_")
+        },
+        **_mapping(contract.fact_selfcheck_gate),
+    }
+    if not gate:
+        return {}
+    return _drop_none_values(
+        {
+            "promotion_contract_fact_selfcheck_gate_report": gate.get("report_path")
+            or gate.get("report"),
+            "promotion_contract_fact_selfcheck_gate_manifest": gate.get("manifest_path")
+            or gate.get("manifest"),
+            "promotion_contract_fact_selfcheck_gate_source": gate.get("source"),
+            "promotion_contract_fact_selfcheck_gate_manifest_verified": gate.get(
+                "manifest_verified"
+            ),
+            "promotion_contract_fact_selfcheck_gate_workflow": gate.get("workflow"),
+            "promotion_contract_fact_selfcheck_gate_status": gate.get("status"),
+            "promotion_contract_fact_selfcheck_gate_gate_status": gate.get(
+                "gate_status"
+            ),
+            "promotion_contract_fact_selfcheck_gate_enabled": gate.get(
+                "gate_enabled"
+            ),
+            "promotion_contract_fact_selfcheck_gate_passed": gate.get("gate_passed")
+            if "gate_passed" in gate
+            else gate.get("passed"),
+            "promotion_contract_fact_selfcheck_gate_run_count": gate.get("run_count"),
+            "promotion_contract_fact_selfcheck_gate_failed_run_count": gate.get(
+                "failed_run_count"
+            ),
+            "promotion_contract_fact_selfcheck_gate_min_executed_rate": gate.get(
+                "min_executed_rate"
+            ),
+            "promotion_contract_fact_selfcheck_gate_min_decided_rate": gate.get(
+                "min_decided_rate"
+            ),
+            "promotion_contract_fact_selfcheck_gate_max_not_applicable_rate": gate.get(
+                "max_not_applicable_rate"
+            ),
+            "promotion_contract_fact_selfcheck_gate_min_claim_triples_per_record": gate.get(
+                "min_claim_triples_per_record"
+            ),
+            "promotion_contract_fact_selfcheck_gate_min_sample_triples_per_record": gate.get(
+                "min_sample_triples_per_record"
+            ),
+            "promotion_contract_fact_selfcheck_gate_failed_runs": gate.get(
+                "failed_runs"
+            ),
+            "promotion_contract_fact_selfcheck_gate_blocking_reasons": gate.get(
+                "blocking_reasons"
+            ),
+        }
+    )
 
 
 def _promotion_contract_runtime_cost_metadata(

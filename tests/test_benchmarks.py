@@ -40682,6 +40682,122 @@ def _write_product_runtime_trace(
     )
 
 
+def test_run_product_runtime_baseline_aggregates_fact_selfcheck_gate(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    registry_module = importlib.import_module("eigentruth.registry")
+    trace_a = tmp_path / "trace-a.json"
+    trace_b = tmp_path / "trace-b.json"
+    report_path = tmp_path / "runtime-baseline.json"
+    registry_path = tmp_path / "registry.json"
+    _write_product_runtime_trace(
+        trace_a,
+        request_id="promoted",
+        total_seconds=0.10,
+        route_seconds=0.02,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=1,
+        cache_misses=0,
+        metadata={
+            "fact_selfcheck_gate_report": "fact-a.json",
+            "fact_selfcheck_gate_manifest": "manifest-a.json",
+            "fact_selfcheck_gate_source": "runtime_evidence_bundle",
+            "fact_selfcheck_gate_manifest_verified": True,
+            "fact_selfcheck_gate_workflow": "verifier_signal_fusion_workflow",
+            "fact_selfcheck_gate_status": "promote",
+            "fact_selfcheck_gate_gate_status": "promote",
+            "fact_selfcheck_gate_enabled": True,
+            "fact_selfcheck_gate_passed": True,
+            "fact_selfcheck_gate_run_count": 2,
+            "fact_selfcheck_gate_failed_run_count": 0,
+            "fact_selfcheck_gate_min_executed_rate": 0.95,
+            "fact_selfcheck_gate_min_decided_rate": 0.85,
+            "fact_selfcheck_gate_max_not_applicable_rate": 0.05,
+            "fact_selfcheck_gate_min_claim_triples_per_record": 1.0,
+            "fact_selfcheck_gate_min_sample_triples_per_record": 2.0,
+        },
+    )
+    _write_product_runtime_trace(
+        trace_b,
+        request_id="blocked",
+        total_seconds=0.12,
+        route_seconds=0.03,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=1,
+        cache_misses=0,
+        metadata={
+            "promotion_contract_fact_selfcheck_gate_report": "fact-b.json",
+            "promotion_contract_fact_selfcheck_gate_manifest": "manifest-b.json",
+            "promotion_contract_fact_selfcheck_gate_source": "runtime_evidence_bundle",
+            "promotion_contract_fact_selfcheck_gate_manifest_verified": False,
+            "promotion_contract_fact_selfcheck_gate_workflow": (
+                "verifier_signal_fusion_workflow"
+            ),
+            "promotion_contract_fact_selfcheck_gate_status": "blocked",
+            "promotion_contract_fact_selfcheck_gate_gate_status": "blocked",
+            "promotion_contract_fact_selfcheck_gate_enabled": True,
+            "promotion_contract_fact_selfcheck_gate_passed": False,
+            "promotion_contract_fact_selfcheck_gate_run_count": 1,
+            "promotion_contract_fact_selfcheck_gate_failed_run_count": 1,
+            "promotion_contract_fact_selfcheck_gate_min_executed_rate": 0.90,
+            "promotion_contract_fact_selfcheck_gate_min_decided_rate": 0.40,
+            "promotion_contract_fact_selfcheck_gate_max_not_applicable_rate": 0.60,
+            "promotion_contract_fact_selfcheck_gate_min_claim_triples_per_record": 0.5,
+            "promotion_contract_fact_selfcheck_gate_min_sample_triples_per_record": 0.0,
+            "promotion_contract_fact_selfcheck_gate_failed_runs": ("fact-b",),
+            "promotion_contract_fact_selfcheck_gate_blocking_reasons": (
+                "low_decided_rate",
+            ),
+        },
+    )
+
+    payload = module.build_product_runtime_baseline(
+        module.ProductRuntimeBaselineConfig(
+            trace_paths=(trace_a, trace_b),
+            report_path=report_path,
+            registry_path=registry_path,
+            name="runtime-baseline-fact-selfcheck",
+            version="0.1",
+        )
+    )
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    registry_record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "product_runtime_baseline:runtime-baseline-fact-selfcheck:0.1"
+    )
+    gate_summary = payload["summary"]["promotion_contract"]["fact_selfcheck_gate"]
+
+    assert payload["traces"][0]["metrics"]["promotion_contract_fact_selfcheck_gate_passed"] is True
+    assert payload["traces"][1]["metrics"]["promotion_contract_fact_selfcheck_gate_status"] == "blocked"
+    assert gate_summary["available_trace_count"] == 2
+    assert gate_summary["coverage_rate"] == pytest.approx(1.0)
+    assert gate_summary["manifest_verified_count"] == 1
+    assert gate_summary["manifest_failed_count"] == 1
+    assert gate_summary["passed_counts"] == {"False": 1, "True": 1}
+    assert gate_summary["passed_rate"] == pytest.approx(0.5)
+    assert gate_summary["run_count"]["mean"] == pytest.approx(1.5)
+    assert gate_summary["failed_run_count"]["mean"] == pytest.approx(0.5)
+    assert gate_summary["min_decided_rate"]["mean"] == pytest.approx(0.625)
+    assert gate_summary["failed_runs"] == {"fact-b": 1}
+    assert gate_summary["blocking_reasons"] == {"low_decided_rate": 1}
+    assert (
+        manifest["metadata"]["promotion_contract_fact_selfcheck_gate_available_trace_count"]
+        == 2
+    )
+    assert manifest["metadata"]["promotion_contract_fact_selfcheck_gate_passed_rate"] == (
+        pytest.approx(0.5)
+    )
+    assert manifest["metadata"]["promotion_contract_fact_selfcheck_gate_failed_runs"] == {
+        "fact-b": 1
+    }
+    assert registry_record.metadata[
+        "promotion_contract_fact_selfcheck_gate_manifest_failed_count"
+    ] == 1
+    assert registry_record.metadata[
+        "promotion_contract_fact_selfcheck_gate_blocking_reasons"
+    ] == {"low_decided_rate": 1}
+
+
 def _write_receipted_product_runtime_trace(
     path: Path,
     *,

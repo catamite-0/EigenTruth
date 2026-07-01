@@ -738,6 +738,77 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
     json.dumps(payload)
 
 
+def test_product_runtime_metrics_exposes_fact_selfcheck_gate_from_contract():
+    gate = {
+        "report_path": "fact-selfcheck-workflow.json",
+        "manifest_path": "fact-selfcheck-artifact-manifest.json",
+        "manifest_verified": True,
+        "source": "runtime_evidence_bundle",
+        "workflow": "verifier_signal_fusion_workflow",
+        "status": "promote",
+        "gate_status": "promote",
+        "gate_enabled": True,
+        "gate_passed": True,
+        "run_count": 2,
+        "failed_run_count": 0,
+        "min_executed_rate": 0.95,
+        "min_decided_rate": 0.85,
+        "max_not_applicable_rate": 0.05,
+        "min_claim_triples_per_record": 1.0,
+        "min_sample_triples_per_record": 2.0,
+        "failed_runs": (),
+        "blocking_reasons": (),
+    }
+    contract = ProductPromotionContract(
+        source_status="promote",
+        fact_selfcheck_gate=gate,
+        metadata={"fact_selfcheck_gate_source": "legacy-handoff"},
+    )
+    loaded = ProductPromotionContract.from_mapping(contract.to_dict())
+    payload = product_promotion_contract_metadata(
+        loaded,
+        source="contract.json",
+        budget_enabled=True,
+    )
+    metrics = product_runtime_metrics({"metadata": payload})
+
+    assert loaded.fact_selfcheck_gate == gate
+    assert payload["promotion_contract_fact_selfcheck_gate_status"] == "promote"
+    assert payload["promotion_contract_fact_selfcheck_gate_source"] == (
+        "runtime_evidence_bundle"
+    )
+    assert metrics["promotion_contract_available"] is True
+    assert metrics["promotion_contract_fact_selfcheck_gate_available"] is True
+    assert metrics["promotion_contract_fact_selfcheck_gate_status"] == "promote"
+    assert metrics["promotion_contract_fact_selfcheck_gate_manifest_verified"] is True
+    assert metrics["promotion_contract_fact_selfcheck_gate_passed"] is True
+    assert metrics["promotion_contract_fact_selfcheck_gate_run_count"] == pytest.approx(2.0)
+    assert metrics[
+        "promotion_contract_fact_selfcheck_gate_min_sample_triples_per_record"
+    ] == pytest.approx(2.0)
+    assert metrics["promotion_contract_summary"]["fact_selfcheck_gate"] == {
+        "available": True,
+        "report": "fact-selfcheck-workflow.json",
+        "manifest": "fact-selfcheck-artifact-manifest.json",
+        "source": "runtime_evidence_bundle",
+        "manifest_verified": True,
+        "workflow": "verifier_signal_fusion_workflow",
+        "status": "promote",
+        "gate_status": "promote",
+        "enabled": True,
+        "passed": True,
+        "run_count": 2.0,
+        "failed_run_count": 0.0,
+        "min_executed_rate": 0.95,
+        "min_decided_rate": 0.85,
+        "max_not_applicable_rate": 0.05,
+        "min_claim_triples_per_record": 1.0,
+        "min_sample_triples_per_record": 2.0,
+        "failed_runs": [],
+        "blocking_reasons": [],
+    }
+
+
 def test_product_trace_bounded_payload_reuses_prepared_trace_payload(monkeypatch):
     original_verification = trace_module._verification_result_to_dict
     original_action_result = trace_module._action_result_to_dict

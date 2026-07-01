@@ -8511,7 +8511,10 @@ text-redline run-count summaries into the report, manifest, and registry
 metadata. It also aggregates promotion-contract counterfactual verifier-audit
 coverage, source/status/workflow counts, manifest-verification counts,
 record-count/pass-rate/false-invariance summaries, and flip-success summaries
-into the same report, manifest, and registry metadata. The output includes
+into the same report, manifest, and registry metadata. Fact-selfcheck gate
+handoffs are likewise aggregated with coverage, report/manifest presence,
+manifest verification, pass counts, run-count quality, failed runs, and blocking
+reasons in the report, manifest, and registry metadata. The output includes
 `optimization.hotspots`,
 `optimization.recommendations`, and `optimization.policy_hints`, turning the
 baseline into an actionable performance pass over slow phases/routes, low cache
