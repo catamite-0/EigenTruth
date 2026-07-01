@@ -3304,12 +3304,15 @@ def test_frontier_abstention_rerun_queue_emits_budget_profile_flags(tmp_path):
         source=source,
         json_path=queue_path,
         output_dir=tmp_path / "abstention-reruns",
-        profiles=("budget", "budget_0p48"),
+        profiles=("budget", "budget_0p48", "gate_budget_sweep"),
         signal_groups=("recommended",),
         python_executable="python",
     )
     budget = next(entry for entry in payload["entries"] if entry["profile"] == "budget")
     budget_0p48 = next(entry for entry in payload["entries"] if entry["profile"] == "budget_0p48")
+    gate_budget_sweep = next(
+        entry for entry in payload["entries"] if entry["profile"] == "gate_budget_sweep"
+    )
 
     assert budget["profile_config"]["enforce_abstention_budget"] is True
     assert budget["profile_config"]["abstention_budget_target_rate"] == 0.5
@@ -3321,6 +3324,77 @@ def test_frontier_abstention_rerun_queue_emits_budget_profile_flags(tmp_path):
         budget_0p48["command"][budget_0p48["command"].index("--abstention-budget-target-rate") + 1]
         == "0.48"
     )
+    assert gate_budget_sweep["profile_config"]["enforce_abstention_budget"] is True
+    assert gate_budget_sweep["profile_config"]["prefer_release_gate_passing"] is True
+    assert gate_budget_sweep["profile_config"]["abstention_budget_target_rates"] == (
+        0.35,
+        0.4,
+        0.45,
+        0.48,
+        0.5,
+    )
+    assert "--prefer-release-gate-passing" in gate_budget_sweep["command"]
+    assert (
+        gate_budget_sweep["command"][
+            gate_budget_sweep["command"].index("--abstention-budget-target-rates") + 1
+        ]
+        == "0.35,0.4,0.45,0.48,0.5"
+    )
+
+
+def test_frontier_abstention_rerun_rollup_accepts_derived_fusion_report_config(tmp_path):
+    report_path = tmp_path / "abstention-stability.json"
+    source = tmp_path / "frontier-release-evidence.json"
+    queue_path = tmp_path / "abstention-rerun-queue.json"
+    rollup_path = tmp_path / "abstention-rerun-rollup.json"
+    fusion_signal = (
+        "geometry_uncertainty_fusion:noisy_or"
+        "[geometry=mean_rank:truth_proj+subspace_resid+eigenscore;"
+        "uncertainty=mean_rank:verifier_refuted+verifier_refute_confidence+verifier_not_supported]"
+    )
+    report = _abstention_stability_payload(tmp_path / "qwen-scores.manifest.json")
+    report["config"]["signals"] = (
+        "truth_proj",
+        "subspace_resid",
+        "eigenscore",
+        "verifier_refuted",
+        "verifier_refute_confidence",
+        "verifier_not_supported",
+    )
+    report["runs"][0]["stability"]["stable_recommended_score_name"] = fusion_signal
+    report["runs"][0]["stability"]["recommended_score_name_counts"] = {fusion_signal: 2}
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+    source.write_text(
+        json.dumps(_frontier_release_abstention_payload(report_path)),
+        encoding="utf-8",
+    )
+    queue = build_frontier_abstention_evidence_rerun_queue(
+        source=source,
+        json_path=queue_path,
+        output_dir=tmp_path / "abstention-reruns",
+        profiles=("selective_accuracy",),
+        signal_groups=("recommended",),
+        python_executable="python",
+    )
+    entry = queue["entries"][0]
+    output_path = _queue_entry_report_path(entry)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        json.dumps(_abstention_rerun_report(entry)),
+        encoding="utf-8",
+    )
+
+    payload = rollup_frontier_abstention_evidence_reruns(
+        queue_path=queue_path,
+        report_json_path=rollup_path,
+        require_all_reports=True,
+    )
+    candidate = payload["candidates"][0]
+
+    assert candidate["candidate_status"] == "promotion_ready"
+    assert candidate["config_check"]["matches"] is True
+    assert candidate["config_check"]["mismatches"] == ()
+    assert candidate["metrics"]["stable_recommended_score_name"] == fusion_signal
 
 
 def test_frontier_abstention_evidence_rerun_rollup_promotes_best_candidate(tmp_path):
@@ -4181,12 +4255,21 @@ def _abstention_rerun_report(entry):
     passed = profile == "selective_accuracy"
     correctness = 0.86 if passed else 0.72
     pass_count = 2 if passed else 0
+    derived_signal_config = entry.get("derived_signal_config") or {}
+    config_signals = tuple(derived_signal_config.get("base_signals") or entry["signals"])
+    fusion_config = {}
+    if derived_signal_config.get("geometry_uncertainty"):
+        fusion_config = {
+            "fusion": {
+                "geometry_uncertainty": derived_signal_config["geometry_uncertainty"],
+            },
+        }
     return {
         "schema_version": 1,
         "workflow": "abstention_stability",
         "status": "complete",
         "config": {
-            "signals": tuple(entry["signals"]),
+            "signals": config_signals,
             "alpha": entry["profile_config"]["alpha"],
             "best_by": entry["profile_config"]["best_by"],
             "release_gate": {
@@ -4195,6 +4278,7 @@ def _abstention_rerun_report(entry):
                 ),
                 "max_abstention_rate": entry["profile_config"]["max_abstention_rate"],
             },
+            **fusion_config,
         },
         "runs": (
             {

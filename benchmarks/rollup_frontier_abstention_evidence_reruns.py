@@ -559,7 +559,7 @@ def _config_check(entry: Mapping[str, Any], report: Mapping[str, Any]) -> dict[s
     config = _mapping(report.get("config"))
     profile = _mapping(entry.get("profile_config"))
     mismatches: list[dict[str, Any]] = []
-    entry_signals = set(_string_tuple(entry.get("signals")))
+    entry_signals = set(_expected_config_signals(entry))
     report_signals = set(_string_tuple(config.get("signals")))
     if entry_signals and report_signals and entry_signals != report_signals:
         mismatches.append({
@@ -590,6 +590,12 @@ def _config_check(entry: Mapping[str, Any], report: Mapping[str, Any]) -> dict[s
         mismatches,
     )
     return {"matches": not mismatches, "mismatches": tuple(mismatches)}
+
+
+def _expected_config_signals(entry: Mapping[str, Any]) -> tuple[str, ...]:
+    derived = _mapping(entry.get("derived_signal_config"))
+    base_signals = _string_tuple(derived.get("base_signals"))
+    return base_signals or _string_tuple(entry.get("signals"))
 
 
 def _check_float_match(

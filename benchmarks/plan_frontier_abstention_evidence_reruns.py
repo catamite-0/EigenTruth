@@ -30,6 +30,7 @@ DEFAULT_PROFILES = (
     "retention",
     "budget",
     "budget_0p48",
+    "gate_budget_sweep",
 )
 DEFAULT_SIGNAL_GROUPS = ("recommended", "all", "geometry", "uncertainty")
 GEOMETRY_SIGNALS = ("maha_last", "truth_proj", "subspace_resid")
@@ -341,9 +342,15 @@ def _command_for_experiment(
     ))
     if profile_config.get("enforce_abstention_budget") is True:
         command.append("--enforce-abstention-budget")
-        budget_target = profile_config.get("abstention_budget_target_rate")
-        if budget_target is not None:
-            command.extend(("--abstention-budget-target-rate", str(budget_target)))
+        budget_target_rates = _string_tuple(profile_config.get("abstention_budget_target_rates"))
+        if budget_target_rates:
+            command.extend(("--abstention-budget-target-rates", ",".join(budget_target_rates)))
+        else:
+            budget_target = profile_config.get("abstention_budget_target_rate")
+            if budget_target is not None:
+                command.extend(("--abstention-budget-target-rate", str(budget_target)))
+    if profile_config.get("prefer_release_gate_passing") is True:
+        command.append("--prefer-release-gate-passing")
     rank_fusion = _mapping(signal_config.get("rank_fusion"))
     if rank_fusion:
         command.extend((
@@ -508,6 +515,12 @@ def _profile_config(
     best_by = base_best_by
     enforce_budget = False
     budget_target_rate: float | None = None
+    budget_target_rates: tuple[float, ...] = ()
+    prefer_release_gate_passing = False
+    release_max_abstention = _finite_float_or(
+        release_gate.get("max_abstention_rate"),
+        base_max_abstention,
+    )
     if profile == "baseline":
         pass
     elif profile == "alpha_0p05":
@@ -524,16 +537,19 @@ def _profile_config(
     elif profile.startswith("budget_"):
         enforce_budget = True
         budget_target_rate = _budget_profile_target(profile)
+    elif profile == "gate_budget_sweep":
+        enforce_budget = True
+        prefer_release_gate_passing = True
+        budget_target_rates = _budget_profile_target_rates(release_max_abstention)
     else:
         raise ValueError(f"unknown abstention experiment profile: {profile!r}")
     if best_by not in ABSTENTION_COMPARISON_METRICS:
         raise ValueError(f"best_by must be one of {ABSTENTION_COMPARISON_METRICS}.")
     if budget_target_rate is not None and not (0.0 <= budget_target_rate <= 1.0):
         raise ValueError("budget profile target must be in [0, 1].")
-    release_max_abstention = _finite_float_or(
-        release_gate.get("max_abstention_rate"),
-        base_max_abstention,
-    )
+    for rate in budget_target_rates:
+        if not (0.0 <= rate <= 1.0):
+            raise ValueError("budget profile target rates must be in [0, 1].")
     return {
         "profile": profile,
         "alpha": alpha,
@@ -542,8 +558,11 @@ def _profile_config(
         "max_abstention_rate": base_max_abstention,
         "enforce_abstention_budget": enforce_budget,
         "abstention_budget_target_rate": budget_target_rate,
+        "abstention_budget_target_rates": budget_target_rates,
+        "prefer_release_gate_passing": prefer_release_gate_passing,
         "promotion_eligible": base_max_abstention <= release_max_abstention
-        and (budget_target_rate is None or budget_target_rate <= release_max_abstention),
+        and (budget_target_rate is None or budget_target_rate <= release_max_abstention)
+        and all(rate <= release_max_abstention for rate in budget_target_rates),
     }
 
 
@@ -554,6 +573,23 @@ def _budget_profile_target(profile: str) -> float:
     except ValueError as exc:
         raise ValueError(f"invalid abstention budget profile: {profile!r}") from exc
     return target
+
+
+def _budget_profile_target_rates(max_abstention_rate: float) -> tuple[float, ...]:
+    raw_targets = (
+        max_abstention_rate - 0.15,
+        max_abstention_rate - 0.10,
+        max_abstention_rate - 0.05,
+        max_abstention_rate - 0.02,
+        max_abstention_rate,
+    )
+    return tuple(
+        dict.fromkeys(
+            round(rate, 6)
+            for rate in raw_targets
+            if 0.0 <= rate <= 1.0
+        )
+    )
 
 
 def _signal_group_signals(
