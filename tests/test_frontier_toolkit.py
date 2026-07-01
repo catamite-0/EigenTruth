@@ -1684,6 +1684,71 @@ def test_fact_self_consistency_verifier_refutes_conflicting_fact_triples():
     assert "Lyon" in result.evidence[0]
 
 
+def test_fact_self_consistency_verifier_early_stops_when_fact_threshold_is_fixed():
+    verifier = FactSelfConsistencyVerifier(
+        samples=(
+            "Lyon is the capital of France.",
+            "The capital of France is Lyon.",
+            "France has several large cities.",
+            "Paris is the capital of France.",
+            "The capital of France is Paris.",
+        ),
+        min_samples=2,
+        refute_threshold=0.40,
+        support_threshold=0.80,
+        early_stop=True,
+    )
+    claim = extract_claims("Paris is the capital of France.")[0]
+
+    result = verifier.verify(claim)
+
+    assert result.status is VerificationStatus.REFUTED
+    assert result.metadata["decision_rule"] == "fact_refute_rate"
+    assert result.metadata["early_stop"] is True
+    assert result.metadata["early_stop_reason"] == "fact_refute_threshold_guaranteed"
+    assert result.metadata["sample_count"] == 5
+    assert result.metadata["processed_sample_count"] == 2
+    assert result.metadata["skipped_sample_count"] == 3
+    triple_report = result.metadata["fact_selfcheck"]["triple_reports"][0]
+    assert triple_report["sample_count"] == 5
+    assert triple_report["processed_sample_count"] == 2
+    assert triple_report["skipped_sample_count"] == 3
+    assert triple_report["refute_rate"] == pytest.approx(0.40)
+    assert triple_report["processed_refute_rate"] == pytest.approx(1.0)
+    assert triple_report["skipped_rate"] == pytest.approx(0.60)
+    assert len(triple_report["decisions"]) == 2
+
+
+def test_fact_self_consistency_sample_budget_status_respects_refute_priority():
+    claim = extract_claims("Paris is the capital of France.")[0]
+    samples = (
+        "Paris is the capital of France.",
+        "The capital of France is Paris.",
+    )
+    verifier = FactSelfConsistencyVerifier(
+        min_samples=2,
+        support_threshold=0.40,
+        refute_threshold=0.40,
+    )
+
+    still_open = verifier.sample_budget_status(claim, samples, total_samples=5)
+
+    assert still_open["can_stop"] is False
+    assert still_open["reason"] is None
+    assert still_open["remaining_samples"] == 3
+
+    conservative_verifier = FactSelfConsistencyVerifier(
+        min_samples=2,
+        support_threshold=0.40,
+        refute_threshold=0.80,
+    )
+    fixed = conservative_verifier.sample_budget_status(claim, samples, total_samples=5)
+
+    assert fixed["can_stop"] is True
+    assert fixed["reason"] == "fact_support_threshold_guaranteed"
+    assert fixed["triple_reports"][0]["support_rate"] == pytest.approx(0.40)
+
+
 def test_fact_self_consistency_verifier_uses_context_and_metadata_triples():
     triple = {"subject": "AlphaCorp", "predicate": "has", "object": "12 offices"}
     claim = Claim(

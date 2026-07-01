@@ -4699,6 +4699,7 @@ python benchmarks/eval_verifier_ensemble.py \
   --claims artifacts/tiny_selfcheck_claims.json \
   --signal truth_proj \
   --enable-fact-selfcheck \
+  --fact-selfcheck-early-stop \
   --selfcheck-early-stop \
   --json artifacts/tiny_selfcheck_verifier_ensemble_report.json
 ```
@@ -4709,7 +4710,10 @@ boundary, works best when records or samples carry `claim_triples` / `triples`
 metadata, and reports the opt-in `fact_selfcheck_verifier` block plus
 `fact_self_consistency` route metrics. Unsupported or unextractable fact
 triples remain `not_applicable` / `insufficient_evidence` and fall through to
-the existing sentence-level route. Verified-record sidecars from this path can
+the existing sentence-level route. `--fact-selfcheck-early-stop` stops judging
+additional sample triples once the final claim-level threshold outcome is fixed,
+and the report records `early_stopped_records`, processed/skipped samples, and
+per-triple processed support/refute rates. Verified-record sidecars from this path can
 also be passed to `build_verifier_signal_score_dump.py`, which emits
 `fact_selfcheck_support_rate`, `fact_selfcheck_refute_rate`,
 `fact_selfcheck_disagreement`, `fact_selfcheck_insufficient`,
@@ -4727,6 +4731,7 @@ python benchmarks/run_verifier_signal_fusion_workflow.py \
   --output-dir artifacts/tiny_fact_selfcheck_signal_fusion \
   --enable-fact-selfcheck \
   --fact-selfcheck-min-samples 2 \
+  --fact-selfcheck-early-stop \
   --fact-selfcheck-gate \
   --keep-signals truth_proj,subspace_resid,eigenscore \
   --fusion-signals truth_proj,subspace_resid,eigenscore,fact_selfcheck_refute_rate,fact_selfcheck_uncovered_rate,fact_selfcheck_disagreement \

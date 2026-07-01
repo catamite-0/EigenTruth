@@ -119,6 +119,7 @@ class VerifierSignalFusionWorkflowConfig:
     fact_selfcheck_min_samples: int | None = None
     fact_selfcheck_support_threshold: float | None = None
     fact_selfcheck_refute_threshold: float | None = None
+    fact_selfcheck_early_stop: bool = False
     fact_selfcheck_max_samples: int | None = None
     fact_selfcheck_gate: bool = False
     fact_selfcheck_gate_min_executed_rate: float = 0.50
@@ -197,6 +198,8 @@ class VerifierSignalFusionWorkflowConfig:
             raise ValueError("fact_selfcheck_max_samples must be >= fact_selfcheck_min_samples when both are set.")
         if not isinstance(self.fact_selfcheck_gate, bool):
             raise ValueError("fact_selfcheck_gate must be a bool.")
+        if not isinstance(self.fact_selfcheck_early_stop, bool):
+            raise ValueError("fact_selfcheck_early_stop must be a bool.")
         for name in (
             "fact_selfcheck_gate_min_executed_rate",
             "fact_selfcheck_gate_min_decided_rate",
@@ -305,6 +308,7 @@ def run_verifier_signal_fusion_workflow(
             fact_selfcheck_min_samples=config.fact_selfcheck_min_samples,
             fact_selfcheck_support_threshold=config.fact_selfcheck_support_threshold,
             fact_selfcheck_refute_threshold=config.fact_selfcheck_refute_threshold,
+            fact_selfcheck_early_stop=config.fact_selfcheck_early_stop,
             fact_selfcheck_max_samples=config.fact_selfcheck_max_samples,
             staged_verification=bool(config.staged_verification),
             staged_alpha=float(config.staged_alpha),
@@ -1028,6 +1032,7 @@ def _config_payload(config: VerifierSignalFusionWorkflowConfig) -> dict[str, Any
             "min_samples": config.fact_selfcheck_min_samples,
             "support_threshold": config.fact_selfcheck_support_threshold,
             "refute_threshold": config.fact_selfcheck_refute_threshold,
+            "early_stop": bool(config.fact_selfcheck_early_stop),
             "max_samples": config.fact_selfcheck_max_samples,
         },
         "fact_selfcheck_gate": _fact_selfcheck_gate_config(config),
@@ -1172,6 +1177,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         fact_selfcheck_min_samples=args.fact_selfcheck_min_samples,
         fact_selfcheck_support_threshold=args.fact_selfcheck_support_threshold,
         fact_selfcheck_refute_threshold=args.fact_selfcheck_refute_threshold,
+        fact_selfcheck_early_stop=bool(args.fact_selfcheck_early_stop),
         fact_selfcheck_max_samples=args.fact_selfcheck_max_samples,
         fact_selfcheck_gate=bool(args.fact_selfcheck_gate),
         fact_selfcheck_gate_min_executed_rate=args.fact_selfcheck_gate_min_executed_rate,
@@ -1257,6 +1263,8 @@ def main() -> None:
                         help="optional fact-level support threshold; defaults to --selfcheck-support-threshold")
     parser.add_argument("--fact-selfcheck-refute-threshold", type=float, default=None,
                         help="optional fact-level refute threshold; defaults to --selfcheck-refute-threshold")
+    parser.add_argument("--fact-selfcheck-early-stop", action="store_true",
+                        help="stop fact-level sample judging once the final threshold outcome is fixed")
     parser.add_argument("--fact-selfcheck-max-samples", type=int, default=None,
                         help="optional fact-level sample cap; defaults to --selfcheck-max-samples")
     parser.add_argument("--fact-selfcheck-gate", action="store_true",

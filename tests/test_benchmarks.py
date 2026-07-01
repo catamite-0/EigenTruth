@@ -10514,6 +10514,83 @@ def test_eval_verifier_ensemble_reports_selfcheck_early_stop_savings(tmp_path):
     assert summary["processing_rate"] == pytest.approx(4 / 7)
 
 
+def test_eval_verifier_ensemble_reports_fact_selfcheck_early_stop_savings(tmp_path):
+    verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    scores_path = tmp_path / "scores.json"
+    fixture_path = tmp_path / "claims.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [1, 0, 0, 1],
+            "scores": {"truth_proj": [0.9, 0.1, 0.2, 0.8]},
+        }),
+        encoding="utf-8",
+    )
+
+    def triple(subject, predicate, object_value):
+        return {"subject": subject, "predicate": predicate, "object": object_value}
+
+    fixture_path.write_text(
+        json.dumps({
+            "records": [
+                {
+                    "claim": "Paris is the capital of France.",
+                    "claim_triples": [triple("France", "capital_of", "Paris")],
+                    "selfcheck_samples": [
+                        {"response": "sample one", "triples": [triple("France", "capital_of", "Lyon")]},
+                        {"response": "sample two", "triples": [triple("France", "capital_of", "Lyon")]},
+                        {"response": "sample three", "triples": [triple("France", "capital_of", "Paris")]},
+                        {"response": "sample four", "triples": [triple("France", "capital_of", "Paris")]},
+                        {"response": "sample five", "triples": [triple("France", "capital_of", "Paris")]},
+                    ],
+                },
+                {
+                    "claim": "The euro is the currency of Germany.",
+                    "claim_triples": [triple("Germany", "currency_of", "euro")],
+                    "selfcheck_samples": [
+                        {"response": "sample one", "triples": [triple("Germany", "currency_of", "euro")]},
+                        {"response": "sample two", "triples": [triple("Germany", "currency_of", "euro")]},
+                    ],
+                },
+                {
+                    "claim": "Water boils at 100 degrees Celsius.",
+                    "initial_evidence": ["Water boils at 100 degrees Celsius at standard pressure."],
+                },
+                {
+                    "claim": "The moon is made of cheese.",
+                    "refutations": {"The moon is made of cheese.": ["Lunar samples are rock."]},
+                },
+            ]
+        }),
+        encoding="utf-8",
+    )
+
+    report = verifier.build_verifier_ensemble_report(
+        [("synthetic", scores_path)],
+        signal="truth_proj",
+        claims_path=fixture_path,
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+        enable_fact_selfcheck=True,
+        fact_selfcheck_refute_threshold=0.40,
+        fact_selfcheck_support_threshold=0.80,
+        fact_selfcheck_early_stop=True,
+    )
+    summary = report["runs"][0]["fact_selfcheck_verifier"]
+
+    assert report["fact_selfcheck_verifier"]["early_stop"] is True
+    assert summary["records_with_samples"] == 2
+    assert summary["executed_records"] == 2
+    assert summary["decided_records"] == 2
+    assert summary["early_stopped_records"] == 1
+    assert summary["considered_samples"] == 7
+    assert summary["processed_samples"] == 4
+    assert summary["skipped_samples"] == 3
+    assert summary["sample_triple_count"] == 4
+    assert summary["processing_rate"] == pytest.approx(4 / 7)
+
+
 def test_eval_verifier_ensemble_reuses_verification_trace_cache(tmp_path, monkeypatch):
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
     scores_path = tmp_path / "scores.json"
@@ -51710,6 +51787,7 @@ def test_run_verifier_signal_fusion_workflow_enables_fact_selfcheck_signals(tmp_
             best_alpha=0.2,
             enable_fact_selfcheck=True,
             fact_selfcheck_min_samples=2,
+            fact_selfcheck_early_stop=True,
             fact_selfcheck_gate=True,
             fusion_signals=(
                 "truth_proj",
@@ -51746,6 +51824,7 @@ def test_run_verifier_signal_fusion_workflow_enables_fact_selfcheck_signals(tmp_
     ]
 
     assert payload["config"]["fact_selfcheck"]["enabled"] is True
+    assert payload["config"]["fact_selfcheck"]["early_stop"] is True
     assert payload["config"]["fact_selfcheck_gate"]["enabled"] is True
     assert payload["fact_selfcheck_summary"]["enabled"] is True
     assert payload["fact_selfcheck_evidence_gate"]["passed"] is True
@@ -51754,9 +51833,11 @@ def test_run_verifier_signal_fusion_workflow_enables_fact_selfcheck_signals(tmp_
     assert payload["claims_summary"]["records_with_samples"] == len(labels)
     assert claims["records"][0]["claim_triples"] == [triple("Entity0", "status", "true")]
     assert verifier_report["runs"][0]["fact_selfcheck_verifier"]["executed_records"] == len(labels)
+    assert verifier_report["runs"][0]["fact_selfcheck_verifier"]["early_stopped_records"] == len(labels)
+    assert verifier_report["runs"][0]["fact_selfcheck_verifier"]["sample_triple_count"] == 2 * len(labels)
     assert verifier_report["runs"][0]["selfcheck_verifier"]["executed_records"] == 0
-    assert enhanced.scores["fact_selfcheck_support_rate"][0] == pytest.approx(1.0)
-    assert enhanced.scores["fact_selfcheck_refute_rate"][-1] == pytest.approx(1.0)
+    assert enhanced.scores["fact_selfcheck_support_rate"][0] == pytest.approx(2 / 3)
+    assert enhanced.scores["fact_selfcheck_refute_rate"][-1] == pytest.approx(2 / 3)
     assert verified_records[0]["record"]["route"]["selected_verifier"] == "FactSelfConsistencyVerifier"
     assert (output_dir / "synthetic-geometry-fusion-artifact.json").exists()
 
