@@ -35,11 +35,13 @@ REQUIRED_INPUT_FLAGS = {
         "product_promotion_contract_source": "--contract",
     },
     "benchmarks/plan_frontier_abstention_evidence_reruns.py": {
+        "frontier_release_report_or_evidence_gap_plan": "--source",
         "abstention_score_dump_paths": "--scores",
         "abstention_signal_groups": "--signal-groups",
     },
     "benchmarks/run_product_runtime_baseline.py": {
         "product_trace_corpus": "--trace",
+        "product_promotion_contract_source": "--promotion-contract",
     },
 }
 

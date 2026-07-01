@@ -31869,6 +31869,7 @@ def test_frontier_research_queue_binding_scaffold_reports_command_requirements(t
     )
 
     requirements = scaffold["entries"][0]["command_requirements"]
+    placeholders = scaffold["entries"][0]["placeholder_records"]
     bindings = json.loads(bindings_path.read_text(encoding="utf-8"))
     binding = bindings["bindings"]["improve_abstention_participation_gate"]
 
@@ -31893,6 +31894,13 @@ def test_frontier_research_queue_binding_scaffold_reports_command_requirements(t
         {"input": "abstention_score_dump_paths", "flag": "--scores"},
         {"input": "abstention_signal_groups", "flag": "--signal-groups"},
     ]
+    assert placeholders[0]["flag"] == "--source"
+    assert placeholders[0]["suggested_binding"] == {
+        "review_required": True,
+        "reason": "required_input_flag",
+        "input_name": "frontier_release_report_or_evidence_gap_plan",
+        "flag": "--source",
+    }
 
 
 def test_frontier_research_queue_binding_scaffold_knows_promotion_metric_commands(
@@ -31915,7 +31923,8 @@ def test_frontier_research_queue_binding_scaffold_knows_promotion_metric_command
                         "--json ...",
                         "benchmarks/export_product_promotion_contract_evidence_handoff.py "
                         "--contract ... --json ... --audit-json ...",
-                        "benchmarks/run_product_runtime_baseline.py --trace ... --json ...",
+                        "benchmarks/run_product_runtime_baseline.py "
+                        "--trace ... --promotion-contract ... --json ...",
                         "benchmarks/compare_product_runtime_baselines.py "
                         "--current ... --baseline ... --json ...",
                     ),
@@ -31946,6 +31955,10 @@ def test_frontier_research_queue_binding_scaffold_knows_promotion_metric_command
     )
 
     requirements = scaffold["entries"][0]["command_requirements"]
+    placeholders = {
+        (item["command_index"], item["flag"]): item
+        for item in scaffold["entries"][0]["placeholder_records"]
+    }
     assert scaffold["summary"]["command_requirement_issue_count"] == 0
     assert [item["script"] for item in requirements] == [
         "benchmarks/compare_frontier_release_evidence.py",
@@ -31960,6 +31973,18 @@ def test_frontier_research_queue_binding_scaffold_knows_promotion_metric_command
     )
     assert requirements[3]["required_input_flags"] == (
         {"input": "baseline_product_runtime_report", "flag": "--baseline"},
+    )
+    assert placeholders[(2, "--contract")]["suggested_binding"]["input_name"] == (
+        "product_promotion_contract_source"
+    )
+    assert placeholders[(3, "--trace")]["suggested_binding"]["input_name"] == (
+        "product_trace_corpus"
+    )
+    assert placeholders[(3, "--promotion-contract")]["suggested_binding"]["input_name"] == (
+        "product_promotion_contract_source"
+    )
+    assert placeholders[(4, "--baseline")]["suggested_binding"]["input_name"] == (
+        "baseline_product_runtime_report"
     )
 
 

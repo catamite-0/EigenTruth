@@ -1366,7 +1366,10 @@ Added the first monitor-first tool-selection audit layer:
   adding frontier-release comparison requirements it also exposes the missing
   `--verifier-stability-report`/`--abstention-stability-report`/`--json` flags
   on the final comparison template. The promotion-metrics refresh action's
-  four known commands now scaffold as command-requirement ready.
+  four known commands now scaffold as command-requirement ready, and direct
+  placeholder hints map flags back to exact required inputs such as
+  `product_promotion_contract_source`, `product_trace_corpus`, and
+  `baseline_product_runtime_report`.
 - `bind_frontier_research_queue_command_plan.py` and
   `run_frontier_research_queue_bound_command_plan.py` add the next handoff
   layer: reviewed bindings can turn that queue into a ready bound plan, and the

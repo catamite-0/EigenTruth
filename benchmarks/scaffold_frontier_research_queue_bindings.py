@@ -164,6 +164,7 @@ def _scaffold_entry(
             command,
             action_id=action_id,
             command_index=command_index,
+            command_requirement=command_requirements[command_index - 1],
             planned_outputs=planned_outputs,
             output_index=output_index,
             registry_output_path=registry_output_path,
@@ -207,6 +208,7 @@ def _placeholder_records(
     *,
     action_id: str,
     command_index: int,
+    command_requirement: Mapping[str, Any],
     planned_outputs: Sequence[Mapping[str, Any]],
     output_index: int,
     registry_output_path: str | Path | None,
@@ -226,6 +228,7 @@ def _placeholder_records(
             action_id=action_id,
             command_index=command_index,
             placeholder_index=placeholder_seen,
+            command_requirement=command_requirement,
             planned_outputs=planned_outputs,
             output_index=output_index,
             previous_report_path=previous_report_path,
@@ -250,6 +253,7 @@ def _placeholder_suggestion(
     action_id: str,
     command_index: int,
     placeholder_index: int,
+    command_requirement: Mapping[str, Any],
     planned_outputs: Sequence[Mapping[str, Any]],
     output_index: int,
     previous_report_path: str | None,
@@ -276,6 +280,14 @@ def _placeholder_suggestion(
         }, output_index, previous_report_path
     if normalized == "version":
         return {"value": str(default_version), "source": "default_version"}, output_index, previous_report_path
+    required_input_name = _required_input_name_for_flag(command_requirement, flag)
+    if required_input_name:
+        return {
+            "review_required": True,
+            "reason": "required_input_flag",
+            "input_name": required_input_name,
+            "flag": flag,
+        }, output_index, previous_report_path
     if normalized.startswith("min_") or normalized.endswith("_rate"):
         return {"review_required": True, "reason": "metric_gate_threshold"}, output_index, previous_report_path
     if normalized.startswith("max_"):
@@ -297,6 +309,16 @@ def _manifest_suggestion(previous_report_path: str | None, action_id: str, comma
     if previous_report_path:
         return str(Path(previous_report_path).with_name("artifact-manifest.json"))
     return str(Path("artifacts") / _slug(action_id) / f"command-{command_index}-manifest.json")
+
+
+def _required_input_name_for_flag(requirement: Mapping[str, Any], flag: str | None) -> str | None:
+    if not flag:
+        return None
+    for item in _mapping_sequence(requirement.get("required_input_flags")):
+        if str(item.get("flag") or "") == flag:
+            name = str(item.get("input") or "")
+            return name or None
+    return None
 
 
 def _input_suggestion(name: str) -> Mapping[str, Any]:

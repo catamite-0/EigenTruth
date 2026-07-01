@@ -6605,8 +6605,12 @@ output/manifest/registry/name/version binding, and known command-specific CLI
 requirements. For example, it will mark an abstention rerun planner template as
 still needing `--scores`/`--signal-groups` when the action requires score dumps
 and signal groups, and it recognizes the frontier release-evidence promotion
-refresh scripts before binding review. The generated bindings sidecar is
-deliberately empty so feeding it directly to the binder remains `needs_inputs`.
+refresh scripts before binding review. Placeholders whose flags map directly to
+required inputs carry that exact input name, such as
+`--contract -> product_promotion_contract_source` or
+`--baseline -> baseline_product_runtime_report`. The generated bindings sidecar
+is deliberately empty so feeding it directly to the binder remains
+`needs_inputs`.
 After review, fill either ordered `command_template_values` or full
 `bound_commands` through that sidecar:
 
