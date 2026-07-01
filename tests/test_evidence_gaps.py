@@ -42,6 +42,16 @@ _ABSTENTION_RERUN_COMMANDS = (
     "benchmarks/compare_frontier_release_evidence.py --frontier-rerun-rollup-report ...",
 )
 
+_CITATION_BATCH_RERUN_COMMANDS = (
+    "benchmarks/plan_citation_batch_evidence_reruns.py --source ... --json ...",
+    "benchmarks/run_external_citation_search_adapter_workflow.py "
+    "--queue ... --batch-id ... --workflow-report ...",
+    "benchmarks/run_source_family_citation_search_workflow.py "
+    "--queue ... --batch-id ... --workflow-report ...",
+    "benchmarks/rollup_citation_search_batch_evidence.py --queue ... --batch-report ... --json ...",
+    "benchmarks/compare_frontier_release_evidence.py --citation-batch-rollup-report ...",
+)
+
 
 def _assert_multiple_testing_rerun_rollup_action(action):
     assert action["evidence_routes"] == (
@@ -113,6 +123,58 @@ def _assert_abstention_rerun_rollup_action(action):
     assert action["metadata"]["closure_outputs"] == (
         "abstention_rerun_queue",
         "abstention_rerun_rollup",
+        "frontier_release_evidence_comparison",
+    )
+
+
+def _assert_citation_batch_rerun_rollup_action(action):
+    assert action["evidence_routes"] == (
+        "unresolved_evidence_queue",
+        "citation_search_evidence",
+        "source_family_citation",
+        "frontier_release_evidence",
+    )
+    assert action["suggested_commands"] == _CITATION_BATCH_RERUN_COMMANDS
+    assert action["metadata"]["planner_script"] == (
+        "benchmarks/plan_citation_batch_evidence_reruns.py"
+    )
+    assert action["metadata"]["external_workflow_script"] == (
+        "benchmarks/run_external_citation_search_adapter_workflow.py"
+    )
+    assert action["metadata"]["source_family_workflow_script"] == (
+        "benchmarks/run_source_family_citation_search_workflow.py"
+    )
+    assert action["metadata"]["rollup_script"] == (
+        "benchmarks/rollup_citation_search_batch_evidence.py"
+    )
+    assert action["metadata"]["release_gate_script"] == (
+        "benchmarks/compare_frontier_release_evidence.py"
+    )
+    assert action["metadata"]["rerun_queue_workflow"] == (
+        "citation_batch_evidence_rerun_queue"
+    )
+    assert action["metadata"]["external_workflow"] == (
+        "external_citation_search_adapter_workflow"
+    )
+    assert action["metadata"]["source_family_workflow"] == (
+        "source_family_citation_search_workflow"
+    )
+    assert action["metadata"]["rollup_workflow"] == (
+        "citation_search_batch_evidence_rollup"
+    )
+    assert action["metadata"]["derived_artifact_key"] == (
+        "citation_batch_evidence_rerun_queue"
+    )
+    assert action["metadata"]["rollup_track"] == "citation_batch"
+    assert action["metadata"]["release_gate_track"] == "citation_batch"
+    assert action["metadata"]["risk_control_method"] == "citation_traceability"
+    assert action["metadata"]["queue_entry_report_kinds"] == (
+        "external_citation_search_adapter_workflow",
+        "source_family_citation_search_workflow",
+    )
+    assert action["metadata"]["closure_outputs"] == (
+        "citation_batch_evidence_rerun_queue",
+        "citation_search_batch_evidence_rollup",
         "frontier_release_evidence_comparison",
     )
 
@@ -355,11 +417,8 @@ def test_evidence_gap_plan_maps_frontier_release_evidence_report_tracks():
     _assert_abstention_rerun_rollup_action(
         actions["improve_abstention_participation_gate"]
     )
-    assert actions["complete_citation_batch_evidence_rollup"]["evidence_routes"] == (
-        "unresolved_evidence_queue",
-        "citation_search_evidence",
-        "source_family_citation",
-        "frontier_release_evidence",
+    _assert_citation_batch_rerun_rollup_action(
+        actions["complete_citation_batch_evidence_rollup"]
     )
 
 

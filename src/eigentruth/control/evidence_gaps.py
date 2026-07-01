@@ -1176,11 +1176,46 @@ def _action_template(kind: Mapping[str, str], *, gate: str, reason: str) -> Evid
                 "frontier_release_evidence",
             ),
             suggested_commands=(
-                "benchmarks/run_external_citation_search_adapter_workflow.py --batch-id ...",
-                "benchmarks/run_source_family_citation_search_workflow.py --batch-id ...",
-                "benchmarks/rollup_citation_search_batch_evidence.py --queue ... --batch-report ...",
+                "benchmarks/plan_citation_batch_evidence_reruns.py --source ... --json ...",
+                "benchmarks/run_external_citation_search_adapter_workflow.py "
+                "--queue ... --batch-id ... --workflow-report ...",
+                "benchmarks/run_source_family_citation_search_workflow.py "
+                "--queue ... --batch-id ... --workflow-report ...",
+                "benchmarks/rollup_citation_search_batch_evidence.py --queue ... --batch-report ... --json ...",
                 "benchmarks/compare_frontier_release_evidence.py --citation-batch-rollup-report ...",
             ),
+            metadata={
+                "planner_script": "benchmarks/plan_citation_batch_evidence_reruns.py",
+                "external_workflow_script": "benchmarks/run_external_citation_search_adapter_workflow.py",
+                "source_family_workflow_script": "benchmarks/run_source_family_citation_search_workflow.py",
+                "rollup_script": "benchmarks/rollup_citation_search_batch_evidence.py",
+                "release_gate_script": "benchmarks/compare_frontier_release_evidence.py",
+                "rerun_queue_workflow": "citation_batch_evidence_rerun_queue",
+                "external_workflow": "external_citation_search_adapter_workflow",
+                "source_family_workflow": "source_family_citation_search_workflow",
+                "rollup_workflow": "citation_search_batch_evidence_rollup",
+                "derived_artifact_key": "citation_batch_evidence_rerun_queue",
+                "derived_artifact_kind": "citation_batch_evidence_rerun_queue",
+                "rollup_track": "citation_batch",
+                "release_gate_track": "citation_batch",
+                "queue_entry_report_kinds": (
+                    "external_citation_search_adapter_workflow",
+                    "source_family_citation_search_workflow",
+                ),
+                "risk_control_method": "citation_traceability",
+                "required_inputs": (
+                    "frontier_release_report_or_evidence_gap_plan",
+                    "unresolved_evidence_queue",
+                    "score_dump",
+                    "blind_spot_rows",
+                    "source_catalog_or_search_command",
+                ),
+                "closure_outputs": (
+                    "citation_batch_evidence_rerun_queue",
+                    "citation_search_batch_evidence_rollup",
+                    "frontier_release_evidence_comparison",
+                ),
+            },
         )
     if evidence_kind == "frontier_rerun_rollup_evidence":
         return EvidenceGapAction(
